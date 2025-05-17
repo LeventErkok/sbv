@@ -64,8 +64,9 @@ type Proposition a = ( QNot a
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> KD Proof
 axiom nm p = do cfg <- getKDConfig
+                u   <- kdGetNextUnique
                 _   <- liftIO $ startKD cfg True "Axiom" 0 (KDProofOneShot nm [])
-                pure (internalAxiom nm p) { isUserAxiom = True }
+                pure (internalAxiom nm p) { isUserAxiom = True, uniqId = u }
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
 internalAxiom :: Proposition a => String -> a -> Proof
@@ -75,6 +76,7 @@ internalAxiom nm p = Proof { rootOfTrust  = None
                            , getProof     = label nm (quantifiedBool p)
                            , getProp      = toDyn p
                            , proofName    = nm
+                           , uniqId       = KDInternal
                            }
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
@@ -87,6 +89,7 @@ sorry = Proof { rootOfTrust  = Self
               , getProof     = label "sorry" (quantifiedBool p)
               , getProp      = toDyn p
               , proofName    = "sorry"
+              , uniqId       = KDSorry
               }
   where -- ideally, I'd rather just use
         --   p = sFalse
@@ -100,21 +103,23 @@ sorry = Proof { rootOfTrust  = Self
 lemmaGen :: Proposition a => SMTConfig -> String -> String -> a -> [Proof] -> KD Proof
 lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nm inputProp by = do
         kdSt <- getKDState
-        liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
-  where go kdSt mbStartTime = do qSaturateSavingObservables inputProp
-                                 mapM_ (constrain . getProof) by
-                                 query $ smtProofStep cfg kdSt tag 0 (KDProofOneShot nm by) Nothing inputProp (good mbStartTime)
+        u    <- kdGetNextUnique
+        liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt u
+  where go kdSt u mbStartTime = do qSaturateSavingObservables inputProp
+                                   mapM_ (constrain . getProof) by
+                                   query $ smtProofStep cfg kdSt tag 0 (KDProofOneShot nm by) Nothing inputProp (good mbStartTime u)
 
         -- What to do if all goes well
-        good mbStart d = do mbElapsed <- getElapsedTime mbStart
-                            liftIO $ finishKD cfg ("Q.E.D." ++ modulo) d $ catMaybes [mbElapsed]
-                            pure Proof { rootOfTrust  = ros
-                                       , dependencies = by
-                                       , isUserAxiom  = False
-                                       , getProof     = label nm (quantifiedBool inputProp)
-                                       , getProp      = toDyn inputProp
-                                       , proofName    = nm
-                                       }
+        good mbStart u d = do mbElapsed <- getElapsedTime mbStart
+                              liftIO $ finishKD cfg ("Q.E.D." ++ modulo) d $ catMaybes [mbElapsed]
+                              pure Proof { rootOfTrust  = ros
+                                         , dependencies = by
+                                         , isUserAxiom  = False
+                                         , getProof     = label nm (quantifiedBool inputProp)
+                                         , getProp      = toDyn inputProp
+                                         , proofName    = nm
+                                         , uniqId       = u
+                                         }
           where (ros, modulo) = calculateRootOfTrust nm by
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.

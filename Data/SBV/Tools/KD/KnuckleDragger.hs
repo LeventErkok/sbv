@@ -141,6 +141,7 @@ class CalcLemma a steps where
   calcGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> KD Proof
   calcGeneric tagTheorem cfg nm result steps = do
      kdSt <- getKDState
+     u    <- kdGetNextUnique
 
      liftIO $ runSMTWith cfg $ do
 
@@ -153,7 +154,7 @@ class CalcLemma a steps where
         -- Collect all subterms and saturate them
         mapM_ qSaturateSavingObservables $ getCalcStrategySaturatables strategy
 
-        query $ proveProofTree cfg kdSt nm (result, calcGoal) calcIntros calcProofTree
+        query $ proveProofTree cfg kdSt nm (result, calcGoal) calcIntros calcProofTree u
 
 -- | Prove the proof tree. The arguments are:
 --
@@ -178,8 +179,9 @@ proveProofTree :: Proposition a
                -> (a, SBool)    -- ^ goal: as a proposition and as a boolean
                -> SBool         -- ^ hypotheses
                -> KDProof       -- ^ proof tree
+               -> KDUnique      -- ^ unique id
                -> Query Proof
-proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree = do
+proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree uniq = do
 
   let SMTConfig{kdOptions = KDOptions{measureTime}} = cfg
   mbStartTime <- getTimeStampIf measureTime
@@ -301,6 +303,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                                , getProof     = label nm (quantifiedBool result)
                                , getProp      = toDyn result
                                , proofName    = nm
+                               , uniqId       = uniq
                                }
 
 -- Helper data-type for calc-step below
@@ -478,6 +481,7 @@ class SInductive a measure steps where
 inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> KD Proof
 inductionEngine style tagTheorem cfg nm result getStrategy = do
    kdSt <- getKDState
+   u    <- kdGetNextUnique
 
    liftIO $ runSMTWith cfg $ do
 
@@ -517,7 +521,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
                                               bc
                                               (\d -> finishKD cfg "Q.E.D." d [])
 
-       proveProofTree cfg kdSt nm (result, inductiveStep) inductionIntros inductionProofTree
+       proveProofTree cfg kdSt nm (result, inductiveStep) inductionIntros inductionProofTree u
 
 -- Induction strategy helper
 mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, KDProofRaw a) -> SBool -> InductionStrategy

@@ -19,9 +19,9 @@
 
 module Data.SBV.Tools.KD.Utils (
          KD, runKD, runKDWith, Proof(..)
-       , startKD, finishKD, getKDState, getKDConfig, KDState(..), KDStats(..)
+       , startKD, finishKD, getKDState, getKDConfig, kdGetNextUnique, KDState(..), KDStats(..)
        , RootOfTrust(..), KDProofContext(..), calculateRootOfTrust, message, updStats
-       , KDProofDeps(..), getProofTree, kdShowDepsHTML
+       , KDProofDeps(..), KDUnique(..), getProofTree, kdShowDepsHTML
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -50,6 +50,7 @@ import Data.Dynamic
 
 -- | Various statistics we collect
 data KDStats = KDStats { noOfCheckSats :: Int
+                       , noOfProofs    :: Int
                        , solverElapsed :: NominalDiffTime
                        }
 
@@ -77,15 +78,16 @@ runKD = runKDWith defaultSMTCfg
 -- | Run a KD proof, using the given configuration.
 runKDWith :: SMTConfig -> KD a -> IO a
 runKDWith cfg@SMTConfig{kdOptions = KDOptions{measureTime}} (KD f) = do
-   rStats <- newIORef $ KDStats { noOfCheckSats = 0, solverElapsed = 0 }
+   rStats <- newIORef $ KDStats { noOfCheckSats = 0, noOfProofs = 0, solverElapsed = 0 }
    (mbT, r) <- timeIf measureTime $ runReaderT f KDState {config = cfg, stats = rStats}
    case mbT of
      Nothing -> pure ()
-     Just t  -> do KDStats noOfCheckSats solverTime <- readIORef rStats
+     Just t  -> do KDStats noOfCheckSats pc solverTime <- readIORef rStats
 
                    let stats = [ ("SBV",       showTDiff (t - solverTime))
                                , ("Solver",    showTDiff solverTime)
                                , ("Total",     showTDiff t)
+                               , ("Proofs",    show pc)
                                , ("Decisions", show noOfCheckSats)
                                ]
 
@@ -95,6 +97,12 @@ runKDWith cfg@SMTConfig{kdOptions = KDOptions{measureTime}} (KD f) = do
 -- | get the state
 getKDState :: KD KDState
 getKDState = ask
+
+kdGetNextUnique :: KD KDUnique
+kdGetNextUnique = do st@KDState{stats} <- getKDState
+                     c <- liftIO (noOfProofs <$> readIORef stats)
+                     updStats st (\s -> s {noOfProofs = c + 1})
+                     pure $ KDUser c
 
 -- | get the configuration
 getKDConfig :: KD SMTConfig
@@ -142,6 +150,26 @@ data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying s
                                --   name of the proposition itself, not the parent that's trusted.
                 deriving (NFData, Generic)
 
+-- | Unique identifier for each proof
+data KDUnique = KDInternal
+              | KDSorry
+              | KDUser Int
+              deriving (NFData, Generic, Eq)
+
+-- | We make internal the lowest, then kdsorry, then with the order as given in the integer
+instance Ord KDUnique where
+   KDInternal `compare` KDInternal = EQ
+   KDInternal `compare` KDSorry    = LT
+   KDInternal `compare` KDUser{}   = LT
+
+   KDSorry    `compare` KDInternal = GT
+   KDSorry    `compare` KDSorry    = EQ
+   KDSorry    `compare` KDUser{}   = LT
+
+   KDUser{}   `compare` KDInternal = GT
+   KDUser{}   `compare` KDSorry    = GT
+   KDUser i   `compare` KDUser j   = i `compare` j
+
 -- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
 -- call to lemma/theorem etc., ensuring soundness. (Note that the trusted-code base here
 -- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
@@ -153,15 +181,17 @@ data Proof = Proof { rootOfTrust  :: RootOfTrust -- ^ Root of trust, described a
                    , getProof     :: SBool       -- ^ Get the underlying boolean
                    , getProp      :: Dynamic     -- ^ The actual proposition
                    , proofName    :: String      -- ^ User given name
+                   , uniqId       :: KDUnique    -- ^ Unique identified
                    }
 
 -- | NFData ignores the getProp field
 instance NFData Proof where
-  rnf (Proof rootOfTrust dependencies isUserAxiom getProof _getProp proofName) =     rnf rootOfTrust
-                                                                               `seq` rnf dependencies
-                                                                               `seq` rnf isUserAxiom
-                                                                               `seq` rnf getProof
-                                                                               `seq` rnf proofName
+  rnf (Proof rootOfTrust dependencies isUserAxiom getProof _getProp proofName uniqId) =     rnf rootOfTrust
+                                                                                      `seq` rnf dependencies
+                                                                                      `seq` rnf isUserAxiom
+                                                                                      `seq` rnf getProof
+                                                                                      `seq` rnf proofName
+                                                                                      `seq` rnf uniqId
 
 -- | Dependencies of a proof, in a tree format.
 data KDProofDeps = KDProofDeps Proof [KDProofDeps]
@@ -171,20 +201,21 @@ getProofTree :: Proof -> KDProofDeps
 getProofTree p = KDProofDeps p $ map getProofTree (dependencies p)
 
 -- | Turn dependencies to a container tree, for display purposes
-depsToTree :: [String] -> (String -> Int -> Int -> a) -> (Int, KDProofDeps) -> ([String], Tree a)
+depsToTree :: [KDUnique] -> (String -> Int -> Int -> a) -> (Int, KDProofDeps) -> ([KDUnique], Tree a)
 depsToTree visited xform (cnt, KDProofDeps top ds) = (nVisited, Node (xform nTop cnt (length chlds)) chlds)
   where nTop = shortName top
+        uniq = uniqId top
 
-        (nVisited, chlds) | nTop `elem` visited = (visited, [])
-                          | True                = walk (nTop : visited) (compress (filter interesting ds))
+        (nVisited, chlds) | uniq `elem` visited = (visited, [])
+                          | True                = walk (uniq : visited) (compress (filter interesting ds))
 
         walk v []     = (v, [])
         walk v (c:cs) = let (v',  t)  = depsToTree v xform c
                             (v'', ts) = walk v' cs
                         in (v'', t : ts)
 
-        -- Don't show IH's, just not interesting
-        interesting (KDProofDeps p _) = not ("IH" `isInfixOf` proofName p)
+        -- Don't show internal axioms, start from sorry, which covers all user proven axioms but not internal ones
+        interesting (KDProofDeps p _) = uniqId p >= KDSorry
 
         -- If a proof is used twice in the same proof, compress it
         compress :: [KDProofDeps] -> [(Int, KDProofDeps)]
