@@ -150,25 +150,11 @@ data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying s
                                --   name of the proposition itself, not the parent that's trusted.
                 deriving (NFData, Generic)
 
--- | Unique identifier for each proof
+-- | Unique identifier for each proof.
 data KDUnique = KDInternal
               | KDSorry
               | KDUser Int
               deriving (NFData, Generic, Eq)
-
--- | We make internal the lowest, then kdsorry, then with the order as given in the integer
-instance Ord KDUnique where
-   KDInternal `compare` KDInternal = EQ
-   KDInternal `compare` KDSorry    = LT
-   KDInternal `compare` KDUser{}   = LT
-
-   KDSorry    `compare` KDInternal = GT
-   KDSorry    `compare` KDSorry    = EQ
-   KDSorry    `compare` KDUser{}   = LT
-
-   KDUser{}   `compare` KDInternal = GT
-   KDUser{}   `compare` KDSorry    = GT
-   KDUser i   `compare` KDUser j   = i `compare` j
 
 -- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
 -- call to lemma/theorem etc., ensuring soundness. (Note that the trusted-code base here
@@ -214,8 +200,11 @@ depsToTree visited xform (cnt, KDProofDeps top ds) = (nVisited, Node (xform nTop
                             (v'', ts) = walk v' cs
                         in (v'', t : ts)
 
-        -- Don't show internal axioms, start from sorry, which covers all user proven axioms but not internal ones
-        interesting (KDProofDeps p _) = uniqId p >= KDSorry
+        -- Don't show internal axioms, not interesting
+        interesting (KDProofDeps p _) = case uniqId p of
+                                          KDSorry    -> True
+                                          KDInternal -> False
+                                          KDUser{}   -> True
 
         -- If a proof is used twice in the same proof, compress it
         compress :: [KDProofDeps] -> [(Int, KDProofDeps)]
