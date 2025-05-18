@@ -94,7 +94,7 @@ fibCorrect = induct chatty setup initial trans strengthenings inv goal
                            .&& m .== fib i
 
         -- Final goal. When the termination condition holds, the value @m@
-        -- holds the @n@th fibonacc number. Note that SBV does not prove the
+        -- holds the @n@th fibonacci number. Note that SBV does not prove the
         -- termination condition; it simply is the indication that the loop
         -- has ended as specified by the user.
         goal :: S SInteger -> (SBool, SBool)
