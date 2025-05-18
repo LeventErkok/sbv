@@ -3,7 +3,10 @@
 
 ### Version 11.7.5, Not yet released
   
-  * KnuckleDragger: Keep track of proofs with a unique id.
+  * KnuckleDragger:
+      - Keep track of proofs with a unique id.
+      - Add a knuckle-dragger proof that tail-recursive definition of fibonacci is
+        equivalent to its textbook definition. See Documentation/SBV/Examples/KnuckleDragger/Fibonacci.hs.
 
 ### Version 11.7, 2025-05-16
 
