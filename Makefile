@@ -114,7 +114,6 @@ updateForVersionChange:
 	@cabal run SBVTest -- -p noOpt2  --accept --quiet
 
 lintTest:
-	hlint Data SBVTestSuite -i "Use otherwise" -i "Parse error" --cpp-simple
 	@$(TIME) cabal test SBVHLint
 
 testInterfaces:
