@@ -655,7 +655,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
            [sortIsPermutation, sortIsNonDecreasing]
 
   -- | We can display the dependencies in a proof
-  liftIO $ do putStrLn "== Dependencies:"
-              putStr $ show $ getProofTree qs
+  liftIO $ do putStrLn "== ProofTree:"
+              putStr $ showProofTree True $ getProofTree qs
 
   pure qs

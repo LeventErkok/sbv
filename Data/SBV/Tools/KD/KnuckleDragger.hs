@@ -29,7 +29,8 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KD.KnuckleDragger (
-         Proposition, Proof, Instantiatable(..), Inst(..), getProofTree, kdShowDepsHTML, KDProofDeps(..), rootOfTrust
+         Proposition, Proof, Instantiatable(..), Inst(..)
+       , rootOfTrust, RootOfTrust(..), ProofTree(..), getProofTree, showProofTree, showProofTreeHTML
        , axiom
        , lemma,   lemmaWith
        , theorem, theoremWith

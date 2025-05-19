@@ -24,7 +24,7 @@ module Data.SBV.Tools.KD.Utils (
          KD, runKD, runKDWith, Proof(..), sorry
        , startKD, finishKD, getKDState, getKDConfig, kdGetNextUnique, KDState(..), KDStats(..), RootOfTrust(..)
        , KDProofContext(..), message, updStats, rootOfTrust, trustsModulo
-       , KDProofDeps(..), KDUnique(..), getProofTree, kdShowDepsHTML, shortProofName
+       , ProofTree(..), KDUnique(..), getProofTree, showProofTree, showProofTreeHTML, shortProofName
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -173,23 +173,21 @@ shortProofName p | "@" `isInfixOf` s = reverse . dropWhile isSpace . reverse . t
    where s = proofName p
 
 -- | Keeping track of where the sorry originates from. Used in displaying dependencies.
-data RootOfTrust = TrustsNothing  -- ^ Trusts nothing (aside from SBV, underlying solver etc.)
-                 | Trusts [Proof] -- ^ Trusts these proofs that are established via calls to sorry
+newtype RootOfTrust = RootOfTrust (Maybe [Proof])
 
 -- | Show instance for 'RootOfTrust'
 instance Show RootOfTrust where
-  show TrustsNothing = "TrustsNothing"
-  show (Trusts ps)   = "Trusts [" ++ intercalate ", " (map shortProofName ps) ++ "]"
+  show (RootOfTrust mbp) = case mbp of
+                             Nothing -> "Nothing"
+                             Just ps -> "Just [" ++ intercalate ", " (map shortProofName ps) ++ "]"
 
 -- | Trust forms a semigroup
 instance Semigroup RootOfTrust where
-   TrustsNothing <> b             = b
-   a             <> TrustsNothing = a
-   Trusts as     <> Trusts bs     = Trusts (nubBy (\a b -> uniqId a == uniqId b) (as <> bs))
+   RootOfTrust as <> RootOfTrust bs = RootOfTrust $ nubBy (\a b -> uniqId a == uniqId b) <$> (as <> bs)
 
 -- | Trust forms a monoid
 instance Monoid RootOfTrust where
-  mempty = TrustsNothing
+  mempty = RootOfTrust Nothing
 
 -- | NFData ignores the getProp field
 instance NFData Proof where
@@ -200,50 +198,54 @@ instance NFData Proof where
                                                                           `seq` rnf uniqId
 
 -- | Dependencies of a proof, in a tree format.
-data KDProofDeps = KDProofDeps Proof [KDProofDeps]
+data ProofTree = ProofTree Proof [ProofTree]
 
 -- | Return all the proofs this particular proof depends on, transitively
-getProofTree :: Proof -> KDProofDeps
-getProofTree p = KDProofDeps p $ map getProofTree (dependencies p)
+getProofTree :: Proof -> ProofTree
+getProofTree p = ProofTree p $ map getProofTree (dependencies p)
 
 -- | Turn dependencies to a container tree, for display purposes
-depsToTree :: [KDUnique] -> (String -> Int -> Int -> a) -> (Int, KDProofDeps) -> ([KDUnique], Tree a)
-depsToTree visited xform (cnt, KDProofDeps top ds) = (nVisited, Node (xform nTop cnt (length chlds)) chlds)
+depsToTree :: Bool -> [KDUnique] -> (String -> Int -> Int -> a) -> (Int, ProofTree) -> ([KDUnique], Tree a)
+depsToTree shouldCompress visited xform (cnt, ProofTree top ds) = (nVisited, Node (xform nTop cnt (length chlds)) chlds)
   where nTop = shortProofName top
         uniq = uniqId top
 
-        (nVisited, chlds) | uniq `elem` visited = (visited, [])
-                          | True                = walk (uniq : visited) (compress (filter interesting ds))
+        (nVisited, chlds)
+           | shouldCompress && uniq `elem` visited = (visited, [])
+           | shouldCompress                        = walk (uniq : visited) (compress       (filter interesting ds))
+           | True                                  = walk         visited  (zip (repeat 1) (filter interesting ds))
 
         walk v []     = (v, [])
-        walk v (c:cs) = let (v',  t)  = depsToTree v xform c
+        walk v (c:cs) = let (v',  t)  = depsToTree shouldCompress v xform c
                             (v'', ts) = walk v' cs
                         in (v'', t : ts)
 
         -- Don't show internal axioms, not interesting
-        interesting (KDProofDeps p _) = case uniqId p of
-                                          KDSorry    -> True
-                                          KDInternal -> False
-                                          KDUser{}   -> True
+        interesting (ProofTree p _) = case uniqId p of
+                                        KDSorry    -> True
+                                        KDInternal -> False
+                                        KDUser{}   -> True
 
         -- If a proof is used twice in the same proof, compress it
-        compress :: [KDProofDeps] -> [(Int, KDProofDeps)]
+        compress :: [ProofTree] -> [(Int, ProofTree)]
         compress []       = []
         compress (p : ps) = (1 + length [() | (_, True) <- filtered], p) : compress [d | (d, False) <- filtered]
-          where filtered = [(d, uniqId p' == curUniq) | d@(KDProofDeps p' _) <- ps]
+          where filtered = [(d, uniqId p' == curUniq) | d@(ProofTree p' _) <- ps]
                 curUniq  = case p of
-                             KDProofDeps curProof _ -> uniqId curProof
+                             ProofTree curProof _ -> uniqId curProof
 
--- | Display the dependencies as a tree
-instance Show KDProofDeps where
-  show d = showTree $ snd $ depsToTree [] sh (1, d)
+-- | Display the proof tree as ASCII text. The first argument is if we should compress the tree, showing only the first
+-- use of any sublemma.
+showProofTree :: Bool -> ProofTree -> String
+showProofTree compress d = showTree $ snd $ depsToTree compress [] sh (1, d)
     where sh nm 1 _ = nm
           sh nm x _= nm ++ " (x" ++ show x ++ ")"
 
 -- | Display the tree as an html doc for rendering purposes.
--- The first argument is Path (or URL) to external CSS file, if needed.
-kdShowDepsHTML :: Maybe FilePath -> KDProofDeps -> String
-kdShowDepsHTML mbCSS deps = htmlTree mbCSS $ snd $ depsToTree [] nodify (1, deps)
+-- The first argument is if we should compress the tree, showing only the first
+-- use of any sublemma. Second is the path (or URL) to external CSS file, if needed.
+showProofTreeHTML :: Bool -> Maybe FilePath -> ProofTree -> String
+showProofTreeHTML compress mbCSS deps = htmlTree mbCSS $ snd $ depsToTree compress [] nodify (1, deps)
   where nodify :: String -> Int -> Int -> NodeInfo
         nodify nm cnt dc = NodeInfo { nodeBehavior = InitiallyExpanded
                                     , nodeName     = nm
@@ -262,8 +264,8 @@ kdShowDepsHTML mbCSS deps = htmlTree mbCSS $ snd $ depsToTree [] nodify (1, deps
 -- | Show instance for t'Proof'
 instance Show Proof where
   show p@Proof{proofName = nm} = '[' : sh (rootOfTrust p) ++ "] " ++ nm
-    where sh TrustsNothing = "Proven"
-          sh (Trusts ps)   = "Modulo: " ++ intercalate ", " (map shortProofName ps)
+    where sh (RootOfTrust Nothing)   = "Proven"
+          sh (RootOfTrust (Just ps)) = "Modulo: " ++ intercalate ", " (map shortProofName ps)
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
 -- cannot deal with, or if we want to postpone the proof for the time being. KnuckleDragger will keep
@@ -289,12 +291,12 @@ sorry = Proof { dependencies = []
 rootOfTrust :: Proof -> RootOfTrust
 rootOfTrust p@Proof{uniqId, dependencies} = compress res
   where res = case uniqId of
-                KDInternal -> TrustsNothing
-                KDSorry    -> Trusts [sorry]
+                KDInternal -> RootOfTrust Nothing
+                KDSorry    -> RootOfTrust $ Just [sorry]
                 KDUser {}  -> self <> foldMap rootOfTrust dependencies
 
         -- if sorry is one of our direct dependencies, then we trust this proof
-        self | any isSorry dependencies = Trusts [p]
+        self | any isSorry dependencies = RootOfTrust $ Just [p]
              | True                     = mempty
 
         isSorry Proof{uniqId = u} = u == KDSorry
@@ -302,13 +304,13 @@ rootOfTrust p@Proof{uniqId, dependencies} = compress res
         -- If we have any dependency that is not sorry itself, then we can skip all the sorries.
         -- Why? Because "sorry" will implicitly be coming from one of these anyhow. (In other
         -- words, we do not need to (or want to) distinguish between different uses of sorry.
-        compress TrustsNothing = TrustsNothing
-        compress (Trusts ps)   = Trusts $ case partition isSorry ps of
-                                            (_, []) -> [sorry]
-                                            (_, os) -> os
+        compress (RootOfTrust mbps) = RootOfTrust $ reduce <$> mbps
+          where reduce ps = case partition isSorry ps of
+                              (_, []) -> [sorry]
+                              (_, os) -> os
 
 -- | Calculate the modulo string for dependencies
 trustsModulo :: [Proof] -> String
 trustsModulo by = case foldMap rootOfTrust by of
-                    TrustsNothing -> ""
-                    Trusts ps     -> " [" ++ intercalate ", " (map (shortProofName) ps) ++ "]"
+                    RootOfTrust Nothing   -> ""
+                    RootOfTrust (Just ps) -> " [" ++ intercalate ", " (map (shortProofName) ps) ++ "]"
