@@ -217,7 +217,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --     Step: 1.2.4                                             Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: quickSortIsCorrect                                   Q.E.D.
--- == Dependencies:
+-- == Proof tree:
 -- quickSortIsCorrect
 --  ├╴sortIsPermutation
 --  │  └╴sortCountsMatch
@@ -655,7 +655,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
            [sortIsPermutation, sortIsNonDecreasing]
 
   -- | We can display the dependencies in a proof
-  liftIO $ do putStrLn "== ProofTree:"
+  liftIO $ do putStrLn "== Proof tree:"
               putStr $ showProofTree True $ getProofTree qs
 
   pure qs
