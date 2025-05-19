@@ -5,6 +5,8 @@
   
   * KnuckleDragger:
       - Keep track of proofs with a unique id.
+      - Add method rootOfTrust which can be used to retrieve uses of sorry in a proof. The idea is that
+        to get a proof clean, you need to resolve all the proofs returned by this call.
       - Add a knuckle-dragger proof that tail-recursive definition of fibonacci is
         equivalent to its textbook definition. See Documentation/SBV/Examples/KnuckleDragger/Fibonacci.hs.
 

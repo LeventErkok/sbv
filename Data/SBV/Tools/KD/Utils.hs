@@ -9,19 +9,22 @@
 -- Various KnuckleDrugger machinery.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeAbstractions           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KD.Utils (
-         KD, runKD, runKDWith, Proof(..)
-       , startKD, finishKD, getKDState, getKDConfig, kdGetNextUnique, KDState(..), KDStats(..)
-       , RootOfTrust(..), KDProofContext(..), calculateRootOfTrust, message, updStats
-       , KDProofDeps(..), KDUnique(..), getProofTree, kdShowDepsHTML
+         KD, runKD, runKDWith, Proof(..), sorry
+       , startKD, finishKD, getKDState, getKDConfig, kdGetNextUnique, KDState(..), KDStats(..), RootOfTrust(..)
+       , KDProofContext(..), message, updStats, rootOfTrust, trustsModulo
+       , KDProofDeps(..), KDUnique(..), getProofTree, kdShowDepsHTML, shortProofName
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -33,10 +36,11 @@ import Data.Tree
 import Data.Tree.View
 
 import Data.Char (isSpace)
-import Data.List (intercalate, nub, sort, isInfixOf)
+import Data.List (intercalate, isInfixOf, nubBy, partition)
 import System.IO (hFlush, stdout)
 
-import Data.SBV.Core.Data (SBool)
+import Data.SBV.Core.Data      (SBool, Forall(..), quantifiedBool)
+import Data.SBV.Core.Model     (label)
 import Data.SBV.Core.Symbolic  (SMTConfig, KDOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 
@@ -143,13 +147,6 @@ finishKD cfg@SMTConfig{kdOptions = KDOptions{ribbonLength}} what (skip, mbT) ext
 
        mkTiming t = '[' : showTDiff t ++ "]"
 
--- | Keeping track of where the sorry originates from. Used in displaying dependencies.
-data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying solver etc.)
-                 | Self        -- ^ Trusts itself, i.e., established by a call to sorry
-                 | Prop String -- ^ Trusts a parent that itself trusts something else. Note the name here is the
-                               --   name of the proposition itself, not the parent that's trusted.
-                deriving (NFData, Generic)
-
 -- | Unique identifier for each proof.
 data KDUnique = KDInternal
               | KDSorry
@@ -161,8 +158,7 @@ data KDUnique = KDInternal
 -- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
-data Proof = Proof { rootOfTrust  :: RootOfTrust -- ^ Root of trust, described above.
-                   , dependencies :: [Proof]     -- ^ Immediate dependencies of this proof. (Not transitive)
+data Proof = Proof { dependencies :: [Proof]     -- ^ Immediate dependencies of this proof. (Not transitive)
                    , isUserAxiom  :: Bool        -- ^ Was this an axiom given by the user?
                    , getProof     :: SBool       -- ^ Get the underlying boolean
                    , getProp      :: Dynamic     -- ^ The actual proposition
@@ -170,14 +166,38 @@ data Proof = Proof { rootOfTrust  :: RootOfTrust -- ^ Root of trust, described a
                    , uniqId       :: KDUnique    -- ^ Unique identified
                    }
 
+-- | Drop the instantiation part
+shortProofName :: Proof -> String
+shortProofName p | "@" `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
+                 | True              = s
+   where s = proofName p
+
+-- | Keeping track of where the sorry originates from. Used in displaying dependencies.
+data RootOfTrust = TrustsNothing  -- ^ Trusts nothing (aside from SBV, underlying solver etc.)
+                 | Trusts [Proof] -- ^ Trusts these proofs that are established via calls to sorry
+
+-- | Show instance for 'RootOfTrust'
+instance Show RootOfTrust where
+  show TrustsNothing = "TrustsNothing"
+  show (Trusts ps)   = "Trusts [" ++ intercalate ", " (map shortProofName ps) ++ "]"
+
+-- | Trust forms a semigroup
+instance Semigroup RootOfTrust where
+   TrustsNothing <> b             = b
+   a             <> TrustsNothing = a
+   Trusts as     <> Trusts bs     = Trusts (nubBy (\a b -> uniqId a == uniqId b) (as <> bs))
+
+-- | Trust forms a monoid
+instance Monoid RootOfTrust where
+  mempty = TrustsNothing
+
 -- | NFData ignores the getProp field
 instance NFData Proof where
-  rnf (Proof rootOfTrust dependencies isUserAxiom getProof _getProp proofName uniqId) =     rnf rootOfTrust
-                                                                                      `seq` rnf dependencies
-                                                                                      `seq` rnf isUserAxiom
-                                                                                      `seq` rnf getProof
-                                                                                      `seq` rnf proofName
-                                                                                      `seq` rnf uniqId
+  rnf (Proof dependencies isUserAxiom getProof _getProp proofName uniqId) =     rnf dependencies
+                                                                          `seq` rnf isUserAxiom
+                                                                          `seq` rnf getProof
+                                                                          `seq` rnf proofName
+                                                                          `seq` rnf uniqId
 
 -- | Dependencies of a proof, in a tree format.
 data KDProofDeps = KDProofDeps Proof [KDProofDeps]
@@ -189,7 +209,7 @@ getProofTree p = KDProofDeps p $ map getProofTree (dependencies p)
 -- | Turn dependencies to a container tree, for display purposes
 depsToTree :: [KDUnique] -> (String -> Int -> Int -> a) -> (Int, KDProofDeps) -> ([KDUnique], Tree a)
 depsToTree visited xform (cnt, KDProofDeps top ds) = (nVisited, Node (xform nTop cnt (length chlds)) chlds)
-  where nTop = shortName top
+  where nTop = shortProofName top
         uniq = uniqId top
 
         (nVisited, chlds) | uniq `elem` visited = (visited, [])
@@ -210,15 +230,9 @@ depsToTree visited xform (cnt, KDProofDeps top ds) = (nVisited, Node (xform nTop
         compress :: [KDProofDeps] -> [(Int, KDProofDeps)]
         compress []       = []
         compress (p : ps) = (1 + length [() | (_, True) <- filtered], p) : compress [d | (d, False) <- filtered]
-          where filtered = [(d, shortName p' == curName) | d@(KDProofDeps p' _) <- ps]
-                curName  = case p of
-                             KDProofDeps curProof _ -> shortName curProof
-
-        -- Drop the instantiation part
-        shortName :: Proof -> String
-        shortName p | "@" `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
-                    | True              = s
-           where s = proofName p
+          where filtered = [(d, uniqId p' == curUniq) | d@(KDProofDeps p' _) <- ps]
+                curUniq  = case p of
+                             KDProofDeps curProof _ -> uniqId curProof
 
 -- | Display the dependencies as a tree
 instance Show KDProofDeps where
@@ -247,24 +261,54 @@ kdShowDepsHTML mbCSS deps = htmlTree mbCSS $ snd $ depsToTree [] nodify (1, deps
 
 -- | Show instance for t'Proof'
 instance Show Proof where
-  show Proof{rootOfTrust, isUserAxiom, proofName} = '[' : tag ++ "] " ++ proofName
-     where tag | isUserAxiom = "Axiom"
-               | True        = case rootOfTrust of
-                                 None   -> "Proven"
-                                 Self   -> "Sorry"
-                                 Prop s -> "Modulo: " ++ s
+  show p@Proof{proofName = nm} = '[' : sh (rootOfTrust p) ++ "] " ++ nm
+    where sh TrustsNothing = "Proven"
+          sh (Trusts ps)   = "Modulo: " ++ intercalate ", " (map shortProofName ps)
 
--- | Calculate the root of trust for a proof. The string is the modulo text, if any.
-calculateRootOfTrust :: String -> [Proof] -> (RootOfTrust, String)
-calculateRootOfTrust nm by | not hasSelf && null depNames = (None,    "")
-                           | True                         = (Prop nm, " [Modulo: " ++ why ++ "]")
-   where why | hasSelf = "sorry"
-             | True    = intercalate ", " depNames
+-- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
+-- cannot deal with, or if we want to postpone the proof for the time being. KnuckleDragger will keep
+-- track of the uses of 'sorry' and will print them appropriately while printing proofs.
+sorry :: Proof
+sorry = Proof { dependencies = []
+              , isUserAxiom  = False
+              , getProof     = label "sorry" (quantifiedBool p)
+              , getProp      = toDyn p
+              , proofName    = "sorry"
+              , uniqId       = KDSorry
+              }
+  where -- ideally, I'd rather just use
+        --   p = sFalse
+        -- but then SBV constant folds the boolean, and the generated script
+        -- doesn't contain the actual contents, as SBV determines unsatisfiability
+        -- itself. By using the following proposition (which is easy for the backend
+        -- solver to determine as false, we avoid the constant folding.
+        p (Forall @"__sbvKD_sorry" (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
 
-         -- What's the root-of-trust for this node?
-         -- If there are no "sorry" parents, and no parent nodes
-         -- that are marked with a root of trust, then we don't have it either.
-         -- Otherwise, mark it accordingly.
-         parentRoots = map rootOfTrust by
-         hasSelf     = not $ null [() | Self   <- parentRoots]
-         depNames    = nub $ sort [p  | Prop p <- parentRoots]
+-- | Calculate the root of trust. The returned list of proofs, if any, will need to be sorry-free to
+-- have the given proof to be sorry-free.
+rootOfTrust :: Proof -> RootOfTrust
+rootOfTrust p@Proof{uniqId, dependencies} = compress res
+  where res = case uniqId of
+                KDInternal -> TrustsNothing
+                KDSorry    -> Trusts [sorry]
+                KDUser {}  -> self <> foldMap rootOfTrust dependencies
+
+        -- if sorry is one of our direct dependencies, then we trust this proof
+        self | any isSorry dependencies = Trusts [p]
+             | True                     = mempty
+
+        isSorry Proof{uniqId = u} = u == KDSorry
+
+        -- If we have any dependency that is not sorry itself, then we can skip all the sorries.
+        -- Why? Because "sorry" will implicitly be coming from one of these anyhow. (In other
+        -- words, we do not need to (or want to) distinguish between different uses of sorry.
+        compress TrustsNothing = TrustsNothing
+        compress (Trusts ps)   = Trusts $ case partition isSorry ps of
+                                            (_, []) -> [sorry]
+                                            (_, os) -> os
+
+-- | Calculate the modulo string for dependencies
+trustsModulo :: [Proof] -> String
+trustsModulo by = case foldMap rootOfTrust by of
+                    TrustsNothing -> ""
+                    Trusts ps     -> " [" ++ intercalate ", " (map (shortProofName) ps) ++ "]"

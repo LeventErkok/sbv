@@ -29,7 +29,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KD.KnuckleDragger (
-         Proposition, Proof, Instantiatable(..), Inst(..), getProofTree, kdShowDepsHTML, KDProofDeps(..)
+         Proposition, Proof, Instantiatable(..), Inst(..), getProofTree, kdShowDepsHTML, KDProofDeps(..), rootOfTrust
        , axiom
        , lemma,   lemmaWith
        , theorem, theoremWith
@@ -254,10 +254,8 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
       -- Do a proof step
       walk intros level (bn, ProofStep cur hs p) = do
 
-           let finish et helpers d = finishKD cfg ("Q.E.D." ++ modulo) d et
-                  where (_, modulo) = calculateRootOfTrust nm helpers
-
-               stepName = mkStepName level bn p
+           let finish et helpers d = finishKD cfg ("Q.E.D." ++ trustsModulo helpers) d et
+               stepName            = mkStepName level bn p
 
            -- First prove the assumptions, if there are any. We stay quiet, unless timing is asked for
            let (quietCfg, finalizer)
@@ -294,11 +292,10 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                (Just (initialHypotheses .=> sAnd results))
                resultBool $ \d ->
                  do mbElapsed <- getElapsedTime mbStartTime
-                    let (ros, modulo) = calculateRootOfTrust nm (concatMap getHelperProofs (getAllHelpers calcProofTree))
+                    let modulo = trustsModulo (concatMap getHelperProofs (getAllHelpers calcProofTree))
                     finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
-                    pure Proof { rootOfTrust  = ros
-                               , dependencies = getDependencies calcProofTree
+                    pure Proof { dependencies = getDependencies calcProofTree
                                , isUserAxiom  = False
                                , getProof     = label nm (quantifiedBool result)
                                , getProp      = toDyn result

@@ -24,7 +24,6 @@ module Data.SBV.Tools.KD.Kernel (
        , axiom
        , lemma,   lemmaWith,   lemmaGen
        , theorem, theoremWith
-       , sorry
        , internalAxiom
        , KDProofContext (..), smtProofStep
        ) where
@@ -70,34 +69,13 @@ axiom nm p = do cfg <- getKDConfig
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
 internalAxiom :: Proposition a => String -> a -> Proof
-internalAxiom nm p = Proof { rootOfTrust  = None
-                           , dependencies = []
+internalAxiom nm p = Proof { dependencies = []
                            , isUserAxiom  = False
                            , getProof     = label nm (quantifiedBool p)
                            , getProp      = toDyn p
                            , proofName    = nm
                            , uniqId       = KDInternal
                            }
-
--- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
--- cannot deal with, or if we want to postpone the proof for the time being. KnuckleDragger will keep
--- track of the uses of 'sorry' and will print them appropriately while printing proofs.
-sorry :: Proof
-sorry = Proof { rootOfTrust  = Self
-              , dependencies = []
-              , isUserAxiom  = False
-              , getProof     = label "sorry" (quantifiedBool p)
-              , getProp      = toDyn p
-              , proofName    = "sorry"
-              , uniqId       = KDSorry
-              }
-  where -- ideally, I'd rather just use
-        --   p = sFalse
-        -- but then SBV constant folds the boolean, and the generated script
-        -- doesn't contain the actual contents, as SBV determines unsatisfiability
-        -- itself. By using the following proposition (which is easy for the backend
-        -- solver to determine as false, we avoid the constant folding.
-        p (Forall @"__sbvKD_sorry" (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> String -> a -> [Proof] -> KD Proof
@@ -111,16 +89,14 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nm inputProp by =
 
         -- What to do if all goes well
         good mbStart u d = do mbElapsed <- getElapsedTime mbStart
-                              liftIO $ finishKD cfg ("Q.E.D." ++ modulo) d $ catMaybes [mbElapsed]
-                              pure Proof { rootOfTrust  = ros
-                                         , dependencies = by
+                              liftIO $ finishKD cfg ("Q.E.D." ++ trustsModulo by) d $ catMaybes [mbElapsed]
+                              pure Proof { dependencies = by
                                          , isUserAxiom  = False
                                          , getProof     = label nm (quantifiedBool inputProp)
                                          , getProp      = toDyn inputProp
                                          , proofName    = nm
                                          , uniqId       = u
                                          }
-          where (ros, modulo) = calculateRootOfTrust nm by
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: Proposition a => String -> a -> [Proof] -> KD Proof
