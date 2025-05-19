@@ -16,6 +16,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeAbstractions           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -212,8 +213,8 @@ depsToTree shouldCompress visited xform (cnt, ProofTree top ds) = (nVisited, Nod
 
         (nVisited, chlds)
            | shouldCompress && uniq `elem` visited = (visited, [])
-           | shouldCompress                        = walk (uniq : visited) (compress       (filter interesting ds))
-           | True                                  = walk         visited  (zip (repeat 1) (filter interesting ds))
+           | shouldCompress                        = walk (uniq : visited) (compress (filter interesting ds))
+           | True                                  = walk         visited  (map (1,) (filter interesting ds))
 
         walk v []     = (v, [])
         walk v (c:cs) = let (v',  t)  = depsToTree shouldCompress v xform c
@@ -313,4 +314,4 @@ rootOfTrust p@Proof{uniqId, dependencies} = compress res
 trustsModulo :: [Proof] -> String
 trustsModulo by = case foldMap rootOfTrust by of
                     RootOfTrust Nothing   -> ""
-                    RootOfTrust (Just ps) -> " [" ++ intercalate ", " (map (shortProofName) ps) ++ "]"
+                    RootOfTrust (Just ps) -> " [" ++ intercalate ", " (map shortProofName ps) ++ "]"
