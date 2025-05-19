@@ -175,7 +175,7 @@ shortProofName p | "@" `isInfixOf` s = reverse . dropWhile isSpace . reverse . t
 -- | Keeping track of where the sorry originates from. Used in displaying dependencies.
 newtype RootOfTrust = RootOfTrust (Maybe [Proof])
 
--- | Show instance for 'RootOfTrust'
+-- | Show instance for t'RootOfTrust'
 instance Show RootOfTrust where
   show (RootOfTrust mbp) = case mbp of
                              Nothing -> "Nothing"
