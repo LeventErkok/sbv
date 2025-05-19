@@ -24,7 +24,7 @@
 module Data.SBV.Tools.KD.Utils (
          KD, runKD, runKDWith, Proof(..), sorry
        , startKD, finishKD, getKDState, getKDConfig, kdGetNextUnique, KDState(..), KDStats(..), RootOfTrust(..)
-       , KDProofContext(..), message, updStats, rootOfTrust, trustsModulo
+       , KDProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), KDUnique(..), getProofTree, showProofTree, showProofTreeHTML, shortProofName
        ) where
 
@@ -311,7 +311,7 @@ rootOfTrust p@Proof{uniqId, dependencies} = compress res
                               (_, os) -> os
 
 -- | Calculate the modulo string for dependencies
-trustsModulo :: [Proof] -> String
-trustsModulo by = case foldMap rootOfTrust by of
-                    RootOfTrust Nothing   -> ""
-                    RootOfTrust (Just ps) -> " [" ++ intercalate ", " (map shortProofName ps) ++ "]"
+concludeModulo :: [Proof] -> String
+concludeModulo by = case foldMap rootOfTrust by of
+                      RootOfTrust Nothing   -> ""
+                      RootOfTrust (Just ps) -> " [Modulo: " ++ intercalate ", " (map shortProofName ps) ++ "]"

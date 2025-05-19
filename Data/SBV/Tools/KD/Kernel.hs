@@ -89,7 +89,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nm inputProp by =
 
         -- What to do if all goes well
         good mbStart u d = do mbElapsed <- getElapsedTime mbStart
-                              liftIO $ finishKD cfg ("Q.E.D." ++ trustsModulo by) d $ catMaybes [mbElapsed]
+                              liftIO $ finishKD cfg ("Q.E.D." ++ concludeModulo by) d $ catMaybes [mbElapsed]
                               pure Proof { dependencies = by
                                          , isUserAxiom  = False
                                          , getProof     = label nm (quantifiedBool inputProp)

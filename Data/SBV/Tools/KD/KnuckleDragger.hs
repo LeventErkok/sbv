@@ -255,7 +255,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
       -- Do a proof step
       walk intros level (bn, ProofStep cur hs p) = do
 
-           let finish et helpers d = finishKD cfg ("Q.E.D." ++ trustsModulo helpers) d et
+           let finish et helpers d = finishKD cfg ("Q.E.D." ++ concludeModulo helpers) d et
                stepName            = mkStepName level bn p
 
            -- First prove the assumptions, if there are any. We stay quiet, unless timing is asked for
@@ -293,7 +293,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                (Just (initialHypotheses .=> sAnd results))
                resultBool $ \d ->
                  do mbElapsed <- getElapsedTime mbStartTime
-                    let modulo = trustsModulo (concatMap getHelperProofs (getAllHelpers calcProofTree))
+                    let modulo = concludeModulo (concatMap getHelperProofs (getAllHelpers calcProofTree))
                     finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
                     pure Proof { dependencies = getDependencies calcProofTree
