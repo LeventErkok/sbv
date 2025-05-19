@@ -42,6 +42,7 @@ correctness :: IO Proof
 correctness = runKD $ do
 
    -- We start by establishing that @n < mcCarthy91 n + 11@. This will come in handy when we do the induction later.
+   -- https://github.com/acl2/acl2/blob/be39e7835f1c68008c17188d2f65eeaef61632fa/books/workshops/2000/ruiz/multiset/examples/mccarthy-91/mccarthy-91.lisp#L4
    smaller <- lemma "smaller"
                      (\(Forall @"n" n) -> n .< mcCarthy91 n + 11)
                      [sorry]
