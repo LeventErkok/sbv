@@ -45,8 +45,53 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 -- | Correctness the function 'rev'. We have:
 --
 -- >>> correctness
+-- Inductive lemma: revSameLength
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: revApp
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: revCons                          Q.E.D.
+-- Inductive lemma: reverseReverse
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma (strong): revCorrect
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way full case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2 (2 way full case split)
+--       Step: 1.2.1                       Q.E.D.
+--       Step: 1.2.2.1                     Q.E.D.
+--       Step: 1.2.2.2                     Q.E.D.
+--       Step: 1.2.2.3                     Q.E.D.
+--       Step: 1.2.2.4                     Q.E.D.
+--       Step: 1.2.2.5 (simplify head)     Q.E.D.
+--       Step: 1.2.2.6                     Q.E.D.
+--       Step: 1.2.2.7 (simplify tail)     Q.E.D.
+--       Step: 1.2.2.8                     Q.E.D.
+--       Step: 1.2.2.9                     Q.E.D.
+--       Step: 1.2.2.10                    Q.E.D.
+--       Step: 1.2.2.11 (substitute)       Q.E.D.
+--       Step: 1.2.2.12                    Q.E.D.
+--       Step: 1.2.2.13                    Q.E.D.
+--       Step: 1.2.2.14                    Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] revCorrect
 correctness :: IO Proof
-correctness = runKDWith z3{kdOptions = (kdOptions z3) { measureTime = True}}  $ do
+correctness = runKD $ do
 
   -- Reverse: preserves length
   revSameLength <-
@@ -101,8 +146,6 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { measureTime = True}}  $ 
                     (\a as -> split as trivial
                                     (\_ _ -> head (rev as) .: rev (a .: rev (tail (rev as)))
                                           ?? ih `at` Inst @"xs" as
-                                          =: head (reverse as) .: rev (a .: rev (tail (rev as)))
-                                          ?? ih `at` Inst @"xs" as
                                           =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
                                           ?? ih `at` Inst @"xs" (tail (rev as))
                                           =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
@@ -116,9 +159,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { measureTime = True}}  $ 
                                           =: b .: rev (a .: rev (tail (b .: reverse w)))
                                           ?? "simplify tail"
                                           =: b .: rev (a .: rev (reverse w))
-                                          ?? [ hprf $ ih `at` Inst @"xs" (reverse w)
-                                             , hprf $ revSameLength `at` Inst @"xs" w
-                                             , hasm $ length w .< length as
+                                          ?? [ ih `at` Inst @"xs" (reverse w)
+                                             , revSameLength `at` Inst @"xs" w
                                              ]
                                           =: b .: rev (a .: reverse (reverse w))
                                           ?? revRev `at` Inst @"xs" w
