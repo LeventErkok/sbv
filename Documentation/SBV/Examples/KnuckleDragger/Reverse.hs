@@ -46,7 +46,7 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --
 -- >>> correctness
 correctness :: IO Proof
-correctness = runKD $ do
+correctness = runKDWith z3{kdOptions = (kdOptions z3) { measureTime = True}}  $ do
 
   -- Reverse: preserves length
   revSameLength <-
@@ -60,7 +60,7 @@ correctness = runKD $ do
                                         =: length (x .: xs)
                                         =: qed
 
-  -- reverse and append
+  -- Reverse and append
   revApp  <-
      induct "revApp"
             (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
@@ -73,6 +73,11 @@ correctness = runKD $ do
                    =: reverse ys ++ (reverse xs ++ singleton x)
                    =: reverse ys ++ reverse (x .: xs)
                    =: qed
+
+  -- A simpler version of revApp, for readability
+  revCons <- lemma "revCons"
+                   (\(Forall @"xs" (xs :: SList Integer)) (Forall @"x" x) -> reverse (xs ++ singleton x) .== x .:  reverse xs)
+                   [revApp]
 
   -- Reverse: double reverse is identity
   revRev <-
@@ -101,13 +106,13 @@ correctness = runKD $ do
                                           =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
                                           ?? ih `at` Inst @"xs" (tail (rev as))
                                           =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
-                                          ?? revApp `at` (Inst @"xs" (init as), Inst @"ys" (singleton (last as)))
+                                          ?? revCons `at` (Inst @"xs" (init as), Inst @"x" (last as))
                                           =: let w = init as
                                                  b = last as
                                           in head (b .: reverse w) .: rev (a .: rev (tail (reverse as)))
                                           ?? "simplify head"
                                           =: b .: rev (a .: rev (tail (reverse as)))
-                                          ?? revApp `at` (Inst @"xs" (init as), Inst @"ys" (singleton (last as)))
+                                          ?? revCons `at` (Inst @"xs" (init as), Inst @"x" (last as))
                                           =: b .: rev (a .: rev (tail (b .: reverse w)))
                                           ?? "simplify tail"
                                           =: b .: rev (a .: rev (reverse w))
