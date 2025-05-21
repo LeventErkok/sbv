@@ -30,13 +30,13 @@ import Data.SBV.List
 
 -- | Helper function to count candidates.
 cand :: SInteger -> SInteger -> SList Integer -> SInteger
-cand = smtFunction "cand" $ \c k l -> ite (null l) c
-                                          (let (x, xs) = uncons l
-                                           in ite (x .== c)
-                                                  (cand c (k+1) xs)
+cand = smtFunction "cand" $ \c k xs -> ite (null xs) c
+                                          (let (a, as) = uncons xs
+                                           in ite (a .== c)
+                                                  (cand c (k+1) as)
                                                   (ite (k .== 0)
-                                                       (cand x 1     xs)
-                                                       (cand c (k-1) xs)))
+                                                       (cand a 1     as)
+                                                       (cand c (k-1) as)))
 
 -- | Boyer and Moore's linear time algorithm to find the majority element, if it exists.
 -- The return value is arbitrary if no majority element exists.
@@ -62,14 +62,24 @@ correctness = runKD $ do
 
     -- We prove a generalized version
     helper <-
-      induct "helper"
-             (\(Forall @"xs" xs) (Forall @"k" k) (Forall @"c" c) (Forall @"m" m)
-                   -> majority (replicate k c ++ xs) m .=> cand c k xs .== m) $
-             \ih x xs k c m -> [majority (replicate k c ++ (x .: xs)) m]
-                            |- cand c k (x .: xs)
-                            ?? ih
-                            =: m
-                            =: qed
+      sInduct "helper"
+              (\(Forall @"xs" xs) (Forall @"k" k) (Forall @"c" c) (Forall @"m" m)
+                    -> majority (replicate k c ++ xs) m .=> cand c k xs .== m)
+              (\xs (_k :: SInteger) (_c :: SInteger) (_m :: SInteger) -> length @Integer xs) $
+              \ih xs k c m -> [majority (replicate k c ++ xs) m]
+                           |- cand c k xs
+                           =: split xs
+                                    (c ?? "bad"
+                                       =: m
+                                       =: qed)
+                                    (\a as -> ite (a .== c)
+                                                  (cand c (k+1) as)
+                                                  (ite (k .== 0)
+                                                       (cand a 1     as)
+                                                       (cand c (k-1) as))
+                                           ?? ih
+                                           =: m
+                                           =: qed)
 
     -- The theorem now follows simply from the helper
     calc "correctness"
