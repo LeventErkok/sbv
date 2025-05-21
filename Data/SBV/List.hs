@@ -26,7 +26,7 @@ module Data.SBV.List (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, uncons, init, singleton, listToListAt, elemAt, (!!), implode, concat, (.:), snoc, nil, (++)
+        , head, tail, uncons, init, last, singleton, listToListAt, elemAt, (!!), implode, concat, (.:), snoc, nil, (++)
         -- * Containment
         , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
         -- * Sublists
@@ -45,7 +45,7 @@ module Data.SBV.List (
         , all, any, and, or
         ) where
 
-import Prelude hiding (head, tail, init, length, take, drop, splitAt, concat, null, elem,
+import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
                        all, any, and, or)
 import qualified Prelude as P
@@ -68,7 +68,7 @@ import Data.Proxy
 
 #ifdef DOCTEST
 -- $setup
--- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any)
+-- >>> import Prelude hiding (head, tail, init, last, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any)
 -- >>> import qualified Prelude as P(map)
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds
@@ -137,6 +137,13 @@ init l
  = literal $ P.init cs
  | True
  = subList l 0 (length l - 1)
+
+-- | @`last`@ returns the last element of the list. Unspecified if the list is empty.
+--
+-- >>> prove $ \(l :: SInteger) i -> last (i ++ singleton l) .== l
+-- Q.E.D.
+last :: SymVal a => SList a -> SBV a
+last l = l `elemAt` (length l - 1)
 
 -- | @`singleton` x@ is the list of length 1 that contains the only value @x@.
 --
