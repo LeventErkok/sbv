@@ -48,17 +48,49 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 correctness :: IO Proof
 correctness = runKD $ do
 
+  -- Relationship between cons, reverse and append
   consRev <- lemma "consRev"
                    (\(Forall @"xs" xs) (Forall @"l" (l :: SInteger)) -> l .: reverse xs .== reverse (xs ++ singleton l))
                    [sorry]
 
   -- Reverse: preserves length
-  revPreserveLength <- lemma "revPreserveLength"
-                             (\(Forall @"xs" (xs :: SList Integer)) -> length (reverse xs) .== length xs)
-                             [sorry]
+  revSameLength <-
+    induct "revSameLength"
+           (\(Forall @"xs" (xs :: SList Integer)) -> length (reverse xs) .== length xs) $
+           \ih (x :: SInteger) xs -> [] |- length (reverse (x .: xs))
+                                        =: length (reverse xs ++ singleton x)
+                                        =: length (reverse xs) + length (singleton x)
+                                        ?? ih
+                                        =: length xs + 1
+                                        =: length (x .: xs)
+                                        =: qed
+
+  -- reverse and append
+  revApp  <-
+     induct "revApp"
+            (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
+            \ih (x :: SInteger) xs ys ->
+                [] |- reverse ((x .: xs) ++ ys)
+                   =: reverse (x .: (xs ++ ys))
+                   =: reverse (xs ++ ys) ++ singleton x
+                   ?? ih
+                   =: (reverse ys ++ reverse xs) ++ singleton x
+                   =: reverse ys ++ (reverse xs ++ singleton x)
+                   =: reverse ys ++ reverse (x .: xs)
+                   =: qed
 
   -- Reverse: double reverse is identity
-  revRev <- lemma "revRev" (\(Forall @"xs" (xs :: SList Integer)) -> reverse (reverse xs) .== xs) [sorry]
+  revRev <-
+    induct "reverseReverse"
+           (\(Forall @"xs" (xs :: SList Integer)) -> reverse (reverse xs) .== xs) $
+           \ih (x :: SInteger) xs -> [] |- reverse (reverse (x .: xs))
+                                        =: reverse (reverse xs ++ singleton x)
+                                        ?? revApp
+                                        =: reverse (singleton x) ++ reverse (reverse xs)
+                                        ?? ih
+                                        =: singleton x ++ xs
+                                        =: x .: xs
+                                        =: qed
 
   sInductWith cvc5 "revCorrect"
     (\(Forall @"xs" xs) -> rev xs .== reverse xs)
@@ -85,7 +117,7 @@ correctness = runKD $ do
                                           ?? "simplify tail"
                                           =: b .: rev (a .: rev (reverse w))
                                           ?? [ hprf $ ih `at` Inst @"xs" (reverse w)
-                                             , hprf $ revPreserveLength `at` Inst @"xs" w
+                                             , hprf $ revSameLength `at` Inst @"xs" w
                                              , hasm $ length w .< length as
                                              ]
                                           =: b .: rev (a .: reverse (reverse w))
