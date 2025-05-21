@@ -48,11 +48,6 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 correctness :: IO Proof
 correctness = runKD $ do
 
-  -- Relationship between cons, reverse and append
-  consRev <- lemma "consRev"
-                   (\(Forall @"xs" xs) (Forall @"l" (l :: SInteger)) -> l .: reverse xs .== reverse (xs ++ singleton l))
-                   [sorry]
-
   -- Reverse: preserves length
   revSameLength <-
     induct "revSameLength"
@@ -106,13 +101,13 @@ correctness = runKD $ do
                                           =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
                                           ?? ih `at` Inst @"xs" (tail (rev as))
                                           =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
-                                          ?? consRev `at` (Inst @"xs" (init as), Inst @"l" (last as))
+                                          ?? revApp `at` (Inst @"xs" (init as), Inst @"ys" (singleton (last as)))
                                           =: let w = init as
                                                  b = last as
                                           in head (b .: reverse w) .: rev (a .: rev (tail (reverse as)))
                                           ?? "simplify head"
                                           =: b .: rev (a .: rev (tail (reverse as)))
-                                          ?? consRev `at` (Inst @"xs" (init as), Inst @"l" (last as))
+                                          ?? revApp `at` (Inst @"xs" (init as), Inst @"ys" (singleton (last as)))
                                           =: b .: rev (a .: rev (tail (b .: reverse w)))
                                           ?? "simplify tail"
                                           =: b .: rev (a .: rev (reverse w))
@@ -127,7 +122,7 @@ correctness = runKD $ do
                                           =: b .: reverse (a .: w)
                                           ?? "substitute"
                                           =: last as .: reverse (a .: init as)
-                                          ?? consRev `at` (Inst @"xs" (a .: init as), Inst @"l" (last as))
+                                          ?? revApp `at` (Inst @"xs" (init as), Inst @"ys" (singleton (last as)))
                                           =: reverse (a .: init as ++ singleton (last as))
                                           =: reverse (a .: as)
                                           =: reverse xs
