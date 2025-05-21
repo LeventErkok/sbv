@@ -10,8 +10,8 @@
 -- in terms of cons, head, tail, and itself (recursively)? This example
 -- shows such a definition and proves that it is correct.
 --
--- We follow the proof given in Zohar Manna's 1974 "Mathematical Theory of Computation" book
--- fairly closely, where this definition and its proof is presented in Example 5.36.
+-- See Zohar Manna's 1974 "Mathematical Theory of Computation" book, where this
+-- definition and its proof is presented as Example 5.36.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
@@ -23,7 +23,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Reverse where
 
-import Prelude hiding (head, tail, null, reverse)
+import Prelude hiding (head, tail, null, reverse, length, init, last)
 
 import Data.SBV
 import Data.SBV.List hiding (partition)
@@ -32,13 +32,13 @@ import Data.SBV.Tools.KnuckleDragger
 -- * Reversing with no auxiliaries
 
 -- | This definition of reverse uses no helper functions, other than the usual
--- head, tail, and cons to reverse a given list. Note that efficiency is not our
--- concern here.
+-- head, tail, cons, and uncons to reverse a given list. Note that efficiency
+-- is not our concern here, we call 'rev' itself three times in the body.
 rev :: SList Integer -> SList Integer
-rev = smtFunction "rev" $ \l -> ite (null l .|| null (tail l)) l
-                                    (let (h, t)     = uncons l
-                                         (hrt, trt) = uncons (rev t)
-                                     in hrt .: rev (h .: rev trt))
+rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
+                                     (let (x, as)     = uncons xs
+                                          (hras, tas) = uncons (rev as)
+                                      in hras .: rev (x .: rev tas))
 
 -- * Correctness proof
 
@@ -46,17 +46,27 @@ rev = smtFunction "rev" $ \l -> ite (null l .|| null (tail l)) l
 --
 -- >>> correctness
 correctness :: IO Proof
-correctness = runKD $
+correctness = runKD $ do
 
-  induct "revCorrect"
-         (\(Forall @"xs" xs) -> rev xs .== reverse xs) $
-         \ih h t -> []
-                 |- rev (h .: t)
-                 =: split t ((h .: t) =: qed)
-                            (\y ys -> rev (h .: y .: ys)
-                                   ?? "unfold"
-                                   =: let (hrt, trt) = uncons (rev (y .: ys))
-                                   in hrt .: rev (h .: rev trt)
-                                   ?? ih
-                                   =: reverse (h .: y .: ys)
-                                   =: qed)
+  let last :: SList Integer -> SInteger
+      last = last
+
+  -- A property of reverse: the last element comes to front if the list is not empty.
+  _evInit <- lemma "revInit"
+                   (\(Forall @"xs" xs) -> null xs .|| reverse xs .== last xs .: reverse (init xs))
+                   [sorry]
+
+  sInduct "revCorrect"
+    (\(Forall @"xs" xs) -> rev xs .== reverse xs)
+    (length @Integer) $
+    \ih xs -> []
+           |- rev xs
+           =: split xs trivial
+                    (\a as -> split as trivial
+                                    (\_ _ -> head (rev as) .: rev (a .: rev (tail (rev as)))
+                                          ?? ih `at` Inst @"xs" as
+                                          =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
+                                          ?? ih `at` Inst @"xs" (tail (rev as))
+                                          =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
+                                          =: reverse xs
+                                          =: qed))
