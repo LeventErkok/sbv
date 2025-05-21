@@ -42,10 +42,24 @@ correctness :: IO Proof
 correctness = runKD $ do
 
    -- We start by establishing that @n < mcCarthy91 n + 11@. This will come in handy when we do the induction later.
-   -- https://github.com/acl2/acl2/blob/be39e7835f1c68008c17188d2f65eeaef61632fa/books/workshops/2000/ruiz/multiset/examples/mccarthy-91/mccarthy-91.lisp#L4
-   smaller <- lemma "smaller"
-                     (\(Forall @"n" n) -> n .< mcCarthy91 n + 11)
-                     [sorry]
+   smaller <- sInduct "smaller"
+                      (\(Forall @"n" n) -> n .< mcCarthy91 n + 11)
+                      (\(n :: SInteger) -> ite (n .<= 111) (111 - n) 0) $
+                      \ih n -> [] |- n + 1 .< mcCarthy91 (n + 1) + 11
+                                  =: cases [ n+1 .> 100  ==> n + 1 .< n + 1 - 10 + 11
+                                                          =: n .< n + 1
+                                                          =: sTrue
+                                                          =: qed
+                                           , n+1 .<= 100 ==> n + 1 .< mcCarthy91 (mcCarthy91 (n + 12)) + 11
+                                                          =: n .< mcCarthy91 (mcCarthy91 (n + 12)) + 10
+                                                          ?? [ hprf (ih `at` Inst @"n" (mcCarthy91 (n + 12)))
+                                                             , hcmnt "bad"
+                                                             ]
+                                                          =: mcCarthy91 (n + 12) .< n + 1
+                                                          ?? ih `at` Inst @"n" (n + 12)
+                                                          =: sTrue
+                                                          =: qed
+                                           ]
 
    -- Case 1. When @n > 100@
    case1 <- lemma "case1" (\(Forall @"n" n) -> n .>= 100 .=> mcCarthy91 n .== spec91 n) []
