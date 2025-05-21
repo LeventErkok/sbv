@@ -15,6 +15,8 @@
     addressed by KnuckleDragger's induction methods. If you were using this functionality and have problems
     porting to knuckle-dragger, please get in touch!
 
+   * Add function 'last' to Data.SBV.List.
+
 ### Version 11.7, 2025-05-16
 
   * KnuckleDragger: Add a proof of correctness for the quick-sort algorithm.
