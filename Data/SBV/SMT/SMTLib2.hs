@@ -53,6 +53,7 @@ firstify uniqLen o = prefix o ++ "_" ++ take uniqLen (BC.unpack (B.encode (hash 
   where prefix (SeqOp SBVReverse   {}) = "sbv.reverse"
         prefix (SeqOp SBVZip       {}) = "sbv.zip"
         prefix (SeqOp SBVZipWith   {}) = "sbv.zipWith"
+        prefix (SeqOp SBVReplicate {}) = "sbv.replicate"
         prefix (SeqOp SBVPartition {}) = "sbv.partition"
         prefix (SeqOp SBVMap       {}) = "sbv.map"
         prefix (SeqOp SBVFoldl     {}) = "sbv.foldl"
@@ -343,7 +344,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                  getFuncs (SeqOp (SBVFilter    a     f)) (SeqOp (SBVFilter    x     g)) | [a      ] == [x      ] = Just (f, g)
                  getFuncs (SeqOp (SBVAll       a     f)) (SeqOp (SBVAll       x     g)) | [a      ] == [x      ] = Just (f, g)
                  getFuncs (SeqOp (SBVAny       a     f)) (SeqOp (SBVAny       x     g)) | [a      ] == [x      ] = Just (f, g)
-                 getFuncs _                              _                                                     = Nothing
+                 getFuncs _                              _                                                       = Nothing
 
                  equate :: (Op, (String, SMTLambda), (String, SMTLambda)) -> [String]
                  equate (o, (nm1, f), (nm2, g)) = [ "; Equality for " ++ nm1 ++ " vs. " ++ nm2
@@ -355,14 +356,15 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                             args   = unwords $ map fst params
                             decls  = unwords ['(' : n ++ " " ++ smtType k ++ ")" | (n, k) <- params]
 
-                            paramsOf (SeqOp (SBVZipWith   k1 k2 _ _)) = [           ("xs", KList k1), ("ys", KList k2)]
-                            paramsOf (SeqOp (SBVPartition k1      _)) = [           ("xs", KList k1)]
-                            paramsOf (SeqOp (SBVMap       k1    _ _)) = [           ("xs", KList k1)]
-                            paramsOf (SeqOp (SBVFoldl     k1 k2   _)) = [("b", k2), ("xs", KList k1)]
-                            paramsOf (SeqOp (SBVFoldr     k1 k2   _)) = [("b", k2), ("xs", KList k1)]
-                            paramsOf (SeqOp (SBVFilter    k1      _)) = [           ("xs", KList k1)]
-                            paramsOf (SeqOp (SBVAll       k1      _)) = [           ("xs", KList k1)]
-                            paramsOf (SeqOp (SBVAny       k1      _)) = [           ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVZipWith   k1 k2 _ _)) = [                   ("xs", KList k1), ("ys", KList k2)]
+                            paramsOf (SeqOp (SBVReplicate k        )) = [("i", KUnbounded), ("e",  k)]
+                            paramsOf (SeqOp (SBVPartition k1      _)) = [                   ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVMap       k1    _ _)) = [                   ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVFoldl     k1 k2   _)) = [("b", k2),         ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVFoldr     k1 k2   _)) = [("b", k2),         ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVFilter    k1      _)) = [                   ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVAll       k1      _)) = [                   ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVAny       k1      _)) = [                   ("xs", KList k1)]
                             paramsOf op                               = error $ "Data.SBV.firstifiedEqualities: Unexpected op: " ++ show op
 
         userDefs = declUserFuns defs
@@ -431,6 +433,7 @@ declSBVFunc cfg op = (nm, comment ++ body)
                  SeqOp (SBVReverse   (KList k))              -> mkSeqRev    (KList k)
                  SeqOp (SBVZip       k1 k2)                  -> mkZip       k1 k2 Nothing
                  SeqOp (SBVZipWith   k1 k2 k3 (SMTLambda f)) -> mkZip       k1 k2 (Just (k3, f))
+                 SeqOp (SBVReplicate k)                      -> mkReplicate k
                  SeqOp (SBVPartition ek       (SMTLambda f)) -> mkPartition ek f
                  SeqOp (SBVMap       k1 k2    (SMTLambda f)) -> mkMap       k1 k2 f
                  SeqOp (SBVFoldl     k1 k2    (SMTLambda f)) -> mkFoldl     k1 k2 f
@@ -456,6 +459,7 @@ declSBVFunc cfg op = (nm, comment ++ body)
                  SeqOp (SBVReverse   k@KList{}) -> shf "reverse"   [k] k
                  SeqOp (SBVZip       a b)       -> shf "zip"       [KList a, KList b] (KList (KTuple [a, b]))
                  SeqOp (SBVZipWith   a b c _)   -> shh "zipWith"   ([a, b], c)  ([KList a, KList b], KList c)
+                 SeqOp (SBVReplicate a)         -> shf "replicate" [KUnbounded, a] (KList a)
                  SeqOp (SBVPartition a     _)   -> shh "partition" ([a], KBool) ([KList a], KTuple [KList a, KList a])
                  SeqOp (SBVMap       a b   _)   -> shh "map"       ([a], b)     ([KList a], KList b)
                  SeqOp (SBVFoldl     a b   _)   -> shh "foldl"     ([b, a], b)  ([b, KList a], b)
@@ -591,6 +595,15 @@ declSBVFunc cfg op = (nm, comment ++ body)
                      ]
          where tla  = smtType (KList a)
                tlla = smtType (KList (KList a))
+
+        -- Int -> a -> [a]
+        mkReplicate a = [ "(define-fun-rec " ++ nm ++ " ((i Int) (e " ++ ta ++ ")) " ++ tla
+                        , "                (ite (<= i 0)"
+                        , "                     " ++ empty tla
+                        , "                     (seq.++ (seq.unit e) (" ++ nm ++ " (- i 1) e))))"
+                        ]
+         where ta  = smtType a
+               tla = smtType (KList a)
 
 -- | Declare new sorts
 declSort :: (String, Maybe [String]) -> [String]
@@ -1265,6 +1278,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp o@(SeqOp SBVReverse{})   args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp o@(SeqOp SBVZip{})       args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp o@(SeqOp SBVZipWith{})   args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReplicate{}) args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp o@(SeqOp SBVPartition{}) args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp o@(SeqOp SBVReverse{})   args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp o@(SeqOp SBVMap{})       args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"

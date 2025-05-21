@@ -42,12 +42,12 @@ module Data.SBV.List (
         -- * Filtering
         , filter, partition
         -- * Other list functions
-        , all, any, and, or
+        , all, any, and, or, replicate
         ) where
 
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
-                       all, any, and, or)
+                       all, any, and, or, replicate)
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
@@ -61,7 +61,7 @@ import Data.SBV.Tuple hiding (fst, snd)
 
 import Data.Maybe (isNothing, catMaybes)
 
-import Data.List (genericLength, genericIndex, genericDrop, genericTake)
+import Data.List (genericLength, genericIndex, genericDrop, genericTake, genericReplicate)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf, partition)
 
 import Data.Proxy
@@ -592,7 +592,7 @@ all f l
                  newExpr st KBool (SBVApp op [sva])
 
 -- | Check some element satisfies the predicate.
--- --
+--
 -- >>> let isEven x = x `sMod` 2 .== 0
 -- >>> any (sNot . isEven) [2, 4, 6, 8, 10 :: Integer]
 -- False
@@ -617,6 +617,25 @@ and = all id
 -- | Disjunction of all the elements.
 or :: SList Bool -> SBool
 or = any id
+
+-- | Replicate an element a given number of times.
+--
+-- >>> replicate 3 (2 :: SInteger) .== [2, 2, 2 :: Integer]
+-- True
+-- >>> replicate (-2) (2 :: SInteger) .== ([] :: [Integer])
+-- True
+replicate :: forall a. SymVal a => SInteger -> SBV a -> SList a
+replicate c e
+ | Just c' <- unliteral c, Just e' <- unliteral e
+ = literal (genericReplicate c' e')
+ | True
+ = SBV $ SVal k $ Right $ cache r
+ where k = kindOf (Proxy @(SList a))
+       r st = do svc <- sbvToSV st c
+                 sve <- sbvToSV st e
+                 let op = SeqOp (SBVReplicate (kindOf (Proxy @a)))
+                 registerSpecialFunction st op
+                 newExpr st k (SBVApp op [svc, sve])
 
 -- | @filter f xs@ filters the list with the given predicate.
 --

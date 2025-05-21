@@ -546,6 +546,7 @@ data SeqOp = SeqConcat                           -- ^ See StrConcat
            -- Polymorphic and higher order functions
            | SBVReverse   Kind                     -- ^ reverse k.         Where k is either [a] or String. Reverses the argument, accordingly.
            | SBVZip       Kind Kind                -- ^ zip a b.           Where we zip [a] and [b] to produce [(a, b)]
+           | SBVReplicate Kind                     -- ^ replicate k.       Where we replicate at kind k
            | SBVZipWith   Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where fun :: a -> b -> c, and zipWith   :: (a -> b -> c) -> [a] -> [b] -> [c]
            | SBVPartition Kind           SMTLambda -- ^ partition a fun.   Where fun :: a -> SBool,  and partition :: (a -> Bool) -> [a] -> ([a], [a])
            | SBVMap       Kind Kind      SMTLambda -- ^ map    a b fun.    Where fun :: a -> b,      and map       :: (a -> b) -> [a] -> [b]
@@ -574,6 +575,7 @@ instance Show SeqOp where
   show (SBVReverse   a)       = funcWithKind "sbv.reverse"   a                  Nothing
   show (SBVZip       a b)     = funcWithKind "sbv.zip"       (KTuple [a, b])    Nothing
   show (SBVZipWith   a b c f) = funcWithKind "sbv.zipWith"   (KTuple [a, b, c]) (Just f)
+  show (SBVReplicate a)       = funcWithKind "sbv.replicate" a                  Nothing
   show (SBVPartition a     f) = funcWithKind "sbv.partition" a                  (Just f)
   show (SBVMap       a b   f) = funcWithKind "sbv.map"       (KTuple [a, b])    (Just f)
   show (SBVFoldl     a b   f) = funcWithKind "sbv.foldl"     (KTuple [a, b])    (Just f)
