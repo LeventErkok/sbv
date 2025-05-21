@@ -17,6 +17,9 @@
 
    * Add function 'last' to Data.SBV.List.
 
+   * Add Documentation.SBV.Examples.KnuckleDragger.Reverse, proving a curious definition of reverse that
+     uses no auxiliary definitions is correct.
+
 ### Version 11.7, 2025-05-16
 
   * KnuckleDragger: Add a proof of correctness for the quick-sort algorithm.
