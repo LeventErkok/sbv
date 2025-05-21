@@ -48,11 +48,6 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 correctness :: IO Proof
 correctness = runKD $ do
 
-  -- Reverse: the last element comes to front if the list is not empty.
-  revInit <- lemma "revInit"
-                   (\(Forall @"xs" (xs :: SList Integer)) -> sNot (null xs) .=> reverse xs .== last xs .: reverse (init xs))
-                   [sorry]
-
   consRev <- lemma "consRev"
                    (\(Forall @"xs" xs) (Forall @"l" (l :: SInteger)) -> l .: reverse xs .== reverse (xs ++ singleton l))
                    [sorry]
@@ -79,13 +74,13 @@ correctness = runKD $ do
                                           =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
                                           ?? ih `at` Inst @"xs" (tail (rev as))
                                           =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
-                                          ?? revInit `at` Inst @"xs" as
+                                          ?? consRev `at` (Inst @"xs" (init as), Inst @"l" (last as))
                                           =: let w = init as
                                                  b = last as
                                           in head (b .: reverse w) .: rev (a .: rev (tail (reverse as)))
                                           ?? "simplify head"
                                           =: b .: rev (a .: rev (tail (reverse as)))
-                                          ?? revInit `at` Inst @"xs" as
+                                          ?? consRev `at` (Inst @"xs" (init as), Inst @"l" (last as))
                                           =: b .: rev (a .: rev (tail (b .: reverse w)))
                                           ?? "simplify tail"
                                           =: b .: rev (a .: rev (reverse w))
