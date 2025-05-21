@@ -23,7 +23,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Reverse where
 
-import Prelude hiding (head, tail, null, reverse, length, init, last)
+import Prelude hiding (head, tail, null, reverse, length, init, last, (++))
 
 import Data.SBV
 import Data.SBV.List hiding (partition)
@@ -48,15 +48,24 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 correctness :: IO Proof
 correctness = runKD $ do
 
-  let last :: SList Integer -> SInteger
-      last = last
-
-  -- A property of reverse: the last element comes to front if the list is not empty.
-  _evInit <- lemma "revInit"
-                   (\(Forall @"xs" xs) -> null xs .|| reverse xs .== last xs .: reverse (init xs))
+  -- Reverse: the last element comes to front if the list is not empty.
+  revInit <- lemma "revInit"
+                   (\(Forall @"xs" (xs :: SList Integer)) -> sNot (null xs) .=> reverse xs .== last xs .: reverse (init xs))
                    [sorry]
 
-  sInduct "revCorrect"
+  consRev <- lemma "consRev"
+                   (\(Forall @"xs" xs) (Forall @"l" (l :: SInteger)) -> l .: reverse xs .== reverse (xs ++ singleton l))
+                   [sorry]
+
+  -- Reverse: preserves length
+  revPreserveLength <- lemma "revPreserveLength"
+                             (\(Forall @"xs" (xs :: SList Integer)) -> length (reverse xs) .== length xs)
+                             [sorry]
+
+  -- Reverse: double reverse is identity
+  revRev <- lemma "revRev" (\(Forall @"xs" (xs :: SList Integer)) -> reverse (reverse xs) .== xs) [sorry]
+
+  sInductWith cvc5 "revCorrect"
     (\(Forall @"xs" xs) -> rev xs .== reverse xs)
     (length @Integer) $
     \ih xs -> []
@@ -65,8 +74,34 @@ correctness = runKD $ do
                     (\a as -> split as trivial
                                     (\_ _ -> head (rev as) .: rev (a .: rev (tail (rev as)))
                                           ?? ih `at` Inst @"xs" as
+                                          =: head (reverse as) .: rev (a .: rev (tail (rev as)))
+                                          ?? ih `at` Inst @"xs" as
                                           =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
                                           ?? ih `at` Inst @"xs" (tail (rev as))
                                           =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
+                                          ?? revInit `at` Inst @"xs" as
+                                          =: let w = init as
+                                                 b = last as
+                                          in head (b .: reverse w) .: rev (a .: rev (tail (reverse as)))
+                                          ?? "simplify head"
+                                          =: b .: rev (a .: rev (tail (reverse as)))
+                                          ?? revInit `at` Inst @"xs" as
+                                          =: b .: rev (a .: rev (tail (b .: reverse w)))
+                                          ?? "simplify tail"
+                                          =: b .: rev (a .: rev (reverse w))
+                                          ?? [ hprf $ ih `at` Inst @"xs" (reverse w)
+                                             , hprf $ revPreserveLength `at` Inst @"xs" w
+                                             , hasm $ length w .< length as
+                                             ]
+                                          =: b .: rev (a .: reverse (reverse w))
+                                          ?? revRev `at` Inst @"xs" w
+                                          =: b .: rev (a .: w)
+                                          ?? ih
+                                          =: b .: reverse (a .: w)
+                                          ?? "substitute"
+                                          =: last as .: reverse (a .: init as)
+                                          ?? consRev `at` (Inst @"xs" (a .: init as), Inst @"l" (last as))
+                                          =: reverse (a .: init as ++ singleton (last as))
+                                          =: reverse (a .: as)
                                           =: reverse xs
                                           =: qed))
