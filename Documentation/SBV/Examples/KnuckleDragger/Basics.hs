@@ -13,7 +13,7 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE ExplicitForAll     #-}
 {-# LANGUAGE TypeAbstractions   #-}
 {-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -28,6 +28,8 @@ import Data.SBV.Tools.KnuckleDragger
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XScopedTypeVariables
+-- >>> :set -XTypeApplications
+-- >>> import Data.SBV
 -- >>> import Control.Exception
 #endif
 
@@ -69,24 +71,16 @@ largerIntegerExists = runKD $ lemma "largerIntegerExists"
                                     (\(Forall @"x" x) (Exists @"y" y) -> x .< (y :: SInteger))
                                     []
 
--- | Use an uninterpreted type for the domain
-data T
-mkUninterpretedSort ''T
-
 -- * Basic connectives
 
 -- | Pushing a universal through conjunction. We have:
 --
--- >>> forallConjunction
+-- >>> forallConjunction @Integer (uninterpret "p") (uninterpret "q")
 -- Lemma: forallConjunction                Q.E.D.
 -- [Proven] forallConjunction
-forallConjunction :: IO Proof
-forallConjunction = runKD $ do
-    let p, q :: ST -> SBool
-        p = uninterpret "p"
-        q = uninterpret "q"
-
-        qb = quantifiedBool
+forallConjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO Proof
+forallConjunction p q = runKD $ do
+    let qb = quantifiedBool
 
     lemma "forallConjunction"
            (      (qb (\(Forall @"x" x) -> p x) .&& qb (\(Forall @"x" x) -> q x))
@@ -97,16 +91,12 @@ forallConjunction = runKD $ do
 
 -- | Pushing an existential through disjunction. We have:
 --
--- >>> existsDisjunction
+-- >>> existsDisjunction @Integer (uninterpret "p") (uninterpret "q")
 -- Lemma: existsDisjunction                Q.E.D.
 -- [Proven] existsDisjunction
-existsDisjunction :: IO Proof
-existsDisjunction = runKD $ do
-    let p, q :: ST -> SBool
-        p = uninterpret "p"
-        q = uninterpret "q"
-
-        qb = quantifiedBool
+existsDisjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO Proof
+existsDisjunction p q = runKD $ do
+    let qb = quantifiedBool
 
     lemma "existsDisjunction"
            (      (qb (\(Exists @"x" x) -> p x) .|| qb (\(Exists @"x" x) -> q x))
@@ -117,30 +107,26 @@ existsDisjunction = runKD $ do
 
 -- | We cannot push a universal through a disjunction. We have:
 --
--- >>> forallDisjunctionNot `catch` (\(_ :: SomeException) -> pure ())
+-- >>> forallDisjunctionNot @Integer (uninterpret "p") (uninterpret "q") `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: forallConjunctionNot
 -- *** Failed to prove forallConjunctionNot.
 -- Falsifiable. Counter-example:
---   p :: T -> Bool
---   p T_2 = True
---   p T_0 = True
---   p _   = False
+--   p :: Integer -> Bool
+--   p 2 = True
+--   p 1 = False
+--   p _ = True
 -- <BLANKLINE>
---   q :: T -> Bool
---   q T_2 = False
---   q T_0 = False
---   q _   = True
+--   q :: Integer -> Bool
+--   q 2 = False
+--   q 1 = True
+--   q _ = True
 --
 -- Note how @p@ assigns two selected values to @True@ and everything else to @False@, while @q@ does the exact opposite.
 -- So, there is no common value that satisfies both, providing a counter-example. (It's not clear why the solver finds
 -- a model with two distinct values, as one would have sufficed. But it is still a valud model.)
-forallDisjunctionNot :: IO ()
-forallDisjunctionNot = runKD $ do
-    let p, q :: ST -> SBool
-        p = uninterpret "p"
-        q = uninterpret "q"
-
-        qb = quantifiedBool
+forallDisjunctionNot :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO ()
+forallDisjunctionNot p q = runKD $ do
+    let qb = quantifiedBool
 
     -- This won't prove!
     _won'tGoThrough <- lemma "forallConjunctionNot"
@@ -154,26 +140,22 @@ forallDisjunctionNot = runKD $ do
 
 -- | We cannot push an existential through conjunction. We have:
 --
--- >>> existsConjunctionNot `catch` (\(_ :: SomeException) -> pure ())
+-- >>> existsConjunctionNot @Integer (uninterpret "p") (uninterpret "q") `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: existsConjunctionNot
 -- *** Failed to prove existsConjunctionNot.
 -- Falsifiable. Counter-example:
---   p :: T -> Bool
---   p T_1 = False
---   p _   = True
+--   p :: Integer -> Bool
+--   p 1 = False
+--   p _ = True
 -- <BLANKLINE>
---   q :: T -> Bool
---   q T_1 = True
---   q _   = False
+--   q :: Integer -> Bool
+--   q 1 = True
+--   q _ = False
 --
 -- In this case, we again have a predicate That disagree at every point, providing a counter-example.
-existsConjunctionNot :: IO ()
-existsConjunctionNot = runKD $ do
-    let p, q :: ST -> SBool
-        p = uninterpret "p"
-        q = uninterpret "q"
-
-        qb = quantifiedBool
+existsConjunctionNot :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO ()
+existsConjunctionNot p q = runKD $ do
+    let qb = quantifiedBool
 
     _wont'GoThrough <- lemma "existsConjunctionNot"
                              (      (qb (\(Exists @"x" x) -> p x) .&& qb (\(Exists @"x" x) -> q x))
