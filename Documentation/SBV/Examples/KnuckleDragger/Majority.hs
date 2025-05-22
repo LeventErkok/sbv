@@ -31,12 +31,12 @@ import Data.SBV.List
 -- | Helper function to count candidates.
 cand :: SInteger -> SInteger -> SList Integer -> SInteger
 cand = smtFunction "cand" $ \c k xs -> ite (null xs) c
-                                          (let (a, as) = uncons xs
-                                           in ite (a .== c)
-                                                  (cand c (k+1) as)
-                                                  (ite (k .== 0)
-                                                       (cand a 1     as)
-                                                       (cand c (k-1) as)))
+                                           (let (a, as) = uncons xs
+                                            in ite (a .== c)
+                                                   (cand c (k+1) as)
+                                                   (ite (k .== 0)
+                                                        (cand a 1     as)
+                                                        (cand c (k-1) as)))
 
 -- | Boyer and Moore's linear time algorithm to find the majority element, if it exists.
 -- The return value is arbitrary if no majority element exists.
@@ -60,24 +60,48 @@ majority l m = length l `sEDiv` 2 .< count l m
 correctness :: IO Proof
 correctness = runKD $ do
 
+    -- Majority of a replicated element is that element
+    majSame <- lemma "majSame"
+                     (\(Forall @"k" k) (Forall @"c" c) -> k .> 0 .=> majority (replicate k c) c)
+                     [sorry]
+
+    -- Majority, if exists, is unique
+    majUnique <- lemma "majUnique"
+                       (\(Forall @"xs" xs) (Forall @"m1" m1) (Forall @"m2" m2) ->
+                            majority xs m1 .&& majority xs m2 .=> m1 .== m2)
+                       [sorry]
+
     -- We prove a generalized version
     helper <-
-      sInduct "helper"
+      sInductWith cvc5 "helper"
               (\(Forall @"xs" xs) (Forall @"k" k) (Forall @"c" c) (Forall @"m" m)
                     -> majority (replicate k c ++ xs) m .=> cand c k xs .== m)
               (\xs (_k :: SInteger) (_c :: SInteger) (_m :: SInteger) -> length @Integer xs) $
               \ih xs k c m -> [majority (replicate k c ++ xs) m]
                            |- cand c k xs
                            =: split xs
-                                    (c ?? "bad"
-                                       =: m
-                                       =: qed)
+                                    (cases [ k .>  0 ==> c
+                                                      ?? [ majSame   `at` (Inst @"k" k, Inst @"c" c)
+                                                         , majUnique `at` ( Inst @"xs" (replicate k c)
+                                                                          , Inst @"m1" c
+                                                                          , Inst @"m2" m
+                                                                          )
+                                                         ]
+                                                      =: m
+                                                      =: qed
+                                           -- NB. We don't need a k .<= 0 case. Why?
+                                           -- Because the solver can deduce that the
+                                           -- assumption would imply @majority [] m@ can never be true
+                                           -- in that case, since we'd have 0 < 0. Cool.
+                                           ])
                                     (\a as -> ite (a .== c)
                                                   (cand c (k+1) as)
                                                   (ite (k .== 0)
                                                        (cand a 1     as)
                                                        (cand c (k-1) as))
                                            ?? ih
+                                           ?? "stuck"
+                                           ?? sorry
                                            =: m
                                            =: qed)
 
