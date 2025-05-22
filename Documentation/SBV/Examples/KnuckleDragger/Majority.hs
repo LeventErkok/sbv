@@ -78,32 +78,66 @@ correctness = runKD $ do
               (\(Forall @"xs" xs) (Forall @"k" k) (Forall @"c" c) (Forall @"m" m)
                     -> majority (replicate k c ++ xs) m .=> cand c k xs .== m)
               (\xs (_k :: SInteger) (_c :: SInteger) (_m :: SInteger) -> length @Integer xs) $
-              \ih xs k c m -> [majority (replicate k c ++ xs) m]
-                           |- cand c k xs
-                           =: split xs
-                                    (cases [ k .>  0 ==> c
-                                                      ?? [ majSame   `at` (Inst @"k" k, Inst @"c" c)
-                                                         , majUnique `at` ( Inst @"xs" (replicate k c)
-                                                                          , Inst @"m1" c
-                                                                          , Inst @"m2" m
-                                                                          )
-                                                         ]
-                                                      =: m
-                                                      =: qed
-                                           -- NB. We don't need a k .<= 0 case. Why?
-                                           -- Because the solver can deduce that the
-                                           -- assumption would imply @majority [] m@ can never be true
-                                           -- in that case, since we'd have 0 < 0. Cool.
-                                           ])
-                                    (\a as -> ite (a .== c)
-                                                  (cand c (k+1) as)
-                                                  (ite (k .== 0)
-                                                       (cand a 1     as)
-                                                       (cand c (k-1) as))
-                                           ?? ih
-                                           ?? sorry
+              \ih xs k c m ->
+                   [majority (replicate k c ++ xs) m]
+                |- cand c k xs
+                =: split xs
+                         (cases [ k .>  0 ==> c
+                                           ?? [ majSame   `at` (Inst @"k" k, Inst @"c" c)
+                                              , majUnique `at` ( Inst @"xs" (replicate k c)
+                                                               , Inst @"m1" c
+                                                               , Inst @"m2" m
+                                                               )
+                                              ]
                                            =: m
-                                           =: qed)
+                                           =: qed
+                                , k .<= 0 ==> c
+                                           -- Note that the assumption
+                                           --
+                                           --    majority (replicate k c ++ xs) m
+                                           --
+                                           -- evaluates to False in this case. Why? Well,
+                                           -- @xs@ is null, and so is @replicate k c@, so
+                                           -- we get @majority [] m@, which then leads
+                                           -- to '0 .< 0', i.e., false. That is, the case
+                                           -- combined implication leads to a contradiction
+                                           -- Hence, we're justified in putting 'sFalse'
+                                           -- here as the reason, since False implies everything.
+                                           --
+                                           -- In fact, we can even totally skip the @k .<= 0@ case
+                                           -- as the SMT solver will figure that out on its own, but
+                                           -- we're being explicit here.
+                                           ?? sFalse
+                                           =: m
+                                           =: qed
+                                ])
+                         (\a as -> ite (a .== c)
+                                       (cand c (k+1) as)
+                                       (ite (k .== 0)
+                                            (cand a 1     as)
+                                            (cand c (k-1) as))
+                                =: cases [ a .== c
+                                           ==> cand c (k+1) as
+                                            ?? ih `at` (Inst @"xs" as, Inst @"k" (k+1), Inst @"c" c, Inst @"m" m)
+                                            ?? "c1"
+                                            ?? sorry
+                                            =: m
+                                            =: qed
+                                         , a ./= c .&& k .== 0
+                                           ==> cand a 1 as
+                                            ?? ih `at` (Inst @"xs" as, Inst @"k" (1 :: SInteger), Inst @"c" a, Inst @"m" m)
+                                            ?? "c2"
+                                            ?? sorry
+                                            =: m
+                                            =: qed
+                                         , a ./= c .&& k ./= 0
+                                           ==> cand c (k-1) as
+                                            ?? ih `at` (Inst @"xs" as, Inst @"k" (k-1), Inst @"c" c, Inst @"m" m)
+                                            ?? "c3"
+                                            ?? sorry
+                                            =: m
+                                            =: qed
+                                         ])
 
     -- The theorem now follows simply from the helper
     calc "correctness"
