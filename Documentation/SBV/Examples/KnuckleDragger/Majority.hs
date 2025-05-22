@@ -6,9 +6,10 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proving Boyer-Moore's majority algorithm correct. We follow Tobias Nipkow's
--- proof in https://www21.in.tum.de/~nipkow/pubs/ijsi11.pdf closely. (See
--- Section 5 of the paper.)
+-- Proving Boyer-Moore's majority algorithm correct. We use the ideas in
+-- Tobias Nipkow's proof (See https://www21.in.tum.de/~nipkow/pubs/ijsi11.pdf),
+-- though the paper is sparse on details which we fill here. (See Section 5 of
+-- the paper.)
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
