@@ -100,7 +100,6 @@ correctness = runKD $ do
                                                        (cand a 1     as)
                                                        (cand c (k-1) as))
                                            ?? ih
-                                           ?? "stuck"
                                            ?? sorry
                                            =: m
                                            =: qed)
