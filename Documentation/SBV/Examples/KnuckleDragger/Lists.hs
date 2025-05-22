@@ -222,6 +222,38 @@ lenAppend2 :: IO Proof
 lenAppend2 = runKD $
     lemma "lenAppend2" (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> length xs .== length ys .=> length (xs ++ ys) .== 2 * length xs) []
 
+-- * Replicate
+
+-- | @length (replicate k x) == max (0, k)@
+--
+-- We have:
+--
+-- >>> replicateLength (Proxy @Integer)
+-- Inductive lemma: replicateLength
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] replicateLength
+replicateLength :: forall a. SymVal a => Proxy a -> IO Proof
+replicateLength _ = runKD $
+   induct "replicateLength"
+          (\(Forall @"k" k) (Forall @"x" (x :: SBV a)) -> length (replicate k x) .== 0 `smax` k) $
+          \ih k (x :: SBV a) -> [] |- length (replicate (k+1) x)
+                             =: cases [ k .< 0  ==> trivial
+                                      , k .>= 0 ==> length (x .: replicate k x)
+                                                 =: 1 + length (replicate k x)
+                                                 ?? ih
+                                                 =: 1 + 0 `smax` k
+                                                 =: 0 `smax` (k+1)
+                                                 =: qed
+                                      ]
+
 -- * Any, all, and filtering
 
 -- | @not (all id xs) == any not xs@

@@ -15,10 +15,10 @@
     addressed by KnuckleDragger's induction methods. If you were using this functionality and have problems
     porting to knuckle-dragger, please get in touch!
 
-   * Add functions 'last' and 'replicate' to Data.SBV.List.
+  * Add functions 'last' and 'replicate' to Data.SBV.List.
 
-   * Add Documentation.SBV.Examples.KnuckleDragger.Reverse, proving a curious definition of reverse that
-     uses no auxiliary definitions is correct.
+  * Add Documentation.SBV.Examples.KnuckleDragger.Reverse, proving a curious definition of reverse that
+    uses no auxiliary definitions is correct.
 
 ### Version 11.7, 2025-05-16
 
