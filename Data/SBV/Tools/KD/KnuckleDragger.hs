@@ -1127,9 +1127,10 @@ cases = ProofBranch True []
 
 -- | Case splitting over a list; empty and full cases
 split :: SymVal a => SList a -> KDProofRaw r -> (SBV a -> SList a -> KDProofRaw r) -> KDProofRaw r
-split xs empty cons = ProofBranch False [] [ (      SL.null xs,  empty)
-                                           , (sNot (SL.null xs), cons (SL.head xs) (SL.tail xs))
-                                           ]
+split xs empty cons = ProofBranch False [] [(cnil, empty), (ccons, cons h t)]
+   where cnil   = SL.null   xs
+         (h, t) = SL.uncons xs
+         ccons  = sNot cnil .&& xs .== h SL..: t
 
 -- | Case splitting over two lists; empty and full cases for each
 split2 :: (SymVal a, SymVal b)
@@ -1141,11 +1142,19 @@ split2 :: (SymVal a, SymVal b)
        -> KDProofRaw r
 split2 (xs, ys) ee ec ce cc = ProofBranch False
                                           []
-                                          [ (      SL.null xs  .&&       SL.null ys , ee)
-                                          , (      SL.null xs  .&& sNot (SL.null ys), ec (SL.head ys, SL.tail ys))
-                                          , (sNot (SL.null xs) .&&       SL.null ys , ce (SL.head xs, SL.tail xs))
-                                          , (sNot (SL.null xs) .&& sNot (SL.null ys), cc (SL.head xs, SL.tail xs) (SL.head ys, SL.tail ys))
+                                          [ (xnil  .&& ynil,  ee)
+                                          , (xnil  .&& ycons, ec (hy, ty))
+                                          , (xcons .&& ynil,  ce (hx, tx))
+                                          , (xcons .&& ycons, cc (hx, tx) (hy, ty))
                                           ]
+  where xnil     = SL.null   xs
+        (hx, tx) = SL.uncons xs
+        xcons    = sNot xnil .&& xs .== hx SL..: tx
+
+        ynil     = SL.null   ys
+        (hy, ty) = SL.uncons ys
+        ycons    = sNot ynil .&& ys .== hy SL..: ty
+
 
 -- | Specifying a case-split, helps with the boolean case.
 (==>) :: SBool -> KDProofRaw a -> (SBool, KDProofRaw a)
