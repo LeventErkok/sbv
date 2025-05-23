@@ -12,6 +12,7 @@
 -- back in 1989.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -23,16 +24,25 @@ module Documentation.SBV.Examples.KnuckleDragger.QuickSort where
 
 import Prelude hiding (null, length, (++), tail, all, fst, snd, elem)
 import Control.Monad.Trans (liftIO)
+import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List hiding (partition)
 import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
 
+import qualified Documentation.SBV.Examples.KnuckleDragger.SortHelpers as SH
+
+#ifdef DOCTEST
+-- $setup
+-- >>> :set -XTypeApplications
+-- >>> import Data.Proxy
+#endif
+
 -- * Quick sort
 
 -- | Quick-sort, using the first element as pivot.
-quickSort :: SList Integer -> SList Integer
+quickSort :: (Ord a, SymVal a) => SList a -> SList a
 quickSort = smtFunction "quickSort" $ \l -> ite (null l)
                                                 nil
                                                 (let (x,  xs) = uncons l
@@ -42,7 +52,7 @@ quickSort = smtFunction "quickSort" $ \l -> ite (null l)
 -- | We define @partition@ as an explicit function. Unfortunately, we can't just replace this
 -- with @\pivot xs -> Data.List.SBV.partition (.< pivot) xs@ because that would create a firstified version of partition
 -- with a free-variable captured, which isn't supported due to higher-order limitations in SMTLib.
-partition :: SInteger -> SList Integer -> STuple [Integer] [Integer]
+partition :: (Ord a, SymVal a) => SBV a -> SList a -> STuple [a] [a]
 partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
                                                        (tuple (nil, nil))
                                                        (let (a,  as) = uncons xs
@@ -51,34 +61,13 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
                                                                (tuple (a .: lo, hi))
                                                                (tuple (lo, a .: hi)))
 
--- * Helper functions
-
--- | A predicate testing whether a given list is non-decreasing.
-nonDecreasing :: SList Integer -> SBool
-nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
-                                                 .|| let (x, l') = uncons l
-                                                         (y, _)  = uncons l'
-                                                     in x .<= y .&& nonDecreasing l'
-
--- | Count the number of occurrences of an element in a list
-count :: SInteger -> SList Integer -> SInteger
-count = smtFunction "count" $ \e l -> ite (null l)
-                                          0
-                                          (let (x, xs) = uncons l
-                                               cxs     = count e xs
-                                           in ite (e .== x) (1 + cxs) cxs)
-
--- | Are two lists permutations of each other?
-isPermutation :: SList Integer -> SList Integer -> SBool
-isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x ys)
-
 -- * Correctness proof
 
 -- | Correctness of quick-sort.
 --
 -- We have:
 --
--- >>> correctness
+-- >>> correctness (Proxy @Integer)
 -- Inductive lemma: lltCorrect
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
@@ -249,20 +238,27 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --     │  └╴permutationImpliesSublist
 --     └╴nonDecreasingMerge
 -- [Proven] quickSortIsCorrect
-correctness :: IO Proof
-correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
+correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
+correctness _ = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
+
+  --------------------------------------------------------------------------------------------
+  -- Part I. Import helper lemmas, definitions
+  --------------------------------------------------------------------------------------------
+  let count         = SH.count         @a
+      isPermutation = SH.isPermutation @a
+      nonDecreasing = SH.nonDecreasing @a
 
   ---------------------------------------------------------------------------------------------------
-  -- Part I. Formalizing less-than/greater-than-or-equal over lists and relationship to permutations
+  -- Part II. Formalizing less-than/greater-than-or-equal over lists and relationship to permutations
   ---------------------------------------------------------------------------------------------------
   -- llt: list less-than:     all the elements are <  pivot
   -- lge: list greater-equal: all the elements are >= pivot
-  let llt, lge :: SInteger -> SList Integer -> SBool
+  let llt, lge :: SBV a -> SList a -> SBool
       llt = smtFunction "llt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& llt pivot xs
       lge = smtFunction "lge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& lge pivot xs
 
       -- Sublist relationship
-      sublist :: SList Integer -> SList Integer -> SBool
+      sublist :: SList a -> SList a -> SBool
       sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e ys .> 0)
 
   -- llt correctness
@@ -421,7 +417,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                         =: qed
 
   --------------------------------------------------------------------------------------------
-  -- Part II. Helper lemmas for partition
+  -- Part III. Helper lemmas for partition
   --------------------------------------------------------------------------------------------
 
   -- The first element of the partition produces all smaller elements
@@ -456,9 +452,9 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   -- The first element of partition does not increase in size
   partitionNotLongerFst <- sInduct "partitionNotLongerFst"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (fst (partition pivot l)) .<= length l)
-     (\l (_ :: SInteger) -> length @Integer l) $
-     \ih l pivot -> [] |- length (fst (partition pivot l)) .<= length l
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (fst (partition @a pivot l)) .<= length l)
+     (\l (_ :: SBV a) -> length @a l) $
+     \ih l pivot -> [] |- length (fst (partition @a pivot l)) .<= length l
                        =: split l trivial
                                 (\a as -> let lo = fst (partition pivot as)
                                        in ite (a .< pivot)
@@ -474,9 +470,9 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   -- The second element of partition does not increase in size
   partitionNotLongerSnd <- sInduct "partitionNotLongerSnd"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (snd (partition pivot l)) .<= length l)
-     (\l (_ :: SInteger) -> length @Integer l) $
-     \ih l pivot -> [] |- length (snd (partition pivot l)) .<= length l
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (snd (partition @a pivot l)) .<= length l)
+     (\l (_ :: SBV a) -> length @a l) $
+     \ih l pivot -> [] |- length (snd (partition @a pivot l)) .<= length l
                        =: split l trivial
                                 (\a as -> let hi = snd (partition pivot as)
                                        in ite (a .< pivot)
@@ -491,7 +487,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                        =: qed)
 
   --------------------------------------------------------------------------------------------
-  -- Part III. Helper lemmas for count
+  -- Part IV. Helper lemmas for count
   --------------------------------------------------------------------------------------------
 
   -- Count distributes over append
@@ -509,7 +505,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                  =: qed
 
   -- Count is preserved over partition
-  let countTuple :: SInteger -> STuple [Integer] [Integer] -> SInteger
+  let countTuple :: SBV a -> STuple [a] [a] -> SInteger
       countTuple e xsys = count e xs + count e ys
         where (xs, ys) = untuple xsys
 
@@ -546,13 +542,13 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                        =: qed
                             ]
   --------------------------------------------------------------------------------------------
-  -- Part IV. Prove that the output of quick sort is a permutation of its input
+  -- Part V. Prove that the output of quick sort is a permutation of its input
   --------------------------------------------------------------------------------------------
 
   sortCountsMatch <-
      sInduct "sortCountsMatch"
-             (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (quickSort xs))
-             (\xs (_ :: SInteger) -> length @Integer xs) $
+             (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> count e xs .== count e (quickSort xs))
+             (\xs (_ :: SBV a) -> length @a xs) $
              \ih xs e ->
                 [] |- count e (quickSort xs)
                    =: split xs trivial
@@ -584,7 +580,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
   sortIsPermutation <- lemma "sortIsPermutation" (\(Forall @"xs" xs) -> isPermutation xs (quickSort xs)) [sortCountsMatch]
 
   --------------------------------------------------------------------------------------------
-  -- Part V. Helper lemmas for nonDecreasing
+  -- Part VI. Helper lemmas for nonDecreasing
   --------------------------------------------------------------------------------------------
   nonDecreasingMerge <-
       inductWith cvc5 "nonDecreasingMerge"
@@ -602,12 +598,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                             =: qed)
 
   --------------------------------------------------------------------------------------------
-  -- Part VI. Prove that the output of quick sort is non-decreasing
+  -- Part VII. Prove that the output of quick sort is non-decreasing
   --------------------------------------------------------------------------------------------
   sortIsNonDecreasing <-
      sInductWith cvc5 "sortIsNonDecreasing"
              (\(Forall @"xs" xs) -> nonDecreasing (quickSort xs))
-             (length @Integer) $
+             (length @a) $
              \ih xs ->
                 [] |- nonDecreasing (quickSort xs)
                    =: split xs trivial
@@ -645,7 +641,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                    =: qed)
 
   --------------------------------------------------------------------------------------------
-  -- Part VII. Putting it together
+  -- Part VIII. Putting it together
   --------------------------------------------------------------------------------------------
 
   qs <- lemma "quickSortIsCorrect"

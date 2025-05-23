@@ -9,6 +9,7 @@
 -- Proving merge sort correct.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -18,16 +19,25 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.MergeSort where
 
+import Prelude hiding (null, length, head, tail, elem, splitAt, (++), take, drop)
+import Data.Proxy
+
 import Data.SBV
+import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
 
-import Prelude hiding (null, length, head, tail, elem, splitAt, (++), take, drop)
-import Data.SBV.List
+import qualified Documentation.SBV.Examples.KnuckleDragger.SortHelpers as SH
+
+#ifdef DOCTEST
+-- $setup
+-- >>> :set -XTypeApplications
+-- >>> import Data.Proxy
+#endif
 
 -- * Merge sort
 
 -- | Merge two already sorted lists into another
-merge :: SList Integer -> SList Integer -> SList Integer
+merge :: (Ord a, SymVal a) => SList a -> SList a -> SList a
 merge = smtFunction "merge" $ \l r -> ite (null l) r
                                     $ ite (null r) l
                                     $ let (a, as) = uncons l
@@ -35,30 +45,10 @@ merge = smtFunction "merge" $ \l r -> ite (null l) r
                                       in ite (a .<= b) (a .: merge as r) (b .: merge l bs)
 
 -- | Merge sort, using 'merge' above to successively sort halved input
-mergeSort :: SList Integer -> SList Integer
+mergeSort :: (Ord a, SymVal a) => SList a -> SList a
 mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
                                               $ let (h1, h2) = splitAt (length l `sEDiv` 2) l
                                                 in merge (mergeSort h1) (mergeSort h2)
--- * Helper functions
-
--- | A predicate testing whether a given list is non-decreasing.
-nonDecreasing :: SList Integer -> SBool
-nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
-                                                 .|| let (x, l') = uncons l
-                                                         (y, _)  = uncons l'
-                                                     in x .<= y .&& nonDecreasing l'
-
--- | Count the number of occurrences of an element in a list
-count :: SInteger -> SList Integer -> SInteger
-count = smtFunction "count" $ \e l -> ite (null l)
-                                          0
-                                          (let (x, xs) = uncons l
-                                               cxs     = count e xs
-                                           in ite (e .== x) (1 + cxs) cxs)
-
--- | Are two lists permutations of each other?
-isPermutation :: SList Integer -> SList Integer -> SBool
-isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x ys)
 
 -- * Correctness proof
 
@@ -66,8 +56,8 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --
 -- We have:
 --
--- >>> correctness
--- Lemma: nonDecrInsert                                        Q.E.D.
+-- >>> correctness (Proxy @Integer)
+-- Lemma: nonDecrInsert                    Q.E.D.
 -- Inductive lemma (strong): mergeKeepsSort
 --   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (4 way full case split)
@@ -130,22 +120,25 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --   Result:                                                   Q.E.D.
 -- Lemma: mergeSortIsCorrect                                   Q.E.D.
 -- [Proven] mergeSortIsCorrect
-correctness :: IO Proof
-correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
+correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
+correctness _ = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
     --------------------------------------------------------------------------------------------
-    -- Part I. Prove that the output of merge sort is non-decreasing.
+    -- Part I. Import helper lemmas, definitions
     --------------------------------------------------------------------------------------------
+    let nonDecreasing = SH.nonDecreasing @a
+        isPermutation = SH.isPermutation @a
+        count         = SH.count         @a
 
-    nonDecrIns <- lemma "nonDecrInsert"
-                        (\(Forall @"x" x) (Forall @"ys" ys) -> nonDecreasing ys .&& sNot (null ys) .&& x .<= head ys
-                                                           .=> nonDecreasing (x .: ys))
-                        []
+    nonDecrIns <- use $ SH.nonDecrIns (Proxy @Integer)
+    --------------------------------------------------------------------------------------------
+    -- Part II. Prove that the output of merge sort is non-decreasing.
+    --------------------------------------------------------------------------------------------
 
     mergeKeepsSort <-
         sInductWith cvc5 "mergeKeepsSort"
            (\(Forall @"xs" xs) (Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys))
-           (\(xs :: SList Integer) (ys :: SList Integer) -> (length xs, length ys)) $
+           (\xs ys -> (length @a xs, length @a ys)) $
            \ih xs ys -> [nonDecreasing xs, nonDecreasing ys]
                      |- split2 (xs, ys)
                                trivial           -- when both xs and ys are empty.  Trivial.
@@ -175,7 +168,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
     sortNonDecreasing <-
         sInduct "sortNonDecreasing"
                 (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs))
-                (length @Integer) $
+                (length @a) $
                 \ih xs -> [] |- split xs
                                       qed
                                       (\e es -> nonDecreasing (mergeSort (e .: es))
@@ -200,12 +193,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                              =: qed)
 
     --------------------------------------------------------------------------------------------
-    -- Part II. Prove that the output of merge sort is a permuation of its input
+    -- Part III. Prove that the output of merge sort is a permuation of its input
     --------------------------------------------------------------------------------------------
     mergeCount <-
         sInduct "mergeCount"
-                (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (merge xs ys) .== count e xs + count e ys)
-                (\(xs :: SList Integer) (ys :: SList Integer) (_e :: SInteger) -> (length xs, length ys)) $
+                (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"e" e) -> count e (merge xs ys) .== count e xs + count e ys)
+                (\xs ys (_e :: SBV a) -> (length @a xs, length @a ys)) $
                 \ih as bs e -> [] |-
                         split2 (as, bs)
                                trivial
@@ -270,8 +263,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
     sortIsPermutation <-
         sInductWith cvc5 "sortIsPermutation"
-                (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs))
-                (\(xs :: SList Integer) (_e :: SInteger) -> length xs) $
+                (\(Forall @"xs" (xs :: SList a)) (Forall @"e" e) -> count e xs .== count e (mergeSort xs))
+                (\xs (_e :: SBV a) -> length @a xs) $
                 \ih as e -> [] |- split as
                                         qed
                                         (\x xs -> count e (mergeSort (x .: xs))
