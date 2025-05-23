@@ -86,13 +86,30 @@ appendAssoc _ = runKD $
 
 -- * Reverse and append
 
--- | @reverse (x:xs) == reverse xs ++ [x]@
+-- | @length (reverse xs) = length xs@
 --
--- >>> revCons (Proxy @Integer)
--- Lemma: revCons                          Q.E.D.
--- [Proven] revCons
-revCons :: forall a. SymVal a => Proxy a -> IO Proof
-revCons _ = runKD $ lemma "revCons" (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (x .: xs) .== reverse xs ++ singleton x) []
+-- We have:
+--
+-- >>> reversePreservesLength (Proxy @Integer)
+-- Inductive lemma: reversePreservesLength
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] reversePreservesLength
+reversePreservesLength :: forall a. SymVal a => Proxy a -> IO Proof
+reversePreservesLength _ = runKD $
+    induct "reversePreservesLength"
+           (\(Forall @"xs" (xs :: SList Integer)) -> length (reverse xs) .== length xs) $
+           \ih (x :: SInteger) xs -> [] |- length (reverse (x .: xs))
+                                        =: length (reverse xs ++ singleton x)
+                                        =: length (reverse xs) + length (singleton x)
+                                        ?? ih
+                                        =: length xs + 1
+                                        =: length (x .: xs)
+                                        =: qed
 
 -- | @reverse (xs ++ ys) .== reverse ys ++ reverse xs@
 --
@@ -120,6 +137,35 @@ revApp _ = runKD $
                                        =: reverse ys ++ (reverse xs ++ singleton x)
                                        =: reverse ys ++ reverse (x .: xs)
                                        =: qed
+
+-- | @reverse (x:xs) == reverse xs ++ [x]@
+--
+-- >>> revCons (Proxy @Integer)
+-- Lemma: revCons                          Q.E.D.
+-- [Proven] revCons
+revCons :: forall a. SymVal a => Proxy a -> IO Proof
+revCons _ = runKD $ lemma "revCons" (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (x .: xs) .== reverse xs ++ singleton x) []
+
+-- | @reverse (xs ++ [x]) == x : reverse xs@
+--
+-- >>> revSnoc (Proxy @Integer)
+-- Inductive lemma: revApp
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: revSnoc                          Q.E.D.
+-- [Proven] revSnoc
+revSnoc :: forall a. SymVal a => Proxy a -> IO Proof
+revSnoc _ = runKD $ do
+   ra <- use $ revApp (Proxy @a)
+
+   lemma "revSnoc"
+         (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (xs ++ singleton x) .== x .: reverse xs)
+         [ra]
 
 -- * Reversing twice is identity
 
