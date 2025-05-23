@@ -249,9 +249,10 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
       nonDecreasing = SH.nonDecreasing @a
       sublist       = SH.sublist       @a
 
-  countAppend <- use $ SH.countAppend p
-  sublistElem <- use $ SH.sublistElem p
-  sublistTail <- use $ SH.sublistTail p
+  countAppend               <- use $ SH.countAppend               p
+  sublistElem               <- use $ SH.sublistElem               p
+  sublistTail               <- use $ SH.sublistTail               p
+  permutationImpliesSublist <- use $ SH.permutationImpliesSublist p
 
   ---------------------------------------------------------------------------------------------------
   -- Part II. Formalizing less-than/greater-than-or-equal over lists and relationship to permutations
@@ -281,11 +282,6 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
                              ?? ih
                              =: sTrue
                              =: qed
-
-  -- Permutation implies sublist
-  permutationImpliesSublist <- lemma "permutationImpliesSublist"
-                                    (\(Forall @"xs" xs) (Forall @"ys" ys) -> isPermutation xs ys .=> xs `sublist` ys)
-                                    []
 
   -- If a value is less than all the elements in a list, then it is also less than all the elements of any sublist of it
   lltSublist <-

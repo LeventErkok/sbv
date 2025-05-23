@@ -338,3 +338,14 @@ sublistTail p = runKD $
   lemma (atProxy p "sublistTail")
         (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> xs `sublist` ys)
         []
+
+-- | Permutation implies sublist. We have:
+--
+-- >>> permutationImpliesSublist (Proxy @Integer)
+-- Lemma: permutationImpliesSublist @IntegerQ.E.D.
+-- [Proven] permutationImpliesSublist @Integer
+permutationImpliesSublist :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
+permutationImpliesSublist p = runKD $
+  lemma (atProxy p "permutationImpliesSublist")
+        (\(Forall @"xs" xs) (Forall @"ys" (ys :: SList a)) -> isPermutation xs ys .=> xs `sublist` ys)
+        []
