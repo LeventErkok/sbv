@@ -39,7 +39,7 @@ module Data.SBV.Tools.KnuckleDragger.KnuckleDragger (
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
+       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), qed, trivial, contradiction, atProxy
        ) where
 
 import Data.SBV

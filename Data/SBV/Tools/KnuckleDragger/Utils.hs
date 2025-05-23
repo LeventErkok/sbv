@@ -18,6 +18,7 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeAbstractions           #-}
+{-# LANGUAGE TypeApplications           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -26,6 +27,7 @@ module Data.SBV.Tools.KnuckleDragger.Utils (
        , startKD, finishKD, getKDState, getKDConfig, kdGetNextUnique, KDState(..), KDStats(..), RootOfTrust(..)
        , KDProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), KDUnique(..), getProofTree, showProofTree, showProofTreeHTML, shortProofName
+       , atProxy
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -38,6 +40,7 @@ import Data.Tree.View
 
 import Data.Char (isSpace)
 import Data.List (intercalate, isInfixOf, nubBy, partition)
+import Data.Proxy
 import System.IO (hFlush, stdout)
 
 import Data.SBV.Core.Data      (SBool, Forall(..), quantifiedBool)
@@ -52,6 +55,8 @@ import Data.IORef
 
 import GHC.Generics
 import Data.Dynamic
+
+import Type.Reflection
 
 -- | Various statistics we collect
 data KDStats = KDStats { noOfCheckSats :: Int
@@ -315,3 +320,8 @@ concludeModulo :: [Proof] -> String
 concludeModulo by = case foldMap rootOfTrust by of
                       RootOfTrust Nothing   -> ""
                       RootOfTrust (Just ps) -> " [Modulo: " ++ intercalate ", " (map shortProofName ps) ++ "]"
+
+--- | Converts a proxy to a readable result. This is useful when you want to write a polymorphic
+-- proof, so that the name contains the instantiated version properly.
+atProxy :: forall a. Typeable a => Proxy a -> String -> String
+atProxy _ nm = nm ++ " @" ++ show (typeRep @a)

@@ -30,7 +30,6 @@ import Data.Proxy
 import Data.SBV
 import Data.SBV.List hiding (partition)
 import Data.SBV.Tools.KnuckleDragger
-import Data.SBV.Utils.Lib (shAtProxy)
 
 import qualified Data.SBV.Tools.KnuckleDragger.Lists as KDL
 
@@ -126,7 +125,7 @@ correctness p = runKD $ do
   revSnoc            <- use $ KDL.revSnoc                p
   reverseReverse     <- use $ KDL.reverseReverse         p
 
-  sInductWith cvc5 (shAtProxy p "revCorrect")
+  sInductWith cvc5 (atProxy p "revCorrect")
     (\(Forall @"xs" (xs :: SList a)) -> rev xs .== reverse xs)
     (length @a) $
     \ih (xs :: SList a) ->

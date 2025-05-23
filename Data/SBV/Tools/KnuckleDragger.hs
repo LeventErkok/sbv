@@ -60,6 +60,9 @@ module Data.SBV.Tools.KnuckleDragger (
 
        -- * Finishing up a calculational proof
        , qed, trivial, contradiction
+
+       -- * Helpers
+       , atProxy
        ) where
 
 import Data.SBV.Tools.KnuckleDragger.KnuckleDragger

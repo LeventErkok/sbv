@@ -22,7 +22,6 @@ module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlif
                           , checkObservableName
                           , needsBars, isEnclosedInBars
                           , noSurrounding, unQuote, unBar, nameSupply
-                          , shAtProxy
                           ,   curry2,   curry3,   curry4,   curry5,   curry6,   curry7,   curry8,   curry9,   curry10,   curry11,   curry12
                           , uncurry2, uncurry3, uncurry4, uncurry5, uncurry6, uncurry7, uncurry8, uncurry9, uncurry10, uncurry11, uncurry12
                           )
@@ -30,19 +29,12 @@ module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlif
 
 import Data.Char    (isSpace, chr, ord, isDigit, isAscii, isAlphaNum)
 import Data.List    (isPrefixOf, isSuffixOf)
-import Data.Dynamic (fromDynamic, toDyn)
+import Data.Dynamic (fromDynamic, toDyn, Typeable)
 import Data.Maybe   (fromJust, isJust, isNothing)
-import Data.Proxy
-
-import Type.Reflection
 
 import Numeric (readHex, showHex)
 
 import Data.SBV.SMT.SMTLibNames (isReserved)
-
--- | Converts a proxy to a readable result, if the underlyting type is Typeable
-shAtProxy :: forall a. Typeable a => Proxy a -> String -> String
-shAtProxy _ nm = nm ++ " @" ++ show (typeRep @a)
 
 -- | We have a nasty issue with the usual String/List confusion in Haskell. However, we can
 -- do a simple dynamic trick to determine where we are. The ice is thin here, but it seems to work.
