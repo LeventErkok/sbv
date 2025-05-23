@@ -68,6 +68,47 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 -- We have:
 --
 -- >>> correctness (Proxy @Integer)
+-- Inductive lemma: countAppend @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2 (unfold count)                Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4 (simplify)                    Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: countNonNegative @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: countElem @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: elemCount @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: sublistCorrect @Integer
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: sublistElem @Integer
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: sublistTail @Integer             Q.E.D.
+-- Lemma: permutationImpliesSublist @IntegerQ.E.D.
 -- Inductive lemma: lltCorrect
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
@@ -76,40 +117,6 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma: countNonNegative
---   Step: Base                                                Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1.1                                             Q.E.D.
---     Step: 1.1.2                                             Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
--- Inductive lemma: countElem
---   Step: Base                                                Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1.1                                             Q.E.D.
---     Step: 1.1.2                                             Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
--- Inductive lemma: elemCount
---   Step: Base                                                Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: sublistCorrect
---   Step: 1                                                   Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: sublistElem
---   Step: 1                                                   Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: sublistTail                                          Q.E.D.
--- Lemma: permutationImpliesSublist                            Q.E.D.
 -- Inductive lemma: lltSublist
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
@@ -153,13 +160,6 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     Step: 1.2.1                                             Q.E.D.
 --     Step: 1.2.2 (simplify)                                  Q.E.D.
 --     Step: 1.2.3                                             Q.E.D.
---   Result:                                                   Q.E.D.
--- Inductive lemma: countAppend
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2 (unfold count)                                    Q.E.D.
---   Step: 3                                                   Q.E.D.
---   Step: 4 (simplify)                                        Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Inductive lemma: countPartition
 --   Step: Base                                                Q.E.D.
@@ -222,19 +222,12 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     ├╴sortIsPermutation (x2)
 --     ├╴lltPermutation
 --     │  ├╴lltSublist
---     │  │  ├╴sublistElem
---     │  │  │  └╴sublistCorrect
---     │  │  │     ├╴countElem
---     │  │  │     │  └╴countNonNegative
---     │  │  │     └╴elemCount
---     │  │  ├╴lltCorrect
---     │  │  └╴sublistTail
+--     │  │  └╴sublistElem (x3)
 --     │  └╴permutationImpliesSublist
 --     ├╴lgePermutation
 --     │  ├╴lgeSublist
---     │  │  ├╴sublistElem
---     │  │  ├╴lgeCorrect
---     │  │  └╴sublistTail
+--     │  │  ├╴sublistElem (x2)
+--     │  │  └╴lgeCorrect
 --     │  └╴permutationImpliesSublist
 --     └╴nonDecreasingMerge
 -- [Proven] quickSortIsCorrect @Integer
