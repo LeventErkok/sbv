@@ -205,7 +205,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     Step: 1.2.3 (push nonDecreasing down)                   Q.E.D.
 --     Step: 1.2.4                                             Q.E.D.
 --   Result:                                                   Q.E.D.
--- Lemma: quickSortIsCorrect                                   Q.E.D.
+-- Lemma: quickSortIsCorrect @Integer                          Q.E.D.
 -- == Proof tree:
 -- quickSortIsCorrect
 --  ├╴sortIsPermutation
@@ -237,9 +237,9 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     │  │  └╴sublistTail
 --     │  └╴permutationImpliesSublist
 --     └╴nonDecreasingMerge
--- [Proven] quickSortIsCorrect
+-- [Proven] quickSortIsCorrect @Integer
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-correctness _ = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
+correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   --------------------------------------------------------------------------------------------
   -- Part I. Import helper lemmas, definitions
@@ -644,7 +644,7 @@ correctness _ = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
   -- Part VIII. Putting it together
   --------------------------------------------------------------------------------------------
 
-  qs <- lemma "quickSortIsCorrect"
+  qs <- lemma (atProxy p "quickSortIsCorrect")
            (\(Forall @"xs" xs) -> let out = quickSort xs in isPermutation xs out .&& nonDecreasing out)
            [sortIsPermutation, sortIsNonDecreasing]
 
