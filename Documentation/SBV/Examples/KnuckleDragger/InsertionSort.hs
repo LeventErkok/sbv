@@ -110,10 +110,10 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 --   Step: 4                                    Q.E.D.
 --   Step: 5                                    Q.E.D.
 --   Result:                                    Q.E.D.
--- Lemma: insertionSortIsCorrect                Q.E.D.
--- [Proven] insertionSortIsCorrect
+-- Lemma: insertionSortIsCorrect @Integer       Q.E.D.
+-- [Proven] insertionSortIsCorrect @Integer
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-correctness _ = runKDWith cvc5{kdOptions = (kdOptions cvc5) { ribbonLength = 45 }} $ do
+correctness p = runKDWith cvc5{kdOptions = (kdOptions cvc5) { ribbonLength = 45 }} $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions
@@ -213,6 +213,6 @@ correctness _ = runKDWith cvc5{kdOptions = (kdOptions cvc5) { ribbonLength = 45 
     --------------------------------------------------------------------------------------------
     -- Put the two parts together for the final proof
     --------------------------------------------------------------------------------------------
-    lemma "insertionSortIsCorrect"
+    lemma (atProxy p "insertionSortIsCorrect")
           (\(Forall @"xs" xs) -> let out = insertionSort xs in nonDecreasing out .&& isPermutation xs out)
           [sortNonDecreasing, sortIsPermutation]
