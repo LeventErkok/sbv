@@ -53,7 +53,7 @@ module Data.SBV.Tools.KnuckleDragger (
        , (=:), (≡)
 
        -- * Supplying hints for a calculation step
-       , (??), (⁇), hprf, hasm, hcmnt
+       , (??), (⁇)
 
        -- * Case splits
        , split, split2, cases, (⟹), (==>)

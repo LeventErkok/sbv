@@ -39,7 +39,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), hasm, hprf, hcmnt, qed, trivial, contradiction
+       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        ) where
 
 import Data.SBV
@@ -933,20 +933,6 @@ getHelperText hs = case [s | HelperString s <- hs] of
         collect (HelperProof  p) = [proofName p | isUserAxiom p]  -- Don't put out internals (inductive hypotheses)
         collect HelperAssum  {}  = []
         collect (HelperString s) = [s]
-
--- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
--- mixing proofs and booleans in one group of hints.
-hasm :: SBool -> Helper
-hasm = HelperAssum
-
--- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
--- mixing proofs and booleans in one group of hints.
-hprf :: Proof -> Helper
-hprf = HelperProof
-
--- | Smart constructor for adding a comment.
-hcmnt :: String -> Helper
-hcmnt = HelperString
 
 -- | A proof is a sequence of steps, supporting branching
 data KDProofGen a bh b = ProofStep   a    [Helper] (KDProofGen a bh b)          -- ^ A single step
