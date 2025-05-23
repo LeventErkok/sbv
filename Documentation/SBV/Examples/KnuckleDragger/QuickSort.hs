@@ -244,9 +244,12 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
   --------------------------------------------------------------------------------------------
   -- Part I. Import helper lemmas, definitions
   --------------------------------------------------------------------------------------------
-  let count         = SH.count         @a
-      isPermutation = SH.isPermutation @a
-      nonDecreasing = SH.nonDecreasing @a
+  let count            = SH.count            @a
+      isPermutation    = SH.isPermutation    @a
+      nonDecreasing    = SH.nonDecreasing    @a
+
+  countElem        <- use $ SH.countElem        p
+  elemCount        <- use $ SH.elemCount        p
 
   ---------------------------------------------------------------------------------------------------
   -- Part II. Formalizing less-than/greater-than-or-equal over lists and relationship to permutations
@@ -280,47 +283,6 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
                              ?? ih
                              =: sTrue
                              =: qed
-
-  -- count is always non-negative
-  countNonNegative <- induct "countNonNegative"
-                             (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .>= 0) $
-                             \ih x xs e -> [] |- count e (x .: xs) .>= 0
-                                              =: cases [ e .== x ==> 1 + count e xs .>= 0
-                                                                  ?? ih
-                                                                  =: sTrue
-                                                                  =: qed
-                                                       , e ./= x ==> count e xs .>= 0
-                                                                  ?? ih
-                                                                  =: sTrue
-                                                                  =: qed
-                                                       ]
-
-  -- relationship between count and elem, forward direction
-  countElem <- induct "countElem"
-                      (\(Forall @"xs" xs) (Forall @"e" e) -> e `elem` xs .=> count e xs .> 0) $
-                      \ih x xs e -> [e `elem` (x .: xs)]
-                                 |- count e (x .: xs) .> 0
-                                 =: cases [ e .== x ==> 1 + count e xs .> 0
-                                                     ?? countNonNegative
-                                                     =: sTrue
-                                                     =: qed
-                                          , e ./= x ==> count e xs .> 0
-                                                     ?? ih
-                                                     =: sTrue
-                                                     =: qed
-                                          ]
-
-  -- relationship between count and elem, backwards direction
-  elemCount <- induct "elemCount"
-                      (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .> 0 .=> e `elem` xs) $
-                      \ih x xs e -> [count e xs .> 0]
-                                 |- e `elem` (x .: xs)
-                                 =: cases [ e .== x ==> trivial
-                                          , e ./= x ==> e `elem` xs
-                                                     ?? ih
-                                                     =: sTrue
-                                                     =: qed
-                                          ]
 
   -- sublist correctness
   sublistCorrect <- calc "sublistCorrect"

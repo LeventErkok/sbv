@@ -132,3 +132,97 @@ takeDropCount p = runKD $ do
                    ?? takeDrop
                    =: count e xs
                    =: qed
+
+-- | 'count' is always non-negative. We have:
+--
+-- >>> countNonNegative (Proxy @Integer)
+-- Inductive lemma: countNonNegative @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] countNonNegative @Integer
+countNonNegative :: forall a. SymVal a => Proxy a -> IO Proof
+countNonNegative p = runKD $ do
+   induct (atProxy p "countNonNegative")
+          (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> count e xs .>= 0) $
+          \ih x xs (e :: SBV a) -> [] |- count e (x .: xs) .>= 0
+                                      =: cases [ e .== x ==> 1 + count e xs .>= 0
+                                                          ?? ih
+                                                          =: sTrue
+                                                          =: qed
+                                               , e ./= x ==> count e xs .>= 0
+                                                          ?? ih
+                                                          =: sTrue
+                                                          =: qed
+                                               ]
+
+-- | Relationship between count and elem, forward direction.
+--
+-- >>> countElem (Proxy @Integer)
+-- Inductive lemma: countNonNegative @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: countElem @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] countElem @Integer
+countElem :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
+countElem p = runKD $ do
+
+    cnn <- use $ countNonNegative p
+
+    induct (atProxy p "countElem")
+           (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> e `elem` xs .=> count e xs .> 0) $
+           \ih x xs (e :: SBV a) -> [e `elem` (x .: xs)]
+                                 |- count e (x .: xs) .> 0
+                                 =: cases [ e .== x ==> 1 + count e xs .> 0
+                                                     ?? cnn
+                                                     =: sTrue
+                                                     =: qed
+                                          , e ./= x ==> count e xs .> 0
+                                                     ?? ih
+                                                     =: sTrue
+                                                     =: qed
+                                          ]
+
+-- | Relationship between count and elem, backwards direction.
+--
+-- >>> elemCount (Proxy @Integer)
+-- Inductive lemma: elemCount @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] elemCount @Integer
+elemCount :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
+elemCount p = runKD $
+    induct (atProxy p "elemCount")
+           (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> count e xs .> 0 .=> e `elem` xs) $
+           \ih x xs (e :: SBV a) -> [count e xs .> 0]
+                                 |- e `elem` (x .: xs)
+                                 =: cases [ e .== x ==> trivial
+                                          , e ./= x ==> e `elem` xs
+                                                     ?? ih
+                                                     =: sTrue
+                                                     =: qed
+                                          ]
