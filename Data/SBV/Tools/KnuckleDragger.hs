@@ -62,4 +62,4 @@ module Data.SBV.Tools.KnuckleDragger (
        , qed, trivial, contradiction
        ) where
 
-import Data.SBV.Tools.KD.KnuckleDragger
+import Data.SBV.Tools.KnuckleDragger.KnuckleDragger

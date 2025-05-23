@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.KD.Utils
+-- Module    : Data.SBV.Tools.KnuckleDragger.Utils
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -21,7 +21,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.KD.Utils (
+module Data.SBV.Tools.KnuckleDragger.Utils (
          KD, runKD, runKDWith, Proof(..), sorry
        , startKD, finishKD, getKDState, getKDConfig, kdGetNextUnique, KDState(..), KDStats(..), RootOfTrust(..)
        , KDProofContext(..), message, updStats, rootOfTrust, concludeModulo

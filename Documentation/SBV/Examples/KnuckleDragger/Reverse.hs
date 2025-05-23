@@ -14,6 +14,7 @@
 -- definition and its proof is presented as Example 5.36.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -29,15 +30,22 @@ import Data.Proxy
 import Data.SBV
 import Data.SBV.List hiding (partition)
 import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Utils.Lib (shAtProxy)
 
-import qualified Documentation.SBV.Examples.KnuckleDragger.Lists as KDL
+import qualified Data.SBV.Tools.KnuckleDragger.Lists as KDL
+
+#ifdef DOCTEST
+-- $setup
+-- >>> :set -XTypeApplications
+-- >>> import Data.Proxy
+#endif
 
 -- * Reversing with no auxiliaries
 
 -- | This definition of reverse uses no helper functions, other than the usual
 -- head, tail, cons, and uncons to reverse a given list. Note that efficiency
 -- is not our concern here, we call 'rev' itself three times in the body.
-rev :: SList Integer -> SList Integer
+rev :: SymVal a => SList a -> SList a
 rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
                                      (let (x, as)     = uncons xs
                                           (hras, tas) = uncons (rev as)
@@ -47,23 +55,15 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 
 -- | Correctness the function 'rev'. We have:
 --
--- >>> correctness
--- Inductive lemma: reversePreservesLength
+-- >>> correctness (Proxy @Integer)
+-- Inductive lemma: reversePreservesLength @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: revApp
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma: revApp
+-- Inductive lemma: revApp @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -71,8 +71,7 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: revSnoc                          Q.E.D.
--- Inductive lemma: revApp
+-- Inductive lemma: revApp @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -80,14 +79,23 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: reverseReverse
+-- Lemma: revSnoc @Integer                 Q.E.D.
+-- Inductive lemma: revApp @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: reverseReverse @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma (strong): revCorrect
+-- Inductive lemma (strong): revCorrect @Integer
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way full case split)
 --     Step: 1.1                           Q.E.D.
@@ -108,21 +116,21 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --       Step: 1.2.2.13                    Q.E.D.
 --       Step: 1.2.2.14                    Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] revCorrect
-correctness :: IO Proof
-correctness = runKD $ do
+-- [Proven] revCorrect @Integer
+correctness :: forall a. SymVal a => Proxy a -> IO Proof
+correctness p = runKD $ do
 
   -- Import a few helpers from "Data.SBV.Tools.KnuckleDragger.List"
-  revPreservesLength <- use $ KDL.reversePreservesLength (Proxy @Integer)
-  revApp             <- use $ KDL.revApp                 (Proxy @Integer)
-  revSnoc            <- use $ KDL.revSnoc                (Proxy @Integer)
-  reverseReverse     <- use $ KDL.reverseReverse         (Proxy @Integer)
+  revPreservesLength <- use $ KDL.reversePreservesLength p
+  revApp             <- use $ KDL.revApp                 p
+  revSnoc            <- use $ KDL.revSnoc                p
+  reverseReverse     <- use $ KDL.reverseReverse         p
 
-  sInductWith cvc5 "revCorrect"
-    (\(Forall @"xs" xs) -> rev xs .== reverse xs)
-    (length @Integer) $
-    \ih xs -> []
-           |- rev xs
+  sInductWith cvc5 (shAtProxy p "revCorrect")
+    (\(Forall @"xs" (xs :: SList a)) -> rev xs .== reverse xs)
+    (length @a) $
+    \ih (xs :: SList a) ->
+        [] |- rev xs
            =: split xs trivial
                     (\a as -> split as trivial
                                     (\_ _ -> head (rev as) .: rev (a .: rev (tail (rev as)))

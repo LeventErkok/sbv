@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.KD.KnuckleDragger
+-- Module    : Data.SBV.Tools.KnuckleDragger.KnuckleDragger
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -28,7 +28,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.KD.KnuckleDragger (
+module Data.SBV.Tools.KnuckleDragger.KnuckleDragger (
          Proposition, Proof, Instantiatable(..), Inst(..)
        , rootOfTrust, RootOfTrust(..), ProofTree(..), getProofTree, showProofTree, showProofTreeHTML
        , axiom
@@ -47,8 +47,8 @@ import Data.SBV.Core.Model (qSaturateSavingObservables)
 
 import Data.SBV.Control hiding (getProof)
 
-import Data.SBV.Tools.KD.Kernel
-import Data.SBV.Tools.KD.Utils
+import Data.SBV.Tools.KnuckleDragger.Kernel
+import Data.SBV.Tools.KnuckleDragger.Utils
 
 import qualified Data.SBV.List as SL
 
