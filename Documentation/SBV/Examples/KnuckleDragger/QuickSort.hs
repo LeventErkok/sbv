@@ -244,12 +244,14 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
   --------------------------------------------------------------------------------------------
   -- Part I. Import helper lemmas, definitions
   --------------------------------------------------------------------------------------------
-  let count            = SH.count            @a
-      isPermutation    = SH.isPermutation    @a
-      nonDecreasing    = SH.nonDecreasing    @a
+  let count         = SH.count         @a
+      isPermutation = SH.isPermutation @a
+      nonDecreasing = SH.nonDecreasing @a
+      sublist       = SH.sublist       @a
 
-  countElem        <- use $ SH.countElem        p
-  elemCount        <- use $ SH.elemCount        p
+  countAppend <- use $ SH.countAppend p
+  sublistElem <- use $ SH.sublistElem p
+  sublistTail <- use $ SH.sublistTail p
 
   ---------------------------------------------------------------------------------------------------
   -- Part II. Formalizing less-than/greater-than-or-equal over lists and relationship to permutations
@@ -259,10 +261,6 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
   let llt, lge :: SBV a -> SList a -> SBool
       llt = smtFunction "llt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& llt pivot xs
       lge = smtFunction "lge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& lge pivot xs
-
-      -- Sublist relationship
-      sublist :: SList a -> SList a -> SBool
-      sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e ys .> 0)
 
   -- llt correctness
   lltCorrect <-
@@ -283,31 +281,6 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
                              ?? ih
                              =: sTrue
                              =: qed
-
-  -- sublist correctness
-  sublistCorrect <- calc "sublistCorrect"
-                          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys) $
-                          \xs ys x -> [xs `sublist` ys, x `elem` xs]
-                                   |- x `elem` ys
-                                   ?? [ countElem `at` (Inst @"xs" xs, Inst @"e" x)
-                                      , elemCount `at` (Inst @"xs" ys, Inst @"e" x)
-                                      ]
-                                   =: sTrue
-                                   =: qed
-
-  -- If one list is a sublist of another, then its head is an elem
-  sublistElem <- calc "sublistElem"
-                       (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> x `elem` ys) $
-                       \x xs ys -> [(x .: xs) `sublist` ys]
-                                |- x `elem` ys
-                                ?? sublistCorrect `at` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"x" x)
-                                =: sTrue
-                                =: qed
-
-  -- If one list is a sublist of another so is its tail
-  sublistTail <- lemma "sublistTail"
-                       (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> xs `sublist` ys)
-                       []
 
   -- Permutation implies sublist
   permutationImpliesSublist <- lemma "permutationImpliesSublist"
@@ -451,20 +424,6 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
   --------------------------------------------------------------------------------------------
   -- Part IV. Helper lemmas for count
   --------------------------------------------------------------------------------------------
-
-  -- Count distributes over append
-  countAppend <-
-      induct "countAppend"
-             (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (xs ++ ys) .== count e xs + count e ys) $
-             \ih x xs ys e -> [] |- count e ((x .: xs) ++ ys)
-                                 =: count e (x .: (xs ++ ys))
-                                 ?? "unfold count"
-                                 =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
-                                 ?? ih `at` (Inst @"ys" ys, Inst @"e" e)
-                                 =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
-                                 ?? "simplify"
-                                 =: count e (x .: xs) + count e ys
-                                 =: qed
 
   -- Count is preserved over partition
   let countTuple :: SBV a -> STuple [a] [a] -> SInteger

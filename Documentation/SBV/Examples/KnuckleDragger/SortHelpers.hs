@@ -226,3 +226,115 @@ elemCount p = runKD $
                                                      =: sTrue
                                                      =: qed
                                           ]
+
+-- | Sublist relationship
+sublist :: SymVal a => SList a -> SList a -> SBool
+sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e ys .> 0)
+
+-- | 'sublist' correctness. We have:
+--
+-- >>> sublistCorrect (Proxy @Integer)
+-- Inductive lemma: countNonNegative @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: countElem @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: elemCount @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: sublistCorrect @Integer
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] sublistCorrect @Integer
+sublistCorrect :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
+sublistCorrect p = runKD $ do
+
+    cElem  <- use $ countElem p
+    eCount <- use $ elemCount p
+
+    calc (atProxy p "sublistCorrect")
+         (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" (x :: SBV a)) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys) $
+         \xs ys (x :: SBV a) -> [xs `sublist` ys, x `elem` xs]
+                             |- x `elem` ys
+                             ?? [ cElem  `at` (Inst @"xs" xs, Inst @"e" x)
+                                , eCount `at` (Inst @"xs" ys, Inst @"e" x)
+                                ]
+                             =: sTrue
+                             =: qed
+
+-- | If one list is a sublist of another, then its head is an elem. We have:
+--
+-- >>> sublistElem (Proxy @Integer)
+-- Inductive lemma: countNonNegative @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: countElem @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: elemCount @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: sublistCorrect @Integer
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: sublistElem @Integer
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] sublistElem @Integer
+sublistElem :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
+sublistElem p = runKD $ do
+   slc <- use $ sublistCorrect p
+
+   calc (atProxy p "sublistElem")
+        (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> x `elem` ys) $
+        \(x :: SBV a) xs ys -> [(x .: xs) `sublist` ys]
+                            |- x `elem` ys
+                            ?? slc `at` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"x" x)
+                            =: sTrue
+                            =: qed
+
+-- | If one list is a sublist of another so is its tail. We have:
+--
+-- >>> sublistTail (Proxy @Integer)
+-- Lemma: sublistTail @Integer             Q.E.D.
+-- [Proven] sublistTail @Integer
+sublistTail :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
+sublistTail p = runKD $
+  lemma (atProxy p "sublistTail")
+        (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> xs `sublist` ys)
+        []
