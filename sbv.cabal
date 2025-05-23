@@ -134,6 +134,7 @@ Library
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.KnuckleDragger
+                  , Data.SBV.Tools.KnuckleDragger.Lists
                   , Data.SBV.Tools.Overflow
                   , Data.SBV.Tools.Polynomial
                   , Data.SBV.Tools.Range
@@ -168,13 +169,13 @@ Library
                   , Documentation.SBV.Examples.KnuckleDragger.Fibonacci
                   , Documentation.SBV.Examples.KnuckleDragger.InsertionSort
                   , Documentation.SBV.Examples.KnuckleDragger.Kleene
-                  , Documentation.SBV.Examples.KnuckleDragger.Lists
                   , Documentation.SBV.Examples.KnuckleDragger.Majority
                   , Documentation.SBV.Examples.KnuckleDragger.MergeSort
                   , Documentation.SBV.Examples.KnuckleDragger.Numeric
                   , Documentation.SBV.Examples.KnuckleDragger.QuickSort
                   , Documentation.SBV.Examples.KnuckleDragger.Reverse
                   , Documentation.SBV.Examples.KnuckleDragger.ShefferStroke
+                  , Documentation.SBV.Examples.KnuckleDragger.SortHelpers
                   , Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational
                   , Documentation.SBV.Examples.KnuckleDragger.StrongInduction
                   , Documentation.SBV.Examples.KnuckleDragger.Tao
@@ -289,9 +290,9 @@ Library
                   , Data.SBV.Provers.OpenSMT
                   , Data.SBV.Provers.Yices
                   , Data.SBV.Provers.Z3
-                  , Data.SBV.Tools.KD.Kernel
-                  , Data.SBV.Tools.KD.KnuckleDragger
-                  , Data.SBV.Tools.KD.Utils
+                  , Data.SBV.Tools.KnuckleDragger.Kernel
+                  , Data.SBV.Tools.KnuckleDragger.KnuckleDragger
+                  , Data.SBV.Tools.KnuckleDragger.Utils
                   , Data.SBV.Utils.CrackNum
                   , Data.SBV.Utils.ExtractIO
                   , Data.SBV.Utils.Numeric

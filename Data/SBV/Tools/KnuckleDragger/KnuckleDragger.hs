@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.KD.KnuckleDragger
+-- Module    : Data.SBV.Tools.KnuckleDragger.KnuckleDragger
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -28,7 +28,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.KD.KnuckleDragger (
+module Data.SBV.Tools.KnuckleDragger.KnuckleDragger (
          Proposition, Proof, Instantiatable(..), Inst(..)
        , rootOfTrust, RootOfTrust(..), ProofTree(..), getProofTree, showProofTree, showProofTreeHTML
        , axiom
@@ -39,7 +39,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), hasm, hprf, hcmnt, qed, trivial, contradiction
+       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), qed, trivial, contradiction, atProxy
        ) where
 
 import Data.SBV
@@ -47,8 +47,8 @@ import Data.SBV.Core.Model (qSaturateSavingObservables)
 
 import Data.SBV.Control hiding (getProof)
 
-import Data.SBV.Tools.KD.Kernel
-import Data.SBV.Tools.KD.Utils
+import Data.SBV.Tools.KnuckleDragger.Kernel
+import Data.SBV.Tools.KnuckleDragger.Utils
 
 import qualified Data.SBV.List as SL
 
@@ -934,20 +934,6 @@ getHelperText hs = case [s | HelperString s <- hs] of
         collect HelperAssum  {}  = []
         collect (HelperString s) = [s]
 
--- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
--- mixing proofs and booleans in one group of hints.
-hasm :: SBool -> Helper
-hasm = HelperAssum
-
--- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
--- mixing proofs and booleans in one group of hints.
-hprf :: Proof -> Helper
-hprf = HelperProof
-
--- | Smart constructor for adding a comment.
-hcmnt :: String -> Helper
-hcmnt = HelperString
-
 -- | A proof is a sequence of steps, supporting branching
 data KDProofGen a bh b = ProofStep   a    [Helper] (KDProofGen a bh b)          -- ^ A single step
                        | ProofBranch Bool bh       [(SBool, KDProofGen a bh b)] -- ^ A branching step. Bool indicates if completeness check is needed
@@ -1141,9 +1127,10 @@ cases = ProofBranch True []
 
 -- | Case splitting over a list; empty and full cases
 split :: SymVal a => SList a -> KDProofRaw r -> (SBV a -> SList a -> KDProofRaw r) -> KDProofRaw r
-split xs empty cons = ProofBranch False [] [ (      SL.null xs,  empty)
-                                           , (sNot (SL.null xs), cons (SL.head xs) (SL.tail xs))
-                                           ]
+split xs empty cons = ProofBranch False [] [(cnil, empty), (ccons, cons h t)]
+   where cnil   = SL.null   xs
+         (h, t) = SL.uncons xs
+         ccons  = sNot cnil .&& xs .== h SL..: t
 
 -- | Case splitting over two lists; empty and full cases for each
 split2 :: (SymVal a, SymVal b)
@@ -1155,11 +1142,19 @@ split2 :: (SymVal a, SymVal b)
        -> KDProofRaw r
 split2 (xs, ys) ee ec ce cc = ProofBranch False
                                           []
-                                          [ (      SL.null xs  .&&       SL.null ys , ee)
-                                          , (      SL.null xs  .&& sNot (SL.null ys), ec (SL.head ys, SL.tail ys))
-                                          , (sNot (SL.null xs) .&&       SL.null ys , ce (SL.head xs, SL.tail xs))
-                                          , (sNot (SL.null xs) .&& sNot (SL.null ys), cc (SL.head xs, SL.tail xs) (SL.head ys, SL.tail ys))
+                                          [ (xnil  .&& ynil,  ee)
+                                          , (xnil  .&& ycons, ec (hy, ty))
+                                          , (xcons .&& ynil,  ce (hx, tx))
+                                          , (xcons .&& ycons, cc (hx, tx) (hy, ty))
                                           ]
+  where xnil     = SL.null   xs
+        (hx, tx) = SL.uncons xs
+        xcons    = sNot xnil .&& xs .== hx SL..: tx
+
+        ynil     = SL.null   ys
+        (hy, ty) = SL.uncons ys
+        ycons    = sNot ynil .&& ys .== hy SL..: ty
+
 
 -- | Specifying a case-split, helps with the boolean case.
 (==>) :: SBool -> KDProofRaw a -> (SBool, KDProofRaw a)

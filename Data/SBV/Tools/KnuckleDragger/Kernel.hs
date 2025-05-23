@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.KD.Kernel
+-- Module    : Data.SBV.Tools.KnuckleDragger.Kernel
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -19,7 +19,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.KD.Kernel (
+module Data.SBV.Tools.KnuckleDragger.Kernel (
          Proposition,  Proof(..)
        , axiom
        , lemma,   lemmaWith,   lemmaGen
@@ -40,7 +40,7 @@ import Data.SBV.SMT.SMT
 import Data.SBV.Core.Model
 import Data.SBV.Provers.Prover
 
-import Data.SBV.Tools.KD.Utils
+import Data.SBV.Tools.KnuckleDragger.Utils
 
 import Data.Time (NominalDiffTime)
 import Data.SBV.Utils.TDiff

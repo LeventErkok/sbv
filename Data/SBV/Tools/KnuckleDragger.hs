@@ -53,13 +53,16 @@ module Data.SBV.Tools.KnuckleDragger (
        , (=:), (≡)
 
        -- * Supplying hints for a calculation step
-       , (??), (⁇), hprf, hasm, hcmnt
+       , (??), (⁇)
 
        -- * Case splits
        , split, split2, cases, (⟹), (==>)
 
        -- * Finishing up a calculational proof
        , qed, trivial, contradiction
+
+       -- * Helpers
+       , atProxy
        ) where
 
-import Data.SBV.Tools.KD.KnuckleDragger
+import Data.SBV.Tools.KnuckleDragger.KnuckleDragger

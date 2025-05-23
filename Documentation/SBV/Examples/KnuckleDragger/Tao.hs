@@ -21,9 +21,11 @@
 -----------------------------------------------------------------------------
 
 
+{-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE ExplicitForAll     #-}
 {-# LANGUAGE TypeAbstractions   #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
@@ -34,6 +36,12 @@ module Documentation.SBV.Examples.KnuckleDragger.Tao where
 
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
+
+#ifdef DOCTEST
+-- $setup
+-- >>> import Data.SBV
+-- >>> :set -XTypeApplications
+#endif
 
 -- | Create an uninterpreted type to do the proofs over.
 data T
@@ -49,14 +57,11 @@ mkUninterpretedSort ''T
 --
 -- We have:
 --
--- >>> tao
+-- >>> tao @T (uninterpret "op")
 -- Lemma: tao                              Q.E.D.
 -- [Proven] tao
-tao :: IO Proof
-tao = runKD $ do
-   let op :: ST -> ST -> ST
-       op = uninterpret "op"
-
+tao :: forall a. SymVal a => (SBV a -> SBV a -> SBV a) -> IO Proof
+tao op = runKD $
    lemma "tao" (    quantifiedBool (\(Forall @"x" x) (Forall @"y" y) -> ((x `op` x) `op` y) .== y `op` x)
                 .=> quantifiedBool (\(Forall @"x" x) (Forall @"y" y) -> (x `op` y) .== (y `op` x)))
                []
