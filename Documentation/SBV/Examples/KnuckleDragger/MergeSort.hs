@@ -58,6 +58,18 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 --
 -- >>> correctness (Proxy @Integer)
 -- Lemma: nonDecrInsert                    Q.E.D.
+-- Inductive lemma: countAppend @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2 (unfold count)                Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4 (simplify)                    Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: take_drop @Integer               Q.E.D.
+-- Lemma: takeDropCount @Integer
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma (strong): mergeKeepsSort
 --   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (4 way full case split)
@@ -95,18 +107,6 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 --     Step: 1.4.6 (unfold count in reverse, twice)            Q.E.D.
 --     Step: 1.4.7 (simplify)                                  Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma: countAppend
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2 (unfold count)                                    Q.E.D.
---   Step: 3                                                   Q.E.D.
---   Step: 4 (simplify)                                        Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: take_drop                                            Q.E.D.
--- Lemma: takeDropCount
---   Step: 1                                                   Q.E.D.
---   Step: 2                                                   Q.E.D.
---   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): sortIsPermutation
 --   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (2 way full case split)
@@ -130,7 +130,9 @@ correctness _ = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
         isPermutation = SH.isPermutation @a
         count         = SH.count         @a
 
-    nonDecrIns <- use $ SH.nonDecrIns (Proxy @Integer)
+    nonDecrIns    <- use $ SH.nonDecrIns    (Proxy @a)
+    takeDropCount <- use $ SH.takeDropCount (Proxy @a)
+
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is non-decreasing.
     --------------------------------------------------------------------------------------------
@@ -197,7 +199,8 @@ correctness _ = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
     --------------------------------------------------------------------------------------------
     mergeCount <-
         sInduct "mergeCount"
-                (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"e" e) -> count e (merge xs ys) .== count e xs + count e ys)
+                (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" (e :: SBV a)) ->
+                        count e (merge xs ys) .== count e xs + count e ys)
                 (\xs ys (_e :: SBV a) -> (length @a xs, length @a ys)) $
                 \ih as bs e -> [] |-
                         split2 (as, bs)
@@ -232,34 +235,6 @@ correctness _ = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
                                                  ?? "simplify"
                                                  =: count e (x .: xs) + count e (y .: ys)
                                                  =: qed)
-
-    countAppend <-
-      induct "countAppend"
-             (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (xs ++ ys) .== count e xs + count e ys) $
-             \ih x xs ys e -> [] |- count e ((x .: xs) ++ ys)
-                                 =: count e (x .: (xs ++ ys))
-                                 ?? "unfold count"
-                                 =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
-                                 ?? ih `at` (Inst @"ys" ys, Inst @"e" e)
-                                 =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
-                                 ?? "simplify"
-                                 =: count e (x .: xs) + count e ys
-                                 =: qed
-
-    takeDropCount <- do
-
-       takeDrop <- lemma "take_drop"
-                         (\(Forall @"n" n) (Forall @"xs" (xs :: SList Integer)) -> take n xs ++ drop n xs .== xs)
-                         []
-
-       calc "takeDropCount"
-            (\(Forall @"xs" xs) (Forall @"n" n) (Forall @"e" e) -> count e (take n xs) + count e (drop n xs) .== count e xs) $
-            \xs n e -> [] |- count e (take n xs) + count e (drop n xs)
-                          ?? countAppend `at` (Inst @"xs" (take n xs), Inst @"ys" (drop n xs), Inst @"e" e)
-                          =: count e (take n xs ++ drop n xs)
-                          ?? takeDrop
-                          =: count e xs
-                          =: qed
 
     sortIsPermutation <-
         sInductWith cvc5 "sortIsPermutation"

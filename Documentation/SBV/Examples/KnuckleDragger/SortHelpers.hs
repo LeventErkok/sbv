@@ -19,12 +19,13 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.SortHelpers where
 
-import Prelude hiding (null, tail, elem, head)
+import Prelude hiding (null, tail, elem, head, (++), take, drop)
 import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.KnuckleDragger.Lists
 
 #ifdef DOCTEST
 -- $setup
@@ -73,3 +74,61 @@ nonDecrIns _ = runKD $
          (\(Forall @"x" (x :: SBV a)) (Forall @"ys" ys) -> nonDecreasing ys .&& sNot (null ys) .&& x .<= head ys
                                                        .=> nonDecreasing (x .: ys))
          []
+
+
+-- | 'count' distributes over append. We have:
+--
+-- >>> countAppend (Proxy @Integer)
+-- Inductive lemma: countAppend @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2 (unfold count)                Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4 (simplify)                    Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] countAppend @Integer
+countAppend :: forall a. SymVal a => Proxy a -> IO Proof
+countAppend p = runKD $
+   induct (atProxy p "countAppend")
+          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" (e :: SBV a)) -> count e (xs ++ ys) .== count e xs + count e ys) $
+          \ih x xs ys (e :: SBV a) ->
+              [] |- count e ((x .: xs) ++ ys)
+                 =: count e (x .: (xs ++ ys))
+                 ?? "unfold count"
+                 =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
+                 ?? ih `at` (Inst @"ys" ys, Inst @"e" e)
+                 =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
+                 ?? "simplify"
+                 =: count e (x .: xs) + count e ys
+                 =: qed
+
+-- | 'count' distributes over a split list. We have:
+--
+-- >>> takeDropCount (Proxy @Integer)
+-- Inductive lemma: countAppend @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2 (unfold count)                Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4 (simplify)                    Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: take_drop @Integer               Q.E.D.
+-- Lemma: takeDropCount @Integer
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] takeDropCount @Integer
+takeDropCount :: forall a. SymVal a => Proxy a -> IO Proof
+takeDropCount p = runKD $ do
+       capp     <- use $ countAppend p
+       takeDrop <- use $ take_drop p
+
+       calc (atProxy p "takeDropCount")
+            (\(Forall @"xs" xs) (Forall @"n" n) (Forall @"e" (e :: SBV a)) -> count e (take n xs) + count e (drop n xs) .== count e xs) $
+            \xs n (e :: SBV a) ->
+                [] |- count e (take n xs) + count e (drop n xs)
+                   ?? capp `at` (Inst @"xs" (take n xs), Inst @"ys" (drop n xs), Inst @"e" e)
+                   =: count e (take n xs ++ drop n xs)
+                   ?? takeDrop
+                   =: count e xs
+                   =: qed
