@@ -30,6 +30,7 @@ import Data.SBV
 import Data.SBV.List hiding (partition)
 import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
+import qualified Data.SBV.Tools.KnuckleDragger.Lists as KD
 
 import qualified Documentation.SBV.Examples.KnuckleDragger.SortHelpers as SH
 
@@ -237,12 +238,12 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
   --------------------------------------------------------------------------------------------
   -- Part I. Import helper lemmas, definitions
   --------------------------------------------------------------------------------------------
-  let count         = SH.count         @a
+  let count         = KD.count         @a
       isPermutation = SH.isPermutation @a
       nonDecreasing = SH.nonDecreasing @a
       sublist       = SH.sublist       @a
 
-  countAppend               <- use $ SH.countAppend               p
+  countAppend               <- use $ KD.countAppend               p
   sublistElem               <- use $ SH.sublistElem               p
   sublistTail               <- use $ SH.sublistTail               p
   permutationImpliesSublist <- use $ SH.permutationImpliesSublist p

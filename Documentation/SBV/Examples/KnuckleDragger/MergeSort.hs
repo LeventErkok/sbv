@@ -25,6 +25,7 @@ import Data.Proxy
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
+import qualified Data.SBV.Tools.KnuckleDragger.Lists as KD
 
 import qualified Documentation.SBV.Examples.KnuckleDragger.SortHelpers as SH
 
@@ -128,10 +129,10 @@ correctness _ = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
     --------------------------------------------------------------------------------------------
     let nonDecreasing = SH.nonDecreasing @a
         isPermutation = SH.isPermutation @a
-        count         = SH.count         @a
+        count         = KD.count         @a
 
     nonDecrIns    <- use $ SH.nonDecrIns    (Proxy @a)
-    takeDropCount <- use $ SH.takeDropCount (Proxy @a)
+    takeDropCount <- use $ KD.takeDropCount (Proxy @a)
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is non-decreasing.
