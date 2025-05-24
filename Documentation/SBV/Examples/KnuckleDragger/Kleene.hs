@@ -124,7 +124,8 @@ kleeneProofs = runKD $ do
                        (\(Forall @"x" (x :: SKleene)) -> star x * star x .== star x) $
                        \x -> [] |- star x * star x                     ?? unfold
                                 =: (1 + x * star x) * (1 + x * star x)
-                                ?? hcmnt "factor out x * star x" : map hprf kleene
+                                ?? "factor out x * star x"
+                                ?? kleene
                                 =: (1 + 1) + (x * star x + x * star x) ?? par_idem
                                 =: 1 + x * star x                      ?? unfold
                                 =: star x

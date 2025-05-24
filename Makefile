@@ -171,7 +171,8 @@ veryclean: clean
 	@make -C buildUtils clean
 
 # Just test the KD output for doctest. We give it a shorter wait time as well.
-KD_FILES          = $(addprefix --module ,$(basename $(subst /,.,$(wildcard Documentation/SBV/Examples/KnuckleDragger/*.hs))))
+KD_FILES          = $(addprefix --module ,$(basename $(subst /,.,$(wildcard Data/SBV/Tools/KnuckleDragger/*.hs)))) 	       \
+	            $(addprefix --module ,$(basename $(subst /,.,$(wildcard Documentation/SBV/Examples/KnuckleDragger/*.hs))))
 KD_MODULES        = ${KD_FILES}
 KD_DOCTESTTIMEOUT = 20
 kdDocTest:
