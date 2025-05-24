@@ -1274,22 +1274,22 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (RegExOp o@RegExEq{})  []) = show o
         sh (SBVApp (RegExOp o@RegExNEq{}) []) = show o
 
-        -- Reverse and higher order functions are special
-        sh (SBVApp o@(SeqOp SBVReverse{})   args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVZip{})       args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVZipWith{})   args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVReplicate{}) args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVPartition{}) args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVReverse{})   args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVMap{})       args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFoldl{})     args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFoldr{})     args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFilter{})    args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVAll{} )      args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVAny{} )      args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVConcat{})    args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        -- Reverse and higher order functions are special. Reverse is supported for strings, not others.
+        sh (SBVApp o@(SeqOp SBVReverse{})   args)                = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVZip{})       args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVZipWith{})   args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReplicate{}) args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVPartition{}) args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReverse{})   args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVMap{})       args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFoldl{})     args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFoldr{})     args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFilter{})    args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVAll{} )      args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVAny{} )      args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVConcat{})    args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
 
-        sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp (SeqOp op) args) = "(" ++ stringOrSequence stringOp op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (SetOp SetEqual)      args)   = "(= "      ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp (SetOp SetMember)     [e, s]) = "(select " ++ cvtSV s ++ " " ++ cvtSV e ++ ")"
@@ -1724,3 +1724,37 @@ setSMTOption cfg = set
         smtBool :: Bool -> String
         smtBool True  = "true"
         smtBool False = "false"
+
+-- Pick the correct op if we have a string
+stringOrSequence :: Bool -> SeqOp -> String
+stringOrSequence False op = show op
+stringOrSequence True  op = case op of
+                              SeqConcat       -> show StrConcat
+                              SeqLen          -> show StrLen
+                              SeqUnit         -> show StrUnit
+                              SeqNth          -> show StrNth
+                              SeqSubseq       -> show StrSubstr
+                              SeqIndexOf      -> show StrIndexOf
+                              SeqContains     -> show StrContains
+                              SeqPrefixOf     -> show StrPrefixOf
+                              SeqSuffixOf     -> show StrSuffixOf
+                              SeqReplace      -> show StrReplace
+                              SBVReverse   {} -> tbd
+                              SBVZip       {} -> tbd
+                              SBVReplicate {} -> tbd
+                              SBVZipWith   {} -> tbd
+                              SBVPartition {} -> tbd
+                              SBVMap       {} -> tbd
+                              SBVFoldl     {} -> tbd
+                              SBVFoldr     {} -> tbd
+                              SBVFilter    {} -> tbd
+                              SBVAll       {} -> tbd
+                              SBVAny       {} -> tbd
+                              SBVConcat    {} -> tbd
+  where tbd = error $ unlines [ "***"
+                              , "*** Use of sequence operator " ++ show op ++ " on strings isn't supported yet."
+                              , "***"
+                              , "*** Please cast this in terms of operators in Data.SBV.String. If a polymorphic"
+                              , "*** use case is needed that works uniformly on both strings and arbitrary"
+                              , "*** sequences, please report this as a feature request."
+                              ]
