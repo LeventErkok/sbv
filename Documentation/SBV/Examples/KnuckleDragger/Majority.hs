@@ -6,148 +6,134 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proving Boyer-Moore's majority algorithm correct. We use the ideas in
--- Tobias Nipkow's proof (See https://www21.in.tum.de/~nipkow/pubs/ijsi11.pdf),
--- though the paper is sparse on details which we fill here. (See Section 5 of
--- the paper.)
+-- Proving Boyer-Moore's majority algorithm correct. We follow the ACL2 proof
+-- closely: https://github.com/acl2/acl2/blob/master/books/demos/majority-vote.lisp.
+--
+-- I was lucky enough to sit in J Moore's "Recursion and Induction" class back
+-- in '96-'97 at UT Austin. He is one of the nicest people I ever met in my
+-- life, and he was incredibly kind to me. It's nice to pay homage back to his
+-- influence and impact on both me personally, and on the entire theorem
+-- programming community. Thanks J!
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE ExplicitForAll      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.KnuckleDragger.Majority where
 
-import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
+import Prelude hiding (null, length)
 
-import Prelude hiding (null, length, (++), replicate)
+import Data.SBV
 import Data.SBV.List
 
--- * Choosing majority
+import Data.Proxy
 
--- | Helper function to count candidates.
-cand :: SInteger -> SInteger -> SList Integer -> SInteger
-cand = smtFunction "cand" $ \c k xs -> ite (null xs) c
-                                           (let (a, as) = uncons xs
-                                            in ite (a .== c)
-                                                   (cand c (k+1) as)
-                                                   (ite (k .== 0)
-                                                        (cand a 1     as)
-                                                        (cand c (k-1) as)))
+import Data.SBV.Tools.KnuckleDragger
+import qualified Data.SBV.Tools.KnuckleDragger.Lists as KD
 
--- | Boyer and Moore's linear time algorithm to find the majority element, if it exists.
--- The return value is arbitrary if no majority element exists.
-maj :: SList Integer -> SInteger
-maj = cand 0 0
+#ifdef DOCTEST
+-- $setup
+-- >>> :set -XTypeApplications
+-- >>> import Data.Proxy
+#endif
 
--- | Is a given element the majority in a list?
-majority :: SList Integer -> SInteger -> SBool
-majority l m = length l `sEDiv` 2 .< count l m
-  where count :: SList Integer -> SInteger -> SInteger
-        count = smtFunction "count" $ \xs c -> ite (null xs) 0
-                                                   (let (a, as) = uncons xs
-                                                        cnt     = count as c
-                                                    in ite (a .== c) (1 + cnt) cnt)
+-- * Calculating majority
 
--- * Correctness proof
+-- | Given a list, calculate the majority element using Boyer-Moore's algorithm.
+-- Note that the algorithm returns the majority if it exists. If there is no
+-- majority element, then the result is irrelevant.
+majority :: SymVal a => SBV a -> SInteger -> SList a -> SBV a
+majority = smtFunction "majority"
+                    $ \c i lst ->  ite (null lst) c
+                                       (let (x, xs) = uncons lst
+                                        in ite (i .== 0)
+                                                (majority x 1 xs)
+                                                (majority c (i + ite (c .== x) 1 (-1)) xs))
 
--- | Correctness of the majority algorithm.  We have:
+-- | We can now define mjrty, which simply feeds the majority function with an arbitrary element of the domain.
+-- By the definition of 'majority' above, this arbitrary element will be returned if the given list is empty.
+-- Otherwise, majority will be returned if it exists, and an element of the list otherwise.
+mjrty :: SymVal a => SList a -> SBV a
+mjrty = majority (some "arb" (const sTrue)) 0
+
+-- | The function @how-many@ in the paper is already defined in SBV as 'count'. Let's give it a name:
+howMany :: SymVal a => SBV a -> SList a -> SInteger
+howMany = KD.count
+
+-- * Correctness
+
+-- | The generalized majority theorem. This comment is taken more or less
+-- directly from J's proof, cast in SBV terms:
 --
--- >>> correctness
-correctness :: IO Proof
-correctness = runKD $ do
+-- This is the generalized theorem that explains how majority works on any @c@ and
+-- @i@ instead of just on the initial @c@ and @i=0@.
+--
+-- The way to imagine @majority c i xs@ is that we started with
+-- a bigger @xs'@ that contains @i@ occurrences of c followed by @xs@. That is,
+-- @xs' = replicate i c ++ xs@.  We know that @majority c 0 xs'@ finds
+-- the majority in @xs'@ if there is one.
+--
+-- So the generalized theorem supposes that @e@ occurs a majority of times in @xs'@.
+-- We can say that in terms of @c@, @i@, and @xs@: the number of times @e@ occurs in @xs@
+-- plus @i@ (if @e@ is @c@) is greater than half of the length of @xs@ plus @i@.
+--
+-- The conclusion states that @majority c i x@ is @e@. We have:
+--
+-- >>> correctness  (Proxy @Integer)
+-- Inductive lemma: majorityGeneral @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2                   Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2                   Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: majority @Integer                Q.E.D.
+-- [Proven] majority @Integer
+correctness :: forall a. SymVal a => Proxy a -> IO Proof
+correctness p = runKD $ do
 
-    -- Majority of a replicated element is that element
-    majSame <- lemma "majSame"
-                     (\(Forall @"k" k) (Forall @"c" c) -> k .> 0 .=> majority (replicate k c) c)
-                     [sorry]
+  -- Helper definition
+  let isMajority :: SBV a -> SList a -> SBool
+      isMajority e xs = length xs `sEDiv` 2 .< KD.count e xs
 
-    -- Majority, if exists, is unique
-    majUnique <- lemma "majUnique"
-                       (\(Forall @"xs" xs) (Forall @"m1" m1) (Forall @"m2" m2) ->
-                            majority xs m1 .&& majority xs m2 .=> m1 .== m2)
-                       [sorry]
+  -- First prove the generalized majority theorem
+  majorityGeneral <-
+     induct (atProxy p "majorityGeneral")
+            (\(Forall @"xs" xs) (Forall @"i" i) (Forall @"e" (e :: SBV a)) (Forall @"c" c)
+                  -> i .>= 0 .&& (length xs + i) `sEDiv` 2 .< ite (e .== c) i 0 + KD.count e xs .=> majority c i xs .== e) $
+            \ih x xs i (e :: SBV a) c ->
+                   [i .>= 0, (length (x .: xs) + i) `sEDiv` 2 .< ite (e .== c) i 0 + KD.count e (x .: xs)]
+                |- majority c i (x .: xs)
+                =: cases [ i .== 0 ==> majority x 1 xs
+                                    ?? ih `at` (Inst @"i" (1 :: SInteger), Inst @"e" e, Inst @"c" x)
+                                    =: e
+                                    =: qed
+                         , i .>  0 ==> majority c (i + ite (c .== x) 1 (-1)) xs
+                                    =: cases [ c .== x ==> majority c (i + 1) xs
+                                                        ?? ih `at` (Inst @"i" (i+1), Inst @"e" e, Inst @"c" c)
+                                                        =: e
+                                                        =: qed
+                                             , c ./= x ==> majority c (i - 1) xs
+                                                        ?? ih `at` (Inst @"i" (i-1), Inst @"e" e, Inst @"c" c)
+                                                        =: e
+                                                        =: qed
+                                             ]
+                         ]
 
-    -- We prove a generalized version
-    helper <-
-      sInductWith cvc5 "helper"
-              (\(Forall @"xs" xs) (Forall @"k" k) (Forall @"c" c) (Forall @"m" m)
-                    -> majority (replicate k c ++ xs) m .=> cand c k xs .== m)
-              (\xs (_k :: SInteger) (_c :: SInteger) (_m :: SInteger) -> length @Integer xs) $
-              \ih xs k c m ->
-                   [majority (replicate k c ++ xs) m]
-                |- cand c k xs
-                =: split xs
-                         (cases [ k .>  0 ==> c
-                                           ?? [ majSame   `at` (Inst @"k" k, Inst @"c" c)
-                                              , majUnique `at` ( Inst @"xs" (replicate k c)
-                                                               , Inst @"m1" c
-                                                               , Inst @"m2" m
-                                                               )
-                                              ]
-                                           =: m
-                                           =: qed
-                                , k .<= 0 ==> c
-                                           -- Note that the assumption
-                                           --
-                                           --    majority (replicate k c ++ xs) m
-                                           --
-                                           -- evaluates to False in this case. Why? Well,
-                                           -- @xs@ is null, and so is @replicate k c@, so
-                                           -- we get @majority [] m@, which then leads
-                                           -- to '0 .< 0', i.e., false. That is, the case
-                                           -- combined implication leads to a contradiction
-                                           -- Hence, we're justified in putting 'sFalse'
-                                           -- here as the reason, since False implies everything.
-                                           --
-                                           -- In fact, we can even totally skip the @k .<= 0@ case
-                                           -- as the SMT solver will figure that out on its own, but
-                                           -- we're being explicit here.
-                                           ?? sFalse
-                                           =: m
-                                           =: qed
-                                ])
-                         (\a as -> ite (a .== c)
-                                       (cand c (k+1) as)
-                                       (ite (k .== 0)
-                                            (cand a 1     as)
-                                            (cand c (k-1) as))
-                                =: cases [ a .== c
-                                           ==> cand c (k+1) as
-                                            ?? ih `at` (Inst @"xs" as, Inst @"k" (k+1), Inst @"c" c, Inst @"m" m)
-                                            ?? "c1"
-                                            ?? sorry
-                                            =: m
-                                            =: qed
-                                         , a ./= c .&& k .== 0
-                                           ==> cand a 1 as
-                                            ?? ih `at` (Inst @"xs" as, Inst @"k" (1 :: SInteger), Inst @"c" a, Inst @"m" m)
-                                            ?? "c2"
-                                            ?? sorry
-                                            =: m
-                                            =: qed
-                                         , a ./= c .&& k ./= 0
-                                           ==> cand c (k-1) as
-                                            ?? ih `at` (Inst @"xs" as, Inst @"k" (k-1), Inst @"c" c, Inst @"m" m)
-                                            ?? "c3"
-                                            ?? sorry
-                                            =: m
-                                            =: qed
-                                         ])
-
-    -- The theorem now follows simply from the helper
-    calc "correctness"
-         (\(Forall @"xs" xs) (Forall @"m" m) -> majority xs m .=> maj xs .== m) $
-         \xs m -> [majority xs m] |- maj xs
-                                  =: cand 0 0 xs
-                                  ?? helper `at` ( Inst @"xs" xs
-                                                 , Inst @"k" (0 :: SInteger)
-                                                 , Inst @"c" (0 :: SInteger)
-                                                 , Inst @"m" m
-                                                 )
-                                  =: m
-                                  =: qed
+  -- We can now prove the main theorem, by instantiating the general version.
+  lemma (atProxy p "majority")
+        (\(Forall @"c" (c :: SBV a)) (Forall @"xs" xs) -> isMajority c xs .=> mjrty xs .== c)
+        [majorityGeneral]
