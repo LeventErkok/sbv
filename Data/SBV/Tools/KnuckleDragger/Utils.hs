@@ -174,8 +174,8 @@ data Proof = Proof { dependencies :: [Proof]     -- ^ Immediate dependencies of 
 
 -- | Drop the instantiation part
 shortProofName :: Proof -> String
-shortProofName p | "@" `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
-                 | True              = s
+shortProofName p | " @ " `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
+                 | True                = s
    where s = proofName p
 
 -- | Keeping track of where the sorry originates from. Used in displaying dependencies.
