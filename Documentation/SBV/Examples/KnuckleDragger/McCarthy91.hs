@@ -52,9 +52,8 @@ correctness = runKD $ do
                                                           =: qed
                                            , n+1 .<= 100 ==> n + 1 .< mcCarthy91 (mcCarthy91 (n + 12)) + 11
                                                           =: n .< mcCarthy91 (mcCarthy91 (n + 12)) + 10
-                                                          ?? [ hprf (ih `at` Inst @"n" (mcCarthy91 (n + 12)))
-                                                             , hcmnt "bad"
-                                                             ]
+                                                          ?? ih `at` Inst @"n" (mcCarthy91 (n + 12))
+                                                          ?? "bad"
                                                           =: mcCarthy91 (n + 12) .< n + 1
                                                           ?? ih `at` Inst @"n" (n + 12)
                                                           =: sTrue
