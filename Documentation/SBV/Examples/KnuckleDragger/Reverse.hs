@@ -31,7 +31,7 @@ import Data.SBV
 import Data.SBV.List hiding (partition)
 import Data.SBV.Tools.KnuckleDragger
 
-import qualified Data.SBV.Tools.KnuckleDragger.List as KDL
+import qualified Data.SBV.Tools.KnuckleDragger.List as KD
 
 #ifdef DOCTEST
 -- $setup
@@ -120,10 +120,10 @@ correctness :: forall a. SymVal a => Proxy a -> IO Proof
 correctness p = runKD $ do
 
   -- Import a few helpers from "Data.SBV.Tools.KnuckleDragger.List"
-  revLen  <- use $ KDL.revLen  p
-  revApp  <- use $ KDL.revApp  p
-  revSnoc <- use $ KDL.revSnoc p
-  revRev  <- use $ KDL.revRev  p
+  revLen  <- use $ KD.revLen  p
+  revApp  <- use $ KD.revApp  p
+  revSnoc <- use $ KD.revSnoc p
+  revRev  <- use $ KD.revRev  p
 
   sInductWith cvc5 (atProxy p "revCorrect")
     (\(Forall @"xs" (xs :: SList a)) -> rev xs .== reverse xs)
