@@ -1289,7 +1289,10 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp o@(SeqOp SBVAny{} )      args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp o@(SeqOp SBVConcat{})    args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
 
-        sh (SBVApp (SeqOp op) args) = "(" ++ stringOrSequence stringOp op ++ " " ++ unwords (map cvtSV args) ++ ")"
+        -- Otherwise, we get to pick between string or sequence. Exception: unit over string is a no-op, because
+        -- SMTLib characters are and strings are the same thing.
+        sh (SBVApp (SeqOp SeqUnit) [a]) | charOp = cvtSV a
+        sh (SBVApp (SeqOp op) args) = "(" ++ stringOrSequence charOp op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (SetOp SetEqual)      args)   = "(= "      ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp (SetOp SetMember)     [e, s]) = "(select " ++ cvtSV s ++ " " ++ cvtSV e ++ ")"

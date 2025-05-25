@@ -402,7 +402,8 @@ mapAppend f = runKD $ do
           (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> map f (xs ++ ys) .== map f xs ++ map f ys) $
           \ih x xs ys -> [] |- map f ((x .: xs) ++ ys)
                             =: map f (x .: (xs ++ ys))
-                            =: f x .: map f (xs ++ ys)        ?? ih
+                            =: f x .: map f (xs ++ ys)
+                            ?? ih
                             =: f x .: (map f xs  ++ map f ys)
                             =: (f x .: map f xs) ++ map f ys
                             =: map f (x .: xs) ++ map f ys
