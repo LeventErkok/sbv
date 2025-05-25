@@ -30,7 +30,7 @@ import Data.SBV
 import Data.SBV.List hiding (partition)
 import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
-import qualified Data.SBV.Tools.KnuckleDragger.Lists as KD
+import qualified Data.SBV.Tools.KnuckleDragger.List as KD
 
 import qualified Documentation.SBV.Examples.KnuckleDragger.SortHelpers as SH
 

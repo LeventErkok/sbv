@@ -134,7 +134,7 @@ Library
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.KnuckleDragger
-                  , Data.SBV.Tools.KnuckleDragger.Lists
+                  , Data.SBV.Tools.KnuckleDragger.List
                   , Data.SBV.Tools.Overflow
                   , Data.SBV.Tools.Polynomial
                   , Data.SBV.Tools.Range

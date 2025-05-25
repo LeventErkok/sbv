@@ -25,7 +25,7 @@ import Data.Proxy
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
-import Data.SBV.Tools.KnuckleDragger.Lists
+import Data.SBV.Tools.KnuckleDragger.List
 
 #ifdef DOCTEST
 -- $setup

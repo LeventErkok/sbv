@@ -35,7 +35,7 @@ import Data.SBV.List
 import Data.Proxy
 
 import Data.SBV.Tools.KnuckleDragger
-import qualified Data.SBV.Tools.KnuckleDragger.Lists as KD
+import qualified Data.SBV.Tools.KnuckleDragger.List as KD
 
 #ifdef DOCTEST
 -- $setup
@@ -62,7 +62,7 @@ majority = smtFunction "majority"
 mjrty :: SymVal a => SList a -> SBV a
 mjrty = majority (some "arb" (const sTrue)) 0
 
--- | The function @how-many@ in the paper is already defined in SBV as 'count'. Let's give it a name:
+-- | The function @how-many@ in the paper is already defined in SBV as 'KD.count'. Let's give it a name:
 howMany :: SymVal a => SBV a -> SList a -> SInteger
 howMany = KD.count
 
