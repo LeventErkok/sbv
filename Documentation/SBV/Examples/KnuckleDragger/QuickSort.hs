@@ -208,7 +208,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --   Result:                                                   Q.E.D.
 -- Lemma: quickSortIsCorrect @Integer                          Q.E.D.
 -- == Proof tree:
--- quickSortIsCorrect
+-- quickSortIsCorrect @Integer
 --  ├╴sortIsPermutation
 --  │  └╴sortCountsMatch
 --  │     ├╴countAppend (x2)
