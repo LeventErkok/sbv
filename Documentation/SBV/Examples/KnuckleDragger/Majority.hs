@@ -101,8 +101,13 @@ howMany = KD.count
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: majority @Integer                Q.E.D.
--- [Proven] majority @Integer
-correctness :: forall a. SymVal a => Proxy a -> IO Proof
+-- Lemma: ifExistsFound @Integer           Q.E.D.
+-- Lemma: ifNoMajority @Integer            Q.E.D.
+-- Lemma: uniqueness @Integer
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- ([Proven] majority @Integer,[Proven] ifExistsFound @Integer,[Proven] ifNoMajority @Integer,[Proven] uniqueness @Integer)
+correctness :: forall a. SymVal a => Proxy a -> IO (Proof, Proof, Proof, Proof)
 correctness p = runKD $ do
 
   -- Helper definition
@@ -134,6 +139,28 @@ correctness p = runKD $ do
                          ]
 
   -- We can now prove the main theorem, by instantiating the general version.
-  lemma (atProxy p "majority")
-        (\(Forall @"c" (c :: SBV a)) (Forall @"xs" xs) -> isMajority c xs .=> mjrty xs .== c)
-        [majorityGeneral]
+  correct <- lemma (atProxy p "majority")
+                   (\(Forall @"c" (c :: SBV a)) (Forall @"xs" xs) -> isMajority c xs .=> mjrty xs .== c)
+                   [majorityGeneral]
+
+  -- Corollary: If there is a majority element, then what we return is a majority element:
+  ifExistsFound <- lemma (atProxy p "ifExistsFound")
+                        (\(Forall @"c" (c :: SBV a)) (Forall @"xs" xs) -> isMajority c xs .=> isMajority (mjrty xs) xs)
+                        [correct]
+
+  -- Contrapositive to the above: If the returned value is not majority, then there is no majority:
+  ifNoMajority <- lemma (atProxy p "ifNoMajority")
+                        (\(Forall @"c" (c :: SBV a)) (Forall @"xs" xs) -> sNot (isMajority (mjrty xs) xs) .=> sNot (isMajority c xs))
+                        [ifExistsFound]
+
+  -- Let's also prove majority is unique, while we're at it, even though it is not essential for our main argument.
+  unique <- calc (atProxy p "uniqueness")
+                 (\(Forall @"m1" (m1 :: SBV a)) (Forall @"m2" m2) (Forall @"xs" xs) -> isMajority m1 xs .&& isMajority m2 xs .=> m1 .== m2) $
+                 \m1 m2 xs -> [isMajority m1 xs, isMajority m2 xs]
+                           |- m1
+                           ?? correct `at` (Inst @"c" m1, Inst @"xs" xs)
+                           ?? correct `at` (Inst @"c" m2, Inst @"xs" xs)
+                           =: m2
+                           =: qed
+
+  pure (correct, ifExistsFound, ifNoMajority, unique)
