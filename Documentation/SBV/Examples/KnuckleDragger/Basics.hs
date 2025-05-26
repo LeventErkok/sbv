@@ -9,27 +9,35 @@
 -- Some basic KD usage.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                #-}
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE ExplicitForAll     #-}
-{-# LANGUAGE TypeAbstractions   #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE ExplicitForAll      #-}
+{-# LANGUAGE TypeAbstractions    #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.KnuckleDragger.Basics where
 
+import Prelude hiding(reverse, length, elem)
+
 import Data.SBV
+import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
+
+import Data.Proxy
+import Control.Monad (void)
 
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XScopedTypeVariables
 -- >>> :set -XTypeApplications
 -- >>> import Data.SBV
+-- >>> import Data.Proxy
 -- >>> import Control.Exception
 #endif
 
@@ -197,3 +205,40 @@ noTerminationChecks = runKD $ do
             ?? badAxiom `at` Inst @"n" (0 :: SInteger)
             =: 1 + f 0
             =: qed)
+
+-- * Trying to prove non-theorems
+
+-- | An example where we attempt to prove a non-theorem. Notice the counter-example
+-- generated for:
+--
+-- @length xs == ite (length xs .== 3) 5 (length xs)@
+--
+-- >>> badRevLen (Proxy @Integer) `catch` (\(_ :: SomeException) -> pure ())
+-- Lemma: badRevLen @Integer
+-- *** Failed to prove badRevLen @Integer.
+-- Falsifiable. Counter-example:
+--   xs = [10,11,10] :: [Integer]
+badRevLen :: forall a. SymVal a => Proxy a -> IO ()
+badRevLen p = runKD $
+   void $ lemma (atProxy p "badRevLen")
+                (\(Forall @"xs" (xs :: SList a)) -> length (reverse xs) .== ite (length xs .== 3) 5 (length xs))
+                []
+
+-- | It is instructive to see what kind of counter-example we get if a lemma fails to prove.
+-- Below, we do a variant of the 'lengthTail, but with a bad implementation over integers,
+-- and see the counter-example. Our implementation returns an incorrect answer if the given list is longer
+-- than 5 elements and have 42 in it:
+--
+-- >>> badLengthProof `catch` (\(_ :: SomeException) -> pure ())
+-- Lemma: badLengthProof
+-- *** Failed to prove badLengthProof.
+-- Falsifiable. Counter-example:
+--   xs   = [15,11,13,16,27,42] :: [Integer]
+--   imp  =                  42 :: Integer
+--   spec =                   6 :: Integer
+badLengthProof :: IO ()
+badLengthProof = runKD $ do
+   let badLength :: SList Integer -> SInteger
+       badLength xs = ite (length xs .> 5 .&& 42 `elem` xs) 42 (length xs)
+
+   void $ lemma "badLengthProof" (\(Forall @"xs" xs) -> observe "imp" (badLength xs) .== observe "spec" (length xs)) []

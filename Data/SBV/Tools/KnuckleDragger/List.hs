@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.KnuckleDragger.Lists
+-- Module    : Data.SBV.Tools.KnuckleDragger.List
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -22,9 +22,50 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.KnuckleDragger.Lists where
+module Data.SBV.Tools.KnuckleDragger.List (
+     -- * Append
+     appendNull, consApp, appendAssoc
 
-import Prelude (IO, ($), Integer, Num(..), id, (.), flip)
+     -- * Reverse
+   , revLen, revApp, revCons, revSnoc, revRev
+
+     -- * Length
+   , lengthTail, lenAppend, lenAppend2
+
+     -- * Replicate
+   , replicateLength
+
+     -- * All and any
+   , allAny
+
+     -- * Map
+   , mapEquiv, mapAppend, mapReverse
+
+     -- * Foldr and foldl
+   , foldrMapFusion, foldrFusion, foldrOverAppend, foldlOverAppend, foldrFoldlDuality, foldrFoldlDualityGeneralized, foldrFoldl
+   , bookKeeping
+
+     -- * Filter
+   , filterAppend, filterConcat, mapFilter
+
+     -- * Partition
+   , partition1, partition2
+
+    -- * Take and drop
+   , take_take, drop_drop, take_drop, take_cons, take_map, drop_cons, drop_map, length_take, length_drop, take_all, drop_all
+   , take_append, drop_append
+
+   -- * Zip
+   , map_fst_zip
+   , map_snd_zip
+   , map_fst_zip_take
+   , map_snd_zip_take
+
+   -- * Counting elements
+   , count, countAppend, takeDropCount, countNonNegative, countElem, elemCount
+ ) where
+
+import Prelude (Eq, IO, ($), Num(..), id, (.), flip)
 
 import Data.SBV
 import Data.SBV.List
@@ -47,8 +88,6 @@ import Data.Proxy
 
 -- | @xs ++ [] == xs@
 --
--- We have:
---
 -- >>> appendNull (Proxy @Integer)
 -- Lemma: appendNull @Integer              Q.E.D.
 -- [Proven] appendNull @Integer
@@ -61,8 +100,6 @@ appendNull p = runKD $ lemma (atProxy p "appendNull")
 
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
 --
--- We have:
---
 -- >>> consApp (Proxy @Integer)
 -- Lemma: consApp @Integer                 Q.E.D.
 -- [Proven] consApp @Integer
@@ -72,8 +109,6 @@ consApp p = runKD $ lemma (atProxy p "consApp") (\(Forall @"x" (x :: SBV a)) (Fo
 -- * Associativity of append
 
 -- | @(xs ++ ys) ++ zs == xs ++ (ys ++ zs)@
---
--- We have:
 --
 -- >>> appendAssoc (Proxy @Integer)
 -- Lemma: appendAssoc @Integer             Q.E.D.
@@ -86,36 +121,32 @@ appendAssoc :: forall a. SymVal a => Proxy a -> IO Proof
 appendAssoc p = runKD $
    lemma (atProxy p "appendAssoc") (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs) []
 
--- * Reverse and append
+-- * Reverse
 
--- | @length (reverse xs) = length xs@
+-- | @length xs == length (reverse xs)@
 --
--- We have:
---
--- >>> reversePreservesLength (Proxy @Integer)
--- Inductive lemma: reversePreservesLength @Integer
+-- >>> revLen (Proxy @Integer)
+-- Inductive lemma: revLen @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] reversePreservesLength @Integer
-reversePreservesLength :: forall a. SymVal a => Proxy a -> IO Proof
-reversePreservesLength p = runKD $
-    induct (atProxy p "reversePreservesLength")
-           (\(Forall @"xs" (xs :: SList Integer)) -> length (reverse xs) .== length xs) $
-           \ih (x :: SInteger) xs -> [] |- length (reverse (x .: xs))
-                                        =: length (reverse xs ++ singleton x)
-                                        =: length (reverse xs) + length (singleton x)
-                                        ?? ih
-                                        =: length xs + 1
-                                        =: length (x .: xs)
-                                        =: qed
+-- [Proven] revLen @Integer
+revLen :: forall a. SymVal a => Proxy a -> IO Proof
+revLen p = runKD $
+   induct (atProxy p "revLen")
+          (\(Forall @"xs" (xs :: SList a)) -> length (reverse xs) .== length xs) $
+          \ih (x :: SBV a) xs -> [] |- length (reverse (x .: xs))
+                                    =: length (reverse xs ++ singleton x)
+                                    =: length (reverse xs) + length (singleton x)
+                                    ?? ih
+                                    =: length xs + 1
+                                    =: length (x .: xs)
+                                    =: qed
 
 -- | @reverse (xs ++ ys) .== reverse ys ++ reverse xs@
---
--- We have:
 --
 -- >>> revApp (Proxy @Integer)
 -- Inductive lemma: revApp @Integer
@@ -173,9 +204,7 @@ revSnoc p = runKD $ do
 
 -- | @reverse (reverse xs) == xs@
 --
--- We have:
---
--- >>> reverseReverse (Proxy @Integer)
+-- >>> revRev (Proxy @Integer)
 -- Inductive lemma: revApp @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -184,20 +213,20 @@ revSnoc p = runKD $ do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: reverseReverse @Integer
+-- Inductive lemma: revRev @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] reverseReverse @Integer
-reverseReverse :: forall a. SymVal a => Proxy a -> IO Proof
-reverseReverse p = runKD $ do
+-- [Proven] revRev @Integer
+revRev :: forall a. SymVal a => Proxy a -> IO Proof
+revRev p = runKD $ do
 
    ra <- use $ revApp p
 
-   induct (atProxy p "reverseReverse")
+   induct (atProxy p "revRev")
           (\(Forall @"xs" (xs :: SList a)) -> reverse (reverse xs) .== xs) $
           \ih (x :: SBV a) xs -> [] |- reverse (reverse (x .: xs))
                                     =: reverse (reverse xs ++ singleton x)           ?? ra
@@ -208,9 +237,7 @@ reverseReverse p = runKD $ do
 
 -- * Lengths of lists
 
--- | @length (x : xs) = 1 + length xs@
---
--- We have:
+-- | @length (x : xs) == 1 + length xs@
 --
 -- >>> lengthTail (Proxy @Integer)
 -- Lemma: lengthTail @Integer              Q.E.D.
@@ -221,28 +248,7 @@ lengthTail p = runKD $
          (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> length (x .: xs) .== 1 + length xs)
          []
 
--- | It is instructive to see what kind of counter-example we get if a lemma fails to prove.
--- Below, we do a variant of the 'lengthTail, but with a bad implementation over integers,
--- and see the counter-example. Our implementation returns an incorrect answer if the given list is longer
--- than 5 elements and have 42 in it. We have:
---
--- >>> badLengthProof `catch` (\(_ :: SomeException) -> pure ())
--- Lemma: badLengthProof
--- *** Failed to prove badLengthProof.
--- Falsifiable. Counter-example:
---   xs   = [15,11,13,16,27,42] :: [Integer]
---   imp  =                  42 :: Integer
---   spec =                   6 :: Integer
-badLengthProof :: IO ()
-badLengthProof = runKD $ do
-   let badLength :: SList Integer -> SInteger
-       badLength xs = ite (length xs .> 5 .&& 42 `elem` xs) 42 (length xs)
-
-   void $ lemma "badLengthProof" (\(Forall @"xs" xs) -> observe "imp" (badLength xs) .== observe "spec" (length xs)) []
-
 -- | @length (xs ++ ys) == length xs + length ys@
---
--- We have:
 --
 -- >>> lenAppend (Proxy @Integer)
 -- Lemma: lenAppend @Integer               Q.E.D.
@@ -254,8 +260,6 @@ lenAppend p = runKD $
          []
 
 -- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
---
--- We have:
 --
 -- >>> lenAppend2 (Proxy @Integer)
 -- Lemma: lenAppend2 @Integer              Q.E.D.
@@ -269,8 +273,6 @@ lenAppend2 p = runKD $
 -- * Replicate
 
 -- | @length (replicate k x) == max (0, k)@
---
--- We have:
 --
 -- >>> replicateLength (Proxy @Integer)
 -- Inductive lemma: replicateLength @Integer
@@ -302,7 +304,7 @@ replicateLength p = runKD $
 
 -- | @not (all id xs) == any not xs@
 --
--- A list of booleans is not all true, if any of them is false. We have:
+-- A list of booleans is not all true, if any of them is false.
 --
 -- >>> allAny
 -- Inductive lemma: allAny
@@ -324,41 +326,9 @@ allAny = runKD $
                          =: any sNot (x .: xs)
                          =: qed
 
--- | If an integer list doesn't have 2 as an element, then filtering for @> 2@ or @.>= 2@
--- yields the same result. We have:
---
--- >>> filterEx
--- Inductive lemma: filterEx
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] filterEx
-filterEx :: IO Proof
-filterEx = runKD $
-  induct "filterEx"
-         (\(Forall @"xs" xs) -> (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)) $
-         \ih x xs -> let h = (2 :: SInteger) `notElem` (x .:  xs)
-                  in [h] |- filter (.> 2) (x .: xs)
-                         =: ite (x .> 2) (x .: filter (.>  2) xs) (filter (.>  2) xs) ?? ih
-                         =: ite (x .> 2) (x .: filter (.>= 2) xs) (filter (.>= 2) xs)
-                         =: qed
-
--- | The 'filterEx' example above, except we get a counter-example if @2@ can be in the list. Note that
--- we don't need the induction tactic here.
---
--- >>> filterEx2 `catch` (\(_ :: SomeException) -> pure ())
--- Lemma: filterEx2
--- *** Failed to prove filterEx2.
--- Falsifiable. Counter-example:
---   xs = [2] :: [Integer]
-filterEx2 :: IO ()
-filterEx2 = runKD $
-   void $ lemma "filterEx2" (\(Forall @"xs" xs) -> filter (.> (2 :: SInteger)) xs .== filter (.>= 2) xs) []
-
 -- * Map, append, and reverse
 
--- | @f = g => map f xs = map g xs@
+-- | @f == g ==> map f xs == map g xs@
 --
 -- >>> mapEquiv @Integer @Integer (uninterpret "f") (uninterpret "g")
 -- Inductive lemma: mapEquiv @(Integer,Integer)
@@ -402,7 +372,8 @@ mapAppend f = runKD $ do
           (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> map f (xs ++ ys) .== map f xs ++ map f ys) $
           \ih x xs ys -> [] |- map f ((x .: xs) ++ ys)
                             =: map f (x .: (xs ++ ys))
-                            =: f x .: map f (xs ++ ys)        ?? ih
+                            =: f x .: map f (xs ++ ys)
+                            ?? ih
                             =: f x .: (map f xs  ++ map f ys)
                             =: (f x .: map f xs) ++ map f ys
                             =: map f (x .: xs) ++ map f ys
@@ -446,56 +417,9 @@ mapReverse f = runKD $ do
                            =: map f (reverse (x .: xs))
                            =: qed
 
--- * Reverse and length
-
--- | @length xs == length (reverse xs)@
---
--- We have:
---
--- >>> revLen (Proxy @Integer)
--- Inductive lemma: revLen @Integer
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] revLen @Integer
-revLen :: forall a. SymVal a => Proxy a -> IO Proof
-revLen p = runKD $
-   induct (atProxy p "revLen")
-          (\(Forall @"xs" (xs :: SList a)) -> length (reverse xs) .== length xs) $
-          \ih (x :: SBV a) xs -> [] |- length (reverse (x .: xs))
-                                    =: length (reverse xs ++ singleton x)
-                                    =: length (reverse xs) + length (singleton x)
-                                    ?? ih
-                                    =: length xs + 1
-                                    =: length (x .: xs)
-                                    =: qed
-
--- | An example where we attempt to prove a non-theorem. Notice the counter-example
--- generated for:
---
--- @length xs = ite (length xs .== 3) 5 (length xs)@
---
--- We have:
---
--- >>> badRevLen (Proxy @Integer) `catch` (\(_ :: SomeException) -> pure ())
--- Lemma: badRevLen @Integer
--- *** Failed to prove badRevLen @Integer.
--- Falsifiable. Counter-example:
---   xs = [10,11,10] :: [Integer]
-badRevLen :: forall a. SymVal a => Proxy a -> IO ()
-badRevLen p = runKD $
-   void $ lemma (atProxy p "badRevLen")
-                (\(Forall @"xs" (xs :: SList a)) -> length (reverse xs) .== ite (length xs .== 3) 5 (length xs))
-                []
-
 -- * Foldr-map fusion
 
--- | @foldr f a . map g = foldr (f . g) a@
---
--- We have:
+-- | @foldr f a . map g == foldr (f . g) a@
 --
 -- >>> foldrMapFusion @Integer @Bool @String (uninterpret "a") (uninterpret "b") (uninterpret "c")
 -- Inductive lemma: foldrMapFusion @(Integer,Bool,[Char])
@@ -522,8 +446,8 @@ foldrMapFusion a g f = runKD $ do
 -- |
 --
 -- @
---   Given f a = b and f (g x y) = h x (f y), for all x and y
---   We have: f . foldr g a = foldr h b
+--   f . foldr g a == foldr h b
+--   provided, f a = b and for all x and y, f (g x y) == h x (f y).
 -- @
 --
 -- >>> foldrFusion @Integer @Bool @String (uninterpret "a") (uninterpret "b") (uninterpret "f") (uninterpret "g") (uninterpret "h")
@@ -554,8 +478,6 @@ foldrFusion a b f g h = runKD $ do
 
 -- | @foldr f a (xs ++ ys) == foldr f (foldr f a ys) xs@
 --
--- We have:
---
 -- >>> foldrOverAppend @Integer (uninterpret "a") (uninterpret "f")
 -- Inductive lemma: foldrOverAppend @Integer
 --   Step: Base                            Q.E.D.
@@ -579,8 +501,6 @@ foldrOverAppend a f = runKD $ do
 -- * Foldl over append
 
 -- | @foldl f a (xs ++ ys) == foldl f (foldl f a xs) ys@
---
--- We have:
 --
 -- >>> foldlOverAppend @Integer @Bool (uninterpret "f")
 -- Inductive lemma: foldlOverAppend @(Integer,Bool)
@@ -606,8 +526,6 @@ foldlOverAppend f = runKD $
 -- * Foldr-foldl correspondence
 
 -- | @foldr f e xs == foldl (flip f) e (reverse xs)@
---
--- We have:
 --
 -- >>> foldrFoldlDuality @Integer @String (uninterpret "f")
 -- Inductive lemma: foldlOverAppend @(Integer,[Char])
@@ -653,13 +571,11 @@ foldrFoldlDuality f = runKD $ do
 -- and x \@ e = x                     (right unit)
 -- @
 --
--- Prove:
+-- Proves:
 --
 -- @
---     foldr (\@) e xs = foldl (\@) e xs
+--     foldr (\@) e xs == foldl (\@) e xs
 -- @
---
--- We have:
 --
 -- >>> foldrFoldlDualityGeneralized @Integer (uninterpret "e") (uninterpret "|@|")
 -- Inductive lemma: helper @Integer
@@ -726,7 +642,7 @@ foldrFoldlDualityGeneralized  e (@) = runKD $ do
 --    foldr (\<+>) e xs = foldl (\<*>) e xs
 -- @
 --
--- In Bird's Introduction to Functional Programming book (2nd edition) this is called the second duality theorem. We have:
+-- In Bird's Introduction to Functional Programming book (2nd edition) this is called the second duality theorem:
 --
 -- >>> foldrFoldl @Integer @String (uninterpret "<+>") (uninterpret "<*>") (uninterpret "e")
 -- Inductive lemma: foldl over <*>/<+> @(Integer,[Char])
@@ -783,8 +699,6 @@ foldrFoldl (<+>) (<*>) e = runKD $ do
 -- | Provided @f@ is associative and @a@ is its both left and right-unit:
 --
 -- @foldr f a . concat == foldr f a . map (foldr f a)@
---
--- We have:
 --
 -- >>> bookKeeping @Integer (uninterpret "a") (uninterpret "f")
 -- Inductive lemma: foldBase @Integer
@@ -879,8 +793,6 @@ bookKeeping a f = runKD $ do
 
 -- | @filter p (xs ++ ys) == filter p xs ++ filter p ys@
 --
--- We have:
---
 -- >>> filterAppend @Integer (uninterpret "p")
 -- Inductive lemma: filterAppend @Integer
 --   Step: Base                            Q.E.D.
@@ -909,8 +821,6 @@ filterAppend p = runKD $
 -- Similar to the book-keeping law, we cannot express this in SBV directly, since it involves a nested lambda.
 -- @concatMap (filter p)@ maps a higher-order function @filter p@, which itself has a nested lambda. So, we use
 -- our own merged definition. Hopefully we'll relax this as SMTLib gains more higher order features.
---
--- We have:
 --
 -- >>> filterConcat @Integer (uninterpret "f")
 -- Inductive lemma: filterAppend @Integer
@@ -1032,7 +942,7 @@ partition2 f = runKD $
 
 -- * Take and drop
 
--- | @take n (take m xs) = take (n `smin` m) xs@
+-- | @take n (take m xs) == take (n `smin` m) xs@
 --
 -- >>> take_take (Proxy @Integer)
 -- Lemma: take_take @Integer               Q.E.D.
@@ -1044,7 +954,7 @@ take_take p = runKD $
          []
 
 
--- | @n >= 0 && m >= 0 => drop n (drop m xs) = drop (n + m) xs@
+-- | @n >= 0 && m >= 0 ==> drop n (drop m xs) == drop (n + m) xs@
 --
 -- >>> drop_drop (Proxy @Integer)
 -- Lemma: drop_drop @Integer               Q.E.D.
@@ -1067,7 +977,7 @@ take_drop p = runKD $
           (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> take n xs ++ drop n xs .== xs)
           []
 
--- | @n .> 0 => take n (x .: xs) = x .: take (n - 1) xs@
+-- | @n .> 0 ==> take n (x .: xs) == x .: take (n - 1) xs@
 --
 -- >>> take_cons (Proxy @Integer)
 -- Lemma: take_cons @Integer               Q.E.D.
@@ -1120,7 +1030,7 @@ take_map f = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
           (\(Forall @"xs" xs) (Forall @"n" n) -> take n (map f xs) .== map f (take n xs))
           [h1, h2]
 
--- | @n .> 0 => drop n (x .: xs) = drop (n - 1) xs@
+-- | @n .> 0 ==> drop n (x .: xs) == drop (n - 1) xs@
 --
 -- >>> drop_cons (Proxy @Integer)
 -- Lemma: drop_cons @Integer               Q.E.D.
@@ -1184,7 +1094,7 @@ drop_map f = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                     =: sTrue
                     =: qed
 
--- | @n >= 0 ==> length (take n xs) = length xs \`min\` n@
+-- | @n >= 0 ==> length (take n xs) == length xs \`min\` n@
 --
 -- >>> length_take (Proxy @Integer)
 -- Lemma: length_take @Integer             Q.E.D.
@@ -1195,7 +1105,7 @@ length_take p = runKD $
            (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> n .>= 0 .=> length (take n xs) .== length xs `smin` n)
            []
 
--- | @n >= 0 ==> length (drop n xs) = (length xs - n) \`max\` 0@
+-- | @n >= 0 ==> length (drop n xs) == (length xs - n) \`max\` 0@
 --
 -- >>> length_drop (Proxy @Integer)
 -- Lemma: length_drop @Integer             Q.E.D.
@@ -1228,7 +1138,7 @@ drop_all p = runKD $
           (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> length xs .<= n .=> drop n xs .== nil)
           []
 
--- | @take n (xs ++ ys) = (take n xs ++ take (n - length xs) ys)@
+-- | @take n (xs ++ ys) == (take n xs ++ take (n - length xs) ys)@
 --
 -- >>> take_append (Proxy @Integer)
 -- Lemma: take_append @Integer             Q.E.D.
@@ -1239,7 +1149,7 @@ take_append p = runKDWith cvc5 $
          (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> take n (xs ++ ys) .== take n xs ++ take (n - length xs) ys)
          []
 
--- | @drop n (xs ++ ys) = drop n xs ++ drop (n - length xs) ys@
+-- | @drop n (xs ++ ys) == drop n xs ++ drop (n - length xs) ys@
 --
 -- NB. As of Feb 2025, z3 struggles to prove this, but cvc5 gets it out-of-the-box.
 --
@@ -1252,76 +1162,9 @@ drop_append p = runKD $
                    (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> drop n (xs ++ ys) .== drop n xs ++ drop (n - length xs) ys)
                    []
 
--- * Summing via halving
-
--- | We prove that summing a list can be done by halving the list, summing parts, and adding the results. The proof uses
--- strong induction. We have:
---
--- >>> sumHalves
--- Inductive lemma: sumAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): sumHalves
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way full case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2 (2 way full case split)
---       Step: 1.2.1                       Q.E.D.
---       Step: 1.2.2.1                     Q.E.D.
---       Step: 1.2.2.2                     Q.E.D.
---       Step: 1.2.2.3                     Q.E.D.
---       Step: 1.2.2.4                     Q.E.D.
---       Step: 1.2.2.5                     Q.E.D.
---       Step: 1.2.2.6 (simplify)          Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] sumHalves
-sumHalves :: IO Proof
-sumHalves = runKD $ do
-
-    let halvingSum :: SList Integer -> SInteger
-        halvingSum = smtFunction "halvingSum" $ \xs -> ite (null xs .|| null (tail xs))
-                                                           (sum xs)
-                                                           (let (f, s) = splitAt (length xs `sDiv` 2) xs
-                                                            in halvingSum f + halvingSum s)
-
-        sum :: SList Integer -> SInteger
-        sum = smtFunction "sum" $ \xs -> ite (null xs) 0 (head xs + sum (tail xs))
-
-    helper <- induct "sumAppend"
-                     (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
-                     \ih x xs ys -> [] |- sum (x .: xs ++ ys)
-                                       =: x + sum (xs ++ ys)
-                                       ?? ih
-                                       =: x + sum xs + sum ys
-                                       =: sum (x .: xs) + sum ys
-                                       =: qed
-
-    -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
-    sInductWith cvc5 "sumHalves"
-      (\(Forall @"xs" xs) -> halvingSum xs .== sum xs)
-      (length @Integer) $
-      \ih xs -> [] |- halvingSum xs
-                   =: split xs qed
-                            (\a as -> split as qed
-                                            (\b bs -> halvingSum (a .: b .: bs)
-                                                   =: let (f, s) = splitAt (length (a .: b .: bs) `sDiv` 2) (a .: b .: bs)
-                                                   in halvingSum f + halvingSum s
-                                                   ?? ih `at` Inst @"xs" f
-                                                   =: sum f + halvingSum s
-                                                   ?? ih `at` Inst @"xs" s
-                                                   =: sum f + sum s
-                                                   ?? helper `at` (Inst @"xs" f, Inst @"ys" s)
-                                                   =: sum (f ++ s)
-                                                   ?? "simplify"
-                                                   =: sum (a .: b .: bs)
-                                                   =: qed))
-
 -- * Zip
 
--- | @length xs = length ys ⟹ map fst (zip xs ys) = xs@
+-- | @length xs == length ys ==> map fst (zip xs ys) = xs@
 --
 -- >>> map_fst_zip (Proxy @(Integer,Integer))
 -- Inductive lemma: map_fst_zip @(Integer,Integer)
@@ -1346,7 +1189,7 @@ map_fst_zip p = runKD $
              =: x .: xs
              =: qed
 
--- | @length xs = length ys ⟹ map snd (zip xs ys) = xs@
+-- | @length xs == length ys ==> map snd (zip xs ys) = xs@
 --
 -- >>> map_snd_zip (Proxy @(Integer,Integer))
 -- Inductive lemma: map_snd_zip @(Integer,Integer)
@@ -1371,7 +1214,7 @@ map_snd_zip p = runKD $
              =: y .: ys
              =: qed
 
--- | @map fst (zip xs ys) = take (min (length xs) (length ys)) xs@
+-- | @map fst (zip xs ys) == take (min (length xs) (length ys)) xs@
 --
 -- >>> map_fst_zip_take (Proxy @(Integer,Integer))
 -- Lemma: take_cons @Integer               Q.E.D.
@@ -1401,7 +1244,7 @@ map_fst_zip_take p = runKD $ do
                =: take (length (x .: xs) `smin` length (y .: ys)) (x .: xs)
                =: qed
 
--- | @map snd (zip xs ys) = take (min (length xs) (length ys)) xs@
+-- | @map snd (zip xs ys) == take (min (length xs) (length ys)) xs@
 --
 -- >>> map_snd_zip_take (Proxy @(Integer,Integer))
 -- Lemma: take_cons @Integer               Q.E.D.
@@ -1431,7 +1274,168 @@ map_snd_zip_take p = runKD $ do
                   =: take (length (x .: xs) `smin` length (y .: ys)) (y .: ys)
                   =: qed
 
-{- HLint ignore reverseReverse "Redundant reverse" -}
+-- * Counting
+
+-- | Count the number of occurrences of an element in a list
+count :: SymVal a => SBV a -> SList a -> SInteger
+count = smtFunction "count" $ \e l -> ite (null l)
+                                          0
+                                          (let (x, xs) = uncons l
+                                               cxs     = count e xs
+                                           in ite (e .== x) (1 + cxs) cxs)
+
+-- | @count e (xs ++ ys) == count e xs + count e ys@
+--
+-- >>> countAppend (Proxy @Integer)
+-- Inductive lemma: countAppend @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2 (unfold count)                Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4 (simplify)                    Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] countAppend @Integer
+countAppend :: forall a. SymVal a => Proxy a -> IO Proof
+countAppend p = runKD $
+   induct (atProxy p "countAppend")
+          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" (e :: SBV a)) -> count e (xs ++ ys) .== count e xs + count e ys) $
+          \ih x xs ys (e :: SBV a) ->
+              [] |- count e ((x .: xs) ++ ys)
+                 =: count e (x .: (xs ++ ys))
+                 ?? "unfold count"
+                 =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
+                 ?? ih `at` (Inst @"ys" ys, Inst @"e" e)
+                 =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
+                 ?? "simplify"
+                 =: count e (x .: xs) + count e ys
+                 =: qed
+
+-- | @count e (take n xs) + count e (drop n xs) == count e xs@
+--
+-- >>> takeDropCount (Proxy @Integer)
+-- Inductive lemma: countAppend @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2 (unfold count)                Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4 (simplify)                    Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: take_drop @Integer               Q.E.D.
+-- Lemma: takeDropCount @Integer
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] takeDropCount @Integer
+takeDropCount :: forall a. SymVal a => Proxy a -> IO Proof
+takeDropCount p = runKD $ do
+       capp     <- use $ countAppend p
+       takeDrop <- use $ take_drop p
+
+       calc (atProxy p "takeDropCount")
+            (\(Forall @"xs" xs) (Forall @"n" n) (Forall @"e" (e :: SBV a)) -> count e (take n xs) + count e (drop n xs) .== count e xs) $
+            \xs n (e :: SBV a) ->
+                [] |- count e (take n xs) + count e (drop n xs)
+                   ?? capp `at` (Inst @"xs" (take n xs), Inst @"ys" (drop n xs), Inst @"e" e)
+                   =: count e (take n xs ++ drop n xs)
+                   ?? takeDrop
+                   =: count e xs
+                   =: qed
+
+-- | @count xs >= 0@
+--
+-- >>> countNonNegative (Proxy @Integer)
+-- Inductive lemma: countNonNegative @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] countNonNegative @Integer
+countNonNegative :: forall a. SymVal a => Proxy a -> IO Proof
+countNonNegative p = runKD $ do
+   induct (atProxy p "countNonNegative")
+          (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> count e xs .>= 0) $
+          \ih x xs (e :: SBV a) -> [] |- count e (x .: xs) .>= 0
+                                      =: cases [ e .== x ==> 1 + count e xs .>= 0
+                                                          ?? ih
+                                                          =: sTrue
+                                                          =: qed
+                                               , e ./= x ==> count e xs .>= 0
+                                                          ?? ih
+                                                          =: sTrue
+                                                          =: qed
+                                               ]
+
+-- | @e \`elem\` xs ==> count e xs .> 0@
+--
+-- >>> countElem (Proxy @Integer)
+-- Inductive lemma: countNonNegative @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: countElem @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] countElem @Integer
+countElem :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
+countElem p = runKD $ do
+
+    cnn <- use $ countNonNegative p
+
+    induct (atProxy p "countElem")
+           (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> e `elem` xs .=> count e xs .> 0) $
+           \ih x xs (e :: SBV a) -> [e `elem` (x .: xs)]
+                                 |- count e (x .: xs) .> 0
+                                 =: cases [ e .== x ==> 1 + count e xs .> 0
+                                                     ?? cnn
+                                                     =: sTrue
+                                                     =: qed
+                                          , e ./= x ==> count e xs .> 0
+                                                     ?? ih
+                                                     =: sTrue
+                                                     =: qed
+                                          ]
+
+-- | @count e xs .> 0 .=> e \`elem\` xs@
+--
+-- >>> elemCount (Proxy @Integer)
+-- Inductive lemma: elemCount @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] elemCount @Integer
+elemCount :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
+elemCount p = runKD $
+    induct (atProxy p "elemCount")
+           (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> count e xs .> 0 .=> e `elem` xs) $
+           \ih x xs (e :: SBV a) -> [count e xs .> 0]
+                                 |- e `elem` (x .: xs)
+                                 =: cases [ e .== x ==> trivial
+                                          , e ./= x ==> e `elem` xs
+                                                     ?? ih
+                                                     =: sTrue
+                                                     =: qed
+                                          ]
+
+{- HLint ignore revRev         "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
 {- HLint ignore foldrMapFusion "Fuse foldr/map"    -}
 {- HLint ignore filterConcat   "Move filter"       -}

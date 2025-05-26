@@ -30,6 +30,7 @@ import Data.SBV
 import Data.SBV.List hiding (partition)
 import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
+import qualified Data.SBV.Tools.KnuckleDragger.List as KD
 
 import qualified Documentation.SBV.Examples.KnuckleDragger.SortHelpers as SH
 
@@ -108,7 +109,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: sublistTail @Integer             Q.E.D.
--- Lemma: permutationImpliesSublist @IntegerQ.E.D.
+-- Lemma: sublistIfPerm @Integer           Q.E.D.
 -- Inductive lemma: lltCorrect
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
@@ -207,7 +208,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --   Result:                                                   Q.E.D.
 -- Lemma: quickSortIsCorrect @Integer                          Q.E.D.
 -- == Proof tree:
--- quickSortIsCorrect
+-- quickSortIsCorrect @Integer
 --  ├╴sortIsPermutation
 --  │  └╴sortCountsMatch
 --  │     ├╴countAppend (x2)
@@ -223,12 +224,12 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     ├╴lltPermutation
 --     │  ├╴lltSublist
 --     │  │  └╴sublistElem (x3)
---     │  └╴permutationImpliesSublist
+--     │  └╴sublistIfPerm
 --     ├╴lgePermutation
 --     │  ├╴lgeSublist
 --     │  │  ├╴sublistElem (x2)
 --     │  │  └╴lgeCorrect
---     │  └╴permutationImpliesSublist
+--     │  └╴sublistIfPerm
 --     └╴nonDecreasingMerge
 -- [Proven] quickSortIsCorrect @Integer
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
@@ -237,15 +238,15 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
   --------------------------------------------------------------------------------------------
   -- Part I. Import helper lemmas, definitions
   --------------------------------------------------------------------------------------------
-  let count         = SH.count         @a
+  let count         = KD.count         @a
       isPermutation = SH.isPermutation @a
       nonDecreasing = SH.nonDecreasing @a
       sublist       = SH.sublist       @a
 
-  countAppend               <- use $ SH.countAppend               p
-  sublistElem               <- use $ SH.sublistElem               p
-  sublistTail               <- use $ SH.sublistTail               p
-  permutationImpliesSublist <- use $ SH.permutationImpliesSublist p
+  countAppend   <- use $ KD.countAppend   p
+  sublistElem   <- use $ SH.sublistElem   p
+  sublistTail   <- use $ SH.sublistTail   p
+  sublistIfPerm <- use $ SH.sublistIfPerm p
 
   ---------------------------------------------------------------------------------------------------
   -- Part II. Formalizing less-than/greater-than-or-equal over lists and relationship to permutations
@@ -286,12 +287,12 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
                               ?? [ -- To establish x .< pivot, observe that x is in ys, and together
                                    -- with llt pivot ys, we get that x is less than pivot
                                    sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
-                                 , lltCorrect `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
+                                 , lltCorrect  `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
 
                                    -- Use induction hypothesis to get rid of the second conjunct. We need to tell
                                    -- the prover that xs is a sublist of ys too so it can satisfy its precondition
                                  , sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
-                                 , ih         `at` (Inst @"pivot" pivot, Inst @"ys" ys)
+                                 , ih          `at` (Inst @"pivot" pivot, Inst @"ys" ys)
                                  ]
                               =: sTrue
                               =: qed
@@ -302,8 +303,8 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& isPermutation xs ys .=> llt pivot xs) $
            \xs pivot ys -> [llt pivot ys, isPermutation xs ys]
                         |- llt pivot xs
-                        ?? [ lltSublist                `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
-                           , permutationImpliesSublist `at` (Inst @"xs" xs, Inst @"ys" ys)
+                        ?? [ lltSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
+                           , sublistIfPerm `at` (Inst @"xs" xs, Inst @"ys" ys)
                            ]
                         =: sTrue
                         =: qed
@@ -334,8 +335,8 @@ correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ d
            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& isPermutation xs ys .=> lge pivot xs) $
            \xs pivot ys -> [lge pivot ys, isPermutation xs ys]
                         |- lge pivot xs
-                        ?? [ lgeSublist                `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
-                           , permutationImpliesSublist `at` (Inst @"xs" xs, Inst @"ys" ys)
+                        ?? [ lgeSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
+                           , sublistIfPerm `at` (Inst @"xs" xs, Inst @"ys" ys)
                            ]
                         =: sTrue
                         =: qed

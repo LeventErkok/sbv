@@ -31,7 +31,7 @@ import Data.SBV
 import Data.SBV.List hiding (partition)
 import Data.SBV.Tools.KnuckleDragger
 
-import qualified Data.SBV.Tools.KnuckleDragger.Lists as KDL
+import qualified Data.SBV.Tools.KnuckleDragger.List as KD
 
 #ifdef DOCTEST
 -- $setup
@@ -55,7 +55,7 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 -- | Correctness the function 'rev'. We have:
 --
 -- >>> correctness (Proxy @Integer)
--- Inductive lemma: reversePreservesLength @Integer
+-- Inductive lemma: revLen @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -87,7 +87,7 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: reverseReverse @Integer
+-- Inductive lemma: revRev @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -120,10 +120,10 @@ correctness :: forall a. SymVal a => Proxy a -> IO Proof
 correctness p = runKD $ do
 
   -- Import a few helpers from "Data.SBV.Tools.KnuckleDragger.List"
-  revPreservesLength <- use $ KDL.reversePreservesLength p
-  revApp             <- use $ KDL.revApp                 p
-  revSnoc            <- use $ KDL.revSnoc                p
-  reverseReverse     <- use $ KDL.reverseReverse         p
+  revLen  <- use $ KD.revLen  p
+  revApp  <- use $ KD.revApp  p
+  revSnoc <- use $ KD.revSnoc p
+  revRev  <- use $ KD.revRev  p
 
   sInductWith cvc5 (atProxy p "revCorrect")
     (\(Forall @"xs" (xs :: SList a)) -> rev xs .== reverse xs)
@@ -147,11 +147,11 @@ correctness p = runKD $ do
                                           =: b .: rev (a .: rev (tail (b .: reverse w)))
                                           ?? "simplify tail"
                                           =: b .: rev (a .: rev (reverse w))
-                                          ?? [ ih                 `at` Inst @"xs" (reverse w)
-                                             , revPreservesLength `at` Inst @"xs" w
+                                          ?? [ ih     `at` Inst @"xs" (reverse w)
+                                             , revLen `at` Inst @"xs" w
                                              ]
                                           =: b .: rev (a .: reverse (reverse w))
-                                          ?? reverseReverse `at` Inst @"xs" w
+                                          ?? revRev `at` Inst @"xs" w
                                           =: b .: rev (a .: w)
                                           ?? ih
                                           =: b .: reverse (a .: w)

@@ -116,7 +116,8 @@ theorem nm f by = do cfg <- getKDConfig
 theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
 theoremWith cfg = lemmaGen cfg "Theorem"
 
--- | Capture the general flow of a proof-step.
+-- | Capture the general flow of a proof-step. Note that this is the only point where we call the backend solver
+-- in a KD proof.
 smtProofStep :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    => SMTConfig                              -- ^ config
    -> KDState                                -- ^ KDState

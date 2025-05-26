@@ -1275,21 +1275,24 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (RegExOp o@RegExNEq{}) []) = show o
 
         -- Reverse and higher order functions are special. Reverse is supported for strings, not others.
-        sh (SBVApp o@(SeqOp SBVReverse{})   args)                = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVZip{})       args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVZipWith{})   args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVReplicate{}) args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVPartition{}) args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVReverse{})   args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVMap{})       args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFoldl{})     args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFoldr{})     args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFilter{})    args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVAll{} )      args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVAny{} )      args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVConcat{})    args) | not stringOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReverse{})   args)              = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVZip{})       args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVZipWith{})   args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReplicate{}) args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVPartition{}) args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReverse{})   args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVMap{})       args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFoldl{})     args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFoldr{})     args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFilter{})    args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVAll{} )      args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVAny{} )      args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVConcat{})    args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
 
-        sh (SBVApp (SeqOp op) args) = "(" ++ stringOrSequence stringOp op ++ " " ++ unwords (map cvtSV args) ++ ")"
+        -- Otherwise, we get to pick between string or sequence. Exception: unit over string is a no-op, because
+        -- SMTLib characters are and strings are the same thing.
+        sh (SBVApp (SeqOp SeqUnit) [a]) | charOp = cvtSV a
+        sh (SBVApp (SeqOp op) args) = "(" ++ stringOrSequence charOp op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (SetOp SetEqual)      args)   = "(= "      ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp (SetOp SetMember)     [e, s]) = "(select " ++ cvtSV s ++ " " ++ cvtSV e ++ ")"

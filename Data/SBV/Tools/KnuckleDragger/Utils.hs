@@ -174,8 +174,8 @@ data Proof = Proof { dependencies :: [Proof]     -- ^ Immediate dependencies of 
 
 -- | Drop the instantiation part
 shortProofName :: Proof -> String
-shortProofName p | "@" `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
-                 | True              = s
+shortProofName p | " @ " `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
+                 | True                = s
    where s = proofName p
 
 -- | Keeping track of where the sorry originates from. Used in displaying dependencies.
@@ -321,7 +321,7 @@ concludeModulo by = case foldMap rootOfTrust by of
                       RootOfTrust Nothing   -> ""
                       RootOfTrust (Just ps) -> " [Modulo: " ++ intercalate ", " (map shortProofName ps) ++ "]"
 
---- | Converts a proxy to a readable result. This is useful when you want to write a polymorphic
+-- | Converts a proxy to a readable result. This is useful when you want to write a polymorphic
 -- proof, so that the name contains the instantiated version properly.
 atProxy :: forall a. Typeable a => Proxy a -> String -> String
 atProxy _ nm = nm ++ " @" ++ show (typeRep @a)
