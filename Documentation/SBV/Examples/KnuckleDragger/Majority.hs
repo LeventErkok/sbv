@@ -8,12 +8,6 @@
 --
 -- Proving Boyer-Moore's majority algorithm correct. We follow the ACL2 proof
 -- closely: https://github.com/acl2/acl2/blob/master/books/demos/majority-vote.lisp.
---
--- I was lucky enough to sit in J Moore's "Recursion and Induction" class back
--- in '96-'97 at UT Austin. He is one of the nicest people I ever met in my
--- life, and he was incredibly kind to me. It's nice to pay homage back to his
--- influence and impact on both me personally, and on the entire theorem
--- programming community. Thanks J!
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
