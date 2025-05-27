@@ -281,6 +281,19 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- Firstified equivalences"         | not (null exportedFirstifiedEqualities) ]
              ++ concat exportedFirstifiedEqualities
              ++ [ "; -- NB. Skipping firstified equivalences, due to generateHOEquivs setting." | not (null firstifiedEqualities || generateHOEquivs)]
+             ++ [ unlines [ "; -- string/sequence converters"
+                          , "(define-fun-rec sbv.str2Seq ((str String)) (Seq String)"
+                          , "                            (ite (= str \"\") (as seq.empty (Seq String))"
+                          , "                                            (seq.++ (seq.unit (str.substr str 0 1))"
+                          , "                                                    (sbv.str2Seq (str.substr str 1 (- (str.len str) 1))))))"
+                          , "(define-fun-rec sbv.seq2Str ((seq (Seq String))) String"
+                          , "                            (ite (= seq (as seq.empty (Seq String)))"
+                          , "                                        \"\""
+                          , "                                        (str.++ (seq.nth seq 0)"
+                          , "                                                (sbv.seq2Str (seq.extract seq 1 (- (seq.len seq) 1))))))"
+                          ]
+                | hasString
+                ]
              ++ [ "; --- user defined functions ---"]
              ++ userDefs
              ++ [ "; --- assignments ---" ]
@@ -1122,6 +1135,33 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         firstifiedName = firstify (firstifyUniqueLen (kdOptions cfg))
 
+        str2Seq :: SV -> String
+        str2Seq sv@(SV KString _) = "(sbv.str2Seq " ++ cvtSV sv ++ ")"
+        str2Seq sv                = cvtSV sv
+
+        seq2Str so out | stringRes so = "(sbv.seq2Str " ++ out ++ ")"
+                       | True         = out
+          where -- This group can never produce a string
+                stringRes SBVZip{}             = False
+                stringRes SBVPartition{}       = False
+                stringRes SBVAll{}             = False
+                stringRes SBVAny{}             = False
+
+                stringRes (SBVZipWith _ _ c _) = isChar c
+                stringRes (SBVReplicate k)     = isChar k
+                stringRes (SBVMap _ b _)       = isChar b
+                stringRes (SBVFilter k _)      = isChar k
+                stringRes (SBVConcat k)        = isChar k
+                stringRes (SBVFoldl _ b _)     = isChar b
+                stringRes (SBVFoldr _ b _)     = isChar b
+
+                stringRes _              = error $ unlines [ "*** Impossible happened: seq2Str recevied unexpected operator:"
+                                                           , "***"
+                                                           , "*** " ++ show so
+                                                           , "***"
+                                                           , "*** Please report this as a bug!"
+                                                           ]
+
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ cvtSV a ++ " " ++ cvtSV b ++ " " ++ cvtSV c ++ ")"
 
         sh (SBVApp (LkUp (t, aKnd, _, l) i e) [])
@@ -1275,19 +1315,21 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (RegExOp o@RegExNEq{}) []) = show o
 
         -- Reverse and higher order functions are special. Reverse is supported for strings, not others.
-        sh (SBVApp o@(SeqOp SBVReverse{})   args)              = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVZip{})       args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVZipWith{})   args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVReplicate{}) args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVPartition{}) args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVReverse{})   args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVMap{})       args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFoldl{})     args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFoldr{})     args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFilter{})    args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVAll{} )      args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVAny{} )      args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVConcat{})    args) | not charOp = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReverse{}) args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+
+        -- The following set has to be careful since the definitions are generic over sequences
+        sh (SBVApp o@(SeqOp so@SBVZip{})       args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVZipWith{})   args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVReplicate{}) args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVPartition{}) args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVReverse{})   args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVMap{})       args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVFoldl{})     args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVFoldr{})     args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVFilter{})    args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVAll{} )      args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVAny{} )      args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVConcat{})    args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
 
         -- Otherwise, we get to pick between string or sequence. Exception: unit over string is a no-op, because
         -- SMTLib characters are and strings are the same thing.
@@ -1744,8 +1786,8 @@ stringOrSequence True  op = case op of
                               SeqReplace      -> show StrReplace
                               SBVReverse   {} -> tbd
                               SBVZip       {} -> tbd
-                              SBVReplicate {} -> tbd
                               SBVZipWith   {} -> tbd
+                              SBVReplicate {} -> tbd
                               SBVPartition {} -> tbd
                               SBVMap       {} -> tbd
                               SBVFoldl     {} -> tbd
@@ -1755,9 +1797,8 @@ stringOrSequence True  op = case op of
                               SBVAny       {} -> tbd
                               SBVConcat    {} -> tbd
   where tbd = error $ unlines [ "***"
-                              , "*** Use of sequence operator " ++ show op ++ " on strings isn't supported yet."
+                              , "*** Impossible happened. Wasn't expecting to see:"
+                              , "***    " ++ show op
                               , "***"
-                              , "*** Please cast this in terms of operators in Data.SBV.String. If a polymorphic"
-                              , "*** use case is needed that works uniformly on both strings and arbitrary"
-                              , "*** sequences, please report this as a feature request."
+                              , "*** in this context. Please report this as a bug!"
                               ]
