@@ -622,7 +622,7 @@ or = any id
 --
 -- >>> replicate 3 (2 :: SInteger) .== [2, 2, 2 :: Integer]
 -- True
--- >>> replicate (-2) (2 :: SInteger) .== ([] :: [Integer])
+-- >>> replicate (-2) (2 :: SInteger) .== ([] :: SList Integer)
 -- True
 replicate :: forall a. SymVal a => SInteger -> SBV a -> SList a
 replicate c e
