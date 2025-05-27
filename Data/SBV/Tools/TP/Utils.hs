@@ -41,7 +41,10 @@ import Data.Tree.View
 import Data.Char (isSpace)
 import Data.List (intercalate, isInfixOf, nubBy, partition)
 import Data.Proxy
-import System.IO (hFlush, stdout)
+import Data.Int (Int64)
+
+import System.IO     (hFlush, stdout)
+import System.Random (randomIO)
 
 import Data.SBV.Core.Data      (SBool, Forall(..), quantifiedBool)
 import Data.SBV.Core.Model     (label)
@@ -60,7 +63,6 @@ import Type.Reflection
 
 -- | Various statistics we collect
 data TPStats = TPStats { noOfCheckSats :: Int
-                       , noOfProofs    :: Int
                        , solverElapsed :: NominalDiffTime
                        }
 
@@ -88,16 +90,15 @@ runTP = runTPWith defaultSMTCfg
 -- | Run a TP proof, using the given configuration.
 runTPWith :: SMTConfig -> TP a -> IO a
 runTPWith cfg@SMTConfig{tpOptions = TPOptions{measureTime}} (TP f) = do
-   rStats <- newIORef $ TPStats { noOfCheckSats = 0, noOfProofs = 0, solverElapsed = 0 }
+   rStats <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0 }
    (mbT, r) <- timeIf measureTime $ runReaderT f TPState {config = cfg, stats = rStats}
    case mbT of
      Nothing -> pure ()
-     Just t  -> do TPStats noOfCheckSats pc solverTime <- readIORef rStats
+     Just t  -> do TPStats noOfCheckSats solverTime <- readIORef rStats
 
                    let stats = [ ("SBV",       showTDiff (t - solverTime))
                                , ("Solver",    showTDiff solverTime)
                                , ("Total",     showTDiff t)
-                               , ("Proofs",    show pc)
                                , ("Decisions", show noOfCheckSats)
                                ]
 
@@ -108,11 +109,9 @@ runTPWith cfg@SMTConfig{tpOptions = TPOptions{measureTime}} (TP f) = do
 getTPState :: TP TPState
 getTPState = ask
 
+-- | Make a unique number in this TP run. We combine that context with the proof-count
 tpGetNextUnique :: TP TPUnique
-tpGetNextUnique = do st@TPState{stats} <- getTPState
-                     c <- liftIO (noOfProofs <$> readIORef stats)
-                     updStats st (\s -> s {noOfProofs = c + 1})
-                     pure $ TPUser c
+tpGetNextUnique = TPUser <$> liftIO randomIO
 
 -- | get the configuration
 getTPConfig :: TP SMTConfig
@@ -156,7 +155,7 @@ finishTP cfg@SMTConfig{tpOptions = TPOptions{ribbonLength}} what (skip, mbT) ext
 -- | Unique identifier for each proof.
 data TPUnique = TPInternal
               | TPSorry
-              | TPUser Int
+              | TPUser Int64
               deriving (NFData, Generic, Eq)
 
 -- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
