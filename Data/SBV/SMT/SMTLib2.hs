@@ -1318,18 +1318,18 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp o@(SeqOp SBVReverse{}) args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         -- The following set has to be careful since the definitions are generic over sequences
-        sh (SBVApp o@(SeqOp so@SBVZip{})       args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVZipWith{})   args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVReplicate{}) args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVPartition{}) args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVReverse{})   args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVMap{})       args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVFoldl{})     args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVFoldr{})     args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVFilter{})    args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVAll{} )      args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVAny{} )      args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
-        sh (SBVApp o@(SeqOp so@SBVConcat{})    args) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args) ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVZip{})       args)   = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args)   ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVZipWith{})   args)   = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args)   ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVReplicate{}) args)   = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args)   ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVPartition{}) args)   = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args)   ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVReverse{})   args)   = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args)   ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVMap{})       args)   = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args)   ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVFoldl{})     [a, b]) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords [cvtSV a, str2Seq b] ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVFoldr{})     [a, b]) = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords [cvtSV a, str2Seq b] ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVFilter{})    args)   = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args)   ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVAll{} )      args)   = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args)   ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVAny{} )      args)   = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args)   ++ ")"
+        sh (SBVApp o@(SeqOp so@SBVConcat{})    args)   = seq2Str so $ "(" ++ firstifiedName o ++ " " ++ unwords (map str2Seq args)   ++ ")"
 
         -- Otherwise, we get to pick between string or sequence. Exception: unit over string is a no-op, because
         -- SMTLib characters are and strings are the same thing.
