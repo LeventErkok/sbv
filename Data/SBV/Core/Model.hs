@@ -2527,10 +2527,10 @@ class SMTDefinable a where
   {-# MINIMAL sbvDefineValue, sbv2smt #-}
 
   -- defaults:
-  uninterpret         nm         = sbvDefineValue (UIGiven nm)   Nothing   $ UIFree True
-  uninterpretWithArgs nm  as     = sbvDefineValue (UIGiven nm)   (Just as) $ UIFree True
-  smtFunction         nm       v = sbvDefineValue (UIGiven nm)   Nothing   $ UIFun   (v, \st fk -> namedLambda TopLevel st nm fk v)
-  cgUninterpret       nm  code v = sbvDefineValue (UIGiven nm)   Nothing   $ UICodeC (v, code)
+  uninterpret         nm         = sbvDefineValue (UIGiven nm) Nothing   $ UIFree True
+  uninterpretWithArgs nm  as     = sbvDefineValue (UIGiven nm) (Just as) $ UIFree True
+  smtFunction         nm       v = sbvDefineValue (UIGiven nm) Nothing   $ UIFun   (v, \st fk -> namedLambda TopLevel st nm fk v)
+  cgUninterpret       nm  code v = sbvDefineValue (UIGiven nm) Nothing   $ UICodeC (v, code)
   sym                            = uninterpret
 
   default registerFunction :: forall b c. (a ~ (SBV b -> c), SymVal b, SMTDefinable c) => a -> Symbolic ()
