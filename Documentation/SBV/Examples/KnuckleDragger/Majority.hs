@@ -12,7 +12,6 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE ExplicitForAll      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}

@@ -162,3 +162,6 @@ correctness p = runKD $ do
                                           =: reverse (a .: as)
                                           =: reverse xs
                                           =: qed))
+
+{- HLint ignore correctness "Use last"          -}
+{- HLint ignore correctness "Redundant reverse" -}

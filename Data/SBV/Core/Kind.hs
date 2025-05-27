@@ -461,8 +461,6 @@ type family BVIsNonZero (arg :: Nat) :: Constraint where
    BVIsNonZero 0 = TypeError BVZeroWidth
    BVIsNonZero _ = ()
 
-#include "MachDeps.h"
-
 -- Allowed sizes for floats, imposed by LibBF.
 --
 -- NB. In LibBF bindings (and libbf itself as well), minimum number of exponent bits is specified as 3. But this

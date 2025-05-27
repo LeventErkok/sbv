@@ -11,13 +11,9 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE ExplicitForAll      #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

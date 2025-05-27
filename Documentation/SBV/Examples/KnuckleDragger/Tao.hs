@@ -21,14 +21,14 @@
 -----------------------------------------------------------------------------
 
 
-{-# LANGUAGE CPP                #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE ExplicitForAll     #-}
-{-# LANGUAGE TypeAbstractions   #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE TypeAbstractions    #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

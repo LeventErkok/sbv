@@ -16,7 +16,6 @@
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternGuards         #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -812,33 +811,33 @@ instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
 -- So, we have to declare the instances individually. I played around doing this via iso-deriving and
 -- other generic mechanisms, but failed to do so. The CPP solution here is crude, but it avoids the
 -- code duplication.
-#define MKSNUM(CSTR, TYPE, KIND)                                                            \
-instance (CSTR) => Num (TYPE) where {                                                       \
-  fromInteger i  = SBV $ SVal (KIND) $ Left $ mkConstCV (KIND) (fromIntegral i :: Integer); \
-  SBV a + SBV b  = SBV $ a `svPlus`  b;                                                     \
-  SBV a * SBV b  = SBV $ a `svTimes` b;                                                     \
-  SBV a - SBV b  = SBV $ a `svMinus` b;                                                     \
-  abs    (SBV a) = SBV $ svAbs    a;                                                        \
-  signum (SBV a) = SBV $ svSignum a;                                                        \
-  negate (SBV a) = SBV $ svUNeg   a;                                                        \
+#define MKSNUM(CSTR, TYPE, KIND)                                                        \
+instance CSTR => Num TYPE where {                                                       \
+  fromInteger i  = SBV $ SVal KIND $ Left $ mkConstCV KIND (fromIntegral i :: Integer); \
+  SBV a + SBV b  = SBV $ a `svPlus`  b;                                                 \
+  SBV a * SBV b  = SBV $ a `svTimes` b;                                                 \
+  SBV a - SBV b  = SBV $ a `svMinus` b;                                                 \
+  abs    (SBV a) = SBV $ svAbs    a;                                                    \
+  signum (SBV a) = SBV $ svSignum a;                                                    \
+  negate (SBV a) = SBV $ svUNeg   a;                                                    \
 }
 
 -- Derive basic instances we need
-MKSNUM((),               SInteger,             KUnbounded)
-MKSNUM((),               SWord8,               KBounded False  8)
-MKSNUM((),               SWord16,              KBounded False 16)
-MKSNUM((),               SWord32,              KBounded False 32)
-MKSNUM((),               SWord64,              KBounded False 64)
-MKSNUM((),               SInt8,                KBounded True   8)
-MKSNUM((),               SInt16,               KBounded True  16)
-MKSNUM((),               SInt32,               KBounded True  32)
-MKSNUM((),               SInt64,               KBounded True  64)
-MKSNUM((),               SFloat,               KFloat)
-MKSNUM((),               SDouble,              KDouble)
-MKSNUM((),               SReal,                KReal)
-MKSNUM(KnownNat n,       SWord n,              KBounded False (intOfProxy (Proxy @n)))
-MKSNUM(KnownNat n,       SInt  n,              KBounded True  (intOfProxy (Proxy @n)))
-MKSNUM(ValidFloat eb sb, SFloatingPoint eb sb, KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb)))
+MKSNUM((),                 SInteger,               KUnbounded)
+MKSNUM((),                 SWord8,                 (KBounded False  8))
+MKSNUM((),                 SWord16,                (KBounded False 16))
+MKSNUM((),                 SWord32,                (KBounded False 32))
+MKSNUM((),                 SWord64,                (KBounded False 64))
+MKSNUM((),                 SInt8,                  (KBounded True   8))
+MKSNUM((),                 SInt16,                 (KBounded True  16))
+MKSNUM((),                 SInt32,                 (KBounded True  32))
+MKSNUM((),                 SInt64,                 (KBounded True  64))
+MKSNUM((),                 SFloat,                 KFloat)
+MKSNUM((),                 SDouble,                KDouble)
+MKSNUM((),                 SReal,                  KReal)
+MKSNUM((KnownNat n),       (SWord n),              (KBounded False (intOfProxy (Proxy @n))))
+MKSNUM((KnownNat n),       (SInt  n),              (KBounded True  (intOfProxy (Proxy @n))))
+MKSNUM((ValidFloat eb sb), (SFloatingPoint eb sb), (KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))))
 
 -- | Extract a portion of bits to form a smaller bit-vector.
 bvExtract :: forall i j n bv proxy. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
