@@ -31,6 +31,7 @@ import Data.SBV.Tools.TP.List
 -- $setup
 -- >>> :set -XTypeApplications
 -- >>> import Data.Proxy
+-- >>> import Data.SBV.Tools.TP
 #endif
 
 -- | A predicate testing whether a given list is non-decreasing.
@@ -46,22 +47,22 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 
 -- | The tail of a non-decreasing list is non-decreasing. We have:
 --
--- >>> nonDecrTail (Proxy @Integer)
--- Lemma: nonDecTail                       Q.E.D.
--- [Proven] nonDecTail
-nonDecrTail :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-nonDecrTail _ = runTP $
-   lemma "nonDecTail"
+-- >>> runTP $ nonDecrTail (Proxy @Integer)
+-- Lemma: nonDecrTail                      Q.E.D.
+-- [Proven] nonDecrTail
+nonDecrTail :: forall a. (Ord a, SymVal a) => Proxy a -> TP Proof
+nonDecrTail _ =
+   lemma "nonDecrTail"
          (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
          []
 
 -- | If we insert an element that is less than the head of a nonDecreasing list, it remains nondecreasing. We have:
 --
--- >>> nonDecrIns (Proxy @Integer)
+-- >>> runTP $ nonDecrIns (Proxy @Integer)
 -- Lemma: nonDecrInsert                    Q.E.D.
 -- [Proven] nonDecrInsert
-nonDecrIns :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-nonDecrIns _ = runTP $
+nonDecrIns :: forall a. (Ord a, SymVal a) => Proxy a -> TP Proof
+nonDecrIns _ =
    lemma "nonDecrInsert"
          (\(Forall @"x" (x :: SBV a)) (Forall @"ys" ys) -> nonDecreasing ys .&& sNot (null ys) .&& x .<= head ys
                                                        .=> nonDecreasing (x .: ys))
@@ -73,8 +74,8 @@ sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e 
 
 -- | 'sublist' correctness. We have:
 --
--- >>> sublistCorrect (Proxy @Integer)
--- Inductive lemma: countNonNegative @Integer
+-- >>> runTP $ sublistCorrect (Proxy @Integer)
+-- Inductive lemma: countNonNeg @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                         Q.E.D.
@@ -104,11 +105,11 @@ sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e 
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sublistCorrect @Integer
-sublistCorrect :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
-sublistCorrect p = runTP $ do
+sublistCorrect :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+sublistCorrect p = do
 
-    cElem  <- use $ countElem p
-    eCount <- use $ elemCount p
+    cElem  <- countElem p
+    eCount <- elemCount p
 
     calc (atProxy p "sublistCorrect")
          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" (x :: SBV a)) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys) $
@@ -122,8 +123,8 @@ sublistCorrect p = runTP $ do
 
 -- | If one list is a sublist of another, then its head is an elem. We have:
 --
--- >>> sublistElem (Proxy @Integer)
--- Inductive lemma: countNonNegative @Integer
+-- >>> runTP $ sublistElem (Proxy @Integer)
+-- Inductive lemma: countNonNeg @Integer
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                         Q.E.D.
@@ -156,9 +157,9 @@ sublistCorrect p = runTP $ do
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sublistElem @Integer
-sublistElem :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
-sublistElem p = runTP $ do
-   slc <- use $ sublistCorrect p
+sublistElem :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+sublistElem p = do
+   slc <- sublistCorrect p
 
    calc (atProxy p "sublistElem")
         (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> x `elem` ys) $
@@ -170,22 +171,22 @@ sublistElem p = runTP $ do
 
 -- | If one list is a sublist of another so is its tail. We have:
 --
--- >>> sublistTail (Proxy @Integer)
+-- >>> runTP $ sublistTail (Proxy @Integer)
 -- Lemma: sublistTail @Integer             Q.E.D.
 -- [Proven] sublistTail @Integer
-sublistTail :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
-sublistTail p = runTP $
+sublistTail :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+sublistTail p =
   lemma (atProxy p "sublistTail")
         (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> xs `sublist` ys)
         []
 
 -- | Permutation implies sublist. We have:
 --
--- >>> sublistIfPerm (Proxy @Integer)
+-- >>> runTP $ sublistIfPerm (Proxy @Integer)
 -- Lemma: sublistIfPerm @Integer           Q.E.D.
 -- [Proven] sublistIfPerm @Integer
-sublistIfPerm :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
-sublistIfPerm p = runTP $
+sublistIfPerm :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+sublistIfPerm p =
   lemma (atProxy p "sublistIfPerm")
         (\(Forall @"xs" xs) (Forall @"ys" (ys :: SList a)) -> isPermutation xs ys .=> xs `sublist` ys)
         []

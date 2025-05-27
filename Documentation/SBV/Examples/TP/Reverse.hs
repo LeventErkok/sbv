@@ -120,10 +120,10 @@ correctness :: forall a. SymVal a => Proxy a -> IO Proof
 correctness p = runTP $ do
 
   -- Import a few helpers from "Data.SBV.Tools.TP.List"
-  revLen  <- use $ TP.revLen  p
-  revApp  <- use $ TP.revApp  p
-  revSnoc <- use $ TP.revSnoc p
-  revRev  <- use $ TP.revRev  p
+  revLen  <- TP.revLen  p
+  revApp  <- TP.revApp  p
+  revSnoc <- TP.revSnoc p
+  revRev  <- TP.revRev  p
 
   sInductWith cvc5 (atProxy p "revCorrect")
     (\(Forall @"xs" (xs :: SList a)) -> rev xs .== reverse xs)

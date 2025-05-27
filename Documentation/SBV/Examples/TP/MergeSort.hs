@@ -58,19 +58,19 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 -- We have:
 --
 -- >>> correctness (Proxy @Integer)
--- Lemma: nonDecrInsert                    Q.E.D.
+-- Lemma: nonDecrInsert                                        Q.E.D.
 -- Inductive lemma: countAppend @Integer
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2 (unfold count)                Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4 (simplify)                    Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: take_drop @Integer               Q.E.D.
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2 (unfold count)                                    Q.E.D.
+--   Step: 3                                                   Q.E.D.
+--   Step: 4 (simplify)                                        Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: take_drop @Integer                                   Q.E.D.
 -- Lemma: takeDropCount @Integer
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): mergeKeepsSort
 --   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (4 way full case split)
@@ -131,8 +131,8 @@ correctness _ = runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 60}} $ d
         isPermutation = SH.isPermutation @a
         count         = TP.count         @a
 
-    nonDecrIns    <- use $ SH.nonDecrIns    (Proxy @a)
-    takeDropCount <- use $ TP.takeDropCount (Proxy @a)
+    nonDecrIns    <- SH.nonDecrIns    (Proxy @a)
+    takeDropCount <- TP.takeDropCount (Proxy @a)
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is non-decreasing.

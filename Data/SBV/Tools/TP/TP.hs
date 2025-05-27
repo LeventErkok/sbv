@@ -32,7 +32,7 @@ module Data.SBV.Tools.TP.TP (
        ,  induct,  inductWith,  inductThm,  inductThmWith
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
-       , TP, runTP, runTPWith, use
+       , TP, runTP, runTPWith
        , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), qed, trivial, contradiction, atProxy
        ) where
 
@@ -59,10 +59,6 @@ import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
 import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
-
--- | Bring an IO proof into current proof context.
-use :: IO Proof -> TP Proof
-use = liftIO
 
 -- | Captures the steps for a calculationa proof
 data CalcStrategy = CalcStrategy { calcIntros    :: SBool

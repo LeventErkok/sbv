@@ -72,7 +72,7 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 -- We have:
 --
 -- >>> correctness (Proxy @Integer)
--- Lemma: nonDecTail                       Q.E.D.
+-- Lemma: nonDecrTail                           Q.E.D.
 -- Inductive lemma: insertNonDecreasing
 --   Step: Base                                 Q.E.D.
 --   Step: 1 (unfold insert)                    Q.E.D.
@@ -120,7 +120,7 @@ correctness p = runTPWith cvc5{tpOptions = (tpOptions cvc5) { ribbonLength = 45 
     --------------------------------------------------------------------------------------------
     let nonDecreasing = SH.nonDecreasing @a
 
-    nonDecrTail <- use $ SH.nonDecrTail (Proxy @a)
+    nonDecrTail <- SH.nonDecrTail (Proxy @a)
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of insertion sort is non-decreasing.
