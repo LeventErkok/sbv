@@ -20,7 +20,7 @@ module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlif
                           , stringToQFS, qfsToString
                           , isKString
                           , checkObservableName
-                          , needsBars, isEnclosedInBars
+                          , needsBars, barify, isEnclosedInBars
                           , noSurrounding, unQuote, unBar, nameSupply
                           , atProxy
                           ,   curry2,   curry3,   curry4,   curry5,   curry6,   curry7,   curry8,   curry9,   curry10,   curry11,   curry12
@@ -169,6 +169,11 @@ unQuote = noSurrounding '"'
 -- Remove a pair of surrounding bars
 unBar :: String -> String
 unBar = noSurrounding '|'
+
+-- | Add bars if needed
+barify :: String -> String
+barify s | needsBars s = '|' : s ++ "|"
+         | True        = s
 
 -- Is this string surrounded by bars? NB. There shouldn't be any other bars or backslash anywhere
 isEnclosedInBars :: String -> Bool

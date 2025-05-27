@@ -110,7 +110,7 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.SMT.SMTLibNames
 import Data.SBV.Utils.TDiff (Timing)
-import Data.SBV.Utils.Lib   (stringToQFS, checkObservableName, needsBars)
+import Data.SBV.Utils.Lib   (stringToQFS, checkObservableName, barify)
 
 import Data.Containers.ListUtils (nubOrd)
 
@@ -1388,8 +1388,7 @@ newUninterpreted st uiName mbArgNames t uiCode = do
       -- determine the final name
       nm = case () of
              () | "__internal_sbv_" `isPrefixOf` candName -> candName                -- internal names go thru
-             () | needsBars candName                      -> '|' : candName ++ "|"   -- surround with bars if not legitimate in SMTLib
-             ()                                           -> candName
+                | True                                    -> barify candName         -- surround with bars if not legitimate in SMTLib
 
       extraComment = case uiName of
                       UIGiven  n | nm /= n                 -> " (Given: " ++ n ++ ")"
