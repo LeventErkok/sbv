@@ -61,7 +61,7 @@ module Data.SBV.Core.Symbolic
   , extractSymbolicSimulationState, CnstMap
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , MonadQuery(..), QueryT(..), Query, QueryState(..), QueryContext(..)
-  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), KDOptions(..), SMTEngine, isEmptyModel
+  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), TPOptions(..), SMTEngine, isEmptyModel
   , validationRequested, outputSVal, ProgInfo(..), mustIgnoreVar, getRootState
   ) where
 
@@ -2299,13 +2299,13 @@ data SMTConfig = SMTConfig {
        , redirectVerbose             :: Maybe FilePath      -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
        , generateHOEquivs            :: Bool                -- ^ Should SBV generate function-level equivalences for firstified functions?
                                                             --   The default is False, but in certain cases this can lead the solver to loop-forever,
-                                                            --   especially in KnuckleDragger proofs. In such cases, set this to True to see if it helps.
-       , kdOptions                   :: KDOptions           -- ^ KnuckleDragger specific options
+                                                            --   especially in TP proofs. In such cases, set this to True to see if it helps.
+       , tpOptions                   :: TPOptions           -- ^ TP specific options
        }
 
--- | Configuration for KnuckleDragger
-data KDOptions = KDOptions {
-         ribbonLength      :: Int  -- ^ Line length for KD proofs
+-- | Configuration for TP
+data TPOptions = TPOptions {
+         ribbonLength      :: Int  -- ^ Line length for TP proofs
        , firstifyUniqueLen :: Int  -- ^ Unique length used for firstified names.
        , quiet             :: Bool -- ^ No messages what-so-ever for successful steps. (Will print if something fails)
        , measureTime       :: Bool -- ^ Print time/statistics. If quiet is True, then measureTime is ignored.

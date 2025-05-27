@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Tao
+-- Module    : Documentation.SBV.Examples.TP.Tao
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -32,10 +32,10 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.Tao where
+module Documentation.SBV.Examples.TP.Tao where
 
 import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 #ifdef DOCTEST
 -- $setup
@@ -61,7 +61,7 @@ mkUninterpretedSort ''T
 -- Lemma: tao                              Q.E.D.
 -- [Proven] tao
 tao :: forall a. SymVal a => (SBV a -> SBV a -> SBV a) -> IO Proof
-tao op = runKD $
+tao op = runTP $
    lemma "tao" (    quantifiedBool (\(Forall @"x" x) (Forall @"y" y) -> ((x `op` x) `op` y) .== y `op` x)
                 .=> quantifiedBool (\(Forall @"x" x) (Forall @"y" y) -> (x `op` y) .== (y `op` x)))
                []

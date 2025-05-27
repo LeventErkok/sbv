@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.CaseSplit
+-- Module    : Documentation.SBV.Examples.TP.CaseSplit
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Use KnuckleDragger to prove @2n^2 + n + 1@ is never divisible by @3@.
+-- Use TP to prove @2n^2 + n + 1@ is never divisible by @3@.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds        #-}
@@ -15,12 +15,12 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.CaseSplit where
+module Documentation.SBV.Examples.TP.CaseSplit where
 
 import Prelude hiding (sum, length)
 
 import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 -- | Prove that @2n^2 + n + 1@ is not divisible by @3@.
 --
@@ -59,7 +59,7 @@ import Data.SBV.Tools.KnuckleDragger
 --   Result:                               Q.E.D.
 -- [Proven] notDiv3
 notDiv3 :: IO Proof
-notDiv3 = runKD $ do
+notDiv3 = runTP $ do
 
    let s n = 2 * n * n + n + 1
        p n = s n `sEMod` 3 ./= 0

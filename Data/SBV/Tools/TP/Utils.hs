@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.KnuckleDragger.Utils
+-- Module    : Data.SBV.Tools.TP.Utils
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Various KnuckleDrugger machinery.
+-- Various theorem-proving machinery.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds                  #-}
@@ -22,11 +22,11 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.KnuckleDragger.Utils (
-         KD, runKD, runKDWith, Proof(..), sorry
-       , startKD, finishKD, getKDState, getKDConfig, kdGetNextUnique, KDState(..), KDStats(..), RootOfTrust(..)
-       , KDProofContext(..), message, updStats, rootOfTrust, concludeModulo
-       , ProofTree(..), KDUnique(..), getProofTree, showProofTree, showProofTreeHTML, shortProofName
+module Data.SBV.Tools.TP.Utils (
+         TP, runTP, runTPWith, Proof(..), sorry
+       , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
+       , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
+       , ProofTree(..), TPUnique(..), getProofTree, showProofTree, showProofTreeHTML, shortProofName
        , atProxy
        ) where
 
@@ -45,7 +45,7 @@ import System.IO (hFlush, stdout)
 
 import Data.SBV.Core.Data      (SBool, Forall(..), quantifiedBool)
 import Data.SBV.Core.Model     (label)
-import Data.SBV.Core.Symbolic  (SMTConfig, KDOptions(..))
+import Data.SBV.Core.Symbolic  (SMTConfig, TPOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 
 import Data.SBV.Utils.TDiff (showTDiff, timeIf)
@@ -59,40 +59,40 @@ import Data.Dynamic
 import Type.Reflection
 
 -- | Various statistics we collect
-data KDStats = KDStats { noOfCheckSats :: Int
+data TPStats = TPStats { noOfCheckSats :: Int
                        , noOfProofs    :: Int
                        , solverElapsed :: NominalDiffTime
                        }
 
--- | Extra state we carry in a KD context
-data KDState = KDState { stats  :: IORef KDStats
+-- | Extra state we carry in a TP context
+data TPState = TPState { stats  :: IORef TPStats
                        , config :: SMTConfig
                        }
 
--- | Monad for running KnuckleDragger proofs in.
-newtype KD a = KD (ReaderT KDState IO a)
-            deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader KDState, MonadFail)
+-- | Monad for running TP proofs in.
+newtype TP a = TP (ReaderT TPState IO a)
+            deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader TPState, MonadFail)
 
 -- | The context in which we make a check-sat call
-data KDProofContext = KDProofOneShot String   -- ^ A one shot proof, with string containing its name
+data TPProofContext = TPProofOneShot String   -- ^ A one shot proof, with string containing its name
                                      [Proof]  -- ^ Helpers used (latter only used for cex generation)
-                    | KDProofStep    Bool     -- ^ A proof step. If Bool is true, then these are the assumptions for that step
+                    | TPProofStep    Bool     -- ^ A proof step. If Bool is true, then these are the assumptions for that step
                                      String   -- ^ Name of original goal
                                      [String] -- ^ The helper "strings" given by the user
                                      [String] -- ^ The step name, i.e., the name of the branch in the proof tree
 
--- | Run a KD proof, using the default configuration.
-runKD :: KD a -> IO a
-runKD = runKDWith defaultSMTCfg
+-- | Run a TP proof, using the default configuration.
+runTP :: TP a -> IO a
+runTP = runTPWith defaultSMTCfg
 
--- | Run a KD proof, using the given configuration.
-runKDWith :: SMTConfig -> KD a -> IO a
-runKDWith cfg@SMTConfig{kdOptions = KDOptions{measureTime}} (KD f) = do
-   rStats <- newIORef $ KDStats { noOfCheckSats = 0, noOfProofs = 0, solverElapsed = 0 }
-   (mbT, r) <- timeIf measureTime $ runReaderT f KDState {config = cfg, stats = rStats}
+-- | Run a TP proof, using the given configuration.
+runTPWith :: SMTConfig -> TP a -> IO a
+runTPWith cfg@SMTConfig{tpOptions = TPOptions{measureTime}} (TP f) = do
+   rStats <- newIORef $ TPStats { noOfCheckSats = 0, noOfProofs = 0, solverElapsed = 0 }
+   (mbT, r) <- timeIf measureTime $ runReaderT f TPState {config = cfg, stats = rStats}
    case mbT of
      Nothing -> pure ()
-     Just t  -> do KDStats noOfCheckSats pc solverTime <- readIORef rStats
+     Just t  -> do TPStats noOfCheckSats pc solverTime <- readIORef rStats
 
                    let stats = [ ("SBV",       showTDiff (t - solverTime))
                                , ("Solver",    showTDiff solverTime)
@@ -105,37 +105,37 @@ runKDWith cfg@SMTConfig{kdOptions = KDOptions{measureTime}} (KD f) = do
    pure r
 
 -- | get the state
-getKDState :: KD KDState
-getKDState = ask
+getTPState :: TP TPState
+getTPState = ask
 
-kdGetNextUnique :: KD KDUnique
-kdGetNextUnique = do st@KDState{stats} <- getKDState
+tpGetNextUnique :: TP TPUnique
+tpGetNextUnique = do st@TPState{stats} <- getTPState
                      c <- liftIO (noOfProofs <$> readIORef stats)
                      updStats st (\s -> s {noOfProofs = c + 1})
-                     pure $ KDUser c
+                     pure $ TPUser c
 
 -- | get the configuration
-getKDConfig :: KD SMTConfig
-getKDConfig = config <$> getKDState
+getTPConfig :: TP SMTConfig
+getTPConfig = config <$> getTPState
 
 -- | Update stats
-updStats :: MonadIO m => KDState -> (KDStats -> KDStats) -> m ()
-updStats KDState{stats} u = liftIO $ modifyIORef' stats u
+updStats :: MonadIO m => TPState -> (TPStats -> TPStats) -> m ()
+updStats TPState{stats} u = liftIO $ modifyIORef' stats u
 
 -- | Display the message if not quiet. Note that we don't print a newline; so the message must have it if needed.
 message :: MonadIO m => SMTConfig -> String -> m ()
-message SMTConfig{kdOptions = KDOptions{quiet}} s
+message SMTConfig{tpOptions = TPOptions{quiet}} s
   | quiet = pure ()
   | True  = liftIO $ putStr s
 
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
-startKD :: SMTConfig -> Bool -> String -> Int -> KDProofContext -> IO Int
-startKD cfg newLine what level ctx = do message cfg $ line ++ if newLine then "\n" else ""
+startTP :: SMTConfig -> Bool -> String -> Int -> TPProofContext -> IO Int
+startTP cfg newLine what level ctx = do message cfg $ line ++ if newLine then "\n" else ""
                                         hFlush stdout
                                         return (length line)
   where nm = case ctx of
-               KDProofOneShot n _       -> n
-               KDProofStep    _ _ hs ss -> intercalate "." ss ++ userHints hs
+               TPProofOneShot n _       -> n
+               TPProofStep    _ _ hs ss -> intercalate "." ss ++ userHints hs
 
         tab = 2 * level
 
@@ -144,9 +144,9 @@ startKD cfg newLine what level ctx = do message cfg $ line ++ if newLine then "\
         userHints [] = ""
         userHints ss = " (" ++ intercalate ", " ss ++ ")"
 
--- | Finish a proof. First argument is what we got from the call of 'startKD' above.
-finishKD :: SMTConfig -> String -> (Int, Maybe NominalDiffTime) -> [NominalDiffTime] -> IO ()
-finishKD cfg@SMTConfig{kdOptions = KDOptions{ribbonLength}} what (skip, mbT) extraTiming =
+-- | Finish a proof. First argument is what we got from the call of 'startTP' above.
+finishTP :: SMTConfig -> String -> (Int, Maybe NominalDiffTime) -> [NominalDiffTime] -> IO ()
+finishTP cfg@SMTConfig{tpOptions = TPOptions{ribbonLength}} what (skip, mbT) extraTiming =
    message cfg $ replicate (ribbonLength - skip) ' ' ++ what ++ timing ++ extras ++ "\n"
  where timing = maybe "" ((' ' :) . mkTiming) mbT
        extras = concatMap mkTiming extraTiming
@@ -154,14 +154,14 @@ finishKD cfg@SMTConfig{kdOptions = KDOptions{ribbonLength}} what (skip, mbT) ext
        mkTiming t = '[' : showTDiff t ++ "]"
 
 -- | Unique identifier for each proof.
-data KDUnique = KDInternal
-              | KDSorry
-              | KDUser Int
+data TPUnique = TPInternal
+              | TPSorry
+              | TPUser Int
               deriving (NFData, Generic, Eq)
 
 -- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
 -- call to lemma/theorem etc., ensuring soundness. (Note that the trusted-code base here
--- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
+-- is still large: The underlying solver, SBV, and TP kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
 data Proof = Proof { dependencies :: [Proof]     -- ^ Immediate dependencies of this proof. (Not transitive)
@@ -169,7 +169,7 @@ data Proof = Proof { dependencies :: [Proof]     -- ^ Immediate dependencies of 
                    , getProof     :: SBool       -- ^ Get the underlying boolean
                    , getProp      :: Dynamic     -- ^ The actual proposition
                    , proofName    :: String      -- ^ User given name
-                   , uniqId       :: KDUnique    -- ^ Unique identified
+                   , uniqId       :: TPUnique    -- ^ Unique identified
                    }
 
 -- | Drop the instantiation part
@@ -211,7 +211,7 @@ getProofTree :: Proof -> ProofTree
 getProofTree p = ProofTree p $ map getProofTree (dependencies p)
 
 -- | Turn dependencies to a container tree, for display purposes
-depsToTree :: Bool -> [KDUnique] -> (String -> Int -> Int -> a) -> (Int, ProofTree) -> ([KDUnique], Tree a)
+depsToTree :: Bool -> [TPUnique] -> (String -> Int -> Int -> a) -> (Int, ProofTree) -> ([TPUnique], Tree a)
 depsToTree shouldCompress visited xform (cnt, ProofTree top ds) = (nVisited, Node (xform nTop cnt (length chlds)) chlds)
   where nTop = shortProofName top
         uniq = uniqId top
@@ -228,9 +228,9 @@ depsToTree shouldCompress visited xform (cnt, ProofTree top ds) = (nVisited, Nod
 
         -- Don't show internal axioms, not interesting
         interesting (ProofTree p _) = case uniqId p of
-                                        KDSorry    -> True
-                                        KDInternal -> False
-                                        KDUser{}   -> True
+                                        TPSorry    -> True
+                                        TPInternal -> False
+                                        TPUser{}   -> True
 
         -- If a proof is used twice in the same proof, compress it
         compress :: [ProofTree] -> [(Int, ProofTree)]
@@ -274,7 +274,7 @@ instance Show Proof where
           sh (RootOfTrust (Just ps)) = "Modulo: " ++ intercalate ", " (map shortProofName ps)
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
--- cannot deal with, or if we want to postpone the proof for the time being. KnuckleDragger will keep
+-- cannot deal with, or if we want to postpone the proof for the time being. TP will keep
 -- track of the uses of 'sorry' and will print them appropriately while printing proofs.
 sorry :: Proof
 sorry = Proof { dependencies = []
@@ -282,7 +282,7 @@ sorry = Proof { dependencies = []
               , getProof     = label "sorry" (quantifiedBool p)
               , getProp      = toDyn p
               , proofName    = "sorry"
-              , uniqId       = KDSorry
+              , uniqId       = TPSorry
               }
   where -- ideally, I'd rather just use
         --   p = sFalse
@@ -290,22 +290,22 @@ sorry = Proof { dependencies = []
         -- doesn't contain the actual contents, as SBV determines unsatisfiability
         -- itself. By using the following proposition (which is easy for the backend
         -- solver to determine as false, we avoid the constant folding.
-        p (Forall @"__sbvKD_sorry" (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
+        p (Forall @"__sbvTP_sorry" (x :: SBool)) = label "SORRY: TP, proof uses \"sorry\"" x
 
 -- | Calculate the root of trust. The returned list of proofs, if any, will need to be sorry-free to
 -- have the given proof to be sorry-free.
 rootOfTrust :: Proof -> RootOfTrust
 rootOfTrust p@Proof{uniqId, dependencies} = compress res
   where res = case uniqId of
-                KDInternal -> RootOfTrust Nothing
-                KDSorry    -> RootOfTrust $ Just [sorry]
-                KDUser {}  -> self <> foldMap rootOfTrust dependencies
+                TPInternal -> RootOfTrust Nothing
+                TPSorry    -> RootOfTrust $ Just [sorry]
+                TPUser {}  -> self <> foldMap rootOfTrust dependencies
 
         -- if sorry is one of our direct dependencies, then we trust this proof
         self | any isSorry dependencies = RootOfTrust $ Just [p]
              | True                     = mempty
 
-        isSorry Proof{uniqId = u} = u == KDSorry
+        isSorry Proof{uniqId = u} = u == TPSorry
 
         -- If we have any dependency that is not sorry itself, then we can skip all the sorries.
         -- Why? Because "sorry" will implicitly be coming from one of these anyhow. (In other

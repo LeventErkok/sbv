@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.InsertionSort
+-- Module    : Documentation.SBV.Examples.TP.InsertionSort
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -17,17 +17,17 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.InsertionSort where
+module Documentation.SBV.Examples.TP.InsertionSort where
 
 import Prelude hiding (null, length, head, tail, elem)
 
 import Data.SBV
 import Data.SBV.List
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 import Data.Proxy
 
-import qualified Documentation.SBV.Examples.KnuckleDragger.SortHelpers as SH
+import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 #ifdef DOCTEST
 -- $setup
@@ -113,7 +113,7 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 -- Lemma: insertionSortIsCorrect @Integer       Q.E.D.
 -- [Proven] insertionSortIsCorrect @Integer
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-correctness p = runKDWith cvc5{kdOptions = (kdOptions cvc5) { ribbonLength = 45 }} $ do
+correctness p = runTPWith cvc5{tpOptions = (tpOptions cvc5) { ribbonLength = 45 }} $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions

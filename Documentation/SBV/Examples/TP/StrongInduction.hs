@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.StrongInduction
+-- Module    : Documentation.SBV.Examples.TP.StrongInduction
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -17,14 +17,14 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.StrongInduction where
+module Documentation.SBV.Examples.TP.StrongInduction where
 
 import Prelude hiding (length, null, head, tail, reverse, (++), splitAt, sum)
 
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tuple
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 #ifdef DOCTEST
 -- $setup
@@ -51,7 +51,7 @@ import Data.SBV.Tools.KnuckleDragger
 --   Result:                               Q.E.D.
 -- [Proven] oddSequence
 oddSequence1 :: IO Proof
-oddSequence1 = runKD $ do
+oddSequence1 = runTP $ do
   let s :: SInteger -> SInteger
       s = smtFunction "seq" $ \n -> ite (n .<= 0) 1
                                   $ ite (n .== 1) 3
@@ -97,7 +97,7 @@ oddSequence1 = runKD $ do
 --   Result:                                         Q.E.D.
 -- [Proven] oddSequence2
 oddSequence2 :: IO Proof
-oddSequence2 = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
+oddSequence2 = runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 50}} $ do
   let s :: SInteger -> SInteger
       s = smtFunction "seq" $ \n -> ite (n .<= 0) 1
                                   $ ite (n .== 1) 3
@@ -156,7 +156,7 @@ interleave = smtFunction "interleave" (\xs ys -> ite (null  xs) ys (head xs .: i
 --   Result:                               Q.E.D.
 -- [Proven] interleaveLen
 interleaveLen :: IO Proof
-interleaveLen = runKD $ do
+interleaveLen = runTP $ do
 
    sInduct "interleaveLen"
            (\(Forall @"xs" xs) (Forall @"ys" ys) -> length xs + length ys .== length (interleave @Integer xs ys))
@@ -210,7 +210,7 @@ uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple
 --   Result:                               Q.E.D.
 -- [Proven] interleaveRoundTrip
 interleaveRoundTrip :: IO Proof
-interleaveRoundTrip = runKDWith cvc5 $ do
+interleaveRoundTrip = runTPWith cvc5 $ do
 
    revHelper <- lemma "revCons" (\(Forall @"a" a) (Forall @"as" as) (Forall @"bs" bs)
                                         -> reverse @Integer (a .: as) ++ bs .== reverse as ++ (a .: bs)) []
@@ -266,7 +266,7 @@ interleaveRoundTrip = runKDWith cvc5 $ do
 -- <BLANKLINE>
 -- *** Solver reported: canceled
 won'tProve1 :: IO ()
-won'tProve1 = runKD $ do
+won'tProve1 = runTP $ do
    let len :: SList Integer -> SInteger
        len = smtFunction "len" $ \xs -> ite (null xs) 0 (1 + len (tail xs))
 
@@ -292,7 +292,7 @@ won'tProve1 = runKD $ do
 -- Falsifiable. Counter-example:
 --   xs = [] :: [Integer]
 won'tProve2 :: IO ()
-won'tProve2 = runKD $ do
+won'tProve2 = runTP $ do
    let len :: SList Integer -> SInteger
        len = smtFunction "badLength" $ \xs -> ite (null xs)
                                                   123
@@ -320,7 +320,7 @@ won'tProve2 = runKD $ do
 -- Falsifiable. Counter-example:
 --   x = -1 :: Integer
 won'tProve3 :: IO ()
-won'tProve3 = runKD $ do
+won'tProve3 = runTP $ do
    _ <- sInduct "badMeasure"
                 (\(Forall @"x" (x :: SInteger)) -> x .== x)
                 (id @SInteger) $
@@ -343,7 +343,7 @@ won'tProve3 = runKD $ do
 -- <BLANKLINE>
 -- *** Solver reported: canceled
 won'tProve4 :: IO ()
-won'tProve4 = runKD $ do
+won'tProve4 = runTP $ do
 
    let -- a bizarre (but valid!) way to sum two integers
        weirdSum = smtFunction "weirdSum" (\x y -> ite (x .<= 0) y (weirdSum (x - 1) (y + 1)))
@@ -392,7 +392,7 @@ won'tProve4 = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] sumHalves
 sumHalves :: IO Proof
-sumHalves = runKD $ do
+sumHalves = runTP $ do
 
     let halvingSum :: SList Integer -> SInteger
         halvingSum = smtFunction "halvingSum" $ \xs -> ite (null xs .|| null (tail xs))

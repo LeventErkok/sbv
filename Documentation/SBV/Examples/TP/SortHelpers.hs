@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.SortHelpers
+-- Module    : Documentation.SBV.Examples.TP.SortHelpers
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -17,15 +17,15 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.SortHelpers where
+module Documentation.SBV.Examples.TP.SortHelpers where
 
 import Prelude hiding (null, tail, elem, head, (++), take, drop)
 import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List
-import Data.SBV.Tools.KnuckleDragger
-import Data.SBV.Tools.KnuckleDragger.List
+import Data.SBV.Tools.TP
+import Data.SBV.Tools.TP.List
 
 #ifdef DOCTEST
 -- $setup
@@ -50,7 +50,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 -- Lemma: nonDecTail                       Q.E.D.
 -- [Proven] nonDecTail
 nonDecrTail :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-nonDecrTail _ = runKD $
+nonDecrTail _ = runTP $
    lemma "nonDecTail"
          (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
          []
@@ -61,7 +61,7 @@ nonDecrTail _ = runKD $
 -- Lemma: nonDecrInsert                    Q.E.D.
 -- [Proven] nonDecrInsert
 nonDecrIns :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-nonDecrIns _ = runKD $
+nonDecrIns _ = runTP $
    lemma "nonDecrInsert"
          (\(Forall @"x" (x :: SBV a)) (Forall @"ys" ys) -> nonDecreasing ys .&& sNot (null ys) .&& x .<= head ys
                                                        .=> nonDecreasing (x .: ys))
@@ -105,7 +105,7 @@ sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e 
 --   Result:                               Q.E.D.
 -- [Proven] sublistCorrect @Integer
 sublistCorrect :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
-sublistCorrect p = runKD $ do
+sublistCorrect p = runTP $ do
 
     cElem  <- use $ countElem p
     eCount <- use $ elemCount p
@@ -157,7 +157,7 @@ sublistCorrect p = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] sublistElem @Integer
 sublistElem :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
-sublistElem p = runKD $ do
+sublistElem p = runTP $ do
    slc <- use $ sublistCorrect p
 
    calc (atProxy p "sublistElem")
@@ -174,7 +174,7 @@ sublistElem p = runKD $ do
 -- Lemma: sublistTail @Integer             Q.E.D.
 -- [Proven] sublistTail @Integer
 sublistTail :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
-sublistTail p = runKD $
+sublistTail p = runTP $
   lemma (atProxy p "sublistTail")
         (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> xs `sublist` ys)
         []
@@ -185,7 +185,7 @@ sublistTail p = runKD $
 -- Lemma: sublistIfPerm @Integer           Q.E.D.
 -- [Proven] sublistIfPerm @Integer
 sublistIfPerm :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
-sublistIfPerm p = runKD $
+sublistIfPerm p = runTP $
   lemma (atProxy p "sublistIfPerm")
         (\(Forall @"xs" xs) (Forall @"ys" (ys :: SList a)) -> isPermutation xs ys .=> xs `sublist` ys)
         []

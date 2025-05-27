@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.McCarthy91
+-- Module    : Documentation.SBV.Examples.TP.McCarthy91
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -16,10 +16,10 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.McCarthy91 where
+module Documentation.SBV.Examples.TP.McCarthy91 where
 
 import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 -- * Definitions
 
@@ -54,7 +54,7 @@ spec91 n = ite (n .> 100) (n - 10) 91
 --   Result:                               Q.E.D.
 -- [Proven] mcCarthy91
 correctness :: IO Proof
-correctness = runKD $ do
+correctness = runTP $ do
 
    -- Case 1. When @n > 100@
    case1 <- lemma "case1" (\(Forall @"n" n) -> n .>= 100 .=> mcCarthy91 n .== spec91 n) []

@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Numeric
+-- Module    : Documentation.SBV.Examples.TP.Numeric
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Example use of inductive KnuckleDragger proofs, over integers.
+-- Example use of inductive TP proofs, over integers.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
@@ -17,12 +17,12 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.Numeric where
+module Documentation.SBV.Examples.TP.Numeric where
 
 import Prelude hiding (sum, length)
 
 import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 #ifdef DOCTEST
 -- $setup
@@ -45,7 +45,7 @@ import Data.SBV.Tools.KnuckleDragger
 --   Result:                               Q.E.D.
 -- [Proven] sumConst_correct
 sumConstProof :: IO Proof
-sumConstProof = runKD $ do
+sumConstProof = runTP $ do
    let c :: SInteger
        c = uninterpret "c"
 
@@ -76,7 +76,7 @@ sumConstProof = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] sum_correct
 sumProof :: IO Proof
-sumProof = runKD $ do
+sumProof = runTP $ do
    let sum :: SInteger -> SInteger
        sum = smtFunction "sum" $ \n -> ite (n .<= 0) 0 (n + sum (n - 1))
 
@@ -105,7 +105,7 @@ sumProof = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] sumSquare_correct
 sumSquareProof :: IO Proof
-sumSquareProof = runKD $ do
+sumSquareProof = runTP $ do
    let sumSquare :: SInteger -> SInteger
        sumSquare = smtFunction "sumSquare" $ \n -> ite (n .<= 0) 0 (n * n + sumSquare (n - 1))
 
@@ -144,7 +144,7 @@ sumSquareProof = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] elevenMinusFour
 elevenMinusFour :: IO Proof
-elevenMinusFour = runKD $ do
+elevenMinusFour = runTP $ do
    let pow :: SInteger -> SInteger -> SInteger
        pow = smtFunction "pow" $ \x y -> ite (y .== 0) 1 (x * pow x (y - 1))
 
@@ -184,7 +184,7 @@ elevenMinusFour = runKD $ do
 -- Falsifiable. Counter-example:
 --   n = -2 :: Integer
 badNonNegative :: IO ()
-badNonNegative = runKD $ do
+badNonNegative = runTP $ do
     _ <- induct "badNonNegative"
                 (\(Forall @"n" (n :: SInteger)) -> n .>= 0) $
                 \ih n -> [] |- n + 1 .>= (0 :: SInteger)

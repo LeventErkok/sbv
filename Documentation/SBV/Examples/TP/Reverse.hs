@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Reverse
+-- Module    : Documentation.SBV.Examples.TP.Reverse
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -22,16 +22,16 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.Reverse where
+module Documentation.SBV.Examples.TP.Reverse where
 
 import Prelude hiding (head, tail, null, reverse, length, init, last, (++))
 import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List hiding (partition)
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
-import qualified Data.SBV.Tools.KnuckleDragger.List as KD
+import qualified Data.SBV.Tools.TP.List as TP
 
 #ifdef DOCTEST
 -- $setup
@@ -117,13 +117,13 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --   Result:                               Q.E.D.
 -- [Proven] revCorrect @Integer
 correctness :: forall a. SymVal a => Proxy a -> IO Proof
-correctness p = runKD $ do
+correctness p = runTP $ do
 
-  -- Import a few helpers from "Data.SBV.Tools.KnuckleDragger.List"
-  revLen  <- use $ KD.revLen  p
-  revApp  <- use $ KD.revApp  p
-  revSnoc <- use $ KD.revSnoc p
-  revRev  <- use $ KD.revRev  p
+  -- Import a few helpers from "Data.SBV.Tools.TP.List"
+  revLen  <- use $ TP.revLen  p
+  revApp  <- use $ TP.revApp  p
+  revSnoc <- use $ TP.revSnoc p
+  revRev  <- use $ TP.revRev  p
 
   sInductWith cvc5 (atProxy p "revCorrect")
     (\(Forall @"xs" (xs :: SList a)) -> rev xs .== reverse xs)

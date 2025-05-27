@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Majority
+-- Module    : Documentation.SBV.Examples.TP.Majority
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -18,7 +18,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.Majority where
+module Documentation.SBV.Examples.TP.Majority where
 
 import Prelude hiding (null, length)
 
@@ -27,8 +27,8 @@ import Data.SBV.List
 
 import Data.Proxy
 
-import Data.SBV.Tools.KnuckleDragger
-import qualified Data.SBV.Tools.KnuckleDragger.List as KD
+import Data.SBV.Tools.TP
+import qualified Data.SBV.Tools.TP.List as TP
 
 #ifdef DOCTEST
 -- $setup
@@ -55,9 +55,9 @@ majority = smtFunction "majority"
 mjrty :: SymVal a => SList a -> SBV a
 mjrty = majority (some "arb" (const sTrue)) 0
 
--- | The function @how-many@ in the paper is already defined in SBV as 'KD.count'. Let's give it a name:
+-- | The function @how-many@ in the paper is already defined in SBV as 'TP.count'. Let's give it a name:
 howMany :: SymVal a => SBV a -> SList a -> SInteger
-howMany = KD.count
+howMany = TP.count
 
 -- * Correctness
 
@@ -101,19 +101,19 @@ howMany = KD.count
 --   Result:                               Q.E.D.
 -- ([Proven] majority @Integer,[Proven] ifExistsFound @Integer,[Proven] ifNoMajority @Integer,[Proven] uniqueness @Integer)
 correctness :: forall a. SymVal a => Proxy a -> IO (Proof, Proof, Proof, Proof)
-correctness p = runKD $ do
+correctness p = runTP $ do
 
   -- Helper definition
   let isMajority :: SBV a -> SList a -> SBool
-      isMajority e xs = length xs `sEDiv` 2 .< KD.count e xs
+      isMajority e xs = length xs `sEDiv` 2 .< TP.count e xs
 
   -- First prove the generalized majority theorem
   majorityGeneral <-
      induct (atProxy p "majorityGeneral")
             (\(Forall @"xs" xs) (Forall @"i" i) (Forall @"e" (e :: SBV a)) (Forall @"c" c)
-                  -> i .>= 0 .&& (length xs + i) `sEDiv` 2 .< ite (e .== c) i 0 + KD.count e xs .=> majority c i xs .== e) $
+                  -> i .>= 0 .&& (length xs + i) `sEDiv` 2 .< ite (e .== c) i 0 + TP.count e xs .=> majority c i xs .== e) $
             \ih x xs i (e :: SBV a) c ->
-                   [i .>= 0, (length (x .: xs) + i) `sEDiv` 2 .< ite (e .== c) i 0 + KD.count e (x .: xs)]
+                   [i .>= 0, (length (x .: xs) + i) `sEDiv` 2 .< ite (e .== c) i 0 + TP.count e (x .: xs)]
                 |- majority c i (x .: xs)
                 =: cases [ i .== 0 ==> majority x 1 xs
                                     ?? ih `at` (Inst @"i" (1 :: SInteger), Inst @"e" e, Inst @"c" x)

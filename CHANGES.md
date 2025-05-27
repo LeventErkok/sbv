@@ -3,23 +3,26 @@
 
 ### Version 11.7.5, Not yet released
   
-  * KnuckleDragger:
+  * Renamed KnuckeDragger to TP, for theorem-proving. The original name was confusing, and the design has
+    diverged from Phil's tool in significant ways and goals.
+
+  * TP:
       - Keep track of proofs with a unique id.
       - Add method rootOfTrust which can be used to retrieve uses of sorry in a proof. The idea is that
         to get a proof clean, you need to resolve all the proofs returned by this call.
-      - Add a knuckle-dragger proof that tail-recursive definition of fibonacci is
-        equivalent to its textbook definition. See Documentation/SBV/Examples/KnuckleDragger/Fibonacci.hs.
+      - Add a proof that tail-recursive definition of fibonacci is
+        equivalent to its textbook definition. See Documentation/SBV/Examples/TP/Fibonacci.hs.
       - Renamed kdShowDepsHTML to showProofTreeHTML. (Along with showProofTree which renders in ASCII.)
       - Generalize various KD list/sort proofs.
 
-   * New KnuckleDragger examples:
-      - Documentation.SBV.Examples.KnuckleDragger.Reverse:    Proving a definition of reverse that uses no auxiliary definitions correct.
-      - Documentation.SBV.Examples.KnuckleDragger.Majority:   Proof of Boyer-Moore's majority selection algorithm correct.
-      - Documentation.SBV.Examples.KnuckleDragger.McCarthy91: Proof of correctness for McCarthy's 91 function.
+   * New TP examples:
+      - Documentation.SBV.Examples.TP.Reverse:    Proving a definition of reverse that uses no auxiliary definitions correct.
+      - Documentation.SBV.Examples.TP.Majority:   Proof of Boyer-Moore's majority selection algorithm correct.
+      - Documentation.SBV.Examples.TP.McCarthy91: Proof of correctness for McCarthy's 91 function.
 
   * Remove Data.SBV.Tools.NaturalInduction. The functionality provided by this tool is much better
-    addressed by KnuckleDragger's induction methods. If you were using this functionality and have problems
-    porting to knuckle-dragger, please get in touch!
+    addressed by TP'sinduction methods. If you were using this functionality and have problems
+    porting to TP, please get in touch!
 
   * Add functions 'last' and 'replicate' to Data.SBV.List.
 

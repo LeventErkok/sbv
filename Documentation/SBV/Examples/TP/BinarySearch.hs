@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.BinarySearch
+-- Module    : Documentation.SBV.Examples.TP.BinarySearch
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -16,13 +16,13 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.BinarySearch where
+module Documentation.SBV.Examples.TP.BinarySearch where
 
 import Prelude hiding (null, length, (!!), drop, take, tail, elem, notElem)
 
 import Data.SBV
 import Data.SBV.Maybe
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 -- * Binary search
 
@@ -108,7 +108,7 @@ inArray arr (low, high) elt = quantifiedBool $ \(Exists @"i" i) -> low .<= i .&&
 --   Result:                                         Q.E.D.
 -- [Proven] bsearchCorrect
 correctness :: IO Proof
-correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ do
+correctness = runTPWith z3{tpOptions = (tpOptions z3) { ribbonLength = 50 }} $ do
 
   -- Helper: if a value is not in a range, then it isn't in any subrange of it:
   notInRange <- lemma "notInRange"

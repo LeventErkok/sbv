@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Basics
+-- Module    : Documentation.SBV.Examples.TP.Basics
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Some basic KD usage.
+-- Some basic TP usage.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
@@ -17,13 +17,13 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.Basics where
+module Documentation.SBV.Examples.TP.Basics where
 
 import Prelude hiding(reverse, length, elem)
 
 import Data.SBV
 import Data.SBV.List
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 import Data.Proxy
 import Control.Monad (void)
@@ -47,7 +47,7 @@ import Control.Monad (void)
 -- Lemma: true                             Q.E.D.
 -- [Proven] true
 trueIsProvable :: IO Proof
-trueIsProvable = runKD $ lemma "true" sTrue []
+trueIsProvable = runTP $ lemma "true" sTrue []
 
 -- | @sFalse@ isn't provable.
 --
@@ -58,7 +58,7 @@ trueIsProvable = runKD $ lemma "true" sTrue []
 -- *** Failed to prove sFalse.
 -- Falsifiable
 falseIsn'tProvable :: IO ()
-falseIsn'tProvable = runKD $ do
+falseIsn'tProvable = runTP $ do
         _won'tGoThrough <- lemma "sFalse" sFalse []
         pure ()
 
@@ -71,7 +71,7 @@ falseIsn'tProvable = runKD $ do
 -- Lemma: largerIntegerExists              Q.E.D.
 -- [Proven] largerIntegerExists
 largerIntegerExists :: IO Proof
-largerIntegerExists = runKD $ lemma "largerIntegerExists"
+largerIntegerExists = runTP $ lemma "largerIntegerExists"
                                     (\(Forall @"x" x) (Exists @"y" y) -> x .< (y :: SInteger))
                                     []
 
@@ -83,7 +83,7 @@ largerIntegerExists = runKD $ lemma "largerIntegerExists"
 -- Lemma: forallConjunction                Q.E.D.
 -- [Proven] forallConjunction
 forallConjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO Proof
-forallConjunction p q = runKD $ do
+forallConjunction p q = runTP $ do
     let qb = quantifiedBool
 
     lemma "forallConjunction"
@@ -99,7 +99,7 @@ forallConjunction p q = runKD $ do
 -- Lemma: existsDisjunction                Q.E.D.
 -- [Proven] existsDisjunction
 existsDisjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO Proof
-existsDisjunction p q = runKD $ do
+existsDisjunction p q = runTP $ do
     let qb = quantifiedBool
 
     lemma "existsDisjunction"
@@ -129,7 +129,7 @@ existsDisjunction p q = runKD $ do
 -- So, there is no common value that satisfies both, providing a counter-example. (It's not clear why the solver finds
 -- a model with two distinct values, as one would have sufficed. But it is still a valud model.)
 forallDisjunctionNot :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO ()
-forallDisjunctionNot p q = runKD $ do
+forallDisjunctionNot p q = runTP $ do
     let qb = quantifiedBool
 
     -- This won't prove!
@@ -158,7 +158,7 @@ forallDisjunctionNot p q = runKD $ do
 --
 -- In this case, we again have a predicate That disagree at every point, providing a counter-example.
 existsConjunctionNot :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO ()
-existsConjunctionNot p q = runKD $ do
+existsConjunctionNot p q = runTP $ do
     let qb = quantifiedBool
 
     _wont'GoThrough <- lemma "existsConjunctionNot"
@@ -172,7 +172,7 @@ existsConjunctionNot p q = runKD $ do
 
 -- * No termination checks
 
--- | It's important to realize that KnuckleDragger proofs in SBV neither check nor guarantee that the
+-- | It's important to realize that TP proofs in SBV neither check nor guarantee that the
 -- functions we use are terminating. This is beyond the scope (and current capabilities) of what SBV can handle.
 -- That is, the proof is up-to-termination, i.e., any proof implicitly assumes all functions defined (or axiomatized)
 -- terminate for all possible inputs. If non-termination is possible, then the logic becomes inconsistent, i.e.,
@@ -188,7 +188,7 @@ existsConjunctionNot p q = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] noTerminationImpliesFalse
 noTerminationChecks :: IO Proof
-noTerminationChecks = runKD $ do
+noTerminationChecks = runTP $ do
 
    let f :: SInteger -> SInteger
        f = uninterpret "f"
@@ -215,7 +215,7 @@ noTerminationChecks = runKD $ do
 -- Falsifiable. Counter-example:
 --   xs = [10,11,10] :: [Integer]
 badRevLen :: forall a. SymVal a => Proxy a -> IO ()
-badRevLen p = runKD $
+badRevLen p = runTP $
    void $ lemma (atProxy p "badRevLen")
                 (\(Forall @"xs" (xs :: SList a)) -> length (reverse xs) .== ite (length xs .== 3) 5 (length xs))
                 []
@@ -233,7 +233,7 @@ badRevLen p = runKD $
 --   imp  =                  42 :: Integer
 --   spec =                   6 :: Integer
 badLengthProof :: IO ()
-badLengthProof = runKD $ do
+badLengthProof = runTP $ do
    let badLength :: SList Integer -> SInteger
        badLength xs = ite (length xs .> 5 .&& 42 `elem` xs) 42 (length xs)
 

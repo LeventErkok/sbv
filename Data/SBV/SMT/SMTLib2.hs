@@ -303,7 +303,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- formula ---" ]
              ++ finalAssert
 
-        SMTConfig{generateHOEquivs, kdOptions = KDOptions{firstifyUniqueLen}} = cfg
+        SMTConfig{generateHOEquivs, tpOptions = TPOptions{firstifyUniqueLen}} = cfg
 
         (firstifiedDefs, firstifiedFuncs)
            = case dup res of
@@ -437,7 +437,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
 -- Declare "known" SBV functions here
 declSBVFunc :: SMTConfig -> Op -> (String, [String])
 declSBVFunc cfg op = (nm, comment ++ body)
-  where nm = firstify (firstifyUniqueLen (kdOptions cfg)) op
+  where nm = firstify (firstifyUniqueLen (tpOptions cfg)) op
 
         comment = ["; Firstified function: " ++ htyp]
 
@@ -1133,7 +1133,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                 ps      = " (" ++ unwords (map smtType params) ++ ") "
                 aResult = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
 
-        firstifiedName = firstify (firstifyUniqueLen (kdOptions cfg))
+        firstifiedName = firstify (firstifyUniqueLen (tpOptions cfg))
 
         str2Seq :: SV -> String
         str2Seq sv@(SV KString _) = "(sbv.str2Seq " ++ cvtSV sv ++ ")"

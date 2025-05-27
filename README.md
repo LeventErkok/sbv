@@ -95,18 +95,19 @@ Other SMT solvers can be used with SBV as well, with a relatively easy hook-up m
 SBV also allows for running multiple solvers at the same time, either picking the result of the first to complete, or getting results from all.
 See `proveWithAny`/`proveWithAll` and `satWithAny`/`satWithAll` functions. The function `sbvAvailableSolvers` can be used to query the available solvers at run-time.
 
-## KnuckleDragger: Semi-automated theorem proving
+## TP: Semi-automated theorem proving
 
 While SMT solvers are quite powerful, there is a certain class of problems that they are just not well suited for. In particular, SMT
 solvers are not good at proofs that require induction, or those that require complex chains of reasoning. Induction is necessary to reason about
 any recursive algorithm, and most such proofs require carefully constructed equational steps.
 
-SBV allows for a style of semi-automated theorem proving, called KnuckleDragger, that can be used to construct such proofs.
+SBV allows for a style of semi-automated theorem proving, called TP (for Theorem-Proving, not toilet-paper, though
+you can be the judge of that!), which can be used to construct such proofs.
 The documentation includes example proofs for many list functions, and even inductive proofs for the familiar insertion
 and merge-sort algorithms, along with a proof that the square-root of 2 is irrational. While a proper theorem prover (such as Lean, Isabelle
 etc.) is a more appropriate choice for such proofs, with some guidance (and acceptance of a much larger trusted code base!), SBV can
 be used to establish correctness of various mathematical claims and algorithms that are usually beyond the scope of SMT
-solvers alone. See the documentation under the `Documentation.SBV.Examples.KnuckleDragger` directory.
+solvers alone. See the documentation under the `Documentation.SBV.Examples.TP` directory.
 
 ## Copyright, License
 

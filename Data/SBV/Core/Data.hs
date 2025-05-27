@@ -58,7 +58,7 @@ module Data.SBV.Core.Data
  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
  , SolverCapabilities(..)
  , extractSymbolicSimulationState
- , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), KDOptions(..)
+ , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), TPOptions(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
  , QuantifiedBool(..), EqSymbolic(..), QNot(..), Skolemize(SkolemsTo, skolemize, taggedSkolemize)

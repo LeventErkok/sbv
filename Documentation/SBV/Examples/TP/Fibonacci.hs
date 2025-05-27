@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Fibonacci
+-- Module    : Documentation.SBV.Examples.TP.Fibonacci
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -17,10 +17,10 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.Fibonacci(correctness) where
+module Documentation.SBV.Examples.TP.Fibonacci(correctness) where
 
 import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 -- * Naive fibonacci
 
@@ -57,7 +57,7 @@ fibTail = fib 1 1
 --   Result:                               Q.E.D.
 -- [Proven] fibCorrect
 correctness :: IO Proof
-correctness = runKD $ do
+correctness = runTP $ do
 
   helper <- induct "helper"
                    (\(Forall @"n" n) (Forall @"k" k) ->

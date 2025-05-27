@@ -133,12 +133,12 @@ Library
                   , Data.SBV.Tools.Induction
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
-                  , Data.SBV.Tools.KnuckleDragger
-                  , Data.SBV.Tools.KnuckleDragger.List
                   , Data.SBV.Tools.Overflow
                   , Data.SBV.Tools.Polynomial
                   , Data.SBV.Tools.Range
                   , Data.SBV.Tools.STree
+                  , Data.SBV.Tools.TP
+                  , Data.SBV.Tools.TP.List
                   , Data.SBV.Tools.WeakestPreconditions
                   , Data.SBV.Trans
                   , Data.SBV.Trans.Control
@@ -163,23 +163,6 @@ Library
                   , Documentation.SBV.Examples.Lists.Fibonacci
                   , Documentation.SBV.Examples.Lists.BoundedMutex
                   , Documentation.SBV.Examples.Lists.CountOutAndTransfer
-                  , Documentation.SBV.Examples.KnuckleDragger.Basics
-                  , Documentation.SBV.Examples.KnuckleDragger.BinarySearch
-                  , Documentation.SBV.Examples.KnuckleDragger.CaseSplit
-                  , Documentation.SBV.Examples.KnuckleDragger.Fibonacci
-                  , Documentation.SBV.Examples.KnuckleDragger.InsertionSort
-                  , Documentation.SBV.Examples.KnuckleDragger.Kleene
-                  , Documentation.SBV.Examples.KnuckleDragger.McCarthy91
-                  , Documentation.SBV.Examples.KnuckleDragger.Majority
-                  , Documentation.SBV.Examples.KnuckleDragger.MergeSort
-                  , Documentation.SBV.Examples.KnuckleDragger.Numeric
-                  , Documentation.SBV.Examples.KnuckleDragger.QuickSort
-                  , Documentation.SBV.Examples.KnuckleDragger.Reverse
-                  , Documentation.SBV.Examples.KnuckleDragger.ShefferStroke
-                  , Documentation.SBV.Examples.KnuckleDragger.SortHelpers
-                  , Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational
-                  , Documentation.SBV.Examples.KnuckleDragger.StrongInduction
-                  , Documentation.SBV.Examples.KnuckleDragger.Tao
                   , Documentation.SBV.Examples.Misc.Definitions
                   , Documentation.SBV.Examples.Misc.Enumerate
                   , Documentation.SBV.Examples.Misc.FirstOrderLogic
@@ -248,6 +231,23 @@ Library
                   , Documentation.SBV.Examples.Queries.Concurrency
                   , Documentation.SBV.Examples.Strings.RegexCrossword
                   , Documentation.SBV.Examples.Strings.SQLInjection
+                  , Documentation.SBV.Examples.TP.Basics
+                  , Documentation.SBV.Examples.TP.BinarySearch
+                  , Documentation.SBV.Examples.TP.CaseSplit
+                  , Documentation.SBV.Examples.TP.Fibonacci
+                  , Documentation.SBV.Examples.TP.InsertionSort
+                  , Documentation.SBV.Examples.TP.Kleene
+                  , Documentation.SBV.Examples.TP.McCarthy91
+                  , Documentation.SBV.Examples.TP.Majority
+                  , Documentation.SBV.Examples.TP.MergeSort
+                  , Documentation.SBV.Examples.TP.Numeric
+                  , Documentation.SBV.Examples.TP.QuickSort
+                  , Documentation.SBV.Examples.TP.Reverse
+                  , Documentation.SBV.Examples.TP.ShefferStroke
+                  , Documentation.SBV.Examples.TP.SortHelpers
+                  , Documentation.SBV.Examples.TP.Sqrt2IsIrrational
+                  , Documentation.SBV.Examples.TP.StrongInduction
+                  , Documentation.SBV.Examples.TP.Tao
                   , Documentation.SBV.Examples.Transformers.SymbolicEval
                   , Documentation.SBV.Examples.Uninterpreted.AUF
                   , Documentation.SBV.Examples.Uninterpreted.Deduce
@@ -291,9 +291,6 @@ Library
                   , Data.SBV.Provers.OpenSMT
                   , Data.SBV.Provers.Yices
                   , Data.SBV.Provers.Z3
-                  , Data.SBV.Tools.KnuckleDragger.Kernel
-                  , Data.SBV.Tools.KnuckleDragger.KnuckleDragger
-                  , Data.SBV.Tools.KnuckleDragger.Utils
                   , Data.SBV.Utils.CrackNum
                   , Data.SBV.Utils.ExtractIO
                   , Data.SBV.Utils.Numeric
@@ -301,6 +298,9 @@ Library
                   , Data.SBV.Utils.Lib
                   , Data.SBV.Utils.PrettyNum
                   , Data.SBV.Utils.SExpr
+                  , Data.SBV.Tools.TP.Kernel
+                  , Data.SBV.Tools.TP.TP
+                  , Data.SBV.Tools.TP.Utils
 
 Test-Suite SBVTest
   import           : common-settings

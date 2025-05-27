@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.KnuckleDragger.List
+-- Module    : Data.SBV.Tools.TP.List
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- A variety of KnuckleDragger proofs on list processing functions. Note that
+-- A variety of TP proofs on list processing functions. Note that
 -- these proofs only hold for finite lists. SMT-solvers do not model infinite
 -- lists, and hence all claims are for finite (but arbitrary-length) lists.
 -----------------------------------------------------------------------------
@@ -19,7 +19,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.KnuckleDragger.List (
+module Data.SBV.Tools.TP.List (
      -- * Append
      appendNull, consApp, appendAssoc
 
@@ -67,7 +67,7 @@ import Prelude (Eq, IO, ($), Num(..), id, (.), flip)
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tuple
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 import Control.Monad (void)
 import Data.Proxy
@@ -89,7 +89,7 @@ import Data.Proxy
 -- Lemma: appendNull @Integer              Q.E.D.
 -- [Proven] appendNull @Integer
 appendNull :: forall a. SymVal a => Proxy a -> IO Proof
-appendNull p = runKD $ lemma (atProxy p "appendNull")
+appendNull p = runTP $ lemma (atProxy p "appendNull")
                              (\(Forall @"xs" (xs :: SList a)) -> xs ++ nil .== xs)
                              []
 
@@ -101,7 +101,7 @@ appendNull p = runKD $ lemma (atProxy p "appendNull")
 -- Lemma: consApp @Integer                 Q.E.D.
 -- [Proven] consApp @Integer
 consApp :: forall a. SymVal a => Proxy a -> IO Proof
-consApp p = runKD $ lemma (atProxy p "consApp") (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys)) []
+consApp p = runTP $ lemma (atProxy p "consApp") (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys)) []
 
 -- * Associativity of append
 
@@ -115,7 +115,7 @@ consApp p = runKD $ lemma (atProxy p "consApp") (\(Forall @"x" (x :: SBV a)) (Fo
 -- the concatenation of sequences in SMTLib, it must trigger an internal heuristic in z3
 -- that proves it right out-of-the-box!)
 appendAssoc :: forall a. SymVal a => Proxy a -> IO Proof
-appendAssoc p = runKD $
+appendAssoc p = runTP $
    lemma (atProxy p "appendAssoc") (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs) []
 
 -- * Reverse
@@ -132,7 +132,7 @@ appendAssoc p = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] revLen @Integer
 revLen :: forall a. SymVal a => Proxy a -> IO Proof
-revLen p = runKD $
+revLen p = runTP $
    induct (atProxy p "revLen")
           (\(Forall @"xs" (xs :: SList a)) -> length (reverse xs) .== length xs) $
           \ih (x :: SBV a) xs -> [] |- length (reverse (x .: xs))
@@ -156,7 +156,7 @@ revLen p = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] revApp @Integer
 revApp :: forall a. SymVal a => Proxy a -> IO Proof
-revApp p = runKD $
+revApp p = runTP $
    induct (atProxy p "revApp")
           (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
           \ih (x :: SBV a) xs ys -> [] |- reverse ((x .: xs) ++ ys)
@@ -174,7 +174,7 @@ revApp p = runKD $
 -- Lemma: revCons @Integer                 Q.E.D.
 -- [Proven] revCons @Integer
 revCons :: forall a. SymVal a => Proxy a -> IO Proof
-revCons p = runKD $ lemma (atProxy p "revCons") (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (x .: xs) .== reverse xs ++ singleton x) []
+revCons p = runTP $ lemma (atProxy p "revCons") (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (x .: xs) .== reverse xs ++ singleton x) []
 
 -- | @reverse (xs ++ [x]) == x : reverse xs@
 --
@@ -190,7 +190,7 @@ revCons p = runKD $ lemma (atProxy p "revCons") (\(Forall @"x" (x :: SBV a)) (Fo
 -- Lemma: revSnoc @Integer                 Q.E.D.
 -- [Proven] revSnoc @Integer
 revSnoc :: forall a. SymVal a => Proxy a -> IO Proof
-revSnoc p = runKD $ do
+revSnoc p = runTP $ do
    ra <- use $ revApp p
 
    lemma (atProxy p "revSnoc")
@@ -219,7 +219,7 @@ revSnoc p = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] revRev @Integer
 revRev :: forall a. SymVal a => Proxy a -> IO Proof
-revRev p = runKD $ do
+revRev p = runTP $ do
 
    ra <- use $ revApp p
 
@@ -240,7 +240,7 @@ revRev p = runKD $ do
 -- Lemma: lengthTail @Integer              Q.E.D.
 -- [Proven] lengthTail @Integer
 lengthTail :: forall a. SymVal a => Proxy a -> IO Proof
-lengthTail p = runKD $
+lengthTail p = runTP $
    lemma (atProxy p "lengthTail")
          (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> length (x .: xs) .== 1 + length xs)
          []
@@ -251,7 +251,7 @@ lengthTail p = runKD $
 -- Lemma: lenAppend @Integer               Q.E.D.
 -- [Proven] lenAppend @Integer
 lenAppend :: forall a. SymVal a => Proxy a -> IO Proof
-lenAppend p = runKD $
+lenAppend p = runTP $
    lemma (atProxy p "lenAppend")
          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> length (xs ++ ys) .== length xs + length ys)
          []
@@ -262,7 +262,7 @@ lenAppend p = runKD $
 -- Lemma: lenAppend2 @Integer              Q.E.D.
 -- [Proven] lenAppend2 @Integer
 lenAppend2 :: forall a. SymVal a => Proxy a -> IO Proof
-lenAppend2 p = runKD $
+lenAppend2 p = runTP $
     lemma (atProxy p "lenAppend2")
           (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> length xs .== length ys .=> length (xs ++ ys) .== 2 * length xs)
           []
@@ -284,7 +284,7 @@ lenAppend2 p = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] replicateLength @Integer
 replicateLength :: forall a. SymVal a => Proxy a -> IO Proof
-replicateLength p = runKD $
+replicateLength p = runTP $
    induct (atProxy p "replicateLength")
           (\(Forall @"k" k) (Forall @"x" (x :: SBV a)) -> length (replicate k x) .== 0 `smax` k) $
           \ih k (x :: SBV a) -> [] |- length (replicate (k+1) x)
@@ -313,7 +313,7 @@ replicateLength p = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] allAny
 allAny :: IO Proof
-allAny = runKD $
+allAny = runTP $
    induct "allAny"
           (\(Forall @"xs" xs) -> sNot (all id xs) .== any sNot xs) $
           \ih x xs -> [] |- sNot (all id (x .: xs))
@@ -337,7 +337,7 @@ allAny = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] mapEquiv @(Integer,Integer)
 mapEquiv :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> (SBV a -> SBV b) -> IO Proof
-mapEquiv f g = runKD $ do
+mapEquiv f g = runTP $ do
    let f'eq'g :: SBool
        f'eq'g = quantifiedBool $ \(Forall @"x" x) -> f x .== g x
 
@@ -364,7 +364,7 @@ mapEquiv f g = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] mapAppend @(Integer,Integer)
 mapAppend :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> IO Proof
-mapAppend f = runKD $ do
+mapAppend f = runTP $ do
    induct (atProxy (Proxy @(a, b)) "mapAppend")
           (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> map f (xs ++ ys) .== map f xs ++ map f ys) $
           \ih x xs ys -> [] |- map f ((x .: xs) ++ ys)
@@ -398,7 +398,7 @@ mapAppend f = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] mapReverse @(Integer,[Char])
 mapReverse :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> IO Proof
-mapReverse f = runKD $ do
+mapReverse f = runTP $ do
      mApp <- use (mapAppend f)
 
      induct (atProxy (Proxy @(a, b)) "mapReverse")
@@ -428,7 +428,7 @@ mapReverse f = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] foldrMapFusion @(Integer,Bool,[Char])
 foldrMapFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV a -> (SBV c -> SBV b) -> (SBV b -> SBV a -> SBV a) -> IO Proof
-foldrMapFusion a g f = runKD $ do
+foldrMapFusion a g f = runTP $ do
   induct (atProxy (Proxy @(a, b, c)) "foldrMapFusion")
          (\(Forall @"xs" xs) -> foldr f a (map g xs) .== foldr (f . g) a xs) $
          \ih x xs -> [] |- foldr f a (map g (x .: xs))
@@ -457,7 +457,7 @@ foldrMapFusion a g f = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] foldrFusion @(Integer,Bool,[Char])
 foldrFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV a -> SBV b -> (SBV a -> SBV b) -> (SBV c -> SBV a -> SBV a) -> (SBV c -> SBV b -> SBV b) -> IO Proof
-foldrFusion a b f g h = runKD $ do
+foldrFusion a b f g h = runTP $ do
    let -- Assumptions under which the equality holds
        h1 = f a .== b
        h2 = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
@@ -485,7 +485,7 @@ foldrFusion a b f g h = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] foldrOverAppend @Integer
 foldrOverAppend :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> IO Proof
-foldrOverAppend a f = runKD $ do
+foldrOverAppend a f = runTP $ do
    induct (atProxy (Proxy @a) "foldrOverAppend")
           (\(Forall @"xs" xs) (Forall @"ys" ys) -> foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs) $
           \ih x xs ys -> [] |- foldr f a ((x .: xs) ++ ys)
@@ -508,7 +508,7 @@ foldrOverAppend a f = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] foldlOverAppend @(Integer,Bool)
 foldlOverAppend :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> IO Proof
-foldlOverAppend f = runKD $
+foldlOverAppend f = runTP $
    induct (atProxy (Proxy @(a, b)) "foldlOverAppend")
           (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"a" a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys) $
           \ih x xs ys a -> [] |- foldl f a ((x .: xs) ++ ys)
@@ -542,7 +542,7 @@ foldlOverAppend f = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] foldrFoldlDuality @(Integer,[Char])
 foldrFoldlDuality :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> IO Proof
-foldrFoldlDuality f = runKD $ do
+foldrFoldlDuality f = runTP $ do
    foa <- use (foldlOverAppend (flip f))
 
    induct (atProxy (Proxy @(a, b)) "foldrFoldlDuality")
@@ -593,7 +593,7 @@ foldrFoldlDuality f = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] foldrFoldlDuality @Integer
 foldrFoldlDualityGeneralized :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> IO Proof
-foldrFoldlDualityGeneralized  e (@) = runKD $ do
+foldrFoldlDualityGeneralized  e (@) = runTP $ do
    -- Assumptions under which the equality holds
    let assoc = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x @ (y @ z) .== (x @ y) @ z
        lunit = quantifiedBool $ \(Forall @"x" x) -> e @ x .== x
@@ -659,7 +659,7 @@ foldrFoldlDualityGeneralized  e (@) = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] foldrFoldl @(Integer,[Char])
 foldrFoldl :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> (SBV b -> SBV a -> SBV b) -> SBV b-> IO Proof
-foldrFoldl (<+>) (<*>) e = runKD $ do
+foldrFoldl (<+>) (<*>) e = runTP $ do
    -- Assumptions about the operators
    let -- (x <+> y) <*> z == x <+> (y <*> z)
        assoc = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> (x <+> y) <*> z .== x <+> (y <*> z)
@@ -747,7 +747,7 @@ foldrFoldl (<+>) (<*>) e = runKD $ do
 -- In fact, @f@ has no-left unit by the above argument. In this case, the bookkeeping law produces @B@ for
 -- the left-hand-side, and @A@ for the right-hand-side for the input @[[], [B]]@.
 bookKeeping :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> IO Proof
-bookKeeping a f = runKD $ do
+bookKeeping a f = runTP $ do
    let -- Fuse map (foldr f a) in the theorem into one call to avoid nested lambdas. See above note.
        mapFoldr :: SBV a -> SList [a] -> SList a
        mapFoldr = smtFunction "mapFoldr" $ \e xss -> ite (null xss)
@@ -801,7 +801,7 @@ bookKeeping a f = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] filterAppend @Integer
 filterAppend :: forall a. SymVal a => (SBV a -> SBool) -> IO Proof
-filterAppend p = runKD $
+filterAppend p = runTP $
    induct (atProxy (Proxy @a) "filterAppend")
           (\(Forall @"xs" xs) (Forall @"ys" ys) -> filter p xs ++ filter p ys .== filter p (xs ++ ys)) $
           \ih x xs ys -> [] |- filter p (x .: xs) ++ filter p ys
@@ -837,7 +837,7 @@ filterAppend p = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] filterConcat @Integer
 filterConcat :: forall a. SymVal a => (SBV a -> SBool) -> IO Proof
-filterConcat p = runKD $ do
+filterConcat p = runTP $ do
   let -- Fuse concatMap (filter p) in the theorem to avoid nested lambdas. See above note
       concatMapFilter :: SymVal a => (SBV a -> SBool) -> SList [a] -> SList a
       concatMapFilter pred = smtFunction "concatMapFilter" $ \xs -> ite (null xs)
@@ -880,7 +880,7 @@ filterConcat p = runKD $ do
 -- counter-example, for the input @[9]@, left-hand-side filters nothing and the result is the singleton @20@. But the
 -- map on the right-hand side maps everything to @[2]@ and the filter gets rid of the elements, resulting in an empty list.
 mapFilter :: SymVal a => (SBV a -> SBV a) -> (SBV a -> SBool) -> IO ()
-mapFilter f p = runKD $
+mapFilter f p = runTP $
    void $ lemma "badMapFilter"
                 (\(Forall @"xs" xs) -> observe "lhs" (map f (filter p xs)) .== observe "rhs" (filter p (map f xs)))
                 []
@@ -899,7 +899,7 @@ mapFilter f p = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] partition1 @Integer
 partition1 :: forall a. SymVal a => (SBV a -> SBool) -> IO Proof
-partition1 f = runKD $
+partition1 f = runTP $
    induct (atProxy (Proxy @a) "partition1")
           (\(Forall @"xs" xs) -> fst (partition f xs) .== filter f xs) $
           \ih x xs -> [] |- fst (partition f (x .: xs))
@@ -924,7 +924,7 @@ partition1 f = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] partition2 @Integer
 partition2 :: forall a. SymVal a => (SBV a -> SBool) -> IO Proof
-partition2 f = runKD $
+partition2 f = runTP $
    induct (atProxy (Proxy @a) "partition2")
           (\(Forall @"xs" xs) -> snd (partition f xs) .== filter (sNot . f) xs) $
           \ih x xs -> [] |- snd (partition f (x .: xs))
@@ -945,7 +945,7 @@ partition2 f = runKD $
 -- Lemma: take_take @Integer               Q.E.D.
 -- [Proven] take_take @Integer
 take_take :: forall a. SymVal a => Proxy a -> IO Proof
-take_take p = runKD $
+take_take p = runTP $
    lemma (atProxy p "take_take")
          (\(Forall @"xs" (xs :: SList a)) (Forall @"m" m) (Forall @"n" n) -> take n (take m xs) .== take (n `smin` m) xs)
          []
@@ -957,7 +957,7 @@ take_take p = runKD $
 -- Lemma: drop_drop @Integer               Q.E.D.
 -- [Proven] drop_drop @Integer
 drop_drop :: forall a. SymVal a => Proxy a -> IO Proof
-drop_drop p = runKD $
+drop_drop p = runTP $
    lemma (atProxy p "drop_drop")
           (\(Forall @"n" n) (Forall @"m" m) (Forall @"xs" (xs :: SList a)) ->
                 n .>= 0 .&& m .>= 0 .=> drop n (drop m xs) .== drop (n + m) xs)
@@ -969,7 +969,7 @@ drop_drop p = runKD $
 -- Lemma: take_drop @Integer               Q.E.D.
 -- [Proven] take_drop @Integer
 take_drop :: forall a. SymVal a => Proxy a -> IO Proof
-take_drop p = runKD $
+take_drop p = runTP $
     lemma (atProxy p "take_drop")
           (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> take n xs ++ drop n xs .== xs)
           []
@@ -980,7 +980,7 @@ take_drop p = runKD $
 -- Lemma: take_cons @Integer               Q.E.D.
 -- [Proven] take_cons @Integer
 take_cons :: forall a. SymVal a => Proxy a -> IO Proof
-take_cons p = runKD $
+take_cons p = runTP $
    lemma (atProxy p "take_cons")
          (\(Forall @"n" n) (Forall @"x" x) (Forall @"xs" (xs :: SList a)) -> n .> 0 .=> take n (x .: xs) .== x .: take (n - 1) xs)
          []
@@ -1002,7 +1002,7 @@ take_cons p = runKD $
 -- Lemma: take_map @(Integer,Float)                  Q.E.D.
 -- [Proven] take_map @(Integer,Float)
 take_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> IO Proof
-take_map f = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
+take_map f = runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 50}} $ do
     tc   <- use $ take_cons (Proxy @a)
 
     map1 <- lemma (atProxy (Proxy @(a, b)) "map1")
@@ -1033,7 +1033,7 @@ take_map f = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
 -- Lemma: drop_cons @Integer               Q.E.D.
 -- [Proven] drop_cons @Integer
 drop_cons :: forall a. SymVal a => Proxy a -> IO Proof
-drop_cons p = runKD $
+drop_cons p = runTP $
    lemma (atProxy p "drop_cons")
          (\(Forall @"n" n) (Forall @"x" x) (Forall @"xs" (xs :: SList a)) -> n .> 0 .=> drop n (x .: xs) .== drop (n - 1) xs)
          []
@@ -1059,7 +1059,7 @@ drop_cons p = runKD $
 --   Result:                                         Q.E.D.
 -- [Proven] drop_map @(Integer,[Char])
 drop_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> IO Proof
-drop_map f = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
+drop_map f = runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 50}} $ do
    dcA <- use $ drop_cons (Proxy @a)
    dcB <- use $ drop_cons (Proxy @b)
 
@@ -1097,7 +1097,7 @@ drop_map f = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
 -- Lemma: length_take @Integer             Q.E.D.
 -- [Proven] length_take @Integer
 length_take :: forall a. SymVal a => Proxy a -> IO Proof
-length_take p = runKD $
+length_take p = runTP $
      lemma (atProxy p "length_take")
            (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> n .>= 0 .=> length (take n xs) .== length xs `smin` n)
            []
@@ -1108,7 +1108,7 @@ length_take p = runKD $
 -- Lemma: length_drop @Integer             Q.E.D.
 -- [Proven] length_drop @Integer
 length_drop :: forall a. SymVal a => Proxy a -> IO Proof
-length_drop p = runKD $
+length_drop p = runTP $
      lemma (atProxy p "length_drop")
            (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> n .>= 0 .=> length (drop n xs) .== (length xs - n) `smax` 0)
            []
@@ -1119,7 +1119,7 @@ length_drop p = runKD $
 -- Lemma: take_all @Integer                Q.E.D.
 -- [Proven] take_all @Integer
 take_all :: forall a. SymVal a => Proxy a -> IO Proof
-take_all p = runKD $
+take_all p = runTP $
     lemma (atProxy p "take_all")
           (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> length xs .<= n .=> take n xs .== xs)
           []
@@ -1130,7 +1130,7 @@ take_all p = runKD $
 -- Lemma: drop_all @Integer                Q.E.D.
 -- [Proven] drop_all @Integer
 drop_all :: forall a. SymVal a => Proxy a -> IO Proof
-drop_all p = runKD $
+drop_all p = runTP $
     lemma (atProxy p "drop_all")
           (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> length xs .<= n .=> drop n xs .== nil)
           []
@@ -1141,7 +1141,7 @@ drop_all p = runKD $
 -- Lemma: take_append @Integer             Q.E.D.
 -- [Proven] take_append @Integer
 take_append :: forall a. SymVal a => Proxy a -> IO Proof
-take_append p = runKDWith cvc5 $
+take_append p = runTPWith cvc5 $
     lemma (atProxy p "take_append")
          (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> take n (xs ++ ys) .== take n xs ++ take (n - length xs) ys)
          []
@@ -1154,7 +1154,7 @@ take_append p = runKDWith cvc5 $
 -- Lemma: drop_append @Integer             Q.E.D.
 -- [Proven] drop_append @Integer
 drop_append :: forall a. SymVal a => Proxy a -> IO Proof
-drop_append p = runKD $
+drop_append p = runTP $
     lemmaWith cvc5 (atProxy p "drop_append")
                    (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> drop n (xs ++ ys) .== drop n xs ++ drop (n - length xs) ys)
                    []
@@ -1173,7 +1173,7 @@ drop_append p = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] map_fst_zip @(Integer,Integer)
 map_fst_zip :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> IO Proof
-map_fst_zip p = runKD $
+map_fst_zip p = runTP $
    induct (atProxy p "map_fst_zip")
           (\(Forall @"xs" (xs :: SList a), Forall @"ys" (ys :: SList b)) -> length xs .== length ys .=> map fst (zip xs ys) .== xs) $
           \ih (x :: SBV a, xs, y :: SBV b, ys) ->
@@ -1198,7 +1198,7 @@ map_fst_zip p = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] map_snd_zip @(Integer,Integer)
 map_snd_zip :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> IO Proof
-map_snd_zip p = runKD $
+map_snd_zip p = runTP $
    induct (atProxy p "map_snd_zip")
           (\(Forall @"xs" (xs :: SList a), Forall @"ys" (ys :: SList b)) -> length xs .== length ys .=> map snd (zip xs ys) .== ys) $
           \ih (x :: SBV a, xs, y :: SBV b, ys) ->
@@ -1225,7 +1225,7 @@ map_snd_zip p = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] map_fst_zip_take @(Integer,Integer)
 map_fst_zip_take :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> IO Proof
-map_fst_zip_take p = runKD $ do
+map_fst_zip_take p = runTP $ do
    tc <- use $ take_cons (Proxy @a)
 
    induct (atProxy p "map_fst_zip_take")
@@ -1255,7 +1255,7 @@ map_fst_zip_take p = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] map_snd_zip_take @(Integer,Integer)
 map_snd_zip_take :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> IO Proof
-map_snd_zip_take p = runKD $ do
+map_snd_zip_take p = runTP $ do
    tc <- use $ take_cons (Proxy @a)
 
    induct (atProxy p "map_snd_zip_take")
@@ -1293,7 +1293,7 @@ count = smtFunction "count" $ \e l -> ite (null l)
 --   Result:                               Q.E.D.
 -- [Proven] countAppend @Integer
 countAppend :: forall a. SymVal a => Proxy a -> IO Proof
-countAppend p = runKD $
+countAppend p = runTP $
    induct (atProxy p "countAppend")
           (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" (e :: SBV a)) -> count e (xs ++ ys) .== count e xs + count e ys) $
           \ih x xs ys (e :: SBV a) ->
@@ -1324,7 +1324,7 @@ countAppend p = runKD $
 --   Result:                               Q.E.D.
 -- [Proven] takeDropCount @Integer
 takeDropCount :: forall a. SymVal a => Proxy a -> IO Proof
-takeDropCount p = runKD $ do
+takeDropCount p = runTP $ do
        capp     <- use $ countAppend p
        takeDrop <- use $ take_drop p
 
@@ -1352,7 +1352,7 @@ takeDropCount p = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] countNonNegative @Integer
 countNonNegative :: forall a. SymVal a => Proxy a -> IO Proof
-countNonNegative p = runKD $ do
+countNonNegative p = runTP $ do
    induct (atProxy p "countNonNegative")
           (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> count e xs .>= 0) $
           \ih x xs (e :: SBV a) -> [] |- count e (x .: xs) .>= 0
@@ -1389,7 +1389,7 @@ countNonNegative p = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] countElem @Integer
 countElem :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
-countElem p = runKD $ do
+countElem p = runTP $ do
 
     cnn <- use $ countNonNegative p
 
@@ -1420,7 +1420,7 @@ countElem p = runKD $ do
 --   Result:                               Q.E.D.
 -- [Proven] elemCount @Integer
 elemCount :: forall a. (Eq a, SymVal a) => Proxy a -> IO Proof
-elemCount p = runKD $
+elemCount p = runTP $
     induct (atProxy p "elemCount")
            (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> count e xs .> 0 .=> e `elem` xs) $
            \ih x xs (e :: SBV a) -> [count e xs .> 0]

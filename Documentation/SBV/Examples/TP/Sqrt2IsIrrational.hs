@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational
+-- Module    : Documentation.SBV.Examples.TP.Sqrt2IsIrrational
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -15,12 +15,12 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational where
+module Documentation.SBV.Examples.TP.Sqrt2IsIrrational where
 
 import Prelude hiding (even, odd)
 
 import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 -- | Prove that square-root of @2@ is irrational. That is, we can never find @a@ and @b@ such that
 -- @sqrt 2 == a / b@ and @a@ and @b@ are co-prime.
@@ -43,7 +43,7 @@ import Data.SBV.Tools.KnuckleDragger
 --   (9)  Thus, @b@ must be even. (Using 2 and 8.)
 --   (10) Since @a@ and @b@ are both even, they cannot be co-prime. (Using 6 and 9.)
 --
--- Note that our proof is mostly about the first 3 facts above, then z3 and KnuckleDragger fills in the rest.
+-- Note that our proof is mostly about the first 3 facts above, then z3 and TP fills in the rest.
 --
 -- We have:
 --
@@ -60,7 +60,7 @@ import Data.SBV.Tools.KnuckleDragger
 -- Lemma: sqrt2IsIrrational                Q.E.D.
 -- [Proven] sqrt2IsIrrational
 sqrt2IsIrrational :: IO Proof
-sqrt2IsIrrational = runKD $ do
+sqrt2IsIrrational = runTP $ do
     let even, odd :: SInteger -> SBool
         even = (2 `sDivides`)
         odd  = sNot . even

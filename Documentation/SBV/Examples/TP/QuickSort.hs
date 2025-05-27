@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.QuickSort
+-- Module    : Documentation.SBV.Examples.TP.QuickSort
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -20,7 +20,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.QuickSort where
+module Documentation.SBV.Examples.TP.QuickSort where
 
 import Prelude hiding (null, length, (++), tail, all, fst, snd, elem)
 import Control.Monad.Trans (liftIO)
@@ -29,10 +29,10 @@ import Data.Proxy
 import Data.SBV
 import Data.SBV.List hiding (partition)
 import Data.SBV.Tuple
-import Data.SBV.Tools.KnuckleDragger
-import qualified Data.SBV.Tools.KnuckleDragger.List as KD
+import Data.SBV.Tools.TP
+import qualified Data.SBV.Tools.TP.List as TP
 
-import qualified Documentation.SBV.Examples.KnuckleDragger.SortHelpers as SH
+import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 #ifdef DOCTEST
 -- $setup
@@ -233,17 +233,17 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     └╴nonDecreasingMerge
 -- [Proven] quickSortIsCorrect @Integer
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-correctness p = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
+correctness p = runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 60}} $ do
 
   --------------------------------------------------------------------------------------------
   -- Part I. Import helper lemmas, definitions
   --------------------------------------------------------------------------------------------
-  let count         = KD.count         @a
+  let count         = TP.count         @a
       isPermutation = SH.isPermutation @a
       nonDecreasing = SH.nonDecreasing @a
       sublist       = SH.sublist       @a
 
-  countAppend   <- use $ KD.countAppend   p
+  countAppend   <- use $ TP.countAppend   p
   sublistElem   <- use $ SH.sublistElem   p
   sublistTail   <- use $ SH.sublistTail   p
   sublistIfPerm <- use $ SH.sublistIfPerm p

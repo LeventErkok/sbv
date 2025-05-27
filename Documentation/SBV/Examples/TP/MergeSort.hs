@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.MergeSort
+-- Module    : Documentation.SBV.Examples.TP.MergeSort
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -17,17 +17,17 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.MergeSort where
+module Documentation.SBV.Examples.TP.MergeSort where
 
 import Prelude hiding (null, length, head, tail, elem, splitAt, (++), take, drop)
 import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List
-import Data.SBV.Tools.KnuckleDragger
-import qualified Data.SBV.Tools.KnuckleDragger.List as KD
+import Data.SBV.Tools.TP
+import qualified Data.SBV.Tools.TP.List as TP
 
-import qualified Documentation.SBV.Examples.KnuckleDragger.SortHelpers as SH
+import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 #ifdef DOCTEST
 -- $setup
@@ -122,17 +122,17 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 -- Lemma: mergeSortIsCorrect                                   Q.E.D.
 -- [Proven] mergeSortIsCorrect
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-correctness _ = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
+correctness _ = runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 60}} $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions
     --------------------------------------------------------------------------------------------
     let nonDecreasing = SH.nonDecreasing @a
         isPermutation = SH.isPermutation @a
-        count         = KD.count         @a
+        count         = TP.count         @a
 
     nonDecrIns    <- use $ SH.nonDecrIns    (Proxy @a)
-    takeDropCount <- use $ KD.takeDropCount (Proxy @a)
+    takeDropCount <- use $ TP.takeDropCount (Proxy @a)
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is non-decreasing.

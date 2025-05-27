@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Kleene
+-- Module    : Documentation.SBV.Examples.TP.Kleene
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Example use of the KnuckleDragger layer, proving some Kleene algebra theorems.
+-- Example use of the TP layer, proving some Kleene algebra theorems.
 --
 -- Based on <http://www.philipzucker.com/bryzzowski_kat/>
 -----------------------------------------------------------------------------
@@ -22,12 +22,12 @@
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-unused-matches #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.Kleene where
+module Documentation.SBV.Examples.TP.Kleene where
 
 import Prelude hiding((<=))
 
 import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 -- | An uninterpreted sort, corresponding to the type of Kleene algebra strings.
 data Kleene
@@ -87,7 +87,7 @@ x <= y = x + y .== y
 -- Lemma: star_star_2_1                    Q.E.D.
 -- Lemma: star_star_2                      Q.E.D.
 kleeneProofs :: IO ()
-kleeneProofs = runKD $ do
+kleeneProofs = runTP $ do
 
   -- Kozen axioms
   par_assoc <- axiom "par_assoc" $ \(Forall @"x" (x :: SKleene)) (Forall @"y" y) (Forall @"z" z) -> x + (y + z) .== (x + y) + z

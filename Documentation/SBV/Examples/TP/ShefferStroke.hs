@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.ShefferStroke
+-- Module    : Documentation.SBV.Examples.TP.ShefferStroke
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -24,13 +24,13 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.ShefferStroke where
+module Documentation.SBV.Examples.TP.ShefferStroke where
 
 import Prelude hiding ((<))
 import Data.List (intercalate)
 
 import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
+import Data.SBV.Tools.TP
 
 -- * Generalized Boolean Algebras
 
@@ -135,15 +135,15 @@ instance BooleanAlgebra SStroke where
 #define XYZ XY (Forall @"Z"  (z  :: SStroke))
 
 -- | First Sheffer axiom: @ﬧﬧa == a@
-sheffer1 :: KD Proof
+sheffer1 :: TP Proof
 sheffer1 = axiom "ﬧﬧa == a" $ \A -> ﬧﬧ a .== a
 
 -- | Second Sheffer axiom: @a ⏐ (b ⏐ ﬧb) == ﬧa@
-sheffer2 :: KD Proof
+sheffer2 :: TP Proof
 sheffer2 = axiom "a ⏐ (b ⏐ ﬧb) == ﬧa" $ \AB -> a ⏐ (b ⏐ ﬧ b) .== ﬧ a
 
 -- | Third Sheffer axiom: @ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)@
-sheffer3 :: KD Proof
+sheffer3 :: TP Proof
 sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC -> ﬧ(a ⏐ (b ⏐ c)) .== (ﬧ b ⏐ a) ⏐ (ﬧ c ⏐ a)
 
 -- * Sheffer's stroke defines a boolean algebra
@@ -364,7 +364,7 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 --   himp_eq         : [Proven] x ⇨ y = y ⊔ xᶜ
 -- }
 shefferBooleanAlgebra :: IO BooleanAlgebraProof
-shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
+shefferBooleanAlgebra = runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 60}} $ do
 
   -- Get the axioms
   sh1 <- sheffer1

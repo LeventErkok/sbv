@@ -107,7 +107,7 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , ignoreExitCode              = False
                                             , redirectVerbose             = Nothing
                                             , generateHOEquivs            = False
-                                            , kdOptions                   = KDOptions { ribbonLength      = 40
+                                            , tpOptions                   = TPOptions { ribbonLength      = 40
                                                                                       , firstifyUniqueLen = 6
                                                                                       , quiet             = False
                                                                                       , measureTime       = False
