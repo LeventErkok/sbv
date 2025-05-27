@@ -36,7 +36,6 @@ import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds)
 import Data.SBV.Control.Types
 
 import Data.SBV.SMT.Utils
-import Data.SBV.Utils.Lib (needsBars)
 
 import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName', getSV, regExpToSMTString, NROp(..)
                               , SMTDef(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..), SMTLambda(..)
@@ -889,11 +888,7 @@ declFuncs ds = map declGroup sorted
 
                  decl = mkDecl param (smtType fk)
 
-                 s = "(" ++ definer ++ " " ++ barNm ++ " " ++ decl ++ "\n" ++ body 2 ++ ")"
-
-                 barNm
-                  | needsBars nm = '|' : nm ++ "|"
-                  | True         = nm
+                 s = "(" ++ definer ++ " " ++ nm ++ " " ++ decl ++ "\n" ++ body 2 ++ ")"
 
         -- declare a bunch of mutually-recursive functions
         declUserDefMulti bs = render $ map collect bs

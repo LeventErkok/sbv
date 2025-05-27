@@ -34,6 +34,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
 import Data.SBV.SMT.SMTLib2
 import Data.SBV.Utils.PrettyNum
+import Data.SBV.Utils.Lib (barify)
 
 import           Data.SBV.Core.Symbolic hiding   (mkNewState)
 import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
@@ -193,12 +194,12 @@ namedLambdaGen scope trans inState fk f = inSubState scope inState $ \st -> tran
 -- | Create a named SMTLib function, in the given state.
 namedLambda :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> State -> String -> Kind -> a -> m SMTDef
 namedLambda scope inState nm fk = namedLambdaGen scope mkDef inState fk
-   where mkDef (Defn unints _frees params body) = SMTDef nm fk unints (extractAllUniversals <$> params) body
+   where mkDef (Defn unints _frees params body) = SMTDef (barify nm) fk unints (extractAllUniversals <$> params) body
 
 -- | Create a named SMTLib function, in the given state, string version
 namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> State -> String -> SBVType -> a -> m String
 namedLambdaStr scope inState nm t = namedLambdaGen scope mkDef inState fk
-   where mkDef (Defn unints _frees params body) = concat $ declUserFuns [(SMTDef nm fk unints (extractAllUniversals <$> params) body, t)]
+   where mkDef (Defn unints _frees params body) = concat $ declUserFuns [(SMTDef (barify nm) fk unints (extractAllUniversals <$> params) body, t)]
          fk = case t of
                 SBVType [] -> error $ "namedLambdaStr: Invalid type for " ++ show nm ++ ", empty!"
                 SBVType xs -> last xs
