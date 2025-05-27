@@ -81,8 +81,6 @@ import Data.Proxy
 -- >>> import Control.Exception
 #endif
 
--- * Appending null
-
 -- | @xs ++ [] == xs@
 --
 -- >>> runTP $ appendNull (Proxy @Integer)
@@ -93,8 +91,6 @@ appendNull p = lemma (atProxy p "appendNull")
                      (\(Forall @"xs" (xs :: SList a)) -> xs ++ nil .== xs)
                      []
 
--- * Moving cons over append
-
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
 --
 -- >>> runTP $ consApp (Proxy @Integer)
@@ -104,8 +100,6 @@ consApp :: forall a. SymVal a => Proxy a -> TP Proof
 consApp p = lemma (atProxy p "consApp")
                   (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
                   []
-
--- * Associativity of append
 
 -- | @(xs ++ ys) ++ zs == xs ++ (ys ++ zs)@
 --
@@ -119,8 +113,6 @@ consApp p = lemma (atProxy p "consApp")
 appendAssoc :: forall a. SymVal a => Proxy a -> TP Proof
 appendAssoc p =
    lemma (atProxy p "appendAssoc") (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs) []
-
--- * Reverse
 
 -- | @length xs == length (reverse xs)@
 --
@@ -201,8 +193,6 @@ revSnoc p = do
          (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (xs ++ singleton x) .== x .: reverse xs)
          [ra]
 
--- * Reversing twice is identity
-
 -- | @reverse (reverse xs) == xs@
 --
 -- >>> runTP $ revRev (Proxy @Integer)
@@ -235,8 +225,6 @@ revRev p = do
                                     =: singleton x ++ xs
                                     =: x .: xs
                                     =: qed
-
--- * Lengths of lists
 
 -- | @length (x : xs) == 1 + length xs@
 --
@@ -271,8 +259,6 @@ lenAppend2 p =
           (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> length xs .== length ys .=> length (xs ++ ys) .== 2 * length xs)
           []
 
--- * Replicate
-
 -- | @length (replicate k x) == max (0, k)@
 --
 -- >>> runTP $ replicateLength (Proxy @Integer)
@@ -301,8 +287,6 @@ replicateLength p =
                                                  =: qed
                                       ]
 
--- * Any, all, and filtering
-
 -- | @not (all id xs) == any not xs@
 --
 -- A list of booleans is not all true, if any of them is false.
@@ -326,8 +310,6 @@ allAny =
                          =: sNot x .|| any sNot xs
                          =: any sNot (x .: xs)
                          =: qed
-
--- * Map, append, and reverse
 
 -- | @f == g ==> map f xs == map g xs@
 --
@@ -418,8 +400,6 @@ mapReverse f = do
                            =: map f (reverse (x .: xs))
                            =: qed
 
--- * Foldr-map fusion
-
 -- | @foldr f a . map g == foldr (f . g) a@
 --
 -- >>> runTP $ foldrMapFusion @Integer @Bool @String (uninterpret "a") (uninterpret "b") (uninterpret "c")
@@ -441,8 +421,6 @@ foldrMapFusion a g f =
                         =: g x `f` foldr (f . g) a xs
                         =: foldr (f . g) a (x .: xs)
                         =: qed
-
--- * Foldr-foldr fusion
 
 -- |
 --
@@ -475,8 +453,6 @@ foldrFusion a b f g h = do
                                =: foldr h b (x .: xs)
                                =: qed
 
--- * Foldr over append
-
 -- | @foldr f a (xs ++ ys) == foldr f (foldr f a ys) xs@
 --
 -- >>> runTP $ foldrOverAppend @Integer (uninterpret "a") (uninterpret "f")
@@ -498,8 +474,6 @@ foldrOverAppend a f =
                             =: x `f` foldr f (foldr f a ys) xs
                             =: foldr f (foldr f a ys) (x .: xs)
                             =: qed
-
--- * Foldl over append
 
 -- | @foldl f a (xs ++ ys) == foldl f (foldl f a xs) ys@
 --
@@ -523,8 +497,6 @@ foldlOverAppend f =
                               ?? ih `at` (Inst @"ys" ys, Inst @"a" (a `f` x))
                               =: foldl f (foldl f (a `f` x) xs) ys
                               =: qed
-
--- * Foldr-foldl correspondence
 
 -- | @foldr f e xs == foldl (flip f) e (reverse xs)@
 --
@@ -561,8 +533,6 @@ foldrFoldlDuality f = do
                                            =: foldl ff e (rxs ++ singleton x)
                                            =: foldl ff e (reverse (x .: xs))
                                            =: qed
-
--- * Foldr-foldl duality, generalized
 
 -- | Given:
 --
@@ -628,8 +598,6 @@ foldrFoldlDualityGeneralized  e (@) = do
                                             =: foldl (@) e (x .: xs)
                                             =: qed
 
--- * Another foldl-foldr correspondence
-
 -- | Given:
 --
 -- @
@@ -694,8 +662,6 @@ foldrFoldl (<+>) (<*>) e = do
                                     =: foldl (<*>) (e <*> x) xs
                                     =: foldl (<*>) e (x .: xs)
                                     =: qed
-
--- * Bookkeeping law
 
 -- | Provided @f@ is associative and @a@ is its both left and right-unit:
 --
@@ -790,8 +756,6 @@ bookKeeping a f = do
                                               =: foldr f a (mapFoldr a (xs .: xss))
                                               =: qed
 
--- * Filter-append
-
 -- | @filter p (xs ++ ys) == filter p xs ++ filter p ys@
 --
 -- >>> runTP $ filterAppend @Integer (uninterpret "p")
@@ -860,7 +824,6 @@ filterConcat p = do
                           =: concatMapFilter p (xs .: xss)
                           =: qed
 
--- * Partition
 
 -- | @fst (partition f xs) == filter f xs@
 --
@@ -911,8 +874,6 @@ partition2 f =
                          =: ite (f x) (filter (sNot . f) xs) (x .: filter (sNot . f) xs)
                          =: filter (sNot . f) (x .: xs)
                          =: qed
-
--- * Take and drop
 
 -- | @take n (take m xs) == take (n `smin` m) xs@
 --
@@ -1135,8 +1096,6 @@ drop_append p =
             -> drop n (xs ++ ys) .== drop n xs ++ drop (n - length xs) ys)
       []
 
--- * Zip
-
 -- | @length xs == length ys ==> map fst (zip xs ys) = xs@
 --
 -- >>> runTP $ map_fst_zip (Proxy @(Integer,Integer))
@@ -1246,8 +1205,6 @@ map_snd_zip_take p = do
                   =: take (1 + (length xs `smin` length ys)) (y .: ys)
                   =: take (length (x .: xs) `smin` length (y .: ys)) (y .: ys)
                   =: qed
-
--- * Counting
 
 -- | Count the number of occurrences of an element in a list
 count :: SymVal a => SBV a -> SList a -> SInteger
