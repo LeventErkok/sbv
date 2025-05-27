@@ -499,7 +499,7 @@ difference sa sb
         ka = kindOf (Proxy @a)
 
 -- | Synonym for 'Data.SBV.Set.difference'.
-infixl 9 \\  -- This comment avoids CPP to eat up the trailing backspace in this line  Do not remove!
+infix 5 \\  -- This comment avoids CPP to eat up the trailing backspace in this line  Do not remove!
 (\\) :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 (\\) = difference
 
