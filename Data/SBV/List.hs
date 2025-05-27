@@ -35,6 +35,8 @@ module Data.SBV.List (
         , reverse
         -- * Mapping
         , map, concatMap
+        -- * Difference
+        , (\\)
         -- * Folding
         , foldl, foldr
         -- * Zipping
@@ -62,9 +64,10 @@ import Data.SBV.Tuple hiding (fst, snd)
 import Data.Maybe (isNothing, catMaybes)
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake, genericReplicate)
-import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf, partition)
+import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf, partition, (\\))
 
 import Data.Proxy
+import Data.SBV.Utils.Lib (atProxy)
 
 #ifdef DOCTEST
 -- $setup
@@ -636,6 +639,25 @@ replicate c e
                  let op = SeqOp (SBVReplicate (kindOf (Proxy @a)))
                  registerSpecialFunction st op
                  newExpr st k (SBVApp op [svc, sve])
+
+-- | Difference.
+--
+-- >>> [1, 2] \\ [3, 4]
+-- [1,2] :: [SInteger]
+-- >>> [1, 2] \\ [2, 4]
+-- [1] :: [SInteger]
+(\\) :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SList a
+xs \\ ys
+ | Just xs' <- unliteral xs, Just ys' <- unliteral ys
+ = literal (xs' L.\\ ys')
+ | True
+ = f xs ys
+ where f = smtFunction (atProxy (Proxy @a) "sbv.\\\\") $
+                       \x y -> ite (null x) x
+                                   (let (h, t) = uncons x
+                                        r      = f t y
+                                    in ite (h `elem` y) r (h .: r))
+infix 5 \\  -- CPP: do not eat the final newline
 
 -- | @filter f xs@ filters the list with the given predicate.
 --
