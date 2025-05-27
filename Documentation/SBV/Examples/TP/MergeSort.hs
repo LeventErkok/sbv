@@ -122,7 +122,7 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 -- Lemma: mergeSortIsCorrect                                   Q.E.D.
 -- [Proven] mergeSortIsCorrect
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-correctness _ = runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 60}} $ do
+correctness _ = runTPWith (tpRibbon 60 z3) $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions

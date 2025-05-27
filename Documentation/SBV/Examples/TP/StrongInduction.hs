@@ -97,7 +97,7 @@ oddSequence1 = runTP $ do
 --   Result:                                         Q.E.D.
 -- [Proven] oddSequence2
 oddSequence2 :: IO Proof
-oddSequence2 = runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 50}} $ do
+oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
   let s :: SInteger -> SInteger
       s = smtFunction "seq" $ \n -> ite (n .<= 0) 1
                                   $ ite (n .== 1) 3

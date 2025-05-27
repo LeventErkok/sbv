@@ -27,7 +27,7 @@ module Data.SBV.Tools.TP.Utils (
        , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), getProofTree, showProofTree, showProofTreeHTML, shortProofName
-       , atProxy
+       , atProxy, tpRibbon
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -325,3 +325,7 @@ concludeModulo by = case foldMap rootOfTrust by of
 -- proof, so that the name contains the instantiated version properly.
 atProxy :: forall a. Typeable a => Proxy a -> String -> String
 atProxy _ nm = nm ++ " @" ++ show (typeRep @a)
+
+-- | Change the size of the ribbon for TP proofs
+tpRibbon :: Int -> SMTConfig -> SMTConfig
+tpRibbon i cfg = cfg{tpOptions = (tpOptions cfg) { ribbonLength = i }}

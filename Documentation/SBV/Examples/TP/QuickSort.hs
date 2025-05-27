@@ -240,7 +240,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     └╴nonDecreasingMerge
 -- [Proven] quickSortIsCorrect @Integer
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-correctness p = runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 60}} $ do
+correctness p = runTPWith (tpRibbon 60 z3) $ do
 
   --------------------------------------------------------------------------------------------
   -- Part I. Import helper lemmas, definitions

@@ -10,15 +10,15 @@
       - Keep track of proofs with a unique id.
       - Add method rootOfTrust which can be used to retrieve uses of sorry in a proof. The idea is that
         to get a proof clean, you need to resolve all the proofs returned by this call.
-      - Add a proof that tail-recursive definition of fibonacci is
-        equivalent to its textbook definition. See Documentation/SBV/Examples/TP/Fibonacci.hs.
       - Renamed kdShowDepsHTML to showProofTreeHTML. (Along with showProofTree which renders in ASCII.)
+      - Add function tpRibbon which simplifies setting the ribbon size in a proof.
       - Generalize various KD list/sort proofs.
 
    * New TP examples:
-      - Documentation.SBV.Examples.TP.Reverse:    Proving a definition of reverse that uses no auxiliary definitions correct.
+      - Documentation.SBV.Examples.TP.Fibonacci:  Proving tail-recursive fibonacci is equivalent to textbook definition
       - Documentation.SBV.Examples.TP.Majority:   Proof of Boyer-Moore's majority selection algorithm correct.
       - Documentation.SBV.Examples.TP.McCarthy91: Proof of correctness for McCarthy's 91 function.
+      - Documentation.SBV.Examples.TP.Reverse:    Proving a definition of reverse that uses no auxiliary definitions correct.
 
   * Remove Data.SBV.Tools.NaturalInduction. The functionality provided by this tool is much better
     addressed by TP'sinduction methods. If you were using this functionality and have problems

@@ -113,7 +113,7 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 -- Lemma: insertionSortIsCorrect @Integer       Q.E.D.
 -- [Proven] insertionSortIsCorrect @Integer
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
-correctness p = runTPWith cvc5{tpOptions = (tpOptions cvc5) { ribbonLength = 45 }} $ do
+correctness p = runTPWith (tpRibbon 45 cvc5) $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions

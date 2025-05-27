@@ -962,7 +962,7 @@ take_cons p =
 
 -- | @take n (map f xs) == map f (take n xs)@
 --
--- >>> runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 50}} $ take_map @Integer @Float (uninterpret "f")
+-- >>> runTPWith (tpRibbon 50 z3) $ take_map @Integer @Float (uninterpret "f")
 -- Lemma: take_cons @Integer                         Q.E.D.
 -- Lemma: map1 @(Integer,Float)                      Q.E.D.
 -- Lemma: take_map.n <= 0 @(Integer,Float)           Q.E.D.
@@ -1015,7 +1015,7 @@ drop_cons p =
 
 -- | @drop n (map f xs) == map f (drop n xs)@
 --
--- >>> runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 50}} $ drop_map @Integer @String (uninterpret "f")
+-- >>> runTPWith (tpRibbon 50 z3) $ drop_map @Integer @String (uninterpret "f")
 -- Lemma: drop_cons @Integer                         Q.E.D.
 -- Lemma: drop_cons @[Char]                          Q.E.D.
 -- Lemma: drop_map.n <= 0 @(Integer,[Char])          Q.E.D.
@@ -1189,7 +1189,7 @@ map_snd_zip p =
 
 -- | @map fst (zip xs ys) == take (min (length xs) (length ys)) xs@
 --
--- >>> runTPWith z3{tpOptions = (tpOptions z3) {ribbonLength = 55}} $ map_fst_zip_take (Proxy @(Integer,Integer))
+-- >>> runTPWith (tpRibbon 55 z3) $ map_fst_zip_take (Proxy @(Integer,Integer))
 -- Lemma: take_cons @Integer                              Q.E.D.
 -- Inductive lemma: map_fst_zip_take @(Integer,Integer)
 --   Step: Base                                           Q.E.D.
