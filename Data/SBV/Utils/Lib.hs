@@ -11,6 +11,7 @@
 
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -21,6 +22,7 @@ module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlif
                           , checkObservableName
                           , needsBars, isEnclosedInBars
                           , noSurrounding, unQuote, unBar, nameSupply
+                          , atProxy
                           ,   curry2,   curry3,   curry4,   curry5,   curry6,   curry7,   curry8,   curry9,   curry10,   curry11,   curry12
                           , uncurry2, uncurry3, uncurry4, uncurry5, uncurry6, uncurry7, uncurry8, uncurry9, uncurry10, uncurry11, uncurry12
                           )
@@ -30,6 +32,9 @@ import Data.Char    (isSpace, chr, ord, isDigit, isAscii, isAlphaNum)
 import Data.List    (isPrefixOf, isSuffixOf)
 import Data.Dynamic (fromDynamic, toDyn, Typeable)
 import Data.Maybe   (fromJust, isJust, isNothing)
+import Data.Proxy
+
+import Type.Reflection (typeRep)
 
 import Numeric (readHex, showHex)
 
@@ -177,6 +182,11 @@ needsBars :: String -> Bool
 needsBars ""        = error "Impossible happened: needsBars received an empty name!"
 needsBars nm@(h:tl) = not (isEnclosedInBars nm || (isAscii h && all validChar tl))
  where  validChar x = isAscii x && (isAlphaNum x || x `elem` ("_" :: String))
+
+-- | Converts a proxy to a readable result. This is useful when you want to write a polymorphic
+-- proof, so that the name contains the instantiated version properly.
+atProxy :: forall a. Typeable a => Proxy a -> String -> String
+atProxy _ nm = nm ++ " @" ++ show (typeRep @a)
 
 -- An infinite supply of names, starting with a given set
 nameSupply :: [String] -> [String]
