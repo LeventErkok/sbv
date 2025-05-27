@@ -24,7 +24,7 @@
     addressed by TP'sinduction methods. If you were using this functionality and have problems
     porting to TP, please get in touch!
 
-  * Add functions 'last' and 'replicate' to Data.SBV.List.
+  * Added functions 'last', 'replicate', and '\\' to Data.SBV.List.
 
 ### Version 11.7, 2025-05-16
 
