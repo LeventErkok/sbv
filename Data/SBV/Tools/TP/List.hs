@@ -45,6 +45,9 @@ module Data.SBV.Tools.TP.List (
      -- * Filter
    , filterAppend, filterConcat
 
+     -- * Difference
+   , appendDiff
+
      -- * Partition
    , partition1, partition2
 
@@ -824,6 +827,27 @@ filterConcat p = do
                           =: concatMapFilter p (xs .: xss)
                           =: qed
 
+-- | @(as ++ bs) \\ cs == (as \\ cs) ++ (bs \\ cs)@
+--
+-- >>> runTP $ appendDiff (Proxy @Integer)
+-- Inductive lemma: appendDiff @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] appendDiff @Integer
+appendDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+appendDiff p =
+   induct (atProxy p "appendDiff")
+          (\(Forall @"as" (as :: SList a)) (Forall @"bs" bs) (Forall @"cs" cs) -> (as ++ bs) \\ cs .== (as \\ cs) ++ (bs \\ cs)) $
+          \ih (a :: SBV a) as bs cs ->
+              [] |- (a .: as ++ bs) \\ cs
+                 =: (a .: (as ++ bs)) \\ cs
+                 =: ite (a `elem` cs) ((as ++ bs) \\ cs) (a .: ((as ++ bs) \\ cs))
+                 ?? ih
+                 =: ((a .: as) \\ cs) ++ (bs \\ cs)
+                 =: qed
 
 -- | @fst (partition f xs) == filter f xs@
 --
