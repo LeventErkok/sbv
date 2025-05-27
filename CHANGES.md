@@ -13,8 +13,9 @@
       - Generalize various KD list/sort proofs.
 
    * New KnuckleDragger examples:
-      - Documentation.SBV.Examples.KnuckleDragger.Reverse:  Proving a definition of reverse that uses no auxiliary definitions correct.
-      - Documentation.SBV.Examples.KnuckleDragger.Majority: Proof of Boyer-Moore's majority selection algorithm correct.
+      - Documentation.SBV.Examples.KnuckleDragger.Reverse:    Proving a definition of reverse that uses no auxiliary definitions correct.
+      - Documentation.SBV.Examples.KnuckleDragger.Majority:   Proof of Boyer-Moore's majority selection algorithm correct.
+      - Documentation.SBV.Examples.KnuckleDragger.McCarthy91: Proof of correctness for McCarthy's 91 function.
 
   * Remove Data.SBV.Tools.NaturalInduction. The functionality provided by this tool is much better
     addressed by KnuckleDragger's induction methods. If you were using this functionality and have problems
