@@ -10,12 +10,11 @@
 -- A collection of list utilities, useful when working with symbolic lists.
 -- To the extent possible, the functions in this module follow those of "Data.List"
 -- so importing qualified is the recommended workflow. Also, it is recommended
--- you use the @OverloadedLists@ extension to allow literal lists to
--- be used as symbolic-lists.
+-- you use the @OverloadedLists@ and @OverloadedStrings@ extensions to allow literal
+-- lists and strings to be used as symbolic literals.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
-{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -79,6 +78,7 @@ import Data.SBV.Utils.Lib (atProxy)
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds
 -- >>> :set -XOverloadedLists
+-- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
 #endif
 
@@ -96,7 +96,7 @@ import Data.SBV.Utils.Lib (atProxy)
 --   s0 = "BA" :: String
 -- >>> sat $ \(s :: SString) -> length s .< 0
 -- Unsatisfiable
--- >>> prove $ \s1 s2 -> length s1 + length s2 .== length (s1 ++ s2)
+-- >>> prove $ \(s1 :: SString) s2 -> length s1 + length s2 .== length (s1 ++ s2)
 -- Q.E.D.
 length :: forall a. SymVal a => SList a -> SInteger
 length = lift1 False (SLen (kindOf (Proxy @a))) (Just (fromIntegral . P.length))
@@ -107,9 +107,9 @@ length = lift1 False (SLen (kindOf (Proxy @a))) (Just (fromIntegral . P.length))
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Word16) -> null l .<=> l .== []
 -- Q.E.D.
--- >>> prove $ \s -> null s .<=> length s .== 0
+-- >>> prove $ \(s :: SString) -> null s .<=> length s .== 0
 -- Q.E.D.
--- >>> prove $ \s -> null s .<=> s .== ""
+-- >>> prove $ \(s :: SString) -> null s .<=> s .== ""
 -- Q.E.D.
 null :: SymVal a => SList a -> SBool
 null l
@@ -124,7 +124,7 @@ null l
 -- Q.E.D.
 -- >>> prove $ \c -> c .== literal 'A' .=> singleton c .== "A"
 -- Q.E.D.
--- >>> prove $ \c -> length (singleton c) .== 1
+-- >>> prove $ \(c :: SChar) -> length (singleton c) .== 1
 -- Q.E.D.
 -- >>> prove $ \(c :: SChar) -> head (singleton c) .== c
 -- Q.E.D.
@@ -139,11 +139,11 @@ head = (`elemAt` 0)
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Integer) -> sNot (null l) .=> singleton (head l) ++ tail l .== l
 -- Q.E.D.
--- >>> prove $ \h s -> tail (singleton h ++ s) .== s
+-- >>> prove $ \(h :: SChar) s -> tail (singleton h ++ s) .== s
 -- Q.E.D.
--- >>> prove $ \s -> length s .> 0 .=> length (tail s) .== length s - 1
+-- >>> prove $ \(s :: SString) -> length s .> 0 .=> length (tail s) .== length s - 1
 -- Q.E.D.
--- >>> prove $ \s -> sNot (null s) .=> singleton (head s) ++ tail s .== s
+-- >>> prove $ \(s :: SString) -> sNot (null s) .=> singleton (head s) ++ tail s .== s
 -- Q.E.D.
 tail :: SymVal a => SList a -> SList a
 tail l
@@ -160,7 +160,7 @@ uncons l = (head l, tail l)
 --
 -- >>> prove $ \(h :: SInteger) t -> init (t ++ singleton h) .== t
 -- Q.E.D.
--- >>> prove $ \c t -> init (t ++ singleton c) .== t
+-- >>> prove $ \(c :: SChar) t -> init (t ++ singleton c) .== t
 -- Q.E.D.
 init :: SymVal a => SList a -> SList a
 init l
@@ -224,7 +224,7 @@ elemAt l i
 -- Q.E.D.
 -- >>> prove $ \(c1 :: SChar) c2 c3 -> length (implode [c1, c2, c3]) .== 3
 -- Q.E.D.
--- >>> prove $ \(c1 :: SChar) c2 c3 -> map (strToCharAt (implode [c1, c2, c3])) (map literal [0 .. 2]) .== [c1, c2, c3]
+-- >>> prove $ \(c1 :: SChar) c2 c3 -> P.map (elemAt (implode [c1, c2, c3])) (P.map literal [0 .. 2]) .== [c1, c2, c3]
 -- Q.E.D.
 implode :: SymVal a => [SBV a] -> SList a
 implode = P.foldr ((++) . singleton) (literal [])
@@ -245,7 +245,7 @@ as `snoc` a = as ++ singleton a
 -- >>> prove $ \(l :: SString) -> length l .== 0 .<=> l .== nil
 -- Q.E.D.
 nil :: SymVal a => SList a
-nil = []
+nil = literal []
 
 -- | Append two lists.
 --
@@ -254,7 +254,7 @@ nil = []
 --   s0 =      [1,2,3,4,5] :: [Integer]
 --   s1 =              [6] :: [Integer]
 --   s2 = [7,8,9,10,11,12] :: [Integer]
--- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== "Hello world!"
+-- >>> sat $ \(x :: SString) y z -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== "Hello world!"
 -- Satisfiable. Model:
 --   s0 =  "Hello" :: String
 --   s1 =      " " :: String
@@ -279,9 +279,9 @@ e `notElem` l = sNot (e `elem` l)
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isInfixOf` l2 .&& l2 `isInfixOf` l1 .<=> l1 .== l2
 -- Q.E.D.
--- >>> prove $ \s1 s2 s3 -> s2 `isInfixOf` (s1 ++ s2 ++ s3)
+-- >>> prove $ \(s1 :: SString) s2 s3 -> s2 `isInfixOf` (s1 ++ s2 ++ s3)
 -- Q.E.D.
--- >>> prove $ \s1 s2 -> s1 `isInfixOf` s2 .&& s2 `isInfixOf` s1 .<=> s1 .== s2
+-- >>> prove $ \(s1 :: SString) s2 -> s1 `isInfixOf` s2 .&& s2 `isInfixOf` s1 .<=> s1 .== s2
 -- Q.E.D.
 isInfixOf :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SBool
 sub `isInfixOf` l
@@ -296,9 +296,9 @@ sub `isInfixOf` l
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` l2 .=> subList l2 0 (length l1) .== l1
 -- Q.E.D.
--- >>> prove $ \s1 s2 -> s1 `isPrefixOf` (s1 ++ s2)
+-- >>> prove $ \(s1 :: SString) s2 -> s1 `isPrefixOf` (s1 ++ s2)
 -- Q.E.D.
--- >>> prove $ \s1 s2 -> s1 `isPrefixOf` s2 .=> subStr s2 0 (length s1) .== s1
+-- >>> prove $ \(s1 :: SString) s2 -> s1 `isPrefixOf` s2 .=> subList s2 0 (length s1) .== s1
 -- Q.E.D.
 isPrefixOf :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SBool
 pre `isPrefixOf` l
@@ -313,9 +313,9 @@ pre `isPrefixOf` l
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Word16) l2 -> l1 `isSuffixOf` l2 .=> subList l2 (length l2 - length l1) (length l1) .== l1
 -- Q.E.D.
--- >>> prove $ \s1 s2 -> s2 `isSuffixOf` (s1 ++ s2)
+-- >>> prove $ \(s1 :: SString) s2 -> s2 `isSuffixOf` (s1 ++ s2)
 -- Q.E.D.
--- >>> prove $ \s1 s2 -> s1 `isSuffixOf` s2 .=> subStr s2 (length s2 - length s1) (length s1) .== s1
+-- >>> prove $ \(s1 :: SString) s2 -> s1 `isSuffixOf` s2 .=> subList s2 (length s2 - length s1) (length s1) .== s1
 -- Q.E.D.
 isSuffixOf :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SBool
 suf `isSuffixOf` l
@@ -328,7 +328,7 @@ suf `isSuffixOf` l
 --
 -- >>> prove $ \(l :: SList Integer) i -> i .>= 0 .=> length (take i l) .<= i
 -- Q.E.D.
--- >>> prove $ \s i -> i .>= 0 .=> length (take i s) .<= i
+-- >>> prove $ \(s :: SString) i -> i .>= 0 .=> length (take i s) .<= i
 -- Q.E.D.
 take :: SymVal a => SInteger -> SList a -> SList a
 take i l = ite (i .<= 0)        (literal [])
@@ -341,9 +341,9 @@ take i l = ite (i .<= 0)        (literal [])
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Word16) i -> take i l ++ drop i l .== l
 -- Q.E.D.
--- >>> prove $ \s i -> length (drop i s) .<= length s
+-- >>> prove $ \(s :: SString) i -> length (drop i s) .<= length s
 -- Q.E.D.
--- >>> prove $ \s i -> take i s ++ drop i s .== s
+-- >>> prove $ \(s :: SString) i -> take i s ++ drop i s .== s
 -- Q.E.D.
 drop :: SymVal a => SInteger -> SList a -> SList a
 drop i s = ite (i .>= ls) (literal [])
@@ -367,18 +367,18 @@ splitAt n xs = (take n xs, drop n xs)
 --   s1 = 3 :: Integer
 -- >>> sat  $ \i j -> subList [1..5] i j .== ([6..7] :: SList Integer)
 -- Unsatisfiable
--- >>> prove $ \s1 s2 -> subList (s1 ++ s2) (length s1) .== subList s2 0
+-- >>> prove $ \(s1 :: SString) (s2 :: SString) -> subList (s1 ++ s2) (length s1) 1 .== subList s2 0 1
 -- Q.E.D.
--- >>> sat $ \s -> length s .>= 2 .&& subList s 0 ./= subList s (length s - 1)
+-- >>> sat $ \(s :: SString) -> length s .>= 2 .&& subList s 0 1 ./= subList s (length s - 1) 1
 -- Satisfiable. Model:
 --   s0 = "AB" :: String
--- >>> prove $ \s i -> i .>= 0 .&& i .< length s .=> subStr s 0 i ++ subStr s i (length s - i) .== s
+-- >>> prove $ \(s :: SString) i -> i .>= 0 .&& i .< length s .=> subList s 0 i ++ subList s i (length s - i) .== s
 -- Q.E.D.
--- >>> sat  $ \i j -> subStr "hello" i j .== "ell"
+-- >>> sat  $ \i j -> subList "hello" i j .== ("ell" :: SString)
 -- Satisfiable. Model:
 --   s0 = 1 :: Integer
 --   s1 = 3 :: Integer
--- >>> sat  $ \i j -> subStr "hell" i j .== "no"
+-- >>> sat  $ \i j -> subList "hell" i j .== ("no" :: SString)
 -- Unsatisfiable
 subList :: forall a. SymVal a => SList a -> SInteger -> SInteger -> SList a
 subList l offset len
@@ -400,9 +400,9 @@ subList l offset len
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 l3 -> length l2 .> length l1 .=> replace l1 l2 l3 .== l1
 -- Q.E.D.
--- >>> prove $ \s -> replace "hello" s "world" .== "world" .=> s .== "hello"
+-- >>> prove $ \(s :: SString) -> replace "hello" s "world" .== "world" .=> s .== "hello"
 -- Q.E.D.
--- >>> prove $ \s1 s2 s3 -> length s2 .> length s1 .=> replace s1 s2 s3 .== s1
+-- >>> prove $ \(s1 :: SString) s2 s3 -> length s2 .> length s1 .=> replace s1 s2 s3 .== s1
 -- Q.E.D.
 replace :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SList a -> SList a
 replace l src dst
@@ -442,11 +442,11 @@ indexOf s sub = offsetIndexOf s sub 0
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Int8) sub i -> i .> length l .=> offsetIndexOf l sub i .== -1
 -- Q.E.D.
--- >>> prove $ \s sub -> offsetIndexOf s sub 0 .== indexOf s sub
+-- >>> prove $ \(s :: SString) sub -> offsetIndexOf s sub 0 .== indexOf s sub
 -- Q.E.D.
--- >>> prove $ \s sub i -> i .>= length s .&& length sub .> 0 .=> offsetIndexOf s sub i .== -1
+-- >>> prove $ \(s :: SString) sub i -> i .>= length s .&& length sub .> 0 .=> offsetIndexOf s sub i .== -1
 -- Q.E.D.
--- >>> prove $ \s sub i -> i .> length s .=> offsetIndexOf s sub i .== -1
+-- >>> prove $ \(s :: SString) sub i -> i .> length s .=> offsetIndexOf s sub i .== -1
 -- Q.E.D.
 offsetIndexOf :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SInteger -> SInteger
 offsetIndexOf s sub offset
@@ -472,6 +472,11 @@ offsetIndexOf s sub offset
 -- Satisfiable. Model:
 --   s0 = [1,2,3] :: [Integer]
 -- >>> prove $ \(l :: SList Word32) -> reverse l .== [] .<=> null l
+-- Q.E.D.
+-- >>> sat $ \(l :: SString ) -> reverse l .== "321"
+-- Satisfiable. Model:
+--   s0 = "123" :: String
+-- >>> prove $ \(l :: SString) -> reverse l .== "" .<=> null l
 -- Q.E.D.
 reverse :: forall a. SymVal a => SList a -> SList a
 reverse l

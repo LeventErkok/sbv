@@ -548,7 +548,7 @@ instance Show SeqOp where
   show (SConcat   k) = pickSeqOp k "str.++"       "seq.++"
   show (SNth      k) = pickSeqOp k "str.at"       "seq.nth"
   show (SUnit     k) = pickSeqOp k "str.unit"     "seq.unit"
-  show (SSubseq   k) = pickSeqOp k "str.extract"  "seq.extract"
+  show (SSubseq   k) = pickSeqOp k "str.substr"   "seq.extract"
   show (SIndexOf  k) = pickSeqOp k "str.indexof"  "seq.indexof"
   show (SContains k) = pickSeqOp k "str.contains" "seq.contains"
   show (SPrefixOf k) = pickSeqOp k "str.prefixof" "seq.prefixof"
