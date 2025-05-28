@@ -125,7 +125,6 @@ Library
                   , Data.SBV.Rational
                   , Data.SBV.Set
                   , Data.SBV.Char
-                  , Data.SBV.String
                   , Data.SBV.Tuple
                   , Data.SBV.RegExp
                   , Data.SBV.Tools.BMC

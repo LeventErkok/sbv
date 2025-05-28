@@ -26,6 +26,10 @@
 
   * Added functions 'last', 'replicate', and '\\' to Data.SBV.List.
 
+  * Removed Data.SBV.String, and unified list and string functions just as in Haskell. This was a long-time wart
+    in SBV, where we distinguished strings and list of characters since SMTLib does not equate them. SBV now
+    treats these uniformly, obviating the need for Data.SBV.String.
+
 ### Version 11.7, 2025-05-16
 
   * KnuckleDragger: Add a proof of correctness for the quick-sort algorithm.

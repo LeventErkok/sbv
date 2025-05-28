@@ -45,6 +45,8 @@ module Data.SBV.List (
         , filter, partition
         -- * Other list functions
         , all, any, and, or, replicate
+        -- * Conversion between strings and naturals
+        , strToNat, natToStr
         ) where
 
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
@@ -53,7 +55,7 @@ import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, conc
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
-import Data.SBV.Core.Data hiding (StrOp(..))
+import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Symbolic (registerSpecialFunction)
 
@@ -62,6 +64,7 @@ import Data.SBV.Lambda
 import Data.SBV.Tuple hiding (fst, snd)
 
 import Data.Maybe (isNothing, catMaybes)
+import qualified Data.Char as C
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake, genericReplicate)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf, partition, (\\))
@@ -103,6 +106,10 @@ length = lift1 False (SLen (kindOf (Proxy @a))) (Just (fromIntegral . P.length))
 -- >>> prove $ \(l :: SList Word16) -> null l .<=> length l .== 0
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Word16) -> null l .<=> l .== []
+-- Q.E.D.
+-- >>> prove $ \s -> null s .<=> length s .== 0
+-- Q.E.D.
+-- >>> prove $ \s -> null s .<=> s .== ""
 -- Q.E.D.
 null :: SymVal a => SList a -> SBool
 null l
@@ -215,6 +222,10 @@ elemAt l i
 -- Q.E.D.
 -- >>> prove $ \(e1 :: SInteger) e2 e3 -> P.map (elemAt (implode [e1, e2, e3])) (P.map literal [0 .. 2]) .== [e1, e2, e3]
 -- Q.E.D.
+-- >>> prove $ \(c1 :: SChar) c2 c3 -> length (implode [c1, c2, c3]) .== 3
+-- Q.E.D.
+-- >>> prove $ \(c1 :: SChar) c2 c3 -> map (strToCharAt (implode [c1, c2, c3])) (map literal [0 .. 2]) .== [c1, c2, c3]
+-- Q.E.D.
 implode :: SymVal a => [SBV a] -> SList a
 implode = P.foldr ((++) . singleton) (literal [])
 
@@ -230,6 +241,8 @@ as `snoc` a = as ++ singleton a
 -- | Empty list. This value has the property that it's the only list with length 0:
 --
 -- >>> prove $ \(l :: SList Integer) -> length l .== 0 .<=> l .== nil
+-- Q.E.D.
+-- >>> prove $ \(l :: SString) -> length l .== 0 .<=> l .== nil
 -- Q.E.D.
 nil :: SymVal a => SList a
 nil = []
@@ -758,6 +771,34 @@ partition f l
                   registerSpecialFunction st op
                   newExpr st k (SBVApp (SeqOp (SeqHO op)) [sva])
 
+-- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
+-- Note that by definition this function only works when @s@ only contains digits,
+-- that is, if it encodes a natural number. Otherwise, it returns '-1'.
+--
+-- >>> prove $ \s -> let n = strToNat s in length s .== 1 .=> (-1) .<= n .&& n .<= 9
+-- Q.E.D.
+strToNat :: SString -> SInteger
+strToNat s
+ | Just a <- unliteral s
+ = if P.all C.isDigit a && not (P.null a)
+   then literal (read a)
+   else -1
+ | True
+ = lift1Str StrStrToNat Nothing s
+
+-- | @`natToStr` i@. Retrieve string encoded by integer @i@ (ground rewriting only).
+-- Again, only naturals are supported, any input that is not a natural number
+-- produces empty string, even though we take an integer as an argument.
+--
+-- >>> prove $ \i -> length (natToStr i) .== 3 .=> i .<= 999
+-- Q.E.D.
+natToStr :: SInteger -> SString
+natToStr i
+ | Just v <- unliteral i
+ = literal $ if v >= 0 then show v else ""
+ | True
+ = lift1Str StrNatToStr Nothing i
+
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymVal a, SymVal b) => Bool -> SeqOp -> Maybe (a -> b) -> SBV a -> SBV b
 lift1 simpleEq w mbOp a
@@ -816,3 +857,14 @@ concEval3 simpleEq mbOp a b c
 isConcretelyEmpty :: SymVal a => SList a -> Bool
 isConcretelyEmpty sl | Just l <- unliteral sl = P.null l
                      | True                   = False
+
+-- | Lift a unary operator over strings.
+lift1Str :: forall a b. (SymVal a, SymVal b) => StrOp -> Maybe (a -> b) -> SBV a -> SBV b
+lift1Str w mbOp a
+  | Just cv <- literal <$> (mbOp <*> unliteral a)
+  = cv
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where k = kindOf (Proxy @b)
+        r st = do sva <- sbvToSV st a
+                  newExpr st k (SBVApp (StrOp w) [sva])
