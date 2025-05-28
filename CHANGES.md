@@ -2764,9 +2764,6 @@ uninterpreted.
 
   * Add a hook so users can add custom script segments for SMT solvers. The new
     "solverTweaks" field in the SMTConfig data-type can be used for this purpose.
-    The need for this came about due to the need to workaround a Z3 v3.2 issue
-    detailed below:
-      http://stackoverflow.com/questions/9426420/soundness-issue-with-integer-bv-mixed-benchmarks
     As a consequence, mixed Integer/BV problems can cause soundness issues in Z3
     and does in SBV. Unfortunately, it is too severe for SBV to add the workaround
     option, as it slows down the solver as a side effect as well. Thus, we are

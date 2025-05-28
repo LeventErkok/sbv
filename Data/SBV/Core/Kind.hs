@@ -476,7 +476,6 @@ type family BVIsNonZero (arg :: Nat) :: Constraint where
 --
 -- NB. It would be nice if we could use the LibBF constants expBitsMin, expBitsMax, precBitsMin, precBitsMax
 -- for determining the valid range. Unfortunately this doesn't seem to be possible.
--- See <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int> for a discussion.
 -- So, we use CPP to work-around that.
 #define FP_MIN_EB 2
 #define FP_MIN_SB 2

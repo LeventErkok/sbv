@@ -6,18 +6,14 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proves a problem originating in algebra:
---   https://mathoverflow.net/questions/450890/is-there-an-identity-between-the-commutative-identity-and-the-constant-identity/
---
--- Apparently this was posed by Terrence Tao: https://mathstodon.xyz/@tao/110736805384878353
---
+-- A question posed by Terrence Tao: <https://mathstodon.xyz/@tao/110736805384878353>.
 -- Essentially, for an arbitrary binary operation op, we prove that
 --
 -- @
 --    (x op x) op y == y op x
 -- @
 --
--- Implies that @op@ must be commutative.
+-- Implies @op@ must be commutative.
 -----------------------------------------------------------------------------
 
 

@@ -7,7 +7,7 @@
 -- Stability : experimental
 --
 -- Proving Boyer-Moore's majority algorithm correct. We follow the ACL2 proof
--- closely: https://github.com/acl2/acl2/blob/master/books/demos/majority-vote.lisp.
+-- closely, which you can find at <https://github.com/acl2/acl2/blob/master/books/demos/majority-vote.lisp>.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}

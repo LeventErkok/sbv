@@ -7,8 +7,6 @@
 -- Stability : experimental
 --
 -- Demonstrates uninterpreted sorts and how they can be used for deduction.
--- This example is inspired by the discussion at <http://stackoverflow.com/questions/10635783/using-axioms-for-deductions-in-z3>,
--- essentially showing how to show the required deduction using SBV.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass     #-}
