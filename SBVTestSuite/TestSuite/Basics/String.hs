@@ -21,8 +21,8 @@ import Utils.SBVTestFramework
 import Prelude hiding ((!!), (++))
 import qualified Prelude as P ((++))
 
-import Data.SBV.String ((!!), (++))
-import qualified Data.SBV.String as S
+import Data.SBV.List ((!!), (++))
+import qualified Data.SBV.List   as S
 import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.RegExp as R
 
@@ -69,24 +69,24 @@ checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
                        Unk    -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" P.++ show r
 
 strConcatSat :: Symbolic ()
-strConcatSat = constrain $ "abc" ++ "def" .== "abcdef"
+strConcatSat = constrain $ "abc" ++ "def" .== ("abcdef" :: SString)
 
 strConcatUnsat :: Symbolic ()
-strConcatUnsat = constrain $ "abc" ++ "def" .== "abcdefg"
+strConcatUnsat = constrain $ "abc" ++ "def" .== ("abcdefg" :: SString)
 
 strIndexOfSat :: Symbolic ()
-strIndexOfSat = constrain $ S.indexOf "abcabc" "a" .== 0
+strIndexOfSat = constrain $ S.indexOf "abcabc" ("a" :: SString) .== 0
 
 strIndexOfUnsat :: Symbolic ()
-strIndexOfUnsat = constrain $ S.indexOf "abcabc" "a" ./= 0
+strIndexOfUnsat = constrain $ S.indexOf "abcabc" ("a" :: SString) ./= 0
 
 -- Basic string operations
 strExamples1 :: Symbolic ()
 strExamples1 = constrain $ sAnd
-  [ S.singleton ("abc" !! 1) ++ S.singleton ("abc" !! 0) .== "ba"
-  , "abcabc" `S.indexOf` "a"                              .== 0
-  , S.offsetIndexOf "abcabc" "a" 1                        .== 3
-  , S.subStr "xxabcyy" 2 3                                .== "abc"
+  [ S.singleton ("abc" !! 1) ++ S.singleton ("abc" !! 0) .== ("ba" :: SString)
+  , "abcabc" `S.indexOf` ("a" :: SString)                .== 0
+  , S.offsetIndexOf "abcabc" ("a" :: SString) 1          .== 3
+  , S.subList "xxabcyy" 2 3                              .== ("abc" :: SString)
   ]
 
 -- A string cannot overlap with two different characters.
