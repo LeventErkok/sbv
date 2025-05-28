@@ -18,7 +18,6 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeAbstractions           #-}
-{-# LANGUAGE TypeApplications           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
