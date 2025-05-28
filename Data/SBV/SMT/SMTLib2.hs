@@ -1645,8 +1645,8 @@ stringOrSequence False op = show op
 stringOrSequence True  op = case op of
                               SConcat{}       -> show op
                               SLen{}          -> show op
+                              SNth{}          -> show op
                               SeqUnit         -> show StrUnit
-                              SeqNth          -> show StrNth
                               SeqSubseq       -> show StrSubstr
                               SeqIndexOf      -> show StrIndexOf
                               SeqContains     -> show StrContains

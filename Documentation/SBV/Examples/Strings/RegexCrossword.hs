@@ -21,9 +21,6 @@ import Data.List (genericLength, transpose)
 import Data.SBV
 import Data.SBV.Control
 
-import Prelude hiding ((!!))
-import Data.SBV.String ((!!))
-
 import qualified Data.SBV.List   as L
 import qualified Data.SBV.RegExp as R
 
@@ -50,8 +47,8 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
         cols <- mapM mkCol colRegExps
 
         -- constrain each "cell" as they rows/columns intersect:
-        let rowss =           [[r !! literal i | i <- [0..numCols-1]] | r <- rows]
-        let colss = transpose [[c !! literal i | i <- [0..numRows-1]] | c <- cols]
+        let rowss =           [[r L.!! literal i | i <- [0..numCols-1]] | r <- rows]
+        let colss = transpose [[c L.!! literal i | i <- [0..numRows-1]] | c <- cols]
 
         constrain $ sAnd $ zipWith (.==) (concat rowss) (concat colss)
 

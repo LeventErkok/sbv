@@ -388,7 +388,6 @@ instance Show OvOp where
 
 -- | String operations. Note that we do not define @StrAt@ as it translates to 'StrSubstr' trivially.
 data StrOp = StrUnit         -- ^ Unit string
-           | StrNth          -- ^ Nth element
            | StrSubstr       -- ^ Retrieves substring of @s@ at @offset@
            | StrIndexOf      -- ^ Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences
            | StrContains     -- ^ Does @s@ contain the substring @sub@?
@@ -499,7 +498,6 @@ regExpToString fs (Union xs)        = "(re.union " ++ unwords (map (regExpToStri
 -- | Show instance for @StrOp@. Note that the mapping here is important to match the SMTLib equivalents.
 instance Show StrOp where
   show StrUnit     = "str.unit"      -- NB. This is actually a no-op, since in SMTLib characters are the same as strings.
-  show StrNth      = "str.at"
   show StrSubstr   = "str.substr"
   show StrIndexOf  = "str.indexof"
   show StrContains = "str.contains"
@@ -531,8 +529,8 @@ instance Show SMTLambda where
 -- | Sequence operations. Indexed by the element kind.
 data SeqOp = SLen      Kind
            | SConcat   Kind
+           | SNth      Kind
            | SeqUnit                             -- ^ See StrUnit
-           | SeqNth                              -- ^ See StrNth
            | SeqSubseq                           -- ^ See StrSubseq
            | SeqIndexOf                          -- ^ See StrIndexOf
            | SeqContains                         -- ^ See StrContains
@@ -554,16 +552,16 @@ data SeqHO = SBVZipWith   Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Pick the correct operator
-pickSeqOp :: Kind -> String -> String
-pickSeqOp KChar fun = "str." ++ fun
-pickSeqOp _     fun = "seq." ++ fun
+pickSeqOp :: Kind -> String -> String -> String
+pickSeqOp KChar st _  = st
+pickSeqOp _     _  sq = sq
 
 -- | Show instance for SeqOp. Again, mapping is important.
 instance Show SeqOp where
-  show (SLen    k) = pickSeqOp k "len"
-  show (SConcat k) = pickSeqOp k "++"
+  show (SLen    k) = pickSeqOp k "str.len" "seq.len"
+  show (SConcat k) = pickSeqOp k "str.++"  "seq.++"
+  show (SNth    k) = pickSeqOp k "str.at"  "seq.nth"
   show SeqUnit     = "seq.unit"
-  show SeqNth      = "seq.nth"
   show SeqSubseq   = "seq.extract"
   show SeqIndexOf  = "seq.indexof"
   show SeqContains = "seq.contains"

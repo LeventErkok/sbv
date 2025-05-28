@@ -27,7 +27,7 @@ module Data.SBV.String (
         -- * emptiness
            null
         -- * Deconstructing/Reconstructing
-        , head, tail, uncons, init, singleton, strToStrAt, strToCharAt, (!!), implode, (.:), snoc, nil
+        , head, tail, uncons, init, singleton, implode, (.:), snoc, nil
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
@@ -46,7 +46,7 @@ import Data.SBV.Core.Model
 import Data.SBV.Utils.Lib (atProxy)
 
 import qualified Data.Char as C
-import Data.List (genericLength, genericIndex, genericDrop, genericTake)
+import Data.List (genericLength, genericDrop, genericTake)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 
 import Data.Proxy
@@ -78,7 +78,7 @@ null s
 -- >>> prove $ \c -> head (singleton c) .== c
 -- Q.E.D.
 head :: SString -> SChar
-head = (`strToCharAt` 0)
+head = SL.head
 
 -- | @`tail`@ returns the tail of a string. Unspecified if the string is empty.
 --
@@ -119,33 +119,6 @@ init s
 singleton :: SChar -> SString
 singleton = lift1 StrUnit (Just wrap)
   where wrap c = [c]
-
--- | @`strToStrAt` s offset@. Substring of length 1 at @offset@ in @s@. Unspecified if
--- offset is out of bounds.
---
--- >>> prove $ \s1 s2 -> strToStrAt (s1 ++ s2) (length s1) .== strToStrAt s2 0
--- Q.E.D.
--- >>> sat $ \s -> length s .>= 2 .&& strToStrAt s 0 ./= strToStrAt s (length s - 1)
--- Satisfiable. Model:
---   s0 = "AB" :: String
-strToStrAt :: SString -> SInteger -> SString
-strToStrAt s offset = subStr s offset 1
-
--- | @`strToCharAt` s i@ is the character stored at location @i@. Unspecified if
--- index is out of bounds.
---
--- >>> prove $ \i -> i .>= 0 .&& i .<= 4 .=> "AAAAA" `strToCharAt` i .== literal 'A'
--- Q.E.D.
-strToCharAt :: SString -> SInteger -> SChar
-strToCharAt s i
-  | Just cs <- unliteral s, Just ci <- unliteral i, ci >= 0, ci < genericLength cs, let c = C.ord (cs `genericIndex` ci)
-  = literal (C.chr c)
-  | True
-  = lift2 StrNth Nothing s i
-
--- | Short cut for 'strToCharAt'
-(!!) :: SString -> SInteger -> SChar
-(!!) = strToCharAt
 
 -- | @`implode` cs@ is the string of length @|cs|@ containing precisely those
 -- characters. Note that there is no corresponding function @explode@, since

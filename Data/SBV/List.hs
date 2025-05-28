@@ -180,12 +180,14 @@ listToListAt s offset = subList s offset 1
 --
 -- >>> prove $ \i -> i `inRange` (0, 4) .=> [1,1,1,1,1] `elemAt` i .== (1::SInteger)
 -- Q.E.D.
-elemAt :: SymVal a => SList a -> SInteger -> SBV a
+-- >>> prove $ \i -> i .>= 0 .&& i .<= 4 .=> "AAAAA" `elemAt` i .== literal 'A'
+-- Q.E.D.
+elemAt :: forall a. SymVal a => SList a -> SInteger -> SBV a
 elemAt l i
   | Just xs <- unliteral l, Just ci <- unliteral i, ci >= 0, ci < genericLength xs, let x = xs `genericIndex` ci
   = literal x
   | True
-  = lift2 False SeqNth Nothing l i
+  = lift2 False (SNth (kindOf (Proxy @a))) Nothing l i
 
 -- | Short cut for 'elemAt'
 (!!) :: SymVal a => SList a -> SInteger -> SBV a
@@ -320,6 +322,11 @@ splitAt n xs = (take n xs, drop n xs)
 --   s1 = 3 :: Integer
 -- >>> sat  $ \i j -> subList [1..5] i j .== ([6..7] :: SList Integer)
 -- Unsatisfiable
+-- >>> prove $ \s1 s2 -> subList (s1 ++ s2) (length s1) .== subList s2 0
+-- Q.E.D.
+-- >>> sat $ \s -> length s .>= 2 .&& subList s 0 ./= subList s (length s - 1)
+-- Satisfiable. Model:
+--   s0 = "AB" :: String
 subList :: SymVal a => SList a -> SInteger -> SInteger -> SList a
 subList l offset len
   | Just c  <- unliteral l                   -- a constant list
