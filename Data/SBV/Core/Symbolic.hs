@@ -386,15 +386,8 @@ instance Show OvOp where
   show DivOv           = "bvsdivo" -- This is confusing, the division is called bvsdivo, but negation is bvnego
   show NegOv           = "bvnego"  -- But SMTLib's choice is deliberate: https://groups.google.com/u/0/g/smt-lib/c/J4D99wT0aKI
 
--- | String operations. Note that we do not define @StrAt@ as it translates to 'StrSubstr' trivially.
-data StrOp = StrUnit         -- ^ Unit string
-           | StrSubstr       -- ^ Retrieves substring of @s@ at @offset@
-           | StrIndexOf      -- ^ Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences
-           | StrContains     -- ^ Does @s@ contain the substring @sub@?
-           | StrPrefixOf     -- ^ Is @pre@ a prefix of @s@?
-           | StrSuffixOf     -- ^ Is @suf@ a suffix of @s@?
-           | StrReplace      -- ^ Replace the first occurrence of @src@ by @dst@ in @s@
-           | StrStrToNat     -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
+-- | String operations.
+data StrOp = StrStrToNat     -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
            | StrNatToStr     -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
            | StrToCode       -- ^ Equivalent to Haskell's ord
            | StrFromCode     -- ^ Equivalent to Haskell's chr
@@ -497,13 +490,6 @@ regExpToString fs (Union xs)        = "(re.union " ++ unwords (map (regExpToStri
 
 -- | Show instance for @StrOp@. Note that the mapping here is important to match the SMTLib equivalents.
 instance Show StrOp where
-  show StrUnit     = "str.unit"      -- NB. This is actually a no-op, since in SMTLib characters are the same as strings.
-  show StrSubstr   = "str.substr"
-  show StrIndexOf  = "str.indexof"
-  show StrContains = "str.contains"
-  show StrPrefixOf = "str.prefixof"
-  show StrSuffixOf = "str.suffixof"
-  show StrReplace  = "str.replace"
   show StrStrToNat = "str.to.int"    -- NB. SMTLib uses "int" here though only nats are supported
   show StrNatToStr = "int.to.str"    -- NB. SMTLib uses "int" here though only nats are supported
   show StrToCode   = "str.to_code"
@@ -530,13 +516,13 @@ instance Show SMTLambda where
 data SeqOp = SLen      Kind
            | SConcat   Kind
            | SNth      Kind
-           | SeqUnit                             -- ^ See StrUnit
-           | SeqSubseq                           -- ^ See StrSubseq
-           | SeqIndexOf                          -- ^ See StrIndexOf
-           | SeqContains                         -- ^ See StrContains
-           | SeqPrefixOf                         -- ^ See StrPrefixOf
-           | SeqSuffixOf                         -- ^ See StrSuffixOf
-           | SeqReplace                          -- ^ See StrReplace
+           | SUnit     Kind
+           | SSubseq   Kind
+           | SIndexOf  Kind
+           | SContains Kind
+           | SPrefixOf Kind
+           | SSuffixOf Kind
+           | SReplace  Kind
            | SeqHO SeqHO                         -- ^ Higher order sequence functions
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
@@ -558,17 +544,17 @@ pickSeqOp _     _  sq = sq
 
 -- | Show instance for SeqOp. Again, mapping is important.
 instance Show SeqOp where
-  show (SLen    k) = pickSeqOp k "str.len" "seq.len"
-  show (SConcat k) = pickSeqOp k "str.++"  "seq.++"
-  show (SNth    k) = pickSeqOp k "str.at"  "seq.nth"
-  show SeqUnit     = "seq.unit"
-  show SeqSubseq   = "seq.extract"
-  show SeqIndexOf  = "seq.indexof"
-  show SeqContains = "seq.contains"
-  show SeqPrefixOf = "seq.prefixof"
-  show SeqSuffixOf = "seq.suffixof"
-  show SeqReplace  = "seq.replace"
-  show (SeqHO ho)  = show ho
+  show (SLen      k) = pickSeqOp k "str.len"      "seq.len"
+  show (SConcat   k) = pickSeqOp k "str.++"       "seq.++"
+  show (SNth      k) = pickSeqOp k "str.at"       "seq.nth"
+  show (SUnit     k) = pickSeqOp k "str.unit"     "seq.unit"
+  show (SSubseq   k) = pickSeqOp k "str.extract"  "seq.extract"
+  show (SIndexOf  k) = pickSeqOp k "str.indexof"  "seq.indexof"
+  show (SContains k) = pickSeqOp k "str.contains" "seq.contains"
+  show (SPrefixOf k) = pickSeqOp k "str.prefixof" "seq.prefixof"
+  show (SSuffixOf k) = pickSeqOp k "str.suffixof" "seq.suffixof"
+  show (SReplace  k) = pickSeqOp k "str.replace"  "seq.replace"
+  show (SeqHO ho)    = show ho
 
 -- Note: The followings aren't part of SMTLib, we explicitly handle them
 instance Show SeqHO where

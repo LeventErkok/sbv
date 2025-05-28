@@ -51,7 +51,7 @@ module Data.SBV.RegExp (
         , identifier
         ) where
 
-import Prelude hiding (length, take, elem, notElem, head)
+import Prelude hiding (length, take, elem, notElem, head, replicate, filter, map)
 
 import qualified Prelude   as P
 import qualified Data.List as L
@@ -59,7 +59,7 @@ import qualified Data.List as L
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
 
-import Data.SBV.String
+import Data.SBV.List
 import qualified Data.Char as C
 
 import Data.Proxy
@@ -116,7 +116,7 @@ instance RegExpMatchable SString where
            go (Opt r)        k s      = k s || go r k s
            go (Comp r)       k s      = not $ go r k s
            go (Diff r1 r2)   k s      = go r1 k s && not (go r2 k s)
-           go (Loop i j r)   k s      = go (Conc (replicate i r P.++ replicate (j - i) (Opt r))) k s
+           go (Loop i j r)   k s      = go (Conc (P.replicate i r P.++ P.replicate (j - i) (Opt r))) k s
            go (Power n r)    k s      = go (Loop n n r) k s
            go (Union [])     _ _      = False
            go (Union [x])    k s      = go x k s
@@ -184,7 +184,7 @@ tab = oneOf "\t"
 
 -- | Lift a char function to a regular expression that recognizes it.
 liftPredL1 :: (Char -> Bool) -> RegExp
-liftPredL1 predicate = oneOf $ filter predicate (map C.chr [0 .. 255])
+liftPredL1 predicate = oneOf $ P.filter predicate (P.map C.chr [0 .. 255])
 
 -- | Recognize white-space, but without a new line.
 --
@@ -336,7 +336,7 @@ concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
 
 -- | Quiet GHC about testing only imports
 __unused :: a
-__unused = undefined isSpaceL1 take elem notElem head
+__unused = undefined isSpaceL1
 
 {- $matching
 A symbolic string or a character ('SString' or 'SChar') can be matched against a regular-expression. Note

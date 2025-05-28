@@ -115,6 +115,12 @@ null l
 --
 -- >>> prove $ \c -> head (singleton c) .== (c :: SInteger)
 -- Q.E.D.
+-- >>> prove $ \c -> c .== literal 'A' .=> singleton c .== "A"
+-- Q.E.D.
+-- >>> prove $ \c -> length (singleton c) .== 1
+-- Q.E.D.
+-- >>> prove $ \(c :: SChar) -> head (singleton c) .== c
+-- Q.E.D.
 head :: SymVal a => SList a -> SBV a
 head = (`elemAt` 0)
 
@@ -125,6 +131,12 @@ head = (`elemAt` 0)
 -- >>> prove $ \(l :: SList Integer) -> length l .> 0 .=> length (tail l) .== length l - 1
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Integer) -> sNot (null l) .=> singleton (head l) ++ tail l .== l
+-- Q.E.D.
+-- >>> prove $ \h s -> tail (singleton h ++ s) .== s
+-- Q.E.D.
+-- >>> prove $ \s -> length s .> 0 .=> length (tail s) .== length s - 1
+-- Q.E.D.
+-- >>> prove $ \s -> sNot (null s) .=> singleton (head s) ++ tail s .== s
 -- Q.E.D.
 tail :: SymVal a => SList a -> SList a
 tail l
@@ -140,6 +152,8 @@ uncons l = (head l, tail l)
 -- | @`init`@ returns all but the last element of the list. Unspecified if the list is empty.
 --
 -- >>> prove $ \(h :: SInteger) t -> init (t ++ singleton h) .== t
+-- Q.E.D.
+-- >>> prove $ \c t -> init (t ++ singleton c) .== t
 -- Q.E.D.
 init :: SymVal a => SList a -> SList a
 init l
@@ -161,8 +175,8 @@ last l = l `elemAt` (length l - 1)
 -- Q.E.D.
 -- >>> prove $ \(x :: SInteger) -> length (singleton x) .== 1
 -- Q.E.D.
-singleton :: SymVal a => SBV a -> SList a
-singleton = lift1 False SeqUnit (Just (: []))
+singleton :: forall a. SymVal a => SBV a -> SList a
+singleton = lift1 False (SUnit (kindOf (Proxy @a))) (Just (: []))
 
 -- | @`listToListAt` l offset@. List of length 1 at @offset@ in @l@. Unspecified if
 -- index is out of bounds.
@@ -252,12 +266,16 @@ e `notElem` l = sNot (e `elem` l)
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isInfixOf` l2 .&& l2 `isInfixOf` l1 .<=> l1 .== l2
 -- Q.E.D.
-isInfixOf :: (Eq a, SymVal a) => SList a -> SList a -> SBool
+-- >>> prove $ \s1 s2 s3 -> s2 `isInfixOf` (s1 ++ s2 ++ s3)
+-- Q.E.D.
+-- >>> prove $ \s1 s2 -> s1 `isInfixOf` s2 .&& s2 `isInfixOf` s1 .<=> s1 .== s2
+-- Q.E.D.
+isInfixOf :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SBool
 sub `isInfixOf` l
   | isConcretelyEmpty sub
   = literal True
   | True
-  = lift2 True SeqContains (Just (flip L.isInfixOf)) l sub -- NB. flip, since `SeqContains` takes args in rev order!
+  = lift2 True (SContains (kindOf (Proxy @a))) (Just (flip L.isInfixOf)) l sub -- NB. flip, since `SeqContains` takes args in rev order!
 
 -- | @`isPrefixOf` pre l@. Is @pre@ a prefix of @l@?
 --
@@ -265,12 +283,16 @@ sub `isInfixOf` l
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` l2 .=> subList l2 0 (length l1) .== l1
 -- Q.E.D.
-isPrefixOf :: (Eq a, SymVal a) => SList a -> SList a -> SBool
+-- >>> prove $ \s1 s2 -> s1 `isPrefixOf` (s1 ++ s2)
+-- Q.E.D.
+-- >>> prove $ \s1 s2 -> s1 `isPrefixOf` s2 .=> subStr s2 0 (length s1) .== s1
+-- Q.E.D.
+isPrefixOf :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SBool
 pre `isPrefixOf` l
   | isConcretelyEmpty pre
   = literal True
   | True
-  = lift2 True SeqPrefixOf (Just L.isPrefixOf) pre l
+  = lift2 True (SPrefixOf (kindOf (Proxy @a))) (Just L.isPrefixOf) pre l
 
 -- | @`isSuffixOf` suf l@. Is @suf@ a suffix of @l@?
 --
@@ -278,16 +300,22 @@ pre `isPrefixOf` l
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Word16) l2 -> l1 `isSuffixOf` l2 .=> subList l2 (length l2 - length l1) (length l1) .== l1
 -- Q.E.D.
-isSuffixOf :: (Eq a, SymVal a) => SList a -> SList a -> SBool
+-- >>> prove $ \s1 s2 -> s2 `isSuffixOf` (s1 ++ s2)
+-- Q.E.D.
+-- >>> prove $ \s1 s2 -> s1 `isSuffixOf` s2 .=> subStr s2 (length s2 - length s1) (length s1) .== s1
+-- Q.E.D.
+isSuffixOf :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SBool
 suf `isSuffixOf` l
   | isConcretelyEmpty suf
   = literal True
   | True
-  = lift2 True SeqSuffixOf (Just L.isSuffixOf) suf l
+  = lift2 True (SSuffixOf (kindOf (Proxy @a))) (Just L.isSuffixOf) suf l
 
 -- | @`take` len l@. Corresponds to Haskell's `take` on symbolic lists.
 --
 -- >>> prove $ \(l :: SList Integer) i -> i .>= 0 .=> length (take i l) .<= i
+-- Q.E.D.
+-- >>> prove $ \s i -> i .>= 0 .=> length (take i s) .<= i
 -- Q.E.D.
 take :: SymVal a => SInteger -> SList a -> SList a
 take i l = ite (i .<= 0)        (literal [])
@@ -299,6 +327,10 @@ take i l = ite (i .<= 0)        (literal [])
 -- >>> prove $ \(l :: SList Word16) i -> length (drop i l) .<= length l
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Word16) i -> take i l ++ drop i l .== l
+-- Q.E.D.
+-- >>> prove $ \s i -> length (drop i s) .<= length s
+-- Q.E.D.
+-- >>> prove $ \s i -> take i s ++ drop i s .== s
 -- Q.E.D.
 drop :: SymVal a => SInteger -> SList a -> SList a
 drop i s = ite (i .>= ls) (literal [])
@@ -327,7 +359,15 @@ splitAt n xs = (take n xs, drop n xs)
 -- >>> sat $ \s -> length s .>= 2 .&& subList s 0 ./= subList s (length s - 1)
 -- Satisfiable. Model:
 --   s0 = "AB" :: String
-subList :: SymVal a => SList a -> SInteger -> SInteger -> SList a
+-- >>> prove $ \s i -> i .>= 0 .&& i .< length s .=> subStr s 0 i ++ subStr s i (length s - i) .== s
+-- Q.E.D.
+-- >>> sat  $ \i j -> subStr "hello" i j .== "ell"
+-- Satisfiable. Model:
+--   s0 = 1 :: Integer
+--   s1 = 3 :: Integer
+-- >>> sat  $ \i j -> subStr "hell" i j .== "no"
+-- Unsatisfiable
+subList :: forall a. SymVal a => SList a -> SInteger -> SInteger -> SList a
 subList l offset len
   | Just c  <- unliteral l                   -- a constant list
   , Just o  <- unliteral offset              -- a constant offset
@@ -339,13 +379,17 @@ subList l offset len
   , valid $ o + sz                           -- we don't overrun
   = literal $ genericTake sz $ genericDrop o c
   | True                                     -- either symbolic, or something is out-of-bounds
-  = lift3 False SeqSubseq Nothing l offset len
+  = lift3 False (SSubseq (kindOf (Proxy @a))) Nothing l offset len
 
 -- | @`replace` l src dst@. Replace the first occurrence of @src@ by @dst@ in @s@
 --
 -- >>> prove $ \l -> replace [1..5] l [6..10] .== [6..10] .=> l .== ([1..5] :: SList Word8)
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 l3 -> length l2 .> length l1 .=> replace l1 l2 l3 .== l1
+-- Q.E.D.
+-- >>> prove $ \s -> replace "hello" s "world" .== "world" .=> s .== "hello"
+-- Q.E.D.
+-- >>> prove $ \s1 s2 s3 -> length s2 .> length s1 .=> replace s1 s2 s3 .== s1
 -- Q.E.D.
 replace :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SList a -> SList a
 replace l src dst
@@ -357,7 +401,7 @@ replace l src dst
   , Just c <- unliteral dst
   = literal $ walk a b c
   | True
-  = lift3 True SeqReplace Nothing l src dst
+  = lift3 True (SReplace ka) Nothing l src dst
   where walk haystack needle newNeedle = go haystack   -- note that needle is guaranteed non-empty here.
            where go []       = []
                  go i@(c:cs)
@@ -371,6 +415,8 @@ replace l src dst
 --
 -- >>> prove $ \(l1 :: SList Word16) l2 -> length l2 .> length l1 .=> indexOf l1 l2 .== -1
 -- Q.E.D.
+-- >>> prove $ \s1 s2 -> length s2 .> length s1 .=> indexOf s1 s2 .== -1
+-- Q.E.D.
 indexOf :: (Eq a, SymVal a) => SList a -> SList a -> SInteger
 indexOf s sub = offsetIndexOf s sub 0
 
@@ -383,6 +429,12 @@ indexOf s sub = offsetIndexOf s sub 0
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Int8) sub i -> i .> length l .=> offsetIndexOf l sub i .== -1
 -- Q.E.D.
+-- >>> prove $ \s sub -> offsetIndexOf s sub 0 .== indexOf s sub
+-- Q.E.D.
+-- >>> prove $ \s sub i -> i .>= length s .&& length sub .> 0 .=> offsetIndexOf s sub i .== -1
+-- Q.E.D.
+-- >>> prove $ \s sub i -> i .> length s .=> offsetIndexOf s sub i .== -1
+-- Q.E.D.
 offsetIndexOf :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SInteger -> SInteger
 offsetIndexOf s sub offset
   | eqCheckIsObjectEq ka
@@ -394,7 +446,7 @@ offsetIndexOf s sub offset
       (i:_) -> literal i
       _     -> -1
   | True
-  = lift3 True SeqIndexOf Nothing s sub offset
+  = lift3 True (SIndexOf ka) Nothing s sub offset
   where ka = kindOf (Proxy @a)
 
 -- | @`reverse` s@ reverses the sequence.

@@ -52,7 +52,7 @@ import Data.SBV.Core.Model
 
 import qualified Data.Char as C
 
-import Data.SBV.String (isInfixOf, singleton)
+import Data.SBV.List (isInfixOf, singleton)
 
 #ifdef DOCTEST
 -- $setup

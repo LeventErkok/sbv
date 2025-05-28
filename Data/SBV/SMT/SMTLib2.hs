@@ -1182,8 +1182,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         -- Note the unfortunate reversal in StrInRe..
         sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in.re " ++ unwords (map cvtSV args) ++ " " ++ regExpToSMTString r ++ ")"
-        -- StrUnit is no-op, since a character in SMTLib is the same as a string
-        sh (SBVApp (StrOp StrUnit)     [a])  = cvtSV a
         sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (RegExOp o@RegExEq{})  []) = show o
@@ -1201,8 +1199,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         -- Otherwise, we get to pick between string or sequence. Exception: unit over string is a no-op, because
         -- SMTLib characters are and strings are the same thing.
-        sh (SBVApp (SeqOp SeqUnit) [a]) | charOp = cvtSV a
-        sh (SBVApp (SeqOp op) args) = "(" ++ stringOrSequence charOp op ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp (SeqOp (SUnit KChar)) [a])  = cvtSV a
+        sh (SBVApp (SeqOp op)            args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (SetOp SetEqual)      args)   = "(= "      ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp (SetOp SetMember)     [e, s]) = "(select " ++ cvtSV s ++ " " ++ cvtSV e ++ ")"
@@ -1637,26 +1635,3 @@ setSMTOption cfg = set
         smtBool :: Bool -> String
         smtBool True  = "true"
         smtBool False = "false"
-
--- Pick the correct op if we have a string
--- TODO: This should go away eventually
-stringOrSequence :: Bool -> SeqOp -> String
-stringOrSequence False op = show op
-stringOrSequence True  op = case op of
-                              SConcat{}       -> show op
-                              SLen{}          -> show op
-                              SNth{}          -> show op
-                              SeqUnit         -> show StrUnit
-                              SeqSubseq       -> show StrSubstr
-                              SeqIndexOf      -> show StrIndexOf
-                              SeqContains     -> show StrContains
-                              SeqPrefixOf     -> show StrPrefixOf
-                              SeqSuffixOf     -> show StrSuffixOf
-                              SeqReplace      -> show StrReplace
-                              SeqHO o         -> tbd o
-  where tbd o = error $ unlines [ "***"
-                                , "*** Impossible happened. Wasn't expecting to see:"
-                                , "***    " ++ show o
-                                , "***"
-                                , "*** in this context. Please report this as a bug!"
-                                ]
