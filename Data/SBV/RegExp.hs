@@ -336,7 +336,7 @@ concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
 
 -- | Quiet GHC about testing only imports
 __unused :: a
-__unused = undefined isSpaceL1 length take elem notElem head
+__unused = undefined isSpaceL1 take elem notElem head
 
 {- $matching
 A symbolic string or a character ('SString' or 'SChar') can be matched against a regular-expression. Note

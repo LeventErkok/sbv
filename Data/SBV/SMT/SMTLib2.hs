@@ -1639,11 +1639,12 @@ setSMTOption cfg = set
         smtBool False = "false"
 
 -- Pick the correct op if we have a string
+-- TODO: This should go away eventually
 stringOrSequence :: Bool -> SeqOp -> String
 stringOrSequence False op = show op
 stringOrSequence True  op = case op of
                               SeqConcat       -> show StrConcat
-                              SeqLen          -> show StrLen
+                              SLen{}          -> show op
                               SeqUnit         -> show StrUnit
                               SeqNth          -> show StrNth
                               SeqSubseq       -> show StrSubstr

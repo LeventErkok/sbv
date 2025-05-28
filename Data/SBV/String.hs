@@ -24,8 +24,8 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.String (
-        -- * Length, emptiness
-          length, null
+        -- * emptiness
+           null
         -- * Deconstructing/Reconstructing
         , head, tail, uncons, init, singleton, strToStrAt, strToCharAt, (!!), implode, concat, (.:), snoc, nil, (++)
         -- * Containment
@@ -51,24 +51,14 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 
 import Data.Proxy
 
+import qualified Data.SBV.List as SL
+
 #ifdef DOCTEST
 -- $setup
 -- >>> import Data.SBV
 -- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, reverse, (++), (!!))
 -- >>> :set -XOverloadedStrings
 #endif
-
--- | Length of a string.
---
--- >>> sat $ \s -> length s .== 2
--- Satisfiable. Model:
---   s0 = "BA" :: String
--- >>> sat $ \s -> length s .< 0
--- Unsatisfiable
--- >>> prove $ \s1 s2 -> length s1 + length s2 .== length (s1 ++ s2)
--- Q.E.D.
-length :: SString -> SInteger
-length = lift1 StrLen (Just (fromIntegral . P.length))
 
 -- | @`null` s@ is True iff the string is empty
 --
@@ -103,7 +93,7 @@ tail s
  | Just (_:cs) <- unliteral s
  = literal cs
  | True
- = subStr s 1 (length s - 1)
+ = subStr s 1 (SL.length s - 1)
 
 -- | @`uncons`@ returns the pair of the first character and tail. Unspecified if the string is empty.
 uncons :: SString -> (SChar, SString)
@@ -118,7 +108,7 @@ init s
  | Just cs@(_:_) <- unliteral s
  = literal $ P.init cs
  | True
- = subStr s 0 (length s - 1)
+ = subStr s 0 (SL.length s - 1)
 
 -- | @`singleton` c@ is the string of length 1 that contains the only character @c@.
 --
@@ -246,7 +236,7 @@ suf `isSuffixOf` s
 -- Q.E.D.
 take :: SInteger -> SString -> SString
 take i s = ite (i .<= 0)        (literal "")
-         $ ite (i .>= length s) s
+         $ ite (i .>= SL.length s) s
          $ subStr s 0 i
 
 -- | @`drop` len s@. Corresponds to Haskell's `drop` on symbolic-strings.
@@ -259,7 +249,7 @@ drop :: SInteger -> SString -> SString
 drop i s = ite (i .>= ls) (literal "")
          $ ite (i .<= 0)  s
          $ subStr s i (ls - i)
-  where ls = length s
+  where ls = SL.length s
 
 -- | @`subStr` s offset len@ is the substring of @s@ at offset @offset@ with length @len@.
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @len@

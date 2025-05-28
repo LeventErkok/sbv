@@ -88,8 +88,15 @@ import Data.SBV.Utils.Lib (atProxy)
 -- Unsatisfiable
 -- >>> prove $ \(l1 :: SList Word16) (l2 :: SList Word16) -> length l1 + length l2 .== length (l1 ++ l2)
 -- Q.E.D.
-length :: SymVal a => SList a -> SInteger
-length = lift1 False SeqLen (Just (fromIntegral . P.length))
+-- >>> sat $ \(s :: SString) -> length s .== 2
+-- Satisfiable. Model:
+--   s0 = "BA" :: String
+-- >>> sat $ \(s :: SString) -> length s .< 0
+-- Unsatisfiable
+-- >>> prove $ \s1 s2 -> length s1 + length s2 .== length (s1 ++ s2)
+-- Q.E.D.
+length :: forall a. SymVal a => SList a -> SInteger
+length = lift1 False (SLen (kindOf (Proxy @a))) (Just (fromIntegral . P.length))
 
 -- | @`null` s@ is True iff the list is empty
 --

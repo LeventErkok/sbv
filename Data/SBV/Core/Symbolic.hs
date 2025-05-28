@@ -388,7 +388,6 @@ instance Show OvOp where
 
 -- | String operations. Note that we do not define @StrAt@ as it translates to 'StrSubstr' trivially.
 data StrOp = StrConcat       -- ^ Concatenation of one or more strings
-           | StrLen          -- ^ String length
            | StrUnit         -- ^ Unit string
            | StrNth          -- ^ Nth element
            | StrSubstr       -- ^ Retrieves substring of @s@ at @offset@
@@ -501,7 +500,6 @@ regExpToString fs (Union xs)        = "(re.union " ++ unwords (map (regExpToStri
 -- | Show instance for @StrOp@. Note that the mapping here is important to match the SMTLib equivalents.
 instance Show StrOp where
   show StrConcat   = "str.++"
-  show StrLen      = "str.len"
   show StrUnit     = "str.unit"      -- NB. This is actually a no-op, since in SMTLib characters are the same as strings.
   show StrNth      = "str.at"
   show StrSubstr   = "str.substr"
@@ -532,9 +530,9 @@ newtype SMTLambda = SMTLambda String
 instance Show SMTLambda where
   show (SMTLambda s) = s
 
--- | Sequence operations.
-data SeqOp = SeqConcat                           -- ^ See StrConcat
-           | SeqLen                              -- ^ See StrLen
+-- | Sequence operations. Indexed by the element kind.
+data SeqOp = SLen    Kind
+           | SeqConcat                           -- ^ See StrConcat
            | SeqUnit                             -- ^ See StrUnit
            | SeqNth                              -- ^ See StrNth
            | SeqSubseq                           -- ^ See StrSubseq
@@ -557,10 +555,15 @@ data SeqHO = SBVZipWith   Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where
            | SBVAny       Kind           SMTLambda -- ^ any    a fun.      Where fun :: a -> Bool,   and any       :: (a -> Bool) -> [a] -> Bool
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
+-- | Pick the correct operator
+pickSeqOp :: Kind -> String -> String
+pickSeqOp KChar fun = "str." ++ fun
+pickSeqOp _     fun = "seq." ++ fun
+
 -- | Show instance for SeqOp. Again, mapping is important.
 instance Show SeqOp where
+  show (SLen k)    = pickSeqOp k "len"
   show SeqConcat   = "seq.++"
-  show SeqLen      = "seq.len"
   show SeqUnit     = "seq.unit"
   show SeqNth      = "seq.nth"
   show SeqSubseq   = "seq.extract"

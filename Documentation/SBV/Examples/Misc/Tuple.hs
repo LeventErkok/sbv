@@ -13,6 +13,7 @@
 -- arbitrary criteria.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -28,8 +29,7 @@ import Prelude hiding ((!!))
 import Data.SBV.List   ((!!))
 import Data.SBV.RegExp
 
-import qualified Data.SBV.String as S
-import qualified Data.SBV.List   as L
+import qualified Data.SBV.List as L
 
 -- | A dictionary is a list of lookup values. Note that we
 -- store the type @[(a, b)]@ as a symbolic value here, mixing
@@ -62,12 +62,12 @@ example = runSMT $ do dict :: Dict String Integer <- free "dict"
 
                       -- require each key to be at of length 3 more than the index it occupies
                       -- and look like an identifier
-                      let goodKey i s = let l = S.length s
+                      let goodKey i s = let l = L.length s
                                             r = asciiLower * KStar (asciiLetter + digit + "_" + "'")
                                       in l .== fromIntegral i+3 .&& s `match` r
 
                           restrict i = case untuple (dict !! fromIntegral i) of
-                                         (k, v) -> constrain $ goodKey i k .&& v .== S.length k
+                                         (k, v) -> constrain $ goodKey i k .&& v .== L.length k
 
                       mapM_ restrict range
 

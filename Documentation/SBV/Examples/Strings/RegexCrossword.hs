@@ -9,7 +9,8 @@
 -- This example solves regex crosswords from <http://regexcrossword.com>
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -23,7 +24,7 @@ import Data.SBV.Control
 import Prelude hiding ((!!))
 import Data.SBV.String ((!!))
 
-import qualified Data.SBV.String as S
+import qualified Data.SBV.List   as L
 import qualified Data.SBV.RegExp as R
 
 -- | Solve a given crossword, returning the corresponding rows
@@ -33,17 +34,17 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
             numCols = genericLength colRegExps
 
         -- constrain rows
-        let mkRow rowRegExp = do row <- free_
+        let mkRow rowRegExp = do row :: SString <- free_
                                  constrain $ row `R.match` rowRegExp
-                                 constrain $ S.length row .== literal numCols
+                                 constrain $ L.length row .== literal numCols
                                  return row
 
         rows <- mapM mkRow rowRegExps
 
         -- constrain columns
-        let mkCol colRegExp = do col <- free_
+        let mkCol colRegExp = do col :: SString <- free_
                                  constrain $ col `R.match` colRegExp
-                                 constrain $ S.length col .== literal numRows
+                                 constrain $ L.length col .== literal numRows
                                  return col
 
         cols <- mapM mkCol colRegExps
