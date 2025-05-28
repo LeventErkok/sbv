@@ -46,7 +46,7 @@ module Data.SBV.Tools.TP.List (
    , filterAppend, filterConcat
 
      -- * Difference
-   , appendDiff
+   , appendDiff, diffAppend
 
      -- * Partition
    , partition1, partition2
@@ -848,6 +848,56 @@ appendDiff p =
                  ?? ih
                  =: ((a .: as) \\ cs) ++ (bs \\ cs)
                  =: qed
+
+-- | @as \\ (bs ++ cs) == (as \\ bs) \\ cs@
+--
+-- >>> runTP $ diffAppend (Proxy @Integer)
+-- Inductive lemma: diffAppend @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] diffAppend @Integer
+diffAppend :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+diffAppend p =
+   induct (atProxy p "diffAppend")
+          (\(Forall @"as" (as :: SList a)) (Forall @"bs" bs) (Forall @"cs" cs) -> as \\ (bs ++ cs) .== (as \\ bs) \\ cs) $
+          \ih (a :: SBV a) as bs cs ->
+              [] |- (a .: as) \\ (bs ++ cs)
+                 =: ite (a `elem` (bs ++ cs)) (as \\ (bs ++ cs)) (a .: (as \\ (bs ++ cs)))
+                 ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
+                 =: ite (a `elem` (bs ++ cs)) ((as \\ bs) \\ cs) (a .: (as \\ (bs ++ cs)))
+                 ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
+                 =: ite (a `elem` (bs ++ cs)) ((as \\ bs) \\ cs) (a .: ((as \\ bs) \\ cs))
+                 =: ((a .: as) \\ bs) \\ cs
+                 =: qed
+
+{-
+-- | @(as \\ bs) \\ cs == (as \\ cs) \\ bs@
+--
+-- >>> runTP $ diffDiff (Proxy @Integer)
+diffDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+diffDiff p =
+   induct (atProxy p "diffDiff")
+          (\(Forall @"as" (as :: SList a)) (Forall @"bs" bs) (Forall @"cs" cs) -> (as \\ bs) \\ cs .== (as \\ cs) \\ bs) $
+          \ih (a :: SBV a) as bs cs ->
+              [] |- ((a .: as) \\ bs) \\ cs
+                 =: (ite (a `elem` bs) (as \\ bs) (a .: (as \\ bs))) \\ cs
+                 ?? "pull cs in"
+                 =: ite (a `elem` bs) ((as \\ bs) \\ cs) ((a .: (as \\ bs)) \\ cs)
+                 ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
+                 =: ite (a `elem` bs) ((as \\ cs) \\ bs) ((a .: (as \\ bs)) \\ cs)
+                 ?? sorry
+                 =: ite (a `elem` bs) ((as \\ cs) \\ bs) (a .: ((as \\ bs) \\ cs))
+                 ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
+                 =: ite (a `elem` bs) ((as \\ cs) \\ bs) (a .: ((as \\ cs) \\ bs))
+                 ?? sorry
+                 =: ite (a `elem` bs) ((as \\ cs) \\ bs) ((((a .: as) \\ cs) \\ bs))
+                 =: ((a .: as) \\ cs) \\ bs
+                 =: qed
+-}
 
 -- | @fst (partition f xs) == filter f xs@
 --
