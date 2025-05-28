@@ -387,8 +387,7 @@ instance Show OvOp where
   show NegOv           = "bvnego"  -- But SMTLib's choice is deliberate: https://groups.google.com/u/0/g/smt-lib/c/J4D99wT0aKI
 
 -- | String operations. Note that we do not define @StrAt@ as it translates to 'StrSubstr' trivially.
-data StrOp = StrConcat       -- ^ Concatenation of one or more strings
-           | StrUnit         -- ^ Unit string
+data StrOp = StrUnit         -- ^ Unit string
            | StrNth          -- ^ Nth element
            | StrSubstr       -- ^ Retrieves substring of @s@ at @offset@
            | StrIndexOf      -- ^ Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences
@@ -499,7 +498,6 @@ regExpToString fs (Union xs)        = "(re.union " ++ unwords (map (regExpToStri
 
 -- | Show instance for @StrOp@. Note that the mapping here is important to match the SMTLib equivalents.
 instance Show StrOp where
-  show StrConcat   = "str.++"
   show StrUnit     = "str.unit"      -- NB. This is actually a no-op, since in SMTLib characters are the same as strings.
   show StrNth      = "str.at"
   show StrSubstr   = "str.substr"
@@ -531,8 +529,8 @@ instance Show SMTLambda where
   show (SMTLambda s) = s
 
 -- | Sequence operations. Indexed by the element kind.
-data SeqOp = SLen    Kind
-           | SeqConcat                           -- ^ See StrConcat
+data SeqOp = SLen      Kind
+           | SConcat   Kind
            | SeqUnit                             -- ^ See StrUnit
            | SeqNth                              -- ^ See StrNth
            | SeqSubseq                           -- ^ See StrSubseq
@@ -562,8 +560,8 @@ pickSeqOp _     fun = "seq." ++ fun
 
 -- | Show instance for SeqOp. Again, mapping is important.
 instance Show SeqOp where
-  show (SLen k)    = pickSeqOp k "len"
-  show SeqConcat   = "seq.++"
+  show (SLen    k) = pickSeqOp k "len"
+  show (SConcat k) = pickSeqOp k "++"
   show SeqUnit     = "seq.unit"
   show SeqNth      = "seq.nth"
   show SeqSubseq   = "seq.extract"

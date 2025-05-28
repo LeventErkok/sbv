@@ -1643,7 +1643,7 @@ setSMTOption cfg = set
 stringOrSequence :: Bool -> SeqOp -> String
 stringOrSequence False op = show op
 stringOrSequence True  op = case op of
-                              SeqConcat       -> show StrConcat
+                              SConcat{}       -> show op
                               SLen{}          -> show op
                               SeqUnit         -> show StrUnit
                               SeqNth          -> show StrNth

@@ -225,11 +225,16 @@ nil = []
 --   s0 =      [1,2,3,4,5] :: [Integer]
 --   s1 =              [6] :: [Integer]
 --   s2 = [7,8,9,10,11,12] :: [Integer]
+-- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== "Hello world!"
+-- Satisfiable. Model:
+--   s0 =  "Hello" :: String
+--   s1 =      " " :: String
+--   s2 = "world!" :: String
 infixr 5 ++
-(++) :: SymVal a => SList a -> SList a -> SList a
+(++) :: forall a. SymVal a => SList a -> SList a -> SList a
 x ++ y | isConcretelyEmpty x = y
        | isConcretelyEmpty y = x
-       | True                = lift2 False SeqConcat (Just (P.++)) x y
+       | True                = lift2 False (SConcat (kindOf (Proxy @a))) (Just (P.++)) x y
 
 -- | @`elem` e l@. Does @l@ contain the element @e@?
 elem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool

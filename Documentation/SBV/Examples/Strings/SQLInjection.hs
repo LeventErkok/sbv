@@ -27,7 +27,7 @@ import Data.SBV
 import Data.SBV.Control
 
 import Prelude hiding ((++))
-import Data.SBV.String ((++))
+import Data.SBV.List ((++))
 import qualified Data.SBV.RegExp as R
 
 -- | Simple expression language

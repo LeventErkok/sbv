@@ -27,7 +27,7 @@ module Data.SBV.String (
         -- * emptiness
            null
         -- * Deconstructing/Reconstructing
-        , head, tail, uncons, init, singleton, strToStrAt, strToCharAt, (!!), implode, concat, (.:), snoc, nil, (++)
+        , head, tail, uncons, init, singleton, strToStrAt, strToCharAt, (!!), implode, (.:), snoc, nil
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
@@ -156,16 +156,16 @@ strToCharAt s i
 -- >>> prove $ \c1 c2 c3 -> map (strToCharAt (implode [c1, c2, c3])) (map literal [0 .. 2]) .== [c1, c2, c3]
 -- Q.E.D.
 implode :: [SChar] -> SString
-implode = foldr ((++) . singleton) ""
+implode = foldr ((SL.++) . singleton) ""
 
 -- | Prepend an element, the traditional @cons@.
 infixr 5 .:
 (.:) :: SChar -> SString -> SString
-c .: cs = singleton c ++ cs
+c .: cs = singleton c SL.++ cs
 
 -- | Append an element
 snoc :: SString -> SChar -> SString
-s `snoc` c = s ++ singleton c
+s `snoc` c = s SL.++ singleton c
 
 -- | Empty string. This value has the property that it's the only string with length 0:
 --
@@ -173,23 +173,6 @@ s `snoc` c = s ++ singleton c
 -- Q.E.D.
 nil :: SString
 nil = ""
-
--- | Concatenate two strings. See also `++`.
-concat :: SString -> SString -> SString
-concat x y | isConcretelyEmpty x = y
-           | isConcretelyEmpty y = x
-           | True                = lift2 StrConcat (Just (P.++)) x y
-
--- | Short cut for `concat`.
---
--- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== "Hello world!"
--- Satisfiable. Model:
---   s0 =  "Hello" :: String
---   s1 =      " " :: String
---   s2 = "world!" :: String
-infixr 5 ++
-(++) :: SString -> SString -> SString
-(++) = concat
 
 -- | @`isInfixOf` sub s@. Does @s@ contain the substring @sub@?
 --
@@ -286,7 +269,7 @@ subStr s offset len
 replace :: SString -> SString -> SString -> SString
 replace s src dst
   | Just b <- unliteral src, P.null b   -- If src is null, simply prepend
-  = dst ++ s
+  = dst SL.++ s
   | Just a <- unliteral s
   , Just b <- unliteral src
   , Just c <- unliteral dst
@@ -341,7 +324,7 @@ reverse s
   | True
   = f s
   where f = smtFunction (atProxy (Proxy @String) "sbv.reverse") $
-                        \str -> ite (null str) nil (let (h, t) = uncons str in f t ++ singleton h)
+                        \str -> ite (null str) nil (let (h, t) = uncons str in f t SL.++ singleton h)
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
