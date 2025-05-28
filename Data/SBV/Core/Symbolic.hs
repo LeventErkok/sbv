@@ -37,7 +37,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV, contextOfSV
-  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..)
+  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SeqHO(..), SetOp(..), SpecialRelOp(..)
   , RegExp(..), regExpToSMTString, SMTLambda(..)
   , Quantifier(..), needsExistentials, SBVContext(..), checkCompatibleContext, VarContext(..)
   , RoundingMode(..)
@@ -543,11 +543,11 @@ data SeqOp = SeqConcat                           -- ^ See StrConcat
            | SeqPrefixOf                         -- ^ See StrPrefixOf
            | SeqSuffixOf                         -- ^ See StrSuffixOf
            | SeqReplace                          -- ^ See StrReplace
-           -- Polymorphic and higher order functions
-           | SBVReverse   Kind                     -- ^ reverse k.         Where k is either [a] or String. Reverses the argument, accordingly.
-           | SBVZip       Kind Kind                -- ^ zip a b.           Where we zip [a] and [b] to produce [(a, b)]
-           | SBVReplicate Kind                     -- ^ replicate k.       Where we replicate at kind k to produce [k]
-           | SBVZipWith   Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where fun :: a -> b -> c, and zipWith   :: (a -> b -> c) -> [a] -> [b] -> [c]
+           | SeqHO SeqHO                         -- ^ Higher order sequence functions
+  deriving (Eq, Ord, G.Data, NFData, Generic)
+
+-- | High-order functions
+data SeqHO = SBVZipWith   Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where fun :: a -> b -> c, and zipWith   :: (a -> b -> c) -> [a] -> [b] -> [c]
            | SBVPartition Kind           SMTLambda -- ^ partition a fun.   Where fun :: a -> SBool,  and partition :: (a -> Bool) -> [a] -> ([a], [a])
            | SBVMap       Kind Kind      SMTLambda -- ^ map    a b fun.    Where fun :: a -> b,      and map       :: (a -> b) -> [a] -> [b]
            | SBVFoldl     Kind Kind      SMTLambda -- ^ foldl  a b fun.    Where fun :: b -> a -> b, and foldl     :: (b -> a -> b) -> b -> [a] -> b
@@ -555,27 +555,25 @@ data SeqOp = SeqConcat                           -- ^ See StrConcat
            | SBVFilter    Kind           SMTLambda -- ^ filter a fun.      Where fun :: a -> Bool,   and filter    :: (a -> Bool) -> [a] -> [a]
            | SBVAll       Kind           SMTLambda -- ^ all    a fun.      Where fun :: a -> Bool,   and all       :: (a -> Bool) -> [a] -> Bool
            | SBVAny       Kind           SMTLambda -- ^ any    a fun.      Where fun :: a -> Bool,   and any       :: (a -> Bool) -> [a] -> Bool
-           | SBVConcat    Kind                     -- ^ concat a.          Where we concat [[a]] to get [a] (a is the inside-element type)
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Show instance for SeqOp. Again, mapping is important.
 instance Show SeqOp where
-  show SeqConcat        = "seq.++"
-  show SeqLen           = "seq.len"
-  show SeqUnit          = "seq.unit"
-  show SeqNth           = "seq.nth"
-  show SeqSubseq        = "seq.extract"
-  show SeqIndexOf       = "seq.indexof"
-  show SeqContains      = "seq.contains"
-  show SeqPrefixOf      = "seq.prefixof"
-  show SeqSuffixOf      = "seq.suffixof"
-  show SeqReplace       = "seq.replace"
+  show SeqConcat   = "seq.++"
+  show SeqLen      = "seq.len"
+  show SeqUnit     = "seq.unit"
+  show SeqNth      = "seq.nth"
+  show SeqSubseq   = "seq.extract"
+  show SeqIndexOf  = "seq.indexof"
+  show SeqContains = "seq.contains"
+  show SeqPrefixOf = "seq.prefixof"
+  show SeqSuffixOf = "seq.suffixof"
+  show SeqReplace  = "seq.replace"
+  show (SeqHO ho)  = show ho
 
-  -- Note: The followings aren't part of SMTLib, we explicitly handle them
-  show (SBVReverse   a)       = funcWithKind "sbv.reverse"   a                  Nothing
-  show (SBVZip       a b)     = funcWithKind "sbv.zip"       (KTuple [a, b])    Nothing
+-- Note: The followings aren't part of SMTLib, we explicitly handle them
+instance Show SeqHO where
   show (SBVZipWith   a b c f) = funcWithKind "sbv.zipWith"   (KTuple [a, b, c]) (Just f)
-  show (SBVReplicate a)       = funcWithKind "sbv.replicate" a                  Nothing
   show (SBVPartition a     f) = funcWithKind "sbv.partition" a                  (Just f)
   show (SBVMap       a b   f) = funcWithKind "sbv.map"       (KTuple [a, b])    (Just f)
   show (SBVFoldl     a b   f) = funcWithKind "sbv.foldl"     (KTuple [a, b])    (Just f)
@@ -583,7 +581,6 @@ instance Show SeqOp where
   show (SBVFilter    a     f) = funcWithKind "sbv.filter"    a                  (Just f)
   show (SBVAll       a     f) = funcWithKind "sbv.all"       a                  (Just f)
   show (SBVAny       a     f) = funcWithKind "sbv.any"       a                  (Just f)
-  show (SBVConcat    a)       = funcWithKind "sbv.concat"    a                  Nothing
 
 -- helper for above
 funcWithKind :: String -> Kind -> Maybe SMTLambda -> String
@@ -894,7 +891,7 @@ instance NFData ResultInp where
 data ProgInfo = ProgInfo { hasQuants         :: Bool
                          , progSpecialRels   :: [SpecialRelOp]
                          , progTransClosures :: [(String, String)]
-                         , progSpecialFuncs  :: [Op]                -- functions that need to be generated, like list reverse/all/any/filter
+                         , progSpecialFuncs  :: [SeqHO]            -- functions that need to be generated
                          }
                          deriving G.Data
 
@@ -1549,7 +1546,7 @@ registerLabel whence st nm
   where err w = error $ "SBV (" ++ whence ++ "): " ++ show nm ++ " " ++ w
 
 -- We need to auto-generate certain functions, so keep track of them here
-registerSpecialFunction :: State -> Op -> IO ()
+registerSpecialFunction :: State -> SeqHO -> IO ()
 registerSpecialFunction st o =
   do progInfo <- readIORef (rProgInfo (getRootState st))
      let upd p@ProgInfo{progSpecialFuncs} = p{progSpecialFuncs = o : progSpecialFuncs}
@@ -2296,9 +2293,6 @@ data SMTConfig = SMTConfig {
        , solverSetOptions            :: [SMTOption]         -- ^ Options to set as we start the solver
        , ignoreExitCode              :: Bool                -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
        , redirectVerbose             :: Maybe FilePath      -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
-       , generateHOEquivs            :: Bool                -- ^ Should SBV generate function-level equivalences for firstified functions?
-                                                            --   The default is False, but in certain cases this can lead the solver to loop-forever,
-                                                            --   especially in TP proofs. In such cases, set this to True to see if it helps.
        , tpOptions                   :: TPOptions           -- ^ TP specific options
        }
 

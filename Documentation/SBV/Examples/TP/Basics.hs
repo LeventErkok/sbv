@@ -213,7 +213,7 @@ noTerminationChecks = runTP $ do
 -- Lemma: badRevLen @Integer
 -- *** Failed to prove badRevLen @Integer.
 -- Falsifiable. Counter-example:
---   xs = [10,11,10] :: [Integer]
+--   xs = [14,11,14] :: [Integer]
 badRevLen :: forall a. SymVal a => Proxy a -> IO ()
 badRevLen p = runTP $
    void $ lemma (atProxy p "badRevLen")

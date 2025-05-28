@@ -389,17 +389,14 @@ offsetIndexOf s sub offset
 --   s0 = [1,2,3] :: [Integer]
 -- >>> prove $ \(l :: SList Word32) -> reverse l .== [] .<=> null l
 -- Q.E.D.
-reverse :: SymVal a => SList a -> SList a
+reverse :: forall a. SymVal a => SList a -> SList a
 reverse l
   | Just l' <- unliteral l
   = literal (P.reverse l')
   | True
-  = SBV $ SVal k $ Right $ cache r
-  where k = kindOf l
-        r st = do sva <- sbvToSV st l
-                  let op = SeqOp (SBVReverse k)
-                  registerSpecialFunction st op
-                  newExpr st k (SBVApp op [sva])
+  = rev l
+  where rev = smtFunction (atProxy (Proxy @a) "sbv.reverse") $
+                          \xs -> ite (null xs) nil (let (h, t) = uncons xs in rev t ++ singleton h)
 
 -- | @`map` f s@ maps the operation on to sequence.
 --
@@ -434,9 +431,9 @@ map f l
         klb = kindOf (Proxy @(SList b))
         r st = do sva <- sbvToSV st l
                   lam <- lambdaStr st HigherOrderArg kb f
-                  let op = SeqOp (SBVMap ka kb lam)
+                  let op = SBVMap ka kb lam
                   registerSpecialFunction st op
-                  newExpr st klb (SBVApp op [sva])
+                  newExpr st klb (SBVApp (SeqOp (SeqHO op)) [sva])
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
 concatMap :: (SymVal a, SymVal b) => (SBV a -> SList b) -> SList a -> SList b
@@ -472,9 +469,9 @@ foldl f base l
         r st = do svb <- sbvToSV st base
                   svl <- sbvToSV st l
                   lam <- lambdaStr st HigherOrderArg kb f
-                  let op = SeqOp (SBVFoldl ka kb lam)
+                  let op = SBVFoldl ka kb lam
                   registerSpecialFunction st op
-                  newExpr st kb (SBVApp op [svb, svl])
+                  newExpr st kb (SBVApp (SeqOp (SeqHO op)) [svb, svl])
 
 -- | @`foldr` f base s@ folds the sequence from the right.
 --
@@ -500,9 +497,9 @@ foldr f base l
         r st = do svb <- sbvToSV st base
                   svl <- sbvToSV st l
                   lam <- lambdaStr st HigherOrderArg kb f
-                  let op = SeqOp (SBVFoldr ka kb lam)
+                  let op = SBVFoldr ka kb lam
                   registerSpecialFunction st op
-                  newExpr st kb (SBVApp op [svb, svl])
+                  newExpr st kb (SBVApp (SeqOp (SeqHO op)) [svb, svl])
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
@@ -517,16 +514,11 @@ zip xs ys
  | Just xs' <- unliteral xs, Just ys' <- unliteral ys
  = literal $ P.zip xs' ys'
  | True
- = SBV $ SVal kr $ Right $ cache r
- where ka = kindOf (Proxy @a)
-       kb = kindOf (Proxy @b)
-       kr = KList $ KTuple [ka, kb]
-
-       r st = do svxs <- sbvToSV st xs
-                 svys <- sbvToSV st ys
-                 let op = SeqOp (SBVZip ka kb)
-                 registerSpecialFunction st op
-                 newExpr st kr (SBVApp op [svxs, svys])
+ = z xs ys
+ where z = smtFunction (atProxy (Proxy @a) "sbv.zip") $
+                       \as bs -> ite (null as .|| null bs)
+                                     nil
+                                     (tuple (head as, head bs) .: z (tail as) (tail bs))
 
 -- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
 -- The length of the final list is the minumum of the lengths of the given lists.
@@ -553,9 +545,9 @@ zipWith f xs ys
        r st = do svxs <- sbvToSV st xs
                  svys <- sbvToSV st ys
                  lam <- lambdaStr st HigherOrderArg kc f
-                 let op = SeqOp (SBVZipWith ka kb kc lam)
+                 let op = SBVZipWith ka kb kc lam
                  registerSpecialFunction st op
-                 newExpr st kr (SBVApp op [svxs, svys])
+                 newExpr st kr (SBVApp (SeqOp (SeqHO op)) [svxs, svys])
 
 -- | Concatenate list of lists.
 --
@@ -566,14 +558,9 @@ concat l
   | Just l' <- unliteral l
   = literal (P.concat l')
   | True
-  = SBV $ SVal kla $ Right $ cache r
-  where ka   = kindOf (Proxy @a)
-        kla  = kindOf (Proxy @[a])
-
-        r st = do sva <- sbvToSV st l
-                  let op = SeqOp (SBVConcat ka)
-                  registerSpecialFunction st op
-                  newExpr st kla (SBVApp op [sva])
+  = c l
+  where c = smtFunction (atProxy (Proxy @a) "sbv.concat") $
+                        \xs -> ite (null xs) nil (let (h, t) = uncons xs in h ++ c t)
 
 -- | Check all elements satisfy the predicate.
 --
@@ -590,9 +577,9 @@ all f l
  = SBV $ SVal KBool $ Right $ cache r
  where r st = do sva <- sbvToSV st l
                  lam <- lambdaStr st HigherOrderArg KBool f
-                 let op = SeqOp (SBVAll (kindOf (Proxy @a)) lam)
+                 let op = SBVAll (kindOf (Proxy @a)) lam
                  registerSpecialFunction st op
-                 newExpr st KBool (SBVApp op [sva])
+                 newExpr st KBool (SBVApp (SeqOp (SeqHO op)) [sva])
 
 -- | Check some element satisfies the predicate.
 --
@@ -609,9 +596,9 @@ any f l
  = SBV $ SVal KBool $ Right $ cache r
  where r st = do sva <- sbvToSV st l
                  lam <- lambdaStr st HigherOrderArg KBool f
-                 let op = SeqOp (SBVAny (kindOf (Proxy @a)) lam)
+                 let op = SBVAny (kindOf (Proxy @a)) lam
                  registerSpecialFunction st op
-                 newExpr st KBool (SBVApp op [sva])
+                 newExpr st KBool (SBVApp (SeqOp (SeqHO op)) [sva])
 
 -- | Conjunction of all the elements.
 and :: SList Bool -> SBool
@@ -632,13 +619,9 @@ replicate c e
  | Just c' <- unliteral c, Just e' <- unliteral e
  = literal (genericReplicate c' e')
  | True
- = SBV $ SVal k $ Right $ cache r
- where k = kindOf (Proxy @(SList a))
-       r st = do svc <- sbvToSV st c
-                 sve <- sbvToSV st e
-                 let op = SeqOp (SBVReplicate (kindOf (Proxy @a)))
-                 registerSpecialFunction st op
-                 newExpr st k (SBVApp op [svc, sve])
+ = r c e
+ where r = smtFunction (atProxy (Proxy @a) "sbv.replicate") $
+                       \count elt -> ite (count .<= 0) nil (elt .: r (count - 1) elt)
 
 -- | Difference.
 --
@@ -653,7 +636,7 @@ xs \\ ys
  | True
  = f xs ys
  where f = smtFunction (atProxy (Proxy @a) "sbv.\\\\") $
-                       \x y -> ite (null x) x
+                       \x y -> ite (null x) nil
                                    (let (h, t) = uncons x
                                         r      = f t y
                                     in ite (h `elem` y) r (h .: r))
@@ -678,9 +661,9 @@ filter f l
         k = kindOf (Proxy @(SList a))
         r st = do sva <- sbvToSV st l
                   lam <- lambdaStr st HigherOrderArg KBool f
-                  let op = SeqOp (SBVFilter (kindOf (Proxy @a)) lam)
+                  let op = SBVFilter (kindOf (Proxy @a)) lam
                   registerSpecialFunction st op
-                  newExpr st k (SBVApp op [sva])
+                  newExpr st k (SBVApp (SeqOp (SeqHO op)) [sva])
 
 -- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
 -- first element, and those that don't in the second.
@@ -700,9 +683,9 @@ partition f l
 
         r st = do sva <- sbvToSV st l
                   lam <- lambdaStr st HigherOrderArg KBool f
-                  let op = SeqOp (SBVPartition (kindOf (Proxy @a)) lam)
+                  let op = SBVPartition (kindOf (Proxy @a)) lam
                   registerSpecialFunction st op
-                  newExpr st k (SBVApp op [sva])
+                  newExpr st k (SBVApp (SeqOp (SeqHO op)) [sva])
 
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymVal a, SymVal b) => Bool -> SeqOp -> Maybe (a -> b) -> SBV a -> SBV b
