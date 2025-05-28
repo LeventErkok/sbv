@@ -46,7 +46,7 @@ module Data.SBV.Tools.TP.List (
    , filterAppend, filterConcat
 
      -- * Difference
-   , appendDiff, diffAppend
+   , appendDiff, diffAppend, diffDiff
 
      -- * Partition
    , partition1, partition2
@@ -874,30 +874,65 @@ diffAppend p =
                  =: ((a .: as) \\ bs) \\ cs
                  =: qed
 
-{-
 -- | @(as \\ bs) \\ cs == (as \\ cs) \\ bs@
 --
 -- >>> runTP $ diffDiff (Proxy @Integer)
+-- Inductive lemma: diffDiff @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.1.3 (2 way case split)
+--       Step: 1.1.3.1                     Q.E.D.
+--       Step: 1.1.3.2.1                   Q.E.D.
+--       Step: 1.1.3.2.2 (a ∉ cs)          Q.E.D.
+--       Step: 1.1.3.Completeness          Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2                   Q.E.D.
+--       Step: 1.2.2.1.3 (a ∈ cs)          Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2                   Q.E.D.
+--       Step: 1.2.2.2.3 (a ∉ bs)          Q.E.D.
+--       Step: 1.2.2.2.4 (a ∉ cs)          Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] diffDiff @Integer
 diffDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
 diffDiff p =
    induct (atProxy p "diffDiff")
           (\(Forall @"as" (as :: SList a)) (Forall @"bs" bs) (Forall @"cs" cs) -> (as \\ bs) \\ cs .== (as \\ cs) \\ bs) $
           \ih (a :: SBV a) as bs cs ->
               [] |- ((a .: as) \\ bs) \\ cs
-                 =: (ite (a `elem` bs) (as \\ bs) (a .: (as \\ bs))) \\ cs
-                 ?? "pull cs in"
-                 =: ite (a `elem` bs) ((as \\ bs) \\ cs) ((a .: (as \\ bs)) \\ cs)
-                 ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
-                 =: ite (a `elem` bs) ((as \\ cs) \\ bs) ((a .: (as \\ bs)) \\ cs)
-                 ?? sorry
-                 =: ite (a `elem` bs) ((as \\ cs) \\ bs) (a .: ((as \\ bs) \\ cs))
-                 ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
-                 =: ite (a `elem` bs) ((as \\ cs) \\ bs) (a .: ((as \\ cs) \\ bs))
-                 ?? sorry
-                 =: ite (a `elem` bs) ((as \\ cs) \\ bs) ((((a .: as) \\ cs) \\ bs))
-                 =: ((a .: as) \\ cs) \\ bs
-                 =: qed
--}
+                 =: cases [ a `elem`    bs ==> (as \\ bs) \\ cs
+                                            ?? ih
+                                            =: (as \\ cs) \\ bs
+                                            =: cases [ a `elem`    cs ==> ((a .: as) \\ cs) \\ bs
+                                                                       =: qed
+                                                     , a `notElem` cs ==> (a .: (as \\ cs)) \\ bs
+                                                                       ?? "a ∉ cs"
+                                                                       =: ((a .: as) \\ cs) \\ bs
+                                                                       =: qed
+                                                     ]
+                          , a `notElem` bs ==> (a .: (as \\ bs)) \\ cs
+                                            =: cases [ a `elem`    cs ==> (as \\ bs) \\ cs
+                                                                       ?? ih
+                                                                       =: (as \\ cs) \\ bs
+                                                                       ?? "a ∈ cs"
+                                                                       =: ((a .: as) \\ cs) \\ bs
+                                                                       =: qed
+                                                     , a `notElem` cs ==> a .: ((as \\ bs) \\ cs)
+                                                                       ?? ih
+                                                                       =: a .: ((as \\ cs) \\ bs)
+                                                                       ?? "a ∉ bs"
+                                                                       =: (a .: (as \\ cs)) \\ bs
+                                                                       ?? "a ∉ cs"
+                                                                       =: ((a .: as) \\ cs) \\ bs
+                                                                       =: qed
+                                                     ]
+                          ]
 
 -- | @fst (partition f xs) == filter f xs@
 --
