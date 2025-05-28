@@ -32,7 +32,6 @@ import Data.List (genericIndex, isInfixOf, isPrefixOf, isSuffixOf, genericTake, 
 
 import qualified Data.Char       as C
 import qualified Data.SBV.Char   as SC
-import qualified Data.SBV.String as SS
 import qualified Data.SBV.List   as SL
 
 -- Test suite
@@ -498,26 +497,25 @@ genChars = map mkTest $  [("ord",           show c, check SC.ord             cor
                               Just x  -> x == cop arg
 
 genStrings :: [TestTree]
-genStrings = map mkTest1 (  [("length",        show s,                   check1 SS.length        strLen        s      ) | s <- ss                                                       ]
-                         ++ [("null",          show s,                   check1 SS.null          null          s      ) | s <- ss                                                       ]
-                         ++ [("head",          show s,                   check1 SS.head          head          s      ) | s <- ss, not (null s)                                         ]
-                         ++ [("tail",          show s,                   check1 SS.tail          tail          s      ) | s <- ss, not (null s)                                         ]
-                         ++ [("singleton",     show c,                   check1 SS.singleton     (: [])        c      ) | c <- cs                                                       ]
-                         ++ [("implode",       show s,                   checkI SS.implode                     s      ) | s <- ss                                                       ]
-                         ++ [("strToNat",      show s,                   check1 SS.strToNat      strToNat      s      ) | s <- ss                                                       ]
-                         ++ [("natToStr",      show i,                   check1 SS.natToStr      natToStr      i      ) | i <- iUBs                                                     ])
-          ++ map mkTest2 (  [("strToStrAt",    show s, show i,           check2 SS.strToStrAt    strToStrAt    s i    ) | s <- ss, i  <- range s                                        ]
-                         ++ [("strToCharAt",   show s, show i,           check2 SS.strToCharAt   strToCharAt   s i    ) | s <- ss, i  <- range s                                        ]
-                         ++ [("concat",        show s, show s1,          check2 SS.concat        (++)          s s1   ) | s <- ss, s1 <- ss                                             ]
-                         ++ [("isInfixOf",     show s, show s1,          check2 SS.isInfixOf     isInfixOf     s s1   ) | s <- ss, s1 <- ss                                             ]
-                         ++ [("isSuffixOf",    show s, show s1,          check2 SS.isSuffixOf    isSuffixOf    s s1   ) | s <- ss, s1 <- ss                                             ]
-                         ++ [("isPrefixOf",    show s, show s1,          check2 SS.isPrefixOf    isPrefixOf    s s1   ) | s <- ss, s1 <- ss                                             ]
-                         ++ [("take",          show s, show i,           check2 SS.take          genericTake   i s    ) | s <- ss, i <- iUBs                                            ]
-                         ++ [("drop",          show s, show i,           check2 SS.drop          genericDrop   i s    ) | s <- ss, i <- iUBs                                            ]
-                         ++ [("indexOf",       show s, show s1,          check2 SS.indexOf       indexOf       s s1   ) | s <- ss, s1 <- ss                                             ])
-          ++ map mkTest3 (  [("subStr",        show s, show  i, show j,  check3 SS.subStr        subStr        s i  j ) | s <- ss, i  <- range s, j <- range s, i + j <= genericLength s]
-                         ++ [("replace",       show s, show s1, show s2, check3 SS.replace       replace       s s1 s2) | s <- ss, s1 <- ss, s2 <- ss                                   ]
-                         ++ [("offsetIndexOf", show s, show s1, show i,  check3 SS.offsetIndexOf offsetIndexOf s s1 i ) | s <- ss, s1 <- ss, i <- range s                               ])
+genStrings = map mkTest1 (  [("length",        show s,                   check1 SL.length        strLen        s      ) | s <- ss                                                       ]
+                         ++ [("null",          show s,                   check1 SL.null          null          s      ) | s <- ss                                                       ]
+                         ++ [("head",          show s,                   check1 SL.head          head          s      ) | s <- ss, not (null s)                                         ]
+                         ++ [("tail",          show s,                   check1 SL.tail          tail          s      ) | s <- ss, not (null s)                                         ]
+                         ++ [("singleton",     show c,                   check1 SL.singleton     (: [])        c      ) | c <- cs                                                       ]
+                         ++ [("implode",       show s,                   checkI SL.implode                     s      ) | s <- ss                                                       ]
+                         ++ [("strToNat",      show s,                   check1 SL.strToNat      strToNat      s      ) | s <- ss                                                       ]
+                         ++ [("natToStr",      show i,                   check1 SL.natToStr      natToStr      i      ) | i <- iUBs                                                     ])
+          ++ map mkTest2 (  [("strToCharAt",   show s, show i,           check2 SL.elemAt        strToCharAt   s i    ) | s <- ss, i  <- range s                                        ]
+                         ++ [("concat",        show s, show s1,          check2 (SL.++)          (++)          s s1   ) | s <- ss, s1 <- ss                                             ]
+                         ++ [("isInfixOf",     show s, show s1,          check2 SL.isInfixOf     isInfixOf     s s1   ) | s <- ss, s1 <- ss                                             ]
+                         ++ [("isSuffixOf",    show s, show s1,          check2 SL.isSuffixOf    isSuffixOf    s s1   ) | s <- ss, s1 <- ss                                             ]
+                         ++ [("isPrefixOf",    show s, show s1,          check2 SL.isPrefixOf    isPrefixOf    s s1   ) | s <- ss, s1 <- ss                                             ]
+                         ++ [("take",          show s, show i,           check2 SL.take          genericTake   i s    ) | s <- ss, i <- iUBs                                            ]
+                         ++ [("drop",          show s, show i,           check2 SL.drop          genericDrop   i s    ) | s <- ss, i <- iUBs                                            ]
+                         ++ [("indexOf",       show s, show s1,          check2 SL.indexOf       indexOf       s s1   ) | s <- ss, s1 <- ss                                             ])
+          ++ map mkTest3 (  [("subStr",        show s, show  i, show j,  check3 SL.subList       subStr        s i  j ) | s <- ss, i  <- range s, j <- range s, i + j <= genericLength s]
+                         ++ [("replace",       show s, show s1, show s2, check3 SL.replace       replace       s s1 s2) | s <- ss, s1 <- ss, s2 <- ss                                   ]
+                         ++ [("offsetIndexOf", show s, show s1, show i,  check3 SL.offsetIndexOf offsetIndexOf s s1 i ) | s <- ss, s1 <- ss, i <- range s                               ])
   where strLen :: String -> Integer
         strLen = fromIntegral . length
 
@@ -541,9 +539,6 @@ genStrings = map mkTest1 (  [("length",        show s,                   check1 
                  | True              = case x of
                                           "" -> -1
                                           (_:r) -> go (i+1) r
-
-        strToStrAt :: String -> Integer -> String
-        s `strToStrAt` i = [s `strToCharAt` i]
 
         strToCharAt :: String -> Integer -> Char
         s `strToCharAt` i = s `genericIndex` i
