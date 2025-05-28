@@ -513,16 +513,16 @@ instance Show SMTLambda where
   show (SMTLambda s) = s
 
 -- | Sequence operations. Indexed by the element kind.
-data SeqOp = SLen      Kind
-           | SConcat   Kind
-           | SNth      Kind
-           | SUnit     Kind
-           | SSubseq   Kind
-           | SIndexOf  Kind
-           | SContains Kind
-           | SPrefixOf Kind
-           | SSuffixOf Kind
-           | SReplace  Kind
+data SeqOp = SeqLen      Kind
+           | SeqConcat   Kind
+           | SeqNth      Kind
+           | SeqUnit     Kind
+           | SeqSubseq   Kind
+           | SeqIndexOf  Kind
+           | SeqContains Kind
+           | SeqPrefixOf Kind
+           | SeqSuffixOf Kind
+           | SeqReplace  Kind
            | SeqHO SeqHO                         -- ^ Higher order sequence functions
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
@@ -544,16 +544,16 @@ pickSeqOp _     _  sq = sq
 
 -- | Show instance for SeqOp. Again, mapping is important.
 instance Show SeqOp where
-  show (SLen      k) = pickSeqOp k "str.len"      "seq.len"
-  show (SConcat   k) = pickSeqOp k "str.++"       "seq.++"
-  show (SNth      k) = pickSeqOp k "str.at"       "seq.nth"
-  show (SUnit     k) = pickSeqOp k "str.unit"     "seq.unit"
-  show (SSubseq   k) = pickSeqOp k "str.substr"   "seq.extract"
-  show (SIndexOf  k) = pickSeqOp k "str.indexof"  "seq.indexof"
-  show (SContains k) = pickSeqOp k "str.contains" "seq.contains"
-  show (SPrefixOf k) = pickSeqOp k "str.prefixof" "seq.prefixof"
-  show (SSuffixOf k) = pickSeqOp k "str.suffixof" "seq.suffixof"
-  show (SReplace  k) = pickSeqOp k "str.replace"  "seq.replace"
+  show (SeqLen      k) = pickSeqOp k "str.len"      "seq.len"
+  show (SeqConcat   k) = pickSeqOp k "str.++"       "seq.++"
+  show (SeqNth      k) = pickSeqOp k "str.at"       "seq.nth"
+  show (SeqUnit     k) = pickSeqOp k "str.unit"     "seq.unit"
+  show (SeqSubseq   k) = pickSeqOp k "str.substr"   "seq.extract"
+  show (SeqIndexOf  k) = pickSeqOp k "str.indexof"  "seq.indexof"
+  show (SeqContains k) = pickSeqOp k "str.contains" "seq.contains"
+  show (SeqPrefixOf k) = pickSeqOp k "str.prefixof" "seq.prefixof"
+  show (SeqSuffixOf k) = pickSeqOp k "str.suffixof" "seq.suffixof"
+  show (SeqReplace  k) = pickSeqOp k "str.replace"  "seq.replace"
   show (SeqHO ho)    = show ho
 
 -- Note: The followings aren't part of SMTLib, we explicitly handle them

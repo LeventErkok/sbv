@@ -99,7 +99,7 @@ import Data.SBV.Utils.Lib (atProxy)
 -- >>> prove $ \(s1 :: SString) s2 -> length s1 + length s2 .== length (s1 ++ s2)
 -- Q.E.D.
 length :: forall a. SymVal a => SList a -> SInteger
-length = lift1 False (SLen (kindOf (Proxy @a))) (Just (fromIntegral . P.length))
+length = lift1 False (SeqLen (kindOf (Proxy @a))) (Just (fromIntegral . P.length))
 
 -- | @`null` s@ is True iff the list is empty
 --
@@ -183,7 +183,7 @@ last l = l `elemAt` (length l - 1)
 -- >>> prove $ \(x :: SInteger) -> length (singleton x) .== 1
 -- Q.E.D.
 singleton :: forall a. SymVal a => SBV a -> SList a
-singleton = lift1 False (SUnit (kindOf (Proxy @a))) (Just (: []))
+singleton = lift1 False (SeqUnit (kindOf (Proxy @a))) (Just (: []))
 
 -- | @`listToListAt` l offset@. List of length 1 at @offset@ in @l@. Unspecified if
 -- index is out of bounds.
@@ -208,7 +208,7 @@ elemAt l i
   | Just xs <- unliteral l, Just ci <- unliteral i, ci >= 0, ci < genericLength xs, let x = xs `genericIndex` ci
   = literal x
   | True
-  = lift2 False (SNth (kindOf (Proxy @a))) Nothing l i
+  = lift2 False (SeqNth (kindOf (Proxy @a))) Nothing l i
 
 -- | Short cut for 'elemAt'
 (!!) :: SymVal a => SList a -> SInteger -> SBV a
@@ -263,7 +263,7 @@ infixr 5 ++
 (++) :: forall a. SymVal a => SList a -> SList a -> SList a
 x ++ y | isConcretelyEmpty x = y
        | isConcretelyEmpty y = x
-       | True                = lift2 False (SConcat (kindOf (Proxy @a))) (Just (P.++)) x y
+       | True                = lift2 False (SeqConcat (kindOf (Proxy @a))) (Just (P.++)) x y
 
 -- | @`elem` e l@. Does @l@ contain the element @e@?
 elem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool
@@ -288,7 +288,7 @@ sub `isInfixOf` l
   | isConcretelyEmpty sub
   = literal True
   | True
-  = lift2 True (SContains (kindOf (Proxy @a))) (Just (flip L.isInfixOf)) l sub -- NB. flip, since `SeqContains` takes args in rev order!
+  = lift2 True (SeqContains (kindOf (Proxy @a))) (Just (flip L.isInfixOf)) l sub -- NB. flip, since `SeqContains` takes args in rev order!
 
 -- | @`isPrefixOf` pre l@. Is @pre@ a prefix of @l@?
 --
@@ -305,7 +305,7 @@ pre `isPrefixOf` l
   | isConcretelyEmpty pre
   = literal True
   | True
-  = lift2 True (SPrefixOf (kindOf (Proxy @a))) (Just L.isPrefixOf) pre l
+  = lift2 True (SeqPrefixOf (kindOf (Proxy @a))) (Just L.isPrefixOf) pre l
 
 -- | @`isSuffixOf` suf l@. Is @suf@ a suffix of @l@?
 --
@@ -322,7 +322,7 @@ suf `isSuffixOf` l
   | isConcretelyEmpty suf
   = literal True
   | True
-  = lift2 True (SSuffixOf (kindOf (Proxy @a))) (Just L.isSuffixOf) suf l
+  = lift2 True (SeqSuffixOf (kindOf (Proxy @a))) (Just L.isSuffixOf) suf l
 
 -- | @`take` len l@. Corresponds to Haskell's `take` on symbolic lists.
 --
@@ -392,7 +392,7 @@ subList l offset len
   , valid $ o + sz                           -- we don't overrun
   = literal $ genericTake sz $ genericDrop o c
   | True                                     -- either symbolic, or something is out-of-bounds
-  = lift3 False (SSubseq (kindOf (Proxy @a))) Nothing l offset len
+  = lift3 False (SeqSubseq (kindOf (Proxy @a))) Nothing l offset len
 
 -- | @`replace` l src dst@. Replace the first occurrence of @src@ by @dst@ in @s@
 --
@@ -414,7 +414,7 @@ replace l src dst
   , Just c <- unliteral dst
   = literal $ walk a b c
   | True
-  = lift3 True (SReplace ka) Nothing l src dst
+  = lift3 True (SeqReplace ka) Nothing l src dst
   where walk haystack needle newNeedle = go haystack   -- note that needle is guaranteed non-empty here.
            where go []       = []
                  go i@(c:cs)
@@ -459,7 +459,7 @@ offsetIndexOf s sub offset
       (i:_) -> literal i
       _     -> -1
   | True
-  = lift3 True (SIndexOf ka) Nothing s sub offset
+  = lift3 True (SeqIndexOf ka) Nothing s sub offset
   where ka = kindOf (Proxy @a)
 
 -- | @`reverse` s@ reverses the sequence.
