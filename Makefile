@@ -111,7 +111,7 @@ updateForVersionChange:
 	@cabal run SBVTest -- -p noOpt1  --accept --quiet
 	@cabal run SBVTest -- -p noOpt2  --accept --quiet
 
-testsuite: updateForVersionChange lintTest test testInterfaces checkLinks benchBuild mkDistro docTest 
+testsuite: updateForVersionChange lintTest test testInterfaces checkLinks benchBuild docTest mkDistro
 
 lintTest:
 	@$(TIME) cabal test SBVHLint
