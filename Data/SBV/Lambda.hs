@@ -187,7 +187,7 @@ lambdaStr st scope k a = SMTLambda <$> lambdaGen scope mkLam st k a
    where mkLam (Defn _unints _frees Nothing       body) = body 0
          mkLam (Defn _unints _frees (Just params) body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 
--- | Generaic creator for named functions,
+-- | Generic creator for named functions,
 namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> (Defn -> b) -> State -> Kind -> a -> m b
 namedLambdaGen scope trans inState fk f = inSubState scope inState $ \st -> trans <$> convert st fk (mkLambda st f)
 
