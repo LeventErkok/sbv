@@ -56,7 +56,7 @@ import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
 
-import Data.Maybe (isNothing, isJust, mapMaybe)
+import Data.Maybe (isNothing, isJust)
 
 import Data.IORef (readIORef, writeIORef, IORef, newIORef, modifyIORef')
 
@@ -80,7 +80,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState, MonadSymbolic(..)
                               , UserInputs, getSV, NamedSymVar(..), lookupInput, getUserName'
-                              , Name, CnstMap, smtDefGivenName, Inputs(..), ProgInfo(..)
+                              , Name, CnstMap, Inputs(..), ProgInfo(..)
                               , mustIgnoreVar, newInternalVariable
                               )
 
@@ -1271,7 +1271,7 @@ getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, (Bool, Maybe [Strin
 getUIs = do State{rUIMap, rDefns, rIncState} <- queryState
             -- NB. no need to worry about new-defines, because we don't allow definitions once query mode starts
             defines <- do allDefs <- io $ readIORef rDefns
-                          pure $ mapMaybe (smtDefGivenName . fst) allDefs
+                          pure $ map fst allDefs
 
             prior <- io $ readIORef rUIMap
             new   <- io $ readIORef rIncState >>= readIORef . rNewUIs

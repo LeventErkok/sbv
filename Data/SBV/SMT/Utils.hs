@@ -67,7 +67,7 @@ type SMTLibConverter a =  QueryContext                                   -- ^ In
                        -> (CnstMap, [(SV, CV)])                          -- ^ constants. The map, and as rendered in order
                        -> [((Int, Kind, Kind), [SV])]                    -- ^ auto-generated tables
                        -> [(String, (Bool, Maybe [String], SBVType))]    -- ^ uninterpreted functions/constants
-                       -> [(SMTDef, SBVType)]                            -- ^ user given axioms/definitions
+                       -> [(String, (SMTDef, SBVType))]                  -- ^ user given axioms/definitions
                        -> SBVPgm                                         -- ^ assignments
                        -> S.Seq (Bool, [(String, String)], SV)           -- ^ extra constraints
                        -> SV                                             -- ^ output variable

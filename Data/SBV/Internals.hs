@@ -69,7 +69,7 @@ module Data.SBV.Internals (
   , svFloatingPointAsSWord
 
   -- * lambdas and axioms
-  , lambda, lambdaStr, namedLambda, namedLambdaStr, constraint, constraintStr, Lambda(..), Constraint(..), LambdaScope(..)
+  , lambda, lambdaStr, constraint, constraintStr, Lambda(..), Constraint(..), LambdaScope(..)
   ) where
 
 import Control.Monad.IO.Class (MonadIO)

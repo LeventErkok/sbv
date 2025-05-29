@@ -727,28 +727,11 @@ declUI ProgInfo{progTransClosures} (i, (_, _, t)) = declareName i t Nothing ++ d
 
 -- Note that even though we get all user defined-functions here (i.e., lambda and axiom), we can only have defined-functions
 -- and axioms. We spit axioms as is; and topologically sort the definitions.
-declUserFuns :: [(SMTDef, SBVType)] -> [String]
-declUserFuns ds
-  | not (null lambdas)
-  = error $ unlines $ "Data.SBV.declUserFuns: Unexpected anonymous functions in declDef:" : map show lambdas
-  | True
-  = declFuncs others
-  where (lambdas, others) = partition (isLam . fst) ds
-        isLam SMTLam{} = True
-        isLam SMTDef{} = False
+declUserFuns :: [(String, (SMTDef, SBVType))] -> [String]
+declUserFuns ds = map declGroup sorted
+  where mkNode d = (d, fst d, getDeps d)
 
--- We need to topologically sort the user given definitions and axioms and put them in the proper order and construct.
--- Note that there are no anonymous functions at this level.
-declFuncs :: [(SMTDef, SBVType)] -> [String]
-declFuncs ds = map declGroup sorted
-  where mkNode d = (d, getKey d, getDeps d)
-
-        getKey (d, _) = case d of
-                         SMTDef n _ _ _ _ -> n
-                         SMTLam{}         -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
-
-        getDeps (SMTDef _ _ d _ _, _) = d
-        getDeps (l@SMTLam{}, t)       = error $ "Data.SBV.declFuns: Unexpected definition: " ++ show (l, t)
+        getDeps (_, (SMTDef _ d _ _, _)) = d
 
         mkDecl Nothing  rt = "() "    ++ rt
         mkDecl (Just p) rt = p ++ " " ++ rt
@@ -761,8 +744,7 @@ declFuncs ds = map declGroup sorted
                                          [x] -> declUserDef True x
                                          xs  -> declUserDefMulti xs
 
-        declUserDef _ d@(SMTLam{}, _) = error $ "Data.SBV.declFuns: Unexpected anonymous lambda in user-defined functions: " ++ show d
-        declUserDef isRec (SMTDef nm fk deps param body, ty) = ("; " ++ nm ++ " :: " ++ show ty ++ recursive ++ frees ++ "\n") ++ s
+        declUserDef isRec (nm, (SMTDef fk deps param body, ty)) = ("; " ++ nm ++ " :: " ++ show ty ++ recursive ++ frees ++ "\n") ++ s
            where (recursive, definer) | isRec = (" [Recursive]", "define-fun-rec")
                                       | True  = ("",             "define-fun")
 
@@ -776,8 +758,7 @@ declFuncs ds = map declGroup sorted
 
         -- declare a bunch of mutually-recursive functions
         declUserDefMulti bs = render $ map collect bs
-          where collect d@(SMTLam{}, _) = error $ "Data.SBV.declFuns: Unexpected lambda in user-defined mutual-recursion group: " ++ show d
-                collect (SMTDef nm fk deps param body, ty) = (deps, nm, ty, '(' : nm ++ " " ++  decl ++ ")", body 3)
+          where collect (nm, (SMTDef fk deps param body, ty)) = (deps, nm, ty, '(' : nm ++ " " ++  decl ++ ")", body 3)
                   where decl = mkDecl param (smtType fk)
 
                 render defs = intercalate "\n" $

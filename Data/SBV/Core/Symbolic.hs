@@ -52,7 +52,7 @@ module Data.SBV.Core.Symbolic
   , getUserName', getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex, sObserve
-  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefGivenName, withNewIncState, IncState(..), incrementInternalCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..), UIName(..)
   , registerKind, registerLabel, registerSpecialFunction, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, newInternalVariable, lambdaVar, quantVar
@@ -77,7 +77,7 @@ import Control.Monad.Writer.Strict (MonadWriter)
 import Data.Char                   (isSpace)
 import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy, isPrefixOf)
-import Data.Maybe                  (fromMaybe, mapMaybe)
+import Data.Maybe                  (fromMaybe)
 import Data.String                 (IsString(fromString))
 
 import Data.Time (getCurrentTime, UTCTime)
@@ -896,7 +896,7 @@ data Result = Result { progInfo       :: ProgInfo                               
                      , resConsts      :: (CnstMap, [(SV, CV)])                        -- ^ constants
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resUIConsts    :: [(String, (Bool, Maybe [String], SBVType))]  -- ^ uninterpreted constants
-                     , resDefinitions :: [(SMTDef, SBVType)]                          -- ^ definitions created via smtFunction or lambda
+                     , resDefinitions :: [(String, (SMTDef, SBVType))]                -- ^ definitions created via smtFunction
                      , resAsgns       :: SBVPgm                                       -- ^ assignments
                      , resConstraints :: S.Seq (Bool, [(String, String)], SV)         -- ^ additional constraints (boolean)
                      , resAssertions  :: [(String, Maybe CallStack, SV)]              -- ^ assertions
@@ -1166,39 +1166,25 @@ lookupInput f sv ns
     secondLookup = S.elemIndexL sv svs >>= flip S.lookup ns
 
 -- | A defined function/value
-data SMTDef = SMTDef String           -- ^ Defined functions -- name
-                     Kind             -- ^ Final kind of the definition (resulting kind, not the params)
+data SMTDef = SMTDef Kind             -- ^ Final kind of the definition (resulting kind, not the params)
                      [String]         -- ^ other definitions it refers to
-                     (Maybe String)   -- ^ parameter string
-                     (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
-            | SMTLam Kind             -- ^ Final kind of the definition (resulting kind, not the params)
-                     [String]         -- ^ Anonymous function -- other definitions it refers to
                      (Maybe String)   -- ^ parameter string
                      (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
             deriving G.Data
 
 -- | For debug purposes
 instance Show SMTDef where
-  show d = case d of
-             SMTDef nm fk frees p body -> shDef (Just nm) fk frees p body
-             SMTLam    fk frees p body -> shDef Nothing   fk frees p body
-    where shDef mbNm fk frees p body = unlines [ "-- User defined function: " ++ fromMaybe "Anonymous" mbNm
-                                               , "-- Final return type    : " ++ show fk
-                                               , "-- Refers to            : " ++ intercalate ", " frees
-                                               , "-- Parameters           : " ++ fromMaybe "NONE" p
-                                               , "-- Body                 : "
-                                               , body 2
-                                               ]
-
--- The name of this definition
-smtDefGivenName :: SMTDef -> Maybe String
-smtDefGivenName (SMTDef n _ _ _ _) = Just n
-smtDefGivenName SMTLam{}           = Nothing
+  show (SMTDef fk frees p body) = unlines [ "-- User defined function:"
+                                          , "-- Final return type    : " ++ show fk
+                                          , "-- Refers to            : " ++ intercalate ", " frees
+                                          , "-- Parameters           : " ++ fromMaybe "NONE" p
+                                          , "-- Body                 : "
+                                          , body 2
+                                          ]
 
 -- | NFData instance for SMTDef
 instance NFData SMTDef where
-  rnf (SMTDef n fk frees params body) = rnf n `seq` rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
-  rnf (SMTLam   fk frees params body) =             rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
+  rnf (SMTDef fk frees params body) = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
 
 -- | The state of the symbolic interpreter
 data State  = State { sbvContext          :: SBVContext
@@ -1226,7 +1212,7 @@ data State  = State { sbvContext          :: SBVContext
                     , rUIMap              :: IORef UIMap
                     , rUserFuncs          :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
                     , rCgMap              :: IORef CgMap
-                    , rDefns              :: IORef [(SMTDef, SBVType)]
+                    , rDefns              :: IORef [(String, (SMTDef, SBVType))]
                     , rSMTOptions         :: IORef [SMTOption]
                     , rOptGoals           :: IORef [Objective (SV, SV)]
                     , rAsserts            :: IORef [(String, Maybe CallStack, SV)]
@@ -1387,7 +1373,7 @@ newUninterpreted st uiName mbArgNames t uiCode = do
 
   isCurried <- case uiCode of
                  UINone c -> pure c
-                 UISMT d  -> do modifyState st rDefns (\defs -> (d, t) : filter (\(o, _) -> smtDefGivenName o /= Just nm) defs)
+                 UISMT d  -> do modifyState st rDefns (\defs -> (nm, (d, t)) : filter (\(onm, _) -> onm /= nm) defs)
                                   $ noInteractive [ "Defined functions (smtFunction):"
                                                   , "  Name: " ++ nm ++ extraComment
                                                   , "  Type: " ++ show t
@@ -2014,7 +2000,7 @@ extractSymbolicSimulationState st@State{ runMode=rrm
    ds    <- reverse <$> readIORef defns
    unint <- do unints <- Map.toList <$> readIORef uis
                -- drop those that has a definition associated with it
-               let defineds = mapMaybe (smtDefGivenName . fst) ds
+               let defineds = map fst ds
                pure [ui | ui@(nm, _) <- unints, nm `notElem` defineds]
    knds  <- readIORef usedKinds
    cgMap <- Map.toList <$> readIORef cgs

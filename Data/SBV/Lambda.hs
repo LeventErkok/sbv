@@ -22,7 +22,6 @@
 
 module Data.SBV.Lambda (
             lambda,      lambdaStr
-          , namedLambda, namedLambdaStr
           , constraint,  constraintStr
           , LambdaScope(..)
         ) where
@@ -34,7 +33,6 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
 import Data.SBV.SMT.SMTLib2
 import Data.SBV.Utils.PrettyNum
-import Data.SBV.Utils.Lib (barify)
 
 import           Data.SBV.Core.Symbolic hiding   (mkNewState)
 import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
@@ -179,30 +177,13 @@ lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$
 -- | Create an SMTLib lambda, in the given state.
 lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTDef
 lambda inState scope fk = lambdaGen scope mkLam inState fk
-   where mkLam (Defn unints _frees params body) = SMTLam fk unints (extractAllUniversals <$> params) body
+   where mkLam (Defn unints _frees params body) = SMTDef fk unints (extractAllUniversals <$> params) body
 
 -- | Create an anonymous lambda, rendered as n SMTLib string. The kind passed is the kind of the final result.
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTLambda
 lambdaStr st scope k a = SMTLambda <$> lambdaGen scope mkLam st k a
    where mkLam (Defn _unints _frees Nothing       body) = body 0
          mkLam (Defn _unints _frees (Just params) body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
-
--- | Generic creator for named functions,
-namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> (Defn -> b) -> State -> Kind -> a -> m b
-namedLambdaGen scope trans inState fk f = inSubState scope inState $ \st -> trans <$> convert st fk (mkLambda st f)
-
--- | Create a named SMTLib function, in the given state.
-namedLambda :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> State -> String -> Kind -> a -> m SMTDef
-namedLambda scope inState nm fk = namedLambdaGen scope mkDef inState fk
-   where mkDef (Defn unints _frees params body) = SMTDef (barify nm) fk unints (extractAllUniversals <$> params) body
-
--- | Create a named SMTLib function, in the given state, string version
-namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> State -> String -> SBVType -> a -> m String
-namedLambdaStr scope inState nm t = namedLambdaGen scope mkDef inState fk
-   where mkDef (Defn unints _frees params body) = concat $ declUserFuns [(SMTDef (barify nm) fk unints (extractAllUniversals <$> params) body, t)]
-         fk = case t of
-                SBVType [] -> error $ "namedLambdaStr: Invalid type for " ++ show nm ++ ", empty!"
-                SBVType xs -> last xs
 
 -- | Generic constraint generator.
 constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => LambdaScope -> ([String] -> (Int -> String) -> b) -> State -> a -> m b
