@@ -99,8 +99,6 @@ endif
 bench:
 	cabal bench
 
-testsuite: lintTest test testInterfaces checkLinks benchBuild mkDistro docTest 
-
 # Run this target, which updates the golds for those tests that rely on version updates
 # for SBV and Z3. Saves time before doing "make release"
 updateForVersionChange:
@@ -112,6 +110,8 @@ updateForVersionChange:
 	@cabal run SBVTest -- -p query1  --accept --quiet
 	@cabal run SBVTest -- -p noOpt1  --accept --quiet
 	@cabal run SBVTest -- -p noOpt2  --accept --quiet
+
+testsuite: updateForVersionChange lintTest test testInterfaces checkLinks benchBuild mkDistro docTest 
 
 lintTest:
 	@$(TIME) cabal test SBVHLint
@@ -143,11 +143,7 @@ checkLinks:
 mkDistro:
 	$(TIME) cabal sdist
 
-# Useful if we update z3 (or some other solver) but don't make any changes to SBV
-releaseNoBuild: testsuite
-	@echo "*** SBV is ready for release! -- no SBV build was done."
-
-fullRelease: veryclean checkExtensions install docs updateForVersionChange testsuite
+fullRelease: veryclean checkExtensions install docs testsuite
 	@echo "*** SBV is ready for release!"
 
 release:
