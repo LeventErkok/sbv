@@ -57,7 +57,6 @@ import qualified Prelude   as P
 import qualified Data.List as L
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model () -- instances only
 
 import Data.SBV.List
 import qualified Data.Char as C
@@ -72,7 +71,8 @@ import Data.SBV.Char
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Char
 -- >>> import Data.SBV.List
--- >>> import Prelude hiding (length, take, elem, notElem, head)
+-- >>> import Prelude hiding (length, take, elem, notElem, head, map)
+-- >>> import qualified Prelude as P
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
 #endif
@@ -159,7 +159,7 @@ exactly = Literal
 
 -- | Helper to define a character class.
 --
--- >>> prove $ \(c :: SChar) -> c `match` oneOf "ABCD" .<=> sAny (c .==) (map literal "ABCD")
+-- >>> prove $ \(c :: SChar) -> c `match` oneOf "ABCD" .<=> sAny (c .==) (P.map literal "ABCD")
 -- Q.E.D.
 oneOf :: String -> RegExp
 oneOf xs = Union [exactly [x] | x <- xs]
