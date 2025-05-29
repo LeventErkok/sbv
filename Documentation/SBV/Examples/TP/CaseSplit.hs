@@ -17,8 +17,6 @@
 
 module Documentation.SBV.Examples.TP.CaseSplit where
 
-import Prelude hiding (sum, length)
-
 import Data.SBV
 import Data.SBV.Tools.TP
 
