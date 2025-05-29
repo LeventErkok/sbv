@@ -39,7 +39,6 @@
                  (let ((args2 (+ args0 args1)))
                  args2))) (seq.nth lst 0)))
                                   (sbv.map_72c5bf (seq.extract lst 1 (- (seq.len lst) 1))))))
-[GOOD] ; -- NB. Skipping firstified equivalences, due to generateHOEquivs setting.
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
