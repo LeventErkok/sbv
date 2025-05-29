@@ -87,7 +87,7 @@ import Data.SBV.Char
 -- >>> let pre   = dig19 * Loop 2 2 dig09
 -- >>> let post  = dig19 * Loop 3 3 dig09
 -- >>> let phone = pre * "-" * post
--- >>> sat $ \s -> (s :: SString) `match` phone
+-- >>> sat $ \(s :: SString) -> s `match` phone
 -- Satisfiable. Model:
 --   s0 = "800-8000" :: String
 class RegExpMatchable a where
@@ -215,11 +215,11 @@ asciiLetter = asciiLower + asciiUpper
 --
 -- >>> asciiLower
 -- (re.range "a" "z")
--- >>> prove $ \c -> (c :: SChar) `match` asciiLower  .=> c `match` asciiLetter
+-- >>> prove $ \(c :: SChar) -> c `match` asciiLower  .=> c `match` asciiLetter
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLower  .=> toUpperL1 c `match` asciiUpper
+-- >>> prove $ \(c :: SChar) -> c `match` asciiLower  .=> toUpperL1 c `match` asciiUpper
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLetter .=> toLowerL1 c `match` asciiLower
+-- >>> prove $ \(c :: SChar) -> c `match` asciiLetter .=> toLowerL1 c `match` asciiLower
 -- Q.E.D.
 asciiLower :: RegExp
 asciiLower = Range 'a' 'z'
@@ -228,11 +228,11 @@ asciiLower = Range 'a' 'z'
 --
 -- >>> asciiUpper
 -- (re.range "A" "Z")
--- >>> prove $ \c -> (c :: SChar) `match` asciiUpper  .=> c `match` asciiLetter
+-- >>> prove $ \(c :: SChar) -> c `match` asciiUpper  .=> c `match` asciiLetter
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiUpper  .=> toLowerL1 c `match` asciiLower
+-- >>> prove $ \(c :: SChar) -> c `match` asciiUpper  .=> toLowerL1 c `match` asciiLower
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLetter .=> toUpperL1 c `match` asciiUpper
+-- >>> prove $ \(c :: SChar) -> c `match` asciiLetter .=> toUpperL1 c `match` asciiUpper
 -- Q.E.D.
 asciiUpper :: RegExp
 asciiUpper = Range 'A' 'Z'
@@ -274,7 +274,7 @@ hexDigit = digit + Range 'a' 'f' + Range 'A' 'F'
 --
 -- >>> decimal
 -- (re.+ (re.range "0" "9"))
--- >>> prove $ \s -> (s::SString) `match` decimal .=> sNot (s `match` KStar asciiLetter)
+-- >>> prove $ \(s :: SString) -> s `match` decimal .=> sNot (s `match` KStar asciiLetter)
 -- Q.E.D.
 decimal :: RegExp
 decimal = KPlus digit
@@ -283,7 +283,7 @@ decimal = KPlus digit
 --
 -- >>> octal
 -- (re.++ (re.union (str.to.re "0o") (str.to.re "0O")) (re.+ (re.range "0" "7")))
--- >>> prove $ \s -> s `match` octal .=> sAny (.== take 2 s) ["0o", "0O"]
+-- >>> prove $ \(s :: SString) -> s `match` octal .=> sAny (.== take 2 s) ["0o", "0O"]
 -- Q.E.D.
 octal :: RegExp
 octal = ("0o" + "0O") * KPlus octDigit
@@ -292,7 +292,7 @@ octal = ("0o" + "0O") * KPlus octDigit
 --
 -- >>> hexadecimal
 -- (re.++ (re.union (str.to.re "0x") (str.to.re "0X")) (re.+ (re.union (re.range "0" "9") (re.range "a" "f") (re.range "A" "F"))))
--- >>> prove $ \s -> s `match` hexadecimal .=> sAny (.== take 2 s) ["0x", "0X"]
+-- >>> prove $ \(s :: SString) -> s `match` hexadecimal .=> sAny (.== take 2 s) ["0x", "0X"]
 -- Q.E.D.
 hexadecimal :: RegExp
 hexadecimal = ("0x" + "0X") * KPlus hexDigit
@@ -300,7 +300,7 @@ hexadecimal = ("0x" + "0X") * KPlus hexDigit
 -- | Recognize a floating point number. The exponent part is optional if a fraction
 -- is present. The exponent may or may not have a sign.
 --
--- >>> prove $ \s -> s `match` floating .=> length s .>= 3
+-- >>> prove $ \(s :: SString) -> s `match` floating .=> length s .>= 3
 -- Q.E.D.
 floating :: RegExp
 floating = withFraction + withoutFraction
@@ -312,9 +312,9 @@ floating = withFraction + withoutFraction
 -- followed by zero or more letters, digits, underscores, and single quotes. The first
 -- letter must be lowercase.
 --
--- >>> prove $ \s -> s `match` identifier .=> isAsciiLower (head s)
+-- >>> prove $ \(s :: SString) -> s `match` identifier .=> isAsciiLower (head s)
 -- Q.E.D.
--- >>> prove $ \s -> s `match` identifier .=> length s .>= 1
+-- >>> prove $ \(s :: SString) -> s `match` identifier .=> length s .>= 1
 -- Q.E.D.
 identifier :: RegExp
 identifier = asciiLower * KStar (asciiLetter + digit + "_" + "'")
@@ -349,22 +349,22 @@ Note that since `match` is a method of 'RegExpMatchable' class, both 'SChar' and
 an argument for matching. In practice, this means you might have to disambiguate with a type-ascription
 if it is not deducible from context.
 
->>> prove $ \s -> (s :: SString) `match` "hello" .<=> s .== "hello"
+>>> prove $ \(s :: SString) -> s `match` "hello" .<=> s .== "hello"
 Q.E.D.
->>> prove $ \s -> s `match` Loop 2 5 "xyz" .=> length s .>= 6
+>>> prove $ \(s :: SString) -> s `match` Loop 2 5 "xyz" .=> length s .>= 6
 Q.E.D.
->>> prove $ \s -> s `match` Loop 2 5 "xyz" .=> length s .<= 15
+>>> prove $ \(s :: SString) -> s `match` Loop 2 5 "xyz" .=> length s .<= 15
 Q.E.D.
->>> prove $ \s -> s `match` Power 3 "xyz" .=> length s .== 9
+>>> prove $ \(s :: SString) -> s `match` Power 3 "xyz" .=> length s .== 9
 Q.E.D.
->>> prove $ \s -> s `match`  (exactly "xyz" ^ 3) .=> length s .== 9
+>>> prove $ \(s :: SString) -> s `match`  (exactly "xyz" ^ 3) .=> length s .== 9
 Q.E.D.
->>> prove $ \s -> match s (Loop 2 5 "xyz") .=> length s .>= 7
+>>> prove $ \(s :: SString) -> match s (Loop 2 5 "xyz") .=> length s .>= 7
 Falsifiable. Counter-example:
   s0 = "xyzxyz" :: String
->>> prove $ \s -> (s :: SString) `match` "hello" .=> s `match` ("hello" + "world")
+>>> prove $ \(s :: SString) -> s `match` "hello" .=> s `match` ("hello" + "world")
 Q.E.D.
->>> prove $ \s -> sNot $ (s::SString) `match` ("so close" * 0)
+>>> prove $ \(s :: SString) -> sNot $ s `match` ("so close" * 0)
 Q.E.D.
 >>> prove $ \c -> (c :: SChar) `match` oneOf "abcd" .=> ord c .>= ord (literal 'a') .&& ord c .<= ord (literal 'd')
 Q.E.D.
