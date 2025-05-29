@@ -37,11 +37,11 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV, contextOfSV
-  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SeqHO(..), SetOp(..), SpecialRelOp(..)
+  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..)
   , RegExp(..), regExpToSMTString, SMTLambda(..)
   , Quantifier(..), needsExistentials, SBVContext(..), checkCompatibleContext, VarContext(..)
   , RoundingMode(..)
-  , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted
+  , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted, prefixNameToUnique
   , SVal(..)
   , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
   , svToSV, svToSymSV, forceSVArg
@@ -54,7 +54,7 @@ module Data.SBV.Core.Symbolic
   , getTableIndex, sObserve
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..), UIName(..)
-  , registerKind, registerLabel, registerSpecialFunction, recordObservable
+  , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, newInternalVariable, lambdaVar, quantVar
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
@@ -66,7 +66,7 @@ module Data.SBV.Core.Symbolic
   ) where
 
 import Control.DeepSeq             (NFData(..))
-import Control.Monad               (when, unless)
+import Control.Monad               (when)
 import Control.Monad.Except        (MonadError, ExceptT)
 import Control.Monad.Reader        (MonadReader(..), ReaderT, runReaderT,
                                     mapReaderT)
@@ -74,7 +74,6 @@ import Control.Monad.State.Lazy    (MonadState)
 import Control.Monad.Trans         (MonadIO(liftIO), MonadTrans(lift))
 import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
-import Data.Char                   (isSpace)
 import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy, isPrefixOf)
 import Data.Maybe                  (fromMaybe)
@@ -523,18 +522,6 @@ data SeqOp = SeqLen      Kind
            | SeqPrefixOf Kind
            | SeqSuffixOf Kind
            | SeqReplace  Kind
-           | SeqHO SeqHO                         -- ^ Higher order sequence functions
-  deriving (Eq, Ord, G.Data, NFData, Generic)
-
--- | High-order functions
-data SeqHO = SBVZipWith   Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where fun :: a -> b -> c, and zipWith   :: (a -> b -> c) -> [a] -> [b] -> [c]
-           | SBVPartition Kind           SMTLambda -- ^ partition a fun.   Where fun :: a -> SBool,  and partition :: (a -> Bool) -> [a] -> ([a], [a])
-           | SBVMap       Kind Kind      SMTLambda -- ^ map    a b fun.    Where fun :: a -> b,      and map       :: (a -> b) -> [a] -> [b]
-           | SBVFoldl     Kind Kind      SMTLambda -- ^ foldl  a b fun.    Where fun :: b -> a -> b, and foldl     :: (b -> a -> b) -> b -> [a] -> b
-           | SBVFoldr     Kind Kind      SMTLambda -- ^ foldr  a b fun.    Where fun :: a -> b -> b, and foldr     :: (a -> b -> b) -> b -> [a] -> b
-           | SBVFilter    Kind           SMTLambda -- ^ filter a fun.      Where fun :: a -> Bool,   and filter    :: (a -> Bool) -> [a] -> [a]
-           | SBVAll       Kind           SMTLambda -- ^ all    a fun.      Where fun :: a -> Bool,   and all       :: (a -> Bool) -> [a] -> Bool
-           | SBVAny       Kind           SMTLambda -- ^ any    a fun.      Where fun :: a -> Bool,   and any       :: (a -> Bool) -> [a] -> Bool
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Pick the correct operator
@@ -554,25 +541,6 @@ instance Show SeqOp where
   show (SeqPrefixOf k) = pickSeqOp k "str.prefixof" "seq.prefixof"
   show (SeqSuffixOf k) = pickSeqOp k "str.suffixof" "seq.suffixof"
   show (SeqReplace  k) = pickSeqOp k "str.replace"  "seq.replace"
-  show (SeqHO ho)    = show ho
-
--- Note: The followings aren't part of SMTLib, we explicitly handle them
-instance Show SeqHO where
-  show (SBVZipWith   a b c f) = funcWithKind "sbv.zipWith"   (KTuple [a, b, c]) (Just f)
-  show (SBVPartition a     f) = funcWithKind "sbv.partition" a                  (Just f)
-  show (SBVMap       a b   f) = funcWithKind "sbv.map"       (KTuple [a, b])    (Just f)
-  show (SBVFoldl     a b   f) = funcWithKind "sbv.foldl"     (KTuple [a, b])    (Just f)
-  show (SBVFoldr     a b   f) = funcWithKind "sbv.foldr"     (KTuple [a, b])    (Just f)
-  show (SBVFilter    a     f) = funcWithKind "sbv.filter"    a                  (Just f)
-  show (SBVAll       a     f) = funcWithKind "sbv.all"       a                  (Just f)
-  show (SBVAny       a     f) = funcWithKind "sbv.any"       a                  (Just f)
-
--- helper for above
-funcWithKind :: String -> Kind -> Maybe SMTLambda -> String
-funcWithKind f k mbExtra = f ++ " @" ++ ssk ++ maybe "" (\l -> ' ' : show l) mbExtra
-  where sk  = show k
-        ssk | any isSpace sk = '(' : sk ++ ")"
-            | True           = sk
 
 -- | Set operations.
 data SetOp = SetEqual
@@ -876,12 +844,11 @@ instance NFData ResultInp where
 data ProgInfo = ProgInfo { hasQuants         :: Bool
                          , progSpecialRels   :: [SpecialRelOp]
                          , progTransClosures :: [(String, String)]
-                         , progSpecialFuncs  :: [SeqHO]            -- functions that need to be generated
                          }
                          deriving G.Data
 
 instance NFData ProgInfo where
-   rnf (ProgInfo a b c d) = rnf a `seq` rnf b `seq` rnf c `seq` rnf d
+   rnf (ProgInfo a b c) = rnf a `seq` rnf b `seq` rnf c
 
 deriving instance G.Data CallStack
 deriving instance G.Data SrcLoc
@@ -1314,8 +1281,8 @@ data UICodeKind = UINone Bool     -- no code. If bool is true, then curried.
                 | UICgC  [String] -- Code-gen, currently only C
 
 -- | Is the name given by the user for the uninterpreted constant a prefix or a full name?
-data UIName = UIGiven  String  -- ^ Full name
-            | UIPrefix String  -- ^ Prefix
+data UIName = UIGiven  String             -- ^ Full name
+            | forall a. UIPrefix String a -- ^ Prefix, with an object to create a unique number based on its hashed stable-pointer name
 
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
@@ -1338,30 +1305,36 @@ svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
                        mapM_ forceSVArg sws
                        newExpr st k $ SBVApp (Uninterpreted nm') sws
 
+-- | Generate a unique name for the fiven function based on the object's stable name
+prefixNameToUnique :: State -> String -> a -> IO String
+prefixNameToUnique st prefix v = do
+   uiMap <- readIORef (rUIMap st)
+   sn <- v `seq` makeStableName v
+   let pre = prefix ++ " u:" ++ show (hashStableName sn)
+       suffix 0 = pre
+       suffix i = pre ++ "_" ++ show i
+   case [cand | i <- [0::Int ..], let cand = suffix i, cand `Map.notMember` uiMap] of
+      (n:_) -> pure n
+      []    -> error $ "genUniqueName: Can't generate a unique name for prefix: " ++ pre   -- can't happen
+
 -- | Create a new uninterpreted symbol, possibly with user given code. This function might change
 -- the name given, putting bars around it if needed. That's the name returned.
 newUninterpreted :: State -> UIName -> Maybe [String] -> SBVType -> UICodeKind -> IO String
 newUninterpreted st uiName mbArgNames t uiCode = do
 
-  uiMap <- readIORef (rUIMap st)
-
-  let candName = case uiName of
-                   UIGiven  n   -> n
-                   UIPrefix pre -> let suffix 0 = pre
-                                       suffix i = pre ++ show i
-                                   in case [cand | i <- [0::Int ..], let cand = suffix i, cand `Map.notMember` uiMap] of
-                                        (n:_) -> n
-                                        []    -> error $ "newUninterpreted: Can't generate a unique name for prefix: " ++ pre   -- can't happen
+  candName <- case uiName of
+                UIGiven  n     -> pure n
+                UIPrefix pre v -> prefixNameToUnique st pre v
 
       -- determine the final name
-      nm = case () of
+  let nm = case () of
              () | "__internal_sbv_" `isPrefixOf` candName -> candName                -- internal names go thru
                 | True                                    -> barify candName         -- surround with bars if not legitimate in SMTLib
 
       extraComment = case uiName of
-                      UIGiven  n | nm /= n                 -> " (Given: " ++ n ++ ")"
-                      UIPrefix n | not (nm `isPrefixOf` n) -> " (Given prefix: " ++ n ++ ")"
-                      _                                    -> ""
+                      UIGiven  n   | nm /= n                 -> " (Given: " ++ n ++ ")"
+                      UIPrefix n _ | not (nm `isPrefixOf` n) -> " (Given prefix: " ++ n ++ ")"
+                      _                                      -> ""
 
   -- Check if reserved:
   when (isReserved nm) $
@@ -1393,6 +1366,7 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                           ++ "      Previously used at: " ++ show t'
         | True    = cont
 
+  uiMap <- readIORef (rUIMap st)
   case nm `Map.lookup` uiMap of
     Just (_, _, t') -> checkType t' (return ())
     Nothing         -> modifyState st rUIMap (Map.insert nm (isCurried, mbArgNames, t))
@@ -1515,13 +1489,6 @@ registerLabel whence st nm
           else modifyState st rUsedLbls (Set.insert nm) (return ())
 
   where err w = error $ "SBV (" ++ whence ++ "): " ++ show nm ++ " " ++ w
-
--- We need to auto-generate certain functions, so keep track of them here
-registerSpecialFunction :: State -> SeqHO -> IO ()
-registerSpecialFunction st o =
-  do progInfo <- readIORef (rProgInfo (getRootState st))
-     let upd p@ProgInfo{progSpecialFuncs} = p{progSpecialFuncs = o : progSpecialFuncs}
-     unless (o `elem` progSpecialFuncs progInfo) $ modifyState st rProgInfo upd (pure ())
 
 -- | Create a new constant; hash-cons as necessary
 newConst :: State -> CV -> IO SV
@@ -1824,7 +1791,6 @@ mkNewState cfg currentRunMode = liftIO $ do
      progInfo           <- newIORef ProgInfo { hasQuants         = False
                                              , progSpecialRels   = []
                                              , progTransClosures = []
-                                             , progSpecialFuncs  = []
                                              }
      rm                 <- newIORef currentRunMode
      ctr                <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
@@ -2269,10 +2235,9 @@ data SMTConfig = SMTConfig {
 
 -- | Configuration for TP
 data TPOptions = TPOptions {
-         ribbonLength      :: Int  -- ^ Line length for TP proofs
-       , firstifyUniqueLen :: Int  -- ^ Unique length used for firstified names.
-       , quiet             :: Bool -- ^ No messages what-so-ever for successful steps. (Will print if something fails)
-       , measureTime       :: Bool -- ^ Print time/statistics. If quiet is True, then measureTime is ignored.
+         ribbonLength :: Int  -- ^ Line length for TP proofs
+       , quiet        :: Bool -- ^ No messages what-so-ever for successful steps. (Will print if something fails)
+       , measureTime  :: Bool -- ^ Print time/statistics. If quiet is True, then measureTime is ignored.
        }
 
 -- | Ignore internal names and those the user told us to

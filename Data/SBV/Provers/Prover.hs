@@ -106,10 +106,9 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , solverSetOptions            = startOpts
                                             , ignoreExitCode              = False
                                             , redirectVerbose             = Nothing
-                                            , tpOptions                   = TPOptions { ribbonLength      = 40
-                                                                                      , firstifyUniqueLen = 6
-                                                                                      , quiet             = False
-                                                                                      , measureTime       = False
+                                            , tpOptions                   = TPOptions { ribbonLength = 40
+                                                                                      , quiet        = False
+                                                                                      , measureTime  = False
                                                                                       }
                                             }
 

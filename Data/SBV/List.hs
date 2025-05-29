@@ -56,9 +56,6 @@ import qualified Prelude as P
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
-import Data.SBV.Core.Symbolic (registerSpecialFunction)
-
-import Data.SBV.Lambda
 
 import Data.SBV.Tuple hiding (fst, snd)
 
@@ -483,9 +480,7 @@ reverse l
   | Just l' <- unliteral l
   = literal (P.reverse l')
   | True
-  = rev l
-  where rev = smtFunction (atProxy (Proxy @a) "sbv.reverse") $
-                          \xs -> ite (null xs) nil (let (h, t) = uncons xs in rev t ++ singleton h)
+  = sbvReverse l
 
 -- | @`map` f s@ maps the operation on to sequence.
 --
@@ -510,23 +505,14 @@ map f l
   | Just l' <- unliteral l, Just concResult <- concreteMap l'
   = literal concResult
   | True
-  = SBV $ SVal klb $ Right $ cache r
+  = sbvMap f l
   where concreteMap l' = case P.map (unliteral . f . literal) l' of
                            xs | P.any isNothing xs -> Nothing
                               | True               -> Just (catMaybes xs)
 
-        ka  = kindOf (Proxy @a)
-        kb  = kindOf (Proxy @b)
-        klb = kindOf (Proxy @(SList b))
-        r st = do sva <- sbvToSV st l
-                  lam <- lambdaStr st HigherOrderArg kb f
-                  let op = SBVMap ka kb lam
-                  registerSpecialFunction st op
-                  newExpr st klb (SBVApp (SeqOp (SeqHO op)) [sva])
-
 -- | @concatMap f xs@ maps f over elements and concats the result.
 concatMap :: (SymVal a, SymVal b) => (SBV a -> SList b) -> SList a -> SList b
-concatMap f xs = concat (map f xs)
+concatMap f = concat . map f
 
 -- | @`foldl` f base s@ folds the from the left.
 --
@@ -547,20 +533,11 @@ foldl f base l
   | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldl base' l'
   = literal concResult
   | True
-  = SBV $ SVal kb $ Right $ cache r
+  = sbvFoldl f base l
   where concreteFoldl b []     = Just b
         concreteFoldl b (e:es) = case unliteral (literal b `f` literal e) of
                                    Nothing -> Nothing
                                    Just b' -> concreteFoldl b' es
-
-        ka = kindOf (Proxy @a)
-        kb = kindOf (Proxy @b)
-        r st = do svb <- sbvToSV st base
-                  svl <- sbvToSV st l
-                  lam <- lambdaStr st HigherOrderArg kb f
-                  let op = SBVFoldl ka kb lam
-                  registerSpecialFunction st op
-                  newExpr st kb (SBVApp (SeqOp (SeqHO op)) [svb, svl])
 
 -- | @`foldr` f base s@ folds the sequence from the right.
 --
@@ -575,20 +552,11 @@ foldr f base l
   | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldr base' l'
   = literal concResult
   | True
-  = SBV $ SVal kb $ Right $ cache r
+  = sbvFoldr f base l
   where concreteFoldr b []     = Just b
         concreteFoldr b (e:es) = case concreteFoldr b es of
                                    Nothing  -> Nothing
                                    Just res -> unliteral (literal e `f` literal res)
-
-        ka = kindOf (Proxy @a)
-        kb = kindOf (Proxy @b)
-        r st = do svb <- sbvToSV st base
-                  svl <- sbvToSV st l
-                  lam <- lambdaStr st HigherOrderArg kb f
-                  let op = SBVFoldr ka kb lam
-                  registerSpecialFunction st op
-                  newExpr st kb (SBVApp (SeqOp (SeqHO op)) [svb, svl])
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
@@ -603,11 +571,7 @@ zip xs ys
  | Just xs' <- unliteral xs, Just ys' <- unliteral ys
  = literal $ P.zip xs' ys'
  | True
- = z xs ys
- where z = smtFunction (atProxy (Proxy @a) "sbv.zip") $
-                       \as bs -> ite (null as .|| null bs)
-                                     nil
-                                     (tuple (head as, head bs) .: z (tail as) (tail bs))
+ = sbvZip xs ys
 
 -- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
 -- The length of the final list is the minumum of the lengths of the given lists.
@@ -621,22 +585,10 @@ zipWith f xs ys
  | Just xs' <- unliteral xs, Just ys' <- unliteral ys, Just concResult <- concreteZipWith xs' ys'
  = literal concResult
  | True
- = SBV $ SVal kr $ Right $ cache r
+ = sbvZipWith f xs ys
  where concreteZipWith []     _      = Just []
        concreteZipWith _      []     = Just []
        concreteZipWith (a:as) (b:bs) = (:) <$> unliteral (literal a `f` literal b) <*> concreteZipWith as bs
-
-       ka = kindOf (Proxy @a)
-       kb = kindOf (Proxy @b)
-       kc = kindOf (Proxy @c)
-       kr = KList kc
-
-       r st = do svxs <- sbvToSV st xs
-                 svys <- sbvToSV st ys
-                 lam <- lambdaStr st HigherOrderArg kc f
-                 let op = SBVZipWith ka kb kc lam
-                 registerSpecialFunction st op
-                 newExpr st kr (SBVApp (SeqOp (SeqHO op)) [svxs, svys])
 
 -- | Concatenate list of lists.
 --
@@ -647,9 +599,7 @@ concat l
   | Just l' <- unliteral l
   = literal (P.concat l')
   | True
-  = c l
-  where c = smtFunction (atProxy (Proxy @a) "sbv.concat") $
-                        \xs -> ite (null xs) nil (let (h, t) = uncons xs in h ++ c t)
+  = sbvConcat l
 
 -- | Check all elements satisfy the predicate.
 --
@@ -663,12 +613,7 @@ all f l
  | Just l' <- unliteral l
  = sAll f (P.map literal l')
  | True
- = SBV $ SVal KBool $ Right $ cache r
- where r st = do sva <- sbvToSV st l
-                 lam <- lambdaStr st HigherOrderArg KBool f
-                 let op = SBVAll (kindOf (Proxy @a)) lam
-                 registerSpecialFunction st op
-                 newExpr st KBool (SBVApp (SeqOp (SeqHO op)) [sva])
+ = sbvAll f l
 
 -- | Check some element satisfies the predicate.
 --
@@ -682,12 +627,7 @@ any f l
  | Just l' <- unliteral l
  = sAny f (P.map literal l')
  | True
- = SBV $ SVal KBool $ Right $ cache r
- where r st = do sva <- sbvToSV st l
-                 lam <- lambdaStr st HigherOrderArg KBool f
-                 let op = SBVAny (kindOf (Proxy @a)) lam
-                 registerSpecialFunction st op
-                 newExpr st KBool (SBVApp (SeqOp (SeqHO op)) [sva])
+ = sbvAny f l
 
 -- | Conjunction of all the elements.
 and :: SList Bool -> SBool
@@ -708,9 +648,7 @@ replicate c e
  | Just c' <- unliteral c, Just e' <- unliteral e
  = literal (genericReplicate c' e')
  | True
- = r c e
- where r = smtFunction (atProxy (Proxy @a) "sbv.replicate") $
-                       \count elt -> ite (count .<= 0) nil (elt .: r (count - 1) elt)
+ = sbvReplicate c e
 
 -- | Difference.
 --
@@ -723,12 +661,7 @@ xs \\ ys
  | Just xs' <- unliteral xs, Just ys' <- unliteral ys
  = literal (xs' L.\\ ys')
  | True
- = f xs ys
- where f = smtFunction (atProxy (Proxy @a) "sbv.\\\\") $
-                       \x y -> ite (null x) nil
-                                   (let (h, t) = uncons x
-                                        r      = f t y
-                                    in ite (h `elem` y) r (h .: r))
+ = sbvDiff xs ys
 infix 5 \\  -- CPP: do not eat the final newline
 
 -- | @filter f xs@ filters the list with the given predicate.
@@ -742,17 +675,10 @@ filter f l
   | Just l' <- unliteral l, Just concResult <- concreteFilter l'
   = literal concResult
   | True
-  = SBV $ SVal k $ Right $ cache r
+  = sbvFilter f l
   where concreteFilter l' = case P.map (unliteral . f . literal) l' of
                               xs | P.any isNothing xs -> Nothing
                                  | True               -> Just [e | (True, e) <- P.zip (catMaybes xs) l']
-
-        k = kindOf (Proxy @(SList a))
-        r st = do sva <- sbvToSV st l
-                  lam <- lambdaStr st HigherOrderArg KBool f
-                  let op = SBVFilter (kindOf (Proxy @a)) lam
-                  registerSpecialFunction st op
-                  newExpr st k (SBVApp (SeqOp (SeqHO op)) [sva])
 
 -- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
 -- first element, and those that don't in the second.
@@ -761,20 +687,11 @@ partition f l
   | Just l' <- unliteral l, Just concResult <- concretePartition l'
   = concResult
   | True
-  = SBV $ SVal k $ Right $ cache r
+  = sbvPartition f l
   where concretePartition l' = case P.map (unliteral . f . literal) l' of
                                  xs | P.any isNothing xs -> Nothing
                                     | True               -> let (ts, fs) = L.partition fst (P.zip (catMaybes xs) l')
                                                             in Just $ tuple (literal (P.map snd ts), literal (P.map snd fs))
-
-
-        k = kindOf (Proxy @(STuple [a] [a]))
-
-        r st = do sva <- sbvToSV st l
-                  lam <- lambdaStr st HigherOrderArg KBool f
-                  let op = SBVPartition (kindOf (Proxy @a)) lam
-                  registerSpecialFunction st op
-                  newExpr st k (SBVApp (SeqOp (SeqHO op)) [sva])
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
@@ -873,3 +790,89 @@ lift1Str w mbOp a
   where k = kindOf (Proxy @b)
         r st = do sva <- sbvToSV st a
                   newExpr st k (SBVApp (StrOp w) [sva])
+
+-- | reverse as SMT function.
+sbvReverse :: forall a. SymVal a => SList a -> SList a
+sbvReverse = smtFunction (atProxy (Proxy @a) "sbv.reverse") $
+                         \xs -> ite (null xs) nil (let (h, t) = uncons xs in sbvReverse t ++ singleton h)
+
+-- | map as SMT function, specialized to the given function.
+sbvMap :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
+sbvMap f = def
+ where def = smtFunction (atProxy (Proxy @(a, b)) "sbv.map") $
+                         \xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: def t)
+
+-- | filter as SMT function, specialized to the given function.
+sbvFilter :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SList a
+sbvFilter f = def
+ where def = smtFunction (atProxy (Proxy @a) "sbv.filter") $
+                         \xs -> ite (null xs)
+                                    nil
+                                    (let (h, t) = uncons xs
+                                         r      = def t
+                                     in ite (f h) (h .: r) r)
+
+-- | foldl as SMT function, specialized to the fiven function.
+sbvFoldl :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
+sbvFoldl f = def
+  where def = smtFunction (atProxy (Proxy @(a, b)) "sbv.foldl") $
+                          \e xs -> ite (null xs) e (let (h, t) = uncons xs in def (e `f` h) t)
+
+
+-- | foldr as SMT function, specialized to the fiven function.
+sbvFoldr :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+sbvFoldr f = def
+  where def = smtFunction (atProxy (Proxy @(a, b)) "sbv.foldr") $
+                          \e xs -> ite (null xs) e (let (h, t) = uncons xs in h `f` def e t)
+
+-- | zip as an SMT function
+sbvZip :: forall a b. (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
+sbvZip = smtFunction (atProxy (Proxy @(a, b)) "sbv.zip") $
+                     \as bs -> ite (null as .|| null bs) nil (tuple (head as, head bs) .: sbvZip (tail as) (tail bs))
+
+-- | zipWith as an SMT function
+sbvZipWith :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
+sbvZipWith f = def
+  where def = smtFunction (atProxy (Proxy @(a, b, c)) "sbv.zipWith") $
+                          \as bs -> ite (null as .|| null bs) nil (f (head as) (head bs) .: def (tail as) (tail bs))
+
+-- | concat as an SMT function
+sbvConcat :: forall a. SymVal a => SList [a] -> SList a
+sbvConcat = smtFunction (atProxy (Proxy @a) "sbv.concat") $
+                        \xs -> ite (null xs) nil (let (h, t) = uncons xs in h ++ sbvConcat t)
+
+-- | replicate as an SMT function
+sbvReplicate :: forall a. SymVal a => SInteger -> SBV a -> SList a
+sbvReplicate = smtFunction (atProxy (Proxy @a) "sbv.replicate") $
+                          \count elt -> ite (count .<= 0) nil (elt .: sbvReplicate (count - 1) elt)
+
+-- | (\\) as an SMT function
+sbvDiff :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SList a
+sbvDiff = smtFunction (atProxy (Proxy @a) "sbv.diff") $
+                      \x y -> ite (null x)
+                                  nil
+                                  (let (h, t) = uncons x
+                                       r      = sbvDiff t y
+                                   in ite (h `elem` y) r (h .: r))
+
+-- | partition as an SMT function
+sbvPartition :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> STuple [a] [a]
+sbvPartition f = def
+  where def = smtFunction (atProxy (Proxy @a) "sbv.partition") $
+                          \xs -> ite (null xs)
+                                     (tuple (nil, nil))
+                                     (let (h, t)   = uncons xs
+                                          (as, bs) = untuple $ def t
+                                      in ite (f h)
+                                             (tuple (h .: as, bs))
+                                             (tuple (as, h .: bs)))
+
+-- | all as an SMT function
+sbvAll :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SBool
+sbvAll f = def
+  where def = smtFunction (atProxy (Proxy @a) "sbv.all") $ \xs -> ite (null xs) sTrue (let (h, t) = uncons xs in f h .&& def t)
+
+-- | any as an SMT function
+sbvAny :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SBool
+sbvAny f = def
+  where def = smtFunction (atProxy (Proxy @a) "sbv.all") $ \xs -> ite (null xs) sFalse (let (h, t) = uncons xs in f h .|| def t)

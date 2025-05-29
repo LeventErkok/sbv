@@ -97,7 +97,6 @@ Library
                   , async               >= 2.2.5
                   , bytestring
                   , base16-bytestring
-                  , cryptohash-sha512
                   , containers
                   , deepseq
                   , directory
