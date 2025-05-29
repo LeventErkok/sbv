@@ -29,26 +29,12 @@ import Data.SBV.Tools.TP
 -- >>> notDiv3
 -- Lemma: case_n_mod_3_eq_0
 --   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: case_n_mod_3_eq_1
 --   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: case_n_mod_3_eq_2
 --   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: notDiv3
 --   Step: 1 (3 way case split)
@@ -66,48 +52,27 @@ notDiv3 = runTP $ do
 
    -- Do the proof in 3 phases; one each for the possible value of n `mod` 3 being 0, 1, and 2
    -- Note that we use the euclidian definition of division/modulus.
-
    let case0 n = n `sEMod` 3 .== 0
        case1 n = n `sEMod` 3 .== 1
        case2 n = n `sEMod` 3 .== 2
 
+   -- In each case, we grab the witness that makes the case true, and z3 can handle
+   -- the rest by itself.
+
    -- Case 0: n = 0 (mod 3)
    c0 <- calc "case_n_mod_3_eq_0"
               (\(Forall @"n" n) -> case0 n .=> p n) $
-              \n -> [case0 n] |- s n
-                              =: let w = some "witness" $ \k -> n .== 3*k  -- Grab the witness for the case
-                              in s (3*w)
-                              =: s (3*w)
-                              =: 2*(3*w)*(3*w) + 3*w + 1
-                              =: 18*w*w + 3*w + 1
-                              =: 3*(6*w*w + w) + 1
-                              =: qed
+              \n -> [case0 n] |- s n =: s (0 + 3 * (some "k" $ \k -> n .== 3*k+0)) =: qed
 
    -- Case 1: n = 1 (mod 3)
    c1 <- calc "case_n_mod_3_eq_1"
               (\(Forall @"n" n) -> case1 n .=> p n) $
-              \n -> [case1 n] |- s n
-                              =: let w = some "witness" $ \k -> n .== 3*k+1  -- Grab the witness for n being 1 modulo 3
-                              in s (3*w+1)
-                              =: 2*(3*w+1)*(3*w+1) + (3*w+1) + 1
-                              =: 2*(9*w*w + 3*w + 3*w + 1) + (3*w + 1) + 1
-                              =: 18*w*w + 12*w + 2 + 3*w + 2
-                              =: 18*w*w + 15*w + 4
-                              =: 3*(6*w*w + 5*w + 1) + 1
-                              =: qed
+              \n -> [case1 n] |- s n =: s (1 + 3 * (some "k" $ \k -> n .== 3*k+1)) =: qed
 
    -- Case 2: n = 2 (mod 3)
    c2 <- calc "case_n_mod_3_eq_2"
               (\(Forall @"n" n) -> case2 n .=> p n) $
-              \n -> [case2 n] |- s n
-                              =: let w = some "witness" $ \k -> n .== 3*k+2 -- Grab the witness for n being 2 modulo 3
-                              in s (3*w+2)
-                              =: 2*(3*w+2)*(3*w+2) + (3*w+2) + 1
-                              =: 2*(9*w*w + 6*w + 6*w + 4) + (3*w + 2) + 1
-                              =: 18*w*w + 24*w + 8 + 3*w + 3
-                              =: 18*w*w + 27*w + 11
-                              =: 3*(6*w*w + 9*w + 3) + 2
-                              =: qed
+              \n -> [case2 n] |- s n =: s (2 + 3 * (some "k" $ \k -> n .== 3*k+2)) =: qed
 
    calc "notDiv3"
         (\(Forall @"n" n) -> p n) $
