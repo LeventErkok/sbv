@@ -95,8 +95,6 @@ Library
   build-depends   : QuickCheck
                   , array
                   , async               >= 2.2.5
-                  , bytestring
-                  , base16-bytestring
                   , containers
                   , deepseq
                   , directory
@@ -306,7 +304,6 @@ Test-Suite SBVTest
   type             : exitcode-stdio-1.0
   ghc-options      : -with-rtsopts=-K64m
   build-depends   : QuickCheck
-                  , bytestring
                   , containers
                   , deepseq
                   , directory
