@@ -145,6 +145,7 @@ mkDistro:
 
 fullRelease: veryclean checkExtensions install docs testsuite
 	@echo "*** SBV is ready for release!"
+	git status
 
 release:
 	$(TIME) make fullRelease
