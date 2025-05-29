@@ -71,7 +71,7 @@ import Data.SBV.Char
 -- $setup
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Char
--- >>> import Data.SBV.String
+-- >>> import Data.SBV.List
 -- >>> import Prelude hiding (length, take, elem, notElem, head)
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables

@@ -57,7 +57,7 @@ import Data.SBV.List (isInfixOf, singleton)
 #ifdef DOCTEST
 -- $setup
 -- >>> import Data.SBV
--- >>> import Data.SBV.String (isInfixOf, singleton)
+-- >>> import Data.SBV.List (isInfixOf, singleton)
 -- >>> import Prelude hiding(elem, notElem)
 -- >>> :set -XOverloadedStrings
 #endif

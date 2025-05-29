@@ -853,7 +853,7 @@ by Rummer and Wahl: <http://www.philipp.ruemmer.org/publications/smt-fpa.pdf>.
 Support for characters, strings, and regular expressions (initial version contributed by Joel Burget)
 adds support for QF_S logic, described here: <https://smt-lib.org/theories-UnicodeStrings.shtml>
 
-See "Data.SBV.Char", "Data.SBV.String", "Data.SBV.RegExp" for related functions.
+See "Data.SBV.Char", "Data.SBV.List", "Data.SBV.RegExp" for related functions.
 -}
 
 {- $lists
