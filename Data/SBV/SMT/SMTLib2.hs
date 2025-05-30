@@ -81,13 +81,10 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         (needsQuantifiers, needsSpecialRels) = case curProgInfo of
            ProgInfo hasQ srs tcs -> (hasQ, not (null srs && null tcs))
 
-        hasLambdas = False
-
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
         doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not (have solverCaps)]
            where checks = [ ("data types",             supportsDataTypes,          hasTuples || hasEither || hasMaybe)
-                          , ("needs lambdas",          supportsLambdas,            hasLambdas)
                           , ("set operations",         supportsSets,               hasSets)
                           , ("bit vectors",            supportsBitVectors,         hasBVs)
                           , ("special relations",      supportsSpecialRels,        needsSpecialRels)
@@ -102,14 +99,16 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                           , "***     But the chosen solver (" ++ show (name (solver cfg)) ++ ") doesn't support this feature."
                           ]
 
-        -- Some cases require all, some require none. Sigh.. Also, if there're lambdas CVC5 needs HO_ALL
-        setAll reason = ["(set-logic " ++ allName ++ ") ; "  ++ reason ++ ", using catch-all."]
-          where allName | hasLambdas && isCVC5 = "HO_ALL"
-                        | True                 = "ALL"
+        -- Some cases require all, some require none.
+        setAll reason = ["(set-logic " ++ showLogic Logic_ALL ++ ") ; "  ++ reason ++ ", using catch-all."]
 
-                isCVC5 = case name (solver cfg) of
-                           CVC5 -> True
-                           _    -> False
+        isCVC5 = case name (solver cfg) of
+                   CVC5 -> True
+                   _    -> False
+
+        -- If ALL is selected, use HO_ALL for CVC5 to get support for higher-order features. Yet another discrepancy.
+        showLogic Logic_ALL | isCVC5 = "HO_ALL"
+        showLogic l                  = show l
 
         -- Determining the logic is surprisingly tricky!
         logic
@@ -123,7 +122,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                                                 ]
            = case l of
                Logic_NONE -> ["; NB. Not setting the logic per user request of Logic_NONE"]
-               _          -> ["(set-logic " ++ show l ++ ") ; NB. User specified."]
+               _          -> ["(set-logic " ++ showLogic l ++ ") ; NB. User specified."]
 
            -- There's a reason why we can't handle this problem:
            | Just cantDo <- doesntHandle
@@ -144,7 +143,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
            | needsSpecialRels      = ["; has special relations, no logic set."]
 
            -- Things that require ALL
-           | hasLambdas            = setAll "has lambda expressions"
            | hasInteger            = setAll "has unbounded values"
            | hasRational           = setAll "has rational values"
            | hasReal               = setAll "has algebraic reals"
