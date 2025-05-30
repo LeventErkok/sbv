@@ -34,7 +34,7 @@ import Data.SBV.Tools.TP
 --   Result:                               Q.E.D.
 -- [Proven] notDiv3
 notDiv3 :: IO Proof
-notDiv3 = runTP $ do
+notDiv3 = runTPWith (tpStats z3) $ do
 
    let s n = 2 * n * n + n + 1
 

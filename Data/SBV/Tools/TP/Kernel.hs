@@ -79,10 +79,10 @@ internalAxiom nm p = Proof { dependencies = []
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> String -> a -> [Proof] -> TP Proof
-lemmaGen cfg@SMTConfig{tpOptions = TPOptions{measureTime}} tag nm inputProp by = do
+lemmaGen cfg@SMTConfig{tpOptions = TPOptions{printStats}} tag nm inputProp by = do
         tpSt <- getTPState
         u    <- tpGetNextUnique
-        liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go tpSt u
+        liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt u
   where go tpSt u mbStartTime = do qSaturateSavingObservables inputProp
                                    mapM_ (constrain . getProof) by
                                    query $ smtProofStep cfg tpSt tag 0 (TPProofOneShot nm by) Nothing inputProp (good mbStartTime u)
@@ -128,7 +128,7 @@ smtProofStep :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    -> a                                      -- ^ what we want to prove
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{measureTime}} tpState tag level ctx mbAssumptions prop unsat = do
+smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState tag level ctx mbAssumptions prop unsat = do
 
         case mbAssumptions of
            Nothing  -> do queryDebug ["; smtProofStep: No context value to push."]
@@ -144,7 +144,7 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{measureTime}} tpState 
            -- based on the name given, and they mess with all else. So, don't skolemize!
            constrain $ sNot (quantifiedBool prop)
 
-           (mbT, r) <- timeIf measureTime checkSat
+           (mbT, r) <- timeIf printStats checkSat
 
            updStats tpState (\s -> s{noOfCheckSats = noOfCheckSats s + 1})
 

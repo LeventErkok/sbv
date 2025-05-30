@@ -2286,7 +2286,7 @@ data TPOptions = TPOptions {
          ribbonLength      :: Int  -- ^ Line length for TP proofs
        , firstifyUniqueLen :: Int  -- ^ Unique length used for firstified names.
        , quiet             :: Bool -- ^ No messages what-so-ever for successful steps. (Will print if something fails)
-       , measureTime       :: Bool -- ^ Print time/statistics. If quiet is True, then measureTime is ignored.
+       , printStats        :: Bool -- ^ Print time/statistics. If quiet is True, then measureTime is ignored.
        }
 
 -- | Ignore internal names and those the user told us to
