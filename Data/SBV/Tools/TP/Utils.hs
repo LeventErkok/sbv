@@ -26,7 +26,7 @@ module Data.SBV.Tools.TP.Utils (
        , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), getProofTree, showProofTree, showProofTreeHTML, shortProofName
-       , atProxy, tpRibbon
+       , atProxy, tpRibbon, tpStats
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -87,9 +87,9 @@ runTP = runTPWith defaultSMTCfg
 
 -- | Run a TP proof, using the given configuration.
 runTPWith :: SMTConfig -> TP a -> IO a
-runTPWith cfg@SMTConfig{tpOptions = TPOptions{measureTime}} (TP f) = do
+runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
    rStats <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0 }
-   (mbT, r) <- timeIf measureTime $ runReaderT f TPState {config = cfg, stats = rStats}
+   (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = cfg, stats = rStats}
    case mbT of
      Nothing -> pure ()
      Just t  -> do TPStats noOfCheckSats solverTime <- readIORef rStats
@@ -318,6 +318,10 @@ concludeModulo by = case foldMap rootOfTrust by of
                       RootOfTrust Nothing   -> ""
                       RootOfTrust (Just ps) -> " [Modulo: " ++ intercalate ", " (map shortProofName ps) ++ "]"
 
--- | Change the size of the ribbon for TP proofs
+-- | Change the size of the ribbon for TP proofs.
 tpRibbon :: Int -> SMTConfig -> SMTConfig
 tpRibbon i cfg = cfg{tpOptions = (tpOptions cfg) { ribbonLength = i }}
+
+-- | Make TP proofs produce statistics.
+tpStats :: SMTConfig -> SMTConfig
+tpStats cfg = cfg{tpOptions = (tpOptions cfg) { printStats = True }}

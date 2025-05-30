@@ -32,7 +32,7 @@ module Data.SBV.Tools.TP.TP (
        ,  induct,  inductWith,  inductThm,  inductThmWith
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
-       , TP, runTP, runTPWith, tpRibbon
+       , TP, runTP, runTPWith, tpRibbon, tpStats
        , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), qed, trivial, contradiction, atProxy
        ) where
 
@@ -174,8 +174,8 @@ proveProofTree :: Proposition a
                -> Query Proof
 proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree uniq = do
 
-  let SMTConfig{tpOptions = TPOptions{measureTime}} = cfg
-  mbStartTime <- getTimeStampIf measureTime
+  let SMTConfig{tpOptions = TPOptions{printStats}} = cfg
+  mbStartTime <- getTimeStampIf printStats
 
   let next :: [Int] -> [Int]
       next bs = case reverse bs of
@@ -250,8 +250,8 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
 
            -- First prove the assumptions, if there are any. We stay quiet, unless timing is asked for
            let (quietCfg, finalizer)
-                 | measureTime = (cfg,                                              finish [] [])
-                 | True        = (cfg{tpOptions = (tpOptions cfg) { quiet = True}}, const (pure ()))
+                 | printStats = (cfg,                                              finish [] [])
+                 | True       = (cfg{tpOptions = (tpOptions cfg) { quiet = True}}, const (pure ()))
 
                as = concatMap getHelperAssumes hs
                ss = getHelperText hs
