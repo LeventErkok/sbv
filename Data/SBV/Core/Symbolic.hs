@@ -1281,8 +1281,8 @@ data UICodeKind = UINone Bool     -- no code. If bool is true, then curried.
                 | UICgC  [String] -- Code-gen, currently only C
 
 -- | Is the name given by the user for the uninterpreted constant a prefix or a full name?
-data UIName = UIGiven  String             -- ^ Full name
-            | forall a. UIPrefix String a -- ^ Prefix, with an object to create a unique number based on its hashed stable-pointer name
+data UIName = UIGiven  String -- ^ Full name
+            | UIPrefix String -- ^ Prefix, which we will make unique
 
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
@@ -1306,13 +1306,13 @@ svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
                        newExpr st k $ SBVApp (Uninterpreted nm') sws
 
 -- | Generate a unique name for the fiven function based on the object's stable name
-prefixNameToUnique :: State -> String -> a -> IO String
-prefixNameToUnique st prefix v = do
+prefixNameToUnique :: State -> String -> IO String
+prefixNameToUnique st pre = do
    uiMap <- readIORef (rUIMap st)
-   sn <- v `seq` makeStableName v
-   let pre = prefix ++ " u:" ++ show (hashStableName sn)
-       suffix 0 = pre
+
+   let suffix 0 = pre
        suffix i = pre ++ "_" ++ show i
+
    case [cand | i <- [0::Int ..], let cand = suffix i, cand `Map.notMember` uiMap] of
       (n:_) -> pure n
       []    -> error $ "genUniqueName: Can't generate a unique name for prefix: " ++ pre   -- can't happen
@@ -1323,8 +1323,8 @@ newUninterpreted :: State -> UIName -> Maybe [String] -> SBVType -> UICodeKind -
 newUninterpreted st uiName mbArgNames t uiCode = do
 
   candName <- case uiName of
-                UIGiven  n     -> pure n
-                UIPrefix pre v -> prefixNameToUnique st pre v
+                UIGiven  n   -> pure n
+                UIPrefix pre -> prefixNameToUnique st pre
 
       -- determine the final name
   let nm = case () of
@@ -1332,9 +1332,9 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                 | True                                    -> barify candName         -- surround with bars if not legitimate in SMTLib
 
       extraComment = case uiName of
-                      UIGiven  n   | nm /= n                 -> " (Given: " ++ n ++ ")"
-                      UIPrefix n _ | not (nm `isPrefixOf` n) -> " (Given prefix: " ++ n ++ ")"
-                      _                                      -> ""
+                      UIGiven  n | nm /= n                 -> " (Given: " ++ n ++ ")"
+                      UIPrefix n | not (nm `isPrefixOf` n) -> " (Given prefix: " ++ n ++ ")"
+                      _                                    -> ""
 
   -- Check if reserved:
   when (isReserved nm) $
