@@ -305,11 +305,12 @@ replicateLength p =
 -- [Proven] allAny
 allAny :: TP Proof
 allAny =
-   induct "allAny"
+   inductWith cvc5 "allAny"
           (\(Forall @"xs" xs) -> sNot (all id xs) .== any sNot xs) $
           \ih x xs -> [] |- sNot (all id (x .: xs))
                          =: sNot (x .&& all id xs)
-                         =: (sNot x .|| sNot (all id xs))   ?? ih
+                         =: (sNot x .|| sNot (all id xs))
+                         ?? ih
                          =: sNot x .|| any sNot xs
                          =: any sNot (x .: xs)
                          =: qed
