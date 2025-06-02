@@ -1,3 +1,2 @@
-; lambda45 :: SWord32 -> SWord32 -> SWord32
-(define-fun lambda45 ((l1_s0 (_ BitVec 32)) (l1_s1 (_ BitVec 32))) (_ BitVec 32)
+(lambda ((l1_s0 (_ BitVec 32)) (l1_s1 (_ BitVec 32)))
   (bvadd l1_s0 l1_s1))

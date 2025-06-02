@@ -8,7 +8,7 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has lambda expressions, using catch-all.
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
@@ -26,26 +26,9 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- Firstified function definitions
-[GOOD] ; Firstified function: map :: ((SInteger, SInteger) -> SInteger) -> [(SInteger, SInteger)] -> [SInteger]
-[GOOD] (define-fun-rec sbv.map_cb21ff ((lst (Seq (SBVTuple2 Int Int)))) (Seq Int)
-                     (ite (= lst (as seq.empty (Seq (SBVTuple2 Int Int))))
-                          (as seq.empty (Seq Int))
-                          (seq.++ (seq.unit (select (lambda ((args0 (SBVTuple2 Int Int)))
-                 (let ((args1 (proj_1_SBVTuple2 args0)))
-                 (let ((args2 (proj_2_SBVTuple2 args0)))
-                 (let ((args3 (+ args1 args2)))
-                 args3)))) (seq.nth lst 0)))
-                                  (sbv.map_cb21ff (seq.extract lst 1 (- (seq.len lst) 1))))))
-[GOOD] ; Firstified function: foldr :: (SInteger -> SInteger -> SInteger) -> SInteger -> [SInteger] -> SInteger
-[GOOD] (define-fun-rec sbv.foldr_5cb25c ((base Int) (lst (Seq Int))) Int
-                       (ite (= lst (as seq.empty (Seq Int)))
-                            base
-                            (select (lambda ((args0 Int) (args1 Int))
-         (+ args0 args1)) (seq.nth lst 0) (sbv.foldr_5cb25c base (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.zip @Integer| :: [SInteger] -> [SInteger] -> [(SInteger, SInteger)] [Recursive]
-[GOOD] (define-fun-rec |sbv.zip @Integer| ((l1_s0 (Seq Int)) (l1_s1 (Seq Int))) (Seq (SBVTuple2 Int Int))
+[GOOD] ; |sbv.zip @(Integer,Integer)| :: [SInteger] -> [SInteger] -> [(SInteger, SInteger)] [Recursive]
+[GOOD] (define-fun-rec |sbv.zip @(Integer,Integer)| ((l1_s0 (Seq Int)) (l1_s1 (Seq Int))) (Seq (SBVTuple2 Int Int))
                                  (let ((l1_s3 0))
                                  (let ((l1_s8 (as seq.empty (Seq (SBVTuple2 Int Int)))))
                                  (let ((l1_s13 1))
@@ -62,16 +45,47 @@
                                  (let ((l1_s15 (seq.extract l1_s0 l1_s13 l1_s14)))
                                  (let ((l1_s16 (- l1_s5 l1_s13)))
                                  (let ((l1_s17 (seq.extract l1_s1 l1_s13 l1_s16)))
-                                 (let ((l1_s18 (|sbv.zip @Integer| l1_s15 l1_s17)))
+                                 (let ((l1_s18 (|sbv.zip @(Integer,Integer)| l1_s15 l1_s17)))
                                  (let ((l1_s19 (seq.++ l1_s12 l1_s18)))
                                  (let ((l1_s20 (ite l1_s7 l1_s8 l1_s19)))
                                  l1_s20))))))))))))))))))))
+[GOOD] ; |sbv.map @((Integer,Integer),Integer)_1fd06f7602| :: [(SInteger, SInteger)] -> [SInteger] [Recursive]
+[GOOD] (define-fun-rec |sbv.map @((Integer,Integer),Integer)_1fd06f7602| ((l1_s0 (Seq (SBVTuple2 Int Int)))) (Seq Int)
+                                 (let ((l1_s2 0))
+                                 (let ((l1_s4 (as seq.empty (Seq Int))))
+                                 (let ((l1_s10 1))
+                                 (let ((l1_s1 (seq.len l1_s0)))
+                                 (let ((l1_s3 (= l1_s1 l1_s2)))
+                                 (let ((l1_s5 (seq.nth l1_s0 l1_s2)))
+                                 (let ((l1_s6 (proj_1_SBVTuple2 l1_s5)))
+                                 (let ((l1_s7 (proj_2_SBVTuple2 l1_s5)))
+                                 (let ((l1_s8 (+ l1_s6 l1_s7)))
+                                 (let ((l1_s9 (seq.unit l1_s8)))
+                                 (let ((l1_s11 (- l1_s1 l1_s10)))
+                                 (let ((l1_s12 (seq.extract l1_s0 l1_s10 l1_s11)))
+                                 (let ((l1_s13 (|sbv.map @((Integer,Integer),Integer)_1fd06f7602| l1_s12)))
+                                 (let ((l1_s14 (seq.++ l1_s9 l1_s13)))
+                                 (let ((l1_s15 (ite l1_s3 l1_s4 l1_s14)))
+                                 l1_s15))))))))))))))))
+[GOOD] ; |sbv.foldr @(Integer,Integer)_d8dc9e6fbd| :: SInteger -> [SInteger] -> SInteger [Recursive]
+[GOOD] (define-fun-rec |sbv.foldr @(Integer,Integer)_d8dc9e6fbd| ((l1_s0 Int) (l1_s1 (Seq Int))) Int
+                                 (let ((l1_s3 0))
+                                 (let ((l1_s6 1))
+                                 (let ((l1_s2 (seq.len l1_s1)))
+                                 (let ((l1_s4 (= l1_s2 l1_s3)))
+                                 (let ((l1_s5 (seq.nth l1_s1 l1_s3)))
+                                 (let ((l1_s7 (- l1_s2 l1_s6)))
+                                 (let ((l1_s8 (seq.extract l1_s1 l1_s6 l1_s7)))
+                                 (let ((l1_s9 (|sbv.foldr @(Integer,Integer)_d8dc9e6fbd| l1_s0 l1_s8)))
+                                 (let ((l1_s10 (+ l1_s5 l1_s9)))
+                                 (let ((l1_s11 (ite l1_s4 l1_s0 l1_s10)))
+                                 l1_s11)))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
-[GOOD] (define-fun s8 () (Seq (SBVTuple2 Int Int)) (|sbv.zip @Integer| s0 s1))
-[GOOD] (define-fun s9 () (Seq Int) (sbv.map_cb21ff s8))
-[GOOD] (define-fun s10 () Int (sbv.foldr_5cb25c s7 s9))
+[GOOD] (define-fun s8 () (Seq (SBVTuple2 Int Int)) (|sbv.zip @(Integer,Integer)| s0 s1))
+[GOOD] (define-fun s9 () (Seq Int) (|sbv.map @((Integer,Integer),Integer)_1fd06f7602| s8))
+[GOOD] (define-fun s10 () Int (|sbv.foldr @(Integer,Integer)_d8dc9e6fbd| s7 s9))
 [GOOD] (define-fun s11 () Bool (= s2 s10))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

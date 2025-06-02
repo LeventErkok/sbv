@@ -8,7 +8,7 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has lambda expressions, using catch-all.
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
@@ -25,20 +25,9 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- Firstified function definitions
-[GOOD] ; Firstified function: foldl :: (SInteger -> (SInteger, SInteger) -> SInteger) -> SInteger -> [(SInteger, SInteger)] -> SInteger
-[GOOD] (define-fun-rec sbv.foldl_7f1bfe ((base Int) (lst (Seq (SBVTuple2 Int Int)))) Int
-                       (ite (= lst (as seq.empty (Seq (SBVTuple2 Int Int))))
-                            base
-                            (sbv.foldl_7f1bfe (select (lambda ((args0 Int) (args1 (SBVTuple2 Int Int)))
-                 (let ((args2 (proj_1_SBVTuple2 args1)))
-                 (let ((args3 (+ args0 args2)))
-                 (let ((args4 (proj_2_SBVTuple2 args1)))
-                 (let ((args5 (+ args3 args4)))
-                 args5))))) base (seq.nth lst 0)) (seq.extract lst 1 (- (seq.len lst) 1)))))
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.zip @Integer| :: [SInteger] -> [SInteger] -> [(SInteger, SInteger)] [Recursive]
-[GOOD] (define-fun-rec |sbv.zip @Integer| ((l1_s0 (Seq Int)) (l1_s1 (Seq Int))) (Seq (SBVTuple2 Int Int))
+[GOOD] ; |sbv.zip @(Integer,Integer)| :: [SInteger] -> [SInteger] -> [(SInteger, SInteger)] [Recursive]
+[GOOD] (define-fun-rec |sbv.zip @(Integer,Integer)| ((l1_s0 (Seq Int)) (l1_s1 (Seq Int))) (Seq (SBVTuple2 Int Int))
                                  (let ((l1_s3 0))
                                  (let ((l1_s8 (as seq.empty (Seq (SBVTuple2 Int Int)))))
                                  (let ((l1_s13 1))
@@ -55,14 +44,30 @@
                                  (let ((l1_s15 (seq.extract l1_s0 l1_s13 l1_s14)))
                                  (let ((l1_s16 (- l1_s5 l1_s13)))
                                  (let ((l1_s17 (seq.extract l1_s1 l1_s13 l1_s16)))
-                                 (let ((l1_s18 (|sbv.zip @Integer| l1_s15 l1_s17)))
+                                 (let ((l1_s18 (|sbv.zip @(Integer,Integer)| l1_s15 l1_s17)))
                                  (let ((l1_s19 (seq.++ l1_s12 l1_s18)))
                                  (let ((l1_s20 (ite l1_s7 l1_s8 l1_s19)))
                                  l1_s20))))))))))))))))))))
+[GOOD] ; |sbv.foldl @((Integer,Integer),Integer)_be08e3a502| :: SInteger -> [(SInteger, SInteger)] -> SInteger [Recursive]
+[GOOD] (define-fun-rec |sbv.foldl @((Integer,Integer),Integer)_be08e3a502| ((l1_s0 Int) (l1_s1 (Seq (SBVTuple2 Int Int)))) Int
+                                 (let ((l1_s3 0))
+                                 (let ((l1_s10 1))
+                                 (let ((l1_s2 (seq.len l1_s1)))
+                                 (let ((l1_s4 (= l1_s2 l1_s3)))
+                                 (let ((l1_s5 (seq.nth l1_s1 l1_s3)))
+                                 (let ((l1_s6 (proj_1_SBVTuple2 l1_s5)))
+                                 (let ((l1_s7 (+ l1_s0 l1_s6)))
+                                 (let ((l1_s8 (proj_2_SBVTuple2 l1_s5)))
+                                 (let ((l1_s9 (+ l1_s7 l1_s8)))
+                                 (let ((l1_s11 (- l1_s2 l1_s10)))
+                                 (let ((l1_s12 (seq.extract l1_s1 l1_s10 l1_s11)))
+                                 (let ((l1_s13 (|sbv.foldl @((Integer,Integer),Integer)_be08e3a502| l1_s9 l1_s12)))
+                                 (let ((l1_s14 (ite l1_s4 l1_s0 l1_s13)))
+                                 l1_s14))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s6 () (Seq (SBVTuple2 Int Int)) (|sbv.zip @Integer| s5 s0))
-[GOOD] (define-fun s7 () Int (sbv.foldl_7f1bfe s4 s6))
+[GOOD] (define-fun s6 () (Seq (SBVTuple2 Int Int)) (|sbv.zip @(Integer,Integer)| s5 s0))
+[GOOD] (define-fun s7 () Int (|sbv.foldl @((Integer,Integer),Integer)_be08e3a502| s4 s6))
 [GOOD] (define-fun s8 () Bool (= s1 s7))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

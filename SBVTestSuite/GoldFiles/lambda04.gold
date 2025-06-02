@@ -8,7 +8,7 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has lambda expressions, using catch-all.
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
@@ -20,18 +20,24 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- Firstified function definitions
-[GOOD] ; Firstified function: map :: (SInteger -> SBool) -> [SInteger] -> [SBool]
-[GOOD] (define-fun-rec sbv.map_a4ae08 ((lst (Seq Int))) (Seq Bool)
-                     (ite (= lst (as seq.empty (Seq Int)))
-                          (as seq.empty (Seq Bool))
-                          (seq.++ (seq.unit (select (lambda ((args0 Int))
-                 false) (seq.nth lst 0)))
-                                  (sbv.map_a4ae08 (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
+[GOOD] ; |sbv.map @(Integer,Bool)_96a983e094| :: [SInteger] -> [SBool] [Recursive]
+[GOOD] (define-fun-rec |sbv.map @(Integer,Bool)_96a983e094| ((l1_s0 (Seq Int))) (Seq Bool)
+                                 (let ((l1_s2 0))
+                                 (let ((l1_s4 (as seq.empty (Seq Bool))))
+                                 (let ((l1_s5 (seq.unit false)))
+                                 (let ((l1_s6 1))
+                                 (let ((l1_s1 (seq.len l1_s0)))
+                                 (let ((l1_s3 (= l1_s1 l1_s2)))
+                                 (let ((l1_s7 (- l1_s1 l1_s6)))
+                                 (let ((l1_s8 (seq.extract l1_s0 l1_s6 l1_s7)))
+                                 (let ((l1_s9 (|sbv.map @(Integer,Bool)_96a983e094| l1_s8)))
+                                 (let ((l1_s10 (seq.++ l1_s5 l1_s9)))
+                                 (let ((l1_s11 (ite l1_s3 l1_s4 l1_s10)))
+                                 l1_s11))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq Bool) (sbv.map_a4ae08 s0))
+[GOOD] (define-fun s4 () (Seq Bool) (|sbv.map @(Integer,Bool)_96a983e094| s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

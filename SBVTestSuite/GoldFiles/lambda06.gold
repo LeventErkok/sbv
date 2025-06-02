@@ -8,7 +8,7 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has lambda expressions, using catch-all.
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
@@ -20,36 +20,43 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- Firstified function definitions
-[GOOD] ; Firstified function: map :: (SInteger -> SInteger) -> [SInteger] -> [SInteger]
-[GOOD] (define-fun-rec sbv.map_066528 ((lst (Seq Int))) (Seq Int)
-                     (ite (= lst (as seq.empty (Seq Int)))
-                          (as seq.empty (Seq Int))
-                          (seq.++ (seq.unit (select (lambda ((args0 Int))
-                 (let ((args1 (* args0 args0)))
-                 (let ((args2 (+ args0 args1)))
-                 (let ((args3 (* args0 args1)))
-                 (let ((args4 (+ args2 args3)))
-                 (let ((args5 (* args1 args1)))
-                 (let ((args6 (+ args4 args5)))
-                 (let ((args7 (* args0 args5)))
-                 (let ((args8 (+ args6 args7)))
-                 (let ((args9 (* args1 args5)))
-                 (let ((args10 (+ args8 args9)))
-                 (let ((args11 (* args0 args9)))
-                 (let ((args12 (+ args10 args11)))
-                 (let ((args13 (* args5 args5)))
-                 (let ((args14 (+ args12 args13)))
-                 (let ((args15 (* args0 args13)))
-                 (let ((args16 (+ args14 args15)))
-                 (let ((args17 (* args1 args13)))
-                 (let ((args18 (+ args16 args17)))
-                 args18))))))))))))))))))) (seq.nth lst 0)))
-                                  (sbv.map_066528 (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
+[GOOD] ; |sbv.map @(Integer,Integer)_b01b78a2e9| :: [SInteger] -> [SInteger] [Recursive]
+[GOOD] (define-fun-rec |sbv.map @(Integer,Integer)_b01b78a2e9| ((l1_s0 (Seq Int))) (Seq Int)
+                                 (let ((l1_s2 0))
+                                 (let ((l1_s4 (as seq.empty (Seq Int))))
+                                 (let ((l1_s25 1))
+                                 (let ((l1_s1 (seq.len l1_s0)))
+                                 (let ((l1_s3 (= l1_s1 l1_s2)))
+                                 (let ((l1_s5 (seq.nth l1_s0 l1_s2)))
+                                 (let ((l1_s6 (* l1_s5 l1_s5)))
+                                 (let ((l1_s7 (+ l1_s5 l1_s6)))
+                                 (let ((l1_s8 (* l1_s5 l1_s6)))
+                                 (let ((l1_s9 (+ l1_s7 l1_s8)))
+                                 (let ((l1_s10 (* l1_s6 l1_s6)))
+                                 (let ((l1_s11 (+ l1_s9 l1_s10)))
+                                 (let ((l1_s12 (* l1_s5 l1_s10)))
+                                 (let ((l1_s13 (+ l1_s11 l1_s12)))
+                                 (let ((l1_s14 (* l1_s6 l1_s10)))
+                                 (let ((l1_s15 (+ l1_s13 l1_s14)))
+                                 (let ((l1_s16 (* l1_s5 l1_s14)))
+                                 (let ((l1_s17 (+ l1_s15 l1_s16)))
+                                 (let ((l1_s18 (* l1_s10 l1_s10)))
+                                 (let ((l1_s19 (+ l1_s17 l1_s18)))
+                                 (let ((l1_s20 (* l1_s5 l1_s18)))
+                                 (let ((l1_s21 (+ l1_s19 l1_s20)))
+                                 (let ((l1_s22 (* l1_s6 l1_s18)))
+                                 (let ((l1_s23 (+ l1_s21 l1_s22)))
+                                 (let ((l1_s24 (seq.unit l1_s23)))
+                                 (let ((l1_s26 (- l1_s1 l1_s25)))
+                                 (let ((l1_s27 (seq.extract l1_s0 l1_s25 l1_s26)))
+                                 (let ((l1_s28 (|sbv.map @(Integer,Integer)_b01b78a2e9| l1_s27)))
+                                 (let ((l1_s29 (seq.++ l1_s24 l1_s28)))
+                                 (let ((l1_s30 (ite l1_s3 l1_s4 l1_s29)))
+                                 l1_s30)))))))))))))))))))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq Int) (sbv.map_066528 s0))
+[GOOD] (define-fun s4 () (Seq Int) (|sbv.map @(Integer,Integer)_b01b78a2e9| s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

@@ -8,7 +8,7 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has lambda expressions, using catch-all.
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
@@ -21,17 +21,23 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- Firstified function definitions
-[GOOD] ; Firstified function: foldr :: (SInteger -> SInteger -> SInteger) -> SInteger -> [SInteger] -> SInteger
-[GOOD] (define-fun-rec sbv.foldr_5cb25c ((base Int) (lst (Seq Int))) Int
-                       (ite (= lst (as seq.empty (Seq Int)))
-                            base
-                            (select (lambda ((args0 Int) (args1 Int))
-         (+ args0 args1)) (seq.nth lst 0) (sbv.foldr_5cb25c base (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
+[GOOD] ; |sbv.foldr @(Integer,Integer)_d8dc9e6fbd| :: SInteger -> [SInteger] -> SInteger [Recursive]
+[GOOD] (define-fun-rec |sbv.foldr @(Integer,Integer)_d8dc9e6fbd| ((l1_s0 Int) (l1_s1 (Seq Int))) Int
+                                 (let ((l1_s3 0))
+                                 (let ((l1_s6 1))
+                                 (let ((l1_s2 (seq.len l1_s1)))
+                                 (let ((l1_s4 (= l1_s2 l1_s3)))
+                                 (let ((l1_s5 (seq.nth l1_s1 l1_s3)))
+                                 (let ((l1_s7 (- l1_s2 l1_s6)))
+                                 (let ((l1_s8 (seq.extract l1_s1 l1_s6 l1_s7)))
+                                 (let ((l1_s9 (|sbv.foldr @(Integer,Integer)_d8dc9e6fbd| l1_s0 l1_s8)))
+                                 (let ((l1_s10 (+ l1_s5 l1_s9)))
+                                 (let ((l1_s11 (ite l1_s4 l1_s0 l1_s10)))
+                                 l1_s11)))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s5 () Int (sbv.foldr_5cb25c s4 s0))
+[GOOD] (define-fun s5 () Int (|sbv.foldr @(Integer,Integer)_d8dc9e6fbd| s4 s0))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
