@@ -8,7 +8,7 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has lambda expressions, using catch-all.
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
@@ -22,18 +22,33 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- Firstified function definitions
-[GOOD] ; Firstified function: zipWith :: (SInteger -> SInteger -> SInteger) -> [SInteger] -> [SInteger] -> [SInteger]
-[GOOD] (define-fun-rec sbv.zipWith_736833 ((lst1 (Seq Int)) (lst2 (Seq Int))) (Seq Int)
-                      (ite (or (= lst1 (as seq.empty (Seq Int))) (= lst2 (as seq.empty (Seq Int))))
-                           (as seq.empty (Seq Int))
-                           (seq.++ (seq.unit (select (lambda ((args0 Int) (args1 Int))
-         (+ args0 args1)) (seq.nth lst1 0) (seq.nth lst2 0))) (sbv.zipWith_736833 (seq.extract lst1 1 (- (seq.len lst1) 1)) (seq.extract lst2 1 (- (seq.len lst2) 1))))))
 [GOOD] ; --- user defined functions ---
+[GOOD] ; |sbv.zipWith @(Integer,Integer,Integer)_d8dc9e6fbd| :: [SInteger] -> [SInteger] -> [SInteger] [Recursive]
+[GOOD] (define-fun-rec |sbv.zipWith @(Integer,Integer,Integer)_d8dc9e6fbd| ((l1_s0 (Seq Int)) (l1_s1 (Seq Int))) (Seq Int)
+                                 (let ((l1_s3 0))
+                                 (let ((l1_s8 (as seq.empty (Seq Int))))
+                                 (let ((l1_s13 1))
+                                 (let ((l1_s2 (seq.len l1_s0)))
+                                 (let ((l1_s4 (= l1_s2 l1_s3)))
+                                 (let ((l1_s5 (seq.len l1_s1)))
+                                 (let ((l1_s6 (= l1_s3 l1_s5)))
+                                 (let ((l1_s7 (or l1_s4 l1_s6)))
+                                 (let ((l1_s9 (seq.nth l1_s0 l1_s3)))
+                                 (let ((l1_s10 (seq.nth l1_s1 l1_s3)))
+                                 (let ((l1_s11 (+ l1_s9 l1_s10)))
+                                 (let ((l1_s12 (seq.unit l1_s11)))
+                                 (let ((l1_s14 (- l1_s2 l1_s13)))
+                                 (let ((l1_s15 (seq.extract l1_s0 l1_s13 l1_s14)))
+                                 (let ((l1_s16 (- l1_s5 l1_s13)))
+                                 (let ((l1_s17 (seq.extract l1_s1 l1_s13 l1_s16)))
+                                 (let ((l1_s18 (|sbv.zipWith @(Integer,Integer,Integer)_d8dc9e6fbd| l1_s15 l1_s17)))
+                                 (let ((l1_s19 (seq.++ l1_s12 l1_s18)))
+                                 (let ((l1_s20 (ite l1_s7 l1_s8 l1_s19)))
+                                 l1_s20))))))))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
-[GOOD] (define-fun s7 () (Seq Int) (sbv.zipWith_736833 s0 s1))
+[GOOD] (define-fun s7 () (Seq Int) (|sbv.zipWith @(Integer,Integer,Integer)_d8dc9e6fbd| s0 s1))
 [GOOD] (define-fun s8 () Bool (= s2 s7))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

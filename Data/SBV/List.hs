@@ -602,7 +602,7 @@ zipWith f xs ys
  | Just xs' <- unliteral xs, Just ys' <- unliteral ys, Just concResult <- concreteZipWith xs' ys'
  = literal concResult
  | True
- = SBV $ SVal (kindOf (Proxy @c)) $ firstify (sbvZipWith, atProxy (Proxy @(a, b, c)) "sbv.zipWith") (f, kindOf (Proxy @c))
+ = SBV $ SVal (kindOf (Proxy @(SList c))) $ firstify (sbvZipWith, atProxy (Proxy @(a, b, c)) "sbv.zipWith") (f, kindOf (Proxy @c))
  where concreteZipWith []     _      = Just []
        concreteZipWith _      []     = Just []
        concreteZipWith (a:as) (b:bs) = (:) <$> unliteral (literal a `f` literal b) <*> concreteZipWith as bs
