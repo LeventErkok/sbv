@@ -651,7 +651,7 @@ any f l
  | Just l' <- unliteral l
  = sAny f (P.map literal l')
  | True
- = SBV $ SVal KBool $ firstify (sbvAny, atProxy (Proxy @a) "sbv.all") (f, KBool)
+ = SBV $ SVal KBool $ firstify (sbvAny, atProxy (Proxy @a) "sbv.any") (f, KBool)
  where sbvAny uniq = def l
         where def = smtFunction uniq $ \xs -> ite (null xs) sFalse (let (h, t) = uncons xs in f h .|| def t)
 
