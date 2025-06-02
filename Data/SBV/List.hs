@@ -492,7 +492,7 @@ reverse l
 mkHO :: Lambda Symbolic r => (String -> SBV a, String) -> (r, Kind) -> Either b (Cached SV)
 mkHO (f, prefix) (farg, kfres) = Right $ cache r
  where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg kfres farg
-                 sbvToSV st (f (prefix <> (unwords (words lam))))
+                 sbvToSV st (f (prefix <> " def: " <> (unwords (words lam))))
 
 -- | @`map` f s@ maps the operation on to sequence.
 --
