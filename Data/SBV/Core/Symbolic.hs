@@ -1280,9 +1280,9 @@ data UICodeKind = UINone Bool     -- no code. If bool is true, then curried.
                 | UISMT  SMTDef   -- SMTLib, first argument are the free-variables in it
                 | UICgC  [String] -- Code-gen, currently only C
 
--- | Is the name given by the user for the uninterpreted constant a prefix or a full name?
-data UIName = UIGiven  String -- ^ Full name
-            | UIPrefix String -- ^ Prefix, which we will make unique
+-- | A newtype wrapper for uninterpreted function names. This is in preparation
+-- for a possibility of having other alternatives here, which we haven't needed so far.
+newtype UIName = UIGiven String -- ^ Full name
 
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
@@ -1323,8 +1323,7 @@ newUninterpreted :: State -> UIName -> Maybe [String] -> SBVType -> UICodeKind -
 newUninterpreted st uiName mbArgNames t uiCode = do
 
   candName <- case uiName of
-                UIGiven  n   -> pure n
-                UIPrefix pre -> prefixNameToUnique st pre
+                UIGiven n -> pure n
 
       -- determine the final name
   let nm = case () of
@@ -1332,9 +1331,8 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                 | True                                    -> barify candName         -- surround with bars if not legitimate in SMTLib
 
       extraComment = case uiName of
-                      UIGiven  n | nm /= n                 -> " (Given: " ++ n ++ ")"
-                      UIPrefix n | not (nm `isPrefixOf` n) -> " (Given prefix: " ++ n ++ ")"
-                      _                                    -> ""
+                      UIGiven  n | nm /= n -> " (Given: " ++ n ++ ")"
+                      _                    -> ""
 
   -- Check if reserved:
   when (isReserved nm) $

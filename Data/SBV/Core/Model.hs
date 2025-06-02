@@ -2527,10 +2527,10 @@ class SMTDefinable a where
   {-# MINIMAL sbvDefineValue, sbv2smt #-}
 
   -- defaults:
-  uninterpret         nm         = sbvDefineValue (UIGiven  nm) Nothing   $ UIFree True
-  uninterpretWithArgs nm  as     = sbvDefineValue (UIGiven  nm) (Just as) $ UIFree True
-  smtFunction         nm       v = sbvDefineValue (UIPrefix nm) Nothing   $ UIFun   (v, \st fk -> lambda st TopLevel fk v)
-  cgUninterpret       nm  code v = sbvDefineValue (UIGiven  nm) Nothing   $ UICodeC (v, code)
+  uninterpret         nm         = sbvDefineValue (UIGiven nm) Nothing   $ UIFree True
+  uninterpretWithArgs nm  as     = sbvDefineValue (UIGiven nm) (Just as) $ UIFree True
+  smtFunction         nm       v = sbvDefineValue (UIGiven nm) Nothing   $ UIFun   (v, \st fk -> lambda st TopLevel fk v)
+  cgUninterpret       nm  code v = sbvDefineValue (UIGiven nm) Nothing   $ UICodeC (v, code)
   sym                            = uninterpret
 
   default registerFunction :: forall b c. (a ~ (SBV b -> c), SymVal b, SMTDefinable c) => a -> Symbolic ()
@@ -2551,8 +2551,6 @@ data UIKind a = UIFree  Bool                            -- ^ completely uninterp
 -- Get the code associated with the UI, unless we've already did this once. (To support recursive defs.)
 retrieveUICode :: UIName -> State -> Kind -> UIKind a -> IO UICodeKind
 retrieveUICode _             _  _  (UIFree  c)      = pure $ UINone c
-retrieveUICode (UIPrefix nm) st fk ui               = do nm' <- prefixNameToUnique st nm
-                                                         retrieveUICode (UIGiven nm') st fk ui
 retrieveUICode (UIGiven  nm) st fk (UIFun   (_, f)) = do userFuncs <- readIORef (rUserFuncs st)
                                                          if nm `Set.member` userFuncs
                                                             then pure $ UINone True
