@@ -24,7 +24,7 @@
 
 module TestSuite.Basics.Lambda(tests)  where
 
-import Prelude hiding((++), map, foldl, foldr, sum, length, zip, zipWith, all, any, concat, filter)
+import Prelude hiding((++), map, foldl, foldr, sum, length, zip, zipWith, all, any, concat, filter, head)
 import qualified Prelude as P
 
 import Control.Monad (unless, void)
@@ -235,7 +235,8 @@ tests =
 
       , goldenCapturedIO "lambda79" $ \f -> sbv2smt def_t1 >>= writeFile f
       , goldenCapturedIO "lambda80" $ \f -> sbv2smt def_t2 >>= writeFile f
-      , goldenCapturedIO "lambda81" $ errorOut freeVar1
+      , goldenCapturedIO "lambda81" $ errorOut noNested
+      , goldenCapturedIO "lambda82" $ errorOut noFreeVars
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
@@ -375,13 +376,19 @@ errorOut t rf = void (t z3{verbose=True, redirectVerbose=Just rf})
                     `C.catch` \(e::C.SomeException) -> do appendFile rf "CAUGHT EXCEPTION\n\n"
                                                           appendFile rf (show e)
 
--- Don't allow free variables in higher-order functions. Firstification can't handle these.
-freeVar1 :: SMTConfig -> IO SatResult
-freeVar1 cfg = satWith cfg $ do
+-- Don't allow nested definitions. We can't handle such definitions as we firstify these.
+noNested :: SMTConfig -> IO SatResult
+noNested cfg = satWith cfg $ do
         zs <- free_
         xs <- free_
         constrain $ xs .== literal [1,2,3::Integer]
         pure $ zs .== map (\x -> map (\y -> x+y) (literal [3,4,5])) xs
+
+-- Don't allow free variables in higher-order functions. Firstification can't handle these.
+noFreeVars :: SMTConfig -> IO SatResult
+noFreeVars cfg = satWith cfg $ do
+        xs :: SList Integer <- free_
+        pure $ filter (.> (head xs)) xs .== filter (.> 4) xs
 
 {- HLint ignore module "Use map once"   -}
 {- HLint ignore module "Use sum"        -}

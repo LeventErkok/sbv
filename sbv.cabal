@@ -304,6 +304,7 @@ Test-Suite SBVTest
   type             : exitcode-stdio-1.0
   ghc-options      : -with-rtsopts=-K64m
   build-depends   : QuickCheck
+                  , bytestring
                   , containers
                   , deepseq
                   , directory
