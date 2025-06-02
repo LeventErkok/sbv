@@ -1978,7 +1978,7 @@ liftDMod x y
 -- uses "truncate to 0" for quotRem, and "truncate to negative infinity" for divMod.
 -- So, we cannot just use the above liftings directly.
 instance SDivisible SInteger where
-  sDivMod = liftDMod
+  sDivMod x y = ite (y .> 0) (sEDivMod x y) (liftDMod x y)
   sQuotRem x y
     | not (isSymbolic x || isSymbolic y)
     = liftQRem x y
