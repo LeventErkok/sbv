@@ -685,7 +685,6 @@ replicate c e
  where def = smtFunction (atProxy (Proxy @a) "sbv.replicate") $
                          \count elt -> ite (count .<= 0) nil (elt .: def (count - 1) elt)
 
-
 -- | Difference.
 --
 -- >>> [1, 2] \\ [3, 4]
@@ -728,6 +727,7 @@ filter f l
                                                     (let (h, t) = uncons xs
                                                          r      = def t
                                                      in ite (f h) (h .: r) r)
+
 -- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
 -- first element, and those that don't in the second.
 partition :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> STuple [a] [a]
