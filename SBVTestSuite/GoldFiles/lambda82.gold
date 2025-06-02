@@ -1,0 +1,16 @@
+CAUGHT EXCEPTION
+
+
+*** Data.SBV.Lambda: Detected free variables passed to a lambda.
+***
+***  Free vars : s0
+***  Definition: (lambda ((args0 Int))
+***                        (let ((args1 0))
+***                        (let ((args2 (seq.nth s0 args1)))
+***                        (let ((args3 (> args0 args2)))
+***                        args3))))
+***
+*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in.
+***
+*** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible.
+*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements.
