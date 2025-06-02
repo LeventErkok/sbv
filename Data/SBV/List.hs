@@ -57,7 +57,6 @@ import qualified Prelude as P
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
-import Data.SBV.Core.Symbolic
 
 import Data.SBV.Lambda
 
@@ -488,12 +487,6 @@ reverse l
   where def = smtFunction (atProxy (Proxy @a) "sbv.reverse") $
                           \xs -> ite (null xs) nil (let (h, t) = uncons xs in def t ++ singleton h)
 
--- | Higher-order helper. Creates a unique name using the lambda and passes it along.
-mkHO :: Lambda Symbolic r => (String -> SBV a, String) -> (r, Kind) -> Either b (Cached SV)
-mkHO (f, prefix) (farg, kfres) = Right $ cache r
- where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg kfres farg
-                 sbvToSV st (f (prefix <> " def: " <> (unwords (words lam))))
-
 -- | @`map` f s@ maps the operation on to sequence.
 --
 -- >>> map (+1) [1 .. 5 :: Integer]
@@ -518,7 +511,7 @@ map f l
   = literal concResult
   | True
   = SBV $ SVal (kindOf (Proxy @(SList b)))
-        $ mkHO (sbvMap, atProxy (Proxy @(a, b)) "sbv.map") (f, kindOf (Proxy @b))
+        $ firstify (sbvMap, atProxy (Proxy @(a, b)) "sbv.map") (f, kindOf (Proxy @b))
   where concreteMap l' = case P.map (unliteral . f . literal) l' of
                            xs | P.any isNothing xs -> Nothing
                               | True               -> Just (catMaybes xs)
@@ -549,7 +542,7 @@ foldl f base l
   | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldl base' l'
   = literal concResult
   | True
-  = SBV $ SVal (kindOf (Proxy @b)) $ mkHO (sbvFoldl, atProxy (Proxy @(a, b)) "sbv.foldl") (f, kindOf (Proxy @b))
+  = SBV $ SVal (kindOf (Proxy @b)) $ firstify (sbvFoldl, atProxy (Proxy @(a, b)) "sbv.foldl") (f, kindOf (Proxy @b))
   where concreteFoldl b []     = Just b
         concreteFoldl b (e:es) = case unliteral (literal b `f` literal e) of
                                    Nothing -> Nothing
@@ -571,7 +564,7 @@ foldr f base l
   | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldr base' l'
   = literal concResult
   | True
-  = SBV $ SVal (kindOf (Proxy @b)) $ mkHO (sbvFoldr, atProxy (Proxy @(a, b)) "sbv.foldr") (f, kindOf (Proxy @b))
+  = SBV $ SVal (kindOf (Proxy @b)) $ firstify (sbvFoldr, atProxy (Proxy @(a, b)) "sbv.foldr") (f, kindOf (Proxy @b))
   where concreteFoldr b []     = Just b
         concreteFoldr b (e:es) = case concreteFoldr b es of
                                    Nothing  -> Nothing
@@ -609,7 +602,7 @@ zipWith f xs ys
  | Just xs' <- unliteral xs, Just ys' <- unliteral ys, Just concResult <- concreteZipWith xs' ys'
  = literal concResult
  | True
- = SBV $ SVal (kindOf (Proxy @c)) $ mkHO (sbvZipWith, atProxy (Proxy @(a, b, c)) "sbv.zipWith") (f, kindOf (Proxy @c))
+ = SBV $ SVal (kindOf (Proxy @c)) $ firstify (sbvZipWith, atProxy (Proxy @(a, b, c)) "sbv.zipWith") (f, kindOf (Proxy @c))
  where concreteZipWith []     _      = Just []
        concreteZipWith _      []     = Just []
        concreteZipWith (a:as) (b:bs) = (:) <$> unliteral (literal a `f` literal b) <*> concreteZipWith as bs
@@ -642,7 +635,7 @@ all f l
  | Just l' <- unliteral l
  = sAll f (P.map literal l')
  | True
- = SBV $ SVal KBool $ mkHO (sbvAll, atProxy (Proxy @a) "sbv.all") (f, KBool)
+ = SBV $ SVal KBool $ firstify (sbvAll, atProxy (Proxy @a) "sbv.all") (f, KBool)
  where sbvAll uniq = def l
         where def = smtFunction uniq $ \xs -> ite (null xs) sTrue (let (h, t) = uncons xs in f h .&& def t)
 
@@ -658,7 +651,7 @@ any f l
  | Just l' <- unliteral l
  = sAny f (P.map literal l')
  | True
- = SBV $ SVal KBool $ mkHO (sbvAny, atProxy (Proxy @a) "sbv.all") (f, KBool)
+ = SBV $ SVal KBool $ firstify (sbvAny, atProxy (Proxy @a) "sbv.all") (f, KBool)
  where sbvAny uniq = def l
         where def = smtFunction uniq $ \xs -> ite (null xs) sFalse (let (h, t) = uncons xs in f h .|| def t)
 
@@ -716,7 +709,7 @@ filter f l
   | Just l' <- unliteral l, Just concResult <- concreteFilter l'
   = literal concResult
   | True
-  = SBV $ SVal (kindOf (Proxy @(SList a))) $ mkHO (sbvFilter, atProxy (Proxy @a) "sbv.filter") (f, KBool)
+  = SBV $ SVal (kindOf (Proxy @(SList a))) $ firstify (sbvFilter, atProxy (Proxy @a) "sbv.filter") (f, KBool)
   where concreteFilter l' = case P.map (unliteral . f . literal) l' of
                               xs | P.any isNothing xs -> Nothing
                                  | True               -> Just [e | (True, e) <- P.zip (catMaybes xs) l']
@@ -735,7 +728,7 @@ partition f l
   | Just l' <- unliteral l, Just concResult <- concretePartition l'
   = concResult
   | True
-  = SBV $ SVal (kindOf (Proxy @(STuple [a] [a]))) $ mkHO (sbvPartition, atProxy (Proxy @a) "sbv.partition") (f, KBool)
+  = SBV $ SVal (kindOf (Proxy @(STuple [a] [a]))) $ firstify (sbvPartition, atProxy (Proxy @a) "sbv.partition") (f, KBool)
   where concretePartition l' = case P.map (unliteral . f . literal) l' of
                                  xs | P.any isNothing xs -> Nothing
                                     | True               -> let (ts, fs) = L.partition fst (P.zip (catMaybes xs) l')
