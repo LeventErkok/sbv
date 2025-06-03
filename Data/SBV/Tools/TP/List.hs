@@ -64,6 +64,9 @@ module Data.SBV.Tools.TP.List (
    -- * Counting elements
    , count, countAppend, takeDropCount, countNonNeg, countElem, elemCount
 
+   -- * Disjointness
+   , disjoint, disjointDiff
+
    -- * Interleaving
    , interleave, uninterleave, interleaveLen, interleaveRoundTrip
  ) where
@@ -937,6 +940,26 @@ diffDiff p =
                                                      ]
                           ]
 
+-- | @disjoint as bs .=> as \\ bs == as@
+--
+-- >>> runTP $ disjointDiff (Proxy @Integer)
+-- Inductive lemma: disjointDiff @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] disjointDiff @Integer
+disjointDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+disjointDiff p =
+   induct (atProxy p "disjointDiff")
+          (\(Forall @"as" (as :: SList a)) (Forall @"bs" bs) -> disjoint as bs .=> as \\ bs .== as) $
+          \ih (a :: SBV a) as bs -> [disjoint (a .: as) bs]
+                                 |- (a .: as) \\ bs
+                                 =: a .: (as \\ bs)
+                                 ?? ih
+                                 =: a .: as
+                                 =: qed
+
 -- | @fst (partition f xs) == filter f xs@
 --
 -- >>> runTP $ partition1 @Integer (uninterpret "f")
@@ -1325,6 +1348,10 @@ count = smtFunction "count" $ \e l -> ite (null l)
                                           (let (x, xs) = uncons l
                                                cxs     = count e xs
                                            in ite (e .== x) (1 + cxs) cxs)
+
+-- | Are the two lists disjoint?
+disjoint :: (Eq a, SymVal a) => SList a -> SList a -> SBool
+disjoint = smtFunction "disjoint" $ \xs ys -> null xs .|| head xs `notElem` ys .&& disjoint (tail xs) ys
 
 -- | Interleave the elements of two lists. If one ends, we take the rest from the other.
 interleave :: SymVal a => SList a -> SList a -> SList a
