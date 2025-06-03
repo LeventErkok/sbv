@@ -3396,7 +3396,7 @@ smtHOFunction nm f hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cach
   where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg (resKindOf (kindOf (Proxy @f))) f
                   let uniqLen = firstifyUniqueLen $ stCfg st
                       uniq    = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
-                  sbvToSV st (smtFunction (atProxy (Proxy @(a, b, f)) nm <> "_" <> uniq) hof arg)
+                  sbvToSV st (smtFunction (atProxy (Proxy @f) nm <> "_" <> uniq) hof arg)
 
         -- we get the functions as arrays here, so chase to find the result
         resKindOf (KArray _ k) = resKindOf k

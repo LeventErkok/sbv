@@ -67,7 +67,6 @@ import Data.List (genericLength, genericIndex, genericDrop, genericTake, generic
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf, partition, (\\))
 
 import Data.Proxy
-import Data.SBV.Utils.Lib (atProxy)
 
 #ifdef DOCTEST
 -- $setup
@@ -482,8 +481,7 @@ reverse l
   = literal (P.reverse l')
   | True
   = def l
-  where def = smtFunction (atProxy (Proxy @a) "sbv.reverse") $
-                          \xs -> ite (null xs) nil (let (h, t) = uncons xs in def t ++ singleton h)
+  where def = smtFunction "sbv.reverse" $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in def t ++ singleton h)
 
 -- | @`map` f s@ maps the operation on to sequence.
 --
@@ -591,8 +589,7 @@ zip xs ys
  = literal $ P.zip xs' ys'
  | True
  = def xs ys
- where def = smtFunction (atProxy (Proxy @(a, b)) "sbv.zip") $
-                         \as bs -> ite (null as .|| null bs) nil (tuple (head as, head bs) .: def (tail as) (tail bs))
+ where def = smtFunction "sbv.zip" $ \as bs -> ite (null as .|| null bs) nil (tuple (head as, head bs) .: def (tail as) (tail bs))
 
 -- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
 -- The length of the final list is the minumum of the lengths of the given lists.
@@ -664,8 +661,7 @@ replicate c e
  = literal (genericReplicate c' e')
  | True
  = def c e
- where def = smtFunction (atProxy (Proxy @a) "sbv.replicate") $
-                         \count elt -> ite (count .<= 0) nil (elt .: def (count - 1) elt)
+ where def = smtFunction "sbv.replicate" $ \count elt -> ite (count .<= 0) nil (elt .: def (count - 1) elt)
 
 -- | Difference.
 --
@@ -679,12 +675,11 @@ xs \\ ys
  = literal (xs' L.\\ ys')
  | True
  = def xs ys
- where def = smtFunction (atProxy (Proxy @a) "sbv.diff") $
-                         \x y -> ite (null x)
-                                     nil
-                                     (let (h, t) = uncons x
-                                          r      = def t y
-                                      in ite (h `elem` y) r (h .: r))
+ where def = smtFunction "sbv.diff" $ \x y -> ite (null x)
+                                                  nil
+                                                  (let (h, t) = uncons x
+                                                       r      = def t y
+                                                   in ite (h `elem` y) r (h .: r))
 infix 5 \\  -- CPP: do not eat the final newline
 
 -- | @filter f xs@ filters the list with the given predicate.
