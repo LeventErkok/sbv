@@ -683,7 +683,7 @@ replicate c e
 -- [[]] :: [[SInteger]]
 -- >>> inits [1,2,3,4::Integer]
 -- [[],[1],[1,2],[1,2,3],[1,2,3,4]] :: [[SInteger]]
-inits :: forall a. (Eq a, SymVal a) => SList a -> SList [a]
+inits :: forall a. SymVal a => SList a -> SList [a]
 inits xs
  | Just xs' <- unliteral xs
  = literal (L.inits xs')
@@ -697,7 +697,7 @@ inits xs
 -- [[]] :: [[SInteger]]
 -- >>> tails [1,2,3,4::Integer]
 -- [[1,2,3,4],[2,3,4],[3,4],[4],[]] :: [[SInteger]]
-tails :: forall a. (Eq a, SymVal a) => SList a -> SList [a]
+tails :: forall a. SymVal a => SList a -> SList [a]
 tails xs
  | Just xs' <- unliteral xs
  = literal (L.tails xs')
