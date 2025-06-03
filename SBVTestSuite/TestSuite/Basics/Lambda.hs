@@ -388,7 +388,7 @@ noNested cfg = satWith cfg $ do
 noFreeVars :: SMTConfig -> IO SatResult
 noFreeVars cfg = satWith cfg $ do
         xs :: SList Integer <- free_
-        pure $ filter (.> (head xs)) xs .== filter (.> 4) xs
+        pure $ filter (.> head xs) xs .== filter (.> 4) xs
 
 {- HLint ignore module "Use map once"   -}
 {- HLint ignore module "Use sum"        -}
