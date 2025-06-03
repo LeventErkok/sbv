@@ -108,7 +108,7 @@ inArray arr (low, high) elt = quantifiedBool $ \(Exists @"i" i) -> low .<= i .&&
 --   Result:                                         Q.E.D.
 -- [Proven] bsearchCorrect
 correctness :: IO Proof
-correctness = runTPWith (tpRibbon 50 z3) $ do
+correctness = runTPWith (tpRibbon 50 cvc5) $ do
 
   -- Helper: if a value is not in a range, then it isn't in any subrange of it:
   notInRange <- lemma "notInRange"
