@@ -4,7 +4,7 @@
 [GOOD] (set-option :global-declarations true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic ALL) ; has algebraic reals, using catch-all.
+[GOOD] (set-logic HO_ALL) ; has algebraic reals, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---

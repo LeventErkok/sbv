@@ -19,17 +19,6 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; -- string/sequence converters
-[GOOD] (define-fun-rec sbv.str2Seq ((str String)) (Seq String)
-                                   (ite (= str "") (as seq.empty (Seq String))
-                                                   (seq.++ (seq.unit (str.substr str 0 1))
-                                                           (sbv.str2Seq (str.substr str 1 (- (str.len str) 1))))))
-[GOOD] (define-fun-rec sbv.seq2Str ((seq (Seq String))) String
-                                   (ite (= seq (as seq.empty (Seq String)))
-                                               ""
-                                               (str.++ (seq.nth seq 0)
-                                                       (sbv.seq2Str (seq.extract seq 1 (- (seq.len seq) 1))))))
-
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () String (str.++ s2 s0))
