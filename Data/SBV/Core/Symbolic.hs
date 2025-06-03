@@ -1876,11 +1876,12 @@ contextMismatchError ctx1 ctx2 level1 level2 = error $ unlines msg
                              , "*** Please avoid such nested calls, all interactions should be from the same context."
                              , "*** See https://github.com/LeventErkok/sbv/issues/71 for several examples."
                              ]
-            | True         = [ "Data.SBV: Mismatched levels detected in the same context."
-                             , "***"
-                             , "***   Refers to: " ++ show level1
-                             , "***   And also : " ++ show level2
-                             , "***"
+            | True         = "Data.SBV: Mismatched levels detected in the same context."
+                           : concat [[ "***"
+                                     , "***   Refers to: " ++ show level1
+                                     , "***   And also : " ++ show level2
+                                     ] | level1 /= level2]
+                          ++ [ "***"
                              , "*** A typical reason for this is the use of a higher order function, typically from"
                              , "*** Data.SBV.List, with a lambda that refers to a free variable. (For instance calling"
                              , "*** 'f e xs = filter (.> e) xs' where 'x' is free in the lambda-expression '(.> e)'.)"
