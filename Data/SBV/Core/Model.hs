@@ -2468,7 +2468,7 @@ class SMTDefinable a where
   -- But the ergonomics of that is worse, and doesn't fit with the general design philosophy. If you
   -- can think of a solution (perhaps using some nifty GHC tricks?) to avoid this issue without making
   -- 'smtFunction' return a monadic result, please get in touch!
-  smtFunction :: Lambda Symbolic a => String -> a -> a
+  smtFunction :: (Typeable a, Lambda Symbolic a) => String -> a -> a
 
   -- | Register a function. This function is typically not needed as SBV will register functions used
   -- automatically upon first use. However, there are scenarios (in particular query contexts)
@@ -2534,9 +2534,10 @@ class SMTDefinable a where
   -- defaults:
   uninterpret         nm         = sbvDefineValue (UIGiven nm) Nothing   $ UIFree True
   uninterpretWithArgs nm  as     = sbvDefineValue (UIGiven nm) (Just as) $ UIFree True
-  smtFunction         nm       v = sbvDefineValue (UIGiven nm) Nothing   $ UIFun   (v, \st fk -> lambda st TopLevel fk v)
   cgUninterpret       nm  code v = sbvDefineValue (UIGiven nm) Nothing   $ UICodeC (v, code)
   sym                            = uninterpret
+
+  smtFunction nm v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing $ UIFun (v, \st fk -> lambda st TopLevel fk v)
 
   default registerFunction :: forall b c. (a ~ (SBV b -> c), SymVal b, SMTDefinable c) => a -> Symbolic ()
   registerFunction f = do let k = kindOf (Proxy @b)
