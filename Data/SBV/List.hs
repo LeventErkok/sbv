@@ -53,8 +53,11 @@ module Data.SBV.List (
         -- * Filtering
         , filter, partition
 
-        -- * Other list functions
-        , all, any, and, or, replicate
+        -- * Predicate transformers
+        , all, any, and, or
+
+        -- * Generators
+        , replicate, inits, tails
 
         -- * Conversion between strings and naturals
         , strToNat, natToStr
@@ -75,7 +78,7 @@ import Data.Maybe (isNothing, catMaybes)
 import qualified Data.Char as C
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake, genericReplicate)
-import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf, partition, (\\))
+import qualified Data.List as L (inits, tails, isSuffixOf, isPrefixOf, isInfixOf, partition, (\\))
 
 import Data.Proxy
 
@@ -673,6 +676,34 @@ replicate c e
  | True
  = def c e
  where def = smtFunction "sbv.replicate" $ \count elt -> ite (count .<= 0) nil (elt .: def (count - 1) elt)
+
+-- | inits of a list.
+--
+-- >>> inits ([] :: SList Integer)
+-- [[]] :: [[SInteger]]
+-- >>> inits [1,2,3,4::Integer]
+-- [[],[1],[1,2],[1,2,3],[1,2,3,4]] :: [[SInteger]]
+inits :: forall a. (Eq a, SymVal a) => SList a -> SList [a]
+inits xs
+ | Just xs' <- unliteral xs
+ = literal (L.inits xs')
+ | True
+ = def xs
+ where def = smtFunction "sbv.inits" $ \l -> ite (null l) (singleton nil) (def (init l) ++ singleton xs)
+
+-- | tails of a list.
+--
+-- >>> tails ([] :: SList Integer)
+-- [[]] :: [[SInteger]]
+-- >>> tails [1,2,3,4::Integer]
+-- [[1,2,3,4],[2,3,4],[3,4],[4],[]] :: [[SInteger]]
+tails :: forall a. (Eq a, SymVal a) => SList a -> SList [a]
+tails xs
+ | Just xs' <- unliteral xs
+ = literal (L.tails xs')
+ | True
+ = def xs
+ where def = smtFunction "sbv.tails" $ \l -> ite (null l) (singleton nil) (singleton xs ++ def (tail l))
 
 -- | Difference.
 --
