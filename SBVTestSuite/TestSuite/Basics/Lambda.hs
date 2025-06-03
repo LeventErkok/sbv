@@ -118,11 +118,11 @@ tests =
 
       , goldenCapturedIO "lambda26" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]]) (concat, P.concat)
 
-      -- , goldenCapturedIO "lambda27" $ eval1 [2, 4, 6,    8, 10 :: Integer] (all (\x -> x `sMod` 2 .== 0), P.all (\x -> x `mod` 2 == 0))
-      -- , goldenCapturedIO "lambda28" $ eval1 [2, 4, 6, 1, 8, 10 :: Integer] (all (\x -> x `sMod` 2 .== 0), P.all (\x -> x `mod` 2 == 0))
+      , goldenCapturedIO "lambda27" $ eval1 [2, 4, 6,    8, 10 :: Integer] (all (\x -> x `sMod` 2 .== 0), P.all (\x -> x `mod` 2 == 0))
+      , goldenCapturedIO "lambda28" $ eval1 [2, 4, 6, 1, 8, 10 :: Integer] (all (\x -> x `sMod` 2 .== 0), P.all (\x -> x `mod` 2 == 0))
 
-      -- , goldenCapturedIO "lambda29" $ eval1 [2, 4, 6,    8, 10 :: Integer] (any (\x -> x `sMod` 2 ./= 0), P.any (\x -> x `mod` 2 /= 0))
-      -- , goldenCapturedIO "lambda30" $ eval1 [2, 4, 6, 1, 8, 10 :: Integer] (any (\x -> x `sMod` 2 .== 0), P.any (\x -> x `mod` 2 == 0))
+      , goldenCapturedIO "lambda29" $ eval1 [2, 4, 6,    8, 10 :: Integer] (any (\x -> x `sMod` 2 ./= 0), P.any (\x -> x `mod` 2 /= 0))
+      , goldenCapturedIO "lambda30" $ eval1 [2, 4, 6, 1, 8, 10 :: Integer] (any (\x -> x `sMod` 2 .== 0), P.any (\x -> x `mod` 2 == 0))
 
       , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
       , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
