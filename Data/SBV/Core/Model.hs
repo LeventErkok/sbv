@@ -57,6 +57,7 @@ module Data.SBV.Core.Model (
   , zeroExtend, signExtend
   , sbvQuickCheck
   , readArray, writeArray, lambdaArray, listArray
+  , smtHOFunction
   )
   where
 
@@ -90,7 +91,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as Set
 
 import Data.Proxy
-import Data.Dynamic (fromDynamic, toDyn)
+import Data.Dynamic (fromDynamic, toDyn, Typeable)
 
 import Test.QuickCheck                         (Testable(..), Arbitrary(..))
 import qualified Test.QuickCheck.Test    as QC (isSuccess)
@@ -118,6 +119,10 @@ import Data.IORef (readIORef, writeIORef)
 import Data.SBV.Utils.Lib
 
 -- Symbolic-Word class instances
+
+import Crypto.Hash.SHA512 (hash)
+import qualified Data.ByteString.Base16 as B
+import qualified Data.ByteString.Char8  as BC
 
 -- | Generate a variable, named
 genVar :: MonadSymbolic m => VarContext -> Kind -> String -> m (SBV a)
@@ -3366,6 +3371,35 @@ lambdaArray f = SBV . SVal k . Right $ cache g
 -- | Turn a constant association-list and a default into a symbolic array.
 listArray :: (SymVal a, SymVal b) => [(a, b)] -> b -> SArray a b
 listArray ascs def = literal $ ArrayModel ascs def
+
+-- | Define a higher-order function. Similar to 'smtFunction', but when we have a higher-order argument.
+smtHOFunction :: forall a b f.
+                 ( SMTDefinable (a -> SBV b)
+                 , Lambda Symbolic f
+                 , Lambda Symbolic (a -> SBV b)
+                 , HasKind b
+                 , HasKind f
+                 , Typeable a
+                 , Typeable b
+                 , Typeable f
+                 ) => String                       -- prefix to use
+                   -> f                            -- The higher-order argument. We're very generic here!
+                   -> ((a -> SBV b) -> a -> SBV b) -- The ho-function we're modeling, taking itself for recursion
+                   -> a -> SBV b
+smtHOFunction nm f hof = firstify . flip (recurse hof)
+  where recurse d uniq = def uniq
+           where def u = smtFunction uniq (d (def u))  -- tie the knot!
+
+        firstify recf = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cache calcRes
+         where calcRes st = do
+                 SMTLambda lam <- lambdaStr st HigherOrderArg (resKindOf (kindOf (Proxy @f))) f
+                 let uniqLen = firstifyUniqueLen $ stCfg st
+                     uniq    = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
+                 sbvToSV st (recf (atProxy (Proxy @(a, b, f)) nm <> "_" <> uniq))
+
+        -- we get the functions as arrays here, so chase to find the result
+        resKindOf (KArray _ k) = resKindOf k
+        resKindOf k            = k
 
 {- HLint ignore module "Reduce duplication"   -}
 {- HLint ignore module "Eta reduce"           -}

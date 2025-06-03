@@ -16,6 +16,7 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
@@ -23,7 +24,6 @@
 module Data.SBV.Lambda (
             lambda,      lambdaStr
           , constraint,  constraintStr
-          , firstify
           , LambdaScope(..)
         ) where
 
@@ -46,10 +46,6 @@ import qualified Data.Foldable as F
 import qualified Data.Set      as Set
 
 import qualified Data.Generics.Uniplate.Data as G
-
-import Crypto.Hash.SHA512 (hash)
-import qualified Data.ByteString.Base16 as B
-import qualified Data.ByteString.Char8  as BC
 
 -- | What's the scope of the generated lambda?
 data LambdaScope = HigherOrderArg   -- This lambda will be firstified, hence can't have any free variables
@@ -425,14 +421,5 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                            ++ show x ++ space
                                            ++ chain (i+1) xs
                                            ++ ")"
-
--- | Higher-order creation helper. Creates a unique name using the lambda and passes it along, effectively
--- firstifying the lambda-argument.
-firstify :: Lambda Symbolic r => (String -> SBV a, String) -> (r, Kind) -> Either b (Cached SV)
-firstify (f, prefix) (farg, kfres) = Right $ cache r
- where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg kfres farg
-                 let uniqLen = firstifyUniqueLen $ stCfg st
-                     uniq    = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
-                 sbvToSV st (f (prefix <> "_" <> uniq))
 
 {- HLint ignore module "Use second" -}

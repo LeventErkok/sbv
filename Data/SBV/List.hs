@@ -58,8 +58,6 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 
-import Data.SBV.Lambda
-
 import Data.SBV.Tuple hiding (fst, snd)
 
 import Data.Maybe (isNothing, catMaybes)
@@ -510,14 +508,12 @@ map f l
   | Just l' <- unliteral l, Just concResult <- concreteMap l'
   = literal concResult
   | True
-  = SBV $ SVal (kindOf (Proxy @(SList b)))
-        $ firstify (sbvMap, atProxy (Proxy @(a, b)) "sbv.map") (f, kindOf (Proxy @b))
+  = sbvMap l
   where concreteMap l' = case P.map (unliteral . f . literal) l' of
                            xs | P.any isNothing xs -> Nothing
                               | True               -> Just (catMaybes xs)
 
-        sbvMap uniq = def l
-          where def = smtFunction uniq $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: def t)
+        sbvMap = smtHOFunction "sbv.map" f $ \rec xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: rec t)
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
 concatMap :: (SymVal a, SymVal b) => (SBV a -> SList b) -> SList a -> SList b
@@ -542,14 +538,18 @@ foldl f base l
   | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldl base' l'
   = literal concResult
   | True
-  = SBV $ SVal (kindOf (Proxy @b)) $ firstify (sbvFoldl, atProxy (Proxy @(a, b)) "sbv.foldl") (f, kindOf (Proxy @b))
+  = sbvFoldl $ tuple (base, l)
   where concreteFoldl b []     = Just b
         concreteFoldl b (e:es) = case unliteral (literal b `f` literal e) of
                                    Nothing -> Nothing
                                    Just b' -> concreteFoldl b' es
 
-        sbvFoldl uniq = def base l
-          where def = smtFunction uniq $ \e xs -> ite (null xs) e (let (h, t) = uncons xs in def (e `f` h) t)
+        sbvFoldl = smtHOFunction "sbv.foldl" (uncurry f . untuple)
+                 $ \rec exs -> let (e, xs) = untuple exs
+                                   (h, t)  = uncons xs
+                               in ite (null xs)
+                                      e
+                                      (rec (tuple (e `f` h, t)))
 
 -- | @`foldr` f base s@ folds the sequence from the right.
 --
@@ -564,14 +564,18 @@ foldr f base l
   | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldr base' l'
   = literal concResult
   | True
-  = SBV $ SVal (kindOf (Proxy @b)) $ firstify (sbvFoldr, atProxy (Proxy @(a, b)) "sbv.foldr") (f, kindOf (Proxy @b))
+  = sbvFoldr $ tuple (base, l)
   where concreteFoldr b []     = Just b
         concreteFoldr b (e:es) = case concreteFoldr b es of
                                    Nothing  -> Nothing
                                    Just res -> unliteral (literal e `f` literal res)
 
-        sbvFoldr uniq = def base l
-          where def = smtFunction uniq $ \e xs -> ite (null xs) e (let (h, t) = uncons xs in h `f` def e t)
+        sbvFoldr = smtHOFunction "sbv.foldr" (uncurry f . untuple)
+                 $ \rec exs -> let (e, xs) = untuple exs
+                                   (h, t)  = uncons xs
+                               in ite (null xs)
+                                      e
+                                      (h `f` rec (tuple (e, t)))
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
@@ -602,13 +606,16 @@ zipWith f xs ys
  | Just xs' <- unliteral xs, Just ys' <- unliteral ys, Just concResult <- concreteZipWith xs' ys'
  = literal concResult
  | True
- = SBV $ SVal (kindOf (Proxy @(SList c))) $ firstify (sbvZipWith, atProxy (Proxy @(a, b, c)) "sbv.zipWith") (f, kindOf (Proxy @c))
+ = sbvZipWith $ tuple (xs, ys)
  where concreteZipWith []     _      = Just []
        concreteZipWith _      []     = Just []
        concreteZipWith (a:as) (b:bs) = (:) <$> unliteral (literal a `f` literal b) <*> concreteZipWith as bs
 
-       sbvZipWith uniq = def xs ys
-         where def = smtFunction uniq $ \as bs -> ite (null as .|| null bs) nil (f (head as) (head bs) .: def (tail as) (tail bs))
+       sbvZipWith = smtHOFunction "sbv.zipWith" (uncurry f . untuple)
+                  $ \rec asbs -> let (as, bs) = untuple asbs
+                                 in ite (null as .|| null bs)
+                                        nil
+                                        (f (head as) (head bs) .: rec (tuple (tail as, tail bs)))
 
 -- | Concatenate list of lists.
 --
@@ -691,17 +698,16 @@ filter f l
   | Just l' <- unliteral l, Just concResult <- concreteFilter l'
   = literal concResult
   | True
-  = SBV $ SVal (kindOf (Proxy @(SList a))) $ firstify (sbvFilter, atProxy (Proxy @a) "sbv.filter") (f, KBool)
+  = sbvFilter l
   where concreteFilter l' = case P.map (unliteral . f . literal) l' of
                               xs | P.any isNothing xs -> Nothing
                                  | True               -> Just [e | (True, e) <- P.zip (catMaybes xs) l']
 
-        sbvFilter uniq = def l
-          where def = smtFunction uniq $ \xs -> ite (null xs)
-                                                    nil
-                                                    (let (h, t) = uncons xs
-                                                         r      = def t
-                                                     in ite (f h) (h .: r) r)
+        sbvFilter = smtHOFunction "sbv.filter" f $ \rec xs -> ite (null xs)
+                                                                  nil
+                                                                  (let (h, t) = uncons xs
+                                                                       r      = rec t
+                                                                   in ite (f h) (h .: r) r)
 
 -- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
 -- first element, and those that don't in the second.
@@ -710,20 +716,19 @@ partition f l
   | Just l' <- unliteral l, Just concResult <- concretePartition l'
   = concResult
   | True
-  = SBV $ SVal (kindOf (Proxy @(STuple [a] [a]))) $ firstify (sbvPartition, atProxy (Proxy @a) "sbv.partition") (f, KBool)
+  = sbvPartition l
   where concretePartition l' = case P.map (unliteral . f . literal) l' of
                                  xs | P.any isNothing xs -> Nothing
                                     | True               -> let (ts, fs) = L.partition fst (P.zip (catMaybes xs) l')
                                                             in Just $ tuple (literal (P.map snd ts), literal (P.map snd fs))
 
-        sbvPartition uniq = def l
-           where def = smtFunction uniq $ \xs -> ite (null xs)
-                                                     (tuple (nil, nil))
-                                                     (let (h, t)   = uncons xs
-                                                          (as, bs) = untuple $ def t
-                                                      in ite (f h)
-                                                             (tuple (h .: as, bs))
-                                                             (tuple (as, h .: bs)))
+        sbvPartition = smtHOFunction "sbv.partition" f $ \rec xs -> ite (null xs)
+                                                                        (tuple (nil, nil))
+                                                                        (let (h, t)   = uncons xs
+                                                                             (as, bs) = untuple $ rec t
+                                                                         in ite (f h)
+                                                                                (tuple (h .: as, bs))
+                                                                                (tuple (as, h .: bs)))
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
