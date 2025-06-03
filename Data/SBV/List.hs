@@ -631,13 +631,7 @@ concat l
 -- >>> all isEven [2, 4, 6, 1, 8, 10 :: Integer]
 -- False
 all :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SBool
-all f l
- | Just l' <- unliteral l
- = sAll f (P.map literal l')
- | True
- = SBV $ SVal KBool $ firstify (sbvAll, atProxy (Proxy @a) "sbv.all") (f, KBool)
- where sbvAll uniq = def l
-        where def = smtFunction uniq $ \xs -> ite (null xs) sTrue (let (h, t) = uncons xs in f h .&& def t)
+all f = foldr ((.&&) . f) sTrue
 
 -- | Check some element satisfies the predicate.
 --
@@ -647,13 +641,7 @@ all f l
 -- >>> any isEven [2, 4, 6, 1, 8, 10 :: Integer]
 -- True
 any :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SBool
-any f l
- | Just l' <- unliteral l
- = sAny f (P.map literal l')
- | True
- = SBV $ SVal KBool $ firstify (sbvAny, atProxy (Proxy @a) "sbv.any") (f, KBool)
- where sbvAny uniq = def l
-        where def = smtFunction uniq $ \xs -> ite (null xs) sFalse (let (h, t) = uncons xs in f h .|| def t)
+any f = foldr ((.||) . f) sFalse
 
 -- | Conjunction of all the elements.
 and :: SList Bool -> SBool
