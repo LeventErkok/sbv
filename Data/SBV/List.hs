@@ -25,26 +25,37 @@
 module Data.SBV.List (
         -- * Length, emptiness
           length, null
+
         -- * Deconstructing/Reconstructing
         , head, tail, uncons, init, last, singleton, listToListAt, elemAt, (!!), implode, concat, (.:), snoc, nil, (++)
+
         -- * Containment
         , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
+
         -- * Sublists
         , take, drop, splitAt, subList, replace, indexOf, offsetIndexOf
+
         -- * Reverse
         , reverse
+
         -- * Mapping
         , map, concatMap
+
         -- * Difference
         , (\\)
+
         -- * Folding
         , foldl, foldr
+
         -- * Zipping
         , zip, zipWith
+
         -- * Filtering
         , filter, partition
+
         -- * Other list functions
         , all, any, and, or, replicate
+
         -- * Conversion between strings and naturals
         , strToNat, natToStr
         ) where
