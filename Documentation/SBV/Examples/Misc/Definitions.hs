@@ -101,8 +101,8 @@ pingPong = sat $ \x -> x .> 0 .&& ping x sTrue .> x
 evenOdd :: IO SatResult
 evenOdd = satWith z3{verbose=True} $ \a r -> a .== 20 .&& r .== isE a
   where isE, isO :: SInteger -> SBool
-        isE = smtFunction "isE" $ \x -> ite (x .< 0) (isE (-x)) (x .== 0 .|| isO  (x - 1))
-        isO = smtFunction "isO"  $ \x -> ite (x .< 0) (isO  (-x)) (x .== 0 .|| isE (x - 1))
+        isE = smtFunction "isE" $ \x -> ite (x .< 0) (isE (-x)) (x .== 0 .|| isO (x - 1))
+        isO = smtFunction "isO" $ \x -> ite (x .< 0) (isO (-x)) (x .== 0 .|| isE (x - 1))
 
 -- | Another technique to handle mutually definitions is to define the functions together, and pull the results out individually.
 -- This usually works better than defining the functions separately, from a solver perspective.
