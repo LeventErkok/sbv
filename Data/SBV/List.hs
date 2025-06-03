@@ -517,7 +517,7 @@ map f l
                               | True               -> Just (catMaybes xs)
 
         sbvMap uniq = def l
-         where def = smtFunction uniq $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: def t)
+          where def = smtFunction uniq $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: def t)
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
 concatMap :: (SymVal a, SymVal b) => (SBV a -> SList b) -> SList a -> SList b
