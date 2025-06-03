@@ -43,7 +43,7 @@ notDiv3 = runTP $ do
    calc "notDiv3"
         (\(Forall @"n" n) -> s n `sEMod` 3 ./= 0) $
         \n -> [] |- s n
-                 =: cases [ n `sEMod` 3 .== 0 ==> s (0 + 3 * some "k" $ \k -> n .== 0 + 3 * k) =: qed
-                          , n `sEMod` 3 .== 1 ==> s (1 + 3 * some "k" $ \k -> n .== 1 + 3 * k) =: qed
-                          , n `sEMod` 3 .== 2 ==> s (2 + 3 * some "k" $ \k -> n .== 2 + 3 * k) =: qed
+                 =: cases [ n `sEMod` 3 .== 0 ==> s (0 + 3 * some "k" (\k -> n .== 0 + 3 * k)) =: qed
+                          , n `sEMod` 3 .== 1 ==> s (1 + 3 * some "k" (\k -> n .== 1 + 3 * k)) =: qed
+                          , n `sEMod` 3 .== 2 ==> s (2 + 3 * some "k" (\k -> n .== 2 + 3 * k)) =: qed
                           ]
