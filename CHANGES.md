@@ -30,6 +30,11 @@
     in SBV, where we distinguished strings and list of characters since SMTLib does not equate them. SBV now
     treats these uniformly, obviating the need for Data.SBV.String.
 
+  * Improved smt-function definitions: You can now define polymorphic, recursive, and higher-order functions in SBV
+    that will be translated to SMTLib functions, without expanding them. Polymorphic functions get monomorphised. Recursive
+    functions are supported, including mutual recursion. For higher-order functions, the function passed (whether named or lambdas)
+    as the higher-order argument cannot have free variables, i.e., they must be combinators. See 'smtHOFunction' for details.
+
 ### Version 11.7, 2025-05-16
 
   * KnuckleDragger: Add a proof of correctness for the quick-sort algorithm.

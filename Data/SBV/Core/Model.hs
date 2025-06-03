@@ -3372,7 +3372,12 @@ lambdaArray f = SBV . SVal k . Right $ cache g
 listArray :: (SymVal a, SymVal b) => [(a, b)] -> b -> SArray a b
 listArray ascs def = literal $ ArrayModel ascs def
 
--- | Define a higher-order function. Similar to 'smtFunction', but when we have a higher-order argument.
+-- | Define a higher-order function. Similar to 'smtFunction', but when we have a higher-order argument. Note that
+-- the higher-order argument cannot have free variables. Also, if the function is recursive, you should call
+-- the first argument of the defining function, which SBV uses to tie the recursive knot. (Note that recursive
+-- functions defined via 'smtFunction' don't have this latter requirement as they can figure out the recursion
+-- automatically. Higher-order functions, unfortunately, can't do this: They firstify their high-order argument,
+-- giving the whole function a unique name; captured via the call to the recursive definition.)
 smtHOFunction :: forall a b f.
                  ( SMTDefinable (a -> SBV b)
                  , Lambda Symbolic f
@@ -3382,20 +3387,15 @@ smtHOFunction :: forall a b f.
                  , Typeable a
                  , Typeable b
                  , Typeable f
-                 ) => String                       -- prefix to use
-                   -> f                            -- The higher-order argument. We're very generic here!
-                   -> ((a -> SBV b) -> a -> SBV b) -- The ho-function we're modeling, taking itself for recursion
+                 ) => String       -- prefix to use
+                   -> f            -- The higher-order argument. We're very generic here!
+                   -> (a -> SBV b) -- The ho-function we're modeling
                    -> a -> SBV b
-smtHOFunction nm f hof = firstify . flip (recurse hof)
-  where recurse d uniq = def uniq
-           where def u = smtFunction uniq (d (def u))  -- tie the knot!
-
-        firstify recf = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cache calcRes
-         where calcRes st = do
-                 SMTLambda lam <- lambdaStr st HigherOrderArg (resKindOf (kindOf (Proxy @f))) f
-                 let uniqLen = firstifyUniqueLen $ stCfg st
-                     uniq    = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
-                 sbvToSV st (recf (atProxy (Proxy @(a, b, f)) nm <> "_" <> uniq))
+smtHOFunction nm f hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cache r
+  where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg (resKindOf (kindOf (Proxy @f))) f
+                  let uniqLen = firstifyUniqueLen $ stCfg st
+                      uniq    = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
+                  sbvToSV st (smtFunction (atProxy (Proxy @(a, b, f)) nm <> "_" <> uniq) hof arg)
 
         -- we get the functions as arrays here, so chase to find the result
         resKindOf (KArray _ k) = resKindOf k

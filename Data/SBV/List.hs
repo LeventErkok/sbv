@@ -513,7 +513,7 @@ map f l
                            xs | P.any isNothing xs -> Nothing
                               | True               -> Just (catMaybes xs)
 
-        sbvMap = smtHOFunction "sbv.map" f $ \rec xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: rec t)
+        sbvMap = smtHOFunction "sbv.map" f $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: sbvMap t)
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
 concatMap :: (SymVal a, SymVal b) => (SBV a -> SList b) -> SList a -> SList b
@@ -545,11 +545,11 @@ foldl f base l
                                    Just b' -> concreteFoldl b' es
 
         sbvFoldl = smtHOFunction "sbv.foldl" (uncurry f . untuple)
-                 $ \rec exs -> let (e, xs) = untuple exs
-                                   (h, t)  = uncons xs
-                               in ite (null xs)
-                                      e
-                                      (rec (tuple (e `f` h, t)))
+                 $ \exs -> let (e, xs) = untuple exs
+                               (h, t)  = uncons xs
+                           in ite (null xs)
+                                  e
+                                  (sbvFoldl (tuple (e `f` h, t)))
 
 -- | @`foldr` f base s@ folds the sequence from the right.
 --
@@ -571,11 +571,11 @@ foldr f base l
                                    Just res -> unliteral (literal e `f` literal res)
 
         sbvFoldr = smtHOFunction "sbv.foldr" (uncurry f . untuple)
-                 $ \rec exs -> let (e, xs) = untuple exs
-                                   (h, t)  = uncons xs
-                               in ite (null xs)
-                                      e
-                                      (h `f` rec (tuple (e, t)))
+                 $ \exs -> let (e, xs) = untuple exs
+                               (h, t)  = uncons xs
+                           in ite (null xs)
+                                  e
+                                  (h `f` sbvFoldr (tuple (e, t)))
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
@@ -612,10 +612,10 @@ zipWith f xs ys
        concreteZipWith (a:as) (b:bs) = (:) <$> unliteral (literal a `f` literal b) <*> concreteZipWith as bs
 
        sbvZipWith = smtHOFunction "sbv.zipWith" (uncurry f . untuple)
-                  $ \rec asbs -> let (as, bs) = untuple asbs
-                                 in ite (null as .|| null bs)
-                                        nil
-                                        (f (head as) (head bs) .: rec (tuple (tail as, tail bs)))
+                  $ \asbs -> let (as, bs) = untuple asbs
+                             in ite (null as .|| null bs)
+                                    nil
+                                    (f (head as) (head bs) .: sbvZipWith (tuple (tail as, tail bs)))
 
 -- | Concatenate list of lists.
 --
@@ -703,11 +703,11 @@ filter f l
                               xs | P.any isNothing xs -> Nothing
                                  | True               -> Just [e | (True, e) <- P.zip (catMaybes xs) l']
 
-        sbvFilter = smtHOFunction "sbv.filter" f $ \rec xs -> ite (null xs)
-                                                                  nil
-                                                                  (let (h, t) = uncons xs
-                                                                       r      = rec t
-                                                                   in ite (f h) (h .: r) r)
+        sbvFilter = smtHOFunction "sbv.filter" f $ \xs -> ite (null xs)
+                                                              nil
+                                                              (let (h, t) = uncons xs
+                                                                   r      = sbvFilter t
+                                                               in ite (f h) (h .: r) r)
 
 -- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
 -- first element, and those that don't in the second.
@@ -722,13 +722,13 @@ partition f l
                                     | True               -> let (ts, fs) = L.partition fst (P.zip (catMaybes xs) l')
                                                             in Just $ tuple (literal (P.map snd ts), literal (P.map snd fs))
 
-        sbvPartition = smtHOFunction "sbv.partition" f $ \rec xs -> ite (null xs)
-                                                                        (tuple (nil, nil))
-                                                                        (let (h, t)   = uncons xs
-                                                                             (as, bs) = untuple $ rec t
-                                                                         in ite (f h)
-                                                                                (tuple (h .: as, bs))
-                                                                                (tuple (as, h .: bs)))
+        sbvPartition = smtHOFunction "sbv.partition" f $ \xs -> ite (null xs)
+                                                                    (tuple (nil, nil))
+                                                                    (let (h, t)   = uncons xs
+                                                                         (as, bs) = untuple $ sbvPartition t
+                                                                     in ite (f h)
+                                                                            (tuple (h .: as, bs))
+                                                                            (tuple (as, h .: bs)))
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
