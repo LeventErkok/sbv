@@ -11,6 +11,9 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
+[GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
+                                           ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
+                                                         (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4) (seq.unit 5)))
@@ -22,36 +25,40 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.zipWith @(Integer,Integer,Integer)_d8dc9e6fbd| :: [SInteger] -> [SInteger] -> [SInteger] [Recursive]
-[GOOD] (define-fun-rec |sbv.zipWith @(Integer,Integer,Integer)_d8dc9e6fbd| ((l1_s0 (Seq Int)) (l1_s1 (Seq Int))) (Seq Int)
+[GOOD] ; |sbv.zipWith @SBV (Integer,Integer) -> SBV Integer_1fd06f7602 @SBV ([Integer],[Integer]) -> SBV [Integer]| :: ([SInteger], [SInteger]) -> [SInteger] [Recursive]
+[GOOD] (define-fun-rec |sbv.zipWith @SBV (Integer,Integer) -> SBV Integer_1fd06f7602 @SBV ([Integer],[Integer]) -> SBV [Integer]| ((l1_s0 (SBVTuple2 (Seq Int) (Seq Int)))) (Seq Int)
                                  (let ((l1_s3 0))
-                                 (let ((l1_s8 (as seq.empty (Seq Int))))
-                                 (let ((l1_s13 1))
-                                 (let ((l1_s2 (seq.len l1_s0)))
+                                 (let ((l1_s9 (as seq.empty (Seq Int))))
+                                 (let ((l1_s14 1))
+                                 (let ((l1_s1 (proj_1_SBVTuple2 l1_s0)))
+                                 (let ((l1_s2 (seq.len l1_s1)))
                                  (let ((l1_s4 (= l1_s2 l1_s3)))
-                                 (let ((l1_s5 (seq.len l1_s1)))
-                                 (let ((l1_s6 (= l1_s3 l1_s5)))
-                                 (let ((l1_s7 (or l1_s4 l1_s6)))
-                                 (let ((l1_s9 (seq.nth l1_s0 l1_s3)))
+                                 (let ((l1_s5 (proj_2_SBVTuple2 l1_s0)))
+                                 (let ((l1_s6 (seq.len l1_s5)))
+                                 (let ((l1_s7 (= l1_s3 l1_s6)))
+                                 (let ((l1_s8 (or l1_s4 l1_s7)))
                                  (let ((l1_s10 (seq.nth l1_s1 l1_s3)))
-                                 (let ((l1_s11 (+ l1_s9 l1_s10)))
-                                 (let ((l1_s12 (seq.unit l1_s11)))
-                                 (let ((l1_s14 (- l1_s2 l1_s13)))
-                                 (let ((l1_s15 (seq.extract l1_s0 l1_s13 l1_s14)))
-                                 (let ((l1_s16 (- l1_s5 l1_s13)))
-                                 (let ((l1_s17 (seq.extract l1_s1 l1_s13 l1_s16)))
-                                 (let ((l1_s18 (|sbv.zipWith @(Integer,Integer,Integer)_d8dc9e6fbd| l1_s15 l1_s17)))
-                                 (let ((l1_s19 (seq.++ l1_s12 l1_s18)))
-                                 (let ((l1_s20 (ite l1_s7 l1_s8 l1_s19)))
-                                 l1_s20))))))))))))))))))))
+                                 (let ((l1_s11 (seq.nth l1_s5 l1_s3)))
+                                 (let ((l1_s12 (+ l1_s10 l1_s11)))
+                                 (let ((l1_s13 (seq.unit l1_s12)))
+                                 (let ((l1_s15 (- l1_s2 l1_s14)))
+                                 (let ((l1_s16 (seq.extract l1_s1 l1_s14 l1_s15)))
+                                 (let ((l1_s17 (- l1_s6 l1_s14)))
+                                 (let ((l1_s18 (seq.extract l1_s5 l1_s14 l1_s17)))
+                                 (let ((l1_s19 ((as mkSBVTuple2 (SBVTuple2 (Seq Int) (Seq Int))) l1_s16 l1_s18)))
+                                 (let ((l1_s20 (|sbv.zipWith @SBV (Integer,Integer) -> SBV Integer_1fd06f7602 @SBV ([Integer],[Integer]) -> SBV [Integer]| l1_s19)))
+                                 (let ((l1_s21 (seq.++ l1_s13 l1_s20)))
+                                 (let ((l1_s22 (ite l1_s8 l1_s9 l1_s21)))
+                                 l1_s22)))))))))))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s5 () (Seq Int) (|sbv.zipWith @(Integer,Integer,Integer)_d8dc9e6fbd| s4 s0))
-[GOOD] (define-fun s6 () Bool (= s1 s5))
+[GOOD] (define-fun s5 () (SBVTuple2 (Seq Int) (Seq Int)) ((as mkSBVTuple2 (SBVTuple2 (Seq Int) (Seq Int))) s4 s0))
+[GOOD] (define-fun s6 () (Seq Int) (|sbv.zipWith @SBV (Integer,Integer) -> SBV Integer_1fd06f7602 @SBV ([Integer],[Integer]) -> SBV [Integer]| s5))
+[GOOD] (define-fun s7 () Bool (= s1 s6))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)
-[GOOD] (assert s6)
+[GOOD] (assert s7)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s1))

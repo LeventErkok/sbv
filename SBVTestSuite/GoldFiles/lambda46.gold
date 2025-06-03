@@ -17,19 +17,19 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; add1 :: SInteger -> SInteger
-[GOOD] (define-fun add1 ((l1_s0 Int)) Int
+[GOOD] ; |add1 @SBV Integer -> SBV Integer| :: SInteger -> SInteger
+[GOOD] (define-fun |add1 @SBV Integer -> SBV Integer| ((l1_s0 Int)) Int
                                  (let ((l1_s1 1))
                                  (let ((l1_s2 (+ l1_s0 l1_s1)))
                                  l1_s2)))
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Int (add1 s0))
+[GOOD] (define-fun s1 () Int (|add1 @SBV Integer -> SBV Integer| s0))
 [GOOD] (define-fun s3 () Bool (= s1 s2))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)
 [GOOD] (declare-fun s4 () Int)
-[GOOD] (define-fun s5 () Int (add1 s4))
+[GOOD] (define-fun s5 () Int (|add1 @SBV Integer -> SBV Integer| s4))
 [GOOD] (define-fun s6 () Bool (= s2 s5))
 [GOOD] (assert s6)
 [SEND] (check-sat)
