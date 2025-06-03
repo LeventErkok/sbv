@@ -615,13 +615,7 @@ zipWith f xs ys
 -- >>> concat [[1..3::Integer], [4..7], [8..10]]
 -- [1,2,3,4,5,6,7,8,9,10] :: [SInteger]
 concat :: forall a. SymVal a => SList [a] -> SList a
-concat l
-  | Just l' <- unliteral l
-  = literal (P.concat l')
-  | True
-  = def l
-  where def = smtFunction (atProxy (Proxy @a) "sbv.concat") $
-                          \xs -> ite (null xs) nil (let (h, t) = uncons xs in h ++ def t)
+concat = foldr (++) nil
 
 -- | Check all elements satisfy the predicate.
 --
