@@ -121,7 +121,10 @@ consApp p = lemma (atProxy p "consApp")
 -- that proves it right out-of-the-box!)
 appendAssoc :: forall a. SymVal a => Proxy a -> TP Proof
 appendAssoc p =
-   lemma (atProxy p "appendAssoc") (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs) []
+   lemma (atProxy p "appendAssoc")
+         (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
+         []
+
 
 -- | @length xs == length (reverse xs)@
 --
