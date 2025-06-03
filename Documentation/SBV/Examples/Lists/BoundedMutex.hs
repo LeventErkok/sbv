@@ -24,10 +24,6 @@ module Documentation.SBV.Examples.Lists.BoundedMutex where
 import Data.SBV
 import Data.SBV.Control
 
-import Prelude hiding ((!!))
-import Data.SBV.List ((!!))
-import qualified Data.SBV.List as L
-
 -- | Each agent can be in one of the three states
 data State = Idle     -- ^ Regular work
            | Ready    -- ^ Intention to enter critical state
@@ -38,8 +34,8 @@ mkSymbolicEnumeration ''State
 
 -- | The mutex property holds for two sequences of state transitions, if they are not in
 -- their critical section at the same time.
-mutex :: SList State -> SList State -> SBool
-mutex p1s p2s = L.and $ L.zipWith (\p1 p2 -> p1 ./= sCritical .|| p2 ./= sCritical) p1s p2s
+mutex :: [SState] -> [SState] -> SBool
+mutex p1s p2s = sAnd $ zipWith (\p1 p2 -> p1 ./= sCritical .|| p2 ./= sCritical) p1s p2s
 
 -- | A sequence is valid upto a bound if it starts at 'Idle', and follows the mutex rules. That is:
 --
@@ -48,36 +44,31 @@ mutex p1s p2s = L.and $ L.zipWith (\p1 p2 -> p1 ./= sCritical .|| p2 ./= sCritic
 --    * From 'Critical' it can either stay in 'Critical' or go back to 'Idle'
 --
 -- The variable @me@ identifies the agent id.
-validSequence :: Int -> Integer -> SList Integer -> SList State -> SBool
-validSequence b me pturns proc = sAnd [ L.length proc .== fromIntegral b
-                                      , sIdle .== L.head proc
-                                      , check b pturns proc sIdle
-                                      ]
-   where check 0 _  _  _    = sTrue
-         check i ts ps prev = let (cur,  rest)  = L.uncons ps
-                                  (turn, turns) = L.uncons ts
-                                  ok   = ite (prev .== sIdle)                          (cur `sElem` [sIdle, sReady])
-                                       $ ite (prev .== sReady .&& turn .== literal me) (cur `sElem` [sCritical])
-                                       $ ite (prev .== sCritical)                      (cur `sElem` [sCritical, sIdle])
-                                                                                       (cur `sElem` [prev])
-                              in ok .&& check (i-1) turns rest cur
+validSequence :: Integer -> [SInteger] -> [SState] -> SBool
+validSequence _  []     _           = sTrue
+validSequence _  _      []          = sTrue
+validSequence me pturns procs@(p:_) = sAnd [ sIdle .== p
+                                           , check pturns procs sIdle
+                                           ]
+   where check []           _          _    = sTrue
+         check _            []         _    = sTrue
+         check (turn:turns) (cur:rest) prev = ok .&& check turns rest cur
+           where ok = ite (prev .== sIdle)                          (cur `sElem` [sIdle, sReady])
+                    $ ite (prev .== sReady .&& turn .== literal me) (cur `sElem` [sCritical])
+                    $ ite (prev .== sCritical)                      (cur `sElem` [sCritical, sIdle])
+                                                                    (cur `sElem` [prev])
 
 -- | The mutex algorithm, coded implicitly as an assignment to turns. Turns start at @1@, and at each stage is either
 -- @1@ or @2@; giving preference to that process. The only condition is that if either process is in its critical
 -- section, then the turn value stays the same. Note that this is sufficient to satisfy safety (i.e., mutual
 -- exclusion), though it does not guarantee liveness.
-validTurns :: Int -> SList Integer -> SList State -> SList State -> SBool
-validTurns b turns process1 process2 = sAnd [ L.length turns .== fromIntegral b
-                                            , 1 .== L.head turns
-                                            , check b turns process1 process2 1
-                                            ]
-   where check 0 _  _     _     _    = sTrue
-         check i ts proc1 proc2 prev =   cur `sElem` [1, 2]
-                                     .&& (p1 .== sCritical .|| p2 .== sCritical .=> cur .== prev)
-                                     .&& check (i-1) rest p1s p2s cur
-            where (cur, rest) = L.uncons ts
-                  (p1,  p1s)  = L.uncons proc1
-                  (p2,  p2s)  = L.uncons proc2
+validTurns :: [SInteger] -> [SState] -> [SState] -> SBool
+validTurns []                    _        _        = sTrue
+validTurns turns@(firstTurn : _) process1 process2 = firstTurn .== 1 .&& check (zip3 turns process1 process2) 1
+  where check []                     _    = sTrue
+        check ((cur, p1, p2) : rest) prev =   cur `sElem` map literal [1, 2]
+                                          .&& (p1 .== sCritical .|| p2 .== sCritical .=> cur .== prev)
+                                          .&& check rest cur
 
 -- | Check that we have the mutex property so long as 'validSequence' and 'validTurns' holds; i.e.,
 -- so long as both the agents and the arbiter act according to the rules. The check is bounded up-to-the
@@ -87,14 +78,14 @@ validTurns b turns process1 process2 = sAnd [ L.length turns .== fromIntegral b
 -- All is good!
 checkMutex :: Int -> IO ()
 checkMutex b = runSMT $ do
-                  p1    :: SList State   <- sList "p1"
-                  p2    :: SList State   <- sList "p2"
-                  turns :: SList Integer <- sList "turns"
+                  p1    :: [SState]   <- mapM (\i -> free ("p1_" ++ show i)) [1 .. b]
+                  p2    :: [SState]   <- mapM (\i -> free ("p2_" ++ show i)) [1 .. b]
+                  turns :: [SInteger] <- mapM (\i -> free ("t_"  ++ show i)) [1 .. b]
 
                   -- Ensure that both sequences and the turns are valid
-                  constrain $ validSequence b 1 turns p1
-                  constrain $ validSequence b 2 turns p2
-                  constrain $ validTurns    b turns p1 p2
+                  constrain $ validSequence 1 turns p1
+                  constrain $ validSequence 2 turns p2
+                  constrain $ validTurns      turns p1 p2
 
                   -- Try to assert that mutex does not hold. If we get a
                   -- counter example, we would've found a violation!
@@ -106,9 +97,9 @@ checkMutex b = runSMT $ do
                                DSat{} -> error "Solver said delta-satisfiable!"
                                Unsat  -> io . putStrLn $ "All is good!"
                                Sat    -> do io . putStrLn $ "Violation detected!"
-                                            do p1V <- getValue p1
-                                               p2V <- getValue p2
-                                               ts  <- getValue turns
+                                            do p1V <- mapM getValue p1
+                                               p2V <- mapM getValue p2
+                                               ts  <- mapM getValue turns
 
                                                io . putStrLn $ "P1: " ++ show p1V
                                                io . putStrLn $ "P2: " ++ show p2V
@@ -121,7 +112,7 @@ checkMutex b = runSMT $ do
 --
 -- >>> notFair 10
 -- Fairness is violated at bound: 10
--- P1: [Idle,Idle,Idle,Ready,Critical,Critical,Critical,Idle,Ready,Critical]
+-- P1: [Idle,Idle,Ready,Critical,Idle,Ready,Critical,Critical,Idle,Ready]
 -- P2: [Idle,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready]
 -- Ts: [1,1,1,1,1,1,1,1,1,1]
 --
@@ -132,21 +123,21 @@ checkMutex b = runSMT $ do
 -- from the previous value if neither process is in critical. Show that this makes the 'notFair'
 -- function below no longer exhibits the issue. Is this sufficient? Concurrent programming is tricky!
 notFair :: Int -> IO ()
-notFair b = runSMT $ do p1    :: SList State   <- sList "p1"
-                        p2    :: SList State   <- sList "p2"
-                        turns :: SList Integer <- sList "turns"
+notFair b = runSMT $ do p1    :: [SState]   <- mapM (\i -> free ("p1_" ++ show i)) [1 .. b]
+                        p2    :: [SState]   <- mapM (\i -> free ("p2_" ++ show i)) [1 .. b]
+                        turns :: [SInteger] <- mapM (\i -> free ("t_"  ++ show i)) [1 .. b]
 
                         -- Ensure that both sequences and the turns are valid
-                        constrain $ validSequence b 1 turns p1
-                        constrain $ validSequence b 2 turns p2
-                        constrain $ validTurns    b turns p1 p2
+                        constrain $ validSequence 1 turns p1
+                        constrain $ validSequence 2 turns p2
+                        constrain $ validTurns    turns p1 p2
 
                         -- Ensure that the second process becomes ready in the second cycle:
                         constrain $ p2 !! 1 .== sReady
 
                         -- Find a trace where p2 never goes critical
                         -- counter example, we would've found a violation!
-                        constrain $ sNot $ sCritical `L.elem` p2
+                        constrain $ sNot $ sCritical `sElem` p2
 
                         query $ do cs <- checkSat
                                    case cs of
@@ -154,9 +145,9 @@ notFair b = runSMT $ do p1    :: SList State   <- sList "p1"
                                      DSat{} -> error "Solver said delta-satisfiable!"
                                      Unsat  -> error "Solver couldn't find a violating trace!"
                                      Sat    -> do io . putStrLn $ "Fairness is violated at bound: " ++ show b
-                                                  do p1V <- getValue p1
-                                                     p2V <- getValue p2
-                                                     ts  <- getValue turns
+                                                  do p1V <- mapM getValue p1
+                                                     p2V <- mapM getValue p2
+                                                     ts  <- mapM getValue turns
 
                                                      io . putStrLn $ "P1: " ++ show p1V
                                                      io . putStrLn $ "P2: " ++ show p2V
