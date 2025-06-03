@@ -175,7 +175,7 @@ interleaveLen = runTP $ do
 uninterleave :: SymVal a => SList a -> STuple [a] [a]
 uninterleave lst = uninterleaveGen lst (tuple (nil, nil))
 
--- | Generalized form of uninterleave with the auxilary lists made explicit.C
+-- | Generalized form of uninterleave with the auxilary lists made explicit.
 uninterleaveGen :: SymVal a => SList a -> STuple [a] [a] -> STuple [a] [a]
 uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple alts
                                                           in ite (null xs)
