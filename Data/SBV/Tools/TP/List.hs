@@ -63,6 +63,9 @@ module Data.SBV.Tools.TP.List (
 
    -- * Counting elements
    , count, countAppend, takeDropCount, countNonNeg, countElem, elemCount
+
+   -- * Interleaving
+   , interleave, uninterleave, interleaveLen, interleaveRoundTrip
  ) where
 
 import Prelude (Eq, ($), Num(..), id, (.), flip)
@@ -1323,6 +1326,122 @@ count = smtFunction "count" $ \e l -> ite (null l)
                                                cxs     = count e xs
                                            in ite (e .== x) (1 + cxs) cxs)
 
+-- | Interleave the elements of two lists. If one ends, we take the rest from the other.
+interleave :: SymVal a => SList a -> SList a -> SList a
+interleave = smtFunction "interleave" (\xs ys -> ite (null  xs) ys (head xs .: interleave ys (tail xs)))
+
+-- | Prove that interleave preserves total length.
+--
+-- The induction here is on the total length of the lists, and hence
+-- we use the generalized induction principle. We have:
+--
+-- >>> runTP $ interleaveLen (Proxy @Integer)
+-- Inductive lemma (strong): interleaveLen @Integer
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way full case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] interleaveLen @Integer
+interleaveLen :: forall a. SymVal a => Proxy a -> TP Proof
+interleaveLen p = do
+
+   sInduct (atProxy p "interleaveLen")
+           (\(Forall @"xs" xs) (Forall @"ys" ys) -> length xs + length ys .== length (interleave @a xs ys))
+           (\xs ys -> length @a xs + length @a ys) $
+           \ih xs ys ->
+              [] |- length xs + length ys .== length (interleave @a xs ys)
+                 =: split xs
+                          trivial
+                          (\a as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
+                                 =: 1 + length as + length ys .== 1 + length (interleave ys as)
+                                 ?? ih `at` (Inst @"xs" ys, Inst @"ys" as)
+                                 =: sTrue
+                                 =: qed)
+
+-- | Uninterleave the elements of two lists. We roughly split it into two, of alternating elements.
+uninterleave :: SymVal a => SList a -> STuple [a] [a]
+uninterleave lst = uninterleaveGen lst (tuple (nil, nil))
+
+-- | Generalized form of uninterleave with the auxilary lists made explicit.
+uninterleaveGen :: SymVal a => SList a -> STuple [a] [a] -> STuple [a] [a]
+uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple alts
+                                                          in ite (null xs)
+                                                                 (tuple (reverse es, reverse os))
+                                                                 (uninterleaveGen (tail xs) (tuple (os, head xs .: es))))
+
+-- | The functions 'uninterleave' and 'interleave' are inverses so long as the inputs are of the same length. (The equality
+-- would even hold if the first argument has one extra element, but we keep things simple here.)
+--
+-- We have:
+--
+-- >>> runTP $ interleaveRoundTrip (Proxy @Integer)
+-- Lemma: revCons @Integer                 Q.E.D.
+-- Inductive lemma (strong): roundTripGen @Integer
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (4 way full case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.3                           Q.E.D.
+--     Step: 1.4.1                         Q.E.D.
+--     Step: 1.4.2                         Q.E.D.
+--     Step: 1.4.3                         Q.E.D.
+--     Step: 1.4.4                         Q.E.D.
+--     Step: 1.4.5                         Q.E.D.
+--     Step: 1.4.6                         Q.E.D.
+--     Step: 1.4.7                         Q.E.D.
+--     Step: 1.4.8                         Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: interleaveRoundTrip @Integer
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] interleaveRoundTrip @Integer
+interleaveRoundTrip :: forall a. SymVal a => Proxy a -> TP Proof
+interleaveRoundTrip p = do
+
+   revHelper <- lemma (atProxy p "revCons") (\(Forall @"a" a) (Forall @"as" as) (Forall @"bs" bs)
+                      -> reverse @a (a .: as) ++ bs .== reverse as ++ (a .: bs)) []
+
+   -- Generalize the theorem first to take the helper lists explicitly
+   roundTripGen <- sInductWith cvc5
+         (atProxy p "roundTripGen")
+         (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"alts" alts) ->
+               length @a xs .== length ys
+                  .=> let (es, os) = untuple alts
+                      in uninterleaveGen (interleave xs ys) alts .== tuple (reverse es ++ xs, reverse os ++ ys))
+         (\xs ys (_alts :: STuple [a] [a]) -> length @a xs + length @a ys) $
+         \ih xs ys alts -> [length @a xs .== length ys]
+                        |- let (es, os) = untuple alts
+                        in uninterleaveGen (interleave xs ys) alts
+                        =: split2 (xs, ys)
+                                  trivial
+                                  trivial
+                                  trivial
+                                  (\(a, as) (b, bs) -> uninterleaveGen (interleave (a .: as) (b .: bs)) alts
+                                                    =: uninterleaveGen (a .: interleave (b .: bs) as) alts
+                                                    =: uninterleaveGen (a .: b .: interleave as bs) alts
+                                                    =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
+                                                    ?? ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
+                                                    =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
+                                                    ?? revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as)
+                                                    =: tuple (reverse es ++ (a .: as), reverse (b .: os) ++ bs)
+                                                    ?? revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs)
+                                                    =: tuple (reverse es ++ (a .: as), reverse os ++ (b .: bs))
+                                                    =: tuple (reverse es ++ xs, reverse os ++ ys)
+                                                    =: qed)
+
+   -- Round-trip theorem:
+   calc (atProxy p "interleaveRoundTrip")
+           (\(Forall @"xs" xs) (Forall @"ys" ys) -> length xs .== length ys .=> uninterleave (interleave @a xs ys) .== tuple (xs, ys)) $
+           \xs ys -> [length xs .== length ys]
+                  |- uninterleave (interleave @a xs ys)
+                  =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
+                  ?? roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList a, nil :: SList a)))
+                  =: tuple (reverse nil ++ xs, reverse nil ++ ys)
+                  =: qed
 -- | @count e (xs ++ ys) == count e xs + count e ys@
 --
 -- >>> runTP $ countAppend (Proxy @Integer)
