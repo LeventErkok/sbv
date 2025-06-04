@@ -132,7 +132,7 @@
 --
 --   * MathSAT from Fondazione Bruno Kessler and DISI-University of Trento: <http://mathsat.fbk.eu/>
 --
---   * Yices from SRI: <http://yices.csl.sri.com/>
+--   * Yices from SRI: <http://github.com/SRI-CSL/yices2>
 --
 --   * DReal from CMU: <http://dreal.github.io/>
 --

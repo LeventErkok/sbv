@@ -73,14 +73,14 @@ The user can construct ordinary Haskell programs using these types, which behave
 The SBV library uses third-party SMT solvers via the standard SMT-Lib interface. The following solvers are supported:
 
  - [ABC](http://www.eecs.berkeley.edu/~alanmi/abc) from University of Berkeley
- - [Boolector](https://boolector.github.io/) from Johannes Kepler University
- - [Bitwuzla](https://bitwuzla.github.io/) from Stanford University
+ - [Boolector](http://boolector.github.io/) from Johannes Kepler University
+ - [Bitwuzla](http://bitwuzla.github.io/) from Stanford University
  - [CVC4](http://cvc4.github.io/) from Stanford University and the University of Iowa
  - [CVC5](http://cvc5.github.io/) from Stanford University and the University of Iowa
- - [DReal](https://dreal.github.io/) from CMU
+ - [DReal](http://dreal.github.io/) from CMU
  - [MathSAT](http://mathsat.fbk.eu/) from FBK and DISI-University of Trento
- - [OpenSMT](https://verify.inf.usi.ch/opensmt) from Università della Svizzera italiana
- - [Yices](http://yices.csl.sri.com/) from SRI
+ - [OpenSMT](http://verify.inf.usi.ch/opensmt) from Università della Svizzera italiana
+ - [Yices](http://github.com/SRI-CSL/yices2) from SRI
  - [Z3](http://github.com/Z3Prover/z3/wiki) from Microsoft
    
 Most functions have two variants: For instance `prove`/`proveWith`. The former uses the default solver, which is currently Z3. The latter expects you to pass it a configuration that picks the solver.
