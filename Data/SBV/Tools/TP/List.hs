@@ -21,7 +21,7 @@
 
 module Data.SBV.Tools.TP.List (
      -- * Append
-     appendNull, consApp, appendAssoc
+     appendNull, consApp, appendAssoc, tailsAppend
 
      -- * Reverse
    , revLen, revApp, revCons, revSnoc, revRev
@@ -125,6 +125,27 @@ appendAssoc p =
          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
          []
 
+-- | @tails (xs ++ ys) == map (++ ys) (tails xs) ++ tail (tails ys)@
+--
+-- >>> runTP $ tailsAppend (Proxy @Integer)
+-- Page 8. Seems to fail.
+tailsAppend :: forall a. SymVal a => Proxy a -> TP Proof
+tailsAppend p = do
+
+   -- We cannot express this lemma directly in SBV since the term @map (++ ys)@ has a free variable in the
+   -- higher-order function passed to @map@. So, we use a fused version.
+   let appendEach :: SList [a] -> SList a -> SList [a]
+       appendEach = smtFunction "appendEach" $ \xs ys -> ite (null xs)
+                                                             nil
+                                                             ((head xs ++ ys) .: appendEach (tail xs) ys)
+
+   inductWith cvc5 (atProxy p "tailsAppend")
+          (\(Forall @"xs" (xs :: SList a), Forall @"ys" ys) -> tails (xs ++ ys) .== appendEach (tails xs) ys ++ tail (tails ys)) $
+          \ih (x :: SBV a, xs, y :: SBV a, ys) ->
+             [] |- tails ((x .: xs) ++ (y .: ys))
+                ?? ih
+                =: appendEach (tails (x .: xs)) (y .: ys) ++ tail (tails (y .: ys))
+                =: qed
 
 -- | @length xs == length (reverse xs)@
 --
