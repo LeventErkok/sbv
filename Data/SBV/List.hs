@@ -689,7 +689,7 @@ inits xs
  = literal (L.inits xs')
  | True
  = def xs
- where def = smtFunction "sbv.inits" $ \l -> ite (null l) (singleton nil) (def (init l) ++ singleton xs)
+ where def = smtFunction "sbv.inits" $ \l -> ite (null l) (singleton nil) (def (init l) ++ singleton l)
 
 -- | tails of a list.
 --
@@ -703,7 +703,7 @@ tails xs
  = literal (L.tails xs')
  | True
  = def xs
- where def = smtFunction "sbv.tails" $ \l -> ite (null l) (singleton nil) (singleton xs ++ def (tail l))
+ where def = smtFunction "sbv.tails" $ \l -> ite (null l) (singleton nil) (singleton l ++ def (tail l))
 
 -- | Difference.
 --
