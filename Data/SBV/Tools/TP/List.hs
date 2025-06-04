@@ -21,7 +21,7 @@
 
 module Data.SBV.Tools.TP.List (
      -- * Append
-     appendNull, consApp, appendAssoc, tailsAppend
+     appendNull, consApp, appendAssoc, tailsLength, tailsAppend
 
      -- * Reverse
    , revLen, revApp, revCons, revSnoc, revRev
@@ -124,6 +124,29 @@ appendAssoc p =
    lemma (atProxy p "appendAssoc")
          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
          []
+
+-- | @length (tails xs) == 1 + length xs@
+--
+-- >>> runTP $ tailsLength (Proxy @Integer)
+-- Inductive lemma: tailsLength @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] tailsLength @Integer
+tailsLength :: forall a. SymVal a => Proxy a -> TP Proof
+tailsLength p =
+   induct (atProxy p "tailsLength")
+          (\(Forall @"xs" (xs :: SList a)) -> length (tails xs) .== 1 + length xs) $
+          \ih (x :: SBV a) xs -> [] |- length (tails (x .: xs))
+                                    =: length (tails xs ++ singleton (x .: xs))
+                                    =: length (tails xs) + 1
+                                    ?? ih
+                                    =: 1 + length xs + 1
+                                    =: 1 + length (x .: xs)
+                                    =: qed
 
 -- | @tails (xs ++ ys) == map (++ ys) (tails xs) ++ tail (tails ys)@
 --
