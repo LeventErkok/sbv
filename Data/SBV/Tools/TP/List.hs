@@ -21,7 +21,7 @@
 
 module Data.SBV.Tools.TP.List (
      -- * Append
-     appendNull, consApp, appendAssoc, tailsLength, tailsAppend
+     appendNull, consApp, appendAssoc, initsLength, tailsLength, tailsAppend
 
      -- * Reverse
    , revLen, revApp, revCons, revSnoc, revRev
@@ -124,6 +124,24 @@ appendAssoc p =
    lemma (atProxy p "appendAssoc")
          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
          []
+
+-- | @length (inits xs) == 1 + length xs@
+--
+-- >>> runTP $ initsLength (Proxy @Integer)
+-- Inductive lemma (strong): initsLength @Integer
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] initsLength @Integer
+initsLength :: forall a. SymVal a => Proxy a -> TP Proof
+initsLength p =
+   sInduct (atProxy p "initsLength")
+           (\(Forall @"xs" (xs :: SList a)) -> length (inits xs) .== 1 + length xs)
+           (length @a) $
+           \ih (xs :: SList a) -> [] |- length (inits xs)
+                                     ?? ih
+                                     =: 1 + length xs
+                                     =: qed
 
 -- | @length (tails xs) == 1 + length xs@
 --
