@@ -3,7 +3,7 @@
 
 ### Version 11.7.5, Not yet released
   
-  * Renamed KnuckeDragger to TP, for theorem-proving. The original name was confusing, and the design has
+  * Renamed KnuckleDragger to TP, for theorem-proving. The original name was confusing, and the design has
     diverged from Phil's tool in significant ways and goals.
 
   * TP:
@@ -32,8 +32,9 @@
 
   * Improved smt-function definitions: You can now define polymorphic, recursive, and higher-order functions in SBV
     that will be translated to SMTLib functions, without expanding them. Polymorphic functions get monomorphised. Recursive
-    functions are supported, including mutual recursion. For higher-order functions, the function passed (whether named or lambda
-    defined) as the higher-order argument cannot have free variables, i.e., they must be combinators. See 'smtHOFunction' for details.
+    functions are supported, including mutual recursion. For higher-order functions, the function passed (whether named or
+    lambda defined) as the higher-order argument cannot have free variables, i.e., they must be combinators.
+    See 'smtHOFunction' for details.
 
 ### Version 11.7, 2025-05-16
 
