@@ -143,22 +143,21 @@ extractAllUniversals other      = error $ unlines [ ""
 -- | Generic creator for anonymous lamdas.
 lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> (Defn -> b) -> State -> Kind -> a -> m b
 lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$> convert st fk (mkLambda st f)
-  where handle d@(Defn _ frees _ _) =
-            case scope of
-              TopLevel       -> trans d
-              HigherOrderArg -> if null frees
-                                then trans d
-                                else error $ unlines [ ""
-                                                     , "*** Data.SBV.Lambda: Detected free variables passed to a lambda."
-                                                     , "***"
-                                                     , "***  Free vars : " ++ unwords frees
-                                                     , "***  Definition: " ++ shift (lines (sh d))
-                                                     , "***"
-                                                     , "*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in."
-                                                     , "***"
-                                                     , "*** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible."
-                                                     , "*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements."
-                                                     ]
+  where handle d@(Defn _ frees _ _)
+            | null frees
+            = trans d
+            | True
+            = error $ unlines [ ""
+                              , "*** Data.SBV.Lambda: Detected free variables passed to a lambda."
+                              , "***"
+                              , "***  Free vars : " ++ unwords frees
+                              , "***  Definition: " ++ shift (lines (sh d))
+                              , "***"
+                              , "*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in."
+                              , "***"
+                              , "*** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible."
+                              , "*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements."
+                              ]
 
         sh (Defn _unints _frees Nothing       body) = body 0
         sh (Defn _unints _frees (Just params) body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
@@ -299,10 +298,14 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                                   ]
                           ResultLamInps xs -> map (\(q, v) -> (q, getSV v)) xs
 
-               frees = map show $ nub allUses \\ nub allDefs
+               frees = map show $ filter (lowerLevel . getId . swNodeId) (nub allUses \\ nub allDefs)
                  where (defs, uses) = unzip [(d, u) | (d, SBVApp _ u) <- F.toList asgnsSeq]
                        allDefs      = defs ++ map snd params ++ map fst constants
                        allUses      = concat uses
+
+                       -- Is this at a lambda-level (i.e., not top)
+                       lowerLevel (_, Just {}, _) = True
+                       lowerLevel (_, Nothing, _) = False
 
                mbParam
                  | null params = Nothing

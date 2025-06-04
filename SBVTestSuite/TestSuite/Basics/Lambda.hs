@@ -159,6 +159,7 @@ tests =
       , goldenCapturedIO "lambda52"   $ runSat2 (\a r -> a .== 21 .&& isOdd  a .== r)
       , goldenCapturedIO "lambda52_c" $ runSat  (isOdd  21 .==)
 
+      -- make sure free vars are caught if used as a function arg
       , goldenCapturedIO "lambda53" $ runSat $ \x -> x .== smtFunction "foo" (+(x::SInteger)) x
 
       -- Make sure we can handle dependency orders
