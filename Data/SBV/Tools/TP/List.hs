@@ -837,11 +837,6 @@ foldrFoldl (<+>) (<*>) e = do
 --   Result:                               Q.E.D.
 -- [Proven] bookKeeping @Integer
 --
--- NB. As of early 2025, we cannot express the above theorem in SBV directly, since it involves nested lambdas.
--- (On the right hand side map has an argument that is represented as a foldr, which itself has a lambda.) As
--- SMTLib moves to a higher-order logic, we intend to make such expressions readily expressable. In the mean time,
--- we use an equivalent (albeit roundabout) version, where we define map-foldr combo as a recursive function ourselves.
---
 -- NB. This theorem does not hold if @f@ does not have a left-unit! Consider the input @[[], [x]]@. Left hand side reduces to
 -- @x@, while the right hand side reduces to: @f a x@. And unless @f@ is commutative or @a@ is not also a left-unit,
 -- then one can find a counter-example. (Aside: if both left and right units exist for a binary operator, then they
@@ -862,23 +857,18 @@ foldrFoldl (<+>) (<*>) e = do
 -- the left-hand-side, and @A@ for the right-hand-side for the input @[[], [B]]@.
 bookKeeping :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP Proof
 bookKeeping a f = do
-   let -- Fuse map (foldr f a) in the theorem into one call to avoid nested lambdas. See above note.
-       mapFoldr :: SBV a -> SList [a] -> SList a
-       mapFoldr = smtFunction "mapFoldr" $ \e xss -> ite (null xss)
-                                                         nil
-                                                         (foldr f e (head xss) .: mapFoldr e (tail xss))
 
    -- Assumptions about f
    let assoc = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z
        rUnit = quantifiedBool $ \(Forall @"x" x) -> x `f` a .== x
        lUnit = quantifiedBool $ \(Forall @"x" x) -> a `f` x .== x
 
-   -- Helper:
-   --   foldr f y xs = foldr f a xs `f` y
+   -- Helper: @foldr f y xs = foldr f a xs `f` y@
    helper <- induct (atProxy (Proxy @a) "foldBase")
                     (\(Forall @"xs" xs) (Forall @"y" y) -> lUnit .&& assoc .=> foldr f y xs .== foldr f a xs `f` y) $
                     \ih x xs y -> [lUnit, assoc] |- foldr f y (x .: xs)
-                                                 =: x `f` foldr f y xs          ?? ih
+                                                 =: x `f` foldr f y xs
+                                                 ?? ih
                                                  =: x `f` (foldr f a xs `f` y)
                                                  =: (x `f` foldr f a xs) `f` y
                                                  =: foldr f a (x .: xs) `f` y
@@ -887,17 +877,17 @@ bookKeeping a f = do
    foa <- foldrOverAppend a f
 
    induct (atProxy (Proxy @a) "bookKeeping")
-          (\(Forall @"xss" xss) -> assoc .&& rUnit .&& lUnit .=> foldr f a (concat xss) .== foldr f a (mapFoldr a xss)) $
+          (\(Forall @"xss" xss) -> assoc .&& rUnit .&& lUnit .=> foldr f a (concat xss) .== foldr f a (map (foldr f a) xss)) $
           \ih xs xss -> [assoc, rUnit, lUnit] |- foldr f a (concat (xs .: xss))
                                               =: foldr f a (xs ++ concat xss)
                                               ?? foa
                                               =: foldr f (foldr f a (concat xss)) xs
                                               ?? ih
-                                              =: foldr f (foldr f a (mapFoldr a xss)) xs
-                                              ?? helper `at` (Inst @"xs" xs, Inst @"y" (foldr f a (mapFoldr a xss)))
-                                              =: foldr f a xs `f` foldr f a (mapFoldr a xss)
-                                              =: foldr f a (foldr f a xs .: mapFoldr a xss)
-                                              =: foldr f a (mapFoldr a (xs .: xss))
+                                              =: foldr f (foldr f a (map (foldr f a) xss)) xs
+                                              ?? helper `at` (Inst @"xs" xs, Inst @"y" (foldr f a (map (foldr f a) xss)))
+                                              =: foldr f a xs `f` foldr f a (map (foldr f a) xss)
+                                              =: foldr f a (foldr f a xs .: map (foldr f a) xss)
+                                              =: foldr f a (map (foldr f a) (xs .: xss))
                                               =: qed
 
 -- | @filter p (xs ++ ys) == filter p xs ++ filter p ys@
@@ -927,10 +917,6 @@ filterAppend p =
 
 -- | @filter p (concat xss) == concatMap (filter p xss)@
 --
--- Similar to the book-keeping law, we cannot express this in SBV directly, since it involves a nested lambda.
--- @concatMap (filter p)@ maps a higher-order function @filter p@, which itself has a nested lambda. So, we use
--- our own merged definition. Hopefully we'll relax this as SMTLib gains more higher order features.
---
 -- >>> runTP $ filterConcat @Integer (uninterpret "f")
 -- Inductive lemma: filterAppend @Integer
 --   Step: Base                            Q.E.D.
@@ -945,27 +931,20 @@ filterAppend p =
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] filterConcat @Integer
 filterConcat :: forall a. SymVal a => (SBV a -> SBool) -> TP Proof
 filterConcat p = do
-  let -- Fuse concatMap (filter p) in the theorem to avoid nested lambdas. See above note
-      concatMapFilter :: SymVal a => (SBV a -> SBool) -> SList [a] -> SList a
-      concatMapFilter pred = smtFunction "concatMapFilter" $ \xs -> ite (null xs)
-                                                                        nil
-                                                                        (filter pred (head xs) ++ concatMapFilter pred (tail xs))
-
-
   fa <- filterAppend p
 
-  induct (atProxy (Proxy @a) "filterConcat")
-         (\(Forall @"xss" xss) -> filter p (concat xss) .== concatMapFilter p xss) $
+  inductWith cvc5 (atProxy (Proxy @a) "filterConcat")
+         (\(Forall @"xss" xss) -> filter p (concat xss) .== concatMap (filter p) xss) $
          \ih xs xss -> [] |- filter p (concat (xs .: xss))
-                          =: filter p (xs ++ concat xss)           ?? fa
-                          =: filter p xs ++ filter p (concat xss)  ?? ih
-                          =: filter p xs ++ concatMapFilter p xss
-                          =: concatMapFilter p (xs .: xss)
+                          =: filter p (xs ++ concat xss)
+                          ?? fa
+                          =: filter p xs ++ filter p (concat xss)
+                          ?? ih
+                          =: concatMap (filter p) (xs .: xss)
                           =: qed
 
 -- | @(as ++ bs) \\ cs == (as \\ cs) ++ (bs \\ cs)@

@@ -65,14 +65,10 @@ tests =
                                             , P.map (\x -> P.sum [x  ^ i         | i <- [1..10 :: Integer]])
                                             )
 
-      -- no nested lambda's alas; the "map sum" term leads to a nested-lambda, and our current
-      -- lambda handler isn't smart enough to take care of such nestedness due to firstification
-      -- We can (hopefully) lift this when SMTLib starts officially supporting higher-order functions
-      -- and solvers get better at it.
-      , goldenCapturedIO "lambda07" $ eval1Err ([[1..5], [1..10], [1..20]] :: [[Integer]])
-                                               ( let sum = foldl (+) 0 in   sum .   map   sum
-                                               ,                          P.sum . P.map P.sum
-                                               )
+      , goldenCapturedIO "lambda07" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]])
+                                            ( let sum = foldl (+) 0 in   sum .   map   sum
+                                            ,                          P.sum . P.map P.sum
+                                            )
 
       , goldenCapturedIO "lambda08" $ eval1 [1 .. 5 :: Float]   (map (+1), P.map (+1))
       , goldenCapturedIO "lambda09" $ eval1 [1 .. 5 :: Int8]    (map (+1), P.map (+1))
@@ -235,8 +231,8 @@ tests =
 
       , goldenCapturedIO "lambda79" $ \f -> sbv2smt def_t1 >>= writeFile f
       , goldenCapturedIO "lambda80" $ \f -> sbv2smt def_t2 >>= writeFile f
-      , goldenCapturedIO "lambda81" $ errorOut noNested
-      , goldenCapturedIO "lambda82" $ errorOut noFreeVars
+      , goldenCapturedIO "lambda81" $ errorOut noFreeVars1
+      , goldenCapturedIO "lambda82" $ errorOut noFreeVars2
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
@@ -314,11 +310,6 @@ tests =
 eval1 :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
 eval1 cArg sf rf = eval1Gen cArg sf rf z3{verbose=True, redirectVerbose=Just rf}
 
-eval1Err :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
-eval1Err cArg sf rf = void (eval1Gen cArg sf rf z3{verbose=True, redirectVerbose=Just rf})
-                      `C.catch` \(e::C.SomeException) -> do appendFile rf "CAUGHT EXCEPTION\n\n"
-                                                            appendFile rf (show e)
-
 eval1Gen :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> SMTConfig -> IO ()
 eval1Gen cArg (sFun, cFun) rf cfg = do m <- runSMTWith cfg run
                                        appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")
@@ -376,17 +367,17 @@ errorOut t rf = void (t z3{verbose=True, redirectVerbose=Just rf})
                     `C.catch` \(e::C.SomeException) -> do appendFile rf "CAUGHT EXCEPTION\n\n"
                                                           appendFile rf (show e)
 
--- Don't allow nested definitions. We can't handle such definitions as we firstify these.
-noNested :: SMTConfig -> IO SatResult
-noNested cfg = satWith cfg $ do
+-- No free vars
+noFreeVars1 :: SMTConfig -> IO SatResult
+noFreeVars1 cfg = satWith cfg $ do
         zs <- free_
         xs <- free_
         constrain $ xs .== literal [1,2,3::Integer]
         pure $ zs .== map (\x -> map (\y -> x+y) (literal [3,4,5])) xs
 
--- Don't allow free variables in higher-order functions. Firstification can't handle these.
-noFreeVars :: SMTConfig -> IO SatResult
-noFreeVars cfg = satWith cfg $ do
+-- No free vars
+noFreeVars2 :: SMTConfig -> IO SatResult
+noFreeVars2 cfg = satWith cfg $ do
         xs :: SList Integer <- free_
         pure $ filter (.> head xs) xs .== filter (.> 4) xs
 

@@ -1,10 +1,17 @@
 CAUGHT EXCEPTION
 
-
-*** Data.SBV.Lambda: Detected nested lambda-definitions.
+Data.SBV: Mismatched levels detected in the same context.
 ***
-*** SBV uses firstification to deal-with lambdas, and SMTLib's first-order nature does not allow
-*** for easy translation of nested lambdas. As SMTLib gets higher-order features, SBV will eventually
-*** relax this restriction. In the mean-time, please rewrite your program without using nested-lambdas
-*** if possible. If this workaround isn't applicable, please report this as a use-case for further
-*** possible enhancements.
+***   Refers to: Just (0,2)
+***   And also : Just (1,0)
+***
+*** A typical reason for this is the use of a higher order function, typically from
+*** Data.SBV.List, with a lambda that refers to a free variable. (For instance calling
+*** 'f e xs = filter (.> e) xs' where 'x' is free in the lambda-expression '(.> e)'.)
+***
+*** While SBV does allow symbolic use of a selected subset of higher-order functions
+*** like filter/map/fold, the lambda-arguments must be closed. (This is due to the
+*** fact that SMTLib doesn't allow higher-order functions, and SBV firstifies such
+*** uses with a simple translation that doesn't allow for captured variables.) As
+*** SMTLib gains more higher order features, we might relax this constraint. Please
+*** report your use case as an example application.

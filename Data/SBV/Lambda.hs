@@ -59,19 +59,12 @@ data Defn = Defn [String]                        -- The uninterpreted names refe
 inSubState :: MonadIO m => LambdaScope -> State -> (State -> m b) -> m b
 inSubState scope inState comp = do
 
-        let noNesting = error $ unlines [ ""
-                                        , "*** Data.SBV.Lambda: Detected nested lambda-definitions."
-                                        , "***"
-                                        , "*** SBV uses firstification to deal-with lambdas, and SMTLib's first-order nature does not allow"
-                                        , "*** for easy translation of nested lambdas. As SMTLib gets higher-order features, SBV will eventually"
-                                        , "*** relax this restriction. In the mean-time, please rewrite your program without using nested-lambdas"
-                                        , "*** if possible. If this workaround isn't applicable, please report this as a use-case for further"
-                                        , "*** possible enhancements."
-                                        ]
-
         newLevel <- do ll <- liftIO $ readIORef (rLambdaLevel inState)
                        pure $ case ll of
-                                Nothing -> noNesting
+                                Nothing -> -- We used to error out here, as this is nested-lambda
+                                           -- But the recent fixes to support for higher-order functions made this
+                                           -- unnecessary, I think. So, let's just return 0 and see what happens..
+                                           Just 0
                                 Just i  -> case scope of
                                              HigherOrderArg -> Nothing
                                              TopLevel       -> Just $ i + 1
