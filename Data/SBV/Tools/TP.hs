@@ -18,7 +18,7 @@
 
 module Data.SBV.Tools.TP (
        -- * Propositions and their proofs
-         Proposition, Proof
+         Proposition, Proof, getProof
 
        -- * Getting the proof tree
        , getProofTree, rootOfTrust, RootOfTrust(..), ProofTree(..), showProofTree, showProofTreeHTML
