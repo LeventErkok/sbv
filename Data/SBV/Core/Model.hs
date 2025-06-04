@@ -3391,7 +3391,7 @@ smtHOFunction :: forall a b f.
                  ) => String       -- prefix to use
                    -> f            -- The higher-order argument. We're very generic here!
                    -> (a -> SBV b) -- The ho-function we're modeling
-                   -> a -> SBV b
+                   ->  a -> SBV b  -- The resulting function, that can be used as is, and will be rendered in SMTLib without unfolding
 smtHOFunction nm f hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cache r
   where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg (resKindOf (kindOf (Proxy @f))) f
                   let uniqLen = firstifyUniqueLen $ stCfg st
