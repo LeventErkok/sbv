@@ -36,7 +36,7 @@ module Data.SBV.Tools.TP.List (
    , allAny
 
      -- * Map
-   , mapEquiv, mapAppend, mapReverse
+   , mapEquiv, mapAppend, mapReverse, mapCompose
 
      -- * Foldr and foldl
    , foldrMapFusion, foldrFusion, foldrOverAppend, foldlOverAppend, foldrFoldlDuality, foldrFoldlDualityGeneralized, foldrFoldl
@@ -502,6 +502,29 @@ mapReverse f = do
                            =: map f (reverse xs ++ singleton x)
                            =: map f (reverse (x .: xs))
                            =: qed
+
+-- | @map f . map g == map (f . g)@
+--
+-- >>> runTP $ mapCompose @Integer @Bool @String (uninterpret "f") (uninterpret "g")
+-- Inductive lemma: mapCompose @(Integer,Bool,[Char])
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] mapCompose @(Integer,Bool,[Char])
+mapCompose :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> (SBV b -> SBV c) -> TP Proof
+mapCompose f g =
+  induct (atProxy (Proxy @(a, b, c)) "mapCompose")
+         (\(Forall @"xs" (xs :: SList a)) -> map g (map f xs) .== map (g . f) xs) $
+         \ih x xs -> [] |- map g (map f (x .: xs))
+                        =: map g (f x .: map f xs)
+                        =: g (f x) .: map g (map f xs)
+                        ?? ih
+                        =: (g . f) x .: map (g . f) xs
+                        =: map (g . f) (x .: xs)
+                        =: qed
 
 -- | @foldr f a . map g == foldr (f . g) a@
 --
