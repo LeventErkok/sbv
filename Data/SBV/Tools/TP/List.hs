@@ -139,13 +139,25 @@ tailsAppend p = do
                                                              nil
                                                              ((head xs ++ ys) .: appendEach (tail xs) ys)
 
-   inductWith cvc5 (atProxy p "tailsAppend")
-          (\(Forall @"xs" (xs :: SList a), Forall @"ys" ys) -> tails (xs ++ ys) .== appendEach (tails xs) ys ++ tail (tails ys)) $
-          \ih (x :: SBV a, xs, y :: SBV a, ys) ->
-             [] |- tails ((x .: xs) ++ (y .: ys))
+   -- Even proving the base case of induction is hard due to recursive definition. So we first prove the base case by induction.
+   bc <- induct "base case"
+          (\(Forall @"ys" (ys :: SList a)) -> tails ys .== singleton ys ++ tail (tails ys)) $
+          \ih (y :: SBV a) ys ->
+             [] |- tails (y .: ys)
+                =: singleton (y .: ys) ++ tails ys
                 ?? ih
-                =: appendEach (tails (x .: xs)) (y .: ys) ++ tail (tails (y .: ys))
+                =: singleton (y .: ys) ++ singleton ys ++ tail (tails ys)
+                =: singleton (y .: ys) ++ tail (tails (y .: ys))
                 =: qed
+
+   induct (atProxy p "tailsAppend")
+          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> tails (xs ++ ys) .== appendEach (tails xs) ys ++ tail (tails ys)) $
+          \ih (x :: SBV a) xs ys ->
+                [getProof bc]
+             |- tails ((x .: xs) ++ ys)
+             ?? ih
+             =: appendEach (tails (x .: xs)) ys ++ tail (tails ys)
+             =: qed
 
 -- | @length xs == length (reverse xs)@
 --
