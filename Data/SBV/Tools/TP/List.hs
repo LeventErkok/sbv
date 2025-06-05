@@ -1736,9 +1736,11 @@ elemCount p =
 
 {- HLint ignore revRev         "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
+{- HLint ignore bookKeeping    "Fuse foldr/map"    -}
 {- HLint ignore foldrMapFusion "Fuse foldr/map"    -}
 {- HLint ignore filterConcat   "Move filter"       -}
 {- HLint ignore module         "Use camelCase"     -}
 {- HLint ignore module         "Use first"         -}
 {- HLint ignore module         "Use second"        -}
 {- HLint ignore module         "Use zipWith"       -}
+{- HLint ignore mapCompose     "Use map once"      -}
