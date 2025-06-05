@@ -239,6 +239,8 @@ tests =
       , goldenCapturedIO "lambda83" $ eval1 [1 .. 5 :: Integer] (   map (\x ->   map (\y -> x + y) (literal [4, 5, 6]))
                                                                 , P.map (\x -> P.map (\y -> x + y)          [4, 5, 6])
                                                                 )
+
+      , goldenCapturedIO "lambda84" $ errorOut noFreeVars2
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
@@ -385,6 +387,16 @@ noFreeVars1 cfg = satWith cfg $ do
         constrain $ xs .== literal [1,2,3::Integer]
         constrain $ ys .== literal [3,4,5::Integer]
         pure $ zs .== map (\x -> map (\y -> x+y) ys) xs
+
+-- No free vars
+noFreeVars2 :: SMTConfig -> IO ThmResult
+noFreeVars2 cfg = proveWith cfg $ do
+   let ae :: SList [Integer] -> SList Integer -> SList [Integer]
+       ae xs ys = map (++ ys) xs
+
+   xs <- free_
+   ys <- free_
+   pure $ map (ae xs) ys .== nil
 
 -- This one is ok, because we're using the global xs. (i.e., no free vars)
 filterHead :: Symbolic String
