@@ -233,13 +233,13 @@ tests =
       , goldenCapturedIO "lambda79" $ \f -> sbv2smt def_t1 >>= writeFile f
       , goldenCapturedIO "lambda80" $ \f -> sbv2smt def_t2 >>= writeFile f
 
-      , goldenCapturedIO "lambda81" $ errorOut   noFreeVars1
-      , goldenCapturedIO "lambda82" $ regularRun filterHead
+      , goldenCapturedIO "lambda81" $ regularRun filterHead
 
-      , goldenCapturedIO "lambda83" $ eval1 [1 .. 5 :: Integer] (   map (\x ->   map (\y -> x + y) (literal [4, 5, 6]))
+      , goldenCapturedIO "lambda82" $ eval1 [1 .. 5 :: Integer] (   map (\x ->   map (\y -> x + y) (literal [4, 5, 6]))
                                                                 , P.map (\x -> P.map (\y -> x + y)          [4, 5, 6])
                                                                 )
 
+      , goldenCapturedIO "lambda83" $ errorOut noFreeVars1
       , goldenCapturedIO "lambda84" $ errorOut noFreeVars2
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
