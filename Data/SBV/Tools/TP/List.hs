@@ -195,9 +195,13 @@ tailsLength p =
 tailsAppend :: forall a. SymVal a => Proxy a -> TP Proof
 tailsAppend p = do
 
-   -- We cannot express this lemma directly in SBV since the term @map (++ ys)@ has a free variable in the
-   -- higher-order function passed to @map@. So, we use a fused version.
-   let appendEach :: SList [a] -> SList a -> SList [a]
+   let -- Would like to define appendEach like this:
+       --
+       --       appendEach xs ys = map (++ ys) xs
+       --
+       -- But capture of ys is not allowed by SBV.  So we use an
+       -- explicit recursive definition to pass around ys.
+       appendEach :: SList [a] -> SList a -> SList [a]
        appendEach = smtFunction "appendEach" $ \xs ys -> ite (null xs)
                                                              nil
                                                              ((head xs ++ ys) .: appendEach (tail xs) ys)
