@@ -2464,7 +2464,7 @@ class SMTDefinable a where
   -- Then, make sure you use @bar "two" 2@ and @bar "three" 3@ etc. to preserve the invariant.
   --
   -- Furthermore, the function argument must not capture any non-constant variables in the context.
-  -- That is, the functions passed must be combinators.
+  -- You can also define higher-order functions, see 'smtHOFunction' for that purpose.
   --
   -- Note that this is a design choice, to keep function creation as easy to use as possible. SBV
   -- could've made 'smtFunction' a monadic call and generated the name itself to avoid all these issues.
