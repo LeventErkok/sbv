@@ -187,8 +187,8 @@ tests =
 
       -- Quantified booleans
       , goldenCapturedIO "lambda62" $ \rf -> do m <- proveWith z3{verbose=True, redirectVerbose=Just rf} drinker
-                                                appendFile rf ("\nRESULT:\n" P.++ show m P.++ "\n")
-                                                `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" P.++ show e P.++ "\n"))
+                                                appendFile rf ("\nRESULT:\n" <> show m <> "\n")
+                                                `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" <> show e <> "\n"))
 
       -- Special relations (kind of lambda related)
       , goldenCapturedIO "lambda63" $ runP $         quantifiedBool (\(Forall x) -> rel (x, x))
@@ -233,8 +233,8 @@ tests =
       , goldenCapturedIO "lambda79" $ \f -> sbv2smt def_t1 >>= writeFile f
       , goldenCapturedIO "lambda80" $ \f -> sbv2smt def_t2 >>= writeFile f
 
-      , goldenCapturedIO "lambda81" $ errorOut noFreeVars1
-      , goldenCapturedIO "lambda82" $ errorOut noFreeVars2
+      , goldenCapturedIO "lambda81" $ errorOut   noFreeVars1
+      , goldenCapturedIO "lambda82" $ regularRun filterHead
 
       , goldenCapturedIO "lambda83" $ eval1 [1 .. 5 :: Integer] (   map (\x ->   map (\y -> x + y) (literal [4, 5, 6]))
                                                                 , P.map (\x -> P.map (\y -> x + y)          [4, 5, 6])
@@ -258,6 +258,9 @@ tests =
         leq = uncurry $ smtFunction "leq" (.<=)
         po  = isPartialOrder "poR" rel
         poI = isPartialOrder "poI" leq
+
+        regularRun tc goldFile = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
+                                    appendFile goldFile ("\n FINAL:" <> show r <> "\nDONE!\n")
 
         record :: (State -> IO String) -> FilePath -> IO ()
         record gen rf = do st <- mkNewState defaultSMTCfg (LambdaGen (Just 0))
@@ -383,11 +386,16 @@ noFreeVars1 cfg = satWith cfg $ do
         constrain $ ys .== literal [3,4,5::Integer]
         pure $ zs .== map (\x -> map (\y -> x+y) ys) xs
 
--- No free vars
-noFreeVars2 :: SMTConfig -> IO SatResult
-noFreeVars2 cfg = satWith cfg $ do
+-- This one is ok, because we're using the global xs. (i.e., no free vars)
+filterHead :: Symbolic String
+filterHead = do
         xs :: SList Integer <- free_
-        pure $ filter (.> head xs) xs .== filter (.> 4) xs
+        constrain $ filter (.> head xs) xs ./= filter (.> 4) xs
+        query $ do cs <- checkSat
+                   case cs of
+                     Sat -> showModel z3 <$> getModel
+                     _   -> pure $ "Unexpected result: " <> show cs
+
 
 {- HLint ignore module "Use map once"   -}
 {- HLint ignore module "Use sum"        -}
