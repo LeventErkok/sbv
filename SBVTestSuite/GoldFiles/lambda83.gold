@@ -7,7 +7,16 @@ CAUGHT EXCEPTION
 ***  Definition: (lambda ((s0 Int))
 ***                (+ args0 s0))
 ***
-*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in.
+*** SBV does not currently support lambda-functions that refer to variables in surrounding
+*** anonymous functions. For instance, consider the expression:
 ***
-*** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible.
-*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements.
+***     map (\x -> map (\y -> x + y))
+***
+*** where the inner 'map' uses 'x', bound by the outer 'map'. This is currently not supported.
+*** (SBV firstifies higher-order functions via a simple translation to make it fit with
+*** SMTLib's first-order logic, and this translation does not currently support free
+*** variables.)
+***
+*** Please rewrite your program to pass the free variable as an explicit argument, i.e., make
+*** it into a closure that captures its environment. If this workaround isn't applicable,
+*** or if you'd like help doing so, please get in touch for further possible enhancements.
