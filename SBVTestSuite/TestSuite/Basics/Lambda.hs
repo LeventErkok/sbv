@@ -232,8 +232,14 @@ tests =
 
       , goldenCapturedIO "lambda79" $ \f -> sbv2smt def_t1 >>= writeFile f
       , goldenCapturedIO "lambda80" $ \f -> sbv2smt def_t2 >>= writeFile f
+
       , goldenCapturedIO "lambda81" $ errorOut noFreeVars1
       , goldenCapturedIO "lambda82" $ errorOut noFreeVars2
+
+
+      , goldenCapturedIO "lambda83" $ eval1 [1 .. 5 :: Integer] (   map (\x ->   map (\y -> x + y) (literal [4, 5, 6]))
+                                                                , P.map (\x -> P.map (\y -> x + y)          [4, 5, 6])
+                                                                )
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
@@ -373,8 +379,10 @@ noFreeVars1 :: SMTConfig -> IO SatResult
 noFreeVars1 cfg = satWith cfg $ do
         zs <- free_
         xs <- free_
+        ys <- free_
         constrain $ xs .== literal [1,2,3::Integer]
-        pure $ zs .== map (\x -> map (\y -> x+y) (literal [3,4,5])) xs
+        constrain $ ys .== literal [3,4,5::Integer]
+        pure $ zs .== map (\x -> map (\y -> x+y) ys) xs
 
 -- No free vars
 noFreeVars2 :: SMTConfig -> IO SatResult

@@ -1,17 +1,16 @@
 CAUGHT EXCEPTION
 
-Data.SBV: Mismatched levels detected in the same context.
+
+*** Data.SBV.Lambda: Detected free variables passed to a lambda.
 ***
-***   Refers to: Just (0,2)
-***   And also : Just (1,0)
+***  Free vars : l1_s0
+***  Definition: (lambda ((args0 Int))
+***                        (let ((args1 0))
+***                        (let ((args2 (seq.nth l1_s0 args1)))
+***                        (let ((args3 (+ args0 args2)))
+***                        args3))))
 ***
-*** A typical reason for this is the use of a higher order function, typically from
-*** Data.SBV.List, with a lambda that refers to a free variable. (For instance calling
-*** 'f e xs = filter (.> e) xs' where 'x' is free in the lambda-expression '(.> e)'.)
+*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in.
 ***
-*** While SBV does allow symbolic use of a selected subset of higher-order functions
-*** like filter/map/fold, the lambda-arguments must be closed. (This is due to the
-*** fact that SMTLib doesn't allow higher-order functions, and SBV firstifies such
-*** uses with a simple translation that doesn't allow for captured variables.) As
-*** SMTLib gains more higher order features, we might relax this constraint. Please
-*** report your use case as an example application.
+*** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible.
+*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements.
