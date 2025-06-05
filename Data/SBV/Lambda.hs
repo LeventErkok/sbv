@@ -63,7 +63,7 @@ inSubState scope inState comp = do
                        pure $ case ll of
                                 Nothing -> -- We used to error out here, as this is nested-lambda
                                            -- But the recent fixes to support for higher-order functions made this
-                                           -- unnecessary, I think. So, let's just return 0 and see what happens..
+                                           -- unnecessary. (I hope!)
                                            Just 0
                                 Just i  -> case scope of
                                              HigherOrderArg -> Nothing
@@ -298,14 +298,16 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                                   ]
                           ResultLamInps xs -> map (\(q, v) -> (q, getSV v)) xs
 
-               frees = map show $ filter (lowerLevel . getId . swNodeId) (nub allUses \\ nub allDefs)
+               frees = map show badFrees
                  where (defs, uses) = unzip [(d, u) | (d, SBVApp _ u) <- F.toList asgnsSeq]
                        allDefs      = defs ++ map snd params ++ map fst constants
                        allUses      = concat uses
+                       allFrees     = nub allUses \\ nub allDefs
+                       badFrees     = filter (not . global . getId . swNodeId) allFrees
 
-                       -- Is this at a lambda-level (i.e., not top)
-                       lowerLevel (_, Just {}, _) = True
-                       lowerLevel (_, Nothing, _) = False
+                       -- is this a global?
+                       global (_, Just 0, _) = True
+                       global (_, _     , n) = n < 0  -- -1/-2 for false true
 
                mbParam
                  | null params = Nothing

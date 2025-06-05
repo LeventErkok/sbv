@@ -159,7 +159,7 @@ tests =
       , goldenCapturedIO "lambda52"   $ runSat2 (\a r -> a .== 21 .&& isOdd  a .== r)
       , goldenCapturedIO "lambda52_c" $ runSat  (isOdd  21 .==)
 
-      -- make sure free vars are caught if used as a function arg
+      -- make sure we can pass globals
       , goldenCapturedIO "lambda53" $ runSat $ \x -> x .== smtFunction "foo" (+(x::SInteger)) x
 
       -- Make sure we can handle dependency orders
@@ -235,7 +235,6 @@ tests =
 
       , goldenCapturedIO "lambda81" $ errorOut noFreeVars1
       , goldenCapturedIO "lambda82" $ errorOut noFreeVars2
-
 
       , goldenCapturedIO "lambda83" $ eval1 [1 .. 5 :: Integer] (   map (\x ->   map (\y -> x + y) (literal [4, 5, 6]))
                                                                 , P.map (\x -> P.map (\y -> x + y)          [4, 5, 6])
