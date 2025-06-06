@@ -45,7 +45,7 @@ module Data.SBV.Tools.TP (
        , sorry
 
        -- * Running TP proofs
-       , TP, runTP, runTPWith, tpRibbon, tpStats
+       , TP, runTP, runTPWith, tpRibbon, tpStats, tpCache
 
        -- * Starting a calculation proof
        , (|-), (⊢)

@@ -32,7 +32,7 @@ module Data.SBV.Tools.TP.TP (
        ,  induct,  inductWith,  inductThm,  inductThmWith
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
-       , TP, runTP, runTPWith, tpRibbon, tpStats
+       , TP, runTP, runTPWith, tpRibbon, tpStats, tpCache
        , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), qed, trivial, contradiction, atProxy
        ) where
 
@@ -130,7 +130,7 @@ class CalcLemma a steps where
   calcThmWith cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric True  (tpMergeCfg cfg cfg') nm p steps
 
   calcGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> TP Proof
-  calcGeneric tagTheorem cfg nm result steps = do
+  calcGeneric tagTheorem cfg nm result steps = withProofCache nm $ do
      tpSt <- getTPState
      u    <- tpGetNextUnique
 
@@ -166,11 +166,11 @@ class CalcLemma a steps where
 proveProofTree :: Proposition a
                => SMTConfig
                -> TPState
-               -> String        -- ^ the name of the top result
-               -> (a, SBool)    -- ^ goal: as a proposition and as a boolean
-               -> SBool         -- ^ hypotheses
-               -> TPProof       -- ^ proof tree
-               -> TPUnique      -- ^ unique id
+               -> String       -- ^ the name of the top result
+               -> (a, SBool)   -- ^ goal: as a proposition and as a boolean
+               -> SBool        -- ^ hypotheses
+               -> TPProof      -- ^ proof tree
+               -> TPUnique     -- ^ unique id
                -> Query Proof
 proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree uniq = do
 
@@ -467,7 +467,7 @@ class SInductive a measure steps where
 
 -- | Do an inductive proof, based on the given strategy
 inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> TP Proof
-inductionEngine style tagTheorem cfg nm result getStrategy = do
+inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $ do
    tpSt <- getTPState
    u    <- tpGetNextUnique
 

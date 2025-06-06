@@ -79,7 +79,7 @@ internalAxiom nm p = Proof { dependencies = []
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> String -> a -> [Proof] -> TP Proof
-lemmaGen cfg@SMTConfig{tpOptions = TPOptions{printStats}} tag nm inputProp by = do
+lemmaGen cfg@SMTConfig{tpOptions = TPOptions{printStats}} tag nm inputProp by = withProofCache nm $ do
         tpSt <- getTPState
         u    <- tpGetNextUnique
         liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt u

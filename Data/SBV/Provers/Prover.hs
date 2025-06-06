@@ -110,6 +110,7 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , tpOptions                   = TPOptions { ribbonLength = 40
                                                                                       , quiet        = False
                                                                                       , printStats   = False
+                                                                                      , cacheProofs  = False
                                                                                       }
                                             }
 

@@ -26,7 +26,8 @@ module Data.SBV.Tools.TP.Utils (
        , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), getProofTree, showProofTree, showProofTreeHTML, shortProofName
-       , atProxy, tpRibbon, tpStats
+       , withProofCache
+       , atProxy, tpRibbon, tpStats, tpCache
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -59,19 +60,38 @@ import Data.IORef
 import GHC.Generics
 import Data.Dynamic
 
+import qualified Data.Map as Map
+import Data.Map (Map)
+
 -- | Various statistics we collect
 data TPStats = TPStats { noOfCheckSats :: Int
                        , solverElapsed :: NominalDiffTime
                        }
 
 -- | Extra state we carry in a TP context
-data TPState = TPState { stats  :: IORef TPStats
-                       , config :: SMTConfig
+data TPState = TPState { stats      :: IORef TPStats
+                       , proofCache :: IORef (Map String Proof)
+                       , config     :: SMTConfig
                        }
 
 -- | Monad for running TP proofs in.
 newtype TP a = TP (ReaderT TPState IO a)
             deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader TPState, MonadFail)
+
+-- | If caches are enabled, see if we cached this proof and return it; otherwise generate it, cache it, and return it
+withProofCache :: String -> TP Proof -> TP Proof
+withProofCache nm genProof = do
+  TPState{proofCache, config = cfg@SMTConfig {tpOptions = TPOptions {cacheProofs}}} <- getTPState
+  if not cacheProofs
+     then genProof
+     else do cache <- liftIO $ readIORef proofCache
+             case nm `Map.lookup` cache of
+               Just prf -> do liftIO $ do tab <- startTP  cfg False "Cache" 0 (TPProofOneShot nm [])
+                                          finishTP cfg "Q.E.D." (tab, Nothing) []
+                              pure prf
+               Nothing  -> do p <- genProof
+                              liftIO $ modifyIORef' proofCache (Map.insert nm p)
+                              pure p
 
 -- | The context in which we make a check-sat call
 data TPProofContext = TPProofOneShot String   -- ^ A one shot proof, with string containing its name
@@ -89,7 +109,8 @@ runTP = runTPWith defaultSMTCfg
 runTPWith :: SMTConfig -> TP a -> IO a
 runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
    rStats <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0 }
-   (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = cfg, stats = rStats}
+   rCache <- newIORef Map.empty
+   (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = cfg, stats = rStats, proofCache = rCache}
    case mbT of
      Nothing -> pure ()
      Just t  -> do TPStats noOfCheckSats solverTime <- readIORef rStats
@@ -325,3 +346,9 @@ tpRibbon i cfg = cfg{tpOptions = (tpOptions cfg) { ribbonLength = i }}
 -- | Make TP proofs produce statistics.
 tpStats :: SMTConfig -> SMTConfig
 tpStats cfg = cfg{tpOptions = (tpOptions cfg) { printStats = True }}
+
+-- | Make TP proofs use proof-cache. Note that if you use this option then
+-- you are obligated to ensure all lemma/theorem names you use are unique for the whole run.
+-- Otherwise the results are not guaranteed to be sound.
+tpCache :: SMTConfig -> SMTConfig
+tpCache cfg = cfg{tpOptions = (tpOptions cfg) { cacheProofs = True }}
