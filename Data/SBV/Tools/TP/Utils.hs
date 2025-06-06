@@ -86,7 +86,7 @@ withProofCache nm genProof = do
      then genProof
      else do cache <- liftIO $ readIORef proofCache
              case nm `Map.lookup` cache of
-               Just prf -> do liftIO $ do tab <- startTP  cfg False "Cache" 0 (TPProofOneShot nm [])
+               Just prf -> do liftIO $ do tab <- startTP  cfg False "Cached" 0 (TPProofOneShot nm [])
                                           finishTP cfg "Q.E.D." (tab, Nothing) []
                               pure prf{isCached = True}
                Nothing  -> do p <- genProof
