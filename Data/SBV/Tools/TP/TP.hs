@@ -292,6 +292,7 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                                , getProp      = toDyn result
                                , proofName    = nm
                                , uniqId       = uniq
+                               , isCached     = False
                                }
 
 -- Helper data-type for calc-step below

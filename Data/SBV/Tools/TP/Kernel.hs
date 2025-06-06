@@ -75,6 +75,7 @@ internalAxiom nm p = Proof { dependencies = []
                            , getProp      = toDyn p
                            , proofName    = nm
                            , uniqId       = TPInternal
+                           , isCached     = False
                            }
 
 -- | Helper to generate lemma/theorem statements.
@@ -96,6 +97,7 @@ lemmaGen cfg@SMTConfig{tpOptions = TPOptions{printStats}} tag nm inputProp by = 
                                          , getProp      = toDyn inputProp
                                          , proofName    = nm
                                          , uniqId       = u
+                                         , isCached     = False
                                          }
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.

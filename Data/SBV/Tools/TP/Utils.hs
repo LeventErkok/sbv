@@ -88,7 +88,7 @@ withProofCache nm genProof = do
              case nm `Map.lookup` cache of
                Just prf -> do liftIO $ do tab <- startTP  cfg False "Cache" 0 (TPProofOneShot nm [])
                                           finishTP cfg "Q.E.D." (tab, Nothing) []
-                              pure prf
+                              pure prf{isCached = True}
                Nothing  -> do p <- genProof
                               liftIO $ modifyIORef' proofCache (Map.insert nm p)
                               pure p
@@ -188,6 +188,7 @@ data Proof = Proof { dependencies :: [Proof]     -- ^ Immediate dependencies of 
                    , getProp      :: Dynamic     -- ^ The actual proposition
                    , proofName    :: String      -- ^ User given name
                    , uniqId       :: TPUnique    -- ^ Unique identifier
+                   , isCached     :: Bool        -- ^ Was this a cached proof?
                    }
 
 -- | Drop the instantiation part
@@ -215,11 +216,12 @@ instance Monoid RootOfTrust where
 
 -- | NFData ignores the getProp field
 instance NFData Proof where
-  rnf (Proof dependencies isUserAxiom getProof _getProp proofName uniqId) =     rnf dependencies
-                                                                          `seq` rnf isUserAxiom
-                                                                          `seq` rnf getProof
-                                                                          `seq` rnf proofName
-                                                                          `seq` rnf uniqId
+  rnf (Proof dependencies isUserAxiom getProof _getProp proofName uniqId isCached) =     rnf dependencies
+                                                                                   `seq` rnf isUserAxiom
+                                                                                   `seq` rnf getProof
+                                                                                   `seq` rnf proofName
+                                                                                   `seq` rnf uniqId
+                                                                                   `seq` rnf isCached
 
 -- | Dependencies of a proof, in a tree format.
 data ProofTree = ProofTree Proof [ProofTree]
@@ -288,8 +290,14 @@ showProofTreeHTML compress mbCSS deps = htmlTree mbCSS $ snd $ depsToTree compre
 -- | Show instance for t'Proof'
 instance Show Proof where
   show p@Proof{proofName = nm} = '[' : sh (rootOfTrust p) ++ "] " ++ nm
-    where sh (RootOfTrust Nothing)   = "Proven"
-          sh (RootOfTrust (Just ps)) = "Modulo: " ++ intercalate ", " (map shortProofName ps)
+    where sh (RootOfTrust Nothing)   = "Proven" ++ if usesCache then " (uses proof cache)" else ""
+          sh (RootOfTrust (Just ps))
+            | usesCache = "Uses proof cache, modulo: " ++ deps
+            | True      = "Modulo: "                   ++ deps
+            where deps = intercalate ", " (map shortProofName ps)
+
+          usesCache = cached p
+          cached Proof{isCached, dependencies} = isCached || any cached dependencies
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
 -- cannot deal with, or if we want to postpone the proof for the time being. TP will keep
@@ -301,6 +309,7 @@ sorry = Proof { dependencies = []
               , getProp      = toDyn p
               , proofName    = "sorry"
               , uniqId       = TPSorry
+              , isCached     = False
               }
   where -- ideally, I'd rather just use
         --   p = sFalse
