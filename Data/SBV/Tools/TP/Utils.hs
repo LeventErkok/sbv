@@ -166,7 +166,7 @@ data Proof = Proof { dependencies :: [Proof]     -- ^ Immediate dependencies of 
                    , getProof     :: SBool       -- ^ Get the underlying boolean
                    , getProp      :: Dynamic     -- ^ The actual proposition
                    , proofName    :: String      -- ^ User given name
-                   , uniqId       :: TPUnique    -- ^ Unique identified
+                   , uniqId       :: TPUnique    -- ^ Unique identifier
                    }
 
 -- | Drop the instantiation part
