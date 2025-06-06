@@ -86,7 +86,7 @@ withProofCache nm genProof = do
      then genProof
      else do cache <- liftIO $ readIORef proofCache
              case nm `Map.lookup` cache of
-               Just prf -> do liftIO $ do tab <- startTP  cfg False "Cache" 0 (TPProofOneShot nm [])
+               Just prf -> do liftIO $ do tab <- startTP  cfg False "Cached" 0 (TPProofOneShot nm [])
                                           finishTP cfg "Q.E.D." (tab, Nothing) []
                               pure prf{isCached = True}
                Nothing  -> do p <- genProof
@@ -290,7 +290,7 @@ showProofTreeHTML compress mbCSS deps = htmlTree mbCSS $ snd $ depsToTree compre
 -- | Show instance for t'Proof'
 instance Show Proof where
   show p@Proof{proofName = nm} = '[' : sh (rootOfTrust p) ++ "] " ++ nm
-    where sh (RootOfTrust Nothing)   = "Proven" ++ if usesCache then " (uses proof cache)" else ""
+    where sh (RootOfTrust Nothing)   = "Proven"
           sh (RootOfTrust (Just ps))
             | usesCache = "Uses proof cache, modulo: " ++ deps
             | True      = "Modulo: "                   ++ deps
@@ -356,8 +356,9 @@ tpRibbon i cfg = cfg{tpOptions = (tpOptions cfg) { ribbonLength = i }}
 tpStats :: SMTConfig -> SMTConfig
 tpStats cfg = cfg{tpOptions = (tpOptions cfg) { printStats = True }}
 
--- | Make TP proofs use proof-cache. Note that if you use this option then
--- you are obligated to ensure all lemma/theorem names you use are unique for the whole run.
--- Otherwise the results are not guaranteed to be sound.
+-- | Make TP proofs use proof-cache. Note that if you use this option then you must
+-- ensure all lemma/theorem names you use are unique for the whole run. Note that this
+-- is not a soundness issue. If the names are duplicated and if you reuse a proof, then
+-- you may simply not be able to prove your original goal at the worst case.
 tpCache :: SMTConfig -> SMTConfig
 tpCache cfg = cfg{tpOptions = (tpOptions cfg) { cacheProofs = True }}
