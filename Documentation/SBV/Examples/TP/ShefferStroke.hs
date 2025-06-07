@@ -30,7 +30,7 @@ import Prelude hiding ((<))
 import Data.List (intercalate)
 
 import Data.SBV
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 -- * Generalized Boolean Algebras
 

@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.TP.TP
+-- Module    : Data.SBV.TP.TP
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -22,7 +22,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.TP.TP (
+module Data.SBV.TP.TP (
          Proposition, Proof, getProof, signature, Instantiatable(..), Inst(..)
        , rootOfTrust, RootOfTrust(..), ProofTree(..), getProofTree, showProofTree, showProofTreeHTML
        , axiom
@@ -41,8 +41,8 @@ import Data.SBV.Core.Model (qSaturateSavingObservables)
 
 import Data.SBV.Control hiding (getProof)
 
-import Data.SBV.Tools.TP.Kernel
-import Data.SBV.Tools.TP.Utils
+import Data.SBV.TP.Kernel
+import Data.SBV.TP.Utils
 
 import qualified Data.SBV.List as SL
 

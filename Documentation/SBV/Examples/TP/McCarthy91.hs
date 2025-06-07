@@ -19,7 +19,7 @@
 module Documentation.SBV.Examples.TP.McCarthy91 where
 
 import Data.SBV
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 -- * Definitions
 

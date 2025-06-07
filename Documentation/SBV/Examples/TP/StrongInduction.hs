@@ -23,7 +23,7 @@ import Prelude hiding (length, null, head, tail, reverse, (++), splitAt, sum)
 
 import Data.SBV
 import Data.SBV.List
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 #ifdef DOCTEST
 -- $setup

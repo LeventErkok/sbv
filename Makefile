@@ -168,7 +168,7 @@ veryclean: clean
 	@make -C buildUtils clean
 
 # Just test the TP output for doctest. We give it a shorter wait time as well.
-TP_FILES          = $(addprefix --module ,$(basename $(subst /,.,$(wildcard Data/SBV/Tools/TP/*.hs)))) 	       \
+TP_FILES          = $(addprefix --module ,$(basename $(subst /,.,$(wildcard Data/SBV/TP/*.hs)))) 	       \
 	            $(addprefix --module ,$(basename $(subst /,.,$(wildcard Documentation/SBV/Examples/TP/*.hs))))
 TP_MODULES        = ${TP_FILES}
 TP_DOCTESTTIMEOUT = 20

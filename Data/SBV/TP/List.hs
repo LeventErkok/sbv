@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.TP.List
+-- Module    : Data.SBV.TP.List
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -19,7 +19,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.TP.List (
+module Data.SBV.TP.List (
      -- * Append
      appendNull, consApp, appendAssoc, initsLength, tailsLength, tailsAppend
 
@@ -76,7 +76,7 @@ import Prelude (Eq, ($), Num(..), id, (.), flip)
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tuple
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 import Data.Proxy
 
@@ -85,7 +85,7 @@ import Data.Proxy
 -- >>> :set -XScopedTypeVariables
 -- >>> :set -XTypeApplications
 -- >>> import Data.SBV
--- >>> import Data.SBV.Tools.TP
+-- >>> import Data.SBV.TP
 -- >>> import Data.Proxy
 -- >>> import Control.Exception
 #endif

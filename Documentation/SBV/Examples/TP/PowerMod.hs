@@ -21,7 +21,7 @@
 module Documentation.SBV.Examples.TP.PowerMod where
 
 import Data.SBV
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 -- | The proofs in this module are structured so they are presented at the top-level and reused.
 -- This results in re-running the proofs over and over, as each proof has to run all its dependents.

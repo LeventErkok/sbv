@@ -24,8 +24,8 @@ import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List
-import Data.SBV.Tools.TP
-import qualified Data.SBV.Tools.TP.List as TP
+import Data.SBV.TP
+import qualified Data.SBV.TP.List as TP
 
 import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 

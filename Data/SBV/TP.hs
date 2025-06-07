@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.TP
+-- Module    : Data.SBV.TP
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -16,7 +16,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.TP (
+module Data.SBV.TP (
        -- * Propositions and their proofs
          Proposition, Proof, getProof, signature
 
@@ -66,4 +66,4 @@ module Data.SBV.Tools.TP (
        , atProxy
        ) where
 
-import Data.SBV.Tools.TP.TP
+import Data.SBV.TP.TP

@@ -127,6 +127,8 @@ Library
                   , Data.SBV.Char
                   , Data.SBV.Tuple
                   , Data.SBV.RegExp
+                  , Data.SBV.TP
+                  , Data.SBV.TP.List
                   , Data.SBV.Tools.BMC
                   , Data.SBV.Tools.BVOptimize
                   , Data.SBV.Tools.Induction
@@ -136,8 +138,6 @@ Library
                   , Data.SBV.Tools.Polynomial
                   , Data.SBV.Tools.Range
                   , Data.SBV.Tools.STree
-                  , Data.SBV.Tools.TP
-                  , Data.SBV.Tools.TP.List
                   , Data.SBV.Tools.WeakestPreconditions
                   , Data.SBV.Trans
                   , Data.SBV.Trans.Control
@@ -298,9 +298,9 @@ Library
                   , Data.SBV.Utils.Lib
                   , Data.SBV.Utils.PrettyNum
                   , Data.SBV.Utils.SExpr
-                  , Data.SBV.Tools.TP.Kernel
-                  , Data.SBV.Tools.TP.TP
-                  , Data.SBV.Tools.TP.Utils
+                  , Data.SBV.TP.Kernel
+                  , Data.SBV.TP.TP
+                  , Data.SBV.TP.Utils
 
 Test-Suite SBVTest
   import           : common-settings

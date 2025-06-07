@@ -22,7 +22,7 @@ module Documentation.SBV.Examples.TP.Numeric where
 import Prelude hiding (sum, length)
 
 import Data.SBV
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 #ifdef DOCTEST
 -- $setup

@@ -23,7 +23,7 @@ import Prelude hiding(reverse, length, elem)
 
 import Data.SBV
 import Data.SBV.List
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 import Data.Proxy
 import Control.Monad (void)
@@ -33,7 +33,7 @@ import Control.Monad (void)
 -- >>> :set -XScopedTypeVariables
 -- >>> :set -XTypeApplications
 -- >>> import Data.SBV
--- >>> import Data.SBV.Tools.TP
+-- >>> import Data.SBV.TP
 -- >>> import Data.Proxy
 -- >>> import Control.Exception
 #endif

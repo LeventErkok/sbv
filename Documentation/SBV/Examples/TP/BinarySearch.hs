@@ -22,7 +22,7 @@ import Prelude hiding (null, length, (!!), drop, take, tail, elem, notElem)
 
 import Data.SBV
 import Data.SBV.Maybe
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 -- * Binary search
 

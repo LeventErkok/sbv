@@ -20,7 +20,7 @@
 module Documentation.SBV.Examples.TP.Fibonacci(correctness) where
 
 import Data.SBV
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 -- * Naive fibonacci
 

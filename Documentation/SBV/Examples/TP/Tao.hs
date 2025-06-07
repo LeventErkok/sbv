@@ -31,7 +31,7 @@
 module Documentation.SBV.Examples.TP.Tao where
 
 import Data.SBV
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 #ifdef DOCTEST
 -- $setup

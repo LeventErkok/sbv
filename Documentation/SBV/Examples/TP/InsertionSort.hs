@@ -23,7 +23,7 @@ import Prelude hiding (null, length, head, tail, elem)
 
 import Data.SBV
 import Data.SBV.List
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 import Data.Proxy
 

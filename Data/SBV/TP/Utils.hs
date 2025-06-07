@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.TP.Utils
+-- Module    : Data.SBV.TP.Utils
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -21,7 +21,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.TP.Utils (
+module Data.SBV.TP.Utils (
          TP, runTP, runTPWith, Proof(..), sorry
        , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo

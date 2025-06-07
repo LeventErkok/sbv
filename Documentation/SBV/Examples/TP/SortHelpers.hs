@@ -24,14 +24,14 @@ import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List
-import Data.SBV.Tools.TP
-import Data.SBV.Tools.TP.List
+import Data.SBV.TP
+import Data.SBV.TP.List
 
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XTypeApplications
 -- >>> import Data.Proxy
--- >>> import Data.SBV.Tools.TP
+-- >>> import Data.SBV.TP
 #endif
 
 -- | A predicate testing whether a given list is non-decreasing.

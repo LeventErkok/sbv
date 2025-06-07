@@ -162,7 +162,7 @@
 -- and merge-sort algorithms, along with a proof that the square-root of 2 is irrational. While a proper theorem prover (such as Lean, Isabelle
 -- etc.) is a more appropriate choice for such proofs, with some guidance (and acceptance of a much larger trusted code base!), SBV can
 -- be used to establish correctness of various mathematical claims and algorithms that are usually beyond the scope of SMT
--- solvers alone. See "Data.SBV.Tools.TP" for the API, and
+-- solvers alone. See "Data.SBV.TP" for the API, and
 --
 --    - "Documentation.SBV.Examples.TP.InsertionSort"
 --    - "Documentation.SBV.Examples.TP.MergeSort"

@@ -20,7 +20,7 @@ module Documentation.SBV.Examples.TP.Sqrt2IsIrrational where
 import Prelude hiding (even, odd)
 
 import Data.SBV
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 -- | Prove that square-root of @2@ is irrational. That is, we can never find @a@ and @b@ such that
 -- @sqrt 2 == a / b@ and @a@ and @b@ are co-prime.

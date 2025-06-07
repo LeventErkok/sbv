@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.TP.Kernel
+-- Module    : Data.SBV.TP.Kernel
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -19,7 +19,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.TP.Kernel (
+module Data.SBV.TP.Kernel (
          Proposition,  Proof(..)
        , axiom
        , lemma,   lemmaWith,   lemmaGen
@@ -40,7 +40,7 @@ import Data.SBV.SMT.SMT
 import Data.SBV.Core.Model
 import Data.SBV.Provers.Prover
 
-import Data.SBV.Tools.TP.Utils
+import Data.SBV.TP.Utils
 
 import Data.Time (NominalDiffTime)
 import Data.SBV.Utils.TDiff

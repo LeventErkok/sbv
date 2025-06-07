@@ -27,7 +27,7 @@ module Documentation.SBV.Examples.TP.Kleene where
 import Prelude hiding((<=))
 
 import Data.SBV
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 -- | An uninterpreted sort, corresponding to the type of Kleene algebra strings.
 data Kleene

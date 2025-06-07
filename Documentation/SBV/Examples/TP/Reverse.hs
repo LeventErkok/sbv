@@ -29,9 +29,9 @@ import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List hiding (partition)
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
-import qualified Data.SBV.Tools.TP.List as TP
+import qualified Data.SBV.TP.List as TP
 
 #ifdef DOCTEST
 -- $setup
@@ -119,7 +119,7 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 correctness :: forall a. SymVal a => Proxy a -> IO Proof
 correctness p = runTP $ do
 
-  -- Import a few helpers from "Data.SBV.Tools.TP.List"
+  -- Import a few helpers from "Data.SBV.TP.List"
   revLen  <- TP.revLen  p
   revApp  <- TP.revApp  p
   revSnoc <- TP.revSnoc p

@@ -17,7 +17,7 @@
 module Documentation.SBV.Examples.TP.CaseSplit where
 
 import Data.SBV
-import Data.SBV.Tools.TP
+import Data.SBV.TP
 
 -- | Prove that @2n^2 + n + 1@ is not divisible by @3@.
 --
