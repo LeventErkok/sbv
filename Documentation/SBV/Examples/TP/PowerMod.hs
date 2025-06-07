@@ -24,9 +24,10 @@ import Data.SBV
 import Data.SBV.Tools.TP
 
 -- | The proofs in this module are structured so they are presented at the top-level and reused.
--- This results in an excessive proof-time, as each proof has to run its dependents. To avoid
--- this issue we use proof-caching, which puts the onus on the user that all the names used
--- in proofs are unique.
+-- This results in re-running the proofs over and over, as each proof has to run all its dependents.
+-- To avoid re-running proofs, we tell TP to use a proof-cache. Note that use of a proof-cache comes
+-- with the user obligation that all proofs used are uniquely named. Otherwise the results can be
+-- unsound, and SBV will indicate this possibility in its output.
 runCached :: TP a -> IO a
 runCached = runTPWith (tpCache z3)
 

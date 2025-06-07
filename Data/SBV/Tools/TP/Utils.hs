@@ -358,6 +358,7 @@ tpStats cfg = cfg{tpOptions = (tpOptions cfg) { printStats = True }}
 
 -- | Make TP proofs use proof-cache. Note that if you use this option then
 -- you are obligated to ensure all lemma/theorem names you use are unique for the whole run.
--- Otherwise the results are not guaranteed to be sound.
+-- Otherwise the results are not guaranteed to be sound. A good tip is to run the proof at
+-- least once to completion, and use cache for regression purposes to avoid re-runs.
 tpCache :: SMTConfig -> SMTConfig
 tpCache cfg = cfg{tpOptions = (tpOptions cfg) { cacheProofs = True }}
