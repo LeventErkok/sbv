@@ -262,16 +262,16 @@ depsToTree shouldCompress visited xform (cnt, ProofTree top ds) = (nVisited, Nod
 
 -- | Display the proof tree as ASCII text. The first argument is if we should compress the tree, showing only the first
 -- use of any sublemma.
-showProofTree :: Bool -> ProofTree -> String
-showProofTree compress d = showTree $ snd $ depsToTree compress [] sh (1, d)
+showProofTree :: Bool -> Proof -> String
+showProofTree compress d = showTree $ snd $ depsToTree compress [] sh (1, (getProofTree d))
     where sh nm 1 _ = nm
           sh nm x _= nm ++ " (x" ++ show x ++ ")"
 
 -- | Display the tree as an html doc for rendering purposes.
 -- The first argument is if we should compress the tree, showing only the first
 -- use of any sublemma. Second is the path (or URL) to external CSS file, if needed.
-showProofTreeHTML :: Bool -> Maybe FilePath -> ProofTree -> String
-showProofTreeHTML compress mbCSS deps = htmlTree mbCSS $ snd $ depsToTree compress [] nodify (1, deps)
+showProofTreeHTML :: Bool -> Maybe FilePath -> Proof -> String
+showProofTreeHTML compress mbCSS p = htmlTree mbCSS $ snd $ depsToTree compress [] nodify (1, (getProofTree p))
   where nodify :: String -> Int -> Int -> NodeInfo
         nodify nm cnt dc = NodeInfo { nodeBehavior = InitiallyExpanded
                                     , nodeName     = nm

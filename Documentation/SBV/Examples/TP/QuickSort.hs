@@ -568,6 +568,6 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
 
   -- | We can display the dependencies in a proof
   liftIO $ do putStrLn "== Proof tree:"
-              putStr $ showProofTree True $ getProofTree qs
+              putStr $ showProofTree True qs
 
   pure qs
