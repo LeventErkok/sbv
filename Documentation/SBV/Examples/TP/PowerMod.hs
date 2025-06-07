@@ -188,7 +188,7 @@ modMulRightNonneg = do
                                      =: ((a+1) * b `sEMod` m) `sEMod` m
                                      =: qed
 
--- | @a >= 0 && m > 0 => (-a*b) % m .== (-a * b % m) % m@
+-- | @a >= 0 && m > 0 => (-a*b) % m .== (-(a*b % m)) % m@
 --
 -- >>> runCached modMulRightNeg
 -- Inductive lemma: modAddMultiple
@@ -228,18 +228,18 @@ modMulRightNeg = do
    mSubR <- modSubRight
 
    induct "modMulRightNeg"
-      (\(Forall @"a" a) (Forall @"b" b) (Forall @"m" m) -> a .>= 0 .&& m .> 0 .=> (-a*b) `sEMod` m .== (-a * b `sEMod` m) `sEMod` m) $
-      \ih a b m -> [a .>= 0, m .> 0] |- (-(a+1)*b) `sEMod` m
-                                     =: (-a*b-b) `sEMod` m
-                                     ?? mSubR `at` (Inst @"a" (-a*b), Inst @"b" b, Inst @"m" m)
-                                     =: (-a*b - b `sEMod` m) `sEMod` m
-                                     ?? mAddL `at` (Inst @"a" (-a*b), Inst @"b" (- (b `sEMod` m)), Inst @"m" m)
-                                     =: ((-a*b) `sEMod` m - b `sEMod` m) `sEMod` m
+      (\(Forall @"a" a) (Forall @"b" b) (Forall @"m" m) -> a .>= 0 .&& m .> 0 .=> (-(a*b)) `sEMod` m .== (-(a * b `sEMod` m)) `sEMod` m) $
+      \ih a b m -> [a .>= 0, m .> 0] |- (-((a+1)*b)) `sEMod` m
+                                     =: (-(a*b)-b) `sEMod` m
+                                     ?? mSubR `at` (Inst @"a" (-(a*b)), Inst @"b" b, Inst @"m" m)
+                                     =: (-(a*b) - b `sEMod` m) `sEMod` m
+                                     ?? mAddL `at` (Inst @"a" (-(a*b)), Inst @"b" (- (b `sEMod` m)), Inst @"m" m)
+                                     =: ((-(a*b)) `sEMod` m - b `sEMod` m) `sEMod` m
                                      ?? ih `at` (Inst @"b" b, Inst @"m" m)
-                                     =: ((-a * b `sEMod` m) `sEMod` m - b `sEMod` m) `sEMod` m
+                                     =: ((-(a * b `sEMod` m)) `sEMod` m - b `sEMod` m) `sEMod` m
                                      ?? mAddL
-                                     =: (-a * b `sEMod` m - b `sEMod` m) `sEMod` m
-                                     =: (-(a+1) * b `sEMod` m) `sEMod` m
+                                     =: (-(a * b `sEMod` m) - b `sEMod` m) `sEMod` m
+                                     =: (-((a+1) * b `sEMod` m)) `sEMod` m
                                      =: qed
 
 -- | @m > 0 => (a*b) % m .== (a * b % m) % m@
@@ -310,9 +310,9 @@ modMulRight = do
                                                =: (a * b `sEMod` m) `sEMod` m
                                                =: qed
                                     , a .<  0 ==> (a*b) `sEMod` m
-                                               =: (-(-a)*b) `sEMod` m
+                                               =: (-((-a)*b)) `sEMod` m
                                                ?? mMulNeg `at` (Inst @"a" (-a), Inst @"b" b, Inst @"m" m)
-                                               =: (-(-a) * b `sEMod` m) `sEMod` m
+                                               =: (-((-a) * b `sEMod` m)) `sEMod` m
                                                =: (a * b `sEMod` m) `sEMod` m
                                                =: qed
                                     ]
@@ -482,21 +482,21 @@ powerMod = do
 
    -- We want to write the b parameter first, but need to induct on n. So, this helper rearranges the parameters only.
    pMod <- induct "powerModInduct"
-      (\(Forall @"n" n) (Forall @"m" m) (Forall @"b" b) -> n .>= 0 .&& m .> 0 .=> (power b n) `sEMod` m .== (power (b `sEMod` m) n) `sEMod` m) $
-      \ih n m b -> [n .>= 0, m .> 0] |- (power b (n+1)) `sEMod` m
+      (\(Forall @"n" n) (Forall @"m" m) (Forall @"b" b) -> n .>= 0 .&& m .> 0 .=> power b n `sEMod` m .== power (b `sEMod` m) n `sEMod` m) $
+      \ih n m b -> [n .>= 0, m .> 0] |- power b (n+1) `sEMod` m
                                      =: (power b n * b) `sEMod` m
                                      ?? mMulL `at` (Inst @"a" (power b n), Inst @"b" b, Inst @"m" m)
-                                     =: ((power b n) `sEMod` m * b) `sEMod` m
+                                     =: (power b n `sEMod` m * b) `sEMod` m
                                      ?? ih `at` (Inst @"m" m, Inst @"b" b)
-                                     =: ((power (b `sEMod` m) n) `sEMod` m * b) `sEMod` m
+                                     =: (power (b `sEMod` m) n `sEMod` m * b) `sEMod` m
                                      ?? mMulL `at` (Inst @"a" (power (b `sEMod` m) n), Inst @"b" b, Inst @"m" m)
                                      =: (power (b `sEMod` m) n * b) `sEMod` m
                                      ?? mMulR `at` (Inst @"a" (power (b `sEMod` m) n), Inst @"b" b, Inst @"m" m)
                                      =: (power (b `sEMod` m) n * b `sEMod` m) `sEMod` m
-                                     =: (power (b `sEMod` m) (n+1)) `sEMod` m
+                                     =: power (b `sEMod` m) (n+1) `sEMod` m
                                      =: qed
 
    -- Same as above, just a more natural selection of variable order.
    lemma "powerMod"
-         (\(Forall @"b" b) (Forall @"n" n) (Forall @"m" m) -> n .>= 0 .&& m .> 0 .=> (power b n) `sEMod` m .== (power (b `sEMod` m) n) `sEMod` m)
+         (\(Forall @"b" b) (Forall @"n" n) (Forall @"m" m) -> n .>= 0 .&& m .> 0 .=> power b n `sEMod` m .== power (b `sEMod` m) n `sEMod` m)
          [pMod]
