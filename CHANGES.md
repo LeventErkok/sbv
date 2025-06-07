@@ -15,6 +15,7 @@
       - Add tpCache: This turns on proof-caching, which can save time in re-running proofs. It comes
         with the proof-obligation on the user that all the names used in lemmas are unique. See
         Documentation.SBV.Examples.TP.Basics for an example demonstration.
+      - Add signature: Which, when passed a proof, will give you its signature as a type, useful for diagnostics.
       - Generalize various KD list/sort proofs.
 
    * New TP examples:

@@ -23,7 +23,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.TP.TP (
-         Proposition, Proof, getProof, Instantiatable(..), Inst(..)
+         Proposition, Proof, getProof, signature, Instantiatable(..), Inst(..)
        , rootOfTrust, RootOfTrust(..), ProofTree(..), getProofTree, showProofTree, showProofTreeHTML
        , axiom
        , lemma,   lemmaWith
@@ -59,6 +59,7 @@ import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
 import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
+import Type.Reflection
 
 -- | Captures the steps for a calculationa proof
 data CalcStrategy = CalcStrategy { calcIntros    :: SBool
@@ -1156,5 +1157,10 @@ infix 0 ==>
 (⟹) :: SBool -> TPProofRaw a -> (SBool, TPProofRaw a)
 (⟹) = (==>)
 infix 0 ⟹
+
+-- | Signature of a proof. This is simply the type of the proof, giving an idea
+-- of what its parameters are and how they are named.
+signature :: Proof -> SomeTypeRep
+signature = dynTypeRep . getProp
 
 {- HLint ignore module "Eta reduce" -}
