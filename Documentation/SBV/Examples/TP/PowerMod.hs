@@ -35,7 +35,7 @@ runCached = runTPWith (tpCache z3)
 power :: SInteger -> SInteger -> SInteger
 power = smtFunction "power" $ \b n -> ite (n .<= 0) 1 (b * power b (n-1))
 
--- | @m > 1 => (n + mk) % m == n % m@
+-- | \(m > 1 \Rightarrow n + mk \equiv n \pmod{m}\)
 --
 -- >>> runCached modAddMultiple
 -- Inductive lemma: modAddMultiple
@@ -56,7 +56,7 @@ modAddMultiple = do
                             =: n `sEMod` m
                             =: qed
 
--- | @m > 0 => (a+b) % m == (a + b % m) % m@
+-- | \(m > 0 \Rightarrow a + b \equiv a + (b \bmod m) \pmod{m}\)
 --
 -- >>> runCached modAddRight
 -- Inductive lemma: modAddMultiple
@@ -81,7 +81,7 @@ modAddRight = do
                          =: (a + b `sEMod` m) `sEMod` m
                          =: qed
 
--- | @m > 0 => (a+b) % m == (a % m + b) % m@
+-- | \(m > 0 \Rightarrow a + b \equiv (a \bmod m) + b \pmod{m}\)
 --
 -- >>> runCached modAddLeft
 -- Inductive lemma: modAddMultiple
@@ -112,7 +112,7 @@ modAddLeft = do
                          =: (a `sEMod` m + b) `sEMod` m
                          =: qed
 
--- | @m > 0 => (a-b) % m == (a - b % m) % m@
+-- | \(m > 0 \Rightarrow a - b \equiv a - (b \bmod m) \pmod{m}\)
 --
 -- >>> runCached modSubRight
 -- Inductive lemma: modAddMultiple
@@ -139,7 +139,7 @@ modSubRight = do
                          =: (a - b `sEMod` m) `sEMod` m
                          =: qed
 
--- | @a > 0 && m > 0 => (a*b) % m .== (a * b % m) % m@
+-- | \(a \geq 0 \land m > 0 \Rightarrow ab \equiv a \cdot (b \bmod m) \pmod{m}\)
 --
 -- >>> runCached modMulRightNonneg
 -- Inductive lemma: modAddMultiple
@@ -189,7 +189,7 @@ modMulRightNonneg = do
                                      =: ((a+1) * b `sEMod` m) `sEMod` m
                                      =: qed
 
--- | @a >= 0 && m > 0 => (-a*b) % m .== (-(a*b % m)) % m@
+-- | \(a \geq 0 \land m > 0 \Rightarrow -ab \equiv -\left(a \cdot (b \bmod m)\right) \pmod{m}\)
 --
 -- >>> runCached modMulRightNeg
 -- Inductive lemma: modAddMultiple
@@ -243,7 +243,7 @@ modMulRightNeg = do
                                      =: (-((a+1) * b `sEMod` m)) `sEMod` m
                                      =: qed
 
--- | @m > 0 => (a*b) % m .== (a * b % m) % m@
+-- | \(m > 0 \Rightarrow ab \equiv a \cdot (b \bmod m) \pmod{m}\)
 --
 -- >>> runCached modMulRight
 -- Inductive lemma: modAddMultiple
@@ -318,7 +318,7 @@ modMulRight = do
                                                =: qed
                                     ]
 
--- | @m > 0 => (a*b) % m .== (a % m * b) % m@
+-- | \(m > 0 \Rightarrow ab \equiv (a \bmod m) \cdot b \pmod{m}\)
 --
 -- >>> runCached modMulLeft
 -- Inductive lemma: modAddMultiple
@@ -392,7 +392,7 @@ modMulLeft = do
                            =: (a `sEMod` m * b) `sEMod` m
                            =: qed
 
--- | @n >= 0 && m > 0 => (b^n) % m .== ((b % m)^n) % m@
+-- | \(n \geq 0 \land m > 0 \Rightarrow b^n \equiv (b \bmod m)^n \pmod{m}\)
 --
 -- >>> runCached powerMod
 -- Inductive lemma: modAddMultiple
