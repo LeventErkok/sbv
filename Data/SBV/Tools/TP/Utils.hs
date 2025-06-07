@@ -39,7 +39,7 @@ import Data.Tree
 import Data.Tree.View
 
 import Data.Char (isSpace)
-import Data.List (intercalate, isInfixOf, nubBy, partition)
+import Data.List (intercalate, isInfixOf, nubBy, partition, sort)
 import Data.Int  (Int64)
 
 import Data.SBV.Utils.Lib (atProxy)
@@ -290,14 +290,17 @@ showProofTreeHTML compress mbCSS deps = htmlTree mbCSS $ snd $ depsToTree compre
 -- | Show instance for t'Proof'
 instance Show Proof where
   show p@Proof{proofName = nm} = '[' : sh (rootOfTrust p) ++ "] " ++ nm
-    where sh (RootOfTrust Nothing)   = "Proven" ++ if usesCache then " (uses proof cache)" else ""
-          sh (RootOfTrust (Just ps))
-            | usesCache = "Uses proof cache, modulo: " ++ deps
-            | True      = "Modulo: "                   ++ deps
-            where deps = intercalate ", " (map shortProofName ps)
+    where sh (RootOfTrust Nothing)   = "Proven" ++ cacheInfo
+          sh (RootOfTrust (Just ps)) = "Modulo: " ++ join ps ++ cacheInfo
 
-          usesCache = cached p
-          cached Proof{isCached, dependencies} = isCached || any cached dependencies
+          join = intercalate ", " . sort . map shortProofName
+
+          cacheInfo = case cachedProofs p of
+                        [] -> ""
+                        cs -> ". Cached: " ++ join (nubBy (\p1 p2 -> uniqId p1 == uniqId p2) cs)
+
+          cachedProofs prf@Proof{isCached} = if isCached then prf : rest else rest
+            where rest = concatMap cachedProofs (dependencies prf)
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
 -- cannot deal with, or if we want to postpone the proof for the time being. TP will keep

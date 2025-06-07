@@ -168,7 +168,7 @@ modSubRight = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven (uses proof cache)] modMulRightNonneg
+-- [Proven. Cached: modAddRight] modMulRightNonneg
 modMulRightNonneg :: TP Proof
 modMulRightNonneg = do
    mAddL <- modAddLeft
@@ -222,7 +222,7 @@ modMulRightNonneg = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven (uses proof cache)] modMulRightNeg
+-- [Proven. Cached: modAddMultiple] modMulRightNeg
 modMulRightNeg :: TP Proof
 modMulRightNeg = do
    mAddL <- modAddLeft
@@ -298,7 +298,7 @@ modMulRightNeg = do
 --     Step: 1.2.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven (uses proof cache)] modMulRight
+-- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight] modMulRight
 modMulRight :: TP Proof
 modMulRight = do
    mMulNonneg <- modMulRightNonneg
@@ -378,7 +378,7 @@ modMulRight = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven (uses proof cache)] modMulLeft
+-- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight] modMulLeft
 modMulLeft :: TP Proof
 modMulLeft = do
    mMulR <- modMulRight
@@ -475,7 +475,7 @@ modMulLeft = do
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: powerMod                         Q.E.D.
--- [Proven (uses proof cache)] powerMod
+-- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerMod
 powerMod :: TP Proof
 powerMod = do
    mMulL <- modMulLeft
