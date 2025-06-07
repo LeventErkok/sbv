@@ -33,6 +33,7 @@ import Control.Monad (void)
 -- >>> :set -XScopedTypeVariables
 -- >>> :set -XTypeApplications
 -- >>> import Data.SBV
+-- >>> import Data.SBV.Tools.TP
 -- >>> import Data.Proxy
 -- >>> import Control.Exception
 #endif
@@ -238,3 +239,46 @@ badLengthProof = runTP $ do
        badLength xs = ite (length xs .> 5 .&& 42 `elem` xs) 42 (length xs)
 
    void $ lemma "badLengthProof" (\(Forall @"xs" xs) -> observe "imp" (badLength xs) .== observe "spec" (length xs)) []
+
+-- * Caching
+
+-- | It is not unusual that TP proofs rely on other proofs. Typically, all the helpers are used together and proven in
+-- one go. It is, however, useful to be able to write these proofs as top-level entries, and reuse them multiple times
+-- in several proofs. (See "Documentation/SBV/Examples/TP/PowerMod.hs" for an example.) To avoid re-proving such
+-- lemmas, you can turn on proof caching. The idea behind caching is simple: If we see a lemma with the same name being
+-- proven again, then we simply reuse the last result. The catch here is that lemmas are identified by their names: Hence,
+-- for caching to be sound, you need to make sure all names used in your proof are unique. Otherwise you can
+-- conclude wrong results!
+--
+-- A good trick is to pay the price and run your entire proof without caching (which is the default) once, and if it is
+-- all good, turn on caching to save time in regressions. (And rerun without caching after code changes.)
+--
+-- To demonstrate why caching can be unsound, simply consider a proof where we first prove true, and then prove false
+-- but we /trick/ TP by reusing the name. If you run this, you'll see:
+--
+-- >>> runTP badCaching `catch` (\(_ :: SomeException) -> pure sorry)
+-- Lemma: evil                             Q.E.D.
+-- Lemma: evil
+-- *** Failed to prove evil.
+-- Falsifiable
+-- [Modulo: sorry] sorry
+--
+-- This is good, the proof failed since it's just not true. (Except for the confusing naming printed in the trace
+-- due to our own choice.)
+--
+-- Let's see what happens if we turn caching on:
+--
+-- >>> runTPWith (tpCache z3) badCaching
+-- Lemma: evil                             Q.E.D.
+-- Cached: evil                            Q.E.D.
+-- [Proven. Cached: evil] evil
+--
+-- In this case we were able to prove False, i.e., this result is unsound. But at least SBV warned us
+-- that we used a cached proof (@evil@), reminding us that using unique names is a proof of obligation for the user
+-- if caching is turned on. Clearly, we failed to uniquely name our proofs in this case.
+badCaching :: TP Proof
+badCaching = do
+   _    <- lemma "evil" sTrue []
+
+   -- Attempt to prove false, using evil:
+   lemma "evil" sFalse []

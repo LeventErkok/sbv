@@ -12,6 +12,9 @@
         to get a proof clean, you need to resolve all the proofs returned by this call.
       - Renamed kdShowDepsHTML to showProofTreeHTML. (Along with showProofTree which renders in ASCII.)
       - Add function tpRibbon which simplifies setting the ribbon size in a proof.
+      - Add tpCache: This turns on proof-caching, which can save time in re-running proofs. It comes
+        with the proof-obligation on the user that all the names used in lemmas are unique. See
+        Documentation.SBV.Examples.TP.Basics for an example demonstration.
       - Generalize various KD list/sort proofs.
 
    * New TP examples:
