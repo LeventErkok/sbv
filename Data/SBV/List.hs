@@ -14,12 +14,15 @@
 -- lists and strings to be used as symbolic literals.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE Rank2Types          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE CPP                    #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE NamedFieldPuns         #-}
+{-# LANGUAGE Rank2Types             #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeApplications       #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -40,8 +43,7 @@ module Data.SBV.List (
         , reverse
 
         -- * Mapping
-        , map, mapClosure
-        , concatMap
+        , map, concatMap
 
         -- * Difference
         , (\\)
@@ -499,42 +501,58 @@ reverse l
   = def l
   where def = smtFunction "sbv.reverse" $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in def t ++ singleton h)
 
--- | @`map` f s@ maps the operation on to sequence.
---
--- >>> map (+1) [1 .. 5 :: Integer]
--- [2,3,4,5,6] :: [SInteger]
--- >>> map (+1) [1 .. 5 :: WordN 8]
--- [2,3,4,5,6] :: [SWord8]
--- >>> map singleton [1 .. 3 :: Integer]
--- [[1],[2],[3]] :: [[SInteger]]
--- >>> import Data.SBV.Tuple
--- >>> import GHC.Exts (fromList)
--- >>> map (\t -> t^._1 + t^._2) (fromList [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
--- [5,6,7,6,7,8,7,8,9] :: [SInteger]
---
--- Of course, SBV's 'map' can also be reused in reverse:
---
--- >>> sat $ \l -> map (+1) l .== [1,2,3 :: Integer]
--- Satisfiable. Model:
---   s0 = [0,1,2] :: [Integer]
-map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
-map f l
-  | Just l' <- unliteral l, Just concResult <- concreteMap l'
-  = literal concResult
-  | True
-  = sbvMap l
-  where concreteMap l' = case P.map (unliteral . f . literal) l' of
-                           xs | P.any isNothing xs -> Nothing
-                              | True               -> Just (catMaybes xs)
+-- | A class of mappable functions. In SBV, we make a distinction between closures and regular functions, and
+-- we instantiate this class appropriately so it can handle both cases.
+class (SymVal a, SymVal b) => Map func a b | func -> a b where
+  map :: func -> SList a -> SList b
 
-        sbvMap = smtHOFunction "sbv.map" f $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: sbvMap t)
+  concreteMap :: func -> (SBV a -> SBV b) -> SList a -> Maybe [b]
+  concreteMap _ f sas
+    | Just as <- unliteral sas
+    = case P.map (unliteral . f . literal) as of
+         bs | P.any isNothing bs -> Nothing
+            | True               -> Just (catMaybes bs)
+    | True
+    = Nothing
 
-mapClosure :: forall env a b. (SymVal env, SymVal a, SymVal b) => Closure (SBV env) (SBV a -> SBV b) -> SList a -> SList b
-mapClosure Closure{closureEnv, closureFun} ls = def (tuple (closureEnv, ls))
-  where def = smtHOFunction "sbv.closureMap" closureFun
-            $ \envxs -> let (cEnv, xs) = untuple envxs
-                            (h,    t)  = uncons xs
-                        in ite (null xs) nil (closureFun cEnv h .: def (tuple (cEnv, t)))
+-- | Mapping symbolic functions.
+instance (SymVal a, SymVal b) => Map (SBV a -> SBV b) a b where
+  -- | @`map` f s@ maps the operation on to sequence.
+  --
+  -- >>> map (+1) [1 .. 5 :: Integer]
+  -- [2,3,4,5,6] :: [SInteger]
+  -- >>> map (+1) [1 .. 5 :: WordN 8]
+  -- [2,3,4,5,6] :: [SWord8]
+  -- >>> map singleton [1 .. 3 :: Integer]
+  -- [[1],[2],[3]] :: [[SInteger]]
+  -- >>> import Data.SBV.Tuple
+  -- >>> import GHC.Exts (fromList)
+  -- >>> map (\t -> t^._1 + t^._2) (fromList [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
+  -- [5,6,7,6,7,8,7,8,9] :: [SInteger]
+  --
+  -- Of course, SBV's 'map' can also be reused in reverse:
+  --
+  -- >>> sat $ \l -> map (+1) l .== [1,2,3 :: Integer]
+  -- Satisfiable. Model:
+  --   s0 = [0,1,2] :: [Integer]
+  map f l
+    | Just concResult <- concreteMap f f l
+    = literal concResult
+    | True
+    = sbvMap l
+    where sbvMap = smtHOFunction "sbv.map" f $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: sbvMap t)
+
+-- | Mapping symbolic closures.
+instance (SymVal env, SymVal a, SymVal b) => Map (Closure (SBV env) (SBV a -> SBV b)) a b where
+  map cls@Closure{closureEnv, closureFun} l
+    | Just concResult <- concreteMap cls (closureFun closureEnv) l
+    = literal concResult
+    | True
+    = sbvMap (tuple (closureEnv, l))
+    where sbvMap = smtHOFunction "sbv.closureMap" closureFun
+                 $ \envxs -> let (cEnv, xs) = untuple envxs
+                                 (h,    t)  = uncons xs
+                             in ite (null xs) nil (closureFun cEnv h .: sbvMap (tuple (cEnv, t)))
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
 concatMap :: (SymVal a, SymVal b) => (SBV a -> SList b) -> SList a -> SList b

@@ -202,10 +202,9 @@ tailsAppend p = do
        -- But capture of ys is not allowed when we use the higher-order
        -- function map in SBV. So, we create a closure instead.
        appendEach :: SList a -> SList [a] -> SList [a]
-       appendEach ys = mapClosure closure
-          where closure = Closure { closureEnv = ys
-                                  , closureFun = \env xs -> xs ++ env
-                                  }
+       appendEach ys = map $ Closure { closureEnv = ys
+                                     , closureFun = \env xs -> xs ++ env
+                                     }
 
    -- Even proving the base case of induction is hard due to recursive definition. So we first prove the base case by induction.
    bc <- induct "base case"
