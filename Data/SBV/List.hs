@@ -552,44 +552,70 @@ instance (SymVal env, SymVal a, SymVal b) => SMap (Closure (SBV env) (SBV a -> S
     = sbvMap (tuple (closureEnv, l))
     where sbvMap = smtHOFunction "sbv.closureMap" closureFun
                  $ \envxs -> let (cEnv, xs) = untuple envxs
-                                 (h,    t)  = uncons xs
+                                 (h, t)     = uncons xs
                              in ite (null xs) nil (closureFun cEnv h .: sbvMap (tuple (cEnv, t)))
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
 concatMap :: (SMap func a [b], SymVal b) => func -> SList a -> SList b
 concatMap f = concat . map f
 
--- | @`foldl` f base s@ folds the from the left.
---
--- >>> foldl (+) 0 [1 .. 5 :: Integer]
--- 15 :: SInteger
--- >>> foldl (*) 1 [1 .. 5 :: Integer]
--- 120 :: SInteger
--- >>> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) [1 .. 5 :: Integer]
--- [5,4,3,2,1] :: [SInteger]
---
--- Again, we can use 'Data.SBV.List.foldl' in the reverse too:
---
--- >>> sat $ \l -> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: Integer]
--- Satisfiable. Model:
---   s0 = [1,2,3,4,5] :: [Integer]
-foldl :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
-foldl f base l
-  | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldl base' l'
-  = literal concResult
-  | True
-  = sbvFoldl $ tuple (base, l)
-  where concreteFoldl b []     = Just b
-        concreteFoldl b (e:es) = case unliteral (literal b `f` literal e) of
-                                   Nothing -> Nothing
-                                   Just b' -> concreteFoldl b' es
+-- | A class of left foldable functions. In SBV, we make a distinction between closures and regular functions, and
+-- we instantiate this class appropriately so it can handle both cases.
+class (SymVal a, SymVal b) => SFoldL func a b | func -> a b where
+  -- | @`foldl` f base s@ folds the from the left.
+  foldl :: (SymVal a, SymVal b) => func -> SBV b -> SList a -> SBV b
 
-        sbvFoldl = smtHOFunction "sbv.foldl" (uncurry f . untuple)
-                 $ \exs -> let (e, xs) = untuple exs
-                               (h, t)  = uncons xs
-                           in ite (null xs)
-                                  e
-                                  (sbvFoldl (tuple (e `f` h, t)))
+  -- | Handle the concrete case for folding left. Used internally only.
+  concreteFoldl :: func -> (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> Maybe b
+  concreteFoldl _ f sb sas
+     | Just b <- unliteral sb, Just as <- unliteral sas
+     = go b as
+     | True
+     = Nothing
+     where go b []     = Just b
+           go b (e:es) = case unliteral (literal b `f` literal e) of
+                           Nothing -> Nothing
+                           Just b' -> go b' es
+
+-- | Folding with symbolic functions.
+instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
+  -- >>> foldl (+) 0 [1 .. 5 :: Integer]
+  -- 15 :: SInteger
+  -- >>> foldl (*) 1 [1 .. 5 :: Integer]
+  -- 120 :: SInteger
+  -- >>> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) [1 .. 5 :: Integer]
+  -- [5,4,3,2,1] :: [SInteger]
+  --
+  -- Again, we can use 'Data.SBV.List.foldl' in the reverse too:
+  --
+  -- >>> sat $ \l -> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: Integer]
+  -- Satisfiable. Model:
+  --   s0 = [1,2,3,4,5] :: [Integer]
+  foldl f base l
+    | Just concResult <- concreteFoldl f f base l
+    = literal concResult
+    | True
+    = sbvFoldl $ tuple (base, l)
+    where sbvFoldl = smtHOFunction "sbv.foldl" (uncurry f . untuple)
+                   $ \envxs -> let (e, xs) = untuple envxs
+                                   (h, t)  = uncons xs
+                               in ite (null xs)
+                                      e
+                                      (sbvFoldl (tuple (e `f` h, t)))
+
+-- | Folding with symbolic closures.
+instance (SymVal env, SymVal a, SymVal b) => SFoldL (Closure (SBV env) (SBV b -> SBV a -> SBV b)) a b where
+  foldl cls@Closure{closureEnv, closureFun} base l
+    | Just concResult <- concreteFoldl cls (closureFun closureEnv) base l
+    = literal concResult
+    | True
+    = sbvFoldl $ tuple (closureEnv, base, l)
+    where sbvFoldl = smtHOFunction "sbv.closureFoldl" closureFun
+                   $ \envxs -> let (cEnv, e, xs) = untuple envxs
+                                   (h, t)        = uncons xs
+                               in ite (null xs)
+                                      e
+                                      (sbvFoldl (tuple (cEnv, closureFun closureEnv e h, t)))
 
 -- | @`foldr` f base s@ folds the sequence from the right.
 --
