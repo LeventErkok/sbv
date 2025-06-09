@@ -503,7 +503,7 @@ reverse l
 
 -- | A class of mappable functions. In SBV, we make a distinction between closures and regular functions, and
 -- we instantiate this class appropriately so it can handle both cases.
-class (SymVal a, SymVal b) => Map func a b | func -> a b where
+class (SymVal a, SymVal b) => SMap func a b | func -> a b where
   map :: func -> SList a -> SList b
 
   -- | Handle the concrete case of mapping. Used internally only.
@@ -517,7 +517,7 @@ class (SymVal a, SymVal b) => Map func a b | func -> a b where
     = Nothing
 
 -- | Mapping symbolic functions.
-instance (SymVal a, SymVal b) => Map (SBV a -> SBV b) a b where
+instance (SymVal a, SymVal b) => SMap (SBV a -> SBV b) a b where
   -- | @`map` f s@ maps the operation on to sequence.
   --
   -- >>> map (+1) [1 .. 5 :: Integer]
@@ -544,7 +544,7 @@ instance (SymVal a, SymVal b) => Map (SBV a -> SBV b) a b where
     where sbvMap = smtHOFunction "sbv.map" f $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: sbvMap t)
 
 -- | Mapping symbolic closures.
-instance (SymVal env, SymVal a, SymVal b) => Map (Closure (SBV env) (SBV a -> SBV b)) a b where
+instance (SymVal env, SymVal a, SymVal b) => SMap (Closure (SBV env) (SBV a -> SBV b)) a b where
   map cls@Closure{closureEnv, closureFun} l
     | Just concResult <- concreteMap cls (closureFun closureEnv) l
     = literal concResult
@@ -556,7 +556,7 @@ instance (SymVal env, SymVal a, SymVal b) => Map (Closure (SBV env) (SBV a -> SB
                              in ite (null xs) nil (closureFun cEnv h .: sbvMap (tuple (cEnv, t)))
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
-concatMap :: (Map func a [b], SymVal b) => func -> SList a -> SList b
+concatMap :: (SMap func a [b], SymVal b) => func -> SList a -> SList b
 concatMap f = concat . map f
 
 -- | @`foldl` f base s@ folds the from the left.
