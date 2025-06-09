@@ -58,10 +58,10 @@ tests =
       , goldenCapturedIO "lambda02" $ record $ \st -> show <$> lambdaStr st TopLevel (kindOf (Proxy @SInteger)) (\x   -> x+1   :: SInteger)
       , goldenCapturedIO "lambda03" $ record $ \st -> show <$> lambdaStr st TopLevel (kindOf (Proxy @SInteger)) (\x y -> x+y*2 :: SInteger)
 
-      , goldenCapturedIO "lambda04" $ eval1 [1 .. 3 :: Integer] (map (const sFalse),  P.map (const False))
-      , goldenCapturedIO "lambda05" $ eval1 [1 .. 5 :: Integer] (map (+1) . map (+2), P.map (+1) . P.map (+2))
+      , goldenCapturedIO "lambda04" $ eval1 [1 .. 3 :: Integer] (mapl (const sFalse),  P.map (const False))
+      , goldenCapturedIO "lambda05" $ eval1 [1 .. 5 :: Integer] (mapl (+1) . mapl (+2), P.map (+1) . P.map (+2))
       , goldenCapturedIO "lambda06" $ eval1 [1 .. 5 :: Integer]
-                                            ( map   (\x -> P.sum [x .^ literal i | i <- [1..10 :: Integer]])
+                                            ( mapl  (\x -> P.sum [x .^ literal i | i <- [1..10 :: Integer]])
                                             , P.map (\x -> P.sum [x  ^ i         | i <- [1..10 :: Integer]])
                                             )
 
@@ -70,10 +70,10 @@ tests =
                                             ,                          P.sum . P.map P.sum
                                             )
 
-      , goldenCapturedIO "lambda08" $ eval1 [1 .. 5 :: Float]   (map (+1), P.map (+1))
-      , goldenCapturedIO "lambda09" $ eval1 [1 .. 5 :: Int8]    (map (+1), P.map (+1))
-      , goldenCapturedIO "lambda10" $ eval1 [1 .. 5 :: Integer] (map (+1), P.map (+1))
-      , goldenCapturedIO "lambda11" $ eval1 [1 .. 5 :: Word8]   (map (+1), P.map (+1))
+      , goldenCapturedIO "lambda08" $ eval1 [1 .. 5 :: Float]   (mapl (+1), P.map (+1))
+      , goldenCapturedIO "lambda09" $ eval1 [1 .. 5 :: Int8]    (mapl (+1), P.map (+1))
+      , goldenCapturedIO "lambda10" $ eval1 [1 .. 5 :: Integer] (mapl (+1), P.map (+1))
+      , goldenCapturedIO "lambda11" $ eval1 [1 .. 5 :: Word8]   (mapl (+1), P.map (+1))
 
       , goldenCapturedIO "lambda12" $ eval1 [1 .. 3 :: Integer] (map singleton, P.map (: []))
 
@@ -235,8 +235,8 @@ tests =
 
       , goldenCapturedIO "lambda81" $ regularRun filterHead
 
-      , goldenCapturedIO "lambda82" $ eval1 [1 .. 5 :: Integer] (   map (\x ->   map (\y -> x + y) (literal [4, 5, 6]))
-                                                                , P.map (\x -> P.map (\y -> x + y)          [4, 5, 6])
+      , goldenCapturedIO "lambda82" $ eval1 [1 .. 5 :: Integer] (   mapl (\x ->   map (\y -> x + y) (literal [4, 5, 6]))
+                                                                , P.map  (\x -> P.map (\y -> x + y)          [4, 5, 6])
                                                                 )
 
       , goldenCapturedIO "lambda83" $ errorOut noFreeVars1
@@ -254,6 +254,9 @@ tests =
         def_o = smtFunction "o" $ \x -> def_e (x-1)
         def_t1 = smtFunction "foo" (\x -> select [1,2,3]       (0 :: SWord32)  (x::SInteger))
         def_t2 = smtFunction "foo" (\x -> select [x+1,x+2,x+3] (0 :: SInteger) (x::SInteger))
+
+        mapl :: (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
+        mapl = map
 
         rel, leq :: Relation Integer
         rel = uninterpret "R"
@@ -381,12 +384,12 @@ errorOut t rf = void (t z3{verbose=True, redirectVerbose=Just rf})
 -- No free vars
 noFreeVars1 :: SMTConfig -> IO SatResult
 noFreeVars1 cfg = satWith cfg $ do
-        zs <- free_
-        xs <- free_
-        ys <- free_
+        zs :: SList [Integer] <- free_
+        xs :: SList Integer   <- free_
+        ys :: SList Integer   <- free_
         constrain $ xs .== literal [1,2,3::Integer]
         constrain $ ys .== literal [3,4,5::Integer]
-        pure $ zs .== map (\x -> map (\y -> x+y) ys) xs
+        pure $ zs .== map (\(x :: SInteger) -> map (\(y :: SInteger) -> x+y) ys) xs
 
 -- No free vars
 noFreeVars2 :: SMTConfig -> IO ThmResult
