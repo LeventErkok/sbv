@@ -506,6 +506,7 @@ reverse l
 class (SymVal a, SymVal b) => Map func a b | func -> a b where
   map :: func -> SList a -> SList b
 
+  -- | Handle the concrete case of mapping. Used internally only.
   concreteMap :: func -> (SBV a -> SBV b) -> SList a -> Maybe [b]
   concreteMap _ f sas
     | Just as <- unliteral sas
@@ -555,7 +556,7 @@ instance (SymVal env, SymVal a, SymVal b) => Map (Closure (SBV env) (SBV a -> SB
                              in ite (null xs) nil (closureFun cEnv h .: sbvMap (tuple (cEnv, t)))
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
-concatMap :: (SymVal a, SymVal b) => (SBV a -> SList b) -> SList a -> SList b
+concatMap :: (Map func a [b], SymVal b) => func -> SList a -> SList b
 concatMap f = concat . map f
 
 -- | @`foldl` f base s@ folds the from the left.
