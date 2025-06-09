@@ -1748,3 +1748,4 @@ elemCount p =
 {- HLint ignore module         "Use second"        -}
 {- HLint ignore module         "Use zipWith"       -}
 {- HLint ignore mapCompose     "Use map once"      -}
+{- HLint ignore tailsAppend    "Avoid lambda"      -}
