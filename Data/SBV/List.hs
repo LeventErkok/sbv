@@ -504,6 +504,7 @@ reverse l
 -- | A class of mappable functions. In SBV, we make a distinction between closures and regular functions, and
 -- we instantiate this class appropriately so it can handle both cases.
 class (SymVal a, SymVal b) => SMap func a b | func -> a b where
+  -- | Map a function (or a closure) over a symbolic list.
   map :: func -> SList a -> SList b
 
   -- | Handle the concrete case of mapping. Used internally only.
