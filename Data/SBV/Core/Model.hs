@@ -57,7 +57,7 @@ module Data.SBV.Core.Model (
   , zeroExtend, signExtend
   , sbvQuickCheck
   , readArray, writeArray, lambdaArray, listArray
-  , smtHOFunction
+  , smtHOFunction, Closure(..)
   )
   where
 
@@ -3375,6 +3375,13 @@ lambdaArray f = SBV . SVal k . Right $ cache g
 -- | Turn a constant association-list and a default into a symbolic array.
 listArray :: (SymVal a, SymVal b) => [(a, b)] -> b -> SArray a b
 listArray ascs def = literal $ ArrayModel ascs def
+
+-- | Create a closure, wrapping the free variables together with the function. When using higher-order functions
+-- in SBV (like map), the function passed must be closed, i.e., not have any free variables. If you need to call
+-- such a function with a function capturing a free variable, you should create a closure instead.
+data Closure env a = Closure { closureEnv :: env
+                             , closureFun :: env -> a
+                             }
 
 -- | Define a higher-order function. Similar to 'smtFunction', but when we have a higher-order argument. Note that
 -- the higher-order argument cannot have free variables. Also, if the function is recursive, you should call

@@ -195,16 +195,17 @@ tailsLength p =
 tailsAppend :: forall a. SymVal a => Proxy a -> TP Proof
 tailsAppend p = do
 
-   let -- Would like to define appendEach like this:
+   let -- Ideally, we would like to define appendEach like this:
        --
        --       appendEach xs ys = map (++ ys) xs
        --
-       -- But capture of ys is not allowed by SBV.  So we use an
-       -- explicit recursive definition to pass around ys.
-       appendEach :: SList [a] -> SList a -> SList [a]
-       appendEach = smtFunction "appendEach" $ \xs ys -> ite (null xs)
-                                                             nil
-                                                             ((head xs ++ ys) .: appendEach (tail xs) ys)
+       -- But capture of ys is not allowed when we use the higher-order
+       -- function map in SBV. So, we create a closure instead.
+       appendEach :: SList a -> SList [a] -> SList [a]
+       appendEach ys = mapClosure closure
+          where closure = Closure { closureEnv = ys
+                                  , closureFun = \env xs -> xs ++ env
+                                  }
 
    -- Even proving the base case of induction is hard due to recursive definition. So we first prove the base case by induction.
    bc <- induct "base case"
@@ -220,23 +221,23 @@ tailsAppend p = do
    -- Also need a helper to relate how appendEach and tails work together
    helper <- calc "helper"
                    (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) ->
-                        appendEach (tails (x .: xs)) ys .== singleton ((x .: xs) ++ ys) ++ appendEach (tails xs) ys) $
-                   \xs ys x -> [] |- appendEach (tails (x .: xs)) ys
-                                  =: appendEach (singleton (x .: xs) ++ tails xs) ys
-                                  =: singleton ((x .: xs) ++ ys) ++ appendEach (tails xs) ys
+                        appendEach ys (tails (x .: xs)) .== singleton ((x .: xs) ++ ys) ++ appendEach ys (tails xs)) $
+                   \xs ys x -> [] |- appendEach ys (tails (x .: xs))
+                                  =: appendEach ys (singleton (x .: xs) ++ tails xs)
+                                  =: singleton ((x .: xs) ++ ys) ++ appendEach ys (tails xs)
                                   =: qed
 
    induct (atProxy p "tailsAppend")
-          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> tails (xs ++ ys) .== appendEach (tails xs) ys ++ tail (tails ys)) $
+          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> tails (xs ++ ys) .== appendEach ys (tails xs) ++ tail (tails ys)) $
           \ih (x :: SBV a) xs ys ->
                 [getProof bc]
              |- tails ((x .: xs) ++ ys)
              =: tails (x .: (xs ++ ys))
              =: singleton (x .: (xs ++ ys)) ++ tails (xs ++ ys)
              ?? ih
-             =: singleton ((x .: xs) ++ ys) ++ appendEach (tails xs) ys ++ tail (tails ys)
+             =: singleton ((x .: xs) ++ ys) ++ appendEach ys (tails xs) ++ tail (tails ys)
              ?? helper
-             =: appendEach (tails (x .: xs)) ys ++ tail (tails ys)
+             =: appendEach ys (tails (x .: xs)) ++ tail (tails ys)
              =: qed
 
 -- | @length xs == length (reverse xs)@

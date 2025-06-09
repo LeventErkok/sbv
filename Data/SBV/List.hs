@@ -16,6 +16,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -39,7 +40,8 @@ module Data.SBV.List (
         , reverse
 
         -- * Mapping
-        , map, concatMap
+        , map, mapClosure
+        , concatMap
 
         -- * Difference
         , (\\)
@@ -65,14 +67,14 @@ module Data.SBV.List (
 
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
-                       all, any, and, or, replicate)
+                       all, any, and, or, replicate, fst, snd)
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 
-import Data.SBV.Tuple hiding (fst, snd)
+import Data.SBV.Tuple
 
 import Data.Maybe (isNothing, catMaybes)
 import qualified Data.Char as C
@@ -527,6 +529,13 @@ map f l
 
         sbvMap = smtHOFunction "sbv.map" f $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: sbvMap t)
 
+mapClosure :: forall env a b. (SymVal env, SymVal a, SymVal b) => Closure (SBV env) (SBV a -> SBV b) -> SList a -> SList b
+mapClosure Closure{closureEnv, closureFun} ls = def (tuple (closureEnv, ls))
+  where def = smtHOFunction "sbv.closureMap" closureFun
+            $ \envxs -> let (cEnv, xs) = untuple envxs
+                            (h,    t)  = uncons xs
+                        in ite (null xs) nil (closureFun cEnv h .: def (tuple (cEnv, t)))
+
 -- | @concatMap f xs@ maps f over elements and concats the result.
 concatMap :: (SymVal a, SymVal b) => (SBV a -> SList b) -> SList a -> SList b
 concatMap f = concat . map f
@@ -756,8 +765,8 @@ partition f l
   = sbvPartition l
   where concretePartition l' = case P.map (unliteral . f . literal) l' of
                                  xs | P.any isNothing xs -> Nothing
-                                    | True               -> let (ts, fs) = L.partition fst (P.zip (catMaybes xs) l')
-                                                            in Just $ tuple (literal (P.map snd ts), literal (P.map snd fs))
+                                    | True               -> let (ts, fs) = L.partition P.fst (P.zip (catMaybes xs) l')
+                                                            in Just $ tuple (literal (P.map P.snd ts), literal (P.map P.snd fs))
 
         sbvPartition = smtHOFunction "sbv.partition" f $ \xs -> ite (null xs)
                                                                     (tuple (nil, nil))
