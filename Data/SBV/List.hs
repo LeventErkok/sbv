@@ -520,9 +520,9 @@ class (SymVal a, SymVal b) => SMap func a b | func -> a b where
 instance (SymVal a, SymVal b) => SMap (SBV a -> SBV b) a b where
   -- | @`map` f s@ maps the operation on to sequence.
   --
-  -- >>> map (+1) [1 .. 5 :: Integer]
+  -- >>> map (+ (1 :: SInteger)) [1 .. 5 :: Integer]
   -- [2,3,4,5,6] :: [SInteger]
-  -- >>> map (+1) [1 .. 5 :: WordN 8]
+  -- >>> map (+ (1 :: SWord 8)) [1 .. 5 :: WordN 8]
   -- [2,3,4,5,6] :: [SWord8]
   -- >>> map singleton [1 .. 3 :: Integer]
   -- [[1],[2],[3]] :: [[SInteger]]
@@ -533,7 +533,7 @@ instance (SymVal a, SymVal b) => SMap (SBV a -> SBV b) a b where
   --
   -- Of course, SBV's 'map' can also be reused in reverse:
   --
-  -- >>> sat $ \l -> map (+1) l .== [1,2,3 :: Integer]
+  -- >>> sat $ \l -> map (+(1 :: SInteger)) l .== [1,2,3 :: Integer]
   -- Satisfiable. Model:
   --   s0 = [0,1,2] :: [Integer]
   map f l
