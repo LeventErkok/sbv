@@ -101,6 +101,7 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
                    , "Client.BaseIO.FromSizedBV"
                    , "Control.Utils.SMTFunction"
                    , "Control.Query.Assignment"
+                   , "List.SMap"
                    , "TP.TP.ChainStep"
                    , "TP.TP.ChainsTo"
                    , "TP.TP.HintsTo"
