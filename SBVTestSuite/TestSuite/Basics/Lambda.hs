@@ -66,8 +66,8 @@ tests =
                                             )
 
       , goldenCapturedIO "lambda07" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]])
-                                            ( let sum = foldl (+) 0 in   sum .   map   sum
-                                            ,                          P.sum . P.map P.sum
+                                            ( let sum = foldlL (+) 0 in   sum .   map   sum
+                                            ,                           P.sum . P.map P.sum
                                             )
 
       , goldenCapturedIO "lambda08" $ eval1 [1 .. 5 :: Float]   (mapl (+1), P.map (+1))
@@ -82,16 +82,16 @@ tests =
 
       , goldenCapturedIO "lambda14" $ eval1 [1 .. 5 :: Integer] (zipWith (+) [10..15], P.zipWith (+) [10..15])
 
-      , goldenCapturedIO "lambda15" $ eval1 [1 .. 5 :: Integer] (foldl (+) 0, P.sum)
-      , goldenCapturedIO "lambda16" $ eval1 [1 .. 5 :: Integer] (foldl (*) 1, P.product)
+      , goldenCapturedIO "lambda15" $ eval1 [1 .. 5 :: Integer] (foldlL (+) 0, P.sum)
+      , goldenCapturedIO "lambda16" $ eval1 [1 .. 5 :: Integer] (foldlL (*) 1, P.product)
       , goldenCapturedIO "lambda17" $ eval1 [1 .. 5 :: Integer]
-                                           (   foldl (\soFar elt -> singleton elt ++ soFar) []
-                                           , P.foldl (\soFar elt ->           elt :  soFar) []
+                                           (   foldlL (\soFar elt -> singleton elt ++ soFar) []
+                                           , P.foldl  (\soFar elt ->           elt :  soFar) []
                                            )
 
       , goldenCapturedIO "lambda18" $ eval1 [1 .. 5 :: Integer]
-                                            (   foldl (\b t      -> t^._1 + b + t^._2) 0 .   zip [10..15]
-                                            , P.foldl (\b (i, a) -> i     + b + a)     0 . P.zip [10..15]
+                                            (   foldlL (\b t      -> t^._1 + b + t^._2) 0 .   zip [10..15]
+                                            , P.foldl  (\b (i, a) -> i     + b + a)     0 . P.zip [10..15]
                                             )
 
       , goldenCapturedIO "lambda19" $ eval1 [1 .. 5 :: Integer] (foldr (+) 0, P.foldr (+) 0)
@@ -257,6 +257,9 @@ tests =
 
         mapl :: (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
         mapl = map
+
+        foldlL :: (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
+        foldlL = foldl
 
         rel, leq :: Relation Integer
         rel = uninterpret "R"
