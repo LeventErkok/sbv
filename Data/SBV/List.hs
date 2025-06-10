@@ -667,7 +667,7 @@ instance (SymVal env, SymVal a, SymVal b) => SFoldR (Closure (SBV env) (SBV a ->
     = literal concResult
     | True
     = sbvFoldr $ tuple (closureEnv, base, l)
-    where sbvFoldr = smtHOFunction "sbv.closureFoldl" closureFun
+    where sbvFoldr = smtHOFunction "sbv.closureFoldr" closureFun
                    $ \envxs -> let (cEnv, e, xs) = untuple envxs
                                    (h, t)        = uncons xs
                                in ite (null xs)
@@ -690,28 +690,55 @@ zip xs ys
  = def xs ys
  where def = smtFunction "sbv.zip" $ \as bs -> ite (null as .|| null bs) nil (tuple (head as, head bs) .: def (tail as) (tail bs))
 
--- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
--- The length of the final list is the minumum of the lengths of the given lists.
---
--- >>> zipWith (+) [1..10::Integer] [11..20::Integer]
--- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]
--- >>> foldr (+) 0 (zipWith (+) [1..10::Integer] [10, 9..1::Integer])
--- 110 :: SInteger
-zipWith :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
-zipWith f xs ys
- | Just xs' <- unliteral xs, Just ys' <- unliteral ys, Just concResult <- concreteZipWith xs' ys'
- = literal concResult
- | True
- = sbvZipWith $ tuple (xs, ys)
- where concreteZipWith []     _      = Just []
-       concreteZipWith _      []     = Just []
-       concreteZipWith (a:as) (b:bs) = (:) <$> unliteral (literal a `f` literal b) <*> concreteZipWith as bs
+-- | A class of function that we can zip-with. In SBV, we make a distinction between closures and regular
+-- functions, and we instantiate this class appropriately so it can handle both cases.
+class (SymVal a, SymVal b, SymVal c) => SZipWith func a b c | func -> a b c where
+  -- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
+  -- The length of the final list is the minumum of the lengths of the given lists.
+  zipWith :: func -> SList a -> SList b -> SList c
 
-       sbvZipWith = smtHOFunction "sbv.zipWith" (uncurry f . untuple)
-                  $ \asbs -> let (as, bs) = untuple asbs
-                             in ite (null as .|| null bs)
-                                    nil
-                                    (f (head as) (head bs) .: sbvZipWith (tuple (tail as, tail bs)))
+  -- | Handle the concrete case of zipping. Used internally only.
+  concreteZipWith :: func -> (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> Maybe [c]
+  concreteZipWith _ f sas sbs
+   | Just as <- unliteral sas, Just bs <- unliteral sbs
+   = go as bs
+   | True
+   = Nothing
+   where go []     _      = Just []
+         go _      []     = Just []
+         go (a:as) (b:bs) = (:) <$> unliteral (literal a `f` literal b) <*> go as bs
+
+-- | Zipping with symbolic functions.
+instance (SymVal a, SymVal b, SymVal c) => SZipWith (SBV a -> SBV b -> SBV c) a b c where
+   -- |
+   --
+   -- >>> zipWith (+) [1..10::Integer] [11..20::Integer]
+   -- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]
+   -- >>> foldr (+) 0 (zipWith (+) [1..10::Integer] [10, 9..1::Integer])
+   -- 110 :: SInteger
+   zipWith f xs ys
+    | Just concResult <- concreteZipWith f f xs ys
+    = literal concResult
+    | True
+    = sbvZipWith $ tuple (xs, ys)
+    where sbvZipWith = smtHOFunction "sbv.zipWith" (uncurry f . untuple)
+                     $ \asbs -> let (as, bs) = untuple asbs
+                                in ite (null as .|| null bs)
+                                       nil
+                                       (f (head as) (head bs) .: sbvZipWith (tuple (tail as, tail bs)))
+
+-- | Zipping with closures.
+instance (SymVal env, SymVal a, SymVal b, SymVal c) => SZipWith (Closure (SBV env) (SBV a -> SBV b -> SBV c)) a b c where
+   zipWith cls@Closure{closureEnv, closureFun} xs ys
+    | Just concResult <- concreteZipWith cls (closureFun closureEnv) xs ys
+    = literal concResult
+    | True
+    = sbvZipWith $ tuple (closureEnv, xs, ys)
+    where sbvZipWith = smtHOFunction "sbv.closureZipWith" closureFun
+                     $ \envasbs -> let (cEnv, as, bs) = untuple envasbs
+                                   in ite (null as .|| null bs)
+                                          nil
+                                          (closureFun cEnv (head as) (head bs) .: sbvZipWith (tuple (cEnv, tail as, tail bs)))
 
 -- | Concatenate list of lists.
 --

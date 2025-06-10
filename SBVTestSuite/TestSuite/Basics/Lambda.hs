@@ -80,7 +80,7 @@ tests =
       , goldenCapturedIO "lambda13" $ eval1 [(x, y) | x <- [1..3], y <- [4..6 :: Integer]]
                                             (map (\t -> t^._1 + t^._2), P.map (uncurry (+)))
 
-      , goldenCapturedIO "lambda14" $ eval1 [1 .. 5 :: Integer] (zipWith (+) [10..15], P.zipWith (+) [10..15])
+      , goldenCapturedIO "lambda14" $ eval1 [1 .. 5 :: Integer] (zipWithL (+) [10..15], P.zipWith (+) [10..15])
 
       , goldenCapturedIO "lambda15" $ eval1 [1 .. 5 :: Integer] (foldlL (+) 0, P.sum)
       , goldenCapturedIO "lambda16" $ eval1 [1 .. 5 :: Integer] (foldlL (*) 1, P.product)
@@ -106,10 +106,10 @@ tests =
                                             ( \a b ->   foldrL (+) 0 (  map (\t -> t^._1+t^._2::SInteger) (  zip a b))
                                             , \a b -> P.foldr  (+) 0 (P.map (\t -> fst t+snd t::Integer ) (P.zip a b))
                                             )
-      , goldenCapturedIO "lambda24" $ eval2 [1 .. 10 :: Integer] [11..20 :: Integer] (zipWith (+), P.zipWith (+))
+      , goldenCapturedIO "lambda24" $ eval2 [1 .. 10 :: Integer] [11..20 :: Integer] (zipWithL (+), P.zipWith (+))
       , goldenCapturedIO "lambda25" $ eval2 [1 .. 10 :: Integer] [10, 9 .. 1 :: Integer]
-                                            ( \a b ->   foldrL (+) 0 (  zipWith (+) a b)
-                                            , \a b -> P.foldr  (+) 0 (P.zipWith (+) a b)
+                                            ( \a b ->   foldrL (+) 0 (  zipWithL (+) a b)
+                                            , \a b -> P.foldr  (+) 0 (P.zipWith  (+) a b)
                                             )
 
       , goldenCapturedIO "lambda26" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]]) (concat, P.concat)
@@ -263,6 +263,9 @@ tests =
 
         foldrL :: (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
         foldrL = foldr
+
+        zipWithL :: (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
+        zipWithL = zipWith
 
         rel, leq :: Relation Integer
         rel = uninterpret "R"

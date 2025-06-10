@@ -104,6 +104,7 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
                    , "List.SMap"
                    , "List.SFoldL"
                    , "List.SFoldR"
+                   , "List.SZipWith"
                    , "TP.TP.ChainStep"
                    , "TP.TP.ChainsTo"
                    , "TP.TP.HintsTo"
