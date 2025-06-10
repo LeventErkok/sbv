@@ -836,27 +836,53 @@ xs \\ ys
                                                    in ite (h `elem` y) r (h .: r))
 infix 5 \\  -- CPP: do not eat the final newline
 
--- | @filter f xs@ filters the list with the given predicate.
---
--- >>> filter (\x -> x `sMod` 2 .== 0) [1 .. 10 :: Integer]
--- [2,4,6,8,10] :: [SInteger]
--- >>> filter (\x -> x `sMod` 2 ./= 0) [1 .. 10 :: Integer]
--- [1,3,5,7,9] :: [SInteger]
-filter :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SList a
-filter f l
-  | Just l' <- unliteral l, Just concResult <- concreteFilter l'
-  = literal concResult
-  | True
-  = sbvFilter l
-  where concreteFilter l' = case P.map (unliteral . f . literal) l' of
-                              xs | P.any isNothing xs -> Nothing
-                                 | True               -> Just [e | (True, e) <- P.zip (catMaybes xs) l']
+-- | A class of filtering functions. In SBV, we make a distinction between closures and regular functions,
+-- and we instantiate this class appropriately so it can handle both cases.
+class SymVal a => SFilter func a | func -> a where
+  -- | Filter a list via a predicate.
+  filter :: func -> SList a -> SList a
 
-        sbvFilter = smtHOFunction "sbv.filter" f $ \xs -> ite (null xs)
-                                                              nil
-                                                              (let (h, t) = uncons xs
-                                                                   r      = sbvFilter t
-                                                               in ite (f h) (h .: r) r)
+  -- | Handle the concrete case of filtering. Used internally only.
+  concreteFilter :: func -> (SBV a -> SBool) -> SList a -> Maybe [a]
+  concreteFilter _ f sas
+   | Just as <- unliteral sas
+   = case P.map (unliteral . f . literal) as of
+        xs | P.any isNothing xs -> Nothing
+           | True               -> Just [e | (True, e) <- P.zip (catMaybes xs) as]
+   | True
+   = Nothing
+
+-- | Filtering with symbolic functions.
+instance SymVal a => SFilter (SBV a -> SBool) a where
+  -- | @filter f xs@ filters the list with the given predicate.
+  --
+  -- >>> filter (\x -> x `sMod` 2 .== 0) [1 .. 10 :: Integer]
+  -- [2,4,6,8,10] :: [SInteger]
+  -- >>> filter (\x -> x `sMod` 2 ./= 0) [1 .. 10 :: Integer]
+  -- [1,3,5,7,9] :: [SInteger]
+  filter f l
+    | Just concResult <- concreteFilter f f l
+    = literal concResult
+    | True
+    = sbvFilter l
+    where sbvFilter = smtHOFunction "sbv.filter" f $ \xs -> ite (null xs)
+                                                                nil
+                                                                (let (h, t) = uncons xs
+                                                                     r      = sbvFilter t
+                                                                 in ite (f h) (h .: r) r)
+
+-- | Filtering with closures.
+instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) a where
+  filter cls@Closure{closureEnv, closureFun} l
+    | Just concResult <- concreteFilter cls (closureFun closureEnv) l
+    = literal concResult
+    | True
+    = sbvFilter (tuple (closureEnv, l))
+    where sbvFilter = smtHOFunction "sbv.closureFilter" closureFun
+                    $ \envxs -> let (cEnv, xs) = untuple envxs
+                                    (h, t)     = uncons xs
+                                    r          = sbvFilter (tuple (cEnv, t))
+                                in ite (closureFun cEnv h) (h .: r) r
 
 -- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
 -- first element, and those that don't in the second.

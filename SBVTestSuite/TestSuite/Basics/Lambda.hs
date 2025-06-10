@@ -120,8 +120,8 @@ tests =
       , goldenCapturedIO "lambda29" $ eval1 [2, 4, 6,    8, 10 :: Integer] (any (\x -> x `sMod` 2 ./= 0), P.any (\x -> x `mod` 2 /= 0))
       , goldenCapturedIO "lambda30" $ eval1 [2, 4, 6, 1, 8, 10 :: Integer] (any (\x -> x `sMod` 2 .== 0), P.any (\x -> x `mod` 2 == 0))
 
-      , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
-      , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
+      , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filterL (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
+      , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filterL (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
 
       , goldenCapturedIO "lambda33" $ record $ \st -> show <$> lambdaStr st TopLevel (kindOf (Proxy @SInt8)) (0           :: SInt8)
       , goldenCapturedIO "lambda34" $ record $ \st -> show <$> lambdaStr st TopLevel (kindOf (Proxy @SInt8)) (\x   -> x+1 :: SInt8)
@@ -266,6 +266,9 @@ tests =
 
         zipWithL :: (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
         zipWithL = zipWith
+
+        filterL :: SymVal a => (SBV a -> SBool) -> SList a -> SList a
+        filterL = filter
 
         rel, leq :: Relation Integer
         rel = uninterpret "R"
@@ -414,7 +417,7 @@ noFreeVars2 cfg = proveWith cfg $ do
 filterHead :: Symbolic String
 filterHead = do
         xs :: SList Integer <- free_
-        constrain $ filter (.> head xs) xs ./= filter (.> 4) xs
+        constrain $ filter (.> (head xs :: SInteger)) xs ./= filter (.> (4 :: SInteger)) xs
         query $ do cs <- checkSat
                    case cs of
                      Sat -> showModel z3 <$> getModel
