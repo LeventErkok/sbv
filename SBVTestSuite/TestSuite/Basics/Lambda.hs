@@ -27,6 +27,8 @@ module TestSuite.Basics.Lambda(tests)  where
 import Prelude hiding((++), map, foldl, foldr, sum, length, zip, zipWith, all, any, concat, filter, head)
 import qualified Prelude as P
 
+import qualified Data.List as P (partition)
+
 import Control.Monad (unless, void)
 import qualified Control.Exception as C
 
@@ -241,6 +243,9 @@ tests =
 
       , goldenCapturedIO "lambda83" $ errorOut noFreeVars1
       , goldenCapturedIO "lambda84" $ errorOut noFreeVars2
+
+      , goldenCapturedIO "lambda85" $ eval1 [1 .. 10 :: Integer] (partitionL (\x -> x `sMod` 2 .== 0), P.partition (\x -> x `mod` 2 == 0))
+      , goldenCapturedIO "lambda86" $ eval1 [1 .. 10 :: Integer] (partitionL (\x -> x `sMod` 2 ./= 0), P.partition (\x -> x `mod` 2 /= 0))
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr ((+) @SInteger) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
@@ -269,6 +274,9 @@ tests =
 
         filterL :: SymVal a => (SBV a -> SBool) -> SList a -> SList a
         filterL = filter
+
+        partitionL :: SymVal a => (SBV a -> SBool) -> SList a -> STuple [a] [a]
+        partitionL = partition
 
         rel, leq :: Relation Integer
         rel = uninterpret "R"

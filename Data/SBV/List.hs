@@ -884,26 +884,54 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
                                     r          = sbvFilter (tuple (cEnv, t))
                                 in ite (closureFun cEnv h) (h .: r) r
 
--- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
--- first element, and those that don't in the second.
-partition :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> STuple [a] [a]
-partition f l
-  | Just l' <- unliteral l, Just concResult <- concretePartition l'
-  = concResult
-  | True
-  = sbvPartition l
-  where concretePartition l' = case P.map (unliteral . f . literal) l' of
-                                 xs | P.any isNothing xs -> Nothing
-                                    | True               -> let (ts, fs) = L.partition P.fst (P.zip (catMaybes xs) l')
-                                                            in Just $ tuple (literal (P.map P.snd ts), literal (P.map P.snd fs))
+-- | A class of functions we can partition with. In SBV, we make a distinction between closures and regular functions, and
+-- we instantiate this class appropriately so it can handle both cases.
+class SymVal a => SPartition func a | func -> a where
+  -- | Partition a symbolic list according to a predicate.
+  partition :: func -> SList a -> STuple [a] [a]
 
-        sbvPartition = smtHOFunction "sbv.partition" f $ \xs -> ite (null xs)
-                                                                    (tuple (nil, nil))
-                                                                    (let (h, t)   = uncons xs
-                                                                         (as, bs) = untuple $ sbvPartition t
-                                                                     in ite (f h)
-                                                                            (tuple (h .: as, bs))
-                                                                            (tuple (as, h .: bs)))
+  -- | Handle the concrete case of partitioning. Used internally only.
+  concretePartition :: func -> (SBV a -> SBool) -> SList a -> Maybe ([a], [a])
+  concretePartition _ f l
+    | Just l' <- unliteral l
+    = case P.map (unliteral . f . literal) l' of
+        xs | P.any isNothing xs -> Nothing
+           | True               -> let (ts, fs) = L.partition P.fst (P.zip (catMaybes xs) l')
+                                   in Just (P.map P.snd ts, P.map P.snd fs)
+    | True
+    = Nothing
+
+-- | Partitioning with symbolic functions.
+instance SymVal a => SPartition (SBV a -> SBool) a where
+  -- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
+  -- first element, and those that don't in the second.
+  partition f l
+    | Just concResult <- concretePartition f f l
+    = literal concResult
+    | True
+    = sbvPartition l
+    where sbvPartition = smtHOFunction "sbv.partition" f $ \xs -> ite (null xs)
+                                                                      (tuple (nil, nil))
+                                                                      (let (h, t)   = uncons xs
+                                                                           (as, bs) = untuple $ sbvPartition t
+                                                                       in ite (f h)
+                                                                              (tuple (h .: as, bs))
+                                                                              (tuple (as, h .: bs)))
+
+-- | Partitioning with closures.
+instance (SymVal env, SymVal a) => SPartition (Closure (SBV env) (SBV a -> SBool)) a where
+  partition cls@Closure{closureEnv, closureFun} l
+    | Just concResult <- concretePartition cls (closureFun closureEnv) l
+    = literal concResult
+    | True
+    = sbvPartition (tuple (closureEnv, l))
+    where sbvPartition = smtHOFunction "sbv.closurePartition" closureFun
+                       $ \envxs -> let (cEnv, xs) = untuple envxs
+                                       (h,    t)  = uncons xs
+                                       (as,   bs) = untuple $ sbvPartition (tuple (cEnv, t))
+                                   in ite (closureFun cEnv h)
+                                          (tuple (h .: as, bs))
+                                          (tuple (as, h .: bs))
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
