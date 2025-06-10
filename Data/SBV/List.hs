@@ -578,7 +578,7 @@ class (SymVal a, SymVal b) => SFoldL func a b | func -> a b where
                            Nothing -> Nothing
                            Just b' -> go b' es
 
--- | Folding with symbolic functions.
+-- | Folding left with symbolic functions.
 instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
   -- | @`foldl` f b s@ folds the sequence from the left.
   --
@@ -606,7 +606,7 @@ instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
                                       e
                                       (sbvFoldl (tuple (e `f` h, t)))
 
--- | Folding with symbolic closures.
+-- | Folding left with symbolic closures.
 instance (SymVal env, SymVal a, SymVal b) => SFoldL (Closure (SBV env) (SBV b -> SBV a -> SBV b)) a b where
   foldl cls@Closure{closureEnv, closureFun} base l
     | Just concResult <- concreteFoldl cls (closureFun closureEnv) base l
