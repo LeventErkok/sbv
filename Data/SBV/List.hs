@@ -94,6 +94,7 @@ import Data.Proxy
 -- >>> :set -XOverloadedLists
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
+-- >>> :set -XTypeApplications
 #endif
 
 -- | Length of a list.
@@ -581,9 +582,9 @@ class (SymVal a, SymVal b) => SFoldL func a b | func -> a b where
 instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
   -- | @`foldl` f b s@ folds the sequence from the left.
   --
-  -- >>> foldl (+) 0 [1 .. 5 :: Integer]
+  -- >>> foldl ((+) @SInteger) 0 [1 .. 5 :: Integer]
   -- 15 :: SInteger
-  -- >>> foldl (*) 1 [1 .. 5 :: Integer]
+  -- >>> foldl ((*) @SInteger) 1 [1 .. 5 :: Integer]
   -- 120 :: SInteger
   -- >>> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) [1 .. 5 :: Integer]
   -- [5,4,3,2,1] :: [SInteger]
