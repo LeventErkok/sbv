@@ -94,22 +94,22 @@ tests =
                                             , P.foldl  (\b (i, a) -> i     + b + a)     0 . P.zip [10..15]
                                             )
 
-      , goldenCapturedIO "lambda19" $ eval1 [1 .. 5 :: Integer] (foldr (+) 0, P.foldr (+) 0)
-      , goldenCapturedIO "lambda20" $ eval1 [1 .. 5 :: Integer] (foldr (*) 1, P.foldr (*) 1)
+      , goldenCapturedIO "lambda19" $ eval1 [1 .. 5 :: Integer] (foldrL (+) 0, P.foldr (+) 0)
+      , goldenCapturedIO "lambda20" $ eval1 [1 .. 5 :: Integer] (foldrL (*) 1, P.foldr (*) 1)
       , goldenCapturedIO "lambda21" $ eval1 [1 .. 5 :: Integer]
-                                           (   foldr (\elt soFar -> soFar   ++ singleton elt) []
-                                           , P.foldr (\elt soFar -> soFar P.++ [elt])         []
+                                           (   foldrL (\elt soFar -> soFar   ++ singleton elt) []
+                                           , P.foldr  (\elt soFar -> soFar P.++ [elt])         []
                                            )
 
       , goldenCapturedIO "lambda22" $ eval2 [1 .. 10 :: Integer] [11..20 :: Integer] (zip, P.zip)
       , goldenCapturedIO "lambda23" $ eval2 [1 .. 10 :: Integer] [10, 9 .. 1 :: Integer]
-                                            ( \a b ->   foldr (+) 0 (  map (\t -> t^._1+t^._2::SInteger) (  zip a b))
-                                            , \a b -> P.foldr (+) 0 (P.map (\t -> fst t+snd t::Integer ) (P.zip a b))
+                                            ( \a b ->   foldrL (+) 0 (  map (\t -> t^._1+t^._2::SInteger) (  zip a b))
+                                            , \a b -> P.foldr  (+) 0 (P.map (\t -> fst t+snd t::Integer ) (P.zip a b))
                                             )
       , goldenCapturedIO "lambda24" $ eval2 [1 .. 10 :: Integer] [11..20 :: Integer] (zipWith (+), P.zipWith (+))
       , goldenCapturedIO "lambda25" $ eval2 [1 .. 10 :: Integer] [10, 9 .. 1 :: Integer]
-                                            ( \a b ->   foldr (+) 0 (  zipWith (+) a b)
-                                            , \a b -> P.foldr (+) 0 (P.zipWith (+) a b)
+                                            ( \a b ->   foldrL (+) 0 (  zipWith (+) a b)
+                                            , \a b -> P.foldr  (+) 0 (P.zipWith (+) a b)
                                             )
 
       , goldenCapturedIO "lambda26" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]]) (concat, P.concat)
@@ -242,7 +242,7 @@ tests =
       , goldenCapturedIO "lambda83" $ errorOut noFreeVars1
       , goldenCapturedIO "lambda84" $ errorOut noFreeVars2
       ]
-   P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
+   P.++ qc1 "lambdaQC1" P.sum (foldr ((+) @SInteger) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
    P.++ qc1 "lambdaQC3" (\n -> let pn = abs n in (pn * (pn+1)) `sDiv` 2)
                         (let ssum = smtFunction "ssum" $ \(n :: SInteger) -> let pn = abs n in ite (pn .== 0) 0 (pn + ssum (pn - 1)) in ssum)
@@ -260,6 +260,9 @@ tests =
 
         foldlL :: (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
         foldlL = foldl
+
+        foldrL :: (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+        foldrL = foldr
 
         rel, leq :: Relation Integer
         rel = uninterpret "R"

@@ -600,11 +600,11 @@ instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
     | True
     = sbvFoldl $ tuple (base, l)
     where sbvFoldl = smtHOFunction "sbv.foldl" (uncurry f . untuple)
-                   $ \envxs -> let (e, xs) = untuple envxs
-                                   (h, t)  = uncons xs
-                               in ite (null xs)
-                                      e
-                                      (sbvFoldl (tuple (e `f` h, t)))
+                   $ \exs -> let (e, xs) = untuple exs
+                                 (h, t)  = uncons xs
+                             in ite (null xs)
+                                    e
+                                    (sbvFoldl (tuple (e `f` h, t)))
 
 -- | Folding left with symbolic closures.
 instance (SymVal env, SymVal a, SymVal b) => SFoldL (Closure (SBV env) (SBV b -> SBV a -> SBV b)) a b where
@@ -620,31 +620,59 @@ instance (SymVal env, SymVal a, SymVal b) => SFoldL (Closure (SBV env) (SBV b ->
                                       e
                                       (sbvFoldl (tuple (cEnv, closureFun closureEnv e h, t)))
 
--- | @`foldr` f base s@ folds the sequence from the right.
---
--- >>> foldr (+) 0 [1 .. 5 :: Integer]
--- 15 :: SInteger
--- >>> foldr (*) 1 [1 .. 5 :: Integer]
--- 120 :: SInteger
--- >>> foldr (\elt soFar -> soFar ++ singleton elt) ([] :: SList Integer) [1 .. 5 :: Integer]
--- [5,4,3,2,1] :: [SInteger]
-foldr :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
-foldr f base l
-  | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldr base' l'
-  = literal concResult
-  | True
-  = sbvFoldr $ tuple (base, l)
-  where concreteFoldr b []     = Just b
-        concreteFoldr b (e:es) = case concreteFoldr b es of
-                                   Nothing  -> Nothing
-                                   Just res -> unliteral (literal e `f` literal res)
+-- | A class of right foldable functions. In SBV, we make a distinction between closures and regular functions, and
+-- we instantiate this class appropriately so it can handle both cases.
+class (SymVal a, SymVal b) => SFoldR func a b | func -> a b where
+  -- | @`foldr` f base s@ folds the from the right.
+  foldr :: func -> SBV b -> SList a -> SBV b
 
-        sbvFoldr = smtHOFunction "sbv.foldr" (uncurry f . untuple)
-                 $ \exs -> let (e, xs) = untuple exs
-                               (h, t)  = uncons xs
-                           in ite (null xs)
-                                  e
-                                  (h `f` sbvFoldr (tuple (e, t)))
+  -- | Handle the concrete case for folding left. Used internally only.
+  concreteFoldr :: func -> (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> Maybe b
+  concreteFoldr _ f sb sas
+     | Just b <- unliteral sb, Just as <- unliteral sas
+     = go b as
+     | True
+     = Nothing
+     where go b []     = Just b
+           go b (e:es) = case go b es of
+                           Nothing  -> Nothing
+                           Just res -> unliteral (literal e `f` literal res)
+
+-- | Folding right with symbolic functions.
+instance (SymVal a, SymVal b) => SFoldR (SBV a -> SBV b -> SBV b) a b where
+  -- | @`foldr` f base s@ folds the sequence from the right.
+  --
+  -- >>> foldr (+) 0 [1 .. 5 :: Integer]
+  -- 15 :: SInteger
+  -- >>> foldr (*) 1 [1 .. 5 :: Integer]
+  -- 120 :: SInteger
+  -- >>> foldr (\elt soFar -> soFar ++ singleton elt) ([] :: SList Integer) [1 .. 5 :: Integer]
+  -- [5,4,3,2,1] :: [SInteger]
+  foldr f base l
+    | Just concResult <- concreteFoldr f f base l
+    = literal concResult
+    | True
+    = sbvFoldr $ tuple (base, l)
+    where sbvFoldr = smtHOFunction "sbv.foldr" (uncurry f . untuple)
+                   $ \exs -> let (e, xs) = untuple exs
+                                 (h, t)  = uncons xs
+                             in ite (null xs)
+                                    e
+                                    (h `f` sbvFoldr (tuple (e, t)))
+
+-- | Folding right with symbolic closures.
+instance (SymVal env, SymVal a, SymVal b) => SFoldR (Closure (SBV env) (SBV a -> SBV b -> SBV b)) a b where
+  foldr cls@Closure{closureEnv, closureFun} base l
+    | Just concResult <- concreteFoldr cls (closureFun closureEnv) base l
+    = literal concResult
+    | True
+    = sbvFoldr $ tuple (closureEnv, base, l)
+    where sbvFoldr = smtHOFunction "sbv.closureFoldl" closureFun
+                   $ \envxs -> let (cEnv, e, xs) = untuple envxs
+                                   (h, t)        = uncons xs
+                               in ite (null xs)
+                                      e
+                                      (closureFun closureEnv h (sbvFoldr (tuple (cEnv, e, t))))
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.

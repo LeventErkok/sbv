@@ -103,6 +103,7 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
                    , "Control.Query.Assignment"
                    , "List.SMap"
                    , "List.SFoldL"
+                   , "List.SFoldR"
                    , "TP.TP.ChainStep"
                    , "TP.TP.ChainsTo"
                    , "TP.TP.HintsTo"
