@@ -579,6 +579,8 @@ class (SymVal a, SymVal b) => SFoldL func a b | func -> a b where
 
 -- | Folding with symbolic functions.
 instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
+  -- | @`foldl` f b s@ folds the sequence from the left.
+  --
   -- >>> foldl (+) 0 [1 .. 5 :: Integer]
   -- 15 :: SInteger
   -- >>> foldl (*) 1 [1 .. 5 :: Integer]
