@@ -207,6 +207,24 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     Step: 1.2.4                                             Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: quickSortIsCorrect @Integer                          Q.E.D.
+-- Inductive lemma: partitionSortedLeft
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: partitionSortedRight
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: unchangedIfNondecreasing @Integer
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2                                                   Q.E.D.
+--   Step: 3                                                   Q.E.D.
+--   Step: 4                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: ifChangedThenUnsorted @Integer                       Q.E.D.
 -- == Proof tree:
 -- quickSortIsCorrect @Integer
 --  ├╴sortIsPermutation
@@ -566,7 +584,55 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
            (\(Forall @"xs" xs) -> let out = quickSort xs in isPermutation xs out .&& nonDecreasing out)
            [sortIsPermutation, sortIsNonDecreasing]
 
+  --------------------------------------------------------------------------------------------
+  -- Part IX. Bonus: This property isn't really needed for correctness, but let's also prove
+  -- that if a list is sorted, then quick-sort returns it unchanged.
+  --------------------------------------------------------------------------------------------
+  partitionSortedLeft <-
+     inductWith cvc5 "partitionSortedLeft"
+            (\(Forall @"as" as) (Forall @"pivot" pivot) -> nonDecreasing (pivot .: as) .=> null (fst (partition pivot as))) $
+            \ih a as pivot -> [nonDecreasing (pivot .: a .: as)]
+                           |- fst (partition pivot (a .: as))
+                           =: let (lo, _) = untuple (partition pivot as)
+                           in lo
+                           ?? ih
+                           =: nil
+                           =: qed
+
+  partitionSortedRight <-
+     inductWith cvc5 "partitionSortedRight"
+           (\(Forall @"xs" xs) (Forall @"pivot" pivot) -> nonDecreasing (pivot .: xs) .=> xs .== snd (partition pivot xs)) $
+           \ih a as pivot -> [nonDecreasing (pivot .: a .: as)]
+                          |- snd (partition pivot (a .: as))
+                          =: let (_, hi) = untuple (partition pivot as)
+                          in a .: hi
+                          ?? ih
+                          =: a .: as
+                          =: qed
+
+  unchangedIfNondecreasing <-
+       induct (atProxy p "unchangedIfNondecreasing")
+              (\(Forall @"xs" xs) -> nonDecreasing xs .=> quickSort xs .== xs) $
+              \ih x xs -> [nonDecreasing (x .: xs)]
+                       |- quickSort (x .: xs)
+                       =: let (lo, hi) = untuple (partition x xs)
+                       in quickSort lo ++ singleton x ++ quickSort hi
+                       ?? partitionSortedLeft
+                       =: singleton x ++ quickSort hi
+                       ?? partitionSortedRight
+                       =: singleton x ++ quickSort xs
+                       ?? ih
+                       =: x .: xs
+                       =: qed
+
+  -- A nice corrollary to the above is that if quicksort changes its input, that implies the input was not non-decreasing:
+  _ <- lemma (atProxy p "ifChangedThenUnsorted")
+             (\(Forall @"xs" xs) -> quickSort xs ./= xs .=> sNot (nonDecreasing xs))
+             [unchangedIfNondecreasing]
+
+  --------------------------------------------------------------------------------------------
   -- | We can display the dependencies in a proof
+  --------------------------------------------------------------------------------------------
   liftIO $ do putStrLn "== Proof tree:"
               putStr $ showProofTree True qs
 
