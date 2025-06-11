@@ -246,6 +246,15 @@ tests =
 
       , goldenCapturedIO "lambda85" $ eval1 [1 .. 10 :: Integer] (partitionL (\x -> x `sMod` 2 .== 0), P.partition (\x -> x `mod` 2 == 0))
       , goldenCapturedIO "lambda86" $ eval1 [1 .. 10 :: Integer] (partitionL (\x -> x `sMod` 2 ./= 0), P.partition (\x -> x `mod` 2 /= 0))
+
+      , let cls :: SInteger -> Closure SInteger (SInteger -> SInteger)
+            cls x = Closure { closureEnv = x
+                            , closureFun = \env y -> env + y
+                            }
+        in goldenCapturedIO "lambda87" $ eval2 [1 .. 3 :: Integer] [6 .. 8 :: Integer]
+                                               ( \xs ys ->   map (\x ->   map (cls x)       xs) ys
+                                               , \xs ys -> P.map (\x -> P.map (\y -> x + y) xs) ys
+                                               )
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr ((+) @SInteger) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
