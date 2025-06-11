@@ -37,6 +37,7 @@ power = smtFunction "power" $ \b n -> ite (n .<= 0) 1 (b * power b (n-1))
 
 -- | \(m > 1 \Rightarrow n + mk \equiv n \pmod{m}\)
 --
+-- ==== __Proof__
 -- >>> runCached modAddMultiple
 -- Inductive lemma: modAddMultiple
 --   Step: Base                            Q.E.D.
@@ -58,6 +59,7 @@ modAddMultiple = do
 
 -- | \(m > 0 \Rightarrow a + b \equiv a + (b \bmod m) \pmod{m}\)
 --
+-- ==== __Proof__
 -- >>> runCached modAddRight
 -- Inductive lemma: modAddMultiple
 --   Step: Base                            Q.E.D.
@@ -83,6 +85,7 @@ modAddRight = do
 
 -- | \(m > 0 \Rightarrow a + b \equiv (a \bmod m) + b \pmod{m}\)
 --
+-- ==== __Proof__
 -- >>> runCached modAddLeft
 -- Inductive lemma: modAddMultiple
 --   Step: Base                            Q.E.D.
@@ -114,6 +117,7 @@ modAddLeft = do
 
 -- | \(m > 0 \Rightarrow a - b \equiv a - (b \bmod m) \pmod{m}\)
 --
+-- ==== __Proof__
 -- >>> runCached modSubRight
 -- Inductive lemma: modAddMultiple
 --   Step: Base                            Q.E.D.
@@ -141,6 +145,7 @@ modSubRight = do
 
 -- | \(a \geq 0 \land m > 0 \Rightarrow ab \equiv a \cdot (b \bmod m) \pmod{m}\)
 --
+-- ==== __Proof__
 -- >>> runCached modMulRightNonneg
 -- Inductive lemma: modAddMultiple
 --   Step: Base                            Q.E.D.
@@ -191,6 +196,7 @@ modMulRightNonneg = do
 
 -- | \(a \geq 0 \land m > 0 \Rightarrow -ab \equiv -\left(a \cdot (b \bmod m)\right) \pmod{m}\)
 --
+-- ==== __Proof__
 -- >>> runCached modMulRightNeg
 -- Inductive lemma: modAddMultiple
 --   Step: Base                            Q.E.D.
@@ -245,6 +251,7 @@ modMulRightNeg = do
 
 -- | \(m > 0 \Rightarrow ab \equiv a \cdot (b \bmod m) \pmod{m}\)
 --
+-- ==== __Proof__
 -- >>> runCached modMulRight
 -- Inductive lemma: modAddMultiple
 --   Step: Base                            Q.E.D.
@@ -320,6 +327,7 @@ modMulRight = do
 
 -- | \(m > 0 \Rightarrow ab \equiv (a \bmod m) \cdot b \pmod{m}\)
 --
+-- ==== __Proof__
 -- >>> runCached modMulLeft
 -- Inductive lemma: modAddMultiple
 --   Step: Base                            Q.E.D.
@@ -394,6 +402,7 @@ modMulLeft = do
 
 -- | \(n \geq 0 \land m > 0 \Rightarrow b^n \equiv (b \bmod m)^n \pmod{m}\)
 --
+-- ==== __Proof__
 -- >>> runCached powerMod
 -- Inductive lemma: modAddMultiple
 --   Step: Base                            Q.E.D.
@@ -501,3 +510,246 @@ powerMod = do
    lemma "powerMod"
          (\(Forall @"b" b) (Forall @"n" n) (Forall @"m" m) -> n .>= 0 .&& m .> 0 .=> power b n `sEMod` m .== power (b `sEMod` m) n `sEMod` m)
          [pMod]
+
+-- | \(n \geq 0 \Rightarrow 1^n = 1\)
+--
+-- ==== __Proof__
+-- >>> runCached onePower
+-- Inductive lemma: onePower
+--   Step: Base                            Q.E.D.
+--   Step: 1 (unfold power)                Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] onePower
+onePower :: TP Proof
+onePower = induct "onePower"
+                  (\(Forall @"n" n) -> n .>= 0 .=> power 1 n .== 1) $
+                  \ih n -> [] |- power 1 (n+1)
+                               ?? "unfold power"
+                               =: 1 * power 1 n
+                               ?? ih
+                               =: (1 :: SInteger)
+                               =: qed
+
+-- | \(n \geq 0 \Rightarrow (27^n \bmod 13) = 1\)
+--
+-- ==== __Proof__
+-- >>> runCached powerOf27
+-- Inductive lemma: onePower
+--   Step: Base                            Q.E.D.
+--   Step: 1 (unfold power)                Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: modAddMultiple
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAddRight
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAddLeft
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modAddRight                     Q.E.D.
+-- Inductive lemma: modMulRightNonneg
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modAddRight                     Q.E.D.
+-- Cached: modAddLeft                      Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Lemma: modSubRight
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: modMulRightNeg
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modMulRight
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modMulLeft
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modAddRight                     Q.E.D.
+-- Cached: modAddLeft                      Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modAddRight                     Q.E.D.
+-- Cached: modMulRightNonneg               Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modAddRight                     Q.E.D.
+-- Cached: modAddLeft                      Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modSubRight                     Q.E.D.
+-- Cached: modMulRightNeg                  Q.E.D.
+-- Cached: modMulRight                     Q.E.D.
+-- Inductive lemma: powerModInduct
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: powerMod                         Q.E.D.
+-- Lemma: powerOf27
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerOf27
+powerOf27 :: TP Proof
+powerOf27 = do
+   pOne <- onePower
+   pMod <- powerMod
+   calc "powerOf27" (\(Forall @"n" n) -> n .>= 0 .=> power 27 n `sEMod` 13  .==  1) $
+                    \n -> [n .>= 0]
+                       |- power 27 n `sEMod` 13
+                       ?? pMod `at` (Inst @"b" (27::SInteger), Inst @"n" n, Inst @"m" (13::SInteger))
+                       =: power (27 `sEMod` 13) n `sEMod` 13
+                       =: power 1 n `sEMod` 13
+                       ?? pOne
+                       =: 1 `sEMod` 13
+                       =: (1::SInteger)
+                       =: qed
+
+-- | \(n \geq 0 \wedge m > 0 \implies (27^{\frac{n}{3}} \bmod 13) \cdot 3^{n \bmod 3} \equiv 3^{n \bmod 3} \pmod{m}\)
+--
+-- ==== __Proof__
+-- >>> runCached powerOfThreeMod13VarDivisor
+-- Inductive lemma: onePower
+--   Step: Base                            Q.E.D.
+--   Step: 1 (unfold power)                Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: modAddMultiple
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAddRight
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAddLeft
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modAddRight                     Q.E.D.
+-- Inductive lemma: modMulRightNonneg
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modAddRight                     Q.E.D.
+-- Cached: modAddLeft                      Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Lemma: modSubRight
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: modMulRightNeg
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modMulRight
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modMulLeft
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modAddRight                     Q.E.D.
+-- Cached: modAddLeft                      Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modAddRight                     Q.E.D.
+-- Cached: modMulRightNonneg               Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modAddRight                     Q.E.D.
+-- Cached: modAddLeft                      Q.E.D.
+-- Cached: modAddMultiple                  Q.E.D.
+-- Cached: modSubRight                     Q.E.D.
+-- Cached: modMulRightNeg                  Q.E.D.
+-- Cached: modMulRight                     Q.E.D.
+-- Inductive lemma: powerModInduct
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: powerMod                         Q.E.D.
+-- Lemma: powerOf27
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: powerOfThreeMod13VarDivisor
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerOfThreeMod13VarDivisor
+powerOfThreeMod13VarDivisor :: TP Proof
+powerOfThreeMod13VarDivisor = do
+   p27 <- powerOf27
+   calc "powerOfThreeMod13VarDivisor"
+        (\(Forall @"n" n) (Forall @"m" m) ->
+            n .>= 0 .&& m .> 0 .=>     power 27 (n `sEDiv` 3) `sEMod` 13 * power 3 (n `sEMod` 3) `sEMod` m
+                                   .== power  3 (n `sEMod` 3) `sEMod` m) $
+        \n m -> [n .>= 0, m .> 0]
+             |- power 27 (n `sEDiv` 3) `sEMod` 13 * power 3 (n `sEMod` 3) `sEMod` m
+             ?? p27 `at` Inst @"n" (sEDiv n 3)
+             =: power 3 (n `sEMod` 3) `sEMod` m
+             =: qed
