@@ -30,28 +30,29 @@ import Data.Proxy
 
 #ifdef DOCTEST
 -- $setup
+-- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeApplications
 -- >>> import Data.Proxy
 #endif
 
--- @sum (reverse xs) = sum xs@
+-- | @sum (reverse xs) = sum xs@
 --
--- >>> revSum
--- Inductive lemma: sumAppend
---  Step: Base                            Q.E.D.
---  Step: 1                               Q.E.D.
---  Step: 2                               Q.E.D.
---  Step: 3                               Q.E.D.
---  Step: 4                               Q.E.D.
---  Result:                               Q.E.D.
---Inductive lemma: sumReverse @Integer
---  Step: Base                            Q.E.D.
---  Step: 1                               Q.E.D.
---  Step: 2                               Q.E.D.
---  Step: 3                               Q.E.D.
---  Step: 4                               Q.E.D.
---  Result:                               Q.E.D.
---[Proven] sumReverse @Integer
+-- >>> revSum (Proxy @Integer)
+-- Inductive lemma: sumAppend @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: sumReverse @Integer
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] sumReverse @Integer
 revSum :: forall a. (SymVal a, Num (SBV a)) => Proxy a -> IO Proof
 revSum p = runTP $ do
 
@@ -59,7 +60,7 @@ revSum p = runTP $ do
 
   -- helper: sum distributes over append.
   sumAppend <-
-     induct "sumAppend"
+     induct (atProxy p "sumAppend")
             (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
             \ih x xs ys -> [] |- sum ((x .: xs) ++ ys)
                               =: sum (x .: (xs ++ ys))
