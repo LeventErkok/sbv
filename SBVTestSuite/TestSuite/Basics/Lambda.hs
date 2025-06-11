@@ -260,7 +260,7 @@ tests =
             cls ys = Closure { closureEnv = ys
                              , closureFun = \env xs -> xs ++ env
                              }
-        in goldenCapturedIO "lambda87" $ eval2 [[1 .. 3 :: Integer], [4 .. 6 :: Integer]] [7 .. 9 :: Integer]
+        in goldenCapturedIO "lambda88" $ eval2 [[1 .. 3 :: Integer], [4 .. 6 :: Integer]] [7 .. 9 :: Integer]
                                                ( \xss ys ->   map (cls  ys) xss
                                                , \xss ys -> P.map (P.++ ys) xss
                                                )
