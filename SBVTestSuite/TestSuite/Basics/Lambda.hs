@@ -255,6 +255,15 @@ tests =
                                                ( \xs ys ->   map (\x ->   map (cls x)       xs) ys
                                                , \xs ys -> P.map (\x -> P.map (\y -> x + y) xs) ys
                                                )
+
+      , let cls :: SList Integer -> Closure (SList Integer) (SList Integer -> SList Integer)
+            cls ys = Closure { closureEnv = ys
+                             , closureFun = \env xs -> xs ++ env
+                             }
+        in goldenCapturedIO "lambda87" $ eval2 [[1 .. 3 :: Integer], [4 .. 6 :: Integer]] [7 .. 9 :: Integer]
+                                               ( \xss ys ->   map (cls  ys) xss
+                                               , \xss ys -> P.map (P.++ ys) xss
+                                               )
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr ((+) @SInteger) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))

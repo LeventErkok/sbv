@@ -8,6 +8,17 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
+[GOOD] (set-option :print-success true)
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
+[GOOD] ; --- uninterpreted sorts ---
+[GOOD] ; --- tuples ---
+[GOOD] (set-option :global-declarations true)
+[GOOD] (set-option :smtlib2_compliant true)
+[GOOD] (set-option :diagnostic-output-channel "stdout")
+[GOOD] (set-option :produce-models true)
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
@@ -85,26 +96,86 @@
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] (define-fun s7 () (Seq (Seq Int)) (|sbv.map @SBV Integer -> SBV [Integer]_f086321e30 @SBV [Integer] -> SBV [[Integer]]| s1))
+[GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
+                                           ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
+                                                         (proj_2_SBVTuple2 T2))))))
+[GOOD] ; --- sums ---
+[GOOD] ; --- literal constants ---
 [GOOD] (define-fun s8 () Bool (= s2 s7))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s4)
 [GOOD] (assert s6)
+[GOOD] (define-fun s3 () (Seq (Seq Int)) (seq.++ (seq.unit (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))) (seq.unit (seq.++ (seq.unit 4) (seq.unit 5) (seq.unit 6)))))
 [GOOD] (assert s8)
 [SEND] (check-sat)
+[GOOD] (define-fun s5 () (Seq Int) (seq.++ (seq.unit 7) (seq.unit 8) (seq.unit 9)))
+[GOOD] ; --- top level inputs ---
+[GOOD] (declare-fun s0 () (Seq (Seq Int)))
+[GOOD] (declare-fun s1 () (Seq Int))
+[GOOD] (declare-fun s2 () (Seq (Seq Int)))
+[GOOD] ; --- constant tables ---
+[GOOD] ; --- non-constant tables ---
+[GOOD] ; --- uninterpreted constants ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; |sbv.closureMap @SBV [Integer] -> SBV [Integer] -> SBV [Integer]_24b5487d7f @SBV ([Integer],[[Integer]]) -> SBV [[Integer]]| :: ([SInteger], [[SInteger]]) -> [[SInteger]] [Recursive]
+[GOOD] (define-fun-rec |sbv.closureMap @SBV [Integer] -> SBV [Integer] -> SBV [Integer]_24b5487d7f @SBV ([Integer],[[Integer]]) -> SBV [[Integer]]| ((l1_s0 (SBVTuple2 (Seq Int) (Seq (Seq Int))))) (Seq (Seq Int))
+                                 (let ((l1_s3 0))
+                                 (let ((l1_s5 (as seq.empty (Seq (Seq Int)))))
+                                 (let ((l1_s10 1))
+                                 (let ((l1_s1 (proj_2_SBVTuple2 l1_s0)))
+                                 (let ((l1_s2 (seq.len l1_s1)))
+                                 (let ((l1_s4 (= l1_s2 l1_s3)))
+                                 (let ((l1_s6 (seq.nth l1_s1 l1_s3)))
+                                 (let ((l1_s7 (proj_1_SBVTuple2 l1_s0)))
+                                 (let ((l1_s8 (seq.++ l1_s6 l1_s7)))
+                                 (let ((l1_s9 (seq.unit l1_s8)))
+                                 (let ((l1_s11 (- l1_s2 l1_s10)))
+                                 (let ((l1_s12 (seq.extract l1_s1 l1_s10 l1_s11)))
+                                 (let ((l1_s13 ((as mkSBVTuple2 (SBVTuple2 (Seq Int) (Seq (Seq Int)))) l1_s7 l1_s12)))
+                                 (let ((l1_s14 (|sbv.closureMap @SBV [Integer] -> SBV [Integer] -> SBV [Integer]_24b5487d7f @SBV ([Integer],[[Integer]]) -> SBV [[Integer]]| l1_s13)))
+                                 (let ((l1_s15 (seq.++ l1_s9 l1_s14)))
+                                 (let ((l1_s16 (ite l1_s4 l1_s5 l1_s15)))
+                                 l1_s16)))))))))))))))))
+[GOOD] ; --- assignments ---
+[GOOD] (define-fun s4 () Bool (= s0 s3))
+[GOOD] (define-fun s6 () Bool (= s1 s5))
+[GOOD] (define-fun s7 () (SBVTuple2 (Seq Int) (Seq (Seq Int))) ((as mkSBVTuple2 (SBVTuple2 (Seq Int) (Seq (Seq Int)))) s1 s0))
+[GOOD] (define-fun s8 () (Seq (Seq Int)) (|sbv.closureMap @SBV [Integer] -> SBV [Integer] -> SBV [Integer]_24b5487d7f @SBV ([Integer],[[Integer]]) -> SBV [[Integer]]| s7))
+[RECV] sat
+[SEND] (get-value (s2))
+[GOOD] (define-fun s9 () Bool (= s2 s8))
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; --- formula ---
+[GOOD] (assert s4)
+[RECV] ((s2 (seq.++ (seq.unit (seq.++ (seq.unit 7) (seq.unit 8) (seq.unit 9)))
+               (seq.unit (seq.++ (seq.unit 8) (seq.unit 9) (seq.unit 10)))
+               (seq.unit (seq.++ (seq.unit 9) (seq.unit 10) (seq.unit 11))))))
+[SEND] (get-value (s0))
+[GOOD] (assert s6)
+[GOOD] (assert s9)
+[SEND] (check-sat)
+[RECV] ((s0 (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))))
+[SEND] (get-value (s1))
+[RECV] ((s1 (seq.++ (seq.unit 6) (seq.unit 7) (seq.unit 8))))
+[SEND] (get-value (s2))
 [RECV] sat
 [SEND] (get-value (s2))
 [RECV] ((s2 (seq.++ (seq.unit (seq.++ (seq.unit 7) (seq.unit 8) (seq.unit 9)))
                (seq.unit (seq.++ (seq.unit 8) (seq.unit 9) (seq.unit 10)))
                (seq.unit (seq.++ (seq.unit 9) (seq.unit 10) (seq.unit 11))))))
+[RECV] ((s2 (seq.++ (seq.unit (seq.++ (seq.unit 1)
+                                 (seq.unit 2)
+                                 (seq.unit 3)
+                                 (seq.++ (seq.unit 7) (seq.unit 8) (seq.unit 9))))
+               (seq.unit (seq.++ (seq.unit 4)
+                                 (seq.unit 5)
+                                 (seq.unit 6)
+                                 (seq.++ (seq.unit 7) (seq.unit 8) (seq.unit 9)))))))
 [SEND] (get-value (s0))
-[RECV] ((s0 (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))))
+[RECV] ((s0 (seq.++ (seq.unit (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3)))
+               (seq.unit (seq.++ (seq.unit 4) (seq.unit 5) (seq.unit 6))))))
 [SEND] (get-value (s1))
-[RECV] ((s1 (seq.++ (seq.unit 6) (seq.unit 7) (seq.unit 8))))
-[SEND] (get-value (s2))
-[RECV] ((s2 (seq.++ (seq.unit (seq.++ (seq.unit 7) (seq.unit 8) (seq.unit 9)))
-               (seq.unit (seq.++ (seq.unit 8) (seq.unit 9) (seq.unit 10)))
-               (seq.unit (seq.++ (seq.unit 9) (seq.unit 10) (seq.unit 11))))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
@@ -112,3 +183,20 @@ RESULT:
   s0 =                      [1,2,3] :: [Integer]
   s1 =                      [6,7,8] :: [Integer]
   s2 = [[7,8,9],[8,9,10],[9,10,11]] :: [[Integer]]
+[RECV] ((s1 (seq.++ (seq.unit 7) (seq.unit 8) (seq.unit 9))))
+[SEND] (get-value (s2))
+[RECV] ((s2 (seq.++ (seq.unit (seq.++ (seq.unit 1)
+                                 (seq.unit 2)
+                                 (seq.unit 3)
+                                 (seq.++ (seq.unit 7) (seq.unit 8) (seq.unit 9))))
+               (seq.unit (seq.++ (seq.unit 4)
+                                 (seq.unit 5)
+                                 (seq.unit 6)
+                                 (seq.++ (seq.unit 7) (seq.unit 8) (seq.unit 9)))))))
+*** Solver   : Z3
+*** Exit code: ExitSuccess
+
+RESULT:
+  s0 =             [[1,2,3],[4,5,6]] :: [[Integer]]
+  s1 =                       [7,8,9] :: [Integer]
+  s2 = [[1,2,3,7,8,9],[4,5,6,7,8,9]] :: [[Integer]]
