@@ -954,6 +954,11 @@ type family Hinted a where
 (??) = addHint
 infixl 2 ??
 
+-- | Alternative unicode for `??`.
+(∵) :: HintsTo a b => a -> b -> Hinted a
+(∵) = (??)
+infixl 2 ∵
+
 -- | Class capturing hints
 class HintsTo a b where
   addHint :: a -> b -> Hinted a
@@ -1107,11 +1112,6 @@ infixl 0 |-
 (⊢) :: [SBool] -> TPProofRaw a -> (SBool, TPProofRaw a)
 (⊢) = (|-)
 infixl 0 ⊢
-
--- | Alternative unicode for `??`.
-(∵) :: HintsTo a b => a -> b -> Hinted a
-(∵) = (??)
-infixl 2 ∵
 
 -- | The boolean case-split
 cases :: [(SBool, TPProofRaw a)] -> TPProofRaw a
