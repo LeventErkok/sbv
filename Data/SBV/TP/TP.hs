@@ -33,7 +33,7 @@ module Data.SBV.TP.TP (
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpCache
-       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), qed, trivial, contradiction, atProxy
+       , (|-), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction, atProxy
        ) where
 
 import Data.SBV
@@ -1109,9 +1109,9 @@ infixl 0 |-
 infixl 0 ⊢
 
 -- | Alternative unicode for `??`.
-(⁇) :: HintsTo a b => a -> b -> Hinted a
-(⁇) = (??)
-infixl 2 ⁇
+(∵) :: HintsTo a b => a -> b -> Hinted a
+(∵) = (??)
+infixl 2 ∵
 
 -- | The boolean case-split
 cases :: [(SBool, TPProofRaw a)] -> TPProofRaw a

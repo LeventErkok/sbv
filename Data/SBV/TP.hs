@@ -54,7 +54,7 @@ module Data.SBV.TP (
        , (=:), (≡)
 
        -- * Supplying hints for a calculation step
-       , (??), (⁇)
+       , (??), (∵)
 
        -- * Case splits
        , split, split2, cases, (⟹), (==>)

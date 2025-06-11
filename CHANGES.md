@@ -11,6 +11,7 @@
       - Add method rootOfTrust which can be used to retrieve uses of sorry in a proof. The idea is that
         to get a proof clean, you need to resolve all the proofs returned by this call.
       - Renamed kdShowDepsHTML to showProofTreeHTML. (Along with showProofTree which renders in ASCII.)
+      - Renamed the unicode symbol for hints from ⁇ to ∵, which is more mathematical.
       - TP utils:
           - Add tpQuiet : quiets TP proofs
           - Add tpRibbon: simplifies setting the ribbon size in a proof.

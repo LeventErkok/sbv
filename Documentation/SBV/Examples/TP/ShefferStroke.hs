@@ -372,22 +372,22 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
   sh3 <- sheffer3
 
   commut <- calc "a | b = b | a" (\AB -> a ⏐ b .== b ⏐ a) $
-                 \a b -> [] ⊢ a ⏐ b                       ⁇ sh1
-                            ≡ ﬧﬧ(a ⏐ b)                   ⁇ sh1
+                 \a b -> [] ⊢ a ⏐ b                       ∵ sh1
+                            ≡ ﬧﬧ(a ⏐ b)                   ∵ sh1
                             ≡ ﬧﬧ(a ⏐ ﬧﬧ b)
-                            ≡ ﬧﬧ(a ⏐ (ﬧ b ⏐ ﬧ b))         ⁇ sh3
+                            ≡ ﬧﬧ(a ⏐ (ﬧ b ⏐ ﬧ b))         ∵ sh3
                             ≡ ﬧ ((ﬧﬧ b ⏐ a) ⏐ (ﬧﬧ b ⏐ a))
-                            ≡ ﬧﬧ(ﬧﬧ b ⏐ a)                ⁇ sh1
-                            ≡ ﬧﬧ b ⏐ a                    ⁇ sh1
+                            ≡ ﬧﬧ(ﬧﬧ b ⏐ a)                ∵ sh1
+                            ≡ ﬧﬧ b ⏐ a                    ∵ sh1
                             ≡ b ⏐ a
                             ≡ qed
 
   all_bot <- calc "a | a′ = b | b′" (\AB -> a ⏐ ﬧ a .== b ⏐ ﬧ b) $
-                  \a b -> [] ⊢ a ⏐ ﬧ a                  ⁇ sh1
-                             ≡ ﬧﬧ(a ⏐ ﬧ a)              ⁇ sh2
-                             ≡ ﬧ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b)) ⁇ commut
-                             ≡ ﬧ((b ⏐ ﬧ b) ⏐ (a ⏐ ﬧ a)) ⁇ sh2
-                             ≡ ﬧﬧ (b ⏐ ﬧ b)             ⁇ sh1
+                  \a b -> [] ⊢ a ⏐ ﬧ a                  ∵ sh1
+                             ≡ ﬧﬧ(a ⏐ ﬧ a)              ∵ sh2
+                             ≡ ﬧ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b)) ∵ commut
+                             ≡ ﬧ((b ⏐ ﬧ b) ⏐ (a ⏐ ﬧ a)) ∵ sh2
+                             ≡ ﬧﬧ (b ⏐ ﬧ b)             ∵ sh1
                              ≡ b ⏐ ﬧ b
                              ≡ qed
 
@@ -404,62 +404,62 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
   compl2 <- lemma "a ⊓ aᶜ = ⲳ" (\A -> a ⨅ ﬧ a .== ⲳ) [sh1, commut, all_bot]
 
   bound1 <- calc "a ⊔ т = т" (\A -> a ⨆ т .== т) $
-                 \(a :: SStroke) -> [] ⊢ a ⨆ т               ⁇ ident2
-                                       ≡ (a ⨆ т) ⨅ т         ⁇ commut2
-                                       ≡ т ⨅ (a ⨆ т)         ⁇ compl1
-                                       ≡ (a ⨆ ﬧ a) ⨅ (a ⨆ т) ⁇ distrib1
-                                       ≡ a ⨆ (ﬧ a ⨅ т)       ⁇ ident2
-                                       ≡ a ⨆ ﬧ a             ⁇ compl1
+                 \(a :: SStroke) -> [] ⊢ a ⨆ т               ∵ ident2
+                                       ≡ (a ⨆ т) ⨅ т         ∵ commut2
+                                       ≡ т ⨅ (a ⨆ т)         ∵ compl1
+                                       ≡ (a ⨆ ﬧ a) ⨅ (a ⨆ т) ∵ distrib1
+                                       ≡ a ⨆ (ﬧ a ⨅ т)       ∵ ident2
+                                       ≡ a ⨆ ﬧ a             ∵ compl1
                                        ≡ (т :: SStroke)
                                        ≡ qed
 
   bound2 <- calc "a ⊓ ⲳ = ⲳ" (\A -> a ⨅ ⲳ .== ⲳ) $
-                 \(a :: SStroke) -> [] ⊢ a ⨅ ⲳ               ⁇ ident1
-                                       ≡ (a ⨅ ⲳ) ⨆ ⲳ         ⁇ commut1
-                                       ≡ ⲳ ⨆ (a ⨅ ⲳ)         ⁇ compl2
-                                       ≡ (a ⨅ ﬧ a) ⨆ (a ⨅ ⲳ) ⁇ distrib2
-                                       ≡ a ⨅ (ﬧ a ⨆ ⲳ)       ⁇ ident1
-                                       ≡ a ⨅ ﬧ a             ⁇ compl2
+                 \(a :: SStroke) -> [] ⊢ a ⨅ ⲳ               ∵ ident1
+                                       ≡ (a ⨅ ⲳ) ⨆ ⲳ         ∵ commut1
+                                       ≡ ⲳ ⨆ (a ⨅ ⲳ)         ∵ compl2
+                                       ≡ (a ⨅ ﬧ a) ⨆ (a ⨅ ⲳ) ∵ distrib2
+                                       ≡ a ⨅ (ﬧ a ⨆ ⲳ)       ∵ ident1
+                                       ≡ a ⨅ ﬧ a             ∵ compl2
                                        ≡ (ⲳ :: SStroke)
                                        ≡ qed
 
   absorb1 <- calc "a ⊔ (a ⊓ b) = a" (\AB -> a ⨆ (a ⨅ b) .== a) $
-                  \(a :: SStroke) b -> [] ⊢ a ⨆ (a ⨅ b)       ⁇ ident2
-                                          ≡ (a ⨅ т) ⨆ (a ⨅ b) ⁇ distrib2
-                                          ≡ a ⨅ (т ⨆ b)       ⁇ commut1
-                                          ≡ a ⨅ (b ⨆ т)       ⁇ bound1
-                                          ≡ a ⨅ т             ⁇ ident2
+                  \(a :: SStroke) b -> [] ⊢ a ⨆ (a ⨅ b)       ∵ ident2
+                                          ≡ (a ⨅ т) ⨆ (a ⨅ b) ∵ distrib2
+                                          ≡ a ⨅ (т ⨆ b)       ∵ commut1
+                                          ≡ a ⨅ (b ⨆ т)       ∵ bound1
+                                          ≡ a ⨅ т             ∵ ident2
                                           ≡ a
                                           ≡ qed
 
   absorb2 <- calc "a ⊓ (a ⊔ b) = a" (\AB -> a ⨅ (a ⨆ b) .== a) $
-                  \(a :: SStroke) b -> [] ⊢ a ⨅ (a ⨆ b)       ⁇ ident1
-                                          ≡ (a ⨆ ⲳ) ⨅ (a ⨆ b) ⁇ distrib1
-                                          ≡ a ⨆ (ⲳ ⨅ b)       ⁇ commut2
-                                          ≡ a ⨆ (b ⨅ ⲳ)       ⁇ bound2
-                                          ≡ a ⨆ ⲳ             ⁇ ident1
+                  \(a :: SStroke) b -> [] ⊢ a ⨅ (a ⨆ b)       ∵ ident1
+                                          ≡ (a ⨆ ⲳ) ⨅ (a ⨆ b) ∵ distrib1
+                                          ≡ a ⨆ (ⲳ ⨅ b)       ∵ commut2
+                                          ≡ a ⨆ (b ⨅ ⲳ)       ∵ bound2
+                                          ≡ a ⨆ ⲳ             ∵ ident1
                                           ≡ a
                                           ≡ qed
 
   idemp2 <- calc "a ⊓ a = a" (\A -> a ⨅ a .== a) $
-                 \(a :: SStroke) -> [] ⊢ a ⨅ a       ⁇ ident1
-                                       ≡ a ⨅ (a ⨆ ⲳ) ⁇ absorb2
+                 \(a :: SStroke) -> [] ⊢ a ⨅ a       ∵ ident1
+                                       ≡ a ⨅ (a ⨆ ⲳ) ∵ absorb2
                                        ≡ a
                                        ≡ qed
 
   inv <- calc "a ⊔ a' = т → a ⊓ a' = ⲳ → a' = aᶜ"
               (\AAp  -> a ⨆ a' .== т .=> a ⨅ a' .== ⲳ .=> a' .== ﬧ a) $
-              \(a :: SStroke) a' -> [a ⨆ a' .== т, a ⨅ a' .== ⲳ] ⊢ a'                     ⁇ ident2
-                                                                 ≡ a' ⨅ т                 ⁇ compl1
-                                                                 ≡ a' ⨅ (a ⨆ ﬧ a)         ⁇ distrib2
-                                                                 ≡ (a' ⨅ a) ⨆ (a' ⨅ ﬧ a)  ⁇ commut2
-                                                                 ≡ (a' ⨅ a) ⨆ (ﬧ a ⨅ a')  ⁇ commut2
-                                                                 ≡ (a ⨅ a') ⨆ (ﬧ a ⨅ a')  ⁇ a ⨅ a' .== ⲳ
-                                                                 ≡ ⲳ ⨆ (ﬧ a ⨅ a')         ⁇ compl2
-                                                                 ≡ (a ⨅ ﬧ a) ⨆ (ﬧ a ⨅ a') ⁇ commut2
-                                                                 ≡ (ﬧ a ⨅ a) ⨆ (ﬧ a ⨅ a') ⁇ distrib2
-                                                                 ≡ ﬧ a ⨅ (a ⨆ a')         ⁇ a ⨆ a' .== т
-                                                                 ≡ ﬧ a ⨅ т                ⁇ ident2
+              \(a :: SStroke) a' -> [a ⨆ a' .== т, a ⨅ a' .== ⲳ] ⊢ a'                     ∵ ident2
+                                                                 ≡ a' ⨅ т                 ∵ compl1
+                                                                 ≡ a' ⨅ (a ⨆ ﬧ a)         ∵ distrib2
+                                                                 ≡ (a' ⨅ a) ⨆ (a' ⨅ ﬧ a)  ∵ commut2
+                                                                 ≡ (a' ⨅ a) ⨆ (ﬧ a ⨅ a')  ∵ commut2
+                                                                 ≡ (a ⨅ a') ⨆ (ﬧ a ⨅ a')  ∵ a ⨅ a' .== ⲳ
+                                                                 ≡ ⲳ ⨆ (ﬧ a ⨅ a')         ∵ compl2
+                                                                 ≡ (a ⨅ ﬧ a) ⨆ (ﬧ a ⨅ a') ∵ commut2
+                                                                 ≡ (ﬧ a ⨅ a) ⨆ (ﬧ a ⨅ a') ∵ distrib2
+                                                                 ≡ ﬧ a ⨅ (a ⨆ a')         ∵ a ⨆ a' .== т
+                                                                 ≡ ﬧ a ⨅ т                ∵ ident2
                                                                  ≡ ﬧ a
                                                                  ≡ qed
 
@@ -469,22 +469,22 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
   cancel <- lemma "a ⊔ bᶜ = т → a ⊓ bᶜ = ⲳ → a = b" (\AB -> a ⨆ ﬧ b .== т .=> a ⨅ ﬧ b .== ⲳ .=> a .== b) [inv, inv_elim]
 
   a1 <- calc "a ⊔ (aᶜ ⊔ b) = т" (\AB  -> a ⨆ (ﬧ a ⨆ b) .== т) $
-             \(a :: SStroke) b -> [] ⊢ a ⨆ (ﬧ a ⨆ b)               ⁇ ident2
-                                     ≡ (a ⨆ (ﬧ a ⨆ b)) ⨅ т         ⁇ commut2
-                                     ≡ т ⨅ (a ⨆ (ﬧ a ⨆ b))         ⁇ compl1
-                                     ≡ (a ⨆ ﬧ a) ⨅ (a ⨆ (ﬧ a ⨆ b)) ⁇ distrib1
-                                     ≡ a ⨆ (ﬧ a ⨅ (ﬧ a ⨆ b))       ⁇ absorb2
-                                     ≡ a ⨆ ﬧ a                     ⁇ compl1
+             \(a :: SStroke) b -> [] ⊢ a ⨆ (ﬧ a ⨆ b)               ∵ ident2
+                                     ≡ (a ⨆ (ﬧ a ⨆ b)) ⨅ т         ∵ commut2
+                                     ≡ т ⨅ (a ⨆ (ﬧ a ⨆ b))         ∵ compl1
+                                     ≡ (a ⨆ ﬧ a) ⨅ (a ⨆ (ﬧ a ⨆ b)) ∵ distrib1
+                                     ≡ a ⨆ (ﬧ a ⨅ (ﬧ a ⨆ b))       ∵ absorb2
+                                     ≡ a ⨆ ﬧ a                     ∵ compl1
                                      ≡ (т :: SStroke)
                                      ≡ qed
 
   a2 <- calc "a ⊓ (aᶜ ⊓ b) = ⲳ" (\AB  -> a ⨅ (ﬧ a ⨅ b) .== ⲳ) $
-             \(a :: SStroke) b -> [] ⊢ a ⨅ (ﬧ a ⨅ b)               ⁇ ident1
-                                     ≡ (a ⨅ (ﬧ a ⨅ b)) ⨆ ⲳ         ⁇ commut1
-                                     ≡ ⲳ ⨆ (a ⨅ (ﬧ a ⨅ b))         ⁇ compl2
-                                     ≡ (a ⨅ ﬧ a) ⨆ (a ⨅ (ﬧ a ⨅ b)) ⁇ distrib2
-                                     ≡ a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ b))       ⁇ absorb1
-                                     ≡ a ⨅ ﬧ a                     ⁇ compl2
+             \(a :: SStroke) b -> [] ⊢ a ⨅ (ﬧ a ⨅ b)               ∵ ident1
+                                     ≡ (a ⨅ (ﬧ a ⨅ b)) ⨆ ⲳ         ∵ commut1
+                                     ≡ ⲳ ⨆ (a ⨅ (ﬧ a ⨅ b))         ∵ compl2
+                                     ≡ (a ⨅ ﬧ a) ⨆ (a ⨅ (ﬧ a ⨅ b)) ∵ distrib2
+                                     ≡ a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ b))       ∵ absorb1
+                                     ≡ a ⨅ ﬧ a                     ∵ compl2
                                      ≡ (ⲳ :: SStroke)
                                      ≡ qed
 
@@ -503,30 +503,30 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
   e2 <- lemma "b ⊔ (a ⊓ (b ⊓ c)) = b" (\ABC -> b ⨆ (a ⨅ (b ⨅ c)) .== b) [distrib1, absorb1, absorb2, commut2]
 
   f1 <- calc "(a ⊔ (b ⊔ c)) ⊔ bᶜ = т" (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ b .== т) $
-             \(a :: SStroke) b c -> [] ⊢ (a ⨆ (b ⨆ c)) ⨆ ﬧ b               ⁇ commut1
-                                       ≡ ﬧ b ⨆ (a ⨆ (b ⨆ c))               ⁇ ident2
-                                       ≡ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ⨅ т         ⁇ commut2
-                                       ≡ т ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c)))         ⁇ compl1
-                                       ≡ (b ⨆ ﬧ b) ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ⁇ commut1
-                                       ≡ (ﬧ b ⨆ b) ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ⁇ distrib1
-                                       ≡ ﬧ b ⨆ (b ⨅ (a ⨆ (b ⨆ c)))         ⁇ e1
-                                       ≡ ﬧ b ⨆ b                           ⁇ commut1
-                                       ≡ b ⨆ ﬧ b                           ⁇ compl1
+             \(a :: SStroke) b c -> [] ⊢ (a ⨆ (b ⨆ c)) ⨆ ﬧ b               ∵ commut1
+                                       ≡ ﬧ b ⨆ (a ⨆ (b ⨆ c))               ∵ ident2
+                                       ≡ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ⨅ т         ∵ commut2
+                                       ≡ т ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c)))         ∵ compl1
+                                       ≡ (b ⨆ ﬧ b) ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ∵ commut1
+                                       ≡ (ﬧ b ⨆ b) ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ∵ distrib1
+                                       ≡ ﬧ b ⨆ (b ⨅ (a ⨆ (b ⨆ c)))         ∵ e1
+                                       ≡ ﬧ b ⨆ b                           ∵ commut1
+                                       ≡ b ⨆ ﬧ b                           ∵ compl1
                                        ≡ (т :: SStroke)
                                        ≡ qed
 
   g1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ cᶜ = т" (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ c .== т) [commut1, f1]
 
   h1 <- calc "(a ⊔ b ⊔ c)ᶜ ⊓ a = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ a .== ⲳ) $
-             \(a :: SStroke) b c -> [] ⊢ ﬧ(a ⨆ b ⨆ c) ⨅ a                    ⁇ commut2
-                                       ≡ a ⨅ ﬧ (a ⨆ b ⨆ c)                   ⁇ dm1
-                                       ≡ a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)               ⁇ ident1
-                                       ≡ (a ⨅  (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)) ⨆ ⲳ        ⁇ commut1
-                                       ≡ ⲳ ⨆ (a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))         ⁇ compl2
-                                       ≡ (a ⨅ ﬧ a) ⨆ (a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)) ⁇ distrib2
-                                       ≡ a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))       ⁇ commut2
-                                       ≡ a ⨅ (ﬧ a ⨆ (ﬧ c ⨅ (ﬧ a ⨅ ﬧ b)))     ⁇ e2
-                                       ≡ a ⨅ ﬧ a                             ⁇ compl2
+             \(a :: SStroke) b c -> [] ⊢ ﬧ(a ⨆ b ⨆ c) ⨅ a                    ∵ commut2
+                                       ≡ a ⨅ ﬧ (a ⨆ b ⨆ c)                   ∵ dm1
+                                       ≡ a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)               ∵ ident1
+                                       ≡ (a ⨅  (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)) ⨆ ⲳ        ∵ commut1
+                                       ≡ ⲳ ⨆ (a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))         ∵ compl2
+                                       ≡ (a ⨅ ﬧ a) ⨆ (a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)) ∵ distrib2
+                                       ≡ a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))       ∵ commut2
+                                       ≡ a ⨅ (ﬧ a ⨆ (ﬧ c ⨅ (ﬧ a ⨅ ﬧ b)))     ∵ e2
+                                       ≡ a ⨅ ﬧ a                             ∵ compl2
                                        ≡ (ⲳ :: SStroke)
                                        ≡ qed
 
@@ -536,57 +536,57 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
   assoc1 <- do
     c1 <- calc "(a ⊔ (b ⊔ c)) ⊔ ((a ⊔ b) ⊔ c)ᶜ = т"
                (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c) .== т) $
-               \(a :: SStroke) b c -> [] ⊢ (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c)                        ⁇ dm1
-                                         ≡ (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)                     ⁇ distrib1
-                                         ≡ ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ c) ⁇ g1
-                                         ≡ ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ т                     ⁇ ident2
-                                         ≡ (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)                           ⁇ distrib1
-                                         ≡ ((a ⨆ (b ⨆ c)) ⨆ ﬧ a) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ b)         ⁇ d1
-                                         ≡ т ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ b)                             ⁇ f1
-                                         ≡ т ⨅ (т :: SStroke)                                    ⁇ idemp2
+               \(a :: SStroke) b c -> [] ⊢ (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c)                        ∵ dm1
+                                         ≡ (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)                     ∵ distrib1
+                                         ≡ ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ c) ∵ g1
+                                         ≡ ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ т                     ∵ ident2
+                                         ≡ (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)                           ∵ distrib1
+                                         ≡ ((a ⨆ (b ⨆ c)) ⨆ ﬧ a) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ b)         ∵ d1
+                                         ≡ т ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ b)                             ∵ f1
+                                         ≡ т ⨅ (т :: SStroke)                                    ∵ idemp2
                                          ≡ (т :: SStroke)
                                          ≡ qed
 
     c2 <- calc "(a ⊔ (b ⊔ c)) ⊓ ((a ⊔ b) ⊔ c)ᶜ = ⲳ"
                (\ABC -> (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c) .== ⲳ) $
-               \(a :: SStroke) b c -> [] ⊢ (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c)                    ⁇ commut2
-                                         ≡ ﬧ((a ⨆ b) ⨆ c) ⨅ (a ⨆ (b ⨆ c))                    ⁇ distrib2
-                                         ≡ (ﬧ((a ⨆ b) ⨆ c) ⨅ a) ⨆ (ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)) ⁇ commut2
-                                         ≡ (a ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ⁇ commut2
-                                         ≡ (ﬧ((a ⨆ b) ⨆ c) ⨅ a) ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ⁇ h1
-                                         ≡ ⲳ ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c))                    ⁇ commut1
-                                         ≡ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ ⲳ                    ⁇ ident1
-                                         ≡ (b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)                          ⁇ commut2
-                                         ≡ ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)                          ⁇ distrib2
-                                         ≡ (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ (ﬧ((a ⨆ b) ⨆ c) ⨅ c)       ⁇ j1
-                                         ≡ (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ ⲳ                          ⁇ i1
-                                         ≡ ⲳ ⨆ (ⲳ :: SStroke)                                ⁇ ident1
+               \(a :: SStroke) b c -> [] ⊢ (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c)                    ∵ commut2
+                                         ≡ ﬧ((a ⨆ b) ⨆ c) ⨅ (a ⨆ (b ⨆ c))                    ∵ distrib2
+                                         ≡ (ﬧ((a ⨆ b) ⨆ c) ⨅ a) ⨆ (ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)) ∵ commut2
+                                         ≡ (a ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ∵ commut2
+                                         ≡ (ﬧ((a ⨆ b) ⨆ c) ⨅ a) ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ∵ h1
+                                         ≡ ⲳ ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c))                    ∵ commut1
+                                         ≡ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ ⲳ                    ∵ ident1
+                                         ≡ (b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)                          ∵ commut2
+                                         ≡ ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)                          ∵ distrib2
+                                         ≡ (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ (ﬧ((a ⨆ b) ⨆ c) ⨅ c)       ∵ j1
+                                         ≡ (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ ⲳ                          ∵ i1
+                                         ≡ ⲳ ⨆ (ⲳ :: SStroke)                                ∵ ident1
                                          ≡ (ⲳ :: SStroke)
                                          ≡ qed
 
     lemma "a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c" (\ABC -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c) [c1, c2, cancel]
 
   assoc2 <- calc "a ⊓ (b ⊓ c) = (a ⊓ b) ⊓ c" (\ABC -> a ⨅ (b ⨅ c) .== (a ⨅ b) ⨅ c) $
-                 \(a :: SStroke) b c -> [] ⊢ a ⨅ (b ⨅ c)     ⁇ dne
-                                           ≡ ﬧﬧ(a ⨅ (b ⨅ c)) ⁇ assoc1
-                                           ≡ ﬧﬧ((a ⨅ b) ⨅ c) ⁇ dne
+                 \(a :: SStroke) b c -> [] ⊢ a ⨅ (b ⨅ c)     ∵ dne
+                                           ≡ ﬧﬧ(a ⨅ (b ⨅ c)) ∵ assoc1
+                                           ≡ ﬧﬧ((a ⨅ b) ⨅ c) ∵ dne
                                            ≡   ((a ⨅ b) ⨅ c)
                                            ≡ qed
 
   le_antisymm <- calc "a ≤ b → b ≤ a → a = b" (\AB -> a ≤ b .=> b ≤ a .=> a .== b) $
-                      \(a :: SStroke) b -> [a ≤ b, b ≤ a] ⊢ a     ⁇ a ≤ b
-                                                          ≡ b ⨅ a ⁇ commut2
-                                                          ≡ a ⨅ b ⁇ b ≤ a
+                      \(a :: SStroke) b -> [a ≤ b, b ≤ a] ⊢ a     ∵ a ≤ b
+                                                          ≡ b ⨅ a ∵ commut2
+                                                          ≡ a ⨅ b ∵ b ≤ a
                                                           ≡ b
                                                           ≡ qed
 
   le_refl <- lemma "a ≤ a" (\A -> a ≤ a) [idemp2]
 
   le_trans <- calc "a ≤ b → b ≤ c → a ≤ c" (\ABC -> a ≤ b .=> b ≤ c .=> a ≤ c) $
-                   \(a :: SStroke) b c -> [a ≤ b, b ≤ c] ⊢ a            ⁇ a ≤ b
-                                                         ≡ b ⨅ a        ⁇ b ≤ c
-                                                         ≡ (c ⨅ b) ⨅ a  ⁇ assoc2
-                                                         ≡ c ⨅ (b ⨅ a)  ⁇ a ≤ b
+                   \(a :: SStroke) b c -> [a ≤ b, b ≤ c] ⊢ a            ∵ a ≤ b
+                                                         ≡ b ⨅ a        ∵ b ≤ c
+                                                         ≡ (c ⨅ b) ⨅ a  ∵ assoc2
+                                                         ≡ c ⨅ (b ⨅ a)  ∵ a ≤ b
                                                          ≡ (c ⨅ a)
                                                          ≡ qed
 
@@ -597,8 +597,8 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
 
   sup_le <- calc "a ≤ c → b ≤ c → a ⊔ b ≤ c"
                  (\ABC -> a ≤ c .=> b ≤ c .=> a ⨆ b ≤ c) $
-                 \(a :: SStroke) b c -> [a ≤ c, b ≤ c] ⊢ a ⨆ b             ⁇ [a ≤ c, b ≤ c]
-                                                       ≡ (c ⨅ a) ⨆ (c ⨅ b) ⁇ distrib2
+                 \(a :: SStroke) b c -> [a ≤ c, b ≤ c] ⊢ a ⨆ b             ∵ [a ≤ c, b ≤ c]
+                                                       ≡ (c ⨅ a) ⨆ (c ⨅ b) ∵ distrib2
                                                        ≡ c ⨅ (a ⨆ b)
                                                        ≡ qed
 
@@ -607,9 +607,9 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
 
   le_inf <- calc "a ≤ b → a ≤ c → a ≤ b ⊓ c"
                  (\ABC -> a ≤ b .=> a ≤ c .=> a ≤ b ⨅ c) $
-                 \(a :: SStroke) b c -> [a ≤ b, a ≤ c] ⊢ a           ⁇ a ≤ b
-                                                       ≡ b ⨅ a       ⁇ a ≤ c
-                                                       ≡ b ⨅ (c ⨅ a) ⁇ assoc2
+                 \(a :: SStroke) b c -> [a ≤ b, a ≤ c] ⊢ a           ∵ a ≤ b
+                                                       ≡ b ⨅ a       ∵ a ≤ c
+                                                       ≡ b ⨅ (c ⨅ a) ∵ assoc2
                                                        ≡ (b ⨅ c ⨅ a)
                                                        ≡ qed
 
@@ -622,14 +622,14 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
 
   le_top <- calc "a ≤ ⊤" (\A -> a ≤ т) $
                  \(a :: SStroke)-> [] ⊢ a ≤ т
-                                      ≡ a .== т ⨅ a ⁇ commut2
-                                      ≡ a .== a ⨅ т ⁇ ident2
+                                      ≡ a .== т ⨅ a ∵ commut2
+                                      ≡ a .== a ⨅ т ∵ ident2
                                       ≡ a .== a
                                       ≡ qed
 
   bot_le <- calc "⊥ ≤ a" (\A -> ⲳ ≤ a) $
                  \(a :: SStroke) -> [] ⊢ ⲳ ≤ a
-                                       ≡ ⲳ .== a ⨅ ⲳ            ⁇ bound2
+                                       ≡ ⲳ .== a ⨅ ⲳ            ∵ bound2
                                        ≡ (ⲳ .== (ⲳ :: SStroke))
                                        ≡ qed
 
