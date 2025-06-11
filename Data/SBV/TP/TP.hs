@@ -32,7 +32,7 @@ module Data.SBV.TP.TP (
        ,  induct,  inductWith,  inductThm,  inductThmWith
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
-       , TP, runTP, runTPWith, tpRibbon, tpStats, tpCache
+       , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpCache
        , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), qed, trivial, contradiction, atProxy
        ) where
 

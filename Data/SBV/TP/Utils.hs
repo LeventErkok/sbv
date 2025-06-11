@@ -27,7 +27,7 @@ module Data.SBV.TP.Utils (
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), getProofTree, showProofTree, showProofTreeHTML, shortProofName
        , withProofCache
-       , atProxy, tpRibbon, tpStats, tpCache
+       , atProxy, tpQuiet, tpRibbon, tpStats, tpCache
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -351,11 +351,21 @@ concludeModulo by = case foldMap rootOfTrust by of
                       RootOfTrust Nothing   -> ""
                       RootOfTrust (Just ps) -> " [Modulo: " ++ intercalate ", " (map shortProofName ps) ++ "]"
 
--- | Change the size of the ribbon for TP proofs.
+-- | Make TP proofs quiet. Note that this setting will be effective with the
+-- call to 'runTP'/'runTPWith', i.e., if you change the solver in a call to 'lemma'/'lemmaWith', we
+-- will inherit the quiet settings from the surrounding environment.
+tpQuiet :: Bool -> SMTConfig -> SMTConfig
+tpQuiet b cfg = cfg{tpOptions = (tpOptions cfg) { quiet = b }}
+
+-- | Change the size of the ribbon for TP proofs. Note that this setting will be effective with the
+-- call to 'runTP'/'runTPWith', i.e., if you change the solver in a call to 'lemma'/'lemmaWith', we
+-- will inherit the ribbon settings from the surrounding environment.
 tpRibbon :: Int -> SMTConfig -> SMTConfig
 tpRibbon i cfg = cfg{tpOptions = (tpOptions cfg) { ribbonLength = i }}
 
--- | Make TP proofs produce statistics.
+-- | Make TP proofs produce statistics. Note that this setting will be effective with the
+-- call to 'runTP'/'runTPWith', i.e., if you change the solver in a call to 'lemma'/'lemmaWith', we
+-- will inherit the statistics settings from the surrounding environment.
 tpStats :: SMTConfig -> SMTConfig
 tpStats cfg = cfg{tpOptions = (tpOptions cfg) { printStats = True }}
 
@@ -363,5 +373,8 @@ tpStats cfg = cfg{tpOptions = (tpOptions cfg) { printStats = True }}
 -- you are obligated to ensure all lemma/theorem names you use are unique for the whole run.
 -- Otherwise the results are not guaranteed to be sound. A good tip is to run the proof at
 -- least once to completion, and use cache for regression purposes to avoid re-runs.
+-- Again, this setting will be effective with the call to 'runTP'/'runTPWith', i.e., if you
+-- change the solver in a call to 'lemma'/'lemmaWith', we will inherit the caching behavior
+-- settings from the surrounding environment.
 tpCache :: SMTConfig -> SMTConfig
 tpCache cfg = cfg{tpOptions = (tpOptions cfg) { cacheProofs = True }}

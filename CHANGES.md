@@ -11,12 +11,17 @@
       - Add method rootOfTrust which can be used to retrieve uses of sorry in a proof. The idea is that
         to get a proof clean, you need to resolve all the proofs returned by this call.
       - Renamed kdShowDepsHTML to showProofTreeHTML. (Along with showProofTree which renders in ASCII.)
-      - Add function tpRibbon which simplifies setting the ribbon size in a proof.
-      - Add tpCache: This turns on proof-caching, which can save time in re-running proofs. It comes
-        with the proof-obligation on the user that all the names used in lemmas are unique. See
-        Documentation.SBV.Examples.TP.Basics for an example demonstration.
+      - TP utils:
+          - Add tpQuiet : quiets TP proofs
+          - Add tpRibbon: simplifies setting the ribbon size in a proof.
+          - Add tpStats : makes TP proofs print detailed statistics
+          - Add tpCache : makes TP proofs use caching. This option can save time in re-running proofs. It comes
+                with the proof-obligation on the user that all the names used in lemmas are unique. See
+                Documentation.SBV.Examples.TP.Basics for an example demonstration.
+        Note that all these utils will be in effect with the closest call to runTP/runTPWith. If you change the
+        solver for a specific lemma, we'll only change the solver, not TP-options.
       - Add signature: Which, when passed a proof, will give you its signature as a type, useful for diagnostics.
-      - Generalize various KD list/sort proofs.
+      - Generalize various TP list/sort proofs.
 
    * New TP examples:
       - Documentation.SBV.Examples.TP.Fibonacci:  Proving tail-recursive fibonacci is equivalent to textbook definition
