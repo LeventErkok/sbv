@@ -642,9 +642,9 @@ class (SymVal a, SymVal b) => SFoldR func a b | func -> a b where
 instance (SymVal a, SymVal b) => SFoldR (SBV a -> SBV b -> SBV b) a b where
   -- | @`foldr` f base s@ folds the sequence from the right.
   --
-  -- >>> foldr (+) 0 [1 .. 5 :: Integer]
+  -- >>> foldr ((+) @SInteger) 0 [1 .. 5 :: Integer]
   -- 15 :: SInteger
-  -- >>> foldr (*) 1 [1 .. 5 :: Integer]
+  -- >>> foldr ((*) @SInteger) 1 [1 .. 5 :: Integer]
   -- 120 :: SInteger
   -- >>> foldr (\elt soFar -> soFar ++ singleton elt) ([] :: SList Integer) [1 .. 5 :: Integer]
   -- [5,4,3,2,1] :: [SInteger]
@@ -680,7 +680,7 @@ instance (SymVal env, SymVal a, SymVal b) => SFoldR (Closure (SBV env) (SBV a ->
 -- >>> zip [1..10::Integer] [11..20::Integer]
 -- [(1,11),(2,12),(3,13),(4,14),(5,15),(6,16),(7,17),(8,18),(9,19),(10,20)] :: [(SInteger, SInteger)]
 -- >>> import Data.SBV.Tuple
--- >>> foldr (+) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [1..10::Integer] [10, 9..1::Integer]))
+-- >>> foldr ((+) @SInteger) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [1..10::Integer] [10, 9..1::Integer]))
 -- 110 :: SInteger
 zip :: forall a b. (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
 zip xs ys
@@ -712,9 +712,9 @@ class (SymVal a, SymVal b, SymVal c) => SZipWith func a b c | func -> a b c wher
 instance (SymVal a, SymVal b, SymVal c) => SZipWith (SBV a -> SBV b -> SBV c) a b c where
    -- |
    --
-   -- >>> zipWith (+) [1..10::Integer] [11..20::Integer]
+   -- >>> zipWith ((+) @SInteger) [1..10::Integer] [11..20::Integer]
    -- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]
-   -- >>> foldr (+) 0 (zipWith (+) [1..10::Integer] [10, 9..1::Integer])
+   -- >>> foldr ((+) @SInteger) 0 (zipWith ((+) @SInteger) [1..10::Integer] [10, 9..1::Integer])
    -- 110 :: SInteger
    zipWith f xs ys
     | Just concResult <- concreteZipWith f f xs ys
@@ -856,9 +856,9 @@ class SymVal a => SFilter func a | func -> a where
 instance SymVal a => SFilter (SBV a -> SBool) a where
   -- | @filter f xs@ filters the list with the given predicate.
   --
-  -- >>> filter (\x -> x `sMod` 2 .== 0) [1 .. 10 :: Integer]
+  -- >>> filter (\(x :: SInteger) -> x `sMod` 2 .== 0) [1 .. 10 :: Integer]
   -- [2,4,6,8,10] :: [SInteger]
-  -- >>> filter (\x -> x `sMod` 2 ./= 0) [1 .. 10 :: Integer]
+  -- >>> filter (\(x :: SInteger) -> x `sMod` 2 ./= 0) [1 .. 10 :: Integer]
   -- [1,3,5,7,9] :: [SInteger]
   filter f l
     | Just concResult <- concreteFilter f f l
