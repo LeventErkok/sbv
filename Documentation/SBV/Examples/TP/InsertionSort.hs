@@ -11,6 +11,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -39,7 +40,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 -- | Insert an element into an already sorted list in the correct place.
 insert :: (Ord a, SymVal a) => SBV a -> SList a -> SList a
-insert = smtFunction "insert" $ \e l -> ite (null l) (singleton e)
+insert = smtFunction "insert" $ \e l -> ite (null l) [e]
                                       $ let (x, xs) = uncons l
                                         in ite (e .<= x) (e .: x .: xs) (x .: insert e xs)
 
@@ -142,9 +143,8 @@ correctness p = runTPWith (tpRibbon 45 cvc5) $ do
                                  (nonDecreasing (x .: insert e xs))
                           ?? nonDecreasing (x .: xs)
                           =: (e .> x .=> nonDecreasing (x .: insert e xs))
-                          ?? [ nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs))
-                             , ih
-                             ]
+                          ?? nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs))
+                          ?? ih
                           =: sTrue
                           =: qed
 
@@ -154,9 +154,8 @@ correctness p = runTPWith (tpRibbon 45 cvc5) $ do
                \ih x xs -> [] |- nonDecreasing (insertionSort (x .: xs))
                               ?? "unfold insertionSort"
                               =: nonDecreasing (insert x (insertionSort xs))
-                              ?? [ insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x)
-                                 , ih
-                                 ]
+                              ?? insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x)
+                              ?? ih
                               =: sTrue
                               =: qed
 

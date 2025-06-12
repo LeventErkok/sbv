@@ -14,9 +14,10 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -48,7 +49,7 @@ quickSort = smtFunction "quickSort" $ \l -> ite (null l)
                                                 nil
                                                 (let (x,  xs) = uncons l
                                                      (lo, hi) = untuple (partition x xs)
-                                                 in  quickSort lo ++ singleton x ++ quickSort hi)
+                                                 in  quickSort lo ++ [x] ++ quickSort hi)
 
 -- | We define @partition@ as an explicit function. Unfortunately, we can't just replace this
 -- with @\pivot xs -> Data.List.SBV.partition (.< pivot) xs@ because that would create a firstified version of partition
@@ -309,16 +310,15 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
             \ih x xs pivot ys -> [llt pivot ys, (x .: xs) `sublist` ys]
                               |- llt pivot (x .: xs)
                               =: x .< pivot .&& llt pivot xs
-                              ?? [ -- To establish x .< pivot, observe that x is in ys, and together
-                                   -- with llt pivot ys, we get that x is less than pivot
-                                   sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
-                                 , lltCorrect  `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
+                              -- To establish x .< pivot, observe that x is in ys, and together
+                              -- with llt pivot ys, we get that x is less than pivot
+                              ?? sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
+                              ?? lltCorrect  `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
 
-                                   -- Use induction hypothesis to get rid of the second conjunct. We need to tell
-                                   -- the prover that xs is a sublist of ys too so it can satisfy its precondition
-                                 , sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
-                                 , ih          `at` (Inst @"pivot" pivot, Inst @"ys" ys)
-                                 ]
+                              -- Use induction hypothesis to get rid of the second conjunct. We need to tell
+                              -- the prover that xs is a sublist of ys too so it can satisfy its precondition
+                              ?? sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                              ?? ih          `at` (Inst @"pivot" pivot, Inst @"ys" ys)
                               =: sTrue
                               =: qed
 
@@ -328,9 +328,8 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& isPermutation xs ys .=> llt pivot xs) $
            \xs pivot ys -> [llt pivot ys, isPermutation xs ys]
                         |- llt pivot xs
-                        ?? [ lltSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
-                           , sublistIfPerm `at` (Inst @"xs" xs, Inst @"ys" ys)
-                           ]
+                        ?? lltSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
+                        ?? sublistIfPerm `at` (Inst @"xs" xs, Inst @"ys" ys)
                         =: sTrue
                         =: qed
 
@@ -341,16 +340,15 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
             \ih x xs pivot ys -> [lge pivot ys, (x .: xs) `sublist` ys]
                               |- lge pivot (x .: xs)
                               =: x .>= pivot .&& lge pivot xs
-                              ?? [ -- To establish x .>= pivot, observe that x is in ys, and together
-                                   -- with lge pivot ys, we get that x is greater than equal to the pivot
-                                   sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
-                                 , lgeCorrect  `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
+                              -- To establish x .>= pivot, observe that x is in ys, and together
+                              -- with lge pivot ys, we get that x is greater than equal to the pivot
+                              ?? sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
+                              ?? lgeCorrect  `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
 
-                                   -- Use induction hypothesis to get rid of the second conjunct. We need to tell
-                                   -- the prover that xs is a sublist of ys too so it can satisfy its precondition
-                                 , sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
-                                 , ih          `at` (Inst @"pivot" pivot, Inst @"ys" ys)
-                                 ]
+                              -- Use induction hypothesis to get rid of the second conjunct. We need to tell
+                              -- the prover that xs is a sublist of ys too so it can satisfy its precondition
+                              ?? sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                              ?? ih          `at` (Inst @"pivot" pivot, Inst @"ys" ys)
                               =: sTrue
                               =: qed
 
@@ -360,9 +358,8 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& isPermutation xs ys .=> lge pivot xs) $
            \xs pivot ys -> [lge pivot ys, isPermutation xs ys]
                         |- lge pivot xs
-                        ?? [ lgeSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
-                           , sublistIfPerm `at` (Inst @"xs" xs, Inst @"ys" ys)
-                           ]
+                        ?? lgeSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
+                        ?? sublistIfPerm `at` (Inst @"xs" xs, Inst @"ys" ys)
                         =: sTrue
                         =: qed
 
@@ -491,24 +488,22 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
                             (\a as -> count e (quickSort (a .: as))
                                    ?? "expand quickSort"
                                    =: count e (let (lo, hi) = untuple (partition a as)
-                                               in quickSort lo ++ singleton a ++ quickSort hi)
+                                               in quickSort lo ++ [a] ++ quickSort hi)
                                    ?? "push count down"
                                    =: let (lo, hi) = untuple (partition a as)
-                                   in count e (quickSort lo ++ singleton a ++ quickSort hi)
-                                   ?? countAppend `at` (Inst @"xs" (quickSort lo), Inst @"ys" (singleton a ++ quickSort hi), Inst @"e" e)
-                                   =: count e (quickSort lo) + count e (singleton a ++ quickSort hi)
-                                   ?? countAppend `at` (Inst @"xs" (singleton a), Inst @"ys" (quickSort hi), Inst @"e" e)
-                                   =: count e (quickSort lo) + count e (singleton a) + count e (quickSort hi)
-                                   ?? [ ih                    `at` (Inst @"xs" lo, Inst @"e" e)
-                                      , partitionNotLongerFst `at` (Inst @"l"  as, Inst @"pivot" a)
-                                      ]
+                                   in count e (quickSort lo ++ [a] ++ quickSort hi)
+                                   ?? countAppend `at` (Inst @"xs" (quickSort lo), Inst @"ys" ([a] ++ quickSort hi), Inst @"e" e)
+                                   =: count e (quickSort lo) + count e ([a] ++ quickSort hi)
+                                   ?? countAppend `at` (Inst @"xs" ([a] :: SList a), Inst @"ys" (quickSort hi), Inst @"e" e)
+                                   =: count e (quickSort lo) + count e [a] + count e (quickSort hi)
+                                   ?? ih                    `at` (Inst @"xs" lo, Inst @"e" e)
+                                   ?? partitionNotLongerFst `at` (Inst @"l"  as, Inst @"pivot" a)
                                    ?? "IH on lo"
-                                   =: count e lo + count e (singleton a) + count e (quickSort hi)
-                                   ?? [ ih                    `at` (Inst @"xs" hi, Inst @"e" e)
-                                      , partitionNotLongerSnd `at` (Inst @"l"  as, Inst @"pivot" a)
-                                      ]
+                                   =: count e lo + count e [a] + count e (quickSort hi)
+                                   ?? ih                    `at` (Inst @"xs" hi, Inst @"e" e)
+                                   ?? partitionNotLongerSnd `at` (Inst @"l"  as, Inst @"pivot" a)
                                    ?? "IH on hi"
-                                   =: count e lo + count e (singleton a) + count e hi
+                                   =: count e lo + count e [a] + count e hi
                                    ?? countPartition `at` (Inst @"xs" as, Inst @"pivot" a, Inst @"e" e)
                                    =: count e xs
                                    =: qed)
@@ -522,13 +517,13 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
       inductWith cvc5 "nonDecreasingMerge"
           (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) ->
                      nonDecreasing xs .&& llt pivot xs
-                 .&& nonDecreasing ys .&& lge pivot ys .=> nonDecreasing (xs ++ singleton pivot ++ ys)) $
+                 .&& nonDecreasing ys .&& lge pivot ys .=> nonDecreasing (xs ++ [pivot] ++ ys)) $
           \ih x xs pivot ys ->
                [nonDecreasing (x .: xs), llt pivot xs, nonDecreasing ys, lge pivot ys]
-            |- nonDecreasing (x .: xs ++ singleton pivot ++ ys)
+            |- nonDecreasing (x .: xs ++ [pivot] ++ ys)
             =: split xs trivial
-                     (\a as -> nonDecreasing (x .: a .: as ++ singleton pivot ++ ys)
-                            =: x .<= a .&& nonDecreasing (a .: as ++ singleton pivot ++ ys)
+                     (\a as -> nonDecreasing (x .: a .: as ++ [pivot] ++ ys)
+                            =: x .<= a .&& nonDecreasing (a .: as ++ [pivot] ++ ys)
                             ?? ih
                             =: sTrue
                             =: qed)
@@ -546,33 +541,32 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
                             (\a as -> nonDecreasing (quickSort (a .: as))
                                    ?? "expand quickSort"
                                    =: nonDecreasing (let (lo, hi) = untuple (partition a as)
-                                                     in quickSort lo ++ singleton a ++ quickSort hi)
+                                                     in quickSort lo ++ [a] ++ quickSort hi)
                                    ?? "push nonDecreasing down"
                                    =: let (lo, hi) = untuple (partition a as)
-                                   in nonDecreasing (quickSort lo ++ singleton a ++ quickSort hi)
-                                   ?? [ -- Deduce that lo/hi is not longer than as, and hence, shorter than xs
-                                        partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
-                                      , partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
+                                   in nonDecreasing (quickSort lo ++ [a] ++ quickSort hi)
+                                   -- Deduce that lo/hi is not longer than as, and hence, shorter than xs
+                                   ?? partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
+                                   ?? partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
 
-                                        -- Use the inductive hypothesis twice to deduce quickSort of lo and hi are nonDecreasing
-                                      , ih `at` Inst @"xs" lo  -- nonDecreasing (quickSort lo)
-                                      , ih `at` Inst @"xs" hi  -- nonDecreasing (quickSort hi)
+                                   -- Use the inductive hypothesis twice to deduce quickSort of lo and hi are nonDecreasing
+                                   ?? ih `at` Inst @"xs" lo  -- nonDecreasing (quickSort lo)
+                                   ?? ih `at` Inst @"xs" hi  -- nonDecreasing (quickSort hi)
 
-                                      -- Deduce that lo is all less than a, and hi is all greater than or equal to a
-                                      , partitionFstLT `at` (Inst @"l" as, Inst @"pivot" a)
-                                      , partitionSndGE `at` (Inst @"l" as, Inst @"pivot" a)
+                                   -- Deduce that lo is all less than a, and hi is all greater than or equal to a
+                                   ?? partitionFstLT `at` (Inst @"l" as, Inst @"pivot" a)
+                                   ?? partitionSndGE `at` (Inst @"l" as, Inst @"pivot" a)
 
-                                      -- Deduce that quickSort lo is all less than a
-                                      , sortIsPermutation `at`  Inst @"xs" lo
-                                      , lltPermutation    `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" lo)
+                                   -- Deduce that quickSort lo is all less than a
+                                   ?? sortIsPermutation `at`  Inst @"xs" lo
+                                   ?? lltPermutation    `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" lo)
 
-                                      -- Deduce that quickSort hi is all greater than or equal to a
-                                      , sortIsPermutation `at`  Inst @"xs" hi
-                                      , lgePermutation    `at` (Inst @"xs" (quickSort hi), Inst @"pivot" a, Inst @"ys" hi)
+                                   -- Deduce that quickSort hi is all greater than or equal to a
+                                   ?? sortIsPermutation `at`  Inst @"xs" hi
+                                   ?? lgePermutation    `at` (Inst @"xs" (quickSort hi), Inst @"pivot" a, Inst @"ys" hi)
 
-                                      -- Finally conclude that the whole reconstruction is non-decreasing
-                                      , nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
-                                      ]
+                                   -- Finally conclude that the whole reconstruction is non-decreasing
+                                   ?? nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
                                    =: sTrue
                                    =: qed)
 
@@ -616,11 +610,11 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
               \ih x xs -> [nonDecreasing (x .: xs)]
                        |- quickSort (x .: xs)
                        =: let (lo, hi) = untuple (partition x xs)
-                       in quickSort lo ++ singleton x ++ quickSort hi
+                       in quickSort lo ++ [x] ++ quickSort hi
                        ?? partitionSortedLeft
-                       =: singleton x ++ quickSort hi
+                       =: [x] ++ quickSort hi
                        ?? partitionSortedRight
-                       =: singleton x ++ quickSort xs
+                       =: [x] ++ quickSort xs
                        ?? ih
                        =: x .: xs
                        =: qed

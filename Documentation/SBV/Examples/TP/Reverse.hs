@@ -16,9 +16,10 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -147,9 +148,8 @@ correctness p = runTP $ do
                                           =: b .: rev (a .: rev (tail (b .: reverse w)))
                                           ?? "simplify tail"
                                           =: b .: rev (a .: rev (reverse w))
-                                          ?? [ ih     `at` Inst @"xs" (reverse w)
-                                             , revLen `at` Inst @"xs" w
-                                             ]
+                                          ?? ih     `at` Inst @"xs" (reverse w)
+                                          ?? revLen `at` Inst @"xs" w
                                           =: b .: rev (a .: reverse (reverse w))
                                           ?? revRev `at` Inst @"xs" w
                                           =: b .: rev (a .: w)
@@ -157,8 +157,8 @@ correctness p = runTP $ do
                                           =: b .: reverse (a .: w)
                                           ?? "substitute"
                                           =: last as .: reverse (a .: init as)
-                                          ?? revApp `at` (Inst @"xs" (init as), Inst @"ys" (singleton (last as)))
-                                          =: reverse (a .: init as ++ singleton (last as))
+                                          ?? revApp `at` (Inst @"xs" (init as), Inst @"ys" ([last as] :: SList a))
+                                          =: reverse (a .: init as ++ [last as])
                                           =: reverse (a .: as)
                                           =: reverse xs
                                           =: qed))

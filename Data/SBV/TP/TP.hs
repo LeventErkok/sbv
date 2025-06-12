@@ -108,8 +108,6 @@ class CalcLemma a steps where
   -- non-boolean steps.
   --
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
-  -- If @H@ is a singleton, then we bail out. A single step in @H@ indicates a usage mistake, since there's
-  -- no sequence of steps to reason about.
   calc :: Proposition a => String -> a -> steps -> TP Proof
 
   -- | Same as calc, except tagged as Theorem

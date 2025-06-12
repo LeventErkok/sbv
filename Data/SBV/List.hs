@@ -19,6 +19,7 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE NamedFieldPuns         #-}
+{-# LANGUAGE OverloadedLists        #-}
 {-# LANGUAGE Rank2Types             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
@@ -150,30 +151,30 @@ null l
 
 -- | @`head`@ returns the first element of a list. Unspecified if the list is empty.
 --
--- >>> prove $ \c -> head (singleton c) .== (c :: SInteger)
+-- >>> prove $ \c -> head [c] .== (c :: SInteger)
 -- Q.E.D.
--- >>> prove $ \c -> c .== literal 'A' .=> singleton c .== "A"
+-- >>> prove $ \c -> c .== literal 'A' .=> ([c] :: SString) .== "A"
 -- Q.E.D.
--- >>> prove $ \(c :: SChar) -> length (singleton c) .== 1
+-- >>> prove $ \(c :: SChar) -> length ([c] :: SString) .== 1
 -- Q.E.D.
--- >>> prove $ \(c :: SChar) -> head (singleton c) .== c
+-- >>> prove $ \(c :: SChar) -> head ([c] :: SString) .== c
 -- Q.E.D.
 head :: SymVal a => SList a -> SBV a
 head = (`elemAt` 0)
 
 -- | @`tail`@ returns the tail of a list. Unspecified if the list is empty.
 --
--- >>> prove $ \(h :: SInteger) t -> tail (singleton h ++ t) .== t
+-- >>> prove $ \(h :: SInteger) t -> tail ([h] ++ t) .== t
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Integer) -> length l .> 0 .=> length (tail l) .== length l - 1
 -- Q.E.D.
--- >>> prove $ \(l :: SList Integer) -> sNot (null l) .=> singleton (head l) ++ tail l .== l
+-- >>> prove $ \(l :: SList Integer) -> sNot (null l) .=> [head l] ++ tail l .== l
 -- Q.E.D.
--- >>> prove $ \(h :: SChar) s -> tail (singleton h ++ s) .== s
+-- >>> prove $ \(h :: SChar) s -> tail ([h] ++ s) .== s
 -- Q.E.D.
 -- >>> prove $ \(s :: SString) -> length s .> 0 .=> length (tail s) .== length s - 1
 -- Q.E.D.
--- >>> prove $ \(s :: SString) -> sNot (null s) .=> singleton (head s) ++ tail s .== s
+-- >>> prove $ \(s :: SString) -> sNot (null s) .=> [head s] ++ tail s .== s
 -- Q.E.D.
 tail :: SymVal a => SList a -> SList a
 tail l
@@ -188,9 +189,9 @@ uncons l = (head l, tail l)
 
 -- | @`init`@ returns all but the last element of the list. Unspecified if the list is empty.
 --
--- >>> prove $ \(h :: SInteger) t -> init (t ++ singleton h) .== t
+-- >>> prove $ \(h :: SInteger) t -> init (t ++ [h]) .== t
 -- Q.E.D.
--- >>> prove $ \(c :: SChar) t -> init (t ++ singleton c) .== t
+-- >>> prove $ \(c :: SChar) t -> init (t ++ [c]) .== t
 -- Q.E.D.
 init :: SymVal a => SList a -> SList a
 init l
@@ -201,16 +202,16 @@ init l
 
 -- | @`last`@ returns the last element of the list. Unspecified if the list is empty.
 --
--- >>> prove $ \(l :: SInteger) i -> last (i ++ singleton l) .== l
+-- >>> prove $ \(l :: SInteger) i -> last (i ++ [l]) .== l
 -- Q.E.D.
 last :: SymVal a => SList a -> SBV a
 last l = l `elemAt` (length l - 1)
 
 -- | @`singleton` x@ is the list of length 1 that contains the only value @x@.
 --
--- >>> prove $ \(x :: SInteger) -> head (singleton x) .== x
+-- >>> prove $ \(x :: SInteger) -> head [x] .== x
 -- Q.E.D.
--- >>> prove $ \(x :: SInteger) -> length (singleton x) .== 1
+-- >>> prove $ \(x :: SInteger) -> length [x] .== 1
 -- Q.E.D.
 singleton :: forall a. SymVal a => SBV a -> SList a
 singleton = lift1 False (SeqUnit (kindOf (Proxy @a))) (Just (: []))
@@ -257,16 +258,16 @@ elemAt l i
 -- >>> prove $ \(c1 :: SChar) c2 c3 -> P.map (elemAt (implode [c1, c2, c3])) (P.map literal [0 .. 2]) .== [c1, c2, c3]
 -- Q.E.D.
 implode :: SymVal a => [SBV a] -> SList a
-implode = P.foldr ((++) . singleton) (literal [])
+implode = P.foldr ((++) . \x -> [x]) (literal [])
 
 -- | Prepend an element, the traditional @cons@.
 infixr 5 .:
 (.:) :: SymVal a => SBV a -> SList a -> SList a
-a .: as = singleton a ++ as
+a .: as = singleton a ++ as  -- NB. Don't do "[a] ++ as" here. That type-checks but is recursive due to how overloaded-lists work.
 
 -- | Append an element
 snoc :: SymVal a => SList a -> SBV a -> SList a
-as `snoc` a = as ++ singleton a
+as `snoc` a = as ++ [a]
 
 -- | Empty list. This value has the property that it's the only list with length 0:
 --
@@ -297,7 +298,7 @@ x ++ y | isConcretelyEmpty x = y
 
 -- | @`elem` e l@. Does @l@ contain the element @e@?
 elem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool
-e `elem` l = singleton e `isInfixOf` l
+e `elem` l = [e] `isInfixOf` l
 
 -- | @`notElem` e l@. Does @l@ not contain the element @e@?
 notElem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool
@@ -494,7 +495,7 @@ offsetIndexOf s sub offset
 
 -- | @`reverse` s@ reverses the sequence.
 --
--- NB. We can define @reverse@ in terms of @foldl@ as: @foldl (\soFar elt -> singleton elt ++ soFar) []@
+-- NB. We can define @reverse@ in terms of @foldl@ as: @foldl (\soFar elt -> [elt] ++ soFar) []@
 -- But in my experiments, I found that this definition performs worse instead of the recursive definition
 -- SBV generates for reverse calls. So we're keeping it intact.
 --
@@ -514,7 +515,7 @@ reverse l
   = literal (P.reverse l')
   | True
   = def l
-  where def = smtFunction "sbv.reverse" $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in def t ++ singleton h)
+  where def = smtFunction "sbv.reverse" $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in def t ++ [h])
 
 -- | A class of mappable functions. In SBV, we make a distinction between closures and regular functions, and
 -- we instantiate this class appropriately so it can handle both cases.
@@ -536,11 +537,11 @@ class (SymVal a, SymVal b) => SMap func a b | func -> a b where
 instance (SymVal a, SymVal b) => SMap (SBV a -> SBV b) a b where
   -- | @`map` f s@ maps the operation on to sequence.
   --
-  -- >>> map (+ (1 :: SInteger)) [1 .. 5 :: Integer]
+  -- >>> map (+ (1 :: SInteger)) (literal [1 .. 5])
   -- [2,3,4,5,6] :: [SInteger]
   -- >>> map (+ (1 :: SWord 8)) [1 .. 5 :: WordN 8]
   -- [2,3,4,5,6] :: [SWord8]
-  -- >>> map singleton [1 .. 3 :: Integer]
+  -- >>> map (\x -> [x]) (literal [1 .. 3])
   -- [[1],[2],[3]] :: [[SInteger]]
   -- >>> import Data.SBV.Tuple
   -- >>> import GHC.Exts (fromList)
@@ -601,12 +602,12 @@ instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
   -- 15 :: SInteger
   -- >>> foldl ((*) @SInteger) 1 [1 .. 5 :: Integer]
   -- 120 :: SInteger
-  -- >>> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) [1 .. 5 :: Integer]
+  -- >>> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) [1 .. 5 :: Integer]
   -- [5,4,3,2,1] :: [SInteger]
   --
   -- Again, we can use 'Data.SBV.List.foldl' in the reverse too:
   --
-  -- >>> sat $ \l -> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: Integer]
+  -- >>> sat $ \l -> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: Integer]
   -- Satisfiable. Model:
   --   s0 = [1,2,3,4,5] :: [Integer]
   foldl f base l
@@ -661,7 +662,7 @@ instance (SymVal a, SymVal b) => SFoldR (SBV a -> SBV b -> SBV b) a b where
   -- 15 :: SInteger
   -- >>> foldr ((*) @SInteger) 1 [1 .. 5 :: Integer]
   -- 120 :: SInteger
-  -- >>> foldr (\elt soFar -> soFar ++ singleton elt) ([] :: SList Integer) [1 .. 5 :: Integer]
+  -- >>> foldr (\elt soFar -> soFar ++ [elt]) ([] :: SList Integer) [1 .. 5 :: Integer]
   -- [5,4,3,2,1] :: [SInteger]
   foldr f base l
     | Just concResult <- concreteFoldr f f base l
@@ -727,7 +728,7 @@ class (SymVal a, SymVal b, SymVal c) => SZipWith func a b c | func -> a b c wher
 instance (SymVal a, SymVal b, SymVal c) => SZipWith (SBV a -> SBV b -> SBV c) a b c where
    -- |
    --
-   -- >>> zipWith ((+) @SInteger) [1..10::Integer] [11..20::Integer]
+   -- >>> zipWith ((+) @SInteger) (literal [1..10]) (literal [11..20])
    -- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]
    -- >>> foldr ((+) @SInteger) 0 (zipWith ((+) @SInteger) [1..10::Integer] [10, 9..1::Integer])
    -- 110 :: SInteger
@@ -765,9 +766,9 @@ concat = foldr (++) nil
 -- | Check all elements satisfy the predicate.
 --
 -- >>> let isEven x = x `sMod` 2 .== 0
--- >>> all isEven [2, 4, 6, 8, 10 :: Integer]
+-- >>> all isEven [2, 4, 6, 8, 10 :: SInteger]
 -- True
--- >>> all isEven [2, 4, 6, 1, 8, 10 :: Integer]
+-- >>> all isEven [2, 4, 6, 1, 8, 10 :: SInteger]
 -- False
 all :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SBool
 all f = foldr ((.&&) . f) sTrue
@@ -775,9 +776,9 @@ all f = foldr ((.&&) . f) sTrue
 -- | Check some element satisfies the predicate.
 --
 -- >>> let isEven x = x `sMod` 2 .== 0
--- >>> any (sNot . isEven) [2, 4, 6, 8, 10 :: Integer]
+-- >>> any (sNot . isEven) [2, 4, 6, 8, 10 :: SInteger]
 -- False
--- >>> any isEven [2, 4, 6, 1, 8, 10 :: Integer]
+-- >>> any isEven [2, 4, 6, 1, 8, 10 :: SInteger]
 -- True
 any :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SBool
 any f = foldr ((.||) . f) sFalse
@@ -792,7 +793,7 @@ or = any id
 
 -- | Replicate an element a given number of times.
 --
--- >>> replicate 3 (2 :: SInteger) .== [2, 2, 2 :: Integer]
+-- >>> replicate 3 (2 :: SInteger) .== [2, 2, 2 :: SInteger]
 -- True
 -- >>> replicate (-2) (2 :: SInteger) .== ([] :: SList Integer)
 -- True
@@ -808,7 +809,7 @@ replicate c e
 --
 -- >>> inits ([] :: SList Integer)
 -- [[]] :: [[SInteger]]
--- >>> inits [1,2,3,4::Integer]
+-- >>> inits [1,2,3,4::SInteger]
 -- [[],[1],[1,2],[1,2,3],[1,2,3,4]] :: [[SInteger]]
 inits :: forall a. SymVal a => SList a -> SList [a]
 inits xs
@@ -816,13 +817,13 @@ inits xs
  = literal (L.inits xs')
  | True
  = def xs
- where def = smtFunction "sbv.inits" $ \l -> ite (null l) (singleton nil) (def (init l) ++ singleton l)
+ where def = smtFunction "sbv.inits" $ \l -> ite (null l) [nil] (def (init l) ++ [l])
 
 -- | tails of a list.
 --
 -- >>> tails ([] :: SList Integer)
 -- [[]] :: [[SInteger]]
--- >>> tails [1,2,3,4::Integer]
+-- >>> tails [1,2,3,4::SInteger]
 -- [[1,2,3,4],[2,3,4],[3,4],[4],[]] :: [[SInteger]]
 tails :: forall a. SymVal a => SList a -> SList [a]
 tails xs
@@ -830,7 +831,7 @@ tails xs
  = literal (L.tails xs')
  | True
  = def xs
- where def = smtFunction "sbv.tails" $ \l -> ite (null l) (singleton nil) (singleton l ++ def (tail l))
+ where def = smtFunction "sbv.tails" $ \l -> ite (null l) [nil] (l .: def (tail l))
 
 -- | Difference.
 --
@@ -871,9 +872,9 @@ class SymVal a => SFilter func a | func -> a where
 instance SymVal a => SFilter (SBV a -> SBool) a where
   -- | @filter f xs@ filters the list with the given predicate.
   --
-  -- >>> filter (\(x :: SInteger) -> x `sMod` 2 .== 0) [1 .. 10 :: Integer]
+  -- >>> filter (\(x :: SInteger) -> x `sMod` 2 .== 0) (literal [1 .. 10])
   -- [2,4,6,8,10] :: [SInteger]
-  -- >>> filter (\(x :: SInteger) -> x `sMod` 2 ./= 0) [1 .. 10 :: Integer]
+  -- >>> filter (\(x :: SInteger) -> x `sMod` 2 ./= 0) (literal [1 .. 10])
   -- [1,3,5,7,9] :: [SInteger]
   filter f l
     | Just concResult <- concreteFilter f f l

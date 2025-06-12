@@ -13,6 +13,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -159,7 +160,7 @@ tailsLength p =
    induct (atProxy p "tailsLength")
           (\(Forall @"xs" (xs :: SList a)) -> length (tails xs) .== 1 + length xs) $
           \ih (x :: SBV a) xs -> [] |- length (tails (x .: xs))
-                                    =: length (tails xs ++ singleton (x .: xs))
+                                    =: length (tails xs ++ [x .: xs])
                                     =: length (tails xs) + 1
                                     ?? ih
                                     =: 1 + length xs + 1
@@ -208,22 +209,22 @@ tailsAppend p = do
 
    -- Even proving the base case of induction is hard due to recursive definition. So we first prove the base case by induction.
    bc <- induct "base case"
-                (\(Forall @"ys" (ys :: SList a)) -> tails ys .== singleton ys ++ tail (tails ys)) $
+                (\(Forall @"ys" (ys :: SList a)) -> tails ys .== [ys] ++ tail (tails ys)) $
                 \ih (y :: SBV a) ys ->
                    [] |- tails (y .: ys)
-                      =: singleton (y .: ys) ++ tails ys
+                      =: [y .: ys] ++ tails ys
                       ?? ih
-                      =: singleton (y .: ys) ++ singleton ys ++ tail (tails ys)
-                      =: singleton (y .: ys) ++ tail (tails (y .: ys))
+                      =: [y .: ys] ++ [ys] ++ tail (tails ys)
+                      =: [y .: ys] ++ tail (tails (y .: ys))
                       =: qed
 
    -- Also need a helper to relate how appendEach and tails work together
    helper <- calc "helper"
                    (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) ->
-                        appendEach ys (tails (x .: xs)) .== singleton ((x .: xs) ++ ys) ++ appendEach ys (tails xs)) $
+                        appendEach ys (tails (x .: xs)) .== [(x .: xs) ++ ys] ++ appendEach ys (tails xs)) $
                    \xs ys x -> [] |- appendEach ys (tails (x .: xs))
-                                  =: appendEach ys (singleton (x .: xs) ++ tails xs)
-                                  =: singleton ((x .: xs) ++ ys) ++ appendEach ys (tails xs)
+                                  =: appendEach ys ([x .: xs] ++ tails xs)
+                                  =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs)
                                   =: qed
 
    induct (atProxy p "tailsAppend")
@@ -232,9 +233,9 @@ tailsAppend p = do
                 [getProof bc]
              |- tails ((x .: xs) ++ ys)
              =: tails (x .: (xs ++ ys))
-             =: singleton (x .: (xs ++ ys)) ++ tails (xs ++ ys)
+             =: [x .: (xs ++ ys)] ++ tails (xs ++ ys)
              ?? ih
-             =: singleton ((x .: xs) ++ ys) ++ appendEach ys (tails xs) ++ tail (tails ys)
+             =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs) ++ tail (tails ys)
              ?? helper
              =: appendEach ys (tails (x .: xs)) ++ tail (tails ys)
              =: qed
@@ -255,8 +256,8 @@ revLen p =
    induct (atProxy p "revLen")
           (\(Forall @"xs" (xs :: SList a)) -> length (reverse xs) .== length xs) $
           \ih (x :: SBV a) xs -> [] |- length (reverse (x .: xs))
-                                    =: length (reverse xs ++ singleton x)
-                                    =: length (reverse xs) + length (singleton x)
+                                    =: length (reverse xs ++ [x])
+                                    =: length (reverse xs) + length [x]
                                     ?? ih
                                     =: length xs + 1
                                     =: length (x .: xs)
@@ -280,10 +281,10 @@ revApp p =
           (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
           \ih (x :: SBV a) xs ys -> [] |- reverse ((x .: xs) ++ ys)
                                        =: reverse (x .: (xs ++ ys))
-                                       =: reverse (xs ++ ys) ++ singleton x
+                                       =: reverse (xs ++ ys) ++ [x]
                                        ?? ih
-                                       =: (reverse ys ++ reverse xs) ++ singleton x
-                                       =: reverse ys ++ (reverse xs ++ singleton x)
+                                       =: (reverse ys ++ reverse xs) ++ [x]
+                                       =: reverse ys ++ (reverse xs ++ [x])
                                        =: reverse ys ++ reverse (x .: xs)
                                        =: qed
 
@@ -294,7 +295,7 @@ revApp p =
 -- [Proven] revCons @Integer
 revCons :: forall a. SymVal a => Proxy a -> TP Proof
 revCons p = lemma (atProxy p "revCons")
-                  (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (x .: xs) .== reverse xs ++ singleton x)
+                  (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (x .: xs) .== reverse xs ++ [x])
                   []
 
 -- | @reverse (xs ++ [x]) == x : reverse xs@
@@ -315,7 +316,7 @@ revSnoc p = do
    ra <- revApp p
 
    lemma (atProxy p "revSnoc")
-         (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (xs ++ singleton x) .== x .: reverse xs)
+         (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (xs ++ [x]) .== x .: reverse xs)
          [ra]
 
 -- | @reverse (reverse xs) == xs@
@@ -345,9 +346,11 @@ revRev p = do
    induct (atProxy p "revRev")
           (\(Forall @"xs" (xs :: SList a)) -> reverse (reverse xs) .== xs) $
           \ih (x :: SBV a) xs -> [] |- reverse (reverse (x .: xs))
-                                    =: reverse (reverse xs ++ singleton x)           ?? ra
-                                    =: reverse (singleton x) ++ reverse (reverse xs) ?? ih
-                                    =: singleton x ++ xs
+                                    =: reverse (reverse xs ++ [x])
+                                    ?? ra
+                                    =: reverse ([x]) ++ reverse (reverse xs)
+                                    ?? ih
+                                    =: [x] ++ xs
                                     =: x .: xs
                                     =: qed
 
@@ -516,12 +519,12 @@ mapReverse f = do
             (\(Forall @"xs" xs) -> reverse (map f xs) .== map f (reverse xs)) $
             \ih x xs -> [] |- reverse (map f (x .: xs))
                            =: reverse (f x .: map f xs)
-                           =: reverse (map f xs) ++ singleton (f x)
+                           =: reverse (map f xs) ++ [f x]
                            ?? ih
-                           =: map f (reverse xs) ++ singleton (f x)
-                           =: map f (reverse xs) ++ map f (singleton x)
+                           =: map f (reverse xs) ++ [f x]
+                           =: map f (reverse xs) ++ map f [x]
                            ?? mApp
-                           =: map f (reverse xs ++ singleton x)
+                           =: map f (reverse xs ++ [x])
                            =: map f (reverse (x .: xs))
                            =: qed
 
@@ -565,7 +568,8 @@ foldrMapFusion a g f =
          (\(Forall @"xs" xs) -> foldr f a (map g xs) .== foldr (f . g) a xs) $
          \ih x xs -> [] |- foldr f a (map g (x .: xs))
                         =: foldr f a (g x .: map g xs)
-                        =: g x `f` foldr f a (map g xs) ?? ih
+                        =: g x `f` foldr f a (map g xs)
+                        ?? ih
                         =: g x `f` foldr (f . g) a xs
                         =: foldr (f . g) a (x .: xs)
                         =: qed
@@ -596,7 +600,8 @@ foldrFusion a b f g h = do
           (\(Forall @"xs" xs) -> h1 .&& h2 .=> f (foldr g a xs) .== foldr h b xs) $
           \ih x xs -> [h1, h2] |- f (foldr g a (x .: xs))
                                =: f (g x (foldr g a xs))
-                               =: h x (f (foldr g a xs))  ?? ih
+                               =: h x (f (foldr g a xs))
+                               ?? ih
                                =: h x (foldr h b xs)
                                =: foldr h b (x .: xs)
                                =: qed
@@ -618,7 +623,8 @@ foldrOverAppend a f =
           (\(Forall @"xs" xs) (Forall @"ys" ys) -> foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs) $
           \ih x xs ys -> [] |- foldr f a ((x .: xs) ++ ys)
                             =: foldr f a (x .: (xs ++ ys))
-                            =: x `f` foldr f a (xs ++ ys)       ?? ih
+                            =: x `f` foldr f a (xs ++ ys)
+                            ?? ih
                             =: x `f` foldr f (foldr f a ys) xs
                             =: foldr f (foldr f a ys) (x .: xs)
                             =: qed
@@ -674,11 +680,13 @@ foldrFoldlDuality f = do
           \ih x xs e ->
               let ff  = flip f
                   rxs = reverse xs
-              in [] |- foldr f e (x .: xs) =: x `f` foldr f e xs                      ?? ih
+              in [] |- foldr f e (x .: xs) =: x `f` foldr f e xs
+                                           ?? ih
                                            =: x `f` foldl ff e rxs
                                            =: foldl ff e rxs `ff` x
-                                           =: foldl ff (foldl ff e rxs) (singleton x) ?? foa
-                                           =: foldl ff e (rxs ++ singleton x)
+                                           =: foldl ff (foldl ff e rxs) [x]
+                                           ?? foa
+                                           =: foldl ff e (rxs ++ [x])
                                            =: foldl ff e (reverse (x .: xs))
                                            =: qed
 
@@ -738,10 +746,14 @@ foldrFoldlDualityGeneralized  e (@) = do
    induct (atProxy (Proxy @a) "foldrFoldlDuality")
           (\(Forall @"xs" xs) -> assoc .&& lunit .&& runit .=> foldr (@) e xs .== foldl (@) e xs) $
           \ih x xs -> [assoc, lunit, runit] |- foldr (@) e (x .: xs)
-                                            =: x @ foldr (@) e xs    ?? ih
-                                            =: x @ foldl (@) e xs    ?? helper
-                                            =: foldl (@) (x @ e) xs  ?? runit
-                                            =: foldl (@) x xs        ?? lunit
+                                            =: x @ foldr (@) e xs
+                                            ?? ih
+                                            =: x @ foldl (@) e xs
+                                            ?? helper
+                                            =: foldl (@) (x @ e) xs
+                                            ?? runit
+                                            =: foldl (@) x xs
+                                            ?? lunit
                                             =: foldl (@) (e @ x) xs
                                             =: foldl (@) e (x .: xs)
                                             =: qed
@@ -794,8 +806,10 @@ foldrFoldl (<+>) (<*>) e = do
              -- Using z to avoid confusion with the variable x already present, following Bird.
              -- z3 can figure out the proper instantiation of ih so the at call is unnecessary, but being explicit is helpful.
              \ih z xs x y -> [assoc] |- x <+> foldl (<*>) y (z .: xs)
-                                     =: x <+> foldl (<*>) (y <*> z) xs    ?? ih `at` (Inst @"x" x, Inst @"y" (y <*> z))
-                                     =: foldl (<*>) (x <+> (y <*> z)) xs  ?? assoc
+                                     =: x <+> foldl (<*>) (y <*> z) xs
+                                     ?? ih `at` (Inst @"x" x, Inst @"y" (y <*> z))
+                                     =: foldl (<*>) (x <+> (y <*> z)) xs
+                                     ?? assoc
                                      =: foldl (<*>) ((x <+> y) <*> z) xs
                                      =: foldl (<*>) (x <+> y) (z .: xs)
                                      =: qed
@@ -804,8 +818,10 @@ foldrFoldl (<+>) (<*>) e = do
    induct (atProxy (Proxy @(a, b)) "foldrFoldl")
           (\(Forall @"xs" xs) -> assoc .&& unit .=> foldr (<+>) e xs .== foldl (<*>) e xs) $
           \ih x xs -> [assoc, unit] |- foldr (<+>) e (x .: xs)
-                                    =: x <+> foldr (<+>) e xs    ?? ih
-                                    =: x <+> foldl (<*>) e xs    ?? helper
+                                    =: x <+> foldr (<+>) e xs
+                                    ?? ih
+                                    =: x <+> foldl (<*>) e xs
+                                    ?? helper
                                     =: foldl (<*>) (x <+> e) xs
                                     =: foldl (<*>) (e <*> x) xs
                                     =: foldl (<*>) e (x .: xs)
@@ -1098,7 +1114,8 @@ partition1 f =
                                  in ite (f x)
                                         (tuple (x .: fst res, snd res))
                                         (tuple (fst res, x .: snd res)))
-                         =: ite (f x) (x .: fst (partition f xs)) (fst (partition f xs)) ?? ih
+                         =: ite (f x) (x .: fst (partition f xs)) (fst (partition f xs))
+                         ?? ih
                          =: ite (f x) (x .: filter f xs) (filter f xs)
                          =: filter f (x .: xs)
                          =: qed
@@ -1123,7 +1140,8 @@ partition2 f =
                                  in ite (f x)
                                         (tuple (x .: fst res, snd res))
                                         (tuple (fst res, x .: snd res)))
-                         =: ite (f x) (snd (partition f xs)) (x .: snd (partition f xs)) ?? ih
+                         =: ite (f x) (snd (partition f xs)) (x .: snd (partition f xs))
+                         ?? ih
                          =: ite (f x) (filter (sNot . f) xs) (x .: filter (sNot . f) xs)
                          =: filter (sNot . f) (x .: xs)
                          =: qed
@@ -1206,9 +1224,12 @@ take_map f = do
                  (\(Forall @"xs" xs) (Forall @"n" n) -> n .> 0 .=> take n (map f xs) .== map f (take n xs)) $
                  \ih x xs n -> [n .> 0] |- take n (map f (x .: xs))
                                         =: take n (f x .: map f xs)
-                                        =: f x .: take (n - 1) (map f xs) ?? ih   `at` Inst @"n" (n-1)
-                                        =: f x .: map f (take (n - 1) xs) ?? map1 `at` (Inst @"x" x, Inst @"xs" (take (n - 1) xs))
-                                        =: map f (x .: take (n - 1) xs)   ?? tc
+                                        =: f x .: take (n - 1) (map f xs)
+                                        ?? ih `at` Inst @"n" (n-1)
+                                        =: f x .: map f (take (n - 1) xs)
+                                        ?? map1 `at` (Inst @"x" x, Inst @"xs" (take (n - 1) xs))
+                                        =: map f (x .: take (n - 1) xs)
+                                        ?? tc
                                         =: map f (take n (x .: xs))
                                         =: qed
 
@@ -1274,9 +1295,11 @@ drop_map f = do
         (\(Forall @"xs" xs) (Forall @"n" n) -> drop n (map f xs) .== map f (drop n xs)) $
         \xs n -> [] |- let result = drop n (map f xs) .== map f (drop n xs)
                     in result
-                    =: ite (n .<= 0) (n .<= 0 .=> result) (n .> 0 .=> result) ?? h1
-                    =: ite (n .<= 0) sTrue                (n .> 0 .=> result) ?? h2
-                    =: ite (n .<= 0) sTrue                sTrue
+                    =: ite (n .<= 0) (n .<= 0 .=> result) (n .> 0 .=> result)
+                    ?? h1
+                    =: ite (n .<= 0) sTrue (n .> 0 .=> result)
+                    ?? h2
+                    =: ite (n .<= 0) sTrue sTrue
                     =: sTrue
                     =: qed
 

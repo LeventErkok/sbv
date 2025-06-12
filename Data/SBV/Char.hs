@@ -22,6 +22,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
+{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -52,20 +53,21 @@ import Data.SBV.Core.Model
 
 import qualified Data.Char as C
 
-import Data.SBV.List (isInfixOf, singleton)
+import Data.SBV.List (isInfixOf)
 
 #ifdef DOCTEST
 -- $setup
 -- >>> import Data.SBV
--- >>> import Data.SBV.List (isInfixOf, singleton)
+-- >>> import Data.SBV.List (isInfixOf)
 -- >>> import Prelude hiding(elem, notElem)
+-- >>> :set -XOverloadedLists
 -- >>> :set -XOverloadedStrings
 #endif
 
 -- | Is the character in the string?
 --
 -- >>> :set -XOverloadedStrings
--- >>> prove $ \c -> c `elem` singleton c
+-- >>> prove $ \c -> c `elem` [c]
 -- Q.E.D.
 -- >>> prove $ \c -> sNot (c `elem` "")
 -- Q.E.D.
@@ -76,7 +78,7 @@ c `elem` s
  | Just cs <- unliteral s                            -- If only the second string is concrete, element-wise checking is still much better!
  = sAny (c .==) $ map literal cs
  | True
- = singleton c `isInfixOf` s
+ = [c] `isInfixOf` s
 
 -- | Is the character not in the string?
 --
