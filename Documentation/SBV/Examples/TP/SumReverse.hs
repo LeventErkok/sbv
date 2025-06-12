@@ -15,6 +15,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE OverloadedLists     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -72,9 +73,9 @@ revSum p = runTP $ do
   induct (atProxy p "sumReverse")
          (\(Forall @"xs" xs) -> sum @a (reverse xs) .== sum xs) $
          \ih x xs -> [] |- sum @a (reverse (x .: xs))
-                        =: sum (reverse xs ++ singleton x)
+                        =: sum (reverse xs ++ [x])
                         ?? sumAppend
-                        =: sum (reverse xs) + sum (singleton x)
+                        =: sum (reverse xs) + sum [x]
                         ?? ih
                         =: sum xs + x
                         =: sum (x .: xs)

@@ -76,7 +76,7 @@ len = smtFunction "list_length" $ \xs -> ite (L.null xs) 0 (1 + len (L.tail xs))
 --   s0 = [1,2,3] :: [Integer]
 --   s1 =       3 :: Integer
 lenExample :: IO SatResult
-lenExample = sat $ \a r -> a .== [1,2,3::Integer] .&& r .== len a
+lenExample = sat $ \a r -> a .== [1,2,3] .&& r .== len a
 
 -------------------------------------------------------------------------
 -- * Mutual recursion

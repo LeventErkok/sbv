@@ -11,6 +11,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -155,15 +156,13 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
                                                         (b .: merge (a .: as) bs))
                                   ?? "case split"
                                   =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
-                                                      ?? [ ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
-                                                         , nonDecrIns `at` (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
-                                                         ]
+                                                      ?? ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
+                                                      ?? nonDecrIns `at` (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
                                                       =: sTrue
                                                       =: qed
                                            , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
-                                                      ?? [ ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
-                                                         , nonDecrIns `at` (Inst @"x" b, Inst @"ys" (merge (a .: as) bs))
-                                                         ]
+                                                      ?? ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
+                                                      ?? nonDecrIns `at` (Inst @"x" b, Inst @"ys" (merge (a .: as) bs))
                                                       =: sTrue
                                                       =: qed
                                            ])
@@ -188,10 +187,9 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
                                              =: ite (length (e .: es) .<= 1)
                                                     sTrue
                                                     (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
-                                             ?? [ ih `at` Inst @"xs" h1
-                                                , ih `at` Inst @"xs" h2
-                                                , mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
-                                                ]
+                                             ?? ih `at` Inst @"xs" h1
+                                             ?? ih `at` Inst @"xs" h2
+                                             ?? mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
                                              =: sTrue
                                              =: qed)
 
@@ -252,23 +250,23 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
                                                ?? "push count down, simplify, rearrange"
                                                =: let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
                                                in ite (null xs)
-                                                      (count e (singleton x))
+                                                      (count e [x])
                                                       (count e (merge (mergeSort h1) (mergeSort h2)))
                                                ?? mergeCount `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2), Inst @"e" e)
                                                =: ite (null xs)
-                                                      (count e (singleton x))
+                                                      (count e [x])
                                                       (count e (mergeSort h1) + count e (mergeSort h2))
                                                ?? ih `at` (Inst @"xs" h1, Inst @"e" e)
                                                =: ite (null xs)
-                                                      (count e (singleton x))
+                                                      (count e [x])
                                                       (count e h1 + count e (mergeSort h2))
                                                ?? ih `at` (Inst @"xs" h2, Inst @"e" e)
                                                =: ite (null xs)
-                                                      (count e (singleton x))
+                                                      (count e [x])
                                                       (count e h1 + count e h2)
                                                ?? takeDropCount `at` (Inst @"xs" (x .: xs), Inst @"n" (length (x .: xs) `sEDiv` 2), Inst @"e" e)
                                                =: ite (null xs)
-                                                      (count e (singleton x))
+                                                      (count e [x])
                                                       (count e (x .: xs))
                                                =: qed)
 
