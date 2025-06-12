@@ -22,10 +22,10 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.Utils (
-         TP, runTP, runTPWith, Proof(..), sorry
+         TP, runTP, runTPWith, Proof(..), ProofObj(..), sorry
        , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
-       , ProofTree(..), TPUnique(..), getProofTree, showProofTree, showProofTreeHTML, shortProofName
+       , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML, shortProofName
        , withProofCache
        , atProxy, tpQuiet, tpRibbon, tpStats, tpCache
        ) where
@@ -70,7 +70,7 @@ data TPStats = TPStats { noOfCheckSats :: Int
 
 -- | Extra state we carry in a TP context
 data TPState = TPState { stats      :: IORef TPStats
-                       , proofCache :: IORef (Map String Proof)
+                       , proofCache :: IORef (Map String ProofObj)
                        , config     :: SMTConfig
                        }
 
@@ -79,7 +79,7 @@ newtype TP a = TP (ReaderT TPState IO a)
             deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader TPState, MonadFail)
 
 -- | If caches are enabled, see if we cached this proof and return it; otherwise generate it, cache it, and return it
-withProofCache :: String -> TP Proof -> TP Proof
+withProofCache :: String -> TP (Proof a) -> TP (Proof a)
 withProofCache nm genProof = do
   TPState{proofCache, config = cfg@SMTConfig {tpOptions = TPOptions {cacheProofs}}} <- getTPState
   if not cacheProofs
@@ -88,18 +88,18 @@ withProofCache nm genProof = do
              case nm `Map.lookup` cache of
                Just prf -> do liftIO $ do tab <- startTP cfg False "Cached" 0 (TPProofOneShot nm [])
                                           finishTP cfg "Q.E.D." (tab, Nothing) []
-                              pure prf{isCached = True}
+                              pure $ Proof prf{isCached = True}
                Nothing  -> do p <- genProof
-                              liftIO $ modifyIORef' proofCache (Map.insert nm p)
+                              liftIO $ modifyIORef' proofCache (Map.insert nm (getProofObj p))
                               pure p
 
 -- | The context in which we make a check-sat call
-data TPProofContext = TPProofOneShot String   -- ^ A one shot proof, with string containing its name
-                                     [Proof]  -- ^ Helpers used (latter only used for cex generation)
-                    | TPProofStep    Bool     -- ^ A proof step. If Bool is true, then these are the assumptions for that step
-                                     String   -- ^ Name of original goal
-                                     [String] -- ^ The helper "strings" given by the user
-                                     [String] -- ^ The step name, i.e., the name of the branch in the proof tree
+data TPProofContext = TPProofOneShot String      -- ^ A one shot proof, with string containing its name
+                                     [ProofObj]  -- ^ Helpers used (latter only used for cex generation)
+                    | TPProofStep    Bool        -- ^ A proof step. If Bool is true, then these are the assumptions for that step
+                                     String      -- ^ Name of original goal
+                                     [String]    -- ^ The helper "strings" given by the user
+                                     [String]    -- ^ The step name, i.e., the name of the branch in the proof tree
 
 -- | Run a TP proof, using the default configuration.
 runTP :: TP a -> IO a
@@ -182,23 +182,26 @@ data TPUnique = TPInternal
 -- is still large: The underlying solver, SBV, and TP kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
-data Proof = Proof { dependencies :: [Proof]     -- ^ Immediate dependencies of this proof. (Not transitive)
-                   , isUserAxiom  :: Bool        -- ^ Was this an axiom given by the user?
-                   , getProof     :: SBool       -- ^ Get the underlying boolean
-                   , getProp      :: Dynamic     -- ^ The actual proposition
-                   , proofName    :: String      -- ^ User given name
-                   , uniqId       :: TPUnique    -- ^ Unique identifier
-                   , isCached     :: Bool        -- ^ Was this a cached proof?
-                   }
+data Proof a = Proof { getProofObj :: ProofObj }
+
+-- | The actual proof container
+data ProofObj = ProofObj { dependencies :: [ProofObj]     -- ^ Immediate dependencies of this proof. (Not transitive)
+                         , isUserAxiom  :: Bool           -- ^ Was this an axiom given by the user?
+                         , getProof     :: SBool          -- ^ Get the underlying boolean
+                         , getProp      :: Dynamic        -- ^ The actual proposition
+                         , proofName    :: String         -- ^ User given name
+                         , uniqId       :: TPUnique       -- ^ Unique identifier
+                         , isCached     :: Bool           -- ^ Was this a cached proof?
+                         }
 
 -- | Drop the instantiation part
-shortProofName :: Proof -> String
+shortProofName :: ProofObj -> String
 shortProofName p | " @ " `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
                  | True                = s
    where s = proofName p
 
 -- | Keeping track of where the sorry originates from. Used in displaying dependencies.
-newtype RootOfTrust = RootOfTrust (Maybe [Proof])
+newtype RootOfTrust = RootOfTrust (Maybe [ProofObj])
 
 -- | Show instance for t'RootOfTrust'
 instance Show RootOfTrust where
@@ -215,19 +218,19 @@ instance Monoid RootOfTrust where
   mempty = RootOfTrust Nothing
 
 -- | NFData ignores the getProp field
-instance NFData Proof where
-  rnf (Proof dependencies isUserAxiom getProof _getProp proofName uniqId isCached) =     rnf dependencies
-                                                                                   `seq` rnf isUserAxiom
-                                                                                   `seq` rnf getProof
-                                                                                   `seq` rnf proofName
-                                                                                   `seq` rnf uniqId
-                                                                                   `seq` rnf isCached
+instance NFData ProofObj where
+  rnf (ProofObj dependencies isUserAxiom getProof _getProp proofName uniqId isCached) =     rnf dependencies
+                                                                                      `seq` rnf isUserAxiom
+                                                                                      `seq` rnf getProof
+                                                                                      `seq` rnf proofName
+                                                                                      `seq` rnf uniqId
+                                                                                      `seq` rnf isCached
 
 -- | Dependencies of a proof, in a tree format.
-data ProofTree = ProofTree Proof [ProofTree]
+data ProofTree = ProofTree ProofObj [ProofTree]
 
 -- | Return all the proofs this particular proof depends on, transitively
-getProofTree :: Proof -> ProofTree
+getProofTree :: ProofObj -> ProofTree
 getProofTree p = ProofTree p $ map getProofTree (dependencies p)
 
 -- | Turn dependencies to a container tree, for display purposes
@@ -262,16 +265,16 @@ depsToTree shouldCompress visited xform (cnt, ProofTree top ds) = (nVisited, Nod
 
 -- | Display the proof tree as ASCII text. The first argument is if we should compress the tree, showing only the first
 -- use of any sublemma.
-showProofTree :: Bool -> Proof -> String
-showProofTree compress d = showTree $ snd $ depsToTree compress [] sh (1, getProofTree d)
+showProofTree :: Bool -> Proof a -> String
+showProofTree compress d = showTree $ snd $ depsToTree compress [] sh (1, getProofTree (getProofObj d))
     where sh nm 1 _ = nm
           sh nm x _= nm ++ " (x" ++ show x ++ ")"
 
 -- | Display the tree as an html doc for rendering purposes.
 -- The first argument is if we should compress the tree, showing only the first
 -- use of any sublemma. Second is the path (or URL) to external CSS file, if needed.
-showProofTreeHTML :: Bool -> Maybe FilePath -> Proof -> String
-showProofTreeHTML compress mbCSS p = htmlTree mbCSS $ snd $ depsToTree compress [] nodify (1, getProofTree p)
+showProofTreeHTML :: Bool -> Maybe FilePath -> Proof a -> String
+showProofTreeHTML compress mbCSS p = htmlTree mbCSS $ snd $ depsToTree compress [] nodify (1, getProofTree (getProofObj p))
   where nodify :: String -> Int -> Int -> NodeInfo
         nodify nm cnt dc = NodeInfo { nodeBehavior = InitiallyExpanded
                                     , nodeName     = nm
@@ -288,32 +291,32 @@ showProofTreeHTML compress mbCSS p = htmlTree mbCSS $ snd $ depsToTree compress 
         depCount n = "Has " ++ show n ++ " dependencies."
 
 -- | Show instance for t'Proof'
-instance Show Proof where
-  show p@Proof{proofName = nm} = '[' : sh (rootOfTrust p) ++ "] " ++ nm
+instance Show (Proof a) where
+  show p@(Proof po@ProofObj{proofName = nm}) = '[' : sh (rootOfTrust p) ++ "] " ++ nm
     where sh (RootOfTrust Nothing)   = "Proven" ++ cacheInfo
           sh (RootOfTrust (Just ps)) = "Modulo: " ++ join ps ++ cacheInfo
 
           join = intercalate ", " . sort . map shortProofName
 
-          cacheInfo = case cachedProofs p of
+          cacheInfo = case cachedProofs po of
                         [] -> ""
                         cs -> ". Cached: " ++ join (nubBy (\p1 p2 -> uniqId p1 == uniqId p2) cs)
 
-          cachedProofs prf@Proof{isCached} = if isCached then prf : rest else rest
+          cachedProofs prf@ProofObj{isCached} = if isCached then prf : rest else rest
             where rest = concatMap cachedProofs (dependencies prf)
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
 -- cannot deal with, or if we want to postpone the proof for the time being. TP will keep
 -- track of the uses of 'sorry' and will print them appropriately while printing proofs.
-sorry :: Proof
-sorry = Proof { dependencies = []
-              , isUserAxiom  = False
-              , getProof     = label "sorry" (quantifiedBool p)
-              , getProp      = toDyn p
-              , proofName    = "sorry"
-              , uniqId       = TPSorry
-              , isCached     = False
-              }
+sorry :: Proof a
+sorry = Proof $ ProofObj { dependencies = []
+                         , isUserAxiom  = False
+                         , getProof     = label "sorry" (quantifiedBool p)
+                         , getProp      = toDyn p
+                         , proofName    = "sorry"
+                         , uniqId       = TPSorry
+                         , isCached     = False
+                         }
   where -- ideally, I'd rather just use
         --   p = sFalse
         -- but then SBV constant folds the boolean, and the generated script
@@ -324,30 +327,31 @@ sorry = Proof { dependencies = []
 
 -- | Calculate the root of trust. The returned list of proofs, if any, will need to be sorry-free to
 -- have the given proof to be sorry-free.
-rootOfTrust :: Proof -> RootOfTrust
-rootOfTrust p@Proof{uniqId, dependencies} = compress res
-  where res = case uniqId of
-                TPInternal -> RootOfTrust Nothing
-                TPSorry    -> RootOfTrust $ Just [sorry]
-                TPUser {}  -> self <> foldMap rootOfTrust dependencies
+rootOfTrust :: Proof a -> RootOfTrust
+rootOfTrust = rot . getProofObj
+  where rot p@ProofObj{uniqId, dependencies} = compress res
+          where res = case uniqId of
+                        TPInternal -> RootOfTrust Nothing
+                        TPSorry    -> RootOfTrust $ Just [getProofObj sorry]
+                        TPUser {}  -> self <> foldMap rot dependencies
 
-        -- if sorry is one of our direct dependencies, then we trust this proof
-        self | any isSorry dependencies = RootOfTrust $ Just [p]
-             | True                     = mempty
+                -- if sorry is one of our direct dependencies, then we trust this proof
+                self | any isSorry dependencies = RootOfTrust $ Just [p]
+                     | True                     = mempty
 
-        isSorry Proof{uniqId = u} = u == TPSorry
+                isSorry ProofObj{uniqId = u} = u == TPSorry
 
-        -- If we have any dependency that is not sorry itself, then we can skip all the sorries.
-        -- Why? Because "sorry" will implicitly be coming from one of these anyhow. (In other
-        -- words, we do not need to (or want to) distinguish between different uses of sorry.
-        compress (RootOfTrust mbps) = RootOfTrust $ reduce <$> mbps
-          where reduce ps = case partition isSorry ps of
-                              (_, []) -> [sorry]
-                              (_, os) -> os
+                -- If we have any dependency that is not sorry itself, then we can skip all the sorries.
+                -- Why? Because "sorry" will implicitly be coming from one of these anyhow. (In other
+                -- words, we do not need to (or want to) distinguish between different uses of sorry.
+                compress (RootOfTrust mbps) = RootOfTrust $ reduce <$> mbps
+                  where reduce ps = case partition isSorry ps of
+                                      (_, []) -> [getProofObj sorry]
+                                      (_, os) -> os
 
 -- | Calculate the modulo string for dependencies
-concludeModulo :: [Proof] -> String
-concludeModulo by = case foldMap rootOfTrust by of
+concludeModulo :: [ProofObj] -> String
+concludeModulo by = case foldMap rootOfTrust (map Proof by) of
                       RootOfTrust Nothing   -> ""
                       RootOfTrust (Just ps) -> " [Modulo: " ++ intercalate ", " (map shortProofName ps) ++ "]"
 

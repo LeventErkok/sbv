@@ -18,10 +18,10 @@
 
 module Data.SBV.TP (
        -- * Propositions and their proofs
-         Proposition, Proof, getProof, signature
+         Proposition, Proof, getProof
 
        -- * Getting the proof tree
-       , getProofTree, rootOfTrust, RootOfTrust(..), ProofTree(..), showProofTree, showProofTreeHTML
+       , rootOfTrust, RootOfTrust(..), ProofTree(..), showProofTree, showProofTreeHTML
 
        -- * Adding axioms/definitions
        , axiom

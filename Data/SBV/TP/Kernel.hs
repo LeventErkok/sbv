@@ -61,29 +61,30 @@ type Proposition a = ( QNot a
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
-axiom :: Proposition a => String -> a -> TP Proof
+axiom :: Proposition a => String -> a -> TP (Proof a)
 axiom nm p = do cfg <- getTPConfig
                 u   <- tpGetNextUnique
                 _   <- liftIO $ startTP cfg True "Axiom" 0 (TPProofOneShot nm [])
-                pure (internalAxiom nm p) { isUserAxiom = True, uniqId = u }
+                let Proof iax = internalAxiom nm p
+                pure $ Proof (iax { isUserAxiom = True, uniqId = u })
 
 -- | Internal axiom generator; so we can keep truck of TP's trusted axioms, vs. user given axioms.
-internalAxiom :: Proposition a => String -> a -> Proof
-internalAxiom nm p = Proof { dependencies = []
-                           , isUserAxiom  = False
-                           , getProof     = label nm (quantifiedBool p)
-                           , getProp      = toDyn p
-                           , proofName    = nm
-                           , uniqId       = TPInternal
-                           , isCached     = False
-                           }
+internalAxiom :: Proposition a => String -> a -> Proof a
+internalAxiom nm p = Proof $ ProofObj { dependencies = []
+                                      , isUserAxiom  = False
+                                      , getProof     = label nm (quantifiedBool p)
+                                      , getProp      = toDyn p
+                                      , proofName    = nm
+                                      , uniqId       = TPInternal
+                                      , isCached     = False
+                                      }
 
 -- | Helper to generate lemma/theorem statements.
-lemmaGen :: Proposition a => SMTConfig -> String -> String -> a -> [Proof] -> TP Proof
+lemmaGen :: Proposition a => SMTConfig -> String -> String -> a -> [ProofObj] -> TP (Proof a)
 lemmaGen cfg@SMTConfig{tpOptions = TPOptions{printStats}} tag nm inputProp by = withProofCache nm $ do
-        tpSt <- getTPState
-        u    <- tpGetNextUnique
-        liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt u
+                 tpSt <- getTPState
+                 u    <- tpGetNextUnique
+                 liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt u
   where go tpSt u mbStartTime = do qSaturateSavingObservables inputProp
                                    mapM_ (constrain . getProof) by
                                    query $ smtProofStep cfg tpSt tag 0 (TPProofOneShot nm by) Nothing inputProp (good mbStartTime u)
@@ -91,31 +92,31 @@ lemmaGen cfg@SMTConfig{tpOptions = TPOptions{printStats}} tag nm inputProp by = 
         -- What to do if all goes well
         good mbStart u d = do mbElapsed <- getElapsedTime mbStart
                               liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo by) d $ catMaybes [mbElapsed]
-                              pure Proof { dependencies = by
-                                         , isUserAxiom  = False
-                                         , getProof     = label nm (quantifiedBool inputProp)
-                                         , getProp      = toDyn inputProp
-                                         , proofName    = nm
-                                         , uniqId       = u
-                                         , isCached     = False
-                                         }
+                              pure $ Proof $ ProofObj { dependencies = by
+                                                      , isUserAxiom  = False
+                                                      , getProof     = label nm (quantifiedBool inputProp)
+                                                      , getProp      = toDyn inputProp
+                                                      , proofName    = nm
+                                                      , uniqId       = u
+                                                      , isCached     = False
+                                                      }
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
-lemma :: Proposition a => String -> a -> [Proof] -> TP Proof
+lemma :: Proposition a => String -> a -> [ProofObj] -> TP (Proof a)
 lemma nm f by = do cfg <- getTPConfig
                    lemmaWith cfg nm f by
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
-lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> TP Proof
+lemmaWith :: Proposition a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
 lemmaWith cfg = lemmaGen cfg "Lemma"
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
-theorem :: Proposition a => String -> a -> [Proof] -> TP Proof
+theorem :: Proposition a => String -> a -> [ProofObj] -> TP (Proof a)
 theorem nm f by = do cfg <- getTPConfig
                      theoremWith cfg nm f by
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
-theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> TP Proof
+theoremWith :: Proposition a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
 theoremWith cfg = lemmaGen cfg "Theorem"
 
 -- | Capture the general flow of a proof-step. Note that this is the only point where we call the backend solver
@@ -187,7 +188,7 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
                      -- Remember that we first have to negate, and then skolemize!
                      do SatResult res <- liftIO $ satWith cfg $ do
                                            qSaturateSavingObservables prop
-                                           mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
+                                           mapM_ constrain [getProof | ProofObj{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
                                            pure $ skolemize (qNot prop)
                         pure res
 

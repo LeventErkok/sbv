@@ -21,7 +21,6 @@
                 Documentation.SBV.Examples.TP.Basics for an example demonstration.
         Note that all these utils will be in effect with the closest call to runTP/runTPWith. If you change the
         solver for a specific lemma, we'll only change the solver, not TP-options.
-      - Add signature: Which, when passed a proof, will give you its signature as a type, useful for diagnostics.
       - Generalize various TP list/sort proofs.
 
    * New TP examples:

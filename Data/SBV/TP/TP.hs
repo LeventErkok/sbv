@@ -23,8 +23,8 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.TP (
-         Proposition, Proof, getProof, signature, Instantiatable(..), Inst(..)
-       , rootOfTrust, RootOfTrust(..), ProofTree(..), getProofTree, showProofTree, showProofTreeHTML
+         Proposition, Proof, getProof, Instantiatable(..), Inst(..)
+       , rootOfTrust, RootOfTrust(..), ProofTree(..), showProofTree, showProofTreeHTML
        , axiom
        , lemma,   lemmaWith
        , theorem, theoremWith
@@ -49,17 +49,16 @@ import qualified Data.SBV.List as SL
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 
-import Data.Char (isSpace)
-import Data.List (isPrefixOf, isSuffixOf, intercalate)
+import Data.List (intercalate)
 import Data.Maybe (catMaybes, maybeToList)
 
 import Data.Proxy
+import Data.Kind    (Type)
 import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
 
 import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
-import Type.Reflection
 
 -- | Captures the steps for a calculationa proof
 data CalcStrategy = CalcStrategy { calcIntros    :: SBool
@@ -108,16 +107,16 @@ class CalcLemma a steps where
   -- non-boolean steps.
   --
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
-  calc :: Proposition a => String -> a -> steps -> TP Proof
+  calc :: Proposition a => String -> a -> steps -> TP (Proof a)
 
   -- | Same as calc, except tagged as Theorem
-  calcThm :: Proposition a => String -> a -> steps -> TP Proof
+  calcThm :: Proposition a => String -> a -> steps -> TP (Proof a)
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  calcWith :: Proposition a => SMTConfig -> String -> a -> steps -> TP Proof
+  calcWith :: Proposition a => SMTConfig -> String -> a -> steps -> TP (Proof a)
 
   -- | Same as calcWith, except tagged as Theorem
-  calcThmWith :: Proposition a => SMTConfig -> String -> a -> steps -> TP Proof
+  calcThmWith :: Proposition a => SMTConfig -> String -> a -> steps -> TP (Proof a)
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL calcSteps #-}
@@ -128,25 +127,25 @@ class CalcLemma a steps where
   calcWith    cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric False (tpMergeCfg cfg cfg') nm p steps
   calcThmWith cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric True  (tpMergeCfg cfg cfg') nm p steps
 
-  calcGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> TP Proof
+  calcGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> TP (Proof a)
   calcGeneric tagTheorem cfg nm result steps = withProofCache nm $ do
-     tpSt <- getTPState
-     u    <- tpGetNextUnique
+      tpSt <- getTPState
+      u    <- tpGetNextUnique
 
-     liftIO $ runSMTWith cfg $ do
+      liftIO $ runSMTWith cfg $ do
 
-        qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
+         qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
-        message cfg $ (if tagTheorem then "Theorem" else "Lemma") ++ ": " ++ nm ++ "\n"
+         message cfg $ (if tagTheorem then "Theorem" else "Lemma") ++ ": " ++ nm ++ "\n"
 
-        (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
+         (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
 
-        -- Collect all subterms and saturate them
-        mapM_ qSaturateSavingObservables $ getCalcStrategySaturatables strategy
+         -- Collect all subterms and saturate them
+         mapM_ qSaturateSavingObservables $ getCalcStrategySaturatables strategy
 
-        query $ proveProofTree cfg tpSt nm (result, calcGoal) calcIntros calcProofTree u
+         query $ proveProofTree cfg tpSt nm (result, calcGoal) calcIntros calcProofTree u
 
--- | Prove the proof tree. The arguments are:
+-- |               Prove the proof tree. The arguments are:
 --
 --      result           : The ultimate goal we want to prove. Note that this is a general proposition, and we don't actually prove it. See the next param.
 --      resultBool       : The instance of result that, if we prove it, establishes the result itself
@@ -170,7 +169,7 @@ proveProofTree :: Proposition a
                -> SBool        -- ^ hypotheses
                -> TPProof      -- ^ proof tree
                -> TPUnique     -- ^ unique id
-               -> Query Proof
+               -> Query (Proof a)
 proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree uniq = do
 
   let SMTConfig{tpOptions = TPOptions{printStats}} = cfg
@@ -285,14 +284,14 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                     let modulo = concludeModulo (concatMap getHelperProofs (getAllHelpers calcProofTree))
                     finishTP cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
-                    pure Proof { dependencies = getDependencies calcProofTree
-                               , isUserAxiom  = False
-                               , getProof     = label nm (quantifiedBool result)
-                               , getProp      = toDyn result
-                               , proofName    = nm
-                               , uniqId       = uniq
-                               , isCached     = False
-                               }
+                    pure $ Proof $ ProofObj { dependencies = getDependencies calcProofTree
+                                            , isUserAxiom  = False
+                                            , getProof     = label nm (quantifiedBool result)
+                                            , getProp      = toDyn result
+                                            , proofName    = nm
+                                            , uniqId       = uniq
+                                            , isCached     = False
+                                            }
 
 -- Helper data-type for calc-step below
 data CalcContext a = CalcStart     [Helper] -- Haven't started yet
@@ -382,25 +381,27 @@ getInductionStrategySaturatables (InductionStrategy inductionIntros
 
 -- | A class for doing regular inductive proofs.
 class Inductive a steps where
+   type IHType a :: Type
+
    -- | Inductively prove a lemma, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   induct  :: Proposition a => String -> a -> (Proof -> steps) -> TP Proof
+   induct  :: Proposition a => String -> a -> (Proof (IHType a) -> steps) -> TP (Proof a)
 
    -- | Inductively prove a theorem. Same as 'induct', but tagged as a theorem, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductThm :: Proposition a => String -> a -> (Proof -> steps) -> TP Proof
+   inductThm :: Proposition a => String -> a -> (Proof (IHType a) -> steps) -> TP (Proof a)
 
    -- | Same as 'induct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> TP Proof
+   inductWith :: Proposition a => SMTConfig -> String -> a -> (Proof (IHType a) -> steps) -> TP (Proof a)
 
    -- | Same as 'inductThm', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductThmWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> TP Proof
+   inductThmWith :: Proposition a => SMTConfig -> String -> a -> (Proof (IHType a) -> steps) -> TP (Proof a)
 
    induct            nm p steps = getTPConfig >>= \cfg  -> inductWith                             cfg                   nm p steps
    inductThm         nm p steps = getTPConfig >>= \cfg  -> inductThmWith                          cfg                   nm p steps
@@ -409,7 +410,7 @@ class Inductive a steps where
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL inductionStrategy #-}
-   inductionStrategy :: Proposition a => a -> (Proof -> steps) -> Symbolic InductionStrategy
+   inductionStrategy :: Proposition a => a -> (Proof (IHType a) -> steps) -> Symbolic InductionStrategy
 
 -- | A class of measures, used for inductive arguments.
 class OrdSymbolic a => Measure a where
@@ -439,22 +440,22 @@ class SInductive a measure steps where
    -- | Inductively prove a lemma, using measure based induction, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInduct :: Proposition a => String -> a -> measure -> (Proof -> steps) -> TP Proof
+   sInduct :: Proposition a => String -> a -> measure -> (Proof a -> steps) -> TP (Proof a)
 
    -- | Inductively prove a theorem, using measure based induction. Same as 'sInduct', but tagged as a theorem, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductThm :: Proposition a => String -> a -> measure -> (Proof -> steps) -> TP Proof
+   sInductThm :: Proposition a => String -> a -> measure -> (Proof a -> steps) -> TP (Proof a)
 
    -- | Same as 'sInduct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductWith :: Proposition a => SMTConfig -> String -> a -> measure -> (Proof -> steps) -> TP Proof
+   sInductWith :: Proposition a => SMTConfig -> String -> a -> measure -> (Proof a -> steps) -> TP (Proof a)
 
    -- | Same as 'sInductThm', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductThmWith :: Proposition a => SMTConfig -> String -> a -> measure -> (Proof -> steps) -> TP Proof
+   sInductThmWith :: Proposition a => SMTConfig -> String -> a -> measure -> (Proof a -> steps) -> TP (Proof a)
 
    sInduct            nm p m steps = getTPConfig >>= \cfg  -> sInductWith                            cfg                   nm p m steps
    sInductThm         nm p m steps = getTPConfig >>= \cfg  -> sInductThmWith                         cfg                   nm p m steps
@@ -463,10 +464,10 @@ class SInductive a measure steps where
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL sInductionStrategy #-}
-   sInductionStrategy :: Proposition a => a -> measure -> (Proof -> steps) -> Symbolic InductionStrategy
+   sInductionStrategy :: Proposition a => a -> measure -> (Proof a -> steps) -> Symbolic InductionStrategy
 
 -- | Do an inductive proof, based on the given strategy
-inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> TP Proof
+inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> TP (Proof a)
 inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $ do
    tpSt <- getTPState
    u    <- tpGetNextUnique
@@ -542,6 +543,8 @@ indResult nms = observeIf not ("P(" ++ intercalate ", " nms ++ ")")
 
 -- | Induction over 'SInteger'
 instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool) (SInteger -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nn Integer -> SBool) = SBool
+
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        pure $ mkIndStrategy Nothing
@@ -551,6 +554,8 @@ instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool
 
 -- | Induction over 'SInteger', taking an extra argument
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> SBool) (SInteger -> SBV a -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nn Integer -> Forall na a -> SBool) = Forall na a -> SBool
+
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -561,6 +566,8 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (
 
 -- | Induction over 'SInteger', taking two extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) (SInteger -> SBV a -> SBV b -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) = Forall na a -> Forall nb b -> SBool
+
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -572,6 +579,8 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Eq
 
 -- | Induction over 'SInteger', taking three extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> SBool
+
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -584,6 +593,8 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
 
 -- | Induction over 'SInteger', taking four extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool
+
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -597,6 +608,8 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
 
 -- | Induction over 'SInteger', taking five extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool
+
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -620,6 +633,8 @@ singular n = case reverse n of
 
 -- | Induction over 'SList'
 instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] -> SBool) (SBV x -> SList x -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nxs [x] -> SBool) = SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        pure $ mkIndStrategy Nothing
@@ -629,6 +644,8 @@ instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] 
 
 -- | Induction over 'SList', taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> SBool) (SBV x -> SList x -> SBV a -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nxs [x] -> Forall na a -> SBool) = Forall na a -> SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
@@ -639,6 +656,8 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => 
 
 -- | Induction over 'SList', taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) = Forall na a -> Forall nb b -> SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
@@ -650,6 +669,8 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
 
 -- | Induction over 'SList', taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
@@ -662,6 +683,8 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
 
 -- | Induction over 'SList', taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
@@ -675,6 +698,8 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
 
 -- | Induction over 'SList', taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw z)) where
+  type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
@@ -689,6 +714,8 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
 
 -- | Induction over two 'SList', simultaneously
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> SBool) ((SBV x, SList x, SBV y, SList y) -> (SBool, TPProofRaw z)) where
+  type IHType ((Forall nxs [x], Forall nys [y]) -> SBool) = SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -699,6 +726,8 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) =>
 
 -- | Induction over two 'SList', simultaneously, taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> (SBool, TPProofRaw z)) where
+  type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) = Forall na a -> SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -710,6 +739,8 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
 
 -- | Induction over two 'SList', simultaneously, taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> (SBool, TPProofRaw z)) where
+  type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) = Forall na a -> Forall nb b -> SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -777,6 +808,9 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 
 -- | Induction over two 'SList', simultaneously, taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> (SBool, TPProofRaw z)) where
+
+  type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -790,6 +824,8 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
 
 -- | Induction over two 'SList', simultaneously, taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, TPProofRaw z)) where
+  type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -804,6 +840,8 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
 
 -- | Induction over two 'SList', simultaneously, taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw z)) where
+  type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool
+
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -826,8 +864,11 @@ instance KnownSymbol nm => Show (Inst nm a) where
 -- | Instantiating a proof at different types of arguments. This is necessarily done using
 -- dynamics, hand has a cost of not being applicable.
 class Instantiatable a where
+  type InstantiatesWith a :: Type
+  type InstantiatesTo   a :: Type
+
   -- | Apply a universal proof to some arguments, creating an instance of the proof itself.
-  at :: Proof -> a -> Proof
+  at :: Proof a -> InstantiatesWith a -> Proof (InstantiatesTo a)
 
 -- | Single parameter
 instance (KnownSymbol na, HasKind a, Typeable a) => Instantiatable (Inst na a) where
@@ -863,6 +904,10 @@ instance ( KnownSymbol na, HasKind a, Typeable a
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d, Inst ne e) where
   at  = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
 
+instantiate :: a
+instantiate = undefined
+
+{-
 -- | Instantiate a proof over an arg. This uses dynamic typing, kind of hacky, but works sufficiently well.
 instantiate :: (Typeable f, Show arg) => (f -> arg -> SBool) -> Proof -> arg -> Proof
 instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
@@ -890,11 +935,12 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
        paren s | "(" `isPrefixOf` s && ")" `isSuffixOf` s = s
                | not (any isSpace s)                      = s
                | True                                     = '(' : s ++ ")"
+-}
 
 -- | Helpers for a step
-data Helper = HelperProof  Proof  -- A previously proven theorem
-            | HelperAssum  SBool  -- A hypothesis
-            | HelperString String -- Just a text, only used for diagnostics
+data Helper = HelperProof  ProofObj  -- A previously proven theorem
+            | HelperAssum  SBool     -- A hypothesis
+            | HelperString String    -- Just a text, only used for diagnostics
 
 -- | Get all helpers used in a proof
 getAllHelpers :: TPProof -> [Helper]
@@ -903,7 +949,7 @@ getAllHelpers (ProofBranch (_ :: Bool) (_ :: [String]) ps) = concatMap (getAllHe
 getAllHelpers (ProofEnd    _           hs                ) = hs
 
 -- | Get proofs from helpers
-getHelperProofs :: Helper -> [Proof]
+getHelperProofs :: Helper -> [ProofObj]
 getHelperProofs (HelperProof p) = [p]
 getHelperProofs HelperAssum {}  = []
 getHelperProofs HelperString{}  = []
@@ -936,7 +982,7 @@ type TPProofRaw a = TPProofGen a [Helper] ()
 type TPProof = TPProofGen SBool [String] SBool
 
 -- | Collect dependencies for a TPProof
-getDependencies :: TPProof -> [Proof]
+getDependencies :: TPProof -> [ProofObj]
 getDependencies = collect
   where collect (ProofStep   _ hs next) = concatMap getHelperProofs hs ++ collect next
         collect (ProofBranch _ _  bs)   = concatMap (collect . snd) bs
@@ -962,8 +1008,8 @@ class HintsTo a b where
   addHint :: a -> b -> Hinted a
 
 -- | Giving just one proof as a helper.
-instance Hinted a ~ TPProofRaw a => HintsTo a Proof where
-  a `addHint` p = ProofStep a [HelperProof p] qed
+instance Hinted a ~ TPProofRaw a => HintsTo a (Proof b) where
+  a `addHint` p = ProofStep a [HelperProof (getProofObj p)] qed
 
 -- | Giving just one boolean as a helper.
 instance Hinted a ~ TPProofRaw a => HintsTo a SBool where
@@ -973,27 +1019,15 @@ instance Hinted a ~ TPProofRaw a => HintsTo a SBool where
 instance Hinted a ~ TPProofRaw a => HintsTo a Helper where
   a `addHint` h = ProofStep a [h] qed
 
--- | Giving a bunch of proofs as a helper.
-instance Hinted a ~ TPProofRaw a => HintsTo a [Proof] where
-  a `addHint` ps = ProofStep a (map HelperProof ps) qed
-
--- | Giving a bunch of booleans as a helper.
-instance Hinted a ~ TPProofRaw a => HintsTo a [SBool] where
-  a `addHint` ps = ProofStep a (map HelperAssum ps) qed
-
--- | Giving a set of helpers
-instance Hinted a ~ TPProofRaw a => HintsTo a [Helper] where
-  a `addHint` hs = ProofStep a hs qed
-
 -- | Giving user a hint as a string. This doesn't actually do anything for the solver, it just helps with readability
 instance Hinted a ~ TPProofRaw a => HintsTo a String where
   a `addHint` s = ProofStep a [HelperString s] qed
 
 -- | Giving just one proof as a helper, starting from a proof
-instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) Proof where
-  ProofStep   a hs ps `addHint` h = ProofStep   a (hs ++ [HelperProof h]) ps
-  ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [HelperProof h]) bs
-  ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [HelperProof h])
+instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) (Proof b) where
+  ProofStep   a hs ps `addHint` h = ProofStep   a (hs ++ [HelperProof (getProofObj h)]) ps
+  ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [HelperProof (getProofObj h)]) bs
+  ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [HelperProof (getProofObj h)])
 
 -- | Giving just one boolean as a helper.
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) SBool where
@@ -1006,12 +1040,6 @@ instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TP
   ProofStep   a hs ps `addHint` h = ProofStep   a (hs ++ [h]) ps
   ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [h]) bs
   ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [h])
-
--- | Giving a bunch of proofs as a helper.
-instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) [Proof] where
-  ProofStep   a hs ps `addHint` hs' = ProofStep   a (hs ++ map HelperProof hs') ps
-  ProofBranch b hs bs `addHint` hs' = ProofBranch b (hs ++ map HelperProof hs') bs
-  ProofEnd    b hs    `addHint` hs' = ProofEnd    b (hs ++ map HelperProof hs')
 
 -- | Giving a bunch of booleans as a helper.
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) [SBool] where
@@ -1155,10 +1183,5 @@ infix 0 ==>
 (⟹) :: SBool -> TPProofRaw a -> (SBool, TPProofRaw a)
 (⟹) = (==>)
 infix 0 ⟹
-
--- | Signature of a proof. This is simply the type of the proof, giving an idea
--- of what its parameters are and how they are named.
-signature :: Proof -> SomeTypeRep
-signature = dynTypeRep . getProp
 
 {- HLint ignore module "Eta reduce" -}
