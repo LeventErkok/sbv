@@ -22,8 +22,9 @@
 {-# LANGUAGE Rank2Types             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeFamilies           #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.List (
         -- * Length, emptiness
@@ -88,6 +89,8 @@ import qualified Data.List as L (inits, tails, isSuffixOf, isPrefixOf, isInfixOf
 
 import Data.Proxy
 
+import GHC.Exts   (IsList(..))
+
 #ifdef DOCTEST
 -- $setup
 -- >>> import Prelude hiding (head, tail, init, last, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any, replicate)
@@ -99,6 +102,15 @@ import Data.Proxy
 -- >>> :set -XScopedTypeVariables
 -- >>> :set -XTypeApplications
 #endif
+
+-- | IsList instance allows list literals to be written compactly.
+instance SymVal a => IsList (SList a) where
+  type Item (SList a) = SBV a
+
+  fromList = P.foldr (.:) nil
+  toList x = case unliteral x of
+               Nothing -> error "IsList.toList used in a symbolic context"
+               Just xs -> P.map literal xs
 
 -- | Length of a list.
 --

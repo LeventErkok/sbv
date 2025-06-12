@@ -68,15 +68,12 @@ module Data.SBV.Core.Data
 
 import GHC.TypeLits (KnownNat, Nat, Symbol, KnownSymbol, symbolVal, AppendSymbol, type (+), type (-), type (<=), natVal)
 
-import GHC.Exts     (IsList(..))
-
 import Control.DeepSeq        (NFData(..))
 import Control.Monad          (void, replicateM)
 import Control.Monad.Trans    (liftIO, MonadIO)
 import Data.Int               (Int8, Int16, Int32, Int64)
 import Data.Word              (Word8, Word16, Word32, Word64)
 import Data.List              (elemIndex)
-import Data.Maybe             (fromMaybe)
 
 import Data.Kind (Type)
 import Data.Proxy
@@ -242,12 +239,6 @@ type STuple7 a b c d e f g = SBV (a, b, c, d, e, f, g)
 
 -- | Symbolic 8-tuple.
 type STuple8 a b c d e f g h = SBV (a, b, c, d, e, f, g, h)
-
--- | IsList instance allows list literals to be written compactly.
-instance SymVal [a] => IsList (SList a) where
-  type Item (SList a) = a
-  fromList = literal
-  toList x = fromMaybe (error "IsList.toList used in a symbolic context!") (unliteral x)
 
 -- | Not-A-Number for 'Double' and 'Float'. Surprisingly, Haskell
 -- Prelude doesn't have this value defined, so we provide it here.
