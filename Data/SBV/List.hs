@@ -90,7 +90,7 @@ import qualified Data.List as L (inits, tails, isSuffixOf, isPrefixOf, isInfixOf
 
 import Data.Proxy
 
-import GHC.Exts   (IsList(..))
+import GHC.Exts (IsList(..))
 
 #ifdef DOCTEST
 -- $setup
