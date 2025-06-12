@@ -67,10 +67,9 @@ tests =
                                             , P.map (\x -> P.sum [x  ^ i         | i <- [1..10 :: Integer]])
                                             )
 
-      , goldenCapturedIO "lambda07" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]])
-                                            ( let sum = foldlL (+) 0 in   sum .   map   sum
-                                            ,                           P.sum . P.map P.sum
-                                            )
+      , goldenCapturedIO "lambda07" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]]) (   sum .   map   sum
+                                                                                        , P.sum . P.map P.sum
+                                                                                        )
 
       , goldenCapturedIO "lambda08" $ eval1 [1 .. 5 :: Float]   (mapl (+1), P.map (+1))
       , goldenCapturedIO "lambda09" $ eval1 [1 .. 5 :: Int8]    (mapl (+1), P.map (+1))
@@ -146,8 +145,8 @@ tests =
       , goldenCapturedIO "lambda47"   $ runSat2 (\a r -> a .== 5 .&& sumToN a .== r)
       , goldenCapturedIO "lambda47_c" $ runSat  (sumToN 5 .==)
 
-      , goldenCapturedIO "lambda48"   $ runSat2 (\a r -> a .== [1,2,3::Integer] .&& len a .== r)
-      , goldenCapturedIO "lambda48_c" $ runSat  (len [1,2,3::Integer] .==)
+      , goldenCapturedIO "lambda48"   $ runSat2 (\a r -> a .== [1,2,3::SInteger] .&& len a .== r)
+      , goldenCapturedIO "lambda48_c" $ runSat  (len [1,2,3::SInteger] .==)
 
       , goldenCapturedIO "lambda49"   $ runSat2 (\a r -> a .== 20 .&& isEven a .== r)
       , goldenCapturedIO "lambda49_c" $ runSat  (isEven 20 .==)
