@@ -75,17 +75,20 @@ declareSymbolic isEnum typeName = do
                        else ensureEmptyData   typeName
 
     deriveEqOrds <- if isEnum
-                       then [d| deriving instance Eq       $typeCon
-                                deriving instance Ord      $typeCon
+                       then [d| deriving instance Eq  $typeCon
+                                deriving instance Ord $typeCon
                             |]
                        else pure []
 
     derives <- [d| deriving instance Show     $typeCon
                    deriving instance Read     $typeCon
                    deriving instance Data     $typeCon
-                   deriving instance SymVal   $typeCon
                    deriving instance HasKind  $typeCon
                    deriving instance SatModel $typeCon
+               |]
+
+    symVals <- [d| instance SymVal $typeCon where
+                     minMaxBound = Nothing
                |]
 
 
@@ -106,7 +109,7 @@ declareSymbolic isEnum typeName = do
 
     addDocs (tname, btname) constrNames
 
-    pure $ deriveEqOrds ++ derives ++ [tdecl] ++ concat cdecls
+    pure $ deriveEqOrds ++ derives ++ symVals ++ [tdecl] ++ concat cdecls
 
  where addDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
 #if MIN_VERSION_template_haskell(2,18,0)

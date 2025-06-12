@@ -192,21 +192,24 @@ instance SymVal Int64 where
   fromCV   = genFromCV
 
 instance SymVal Integer where
-  mkSymVal = genMkSymVar KUnbounded
-  literal  = SBV . SVal KUnbounded . Left . mkConstCV KUnbounded
-  fromCV   = genFromCV
+  mkSymVal    = genMkSymVar KUnbounded
+  literal     = SBV . SVal KUnbounded . Left . mkConstCV KUnbounded
+  fromCV      = genFromCV
+  minMaxBound = Nothing
 
 instance SymVal Rational where
   mkSymVal                    = genMkSymVar KRational
   literal                     = SBV . SVal KRational  . Left . CV KRational . CRational
   fromCV (CV _ (CRational r)) = r
   fromCV c                    = error $ "SymVal.Rational: Unexpected non-rational value: " ++ show c
+  minMaxBound                 = Nothing
 
 instance SymVal AlgReal where
   mkSymVal                   = genMkSymVar KReal
   literal                    = SBV . SVal KReal . Left . CV KReal . CAlgReal
   fromCV (CV _ (CAlgReal a)) = a
   fromCV c                   = error $ "SymVal.AlgReal: Unexpected non-real value: " ++ show c
+  minMaxBound               = Nothing
 
   -- AlgReal needs its own definition of isConcretely
   -- to make sure we avoid using unimplementable Haskell functions
@@ -219,6 +222,7 @@ instance SymVal Float where
   literal                  = SBV . SVal KFloat . Left . CV KFloat . CFloat
   fromCV (CV _ (CFloat a)) = a
   fromCV c                 = error $ "SymVal.Float: Unexpected non-float value: " ++ show c
+  minMaxBound              = Nothing
 
   -- For Float, we conservatively return 'False' for isConcretely. The reason is that
   -- this function is used for optimizations when only one of the argument is concrete,
@@ -230,6 +234,7 @@ instance SymVal Double where
   literal                   = SBV . SVal KDouble . Left . CV KDouble . CDouble
   fromCV (CV _ (CDouble a)) = a
   fromCV c                  = error $ "SymVal.Double: Unexpected non-double value: " ++ show c
+  minMaxBound               = Nothing
 
   -- For Double, we conservatively return 'False' for isConcretely. The reason is that
   -- this function is used for optimizations when only one of the argument is concrete,
@@ -259,6 +264,8 @@ instance SymVal a => SymVal [a] where
   fromCV (CV _ (CList a))   = fromCV . CV (kindOf (Proxy @a)) <$> a
   fromCV c                  = error $ "SymVal.fromCV: Unexpected non-list value: " ++ show c
 
+  minMaxBound               = Nothing
+
 instance ValidFloat eb sb => HasKind (FloatingPoint eb sb) where
   kindOf _ = KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
 
@@ -268,6 +275,7 @@ instance ValidFloat eb sb => SymVal (FloatingPoint eb sb) where
                                in SBV $ SVal k $ Left $ CV k (CFP r)
   fromCV  (CV _ (CFP r))     = FloatingPoint r
   fromCV  c                  = error $ "SymVal.FPR: Unexpected non-arbitrary-precision value: " ++ show c
+  minMaxBound                = Nothing
 
 -- | 'SymVal' instance for 'WordN'
 instance (KnownNat n, BVIsNonZero n) => SymVal (WordN n) where
@@ -319,7 +327,9 @@ instance (SymVal a, SymVal b) => SymVal (Either a b) where
 
   fromCV (CV (KEither k1 _ ) (CEither (Left c)))  = Left  $ fromCV $ CV k1 c
   fromCV (CV (KEither _  k2) (CEither (Right c))) = Right $ fromCV $ CV k2 c
-  fromCV bad                                   = error $ "SymVal.fromCV (Either): Malformed either received: " ++ show bad
+  fromCV bad                                      = error $ "SymVal.fromCV (Either): Malformed either received: " ++ show bad
+
+  minMaxBound = Nothing
 
 instance SymVal a => SymVal (Maybe a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(Maybe a)))
@@ -334,6 +344,8 @@ instance SymVal a => SymVal (Maybe a) where
   fromCV (CV (KMaybe _) (CMaybe Nothing))  = Nothing
   fromCV (CV (KMaybe k) (CMaybe (Just x))) = Just $ fromCV $ CV k x
   fromCV bad                               = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
+
+  minMaxBound = Nothing
 
 instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (ArrayModel a b) where
   mkSymVal = genMkSymVar (KArray (kindOf (Proxy @a)) (kindOf (Proxy @b)))
@@ -350,6 +362,8 @@ instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (ArrayModel a b) w
 
   fromCV bad = error $ "SymVal.fromCV (SArray): Malformed array received: " ++ show bad
 
+  minMaxBound = Nothing
+
 instance (Ord a, SymVal a) => SymVal (RCSet a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(RCSet a)))
 
@@ -362,6 +376,8 @@ instance (Ord a, SymVal a) => SymVal (RCSet a) where
   fromCV (CV (KSet a) (CSet (RegularSet    s))) = RegularSet    $ Set.map (fromCV . CV a) s
   fromCV (CV (KSet a) (CSet (ComplementSet s))) = ComplementSet $ Set.map (fromCV . CV a) s
   fromCV bad                                    = error $ "SymVal.fromCV (Set): Malformed set received: " ++ show bad
+
+  minMaxBound = Nothing
 
 -- | SymVal for 0-tuple (i.e., unit)
 instance SymVal () where
@@ -376,12 +392,15 @@ instance (SymVal a, SymVal b) => SymVal (a, b) where
    fromCV  cv       = let ~[v1, v2] = fromCVTup 2 cv
                       in (fromCV v1, fromCV v2)
 
+   minMaxBound = Nothing
+
 -- | SymVal for 3-tuples
 instance (SymVal a, SymVal b, SymVal c) => SymVal (a, b, c) where
    mkSymVal             = genMkSymVar (kindOf (Proxy @(a, b, c)))
    literal (v1, v2, v3) = mkCVTup 3   (kindOf (Proxy @(a, b, c))) [toCV v1, toCV v2, toCV v3]
    fromCV  cv           = let ~[v1, v2, v3] = fromCVTup 3 cv
                           in (fromCV v1, fromCV v2, fromCV v3)
+   minMaxBound          = Nothing
 
 -- | SymVal for 4-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d) => SymVal (a, b, c, d) where
@@ -389,6 +408,7 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d) => SymVal (a, b, c, d) where
    literal (v1, v2, v3, v4) = mkCVTup 4   (kindOf (Proxy @(a, b, c, d))) [toCV v1, toCV v2, toCV v3, toCV v4]
    fromCV  cv               = let ~[v1, v2, v3, v4] = fromCVTup 4 cv
                               in (fromCV v1, fromCV v2, fromCV v3, fromCV v4)
+   minMaxBound              = Nothing
 
 -- | SymVal for 5-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => SymVal (a, b, c, d, e) where
@@ -396,6 +416,7 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => SymVal (a, b, c, 
    literal (v1, v2, v3, v4, v5) = mkCVTup 5   (kindOf (Proxy @(a, b, c, d, e))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5]
    fromCV  cv                   = let ~[v1, v2, v3, v4, v5] = fromCVTup 5 cv
                                   in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5)
+   minMaxBound                  = Nothing
 
 -- | SymVal for 6-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f) => SymVal (a, b, c, d, e, f) where
@@ -403,6 +424,7 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f) => SymVal 
    literal (v1, v2, v3, v4, v5, v6) = mkCVTup 6   (kindOf (Proxy @(a, b, c, d, e, f))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6]
    fromCV  cv                       = let ~[v1, v2, v3, v4, v5, v6] = fromCVTup 6 cv
                                       in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6)
+   minMaxBound                      = Nothing
 
 -- | SymVal for 7-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g) => SymVal (a, b, c, d, e, f, g) where
@@ -410,6 +432,7 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g) 
    literal (v1, v2, v3, v4, v5, v6, v7) = mkCVTup 7   (kindOf (Proxy @(a, b, c, d, e, f, g))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6, toCV v7]
    fromCV  cv                           = let ~[v1, v2, v3, v4, v5, v6, v7] = fromCVTup 7 cv
                                           in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6, fromCV v7)
+   minMaxBound                          = Nothing
 
 -- | SymVal for 8-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h) => SymVal (a, b, c, d, e, f, g, h) where
@@ -417,6 +440,7 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, 
    literal (v1, v2, v3, v4, v5, v6, v7, v8) = mkCVTup 8   (kindOf (Proxy @(a, b, c, d, e, f, g, h))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6, toCV v7, toCV v8]
    fromCV  cv                               = let ~[v1, v2, v3, v4, v5, v6, v7, v8] = fromCVTup 8 cv
                                               in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6, fromCV v7, fromCV v8)
+   minMaxBound                              = Nothing
 
 instance IsString SString where
   fromString = literal
@@ -1741,24 +1765,31 @@ sBarrelRotateRight = liftViaSVal svBarrelRotateRight
 -- a concrete argument for obvious reasons. Other variants (succ, pred, [x..]) etc are similarly
 -- limited. While symbolic variants can be defined for many of these, they will just diverge
 -- as final sizes cannot be determined statically.
-instance (Show a, Bounded a, Integral a, Num a, Num (SBV a), SymVal a) => Enum (SBV a) where
+instance (Show a, Integral a, Num a, Num (SBV a), SymVal a) => Enum (SBV a) where
   succ x
-    | v == (maxBound :: a) = error $ "Enum.succ{" ++ showType x ++ "}: tried to take `succ' of maxBound"
-    | True                 = fromIntegral $ v + 1
+    | Just (_, h :: a) <- minMaxBound, v == h
+    = error $ "Enum.succ{" ++ showType x ++ "}: tried to take `succ' of maxBound"
+    | True
+    = fromIntegral $ v + 1
     where v = enumCvt "succ" x
+
   pred x
-    | v == (minBound :: a) = error $ "Enum.pred{" ++ showType x ++ "}: tried to take `pred' of minBound"
-    | True                 = fromIntegral $ v - 1
+    | Just (l :: a, _) <- minMaxBound, v == l
+    = error $ "Enum.pred{" ++ showType x ++ "}: tried to take `pred' of minBound"
+    | True
+    = fromIntegral $ v - 1
     where v = enumCvt "pred" x
+
   toEnum x
-    | xi < fromIntegral (minBound :: a) || xi > fromIntegral (maxBound :: a)
-    = error $ "Enum.toEnum{" ++ showType r ++ "}: " ++ show x ++ " is out-of-bounds " ++ show (minBound :: a, maxBound :: a)
+    | Just (l :: a, h) <- minMaxBound, xi < fromIntegral l || xi > fromIntegral h
+    = error $ "Enum.toEnum{" ++ showType r ++ "}: " ++ show x ++ " is out-of-bounds " ++ show (l, h)
     | True
     = r
     where xi :: Integer
           xi = fromIntegral x
           r  :: SBV a
           r  = fromIntegral x
+
   fromEnum x
      | r < fromIntegral (minBound :: Int) || r > fromIntegral (maxBound :: Int)
      = error $ "Enum.fromEnum{" ++ showType x ++ "}:  value " ++ show r ++ " is outside of Int's bounds " ++ show (minBound :: Int, maxBound :: Int)
@@ -1766,15 +1797,26 @@ instance (Show a, Bounded a, Integral a, Num a, Num (SBV a), SymVal a) => Enum (
      = fromIntegral r
     where r :: Integer
           r = enumCvt "fromEnum" x
-  enumFrom x = map fromIntegral [xi .. fromIntegral (maxBound :: a)]
+
+  enumFrom x
+     | Just (_, h :: a) <- minMaxBound
+     = map fromIntegral [xi .. fromIntegral h]
+     | True
+     = error $ "Enum.enumFrom{" ++ showType x ++ "}: is not a bounded type, and SBV doesn't support infinite lists."
      where xi :: Integer
            xi = enumCvt "enumFrom" x
+
   enumFromThen x y
-     | yi >= xi  = map fromIntegral [xi, yi .. fromIntegral (maxBound :: a)]
-     | True      = map fromIntegral [xi, yi .. fromIntegral (minBound :: a)]
-       where xi, yi :: Integer
-             xi = enumCvt "enumFromThen.x" x
-             yi = enumCvt "enumFromThen.y" y
+     | Just (l :: a, h) <- minMaxBound
+     = if yi >= xi
+          then map fromIntegral [xi, yi .. fromIntegral h]
+          else map fromIntegral [xi, yi .. fromIntegral l]
+     | True
+     = error $ "Enum.enumFromThen{" ++ showType x ++ "}: is not a bounded type, and SBV doesn't support infinite lists."
+     where xi, yi :: Integer
+           xi = enumCvt "enumFromThen.x" x
+           yi = enumCvt "enumFromThen.y" y
+
   enumFromThenTo x y z = map fromIntegral [xi, yi .. zi]
        where xi, yi, zi :: Integer
              xi = enumCvt "enumFromThenTo.x" x

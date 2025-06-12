@@ -42,15 +42,16 @@ instance HasKind Metres where
 -- | The 'SymVal' instance simply uses stock definitions. This is always
 -- possible for newtypes that simply wrap over an existing symbolic type.
 instance SymVal Metres where
-   mkSymVal = SI.genMkSymVar KUnbounded
-   literal  = SI.genLiteral  KUnbounded
-   fromCV   = SI.genFromCV
+   mkSymVal    = SI.genMkSymVar KUnbounded
+   literal     = SI.genLiteral  KUnbounded
+   fromCV      = SI.genFromCV
+   minMaxBound = Nothing
 
 -- | Similarly, we can create another newtype, this time wrapping over 'Word16'. As an example,
 -- consider measuring the human height in centimetres? The tallest person in history,
 -- Robert Wadlow, was 272 cm. We don't need negative values, so 'Word16' is the smallest type that
 -- suits our needs.
-newtype HumanHeightInCm = HumanHeightInCm Word16 deriving (Real, Integral, Num, Enum, Eq, Ord)
+newtype HumanHeightInCm = HumanHeightInCm Word16 deriving (Real, Integral, Num, Enum, Eq, Ord, Bounded)
 
 -- | Symbolic version of t'HumanHeightInCm'.
 type SHumanHeightInCm = SBV HumanHeightInCm

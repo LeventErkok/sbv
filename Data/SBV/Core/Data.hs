@@ -609,6 +609,10 @@ class (HasKind a, Typeable a) => SymVal a where
   -- | Does it concretely satisfy the given predicate?
   isConcretely :: SBV a -> (a -> Bool) -> Bool
 
+  -- | If bounded, what's the min/max value for this type?
+  -- If the underlying type is bounded, we have a default below. Otherwise it's nothing.
+  minMaxBound :: Maybe (a, a)
+
   -- minimal complete definition: Nothing.
   -- Giving no instances is okay when defining an uninterpreted/enumerated sort, but otherwise you really
   -- want to define: literal, fromCV, mkSymVal
@@ -635,6 +639,9 @@ class (HasKind a, Typeable a) => SymVal a where
   default fromCV :: Read a => CV -> a
   fromCV (CV _ (CUserSort (_, s))) = read s
   fromCV cv                        = error $ "Cannot convert CV " ++ show cv ++ " to kind " ++ show (kindOf (Proxy @a))
+
+  default minMaxBound :: Bounded a => Maybe (a, a)
+  minMaxBound = Just (minBound, maxBound)
 
   isConcretely s p
     | Just i <- unliteral s = p i

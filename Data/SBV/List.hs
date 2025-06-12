@@ -537,20 +537,19 @@ class (SymVal a, SymVal b) => SMap func a b | func -> a b where
 instance (SymVal a, SymVal b) => SMap (SBV a -> SBV b) a b where
   -- | @`map` f s@ maps the operation on to sequence.
   --
-  -- >>> map (+ (1 :: SInteger)) (literal [1 .. 5])
+  -- >>> map (+ (1 :: SInteger)) [1 .. 5 :: SInteger]
   -- [2,3,4,5,6] :: [SInteger]
-  -- >>> map (+ (1 :: SWord 8)) [1 .. 5 :: WordN 8]
+  -- >>> map (+ (1 :: SWord 8)) [1 .. 5 :: SWord 8]
   -- [2,3,4,5,6] :: [SWord8]
-  -- >>> map (\x -> [x]) (literal [1 .. 3])
+  -- >>> map (\x -> [x] :: SList Integer) [1 .. 3 :: SInteger]
   -- [[1],[2],[3]] :: [[SInteger]]
   -- >>> import Data.SBV.Tuple
-  -- >>> import GHC.Exts (fromList)
-  -- >>> map (\t -> t^._1 + t^._2) (fromList [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
+  -- >>> map (\t -> t^._1 + t^._2) (literal [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
   -- [5,6,7,6,7,8,7,8,9] :: [SInteger]
   --
   -- Of course, SBV's 'map' can also be reused in reverse:
   --
-  -- >>> sat $ \l -> map (+(1 :: SInteger)) l .== [1,2,3 :: Integer]
+  -- >>> sat $ \l -> map (+(1 :: SInteger)) l .== [1,2,3 :: SInteger]
   -- Satisfiable. Model:
   --   s0 = [0,1,2] :: [Integer]
   map f l
@@ -598,16 +597,16 @@ class (SymVal a, SymVal b) => SFoldL func a b | func -> a b where
 instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
   -- | @`foldl` f b s@ folds the sequence from the left.
   --
-  -- >>> foldl ((+) @SInteger) 0 [1 .. 5 :: Integer]
+  -- >>> foldl ((+) @SInteger) 0 [1 .. 5 :: SInteger]
   -- 15 :: SInteger
-  -- >>> foldl ((*) @SInteger) 1 [1 .. 5 :: Integer]
+  -- >>> foldl ((*) @SInteger) 1 [1 .. 5 :: SInteger]
   -- 120 :: SInteger
-  -- >>> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) [1 .. 5 :: Integer]
+  -- >>> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) [1 .. 5 :: SInteger]
   -- [5,4,3,2,1] :: [SInteger]
   --
   -- Again, we can use 'Data.SBV.List.foldl' in the reverse too:
   --
-  -- >>> sat $ \l -> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: Integer]
+  -- >>> sat $ \l -> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: SInteger]
   -- Satisfiable. Model:
   --   s0 = [1,2,3,4,5] :: [Integer]
   foldl f base l
@@ -658,11 +657,11 @@ class (SymVal a, SymVal b) => SFoldR func a b | func -> a b where
 instance (SymVal a, SymVal b) => SFoldR (SBV a -> SBV b -> SBV b) a b where
   -- | @`foldr` f base s@ folds the sequence from the right.
   --
-  -- >>> foldr ((+) @SInteger) 0 [1 .. 5 :: Integer]
+  -- >>> foldr ((+) @SInteger) 0 [1 .. 5 :: SInteger]
   -- 15 :: SInteger
-  -- >>> foldr ((*) @SInteger) 1 [1 .. 5 :: Integer]
+  -- >>> foldr ((*) @SInteger) 1 [1 .. 5 :: SInteger]
   -- 120 :: SInteger
-  -- >>> foldr (\elt soFar -> soFar ++ [elt]) ([] :: SList Integer) [1 .. 5 :: Integer]
+  -- >>> foldr (\elt soFar -> soFar ++ [elt]) ([] :: SList Integer) [1 .. 5 :: SInteger]
   -- [5,4,3,2,1] :: [SInteger]
   foldr f base l
     | Just concResult <- concreteFoldr f f base l
@@ -693,10 +692,10 @@ instance (SymVal env, SymVal a, SymVal b) => SFoldR (Closure (SBV env) (SBV a ->
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
 --
--- >>> zip [1..10::Integer] [11..20::Integer]
+-- >>> zip [1..10 :: SInteger] [11..20 :: SInteger]
 -- [(1,11),(2,12),(3,13),(4,14),(5,15),(6,16),(7,17),(8,18),(9,19),(10,20)] :: [(SInteger, SInteger)]
 -- >>> import Data.SBV.Tuple
--- >>> foldr ((+) @SInteger) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [1..10::Integer] [10, 9..1::Integer]))
+-- >>> foldr ((+) @SInteger) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [1..10 :: SInteger] [10, 9..1 :: SInteger]))
 -- 110 :: SInteger
 zip :: forall a b. (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
 zip xs ys
@@ -730,7 +729,7 @@ instance (SymVal a, SymVal b, SymVal c) => SZipWith (SBV a -> SBV b -> SBV c) a 
    --
    -- >>> zipWith ((+) @SInteger) (literal [1..10]) (literal [11..20])
    -- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]
-   -- >>> foldr ((+) @SInteger) 0 (zipWith ((+) @SInteger) [1..10::Integer] [10, 9..1::Integer])
+   -- >>> foldr ((+) @SInteger) 0 (zipWith ((+) @SInteger) [1..10 :: SInteger] [10, 9..1 :: SInteger])
    -- 110 :: SInteger
    zipWith f xs ys
     | Just concResult <- concreteZipWith f f xs ys
@@ -758,7 +757,7 @@ instance (SymVal env, SymVal a, SymVal b, SymVal c) => SZipWith (Closure (SBV en
 
 -- | Concatenate list of lists.
 --
--- >>> concat [[1..3::Integer], [4..7], [8..10]]
+-- >>> concat [[1..3::SInteger], [4..7], [8..10]]
 -- [1,2,3,4,5,6,7,8,9,10] :: [SInteger]
 concat :: forall a. SymVal a => SList [a] -> SList a
 concat = foldr (++) nil
@@ -835,9 +834,9 @@ tails xs
 
 -- | Difference.
 --
--- >>> [1, 2] \\ [3, 4]
+-- >>> [1, 2] \\ [3, 4 :: SInteger]
 -- [1,2] :: [SInteger]
--- >>> [1, 2] \\ [2, 4]
+-- >>> [1, 2] \\ [2, 4 :: SInteger]
 -- [1] :: [SInteger]
 (\\) :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SList a
 xs \\ ys
