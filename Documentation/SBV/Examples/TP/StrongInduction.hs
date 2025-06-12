@@ -280,12 +280,9 @@ sumHalves = runTP $ do
                                                            (let (f, s) = splitAt (length xs `sDiv` 2) xs
                                                             in halvingSum f + halvingSum s)
 
-        sum :: SList Integer -> SInteger
-        sum = smtFunction "sum" $ \xs -> ite (null xs) 0 (head xs + sum (tail xs))
-
     helper <- induct "sumAppend"
-                     (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
-                     \ih x xs ys -> [] |- sum (x .: xs ++ ys)
+                     (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum @Integer (xs ++ ys) .== sum xs + sum ys) $
+                     \ih x xs ys -> [] |- sum @Integer (x .: xs ++ ys)
                                        =: x + sum (xs ++ ys)
                                        ?? ih
                                        =: x + sum xs + sum ys

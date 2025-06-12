@@ -56,13 +56,11 @@ import Data.Proxy
 revSum :: forall a. (SymVal a, Num (SBV a)) => Proxy a -> IO Proof
 revSum p = runTP $ do
 
-  let sum = foldr ((+) @(SBV a)) 0
-
   -- helper: sum distributes over append.
   sumAppend <-
      induct (atProxy p "sumAppend")
-            (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
-            \ih x xs ys -> [] |- sum ((x .: xs) ++ ys)
+            (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum @a (xs ++ ys) .== sum xs + sum ys) $
+            \ih x xs ys -> [] |- sum @a ((x .: xs) ++ ys)
                               =: sum (x .: (xs ++ ys))
                               =: x + sum (xs ++ ys)
                               ?? ih
@@ -72,8 +70,8 @@ revSum p = runTP $ do
 
   -- Now prove the original theorem by induction
   induct (atProxy p "sumReverse")
-         (\(Forall @"xs" xs) -> sum (reverse xs) .== sum xs) $
-         \ih x xs -> [] |- sum (reverse (x .: xs))
+         (\(Forall @"xs" xs) -> sum @a (reverse xs) .== sum xs) $
+         \ih x xs -> [] |- sum @a (reverse (x .: xs))
                         =: sum (reverse xs ++ singleton x)
                         ?? sumAppend
                         =: sum (reverse xs) + sum (singleton x)

@@ -36,7 +36,7 @@
     addressed by TP'sinduction methods. If you were using this functionality and have problems
     porting to TP, please get in touch!
 
-  * Added functions 'last', 'replicate', and '\\' to Data.SBV.List.
+  * Added functions 'sum', 'product', 'last', 'replicate', and '\\' to Data.SBV.List.
 
   * Removed Data.SBV.String, and unified list and string functions just as in Haskell. This was a long-time wart
     in SBV, where we distinguished strings and list of characters since SMTLib does not equate them. SBV now

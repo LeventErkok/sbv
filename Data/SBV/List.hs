@@ -62,13 +62,16 @@ module Data.SBV.List (
         -- * Generators
         , replicate, inits, tails
 
+        -- * Sum and product
+        , sum, product
+
         -- * Conversion between strings and naturals
         , strToNat, natToStr
         ) where
 
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
-                       all, any, and, or, replicate, fst, snd)
+                       all, any, and, or, replicate, fst, snd, sum, product)
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
@@ -932,6 +935,14 @@ instance (SymVal env, SymVal a) => SPartition (Closure (SBV env) (SBV a -> SBool
                                    in ite (closureFun cEnv h)
                                           (tuple (h .: as, bs))
                                           (tuple (as, h .: bs))
+
+-- | @`sum` s@. Sum the given sequence.
+sum :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
+sum = foldr ((+) @(SBV a)) 0
+
+-- | @`prod` s@. Multiply out the given sequence.
+product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
+product = foldr ((*) @(SBV a)) 1
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
