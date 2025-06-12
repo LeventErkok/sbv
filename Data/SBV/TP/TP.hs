@@ -861,81 +861,13 @@ newtype Inst (nm :: Symbol) a = Inst (SBV a)
 instance KnownSymbol nm => Show (Inst nm a) where
    show (Inst a) = symbolVal (Proxy @nm) ++ " |-> " ++ show a
 
--- | Instantiating a proof at different types of arguments. This is necessarily done using
--- dynamics, hand has a cost of not being applicable.
+
 class Instantiatable a where
   type InstantiatesWith a :: Type
   type InstantiatesTo   a :: Type
 
   -- | Apply a universal proof to some arguments, creating an instance of the proof itself.
   at :: Proof a -> InstantiatesWith a -> Proof (InstantiatesTo a)
-
--- | Single parameter
-instance (KnownSymbol na, HasKind a, Typeable a) => Instantiatable (Inst na a) where
-  at  = instantiate $ \f (Inst a) -> f (Forall a :: Forall na a)
-
--- | Two parameters
-instance ( KnownSymbol na, HasKind a, Typeable a
-         , KnownSymbol nb, HasKind b, Typeable b
-         ) => Instantiatable (Inst na a, Inst nb b) where
-  at  = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b)
-
--- | Three parameters
-instance ( KnownSymbol na, HasKind a, Typeable a
-         , KnownSymbol nb, HasKind b, Typeable b
-         , KnownSymbol nc, HasKind c, Typeable c
-         ) => Instantiatable (Inst na a, Inst nb b, Inst nc c) where
-  at  = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c)
-
--- | Four parameters
-instance ( KnownSymbol na, HasKind a, Typeable a
-         , KnownSymbol nb, HasKind b, Typeable b
-         , KnownSymbol nc, HasKind c, Typeable c
-         , KnownSymbol nd, HasKind d, Typeable d
-         ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d) where
-  at  = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
-
--- | Five parameters
-instance ( KnownSymbol na, HasKind a, Typeable a
-         , KnownSymbol nb, HasKind b, Typeable b
-         , KnownSymbol nc, HasKind c, Typeable c
-         , KnownSymbol nd, HasKind d, Typeable d
-         , KnownSymbol ne, HasKind e, Typeable e
-         ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d, Inst ne e) where
-  at  = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
-
-instantiate :: a
-instantiate = undefined
-
-{-
--- | Instantiate a proof over an arg. This uses dynamic typing, kind of hacky, but works sufficiently well.
-instantiate :: (Typeable f, Show arg) => (f -> arg -> SBool) -> Proof -> arg -> Proof
-instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
-                                                 Nothing -> cantInstantiate
-                                                 Just f  -> let result = f `ap` a
-                                                                nm     = proofName ++ " @ " ++ paren sha
-                                                            in p { getProof  = label nm result
-                                                                 , getProp   = toDyn result
-                                                                 , proofName = nm
-                                                                 }
- where sha = show a
-       cantInstantiate = error $ unlines [ "at: Cannot instantiate proof:"
-                                         , "   Name: " ++ proofName
-                                         , "   Type: " ++ trim (show getProp)
-                                         , "   At  : " ++ sha
-                                         ]
-
-       -- dynamic puts funky <</>> at the beginning and end; trim it:
-       trim  ('<':'<':s) = reverse (trimE (reverse s))
-       trim  s           = s
-       trimE ('>':'>':s) = s
-       trimE s           = s
-
-       -- Add parens if necessary
-       paren s | "(" `isPrefixOf` s && ")" `isSuffixOf` s = s
-               | not (any isSpace s)                      = s
-               | True                                     = '(' : s ++ ")"
--}
 
 -- | Helpers for a step
 data Helper = HelperProof  ProofObj  -- A previously proven theorem

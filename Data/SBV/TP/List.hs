@@ -96,9 +96,9 @@ import Data.Proxy
 -- >>> runTP $ appendNull (Proxy @Integer)
 -- Lemma: appendNull @Integer              Q.E.D.
 -- [Proven] appendNull @Integer
-appendNull :: forall a. SymVal a => Proxy a -> TP Proof
+appendNull :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> SBool))
 appendNull p = lemma (atProxy p "appendNull")
-                     (\(Forall @"xs" (xs :: SList a)) -> xs ++ nil .== xs)
+                     (\(Forall @"xs" xs) -> xs ++ nil .== xs)
                      []
 
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
@@ -106,9 +106,9 @@ appendNull p = lemma (atProxy p "appendNull")
 -- >>> runTP $ consApp (Proxy @Integer)
 -- Lemma: consApp @Integer                 Q.E.D.
 -- [Proven] consApp @Integer
-consApp :: forall a. SymVal a => Proxy a -> TP Proof
+consApp :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 consApp p = lemma (atProxy p "consApp")
-                  (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
+                  (\(Forall @"x") (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
                   []
 
 -- | @(xs ++ ys) ++ zs == xs ++ (ys ++ zs)@
