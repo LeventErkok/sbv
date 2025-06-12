@@ -542,9 +542,8 @@ import Data.Proxy (Proxy(..))
 import Data.Kind  (Type)
 import GHC.TypeLits (KnownNat, type (<=), type (+), type (-))
 
-import Prelude hiding((+), (-)) -- to avoid the haddock ambiguity
-
 import Data.Char (isSpace, isPunctuation)
+import Data.SBV.List () -- instances only
 
 #ifdef DOCTEST
 --- $setup
