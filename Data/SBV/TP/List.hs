@@ -228,15 +228,15 @@ tailsAppend p = do
 
    induct (atProxy p "tailsAppend")
           (\(Forall xs) (Forall ys) -> tails (xs ++ ys) .== appendEach ys (tails xs) ++ tail (tails ys)) $
-          \ih (x, xs) ys -> [getProof bc]
-                         |- tails ((x .: xs) ++ ys)
-                         =: tails (x .: (xs ++ ys))
-                         =: [x .: (xs ++ ys)] ++ tails (xs ++ ys)
-                         ?? ih
-                         =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs) ++ tail (tails ys)
-                         ?? helper
-                         =: appendEach ys (tails (x .: xs)) ++ tail (tails ys)
-                         =: qed
+          \ih ((x, xs), ys) -> [getProof bc]
+                            |- tails ((x .: xs) ++ ys)
+                            =: tails (x .: (xs ++ ys))
+                            =: [x .: (xs ++ ys)] ++ tails (xs ++ ys)
+                            ?? ih
+                            =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs) ++ tail (tails ys)
+                            ?? helper
+                            =: appendEach ys (tails (x .: xs)) ++ tail (tails ys)
+                            =: qed
 
 -- | @length xs == length (reverse xs)@
 --
@@ -277,14 +277,14 @@ revApp :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall 
 revApp p =
    induct (atProxy p "revApp")
           (\(Forall xs) (Forall ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
-          \ih (x, xs) ys -> [] |- reverse ((x .: xs) ++ ys)
-                               =: reverse (x .: (xs ++ ys))
-                               =: reverse (xs ++ ys) ++ [x]
-                               ?? ih
-                               =: (reverse ys ++ reverse xs) ++ [x]
-                               =: reverse ys ++ (reverse xs ++ [x])
-                               =: reverse ys ++ reverse (x .: xs)
-                               =: qed
+          \ih ((x, xs), ys) -> [] |- reverse ((x .: xs) ++ ys)
+                                  =: reverse (x .: (xs ++ ys))
+                                  =: reverse (xs ++ ys) ++ [x]
+                                  ?? ih
+                                  =: (reverse ys ++ reverse xs) ++ [x]
+                                  =: reverse ys ++ (reverse xs ++ [x])
+                                  =: reverse ys ++ reverse (x .: xs)
+                                  =: qed
 
 {-
 -- | @reverse (x:xs) == reverse xs ++ [x]@
