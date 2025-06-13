@@ -379,30 +379,30 @@ getInductionStrategySaturatables (InductionStrategy inductionIntros
                                                     inductiveStep)
   = inductionIntros : inductiveStep : proofTreeSaturatables inductionProofSteps ++ maybeToList inductionBaseCase ++ maybeToList inductionMeasure
 
--- | A class for doing regular inductive proofs. @a@ is the proposition we want to prove, @t@ is the intermediate equality type.
-class EqSymbolic t => Inductive a t where
+-- | A class for doing regular inductive proofs.
+class Inductive a where
    type IHType a :: Type
    type IHArg  a :: Type
 
    -- | Inductively prove a lemma, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   induct  :: Proposition a => String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   induct  :: (Proposition a, EqSymbolic t) => String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
    -- | Inductively prove a theorem. Same as 'induct', but tagged as a theorem, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductThm :: Proposition a => String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   inductThm :: (Proposition a, EqSymbolic t) => String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
    -- | Same as 'induct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductWith :: Proposition a => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   inductWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
    -- | Same as 'inductThm', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductThmWith :: Proposition a => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   inductThmWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
    induct            nm p steps = getTPConfig >>= \cfg  -> inductWith                             cfg                   nm p steps
    inductThm         nm p steps = getTPConfig >>= \cfg  -> inductThmWith                          cfg                   nm p steps
@@ -411,7 +411,7 @@ class EqSymbolic t => Inductive a t where
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL inductionStrategy #-}
-   inductionStrategy :: Proposition a => a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> Symbolic InductionStrategy
+   inductionStrategy :: (Proposition a, EqSymbolic t) => a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> Symbolic InductionStrategy
 
 -- | A class of measures, used for inductive arguments.
 class OrdSymbolic a => Measure a where
@@ -437,28 +437,28 @@ instance Measure (SInteger, SInteger, SInteger, SInteger, SInteger) where
   zero = (0, 0, 0, 0, 0)
 
 -- | A class for doing generalized measure based strong inductive proofs.
-class EqSymbolic t => SInductive a t where
+class SInductive a where
    type SIHArg a :: Type
 
    -- | Inductively prove a lemma, using measure based induction, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInduct :: (Proposition a, Measure m) => String -> a -> (SIHArg a -> m) -> (Proof a -> SIHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   sInduct :: (Proposition a, Measure m, EqSymbolic t) => String -> a -> (SIHArg a -> m) -> (Proof a -> SIHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
    -- | Inductively prove a theorem, using measure based induction. Same as 'sInduct', but tagged as a theorem, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductThm :: (Proposition a, Measure m) => String -> a -> (SIHArg a -> m) -> (Proof a -> SIHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   sInductThm :: (Proposition a, Measure m, EqSymbolic t) => String -> a -> (SIHArg a -> m) -> (Proof a -> SIHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
    -- | Same as 'sInduct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductWith :: (Proposition a, Measure m) => SMTConfig -> String -> a -> (SIHArg a -> m) -> (Proof a -> SIHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   sInductWith :: (Proposition a, Measure m, EqSymbolic t) => SMTConfig -> String -> a -> (SIHArg a -> m) -> (Proof a -> SIHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
    -- | Same as 'sInductThm', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductThmWith :: (Proposition a, Measure m) => SMTConfig -> String -> a -> (SIHArg a -> m) -> (Proof a -> SIHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   sInductThmWith :: (Proposition a, Measure m, EqSymbolic t) => SMTConfig -> String -> a -> (SIHArg a -> m) -> (Proof a -> SIHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
    sInduct            nm p m steps = getTPConfig >>= \cfg  -> sInductWith                            cfg                   nm p m steps
    sInductThm         nm p m steps = getTPConfig >>= \cfg  -> sInductThmWith                         cfg                   nm p m steps
@@ -467,7 +467,7 @@ class EqSymbolic t => SInductive a t where
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL sInductionStrategy #-}
-   sInductionStrategy :: (Proposition a, Measure m) => a -> (SIHArg a -> m) -> (Proof a -> SIHArg a -> (SBool, TPProofRaw t)) -> Symbolic InductionStrategy
+   sInductionStrategy :: (Proposition a, Measure m, EqSymbolic t) => a -> (SIHArg a -> m) -> (Proof a -> SIHArg a -> (SBool, TPProofRaw t)) -> Symbolic InductionStrategy
 
 -- | Do an inductive proof, based on the given strategy
 inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> TP (Proof a)
@@ -545,7 +545,7 @@ indResult :: [String] -> SBool -> SBool
 indResult nms = observeIf not ("P(" ++ intercalate ", " nms ++ ")")
 
 -- | Induction over 'SInteger'
-instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool) z where
+instance KnownSymbol nn => Inductive (Forall nn Integer -> SBool) where
   type IHType (Forall nn Integer -> SBool) = SBool
   type IHArg  (Forall nn Integer -> SBool) = SInteger
 
@@ -557,7 +557,7 @@ instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool
                             (indResult [nn ++ "+1"] (result (Forall (n+1))))
 
 -- | Induction over 'SInteger', taking an extra argument
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> SBool) z where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Integer -> Forall na a -> SBool) where
   type IHType (Forall nn Integer -> Forall na a -> SBool) = Forall na a -> SBool
   type IHArg  (Forall nn Integer -> Forall na a -> SBool) = (SInteger, SBV a)
 
@@ -570,7 +570,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (
                             (indResult [nn ++ "+1", na] (result (Forall (n+1)) (Forall a)))
 
 -- | Induction over 'SInteger', taking two extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) z where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) where
   type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) = Forall na a -> Forall nb b -> SBool
   type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) = (SInteger, SBV a, SBV b)
 
@@ -584,7 +584,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Eq
                             (indResult [nn ++ "+1", na, nb] (result (Forall (n+1)) (Forall a) (Forall b)))
 
 -- | Induction over 'SInteger', taking three extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) z where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
   type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> SBool
   type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SInteger, SBV a, SBV b, SBV c)
 
@@ -599,7 +599,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (indResult [nn ++ "+1", na, nb, nc] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over 'SInteger', taking four extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) z where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
   type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool
   type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SInteger, SBV a, SBV b, SBV c, SBV d)
 
@@ -615,7 +615,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (indResult [nn ++ "+1", na, nb, nc, nd] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over 'SInteger', taking five extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) z where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
   type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool
   type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SInteger, SBV a, SBV b, SBV c, SBV d, SBV e)
 
@@ -641,7 +641,7 @@ singular n = case reverse n of
                _       -> n ++ "Elt"
 
 -- | Induction over 'SList'
-instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] -> SBool) z where
+instance (KnownSymbol nxs, SymVal x) => Inductive (Forall nxs [x] -> SBool) where
   type IHType (Forall nxs [x] -> SBool) = SBool
   type IHArg  (Forall nxs [x] -> SBool) = (SBV x, SList x)
 
@@ -653,7 +653,7 @@ instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] 
                             (indResult [nxxs] (result (Forall (x SL..: xs))))
 
 -- | Induction over 'SList', taking an extra argument
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (Forall nxs [x] -> Forall na a -> SBool) where
   type IHType (Forall nxs [x] -> Forall na a -> SBool) = Forall na a -> SBool
   type IHArg  (Forall nxs [x] -> Forall na a -> SBool) = ((SBV x, SList x), SBV a)
 
@@ -666,7 +666,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => 
                             (indResult [nxxs, na] (result (Forall (x SL..: xs)) (Forall a)))
 
 -- | Induction over 'SList', taking two extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) where
   type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) = Forall na a -> Forall nb b -> SBool
   type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) = ((SBV x, SList x), SBV a, SBV b)
 
@@ -680,7 +680,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxxs, na, nb] (result (Forall (x SL..: xs)) (Forall a) (Forall b)))
 
 -- | Induction over 'SList', taking three extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
   type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> SBool
   type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = ((SBV x, SList x), SBV a, SBV b, SBV c)
 
@@ -695,7 +695,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxxs, na, nb, nc] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over 'SList', taking four extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
   type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool
   type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = ((SBV x, SList x), SBV a, SBV b, SBV c, SBV d)
 
@@ -711,7 +711,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxxs, na, nb, nc, nd] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over 'SList', taking five extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
   type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool
   type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = ((SBV x, SList x), SBV a, SBV b, SBV c, SBV d, SBV e)
 
@@ -728,7 +728,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxxs, na, nb, nc, nd, ne] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
 -- | Induction over two 'SList', simultaneously
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((Forall nxs [x], Forall nys [y]) -> SBool) where
   type IHType ((Forall nxs [x], Forall nys [y]) -> SBool) = SBool
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> SBool) = (SBV x, SList x, SBV y, SList y)
 
@@ -741,7 +741,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) =>
                             (indResult [nxxs, nyys] (result (Forall (x SL..: xs), Forall (y SL..: ys))))
 
 -- | Induction over two 'SList', simultaneously, taking an extra argument
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) where
   type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) = Forall na a -> SBool
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) = ((SBV x, SList x, SBV y, SList y), SBV a)
 
@@ -755,7 +755,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a)))
 
 -- | Induction over two 'SList', simultaneously, taking two extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) where
   type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) = Forall na a -> Forall nb b -> SBool
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) = ((SBV x, SList x, SBV y, SList y), SBV a, SBV b)
 
@@ -770,7 +770,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na, nb] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b)))
 
 -- | Induction over two 'SList', simultaneously, taking three extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
 
   type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> SBool
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = ((SBV x, SList x, SBV y, SList y), SBV a, SBV b, SBV c)
@@ -787,7 +787,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na, nb, nc] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over two 'SList', simultaneously, taking four extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
   type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = ((SBV x, SList x, SBV y, SList y), SBV a, SBV b, SBV c, SBV d)
 
@@ -804,7 +804,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na, nb, nc, nd] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over two 'SList', simultaneously, taking five extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) z where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
   type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = ((SBV x, SList x, SBV y, SList y), SBV a, SBV b, SBV c, SBV d, SBV e)
 
@@ -823,7 +823,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
 
 
 -- | Generalized induction with one parameter
-instance (KnownSymbol na, SymVal a, EqSymbolic z) => SInductive (Forall na a -> SBool) z where
+instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
   type SIHArg (Forall na a -> SBool) = SBV a
 
   sInductionStrategy result measure steps = do
@@ -834,7 +834,7 @@ instance (KnownSymbol na, SymVal a, EqSymbolic z) => SInductive (Forall na a -> 
                            (indResult [na] (result (Forall a)))
 
 -- | Generalized induction with two parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive (Forall na a -> Forall nb b -> SBool) z where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (Forall na a -> Forall nb b -> SBool) where
   type SIHArg (Forall na a -> Forall nb b -> SBool) = (SBV a, SBV b)
 
   sInductionStrategy result measure steps = do
@@ -846,7 +846,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => S
                            (indResult [na, nb] (result (Forall a) (Forall b)))
 
 -- | Generalized induction with three parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) z where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
   type SIHArg (Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SBV a, SBV b, SBV c)
 
   sInductionStrategy result measure steps = do
@@ -859,7 +859,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            (indResult [na, nb, nc] (result (Forall a) (Forall b) (Forall c)))
 
 -- | Generalized induction with four parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) z where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
   type SIHArg (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SBV a, SBV b, SBV c, SBV d)
 
   sInductionStrategy result measure steps = do
@@ -873,7 +873,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            (indResult [na, nb, nc, nd] (result (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Generalized induction with five parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) z where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
   type SIHArg (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SBV a, SBV b, SBV c, SBV d, SBV e)
 
   sInductionStrategy result measure steps = do
