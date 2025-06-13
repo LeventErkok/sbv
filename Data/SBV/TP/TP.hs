@@ -87,7 +87,8 @@ tpMergeCfg cur top = cur{tpOptions = tpOptions top}
 
 -- | A class for doing equational reasoning style calculational proofs. Use 'calc' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
-class CalcLemma a steps where
+class CalcLemma a where
+  type CArgs a :: Type
 
   -- | Prove a property via a series of equality steps, using the default solver.
   -- Let @H@ be a list of already established lemmas. Let @P@ be a property we wanted to prove, named @name@.
@@ -107,27 +108,27 @@ class CalcLemma a steps where
   -- non-boolean steps.
   --
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
-  calc :: Proposition a => String -> a -> steps -> TP (Proof a)
+  calc :: (Proposition a, EqSymbolic t) => String -> a -> (CArgs a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
   -- | Same as calc, except tagged as Theorem
-  calcThm :: Proposition a => String -> a -> steps -> TP (Proof a)
+  calcThm :: (Proposition a, EqSymbolic t) => String -> a -> (CArgs a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  calcWith :: Proposition a => SMTConfig -> String -> a -> steps -> TP (Proof a)
+  calcWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (CArgs a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
   -- | Same as calcWith, except tagged as Theorem
-  calcThmWith :: Proposition a => SMTConfig -> String -> a -> steps -> TP (Proof a)
+  calcThmWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (CArgs a -> (SBool, TPProofRaw t)) -> TP (Proof a)
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL calcSteps #-}
-  calcSteps :: a -> steps -> Symbolic (SBool, CalcStrategy)
+  calcSteps :: EqSymbolic t => a -> (CArgs a -> (SBool, TPProofRaw t)) -> Symbolic (SBool, CalcStrategy)
 
   calc            nm p steps = getTPConfig >>= \cfg  -> calcWith          cfg                   nm p steps
   calcThm         nm p steps = getTPConfig >>= \cfg  -> calcThmWith       cfg                   nm p steps
   calcWith    cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric False (tpMergeCfg cfg cfg') nm p steps
   calcThmWith cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric True  (tpMergeCfg cfg cfg') nm p steps
 
-  calcGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> TP (Proof a)
+  calcGeneric :: (EqSymbolic t, Proposition a) => Bool -> SMTConfig -> String -> a -> (CArgs a -> (SBool, TPProofRaw t)) -> TP (Proof a)
   calcGeneric tagTheorem cfg nm result steps = withProofCache nm $ do
       tpSt <- getTPState
       u    <- tpGetNextUnique
@@ -145,7 +146,7 @@ class CalcLemma a steps where
 
          query $ proveProofTree cfg tpSt nm (result, calcGoal) calcIntros calcProofTree u
 
--- |               Prove the proof tree. The arguments are:
+-- | Prove the proof tree. The arguments are:
 --
 --      result           : The ultimate goal we want to prove. Note that this is a general proposition, and we don't actually prove it. See the next param.
 --      resultBool       : The instance of result that, if we prove it, establishes the result itself
@@ -324,41 +325,46 @@ mkCalcSteps (intros, tpp) = CalcStrategy { calcIntros    = intros
         go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev  .== cur) hs (go (CalcStep first cur hs')         p)
 
 -- | Chaining lemmas that depend on no extra variables
-instance EqSymbolic z => CalcLemma SBool (SBool, TPProofRaw z) where
-   calcSteps result steps = pure (result, mkCalcSteps steps)
+instance CalcLemma SBool where
+   type CArgs SBool = ()
+
+   calcSteps result steps = pure (result, mkCalcSteps (steps ()))
 
 -- | Chaining lemmas that depend on a single extra variable.
-instance (KnownSymbol na, SymVal a, EqSymbolic z) => CalcLemma (Forall na a -> SBool) (SBV a -> (SBool, TPProofRaw z)) where
+instance (KnownSymbol na, SymVal a) => CalcLemma (Forall na a -> SBool) where
+   type CArgs (Forall na a -> SBool) = SBV a
+
    calcSteps result steps = do a <- free (symbolVal (Proxy @na))
                                pure (result (Forall a), mkCalcSteps (steps a))
 
 -- | Chaining lemmas that depend on two extra variables.
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
-      => CalcLemma (Forall na a -> Forall nb b -> SBool)
-                   (SBV a -> SBV b -> (SBool, TPProofRaw z)) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => CalcLemma (Forall na a -> Forall nb b -> SBool) where
+   type CArgs (Forall na a -> Forall nb b -> SBool) = (SBV a, SBV b)
+
    calcSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
-                               pure (result (Forall a) (Forall b), mkCalcSteps (steps a b))
+                               pure (result (Forall a) (Forall b), mkCalcSteps (steps (a, b)))
 
 -- | Chaining lemmas that depend on three extra variables.
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z)
-      => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                   (SBV a -> SBV b -> SBV c -> (SBool, TPProofRaw z)) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
+   type CArgs (Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SBV a, SBV b, SBV c)
+
    calcSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c))
+                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps (a, b, c)))
 
 -- | Chaining lemmas that depend on four extra variables.
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z)
-      => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                   (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, TPProofRaw z)) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
+   type CArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SBV a, SBV b, SBV c, SBV d)
+
    calcSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d))
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps (a, b, c, d)))
 
 -- | Chaining lemmas that depend on five extra variables.
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z)
-      => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
-                   (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw z)) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
+      => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
+   type CArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SBV a, SBV b, SBV c, SBV d, SBV e)
+
    calcSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e))
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps (a, b, c, d, e)))
 
 -- | Captures the schema for an inductive proof. Base case might be nothing, to cover strong induction.
 data InductionStrategy = InductionStrategy { inductionIntros    :: SBool

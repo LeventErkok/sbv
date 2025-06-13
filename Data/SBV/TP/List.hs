@@ -221,10 +221,10 @@ tailsAppend p = do
    helper <- calc "helper"
                    (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) ->
                         appendEach ys (tails (x .: xs)) .== [(x .: xs) ++ ys] ++ appendEach ys (tails xs)) $
-                   \xs ys x -> [] |- appendEach ys (tails (x .: xs))
-                                  =: appendEach ys ([x .: xs] ++ tails xs)
-                                  =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs)
-                                  =: qed
+                   \(xs, ys, x) -> [] |- appendEach ys (tails (x .: xs))
+                                      =: appendEach ys ([x .: xs] ++ tails xs)
+                                      =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs)
+                                      =: qed
 
    induct (atProxy p "tailsAppend")
           (\(Forall xs) (Forall ys) -> tails (xs ++ ys) .== appendEach ys (tails xs) ++ tail (tails ys)) $
