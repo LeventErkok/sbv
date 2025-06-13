@@ -72,7 +72,7 @@ axiom nm p = do cfg <- getTPConfig
 internalAxiom :: Proposition a => String -> a -> Proof a
 internalAxiom nm p = Proof $ ProofObj { dependencies = []
                                       , isUserAxiom  = False
-                                      , getProof     = label nm (quantifiedBool p)
+                                      , getObjProof  = label nm (quantifiedBool p)
                                       , getProp      = toDyn p
                                       , proofName    = nm
                                       , uniqId       = TPInternal
@@ -86,7 +86,7 @@ lemmaGen cfg@SMTConfig{tpOptions = TPOptions{printStats}} tag nm inputProp by = 
                  u    <- tpGetNextUnique
                  liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt u
   where go tpSt u mbStartTime = do qSaturateSavingObservables inputProp
-                                   mapM_ (constrain . getProof) by
+                                   mapM_ (constrain . getObjProof) by
                                    query $ smtProofStep cfg tpSt tag 0 (TPProofOneShot nm by) Nothing inputProp (good mbStartTime u)
 
         -- What to do if all goes well
@@ -94,7 +94,7 @@ lemmaGen cfg@SMTConfig{tpOptions = TPOptions{printStats}} tag nm inputProp by = 
                               liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo by) d $ catMaybes [mbElapsed]
                               pure $ Proof $ ProofObj { dependencies = by
                                                       , isUserAxiom  = False
-                                                      , getProof     = label nm (quantifiedBool inputProp)
+                                                      , getObjProof  = label nm (quantifiedBool inputProp)
                                                       , getProp      = toDyn inputProp
                                                       , proofName    = nm
                                                       , uniqId       = u
@@ -188,7 +188,7 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
                      -- Remember that we first have to negate, and then skolemize!
                      do SatResult res <- liftIO $ satWith cfg $ do
                                            qSaturateSavingObservables prop
-                                           mapM_ constrain [getProof | ProofObj{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
+                                           mapM_ constrain [getObjProof | ProofObj{isUserAxiom, getObjProof} <- by, isUserAxiom] :: Symbolic ()
                                            pure $ skolemize (qNot prop)
                         pure res
 

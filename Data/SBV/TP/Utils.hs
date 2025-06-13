@@ -22,7 +22,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.Utils (
-         TP, runTP, runTPWith, Proof(..), ProofObj(..), sorry
+         TP, runTP, runTPWith, Proof(..), ProofObj(..), getProof, sorry
        , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML, shortProofName
@@ -187,12 +187,16 @@ data Proof a = Proof { getProofObj :: ProofObj }
 -- | The actual proof container
 data ProofObj = ProofObj { dependencies :: [ProofObj]     -- ^ Immediate dependencies of this proof. (Not transitive)
                          , isUserAxiom  :: Bool           -- ^ Was this an axiom given by the user?
-                         , getProof     :: SBool          -- ^ Get the underlying boolean
+                         , getObjProof  :: SBool          -- ^ Get the underlying boolean
                          , getProp      :: Dynamic        -- ^ The actual proposition
                          , proofName    :: String         -- ^ User given name
                          , uniqId       :: TPUnique       -- ^ Unique identifier
                          , isCached     :: Bool           -- ^ Was this a cached proof?
                          }
+
+-- | Access the underlying boolean of a proof
+getProof :: Proof a -> SBool
+getProof (Proof o) = getObjProof o
 
 -- | Drop the instantiation part
 shortProofName :: ProofObj -> String
@@ -219,12 +223,12 @@ instance Monoid RootOfTrust where
 
 -- | NFData ignores the getProp field
 instance NFData ProofObj where
-  rnf (ProofObj dependencies isUserAxiom getProof _getProp proofName uniqId isCached) =     rnf dependencies
-                                                                                      `seq` rnf isUserAxiom
-                                                                                      `seq` rnf getProof
-                                                                                      `seq` rnf proofName
-                                                                                      `seq` rnf uniqId
-                                                                                      `seq` rnf isCached
+  rnf (ProofObj dependencies isUserAxiom getObjProof _getProp proofName uniqId isCached) =     rnf dependencies
+                                                                                         `seq` rnf isUserAxiom
+                                                                                         `seq` rnf getObjProof
+                                                                                         `seq` rnf proofName
+                                                                                         `seq` rnf uniqId
+                                                                                         `seq` rnf isCached
 
 -- | Dependencies of a proof, in a tree format.
 data ProofTree = ProofTree ProofObj [ProofTree]
@@ -311,7 +315,7 @@ instance Show (Proof a) where
 sorry :: Proof a
 sorry = Proof $ ProofObj { dependencies = []
                          , isUserAxiom  = False
-                         , getProof     = label "sorry" (quantifiedBool p)
+                         , getObjProof  = label "sorry" (quantifiedBool p)
                          , getProp      = toDyn p
                          , proofName    = "sorry"
                          , uniqId       = TPSorry

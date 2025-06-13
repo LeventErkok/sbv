@@ -98,7 +98,7 @@ import Data.Proxy
 -- [Proven] appendNull @Integer
 appendNull :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> SBool))
 appendNull p = lemma (atProxy p "appendNull")
-                     (\(Forall @"xs" xs) -> xs ++ nil .== xs)
+                     (\(Forall xs) -> xs ++ nil .== xs)
                      []
 
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
@@ -108,7 +108,7 @@ appendNull p = lemma (atProxy p "appendNull")
 -- [Proven] consApp @Integer
 consApp :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 consApp p = lemma (atProxy p "consApp")
-                  (\(Forall @"x") (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
+                  (\(Forall x) (Forall xs) (Forall ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
                   []
 
 -- | @(xs ++ ys) ++ zs == xs ++ (ys ++ zs)@
@@ -120,10 +120,10 @@ consApp p = lemma (atProxy p "consApp")
 -- Surprisingly, z3 can prove this without any induction. (Since SBV's append translates directly to
 -- the concatenation of sequences in SMTLib, it must trigger an internal heuristic in z3
 -- that proves it right out-of-the-box!)
-appendAssoc :: forall a. SymVal a => Proxy a -> TP Proof
+appendAssoc :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "zs" [a] -> SBool))
 appendAssoc p =
    lemma (atProxy p "appendAssoc")
-         (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
+         (\(Forall xs) (Forall ys) (Forall zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
          []
 
 -- | @length (inits xs) == 1 + length xs@
@@ -134,10 +134,10 @@ appendAssoc p =
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] initsLength @Integer
-initsLength :: forall a. SymVal a => Proxy a -> TP Proof
+initsLength :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> SBool))
 initsLength p =
    sInduct (atProxy p "initsLength")
-           (\(Forall @"xs" (xs :: SList a)) -> length (inits xs) .== 1 + length xs)
+           (\(Forall xs) -> length (inits xs) .== 1 + length xs)
            (length @a) $
            \ih (xs :: SList a) -> [] |- length (inits xs)
                                      ?? ih
@@ -155,17 +155,17 @@ initsLength p =
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] tailsLength @Integer
-tailsLength :: forall a. SymVal a => Proxy a -> TP Proof
+tailsLength :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> SBool))
 tailsLength p =
    induct (atProxy p "tailsLength")
-          (\(Forall @"xs" (xs :: SList a)) -> length (tails xs) .== 1 + length xs) $
-          \ih (x :: SBV a) xs -> [] |- length (tails (x .: xs))
-                                    =: length (tails xs ++ [x .: xs])
-                                    =: length (tails xs) + 1
-                                    ?? ih
-                                    =: 1 + length xs + 1
-                                    =: 1 + length (x .: xs)
-                                    =: qed
+          (\(Forall xs) -> length (tails xs) .== 1 + length xs) $
+          \ih (x, xs) -> [] |- length (tails (x .: xs))
+                            =: length (tails xs ++ [x .: xs])
+                            =: length (tails xs) + 1
+                            ?? ih
+                            =: 1 + length xs + 1
+                            =: 1 + length (x .: xs)
+                            =: qed
 
 -- | @tails (xs ++ ys) == map (++ ys) (tails xs) ++ tail (tails ys)@
 --
@@ -193,7 +193,7 @@ tailsLength p =
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] tailsAppend @Integer
-tailsAppend :: forall a. SymVal a => Proxy a -> TP Proof
+tailsAppend :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 tailsAppend p = do
 
    let -- Ideally, we would like to define appendEach like this:
@@ -210,13 +210,12 @@ tailsAppend p = do
    -- Even proving the base case of induction is hard due to recursive definition. So we first prove the base case by induction.
    bc <- induct "base case"
                 (\(Forall @"ys" (ys :: SList a)) -> tails ys .== [ys] ++ tail (tails ys)) $
-                \ih (y :: SBV a) ys ->
-                   [] |- tails (y .: ys)
-                      =: [y .: ys] ++ tails ys
-                      ?? ih
-                      =: [y .: ys] ++ [ys] ++ tail (tails ys)
-                      =: [y .: ys] ++ tail (tails (y .: ys))
-                      =: qed
+                \ih (y, ys) -> [] |- tails (y .: ys)
+                                  =: [y .: ys] ++ tails ys
+                                  ?? ih
+                                  =: [y .: ys] ++ [ys] ++ tail (tails ys)
+                                  =: [y .: ys] ++ tail (tails (y .: ys))
+                                  =: qed
 
    -- Also need a helper to relate how appendEach and tails work together
    helper <- calc "helper"
@@ -228,17 +227,16 @@ tailsAppend p = do
                                   =: qed
 
    induct (atProxy p "tailsAppend")
-          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> tails (xs ++ ys) .== appendEach ys (tails xs) ++ tail (tails ys)) $
-          \ih (x :: SBV a) xs ys ->
-                [getProof bc]
-             |- tails ((x .: xs) ++ ys)
-             =: tails (x .: (xs ++ ys))
-             =: [x .: (xs ++ ys)] ++ tails (xs ++ ys)
-             ?? ih
-             =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs) ++ tail (tails ys)
-             ?? helper
-             =: appendEach ys (tails (x .: xs)) ++ tail (tails ys)
-             =: qed
+          (\(Forall xs) (Forall ys) -> tails (xs ++ ys) .== appendEach ys (tails xs) ++ tail (tails ys)) $
+          \ih (x, xs) ys -> [getProof bc]
+                         |- tails ((x .: xs) ++ ys)
+                         =: tails (x .: (xs ++ ys))
+                         =: [x .: (xs ++ ys)] ++ tails (xs ++ ys)
+                         ?? ih
+                         =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs) ++ tail (tails ys)
+                         ?? helper
+                         =: appendEach ys (tails (x .: xs)) ++ tail (tails ys)
+                         =: qed
 
 -- | @length xs == length (reverse xs)@
 --
@@ -251,17 +249,17 @@ tailsAppend p = do
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] revLen @Integer
-revLen :: forall a. SymVal a => Proxy a -> TP Proof
+revLen :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> SBool))
 revLen p =
    induct (atProxy p "revLen")
-          (\(Forall @"xs" (xs :: SList a)) -> length (reverse xs) .== length xs) $
-          \ih (x :: SBV a) xs -> [] |- length (reverse (x .: xs))
-                                    =: length (reverse xs ++ [x])
-                                    =: length (reverse xs) + length [x]
-                                    ?? ih
-                                    =: length xs + 1
-                                    =: length (x .: xs)
-                                    =: qed
+          (\(Forall xs) -> length (reverse xs) .== length xs) $
+          \ih (x, xs) -> [] |- length (reverse (x .: xs))
+                            =: length (reverse xs ++ [x])
+                            =: length (reverse xs) + length [x]
+                            ?? ih
+                            =: length xs + 1
+                            =: length (x .: xs)
+                            =: qed
 
 -- | @reverse (xs ++ ys) .== reverse ys ++ reverse xs@
 --
@@ -275,19 +273,20 @@ revLen p =
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] revApp @Integer
-revApp :: forall a. SymVal a => Proxy a -> TP Proof
+revApp :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 revApp p =
    induct (atProxy p "revApp")
-          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
-          \ih (x :: SBV a) xs ys -> [] |- reverse ((x .: xs) ++ ys)
-                                       =: reverse (x .: (xs ++ ys))
-                                       =: reverse (xs ++ ys) ++ [x]
-                                       ?? ih
-                                       =: (reverse ys ++ reverse xs) ++ [x]
-                                       =: reverse ys ++ (reverse xs ++ [x])
-                                       =: reverse ys ++ reverse (x .: xs)
-                                       =: qed
+          (\(Forall xs) (Forall ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
+          \ih (x, xs) ys -> [] |- reverse ((x .: xs) ++ ys)
+                               =: reverse (x .: (xs ++ ys))
+                               =: reverse (xs ++ ys) ++ [x]
+                               ?? ih
+                               =: (reverse ys ++ reverse xs) ++ [x]
+                               =: reverse ys ++ (reverse xs ++ [x])
+                               =: reverse ys ++ reverse (x .: xs)
+                               =: qed
 
+{-
 -- | @reverse (x:xs) == reverse xs ++ [x]@
 --
 -- >>> runTP $ revCons (Proxy @Integer)
@@ -1772,3 +1771,4 @@ elemCount p =
 {- HLint ignore module         "Use zipWith"       -}
 {- HLint ignore mapCompose     "Use map once"      -}
 {- HLint ignore tailsAppend    "Avoid lambda"      -}
+-}
