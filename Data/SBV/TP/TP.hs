@@ -23,7 +23,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.TP (
-         Proposition, Proof, getProof, Instantiatable(..), Inst(..)
+         Proposition, Proof, proofOf, proofToAssumption, Instantiatable(..), Inst(..)
        , rootOfTrust, RootOfTrust(..), ProofTree(..), showProofTree, showProofTreeHTML
        , axiom
        , lemma,   lemmaWith
@@ -49,7 +49,8 @@ import qualified Data.SBV.List as SL
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 
-import Data.List (intercalate)
+import Data.Char  (isSpace)
+import Data.List  (intercalate, isPrefixOf, isSuffixOf)
 import Data.Maybe (catMaybes, maybeToList)
 
 import Data.Proxy
@@ -899,13 +900,88 @@ newtype Inst (nm :: Symbol) a = Inst (SBV a)
 instance KnownSymbol nm => Show (Inst nm a) where
    show (Inst a) = symbolVal (Proxy @nm) ++ " |-> " ++ show a
 
-
+-- | Instantiating a proof at a particular choice of arguments
 class Instantiatable a where
-  type InstantiatesWith a :: Type
-  type InstantiatesTo   a :: Type
+  type IArgs a :: Type
 
-  -- | Apply a universal proof to some arguments, creating an instance of the proof itself.
-  at :: Proof a -> InstantiatesWith a -> Proof (InstantiatesTo a)
+  -- | Apply a universal proof to some arguments, creating a boolean expression guaranteed to be true
+  at :: Proof a -> IArgs a -> Proof Bool
+
+-- | Instantiation a single parameter proof
+instance (KnownSymbol na, Typeable a) => Instantiatable (Forall na a -> SBool) where
+  type IArgs (Forall na a -> SBool) = Inst na a
+
+  at = instantiate $ \f (Inst a) -> f (Forall a :: Forall na a)
+
+-- | Two parameters
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         ) => Instantiatable (Forall na a -> Forall nb b -> SBool) where
+  type IArgs (Forall na a -> Forall nb b -> SBool) = (Inst na a, Inst nb b)
+
+  at  = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b)
+
+-- | Three parameters
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         , KnownSymbol nc, HasKind c, Typeable c
+         ) => Instantiatable (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
+  type IArgs (Forall na a -> Forall nb b -> Forall nc c -> SBool) = (Inst na a, Inst nb b, Inst nc c)
+
+  at  = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c)
+
+-- | Four parameters
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         , KnownSymbol nc, HasKind c, Typeable c
+         , KnownSymbol nd, HasKind d, Typeable d
+         ) => Instantiatable (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
+  type IArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (Inst na a, Inst nb b, Inst nc c, Inst nd d)
+
+  at  = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
+
+-- | Five parameters
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         , KnownSymbol nc, HasKind c, Typeable c
+         , KnownSymbol nd, HasKind d, Typeable d
+         , KnownSymbol ne, HasKind e, Typeable e
+         ) => Instantiatable (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
+  type IArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (Inst na a, Inst nb b, Inst nc c, Inst nd d, Inst ne e)
+
+  at  = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
+
+-- | Instantiate a proof over an arg. This uses dynamic typing, kind of hacky, but works sufficiently well.
+instantiate :: (Typeable f, Show arg) => (f -> arg -> SBool) -> Proof a -> arg -> Proof Bool
+instantiate ap (Proof p@ProofObj{getProp, proofName}) a = case fromDynamic getProp of
+                                                            Nothing -> cantInstantiate
+                                                            Just f  -> let result = f `ap` a
+                                                                           nm     = proofName ++ " @ " ++ paren sha
+                                                                       in Proof $ p { getObjProof = label nm result
+                                                                                    , getProp     = toDyn result
+                                                                                    , proofName   = nm
+                                                                                    }
+ where sha = show a
+       cantInstantiate = error $ unlines [ "***"
+                                         , "Data.SBV.TP: Impossible happened: Cannot instantiate proof:"
+                                         , ""
+                                         , "   Name: " ++ proofName
+                                         , "   Type: " ++ trim (show getProp)
+                                         , "   At  : " ++ sha
+                                         , ""
+                                         , "Please report this as a bug!"
+                                         ]
+
+       -- dynamic puts funky <</>> at the beginning and end; trim it:
+       trim  ('<':'<':s) = reverse (trimE (reverse s))
+       trim  s           = s
+       trimE ('>':'>':s) = s
+       trimE s           = s
+
+       -- Add parens if necessary
+       paren s | "(" `isPrefixOf` s && ")" `isSuffixOf` s = s
+               | not (any isSpace s)                      = s
+               | True                                     = '(' : s ++ ")"
 
 -- | Helpers for a step
 data Helper = HelperProof  ProofObj  -- A previously proven theorem
@@ -979,7 +1055,7 @@ class HintsTo a b where
 
 -- | Giving just one proof as a helper.
 instance Hinted a ~ TPProofRaw a => HintsTo a (Proof b) where
-  a `addHint` p = ProofStep a [HelperProof (getProofObj p)] qed
+  a `addHint` p = ProofStep a [HelperProof (proofOf p)] qed
 
 -- | Giving just one boolean as a helper.
 instance Hinted a ~ TPProofRaw a => HintsTo a SBool where
@@ -995,9 +1071,9 @@ instance Hinted a ~ TPProofRaw a => HintsTo a String where
 
 -- | Giving just one proof as a helper, starting from a proof
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) (Proof b) where
-  ProofStep   a hs ps `addHint` h = ProofStep   a (hs ++ [HelperProof (getProofObj h)]) ps
-  ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [HelperProof (getProofObj h)]) bs
-  ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [HelperProof (getProofObj h)])
+  ProofStep   a hs ps `addHint` h = ProofStep   a (hs ++ [HelperProof (proofOf h)]) ps
+  ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [HelperProof (proofOf h)]) bs
+  ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [HelperProof (proofOf h)])
 
 -- | Giving just one boolean as a helper.
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) SBool where

@@ -72,7 +72,7 @@ module Data.SBV.TP.List (
    , interleave, uninterleave, interleaveLen, interleaveRoundTrip
  ) where
 
-import Prelude (Eq, ($), Num(..), id, (.), flip)
+import Prelude (Integer, Bool, Eq, ($), Num(..), id, (.), flip)
 
 import Data.SBV
 import Data.SBV.List
@@ -139,10 +139,10 @@ initsLength p =
    sInduct (atProxy p "initsLength")
            (\(Forall xs) -> length (inits xs) .== 1 + length xs)
            (length @a) $
-           \ih (xs :: SList a) -> [] |- length (inits xs)
-                                     ?? ih
-                                     =: 1 + length xs
-                                     =: qed
+           \ih xs -> [] |- length (inits xs)
+                        ?? ih
+                        =: 1 + length xs
+                        =: qed
 
 -- | @length (tails xs) == 1 + length xs@
 --
@@ -228,7 +228,7 @@ tailsAppend p = do
 
    induct (atProxy p "tailsAppend")
           (\(Forall xs) (Forall ys) -> tails (xs ++ ys) .== appendEach ys (tails xs) ++ tail (tails ys)) $
-          \ih ((x, xs), ys) -> [getProof bc]
+          \ih ((x, xs), ys) -> [proofToAssumption bc]
                             |- tails ((x .: xs) ++ ys)
                             =: tails (x .: (xs ++ ys))
                             =: [x .: (xs ++ ys)] ++ tails (xs ++ ys)
@@ -286,15 +286,14 @@ revApp p =
                                   =: reverse ys ++ reverse (x .: xs)
                                   =: qed
 
-{-
 -- | @reverse (x:xs) == reverse xs ++ [x]@
 --
 -- >>> runTP $ revCons (Proxy @Integer)
 -- Lemma: revCons @Integer                 Q.E.D.
 -- [Proven] revCons @Integer
-revCons :: forall a. SymVal a => Proxy a -> TP Proof
+revCons :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 revCons p = lemma (atProxy p "revCons")
-                  (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (x .: xs) .== reverse xs ++ [x])
+                  (\(Forall x) (Forall xs) -> reverse (x .: xs) .== reverse xs ++ [x])
                   []
 
 -- | @reverse (xs ++ [x]) == x : reverse xs@
@@ -310,13 +309,13 @@ revCons p = lemma (atProxy p "revCons")
 --   Result:                               Q.E.D.
 -- Lemma: revSnoc @Integer                 Q.E.D.
 -- [Proven] revSnoc @Integer
-revSnoc :: forall a. SymVal a => Proxy a -> TP Proof
+revSnoc :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 revSnoc p = do
    ra <- revApp p
 
    lemma (atProxy p "revSnoc")
-         (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> reverse (xs ++ [x]) .== x .: reverse xs)
-         [ra]
+         (\(Forall x) (Forall xs) -> reverse (xs ++ [x]) .== x .: reverse xs)
+         [proofOf ra]
 
 -- | @reverse (reverse xs) == xs@
 --
@@ -337,31 +336,31 @@ revSnoc p = do
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] revRev @Integer
-revRev :: forall a. SymVal a => Proxy a -> TP Proof
+revRev :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> SBool))
 revRev p = do
 
    ra <- revApp p
 
    induct (atProxy p "revRev")
-          (\(Forall @"xs" (xs :: SList a)) -> reverse (reverse xs) .== xs) $
-          \ih (x :: SBV a) xs -> [] |- reverse (reverse (x .: xs))
-                                    =: reverse (reverse xs ++ [x])
-                                    ?? ra
-                                    =: reverse ([x]) ++ reverse (reverse xs)
-                                    ?? ih
-                                    =: [x] ++ xs
-                                    =: x .: xs
-                                    =: qed
+          (\(Forall xs) -> reverse (reverse xs) .== xs) $
+          \ih (x, xs) -> [] |- reverse (reverse (x .: xs))
+                            =: reverse (reverse xs ++ [x])
+                            ?? ra
+                            =: reverse ([x]) ++ reverse (reverse xs)
+                            ?? ih
+                            =: [x] ++ xs
+                            =: x .: xs
+                            =: qed
 
 -- | @length (x : xs) == 1 + length xs@
 --
 -- >>> runTP $ lengthTail (Proxy @Integer)
 -- Lemma: lengthTail @Integer              Q.E.D.
 -- [Proven] lengthTail @Integer
-lengthTail :: forall a. SymVal a => Proxy a -> TP Proof
+lengthTail :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 lengthTail p =
    lemma (atProxy p "lengthTail")
-         (\(Forall @"x" (x :: SBV a)) (Forall @"xs" xs) -> length (x .: xs) .== 1 + length xs)
+         (\(Forall x) (Forall xs) -> length (x .: xs) .== 1 + length xs)
          []
 
 -- | @length (xs ++ ys) == length xs + length ys@
@@ -369,10 +368,10 @@ lengthTail p =
 -- >>> runTP $ lenAppend (Proxy @Integer)
 -- Lemma: lenAppend @Integer               Q.E.D.
 -- [Proven] lenAppend @Integer
-lenAppend :: forall a. SymVal a => Proxy a -> TP Proof
+lenAppend :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 lenAppend p =
    lemma (atProxy p "lenAppend")
-         (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> length (xs ++ ys) .== length xs + length ys)
+         (\(Forall xs) (Forall ys) -> length (xs ++ ys) .== length xs + length ys)
          []
 
 -- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
@@ -380,10 +379,10 @@ lenAppend p =
 -- >>> runTP $ lenAppend2 (Proxy @Integer)
 -- Lemma: lenAppend2 @Integer              Q.E.D.
 -- [Proven] lenAppend2 @Integer
-lenAppend2 :: forall a. SymVal a => Proxy a -> TP Proof
+lenAppend2 :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 lenAppend2 p =
     lemma (atProxy p "lenAppend2")
-          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> length xs .== length ys .=> length (xs ++ ys) .== 2 * length xs)
+          (\(Forall xs) (Forall ys) -> length xs .== length ys .=> length (xs ++ ys) .== 2 * length xs)
           []
 
 -- | @length (replicate k x) == max (0, k)@
@@ -400,19 +399,19 @@ lenAppend2 p =
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] replicateLength @Integer
-replicateLength :: forall a. SymVal a => Proxy a -> TP Proof
+replicateLength :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "k" Integer -> Forall "x" a -> SBool))
 replicateLength p =
    induct (atProxy p "replicateLength")
-          (\(Forall @"k" k) (Forall @"x" (x :: SBV a)) -> length (replicate k x) .== 0 `smax` k) $
-          \ih k (x :: SBV a) -> [] |- length (replicate (k+1) x)
-                             =: cases [ k .< 0  ==> trivial
-                                      , k .>= 0 ==> length (x .: replicate k x)
-                                                 =: 1 + length (replicate k x)
-                                                 ?? ih
-                                                 =: 1 + 0 `smax` k
-                                                 =: 0 `smax` (k+1)
-                                                 =: qed
-                                      ]
+          (\(Forall k) (Forall x) -> length (replicate k x) .== 0 `smax` k) $
+          \ih (k, x)-> [] |- length (replicate (k+1) x)
+                          =: cases [ k .< 0  ==> trivial
+                                   , k .>= 0 ==> length (x .: replicate k x)
+                                              =: 1 + length (replicate k x)
+                                              ?? ih
+                                              =: 1 + 0 `smax` k
+                                              =: 0 `smax` (k+1)
+                                              =: qed
+                                   ]
 
 -- | @not (all id xs) == any not xs@
 --
@@ -427,16 +426,16 @@ replicateLength p =
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] allAny
-allAny :: TP Proof
+allAny :: TP (Proof (Forall "xs" [Bool] -> SBool))
 allAny = induct "allAny"
-                (\(Forall @"xs" xs) -> sNot (all id xs) .== any sNot xs) $
-                \ih x xs -> [] |- sNot (all id (x .: xs))
-                               =: sNot (x .&& all id xs)
-                               =: (sNot x .|| sNot (all id xs))
-                               ?? ih
-                               =: sNot x .|| any sNot xs
-                               =: any sNot (x .: xs)
-                               =: qed
+                (\(Forall xs) -> sNot (all id xs) .== any sNot xs) $
+                \ih (x, xs) -> [] |- sNot (all id (x .: xs))
+                                  =: sNot (x .&& all id xs)
+                                  =: (sNot x .|| sNot (all id xs))
+                                  ?? ih
+                                  =: sNot x .|| any sNot xs
+                                  =: any sNot (x .: xs)
+                                  =: qed
 
 -- | @f == g ==> map f xs == map g xs@
 --
@@ -449,20 +448,20 @@ allAny = induct "allAny"
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] mapEquiv @(Integer,Integer)
-mapEquiv :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> (SBV a -> SBV b) -> TP Proof
+mapEquiv :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
 mapEquiv f g = do
    let f'eq'g :: SBool
-       f'eq'g = quantifiedBool $ \(Forall @"x" x) -> f x .== g x
+       f'eq'g = quantifiedBool $ \(Forall x) -> f x .== g x
 
    induct (atProxy (Proxy @(a, b)) "mapEquiv")
-          (\(Forall @"xs" xs) -> f'eq'g .=> map f xs .== map g xs) $
-          \ih x xs -> [f'eq'g] |- map f (x .: xs) .== map g (x .: xs)
-                               =: f x .: map f xs .== g x .: map g xs
-                               =: f x .: map f xs .== f x .: map g xs
-                               ?? ih
-                               =: f x .: map f xs .== f x .: map f xs
-                               =: map f (x .: xs) .== map f (x .: xs)
-                               =: qed
+          (\(Forall xs) -> f'eq'g .=> map f xs .== map g xs) $
+          \ih (x, xs) -> [f'eq'g] |- map f (x .: xs) .== map g (x .: xs)
+                                  =: f x .: map f xs .== g x .: map g xs
+                                  =: f x .: map f xs .== f x .: map g xs
+                                  ?? ih
+                                  =: f x .: map f xs .== f x .: map f xs
+                                  =: map f (x .: xs) .== map f (x .: xs)
+                                  =: qed
 
 -- | @map f (xs ++ ys) == map f xs ++ map f ys@
 --
@@ -476,18 +475,18 @@ mapEquiv f g = do
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] mapAppend @(Integer,Integer)
-mapAppend :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP Proof
+mapAppend :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 mapAppend f =
    induct (atProxy (Proxy @(a, b)) "mapAppend")
-          (\(Forall @"xs" (xs :: SList a)) (Forall @"ys" ys) -> map f (xs ++ ys) .== map f xs ++ map f ys) $
-          \ih x xs ys -> [] |- map f ((x .: xs) ++ ys)
-                            =: map f (x .: (xs ++ ys))
-                            =: f x .: map f (xs ++ ys)
-                            ?? ih
-                            =: f x .: (map f xs  ++ map f ys)
-                            =: (f x .: map f xs) ++ map f ys
-                            =: map f (x .: xs) ++ map f ys
-                            =: qed
+          (\(Forall xs) (Forall ys) -> map f (xs ++ ys) .== map f xs ++ map f ys) $
+          \ih ((x, xs), ys) -> [] |- map f ((x .: xs) ++ ys)
+                                  =: map f (x .: (xs ++ ys))
+                                =: f x .: map f (xs ++ ys)
+                                ?? ih
+                                =: f x .: (map f xs  ++ map f ys)
+                                =: (f x .: map f xs) ++ map f ys
+                                =: map f (x .: xs) ++ map f ys
+                                =: qed
 
 -- | @map f . reverse == reverse . map f@
 --
@@ -510,22 +509,22 @@ mapAppend f =
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] mapReverse @(Integer,[Char])
-mapReverse :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP Proof
+mapReverse :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
 mapReverse f = do
      mApp <- mapAppend f
 
      induct (atProxy (Proxy @(a, b)) "mapReverse")
-            (\(Forall @"xs" xs) -> reverse (map f xs) .== map f (reverse xs)) $
-            \ih x xs -> [] |- reverse (map f (x .: xs))
-                           =: reverse (f x .: map f xs)
-                           =: reverse (map f xs) ++ [f x]
-                           ?? ih
-                           =: map f (reverse xs) ++ [f x]
-                           =: map f (reverse xs) ++ map f [x]
-                           ?? mApp
-                           =: map f (reverse xs ++ [x])
-                           =: map f (reverse (x .: xs))
-                           =: qed
+            (\(Forall xs) -> reverse (map f xs) .== map f (reverse xs)) $
+            \ih (x, xs) -> [] |- reverse (map f (x .: xs))
+                              =: reverse (f x .: map f xs)
+                              =: reverse (map f xs) ++ [f x]
+                              ?? ih
+                              =: map f (reverse xs) ++ [f x]
+                              =: map f (reverse xs) ++ map f [x]
+                              ?? mApp
+                              =: map f (reverse xs ++ [x])
+                              =: map f (reverse (x .: xs))
+                              =: qed
 
 -- | @map f . map g == map (f . g)@
 --
@@ -538,40 +537,40 @@ mapReverse f = do
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] mapCompose @(Integer,Bool,[Char])
-mapCompose :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> (SBV b -> SBV c) -> TP Proof
+mapCompose :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> (SBV b -> SBV c) -> TP (Proof (Forall "xs" [a] -> SBool))
 mapCompose f g =
   induct (atProxy (Proxy @(a, b, c)) "mapCompose")
-         (\(Forall @"xs" (xs :: SList a)) -> map g (map f xs) .== map (g . f) xs) $
-         \ih x xs -> [] |- map g (map f (x .: xs))
-                        =: map g (f x .: map f xs)
-                        =: g (f x) .: map g (map f xs)
-                        ?? ih
-                        =: (g . f) x .: map (g . f) xs
-                        =: map (g . f) (x .: xs)
-                        =: qed
+         (\(Forall xs) -> map g (map f xs) .== map (g . f) xs) $
+         \ih (x, xs) -> [] |- map g (map f (x .: xs))
+                           =: map g (f x .: map f xs)
+                           =: g (f x) .: map g (map f xs)
+                           ?? ih
+                           =: (g . f) x .: map (g . f) xs
+                           =: map (g . f) (x .: xs)
+                           =: qed
 
 -- | @foldr f a . map g == foldr (f . g) a@
 --
--- >>> runTP $ foldrMapFusion @Integer @Bool @String (uninterpret "a") (uninterpret "b") (uninterpret "c")
--- Inductive lemma: foldrMapFusion @(Integer,Bool,[Char])
+-- >>> runTP $ foldrMapFusion @String @Bool @Integer (uninterpret "a") (uninterpret "b") (uninterpret "c")
+-- Inductive lemma: foldrMapFusion @([Char],Bool,Integer)
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] foldrMapFusion @(Integer,Bool,[Char])
-foldrMapFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV a -> (SBV c -> SBV b) -> (SBV b -> SBV a -> SBV a) -> TP Proof
+-- [Proven] foldrMapFusion @([Char],Bool,Integer)
+foldrMapFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV c -> (SBV a -> SBV b) -> (SBV b -> SBV c -> SBV c) -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrMapFusion a g f =
   induct (atProxy (Proxy @(a, b, c)) "foldrMapFusion")
-         (\(Forall @"xs" xs) -> foldr f a (map g xs) .== foldr (f . g) a xs) $
-         \ih x xs -> [] |- foldr f a (map g (x .: xs))
-                        =: foldr f a (g x .: map g xs)
-                        =: g x `f` foldr f a (map g xs)
-                        ?? ih
-                        =: g x `f` foldr (f . g) a xs
-                        =: foldr (f . g) a (x .: xs)
-                        =: qed
+         (\(Forall xs) -> foldr f a (map g xs) .== foldr (f . g) a xs) $
+         \ih (x, xs) -> [] |- foldr f a (map g (x .: xs))
+                           =: foldr f a (g x .: map g xs)
+                           =: g x `f` foldr f a (map g xs)
+                           ?? ih
+                           =: g x `f` foldr (f . g) a xs
+                           =: foldr (f . g) a (x .: xs)
+                           =: qed
 
 -- |
 --
@@ -580,30 +579,30 @@ foldrMapFusion a g f =
 --   provided, f a = b and for all x and y, f (g x y) == h x (f y).
 -- @
 --
--- >>> runTP $ foldrFusion @Integer @Bool @String (uninterpret "a") (uninterpret "b") (uninterpret "f") (uninterpret "g") (uninterpret "h")
--- Inductive lemma: foldrFusion @(Integer,Bool,[Char])
+-- >>> runTP $ foldrFusion @String @Bool @Integer (uninterpret "a") (uninterpret "b") (uninterpret "f") (uninterpret "g") (uninterpret "h")
+-- Inductive lemma: foldrFusion @([Char],Bool,Integer)
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] foldrFusion @(Integer,Bool,[Char])
-foldrFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV a -> SBV b -> (SBV a -> SBV b) -> (SBV c -> SBV a -> SBV a) -> (SBV c -> SBV b -> SBV b) -> TP Proof
+-- [Proven] foldrFusion @([Char],Bool,Integer)
+foldrFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV c -> SBV b -> (SBV c -> SBV b) -> (SBV a -> SBV c -> SBV c) -> (SBV a -> SBV b -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrFusion a b f g h = do
    let -- Assumptions under which the equality holds
        h1 = f a .== b
-       h2 = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
+       h2 = quantifiedBool $ \(Forall x) (Forall y) -> f (g x y) .== h x (f y)
 
    induct (atProxy (Proxy @(a, b, c)) "foldrFusion")
-          (\(Forall @"xs" xs) -> h1 .&& h2 .=> f (foldr g a xs) .== foldr h b xs) $
-          \ih x xs -> [h1, h2] |- f (foldr g a (x .: xs))
-                               =: f (g x (foldr g a xs))
-                               =: h x (f (foldr g a xs))
-                               ?? ih
-                               =: h x (foldr h b xs)
-                               =: foldr h b (x .: xs)
-                               =: qed
+          (\(Forall xs) -> h1 .&& h2 .=> f (foldr g a xs) .== foldr h b xs) $
+          \ih (x, xs) -> [h1, h2] |- f (foldr g a (x .: xs))
+                                  =: f (g x (foldr g a xs))
+                                  =: h x (f (foldr g a xs))
+                                  ?? ih
+                                  =: h x (foldr h b xs)
+                                  =: foldr h b (x .: xs)
+                                  =: qed
 
 -- | @foldr f a (xs ++ ys) == foldr f (foldr f a ys) xs@
 --
@@ -616,19 +615,19 @@ foldrFusion a b f g h = do
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] foldrOverAppend @Integer
-foldrOverAppend :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP Proof
+foldrOverAppend :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 foldrOverAppend a f =
    induct (atProxy (Proxy @a) "foldrOverAppend")
-          (\(Forall @"xs" xs) (Forall @"ys" ys) -> foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs) $
-          \ih x xs ys -> [] |- foldr f a ((x .: xs) ++ ys)
-                            =: foldr f a (x .: (xs ++ ys))
-                            =: x `f` foldr f a (xs ++ ys)
-                            ?? ih
-                            =: x `f` foldr f (foldr f a ys) xs
-                            =: foldr f (foldr f a ys) (x .: xs)
-                            =: qed
+          (\(Forall xs) (Forall ys) -> foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs) $
+          \ih ((x, xs), ys) -> [] |- foldr f a ((x .: xs) ++ ys)
+                                  =: foldr f a (x .: (xs ++ ys))
+                                  =: x `f` foldr f a (xs ++ ys)
+                                  ?? ih
+                                  =: x `f` foldr f (foldr f a ys) xs
+                                  =: foldr f (foldr f a ys) (x .: xs)
+                                  =: qed
 
--- | @foldl f a (xs ++ ys) == foldl f (foldl f a xs) ys@
+-- | @foldl f e (xs ++ ys) == foldl f (foldl f e xs) ys@
 --
 -- >>> runTP $ foldlOverAppend @Integer @Bool (uninterpret "f")
 -- Inductive lemma: foldlOverAppend @(Integer,Bool)
@@ -638,18 +637,18 @@ foldrOverAppend a f =
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] foldlOverAppend @(Integer,Bool)
-foldlOverAppend :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> TP Proof
+foldlOverAppend :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "e" b -> SBool))
 foldlOverAppend f =
    induct (atProxy (Proxy @(a, b)) "foldlOverAppend")
-          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"a" a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys) $
-          \ih x xs ys a -> [] |- foldl f a ((x .: xs) ++ ys)
-                              =: foldl f a (x .: (xs ++ ys))
-                              =: foldl f (a `f` x) (xs ++ ys)
-                              -- z3 is smart enough to instantiate the IH correctly below, but we're
-                              -- using an explicit instantiation to be clear about the use of @a@ at a different value
-                              ?? ih `at` (Inst @"ys" ys, Inst @"a" (a `f` x))
-                              =: foldl f (foldl f (a `f` x) xs) ys
-                              =: qed
+          (\(Forall xs) (Forall ys) (Forall a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys) $
+          \ih ((x, xs), ys, a) -> [] |- foldl f a ((x .: xs) ++ ys)
+                                     =: foldl f a (x .: (xs ++ ys))
+                                     =: foldl f (a `f` x) (xs ++ ys)
+                                     -- z3 is smart enough to instantiate the IH correctly below, but we're
+                                     -- using an explicit instantiation to be clear about the use of @a@ at a different value
+                                     ?? ih `at` (Inst @"ys" ys, Inst @"e" (a `f` x))
+                                     =: foldl f (foldl f (a `f` x) xs) ys
+                                     =: qed
 
 -- | @foldr f e xs == foldl (flip f) e (reverse xs)@
 --
@@ -670,24 +669,25 @@ foldlOverAppend f =
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] foldrFoldlDuality @(Integer,[Char])
-foldrFoldlDuality :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> TP Proof
+foldrFoldlDuality :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "e" b -> SBool))
 foldrFoldlDuality f = do
    foa <- foldlOverAppend (flip f)
 
    induct (atProxy (Proxy @(a, b)) "foldrFoldlDuality")
-          (\(Forall @"xs" xs) (Forall @"e" e) -> foldr f e xs .== foldl (flip f) e (reverse xs)) $
-          \ih x xs e ->
+          (\(Forall xs) (Forall e) -> foldr f e xs .== foldl (flip f) e (reverse xs)) $
+          \ih ((x, xs), e) ->
               let ff  = flip f
                   rxs = reverse xs
-              in [] |- foldr f e (x .: xs) =: x `f` foldr f e xs
-                                           ?? ih
-                                           =: x `f` foldl ff e rxs
-                                           =: foldl ff e rxs `ff` x
-                                           =: foldl ff (foldl ff e rxs) [x]
-                                           ?? foa
-                                           =: foldl ff e (rxs ++ [x])
-                                           =: foldl ff e (reverse (x .: xs))
-                                           =: qed
+              in [] |- foldr f e (x .: xs)
+                    =: x `f` foldr f e xs
+                    ?? ih
+                    =: x `f` foldl ff e rxs
+                    =: foldl ff e rxs `ff` x
+                    =: foldl ff (foldl ff e rxs) [x]
+                    ?? foa
+                    =: foldl ff e (rxs ++ [x])
+                    =: foldl ff e (reverse (x .: xs))
+                    =: qed
 
 -- | Given:
 --
@@ -721,41 +721,41 @@ foldrFoldlDuality f = do
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] foldrFoldlDuality @Integer
-foldrFoldlDualityGeneralized :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP Proof
-foldrFoldlDualityGeneralized  e (@) = do
+foldrFoldlDualityGeneralized :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP (Proof (Forall "xs" [a] -> SBool))
+foldrFoldlDualityGeneralized e (@) = do
    -- Assumptions under which the equality holds
-   let assoc = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x @ (y @ z) .== (x @ y) @ z
-       lunit = quantifiedBool $ \(Forall @"x" x) -> e @ x .== x
-       runit = quantifiedBool $ \(Forall @"x" x) -> x @ e .== x
+   let assoc = quantifiedBool $ \(Forall x) (Forall y) (Forall z) -> x @ (y @ z) .== (x @ y) @ z
+       lunit = quantifiedBool $ \(Forall x) -> e @ x .== x
+       runit = quantifiedBool $ \(Forall x) -> x @ e .== x
 
    -- Helper: foldl (@) (y @ z) xs = y @ foldl (@) z xs
    -- Note the instantiation of the IH at a different value for z. It turns out
    -- we don't have to actually specify this since z3 can figure it out by itself, but we're being explicit.
    helper <- induct (atProxy (Proxy @a) "helper")
                     (\(Forall @"xs" xs) (Forall @"y" y) (Forall @"z" z) -> assoc .=> foldl (@) (y @ z) xs .== y @ foldl (@) z xs) $
-                    \ih x xs y z -> [assoc] |- foldl (@) (y @ z) (x .: xs)
-                                            =: foldl (@) ((y @ z) @ x) xs
-                                            ?? assoc
-                                            =: foldl (@) (y @ (z @ x)) xs
-                                            ?? ih `at` (Inst @"y" y, Inst @"z" (z @ x))
-                                            =: y @ foldl (@) (z @ x) xs
-                                            =: y @ foldl (@) z (x .: xs)
-                                            =: qed
+                    \ih ((x, xs), y, z) -> [assoc] |- foldl (@) (y @ z) (x .: xs)
+                                                   =: foldl (@) ((y @ z) @ x) xs
+                                                   ?? assoc
+                                                   =: foldl (@) (y @ (z @ x)) xs
+                                                   ?? ih `at` (Inst @"y" y, Inst @"z" (z @ x))
+                                                   =: y @ foldl (@) (z @ x) xs
+                                                   =: y @ foldl (@) z (x .: xs)
+                                                   =: qed
 
    induct (atProxy (Proxy @a) "foldrFoldlDuality")
-          (\(Forall @"xs" xs) -> assoc .&& lunit .&& runit .=> foldr (@) e xs .== foldl (@) e xs) $
-          \ih x xs -> [assoc, lunit, runit] |- foldr (@) e (x .: xs)
-                                            =: x @ foldr (@) e xs
-                                            ?? ih
-                                            =: x @ foldl (@) e xs
-                                            ?? helper
-                                            =: foldl (@) (x @ e) xs
-                                            ?? runit
-                                            =: foldl (@) x xs
-                                            ?? lunit
-                                            =: foldl (@) (e @ x) xs
-                                            =: foldl (@) e (x .: xs)
-                                            =: qed
+          (\(Forall xs) -> assoc .&& lunit .&& runit .=> foldr (@) e xs .== foldl (@) e xs) $
+          \ih (x, xs) -> [assoc, lunit, runit] |- foldr (@) e (x .: xs)
+                                               =: x @ foldr (@) e xs
+                                               ?? ih
+                                               =: x @ foldl (@) e xs
+                                               ?? helper
+                                               =: foldl (@) (x @ e) xs
+                                               ?? runit
+                                               =: foldl (@) x xs
+                                               ?? lunit
+                                               =: foldl (@) (e @ x) xs
+                                               =: foldl (@) e (x .: xs)
+                                               =: qed
 
 -- | Given:
 --
@@ -789,14 +789,14 @@ foldrFoldlDualityGeneralized  e (@) = do
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] foldrFoldl @(Integer,[Char])
-foldrFoldl :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> (SBV b -> SBV a -> SBV b) -> SBV b-> TP Proof
+foldrFoldl :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> (SBV b -> SBV a -> SBV b) -> SBV b-> TP (Proof (Forall "xs" [a] -> SBool))
 foldrFoldl (<+>) (<*>) e = do
    -- Assumptions about the operators
    let -- (x <+> y) <*> z == x <+> (y <*> z)
-       assoc = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> (x <+> y) <*> z .== x <+> (y <*> z)
+       assoc = quantifiedBool $ \(Forall x) (Forall y) (Forall z) -> (x <+> y) <*> z .== x <+> (y <*> z)
 
        -- x <+> e == e <*> x
-       unit  = quantifiedBool $ \(Forall @"x" x) -> x <+> e .== e <*> x
+       unit  = quantifiedBool $ \(Forall x) -> x <+> e .== e <*> x
 
    -- Helper: x <+> foldl (<*>) y xs == foldl (<*>) (x <+> y) xs
    helper <-
@@ -804,27 +804,27 @@ foldrFoldl (<+>) (<*>) e = do
              (\(Forall @"xs" xs) (Forall @"x" x) (Forall @"y" y) -> assoc .=> x <+> foldl (<*>) y xs .== foldl (<*>) (x <+> y) xs) $
              -- Using z to avoid confusion with the variable x already present, following Bird.
              -- z3 can figure out the proper instantiation of ih so the at call is unnecessary, but being explicit is helpful.
-             \ih z xs x y -> [assoc] |- x <+> foldl (<*>) y (z .: xs)
-                                     =: x <+> foldl (<*>) (y <*> z) xs
-                                     ?? ih `at` (Inst @"x" x, Inst @"y" (y <*> z))
-                                     =: foldl (<*>) (x <+> (y <*> z)) xs
-                                     ?? assoc
-                                     =: foldl (<*>) ((x <+> y) <*> z) xs
-                                     =: foldl (<*>) (x <+> y) (z .: xs)
-                                     =: qed
+             \ih ((z, xs), x, y) -> [assoc] |- x <+> foldl (<*>) y (z .: xs)
+                                            =: x <+> foldl (<*>) (y <*> z) xs
+                                            ?? ih `at` (Inst @"x" x, Inst @"y" (y <*> z))
+                                            =: foldl (<*>) (x <+> (y <*> z)) xs
+                                            ?? assoc
+                                            =: foldl (<*>) ((x <+> y) <*> z) xs
+                                            =: foldl (<*>) (x <+> y) (z .: xs)
+                                            =: qed
 
    -- Final proof:
    induct (atProxy (Proxy @(a, b)) "foldrFoldl")
-          (\(Forall @"xs" xs) -> assoc .&& unit .=> foldr (<+>) e xs .== foldl (<*>) e xs) $
-          \ih x xs -> [assoc, unit] |- foldr (<+>) e (x .: xs)
-                                    =: x <+> foldr (<+>) e xs
-                                    ?? ih
-                                    =: x <+> foldl (<*>) e xs
-                                    ?? helper
-                                    =: foldl (<*>) (x <+> e) xs
-                                    =: foldl (<*>) (e <*> x) xs
-                                    =: foldl (<*>) e (x .: xs)
-                                    =: qed
+          (\(Forall xs) -> assoc .&& unit .=> foldr (<+>) e xs .== foldl (<*>) e xs) $
+          \ih (x, xs) -> [assoc, unit] |- foldr (<+>) e (x .: xs)
+                                       =: x <+> foldr (<+>) e xs
+                                       ?? ih
+                                       =: x <+> foldl (<*>) e xs
+                                       ?? helper
+                                       =: foldl (<*>) (x <+> e) xs
+                                       =: foldl (<*>) (e <*> x) xs
+                                       =: foldl (<*>) e (x .: xs)
+                                       =: qed
 
 -- | Provided @f@ is associative and @a@ is its both left and right-unit:
 --
@@ -874,40 +874,40 @@ foldrFoldl (<+>) (<*>) e = do
 -- You can verify @f@ is associative. Also note that @C@ is the right-unit for @f@, but it isn't the left-unit.
 -- In fact, @f@ has no-left unit by the above argument. In this case, the bookkeeping law produces @B@ for
 -- the left-hand-side, and @A@ for the right-hand-side for the input @[[], [B]]@.
-bookKeeping :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP Proof
+bookKeeping :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP (Proof (Forall "xss" [[a]] -> SBool))
 bookKeeping a f = do
 
    -- Assumptions about f
-   let assoc = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z
-       rUnit = quantifiedBool $ \(Forall @"x" x) -> x `f` a .== x
-       lUnit = quantifiedBool $ \(Forall @"x" x) -> a `f` x .== x
+   let assoc = quantifiedBool $ \(Forall x) (Forall y) (Forall z) -> x `f` (y `f` z) .== (x `f` y) `f` z
+       rUnit = quantifiedBool $ \(Forall x) -> x `f` a .== x
+       lUnit = quantifiedBool $ \(Forall x) -> a `f` x .== x
 
    -- Helper: @foldr f y xs = foldr f a xs `f` y@
    helper <- induct (atProxy (Proxy @a) "foldBase")
                     (\(Forall @"xs" xs) (Forall @"y" y) -> lUnit .&& assoc .=> foldr f y xs .== foldr f a xs `f` y) $
-                    \ih x xs y -> [lUnit, assoc] |- foldr f y (x .: xs)
-                                                 =: x `f` foldr f y xs
-                                                 ?? ih
-                                                 =: x `f` (foldr f a xs `f` y)
-                                                 =: (x `f` foldr f a xs) `f` y
-                                                 =: foldr f a (x .: xs) `f` y
-                                                 =: qed
+                    \ih ((x, xs), y) -> [lUnit, assoc] |- foldr f y (x .: xs)
+                                                       =: x `f` foldr f y xs
+                                                       ?? ih
+                                                       =: x `f` (foldr f a xs `f` y)
+                                                       =: (x `f` foldr f a xs) `f` y
+                                                       =: foldr f a (x .: xs) `f` y
+                                                       =: qed
 
    foa <- foldrOverAppend a f
 
    induct (atProxy (Proxy @a) "bookKeeping")
-          (\(Forall @"xss" xss) -> assoc .&& rUnit .&& lUnit .=> foldr f a (concat xss) .== foldr f a (map (foldr f a) xss)) $
-          \ih xs xss -> [assoc, rUnit, lUnit] |- foldr f a (concat (xs .: xss))
-                                              =: foldr f a (xs ++ concat xss)
-                                              ?? foa
-                                              =: foldr f (foldr f a (concat xss)) xs
-                                              ?? ih
-                                              =: foldr f (foldr f a (map (foldr f a) xss)) xs
-                                              ?? helper `at` (Inst @"xs" xs, Inst @"y" (foldr f a (map (foldr f a) xss)))
-                                              =: foldr f a xs `f` foldr f a (map (foldr f a) xss)
-                                              =: foldr f a (foldr f a xs .: map (foldr f a) xss)
-                                              =: foldr f a (map (foldr f a) (xs .: xss))
-                                              =: qed
+          (\(Forall xss) -> assoc .&& rUnit .&& lUnit .=> foldr f a (concat xss) .== foldr f a (map (foldr f a) xss)) $
+          \ih (xs, xss) -> [assoc, rUnit, lUnit] |- foldr f a (concat (xs .: xss))
+                                                 =: foldr f a (xs ++ concat xss)
+                                                 ?? foa
+                                                 =: foldr f (foldr f a (concat xss)) xs
+                                                 ?? ih
+                                                 =: foldr f (foldr f a (map (foldr f a) xss)) xs
+                                                 ?? helper `at` (Inst @"xs" xs, Inst @"y" (foldr f a (map (foldr f a) xss)))
+                                                 =: foldr f a xs `f` foldr f a (map (foldr f a) xss)
+                                                 =: foldr f a (foldr f a xs .: map (foldr f a) xss)
+                                                 =: foldr f a (map (foldr f a) (xs .: xss))
+                                                 =: qed
 
 -- | @filter p (xs ++ ys) == filter p xs ++ filter p ys@
 --
@@ -921,19 +921,18 @@ bookKeeping a f = do
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] filterAppend @Integer
-filterAppend :: forall a. SymVal a => (SBV a -> SBool) -> TP Proof
+filterAppend :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 filterAppend p =
    induct (atProxy (Proxy @a) "filterAppend")
-          (\(Forall @"xs" xs) (Forall @"ys" ys) -> filter p xs ++ filter p ys .== filter p (xs ++ ys)) $
-          \ih x xs ys -> [] |- filter p (x .: xs) ++ filter p ys
-                            =: ite (p x) (x .: filter p xs) (filter p xs) ++ filter p ys
-                            =: ite (p x) (x .: filter p xs ++ filter p ys) (filter p xs ++ filter p ys)
-                            ?? ih
-                            =: ite (p x) (x .: filter p (xs ++ ys)) (filter p (xs ++ ys))
-                            =: filter p (x .: (xs ++ ys))
-                            =: filter p ((x .: xs) ++ ys)
-                            =: qed
-
+          (\(Forall xs) (Forall ys) -> filter p xs ++ filter p ys .== filter p (xs ++ ys)) $
+          \ih ((x, xs), ys) -> [] |- filter p (x .: xs) ++ filter p ys
+                                  =: ite (p x) (x .: filter p xs) (filter p xs) ++ filter p ys
+                                  =: ite (p x) (x .: filter p xs ++ filter p ys) (filter p xs ++ filter p ys)
+                                  ?? ih
+                                  =: ite (p x) (x .: filter p (xs ++ ys)) (filter p (xs ++ ys))
+                                  =: filter p (x .: (xs ++ ys))
+                                  =: filter p ((x .: xs) ++ ys)
+                                  =: qed
 -- | @filter p (concat xss) == concatMap (filter p xss)@
 --
 -- >>> runTP $ filterConcat @Integer (uninterpret "f")
@@ -952,19 +951,19 @@ filterAppend p =
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] filterConcat @Integer
-filterConcat :: forall a. SymVal a => (SBV a -> SBool) -> TP Proof
+filterConcat :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xss" [[a]] -> SBool))
 filterConcat p = do
   fa <- filterAppend p
 
   inductWith cvc5 (atProxy (Proxy @a) "filterConcat")
-         (\(Forall @"xss" xss) -> filter p (concat xss) .== concatMap (filter p) xss) $
-         \ih xs xss -> [] |- filter p (concat (xs .: xss))
-                          =: filter p (xs ++ concat xss)
-                          ?? fa
-                          =: filter p xs ++ filter p (concat xss)
-                          ?? ih
-                          =: concatMap (filter p) (xs .: xss)
-                          =: qed
+         (\(Forall xss) -> filter p (concat xss) .== concatMap (filter p) xss) $
+         \ih (xs, xss) -> [] |- filter p (concat (xs .: xss))
+                             =: filter p (xs ++ concat xss)
+                             ?? fa
+                             =: filter p xs ++ filter p (concat xss)
+                             ?? ih
+                             =: concatMap (filter p) (xs .: xss)
+                             =: qed
 
 -- | @(as ++ bs) \\ cs == (as \\ cs) ++ (bs \\ cs)@
 --
@@ -976,17 +975,16 @@ filterConcat p = do
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] appendDiff @Integer
-appendDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+appendDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
 appendDiff p =
    induct (atProxy p "appendDiff")
-          (\(Forall @"as" (as :: SList a)) (Forall @"bs" bs) (Forall @"cs" cs) -> (as ++ bs) \\ cs .== (as \\ cs) ++ (bs \\ cs)) $
-          \ih (a :: SBV a) as bs cs ->
-              [] |- (a .: as ++ bs) \\ cs
-                 =: (a .: (as ++ bs)) \\ cs
-                 =: ite (a `elem` cs) ((as ++ bs) \\ cs) (a .: ((as ++ bs) \\ cs))
-                 ?? ih
-                 =: ((a .: as) \\ cs) ++ (bs \\ cs)
-                 =: qed
+          (\(Forall as) (Forall bs) (Forall cs) -> (as ++ bs) \\ cs .== (as \\ cs) ++ (bs \\ cs)) $
+          \ih ((a, as), bs, cs) -> [] |- (a .: as ++ bs) \\ cs
+                                      =: (a .: (as ++ bs)) \\ cs
+                                      =: ite (a `elem` cs) ((as ++ bs) \\ cs) (a .: ((as ++ bs) \\ cs))
+                                      ?? ih
+                                      =: ((a .: as) \\ cs) ++ (bs \\ cs)
+                                      =: qed
 
 -- | @as \\ (bs ++ cs) == (as \\ bs) \\ cs@
 --
@@ -999,11 +997,11 @@ appendDiff p =
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] diffAppend @Integer
-diffAppend :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+diffAppend :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
 diffAppend p =
    induct (atProxy p "diffAppend")
-          (\(Forall @"as" (as :: SList a)) (Forall @"bs" bs) (Forall @"cs" cs) -> as \\ (bs ++ cs) .== (as \\ bs) \\ cs) $
-          \ih (a :: SBV a) as bs cs ->
+          (\(Forall as) (Forall bs) (Forall cs) -> as \\ (bs ++ cs) .== (as \\ bs) \\ cs) $
+          \ih ((a, as), bs, cs) ->
               [] |- (a .: as) \\ (bs ++ cs)
                  =: ite (a `elem` (bs ++ cs)) (as \\ (bs ++ cs)) (a .: (as \\ (bs ++ cs)))
                  ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
@@ -1039,11 +1037,11 @@ diffAppend p =
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] diffDiff @Integer
-diffDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+diffDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
 diffDiff p =
    induct (atProxy p "diffDiff")
-          (\(Forall @"as" (as :: SList a)) (Forall @"bs" bs) (Forall @"cs" cs) -> (as \\ bs) \\ cs .== (as \\ cs) \\ bs) $
-          \ih (a :: SBV a) as bs cs ->
+          (\(Forall as) (Forall bs) (Forall cs) -> (as \\ bs) \\ cs .== (as \\ cs) \\ bs) $
+          \ih ((a, as), bs, cs) ->
               [] |- ((a .: as) \\ bs) \\ cs
                  =: cases [ a `elem`    bs ==> (as \\ bs) \\ cs
                                             ?? ih
@@ -1073,6 +1071,10 @@ diffDiff p =
                                                      ]
                           ]
 
+-- | Are the two lists disjoint?
+disjoint :: (Eq a, SymVal a) => SList a -> SList a -> SBool
+disjoint = smtFunction "disjoint" $ \xs ys -> null xs .|| head xs `notElem` ys .&& disjoint (tail xs) ys
+
 -- | @disjoint as bs .=> as \\ bs == as@
 --
 -- >>> runTP $ disjointDiff (Proxy @Integer)
@@ -1082,16 +1084,16 @@ diffDiff p =
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] disjointDiff @Integer
-disjointDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+disjointDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> SBool))
 disjointDiff p =
    induct (atProxy p "disjointDiff")
-          (\(Forall @"as" (as :: SList a)) (Forall @"bs" bs) -> disjoint as bs .=> as \\ bs .== as) $
-          \ih (a :: SBV a) as bs -> [disjoint (a .: as) bs]
-                                 |- (a .: as) \\ bs
-                                 =: a .: (as \\ bs)
-                                 ?? ih
-                                 =: a .: as
-                                 =: qed
+          (\(Forall as) (Forall bs) -> disjoint as bs .=> as \\ bs .== as) $
+          \ih ((a, as), bs) -> [disjoint (a .: as) bs]
+                            |- (a .: as) \\ bs
+                            =: a .: (as \\ bs)
+                            ?? ih
+                            =: a .: as
+                            =: qed
 
 -- | @fst (partition f xs) == filter f xs@
 --
@@ -1104,20 +1106,20 @@ disjointDiff p =
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] partition1 @Integer
-partition1 :: forall a. SymVal a => (SBV a -> SBool) -> TP Proof
+partition1 :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
 partition1 f =
    induct (atProxy (Proxy @a) "partition1")
-          (\(Forall @"xs" xs) -> fst (partition f xs) .== filter f xs) $
-          \ih x xs -> [] |- fst (partition f (x .: xs))
-                         =: fst (let res = partition f xs
-                                 in ite (f x)
-                                        (tuple (x .: fst res, snd res))
-                                        (tuple (fst res, x .: snd res)))
-                         =: ite (f x) (x .: fst (partition f xs)) (fst (partition f xs))
-                         ?? ih
-                         =: ite (f x) (x .: filter f xs) (filter f xs)
-                         =: filter f (x .: xs)
-                         =: qed
+          (\(Forall xs) -> fst (partition f xs) .== filter f xs) $
+          \ih (x, xs) -> [] |- fst (partition f (x .: xs))
+                            =: fst (let res = partition f xs
+                                    in ite (f x)
+                                           (tuple (x .: fst res, snd res))
+                                           (tuple (fst res, x .: snd res)))
+                            =: ite (f x) (x .: fst (partition f xs)) (fst (partition f xs))
+                            ?? ih
+                            =: ite (f x) (x .: filter f xs) (filter f xs)
+                            =: filter f (x .: xs)
+                            =: qed
 
 -- | @snd (partition f xs) == filter (not . f) xs@
 --
@@ -1130,43 +1132,41 @@ partition1 f =
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] partition2 @Integer
-partition2 :: forall a. SymVal a => (SBV a -> SBool) -> TP Proof
+partition2 :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
 partition2 f =
    induct (atProxy (Proxy @a) "partition2")
-          (\(Forall @"xs" xs) -> snd (partition f xs) .== filter (sNot . f) xs) $
-          \ih x xs -> [] |- snd (partition f (x .: xs))
-                         =: snd (let res = partition f xs
-                                 in ite (f x)
-                                        (tuple (x .: fst res, snd res))
-                                        (tuple (fst res, x .: snd res)))
-                         =: ite (f x) (snd (partition f xs)) (x .: snd (partition f xs))
-                         ?? ih
-                         =: ite (f x) (filter (sNot . f) xs) (x .: filter (sNot . f) xs)
-                         =: filter (sNot . f) (x .: xs)
-                         =: qed
+          (\(Forall xs) -> snd (partition f xs) .== filter (sNot . f) xs) $
+          \ih (x, xs) -> [] |- snd (partition f (x .: xs))
+                            =: snd (let res = partition f xs
+                                    in ite (f x)
+                                           (tuple (x .: fst res, snd res))
+                                           (tuple (fst res, x .: snd res)))
+                            =: ite (f x) (snd (partition f xs)) (x .: snd (partition f xs))
+                            ?? ih
+                            =: ite (f x) (filter (sNot . f) xs) (x .: filter (sNot . f) xs)
+                            =: filter (sNot . f) (x .: xs)
+                            =: qed
 
 -- | @take n (take m xs) == take (n `smin` m) xs@
 --
 -- >>> runTP $ take_take (Proxy @Integer)
 -- Lemma: take_take @Integer               Q.E.D.
 -- [Proven] take_take @Integer
-take_take :: forall a. SymVal a => Proxy a -> TP Proof
+take_take :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "m" Integer -> Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_take p =
    lemma (atProxy p "take_take")
-         (\(Forall @"xs" (xs :: SList a)) (Forall @"m" m) (Forall @"n" n) -> take n (take m xs) .== take (n `smin` m) xs)
+         (\(Forall m) (Forall n) (Forall xs) -> take n (take m xs) .== take (n `smin` m) xs)
          []
-
 
 -- | @n >= 0 && m >= 0 ==> drop n (drop m xs) == drop (n + m) xs@
 --
 -- >>> runTP $ drop_drop (Proxy @Integer)
 -- Lemma: drop_drop @Integer               Q.E.D.
 -- [Proven] drop_drop @Integer
-drop_drop :: forall a. SymVal a => Proxy a -> TP Proof
+drop_drop :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "m" Integer -> Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_drop p =
    lemma (atProxy p "drop_drop")
-          (\(Forall @"n" n) (Forall @"m" m) (Forall @"xs" (xs :: SList a)) ->
-                n .>= 0 .&& m .>= 0 .=> drop n (drop m xs) .== drop (n + m) xs)
+          (\(Forall m) (Forall n) (Forall xs) -> n .>= 0 .&& m .>= 0 .=> drop n (drop m xs) .== drop (n + m) xs)
           []
 
 -- | @take n xs ++ drop n xs == xs@
@@ -1174,10 +1174,10 @@ drop_drop p =
 -- >>> runTP $ take_drop (Proxy @Integer)
 -- Lemma: take_drop @Integer               Q.E.D.
 -- [Proven] take_drop @Integer
-take_drop :: forall a. SymVal a => Proxy a -> TP Proof
+take_drop :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_drop p =
     lemma (atProxy p "take_drop")
-          (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> take n xs ++ drop n xs .== xs)
+          (\(Forall n) (Forall xs) -> take n xs ++ drop n xs .== xs)
           []
 
 -- | @n .> 0 ==> take n (x .: xs) == x .: take (n - 1) xs@
@@ -1185,10 +1185,10 @@ take_drop p =
 -- >>> runTP $ take_cons (Proxy @Integer)
 -- Lemma: take_cons @Integer               Q.E.D.
 -- [Proven] take_cons @Integer
-take_cons :: forall a. SymVal a => Proxy a -> TP Proof
+take_cons :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "x" a -> Forall "xs" [a] -> SBool))
 take_cons p =
    lemma (atProxy p "take_cons")
-         (\(Forall @"n" n) (Forall @"x" x) (Forall @"xs" (xs :: SList a)) -> n .> 0 .=> take n (x .: xs) .== x .: take (n - 1) xs)
+         (\(Forall n) (Forall x) (Forall xs) -> n .> 0 .=> take n (x .: xs) .== x .: take (n - 1) xs)
          []
 
 -- | @take n (map f xs) == map f (take n xs)@
@@ -1207,7 +1207,7 @@ take_cons p =
 --   Result:                                         Q.E.D.
 -- Lemma: take_map @(Integer,Float)                  Q.E.D.
 -- [Proven] take_map @(Integer,Float)
-take_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP Proof
+take_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_map f = do
     tc   <- take_cons (Proxy @a)
 
@@ -1221,30 +1221,30 @@ take_map f = do
 
     h2 <- induct (atProxy (Proxy @(a, b)) "take_map.n > 0")
                  (\(Forall @"xs" xs) (Forall @"n" n) -> n .> 0 .=> take n (map f xs) .== map f (take n xs)) $
-                 \ih x xs n -> [n .> 0] |- take n (map f (x .: xs))
-                                        =: take n (f x .: map f xs)
-                                        =: f x .: take (n - 1) (map f xs)
-                                        ?? ih `at` Inst @"n" (n-1)
-                                        =: f x .: map f (take (n - 1) xs)
-                                        ?? map1 `at` (Inst @"x" x, Inst @"xs" (take (n - 1) xs))
-                                        =: map f (x .: take (n - 1) xs)
-                                        ?? tc
-                                        =: map f (take n (x .: xs))
-                                        =: qed
+                 \ih ((x, xs), n) -> [n .> 0] |- take n (map f (x .: xs))
+                                              =: take n (f x .: map f xs)
+                                              =: f x .: take (n - 1) (map f xs)
+                                              ?? ih `at` Inst @"n" (n-1)
+                                              =: f x .: map f (take (n - 1) xs)
+                                              ?? map1 `at` (Inst @"x" x, Inst @"xs" (take (n - 1) xs))
+                                              =: map f (x .: take (n - 1) xs)
+                                              ?? tc
+                                              =: map f (take n (x .: xs))
+                                              =: qed
 
     lemma (atProxy (Proxy @(a, b)) "take_map")
-          (\(Forall @"xs" xs) (Forall @"n" n) -> take n (map f xs) .== map f (take n xs))
-          [h1, h2]
+          (\(Forall n) (Forall xs) -> take n (map f xs) .== map f (take n xs))
+          [proofOf h1, proofOf h2]
 
 -- | @n .> 0 ==> drop n (x .: xs) == drop (n - 1) xs@
 --
 -- >>> runTP $ drop_cons (Proxy @Integer)
 -- Lemma: drop_cons @Integer               Q.E.D.
 -- [Proven] drop_cons @Integer
-drop_cons :: forall a. SymVal a => Proxy a -> TP Proof
+drop_cons :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "x" a -> Forall "xs" [a] -> SBool))
 drop_cons p =
    lemma (atProxy p "drop_cons")
-         (\(Forall @"n" n) (Forall @"x" x) (Forall @"xs" (xs :: SList a)) -> n .> 0 .=> drop n (x .: xs) .== drop (n - 1) xs)
+         (\(Forall n) (Forall x) (Forall xs) -> n .> 0 .=> drop n (x .: xs) .== drop (n - 1) xs)
          []
 
 -- | @drop n (map f xs) == map f (drop n xs)@
@@ -1267,7 +1267,7 @@ drop_cons p =
 --   Step: 4                                         Q.E.D.
 --   Result:                                         Q.E.D.
 -- [Proven] drop_map @(Integer,[Char])
-drop_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP Proof
+drop_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_map f = do
    dcA <- drop_cons (Proxy @a)
    dcB <- drop_cons (Proxy @b)
@@ -1278,41 +1278,41 @@ drop_map f = do
 
    h2 <- induct (atProxy (Proxy @(a, b)) "drop_map.n > 0")
                 (\(Forall @"xs" xs) (Forall @"n" n) -> n .> 0 .=> drop n (map f xs) .== map f (drop n xs)) $
-                \ih x xs n -> [n .> 0] |- drop n (map f (x .: xs))
-                                       =: drop n (f x .: map f xs)
-                                       ?? dcB `at` (Inst @"n" n, Inst @"x" (f x), Inst @"xs" (map f xs))
-                                       =: drop (n - 1) (map f xs)
-                                       ?? ih `at` Inst @"n" (n-1)
-                                       =: map f (drop (n - 1) xs)
-                                       ?? dcA `at` (Inst @"n" n, Inst @"x" x, Inst @"xs" xs)
-                                       =: map f (drop n (x .: xs))
-                                       =: qed
+                \ih ((x, xs), n) -> [n .> 0] |- drop n (map f (x .: xs))
+                                             =: drop n (f x .: map f xs)
+                                             ?? dcB `at` (Inst @"n" n, Inst @"x" (f x), Inst @"xs" (map f xs))
+                                             =: drop (n - 1) (map f xs)
+                                             ?? ih `at` Inst @"n" (n-1)
+                                             =: map f (drop (n - 1) xs)
+                                             ?? dcA `at` (Inst @"n" n, Inst @"x" x, Inst @"xs" xs)
+                                             =: map f (drop n (x .: xs))
+                                             =: qed
 
    -- I'm a bit surprised that z3 can't deduce the following with a simple-lemma, which is essentially a simple case-split.
    -- But the good thing about calc is that it lets us direct the tool in precise ways that we'd like.
    calc (atProxy (Proxy @(a, b)) "drop_map")
-        (\(Forall @"xs" xs) (Forall @"n" n) -> drop n (map f xs) .== map f (drop n xs)) $
-        \xs n -> [] |- let result = drop n (map f xs) .== map f (drop n xs)
-                    in result
-                    =: ite (n .<= 0) (n .<= 0 .=> result) (n .> 0 .=> result)
-                    ?? h1
-                    =: ite (n .<= 0) sTrue (n .> 0 .=> result)
-                    ?? h2
-                    =: ite (n .<= 0) sTrue sTrue
-                    =: sTrue
-                    =: qed
-
+        (\(Forall n) (Forall xs) -> drop n (map f xs) .== map f (drop n xs)) $
+        \(n, xs) -> [] |- let result = drop n (map f xs) .== map f (drop n xs)
+                          in result
+                          =: ite (n .<= 0) (n .<= 0 .=> result) (n .> 0 .=> result)
+                          ?? h1
+                          =: ite (n .<= 0) sTrue (n .> 0 .=> result)
+                          ?? h2
+                          =: ite (n .<= 0) sTrue sTrue
+                          =: sTrue
+                          =: qed
 -- | @n >= 0 ==> length (take n xs) == length xs \`min\` n@
 --
 -- >>> runTP $ length_take (Proxy @Integer)
 -- Lemma: length_take @Integer             Q.E.D.
 -- [Proven] length_take @Integer
-length_take :: forall a. SymVal a => Proxy a -> TP Proof
+length_take :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 length_take p =
      lemma (atProxy p "length_take")
-           (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> n .>= 0 .=> length (take n xs) .== length xs `smin` n)
+           (\(Forall n) (Forall xs) -> n .>= 0 .=> length (take n xs) .== length xs `smin` n)
            []
 
+{-
 -- | @n >= 0 ==> length (drop n xs) == (length xs - n) \`max\` 0@
 --
 -- >>> runTP $ length_drop (Proxy @Integer)
@@ -1488,10 +1488,6 @@ count = smtFunction "count" $ \e l -> ite (null l)
                                           (let (x, xs) = uncons l
                                                cxs     = count e xs
                                            in ite (e .== x) (1 + cxs) cxs)
-
--- | Are the two lists disjoint?
-disjoint :: (Eq a, SymVal a) => SList a -> SList a -> SBool
-disjoint = smtFunction "disjoint" $ \xs ys -> null xs .|| head xs `notElem` ys .&& disjoint (tail xs) ys
 
 -- | Interleave the elements of two lists. If one ends, we take the rest from the other.
 interleave :: SymVal a => SList a -> SList a -> SList a

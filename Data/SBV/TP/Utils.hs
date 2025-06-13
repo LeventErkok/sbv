@@ -22,7 +22,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.Utils (
-         TP, runTP, runTPWith, Proof(..), ProofObj(..), getProof, sorry
+         TP, runTP, runTPWith, Proof(..), ProofObj(..), proofToAssumption, sorry
        , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML, shortProofName
@@ -90,7 +90,7 @@ withProofCache nm genProof = do
                                           finishTP cfg "Q.E.D." (tab, Nothing) []
                               pure $ Proof prf{isCached = True}
                Nothing  -> do p <- genProof
-                              liftIO $ modifyIORef' proofCache (Map.insert nm (getProofObj p))
+                              liftIO $ modifyIORef' proofCache (Map.insert nm (proofOf p))
                               pure p
 
 -- | The context in which we make a check-sat call
@@ -182,7 +182,11 @@ data TPUnique = TPInternal
 -- is still large: The underlying solver, SBV, and TP kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
-data Proof a = Proof { getProofObj :: ProofObj }
+data Proof a = Proof { proofOf :: ProofObj }
+
+-- | Grab the underlying boolean in a proof. Useful in assumption contexts where we need a boolean
+proofToAssumption :: Proof a -> SBool
+proofToAssumption = getObjProof . proofOf
 
 -- | The actual proof container
 data ProofObj = ProofObj { dependencies :: [ProofObj]     -- ^ Immediate dependencies of this proof. (Not transitive)
@@ -193,10 +197,6 @@ data ProofObj = ProofObj { dependencies :: [ProofObj]     -- ^ Immediate depende
                          , uniqId       :: TPUnique       -- ^ Unique identifier
                          , isCached     :: Bool           -- ^ Was this a cached proof?
                          }
-
--- | Access the underlying boolean of a proof
-getProof :: Proof a -> SBool
-getProof (Proof o) = getObjProof o
 
 -- | Drop the instantiation part
 shortProofName :: ProofObj -> String
@@ -270,7 +270,7 @@ depsToTree shouldCompress visited xform (cnt, ProofTree top ds) = (nVisited, Nod
 -- | Display the proof tree as ASCII text. The first argument is if we should compress the tree, showing only the first
 -- use of any sublemma.
 showProofTree :: Bool -> Proof a -> String
-showProofTree compress d = showTree $ snd $ depsToTree compress [] sh (1, getProofTree (getProofObj d))
+showProofTree compress d = showTree $ snd $ depsToTree compress [] sh (1, getProofTree (proofOf d))
     where sh nm 1 _ = nm
           sh nm x _= nm ++ " (x" ++ show x ++ ")"
 
@@ -278,7 +278,7 @@ showProofTree compress d = showTree $ snd $ depsToTree compress [] sh (1, getPro
 -- The first argument is if we should compress the tree, showing only the first
 -- use of any sublemma. Second is the path (or URL) to external CSS file, if needed.
 showProofTreeHTML :: Bool -> Maybe FilePath -> Proof a -> String
-showProofTreeHTML compress mbCSS p = htmlTree mbCSS $ snd $ depsToTree compress [] nodify (1, getProofTree (getProofObj p))
+showProofTreeHTML compress mbCSS p = htmlTree mbCSS $ snd $ depsToTree compress [] nodify (1, getProofTree (proofOf p))
   where nodify :: String -> Int -> Int -> NodeInfo
         nodify nm cnt dc = NodeInfo { nodeBehavior = InitiallyExpanded
                                     , nodeName     = nm
@@ -332,11 +332,11 @@ sorry = Proof $ ProofObj { dependencies = []
 -- | Calculate the root of trust. The returned list of proofs, if any, will need to be sorry-free to
 -- have the given proof to be sorry-free.
 rootOfTrust :: Proof a -> RootOfTrust
-rootOfTrust = rot . getProofObj
+rootOfTrust = rot . proofOf
   where rot p@ProofObj{uniqId, dependencies} = compress res
           where res = case uniqId of
                         TPInternal -> RootOfTrust Nothing
-                        TPSorry    -> RootOfTrust $ Just [getProofObj sorry]
+                        TPSorry    -> RootOfTrust $ Just [proofOf sorry]
                         TPUser {}  -> self <> foldMap rot dependencies
 
                 -- if sorry is one of our direct dependencies, then we trust this proof
@@ -350,7 +350,7 @@ rootOfTrust = rot . getProofObj
                 -- words, we do not need to (or want to) distinguish between different uses of sorry.
                 compress (RootOfTrust mbps) = RootOfTrust $ reduce <$> mbps
                   where reduce ps = case partition isSorry ps of
-                                      (_, []) -> [getProofObj sorry]
+                                      (_, []) -> [proofOf sorry]
                                       (_, os) -> os
 
 -- | Calculate the modulo string for dependencies
