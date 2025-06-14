@@ -197,11 +197,11 @@ noTerminationChecks = runTP $ do
    badAxiom <- axiom "bad" (\(Forall @"n" n) -> f n .== 1 + f n)
 
    calc "noTerminationImpliesFalse"
-        sFalse $
-        \() -> [] |- f 0
-                  ?? badAxiom `at` Inst @"n" (0 :: SInteger)
-                  =: 1 + f 0
-                  =: qed
+        sFalse
+        ([] |- f 0
+            ?? badAxiom `at` Inst @"n" (0 :: SInteger)
+            =: 1 + f 0
+            =: qed)
 
 -- * Trying to prove non-theorems
 

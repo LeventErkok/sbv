@@ -89,7 +89,7 @@ tpMergeCfg cur top = cur{tpOptions = tpOptions top}
 
 -- | Use an injective type family to allow for curried use of calc and induction steps.
 type family StepArgs a t = result | result -> t where
-  StepArgs SBool                                                                              t = (()                                        -> (SBool, TPProofRaw t))
+  StepArgs SBool                                                                              t = (                                             (SBool, TPProofRaw t))
   StepArgs (Forall na a -> SBool)                                                             t = (SBV a                                     -> (SBool, TPProofRaw t))
   StepArgs (Forall na a -> Forall nb b -> SBool)                                              t = (SBV a -> SBV b                            -> (SBool, TPProofRaw t))
   StepArgs (Forall na a -> Forall nb b -> Forall nc c -> SBool)                               t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))
@@ -335,7 +335,7 @@ mkCalcSteps (intros, tpp) = CalcStrategy { calcIntros    = intros
 
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
-   calcSteps result steps = pure (result, mkCalcSteps (steps ()))
+   calcSteps result steps = pure (result, mkCalcSteps steps)
 
 -- | Chaining lemmas that depend on a single extra variable.
 instance (KnownSymbol na, SymVal a) => Calc (Forall na a -> SBool) where
