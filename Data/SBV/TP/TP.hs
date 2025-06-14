@@ -88,7 +88,7 @@ tpMergeCfg cur top = cur{tpOptions = tpOptions top}
 
 -- | A class for doing equational reasoning style calculational proofs. Use 'calc' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
-class CalcLemma a where
+class Calc a where
   type CArgs a :: Type
 
   -- | Prove a property via a series of equality steps, using the default solver.
@@ -326,34 +326,34 @@ mkCalcSteps (intros, tpp) = CalcStrategy { calcIntros    = intros
         go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev  .== cur) hs (go (CalcStep first cur hs')         p)
 
 -- | Chaining lemmas that depend on no extra variables
-instance CalcLemma SBool where
+instance Calc SBool where
    type CArgs SBool = ()
 
    calcSteps result steps = pure (result, mkCalcSteps (steps ()))
 
 -- | Chaining lemmas that depend on a single extra variable.
-instance (KnownSymbol na, SymVal a) => CalcLemma (Forall na a -> SBool) where
+instance (KnownSymbol na, SymVal a) => Calc (Forall na a -> SBool) where
    type CArgs (Forall na a -> SBool) = SBV a
 
    calcSteps result steps = do a <- free (symbolVal (Proxy @na))
                                pure (result (Forall a), mkCalcSteps (steps a))
 
 -- | Chaining lemmas that depend on two extra variables.
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => CalcLemma (Forall na a -> Forall nb b -> SBool) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Calc (Forall na a -> Forall nb b -> SBool) where
    type CArgs (Forall na a -> Forall nb b -> SBool) = (SBV a, SBV b)
 
    calcSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
                                pure (result (Forall a) (Forall b), mkCalcSteps (steps (a, b)))
 
 -- | Chaining lemmas that depend on three extra variables.
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Calc (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
    type CArgs (Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SBV a, SBV b, SBV c)
 
    calcSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
                                pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps (a, b, c)))
 
 -- | Chaining lemmas that depend on four extra variables.
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
    type CArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SBV a, SBV b, SBV c, SBV d)
 
    calcSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
@@ -361,7 +361,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 
 -- | Chaining lemmas that depend on five extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
-      => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
+      => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
    type CArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SBV a, SBV b, SBV c, SBV d, SBV e)
 
    calcSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))

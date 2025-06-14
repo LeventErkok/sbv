@@ -119,7 +119,7 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
                    , "TP.TP.Instantiatable"
                    , "TP.TP.Inductive"
                    , "TP.TP.SInductive"
-                   , "TP.TP.CalcLemma"
+                   , "TP.TP.Calc"
                    , "TP.TP.Contradiction"
                    , "Tools.STree.STreeInternal"
                    , "Tuple.Tuple"
