@@ -154,11 +154,11 @@ correctness p = runTP $ do
   -- Let's also prove majority is unique, while we're at it, even though it is not essential for our main argument.
   unique <- calc (atProxy p "uniqueness")
                  (\(Forall m1) (Forall m2) (Forall xs) -> isMajority m1 xs .&& isMajority m2 xs .=> m1 .== m2) $
-                 \(m1, m2, xs) -> [isMajority m1 xs, isMajority m2 xs]
-                               |- m1
-                               ?? correct `at` (Inst @"c" m1, Inst @"xs" xs)
-                               ?? correct `at` (Inst @"c" m2, Inst @"xs" xs)
-                               =: m2
-                               =: qed
+                 \m1 m2 xs -> [isMajority m1 xs, isMajority m2 xs]
+                           |- m1
+                           ?? correct `at` (Inst @"c" m1, Inst @"xs" xs)
+                           ?? correct `at` (Inst @"c" m2, Inst @"xs" xs)
+                           =: m2
+                           =: qed
 
   pure (correct, ifExistsFound, ifNoMajority, unique)

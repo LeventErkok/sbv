@@ -7,18 +7,19 @@
 -- Stability : experimental
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DerivingStrategies    #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeAbstractions      #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE ConstraintKinds        #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE DerivingStrategies     #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE NamedFieldPuns         #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeAbstractions       #-}
+{-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TypeOperators          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -86,11 +87,18 @@ getCalcStrategySaturatables (CalcStrategy calcIntros calcProofTree) = calcIntros
 tpMergeCfg :: SMTConfig -> SMTConfig -> SMTConfig
 tpMergeCfg cur top = cur{tpOptions = tpOptions top}
 
+-- | Use an injective type family to allow for curried use of calc and induction steps.
+type family StepArgs a t = result | result -> t where
+  StepArgs SBool                                                                              t = (()                                        -> (SBool, TPProofRaw t))
+  StepArgs (Forall na a -> SBool)                                                             t = (SBV a                                     -> (SBool, TPProofRaw t))
+  StepArgs (Forall na a -> Forall nb b -> SBool)                                              t = (SBV a -> SBV b                            -> (SBool, TPProofRaw t))
+  StepArgs (Forall na a -> Forall nb b -> Forall nc c -> SBool)                               t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))
+  StepArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)                t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw t))
+  StepArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw t))
+
 -- | A class for doing equational reasoning style calculational proofs. Use 'calc' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
 class Calc a where
-  type CArgs a :: Type
-
   -- | Prove a property via a series of equality steps, using the default solver.
   -- Let @H@ be a list of already established lemmas. Let @P@ be a property we wanted to prove, named @name@.
   -- Consider a call of the form @calc name P (cond, [A, B, C, D]) H@. Note that @H@ is
@@ -109,27 +117,27 @@ class Calc a where
   -- non-boolean steps.
   --
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
-  calc :: (Proposition a, EqSymbolic t) => String -> a -> (CArgs a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+  calc :: (Proposition a, EqSymbolic t) => String -> a -> StepArgs a t -> TP (Proof a)
 
   -- | Same as calc, except tagged as Theorem
-  calcThm :: (Proposition a, EqSymbolic t) => String -> a -> (CArgs a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+  calcThm :: (Proposition a, EqSymbolic t) => String -> a -> StepArgs a t -> TP (Proof a)
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  calcWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (CArgs a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+  calcWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
 
   -- | Same as calcWith, except tagged as Theorem
-  calcThmWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (CArgs a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+  calcThmWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL calcSteps #-}
-  calcSteps :: EqSymbolic t => a -> (CArgs a -> (SBool, TPProofRaw t)) -> Symbolic (SBool, CalcStrategy)
+  calcSteps :: EqSymbolic t => a -> StepArgs a t -> Symbolic (SBool, CalcStrategy)
 
   calc            nm p steps = getTPConfig >>= \cfg  -> calcWith          cfg                   nm p steps
   calcThm         nm p steps = getTPConfig >>= \cfg  -> calcThmWith       cfg                   nm p steps
   calcWith    cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric False (tpMergeCfg cfg cfg') nm p steps
   calcThmWith cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric True  (tpMergeCfg cfg cfg') nm p steps
 
-  calcGeneric :: (EqSymbolic t, Proposition a) => Bool -> SMTConfig -> String -> a -> (CArgs a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+  calcGeneric :: (EqSymbolic t, Proposition a) => Bool -> SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
   calcGeneric tagTheorem cfg nm result steps = withProofCache nm $ do
       tpSt <- getTPState
       u    <- tpGetNextUnique
@@ -327,45 +335,33 @@ mkCalcSteps (intros, tpp) = CalcStrategy { calcIntros    = intros
 
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
-   type CArgs SBool = ()
-
    calcSteps result steps = pure (result, mkCalcSteps (steps ()))
 
 -- | Chaining lemmas that depend on a single extra variable.
 instance (KnownSymbol na, SymVal a) => Calc (Forall na a -> SBool) where
-   type CArgs (Forall na a -> SBool) = SBV a
-
    calcSteps result steps = do a <- free (symbolVal (Proxy @na))
                                pure (result (Forall a), mkCalcSteps (steps a))
 
 -- | Chaining lemmas that depend on two extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Calc (Forall na a -> Forall nb b -> SBool) where
-   type CArgs (Forall na a -> Forall nb b -> SBool) = (SBV a, SBV b)
-
    calcSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
-                               pure (result (Forall a) (Forall b), mkCalcSteps (steps (a, b)))
+                               pure (result (Forall a) (Forall b), mkCalcSteps (steps a b))
 
 -- | Chaining lemmas that depend on three extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Calc (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
-   type CArgs (Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SBV a, SBV b, SBV c)
-
    calcSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps (a, b, c)))
+                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c))
 
 -- | Chaining lemmas that depend on four extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
-   type CArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SBV a, SBV b, SBV c, SBV d)
-
    calcSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps (a, b, c, d)))
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d))
 
 -- | Chaining lemmas that depend on five extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
       => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
-   type CArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SBV a, SBV b, SBV c, SBV d, SBV e)
-
    calcSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps (a, b, c, d, e)))
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e))
 
 -- | Captures the schema for an inductive proof. Base case might be nothing, to cover strong induction.
 data InductionStrategy = InductionStrategy { inductionIntros    :: SBool

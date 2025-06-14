@@ -112,12 +112,12 @@ sublistCorrect p = do
 
     calc (atProxy p "sublistCorrect")
          (\(Forall xs) (Forall ys) (Forall x) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys) $
-         \(xs, ys, x) -> [xs `sublist` ys, x `elem` xs]
-                      |- x `elem` ys
-                      ?? cElem  `at` (Inst @"xs" xs, Inst @"e" x)
-                      ?? eCount `at` (Inst @"xs" ys, Inst @"e" x)
-                      =: sTrue
-                      =: qed
+         \xs ys x -> [xs `sublist` ys, x `elem` xs]
+                  |- x `elem` ys
+                  ?? cElem  `at` (Inst @"xs" xs, Inst @"e" x)
+                  ?? eCount `at` (Inst @"xs" ys, Inst @"e" x)
+                  =: sTrue
+                  =: qed
 
 -- | If one list is a sublist of another, then its head is an elem. We have:
 --
@@ -161,11 +161,11 @@ sublistElem p = do
 
    calc (atProxy p "sublistElem")
         (\(Forall x) (Forall xs) (Forall ys) -> (x .: xs) `sublist` ys .=> x `elem` ys) $
-        \(x, xs, ys) -> [(x .: xs) `sublist` ys]
-                     |- x `elem` ys
-                     ?? slc `at` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"x" x)
-                     =: sTrue
-                     =: qed
+        \x xs ys -> [(x .: xs) `sublist` ys]
+                 |- x `elem` ys
+                 ?? slc `at` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"x" x)
+                 =: sTrue
+                 =: qed
 
 -- | If one list is a sublist of another so is its tail. We have:
 --

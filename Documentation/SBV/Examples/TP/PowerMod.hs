@@ -77,11 +77,11 @@ modAddRight = do
    mAddMul <- modAddMultiple
    calc "modAddRight"
       (\(Forall a) (Forall b) (Forall m) -> m .> 0  .=>  (a+b) `sEMod` m .== (a + b `sEMod` m) `sEMod` m) $
-      \(a, b, m) -> [m .> 0] |- (a+b) `sEMod` m
-                             =: (a + b `sEMod` m + m * b `sEDiv` m) `sEMod` m
-                             ?? mAddMul `at` (Inst @"k" (b `sEDiv` m), Inst @"n" (a + b `sEMod` m), Inst @"m" m)
-                             =: (a + b `sEMod` m) `sEMod` m
-                             =: qed
+      \a b m -> [m .> 0] |- (a+b) `sEMod` m
+                         =: (a + b `sEMod` m + m * b `sEDiv` m) `sEMod` m
+                         ?? mAddMul `at` (Inst @"k" (b `sEDiv` m), Inst @"n" (a + b `sEMod` m), Inst @"m" m)
+                         =: (a + b `sEMod` m) `sEMod` m
+                         =: qed
 
 -- | \(m > 0 \Rightarrow a + b \equiv (a \bmod m) + b \pmod{m}\)
 --
@@ -108,12 +108,12 @@ modAddLeft = do
    mAddR <- modAddRight
    calc "modAddLeft"
       (\(Forall a) (Forall b) (Forall m) -> m .> 0 .=>  (a+b) `sEMod` m .== (a `sEMod` m + b) `sEMod` m) $
-      \(a, b, m) -> [m .> 0] |- (a+b) `sEMod` m
-                             =: (b+a) `sEMod` m
-                             ?? mAddR
-                             =: (b + a `sEMod` m) `sEMod` m
-                             =: (a `sEMod` m + b) `sEMod` m
-                             =: qed
+      \a b m -> [m .> 0] |- (a+b) `sEMod` m
+                         =: (b+a) `sEMod` m
+                         ?? mAddR
+                         =: (b + a `sEMod` m) `sEMod` m
+                         =: (a `sEMod` m + b) `sEMod` m
+                         =: qed
 
 -- | \(m > 0 \Rightarrow a - b \equiv a - (b \bmod m) \pmod{m}\)
 --
@@ -136,12 +136,12 @@ modSubRight = do
    mAddMul <- modAddMultiple
    calc "modSubRight"
       (\(Forall a) (Forall b) (Forall m) -> m .> 0 .=>  (a-b) `sEMod` m .== (a - b `sEMod` m) `sEMod` m) $
-      \(a, b, m) -> [m .> 0] |- (a-b) `sEMod` m
-                             =: (a - (b `sEMod` m + m * b `sEDiv` m)) `sEMod` m
-                             =: ((a - b `sEMod` m) + m*(- (b `sEDiv` m))) `sEMod` m
-                             ?? mAddMul `at` (Inst @"k" (- (b `sEDiv` m)), Inst @"n" (a - b `sEMod` m), Inst @"m" m)
-                             =: (a - b `sEMod` m) `sEMod` m
-                             =: qed
+      \a b m -> [m .> 0] |- (a-b) `sEMod` m
+                         =: (a - (b `sEMod` m + m * b `sEDiv` m)) `sEMod` m
+                         =: ((a - b `sEMod` m) + m*(- (b `sEDiv` m))) `sEMod` m
+                         ?? mAddMul `at` (Inst @"k" (- (b `sEDiv` m)), Inst @"n" (a - b `sEMod` m), Inst @"m" m)
+                         =: (a - b `sEMod` m) `sEMod` m
+                         =: qed
 
 -- | \(a \geq 0 \land m > 0 \Rightarrow ab \equiv a \cdot (b \bmod m) \pmod{m}\)
 --
@@ -313,17 +313,17 @@ modMulRight = do
 
    calc "modMulRight"
         (\(Forall a) (Forall b) (Forall m) -> m .> 0 .=> (a*b) `sEMod` m .== (a * b `sEMod` m) `sEMod` m) $
-        \(a, b, m) -> [m .> 0] |- cases [ a .>= 0 ==> (a*b) `sEMod` m
-                                                   ?? mMulNonneg `at` (Inst @"a" a, Inst @"b" b, Inst @"m" m)
-                                                   =: (a * b `sEMod` m) `sEMod` m
-                                                   =: qed
-                                        , a .<  0 ==> (a*b) `sEMod` m
-                                                   =: (-((-a)*b)) `sEMod` m
-                                                   ?? mMulNeg `at` (Inst @"a" (-a), Inst @"b" b, Inst @"m" m)
-                                                   =: (-((-a) * b `sEMod` m)) `sEMod` m
-                                                   =: (a * b `sEMod` m) `sEMod` m
-                                                   =: qed
-                                        ]
+        \a b m -> [m .> 0] |- cases [ a .>= 0 ==> (a*b) `sEMod` m
+                                               ?? mMulNonneg `at` (Inst @"a" a, Inst @"b" b, Inst @"m" m)
+                                               =: (a * b `sEMod` m) `sEMod` m
+                                               =: qed
+                                    , a .<  0 ==> (a*b) `sEMod` m
+                                               =: (-((-a)*b)) `sEMod` m
+                                               ?? mMulNeg `at` (Inst @"a" (-a), Inst @"b" b, Inst @"m" m)
+                                               =: (-((-a) * b `sEMod` m)) `sEMod` m
+                                               =: (a * b `sEMod` m) `sEMod` m
+                                               =: qed
+                                    ]
 
 -- | \(m > 0 \Rightarrow ab \equiv (a \bmod m) \cdot b \pmod{m}\)
 --
@@ -393,12 +393,12 @@ modMulLeft = do
 
    calc "modMulLeft"
         (\(Forall a) (Forall b) (Forall m) -> m .> 0 .=> (a*b) `sEMod` m .== (a `sEMod` m * b) `sEMod` m) $
-        \(a, b, m) -> [m .> 0] |- (a*b) `sEMod` m
-                               =: (b*a) `sEMod` m
-                               ?? mMulR
-                               =: (b * a `sEMod` m) `sEMod` m
-                               =: (a `sEMod` m * b) `sEMod` m
-                               =: qed
+        \a b m -> [m .> 0] |- (a*b) `sEMod` m
+                           =: (b*a) `sEMod` m
+                           ?? mMulR
+                           =: (b * a `sEMod` m) `sEMod` m
+                           =: (a `sEMod` m * b) `sEMod` m
+                           =: qed
 
 -- | \(n \geq 0 \land m > 0 \Rightarrow b^n \equiv (b \bmod m)^n \pmod{m}\)
 --
@@ -748,8 +748,8 @@ powerOfThreeMod13VarDivisor = do
         (\(Forall n) (Forall m) ->
             n .>= 0 .&& m .> 0 .=>     power 27 (n `sEDiv` 3) `sEMod` 13 * power 3 (n `sEMod` 3) `sEMod` m
                                    .== power  3 (n `sEMod` 3) `sEMod` m) $
-        \(n, m) -> [n .>= 0, m .> 0]
-                |- power 27 (n `sEDiv` 3) `sEMod` 13 * power 3 (n `sEMod` 3) `sEMod` m
-                ?? p27 `at` Inst @"n" (sEDiv n 3)
-                =: power 3 (n `sEMod` 3) `sEMod` m
-                =: qed
+        \n m -> [n .>= 0, m .> 0]
+             |- power 27 (n `sEDiv` 3) `sEMod` 13 * power 3 (n `sEMod` 3) `sEMod` m
+             ?? p27 `at` Inst @"n" (sEDiv n 3)
+             =: power 3 (n `sEMod` 3) `sEMod` m
+             =: qed

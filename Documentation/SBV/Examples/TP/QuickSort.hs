@@ -326,12 +326,12 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
   lltPermutation <-
      calc "lltPermutation"
            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& isPermutation xs ys .=> llt pivot xs) $
-           \(xs, pivot, ys) -> [llt pivot ys, isPermutation xs ys]
-                            |- llt pivot xs
-                            ?? lltSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
-                            ?? sublistIfPerm `at` (Inst @"xs" xs, Inst @"ys" ys)
-                            =: sTrue
-                            =: qed
+           \xs pivot ys -> [llt pivot ys, isPermutation xs ys]
+                        |- llt pivot xs
+                        ?? lltSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
+                        ?? sublistIfPerm `at` (Inst @"xs" xs, Inst @"ys" ys)
+                        =: sTrue
+                        =: qed
 
   -- If a value is greater than or equal to all the elements in a list, then it is also less than all the elements of any sublist of it
   lgeSublist <-
@@ -356,12 +356,12 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
   lgePermutation <-
      calc "lgePermutation"
            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& isPermutation xs ys .=> lge pivot xs) $
-           \(xs, pivot, ys) -> [lge pivot ys, isPermutation xs ys]
-                            |- lge pivot xs
-                            ?? lgeSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
-                            ?? sublistIfPerm `at` (Inst @"xs" xs, Inst @"ys" ys)
-                            =: sTrue
-                            =: qed
+           \xs pivot ys -> [lge pivot ys, isPermutation xs ys]
+                        |- lge pivot xs
+                        ?? lgeSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
+                        ?? sublistIfPerm `at` (Inst @"xs" xs, Inst @"ys" ys)
+                        =: sTrue
+                        =: qed
 
   --------------------------------------------------------------------------------------------
   -- Part III. Helper lemmas for partition

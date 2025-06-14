@@ -221,10 +221,10 @@ tailsAppend p = do
    helper <- calc "helper"
                    (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) ->
                         appendEach ys (tails (x .: xs)) .== [(x .: xs) ++ ys] ++ appendEach ys (tails xs)) $
-                   \(xs, ys, x) -> [] |- appendEach ys (tails (x .: xs))
-                                      =: appendEach ys ([x .: xs] ++ tails xs)
-                                      =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs)
-                                      =: qed
+                   \xs ys x -> [] |- appendEach ys (tails (x .: xs))
+                                  =: appendEach ys ([x .: xs] ++ tails xs)
+                                  =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs)
+                                  =: qed
 
    induct (atProxy p "tailsAppend")
           (\(Forall xs) (Forall ys) -> tails (xs ++ ys) .== appendEach ys (tails xs) ++ tail (tails ys)) $
@@ -1292,15 +1292,16 @@ drop_map f = do
    -- But the good thing about calc is that it lets us direct the tool in precise ways that we'd like.
    calc (atProxy (Proxy @(a, b)) "drop_map")
         (\(Forall n) (Forall xs) -> drop n (map f xs) .== map f (drop n xs)) $
-        \(n, xs) -> [] |- let result = drop n (map f xs) .== map f (drop n xs)
-                          in result
-                          =: ite (n .<= 0) (n .<= 0 .=> result) (n .> 0 .=> result)
-                          ?? h1
-                          =: ite (n .<= 0) sTrue (n .> 0 .=> result)
-                          ?? h2
-                          =: ite (n .<= 0) sTrue sTrue
-                          =: sTrue
-                          =: qed
+        \n xs -> [] |- let result = drop n (map f xs) .== map f (drop n xs)
+                       in result
+                       =: ite (n .<= 0) (n .<= 0 .=> result) (n .> 0 .=> result)
+                       ?? h1
+                       =: ite (n .<= 0) sTrue (n .> 0 .=> result)
+                       ?? h2
+                       =: ite (n .<= 0) sTrue sTrue
+                       =: sTrue
+                       =: qed
+
 -- | @n >= 0 ==> length (take n xs) == length xs \`min\` n@
 --
 -- >>> runTP $ length_take (Proxy @Integer)
@@ -1591,12 +1592,12 @@ interleaveRoundTrip p = do
    -- Round-trip theorem:
    calc (atProxy p "interleaveRoundTrip")
            (\(Forall xs) (Forall ys) -> length xs .== length ys .=> uninterleave (interleave xs ys) .== tuple (xs, ys)) $
-           \(xs, ys) -> [length xs .== length ys]
-                     |- uninterleave (interleave xs ys)
-                     =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
-                     ?? roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil, nil)))
-                     =: tuple (reverse nil ++ xs, reverse nil ++ ys)
-                     =: qed
+           \xs ys -> [length xs .== length ys]
+                  |- uninterleave (interleave xs ys)
+                  =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
+                  ?? roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil, nil)))
+                  =: tuple (reverse nil ++ xs, reverse nil ++ ys)
+                  =: qed
 
 -- | @count e (xs ++ ys) == count e xs + count e ys@
 --
@@ -1646,12 +1647,12 @@ takeDropCount p = do
 
        calc (atProxy p "takeDropCount")
             (\(Forall xs) (Forall n) (Forall e) -> count e (take n xs) + count e (drop n xs) .== count e xs) $
-            \(xs, n, e) -> [] |- count e (take n xs) + count e (drop n xs)
-                              ?? capp `at` (Inst @"xs" (take n xs), Inst @"ys" (drop n xs), Inst @"e" e)
-                              =: count e (take n xs ++ drop n xs)
-                              ?? takeDrop
-                              =: count e xs
-                              =: qed
+            \xs n e -> [] |- count e (take n xs) + count e (drop n xs)
+                          ?? capp `at` (Inst @"xs" (take n xs), Inst @"ys" (drop n xs), Inst @"e" e)
+                          =: count e (take n xs ++ drop n xs)
+                          ?? takeDrop
+                          =: count e xs
+                          =: qed
 
 -- | @count e xs >= 0@
 --
