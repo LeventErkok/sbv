@@ -1057,17 +1057,33 @@ class HintsTo a b where
 instance Hinted a ~ TPProofRaw a => HintsTo a (Proof b) where
   a `addHint` p = ProofStep a [HelperProof (proofOf p)] qed
 
+-- | Giving a bunch of proofs at the same type as a helper.
+instance Hinted a ~ TPProofRaw a => HintsTo a [Proof b] where
+  a `addHint` ps = ProofStep a (map (HelperProof . proofOf) ps) qed
+
 -- | Giving just one boolean as a helper.
 instance Hinted a ~ TPProofRaw a => HintsTo a SBool where
   a `addHint` p = ProofStep a [HelperAssum p] qed
+
+-- | Giving a list of booleans as a helper.
+instance Hinted a ~ TPProofRaw a => HintsTo a [SBool] where
+  a `addHint` ps = ProofStep a (map HelperAssum ps) qed
 
 -- | Giving just one helper
 instance Hinted a ~ TPProofRaw a => HintsTo a Helper where
   a `addHint` h = ProofStep a [h] qed
 
+-- | Giving a list of helper
+instance Hinted a ~ TPProofRaw a => HintsTo a [Helper] where
+  a `addHint` hs = ProofStep a hs qed
+
 -- | Giving user a hint as a string. This doesn't actually do anything for the solver, it just helps with readability
 instance Hinted a ~ TPProofRaw a => HintsTo a String where
   a `addHint` s = ProofStep a [HelperString s] qed
+
+-- | Giving a bunch of strings
+instance Hinted a ~ TPProofRaw a => HintsTo a [String] where
+  a `addHint` ss = ProofStep a (map HelperString ss) qed
 
 -- | Giving just one proof as a helper, starting from a proof
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) (Proof b) where
@@ -1075,17 +1091,17 @@ instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TP
   ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [HelperProof (proofOf h)]) bs
   ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [HelperProof (proofOf h)])
 
+-- | Giving a bunch of proofs at the same type as a helper, starting from a proof
+instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) [Proof b] where
+  ProofStep   a hs ps `addHint` hs' = ProofStep   a (hs ++ map (HelperProof . proofOf) hs') ps
+  ProofBranch b hs bs `addHint` hs' = ProofBranch b (hs ++ map (HelperProof . proofOf) hs') bs
+  ProofEnd    b hs    `addHint` hs' = ProofEnd    b (hs ++ map (HelperProof . proofOf) hs')
+
 -- | Giving just one boolean as a helper.
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) SBool where
   ProofStep   a hs ps `addHint` h = ProofStep   a (hs ++ [HelperAssum h]) ps
   ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [HelperAssum h]) bs
   ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [HelperAssum h])
-
--- | Giving just one helper
-instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) Helper where
-  ProofStep   a hs ps `addHint` h = ProofStep   a (hs ++ [h]) ps
-  ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [h]) bs
-  ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [h])
 
 -- | Giving a bunch of booleans as a helper.
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) [SBool] where
@@ -1093,17 +1109,17 @@ instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TP
   ProofBranch b hs bs `addHint` hs' = ProofBranch b (hs ++ map HelperAssum hs') bs
   ProofEnd    b hs    `addHint` hs' = ProofEnd    b (hs ++ map HelperAssum hs')
 
+-- | Giving just one helper
+instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) Helper where
+  ProofStep   a hs ps `addHint` h = ProofStep   a (hs ++ [h]) ps
+  ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [h]) bs
+  ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [h])
+
 -- | Giving a set of helpers
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) [Helper] where
   ProofStep   a hs ps `addHint` hs' = ProofStep   a (hs ++ hs') ps
   ProofBranch b hs bs `addHint` hs' = ProofBranch b (hs ++ hs') bs
   ProofEnd    b hs    `addHint` hs' = ProofEnd    b (hs ++ hs')
-
--- | Giving a set of proof objects as helpers. This is helpful since we occasionally put a bunch of proofs together.
-instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) [ProofObj] where
-  ProofStep   a hs ps `addHint` hs' = ProofStep   a (hs ++ map HelperProof hs') ps
-  ProofBranch b hs bs `addHint` hs' = ProofBranch b (hs ++ map HelperProof hs') bs
-  ProofEnd    b hs    `addHint` hs' = ProofEnd    b (hs ++ map HelperProof hs')
 
 -- | Giving user a hint as a string. This doesn't actually do anything for the solver, it just helps with readability
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) String where
@@ -1112,6 +1128,12 @@ instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TP
 -- | Giving a bunch of strings as hints. This doesn't actually do anything for the solver, it just helps with readability
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) [String] where
   a `addHint` ss = a `addHint` map HelperString ss
+
+-- | Giving a set of proof objects as helpers. This is helpful since we occasionally put a bunch of proofs together.
+instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) [ProofObj] where
+  ProofStep   a hs ps `addHint` hs' = ProofStep   a (hs ++ map HelperProof hs') ps
+  ProofBranch b hs bs `addHint` hs' = ProofBranch b (hs ++ map HelperProof hs') bs
+  ProofEnd    b hs    `addHint` hs' = ProofEnd    b (hs ++ map HelperProof hs')
 
 -- | Capture what a given step can chain-to. This is a closed-type family, i.e.,
 -- we don't allow users to change this and write other chainable things. Probably it is not really necessary,
