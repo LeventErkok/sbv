@@ -122,7 +122,7 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 --   Result:                                                   Q.E.D.
 -- Lemma: mergeSortIsCorrect                                   Q.E.D.
 -- [Proven] mergeSortIsCorrect
-correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO Proof
+correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
 correctness _ = runTPWith (tpRibbon 60 z3) $ do
 
     --------------------------------------------------------------------------------------------
@@ -142,35 +142,35 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
     mergeKeepsSort <-
         sInductWith cvc5 "mergeKeepsSort"
            (\(Forall @"xs" xs) (Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys))
-           (\xs ys -> (length @a xs, length @a ys)) $
-           \ih xs ys -> [nonDecreasing xs, nonDecreasing ys]
-                     |- split2 (xs, ys)
-                               trivial           -- when both xs and ys are empty.  Trivial.
-                               trivial           -- when xs is empty, but ys isn't. Trivial.
-                               trivial           -- when ys is empty, but xs isn't. Trivial.
-                               (\(a, as) (b, bs) ->
-                                     nonDecreasing (merge (a .: as) (b .: bs))
-                                  ?? "unfold merge"
-                                  =: nonDecreasing (ite (a .<= b)
-                                                        (a .: merge as (b .: bs))
-                                                        (b .: merge (a .: as) bs))
-                                  ?? "case split"
-                                  =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
-                                                      ?? ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
-                                                      ?? nonDecrIns `at` (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
-                                                      =: sTrue
-                                                      =: qed
-                                           , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
-                                                      ?? ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
-                                                      ?? nonDecrIns `at` (Inst @"x" b, Inst @"ys" (merge (a .: as) bs))
-                                                      =: sTrue
-                                                      =: qed
-                                           ])
+           (\(xs, ys) -> (length xs, length ys)) $
+           \ih (xs, ys) -> [nonDecreasing xs, nonDecreasing ys]
+                        |- split2 (xs, ys)
+                                  trivial           -- when both xs and ys are empty.  Trivial.
+                                  trivial           -- when xs is empty, but ys isn't. Trivial.
+                                  trivial           -- when ys is empty, but xs isn't. Trivial.
+                                  (\(a, as) (b, bs) ->
+                                        nonDecreasing (merge (a .: as) (b .: bs))
+                                     ?? "unfold merge"
+                                     =: nonDecreasing (ite (a .<= b)
+                                                           (a .: merge as (b .: bs))
+                                                           (b .: merge (a .: as) bs))
+                                     ?? "case split"
+                                     =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
+                                                         ?? ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
+                                                         ?? nonDecrIns `at` (Inst @"x" a, Inst @"xs" (merge as (b .: bs)))
+                                                         =: sTrue
+                                                         =: qed
+                                              , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
+                                                         ?? ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
+                                                         ?? nonDecrIns `at` (Inst @"x" b, Inst @"xs" (merge (a .: as) bs))
+                                                         =: sTrue
+                                                         =: qed
+                                              ])
 
     sortNonDecreasing <-
         sInduct "sortNonDecreasing"
                 (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs))
-                (length @a) $
+                length $
                 \ih xs -> [] |- split xs
                                       qed
                                       (\e es -> nonDecreasing (mergeSort (e .: es))
@@ -200,8 +200,8 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
         sInduct "mergeCount"
                 (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" (e :: SBV a)) ->
                         count e (merge xs ys) .== count e xs + count e ys)
-                (\xs ys (_e :: SBV a) -> (length @a xs, length @a ys)) $
-                \ih as bs e -> [] |-
+                (\(xs, ys, _e) -> (length xs, length ys)) $
+                \ih (as, bs, e) -> [] |-
                         split2 (as, bs)
                                trivial
                                trivial
@@ -238,41 +238,41 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
     sortIsPermutation <-
         sInductWith cvc5 "sortIsPermutation"
                 (\(Forall @"xs" (xs :: SList a)) (Forall @"e" e) -> count e xs .== count e (mergeSort xs))
-                (\xs (_e :: SBV a) -> length @a xs) $
-                \ih as e -> [] |- split as
-                                        qed
-                                        (\x xs -> count e (mergeSort (x .: xs))
-                                               ?? "unfold mergeSort"
-                                               =: count e (ite (length (x .: xs) .<= 1)
-                                                               (x .: xs)
-                                                               (let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
-                                                                in merge (mergeSort h1) (mergeSort h2)))
-                                               ?? "push count down, simplify, rearrange"
-                                               =: let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
-                                               in ite (null xs)
-                                                      (count e [x])
-                                                      (count e (merge (mergeSort h1) (mergeSort h2)))
-                                               ?? mergeCount `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2), Inst @"e" e)
-                                               =: ite (null xs)
-                                                      (count e [x])
-                                                      (count e (mergeSort h1) + count e (mergeSort h2))
-                                               ?? ih `at` (Inst @"xs" h1, Inst @"e" e)
-                                               =: ite (null xs)
-                                                      (count e [x])
-                                                      (count e h1 + count e (mergeSort h2))
-                                               ?? ih `at` (Inst @"xs" h2, Inst @"e" e)
-                                               =: ite (null xs)
-                                                      (count e [x])
-                                                      (count e h1 + count e h2)
-                                               ?? takeDropCount `at` (Inst @"xs" (x .: xs), Inst @"n" (length (x .: xs) `sEDiv` 2), Inst @"e" e)
-                                               =: ite (null xs)
-                                                      (count e [x])
-                                                      (count e (x .: xs))
-                                               =: qed)
+                (\(xs, _e) -> length xs) $
+                \ih (as, e) -> [] |- split as
+                                           trivial
+                                           (\x xs -> count e (mergeSort (x .: xs))
+                                                  ?? "unfold mergeSort"
+                                                  =: count e (ite (length (x .: xs) .<= 1)
+                                                                  (x .: xs)
+                                                                  (let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
+                                                                   in merge (mergeSort h1) (mergeSort h2)))
+                                                  ?? "push count down, simplify, rearrange"
+                                                  =: let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
+                                                  in ite (null xs)
+                                                         (count e [x])
+                                                         (count e (merge (mergeSort h1) (mergeSort h2)))
+                                                  ?? mergeCount `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2), Inst @"e" e)
+                                                  =: ite (null xs)
+                                                         (count e [x])
+                                                         (count e (mergeSort h1) + count e (mergeSort h2))
+                                                  ?? ih `at` (Inst @"xs" h1, Inst @"e" e)
+                                                  =: ite (null xs)
+                                                         (count e [x])
+                                                         (count e h1 + count e (mergeSort h2))
+                                                  ?? ih `at` (Inst @"xs" h2, Inst @"e" e)
+                                                  =: ite (null xs)
+                                                         (count e [x])
+                                                         (count e h1 + count e h2)
+                                                  ?? takeDropCount `at` (Inst @"xs" (x .: xs), Inst @"n" (length (x .: xs) `sEDiv` 2), Inst @"e" e)
+                                                  =: ite (null xs)
+                                                         (count e [x])
+                                                         (count e (x .: xs))
+                                                  =: qed)
 
     --------------------------------------------------------------------------------------------
     -- Put the two parts together for the final proof
     --------------------------------------------------------------------------------------------
     lemma "mergeSortIsCorrect"
-          (\(Forall @"xs" xs) -> let out = mergeSort xs in nonDecreasing out .&& isPermutation xs out)
-          [sortNonDecreasing, sortIsPermutation]
+          (\(Forall xs) -> let out = mergeSort xs in nonDecreasing out .&& isPermutation xs out)
+          [proofOf sortNonDecreasing, proofOf sortIsPermutation]

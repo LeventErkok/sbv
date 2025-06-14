@@ -64,7 +64,7 @@ nonDecrTail _ =
 nonDecrIns :: forall a. (Ord a, SymVal a) => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 nonDecrIns _ =
    lemma "nonDecrInsert"
-         (\(Forall x) (Forall ys) -> nonDecreasing ys .&& sNot (null ys) .&& x .<= head ys .=> nonDecreasing (x .: ys))
+         (\(Forall x) (Forall xs) -> nonDecreasing xs .&& sNot (null xs) .&& x .<= head xs .=> nonDecreasing (x .: xs))
          []
 
 -- | Sublist relationship
