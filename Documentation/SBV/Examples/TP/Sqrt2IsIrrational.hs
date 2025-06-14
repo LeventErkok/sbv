@@ -107,6 +107,6 @@ sqrt2IsIrrational = runTP $ do
 
     -- Prove that square-root of 2 is irrational. We do this by showing for all pairs of integers @a@ and @b@
     -- such that @a*a == 2*b*b@, it must be the case that @a@ and @b@ can not be co-prime:
-    lemma "sqrt2IsIrrationalGen"
+    lemma "sqrt2IsIrrational"
           (quantifiedBool (\(Forall @"a" a) (Forall @"b" b) -> sq a .== 2 * sq b .=> sNot (coPrime a b)))
           [proofOf squareEvenImpliesEven, proofOf evenSquaredIsMult4]
