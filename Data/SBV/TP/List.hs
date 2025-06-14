@@ -1312,16 +1312,15 @@ length_take p =
            (\(Forall n) (Forall xs) -> n .>= 0 .=> length (take n xs) .== length xs `smin` n)
            []
 
-{-
 -- | @n >= 0 ==> length (drop n xs) == (length xs - n) \`max\` 0@
 --
 -- >>> runTP $ length_drop (Proxy @Integer)
 -- Lemma: length_drop @Integer             Q.E.D.
 -- [Proven] length_drop @Integer
-length_drop :: forall a. SymVal a => Proxy a -> TP Proof
+length_drop :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 length_drop p =
      lemma (atProxy p "length_drop")
-           (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> n .>= 0 .=> length (drop n xs) .== (length xs - n) `smax` 0)
+           (\(Forall n) (Forall xs) -> n .>= 0 .=> length (drop n xs) .== (length xs - n) `smax` 0)
            []
 
 -- | @length xs \<= n ==\> take n xs == xs@
@@ -1329,10 +1328,10 @@ length_drop p =
 -- >>> runTP $ take_all (Proxy @Integer)
 -- Lemma: take_all @Integer                Q.E.D.
 -- [Proven] take_all @Integer
-take_all :: forall a. SymVal a => Proxy a -> TP Proof
+take_all :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_all p =
     lemma (atProxy p "take_all")
-          (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> length xs .<= n .=> take n xs .== xs)
+          (\(Forall n) (Forall xs) -> length xs .<= n .=> take n xs .== xs)
           []
 
 -- | @length xs \<= n ==\> drop n xs == nil@
@@ -1340,10 +1339,10 @@ take_all p =
 -- >>> runTP $ drop_all (Proxy @Integer)
 -- Lemma: drop_all @Integer                Q.E.D.
 -- [Proven] drop_all @Integer
-drop_all :: forall a. SymVal a => Proxy a -> TP Proof
+drop_all :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_all p =
     lemma (atProxy p "drop_all")
-          (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) -> length xs .<= n .=> drop n xs .== nil)
+          (\(Forall n) (Forall xs) -> length xs .<= n .=> drop n xs .== nil)
           []
 
 -- | @take n (xs ++ ys) == (take n xs ++ take (n - length xs) ys)@
@@ -1351,10 +1350,9 @@ drop_all p =
 -- >>> runTP $ take_append (Proxy @Integer)
 -- Lemma: take_append @Integer             Q.E.D.
 -- [Proven] take_append @Integer
-take_append :: forall a. SymVal a => Proxy a -> TP Proof
+take_append :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 take_append p = lemmaWith cvc5 (atProxy p "take_append")
-                  (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) (Forall @"ys" ys)
-                      -> take n (xs ++ ys) .== take n xs ++ take (n - length xs) ys)
+                  (\(Forall n) (Forall xs) (Forall ys) -> take n (xs ++ ys) .== take n xs ++ take (n - length xs) ys)
                   []
 
 -- | @drop n (xs ++ ys) == drop n xs ++ drop (n - length xs) ys@
@@ -1364,11 +1362,10 @@ take_append p = lemmaWith cvc5 (atProxy p "take_append")
 -- >>> runTP $ drop_append (Proxy @Integer)
 -- Lemma: drop_append @Integer             Q.E.D.
 -- [Proven] drop_append @Integer
-drop_append :: forall a. SymVal a => Proxy a -> TP Proof
+drop_append :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 drop_append p =
     lemmaWith cvc5 (atProxy p "drop_append")
-      (\(Forall @"n" n) (Forall @"xs" (xs :: SList a)) (Forall @"ys" ys)
-            -> drop n (xs ++ ys) .== drop n xs ++ drop (n - length xs) ys)
+      (\(Forall n) (Forall xs) (Forall ys) -> drop n (xs ++ ys) .== drop n xs ++ drop (n - length xs) ys)
       []
 
 -- | @length xs == length ys ==> map fst (zip xs ys) = xs@
@@ -1382,19 +1379,18 @@ drop_append p =
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] map_fst_zip @(Integer,Integer)
-map_fst_zip :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP Proof
+map_fst_zip :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_fst_zip p =
    induct (atProxy p "map_fst_zip")
-          (\(Forall @"xs" (xs :: SList a), Forall @"ys" (ys :: SList b)) -> length xs .== length ys .=> map fst (zip xs ys) .== xs) $
-          \ih (x :: SBV a, xs, y :: SBV b, ys) ->
-                [length (x .: xs) .== length (y .: ys)]
-             |- map fst (zip (x .: xs) (y .: ys))
-             =: map fst (tuple (x, y) .: zip xs ys)
-             =: fst (tuple (x, y)) .: map fst (zip xs ys)
-             =: x .: map fst (zip xs ys)
-             ?? ih
-             =: x .: xs
-             =: qed
+          (\(Forall xs, Forall ys) -> length xs .== length ys .=> map fst (zip xs ys) .== xs) $
+          \ih (x, xs, y, ys) -> [length (x .: xs) .== length (y .: ys)]
+                             |- map fst (zip (x .: xs) (y .: ys))
+                             =: map fst (tuple (x, y) .: zip xs ys)
+                             =: fst (tuple (x, y)) .: map fst (zip xs ys)
+                             =: x .: map fst (zip xs ys)
+                             ?? ih
+                             =: x .: xs
+                             =: qed
 
 -- | @length xs == length ys ==> map snd (zip xs ys) = xs@
 --
@@ -1407,19 +1403,18 @@ map_fst_zip p =
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] map_snd_zip @(Integer,Integer)
-map_snd_zip :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP Proof
+map_snd_zip :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_snd_zip p =
    induct (atProxy p "map_snd_zip")
-          (\(Forall @"xs" (xs :: SList a), Forall @"ys" (ys :: SList b)) -> length xs .== length ys .=> map snd (zip xs ys) .== ys) $
-          \ih (x :: SBV a, xs, y :: SBV b, ys) ->
-                [length (x .: xs) .== length (y .: ys)]
-             |- map snd (zip (x .: xs) (y .: ys))
-             =: map snd (tuple (x, y) .: zip xs ys)
-             =: snd (tuple (x, y)) .: map snd (zip xs ys)
-             =: y .: map snd (zip xs ys)
-             ?? ih
-             =: y .: ys
-             =: qed
+          (\(Forall xs, Forall ys) -> length xs .== length ys .=> map snd (zip xs ys) .== ys) $
+          \ih (x, xs, y, ys) -> [length (x .: xs) .== length (y .: ys)]
+                             |- map snd (zip (x .: xs) (y .: ys))
+                             =: map snd (tuple (x, y) .: zip xs ys)
+                             =: snd (tuple (x, y)) .: map snd (zip xs ys)
+                             =: y .: map snd (zip xs ys)
+                             ?? ih
+                             =: y .: ys
+                             =: qed
 
 -- | @map fst (zip xs ys) == take (min (length xs) (length ys)) xs@
 --
@@ -1434,22 +1429,21 @@ map_snd_zip p =
 --   Step: 5                                              Q.E.D.
 --   Result:                                              Q.E.D.
 -- [Proven] map_fst_zip_take @(Integer,Integer)
-map_fst_zip_take :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP Proof
+map_fst_zip_take :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_fst_zip_take p = do
    tc <- take_cons (Proxy @a)
 
    induct (atProxy p "map_fst_zip_take")
-          (\(Forall @"xs" (xs :: SList a), Forall @"ys" (ys :: SList b)) -> map fst (zip xs ys) .== take (length xs `smin` length ys) xs) $
-          \ih (x :: SBV a, xs, y :: SBV b, ys) ->
-            [] |- map fst (zip (x .: xs) (y .: ys))
-               =: map fst (tuple (x, y) .: zip xs ys)
-               =: x .: map fst (zip xs ys)
-               ?? ih
-               =: x .: take (length xs `smin` length ys) xs
-               ?? tc
-               =: take (1 + (length xs `smin` length ys)) (x .: xs)
-               =: take (length (x .: xs) `smin` length (y .: ys)) (x .: xs)
-               =: qed
+          (\(Forall xs, Forall ys) -> map fst (zip xs ys) .== take (length xs `smin` length ys) xs) $
+          \ih (x, xs, y, ys) -> [] |- map fst (zip (x .: xs) (y .: ys))
+                                   =: map fst (tuple (x, y) .: zip xs ys)
+                                   =: x .: map fst (zip xs ys)
+                                   ?? ih
+                                   =: x .: take (length xs `smin` length ys) xs
+                                   ?? tc
+                                   =: take (1 + (length xs `smin` length ys)) (x .: xs)
+                                   =: take (length (x .: xs) `smin` length (y .: ys)) (x .: xs)
+                                   =: qed
 
 -- | @map snd (zip xs ys) == take (min (length xs) (length ys)) xs@
 --
@@ -1464,22 +1458,21 @@ map_fst_zip_take p = do
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] map_snd_zip_take @(Integer,Integer)
-map_snd_zip_take :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP Proof
+map_snd_zip_take :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_snd_zip_take p = do
    tc <- take_cons (Proxy @a)
 
    induct (atProxy p "map_snd_zip_take")
-          (\(Forall @"xs" (xs :: SList a), Forall @"ys" (ys :: SList b)) -> map snd (zip xs ys) .== take (length xs `smin` length ys) ys) $
-          \ih (x :: SBV a, xs, y :: SBV b, ys) ->
-               [] |- map snd (zip (x .: xs) (y .: ys))
-                  =: map snd (tuple (x, y) .: zip xs ys)
-                  =: y .: map snd (zip xs ys)
-                  ?? ih
-                  =: y .: take (length xs `smin` length ys) ys
-                  ?? tc
-                  =: take (1 + (length xs `smin` length ys)) (y .: ys)
-                  =: take (length (x .: xs) `smin` length (y .: ys)) (y .: ys)
-                  =: qed
+          (\(Forall xs, Forall ys) -> map snd (zip xs ys) .== take (length xs `smin` length ys) ys) $
+          \ih (x, xs, y, ys) -> [] |- map snd (zip (x .: xs) (y .: ys))
+                                   =: map snd (tuple (x, y) .: zip xs ys)
+                                   =: y .: map snd (zip xs ys)
+                                   ?? ih
+                                   =: y .: take (length xs `smin` length ys) ys
+                                   ?? tc
+                                   =: take (1 + (length xs `smin` length ys)) (y .: ys)
+                                   =: take (length (x .: xs) `smin` length (y .: ys)) (y .: ys)
+                                   =: qed
 
 -- | Count the number of occurrences of an element in a list
 count :: SymVal a => SBV a -> SList a -> SInteger
@@ -1508,21 +1501,20 @@ interleave = smtFunction "interleave" (\xs ys -> ite (null  xs) ys (head xs .: i
 --     Step: 1.2.3                         Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] interleaveLen @Integer
-interleaveLen :: forall a. SymVal a => Proxy a -> TP Proof
+interleaveLen :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 interleaveLen p = do
 
    sInduct (atProxy p "interleaveLen")
-           (\(Forall @"xs" xs) (Forall @"ys" ys) -> length xs + length ys .== length (interleave @a xs ys))
-           (\xs ys -> length @a xs + length @a ys) $
-           \ih xs ys ->
-              [] |- length xs + length ys .== length (interleave @a xs ys)
-                 =: split xs
-                          trivial
-                          (\a as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
-                                 =: 1 + length as + length ys .== 1 + length (interleave ys as)
-                                 ?? ih `at` (Inst @"xs" ys, Inst @"ys" as)
-                                 =: sTrue
-                                 =: qed)
+           (\(Forall xs) (Forall ys) -> length xs + length ys .== length (interleave xs ys))
+           (\(xs, ys) -> length xs + length ys) $
+           \ih (xs, ys) -> [] |- length xs + length ys .== length (interleave xs ys)
+                              =: split xs
+                                       trivial
+                                       (\a as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
+                                              =: 1 + length as + length ys .== 1 + length (interleave ys as)
+                                              ?? ih `at` (Inst @"xs" ys, Inst @"ys" as)
+                                              =: sTrue
+                                              =: qed)
 
 -- | Uninterleave the elements of two lists. We roughly split it into two, of alternating elements.
 uninterleave :: SymVal a => SList a -> STuple [a] [a]
@@ -1562,7 +1554,7 @@ uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] interleaveRoundTrip @Integer
-interleaveRoundTrip :: forall a. SymVal a => Proxy a -> TP Proof
+interleaveRoundTrip :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 interleaveRoundTrip p = do
 
    revHelper <- lemma (atProxy p "revCons") (\(Forall @"a" a) (Forall @"as" as) (Forall @"bs" bs)
@@ -1575,36 +1567,37 @@ interleaveRoundTrip p = do
                length @a xs .== length ys
                   .=> let (es, os) = untuple alts
                       in uninterleaveGen (interleave xs ys) alts .== tuple (reverse es ++ xs, reverse os ++ ys))
-         (\xs ys (_alts :: STuple [a] [a]) -> length @a xs + length @a ys) $
-         \ih xs ys alts -> [length @a xs .== length ys]
-                        |- let (es, os) = untuple alts
-                        in uninterleaveGen (interleave xs ys) alts
-                        =: split2 (xs, ys)
-                                  trivial
-                                  trivial
-                                  trivial
-                                  (\(a, as) (b, bs) -> uninterleaveGen (interleave (a .: as) (b .: bs)) alts
-                                                    =: uninterleaveGen (a .: interleave (b .: bs) as) alts
-                                                    =: uninterleaveGen (a .: b .: interleave as bs) alts
-                                                    =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
-                                                    ?? ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
-                                                    =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
-                                                    ?? revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as)
-                                                    =: tuple (reverse es ++ (a .: as), reverse (b .: os) ++ bs)
-                                                    ?? revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs)
-                                                    =: tuple (reverse es ++ (a .: as), reverse os ++ (b .: bs))
-                                                    =: tuple (reverse es ++ xs, reverse os ++ ys)
-                                                    =: qed)
+         (\(xs, ys, _alts) -> length xs + length ys) $
+         \ih (xs, ys, alts) -> [length xs .== length ys]
+                            |- let (es, os) = untuple alts
+                            in uninterleaveGen (interleave xs ys) alts
+                            =: split2 (xs, ys)
+                                      trivial
+                                      trivial
+                                      trivial
+                                      (\(a, as) (b, bs) -> uninterleaveGen (interleave (a .: as) (b .: bs)) alts
+                                                        =: uninterleaveGen (a .: interleave (b .: bs) as) alts
+                                                        =: uninterleaveGen (a .: b .: interleave as bs) alts
+                                                        =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
+                                                        ?? ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
+                                                        =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
+                                                        ?? revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as)
+                                                        =: tuple (reverse es ++ (a .: as), reverse (b .: os) ++ bs)
+                                                        ?? revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs)
+                                                        =: tuple (reverse es ++ (a .: as), reverse os ++ (b .: bs))
+                                                        =: tuple (reverse es ++ xs, reverse os ++ ys)
+                                                        =: qed)
 
    -- Round-trip theorem:
    calc (atProxy p "interleaveRoundTrip")
-           (\(Forall @"xs" xs) (Forall @"ys" ys) -> length xs .== length ys .=> uninterleave (interleave @a xs ys) .== tuple (xs, ys)) $
-           \xs ys -> [length xs .== length ys]
-                  |- uninterleave (interleave @a xs ys)
-                  =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
-                  ?? roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList a, nil :: SList a)))
-                  =: tuple (reverse nil ++ xs, reverse nil ++ ys)
-                  =: qed
+           (\(Forall xs) (Forall ys) -> length xs .== length ys .=> uninterleave (interleave xs ys) .== tuple (xs, ys)) $
+           \(xs, ys) -> [length xs .== length ys]
+                     |- uninterleave (interleave xs ys)
+                     =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
+                     ?? roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList a, nil :: SList a)))
+                     =: tuple (reverse nil ++ xs, reverse nil ++ ys)
+                     =: qed
+
 -- | @count e (xs ++ ys) == count e xs + count e ys@
 --
 -- >>> runTP $ countAppend (Proxy @Integer)
@@ -1616,20 +1609,19 @@ interleaveRoundTrip p = do
 --   Step: 4 (simplify)                    Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] countAppend @Integer
-countAppend :: forall a. SymVal a => Proxy a -> TP Proof
+countAppend :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "e" a -> SBool))
 countAppend p =
    induct (atProxy p "countAppend")
-          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" (e :: SBV a)) -> count e (xs ++ ys) .== count e xs + count e ys) $
-          \ih x xs ys (e :: SBV a) ->
-              [] |- count e ((x .: xs) ++ ys)
-                 =: count e (x .: (xs ++ ys))
-                 ?? "unfold count"
-                 =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
-                 ?? ih `at` (Inst @"ys" ys, Inst @"e" e)
-                 =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
-                 ?? "simplify"
-                 =: count e (x .: xs) + count e ys
-                 =: qed
+          (\(Forall xs) (Forall ys) (Forall e) -> count e (xs ++ ys) .== count e xs + count e ys) $
+          \ih ((x, xs), ys, e) -> [] |- count e ((x .: xs) ++ ys)
+                                     =: count e (x .: (xs ++ ys))
+                                     ?? "unfold count"
+                                     =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
+                                     ?? ih `at` (Inst @"ys" ys, Inst @"e" e)
+                                     =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
+                                     ?? "simplify"
+                                     =: count e (x .: xs) + count e ys
+                                     =: qed
 
 -- | @count e (take n xs) + count e (drop n xs) == count e xs@
 --
@@ -1647,22 +1639,21 @@ countAppend p =
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] takeDropCount @Integer
-takeDropCount :: forall a. SymVal a => Proxy a -> TP Proof
+takeDropCount :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "n" Integer -> Forall "e" a -> SBool))
 takeDropCount p = do
        capp     <- countAppend p
        takeDrop <- take_drop p
 
        calc (atProxy p "takeDropCount")
-            (\(Forall @"xs" xs) (Forall @"n" n) (Forall @"e" (e :: SBV a)) -> count e (take n xs) + count e (drop n xs) .== count e xs) $
-            \xs n (e :: SBV a) ->
-                [] |- count e (take n xs) + count e (drop n xs)
-                   ?? capp `at` (Inst @"xs" (take n xs), Inst @"ys" (drop n xs), Inst @"e" e)
-                   =: count e (take n xs ++ drop n xs)
-                   ?? takeDrop
-                   =: count e xs
-                   =: qed
+            (\(Forall xs) (Forall n) (Forall e) -> count e (take n xs) + count e (drop n xs) .== count e xs) $
+            \(xs, n, e) -> [] |- count e (take n xs) + count e (drop n xs)
+                              ?? capp `at` (Inst @"xs" (take n xs), Inst @"ys" (drop n xs), Inst @"e" e)
+                              =: count e (take n xs ++ drop n xs)
+                              ?? takeDrop
+                              =: count e xs
+                              =: qed
 
--- | @count xs >= 0@
+-- | @count e xs >= 0@
 --
 -- >>> runTP $ countNonNeg (Proxy @Integer)
 -- Inductive lemma: countNonNeg @Integer
@@ -1675,20 +1666,20 @@ takeDropCount p = do
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] countNonNeg @Integer
-countNonNeg :: forall a. SymVal a => Proxy a -> TP Proof
+countNonNeg :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "e" a -> SBool))
 countNonNeg p =
    induct (atProxy p "countNonNeg")
-          (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> count e xs .>= 0) $
-          \ih x xs (e :: SBV a) -> [] |- count e (x .: xs) .>= 0
-                                      =: cases [ e .== x ==> 1 + count e xs .>= 0
-                                                          ?? ih
-                                                          =: sTrue
-                                                          =: qed
-                                               , e ./= x ==> count e xs .>= 0
-                                                          ?? ih
-                                                          =: sTrue
-                                                          =: qed
-                                               ]
+          (\(Forall xs) (Forall e) -> count e xs .>= 0) $
+          \ih ((x, xs), e) -> [] |- count e (x .: xs) .>= 0
+                                 =: cases [ e .== x ==> 1 + count e xs .>= 0
+                                                     ?? ih
+                                                     =: sTrue
+                                                     =: qed
+                                          , e ./= x ==> count e xs .>= 0
+                                                     ?? ih
+                                                     =: sTrue
+                                                     =: qed
+                                          ]
 
 -- | @e \`elem\` xs ==> count e xs .> 0@
 --
@@ -1712,24 +1703,24 @@ countNonNeg p =
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] countElem @Integer
-countElem :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+countElem :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "e" a -> SBool))
 countElem p = do
 
     cnn <- countNonNeg p
 
     induct (atProxy p "countElem")
-           (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> e `elem` xs .=> count e xs .> 0) $
-           \ih x xs (e :: SBV a) -> [e `elem` (x .: xs)]
-                                 |- count e (x .: xs) .> 0
-                                 =: cases [ e .== x ==> 1 + count e xs .> 0
-                                                     ?? cnn
-                                                     =: sTrue
-                                                     =: qed
-                                          , e ./= x ==> count e xs .> 0
-                                                     ?? ih
-                                                     =: sTrue
-                                                     =: qed
-                                          ]
+           (\(Forall xs) (Forall e) -> e `elem` xs .=> count e xs .> 0) $
+           \ih ((x, xs), e) -> [e `elem` (x .: xs)]
+                            |- count e (x .: xs) .> 0
+                            =: cases [ e .== x ==> 1 + count e xs .> 0
+                                                ?? cnn
+                                                =: sTrue
+                                                =: qed
+                                     , e ./= x ==> count e xs .> 0
+                                                ?? ih
+                                                =: sTrue
+                                                =: qed
+                                     ]
 
 -- | @count e xs .> 0 .=> e \`elem\` xs@
 --
@@ -1743,18 +1734,18 @@ countElem p = do
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] elemCount @Integer
-elemCount :: forall a. (Eq a, SymVal a) => Proxy a -> TP Proof
+elemCount :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "e" a -> SBool))
 elemCount p =
     induct (atProxy p "elemCount")
-           (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> count e xs .> 0 .=> e `elem` xs) $
-           \ih x xs (e :: SBV a) -> [count e xs .> 0]
-                                 |- e `elem` (x .: xs)
-                                 =: cases [ e .== x ==> trivial
-                                          , e ./= x ==> e `elem` xs
-                                                     ?? ih
-                                                     =: sTrue
-                                                     =: qed
-                                          ]
+           (\(Forall xs) (Forall e) -> count e xs .> 0 .=> e `elem` xs) $
+           \ih ((x, xs), e) -> [count e xs .> 0]
+                            |- e `elem` (x .: xs)
+                            =: cases [ e .== x ==> trivial
+                                     , e ./= x ==> e `elem` xs
+                                                ?? ih
+                                                =: sTrue
+                                                =: qed
+                                     ]
 
 {- HLint ignore revRev         "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
@@ -1767,4 +1758,3 @@ elemCount p =
 {- HLint ignore module         "Use zipWith"       -}
 {- HLint ignore mapCompose     "Use map once"      -}
 {- HLint ignore tailsAppend    "Avoid lambda"      -}
--}
