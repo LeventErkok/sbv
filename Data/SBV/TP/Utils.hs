@@ -22,7 +22,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.Utils (
-         TP, runTP, runTPWith, Proof(..), ProofObj(..), proofToAssumption, sorry
+         TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry
        , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML, shortProofName
@@ -185,8 +185,8 @@ data TPUnique = TPInternal
 data Proof a = Proof { proofOf :: ProofObj }
 
 -- | Grab the underlying boolean in a proof. Useful in assumption contexts where we need a boolean
-proofToAssumption :: Proof a -> SBool
-proofToAssumption = getObjProof . proofOf
+assumptionFromProof :: Proof a -> SBool
+assumptionFromProof = getObjProof . proofOf
 
 -- | The actual proof container
 data ProofObj = ProofObj { dependencies :: [ProofObj]     -- ^ Immediate dependencies of this proof. (Not transitive)

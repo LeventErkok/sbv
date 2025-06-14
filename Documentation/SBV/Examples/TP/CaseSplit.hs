@@ -32,7 +32,7 @@ import Data.SBV.TP
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] notDiv3
-notDiv3 :: IO Proof
+notDiv3 :: IO (Proof (Forall "n" Integer -> SBool))
 notDiv3 = runTP $ do
 
    let s n = 2 * n * n + n + 1
@@ -41,7 +41,7 @@ notDiv3 = runTP $ do
    -- we get the witness that is guaranteed to exist by the case condition, and rewrite
    -- @s n@ accordingly. Once this is done, z3 can figure out the rest by itself.
    calc "notDiv3"
-        (\(Forall @"n" n) -> s n `sEMod` 3 ./= 0) $
+        (\(Forall n) -> s n `sEMod` 3 ./= 0) $
         \n -> [] |- s n
                  =: cases [ n `sEMod` 3 .== 0 ==> s (0 + 3 * some "k" (\k -> n .== 0 + 3 * k)) =: qed
                           , n `sEMod` 3 .== 1 ==> s (1 + 3 * some "k" (\k -> n .== 1 + 3 * k)) =: qed

@@ -44,7 +44,7 @@ import Data.SBV.TP
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumConst_correct
-sumConstProof :: IO Proof
+sumConstProof :: IO (Proof (Forall "n" Integer -> SBool))
 sumConstProof = runTP $ do
    let c :: SInteger
        c = uninterpret "c"
@@ -56,7 +56,7 @@ sumConstProof = runTP $ do
        spec n = c * n
 
    induct "sumConst_correct"
-          (\(Forall @"n" n) -> n .>= 0 .=> sum n .== spec n) $
+          (\(Forall n) -> n .>= 0 .=> sum n .== spec n) $
           \ih n -> [n .>= 0] |- sum (n+1)
                              =: c + sum n  ?? ih
                              =: c + spec n
@@ -75,7 +75,7 @@ sumConstProof = runTP $ do
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sum_correct
-sumProof :: IO Proof
+sumProof :: IO (Proof (Forall "n" Integer -> SBool))
 sumProof = runTP $ do
    let sum :: SInteger -> SInteger
        sum = smtFunction "sum" $ \n -> ite (n .<= 0) 0 (n + sum (n - 1))
@@ -87,7 +87,7 @@ sumProof = runTP $ do
        p n = sum n .== spec n
 
    induct "sum_correct"
-          (\(Forall @"n" n) -> n .>= 0 .=> p n) $
+          (\(Forall n) -> n .>= 0 .=> p n) $
           \ih n -> [n .>= 0] |- sum (n+1)
                              =: n+1 + sum n  ?? ih
                              =: n+1 + spec n
@@ -104,7 +104,7 @@ sumProof = runTP $ do
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumSquare_correct
-sumSquareProof :: IO Proof
+sumSquareProof :: IO (Proof (Forall "n" Integer -> SBool))
 sumSquareProof = runTP $ do
    let sumSquare :: SInteger -> SInteger
        sumSquare = smtFunction "sumSquare" $ \n -> ite (n .<= 0) 0 (n * n + sumSquare (n - 1))
@@ -143,7 +143,7 @@ sumSquareProof = runTP $ do
 --   Step: 8                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] elevenMinusFour
-elevenMinusFour :: IO Proof
+elevenMinusFour :: IO (Proof (Forall "n" Integer -> SBool))
 elevenMinusFour = runTP $ do
    let pow :: SInteger -> SInteger -> SInteger
        pow = smtFunction "pow" $ \x y -> ite (y .== 0) 1 (x * pow x (y - 1))
@@ -155,7 +155,7 @@ elevenMinusFour = runTP $ do
    powN <- lemma "powN" (\(Forall @"x" x) (Forall @"n" n) -> n .>= 0 .=> x `pow` (n+1) .== x * x `pow` n) []
 
    inductWith cvc5 "elevenMinusFour"
-          (\(Forall @"n" n) -> n .>= 0 .=> emf n) $
+          (\(Forall n) -> n .>= 0 .=> emf n) $
           \ih n -> [n .>= 0]
                 |- emf (n+1)
                 =: 7 `sDivides` (11 `pow` (n+1) - 4 `pow` (n+1))

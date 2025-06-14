@@ -47,7 +47,7 @@ import Control.Monad (void)
 -- >>> trueIsProvable
 -- Lemma: true                             Q.E.D.
 -- [Proven] true
-trueIsProvable :: IO Proof
+trueIsProvable :: IO (Proof SBool)
 trueIsProvable = runTP $ lemma "true" sTrue []
 
 -- | @sFalse@ isn't provable.
@@ -71,9 +71,9 @@ falseIsn'tProvable = runTP $ do
 -- >>> largerIntegerExists
 -- Lemma: largerIntegerExists              Q.E.D.
 -- [Proven] largerIntegerExists
-largerIntegerExists :: IO Proof
+largerIntegerExists :: IO (Proof (Forall "x" Integer -> Exists "y" Integer -> SBool))
 largerIntegerExists = runTP $ lemma "largerIntegerExists"
-                                    (\(Forall @"x" x) (Exists @"y" y) -> x .< (y :: SInteger))
+                                    (\(Forall x) (Exists y) -> x .< y)
                                     []
 
 -- * Basic connectives
@@ -83,7 +83,7 @@ largerIntegerExists = runTP $ lemma "largerIntegerExists"
 -- >>> forallConjunction @Integer (uninterpret "p") (uninterpret "q")
 -- Lemma: forallConjunction                Q.E.D.
 -- [Proven] forallConjunction
-forallConjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO Proof
+forallConjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO (Proof SBool)
 forallConjunction p q = runTP $ do
     let qb = quantifiedBool
 
@@ -99,7 +99,7 @@ forallConjunction p q = runTP $ do
 -- >>> existsDisjunction @Integer (uninterpret "p") (uninterpret "q")
 -- Lemma: existsDisjunction                Q.E.D.
 -- [Proven] existsDisjunction
-existsDisjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO Proof
+existsDisjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO (Proof SBool)
 existsDisjunction p q = runTP $ do
     let qb = quantifiedBool
 
@@ -188,7 +188,7 @@ existsConjunctionNot p q = runTP $ do
 --   Step: 1 (bad @ (n |-> 0 :: SInteger)) Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] noTerminationImpliesFalse
-noTerminationChecks :: IO Proof
+noTerminationChecks :: IO (Proof SBool)
 noTerminationChecks = runTP $ do
 
    let f :: SInteger -> SInteger
@@ -197,11 +197,11 @@ noTerminationChecks = runTP $ do
    badAxiom <- axiom "bad" (\(Forall @"n" n) -> f n .== 1 + f n)
 
    calc "noTerminationImpliesFalse"
-        sFalse
-        ([] |- f 0
-            ?? badAxiom `at` Inst @"n" (0 :: SInteger)
-            =: 1 + f 0
-            =: qed)
+        sFalse $
+        \() -> [] |- f 0
+                  ?? badAxiom `at` Inst @"n" (0 :: SInteger)
+                  =: 1 + f 0
+                  =: qed
 
 -- * Trying to prove non-theorems
 
@@ -273,10 +273,17 @@ badLengthProof = runTP $ do
 -- Cached: evil                            Q.E.D.
 -- [Proven. Cached: evil] evil
 --
--- In this case we were able to prove False, i.e., this result is unsound. But at least SBV warned us
+-- In this case we were able to ostensibly prove False, i.e., this result is unsound. But at least SBV warned us
 -- that we used a cached proof (@evil@), reminding us that using unique names is a proof of obligation for the user
 -- if caching is turned on. Clearly, we failed to uniquely name our proofs in this case.
-badCaching :: TP Proof
+--
+-- Note that a bad proof obtained this way is unsound in the way that it is misleading: That is, it will lead you
+-- to believe you proved something while you actually proved something else. (More technically, you cannot take the evil
+-- lemma and use it to prove arbitrary things, since it's still just the proof of truth.) In this sense it is just
+-- useless as opposed to soundness, but it is alarming as one can be led astray.
+--
+-- (Incidentally, if you really want to be evil, you can just use 'axiom' and assert false, but that's another story.)
+badCaching :: TP (Proof SBool)
 badCaching = do
    _    <- lemma "evil" sTrue []
 

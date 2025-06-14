@@ -23,7 +23,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.TP (
-         Proposition, Proof, proofOf, proofToAssumption, Instantiatable(..), Inst(..)
+         Proposition, Proof, proofOf, assumptionFromProof, Instantiatable(..), Inst(..)
        , rootOfTrust, RootOfTrust(..), ProofTree(..), showProofTree, showProofTreeHTML
        , axiom
        , lemma,   lemmaWith

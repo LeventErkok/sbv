@@ -228,7 +228,7 @@ tailsAppend p = do
 
    induct (atProxy p "tailsAppend")
           (\(Forall xs) (Forall ys) -> tails (xs ++ ys) .== appendEach ys (tails xs) ++ tail (tails ys)) $
-          \ih ((x, xs), ys) -> [proofToAssumption bc]
+          \ih ((x, xs), ys) -> [assumptionFromProof bc]
                             |- tails ((x .: xs) ++ ys)
                             =: tails (x .: (xs ++ ys))
                             =: [x .: (xs ++ ys)] ++ tails (xs ++ ys)
