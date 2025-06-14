@@ -59,7 +59,7 @@ import Data.SBV.TP
 --   Result:                               Q.E.D.
 -- Lemma: sqrt2IsIrrational                Q.E.D.
 -- [Proven] sqrt2IsIrrational
-sqrt2IsIrrational :: IO Proof
+sqrt2IsIrrational :: IO (Proof SBool)
 sqrt2IsIrrational = runTP $ do
     let even, odd :: SInteger -> SBool
         even = (2 `sDivides`)
@@ -88,7 +88,7 @@ sqrt2IsIrrational = runTP $ do
     -- is enough to establish this.
     squareEvenImpliesEven <- lemma "squareEvenImpliesEven"
                                    (\(Forall @"a" a) -> even (sq a) .=> even a)
-                                   [oddSquaredIsOdd]
+                                   [proofOf oddSquaredIsOdd]
 
     -- Prove that if @a@ is an even number, then its square is four times the square of another.
     evenSquaredIsMult4 <- calc "evenSquaredIsMult4"
@@ -106,7 +106,7 @@ sqrt2IsIrrational = runTP $ do
         coPrime x y = quantifiedBool (\(Forall @"z" z) -> (x `sEMod` z .== 0 .&& y `sEMod` z .== 0) .=> z .== 1)
 
     -- Prove that square-root of 2 is irrational. We do this by showing for all pairs of integers @a@ and @b@
-    -- such that @a*a == 2*b*b@, it must be the case that @a@ and @b@ are not be co-prime:
-    lemma "sqrt2IsIrrational"
-        (\(Forall @"a" a) (Forall @"b" b) -> (sq a .== 2 * sq b) .=> sNot (coPrime a b))
-        [squareEvenImpliesEven, evenSquaredIsMult4]
+    -- such that @a*a == 2*b*b@, it must be the case that @a@ and @b@ can not be co-prime:
+    lemma "sqrt2IsIrrationalGen"
+          (quantifiedBool (\(Forall @"a" a) (Forall @"b" b) -> sq a .== 2 * sq b .=> sNot (coPrime a b)))
+          [proofOf squareEvenImpliesEven, proofOf evenSquaredIsMult4]

@@ -56,23 +56,23 @@ fibTail = fib 1 1
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] fibCorrect
-correctness :: IO Proof
+correctness :: IO (Proof (Forall "n" Integer -> SBool))
 correctness = runTP $ do
 
   helper <- induct "helper"
                    (\(Forall @"n" n) (Forall @"k" k) ->
                        n .>= 0 .&& k .>= 0 .=> fib (fibonacci k) (fibonacci (k+1)) n .== fibonacci (k+n)) $
-                   \ih n k -> [n .>= 0, k .>= 0]
-                           |- fib (fibonacci k) (fibonacci (k+1)) (n+1)
-                           =: fib (fibonacci (k+1)) (fibonacci k + fibonacci (k+1)) n
-                           ?? "unfold fibonacci"
-                           =: fib (fibonacci (k+1)) (fibonacci (k+2)) n
-                           ?? ih `at` Inst @"k" (k+1)
-                           =: fibonacci (k+1+n)
-                           =: qed
+                   \ih (n, k) -> [n .>= 0, k .>= 0]
+                              |- fib (fibonacci k) (fibonacci (k+1)) (n+1)
+                              =: fib (fibonacci (k+1)) (fibonacci k + fibonacci (k+1)) n
+                              ?? "unfold fibonacci"
+                              =: fib (fibonacci (k+1)) (fibonacci (k+2)) n
+                              ?? ih `at` Inst @"k" (k+1)
+                              =: fibonacci (k+1+n)
+                              =: qed
 
   calc "fibCorrect"
-       (\(Forall @"n" n) -> n .>= 0 .=> fibonacci n .== fibTail n) $
+       (\(Forall n) -> n .>= 0 .=> fibonacci n .== fibTail n) $
        \n -> [n .>= 0] |- fibTail n
                        =: fib 1 1 n
                        ?? helper `at` (Inst @"n" n, Inst @"k" (0 :: SInteger))

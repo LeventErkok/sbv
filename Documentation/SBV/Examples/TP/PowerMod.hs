@@ -46,16 +46,16 @@ power = smtFunction "power" $ \b n -> ite (n .<= 0) 1 (b * power b (n-1))
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] modAddMultiple
-modAddMultiple :: TP Proof
+modAddMultiple :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> Forall "m" Integer -> SBool))
 modAddMultiple = do
    inductWith (tpCache cvc5) "modAddMultiple"
-      (\(Forall @"k" k) (Forall @"n" n) (Forall @"m" m) -> m .> 1 .=> (n + m*k) `sEMod` m .== n `sEMod` m) $
-      \ih k n m -> [m .> 1] |- (n + m*(k+1)) `sEMod` m
-                            =: (n + m*k + m) `sEMod` m
-                            =: (n + m*k) `sEMod` m
-                            ?? ih `at` (Inst @"n" n, Inst @"m" m)
-                            =: n `sEMod` m
-                            =: qed
+      (\(Forall k) (Forall n) (Forall m) -> m .> 1 .=> (n + m*k) `sEMod` m .== n `sEMod` m) $
+      \ih (k, n, m) -> [m .> 1] |- (n + m*(k+1)) `sEMod` m
+                                =: (n + m*k + m) `sEMod` m
+                                =: (n + m*k) `sEMod` m
+                                ?? ih `at` (Inst @"n" n, Inst @"m" m)
+                                =: n `sEMod` m
+                                =: qed
 
 -- | \(m > 0 \Rightarrow a + b \equiv a + (b \bmod m) \pmod{m}\)
 --
@@ -72,16 +72,16 @@ modAddMultiple = do
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] modAddRight
-modAddRight :: TP Proof
+modAddRight :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modAddRight = do
    mAddMul <- modAddMultiple
    calc "modAddRight"
-      (\(Forall @"a" a) (Forall @"b" b) (Forall @"m" m) -> m .> 0  .=>  (a+b) `sEMod` m .== (a + b `sEMod` m) `sEMod` m) $
-      \a b m -> [m .> 0] |- (a+b) `sEMod` m
-                         =: (a + b `sEMod` m + m * b `sEDiv` m) `sEMod` m
-                         ?? mAddMul `at` (Inst @"k" (b `sEDiv` m), Inst @"n" (a + b `sEMod` m), Inst @"m" m)
-                         =: (a + b `sEMod` m) `sEMod` m
-                         =: qed
+      (\(Forall a) (Forall b) (Forall m) -> m .> 0  .=>  (a+b) `sEMod` m .== (a + b `sEMod` m) `sEMod` m) $
+      \(a, b, m) -> [m .> 0] |- (a+b) `sEMod` m
+                             =: (a + b `sEMod` m + m * b `sEDiv` m) `sEMod` m
+                             ?? mAddMul `at` (Inst @"k" (b `sEDiv` m), Inst @"n" (a + b `sEMod` m), Inst @"m" m)
+                             =: (a + b `sEMod` m) `sEMod` m
+                             =: qed
 
 -- | \(m > 0 \Rightarrow a + b \equiv (a \bmod m) + b \pmod{m}\)
 --
@@ -103,17 +103,17 @@ modAddRight = do
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] modAddLeft
-modAddLeft :: TP Proof
+modAddLeft :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modAddLeft = do
    mAddR <- modAddRight
    calc "modAddLeft"
-      (\(Forall @"a" a) (Forall @"b" b) (Forall @"m" m) -> m .> 0 .=>  (a+b) `sEMod` m .== (a `sEMod` m + b) `sEMod` m) $
-      \a b m -> [m .> 0] |- (a+b) `sEMod` m
-                         =: (b+a) `sEMod` m
-                         ?? mAddR
-                         =: (b + a `sEMod` m) `sEMod` m
-                         =: (a `sEMod` m + b) `sEMod` m
-                         =: qed
+      (\(Forall a) (Forall b) (Forall m) -> m .> 0 .=>  (a+b) `sEMod` m .== (a `sEMod` m + b) `sEMod` m) $
+      \(a, b, m) -> [m .> 0] |- (a+b) `sEMod` m
+                             =: (b+a) `sEMod` m
+                             ?? mAddR
+                             =: (b + a `sEMod` m) `sEMod` m
+                             =: (a `sEMod` m + b) `sEMod` m
+                             =: qed
 
 -- | \(m > 0 \Rightarrow a - b \equiv a - (b \bmod m) \pmod{m}\)
 --
@@ -131,17 +131,17 @@ modAddLeft = do
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] modSubRight
-modSubRight :: TP Proof
+modSubRight :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modSubRight = do
    mAddMul <- modAddMultiple
    calc "modSubRight"
-      (\(Forall @"a" a) (Forall @"b" b) (Forall @"m" m) -> m .> 0 .=>  (a-b) `sEMod` m .== (a - b `sEMod` m) `sEMod` m) $
-      \a b m -> [m .> 0] |- (a-b) `sEMod` m
-                         =: (a - (b `sEMod` m + m * b `sEDiv` m)) `sEMod` m
-                         =: ((a - b `sEMod` m) + m*(- (b `sEDiv` m))) `sEMod` m
-                         ?? mAddMul `at` (Inst @"k" (- (b `sEDiv` m)), Inst @"n" (a - b `sEMod` m), Inst @"m" m)
-                         =: (a - b `sEMod` m) `sEMod` m
-                         =: qed
+      (\(Forall a) (Forall b) (Forall m) -> m .> 0 .=>  (a-b) `sEMod` m .== (a - b `sEMod` m) `sEMod` m) $
+      \(a, b, m) -> [m .> 0] |- (a-b) `sEMod` m
+                             =: (a - (b `sEMod` m + m * b `sEDiv` m)) `sEMod` m
+                             =: ((a - b `sEMod` m) + m*(- (b `sEDiv` m))) `sEMod` m
+                             ?? mAddMul `at` (Inst @"k" (- (b `sEDiv` m)), Inst @"n" (a - b `sEMod` m), Inst @"m" m)
+                             =: (a - b `sEMod` m) `sEMod` m
+                             =: qed
 
 -- | \(a \geq 0 \land m > 0 \Rightarrow ab \equiv a \cdot (b \bmod m) \pmod{m}\)
 --
@@ -174,25 +174,25 @@ modSubRight = do
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven. Cached: modAddRight] modMulRightNonneg
-modMulRightNonneg :: TP Proof
+modMulRightNonneg :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulRightNonneg = do
    mAddL <- modAddLeft
    mAddR <- modAddRight
 
    induct "modMulRightNonneg"
-      (\(Forall @"a" a) (Forall @"b" b) (Forall @"m" m) -> a .>= 0 .&& m .> 0 .=> (a*b) `sEMod` m .== (a * b `sEMod` m) `sEMod` m) $
-      \ih a b m -> [a .>= 0, m .> 0] |- ((a+1)*b) `sEMod` m
-                                     =: (a*b+b) `sEMod` m
-                                     ?? mAddR `at` (Inst @"a" (a*b), Inst @"b" b, Inst @"m" m)
-                                     =: (a*b + b `sEMod` m) `sEMod` m
-                                     ?? mAddL `at` (Inst @"a" (a*b), Inst @"b" (b `sEMod` m), Inst @"m" m)
-                                     =: ((a*b) `sEMod` m + b `sEMod` m) `sEMod` m
-                                     ?? ih `at` (Inst @"b" b, Inst @"m" m)
-                                     =: ((a * b `sEMod` m) `sEMod` m + b `sEMod` m) `sEMod` m
-                                     ?? mAddL
-                                     =: (a * b `sEMod` m + b `sEMod` m) `sEMod` m
-                                     =: ((a+1) * b `sEMod` m) `sEMod` m
-                                     =: qed
+      (\(Forall a) (Forall b) (Forall m) -> a .>= 0 .&& m .> 0 .=> (a*b) `sEMod` m .== (a * b `sEMod` m) `sEMod` m) $
+      \ih (a, b, m) -> [a .>= 0, m .> 0] |- ((a+1)*b) `sEMod` m
+                                         =: (a*b+b) `sEMod` m
+                                         ?? mAddR `at` (Inst @"a" (a*b), Inst @"b" b, Inst @"m" m)
+                                         =: (a*b + b `sEMod` m) `sEMod` m
+                                         ?? mAddL `at` (Inst @"a" (a*b), Inst @"b" (b `sEMod` m), Inst @"m" m)
+                                         =: ((a*b) `sEMod` m + b `sEMod` m) `sEMod` m
+                                         ?? ih `at` (Inst @"b" b, Inst @"m" m)
+                                         =: ((a * b `sEMod` m) `sEMod` m + b `sEMod` m) `sEMod` m
+                                         ?? mAddL
+                                         =: (a * b `sEMod` m + b `sEMod` m) `sEMod` m
+                                         =: ((a+1) * b `sEMod` m) `sEMod` m
+                                         =: qed
 
 -- | \(a \geq 0 \land m > 0 \Rightarrow -ab \equiv -\left(a \cdot (b \bmod m)\right) \pmod{m}\)
 --
@@ -229,25 +229,25 @@ modMulRightNonneg = do
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven. Cached: modAddMultiple] modMulRightNeg
-modMulRightNeg :: TP Proof
+modMulRightNeg :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulRightNeg = do
    mAddL <- modAddLeft
    mSubR <- modSubRight
 
    induct "modMulRightNeg"
-      (\(Forall @"a" a) (Forall @"b" b) (Forall @"m" m) -> a .>= 0 .&& m .> 0 .=> (-(a*b)) `sEMod` m .== (-(a * b `sEMod` m)) `sEMod` m) $
-      \ih a b m -> [a .>= 0, m .> 0] |- (-((a+1)*b)) `sEMod` m
-                                     =: (-(a*b)-b) `sEMod` m
-                                     ?? mSubR `at` (Inst @"a" (-(a*b)), Inst @"b" b, Inst @"m" m)
-                                     =: (-(a*b) - b `sEMod` m) `sEMod` m
-                                     ?? mAddL `at` (Inst @"a" (-(a*b)), Inst @"b" (- (b `sEMod` m)), Inst @"m" m)
-                                     =: ((-(a*b)) `sEMod` m - b `sEMod` m) `sEMod` m
-                                     ?? ih `at` (Inst @"b" b, Inst @"m" m)
-                                     =: ((-(a * b `sEMod` m)) `sEMod` m - b `sEMod` m) `sEMod` m
-                                     ?? mAddL
-                                     =: (-(a * b `sEMod` m) - b `sEMod` m) `sEMod` m
-                                     =: (-((a+1) * b `sEMod` m)) `sEMod` m
-                                     =: qed
+      (\(Forall a) (Forall b) (Forall m) -> a .>= 0 .&& m .> 0 .=> (-(a*b)) `sEMod` m .== (-(a * b `sEMod` m)) `sEMod` m) $
+      \ih (a, b, m) -> [a .>= 0, m .> 0] |- (-((a+1)*b)) `sEMod` m
+                                         =: (-(a*b)-b) `sEMod` m
+                                         ?? mSubR `at` (Inst @"a" (-(a*b)), Inst @"b" b, Inst @"m" m)
+                                         =: (-(a*b) - b `sEMod` m) `sEMod` m
+                                         ?? mAddL `at` (Inst @"a" (-(a*b)), Inst @"b" (- (b `sEMod` m)), Inst @"m" m)
+                                         =: ((-(a*b)) `sEMod` m - b `sEMod` m) `sEMod` m
+                                         ?? ih `at` (Inst @"b" b, Inst @"m" m)
+                                         =: ((-(a * b `sEMod` m)) `sEMod` m - b `sEMod` m) `sEMod` m
+                                         ?? mAddL
+                                         =: (-(a * b `sEMod` m) - b `sEMod` m) `sEMod` m
+                                         =: (-((a+1) * b `sEMod` m)) `sEMod` m
+                                         =: qed
 
 -- | \(m > 0 \Rightarrow ab \equiv a \cdot (b \bmod m) \pmod{m}\)
 --
@@ -306,24 +306,24 @@ modMulRightNeg = do
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight] modMulRight
-modMulRight :: TP Proof
+modMulRight :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulRight = do
    mMulNonneg <- modMulRightNonneg
    mMulNeg    <- modMulRightNeg
 
    calc "modMulRight"
-        (\(Forall @"a" a) (Forall @"b" b) (Forall @"m" m) -> m .> 0 .=> (a*b) `sEMod` m .== (a * b `sEMod` m) `sEMod` m) $
-        \a b m -> [m .> 0] |- cases [ a .>= 0 ==> (a*b) `sEMod` m
-                                               ?? mMulNonneg `at` (Inst @"a" a, Inst @"b" b, Inst @"m" m)
-                                               =: (a * b `sEMod` m) `sEMod` m
-                                               =: qed
-                                    , a .<  0 ==> (a*b) `sEMod` m
-                                               =: (-((-a)*b)) `sEMod` m
-                                               ?? mMulNeg `at` (Inst @"a" (-a), Inst @"b" b, Inst @"m" m)
-                                               =: (-((-a) * b `sEMod` m)) `sEMod` m
-                                               =: (a * b `sEMod` m) `sEMod` m
-                                               =: qed
-                                    ]
+        (\(Forall a) (Forall b) (Forall m) -> m .> 0 .=> (a*b) `sEMod` m .== (a * b `sEMod` m) `sEMod` m) $
+        \(a, b, m) -> [m .> 0] |- cases [ a .>= 0 ==> (a*b) `sEMod` m
+                                                   ?? mMulNonneg `at` (Inst @"a" a, Inst @"b" b, Inst @"m" m)
+                                                   =: (a * b `sEMod` m) `sEMod` m
+                                                   =: qed
+                                        , a .<  0 ==> (a*b) `sEMod` m
+                                                   =: (-((-a)*b)) `sEMod` m
+                                                   ?? mMulNeg `at` (Inst @"a" (-a), Inst @"b" b, Inst @"m" m)
+                                                   =: (-((-a) * b `sEMod` m)) `sEMod` m
+                                                   =: (a * b `sEMod` m) `sEMod` m
+                                                   =: qed
+                                        ]
 
 -- | \(m > 0 \Rightarrow ab \equiv (a \bmod m) \cdot b \pmod{m}\)
 --
@@ -387,18 +387,18 @@ modMulRight = do
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight] modMulLeft
-modMulLeft :: TP Proof
+modMulLeft :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulLeft = do
    mMulR <- modMulRight
 
    calc "modMulLeft"
-        (\(Forall @"a" a) (Forall @"b" b) (Forall @"m" m) -> m .> 0 .=> (a*b) `sEMod` m .== (a `sEMod` m * b) `sEMod` m) $
-        \a b m -> [m .> 0] |- (a*b) `sEMod` m
-                           =: (b*a) `sEMod` m
-                           ?? mMulR
-                           =: (b * a `sEMod` m) `sEMod` m
-                           =: (a `sEMod` m * b) `sEMod` m
-                           =: qed
+        (\(Forall a) (Forall b) (Forall m) -> m .> 0 .=> (a*b) `sEMod` m .== (a `sEMod` m * b) `sEMod` m) $
+        \(a, b, m) -> [m .> 0] |- (a*b) `sEMod` m
+                               =: (b*a) `sEMod` m
+                               ?? mMulR
+                               =: (b * a `sEMod` m) `sEMod` m
+                               =: (a `sEMod` m * b) `sEMod` m
+                               =: qed
 
 -- | \(n \geq 0 \land m > 0 \Rightarrow b^n \equiv (b \bmod m)^n \pmod{m}\)
 --
@@ -485,7 +485,7 @@ modMulLeft = do
 --   Result:                               Q.E.D.
 -- Lemma: powerMod                         Q.E.D.
 -- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerMod
-powerMod :: TP Proof
+powerMod :: TP (Proof (Forall "b" Integer -> Forall "n" Integer -> Forall "m" Integer -> SBool))
 powerMod = do
    mMulL <- modMulLeft
    mMulR <- modMulRight
@@ -493,23 +493,23 @@ powerMod = do
    -- We want to write the b parameter first, but need to induct on n. So, this helper rearranges the parameters only.
    pMod <- induct "powerModInduct"
       (\(Forall @"n" n) (Forall @"m" m) (Forall @"b" b) -> n .>= 0 .&& m .> 0 .=> power b n `sEMod` m .== power (b `sEMod` m) n `sEMod` m) $
-      \ih n m b -> [n .>= 0, m .> 0] |- power b (n+1) `sEMod` m
-                                     =: (power b n * b) `sEMod` m
-                                     ?? mMulL `at` (Inst @"a" (power b n), Inst @"b" b, Inst @"m" m)
-                                     =: (power b n `sEMod` m * b) `sEMod` m
-                                     ?? ih `at` (Inst @"m" m, Inst @"b" b)
-                                     =: (power (b `sEMod` m) n `sEMod` m * b) `sEMod` m
-                                     ?? mMulL `at` (Inst @"a" (power (b `sEMod` m) n), Inst @"b" b, Inst @"m" m)
-                                     =: (power (b `sEMod` m) n * b) `sEMod` m
-                                     ?? mMulR `at` (Inst @"a" (power (b `sEMod` m) n), Inst @"b" b, Inst @"m" m)
-                                     =: (power (b `sEMod` m) n * b `sEMod` m) `sEMod` m
-                                     =: power (b `sEMod` m) (n+1) `sEMod` m
-                                     =: qed
+      \ih (n, m, b) -> [n .>= 0, m .> 0] |- power b (n+1) `sEMod` m
+                                         =: (power b n * b) `sEMod` m
+                                         ?? mMulL `at` (Inst @"a" (power b n), Inst @"b" b, Inst @"m" m)
+                                         =: (power b n `sEMod` m * b) `sEMod` m
+                                         ?? ih `at` (Inst @"m" m, Inst @"b" b)
+                                         =: (power (b `sEMod` m) n `sEMod` m * b) `sEMod` m
+                                         ?? mMulL `at` (Inst @"a" (power (b `sEMod` m) n), Inst @"b" b, Inst @"m" m)
+                                         =: (power (b `sEMod` m) n * b) `sEMod` m
+                                         ?? mMulR `at` (Inst @"a" (power (b `sEMod` m) n), Inst @"b" b, Inst @"m" m)
+                                         =: (power (b `sEMod` m) n * b `sEMod` m) `sEMod` m
+                                         =: power (b `sEMod` m) (n+1) `sEMod` m
+                                         =: qed
 
    -- Same as above, just a more natural selection of variable order.
    lemma "powerMod"
-         (\(Forall @"b" b) (Forall @"n" n) (Forall @"m" m) -> n .>= 0 .&& m .> 0 .=> power b n `sEMod` m .== power (b `sEMod` m) n `sEMod` m)
-         [pMod]
+         (\(Forall b) (Forall n) (Forall m) -> n .>= 0 .&& m .> 0 .=> power b n `sEMod` m .== power (b `sEMod` m) n `sEMod` m)
+         [proofOf pMod]
 
 -- | \(n \geq 0 \Rightarrow 1^n = 1\)
 --
@@ -521,9 +521,9 @@ powerMod = do
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] onePower
-onePower :: TP Proof
+onePower :: TP (Proof (Forall "n" Integer -> SBool))
 onePower = induct "onePower"
-                  (\(Forall @"n" n) -> n .>= 0 .=> power 1 n .== 1) $
+                  (\(Forall n) -> n .>= 0 .=> power 1 n .== 1) $
                   \ih n -> [] |- power 1 (n+1)
                                ?? "unfold power"
                                =: 1 * power 1 n
@@ -627,11 +627,11 @@ onePower = induct "onePower"
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerOf27
-powerOf27 :: TP Proof
+powerOf27 :: TP (Proof (Forall "n" Integer -> SBool))
 powerOf27 = do
    pOne <- onePower
    pMod <- powerMod
-   calc "powerOf27" (\(Forall @"n" n) -> n .>= 0 .=> power 27 n `sEMod` 13  .==  1) $
+   calc "powerOf27" (\(Forall n) -> n .>= 0 .=> power 27 n `sEMod` 13  .==  1) $
                     \n -> [n .>= 0]
                        |- power 27 n `sEMod` 13
                        ?? pMod `at` (Inst @"b" (27::SInteger), Inst @"n" n, Inst @"m" (13::SInteger))
@@ -741,15 +741,15 @@ powerOf27 = do
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerOfThreeMod13VarDivisor
-powerOfThreeMod13VarDivisor :: TP Proof
+powerOfThreeMod13VarDivisor :: TP (Proof (Forall "n" Integer -> Forall "m" Integer -> SBool))
 powerOfThreeMod13VarDivisor = do
    p27 <- powerOf27
    calc "powerOfThreeMod13VarDivisor"
-        (\(Forall @"n" n) (Forall @"m" m) ->
+        (\(Forall n) (Forall m) ->
             n .>= 0 .&& m .> 0 .=>     power 27 (n `sEDiv` 3) `sEMod` 13 * power 3 (n `sEMod` 3) `sEMod` m
                                    .== power  3 (n `sEMod` 3) `sEMod` m) $
-        \n m -> [n .>= 0, m .> 0]
-             |- power 27 (n `sEDiv` 3) `sEMod` 13 * power 3 (n `sEMod` 3) `sEMod` m
-             ?? p27 `at` Inst @"n" (sEDiv n 3)
-             =: power 3 (n `sEMod` 3) `sEMod` m
-             =: qed
+        \(n, m) -> [n .>= 0, m .> 0]
+                |- power 27 (n `sEDiv` 3) `sEMod` 13 * power 3 (n `sEMod` 3) `sEMod` m
+                ?? p27 `at` Inst @"n" (sEDiv n 3)
+                =: power 3 (n `sEMod` 3) `sEMod` m
+                =: qed

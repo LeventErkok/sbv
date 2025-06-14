@@ -107,7 +107,7 @@ inArray arr (low, high) elt = quantifiedBool $ \(Exists @"i" i) -> low .<= i .&&
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
 -- [Proven] bsearchCorrect
-correctness :: IO Proof
+correctness :: IO (Proof (Forall "arr" (ArrayModel Integer Integer) -> Forall "lo" Integer -> Forall "hi" Integer -> Forall "x" Integer -> SBool))
 correctness = runTPWith (tpRibbon 50 cvc5) $ do
 
   -- Helper: if a value is not in a range, then it isn't in any subrange of it:
@@ -142,8 +142,8 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
   bsearchAbsent <- sInduct "bsearchAbsent"
         (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
             nonDecreasing arr (lo, hi) .&& sNot (inArray arr (lo, hi) x) .=> isNothing (bsearch arr (lo, hi) x))
-        (\(_arr :: Arr) (lo :: SInteger) (hi :: SInteger) (_x :: SInteger) -> abs (hi - lo + 1)) $
-        \ih arr lo hi x ->
+        (\(_arr, lo, hi, _x) -> abs (hi - lo + 1)) $
+        \ih (arr, lo, hi, x) ->
               [nonDecreasing arr (lo, hi), sNot (inArray arr (lo, hi) x)]
            |- isNothing (bsearch arr (lo, hi) x)
            ?? "unfold bsearch"
@@ -176,17 +176,15 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
                                  in ite (xmid .< x)
                                         (isNothing (bsearch arr (mid+1, hi)    x))
                                         (isNothing (bsearch arr (lo,    mid-1) x))
-                                 ?? [ notInRange           `at` inst1 lo      hi (mid+1)
-                                    , nonDecreasingInRange `at` inst2 lo      hi (mid+1)
-                                    , ih                   `at` inst3 (mid+1) hi
-                                    ]
+                                 ?? notInRange           `at` inst1 lo      hi (mid+1)
+                                 ?? nonDecreasingInRange `at` inst2 lo      hi (mid+1)
+                                 ?? ih                   `at` inst3 (mid+1) hi
                                  =: ite (xmid .< x)
                                         sTrue
                                         (isNothing (bsearch arr (lo,    mid-1) x))
-                                 ?? [ notInRange           `at` inst1 lo hi      (mid-1)
-                                    , nonDecreasingInRange `at` inst2 lo hi      (mid-1)
-                                    , ih                   `at` inst3 lo (mid-1)
-                                    ]
+                                 ?? notInRange           `at` inst1 lo hi      (mid-1)
+                                 ?? nonDecreasingInRange `at` inst2 lo hi      (mid-1)
+                                 ?? ih                   `at` inst3 lo (mid-1)
                                  =: ite (xmid .< x) sTrue sTrue
                                  ?? "simplify"
                                  =: sTrue
@@ -197,8 +195,8 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
   bsearchPresent <- sInduct "bsearchPresent"
         (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
             nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .=> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x)
-        (\(_arr :: Arr) (lo :: SInteger) (hi :: SInteger) (_x :: SInteger) -> abs (hi - lo + 1)) $
-        \ih arr lo hi x ->
+        (\(_arr, lo, hi, _x) -> abs (hi - lo + 1)) $
+        \ih (arr, lo, hi, x) ->
              [nonDecreasing arr (lo, hi), inArray arr (lo, hi) x]
           |- x .== arr `readArray` fromJust (bsearch arr (lo, hi) x)
           ?? "unfold bsearch"
@@ -231,41 +229,39 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
                                        inst3 l h   = (Inst @"arr" arr, Inst @"lo" l, Inst @"hi" h,              Inst @"x" x)
                                 in cases [ xmid .== x ==> trivial
                                          , xmid .< x  ==> x .== arr `readArray` fromJust (bsearch arr (mid+1, hi)    x)
-                                                       ?? [ inRangeHigh          `at` inst1 lo      hi mid
-                                                          , nonDecreasingInRange `at` inst2 lo      hi (mid+1)
-                                                          , ih                   `at` inst3 (mid+1) hi
-                                                          ]
+                                                       ?? inRangeHigh          `at` inst1 lo      hi mid
+                                                       ?? nonDecreasingInRange `at` inst2 lo      hi (mid+1)
+                                                       ?? ih                   `at` inst3 (mid+1) hi
                                                        =: sTrue
                                                        =: qed
                                          , xmid .> x  ==> x .== arr `readArray` fromJust (bsearch arr (lo, mid-1) x)
-                                                       ?? [ inRangeLow           `at` inst1 lo hi      mid
-                                                          , nonDecreasingInRange `at` inst2 lo hi      (mid-1)
-                                                          , ih                   `at` inst3 lo (mid-1)
-                                                          ]
+                                                       ?? inRangeLow           `at` inst1 lo hi      mid
+                                                       ?? nonDecreasingInRange `at` inst2 lo hi      (mid-1)
+                                                       ?? ih                   `at` inst3 lo (mid-1)
                                                        =: sTrue
                                                        =: qed
                                          ]
                    ]
 
   calc "bsearchCorrect"
-        (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
+        (\(Forall arr) (Forall lo) (Forall hi) (Forall x) ->
             nonDecreasing arr (lo, hi) .=> let res = bsearch arr (lo, hi) x
                                            in ite (inArray arr (lo, hi) x)
                                                   (arr `readArray` fromJust res .== x)
                                                   (isNothing res)) $
-        \arr lo hi x -> [nonDecreasing arr (lo, hi)]
-                     |- let res = bsearch arr (lo, hi) x
-                        in ite (inArray arr (lo, hi) x)
-                               (arr `readArray` fromJust res .== x)
-                               (isNothing res)
-                     =: cases [ inArray arr (lo, hi) x
-                                  ==> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x
-                                   ?? bsearchPresent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x)
-                                   =: sTrue
-                                   =: qed
-                              , sNot (inArray arr (lo, hi) x)
-                                  ==> isNothing (bsearch arr (lo, hi) x)
-                                   ?? bsearchAbsent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x)
-                                   =: sTrue
-                                   =: qed
-                              ]
+        \(arr, lo, hi, x) -> [nonDecreasing arr (lo, hi)]
+                          |- let res = bsearch arr (lo, hi) x
+                             in ite (inArray arr (lo, hi) x)
+                                    (arr `readArray` fromJust res .== x)
+                                    (isNothing res)
+                          =: cases [ inArray arr (lo, hi) x
+                                       ==> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x
+                                        ?? bsearchPresent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x)
+                                        =: sTrue
+                                        =: qed
+                                   , sNot (inArray arr (lo, hi) x)
+                                       ==> isNothing (bsearch arr (lo, hi) x)
+                                        ?? bsearchAbsent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x)
+                                        =: sTrue
+                                        =: qed
+                                   ]

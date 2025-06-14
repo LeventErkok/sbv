@@ -107,11 +107,11 @@ kleeneProofs = runTP $ do
   least_fix <- axiom "least_fix" $ \(Forall @"x" x) (Forall @"e" e) (Forall @"f" f) -> ((f + e * x) <= x) .=> ((star e * f) <= x)
 
   -- Collect the basic axioms in a list for easy reference
-  let kleene = [ par_assoc,  par_comm, par_idem, par_zero
-               , seq_assoc,  seq_zero, seq_one
-               , ldistrib,   rdistrib
-               , unfold
-               , least_fix
+  let kleene = [ proofOf par_assoc,  proofOf par_comm, proofOf par_idem, proofOf par_zero
+               , proofOf seq_assoc,  proofOf seq_zero, proofOf seq_one
+               , proofOf ldistrib,   proofOf rdistrib
+               , proofOf unfold
+               , proofOf least_fix
                ]
 
   -- Various proofs:
@@ -135,9 +135,9 @@ kleeneProofs = runTP $ do
 
   -- Prove: x** = x*
   star_star_2 <- do _1 <- lemma "star_star_2_2" (\(Forall @"x" x) -> ((star x * star x + 1) <= star x) .=> star (star x) <= star x) kleene
-                    _2 <- lemma "star_star_2_3" (\(Forall @"x" x) -> star (star x) <= star x)                                       (kleene ++ [_1])
+                    _2 <- lemma "star_star_2_3" (\(Forall @"x" x) -> star (star x) <= star x)                                       (kleene ++ [proofOf _1])
                     _3 <- lemma "star_star_2_1" (\(Forall @"x" x) -> star x        <= star (star x))                                kleene
 
-                    lemma "star_star_2" (\(Forall @"x" (x :: SKleene)) -> star (star x) .== star x) [subset_eq, _2, _3]
+                    lemma "star_star_2" (\(Forall @"x" (x :: SKleene)) -> star (star x) .== star x) [proofOf subset_eq, proofOf _2, proofOf _3]
 
   pure ()

@@ -53,7 +53,7 @@ spec91 n = ite (n .> 100) (n - 10) 91
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] mcCarthy91
-correctness :: IO Proof
+correctness :: IO (Proof (Forall "n" Integer -> SBool))
 correctness = runTP $ do
 
    -- Case 1. When @n > 100@
@@ -75,7 +75,7 @@ correctness = runTP $ do
 
    -- Putting it all together
    calc "mcCarthy91"
-        (\(Forall @"n" n) -> mcCarthy91 n .== spec91 n) $
+        (\(Forall n) -> mcCarthy91 n .== spec91 n) $
         \n -> [] |- cases [ n .> 100               ==> mcCarthy91 n ?? case1 =: spec91 n =: qed
                           , 90 .<= n .&& n .<= 100 ==> mcCarthy91 n ?? case2 =: spec91 n =: qed
                           , n .< 90                ==> mcCarthy91 n ?? case3 =: spec91 n =: qed

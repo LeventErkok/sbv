@@ -1099,6 +1099,12 @@ instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TP
   ProofBranch b hs bs `addHint` hs' = ProofBranch b (hs ++ hs') bs
   ProofEnd    b hs    `addHint` hs' = ProofEnd    b (hs ++ hs')
 
+-- | Giving a set of proof objects as helpers. This is helpful since we occasionally put a bunch of proofs together.
+instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) [ProofObj] where
+  ProofStep   a hs ps `addHint` hs' = ProofStep   a (hs ++ map HelperProof hs') ps
+  ProofBranch b hs bs `addHint` hs' = ProofBranch b (hs ++ map HelperProof hs') bs
+  ProofEnd    b hs    `addHint` hs' = ProofEnd    b (hs ++ map HelperProof hs')
+
 -- | Giving user a hint as a string. This doesn't actually do anything for the solver, it just helps with readability
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) String where
   a `addHint` s = a `addHint` HelperString s
