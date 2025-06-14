@@ -1594,7 +1594,7 @@ interleaveRoundTrip p = do
            \(xs, ys) -> [length xs .== length ys]
                      |- uninterleave (interleave xs ys)
                      =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
-                     ?? roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList a, nil :: SList a)))
+                     ?? roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil, nil)))
                      =: tuple (reverse nil ++ xs, reverse nil ++ ys)
                      =: qed
 
