@@ -49,7 +49,7 @@ import Data.SBV.TP
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] oddSequence
-oddSequence1 :: IO Proof
+oddSequence1 :: IO (Proof (Forall "n" Integer -> SBool))
 oddSequence1 = runTP $ do
   let s :: SInteger -> SInteger
       s = smtFunction "seq" $ \n -> ite (n .<= 0) 1
@@ -60,7 +60,7 @@ oddSequence1 = runTP $ do
   -- Note also that we do a "proof-by-contradiction," by deriving that
   -- the negation of the goal leads to falsehood.
   sInductWith cvc5 "oddSequence"
-          (\(Forall @"n" n) -> n .>= 0 .=> sNot (2 `sDivides` s n)) (abs @SInteger) $
+          (\(Forall n) -> n .>= 0 .=> sNot (2 `sDivides` s n)) abs $
           \ih n -> [n .>= 0] |- 2 `sDivides` s n
                              =: cases [ n .== 0 ==> contradiction
                                       , n .== 1 ==> contradiction
@@ -95,7 +95,7 @@ oddSequence1 = runTP $ do
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
 -- [Proven] oddSequence2
-oddSequence2 :: IO Proof
+oddSequence2 :: IO (Proof (Forall "n" Integer -> SBool))
 oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
   let s :: SInteger -> SInteger
       s = smtFunction "seq" $ \n -> ite (n .<= 0) 1
@@ -106,7 +106,7 @@ oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
   s1 <- lemma "oddSequence_1" (s 1 .== 3) []
 
   sNp2 <- sInduct "oddSequence_sNp2"
-                  (\(Forall @"n" n) -> n .>= 2 .=> s n .== 2 * n + 1) (abs @SInteger) $
+                  (\(Forall @"n" n) -> n .>= 2 .=> s n .== 2 * n + 1) abs $
                   \ih n -> [n .>= 2] |- s n
                                      =: 2 * s (n-1) - s (n-2)
                                      ?? ih `at` Inst @"n" (n-1)
@@ -124,13 +124,12 @@ oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
                       \n -> [n .>= 0] |- s n
                                       =: cases [ n .== 0 ==> (1 :: SInteger) =: qed
                                                , n .== 1 ==> (3 :: SInteger) =: qed
-                                               , n .>= 2 ==>    s n
-                                                             ?? [ s0
-                                                                , s1
-                                                                , sNp2 `at` Inst @"n" n
-                                                                ]
-                                                             =: 2 * n + 1
-                                                             =: qed
+                                               , n .>= 2 ==> s n
+                                                          ?? s0
+                                                          ?? s1
+                                                          ?? sNp2 `at` Inst @"n" n
+                                                          =: 2 * n + 1
+                                                          =: qed
                                                ]
 
 -- * Strong induction checks
@@ -153,7 +152,7 @@ won'tProve1 = runTP $ do
    -- Run it for 5 seconds, as otherwise z3 will hang as it can't prove make the inductive step
    _ <- sInductWith z3{extraArgs = ["-t:5000"]} "lengthGood"
                 (\(Forall @"xs" xs) -> len xs .== length xs)
-                (length @Integer) $
+                length $
                 \ih xs -> [] |- len xs
                              -- incorrectly instantiate the IH at xs!
                              ?? ih `at` Inst @"xs" xs
@@ -182,7 +181,7 @@ won'tProve2 = runTP $ do
 
    _ <- sInduct "badLength"
                 (\(Forall @"xs" xs) -> len xs .== length xs)
-                (length @Integer) $
+                length $
                 \ih xs -> [] |- len xs
                              ?? ih `at` Inst @"xs" xs
                              =: length xs
@@ -203,7 +202,7 @@ won'tProve3 :: IO ()
 won'tProve3 = runTP $ do
    _ <- sInduct "badMeasure"
                 (\(Forall @"x" (x :: SInteger)) -> x .== x)
-                (id @SInteger) $
+                id $
                 \_h (x :: SInteger) -> [] |- x
                                           =: x
                                           =: qed
@@ -226,22 +225,22 @@ won'tProve4 :: IO ()
 won'tProve4 = runTP $ do
 
    let -- a bizarre (but valid!) way to sum two integers
+       weirdSum :: SInteger -> SInteger -> SInteger
        weirdSum = smtFunction "weirdSum" (\x y -> ite (x .<= 0) y (weirdSum (x - 1) (y + 1)))
 
    _ <- sInductWith z3{extraArgs = ["-t:5000"]} "badMeasure"
-                (\(Forall @"x" (x :: SInteger)) (Forall @"y" (y :: SInteger)) -> x .>= 0 .=> weirdSum x y .== x + y)
+                (\(Forall @"x" x) (Forall @"y" y) -> x .>= 0 .=> weirdSum x y .== x + y)
                 -- This measure is not good, since it remains the same. Note that we do not get a
                 -- failure, but the proof will never converge either; so we put a time bound
-                (\x y -> abs x + abs @SInteger y) $
-                \ih (x :: SInteger) (y :: SInteger) ->
-                    [x .>= 0] |- ite (x .<= 0) y (weirdSum (x - 1) (y + 1))
-                              =: cases [ x .<= 0 ==> trivial
-                                       , x .>  0 ==> weirdSum (x - 1) (y + 1)
-                                                  ?? ih `at` (Inst @"x" (x - 1), Inst @"y" (y + 1))
-                                                  =: x - 1 + y + 1
-                                                  =: x + y
-                                                  =: qed
-                                       ]
+                (\(x, y) -> abs x + abs y) $
+                \ih (x, y) -> [x .>= 0] |- ite (x .<= 0) y (weirdSum (x - 1) (y + 1))
+                                        =: cases [ x .<= 0 ==> trivial
+                                                 , x .>  0 ==> weirdSum (x - 1) (y + 1)
+                                                            ?? ih `at` (Inst @"x" (x - 1), Inst @"y" (y + 1))
+                                                            =: x - 1 + y + 1
+                                                            =: x + y
+                                                            =: qed
+                                                 ]
 
    pure ()
 
@@ -271,7 +270,7 @@ won'tProve4 = runTP $ do
 --       Step: 1.2.2.6 (simplify)          Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumHalves
-sumHalves :: IO Proof
+sumHalves :: IO (Proof (Forall "xs" [Integer] -> SBool))
 sumHalves = runTP $ do
 
     let halvingSum :: SList Integer -> SInteger
@@ -281,18 +280,18 @@ sumHalves = runTP $ do
                                                             in halvingSum f + halvingSum s)
 
     helper <- induct "sumAppend"
-                     (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum @Integer (xs ++ ys) .== sum xs + sum ys) $
-                     \ih x xs ys -> [] |- sum @Integer (x .: xs ++ ys)
-                                       =: x + sum (xs ++ ys)
-                                       ?? ih
-                                       =: x + sum xs + sum ys
-                                       =: sum (x .: xs) + sum ys
-                                       =: qed
+                     (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
+                     \ih ((x, xs), ys) -> [] |- sum (x .: xs ++ ys)
+                                             =: x + sum (xs ++ ys)
+                                             ?? ih
+                                             =: x + sum xs + sum ys
+                                             =: sum (x .: xs) + sum ys
+                                             =: qed
 
     -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
     sInductWith cvc5 "sumHalves"
       (\(Forall @"xs" xs) -> halvingSum xs .== sum xs)
-      (length @Integer) $
+      length $
       \ih xs -> [] |- halvingSum xs
                    =: split xs qed
                             (\a as -> split as qed
