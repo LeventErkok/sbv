@@ -75,6 +75,6 @@ correctness = runTP $ do
        (\(Forall n) -> n .>= 0 .=> fibonacci n .== fibTail n) $
        \n -> [n .>= 0] |- fibTail n
                        =: fib 1 1 n
-                       ?? helper `at` (Inst @"n" n, Inst @"k" (0 :: SInteger))
+                       ?? helper `at` (Inst @"n" n, Inst @"k" 0)
                        =: fibonacci n
                        =: qed

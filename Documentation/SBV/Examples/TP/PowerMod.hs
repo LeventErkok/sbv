@@ -631,15 +631,15 @@ powerOf27 :: TP (Proof (Forall "n" Integer -> SBool))
 powerOf27 = do
    pOne <- onePower
    pMod <- powerMod
-   calc "powerOf27" (\(Forall n) -> n .>= 0 .=> power 27 n `sEMod` 13  .==  1) $
+   calc "powerOf27" (\(Forall n) -> n .>= 0 .=> power 27 n `sEMod` 13 .== 1) $
                     \n -> [n .>= 0]
                        |- power 27 n `sEMod` 13
-                       ?? pMod `at` (Inst @"b" (27::SInteger), Inst @"n" n, Inst @"m" (13::SInteger))
+                       ?? pMod `at` (Inst @"b" 27, Inst @"n" n, Inst @"m" 13)
                        =: power (27 `sEMod` 13) n `sEMod` 13
                        =: power 1 n `sEMod` 13
                        ?? pOne
                        =: 1 `sEMod` 13
-                       =: (1::SInteger)
+                       =: (1 :: SInteger)
                        =: qed
 
 -- | \(n \geq 0 \wedge m > 0 \implies (27^{\frac{n}{3}} \bmod 13) \cdot 3^{n \bmod 3} \equiv 3^{n \bmod 3} \pmod{m}\)

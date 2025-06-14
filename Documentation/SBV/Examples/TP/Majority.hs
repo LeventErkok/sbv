@@ -121,7 +121,7 @@ correctness p = runTP $ do
                    [i .>= 0, (length (x .: xs) + i) `sEDiv` 2 .< ite (e .== c) i 0 + TP.count e (x .: xs)]
                 |- majority c i (x .: xs)
                 =: cases [ i .== 0 ==> majority x 1 xs
-                                    ?? ih `at` (Inst @"i" (1 :: SInteger), Inst @"e" e, Inst @"c" x)
+                                    ?? ih `at` (Inst @"i" 1, Inst @"e" e, Inst @"c" x)
                                     =: e
                                     =: qed
                          , i .>  0 ==> majority c (i + ite (c .== x) 1 (-1)) xs
@@ -138,12 +138,12 @@ correctness p = runTP $ do
 
   -- We can now prove the main theorem, by instantiating the general version.
   correct <- lemma (atProxy p "majority")
-                   (\(Forall @"c" (c :: SBV a)) (Forall @"xs" xs) -> isMajority c xs .=> mjrty xs .== c)
+                   (\(Forall @"c" c) (Forall @"xs" xs) -> isMajority c xs .=> mjrty xs .== c)
                    [proofOf majorityGeneral]
 
   -- Corollary: If there is a majority element, then what we return is a majority element:
   ifExistsFound <- lemma (atProxy p "ifExistsFound")
-                        (\(Forall @"c" (c :: SBV a)) (Forall @"xs" xs) -> isMajority c xs .=> isMajority (mjrty xs) xs)
+                        (\(Forall @"c" c) (Forall @"xs" xs) -> isMajority c xs .=> isMajority (mjrty xs) xs)
                         [proofOf correct]
 
   -- Contrapositive to the above: If the returned value is not majority, then there is no majority:

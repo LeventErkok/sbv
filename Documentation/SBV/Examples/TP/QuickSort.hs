@@ -480,7 +480,7 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
 
   sortCountsMatch <-
      sInduct "sortCountsMatch"
-             (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> count e xs .== count e (quickSort xs))
+             (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (quickSort xs))
              (\(xs, _) -> length xs) $
              \ih (xs, e) ->
                 [] |- count e (quickSort xs)
@@ -494,7 +494,7 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
                                    in count e (quickSort lo ++ [a] ++ quickSort hi)
                                    ?? countAppend `at` (Inst @"xs" (quickSort lo), Inst @"ys" ([a] ++ quickSort hi), Inst @"e" e)
                                    =: count e (quickSort lo) + count e ([a] ++ quickSort hi)
-                                   ?? countAppend `at` (Inst @"xs" ([a] :: SList a), Inst @"ys" (quickSort hi), Inst @"e" e)
+                                   ?? countAppend `at` (Inst @"xs" [a], Inst @"ys" (quickSort hi), Inst @"e" e)
                                    =: count e (quickSort lo) + count e [a] + count e (quickSort hi)
                                    ?? ih                    `at` (Inst @"xs" lo, Inst @"e" e)
                                    ?? partitionNotLongerFst `at` (Inst @"l"  as, Inst @"pivot" a)

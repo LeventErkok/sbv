@@ -159,9 +159,9 @@ elevenMinusFour = runTP $ do
           \ih n -> [n .>= 0]
                 |- emf (n+1)
                 =: 7 `sDivides` (11 `pow` (n+1) - 4 `pow` (n+1))
-                ?? powN `at` (Inst @"x" (11 :: SInteger), Inst @"n" n)
+                ?? powN `at` (Inst @"x" 11, Inst @"n" n)
                 =: 7 `sDivides` (11 * 11 `pow` n - 4 `pow` (n+1))
-                ?? powN `at` (Inst @"x" ( 4 :: SInteger), Inst @"n" n)
+                ?? powN `at` (Inst @"x" 4, Inst @"n" n)
                 =: 7 `sDivides` (11 * 11 `pow` n - 4 * 4 `pow` n)
                 =: 7 `sDivides` (7 * 11 `pow` n + 4 * 11 `pow` n - 4 * 4 `pow` n)
                 =: 7 `sDivides` (7 * 11 `pow` n + 4 * (11 `pow` n - 4 `pow` n))
@@ -187,7 +187,7 @@ badNonNegative :: IO ()
 badNonNegative = runTP $ do
     _ <- induct "badNonNegative"
                 (\(Forall @"n" (n :: SInteger)) -> n .>= 0) $
-                \ih n -> [] |- n + 1 .>= (0 :: SInteger)
+                \ih n -> [] |- n + 1 .>= 0
                             ?? ih
                             =: sTrue
                             =: qed

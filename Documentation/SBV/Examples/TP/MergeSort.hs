@@ -198,7 +198,7 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
     --------------------------------------------------------------------------------------------
     mergeCount <-
         sInduct "mergeCount"
-                (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" (e :: SBV a)) ->
+                (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) ->
                         count e (merge xs ys) .== count e xs + count e ys)
                 (\(xs, ys, _e) -> (length xs, length ys)) $
                 \ih (as, bs, e) -> [] |-
@@ -237,7 +237,7 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
 
     sortIsPermutation <-
         sInductWith cvc5 "sortIsPermutation"
-                (\(Forall @"xs" (xs :: SList a)) (Forall @"e" e) -> count e xs .== count e (mergeSort xs))
+                (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs))
                 (\(xs, _e) -> length xs) $
                 \ih (as, e) -> [] |- split as
                                            trivial

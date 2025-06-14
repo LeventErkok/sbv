@@ -156,7 +156,7 @@ correctness p = runTP $ do
                                                 =: b .: reverse (a .: w)
                                                 ?? "substitute"
                                                 =: last as .: reverse (a .: init as)
-                                                ?? revApp `at` (Inst @"xs" (init as), Inst @"ys" ([last as] :: SList a))
+                                                ?? revApp `at` (Inst @"xs" (init as), Inst @"ys" [last as])
                                                 =: reverse (a .: init as ++ [last as])
                                                 =: reverse (a .: as)
                                                 =: reverse xs

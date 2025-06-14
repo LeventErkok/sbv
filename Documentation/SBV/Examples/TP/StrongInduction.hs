@@ -122,8 +122,8 @@ oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
 
   calc "oddSequence2" (\(Forall @"n" n) -> n .>= 0 .=> s n .== 2 * n + 1) $
                       \n -> [n .>= 0] |- s n
-                                      =: cases [ n .== 0 ==> (1 :: SInteger) =: qed
-                                               , n .== 1 ==> (3 :: SInteger) =: qed
+                                      =: cases [ n .== 0 ==> trivial
+                                               , n .== 1 ==> trivial
                                                , n .>= 2 ==> s n
                                                           ?? s0
                                                           ?? s1
@@ -203,9 +203,10 @@ won'tProve3 = runTP $ do
    _ <- sInduct "badMeasure"
                 (\(Forall @"x" (x :: SInteger)) -> x .== x)
                 id $
-                \_h (x :: SInteger) -> [] |- x
-                                          =: x
-                                          =: qed
+                \_ih x -> [] |- x
+                             =: x
+                             =: qed
+
 
    pure ()
 
