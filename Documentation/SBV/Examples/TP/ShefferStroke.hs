@@ -56,23 +56,23 @@ class BooleanAlgebra α where
 -- | Proofs needed for a boolean-algebra. Again, we follow Lean's definition here. Since we cannot
 -- put these in the class definition above, we will keep them in a simple data-structure.
 data BooleanAlgebraProof = BooleanAlgebraProof {
-    le_refl          {- ∀ (a : α), a ≤ a                             -} :: Proof (Forall "A" Stroke -> SBool)
-  , le_trans         {- ∀ (a b c : α), a ≤ b → b ≤ c → a ≤ c         -} :: Proof (Forall "A" Stroke -> Forall "B" Stroke -> Forall "C" Stroke -> SBool)
-  , lt_iff_le_not_le {- (∀ (a b : α), a < b ↔ a ≤ b ∧ ¬b ≤ a)        -} :: Proof (Forall "A" Stroke -> Forall "B" Stroke -> SBool)
-  , le_antisymm      {- ∀ (a b : α), a ≤ b → b ≤ a → a = b           -} :: Proof (Forall "A" Stroke -> Forall "B" Stroke -> SBool)
-  , le_sup_left      {- ∀ (a b : α), a ≤ a ⊔ b                       -} :: Proof (Forall "A" Stroke -> Forall "B" Stroke -> SBool)
-  , le_sup_right     {- ∀ (a b : α), b ≤ a ⊔ b                       -} :: Proof (Forall "A" Stroke -> Forall "B" Stroke -> SBool)
-  , sup_le           {- ∀ (a b c : α), a ≤ c → b ≤ c → a ⊔ b ≤ c     -} :: Proof (Forall "A" Stroke -> Forall "B" Stroke -> Forall "C" Stroke -> SBool)
-  , inf_le_left      {- ∀ (a b : α), a ⊓ b ≤ a                       -} :: Proof (Forall "A" Stroke -> Forall "B" Stroke -> SBool)
-  , inf_le_right     {- ∀ (a b : α), a ⊓ b ≤ b                       -} :: Proof (Forall "A" Stroke -> Forall "B" Stroke -> SBool)
-  , le_inf           {- ∀ (a b c : α), a ≤ b → a ≤ c → a ≤ b ⊓ c     -} :: Proof (Forall "A" Stroke -> Forall "B" Stroke -> Forall "C" Stroke -> SBool)
-  , le_sup_inf       {- ∀ (x y z : α), (x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z -} :: Proof (Forall "X" Stroke -> Forall "Y" Stroke -> Forall "Z" Stroke -> SBool)
-  , inf_compl_le_bot {- ∀ (x : α), x ⊓ xᶜ ≤ ⊥                        -} :: Proof (Forall "X" Stroke -> SBool)
-  , top_le_sup_compl {- ∀ (x : α), ⊤ ≤ x ⊔ xᶜ                        -} :: Proof (Forall "X" Stroke -> SBool)
-  , le_top           {- ∀ (a : α), a ≤ ⊤                             -} :: Proof (Forall "A" Stroke -> SBool)
-  , bot_le           {- ∀ (a : α), ⊥ ≤ a                             -} :: Proof (Forall "A" Stroke -> SBool)
-  , sdiff_eq         {- (∀ (x y : α), x \ y = x ⊓ yᶜ)                -} :: Proof (Forall "X" Stroke -> Forall "Y" Stroke -> SBool)
-  , himp_eq          {- (∀ (x y : α), x ⇨ y = y ⊔ xᶜ)                -} :: Proof (Forall "X" Stroke -> Forall "Y" Stroke -> SBool)
+    le_refl          {- ∀ (a : α), a ≤ a                             -} :: Proof (Forall "a" Stroke -> SBool)
+  , le_trans         {- ∀ (a b c : α), a ≤ b → b ≤ c → a ≤ c         -} :: Proof (Forall "a" Stroke -> Forall "b" Stroke -> Forall "c" Stroke -> SBool)
+  , lt_iff_le_not_le {- (∀ (a b : α), a < b ↔ a ≤ b ∧ ¬b ≤ a)        -} :: Proof (Forall "a" Stroke -> Forall "b" Stroke -> SBool)
+  , le_antisymm      {- ∀ (a b : α), a ≤ b → b ≤ a → a = b           -} :: Proof (Forall "a" Stroke -> Forall "b" Stroke -> SBool)
+  , le_sup_left      {- ∀ (a b : α), a ≤ a ⊔ b                       -} :: Proof (Forall "a" Stroke -> Forall "b" Stroke -> SBool)
+  , le_sup_right     {- ∀ (a b : α), b ≤ a ⊔ b                       -} :: Proof (Forall "a" Stroke -> Forall "b" Stroke -> SBool)
+  , sup_le           {- ∀ (a b c : α), a ≤ c → b ≤ c → a ⊔ b ≤ c     -} :: Proof (Forall "a" Stroke -> Forall "b" Stroke -> Forall "c" Stroke -> SBool)
+  , inf_le_left      {- ∀ (a b : α), a ⊓ b ≤ a                       -} :: Proof (Forall "a" Stroke -> Forall "b" Stroke -> SBool)
+  , inf_le_right     {- ∀ (a b : α), a ⊓ b ≤ b                       -} :: Proof (Forall "a" Stroke -> Forall "b" Stroke -> SBool)
+  , le_inf           {- ∀ (a b c : α), a ≤ b → a ≤ c → a ≤ b ⊓ c     -} :: Proof (Forall "a" Stroke -> Forall "b" Stroke -> Forall "c" Stroke -> SBool)
+  , le_sup_inf       {- ∀ (x y z : α), (x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z -} :: Proof (Forall "x" Stroke -> Forall "y" Stroke -> Forall "z" Stroke -> SBool)
+  , inf_compl_le_bot {- ∀ (x : α), x ⊓ xᶜ ≤ ⊥                        -} :: Proof (Forall "x" Stroke -> SBool)
+  , top_le_sup_compl {- ∀ (x : α), ⊤ ≤ x ⊔ xᶜ                        -} :: Proof (Forall "x" Stroke -> SBool)
+  , le_top           {- ∀ (a : α), a ≤ ⊤                             -} :: Proof (Forall "a" Stroke -> SBool)
+  , bot_le           {- ∀ (a : α), ⊥ ≤ a                             -} :: Proof (Forall "a" Stroke -> SBool)
+  , sdiff_eq         {- (∀ (x y : α), x \ y = x ⊓ yᶜ)                -} :: Proof (Forall "x" Stroke -> Forall "y" Stroke -> SBool)
+  , himp_eq          {- (∀ (x y : α), x ⇨ y = y ⊔ xᶜ)                -} :: Proof (Forall "x" Stroke -> Forall "y" Stroke -> SBool)
   }
 
 -- | A somewhat prettier printer for a BooleanAlgebra proof
@@ -126,24 +126,24 @@ instance BooleanAlgebra SStroke where
 ﬧﬧ = ﬧ . ﬧ
 
 -- A couple of CPP defines make the code shorter to read
-#define A      (Forall @"A"  (a  :: SStroke))
-#define AAp A  (Forall @"A'" (a' :: SStroke))
-#define AB  A  (Forall @"B"  (b  :: SStroke))
-#define ABC AB (Forall @"C"  (c  :: SStroke))
-#define X      (Forall @"X"  (x  :: SStroke))
-#define XY  X  (Forall @"Y"  (y  :: SStroke))
-#define XYZ XY (Forall @"Z"  (z  :: SStroke))
+#define A      (Forall @"a"  (a  :: SStroke))
+#define AAp A  (Forall @"a'" (a' :: SStroke))
+#define AB  A  (Forall @"b"  (b  :: SStroke))
+#define ABC AB (Forall @"c"  (c  :: SStroke))
+#define X      (Forall @"x"  (x  :: SStroke))
+#define XY  X  (Forall @"y"  (y  :: SStroke))
+#define XYZ XY (Forall @"z"  (z  :: SStroke))
 
 -- | First Sheffer axiom: @ﬧﬧa == a@
-sheffer1 :: TP (Proof (Forall "A" Stroke -> SBool))
+sheffer1 :: TP (Proof (Forall "a" Stroke -> SBool))
 sheffer1 = axiom "ﬧﬧa == a" $ \A -> ﬧﬧ a .== a
 
 -- | Second Sheffer axiom: @a ⏐ (b ⏐ ﬧb) == ﬧa@
-sheffer2 :: TP (Proof (Forall "A" Stroke -> Forall "B" Stroke -> SBool))
+sheffer2 :: TP (Proof (Forall "a" Stroke -> Forall "b" Stroke -> SBool))
 sheffer2 = axiom "a ⏐ (b ⏐ ﬧb) == ﬧa" $ \AB -> a ⏐ (b ⏐ ﬧ b) .== ﬧ a
 
 -- | Third Sheffer axiom: @ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)@
-sheffer3 :: TP (Proof (Forall "A" Stroke -> Forall "B" Stroke -> Forall "C" Stroke -> SBool))
+sheffer3 :: TP (Proof (Forall "a" Stroke -> Forall "b" Stroke -> Forall "c" Stroke -> SBool))
 sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC -> ﬧ(a ⏐ (b ⏐ c)) .== (ﬧ b ⏐ a) ⏐ (ﬧ c ⏐ a)
 
 -- * Sheffer's stroke defines a boolean algebra
