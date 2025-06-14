@@ -126,13 +126,13 @@ instance BooleanAlgebra SStroke where
 ﬧﬧ = ﬧ . ﬧ
 
 -- A couple of CPP defines make the code shorter to read
-#define A      (Forall @"a"  (a  :: SStroke))
-#define AAp A  (Forall @"a'" (a' :: SStroke))
-#define AB  A  (Forall @"b"  (b  :: SStroke))
-#define ABC AB (Forall @"c"  (c  :: SStroke))
-#define X      (Forall @"x"  (x  :: SStroke))
-#define XY  X  (Forall @"y"  (y  :: SStroke))
-#define XYZ XY (Forall @"z"  (z  :: SStroke))
+#define A      (Forall a  :: Forall "a"  Stroke)
+#define AAp A  (Forall a' :: Forall "a'" Stroke)
+#define AB  A  (Forall b  :: Forall "b"  Stroke)
+#define ABC AB (Forall c  :: Forall "c"  Stroke)
+#define X      (Forall x  :: Forall "x"  Stroke)
+#define XY  X  (Forall y  :: Forall "y"  Stroke)
+#define XYZ XY (Forall z  :: Forall "z"  Stroke)
 
 -- | First Sheffer axiom: @ﬧﬧa == a@
 sheffer1 :: TP (Proof (Forall "a" Stroke -> SBool))
