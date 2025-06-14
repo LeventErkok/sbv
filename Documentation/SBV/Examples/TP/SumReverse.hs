@@ -54,29 +54,29 @@ import Data.Proxy
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumReverse @Integer
-revSum :: forall a. (SymVal a, Num (SBV a)) => Proxy a -> IO Proof
+revSum :: forall a. (SymVal a, Num (SBV a)) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
 revSum p = runTP $ do
 
   -- helper: sum distributes over append.
   sumAppend <-
      induct (atProxy p "sumAppend")
-            (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum @a (xs ++ ys) .== sum xs + sum ys) $
-            \ih x xs ys -> [] |- sum @a ((x .: xs) ++ ys)
-                              =: sum (x .: (xs ++ ys))
-                              =: x + sum (xs ++ ys)
-                              ?? ih
-                              =: x + sum xs + sum ys
-                              =: sum (x .: xs) + sum ys
-                              =: qed
+            (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
+            \ih ((x, xs), ys) -> [] |- sum ((x .: xs) ++ ys)
+                                    =: sum (x .: (xs ++ ys))
+                                    =: x + sum (xs ++ ys)
+                                    ?? ih
+                                    =: x + sum xs + sum ys
+                                    =: sum (x .: xs) + sum ys
+                                    =: qed
 
   -- Now prove the original theorem by induction
   induct (atProxy p "sumReverse")
-         (\(Forall @"xs" xs) -> sum @a (reverse xs) .== sum xs) $
-         \ih x xs -> [] |- sum @a (reverse (x .: xs))
-                        =: sum (reverse xs ++ [x])
-                        ?? sumAppend
-                        =: sum (reverse xs) + sum [x]
-                        ?? ih
-                        =: sum xs + x
-                        =: sum (x .: xs)
-                        =: qed
+         (\(Forall xs) -> sum (reverse xs) .== sum xs) $
+         \ih (x, xs) -> [] |- sum (reverse (x .: xs))
+                           =: sum (reverse xs ++ [x])
+                           ?? sumAppend `at` (Inst @"xs" (reverse xs), Inst @"ys" [x])
+                           =: sum (reverse xs) + sum [x]
+                           ?? ih
+                           =: sum xs + x
+                           =: sum (x .: xs)
+                           =: qed
