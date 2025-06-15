@@ -234,14 +234,14 @@ won'tProve4 = runTP $ do
                 -- This measure is not good, since it remains the same. Note that we do not get a
                 -- failure, but the proof will never converge either; so we put a time bound
                 (\(x, y) -> abs x + abs y) $
-                \ih (x, y) -> [x .>= 0] |- ite (x .<= 0) y (weirdSum (x - 1) (y + 1))
-                                        =: cases [ x .<= 0 ==> trivial
-                                                 , x .>  0 ==> weirdSum (x - 1) (y + 1)
-                                                            ?? ih `at` (Inst @"x" (x - 1), Inst @"y" (y + 1))
-                                                            =: x - 1 + y + 1
-                                                            =: x + y
-                                                            =: qed
-                                                 ]
+                \ih x y -> [x .>= 0] |- ite (x .<= 0) y (weirdSum (x - 1) (y + 1))
+                                     =: cases [ x .<= 0 ==> trivial
+                                              , x .>  0 ==> weirdSum (x - 1) (y + 1)
+                                                         ?? ih `at` (Inst @"x" (x - 1), Inst @"y" (y + 1))
+                                                         =: x - 1 + y + 1
+                                                         =: x + y
+                                                         =: qed
+                                              ]
 
    pure ()
 

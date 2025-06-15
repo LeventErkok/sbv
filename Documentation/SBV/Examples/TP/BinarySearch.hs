@@ -143,7 +143,7 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
         (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
             nonDecreasing arr (lo, hi) .&& sNot (inArray arr (lo, hi) x) .=> isNothing (bsearch arr (lo, hi) x))
         (\(_arr, lo, hi, _x) -> abs (hi - lo + 1)) $
-        \ih (arr, lo, hi, x) ->
+        \ih arr lo hi x ->
               [nonDecreasing arr (lo, hi), sNot (inArray arr (lo, hi) x)]
            |- isNothing (bsearch arr (lo, hi) x)
            ?? "unfold bsearch"
@@ -196,7 +196,7 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
         (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
             nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .=> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x)
         (\(_arr, lo, hi, _x) -> abs (hi - lo + 1)) $
-        \ih (arr, lo, hi, x) ->
+        \ih arr lo hi x ->
              [nonDecreasing arr (lo, hi), inArray arr (lo, hi) x]
           |- x .== arr `readArray` fromJust (bsearch arr (lo, hi) x)
           ?? "unfold bsearch"

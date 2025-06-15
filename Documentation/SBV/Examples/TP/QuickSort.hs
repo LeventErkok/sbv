@@ -401,37 +401,37 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
   partitionNotLongerFst <- sInduct "partitionNotLongerFst"
      (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (fst (partition @a pivot l)) .<= length l)
      (\(l, _) -> length l) $
-     \ih (l, pivot) -> [] |- length (fst (partition @a pivot l)) .<= length l
-                          =: split l trivial
-                                   (\a as -> let lo = fst (partition pivot as)
-                                          in ite (a .< pivot)
-                                                 (length (a .: lo) .<= length (a .: as))
-                                                 (length       lo  .<= length (a .: as))
-                                          ?? "simplify"
-                                          =: ite (a .< pivot)
-                                                 (length lo .<=     length as)
-                                                 (length lo .<= 1 + length as)
-                                          ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
-                                          =: sTrue
-                                          =: qed)
+     \ih l pivot -> [] |- length (fst (partition @a pivot l)) .<= length l
+                       =: split l trivial
+                                (\a as -> let lo = fst (partition pivot as)
+                                       in ite (a .< pivot)
+                                              (length (a .: lo) .<= length (a .: as))
+                                              (length       lo  .<= length (a .: as))
+                                       ?? "simplify"
+                                       =: ite (a .< pivot)
+                                              (length lo .<=     length as)
+                                              (length lo .<= 1 + length as)
+                                       ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                       =: sTrue
+                                       =: qed)
 
   -- The second element of partition does not increase in size
   partitionNotLongerSnd <- sInduct "partitionNotLongerSnd"
      (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (snd (partition @a pivot l)) .<= length l)
      (\(l, _) -> length l) $
-     \ih (l, pivot) -> [] |- length (snd (partition @a pivot l)) .<= length l
-                          =: split l trivial
-                                   (\a as -> let hi = snd (partition pivot as)
-                                          in ite (a .< pivot)
-                                                 (length       hi  .<= length (a .: as))
-                                                 (length (a .: hi) .<= length (a .: as))
-                                          ?? "simplify"
-                                          =: ite (a .< pivot)
-                                                 (length hi .<= 1 + length as)
-                                                 (length hi .<=     length as)
-                                          ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
-                                          =: sTrue
-                                          =: qed)
+     \ih l pivot -> [] |- length (snd (partition @a pivot l)) .<= length l
+                       =: split l trivial
+                                (\a as -> let hi = snd (partition pivot as)
+                                       in ite (a .< pivot)
+                                              (length       hi  .<= length (a .: as))
+                                              (length (a .: hi) .<= length (a .: as))
+                                       ?? "simplify"
+                                       =: ite (a .< pivot)
+                                              (length hi .<= 1 + length as)
+                                              (length hi .<=     length as)
+                                       ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                       =: sTrue
+                                       =: qed)
 
   --------------------------------------------------------------------------------------------
   -- Part IV. Helper lemmas for count
@@ -482,7 +482,7 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
      sInduct "sortCountsMatch"
              (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (quickSort xs))
              (\(xs, _) -> length xs) $
-             \ih (xs, e) ->
+             \ih xs e ->
                 [] |- count e (quickSort xs)
                    =: split xs trivial
                             (\a as -> count e (quickSort (a .: as))

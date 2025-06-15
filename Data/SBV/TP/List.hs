@@ -1508,14 +1508,14 @@ interleaveLen p = do
    sInduct (atProxy p "interleaveLen")
            (\(Forall xs) (Forall ys) -> length xs + length ys .== length (interleave xs ys))
            (\(xs, ys) -> length xs + length ys) $
-           \ih (xs, ys) -> [] |- length xs + length ys .== length (interleave xs ys)
-                              =: split xs
-                                       trivial
-                                       (\a as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
-                                              =: 1 + length as + length ys .== 1 + length (interleave ys as)
-                                              ?? ih `at` (Inst @"xs" ys, Inst @"ys" as)
-                                              =: sTrue
-                                              =: qed)
+           \ih xs ys -> [] |- length xs + length ys .== length (interleave xs ys)
+                           =: split xs
+                                    trivial
+                                    (\a as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
+                                           =: 1 + length as + length ys .== 1 + length (interleave ys as)
+                                           ?? ih `at` (Inst @"xs" ys, Inst @"ys" as)
+                                           =: sTrue
+                                           =: qed)
 
 -- | Uninterleave the elements of two lists. We roughly split it into two, of alternating elements.
 uninterleave :: SymVal a => SList a -> STuple [a] [a]
@@ -1569,25 +1569,25 @@ interleaveRoundTrip p = do
                   .=> let (es, os) = untuple alts
                       in uninterleaveGen (interleave xs ys) alts .== tuple (reverse es ++ xs, reverse os ++ ys))
          (\(xs, ys, _alts) -> length xs + length ys) $
-         \ih (xs, ys, alts) -> [length xs .== length ys]
-                            |- let (es, os) = untuple alts
-                            in uninterleaveGen (interleave xs ys) alts
-                            =: split2 (xs, ys)
-                                      trivial
-                                      trivial
-                                      trivial
-                                      (\(a, as) (b, bs) -> uninterleaveGen (interleave (a .: as) (b .: bs)) alts
-                                                        =: uninterleaveGen (a .: interleave (b .: bs) as) alts
-                                                        =: uninterleaveGen (a .: b .: interleave as bs) alts
-                                                        =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
-                                                        ?? ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
-                                                        =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
-                                                        ?? revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as)
-                                                        =: tuple (reverse es ++ (a .: as), reverse (b .: os) ++ bs)
-                                                        ?? revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs)
-                                                        =: tuple (reverse es ++ (a .: as), reverse os ++ (b .: bs))
-                                                        =: tuple (reverse es ++ xs, reverse os ++ ys)
-                                                        =: qed)
+         \ih xs ys alts -> [length xs .== length ys]
+                        |- let (es, os) = untuple alts
+                        in uninterleaveGen (interleave xs ys) alts
+                        =: split2 (xs, ys)
+                                  trivial
+                                  trivial
+                                  trivial
+                                  (\(a, as) (b, bs) -> uninterleaveGen (interleave (a .: as) (b .: bs)) alts
+                                                    =: uninterleaveGen (a .: interleave (b .: bs) as) alts
+                                                    =: uninterleaveGen (a .: b .: interleave as bs) alts
+                                                    =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
+                                                    ?? ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
+                                                    =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
+                                                    ?? revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as)
+                                                    =: tuple (reverse es ++ (a .: as), reverse (b .: os) ++ bs)
+                                                    ?? revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs)
+                                                    =: tuple (reverse es ++ (a .: as), reverse os ++ (b .: bs))
+                                                    =: tuple (reverse es ++ xs, reverse os ++ ys)
+                                                    =: qed)
 
    -- Round-trip theorem:
    calc (atProxy p "interleaveRoundTrip")
