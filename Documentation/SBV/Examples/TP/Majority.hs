@@ -117,7 +117,7 @@ correctness p = runTP $ do
      induct (atProxy p "majorityGeneral")
             (\(Forall @"xs" xs) (Forall @"i" i) (Forall @"e" (e :: SBV a)) (Forall @"c" c)
                   -> i .>= 0 .&& (length xs + i) `sEDiv` 2 .< ite (e .== c) i 0 + TP.count e xs .=> majority c i xs .== e) $
-            \ih ((x, xs), i, e, c) ->
+            \ih (x, xs) i e c ->
                    [i .>= 0, (length (x .: xs) + i) `sEDiv` 2 .< ite (e .== c) i 0 + TP.count e (x .: xs)]
                 |- majority c i (x .: xs)
                 =: cases [ i .== 0 ==> majority x 1 xs

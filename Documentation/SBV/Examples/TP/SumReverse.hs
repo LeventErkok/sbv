@@ -61,13 +61,13 @@ revSum p = runTP $ do
   sumAppend <-
      induct (atProxy p "sumAppend")
             (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
-            \ih ((x, xs), ys) -> [] |- sum ((x .: xs) ++ ys)
-                                    =: sum (x .: (xs ++ ys))
-                                    =: x + sum (xs ++ ys)
-                                    ?? ih
-                                    =: x + sum xs + sum ys
-                                    =: sum (x .: xs) + sum ys
-                                    =: qed
+            \ih (x, xs) ys -> [] |- sum ((x .: xs) ++ ys)
+                                 =: sum (x .: (xs ++ ys))
+                                 =: x + sum (xs ++ ys)
+                                 ?? ih
+                                 =: x + sum xs + sum ys
+                                 =: sum (x .: xs) + sum ys
+                                 =: qed
 
   -- Now prove the original theorem by induction
   induct (atProxy p "sumReverse")

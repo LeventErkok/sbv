@@ -287,40 +287,40 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
   lltCorrect <-
      induct "lltCorrect"
             (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"pivot" pivot) -> llt pivot xs .&& e `elem` xs .=> e .< pivot) $
-            \ih ((x, xs), e, pivot) -> [llt pivot (x .: xs), e `elem` (x .: xs)]
-                                    |- e .< pivot
-                                    ?? ih
-                                    =: sTrue
-                                    =: qed
+            \ih (x, xs) e pivot -> [llt pivot (x .: xs), e `elem` (x .: xs)]
+                                |- e .< pivot
+                                ?? ih
+                                =: sTrue
+                                =: qed
 
   -- lge correctness
   lgeCorrect <-
      induct "lgeCorrect"
             (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"pivot" pivot) -> lge pivot xs .&& e `elem` xs .=> e .>= pivot) $
-            \ih ((x, xs), e, pivot) -> [lge pivot (x .: xs), e `elem` (x .: xs)]
-                                    |- e .>= pivot
-                                    ?? ih
-                                    =: sTrue
-                                    =: qed
+            \ih (x, xs) e pivot -> [lge pivot (x .: xs), e `elem` (x .: xs)]
+                                |- e .>= pivot
+                                ?? ih
+                                =: sTrue
+                                =: qed
 
   -- If a value is less than all the elements in a list, then it is also less than all the elements of any sublist of it
   lltSublist <-
      inductWith cvc5 "lltSublist"
             (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& xs `sublist` ys .=> llt pivot xs) $
-            \ih ((x, xs), pivot, ys) -> [llt pivot ys, (x .: xs) `sublist` ys]
-                                     |- llt pivot (x .: xs)
-                                     =: x .< pivot .&& llt pivot xs
-                                     -- To establish x .< pivot, observe that x is in ys, and together
-                                     -- with llt pivot ys, we get that x is less than pivot
-                                     ?? sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
-                                     ?? lltCorrect  `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
+            \ih (x, xs) pivot ys -> [llt pivot ys, (x .: xs) `sublist` ys]
+                                 |- llt pivot (x .: xs)
+                                 =: x .< pivot .&& llt pivot xs
+                                 -- To establish x .< pivot, observe that x is in ys, and together
+                                 -- with llt pivot ys, we get that x is less than pivot
+                                 ?? sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
+                                 ?? lltCorrect  `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
 
-                                     -- Use induction hypothesis to get rid of the second conjunct. We need to tell
-                                     -- the prover that xs is a sublist of ys too so it can satisfy its precondition
-                                     ?? sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
-                                     ?? ih          `at` (Inst @"pivot" pivot, Inst @"ys" ys)
-                                     =: sTrue
-                                     =: qed
+                                 -- Use induction hypothesis to get rid of the second conjunct. We need to tell
+                                 -- the prover that xs is a sublist of ys too so it can satisfy its precondition
+                                 ?? sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                 ?? ih          `at` (Inst @"pivot" pivot, Inst @"ys" ys)
+                                 =: sTrue
+                                 =: qed
 
   -- Variant of the above for the permutation case
   lltPermutation <-
@@ -337,20 +337,20 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
   lgeSublist <-
      inductWith cvc5 "lgeSublist"
             (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& xs `sublist` ys .=> lge pivot xs) $
-            \ih ((x, xs), pivot, ys) -> [lge pivot ys, (x .: xs) `sublist` ys]
-                                     |- lge pivot (x .: xs)
-                                     =: x .>= pivot .&& lge pivot xs
-                                     -- To establish x .>= pivot, observe that x is in ys, and together
-                                     -- with lge pivot ys, we get that x is greater than equal to the pivot
-                                     ?? sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
-                                     ?? lgeCorrect  `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
+            \ih (x, xs) pivot ys -> [lge pivot ys, (x .: xs) `sublist` ys]
+                                 |- lge pivot (x .: xs)
+                                 =: x .>= pivot .&& lge pivot xs
+                                 -- To establish x .>= pivot, observe that x is in ys, and together
+                                 -- with lge pivot ys, we get that x is greater than equal to the pivot
+                                 ?? sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
+                                 ?? lgeCorrect  `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
 
-                                     -- Use induction hypothesis to get rid of the second conjunct. We need to tell
-                                     -- the prover that xs is a sublist of ys too so it can satisfy its precondition
-                                     ?? sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
-                                     ?? ih          `at` (Inst @"pivot" pivot, Inst @"ys" ys)
-                                     =: sTrue
-                                     =: qed
+                                 -- Use induction hypothesis to get rid of the second conjunct. We need to tell
+                                 -- the prover that xs is a sublist of ys too so it can satisfy its precondition
+                                 ?? sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                 ?? ih          `at` (Inst @"pivot" pivot, Inst @"ys" ys)
+                                 =: sTrue
+                                 =: qed
 
   -- Variant of the above for the permutation case
   lgePermutation <-
@@ -370,32 +370,32 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
   -- The first element of the partition produces all smaller elements
   partitionFstLT <- inductWith cvc5 "partitionFstLT"
      (\(Forall @"l" l) (Forall @"pivot" pivot) -> llt pivot (fst (partition pivot l))) $
-     \ih ((a, as), pivot) -> [] |- llt pivot (fst (partition pivot (a .: as)))
-                                =: llt pivot (ite (a .< pivot)
-                                                  (a .: fst (partition pivot as))
-                                                  (     fst (partition pivot as)))
-                                ?? "push llt down"
-                                =: ite (a .< pivot)
-                                       (a .< pivot .&& llt pivot (fst (partition pivot as)))
-                                       (               llt pivot (fst (partition pivot as)))
-                                ?? ih
-                                =: sTrue
-                                =: qed
+     \ih (a, as) pivot -> [] |- llt pivot (fst (partition pivot (a .: as)))
+                             =: llt pivot (ite (a .< pivot)
+                                               (a .: fst (partition pivot as))
+                                               (     fst (partition pivot as)))
+                             ?? "push llt down"
+                             =: ite (a .< pivot)
+                                    (a .< pivot .&& llt pivot (fst (partition pivot as)))
+                                    (               llt pivot (fst (partition pivot as)))
+                             ?? ih
+                             =: sTrue
+                             =: qed
 
   -- The second element of the partition produces all greater-than-or-equal to elements
   partitionSndGE <- inductWith cvc5 "partitionSndGE"
      (\(Forall @"l" l) (Forall @"pivot" pivot) -> lge pivot (snd (partition pivot l))) $
-     \ih ((a, as), pivot) -> [] |- lge pivot (snd (partition pivot (a .: as)))
-                                =: lge pivot (ite (a .< pivot)
-                                                  (     snd (partition pivot as))
-                                                  (a .: snd (partition pivot as)))
-                                ?? "push lge down"
-                                =: ite (a .< pivot)
-                                       (a .< pivot .&& lge pivot (snd (partition pivot as)))
-                                       (               lge pivot (snd (partition pivot as)))
-                                ?? ih
-                                =: sTrue
-                                =: qed
+     \ih (a, as) pivot -> [] |- lge pivot (snd (partition pivot (a .: as)))
+                             =: lge pivot (ite (a .< pivot)
+                                               (     snd (partition pivot as))
+                                               (a .: snd (partition pivot as)))
+                             ?? "push lge down"
+                             =: ite (a .< pivot)
+                                    (a .< pivot .&& lge pivot (snd (partition pivot as)))
+                                    (               lge pivot (snd (partition pivot as)))
+                             ?? ih
+                             =: sTrue
+                             =: qed
 
   -- The first element of partition does not increase in size
   partitionNotLongerFst <- sInduct "partitionNotLongerFst"
@@ -445,7 +445,7 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
   countPartition <-
      induct "countPartition"
             (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"e" e) -> countTuple e (partition pivot xs) .== count e xs) $
-            \ih ((a, as), pivot, e) ->
+            \ih (a, as) pivot e ->
                 [] |- countTuple e (partition pivot (a .: as))
                    ?? "expand partition"
                    =: countTuple e (let (lo, hi) = untuple (partition pivot as)
@@ -518,15 +518,15 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
           (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) ->
                      nonDecreasing xs .&& llt pivot xs
                  .&& nonDecreasing ys .&& lge pivot ys .=> nonDecreasing (xs ++ [pivot] ++ ys)) $
-          \ih ((x, xs), pivot, ys) ->
-               [nonDecreasing (x .: xs), llt pivot xs, nonDecreasing ys, lge pivot ys]
-            |- nonDecreasing (x .: xs ++ [pivot] ++ ys)
-            =: split xs trivial
-                     (\a as -> nonDecreasing (x .: a .: as ++ [pivot] ++ ys)
-                            =: x .<= a .&& nonDecreasing (a .: as ++ [pivot] ++ ys)
-                            ?? ih
-                            =: sTrue
-                            =: qed)
+          \ih (x, xs) pivot ys ->
+                [nonDecreasing (x .: xs), llt pivot xs, nonDecreasing ys, lge pivot ys]
+             |- nonDecreasing (x .: xs ++ [pivot] ++ ys)
+             =: split xs trivial
+                      (\a as -> nonDecreasing (x .: a .: as ++ [pivot] ++ ys)
+                             =: x .<= a .&& nonDecreasing (a .: as ++ [pivot] ++ ys)
+                             ?? ih
+                             =: sTrue
+                             =: qed)
 
   --------------------------------------------------------------------------------------------
   -- Part VII. Prove that the output of quick sort is non-decreasing
@@ -585,24 +585,24 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
   partitionSortedLeft <-
      inductWith cvc5 "partitionSortedLeft"
             (\(Forall @"as" as) (Forall @"pivot" pivot) -> nonDecreasing (pivot .: as) .=> null (fst (partition pivot as))) $
-            \ih ((a, as), pivot) -> [nonDecreasing (pivot .: a .: as)]
-                                 |- fst (partition pivot (a .: as))
-                                 =: let (lo, _) = untuple (partition pivot as)
-                                 in lo
-                                 ?? ih
-                                 =: nil
-                                 =: qed
+            \ih (a, as) pivot -> [nonDecreasing (pivot .: a .: as)]
+                              |- fst (partition pivot (a .: as))
+                              =: let (lo, _) = untuple (partition pivot as)
+                              in lo
+                              ?? ih
+                              =: nil
+                              =: qed
 
   partitionSortedRight <-
      inductWith cvc5 "partitionSortedRight"
            (\(Forall @"xs" xs) (Forall @"pivot" pivot) -> nonDecreasing (pivot .: xs) .=> xs .== snd (partition pivot xs)) $
-           \ih ((a, as), pivot) -> [nonDecreasing (pivot .: a .: as)]
-                                |- snd (partition pivot (a .: as))
-                                =: let (_, hi) = untuple (partition pivot as)
-                                in a .: hi
-                                ?? ih
-                                =: a .: as
-                                =: qed
+           \ih (a, as) pivot -> [nonDecreasing (pivot .: a .: as)]
+                             |- snd (partition pivot (a .: as))
+                             =: let (_, hi) = untuple (partition pivot as)
+                             in a .: hi
+                             ?? ih
+                             =: a .: as
+                             =: qed
 
   unchangedIfNondecreasing <-
        induct (atProxy p "unchangedIfNondecreasing")

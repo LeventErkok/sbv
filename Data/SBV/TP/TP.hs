@@ -87,7 +87,7 @@ getCalcStrategySaturatables (CalcStrategy calcIntros calcProofTree) = calcIntros
 tpMergeCfg :: SMTConfig -> SMTConfig -> SMTConfig
 tpMergeCfg cur top = cur{tpOptions = tpOptions top}
 
--- | Use an injective type family to allow for curried use of calc and induction steps.
+-- | Use an injective type family to allow for curried use of calc and strong induction steps.
 type family StepArgs a t = result | result -> t where
   StepArgs SBool                                                                              t = (                                             (SBool, TPProofRaw t))
   StepArgs (Forall na a -> SBool)                                                             t = (SBV a                                     -> (SBool, TPProofRaw t))
@@ -95,6 +95,22 @@ type family StepArgs a t = result | result -> t where
   StepArgs (Forall na a -> Forall nb b -> Forall nc c -> SBool)                               t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))
   StepArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)                t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw t))
   StepArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw t))
+
+-- | Use an injective type family to allow for curried use of regular induction steps. The first argument is the inductive arg that comes separately,
+-- and hence is not used in the right-hand side of the equation.
+type family IStepArgs a t = result | result -> t where
+  IStepArgs ( Forall nx x               -> SBool)                                                                            t = (                                             (SBool, TPProofRaw t))
+  IStepArgs ( Forall nx x               -> Forall na a -> SBool)                                                             t = (SBV a ->                                     (SBool, TPProofRaw t))
+  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> SBool)                                              t = (SBV a -> SBV b                            -> (SBool, TPProofRaw t))
+  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c -> SBool)                               t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))
+  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)                t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw t))
+  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw t))
+  IStepArgs ((Forall nx x, Forall ny y) -> SBool)                                                                            t = (                                             (SBool, TPProofRaw t))
+  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> SBool)                                                             t = (SBV a ->                                     (SBool, TPProofRaw t))
+  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> SBool)                                              t = (SBV a -> SBV b                            -> (SBool, TPProofRaw t))
+  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> Forall nc c -> SBool)                               t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))
+  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)                t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw t))
+  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw t))
 
 -- | A class for doing equational reasoning style calculational proofs. Use 'calc' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
@@ -390,22 +406,22 @@ class Inductive a where
    -- | Inductively prove a lemma, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   induct  :: (Proposition a, EqSymbolic t) => String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   induct  :: (Proposition a, EqSymbolic t) => String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
 
    -- | Inductively prove a theorem. Same as 'induct', but tagged as a theorem, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductThm :: (Proposition a, EqSymbolic t) => String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   inductThm :: (Proposition a, EqSymbolic t) => String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
 
    -- | Same as 'induct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   inductWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
 
    -- | Same as 'inductThm', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductThmWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> TP (Proof a)
+   inductThmWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
 
    induct            nm p steps = getTPConfig >>= \cfg  -> inductWith                             cfg                   nm p steps
    inductThm         nm p steps = getTPConfig >>= \cfg  -> inductThmWith                          cfg                   nm p steps
@@ -414,7 +430,7 @@ class Inductive a where
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL inductionStrategy #-}
-   inductionStrategy :: (Proposition a, EqSymbolic t) => a -> (Proof (IHType a) -> IHArg a -> (SBool, TPProofRaw t)) -> Symbolic InductionStrategy
+   inductionStrategy :: (Proposition a, EqSymbolic t) => a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> Symbolic InductionStrategy
 
 -- | A class of measures, used for inductive arguments.
 class OrdSymbolic a => Measure a where
@@ -562,20 +578,20 @@ instance KnownSymbol nn => Inductive (Forall nn Integer -> SBool) where
 -- | Induction over 'SInteger', taking an extra argument
 instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Integer -> Forall na a -> SBool) where
   type IHType (Forall nn Integer -> Forall na a -> SBool) = Forall na a -> SBool
-  type IHArg  (Forall nn Integer -> Forall na a -> SBool) = (SInteger, SBV a)
+  type IHArg  (Forall nn Integer -> Forall na a -> SBool) = SInteger
 
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0) (Forall a)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> n .>= zero .=> result (Forall n) (Forall a'))) (n, a))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> n .>= zero .=> result (Forall n) (Forall a'))) n a)
                             (indResult [nn ++ "+1", na] (result (Forall (n+1)) (Forall a)))
 
 -- | Induction over 'SInteger', taking two extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) where
   type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) = Forall na a -> Forall nb b -> SBool
-  type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) = (SInteger, SBV a, SBV b)
+  type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) = SInteger
 
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
@@ -583,13 +599,13 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) =>
        (b, nb) <- mkVar (Proxy @nb)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0) (Forall a) (Forall b)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b'))) (n, a, b))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b'))) n a b)
                             (indResult [nn ++ "+1", na, nb] (result (Forall (n+1)) (Forall a) (Forall b)))
 
 -- | Induction over 'SInteger', taking three extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
   type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> SBool
-  type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SInteger, SBV a, SBV b, SBV c)
+  type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = SInteger
 
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
@@ -598,13 +614,13 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (c, nc) <- mkVar (Proxy @nc)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c'))) (n, a, b, c))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c'))) n a b c)
                             (indResult [nn ++ "+1", na, nb, nc] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over 'SInteger', taking four extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
   type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool
-  type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SInteger, SBV a, SBV b, SBV c, SBV d)
+  type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = SInteger
 
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
@@ -614,13 +630,13 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (d, nd) <- mkVar (Proxy @nd)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))) (n, a, b, c, d))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))) n a b c d)
                             (indResult [nn ++ "+1", na, nb, nc, nd] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over 'SInteger', taking five extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
   type IHType (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool
-  type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SInteger, SBV a, SBV b, SBV c, SBV d, SBV e)
+  type IHArg  (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = SInteger
 
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
@@ -631,7 +647,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (e, ne) <- mkVar (Proxy @ne)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (n, a, b, c, d, e))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) n a b c d e)
                             (indResult [nn ++ "+1", na, nb, nc, nd, ne] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
 -- Given a user name for the list, get a name for the element, in the most suggestive way possible
@@ -658,20 +674,20 @@ instance (KnownSymbol nxs, SymVal x) => Inductive (Forall nxs [x] -> SBool) wher
 -- | Induction over 'SList', taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (Forall nxs [x] -> Forall na a -> SBool) where
   type IHType (Forall nxs [x] -> Forall na a -> SBool) = Forall na a -> SBool
-  type IHArg  (Forall nxs [x] -> Forall na a -> SBool) = ((SBV x, SList x), SBV a)
+  type IHArg  (Forall nxs [x] -> Forall na a -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall SL.nil) (Forall a)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs) (Forall a'))) ((x, xs), a))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs) (Forall a'))) (x, xs) a)
                             (indResult [nxxs, na] (result (Forall (x SL..: xs)) (Forall a)))
 
 -- | Induction over 'SList', taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) where
   type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) = Forall na a -> Forall nb b -> SBool
-  type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) = ((SBV x, SList x), SBV a, SBV b)
+  type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
@@ -679,13 +695,13 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (b, nb)       <- mkVar  (Proxy @nb)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall SL.nil) (Forall a) (Forall b)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs) (Forall a') (Forall b'))) ((x, xs), a, b))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs) (Forall a') (Forall b'))) (x, xs) a b)
                             (indResult [nxxs, na, nb] (result (Forall (x SL..: xs)) (Forall a) (Forall b)))
 
 -- | Induction over 'SList', taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
   type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> SBool
-  type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = ((SBV x, SList x), SBV a, SBV b, SBV c)
+  type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
@@ -694,13 +710,13 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (c, nc)       <- mkVar  (Proxy @nc)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs) (Forall a') (Forall b') (Forall c'))) ((x, xs), a, b, c))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs) (Forall a') (Forall b') (Forall c'))) (x, xs) a b c)
                             (indResult [nxxs, na, nb, nc] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over 'SList', taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
   type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool
-  type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = ((SBV x, SList x), SBV a, SBV b, SBV c, SBV d)
+  type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
@@ -710,13 +726,13 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (d, nd)       <- mkVar  (Proxy @nd)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d'))) ((x, xs), a, b, c, d))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d'))) (x, xs) a b c d)
                             (indResult [nxxs, na, nb, nc, nd] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over 'SList', taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
   type IHType (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool
-  type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = ((SBV x, SList x), SBV a, SBV b, SBV c, SBV d, SBV e)
+  type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
@@ -727,7 +743,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (e, ne)       <- mkVar  (Proxy @ne)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) ((x, xs), a, b, c, d, e))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (x, xs) a b c d e)
                             (indResult [nxxs, na, nb, nc, nd, ne] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
 -- | Induction over two 'SList', simultaneously
@@ -746,7 +762,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((F
 -- | Induction over two 'SList', simultaneously, taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) where
   type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) = Forall na a -> SBool
-  type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) = ((SBV x, SList x, SBV y, SList y), SBV a)
+  type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
@@ -754,13 +770,13 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (a, na)       <- mkVar  (Proxy @na)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs, Forall ys) (Forall a'))) ((x, xs, y, ys), a))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs, Forall ys) (Forall a'))) (x, xs, y, ys) a)
                             (indResult [nxxs, nyys, na] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a)))
 
 -- | Induction over two 'SList', simultaneously, taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) where
   type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) = Forall na a -> Forall nb b -> SBool
-  type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) = ((SBV x, SList x, SBV y, SList y), SBV a, SBV b)
+  type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
@@ -769,14 +785,13 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (b, nb)       <- mkVar  (Proxy @nb)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs, Forall ys) (Forall a') (Forall b'))) ((x, xs, y, ys), a, b))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs, Forall ys) (Forall a') (Forall b'))) (x, xs, y, ys) a b)
                             (indResult [nxxs, nyys, na, nb] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b)))
 
 -- | Induction over two 'SList', simultaneously, taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
-
   type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> SBool
-  type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = ((SBV x, SList x, SBV y, SList y), SBV a, SBV b, SBV c)
+  type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
@@ -786,13 +801,13 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (c, nc)       <- mkVar  (Proxy @nc)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c'))) ((x, xs, y, ys), a, b, c))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c'))) (x, xs, y, ys) a b c)
                             (indResult [nxxs, nyys, na, nb, nc] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over two 'SList', simultaneously, taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
   type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool
-  type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = ((SBV x, SList x, SBV y, SList y), SBV a, SBV b, SBV c, SBV d)
+  type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
@@ -803,13 +818,13 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (d, nd)       <- mkVar  (Proxy @nd)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d'))) ((x, xs, y, ys), a, b, c, d))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d'))) (x, xs, y, ys) a b c d)
                             (indResult [nxxs, nyys, na, nb, nc, nd] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over two 'SList', simultaneously, taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
   type IHType ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool
-  type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = ((SBV x, SList x, SBV y, SList y), SBV a, SBV b, SBV c, SBV d, SBV e)
+  type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
@@ -821,7 +836,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (e, ne)       <- mkVar  (Proxy @ne)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) ((x, xs, y, ys), a, b, c, d, e))
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (x, xs, y, ys) a b c d e)
                             (indResult [nxxs, nyys, na, nb, nc, nd, ne] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
 

@@ -228,15 +228,15 @@ tailsAppend p = do
 
    induct (atProxy p "tailsAppend")
           (\(Forall xs) (Forall ys) -> tails (xs ++ ys) .== appendEach ys (tails xs) ++ tail (tails ys)) $
-          \ih ((x, xs), ys) -> [assumptionFromProof bc]
-                            |- tails ((x .: xs) ++ ys)
-                            =: tails (x .: (xs ++ ys))
-                            =: [x .: (xs ++ ys)] ++ tails (xs ++ ys)
-                            ?? ih
-                            =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs) ++ tail (tails ys)
-                            ?? helper
-                            =: appendEach ys (tails (x .: xs)) ++ tail (tails ys)
-                            =: qed
+          \ih (x, xs) ys -> [assumptionFromProof bc]
+                         |- tails ((x .: xs) ++ ys)
+                         =: tails (x .: (xs ++ ys))
+                         =: [x .: (xs ++ ys)] ++ tails (xs ++ ys)
+                         ?? ih
+                         =: [(x .: xs) ++ ys] ++ appendEach ys (tails xs) ++ tail (tails ys)
+                         ?? helper
+                         =: appendEach ys (tails (x .: xs)) ++ tail (tails ys)
+                         =: qed
 
 -- | @length xs == length (reverse xs)@
 --
@@ -277,14 +277,14 @@ revApp :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall 
 revApp p =
    induct (atProxy p "revApp")
           (\(Forall xs) (Forall ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
-          \ih ((x, xs), ys) -> [] |- reverse ((x .: xs) ++ ys)
-                                  =: reverse (x .: (xs ++ ys))
-                                  =: reverse (xs ++ ys) ++ [x]
-                                  ?? ih
-                                  =: (reverse ys ++ reverse xs) ++ [x]
-                                  =: reverse ys ++ (reverse xs ++ [x])
-                                  =: reverse ys ++ reverse (x .: xs)
-                                  =: qed
+          \ih (x, xs) ys -> [] |- reverse ((x .: xs) ++ ys)
+                               =: reverse (x .: (xs ++ ys))
+                               =: reverse (xs ++ ys) ++ [x]
+                               ?? ih
+                               =: (reverse ys ++ reverse xs) ++ [x]
+                               =: reverse ys ++ (reverse xs ++ [x])
+                               =: reverse ys ++ reverse (x .: xs)
+                               =: qed
 
 -- | @reverse (x:xs) == reverse xs ++ [x]@
 --
@@ -403,15 +403,15 @@ replicateLength :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "k" Intege
 replicateLength p =
    induct (atProxy p "replicateLength")
           (\(Forall k) (Forall x) -> length (replicate k x) .== 0 `smax` k) $
-          \ih (k, x)-> [] |- length (replicate (k+1) x)
-                          =: cases [ k .< 0  ==> trivial
-                                   , k .>= 0 ==> length (x .: replicate k x)
-                                              =: 1 + length (replicate k x)
-                                              ?? ih
-                                              =: 1 + 0 `smax` k
-                                              =: 0 `smax` (k+1)
-                                              =: qed
-                                   ]
+          \ih k x -> [] |- length (replicate (k+1) x)
+                        =: cases [ k .< 0  ==> trivial
+                                 , k .>= 0 ==> length (x .: replicate k x)
+                                            =: 1 + length (replicate k x)
+                                            ?? ih
+                                            =: 1 + 0 `smax` k
+                                            =: 0 `smax` (k+1)
+                                            =: qed
+                                 ]
 
 -- | @not (all id xs) == any not xs@
 --
@@ -479,14 +479,14 @@ mapAppend :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (
 mapAppend f =
    induct (atProxy (Proxy @(a, b)) "mapAppend")
           (\(Forall xs) (Forall ys) -> map f (xs ++ ys) .== map f xs ++ map f ys) $
-          \ih ((x, xs), ys) -> [] |- map f ((x .: xs) ++ ys)
-                                  =: map f (x .: (xs ++ ys))
-                                =: f x .: map f (xs ++ ys)
-                                ?? ih
-                                =: f x .: (map f xs  ++ map f ys)
-                                =: (f x .: map f xs) ++ map f ys
-                                =: map f (x .: xs) ++ map f ys
-                                =: qed
+          \ih (x, xs) ys -> [] |- map f ((x .: xs) ++ ys)
+                               =: map f (x .: (xs ++ ys))
+                             =: f x .: map f (xs ++ ys)
+                             ?? ih
+                             =: f x .: (map f xs  ++ map f ys)
+                             =: (f x .: map f xs) ++ map f ys
+                             =: map f (x .: xs) ++ map f ys
+                             =: qed
 
 -- | @map f . reverse == reverse . map f@
 --
@@ -619,13 +619,13 @@ foldrOverAppend :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> T
 foldrOverAppend a f =
    induct (atProxy (Proxy @a) "foldrOverAppend")
           (\(Forall xs) (Forall ys) -> foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs) $
-          \ih ((x, xs), ys) -> [] |- foldr f a ((x .: xs) ++ ys)
-                                  =: foldr f a (x .: (xs ++ ys))
-                                  =: x `f` foldr f a (xs ++ ys)
-                                  ?? ih
-                                  =: x `f` foldr f (foldr f a ys) xs
-                                  =: foldr f (foldr f a ys) (x .: xs)
-                                  =: qed
+          \ih (x, xs) ys -> [] |- foldr f a ((x .: xs) ++ ys)
+                               =: foldr f a (x .: (xs ++ ys))
+                               =: x `f` foldr f a (xs ++ ys)
+                               ?? ih
+                               =: x `f` foldr f (foldr f a ys) xs
+                               =: foldr f (foldr f a ys) (x .: xs)
+                               =: qed
 
 -- | @foldl f e (xs ++ ys) == foldl f (foldl f e xs) ys@
 --
@@ -641,14 +641,14 @@ foldlOverAppend :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b)
 foldlOverAppend f =
    induct (atProxy (Proxy @(a, b)) "foldlOverAppend")
           (\(Forall xs) (Forall ys) (Forall a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys) $
-          \ih ((x, xs), ys, a) -> [] |- foldl f a ((x .: xs) ++ ys)
-                                     =: foldl f a (x .: (xs ++ ys))
-                                     =: foldl f (a `f` x) (xs ++ ys)
-                                     -- z3 is smart enough to instantiate the IH correctly below, but we're
-                                     -- using an explicit instantiation to be clear about the use of @a@ at a different value
-                                     ?? ih `at` (Inst @"ys" ys, Inst @"e" (a `f` x))
-                                     =: foldl f (foldl f (a `f` x) xs) ys
-                                     =: qed
+          \ih (x, xs) ys a -> [] |- foldl f a ((x .: xs) ++ ys)
+                                 =: foldl f a (x .: (xs ++ ys))
+                                 =: foldl f (a `f` x) (xs ++ ys)
+                                 -- z3 is smart enough to instantiate the IH correctly below, but we're
+                                 -- using an explicit instantiation to be clear about the use of @a@ at a different value
+                                 ?? ih `at` (Inst @"ys" ys, Inst @"e" (a `f` x))
+                                 =: foldl f (foldl f (a `f` x) xs) ys
+                                 =: qed
 
 -- | @foldr f e xs == foldl (flip f) e (reverse xs)@
 --
@@ -675,19 +675,18 @@ foldrFoldlDuality f = do
 
    induct (atProxy (Proxy @(a, b)) "foldrFoldlDuality")
           (\(Forall xs) (Forall e) -> foldr f e xs .== foldl (flip f) e (reverse xs)) $
-          \ih ((x, xs), e) ->
-              let ff  = flip f
-                  rxs = reverse xs
-              in [] |- foldr f e (x .: xs)
-                    =: x `f` foldr f e xs
-                    ?? ih
-                    =: x `f` foldl ff e rxs
-                    =: foldl ff e rxs `ff` x
-                    =: foldl ff (foldl ff e rxs) [x]
-                    ?? foa
-                    =: foldl ff e (rxs ++ [x])
-                    =: foldl ff e (reverse (x .: xs))
-                    =: qed
+          \ih (x, xs) e -> [] |- let ff  = flip f
+                                     rxs = reverse xs
+                                 in foldr f e (x .: xs)
+                                 =: x `f` foldr f e xs
+                                 ?? ih
+                                 =: x `f` foldl ff e rxs
+                                 =: foldl ff e rxs `ff` x
+                                 =: foldl ff (foldl ff e rxs) [x]
+                                 ?? foa
+                                 =: foldl ff e (rxs ++ [x])
+                                 =: foldl ff e (reverse (x .: xs))
+                                 =: qed
 
 -- | Given:
 --
@@ -733,14 +732,14 @@ foldrFoldlDualityGeneralized e (@) = do
    -- we don't have to actually specify this since z3 can figure it out by itself, but we're being explicit.
    helper <- induct (atProxy (Proxy @a) "helper")
                     (\(Forall @"xs" xs) (Forall @"y" y) (Forall @"z" z) -> assoc .=> foldl (@) (y @ z) xs .== y @ foldl (@) z xs) $
-                    \ih ((x, xs), y, z) -> [assoc] |- foldl (@) (y @ z) (x .: xs)
-                                                   =: foldl (@) ((y @ z) @ x) xs
-                                                   ?? assoc
-                                                   =: foldl (@) (y @ (z @ x)) xs
-                                                   ?? ih `at` (Inst @"y" y, Inst @"z" (z @ x))
-                                                   =: y @ foldl (@) (z @ x) xs
-                                                   =: y @ foldl (@) z (x .: xs)
-                                                   =: qed
+                    \ih (x, xs) y z -> [assoc] |- foldl (@) (y @ z) (x .: xs)
+                                               =: foldl (@) ((y @ z) @ x) xs
+                                               ?? assoc
+                                               =: foldl (@) (y @ (z @ x)) xs
+                                               ?? ih `at` (Inst @"y" y, Inst @"z" (z @ x))
+                                               =: y @ foldl (@) (z @ x) xs
+                                               =: y @ foldl (@) z (x .: xs)
+                                               =: qed
 
    induct (atProxy (Proxy @a) "foldrFoldlDuality")
           (\(Forall xs) -> assoc .&& lunit .&& runit .=> foldr (@) e xs .== foldl (@) e xs) $
@@ -802,16 +801,17 @@ foldrFoldl (<+>) (<*>) e = do
    helper <-
       induct (atProxy (Proxy @(a, b)) "foldl over <*>/<+>")
              (\(Forall @"xs" xs) (Forall @"x" x) (Forall @"y" y) -> assoc .=> x <+> foldl (<*>) y xs .== foldl (<*>) (x <+> y) xs) $
+
              -- Using z to avoid confusion with the variable x already present, following Bird.
              -- z3 can figure out the proper instantiation of ih so the at call is unnecessary, but being explicit is helpful.
-             \ih ((z, xs), x, y) -> [assoc] |- x <+> foldl (<*>) y (z .: xs)
-                                            =: x <+> foldl (<*>) (y <*> z) xs
-                                            ?? ih `at` (Inst @"x" x, Inst @"y" (y <*> z))
-                                            =: foldl (<*>) (x <+> (y <*> z)) xs
-                                            ?? assoc
-                                            =: foldl (<*>) ((x <+> y) <*> z) xs
-                                            =: foldl (<*>) (x <+> y) (z .: xs)
-                                            =: qed
+             \ih (z, xs) x y -> [assoc] |- x <+> foldl (<*>) y (z .: xs)
+                                        =: x <+> foldl (<*>) (y <*> z) xs
+                                        ?? ih `at` (Inst @"x" x, Inst @"y" (y <*> z))
+                                        =: foldl (<*>) (x <+> (y <*> z)) xs
+                                        ?? assoc
+                                        =: foldl (<*>) ((x <+> y) <*> z) xs
+                                        =: foldl (<*>) (x <+> y) (z .: xs)
+                                        =: qed
 
    -- Final proof:
    induct (atProxy (Proxy @(a, b)) "foldrFoldl")
@@ -885,13 +885,13 @@ bookKeeping a f = do
    -- Helper: @foldr f y xs = foldr f a xs `f` y@
    helper <- induct (atProxy (Proxy @a) "foldBase")
                     (\(Forall @"xs" xs) (Forall @"y" y) -> lUnit .&& assoc .=> foldr f y xs .== foldr f a xs `f` y) $
-                    \ih ((x, xs), y) -> [lUnit, assoc] |- foldr f y (x .: xs)
-                                                       =: x `f` foldr f y xs
-                                                       ?? ih
-                                                       =: x `f` (foldr f a xs `f` y)
-                                                       =: (x `f` foldr f a xs) `f` y
-                                                       =: foldr f a (x .: xs) `f` y
-                                                       =: qed
+                    \ih (x, xs) y -> [lUnit, assoc] |- foldr f y (x .: xs)
+                                                    =: x `f` foldr f y xs
+                                                    ?? ih
+                                                    =: x `f` (foldr f a xs `f` y)
+                                                    =: (x `f` foldr f a xs) `f` y
+                                                    =: foldr f a (x .: xs) `f` y
+                                                    =: qed
 
    foa <- foldrOverAppend a f
 
@@ -925,14 +925,15 @@ filterAppend :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs"
 filterAppend p =
    induct (atProxy (Proxy @a) "filterAppend")
           (\(Forall xs) (Forall ys) -> filter p xs ++ filter p ys .== filter p (xs ++ ys)) $
-          \ih ((x, xs), ys) -> [] |- filter p (x .: xs) ++ filter p ys
-                                  =: ite (p x) (x .: filter p xs) (filter p xs) ++ filter p ys
-                                  =: ite (p x) (x .: filter p xs ++ filter p ys) (filter p xs ++ filter p ys)
-                                  ?? ih
-                                  =: ite (p x) (x .: filter p (xs ++ ys)) (filter p (xs ++ ys))
-                                  =: filter p (x .: (xs ++ ys))
-                                  =: filter p ((x .: xs) ++ ys)
-                                  =: qed
+          \ih (x, xs) ys -> [] |- filter p (x .: xs) ++ filter p ys
+                               =: ite (p x) (x .: filter p xs) (filter p xs) ++ filter p ys
+                               =: ite (p x) (x .: filter p xs ++ filter p ys) (filter p xs ++ filter p ys)
+                               ?? ih
+                               =: ite (p x) (x .: filter p (xs ++ ys)) (filter p (xs ++ ys))
+                               =: filter p (x .: (xs ++ ys))
+                               =: filter p ((x .: xs) ++ ys)
+                               =: qed
+
 -- | @filter p (concat xss) == concatMap (filter p xss)@
 --
 -- >>> runTP $ filterConcat @Integer (uninterpret "f")
@@ -979,12 +980,12 @@ appendDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a
 appendDiff p =
    induct (atProxy p "appendDiff")
           (\(Forall as) (Forall bs) (Forall cs) -> (as ++ bs) \\ cs .== (as \\ cs) ++ (bs \\ cs)) $
-          \ih ((a, as), bs, cs) -> [] |- (a .: as ++ bs) \\ cs
-                                      =: (a .: (as ++ bs)) \\ cs
-                                      =: ite (a `elem` cs) ((as ++ bs) \\ cs) (a .: ((as ++ bs) \\ cs))
-                                      ?? ih
-                                      =: ((a .: as) \\ cs) ++ (bs \\ cs)
-                                      =: qed
+          \ih (a, as) bs cs -> [] |- (a .: as ++ bs) \\ cs
+                                  =: (a .: (as ++ bs)) \\ cs
+                                  =: ite (a `elem` cs) ((as ++ bs) \\ cs) (a .: ((as ++ bs) \\ cs))
+                                  ?? ih
+                                  =: ((a .: as) \\ cs) ++ (bs \\ cs)
+                                  =: qed
 
 -- | @as \\ (bs ++ cs) == (as \\ bs) \\ cs@
 --
@@ -1001,15 +1002,14 @@ diffAppend :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a
 diffAppend p =
    induct (atProxy p "diffAppend")
           (\(Forall as) (Forall bs) (Forall cs) -> as \\ (bs ++ cs) .== (as \\ bs) \\ cs) $
-          \ih ((a, as), bs, cs) ->
-              [] |- (a .: as) \\ (bs ++ cs)
-                 =: ite (a `elem` (bs ++ cs)) (as \\ (bs ++ cs)) (a .: (as \\ (bs ++ cs)))
-                 ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
-                 =: ite (a `elem` (bs ++ cs)) ((as \\ bs) \\ cs) (a .: (as \\ (bs ++ cs)))
-                 ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
-                 =: ite (a `elem` (bs ++ cs)) ((as \\ bs) \\ cs) (a .: ((as \\ bs) \\ cs))
-                 =: ((a .: as) \\ bs) \\ cs
-                 =: qed
+          \ih (a, as) bs cs -> [] |- (a .: as) \\ (bs ++ cs)
+                                  =: ite (a `elem` (bs ++ cs)) (as \\ (bs ++ cs)) (a .: (as \\ (bs ++ cs)))
+                                  ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
+                                  =: ite (a `elem` (bs ++ cs)) ((as \\ bs) \\ cs) (a .: (as \\ (bs ++ cs)))
+                                  ?? ih `at` (Inst @"bs" bs, Inst @"cs" cs)
+                                  =: ite (a `elem` (bs ++ cs)) ((as \\ bs) \\ cs) (a .: ((as \\ bs) \\ cs))
+                                  =: ((a .: as) \\ bs) \\ cs
+                                  =: qed
 
 -- | @(as \\ bs) \\ cs == (as \\ cs) \\ bs@
 --
@@ -1041,7 +1041,7 @@ diffDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a] 
 diffDiff p =
    induct (atProxy p "diffDiff")
           (\(Forall as) (Forall bs) (Forall cs) -> (as \\ bs) \\ cs .== (as \\ cs) \\ bs) $
-          \ih ((a, as), bs, cs) ->
+          \ih (a, as) bs cs ->
               [] |- ((a .: as) \\ bs) \\ cs
                  =: cases [ a `elem`    bs ==> (as \\ bs) \\ cs
                                             ?? ih
@@ -1088,12 +1088,12 @@ disjointDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" 
 disjointDiff p =
    induct (atProxy p "disjointDiff")
           (\(Forall as) (Forall bs) -> disjoint as bs .=> as \\ bs .== as) $
-          \ih ((a, as), bs) -> [disjoint (a .: as) bs]
-                            |- (a .: as) \\ bs
-                            =: a .: (as \\ bs)
-                            ?? ih
-                            =: a .: as
-                            =: qed
+          \ih (a, as) bs -> [disjoint (a .: as) bs]
+                         |- (a .: as) \\ bs
+                         =: a .: (as \\ bs)
+                         ?? ih
+                         =: a .: as
+                         =: qed
 
 -- | @fst (partition f xs) == filter f xs@
 --
@@ -1221,16 +1221,16 @@ take_map f = do
 
     h2 <- induct (atProxy (Proxy @(a, b)) "take_map.n > 0")
                  (\(Forall @"xs" xs) (Forall @"n" n) -> n .> 0 .=> take n (map f xs) .== map f (take n xs)) $
-                 \ih ((x, xs), n) -> [n .> 0] |- take n (map f (x .: xs))
-                                              =: take n (f x .: map f xs)
-                                              =: f x .: take (n - 1) (map f xs)
-                                              ?? ih `at` Inst @"n" (n-1)
-                                              =: f x .: map f (take (n - 1) xs)
-                                              ?? map1 `at` (Inst @"x" x, Inst @"xs" (take (n - 1) xs))
-                                              =: map f (x .: take (n - 1) xs)
-                                              ?? tc
-                                              =: map f (take n (x .: xs))
-                                              =: qed
+                 \ih (x, xs) n -> [n .> 0] |- take n (map f (x .: xs))
+                                           =: take n (f x .: map f xs)
+                                           =: f x .: take (n - 1) (map f xs)
+                                           ?? ih `at` Inst @"n" (n-1)
+                                           =: f x .: map f (take (n - 1) xs)
+                                           ?? map1 `at` (Inst @"x" x, Inst @"xs" (take (n - 1) xs))
+                                           =: map f (x .: take (n - 1) xs)
+                                           ?? tc
+                                           =: map f (take n (x .: xs))
+                                           =: qed
 
     lemma (atProxy (Proxy @(a, b)) "take_map")
           (\(Forall n) (Forall xs) -> take n (map f xs) .== map f (take n xs))
@@ -1278,15 +1278,15 @@ drop_map f = do
 
    h2 <- induct (atProxy (Proxy @(a, b)) "drop_map.n > 0")
                 (\(Forall @"xs" xs) (Forall @"n" n) -> n .> 0 .=> drop n (map f xs) .== map f (drop n xs)) $
-                \ih ((x, xs), n) -> [n .> 0] |- drop n (map f (x .: xs))
-                                             =: drop n (f x .: map f xs)
-                                             ?? dcB `at` (Inst @"n" n, Inst @"x" (f x), Inst @"xs" (map f xs))
-                                             =: drop (n - 1) (map f xs)
-                                             ?? ih `at` Inst @"n" (n-1)
-                                             =: map f (drop (n - 1) xs)
-                                             ?? dcA `at` (Inst @"n" n, Inst @"x" x, Inst @"xs" xs)
-                                             =: map f (drop n (x .: xs))
-                                             =: qed
+                \ih (x, xs) n -> [n .> 0] |- drop n (map f (x .: xs))
+                                          =: drop n (f x .: map f xs)
+                                          ?? dcB `at` (Inst @"n" n, Inst @"x" (f x), Inst @"xs" (map f xs))
+                                          =: drop (n - 1) (map f xs)
+                                          ?? ih `at` Inst @"n" (n-1)
+                                          =: map f (drop (n - 1) xs)
+                                          ?? dcA `at` (Inst @"n" n, Inst @"x" x, Inst @"xs" xs)
+                                          =: map f (drop n (x .: xs))
+                                          =: qed
 
    -- I'm a bit surprised that z3 can't deduce the following with a simple-lemma, which is essentially a simple case-split.
    -- But the good thing about calc is that it lets us direct the tool in precise ways that we'd like.
@@ -1614,15 +1614,15 @@ countAppend :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Fo
 countAppend p =
    induct (atProxy p "countAppend")
           (\(Forall xs) (Forall ys) (Forall e) -> count e (xs ++ ys) .== count e xs + count e ys) $
-          \ih ((x, xs), ys, e) -> [] |- count e ((x .: xs) ++ ys)
-                                     =: count e (x .: (xs ++ ys))
-                                     ?? "unfold count"
-                                     =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
-                                     ?? ih `at` (Inst @"ys" ys, Inst @"e" e)
-                                     =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
-                                     ?? "simplify"
-                                     =: count e (x .: xs) + count e ys
-                                     =: qed
+          \ih (x, xs) ys e -> [] |- count e ((x .: xs) ++ ys)
+                                 =: count e (x .: (xs ++ ys))
+                                 ?? "unfold count"
+                                 =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
+                                 ?? ih `at` (Inst @"ys" ys, Inst @"e" e)
+                                 =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
+                                 ?? "simplify"
+                                 =: count e (x .: xs) + count e ys
+                                 =: qed
 
 -- | @count e (take n xs) + count e (drop n xs) == count e xs@
 --
@@ -1671,16 +1671,16 @@ countNonNeg :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Fo
 countNonNeg p =
    induct (atProxy p "countNonNeg")
           (\(Forall xs) (Forall e) -> count e xs .>= 0) $
-          \ih ((x, xs), e) -> [] |- count e (x .: xs) .>= 0
-                                 =: cases [ e .== x ==> 1 + count e xs .>= 0
-                                                     ?? ih
-                                                     =: sTrue
-                                                     =: qed
-                                          , e ./= x ==> count e xs .>= 0
-                                                     ?? ih
-                                                     =: sTrue
-                                                     =: qed
-                                          ]
+          \ih (x, xs) e -> [] |- count e (x .: xs) .>= 0
+                              =: cases [ e .== x ==> 1 + count e xs .>= 0
+                                                  ?? ih
+                                                  =: sTrue
+                                                  =: qed
+                                       , e ./= x ==> count e xs .>= 0
+                                                  ?? ih
+                                                  =: sTrue
+                                                  =: qed
+                                       ]
 
 -- | @e \`elem\` xs ==> count e xs .> 0@
 --
@@ -1711,17 +1711,17 @@ countElem p = do
 
     induct (atProxy p "countElem")
            (\(Forall xs) (Forall e) -> e `elem` xs .=> count e xs .> 0) $
-           \ih ((x, xs), e) -> [e `elem` (x .: xs)]
-                            |- count e (x .: xs) .> 0
-                            =: cases [ e .== x ==> 1 + count e xs .> 0
-                                                ?? cnn
-                                                =: sTrue
-                                                =: qed
-                                     , e ./= x ==> count e xs .> 0
-                                                ?? ih
-                                                =: sTrue
-                                                =: qed
-                                     ]
+           \ih (x, xs) e -> [e `elem` (x .: xs)]
+                         |- count e (x .: xs) .> 0
+                         =: cases [ e .== x ==> 1 + count e xs .> 0
+                                             ?? cnn
+                                             =: sTrue
+                                             =: qed
+                                  , e ./= x ==> count e xs .> 0
+                                             ?? ih
+                                             =: sTrue
+                                             =: qed
+                                  ]
 
 -- | @count e xs .> 0 .=> e \`elem\` xs@
 --
@@ -1739,14 +1739,14 @@ elemCount :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "xs" [a]
 elemCount p =
     induct (atProxy p "elemCount")
            (\(Forall xs) (Forall e) -> count e xs .> 0 .=> e `elem` xs) $
-           \ih ((x, xs), e) -> [count e xs .> 0]
-                            |- e `elem` (x .: xs)
-                            =: cases [ e .== x ==> trivial
-                                     , e ./= x ==> e `elem` xs
-                                                ?? ih
-                                                =: sTrue
-                                                =: qed
-                                     ]
+           \ih (x, xs) e -> [count e xs .> 0]
+                         |- e `elem` (x .: xs)
+                         =: cases [ e .== x ==> trivial
+                                  , e ./= x ==> e `elem` xs
+                                             ?? ih
+                                             =: sTrue
+                                             =: qed
+                                  ]
 
 {- HLint ignore revRev         "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}

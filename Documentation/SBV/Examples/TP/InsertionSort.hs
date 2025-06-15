@@ -130,23 +130,23 @@ correctness p = runTPWith (tpRibbon 45 cvc5) $ do
     insertNonDecreasing <-
         induct "insertNonDecreasing"
                (\(Forall @"xs" xs) (Forall @"e" e) -> nonDecreasing xs .=> nonDecreasing (insert e xs)) $
-               \ih ((x, xs), e) -> [nonDecreasing (x .: xs)]
-                                |- nonDecreasing (insert e (x .: xs))
-                                ?? "unfold insert"
-                                =: nonDecreasing (ite (e .<= x) (e .: x .: xs) (x .: insert e xs))
-                                ?? "push nonDecreasing down"
-                                =: ite (e .<= x) (nonDecreasing (e .: x .: xs))
-                                                 (nonDecreasing (x .: insert e xs))
-                                ?? "unfold simplify"
-                                =: ite (e .<= x)
-                                       (nonDecreasing (x .: xs))
-                                       (nonDecreasing (x .: insert e xs))
-                                ?? nonDecreasing (x .: xs)
-                                =: (e .> x .=> nonDecreasing (x .: insert e xs))
-                                ?? nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs))
-                                ?? ih
-                                =: sTrue
-                                =: qed
+               \ih (x, xs) e -> [nonDecreasing (x .: xs)]
+                             |- nonDecreasing (insert e (x .: xs))
+                             ?? "unfold insert"
+                             =: nonDecreasing (ite (e .<= x) (e .: x .: xs) (x .: insert e xs))
+                             ?? "push nonDecreasing down"
+                             =: ite (e .<= x) (nonDecreasing (e .: x .: xs))
+                                              (nonDecreasing (x .: insert e xs))
+                             ?? "unfold simplify"
+                             =: ite (e .<= x)
+                                    (nonDecreasing (x .: xs))
+                                    (nonDecreasing (x .: insert e xs))
+                             ?? nonDecreasing (x .: xs)
+                             =: (e .> x .=> nonDecreasing (x .: insert e xs))
+                             ?? nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs))
+                             ?? ih
+                             =: sTrue
+                             =: qed
 
     sortNonDecreasing <-
         induct "sortNonDecreasing"
@@ -166,18 +166,18 @@ correctness p = runTPWith (tpRibbon 45 cvc5) $ do
     insertIsElem <-
         induct "insertIsElem"
                (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> e `elem` insert e xs) $
-               \ih ((x, xs), e) -> [] |- e `elem` insert e (x .: xs)
-                                      =: e `elem` ite (e .<= x) (e .: x .: xs) (x .: insert e xs)
-                                      =: ite (e .<= x) (e `elem` (e .: x .: xs)) (e `elem` (x .: insert e xs))
-                                      =: ite (e .<= x) sTrue (e `elem` insert e xs)
-                                      ?? ih
-                                      =: sTrue
-                                      =: qed
+               \ih (x, xs) e -> [] |- e `elem` insert e (x .: xs)
+                                   =: e `elem` ite (e .<= x) (e .: x .: xs) (x .: insert e xs)
+                                   =: ite (e .<= x) (e `elem` (e .: x .: xs)) (e `elem` (x .: insert e xs))
+                                   =: ite (e .<= x) sTrue (e `elem` insert e xs)
+                                   ?? ih
+                                   =: sTrue
+                                   =: qed
 
     removeAfterInsert <-
         induct "removeAfterInsert"
                (\(Forall @"xs" xs) (Forall @"e" (e :: SBV a)) -> removeFirst e (insert e xs) .== xs) $
-               \ih ((x, xs), e) ->
+               \ih (x, xs) e ->
                    [] |- removeFirst e (insert e (x .: xs))
                       ?? "expand insert"
                       =: removeFirst e (ite (e .<= x) (e .: x .: xs) (x .: insert e xs))

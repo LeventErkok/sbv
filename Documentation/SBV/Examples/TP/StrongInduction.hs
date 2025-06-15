@@ -282,12 +282,12 @@ sumHalves = runTP $ do
 
     helper <- induct "sumAppend"
                      (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
-                     \ih ((x, xs), ys) -> [] |- sum (x .: xs ++ ys)
-                                             =: x + sum (xs ++ ys)
-                                             ?? ih
-                                             =: x + sum xs + sum ys
-                                             =: sum (x .: xs) + sum ys
-                                             =: qed
+                     \ih (x, xs) ys -> [] |- sum (x .: xs ++ ys)
+                                          =: x + sum (xs ++ ys)
+                                          ?? ih
+                                          =: x + sum xs + sum ys
+                                          =: sum (x .: xs) + sum ys
+                                          =: qed
 
     -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
     sInductWith cvc5 "sumHalves"
