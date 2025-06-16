@@ -457,27 +457,27 @@ instance Measure (SInteger, SInteger, SInteger, SInteger, SInteger) where
 
 -- | A class for doing generalized measure based strong inductive proofs.
 class SInductive a where
-   type SIHArg a :: Type
+   type SIMeasure a :: Type
 
    -- | Inductively prove a lemma, using measure based induction, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInduct :: (Proposition a, Measure m, EqSymbolic t) => String -> a -> (SIHArg a -> m) -> (Proof a -> StepArgs a t) -> TP (Proof a)
+   sInduct :: (Proposition a, Measure m, EqSymbolic t) => String -> a -> (SIMeasure a -> m) -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
    -- | Inductively prove a theorem, using measure based induction. Same as 'sInduct', but tagged as a theorem, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductThm :: (Proposition a, Measure m, EqSymbolic t) => String -> a -> (SIHArg a -> m) -> (Proof a -> StepArgs a t) -> TP (Proof a)
+   sInductThm :: (Proposition a, Measure m, EqSymbolic t) => String -> a -> (SIMeasure a -> m) -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
    -- | Same as 'sInduct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductWith :: (Proposition a, Measure m, EqSymbolic t) => SMTConfig -> String -> a -> (SIHArg a -> m) -> (Proof a -> StepArgs a t) -> TP (Proof a)
+   sInductWith :: (Proposition a, Measure m, EqSymbolic t) => SMTConfig -> String -> a -> (SIMeasure a -> m) -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
    -- | Same as 'sInductThm', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductThmWith :: (Proposition a, Measure m, EqSymbolic t) => SMTConfig -> String -> a -> (SIHArg a -> m) -> (Proof a -> StepArgs a t) -> TP (Proof a)
+   sInductThmWith :: (Proposition a, Measure m, EqSymbolic t) => SMTConfig -> String -> a -> (SIMeasure a -> m) -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
    sInduct            nm p m steps = getTPConfig >>= \cfg  -> sInductWith                            cfg                   nm p m steps
    sInductThm         nm p m steps = getTPConfig >>= \cfg  -> sInductThmWith                         cfg                   nm p m steps
@@ -486,7 +486,7 @@ class SInductive a where
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL sInductionStrategy #-}
-   sInductionStrategy :: (Proposition a, Measure m, EqSymbolic t) => a -> (SIHArg a -> m) -> (Proof a -> StepArgs a t) -> Symbolic InductionStrategy
+   sInductionStrategy :: (Proposition a, Measure m, EqSymbolic t) => a -> (SIMeasure a -> m) -> (Proof a -> StepArgs a t) -> Symbolic InductionStrategy
 
 -- | Do an inductive proof, based on the given strategy
 inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> TP (Proof a)
@@ -842,7 +842,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
 
 -- | Generalized induction with one parameter
 instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
-  type SIHArg (Forall na a -> SBool) = SBV a
+  type SIMeasure (Forall na a -> SBool) = SBV a
 
   sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
@@ -853,7 +853,7 @@ instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
 
 -- | Generalized induction with two parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (Forall na a -> Forall nb b -> SBool) where
-  type SIHArg (Forall na a -> Forall nb b -> SBool) = (SBV a, SBV b)
+  type SIMeasure (Forall na a -> Forall nb b -> SBool) = (SBV a, SBV b)
 
   sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
@@ -865,7 +865,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (For
 
 -- | Generalized induction with three parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
-  type SIHArg (Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SBV a, SBV b, SBV c)
+  type SIMeasure (Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SBV a, SBV b, SBV c)
 
   sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
@@ -878,7 +878,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 
 -- | Generalized induction with four parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
-  type SIHArg (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SBV a, SBV b, SBV c, SBV d)
+  type SIMeasure (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SBV a, SBV b, SBV c, SBV d)
 
   sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
@@ -892,7 +892,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 
 -- | Generalized induction with five parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
-  type SIHArg (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SBV a, SBV b, SBV c, SBV d, SBV e)
+  type SIMeasure (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SBV a, SBV b, SBV c, SBV d, SBV e)
 
   sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
