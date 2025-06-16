@@ -46,7 +46,7 @@ import Control.Monad (void)
 --
 -- >>> trueIsProvable
 -- Lemma: true                             Q.E.D.
--- [Proven] true
+-- [Proven] true :: Bool
 trueIsProvable :: IO (Proof SBool)
 trueIsProvable = runTP $ lemma "true" sTrue []
 
@@ -70,7 +70,7 @@ falseIsn'tProvable = runTP $ do
 -- We have:
 -- >>> largerIntegerExists
 -- Lemma: largerIntegerExists              Q.E.D.
--- [Proven] largerIntegerExists
+-- [Proven] largerIntegerExists :: Ɐx ∷ Integer → ∃y ∷ Integer → Bool
 largerIntegerExists :: IO (Proof (Forall "x" Integer -> Exists "y" Integer -> SBool))
 largerIntegerExists = runTP $ lemma "largerIntegerExists"
                                     (\(Forall x) (Exists y) -> x .< y)
@@ -82,7 +82,7 @@ largerIntegerExists = runTP $ lemma "largerIntegerExists"
 --
 -- >>> forallConjunction @Integer (uninterpret "p") (uninterpret "q")
 -- Lemma: forallConjunction                Q.E.D.
--- [Proven] forallConjunction
+-- [Proven] forallConjunction :: Bool
 forallConjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO (Proof SBool)
 forallConjunction p q = runTP $ do
     let qb = quantifiedBool
@@ -98,7 +98,7 @@ forallConjunction p q = runTP $ do
 --
 -- >>> existsDisjunction @Integer (uninterpret "p") (uninterpret "q")
 -- Lemma: existsDisjunction                Q.E.D.
--- [Proven] existsDisjunction
+-- [Proven] existsDisjunction :: Bool
 existsDisjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO (Proof SBool)
 existsDisjunction p q = runTP $ do
     let qb = quantifiedBool
@@ -187,7 +187,7 @@ existsConjunctionNot p q = runTP $ do
 -- Lemma: noTerminationImpliesFalse
 --   Step: 1 (bad @ (n |-> 0 :: SInteger)) Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] noTerminationImpliesFalse
+-- [Proven] noTerminationImpliesFalse :: Bool
 noTerminationChecks :: IO (Proof SBool)
 noTerminationChecks = runTP $ do
 
@@ -211,8 +211,8 @@ noTerminationChecks = runTP $ do
 -- @length xs == ite (length xs .== 3) 5 (length xs)@
 --
 -- >>> badRevLen (Proxy @Integer) `catch` (\(_ :: SomeException) -> pure ())
--- Lemma: badRevLen @Integer
--- *** Failed to prove badRevLen @Integer.
+-- Lemma: badRevLen
+-- *** Failed to prove badRevLen.
 -- Falsifiable. Counter-example:
 --   xs = [14,11,14] :: [Integer]
 badRevLen :: forall a. SymVal a => Proxy a -> IO ()
@@ -261,7 +261,7 @@ badLengthProof = runTP $ do
 -- Lemma: evil
 -- *** Failed to prove evil.
 -- Falsifiable
--- [Modulo: sorry] sorry
+-- [Modulo: sorry] sorry :: Bool
 --
 -- This is good, the proof failed since it's just not true. (Except for the confusing naming printed in the trace
 -- due to our own choice.)
@@ -271,7 +271,7 @@ badLengthProof = runTP $ do
 -- >>> runTPWith (tpCache z3) badCaching
 -- Lemma: evil                             Q.E.D.
 -- Cached: evil                            Q.E.D.
--- [Proven. Cached: evil] evil
+-- [Proven. Cached: evil] evil :: Bool
 --
 -- In this case we were able to ostensibly prove False, i.e., this result is unsound. But at least SBV warned us
 -- that we used a cached proof (@evil@), reminding us that using unique names is a proof of obligation for the user
