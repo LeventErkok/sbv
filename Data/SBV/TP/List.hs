@@ -377,7 +377,7 @@ lenAppend _ =
 -- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
 --
 -- >>> runTP $ lenAppend2 (Proxy @Integer)
--- Lemma: lenAppend2 :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
+-- Lemma: lenAppend2                       Q.E.D.
 -- [Proven] lenAppend2 :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 lenAppend2 :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 lenAppend2 _ =
@@ -831,21 +831,21 @@ foldrFoldl (<+>) (<*>) e = do
 -- @foldr f a . concat == foldr f a . map (foldr f a)@
 --
 -- >>> runTP $ bookKeeping @Integer (uninterpret "a") (uninterpret "f")
--- Inductive lemma: foldBase @Integer
+-- Inductive lemma: foldBase
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: foldrOverAppend @Integer
+-- Inductive lemma: foldrOverAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: bookKeeping @Integer
+-- Inductive lemma: bookKeeping
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -854,7 +854,7 @@ foldrFoldl (<+>) (<*>) e = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] bookKeeping @Integer
+-- [Proven] bookKeeping :: Ɐxss ∷ [[Integer]] → Bool
 --
 -- NB. This theorem does not hold if @f@ does not have a left-unit! Consider the input @[[], [x]]@. Left hand side reduces to
 -- @x@, while the right hand side reduces to: @f a x@. And unless @f@ is commutative or @a@ is not also a left-unit,
@@ -912,7 +912,7 @@ bookKeeping a f = do
 -- | @filter p (xs ++ ys) == filter p xs ++ filter p ys@
 --
 -- >>> runTP $ filterAppend @Integer (uninterpret "p")
--- Inductive lemma: filterAppend @Integer
+-- Inductive lemma: filterAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -920,7 +920,7 @@ bookKeeping a f = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] filterAppend @Integer
+-- [Proven] filterAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 filterAppend :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 filterAppend p =
    induct "filterAppend"
@@ -937,7 +937,7 @@ filterAppend p =
 -- | @filter p (concat xss) == concatMap (filter p xss)@
 --
 -- >>> runTP $ filterConcat @Integer (uninterpret "f")
--- Inductive lemma: filterAppend @Integer
+-- Inductive lemma: filterAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -945,13 +945,13 @@ filterAppend p =
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: filterConcat @Integer
+-- Inductive lemma: filterConcat
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] filterConcat @Integer
+-- [Proven] filterConcat :: Ɐxss ∷ [[Integer]] → Bool
 filterConcat :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xss" [[a]] -> SBool))
 filterConcat p = do
   fa <- filterAppend p
@@ -975,7 +975,7 @@ filterConcat p = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] appendDiff 
+-- [Proven] appendDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Ɐcs ∷ [Integer] → Bool
 appendDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
 appendDiff _ =
    induct "appendDiff"
@@ -990,14 +990,14 @@ appendDiff _ =
 -- | @as \\ (bs ++ cs) == (as \\ bs) \\ cs@
 --
 -- >>> runTP $ diffAppend (Proxy @Integer)
--- Inductive lemma: diffAppend @Integer
+-- Inductive lemma: diffAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] diffAppend @Integer
+-- [Proven] diffAppend :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Ɐcs ∷ [Integer] → Bool
 diffAppend :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
 diffAppend _ =
    induct "diffAppend"
@@ -1014,7 +1014,7 @@ diffAppend _ =
 -- | @(as \\ bs) \\ cs == (as \\ cs) \\ bs@
 --
 -- >>> runTP $ diffDiff (Proxy @Integer)
--- Inductive lemma: diffDiff @Integer
+-- Inductive lemma: diffDiff
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                         Q.E.D.
@@ -1036,7 +1036,7 @@ diffAppend _ =
 --       Step: 1.2.2.Completeness          Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] diffDiff @Integer
+-- [Proven] diffDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Ɐcs ∷ [Integer] → Bool
 diffDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
 diffDiff _ =
    induct "diffDiff"
@@ -1078,12 +1078,12 @@ disjoint = smtFunction "disjoint" $ \xs ys -> null xs .|| head xs `notElem` ys .
 -- | @disjoint as bs .=> as \\ bs == as@
 --
 -- >>> runTP $ disjointDiff (Proxy @Integer)
--- Inductive lemma: disjointDiff @Integer
+-- Inductive lemma: disjointDiff
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] disjointDiff @Integer
+-- [Proven] disjointDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Bool
 disjointDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> SBool))
 disjointDiff _ =
    induct "disjointDiff"
@@ -1098,14 +1098,14 @@ disjointDiff _ =
 -- | @fst (partition f xs) == filter f xs@
 --
 -- >>> runTP $ partition1 @Integer (uninterpret "f")
--- Inductive lemma: partition1 @Integer
+-- Inductive lemma: partition1
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] partition1 @Integer
+-- [Proven] partition1 :: Ɐxs ∷ [Integer] → Bool
 partition1 :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
 partition1 f =
    induct "partition1"
@@ -1124,14 +1124,14 @@ partition1 f =
 -- | @snd (partition f xs) == filter (not . f) xs@
 --
 -- >>> runTP $ partition2 @Integer (uninterpret "f")
--- Inductive lemma: partition2 @Integer
+-- Inductive lemma: partition2
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] partition2 @Integer
+-- [Proven] partition2 :: Ɐxs ∷ [Integer] → Bool
 partition2 :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
 partition2 f =
    induct "partition2"
@@ -1150,8 +1150,8 @@ partition2 f =
 -- | @take n (take m xs) == take (n `smin` m) xs@
 --
 -- >>> runTP $ take_take (Proxy @Integer)
--- Lemma: take_take @Integer               Q.E.D.
--- [Proven] take_take @Integer
+-- Lemma: take_take                        Q.E.D.
+-- [Proven] take_take :: Ɐm ∷ Integer → Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_take :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "m" Integer -> Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_take _ =
    lemma "take_take"
@@ -1161,8 +1161,8 @@ take_take _ =
 -- | @n >= 0 && m >= 0 ==> drop n (drop m xs) == drop (n + m) xs@
 --
 -- >>> runTP $ drop_drop (Proxy @Integer)
--- Lemma: drop_drop @Integer               Q.E.D.
--- [Proven] drop_drop @Integer
+-- Lemma: drop_drop                        Q.E.D.
+-- [Proven] drop_drop :: Ɐm ∷ Integer → Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_drop :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "m" Integer -> Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_drop _ =
    lemma "drop_drop"
@@ -1172,8 +1172,8 @@ drop_drop _ =
 -- | @take n xs ++ drop n xs == xs@
 --
 -- >>> runTP $ take_drop (Proxy @Integer)
--- Lemma: take_drop @Integer               Q.E.D.
--- [Proven] take_drop @Integer
+-- Lemma: take_drop                        Q.E.D.
+-- [Proven] take_drop :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_drop :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_drop _ =
     lemma "take_drop"
@@ -1183,8 +1183,8 @@ take_drop _ =
 -- | @n .> 0 ==> take n (x .: xs) == x .: take (n - 1) xs@
 --
 -- >>> runTP $ take_cons (Proxy @Integer)
--- Lemma: take_cons @Integer               Q.E.D.
--- [Proven] take_cons @Integer
+-- Lemma: take_cons                        Q.E.D.
+-- [Proven] take_cons :: Ɐn ∷ Integer → Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_cons :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "x" a -> Forall "xs" [a] -> SBool))
 take_cons _ =
    lemma "take_cons"
@@ -1239,8 +1239,8 @@ take_map f = do
 -- | @n .> 0 ==> drop n (x .: xs) == drop (n - 1) xs@
 --
 -- >>> runTP $ drop_cons (Proxy @Integer)
--- Lemma: drop_cons @Integer               Q.E.D.
--- [Proven] drop_cons @Integer
+-- Lemma: drop_cons                        Q.E.D.
+-- [Proven] drop_cons :: Ɐn ∷ Integer → Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_cons :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "x" a -> Forall "xs" [a] -> SBool))
 drop_cons _ =
    lemma "drop_cons"
@@ -1250,8 +1250,8 @@ drop_cons _ =
 -- | @drop n (map f xs) == map f (drop n xs)@
 --
 -- >>> runTP $ drop_map @Integer @String (uninterpret "f")
--- Lemma: drop_cons @Integer               Q.E.D.
--- Lemma: drop_cons @[Char]                Q.E.D.
+-- Lemma: drop_cons                        Q.E.D.
+-- Lemma: drop_cons                        Q.E.D.
 -- Lemma: drop_map.n <= 0                  Q.E.D.
 -- Inductive lemma: drop_map.n > 0
 --   Step: Base                            Q.E.D.
