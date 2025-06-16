@@ -138,7 +138,7 @@ initsLength :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> SB
 initsLength p =
    sInduct (atProxy p "initsLength")
            (\(Forall xs) -> length (inits xs) .== 1 + length xs)
-           (length @a) $
+           (Measure . length @a) $
            \ih xs -> [] |- length (inits xs)
                         ?? ih
                         =: 1 + length xs
@@ -1507,7 +1507,7 @@ interleaveLen p = do
 
    sInduct (atProxy p "interleaveLen")
            (\(Forall xs) (Forall ys) -> length xs + length ys .== length (interleave xs ys))
-           (\(xs, ys) -> length xs + length ys) $
+           (\xs ys -> Measure (length xs + length ys)) $
            \ih xs ys -> [] |- length xs + length ys .== length (interleave xs ys)
                            =: split xs
                                     trivial
@@ -1568,7 +1568,7 @@ interleaveRoundTrip p = do
                length @a xs .== length ys
                   .=> let (es, os) = untuple alts
                       in uninterleaveGen (interleave xs ys) alts .== tuple (reverse es ++ xs, reverse os ++ ys))
-         (\(xs, ys, _alts) -> length xs + length ys) $
+         (\xs ys _alts -> Measure (length xs + length ys)) $
          \ih xs ys alts -> [length xs .== length ys]
                         |- let (es, os) = untuple alts
                         in uninterleaveGen (interleave xs ys) alts

@@ -36,7 +36,7 @@ module Data.SBV.TP (
        , induct,  inductWith, inductThm, inductThmWith
 
        -- * Reasoning via measure-based strong induction
-       , sInduct, sInductWith, sInductThm, sInductThmWith
+       , sInduct, sInductWith, sInductThm, sInductThmWith, Measure(..)
 
        -- * Creating instances of proofs
        , at, Inst(..)

@@ -142,7 +142,7 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
     mergeKeepsSort <-
         sInductWith cvc5 "mergeKeepsSort"
            (\(Forall @"xs" xs) (Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys))
-           (\(xs, ys) -> (length xs, length ys)) $
+           (\xs ys -> Measure (length xs, length ys)) $
            \ih xs ys -> [nonDecreasing xs, nonDecreasing ys]
                      |- split2 (xs, ys)
                                trivial           -- when both xs and ys are empty.  Trivial.
@@ -170,7 +170,7 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
     sortNonDecreasing <-
         sInduct "sortNonDecreasing"
                 (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs))
-                length $
+                (Measure . length) $
                 \ih xs -> [] |- split xs
                                       qed
                                       (\e es -> nonDecreasing (mergeSort (e .: es))
@@ -200,7 +200,7 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
         sInduct "mergeCount"
                 (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) ->
                         count e (merge xs ys) .== count e xs + count e ys)
-                (\(xs, ys, _e) -> (length xs, length ys)) $
+                (\xs ys _e -> Measure (length xs, length ys)) $
                 \ih as bs e -> [] |- split2 (as, bs)
                                             trivial
                                             trivial
@@ -237,7 +237,7 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
     sortIsPermutation <-
         sInductWith cvc5 "sortIsPermutation"
                 (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs))
-                (\(xs, _e) -> length xs) $
+                (\xs _e -> Measure (length xs)) $
                 \ih as e -> [] |- split as
                                         trivial
                                         (\x xs -> count e (mergeSort (x .: xs))
