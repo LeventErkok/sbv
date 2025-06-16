@@ -49,7 +49,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --
 -- >>> runTP $ nonDecrTail (Proxy @Integer)
 -- Lemma: nonDecrTail                      Q.E.D.
--- [Proven] nonDecrTail
+-- [Proven] nonDecrTail :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 nonDecrTail :: forall a. (Ord a, SymVal a) => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 nonDecrTail _ =
    lemma "nonDecrTail"
@@ -60,7 +60,7 @@ nonDecrTail _ =
 --
 -- >>> runTP $ nonDecrIns (Proxy @Integer)
 -- Lemma: nonDecrInsert                    Q.E.D.
--- [Proven] nonDecrInsert
+-- [Proven] nonDecrInsert :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 nonDecrIns :: forall a. (Ord a, SymVal a) => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 nonDecrIns _ =
    lemma "nonDecrInsert"
@@ -74,7 +74,7 @@ sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e 
 -- | 'sublist' correctness. We have:
 --
 -- >>> runTP $ sublistCorrect (Proxy @Integer)
--- Inductive lemma: countNonNeg @Integer
+-- Inductive lemma: countNonNeg
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                         Q.E.D.
@@ -83,7 +83,7 @@ sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e 
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: countElem @Integer
+-- Inductive lemma: countElem
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                         Q.E.D.
@@ -92,7 +92,7 @@ sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e 
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: elemCount @Integer
+-- Inductive lemma: elemCount
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1                           Q.E.D.
@@ -100,17 +100,17 @@ sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e 
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: sublistCorrect @Integer
+-- Lemma: sublistCorrect
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] sublistCorrect @Integer
+-- [Proven] sublistCorrect :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Ɐx ∷ Integer → Bool
 sublistCorrect :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "x" a -> SBool))
 sublistCorrect p = do
 
     cElem  <- countElem p
     eCount <- elemCount p
 
-    calc (atProxy p "sublistCorrect")
+    calc "sublistCorrect"
          (\(Forall xs) (Forall ys) (Forall x) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys) $
          \xs ys x -> [xs `sublist` ys, x `elem` xs]
                   |- x `elem` ys
@@ -122,7 +122,7 @@ sublistCorrect p = do
 -- | If one list is a sublist of another, then its head is an elem. We have:
 --
 -- >>> runTP $ sublistElem (Proxy @Integer)
--- Inductive lemma: countNonNeg @Integer
+-- Inductive lemma: countNonNeg
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                         Q.E.D.
@@ -131,7 +131,7 @@ sublistCorrect p = do
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: countElem @Integer
+-- Inductive lemma: countElem
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                         Q.E.D.
@@ -140,7 +140,7 @@ sublistCorrect p = do
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: elemCount @Integer
+-- Inductive lemma: elemCount
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1                           Q.E.D.
@@ -148,18 +148,18 @@ sublistCorrect p = do
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: sublistCorrect @Integer
+-- Lemma: sublistCorrect
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: sublistElem @Integer
+-- Lemma: sublistElem
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] sublistElem @Integer
+-- [Proven] sublistElem :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 sublistElem :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 sublistElem p = do
    slc <- sublistCorrect p
 
-   calc (atProxy p "sublistElem")
+   calc "sublistElem"
         (\(Forall x) (Forall xs) (Forall ys) -> (x .: xs) `sublist` ys .=> x `elem` ys) $
         \x xs ys -> [(x .: xs) `sublist` ys]
                  |- x `elem` ys
@@ -170,21 +170,21 @@ sublistElem p = do
 -- | If one list is a sublist of another so is its tail. We have:
 --
 -- >>> runTP $ sublistTail (Proxy @Integer)
--- Lemma: sublistTail @Integer             Q.E.D.
--- [Proven] sublistTail @Integer
+-- Lemma: sublistTail                      Q.E.D.
+-- [Proven] sublistTail :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 sublistTail :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
-sublistTail p =
-  lemma (atProxy p "sublistTail")
+sublistTail _ =
+  lemma "sublistTail"
         (\(Forall x) (Forall xs) (Forall ys) -> (x .: xs) `sublist` ys .=> xs `sublist` ys)
         []
 
 -- | Permutation implies sublist. We have:
 --
 -- >>> runTP $ sublistIfPerm (Proxy @Integer)
--- Lemma: sublistIfPerm @Integer           Q.E.D.
--- [Proven] sublistIfPerm @Integer
+-- Lemma: sublistIfPerm                    Q.E.D.
+-- [Proven] sublistIfPerm :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 sublistIfPerm :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
-sublistIfPerm p =
-  lemma (atProxy p "sublistIfPerm")
+sublistIfPerm _ =
+  lemma "sublistIfPerm"
         (\(Forall xs) (Forall ys) -> isPermutation xs ys .=> xs `sublist` ys)
         []

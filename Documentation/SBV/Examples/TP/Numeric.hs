@@ -43,7 +43,7 @@ import Data.SBV.TP
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] sumConst_correct
+-- [Proven] sumConst_correct :: Ɐn ∷ Integer → Bool
 sumConstProof :: IO (Proof (Forall "n" Integer -> SBool))
 sumConstProof = runTP $ do
    let c :: SInteger
@@ -74,7 +74,7 @@ sumConstProof = runTP $ do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] sum_correct
+-- [Proven] sum_correct :: Ɐn ∷ Integer → Bool
 sumProof :: IO (Proof (Forall "n" Integer -> SBool))
 sumProof = runTP $ do
    let sum :: SInteger -> SInteger
@@ -103,7 +103,7 @@ sumProof = runTP $ do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] sumSquare_correct
+-- [Proven] sumSquare_correct :: Ɐn ∷ Integer → Bool
 sumSquareProof :: IO (Proof (Forall "n" Integer -> SBool))
 sumSquareProof = runTP $ do
    let sumSquare :: SInteger -> SInteger
@@ -142,7 +142,7 @@ sumSquareProof = runTP $ do
 --   Step: 7                               Q.E.D.
 --   Step: 8                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] elevenMinusFour
+-- [Proven] elevenMinusFour :: Ɐn ∷ Integer → Bool
 elevenMinusFour :: IO (Proof (Forall "n" Integer -> SBool))
 elevenMinusFour = runTP $ do
    let pow :: SInteger -> SInteger -> SInteger

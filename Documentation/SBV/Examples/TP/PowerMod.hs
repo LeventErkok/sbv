@@ -45,7 +45,7 @@ power = smtFunction "power" $ \b n -> ite (n .<= 0) 1 (b * power b (n-1))
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] modAddMultiple
+-- [Proven] modAddMultiple :: Ɐk ∷ Integer → Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 modAddMultiple :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> Forall "m" Integer -> SBool))
 modAddMultiple = do
    inductWith (tpCache cvc5) "modAddMultiple"
@@ -71,7 +71,7 @@ modAddMultiple = do
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] modAddRight
+-- [Proven] modAddRight :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modAddRight :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modAddRight = do
    mAddMul <- modAddMultiple
@@ -102,7 +102,7 @@ modAddRight = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] modAddLeft
+-- [Proven] modAddLeft :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modAddLeft :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modAddLeft = do
    mAddR <- modAddRight
@@ -130,7 +130,7 @@ modAddLeft = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] modSubRight
+-- [Proven] modSubRight :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modSubRight :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modSubRight = do
    mAddMul <- modAddMultiple
@@ -173,7 +173,7 @@ modSubRight = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven. Cached: modAddRight] modMulRightNonneg
+-- [Proven. Cached: modAddRight] modMulRightNonneg :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modMulRightNonneg :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulRightNonneg = do
    mAddL <- modAddLeft
@@ -228,7 +228,7 @@ modMulRightNonneg = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven. Cached: modAddMultiple] modMulRightNeg
+-- [Proven. Cached: modAddMultiple] modMulRightNeg :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modMulRightNeg :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulRightNeg = do
    mAddL <- modAddLeft
@@ -305,7 +305,7 @@ modMulRightNeg = do
 --     Step: 1.2.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight] modMulRight
+-- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight] modMulRight :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modMulRight :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulRight = do
    mMulNonneg <- modMulRightNonneg
@@ -386,7 +386,7 @@ modMulRight = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight] modMulLeft
+-- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight] modMulLeft :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modMulLeft :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulLeft = do
    mMulR <- modMulRight
@@ -484,7 +484,7 @@ modMulLeft = do
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: powerMod                         Q.E.D.
--- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerMod
+-- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerMod :: Ɐb ∷ Integer → Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 powerMod :: TP (Proof (Forall "b" Integer -> Forall "n" Integer -> Forall "m" Integer -> SBool))
 powerMod = do
    mMulL <- modMulLeft
@@ -520,7 +520,7 @@ powerMod = do
 --   Step: 1 (unfold power)                Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] onePower
+-- [Proven] onePower :: Ɐn ∷ Integer → Bool
 onePower :: TP (Proof (Forall "n" Integer -> SBool))
 onePower = induct "onePower"
                   (\(Forall n) -> n .>= 0 .=> power 1 n .== 1) $
@@ -626,7 +626,7 @@ onePower = induct "onePower"
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerOf27
+-- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerOf27 :: Ɐn ∷ Integer → Bool
 powerOf27 :: TP (Proof (Forall "n" Integer -> SBool))
 powerOf27 = do
    pOne <- onePower
@@ -740,7 +740,7 @@ powerOf27 = do
 -- Lemma: powerOfThreeMod13VarDivisor
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerOfThreeMod13VarDivisor
+-- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerOfThreeMod13VarDivisor :: Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 powerOfThreeMod13VarDivisor :: TP (Proof (Forall "n" Integer -> Forall "m" Integer -> SBool))
 powerOfThreeMod13VarDivisor = do
    p27 <- powerOf27

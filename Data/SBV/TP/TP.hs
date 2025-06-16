@@ -35,7 +35,7 @@ module Data.SBV.TP.TP (
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpCache
-       , (|-), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction, atProxy
+       , (|-), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        ) where
 
 import Data.SBV

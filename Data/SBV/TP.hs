@@ -61,9 +61,6 @@ module Data.SBV.TP (
 
        -- * Finishing up a calculational proof
        , qed, trivial, contradiction
-
-       -- * Helpers
-       , atProxy
        ) where
 
 import Data.SBV.TP.TP

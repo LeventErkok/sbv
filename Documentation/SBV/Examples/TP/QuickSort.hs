@@ -70,14 +70,14 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 -- We have:
 --
 -- >>> correctness (Proxy @Integer)
--- Inductive lemma: countAppend @Integer
+-- Inductive lemma: countAppend
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
 --   Step: 2 (unfold count)                                    Q.E.D.
 --   Step: 3                                                   Q.E.D.
 --   Step: 4 (simplify)                                        Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma: countNonNeg @Integer
+-- Inductive lemma: countNonNeg
 --   Step: Base                                                Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                                             Q.E.D.
@@ -86,7 +86,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     Step: 1.2.2                                             Q.E.D.
 --     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma: countElem @Integer
+-- Inductive lemma: countElem
 --   Step: Base                                                Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                                             Q.E.D.
@@ -95,7 +95,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     Step: 1.2.2                                             Q.E.D.
 --     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma: elemCount @Integer
+-- Inductive lemma: elemCount
 --   Step: Base                                                Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1                                               Q.E.D.
@@ -103,14 +103,14 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     Step: 1.2.2                                             Q.E.D.
 --     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
--- Lemma: sublistCorrect @Integer
+-- Lemma: sublistCorrect
 --   Step: 1                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
--- Lemma: sublistElem @Integer
+-- Lemma: sublistElem
 --   Step: 1                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
--- Lemma: sublistTail @Integer                                 Q.E.D.
--- Lemma: sublistIfPerm @Integer                               Q.E.D.
+-- Lemma: sublistTail                                          Q.E.D.
+-- Lemma: sublistIfPerm                                        Q.E.D.
 -- Inductive lemma: lltCorrect
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
@@ -207,7 +207,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     Step: 1.2.3 (push nonDecreasing down)                   Q.E.D.
 --     Step: 1.2.4                                             Q.E.D.
 --   Result:                                                   Q.E.D.
--- Lemma: quickSortIsCorrect @Integer                          Q.E.D.
+-- Lemma: quickSortIsCorrect                                   Q.E.D.
 -- Inductive lemma: partitionSortedLeft
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
@@ -218,16 +218,16 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --   Step: 1                                                   Q.E.D.
 --   Step: 2                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma: unchangedIfNondecreasing @Integer
+-- Inductive lemma: unchangedIfNondecreasing
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
 --   Step: 2                                                   Q.E.D.
 --   Step: 3                                                   Q.E.D.
 --   Step: 4                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
--- Lemma: ifChangedThenUnsorted @Integer                       Q.E.D.
+-- Lemma: ifChangedThenUnsorted                                Q.E.D.
 -- == Proof tree:
--- quickSortIsCorrect @Integer
+-- quickSortIsCorrect
 --  ├╴sortIsPermutation
 --  │  └╴sortCountsMatch
 --  │     ├╴countAppend (x2)
@@ -245,7 +245,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     │  │  ├╴sublistElem
 --     │  │  │  └╴sublistCorrect
 --     │  │  │     ├╴countElem
---     │  │  │     │  └╴countNonNeg @Integer
+--     │  │  │     │  └╴countNonNeg
 --     │  │  │     └╴elemCount
 --     │  │  ├╴lltCorrect
 --     │  │  └╴sublistTail
@@ -257,7 +257,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     │  │  └╴sublistTail
 --     │  └╴sublistIfPerm
 --     └╴nonDecreasingMerge
--- [Proven] quickSortIsCorrect @Integer
+-- [Proven] quickSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
 correctness p = runTPWith (tpRibbon 60 z3) $ do
 
@@ -574,9 +574,9 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
   -- Part VIII. Putting it together
   --------------------------------------------------------------------------------------------
 
-  qs <- lemma (atProxy p "quickSortIsCorrect")
-           (\(Forall xs) -> let out = quickSort xs in isPermutation xs out .&& nonDecreasing out)
-           [proofOf sortIsPermutation, proofOf sortIsNonDecreasing]
+  qs <- lemma "quickSortIsCorrect"
+              (\(Forall xs) -> let out = quickSort xs in isPermutation xs out .&& nonDecreasing out)
+              [proofOf sortIsPermutation, proofOf sortIsNonDecreasing]
 
   --------------------------------------------------------------------------------------------
   -- Part IX. Bonus: This property isn't really needed for correctness, but let's also prove
@@ -605,7 +605,7 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
                              =: qed
 
   unchangedIfNondecreasing <-
-       induct (atProxy p "unchangedIfNondecreasing")
+       induct "unchangedIfNondecreasing"
               (\(Forall @"xs" xs) -> nonDecreasing xs .=> quickSort xs .== xs) $
               \ih (x, xs) -> [nonDecreasing (x .: xs)]
                           |- quickSort (x .: xs)
@@ -620,7 +620,7 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
                           =: qed
 
   -- A nice corrollary to the above is that if quicksort changes its input, that implies the input was not non-decreasing:
-  _ <- lemma (atProxy p "ifChangedThenUnsorted")
+  _ <- lemma "ifChangedThenUnsorted"
              (\(Forall @"xs" xs) -> quickSort xs ./= xs .=> sNot (nonDecreasing xs))
              [proofOf unchangedIfNondecreasing]
 

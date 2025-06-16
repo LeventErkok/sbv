@@ -106,7 +106,7 @@ correctness :: forall a. SymVal a => Proxy a
                   , Proof (Forall "c" a -> Forall "xs" [a] -> SBool)                    -- If returned value isn't majority, then no majority exists
                   , Proof (Forall "m1" a -> Forall "m2" a  -> Forall "xs" [a] -> SBool) -- Uniqueness: If there are two majorities, they're the same
                   )
-correctness p = runTP $ do
+correctness _ = runTP $ do
 
   -- Helper definition
   let isMajority :: SBV a -> SList a -> SBool
@@ -114,7 +114,7 @@ correctness p = runTP $ do
 
   -- First prove the generalized majority theorem
   majorityGeneral <-
-     induct (atProxy p "majorityGeneral")
+     induct "majorityGeneral"
             (\(Forall @"xs" xs) (Forall @"i" i) (Forall @"e" (e :: SBV a)) (Forall @"c" c)
                   -> i .>= 0 .&& (length xs + i) `sEDiv` 2 .< ite (e .== c) i 0 + TP.count e xs .=> majority c i xs .== e) $
             \ih (x, xs) i e c ->
@@ -137,22 +137,22 @@ correctness p = runTP $ do
                          ]
 
   -- We can now prove the main theorem, by instantiating the general version.
-  correct <- lemma (atProxy p "majority")
+  correct <- lemma "majority"
                    (\(Forall @"c" c) (Forall @"xs" xs) -> isMajority c xs .=> mjrty xs .== c)
                    [proofOf majorityGeneral]
 
   -- Corollary: If there is a majority element, then what we return is a majority element:
-  ifExistsFound <- lemma (atProxy p "ifExistsFound")
+  ifExistsFound <- lemma "ifExistsFound"
                         (\(Forall @"c" c) (Forall @"xs" xs) -> isMajority c xs .=> isMajority (mjrty xs) xs)
                         [proofOf correct]
 
   -- Contrapositive to the above: If the returned value is not majority, then there is no majority:
-  ifNoMajority <- lemma (atProxy p "ifNoMajority")
+  ifNoMajority <- lemma "ifNoMajority"
                         (\(Forall c) (Forall xs) -> sNot (isMajority (mjrty xs) xs) .=> sNot (isMajority c xs))
                         [proofOf ifExistsFound]
 
   -- Let's also prove majority is unique, while we're at it, even though it is not essential for our main argument.
-  unique <- calc (atProxy p "uniqueness")
+  unique <- calc "uniqueness"
                  (\(Forall m1) (Forall m2) (Forall xs) -> isMajority m1 xs .&& isMajority m2 xs .=> m1 .== m2) $
                  \m1 m2 xs -> [isMajority m1 xs, isMajority m2 xs]
                            |- m1

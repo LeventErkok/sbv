@@ -28,7 +28,7 @@ module Data.SBV.TP.Utils (
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML, shortProofName
        , withProofCache
-       , atProxy, tpQuiet, tpRibbon, tpStats, tpCache
+       , tpQuiet, tpRibbon, tpStats, tpCache
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -43,10 +43,10 @@ import Data.Proxy
 import Data.Typeable (typeOf, TypeRep)
 
 import Data.Char (isSpace)
-import Data.List (intercalate, isInfixOf, nubBy, partition, sort)
+import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf, nubBy, partition, sort)
 import Data.Int  (Int64)
 
-import Data.SBV.Utils.Lib (atProxy)
+import Data.SBV.Utils.Lib (unQuote)
 
 import System.IO     (hFlush, stdout)
 import System.Random (randomIO)
@@ -303,7 +303,7 @@ showProofTreeHTML compress mbCSS p = htmlTree mbCSS $ snd $ depsToTree compress 
 
 -- | Show instance for t'Proof'
 instance Typeable a => Show (Proof a) where
-  show p@(Proof po@ProofObj{proofName = nm}) = '[' : sh (rootOfTrust p) ++ "] " ++ nm ++ " :: " ++ show (typeOf p)
+  show p@(Proof po@ProofObj{proofName = nm}) = '[' : sh (rootOfTrust p) ++ "] " ++ nm ++ " :: " ++ pretty (show (typeOf p))
     where sh (RootOfTrust Nothing)   = "Proven" ++ cacheInfo
           sh (RootOfTrust (Just ps)) = "Modulo: " ++ join ps ++ cacheInfo
 
@@ -315,6 +315,26 @@ instance Typeable a => Show (Proof a) where
 
           cachedProofs prf@ProofObj{isCached} = if isCached then prf : rest else rest
             where rest = concatMap cachedProofs (dependencies prf)
+
+          -- More mathematical notation for types.
+          pretty :: String -> String
+          pretty = unwords . walk . words . clean
+            where walk ("SBV"    : "Bool" : rest) = walk $ "Bool"                   : rest
+                  walk ("Forall" : xs     : rest) = walk $ ('Ɐ' : unQuote xs) : "∷" : rest
+                  walk ("Exists" : xs     : rest) = walk $ ('∃' : unQuote xs) : "∷" : rest
+                  walk ("->"              : rest) = walk $ "→"                      : rest
+
+                  walk (c : cs) = c : walk cs
+                  walk []       = []
+
+          -- Strip of Proof (...)
+          clean :: String -> String
+          clean s | pre `isPrefixOf` s && suf `isSuffixOf` s
+                  = reverse . drop (length suf) . reverse . drop (length pre) $ s
+                  | True
+                  = s
+            where pre = "Proof ("
+                  suf = ")"
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
 -- cannot deal with, or if we want to postpone the proof for the time being. TP will keep

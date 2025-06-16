@@ -114,7 +114,7 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 -- Lemma: insertionSortIsCorrect @Integer       Q.E.D.
 -- [Proven] insertionSortIsCorrect @Integer
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
-correctness p = runTPWith (tpRibbon 45 cvc5) $ do
+correctness _ = runTPWith (tpRibbon 45 cvc5) $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions
@@ -212,6 +212,6 @@ correctness p = runTPWith (tpRibbon 45 cvc5) $ do
     --------------------------------------------------------------------------------------------
     -- Put the two parts together for the final proof
     --------------------------------------------------------------------------------------------
-    lemma (atProxy p "insertionSortIsCorrect")
+    lemma "insertionSortIsCorrect"
           (\(Forall xs) -> let out = insertionSort xs in nonDecreasing out .&& isPermutation xs out)
           [proofOf sortNonDecreasing, proofOf sortIsPermutation]

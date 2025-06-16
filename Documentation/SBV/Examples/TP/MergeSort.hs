@@ -60,15 +60,15 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 --
 -- >>> correctness (Proxy @Integer)
 -- Lemma: nonDecrInsert                                        Q.E.D.
--- Inductive lemma: countAppend @Integer
+-- Inductive lemma: countAppend
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
 --   Step: 2 (unfold count)                                    Q.E.D.
 --   Step: 3                                                   Q.E.D.
 --   Step: 4 (simplify)                                        Q.E.D.
 --   Result:                                                   Q.E.D.
--- Lemma: take_drop @Integer                                   Q.E.D.
--- Lemma: takeDropCount @Integer
+-- Lemma: take_drop                                            Q.E.D.
+-- Lemma: takeDropCount
 --   Step: 1                                                   Q.E.D.
 --   Step: 2                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
@@ -121,7 +121,7 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 --     Step: 1.2.6                                             Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: mergeSortIsCorrect                                   Q.E.D.
--- [Proven] mergeSortIsCorrect
+-- [Proven] mergeSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
 correctness _ = runTPWith (tpRibbon 60 z3) $ do
 

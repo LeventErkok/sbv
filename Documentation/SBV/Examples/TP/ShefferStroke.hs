@@ -345,23 +345,23 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 -- Lemma: x \ y = x ⊓ yᶜ                                       Q.E.D.
 -- Lemma: x ⇨ y = y ⊔ xᶜ                                       Q.E.D.
 -- BooleanAlgebraProof {
---   le_refl         : [Proven] a ≤ a
---   le_trans        : [Proven] a ≤ b → b ≤ c → a ≤ c
---   lt_iff_le_not_le: [Proven] a < b ↔ a ≤ b ∧ ¬b ≤ a
---   le_antisymm     : [Proven] a ≤ b → b ≤ a → a = b
---   le_sup_left     : [Proven] a ≤ a ⊔ b
---   le_sup_right    : [Proven] b ≤ a ⊔ b
---   sup_le          : [Proven] a ≤ c → b ≤ c → a ⊔ b ≤ c
---   inf_le_left     : [Proven] a ⊓ b ≤ a
---   inf_le_right    : [Proven] a ⊓ b ≤ b
---   le_inf          : [Proven] a ≤ b → a ≤ c → a ≤ b ⊓ c
---   le_sup_inf      : [Proven] (x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z
---   inf_compl_le_bot: [Proven] x ⊓ xᶜ ≤ ⊥
---   top_le_sup_compl: [Proven] ⊤ ≤ x ⊔ xᶜ
---   le_top          : [Proven] a ≤ ⊤
---   bot_le          : [Proven] ⊥ ≤ a
---   sdiff_eq        : [Proven] x \ y = x ⊓ yᶜ
---   himp_eq         : [Proven] x ⇨ y = y ⊔ xᶜ
+--   le_refl         : [Proven] a ≤ a :: Ɐa ∷ Stroke → Bool
+--   le_trans        : [Proven] a ≤ b → b ≤ c → a ≤ c :: Ɐa ∷ Stroke → Ɐb ∷ Stroke → Ɐc ∷ Stroke → Bool
+--   lt_iff_le_not_le: [Proven] a < b ↔ a ≤ b ∧ ¬b ≤ a :: Ɐa ∷ Stroke → Ɐb ∷ Stroke → Bool
+--   le_antisymm     : [Proven] a ≤ b → b ≤ a → a = b :: Ɐa ∷ Stroke → Ɐb ∷ Stroke → Bool
+--   le_sup_left     : [Proven] a ≤ a ⊔ b :: Ɐa ∷ Stroke → Ɐb ∷ Stroke → Bool
+--   le_sup_right    : [Proven] b ≤ a ⊔ b :: Ɐa ∷ Stroke → Ɐb ∷ Stroke → Bool
+--   sup_le          : [Proven] a ≤ c → b ≤ c → a ⊔ b ≤ c :: Ɐa ∷ Stroke → Ɐb ∷ Stroke → Ɐc ∷ Stroke → Bool
+--   inf_le_left     : [Proven] a ⊓ b ≤ a :: Ɐa ∷ Stroke → Ɐb ∷ Stroke → Bool
+--   inf_le_right    : [Proven] a ⊓ b ≤ b :: Ɐa ∷ Stroke → Ɐb ∷ Stroke → Bool
+--   le_inf          : [Proven] a ≤ b → a ≤ c → a ≤ b ⊓ c :: Ɐa ∷ Stroke → Ɐb ∷ Stroke → Ɐc ∷ Stroke → Bool
+--   le_sup_inf      : [Proven] (x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z :: Ɐx ∷ Stroke → Ɐy ∷ Stroke → Ɐz ∷ Stroke → Bool
+--   inf_compl_le_bot: [Proven] x ⊓ xᶜ ≤ ⊥ :: Ɐx ∷ Stroke → Bool
+--   top_le_sup_compl: [Proven] ⊤ ≤ x ⊔ xᶜ :: Ɐx ∷ Stroke → Bool
+--   le_top          : [Proven] a ≤ ⊤ :: Ɐa ∷ Stroke → Bool
+--   bot_le          : [Proven] ⊥ ≤ a :: Ɐa ∷ Stroke → Bool
+--   sdiff_eq        : [Proven] x \ y = x ⊓ yᶜ :: Ɐx ∷ Stroke → Ɐy ∷ Stroke → Bool
+--   himp_eq         : [Proven] x ⇨ y = y ⊔ xᶜ :: Ɐx ∷ Stroke → Ɐy ∷ Stroke → Bool
 -- }
 shefferBooleanAlgebra :: IO BooleanAlgebraProof
 shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do

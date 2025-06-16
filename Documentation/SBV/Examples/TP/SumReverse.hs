@@ -39,27 +39,27 @@ import Data.Proxy
 -- | @sum (reverse xs) = sum xs@
 --
 -- >>> revSum (Proxy @Integer)
--- Inductive lemma: sumAppend @Integer
+-- Inductive lemma: sumAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: sumReverse @Integer
+-- Inductive lemma: sumReverse
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] sumReverse @Integer
+-- [Proven] sumReverse :: Ɐxs ∷ [Integer] → Bool
 revSum :: forall a. (SymVal a, Num (SBV a)) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
-revSum p = runTP $ do
+revSum _ = runTP $ do
 
   -- helper: sum distributes over append.
   sumAppend <-
-     induct (atProxy p "sumAppend")
+     induct "sumAppend"
             (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
             \ih (x, xs) ys -> [] |- sum ((x .: xs) ++ ys)
                                  =: sum (x .: (xs ++ ys))
@@ -70,7 +70,7 @@ revSum p = runTP $ do
                                  =: qed
 
   -- Now prove the original theorem by induction
-  induct (atProxy p "sumReverse")
+  induct "sumReverse"
          (\(Forall xs) -> sum (reverse xs) .== sum xs) $
          \ih (x, xs) -> [] |- sum (reverse (x .: xs))
                            =: sum (reverse xs ++ [x])

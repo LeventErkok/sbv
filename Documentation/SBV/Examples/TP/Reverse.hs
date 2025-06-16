@@ -56,22 +56,14 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 -- | Correctness the function 'rev'. We have:
 --
 -- >>> correctness (Proxy @Integer)
--- Inductive lemma: revLen @Integer
+-- Inductive lemma: revLen
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: revApp @Integer
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma: revApp @Integer
+-- Inductive lemma: revApp
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -79,8 +71,7 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: revSnoc @Integer                 Q.E.D.
--- Inductive lemma: revApp @Integer
+-- Inductive lemma: revApp
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -88,14 +79,23 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: revRev @Integer
+-- Lemma: revSnoc                          Q.E.D.
+-- Inductive lemma: revApp
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: revRev
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma (strong): revCorrect @Integer
+-- Inductive lemma (strong): revCorrect
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way full case split)
 --     Step: 1.1                           Q.E.D.
@@ -116,7 +116,7 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --       Step: 1.2.2.13                    Q.E.D.
 --       Step: 1.2.2.14                    Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] revCorrect @Integer
+-- [Proven] revCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. SymVal a => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
 correctness p = runTP $ do
 
@@ -126,7 +126,7 @@ correctness p = runTP $ do
   revSnoc <- TP.revSnoc p
   revRev  <- TP.revRev  p
 
-  sInductWith cvc5 (atProxy p "revCorrect")
+  sInductWith cvc5 "revCorrect"
     (\(Forall xs) -> rev xs .== reverse xs)
     (Measure . length) $
     \ih xs -> [] |- rev xs

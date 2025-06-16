@@ -38,7 +38,7 @@ import Data.SBV.TP
 -- We have:
 --
 -- >>> oddSequence1
--- Inductive lemma (strong): oddSequence
+-- Inductive lemma (strong): oddSequence1
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (3 way case split)
 --     Step: 1.1                           Q.E.D.
@@ -48,7 +48,7 @@ import Data.SBV.TP
 --     Step: 1.3.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] oddSequence
+-- [Proven] oddSequence1 :: Ɐn ∷ Integer → Bool
 oddSequence1 :: IO (Proof (Forall "n" Integer -> SBool))
 oddSequence1 = runTP $ do
   let s :: SInteger -> SInteger
@@ -59,7 +59,7 @@ oddSequence1 = runTP $ do
   -- z3 can't handle this, but CVC5 is proves it just fine.
   -- Note also that we do a "proof-by-contradiction," by deriving that
   -- the negation of the goal leads to falsehood.
-  sInductWith cvc5 "oddSequence"
+  sInductWith cvc5 "oddSequence1"
           (\(Forall n) -> n .>= 0 .=> sNot (2 `sDivides` s n))
           (Measure . abs) $
           \ih n -> [n .>= 0] |- 2 `sDivides` s n
@@ -95,7 +95,7 @@ oddSequence1 = runTP $ do
 --     Step: 1.3.2                                   Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
--- [Proven] oddSequence2
+-- [Proven] oddSequence2 :: Ɐn ∷ Integer → Bool
 oddSequence2 :: IO (Proof (Forall "n" Integer -> SBool))
 oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
   let s :: SInteger -> SInteger
@@ -272,7 +272,7 @@ won'tProve4 = runTP $ do
 --       Step: 1.2.2.5                     Q.E.D.
 --       Step: 1.2.2.6 (simplify)          Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] sumHalves
+-- [Proven] sumHalves :: Ɐxs ∷ [Integer] → Bool
 sumHalves :: IO (Proof (Forall "xs" [Integer] -> SBool))
 sumHalves = runTP $ do
 

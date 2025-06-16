@@ -58,7 +58,7 @@ import Data.SBV.TP
 --   Step: 2 (expand square)               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: sqrt2IsIrrational                Q.E.D.
--- [Proven] sqrt2IsIrrational
+-- [Proven] sqrt2IsIrrational :: Bool
 sqrt2IsIrrational :: IO (Proof SBool)
 sqrt2IsIrrational = runTP $ do
     let even, odd :: SInteger -> SBool

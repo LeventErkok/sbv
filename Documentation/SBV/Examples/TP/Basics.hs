@@ -216,8 +216,8 @@ noTerminationChecks = runTP $ do
 -- Falsifiable. Counter-example:
 --   xs = [14,11,14] :: [Integer]
 badRevLen :: forall a. SymVal a => Proxy a -> IO ()
-badRevLen p = runTP $
-   void $ lemma (atProxy p "badRevLen")
+badRevLen _ = runTP $
+   void $ lemma "badRevLen"
                 (\(Forall @"xs" (xs :: SList a)) -> length (reverse xs) .== ite (length xs .== 3) 5 (length xs))
                 []
 
