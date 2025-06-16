@@ -241,14 +241,14 @@ tailsAppend _ = do
 -- | @length xs == length (reverse xs)@
 --
 -- >>> runTP $ revLen (Proxy @Integer)
--- Inductive lemma: revLen @Integer
+-- Inductive lemma: revLen
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] revLen :: Proof (Forall "xs" [a] -> SBool)
+-- [Proven] revLen :: Ɐxs ∷ [Integer] → Boo
 revLen :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> SBool))
 revLen _ =
    induct "revLen"
@@ -264,7 +264,7 @@ revLen _ =
 -- | @reverse (xs ++ ys) .== reverse ys ++ reverse xs@
 --
 -- >>> runTP $ revApp (Proxy @Integer)
--- Inductive lemma: revApp @Integer
+-- Inductive lemma: revApp
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -272,7 +272,7 @@ revLen _ =
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] revApp @Integer
+-- [Proven] revApp :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 revApp :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 revApp _ =
    induct "revApp"
@@ -289,8 +289,8 @@ revApp _ =
 -- | @reverse (x:xs) == reverse xs ++ [x]@
 --
 -- >>> runTP $ revCons (Proxy @Integer)
--- Lemma: revCons @Integer                 Q.E.D.
--- [Proven] revCons @Integer
+-- Lemma: revCons                          Q.E.D.
+-- [Proven] revCons :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 revCons :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 revCons _ = lemma "revCons"
                   (\(Forall x) (Forall xs) -> reverse (x .: xs) .== reverse xs ++ [x])
@@ -307,8 +307,8 @@ revCons _ = lemma "revCons"
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: revSnoc @Integer                 Q.E.D.
--- [Proven] revSnoc @Integer
+-- Lemma: revSnoc                          Q.E.D.
+-- [Proven] revSnoc :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 revSnoc :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 revSnoc p = do
    ra <- revApp p
@@ -320,7 +320,7 @@ revSnoc p = do
 -- | @reverse (reverse xs) == xs@
 --
 -- >>> runTP $ revRev (Proxy @Integer)
--- Inductive lemma: revApp @Integer
+-- Inductive lemma: revApp
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -328,14 +328,14 @@ revSnoc p = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: revRev @Integer
+-- Inductive lemma: revRev
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] revRev @Integer
+-- [Proven] revRev :: Ɐxs ∷ [Integer] → Bool
 revRev :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> SBool))
 revRev p = do
 

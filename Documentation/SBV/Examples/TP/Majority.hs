@@ -99,7 +99,7 @@ howMany = TP.count
 -- Lemma: uniqueness @Integer
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
--- ([Proven] majority @Integer,[Proven] ifExistsFound @Integer,[Proven] ifNoMajority @Integer,[Proven] uniqueness @Integer)
+-- ([Proven] majority :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] ifExistsFound :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] ifNoMajority :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] uniqueness :: Ɐm1 ∷ Integer → Ɐm2 ∷ Integer → Ɐxs ∷ [Integer] → Bool)
 correctness :: forall a. SymVal a => Proxy a
             -> IO ( Proof (Forall "c" a -> Forall "xs" [a] -> SBool)                    -- If majority exists, the calculated value is majority
                   , Proof (Forall "c" a -> Forall "xs" [a] -> SBool)                    -- If majority exists, it is found
