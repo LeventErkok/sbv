@@ -18,6 +18,7 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeAbstractions           #-}
+{-# LANGUAGE TypeApplications           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -37,6 +38,9 @@ import Data.Time (NominalDiffTime)
 
 import Data.Tree
 import Data.Tree.View
+
+import Data.Proxy
+import Data.Typeable (typeOf, TypeRep)
 
 import Data.Char (isSpace)
 import Data.List (intercalate, isInfixOf, nubBy, partition, sort)
@@ -70,7 +74,7 @@ data TPStats = TPStats { noOfCheckSats :: Int
 
 -- | Extra state we carry in a TP context
 data TPState = TPState { stats      :: IORef TPStats
-                       , proofCache :: IORef (Map String ProofObj)
+                       , proofCache :: IORef (Map (String, TypeRep) ProofObj)
                        , config     :: SMTConfig
                        }
 
@@ -79,18 +83,21 @@ newtype TP a = TP (ReaderT TPState IO a)
             deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader TPState, MonadFail)
 
 -- | If caches are enabled, see if we cached this proof and return it; otherwise generate it, cache it, and return it
-withProofCache :: String -> TP (Proof a) -> TP (Proof a)
+withProofCache :: forall a. Typeable a => String -> TP (Proof a) -> TP (Proof a)
 withProofCache nm genProof = do
   TPState{proofCache, config = cfg@SMTConfig {tpOptions = TPOptions {cacheProofs}}} <- getTPState
+
+  let key = (nm, typeOf (Proxy @a))
+
   if not cacheProofs
      then genProof
      else do cache <- liftIO $ readIORef proofCache
-             case nm `Map.lookup` cache of
+             case key `Map.lookup` cache of
                Just prf -> do liftIO $ do tab <- startTP cfg False "Cached" 0 (TPProofOneShot nm [])
                                           finishTP cfg "Q.E.D." (tab, Nothing) []
                               pure $ Proof prf{isCached = True}
                Nothing  -> do p <- genProof
-                              liftIO $ modifyIORef' proofCache (Map.insert nm (proofOf p))
+                              liftIO $ modifyIORef' proofCache (Map.insert key (proofOf p))
                               pure p
 
 -- | The context in which we make a check-sat call
@@ -295,8 +302,8 @@ showProofTreeHTML compress mbCSS p = htmlTree mbCSS $ snd $ depsToTree compress 
         depCount n = "Has " ++ show n ++ " dependencies."
 
 -- | Show instance for t'Proof'
-instance Show (Proof a) where
-  show p@(Proof po@ProofObj{proofName = nm}) = '[' : sh (rootOfTrust p) ++ "] " ++ nm
+instance Typeable a => Show (Proof a) where
+  show p@(Proof po@ProofObj{proofName = nm}) = '[' : sh (rootOfTrust p) ++ "] " ++ nm ++ " :: " ++ show (typeOf p)
     where sh (RootOfTrust Nothing)   = "Proven" ++ cacheInfo
           sh (RootOfTrust (Just ps)) = "Modulo: " ++ join ps ++ cacheInfo
 
