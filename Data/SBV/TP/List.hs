@@ -248,7 +248,7 @@ tailsAppend _ = do
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] revLen :: Ɐxs ∷ [Integer] → Boo
+-- [Proven] revLen :: Ɐxs ∷ [Integer] → Bool
 revLen :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> SBool))
 revLen _ =
    induct "revLen"
@@ -299,7 +299,7 @@ revCons _ = lemma "revCons"
 -- | @reverse (xs ++ [x]) == x : reverse xs@
 --
 -- >>> runTP $ revSnoc (Proxy @Integer)
--- Inductive lemma: revApp @Integer
+-- Inductive lemma: revApp
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -355,8 +355,8 @@ revRev p = do
 -- | @length (x : xs) == 1 + length xs@
 --
 -- >>> runTP $ lengthTail (Proxy @Integer)
--- Lemma: lengthTail @Integer              Q.E.D.
--- [Proven] lengthTail @Integer
+-- Lemma: lengthTail                       Q.E.D.
+-- [Proven] lengthTail :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 lengthTail :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 lengthTail _ =
    lemma "lengthTail"
@@ -366,8 +366,8 @@ lengthTail _ =
 -- | @length (xs ++ ys) == length xs + length ys@
 --
 -- >>> runTP $ lenAppend (Proxy @Integer)
--- Lemma: lenAppend @Integer               Q.E.D.
--- [Proven] lenAppend @Integer
+-- Lemma: lenAppend                        Q.E.D.
+-- [Proven] lenAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 lenAppend :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 lenAppend _ =
    lemma "lenAppend"
@@ -377,8 +377,8 @@ lenAppend _ =
 -- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
 --
 -- >>> runTP $ lenAppend2 (Proxy @Integer)
--- Lemma: lenAppend2 @Integer              Q.E.D.
--- [Proven] lenAppend2 @Integer
+-- Lemma: lenAppend2 :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
+-- [Proven] lenAppend2 :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 lenAppend2 :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 lenAppend2 _ =
     lemma "lenAppend2"
@@ -529,14 +529,14 @@ mapReverse f = do
 -- | @map f . map g == map (f . g)@
 --
 -- >>> runTP $ mapCompose @Integer @Bool @String (uninterpret "f") (uninterpret "g")
--- Inductive lemma: mapCompose @(Integer,Bool,[Char])
+-- Inductive lemma: mapCompose
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] mapCompose @(Integer,Bool,[Char])
+-- [Proven] mapCompose :: Ɐxs ∷ [Integer] → Bool
 mapCompose :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> (SBV b -> SBV c) -> TP (Proof (Forall "xs" [a] -> SBool))
 mapCompose f g =
   induct "mapCompose"
@@ -552,14 +552,14 @@ mapCompose f g =
 -- | @foldr f a . map g == foldr (f . g) a@
 --
 -- >>> runTP $ foldrMapFusion @String @Bool @Integer (uninterpret "a") (uninterpret "b") (uninterpret "c")
--- Inductive lemma: foldrMapFusion @([Char],Bool,Integer)
+-- Inductive lemma: foldrMapFusion
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] foldrMapFusion @([Char],Bool,Integer)
+-- [Proven] foldrMapFusion :: Ɐxs ∷ [[Char]] → Bool
 foldrMapFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV c -> (SBV a -> SBV b) -> (SBV b -> SBV c -> SBV c) -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrMapFusion a g f =
   induct "foldrMapFusion"
@@ -580,14 +580,14 @@ foldrMapFusion a g f =
 -- @
 --
 -- >>> runTP $ foldrFusion @String @Bool @Integer (uninterpret "a") (uninterpret "b") (uninterpret "f") (uninterpret "g") (uninterpret "h")
--- Inductive lemma: foldrFusion @([Char],Bool,Integer)
+-- Inductive lemma: foldrFusion
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] foldrFusion @([Char],Bool,Integer)
+-- [Proven] foldrFusion :: Ɐxs ∷ [[Char]] → Bool
 foldrFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV c -> SBV b -> (SBV c -> SBV b) -> (SBV a -> SBV c -> SBV c) -> (SBV a -> SBV b -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrFusion a b f g h = do
    let -- Assumptions under which the equality holds
@@ -607,14 +607,14 @@ foldrFusion a b f g h = do
 -- | @foldr f a (xs ++ ys) == foldr f (foldr f a ys) xs@
 --
 -- >>> runTP $ foldrOverAppend @Integer (uninterpret "a") (uninterpret "f")
--- Inductive lemma: foldrOverAppend @Integer
+-- Inductive lemma: foldrOverAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] foldrOverAppend @Integer
+-- [Proven] foldrOverAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 foldrOverAppend :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 foldrOverAppend a f =
    induct "foldrOverAppend"
@@ -630,13 +630,13 @@ foldrOverAppend a f =
 -- | @foldl f e (xs ++ ys) == foldl f (foldl f e xs) ys@
 --
 -- >>> runTP $ foldlOverAppend @Integer @Bool (uninterpret "f")
--- Inductive lemma: foldlOverAppend @(Integer,Bool)
+-- Inductive lemma: foldlOverAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] foldlOverAppend @(Integer,Bool)
+-- [Proven] foldlOverAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Ɐe ∷ Bool → Bool
 foldlOverAppend :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "e" b -> SBool))
 foldlOverAppend f =
    induct "foldlOverAppend"
@@ -653,13 +653,13 @@ foldlOverAppend f =
 -- | @foldr f e xs == foldl (flip f) e (reverse xs)@
 --
 -- >>> runTP $ foldrFoldlDuality @Integer @String (uninterpret "f")
--- Inductive lemma: foldlOverAppend @(Integer,[Char])
+-- Inductive lemma: foldlOverAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: foldrFoldlDuality @(Integer,[Char])
+-- Inductive lemma: foldrFoldlDuality
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -668,7 +668,7 @@ foldlOverAppend f =
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] foldrFoldlDuality @(Integer,[Char])
+-- [Proven] foldrFoldlDuality :: Ɐxs ∷ [Integer] → Ɐe ∷ [Char] → Bool
 foldrFoldlDuality :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "e" b -> SBool))
 foldrFoldlDuality f = do
    foa <- foldlOverAppend (flip f)
@@ -703,14 +703,14 @@ foldrFoldlDuality f = do
 -- @
 --
 -- >>> runTP $ foldrFoldlDualityGeneralized @Integer (uninterpret "e") (uninterpret "|@|")
--- Inductive lemma: helper @Integer
+-- Inductive lemma: helper
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: foldrFoldlDuality @Integer
+-- Inductive lemma: foldrFoldlDuality
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -719,7 +719,7 @@ foldrFoldlDuality f = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] foldrFoldlDuality @Integer
+-- [Proven] foldrFoldlDuality :: Ɐxs ∷ [Integer] → Bool
 foldrFoldlDualityGeneralized :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrFoldlDualityGeneralized e (@) = do
    -- Assumptions under which the equality holds
@@ -772,14 +772,14 @@ foldrFoldlDualityGeneralized e (@) = do
 -- In Bird's Introduction to Functional Programming book (2nd edition) this is called the second duality theorem:
 --
 -- >>> runTP $ foldrFoldl @Integer @String (uninterpret "<+>") (uninterpret "<*>") (uninterpret "e")
--- Inductive lemma: foldl over <*>/<+> @(Integer,[Char])
+-- Inductive lemma: foldl over <*>/<+>
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: foldrFoldl @(Integer,[Char])
+-- Inductive lemma: foldrFoldl
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -787,7 +787,7 @@ foldrFoldlDualityGeneralized e (@) = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] foldrFoldl @(Integer,[Char])
+-- [Proven] foldrFoldl :: Ɐxs ∷ [Integer] → Bool
 foldrFoldl :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> (SBV b -> SBV a -> SBV b) -> SBV b-> TP (Proof (Forall "xs" [a] -> SBool))
 foldrFoldl (<+>) (<*>) e = do
    -- Assumptions about the operators
@@ -969,13 +969,13 @@ filterConcat p = do
 -- | @(as ++ bs) \\ cs == (as \\ cs) ++ (bs \\ cs)@
 --
 -- >>> runTP $ appendDiff (Proxy @Integer)
--- Inductive lemma: appendDiff @Integer
+-- Inductive lemma: appendDiff
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] appendDiff @Integer
+-- [Proven] appendDiff 
 appendDiff :: forall a. (Eq a, SymVal a) => Proxy a -> TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
 appendDiff _ =
    induct "appendDiff"
@@ -1316,8 +1316,8 @@ length_take _ =
 -- | @n >= 0 ==> length (drop n xs) == (length xs - n) \`max\` 0@
 --
 -- >>> runTP $ length_drop (Proxy @Integer)
--- Lemma: length_drop @Integer             Q.E.D.
--- [Proven] length_drop @Integer
+-- Lemma: length_drop                      Q.E.D.
+-- [Proven] length_drop :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 length_drop :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 length_drop _ =
      lemma "length_drop"
@@ -1327,8 +1327,8 @@ length_drop _ =
 -- | @length xs \<= n ==\> take n xs == xs@
 --
 -- >>> runTP $ take_all (Proxy @Integer)
--- Lemma: take_all @Integer                Q.E.D.
--- [Proven] take_all @Integer
+-- Lemma: take_all                         Q.E.D.
+-- [Proven] take_all :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_all :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_all _ =
     lemma "take_all"
@@ -1338,8 +1338,8 @@ take_all _ =
 -- | @length xs \<= n ==\> drop n xs == nil@
 --
 -- >>> runTP $ drop_all (Proxy @Integer)
--- Lemma: drop_all @Integer                Q.E.D.
--- [Proven] drop_all @Integer
+-- Lemma: drop_all                         Q.E.D.
+-- [Proven] drop_all :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_all :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_all _ =
     lemma "drop_all"
@@ -1349,8 +1349,8 @@ drop_all _ =
 -- | @take n (xs ++ ys) == (take n xs ++ take (n - length xs) ys)@
 --
 -- >>> runTP $ take_append (Proxy @Integer)
--- Lemma: take_append @Integer             Q.E.D.
--- [Proven] take_append @Integer
+-- Lemma: take_append                      Q.E.D.
+-- [Proven] take_append :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 take_append :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 take_append _ = lemmaWith cvc5 "take_append"
                   (\(Forall n) (Forall xs) (Forall ys) -> take n (xs ++ ys) .== take n xs ++ take (n - length xs) ys)
@@ -1361,8 +1361,8 @@ take_append _ = lemmaWith cvc5 "take_append"
 -- NB. As of Feb 2025, z3 struggles to prove this, but cvc5 gets it out-of-the-box.
 --
 -- >>> runTP $ drop_append (Proxy @Integer)
--- Lemma: drop_append @Integer             Q.E.D.
--- [Proven] drop_append @Integer
+-- Lemma: drop_append                      Q.E.D.
+-- [Proven] drop_append :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 drop_append :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 drop_append _ =
     lemmaWith cvc5 "drop_append"
