@@ -111,8 +111,8 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 --   Step: 4                                    Q.E.D.
 --   Step: 5                                    Q.E.D.
 --   Result:                                    Q.E.D.
--- Lemma: insertionSortIsCorrect @Integer       Q.E.D.
--- [Proven] insertionSortIsCorrect @Integer
+-- Lemma: insertionSortIsCorrect                Q.E.D.
+-- [Proven] insertionSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
 correctness _ = runTPWith (tpRibbon 45 cvc5) $ do
 

@@ -106,7 +106,7 @@ inArray arr (low, high) elt = quantifiedBool $ \(Exists @"i" i) -> low .<= i .&&
 --     Step: 1.2.2                                   Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
--- [Proven] bsearchCorrect
+-- [Proven] bsearchCorrect :: Ɐarr ∷ (ArrayModel Integer Integer) → Ɐlo ∷ Integer → Ɐhi ∷ Integer → Ɐx ∷ Integer → Bool
 correctness :: IO (Proof (Forall "arr" (ArrayModel Integer Integer) -> Forall "lo" Integer -> Forall "hi" Integer -> Forall "x" Integer -> SBool))
 correctness = runTPWith (tpRibbon 50 cvc5) $ do
 

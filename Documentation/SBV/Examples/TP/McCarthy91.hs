@@ -52,7 +52,7 @@ spec91 n = ite (n .> 100) (n - 10) 91
 --     Step: 1.3                           Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] mcCarthy91
+-- [Proven] mcCarthy91 :: Ɐn ∷ Integer → Bool
 correctness :: IO (Proof (Forall "n" Integer -> SBool))
 correctness = runTP $ do
 

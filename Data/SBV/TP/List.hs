@@ -388,7 +388,7 @@ lenAppend2 _ =
 -- | @length (replicate k x) == max (0, k)@
 --
 -- >>> runTP $ replicateLength (Proxy @Integer)
--- Inductive lemma: replicateLength @Integer
+-- Inductive lemma: replicateLength
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1                           Q.E.D.
@@ -398,7 +398,7 @@ lenAppend2 _ =
 --     Step: 1.2.4                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] replicateLength @Integer
+-- [Proven] replicateLength :: Ɐk ∷ Integer → Ɐx ∷ Integer → Bool
 replicateLength :: forall a. SymVal a => Proxy a -> TP (Proof (Forall "k" Integer -> Forall "x" a -> SBool))
 replicateLength _ =
    induct "replicateLength"
@@ -425,7 +425,7 @@ replicateLength _ =
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] allAny
+-- [Proven] allAny :: Ɐxs ∷ [Bool] → Bool
 allAny :: TP (Proof (Forall "xs" [Bool] -> SBool))
 allAny = induct "allAny"
                 (\(Forall xs) -> sNot (all id xs) .== any sNot xs) $
@@ -440,14 +440,14 @@ allAny = induct "allAny"
 -- | @f == g ==> map f xs == map g xs@
 --
 -- >>> runTP $ mapEquiv @Integer @Integer (uninterpret "f") (uninterpret "g")
--- Inductive lemma: mapEquiv @(Integer,Integer)
+-- Inductive lemma: mapEquiv
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] mapEquiv @(Integer,Integer)
+-- [Proven] mapEquiv :: Ɐxs ∷ [Integer] → Bool
 mapEquiv :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
 mapEquiv f g = do
    let f'eq'g :: SBool
@@ -466,7 +466,7 @@ mapEquiv f g = do
 -- | @map f (xs ++ ys) == map f xs ++ map f ys@
 --
 -- >>> runTP $ mapAppend @Integer @Integer (uninterpret "f")
--- Inductive lemma: mapAppend @(Integer,Integer)
+-- Inductive lemma: mapAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -474,7 +474,7 @@ mapEquiv f g = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] mapAppend @(Integer,Integer)
+-- [Proven] mapAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 mapAppend :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 mapAppend f =
    induct "mapAppend"
@@ -491,7 +491,7 @@ mapAppend f =
 -- | @map f . reverse == reverse . map f@
 --
 -- >>> runTP $ mapReverse @Integer @String (uninterpret "f")
--- Inductive lemma: mapAppend @(Integer,[Char])
+-- Inductive lemma: mapAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -499,7 +499,7 @@ mapAppend f =
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: mapReverse @(Integer,[Char])
+-- Inductive lemma: mapReverse
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -508,7 +508,7 @@ mapAppend f =
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] mapReverse @(Integer,[Char])
+-- [Proven] mapReverse :: Ɐxs ∷ [Integer] → Bool
 mapReverse :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
 mapReverse f = do
      mApp <- mapAppend f

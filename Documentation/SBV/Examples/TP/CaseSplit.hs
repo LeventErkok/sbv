@@ -31,7 +31,7 @@ import Data.SBV.TP
 --     Step: 1.3                           Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] notDiv3
+-- [Proven] notDiv3 :: Ɐn ∷ Integer → Bool
 notDiv3 :: IO (Proof (Forall "n" Integer -> SBool))
 notDiv3 = runTP $ do
 
