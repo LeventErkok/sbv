@@ -79,7 +79,7 @@ howMany = TP.count
 -- The conclusion states that @majority c i x@ is @e@. We have:
 --
 -- >>> correctness  (Proxy @Integer)
--- Inductive lemma: majorityGeneral @Integer
+-- Inductive lemma: majorityGeneral
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                         Q.E.D.
@@ -93,10 +93,10 @@ howMany = TP.count
 --       Step: 1.2.2.Completeness          Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: majority @Integer                Q.E.D.
--- Lemma: ifExistsFound @Integer           Q.E.D.
--- Lemma: ifNoMajority @Integer            Q.E.D.
--- Lemma: uniqueness @Integer
+-- Lemma: majority                         Q.E.D.
+-- Lemma: ifExistsFound                    Q.E.D.
+-- Lemma: ifNoMajority                     Q.E.D.
+-- Lemma: uniqueness
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- ([Proven] majority :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] ifExistsFound :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] ifNoMajority :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] uniqueness :: Ɐm1 ∷ Integer → Ɐm2 ∷ Integer → Ɐxs ∷ [Integer] → Bool)
