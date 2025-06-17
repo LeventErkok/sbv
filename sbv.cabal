@@ -75,6 +75,7 @@ common common-settings
                      TupleSections
                      TypeApplications
                      TypeFamilies
+                     TypeFamilyDependencies
                      TypeOperators
                      UndecidableInstances
                      ViewPatterns
