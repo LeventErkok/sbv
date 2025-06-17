@@ -27,6 +27,7 @@ import Data.SBV.TP
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XScopedTypeVariables
+-- >>> import Data.SBV.TP
 -- >>> import Control.Exception
 #endif
 
@@ -34,7 +35,7 @@ import Data.SBV.TP
 --
 -- We have:
 --
--- >>> sumConstProof
+-- >>> runTP sumConstProof
 -- Inductive lemma: sumConst_correct
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -44,8 +45,8 @@ import Data.SBV.TP
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumConst_correct :: Ɐn ∷ Integer → Bool
-sumConstProof :: IO (Proof (Forall "n" Integer -> SBool))
-sumConstProof = runTP $ do
+sumConstProof :: TP (Proof (Forall "n" Integer -> SBool))
+sumConstProof = do
    let c :: SInteger
        c = uninterpret "c"
 
@@ -67,7 +68,7 @@ sumConstProof = runTP $ do
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
--- >>> sumProof
+-- >>> runTP sumProof
 -- Inductive lemma: sum_correct
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -75,19 +76,16 @@ sumConstProof = runTP $ do
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sum_correct :: Ɐn ∷ Integer → Bool
-sumProof :: IO (Proof (Forall "n" Integer -> SBool))
-sumProof = runTP $ do
+sumProof :: TP (Proof (Forall "n" Integer -> SBool))
+sumProof = do
    let sum :: SInteger -> SInteger
        sum = smtFunction "sum" $ \n -> ite (n .<= 0) 0 (n + sum (n - 1))
 
        spec :: SInteger -> SInteger
-       spec n = (n * (n+1)) `sDiv` 2
-
-       p :: SInteger -> SBool
-       p n = sum n .== spec n
+       spec n = (n * (n+1)) `sEDiv` 2
 
    induct "sum_correct"
-          (\(Forall n) -> n .>= 0 .=> p n) $
+          (\(Forall n) -> n .>= 0 .=> sum n .== spec n) $
           \ih n -> [n .>= 0] |- sum (n+1)
                              =: n+1 + sum n  ?? ih
                              =: n+1 + spec n
@@ -96,7 +94,7 @@ sumProof = runTP $ do
 
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
 --
--- >>> sumSquareProof
+-- >>> runTP sumSquareProof
 -- Inductive lemma: sumSquare_correct
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -104,19 +102,16 @@ sumProof = runTP $ do
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumSquare_correct :: Ɐn ∷ Integer → Bool
-sumSquareProof :: IO (Proof (Forall "n" Integer -> SBool))
-sumSquareProof = runTP $ do
+sumSquareProof :: TP (Proof (Forall "n" Integer -> SBool))
+sumSquareProof = do
    let sumSquare :: SInteger -> SInteger
        sumSquare = smtFunction "sumSquare" $ \n -> ite (n .<= 0) 0 (n * n + sumSquare (n - 1))
 
        spec :: SInteger -> SInteger
-       spec n = (n * (n+1) * (2*n+1)) `sDiv` 6
-
-       p :: SInteger -> SBool
-       p n = sumSquare n .== spec n
+       spec n = (n * (n+1) * (2*n+1)) `sEDiv` 6
 
    induct "sumSquare_correct"
-          (\(Forall @"n" n) -> n .>= 0 .=> p n) $
+          (\(Forall @"n" n) -> n .>= 0 .=> sumSquare n .== spec n) $
           \ih n -> [n .>= 0] |- sumSquare (n+1)
                              =: (n+1)*(n+1) + sumSquare n ?? ih
                              =: (n+1)*(n+1) + spec n
@@ -129,7 +124,7 @@ sumSquareProof = runTP $ do
 --
 -- We have:
 --
--- >>> elevenMinusFour
+-- >>> runTP elevenMinusFour
 -- Lemma: powN                             Q.E.D.
 -- Inductive lemma: elevenMinusFour
 --   Step: Base                            Q.E.D.
@@ -143,8 +138,8 @@ sumSquareProof = runTP $ do
 --   Step: 8                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] elevenMinusFour :: Ɐn ∷ Integer → Bool
-elevenMinusFour :: IO (Proof (Forall "n" Integer -> SBool))
-elevenMinusFour = runTP $ do
+elevenMinusFour :: TP (Proof (Forall "n" Integer -> SBool))
+elevenMinusFour = do
    let pow :: SInteger -> SInteger -> SInteger
        pow = smtFunction "pow" $ \x y -> ite (y .== 0) 1 (x * pow x (y - 1))
 
