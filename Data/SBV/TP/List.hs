@@ -1379,7 +1379,7 @@ drop_append _ =
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] map_fst_zip :: ((Ɐxs ∷ [Integer]) , (Ɐys ∷ [Integer])) → Bool
+-- [Proven] map_fst_zip :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_fst_zip :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_fst_zip _ =
    induct "map_fst_zip"
@@ -1403,7 +1403,7 @@ map_fst_zip _ =
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] map_snd_zip :: ((Ɐxs ∷ [Integer]) , (Ɐys ∷ [Integer])) → Bool
+-- [Proven] map_snd_zip :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_snd_zip :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_snd_zip _ =
    induct "map_snd_zip"
@@ -1429,7 +1429,7 @@ map_snd_zip _ =
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] map_fst_zip_take :: ((Ɐxs ∷ [Integer]) , (Ɐys ∷ [Integer])) → Bool
+-- [Proven] map_fst_zip_take :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_fst_zip_take :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_fst_zip_take _ = do
    tc <- take_cons (Proxy @a)
@@ -1458,7 +1458,7 @@ map_fst_zip_take _ = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] map_snd_zip_take :: ((Ɐxs ∷ [Integer]) , (Ɐys ∷ [Integer])) → Bool
+-- [Proven] map_snd_zip_take :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_snd_zip_take :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_snd_zip_take _ = do
    tc <- take_cons (Proxy @a)

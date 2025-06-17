@@ -320,16 +320,24 @@ instance Typeable a => Show (Proof a) where
           -- More mathematical notation for types.
           pretty :: String -> String
           pretty = unwords . walk . words . concatMap (\c -> if c == ',' then " , " else [c]) . clean
-            where walk ("SBV"    : "Bool" : rest) = walk $ "Bool"                   : rest
-                  walk ("Forall" : xs     : rest) = walk $ ('Ɐ' : unQuote xs) : "∷" : rest
-                  walk ("Exists" : xs     : rest) = walk $ ('∃' : unQuote xs) : "∷" : rest
-                  walk ("->"              : rest) = walk $ "→"                      : rest
+            where fa v = ['Ɐ' : unQuote v, "∷"]
+                  ex v = ['∃' : unQuote v, "∷"]
+
+                  walk ("SBV"    : "Bool" : rest) = walk $ "Bool" :  rest
+                  walk ("Forall" : xs     : rest) = walk $ fa xs  ++ rest
+                  walk ("Exists" : xs     : rest) = walk $ ex xs  ++ rest
+                  walk ("->"              : rest) = walk $ "→"    :  rest
 
                   -- handle the double case. This isn't quite solid, but it does the trick.
-                  walk ("((Forall" : xs : t1 : "," : "(Forall" : ys : t2 : rest)
-                     = words (unwords (("((Ɐ" ++ unQuote xs) : " ∷ " : t1 : (", (Ɐ" ++ unQuote ys) : " ∷ " : [t2]))
-                     ++ walk rest
+                  walk ("((Forall" : xs : t1 : "," : "(Forall" : ys : t2 : rest) = ap (fa xs) ++ [np t1 ++ ","] ++ fa ys ++ [np t2] ++ walk rest
+                     where -- remove a closing paren from the end if it's there
+                           np s | ")" `isSuffixOf` s = init s
+                                | True               = s
+                           -- add open paren to the first word
+                           ap (t : ts) = ('(':t) : ts
+                           ap []       = []
 
+                  -- Otherwise, pass along
                   walk (c : cs) = c : walk cs
                   walk []       = []
 
