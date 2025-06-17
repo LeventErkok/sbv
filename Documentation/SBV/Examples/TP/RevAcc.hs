@@ -22,7 +22,6 @@
 module Documentation.SBV.Examples.TP.RevAcc where
 
 import Prelude hiding (head, tail, null, reverse, (++))
-import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List
@@ -58,8 +57,8 @@ rev = revAcc []
 --   Result:                               Q.E.D.
 -- Lemma: revCorrect                       Q.E.D.
 -- [Proven] revCorrect :: Ɐxs ∷ [Integer] → Bool
-correctness :: forall a. SymVal a => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
-correctness _ = runTP $ do
+correctness :: forall a. SymVal a => IO (Proof (Forall "xs" [a] -> SBool))
+correctness = runTP $ do
 
   -- Helper lemma regarding 'revAcc'
   helper <- induct "revAccCorrect"
