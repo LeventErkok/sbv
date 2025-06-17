@@ -28,7 +28,8 @@
       - Documentation.SBV.Examples.TP.Majority:   Proof of Boyer-Moore's majority selection algorithm correct.
       - Documentation.SBV.Examples.TP.McCarthy91: Proof of correctness for McCarthy's 91 function.
       - Documentation.SBV.Examples.TP.PowerMod:   Proving arithmetic properties relating power operation and modular arithmetic.
-      - Documentation.SBV.Examples.TP.Reverse:    Proving a definition of reverse that uses no auxiliary definitions correct.
+      - Documentation.SBV.Examples.TP.ReverseAcc: Proving the accummulating reverse definition is correct.
+      - Documentation.SBV.Examples.TP.Reverse:    Proving a definition of reverse that uses no auxiliary definitions is correct.
       - Documentation.SBV.Examples.TP.SumReverse: Proving summing a list and its reverse are equivalent.
 
   * Remove Data.SBV.Tools.NaturalInduction. The functionality provided by this tool is much better
