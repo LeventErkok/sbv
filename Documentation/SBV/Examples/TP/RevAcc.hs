@@ -27,12 +27,6 @@ import Data.SBV
 import Data.SBV.List
 import Data.SBV.TP
 
-#ifdef DOCTEST
--- $setup
--- >>> :set -XTypeApplications
--- >>> import Data.Proxy
-#endif
-
 -- * Reversing with an accummulator.
 
 -- | Accummulating reverse.
@@ -47,7 +41,7 @@ rev = revAcc []
 
 -- | Correctness the function 'rev'. We have:
 --
--- >>> correctness (Proxy @Integer)
+-- >>> correctness @Integer
 -- Inductive lemma: revAccCorrect
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.

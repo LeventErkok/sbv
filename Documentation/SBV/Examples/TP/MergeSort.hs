@@ -21,7 +21,6 @@
 module Documentation.SBV.Examples.TP.MergeSort where
 
 import Prelude hiding (null, length, head, tail, elem, splitAt, (++), take, drop)
-import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List
@@ -33,7 +32,6 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XTypeApplications
--- >>> import Data.Proxy
 #endif
 
 -- * Merge sort
@@ -58,7 +56,7 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 --
 -- We have:
 --
--- >>> correctness (Proxy @Integer)
+-- >>> correctness @Integer
 -- Lemma: nonDecrInsert                                        Q.E.D.
 -- Inductive lemma: countAppend
 --   Step: Base                                                Q.E.D.
@@ -122,8 +120,8 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 --   Result:                                                   Q.E.D.
 -- Lemma: mergeSortIsCorrect                                   Q.E.D.
 -- [Proven] mergeSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
-correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
-correctness _ = runTPWith (tpRibbon 60 z3) $ do
+correctness :: forall a. (Ord a, SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
+correctness = runTPWith (tpRibbon 60 z3) $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions
@@ -132,8 +130,8 @@ correctness _ = runTPWith (tpRibbon 60 z3) $ do
         isPermutation = SH.isPermutation @a
         count         = TP.count         @a
 
-    nonDecrIns    <- SH.nonDecrIns    (Proxy @a)
-    takeDropCount <- TP.takeDropCount (Proxy @a)
+    nonDecrIns    <- SH.nonDecrIns    @a
+    takeDropCount <- TP.takeDropCount @a
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is non-decreasing.

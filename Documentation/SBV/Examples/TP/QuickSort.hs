@@ -25,7 +25,6 @@ module Documentation.SBV.Examples.TP.QuickSort where
 
 import Prelude hiding (null, length, (++), tail, all, fst, snd, elem)
 import Control.Monad.Trans (liftIO)
-import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List hiding (partition)
@@ -38,7 +37,6 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XTypeApplications
--- >>> import Data.Proxy
 #endif
 
 -- * Quick sort
@@ -69,7 +67,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --
 -- We have:
 --
--- >>> correctness (Proxy @Integer)
+-- >>> correctness @Integer
 -- Inductive lemma: countAppend
 --   Step: Base                                                Q.E.D.
 --   Step: 1                                                   Q.E.D.
@@ -258,8 +256,8 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     │  └╴sublistIfPerm
 --     └╴nonDecreasingMerge
 -- [Proven] quickSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
-correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
-correctness p = runTPWith (tpRibbon 60 z3) $ do
+correctness :: forall a. (Ord a, SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
+correctness = runTPWith (tpRibbon 60 z3) $ do
 
   --------------------------------------------------------------------------------------------
   -- Part I. Import helper lemmas, definitions
@@ -269,10 +267,10 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
       nonDecreasing = SH.nonDecreasing @a
       sublist       = SH.sublist       @a
 
-  countAppend   <- TP.countAppend   p
-  sublistElem   <- SH.sublistElem   p
-  sublistTail   <- SH.sublistTail   p
-  sublistIfPerm <- SH.sublistIfPerm p
+  countAppend   <- TP.countAppend   @a
+  sublistElem   <- SH.sublistElem   @a
+  sublistTail   <- SH.sublistTail   @a
+  sublistIfPerm <- SH.sublistIfPerm @a
 
   ---------------------------------------------------------------------------------------------------
   -- Part II. Formalizing less-than/greater-than-or-equal over lists and relationship to permutations

@@ -25,7 +25,6 @@ import Data.SBV
 import Data.SBV.List
 import Data.SBV.TP
 
-import Data.Proxy
 import Control.Monad (void)
 
 #ifdef DOCTEST
@@ -34,7 +33,6 @@ import Control.Monad (void)
 -- >>> :set -XTypeApplications
 -- >>> import Data.SBV
 -- >>> import Data.SBV.TP
--- >>> import Data.Proxy
 -- >>> import Control.Exception
 #endif
 
@@ -210,15 +208,15 @@ noTerminationChecks = runTP $ do
 --
 -- @length xs == ite (length xs .== 3) 5 (length xs)@
 --
--- >>> badRevLen (Proxy @Integer) `catch` (\(_ :: SomeException) -> pure ())
+-- >>> badRevLen `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: badRevLen
 -- *** Failed to prove badRevLen.
 -- Falsifiable. Counter-example:
 --   xs = [14,11,14] :: [Integer]
-badRevLen :: forall a. SymVal a => Proxy a -> IO ()
-badRevLen _ = runTP $
+badRevLen :: IO ()
+badRevLen = runTP $
    void $ lemma "badRevLen"
-                (\(Forall @"xs" (xs :: SList a)) -> length (reverse xs) .== ite (length xs .== 3) 5 (length xs))
+                (\(Forall @"xs" (xs :: SList Integer)) -> length (reverse xs) .== ite (length xs .== 3) 5 (length xs))
                 []
 
 -- | It is instructive to see what kind of counter-example we get if a lemma fails to prove.

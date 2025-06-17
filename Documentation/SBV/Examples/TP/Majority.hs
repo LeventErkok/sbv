@@ -25,16 +25,8 @@ import Prelude hiding (null, length)
 import Data.SBV
 import Data.SBV.List
 
-import Data.Proxy
-
 import Data.SBV.TP
 import qualified Data.SBV.TP.List as TP
-
-#ifdef DOCTEST
--- $setup
--- >>> :set -XTypeApplications
--- >>> import Data.Proxy
-#endif
 
 -- * Calculating majority
 
@@ -78,7 +70,7 @@ howMany = TP.count
 --
 -- The conclusion states that @majority c i x@ is @e@. We have:
 --
--- >>> correctness  (Proxy @Integer)
+-- >>> correctness @Integer
 -- Inductive lemma: majorityGeneral
 --   Step: Base                            Q.E.D.
 --   Step: 1 (2 way case split)
@@ -100,13 +92,13 @@ howMany = TP.count
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- ([Proven] majority :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] ifExistsFound :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] ifNoMajority :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] uniqueness :: Ɐm1 ∷ Integer → Ɐm2 ∷ Integer → Ɐxs ∷ [Integer] → Bool)
-correctness :: forall a. SymVal a => Proxy a
-            -> IO ( Proof (Forall "c" a -> Forall "xs" [a] -> SBool)                    -- If majority exists, the calculated value is majority
+correctness :: forall a. SymVal a
+            => IO ( Proof (Forall "c" a -> Forall "xs" [a] -> SBool)                    -- If majority exists, the calculated value is majority
                   , Proof (Forall "c" a -> Forall "xs" [a] -> SBool)                    -- If majority exists, it is found
                   , Proof (Forall "c" a -> Forall "xs" [a] -> SBool)                    -- If returned value isn't majority, then no majority exists
                   , Proof (Forall "m1" a -> Forall "m2" a  -> Forall "xs" [a] -> SBool) -- Uniqueness: If there are two majorities, they're the same
                   )
-correctness _ = runTP $ do
+correctness = runTP $ do
 
   -- Helper definition
   let isMajority :: SBV a -> SList a -> SBool

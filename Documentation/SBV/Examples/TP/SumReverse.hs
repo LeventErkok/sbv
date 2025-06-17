@@ -27,18 +27,16 @@ import Data.SBV
 import Data.SBV.TP
 import Data.SBV.List
 
-import Data.Proxy
 
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XFlexibleContexts
 -- >>> :set -XTypeApplications
--- >>> import Data.Proxy
 #endif
 
 -- | @sum (reverse xs) = sum xs@
 --
--- >>> revSum (Proxy @Integer)
+-- >>> revSum @Integer
 -- Inductive lemma: sumAppend
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -54,8 +52,8 @@ import Data.Proxy
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumReverse :: Ɐxs ∷ [Integer] → Bool
-revSum :: forall a. (SymVal a, Num (SBV a)) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
-revSum _ = runTP $ do
+revSum :: forall a. (SymVal a, Num (SBV a)) => IO (Proof (Forall "xs" [a] -> SBool))
+revSum = runTP $ do
 
   -- helper: sum distributes over append.
   sumAppend <-

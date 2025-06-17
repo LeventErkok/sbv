@@ -26,7 +26,6 @@
 module Documentation.SBV.Examples.TP.Reverse where
 
 import Prelude hiding (head, tail, null, reverse, length, init, last, (++))
-import Data.Proxy
 
 import Data.SBV
 import Data.SBV.List hiding (partition)
@@ -37,7 +36,6 @@ import qualified Data.SBV.TP.List as TP
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XTypeApplications
--- >>> import Data.Proxy
 #endif
 
 -- * Reversing with no auxiliaries
@@ -55,7 +53,7 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 
 -- | Correctness the function 'rev'. We have:
 --
--- >>> correctness (Proxy @Integer)
+-- >>> correctness @Integer
 -- Inductive lemma: revLen
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -117,14 +115,14 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --       Step: 1.2.2.14                    Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] revCorrect :: Ɐxs ∷ [Integer] → Bool
-correctness :: forall a. SymVal a => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
-correctness p = runTP $ do
+correctness :: forall a. SymVal a => IO (Proof (Forall "xs" [a] -> SBool))
+correctness = runTP $ do
 
   -- Import a few helpers from "Data.SBV.TP.List"
-  revLen  <- TP.revLen  p
-  revApp  <- TP.revApp  p
-  revSnoc <- TP.revSnoc p
-  revRev  <- TP.revRev  p
+  revLen  <- TP.revLen  @a
+  revApp  <- TP.revApp  @a
+  revSnoc <- TP.revSnoc @a
+  revRev  <- TP.revRev  @a
 
   sInductWith cvc5 "revCorrect"
     (\(Forall xs) -> rev xs .== reverse xs)

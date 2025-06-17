@@ -26,14 +26,11 @@ import Data.SBV
 import Data.SBV.List
 import Data.SBV.TP
 
-import Data.Proxy
-
 import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XTypeApplications
--- >>> import Data.Proxy
 #endif
 
 -- * Insertion sort
@@ -72,7 +69,7 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 --
 -- We have:
 --
--- >>> correctness (Proxy @Integer)
+-- >>> correctness @Integer
 -- Lemma: nonDecrTail                           Q.E.D.
 -- Inductive lemma: insertNonDecreasing
 --   Step: Base                                 Q.E.D.
@@ -113,15 +110,15 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 --   Result:                                    Q.E.D.
 -- Lemma: insertionSortIsCorrect                Q.E.D.
 -- [Proven] insertionSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
-correctness :: forall a. (Ord a, SymVal a) => Proxy a -> IO (Proof (Forall "xs" [a] -> SBool))
-correctness _ = runTPWith (tpRibbon 45 cvc5) $ do
+correctness :: forall a. (Ord a, SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
+correctness = runTPWith (tpRibbon 45 cvc5) $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions
     --------------------------------------------------------------------------------------------
     let nonDecreasing = SH.nonDecreasing @a
 
-    nonDecrTail <- SH.nonDecrTail (Proxy @a)
+    nonDecrTail <- SH.nonDecrTail @a
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of insertion sort is non-decreasing.
