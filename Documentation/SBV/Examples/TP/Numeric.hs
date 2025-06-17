@@ -124,6 +124,9 @@ sumSquareProof = do
                              =: spec (n+1)
                              =: qed
 
+
+-- * Exponents and divisibility by 7
+
 -- | Prove that @11^n - 4^n@ is always divisible by 7.
 --
 -- NB. As of Feb 2025, z3 struggles with the inductive step in this proof, but cvc5 performs just fine.
