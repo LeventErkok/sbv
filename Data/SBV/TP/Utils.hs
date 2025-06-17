@@ -318,11 +318,16 @@ instance Typeable a => Show (Proof a) where
 
           -- More mathematical notation for types.
           pretty :: String -> String
-          pretty = unwords . walk . words . clean
+          pretty = unwords . walk . words . concatMap (\c -> if c == ',' then " , " else [c]) . clean
             where walk ("SBV"    : "Bool" : rest) = walk $ "Bool"                   : rest
                   walk ("Forall" : xs     : rest) = walk $ ('Ɐ' : unQuote xs) : "∷" : rest
                   walk ("Exists" : xs     : rest) = walk $ ('∃' : unQuote xs) : "∷" : rest
                   walk ("->"              : rest) = walk $ "→"                      : rest
+
+                  -- handle the double case. This isn't quite solid, but it does the trick.
+                  walk ("((Forall" : xs : t1 : "," : "(Forall" : ys : t2 : rest)
+                     = words (unwords (("((Ɐ" ++ unQuote xs) : " ∷ " : t1 : (", (Ɐ" ++ unQuote ys) : " ∷ " : [t2]))
+                     ++ walk rest
 
                   walk (c : cs) = c : walk cs
                   walk []       = []

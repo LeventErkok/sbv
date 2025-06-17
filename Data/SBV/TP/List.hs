@@ -1193,20 +1193,20 @@ take_cons _ =
 
 -- | @take n (map f xs) == map f (take n xs)@
 --
--- >>> runTPWith (tpRibbon 50 z3) $ take_map @Integer @Float (uninterpret "f")
--- Lemma: take_cons @Integer                         Q.E.D.
--- Lemma: map1 @(Integer,Float)                      Q.E.D.
--- Lemma: take_map.n <= 0 @(Integer,Float)           Q.E.D.
--- Inductive lemma: take_map.n > 0 @(Integer,Float)
---   Step: Base                                      Q.E.D.
---   Step: 1                                         Q.E.D.
---   Step: 2                                         Q.E.D.
---   Step: 3                                         Q.E.D.
---   Step: 4                                         Q.E.D.
---   Step: 5                                         Q.E.D.
---   Result:                                         Q.E.D.
--- Lemma: take_map @(Integer,Float)                  Q.E.D.
--- [Proven] take_map @(Integer,Float)
+-- >>> runTP $ take_map @Integer @Float (uninterpret "f")
+-- Lemma: take_cons                        Q.E.D.
+-- Lemma: map1                             Q.E.D.
+-- Lemma: take_map.n <= 0                  Q.E.D.
+-- Inductive lemma: take_map.n > 0
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: take_map                         Q.E.D.
+-- [Proven] take_map :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_map f = do
     tc   <- take_cons (Proxy @a)
@@ -1372,14 +1372,14 @@ drop_append _ =
 -- | @length xs == length ys ==> map fst (zip xs ys) = xs@
 --
 -- >>> runTP $ map_fst_zip (Proxy @(Integer,Integer))
--- Inductive lemma: map_fst_zip @(Integer,Integer)
+-- Inductive lemma: map_fst_zip
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] map_fst_zip @(Integer,Integer)
+-- [Proven] map_fst_zip :: ((Ɐxs ∷ [Integer]) , (Ɐys ∷ [Integer])) → Bool
 map_fst_zip :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_fst_zip _ =
    induct "map_fst_zip"
@@ -1396,14 +1396,14 @@ map_fst_zip _ =
 -- | @length xs == length ys ==> map snd (zip xs ys) = xs@
 --
 -- >>> runTP $ map_snd_zip (Proxy @(Integer,Integer))
--- Inductive lemma: map_snd_zip @(Integer,Integer)
+-- Inductive lemma: map_snd_zip
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] map_snd_zip @(Integer,Integer)
+-- [Proven] map_snd_zip :: ((Ɐxs ∷ [Integer]) , (Ɐys ∷ [Integer])) → Bool
 map_snd_zip :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_snd_zip _ =
    induct "map_snd_zip"
@@ -1419,17 +1419,17 @@ map_snd_zip _ =
 
 -- | @map fst (zip xs ys) == take (min (length xs) (length ys)) xs@
 --
--- >>> runTPWith (tpRibbon 55 z3) $ map_fst_zip_take (Proxy @(Integer,Integer))
--- Lemma: take_cons @Integer                              Q.E.D.
--- Inductive lemma: map_fst_zip_take @(Integer,Integer)
---   Step: Base                                           Q.E.D.
---   Step: 1                                              Q.E.D.
---   Step: 2                                              Q.E.D.
---   Step: 3                                              Q.E.D.
---   Step: 4                                              Q.E.D.
---   Step: 5                                              Q.E.D.
---   Result:                                              Q.E.D.
--- [Proven] map_fst_zip_take @(Integer,Integer)
+-- >>> runTP $ map_fst_zip_take (Proxy @(Integer,Integer))
+-- Lemma: take_cons                        Q.E.D.
+-- Inductive lemma: map_fst_zip_take
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] map_fst_zip_take :: ((Ɐxs ∷ [Integer]) , (Ɐys ∷ [Integer])) → Bool
 map_fst_zip_take :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_fst_zip_take _ = do
    tc <- take_cons (Proxy @a)
@@ -1449,8 +1449,8 @@ map_fst_zip_take _ = do
 -- | @map snd (zip xs ys) == take (min (length xs) (length ys)) xs@
 --
 -- >>> runTP $ map_snd_zip_take (Proxy @(Integer,Integer))
--- Lemma: take_cons @Integer               Q.E.D.
--- Inductive lemma: map_snd_zip_take @(Integer,Integer)
+-- Lemma: take_cons                        Q.E.D.
+-- Inductive lemma: map_snd_zip_take
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -1458,7 +1458,7 @@ map_fst_zip_take _ = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] map_snd_zip_take @(Integer,Integer)
+-- [Proven] map_snd_zip_take :: ((Ɐxs ∷ [Integer]) , (Ɐys ∷ [Integer])) → Bool
 map_snd_zip_take :: forall a b. (SymVal a, SymVal b) => Proxy (a, b) -> TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_snd_zip_take _ = do
    tc <- take_cons (Proxy @a)
