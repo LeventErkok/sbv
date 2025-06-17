@@ -11,7 +11,6 @@
 -- logic), imply it is a boolean algebra.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DeriveAnyClass       #-}
@@ -125,26 +124,17 @@ instance BooleanAlgebra SStroke where
 ﬧﬧ :: BooleanAlgebra a => a -> a
 ﬧﬧ = ﬧ . ﬧ
 
--- A couple of CPP defines make the code shorter to read
-#define A      (Forall a  :: Forall "a"  Stroke)
-#define AAp A  (Forall a' :: Forall "a'" Stroke)
-#define AB  A  (Forall b  :: Forall "b"  Stroke)
-#define ABC AB (Forall c  :: Forall "c"  Stroke)
-#define X      (Forall x  :: Forall "x"  Stroke)
-#define XY  X  (Forall y  :: Forall "y"  Stroke)
-#define XYZ XY (Forall z  :: Forall "z"  Stroke)
-
 -- | First Sheffer axiom: @ﬧﬧa == a@
 sheffer1 :: TP (Proof (Forall "a" Stroke -> SBool))
-sheffer1 = axiom "ﬧﬧa == a" $ \A -> ﬧﬧ a .== a
+sheffer1 = axiom "ﬧﬧa == a" $ \(Forall a) -> ﬧﬧ a .== a
 
 -- | Second Sheffer axiom: @a ⏐ (b ⏐ ﬧb) == ﬧa@
 sheffer2 :: TP (Proof (Forall "a" Stroke -> Forall "b" Stroke -> SBool))
-sheffer2 = axiom "a ⏐ (b ⏐ ﬧb) == ﬧa" $ \AB -> a ⏐ (b ⏐ ﬧ b) .== ﬧ a
+sheffer2 = axiom "a ⏐ (b ⏐ ﬧb) == ﬧa" $ \(Forall a) (Forall b) -> a ⏐ (b ⏐ ﬧ b) .== ﬧ a
 
 -- | Third Sheffer axiom: @ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)@
 sheffer3 :: TP (Proof (Forall "a" Stroke -> Forall "b" Stroke -> Forall "c" Stroke -> SBool))
-sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC -> ﬧ(a ⏐ (b ⏐ c)) .== (ﬧ b ⏐ a) ⏐ (ﬧ c ⏐ a)
+sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \(Forall a) (Forall b) (Forall c) -> ﬧ(a ⏐ (b ⏐ c)) .== (ﬧ b ⏐ a) ⏐ (ﬧ c ⏐ a)
 
 -- * Sheffer's stroke defines a boolean algebra
 
@@ -374,7 +364,7 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
   sh2 <- sheffer2
   sh3 <- sheffer3
 
-  commut <- calc "a | b = b | a" (\AB -> a ⏐ b .== b ⏐ a) $
+  commut <- calc "a | b = b | a" (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ b .== b ⏐ a) $
                  \a b -> [] ⊢ a ⏐ b                       ∵ sh1
                             ≡ ﬧﬧ(a ⏐ b)                   ∵ sh1
                             ≡ ﬧﬧ(a ⏐ ﬧﬧ b)
@@ -385,7 +375,7 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                             ≡ b ⏐ a
                             ≡ qed
 
-  all_bot <- calc "a | a′ = b | b′" (\AB -> a ⏐ ﬧ a .== b ⏐ ﬧ b) $
+  all_bot <- calc "a | a′ = b | b′" (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ ﬧ a .== b ⏐ ﬧ b) $
                   \a b -> [] ⊢ a ⏐ ﬧ a                  ∵ sh1
                              ≡ ﬧﬧ(a ⏐ ﬧ a)              ∵ sh2
                              ≡ ﬧ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b)) ∵ commut
@@ -394,19 +384,24 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                              ≡ b ⏐ ﬧ b
                              ≡ qed
 
-  commut1  <- lemma "a ⊔ b = b ⊔ a" (\AB -> a ⨆ b .== b ⨆ a) [p commut]
-  commut2  <- lemma "a ⊓ b = b ⊓ a" (\AB -> a ⨅ b .== b ⨅ a) [p commut]
+  commut1  <- lemma "a ⊔ b = b ⊔ a" (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> a ⨆ b .== b ⨆ a) [p commut]
+  commut2  <- lemma "a ⊓ b = b ⊓ a" (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> a ⨅ b .== b ⨅ a) [p commut]
 
-  ident1   <- lemma "a ⊔ ⲳ = a" (\A  -> a ⨆ ⲳ .== a) [p sh1, p sh2]
-  ident2   <- lemma "a ⊓ т = a" (\A  -> a ⨅ т .== a) [p sh1, p sh2]
+  ident1   <- lemma "a ⊔ ⲳ = a" (\(Forall @"a" (a :: SStroke)) -> a ⨆ ⲳ .== a) [p sh1, p sh2]
+  ident2   <- lemma "a ⊓ т = a" (\(Forall @"a" (a :: SStroke)) -> a ⨅ т .== a) [p sh1, p sh2]
 
-  distrib1 <- lemma "a ⊔ (b ⊓ c) = (a ⊔ b) ⊓ (a ⊔ c)" (\ABC -> a ⨆ (b ⨅ c) .== (a ⨆ b) ⨅ (a ⨆ c)) [p sh1, p sh3, p commut]
-  distrib2 <- lemma "a ⊓ (b ⊔ c) = (a ⊓ b) ⊔ (a ⊓ c)" (\ABC -> a ⨅ (b ⨆ c) .== (a ⨅ b) ⨆ (a ⨅ c)) [p sh1, p sh3, p commut]
+  distrib1 <- lemma "a ⊔ (b ⊓ c) = (a ⊔ b) ⊓ (a ⊔ c)"
+                    (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> a ⨆ (b ⨅ c) .== (a ⨆ b) ⨅ (a ⨆ c))
+                    [p sh1, p sh3, p commut]
 
-  compl1 <- lemma "a ⊔ aᶜ = т" (\A -> a ⨆ ﬧ a .== т) [p sh1, p sh2, p sh3, p all_bot]
-  compl2 <- lemma "a ⊓ aᶜ = ⲳ" (\A -> a ⨅ ﬧ a .== ⲳ) [p sh1, p commut, p all_bot]
+  distrib2 <- lemma "a ⊓ (b ⊔ c) = (a ⊓ b) ⊔ (a ⊓ c)"
+                    (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> a ⨅ (b ⨆ c) .== (a ⨅ b) ⨆ (a ⨅ c))
+                    [p sh1, p sh3, p commut]
 
-  bound1 <- calc "a ⊔ т = т" (\A -> a ⨆ т .== т) $
+  compl1 <- lemma "a ⊔ aᶜ = т" (\(Forall @"a" (a :: SStroke)) -> a ⨆ ﬧ a .== т) [p sh1, p sh2, p sh3, p all_bot]
+  compl2 <- lemma "a ⊓ aᶜ = ⲳ" (\(Forall @"a" (a :: SStroke)) -> a ⨅ ﬧ a .== ⲳ) [p sh1, p commut, p all_bot]
+
+  bound1 <- calc "a ⊔ т = т" (\(Forall @"a"  a) -> a ⨆ т .== т) $
                  \a -> [] ⊢ a ⨆ т               ∵ ident2
                            ≡ (a ⨆ т) ⨅ т         ∵ commut2
                            ≡ т ⨅ (a ⨆ т)         ∵ compl1
@@ -416,7 +411,7 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                            ≡ (т :: SStroke)
                            ≡ qed
 
-  bound2 <- calc "a ⊓ ⲳ = ⲳ" (\A -> a ⨅ ⲳ .== ⲳ) $
+  bound2 <- calc "a ⊓ ⲳ = ⲳ" (\(Forall @"a" a) -> a ⨅ ⲳ .== ⲳ) $
                  \a -> [] ⊢ a ⨅ ⲳ               ∵ ident1
                            ≡ (a ⨅ ⲳ) ⨆ ⲳ         ∵ commut1
                            ≡ ⲳ ⨆ (a ⨅ ⲳ)         ∵ compl2
@@ -426,7 +421,7 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                            ≡ (ⲳ :: SStroke)
                            ≡ qed
 
-  absorb1 <- calc "a ⊔ (a ⊓ b) = a" (\AB -> a ⨆ (a ⨅ b) .== a) $
+  absorb1 <- calc "a ⊔ (a ⊓ b) = a" (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> a ⨆ (a ⨅ b) .== a) $
                   \a b -> [] ⊢ a ⨆ (a ⨅ b)       ∵ ident2
                              ≡ (a ⨅ т) ⨆ (a ⨅ b) ∵ distrib2
                              ≡ a ⨅ (т ⨆ b)       ∵ commut1
@@ -435,7 +430,7 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                              ≡ a
                              ≡ qed
 
-  absorb2 <- calc "a ⊓ (a ⊔ b) = a" (\AB -> a ⨅ (a ⨆ b) .== a) $
+  absorb2 <- calc "a ⊓ (a ⊔ b) = a" (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> a ⨅ (a ⨆ b) .== a) $
                   \a b -> [] ⊢ a ⨅ (a ⨆ b)       ∵ ident1
                              ≡ (a ⨆ ⲳ) ⨅ (a ⨆ b) ∵ distrib1
                              ≡ a ⨆ (ⲳ ⨅ b)       ∵ commut2
@@ -444,14 +439,14 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                              ≡ a
                              ≡ qed
 
-  idemp2 <- calc "a ⊓ a = a" (\A -> a ⨅ a .== a) $
+  idemp2 <- calc "a ⊓ a = a" (\(Forall @"a" (a :: SStroke)) -> a ⨅ a .== a) $
                  \a -> [] ⊢ a ⨅ a       ∵ ident1
                           ≡ a ⨅ (a ⨆ ⲳ) ∵ absorb2
                           ≡ a
                           ≡ qed
 
   inv <- calc "a ⊔ a' = т → a ⊓ a' = ⲳ → a' = aᶜ"
-              (\AAp  -> a ⨆ a' .== т .=> a ⨅ a' .== ⲳ .=> a' .== ﬧ a) $
+              (\(Forall @"a" (a :: SStroke)) (Forall @"a'" a') -> a ⨆ a' .== т .=> a ⨅ a' .== ⲳ .=> a' .== ﬧ a) $
               \a a' -> [a ⨆ a' .== т, a ⨅ a' .== ⲳ] ⊢ a'                     ∵ ident2
                                                     ≡ a' ⨅ т                 ∵ compl1
                                                     ≡ a' ⨅ (a ⨆ ﬧ a)         ∵ distrib2
@@ -466,12 +461,19 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                                                     ≡ ﬧ a
                                                     ≡ qed
 
-  dne      <- lemma "aᶜᶜ = a"         (\A -> ﬧﬧ a .== a)               [p inv, p compl1, p compl2, p commut1, p commut2]
-  inv_elim <- lemma "aᶜ = bᶜ → a = b" (\AB -> ﬧ a .== ﬧ b .=> a .== b) [p dne]
+  dne      <- lemma "aᶜᶜ = a"
+                    (\(Forall @"a" (a :: SStroke)) -> ﬧﬧ a .== a)
+                    [p inv, p compl1, p compl2, p commut1, p commut2]
 
-  cancel <- lemma "a ⊔ bᶜ = т → a ⊓ bᶜ = ⲳ → a = b" (\AB -> a ⨆ ﬧ b .== т .=> a ⨅ ﬧ b .== ⲳ .=> a .== b) [p inv, p inv_elim]
+  inv_elim <- lemma "aᶜ = bᶜ → a = b"
+                    (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> ﬧ a .== ﬧ b .=> a .== b)
+                    [p dne]
 
-  a1 <- calc "a ⊔ (aᶜ ⊔ b) = т" (\AB  -> a ⨆ (ﬧ a ⨆ b) .== т) $
+  cancel <- lemma "a ⊔ bᶜ = т → a ⊓ bᶜ = ⲳ → a = b"
+                  (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> a ⨆ ﬧ b .== т .=> a ⨅ ﬧ b .== ⲳ .=> a .== b)
+                  [p inv, p inv_elim]
+
+  a1 <- calc "a ⊔ (aᶜ ⊔ b) = т" (\(Forall @"a" a) (Forall @"b" b)  -> a ⨆ (ﬧ a ⨆ b) .== т) $
              \a b -> [] ⊢ a ⨆ (ﬧ a ⨆ b)               ∵ ident2
                         ≡ (a ⨆ (ﬧ a ⨆ b)) ⨅ т         ∵ commut2
                         ≡ т ⨅ (a ⨆ (ﬧ a ⨆ b))         ∵ compl1
@@ -481,7 +483,7 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                         ≡ (т :: SStroke)
                         ≡ qed
 
-  a2 <- calc "a ⊓ (aᶜ ⊓ b) = ⲳ" (\AB  -> a ⨅ (ﬧ a ⨅ b) .== ⲳ) $
+  a2 <- calc "a ⊓ (aᶜ ⊓ b) = ⲳ" (\(Forall @"a" a) (Forall @"b" b)  -> a ⨅ (ﬧ a ⨅ b) .== ⲳ) $
              \a b -> [] ⊢ a ⨅ (ﬧ a ⨅ b)               ∵ ident1
                         ≡ (a ⨅ (ﬧ a ⨅ b)) ⨆ ⲳ         ∵ commut1
                         ≡ ⲳ ⨆ (a ⨅ (ﬧ a ⨅ b))         ∵ compl2
@@ -491,21 +493,26 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                         ≡ (ⲳ :: SStroke)
                         ≡ qed
 
-  dm1 <- lemma "(a ⊔ b)ᶜ = aᶜ ⊓ bᶜ" (\AB -> ﬧ(a ⨆ b) .== ﬧ a ⨅ ﬧ b)
+  dm1 <- lemma "(a ⊔ b)ᶜ = aᶜ ⊓ bᶜ"
+               (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> ﬧ(a ⨆ b) .== ﬧ a ⨅ ﬧ b)
                [p a1, p a2, p dne, p commut1, p commut2, p ident1, p ident2, p distrib1, p distrib2]
 
-  dm2 <- lemma "(a ⨅ b)ᶜ = aᶜ ⨆ bᶜ" (\AB -> ﬧ(a ⨅ b) .== ﬧ a ⨆ ﬧ b)
+  dm2 <- lemma "(a ⨅ b)ᶜ = aᶜ ⨆ bᶜ"
+               (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> ﬧ(a ⨅ b) .== ﬧ a ⨆ ﬧ b)
                [p a1, p a2, p dne, p commut1, p commut2, p ident1, p ident2, p distrib1, p distrib2]
 
 
-  d1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ aᶜ = т" (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ a .== т)
+  d1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ aᶜ = т"
+              (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ a .== т)
               [p a1, p a2, p commut1, p ident1, p ident2, p distrib1, p compl1, p compl2, p dm1, p dm2, p idemp2]
 
-  e1 <- lemma "b ⊓ (a ⊔ (b ⊔ c)) = b" (\ABC -> b ⨅ (a ⨆ (b ⨆ c)) .== b) [p distrib2, p absorb1, p absorb2, p commut1]
+  e1 <- lemma "b ⊓ (a ⊔ (b ⊔ c)) = b"
+              (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> b ⨅ (a ⨆ (b ⨆ c)) .== b)
+              [p distrib2, p absorb1, p absorb2, p commut1]
 
-  e2 <- lemma "b ⊔ (a ⊓ (b ⊓ c)) = b" (\ABC -> b ⨆ (a ⨅ (b ⨅ c)) .== b) [p distrib1, p absorb1, p absorb2, p commut2]
+  e2 <- lemma "b ⊔ (a ⊓ (b ⊓ c)) = b" (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> b ⨆ (a ⨅ (b ⨅ c)) .== b) [p distrib1, p absorb1, p absorb2, p commut2]
 
-  f1 <- calc "(a ⊔ (b ⊔ c)) ⊔ bᶜ = т" (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ b .== т) $
+  f1 <- calc "(a ⊔ (b ⊔ c)) ⊔ bᶜ = т" (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ b .== т) $
              \a b c -> [] ⊢ (a ⨆ (b ⨆ c)) ⨆ ﬧ b               ∵ commut1
                           ≡ ﬧ b ⨆ (a ⨆ (b ⨆ c))               ∵ ident2
                           ≡ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ⨅ т         ∵ commut2
@@ -518,9 +525,12 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                           ≡ (т :: SStroke)
                           ≡ qed
 
-  g1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ cᶜ = т" (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ c .== т) [p commut1, p f1]
+  g1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ cᶜ = т"
+              (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ c .== т)
+              [p commut1, p f1]
 
-  h1 <- calc "(a ⊔ b ⊔ c)ᶜ ⊓ a = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ a .== ⲳ) $
+  h1 <- calc "(a ⊔ b ⊔ c)ᶜ ⊓ a = ⲳ"
+             (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> ﬧ(a ⨆ b ⨆ c) ⨅ a .== ⲳ) $
              \a b c -> [] ⊢ ﬧ(a ⨆ b ⨆ c) ⨅ a                    ∵ commut2
                           ≡ a ⨅ ﬧ (a ⨆ b ⨆ c)                   ∵ dm1
                           ≡ a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)               ∵ ident1
@@ -533,12 +543,18 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                           ≡ (ⲳ :: SStroke)
                           ≡ qed
 
-  i1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ b = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ b .== ⲳ) [p commut1, p h1]
-  j1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ c = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ c .== ⲳ) [p a2, p dne, p commut2]
+  i1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ b = ⲳ"
+              (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> ﬧ(a ⨆ b ⨆ c) ⨅ b .== ⲳ)
+              [p commut1, p h1]
+
+  j1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ c = ⲳ"
+              (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> ﬧ(a ⨆ b ⨆ c) ⨅ c .== ⲳ)
+              [p a2, p dne, p commut2]
+
 
   assoc1 <- do
     c1 <- calc "(a ⊔ (b ⊔ c)) ⊔ ((a ⊔ b) ⊔ c)ᶜ = т"
-               (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c) .== т) $
+               (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c) .== т) $
                \a b c -> [] ⊢ (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c)                        ∵ dm1
                             ≡ (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)                     ∵ distrib1
                             ≡ ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ c) ∵ g1
@@ -551,7 +567,7 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                             ≡ qed
 
     c2 <- calc "(a ⊔ (b ⊔ c)) ⊓ ((a ⊔ b) ⊔ c)ᶜ = ⲳ"
-               (\ABC -> (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c) .== ⲳ) $
+               (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c) .== ⲳ) $
                \a b c -> [] ⊢ (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c)                    ∵ commut2
                             ≡ ﬧ((a ⨆ b) ⨆ c) ⨅ (a ⨆ (b ⨆ c))                    ∵ distrib2
                             ≡ (ﬧ((a ⨆ b) ⨆ c) ⨅ a) ⨆ (ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)) ∵ commut2
@@ -567,25 +583,29 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                             ≡ (ⲳ :: SStroke)
                             ≡ qed
 
-    lemma "a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c" (\ABC -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c) [p c1, p c2, p cancel]
+    lemma "a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c"
+          (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c)
+          [p c1, p c2, p cancel]
 
-  assoc2 <- calc "a ⊓ (b ⊓ c) = (a ⊓ b) ⊓ c" (\ABC -> a ⨅ (b ⨅ c) .== (a ⨅ b) ⨅ c) $
+  assoc2 <- calc "a ⊓ (b ⊓ c) = (a ⊓ b) ⊓ c"
+                 (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) (Forall @"c" c) -> a ⨅ (b ⨅ c) .== (a ⨅ b) ⨅ c) $
                  \a b c -> [] ⊢ a ⨅ (b ⨅ c)     ∵ dne
                               ≡ ﬧﬧ(a ⨅ (b ⨅ c)) ∵ assoc1
                               ≡ ﬧﬧ((a ⨅ b) ⨅ c) ∵ dne
                               ≡   ((a ⨅ b) ⨅ c)
                               ≡ qed
 
-  le_antisymm <- calc "a ≤ b → b ≤ a → a = b" (\AB -> a ≤ b .=> b ≤ a .=> a .== b) $
+  le_antisymm <- calc "a ≤ b → b ≤ a → a = b"
+                      (\(Forall @"a" a) (Forall @"b" b) -> a ≤ b .=> b ≤ a .=> a .== b) $
                       \a b -> [a ≤ b, b ≤ a] ⊢ a     ∵ a ≤ b
                                              ≡ b ⨅ a ∵ commut2
                                              ≡ a ⨅ b ∵ b ≤ a
                                              ≡ b
                                              ≡ qed
 
-  le_refl <- lemma "a ≤ a" (\A -> a ≤ a) [p idemp2]
+  le_refl <- lemma "a ≤ a" (\(Forall @"a" a) -> a ≤ a) [p idemp2]
 
-  le_trans <- calc "a ≤ b → b ≤ c → a ≤ c" (\ABC -> a ≤ b .=> b ≤ c .=> a ≤ c) $
+  le_trans <- calc "a ≤ b → b ≤ c → a ≤ c" (\(Forall a) (Forall b) (Forall c) -> a ≤ b .=> b ≤ c .=> a ≤ c) $
                    \a b c -> [a ≤ b, b ≤ c] ⊢ a            ∵ a ≤ b
                                             ≡ b ⨅ a        ∵ b ≤ c
                                             ≡ (c ⨅ b) ⨅ a  ∵ assoc2
@@ -593,23 +613,35 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                                             ≡ (c ⨅ a)
                                             ≡ qed
 
-  lt_iff_le_not_le <- lemma "a < b ↔ a ≤ b ∧ ¬b ≤ a" (\AB -> (a < b) .<=> a ≤ b .&& sNot (b ≤ a)) [p sh3]
+  lt_iff_le_not_le <- lemma "a < b ↔ a ≤ b ∧ ¬b ≤ a"
+                            (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> (a < b) .<=> a ≤ b .&& sNot (b ≤ a))
+                            [p sh3]
 
-  le_sup_left  <- lemma "a ≤ a ⊔ b" (\AB -> a ≤ a ⨆ b) [p commut1, p commut2, p absorb2]
-  le_sup_right <- lemma "b ≤ a ⊔ b" (\AB -> a ≤ a ⨆ b) [p commut1, p commut2, p absorb2]
+  le_sup_left  <- lemma "a ≤ a ⊔ b"
+                  (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> a ≤ a ⨆ b)
+                  [p commut1, p commut2, p absorb2]
+
+  le_sup_right <- lemma "b ≤ a ⊔ b"
+                  (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> a ≤ a ⨆ b)
+                  [p commut1, p commut2, p absorb2]
 
   sup_le <- calc "a ≤ c → b ≤ c → a ⊔ b ≤ c"
-                 (\ABC -> a ≤ c .=> b ≤ c .=> a ⨆ b ≤ c) $
+                 (\(Forall a) (Forall b) (Forall c) -> a ≤ c .=> b ≤ c .=> a ⨆ b ≤ c) $
                  \a b c -> [a ≤ c, b ≤ c] ⊢ a ⨆ b             ∵ [a ≤ c, b ≤ c]
                                           ≡ (c ⨅ a) ⨆ (c ⨅ b) ∵ distrib2
                                           ≡ c ⨅ (a ⨆ b)
                                           ≡ qed
 
-  inf_le_left  <- lemma "a ⊓ b ≤ a" (\AB -> a ⨅ b ≤ a) [p assoc2,  p idemp2]
-  inf_le_right <- lemma "a ⊓ b ≤ b" (\AB -> a ⨅ b ≤ b) [p commut2, p inf_le_left]
+  inf_le_left  <- lemma "a ⊓ b ≤ a"
+                        (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> a ⨅ b ≤ a)
+                        [p assoc2,  p idemp2]
+
+  inf_le_right <- lemma "a ⊓ b ≤ b"
+                        (\(Forall @"a" (a :: SStroke)) (Forall @"b" b) -> a ⨅ b ≤ b)
+                        [p commut2, p inf_le_left]
 
   le_inf <- calc "a ≤ b → a ≤ c → a ≤ b ⊓ c"
-                 (\ABC -> a ≤ b .=> a ≤ c .=> a ≤ b ⨅ c) $
+                 (\(Forall a) (Forall b) (Forall c) -> a ≤ b .=> a ≤ c .=> a ≤ b ⨅ c) $
                  \a b c -> [a ≤ b, a ≤ c] ⊢ a           ∵ a ≤ b
                                           ≡ b ⨅ a       ∵ a ≤ c
                                           ≡ b ⨅ (c ⨅ a) ∵ assoc2
@@ -617,27 +649,27 @@ shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
                                           ≡ qed
 
   le_sup_inf <- lemma "(x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z"
-                      (\XYZ -> (x ⨆ y) ⨅ (x ⨆ z) ≤ x ⨆ y ⨅ z)
+                      (\(Forall x) (Forall y) (Forall z) -> (x ⨆ y) ⨅ (x ⨆ z) ≤ x ⨆ y ⨅ z)
                       [p distrib1, p le_refl]
 
-  inf_compl_le_bot <- lemma "x ⊓ xᶜ ≤ ⊥" (\X -> x ⨅ ﬧ x ≤ ⲳ) [p compl2, p le_refl]
-  top_le_sup_compl <- lemma "⊤ ≤ x ⊔ xᶜ" (\X -> т ≤ x ⨆ ﬧ x) [p compl1, p le_refl]
+  inf_compl_le_bot <- lemma "x ⊓ xᶜ ≤ ⊥" (\(Forall x) -> x ⨅ ﬧ x ≤ ⲳ) [p compl2, p le_refl]
+  top_le_sup_compl <- lemma "⊤ ≤ x ⊔ xᶜ" (\(Forall x) -> т ≤ x ⨆ ﬧ x) [p compl1, p le_refl]
 
-  le_top <- calc "a ≤ ⊤" (\A -> a ≤ т) $
+  le_top <- calc "a ≤ ⊤" (\(Forall @"a" a) -> a ≤ т) $
                  \a -> [] ⊢ a ≤ т
                           ≡ a .== т ⨅ a ∵ commut2
                           ≡ a .== a ⨅ т ∵ ident2
                           ≡ a .== a
                           ≡ qed
 
-  bot_le <- calc "⊥ ≤ a" (\A -> ⲳ ≤ a) $
+  bot_le <- calc "⊥ ≤ a" (\(Forall @"a" a) -> ⲳ ≤ a) $
                  \a -> [] ⊢ ⲳ ≤ a
                           ≡ ⲳ .== a ⨅ ⲳ            ∵ bound2
                           ≡ ⲳ .== (ⲳ :: SStroke)
                           ≡ qed
 
-  sdiff_eq <- lemma "x \\ y = x ⊓ yᶜ" (\XY -> x \\ y .== x ⨅ ﬧ y) []
-  himp_eq  <- lemma "x ⇨ y = y ⊔ xᶜ"  (\XY -> x ⇨ y .== y ⨆ ﬧ x)  []
+  sdiff_eq <- lemma "x \\ y = x ⊓ yᶜ" (\(Forall x) (Forall y) -> x \\ y .== x ⨅ ﬧ y) []
+  himp_eq  <- lemma "x ⇨ y = y ⊔ xᶜ"  (\(Forall x) (Forall y) -> x ⇨ y .== y ⨆ ﬧ x)  []
 
   pure BooleanAlgebraProof {
             le_refl          {- ∀ (a : α), a ≤ a                             -} = le_refl
