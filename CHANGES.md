@@ -46,7 +46,7 @@
     functions are supported, including mutual recursion.
 
     NB. For higher-order functions, if the function passed (whether named or lambda defined) as the higher-order argument have
-    free variables, you must create a closure, see the 'Closure' type. If they are already closed, then you can use them as is.
+    free variables, you must create a closure. See the 'Closure' type. If they are already closed, then you can use them as is.
 
     See 'smtFunction' and 'smtHOFunction' for details.
 
