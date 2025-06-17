@@ -17,7 +17,7 @@
           - Add tpRibbon: simplifies setting the ribbon size in a proof.
           - Add tpStats : makes TP proofs print detailed statistics
           - Add tpCache : makes TP proofs use caching. This option can save time in re-running proofs. It comes
-                with the proof-obligation on the user that all the names used in lemmas are unique. See
+                with the proof-obligation on the user that all the name/type pairs used in lemmas are unique. See
                 Documentation.SBV.Examples.TP.Basics for an example demonstration.
         Note that all these utils will be in effect with the closest call to runTP/runTPWith. If you change the
         solver for a specific lemma, we'll only change the solver, not TP-options.
