@@ -189,7 +189,8 @@ data TPUnique = TPInternal
 -- is still large: The underlying solver, SBV, and TP kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
-newtype Proof a = Proof { proofOf :: ProofObj }
+newtype Proof a = Proof { proofOf :: ProofObj -- ^ Get the underlying proof object
+                        }
 
 -- | Grab the underlying boolean in a proof. Useful in assumption contexts where we need a boolean
 assumptionFromProof :: Proof a -> SBool

@@ -952,7 +952,7 @@ instance (SymVal env, SymVal a) => SPartition (Closure (SBV env) (SBV a -> SBool
 sum :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 sum = foldr ((+) @(SBV a)) 0
 
--- | @`prod` s@. Multiply out the given sequence.
+-- | @`product` s@. Multiply out the given sequence.
 product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
 
