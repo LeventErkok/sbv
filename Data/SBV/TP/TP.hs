@@ -18,7 +18,6 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeAbstractions           #-}
 {-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeFamilyDependencies     #-}
 {-# LANGUAGE TypeOperators              #-}
 
@@ -90,7 +89,7 @@ tpMergeCfg cur top = cur{tpOptions = tpOptions top}
 
 -- | Use an injective type family to allow for curried use of calc and strong induction steps.
 type family StepArgs a t = result | result -> t where
-  StepArgs                                                                             SBool  t = (                                             (SBool, TPProofRaw t))
+  StepArgs                                                                             SBool  t =                                               (SBool, TPProofRaw t)
   StepArgs (Forall na a                                                             -> SBool) t = (SBV a                                     -> (SBool, TPProofRaw t))
   StepArgs (Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> (SBool, TPProofRaw t))
   StepArgs (Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))
@@ -112,13 +111,13 @@ type family MeasureArgs a t = result | result -> t where
 -- | Use an injective type family to allow for curried use of regular induction steps. The first argument is the inductive arg that comes separately,
 -- and hence is not used in the right-hand side of the equation.
 type family IStepArgs a t = result | result -> t where
-  IStepArgs ( Forall nx x                                                                                          -> SBool) t = (                                             (SBool, TPProofRaw t))
+  IStepArgs ( Forall nx x                                                                                          -> SBool) t =                                               (SBool, TPProofRaw t)
   IStepArgs ( Forall nx x               -> Forall na a                                                             -> SBool) t = (SBV a ->                                     (SBool, TPProofRaw t))
   IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> (SBool, TPProofRaw t))
   IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))
   IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d                -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw t))
   IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw t))
-  IStepArgs ((Forall nx x, Forall ny y)                                                                            -> SBool) t = (                                             (SBool, TPProofRaw t))
+  IStepArgs ((Forall nx x, Forall ny y)                                                                            -> SBool) t =                                               (SBool, TPProofRaw t)
   IStepArgs ((Forall nx x, Forall ny y) -> Forall na a                                                             -> SBool) t = (SBV a ->                                     (SBool, TPProofRaw t))
   IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> (SBool, TPProofRaw t))
   IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))

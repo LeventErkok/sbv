@@ -189,7 +189,7 @@ data TPUnique = TPInternal
 -- is still large: The underlying solver, SBV, and TP kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
-data Proof a = Proof { proofOf :: ProofObj }
+newtype Proof a = Proof { proofOf :: ProofObj }
 
 -- | Grab the underlying boolean in a proof. Useful in assumption contexts where we need a boolean
 assumptionFromProof :: Proof a -> SBool
@@ -387,7 +387,7 @@ rootOfTrust = rot . proofOf
 
 -- | Calculate the modulo string for dependencies
 concludeModulo :: [ProofObj] -> String
-concludeModulo by = case foldMap rootOfTrust (map Proof by) of
+concludeModulo by = case foldMap (rootOfTrust . Proof) by of
                       RootOfTrust Nothing   -> ""
                       RootOfTrust (Just ps) -> " [Modulo: " ++ intercalate ", " (map shortProofName ps) ++ "]"
 

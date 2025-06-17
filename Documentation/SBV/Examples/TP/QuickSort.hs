@@ -631,3 +631,5 @@ correctness p = runTPWith (tpRibbon 60 z3) $ do
               putStr $ showProofTree True qs
 
   pure qs
+
+{- HLint ignore correctness "Use :" -}

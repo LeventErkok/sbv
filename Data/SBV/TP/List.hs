@@ -346,7 +346,7 @@ revRev p = do
           \ih (x, xs) -> [] |- reverse (reverse (x .: xs))
                             =: reverse (reverse xs ++ [x])
                             ?? ra
-                            =: reverse ([x]) ++ reverse (reverse xs)
+                            =: reverse [x] ++ reverse (reverse xs)
                             ?? ih
                             =: [x] ++ xs
                             =: x .: xs
@@ -1759,3 +1759,5 @@ elemCount _ =
 {- HLint ignore module         "Use zipWith"       -}
 {- HLint ignore mapCompose     "Use map once"      -}
 {- HLint ignore tailsAppend    "Avoid lambda"      -}
+{- HLint ignore tailsAppend    "Use :"             -}
+{- HLint ignore mapReverse     "Evaluate"          -}

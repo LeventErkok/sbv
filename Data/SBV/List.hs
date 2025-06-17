@@ -1053,3 +1053,5 @@ lift1Str w mbOp a
   where k = kindOf (Proxy @b)
         r st = do sva <- sbvToSV st a
                   newExpr st k (SBVApp (StrOp w) [sva])
+
+{- HLint ignore implode "Use :" -}
