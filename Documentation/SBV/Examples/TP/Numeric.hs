@@ -31,6 +31,8 @@ import Data.SBV.TP
 -- >>> import Control.Exception
 #endif
 
+-- * Sum of constants
+
 -- | Prove that sum of constants @c@ from @0@ to @n@ is @n*c@.
 --
 -- We have:
@@ -66,6 +68,8 @@ sumConstProof = do
                              =: spec (n+1)
                              =: qed
 
+-- * Sum of numbers
+
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
 -- >>> runTP sumProof
@@ -92,6 +96,8 @@ sumProof = do
                              =: spec (n+1)
                              =: qed
 
+-- * Sum of squares of numbers
+--
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
 --
 -- >>> runTP sumSquareProof
@@ -167,7 +173,9 @@ elevenMinusFour = do
                 =: sTrue
                 =: qed
 
--- | A negative example: The regular inductive proof on integers (i.e., proving at @0@, assuming at @n@ and proving at
+-- * A negative example
+
+-- | The regular inductive proof on integers (i.e., proving at @0@, assuming at @n@ and proving at
 -- @n+1@ will not allow you to conclude things when @n < 0@. The following example demonstrates this with the most
 -- obvious example:
 --
