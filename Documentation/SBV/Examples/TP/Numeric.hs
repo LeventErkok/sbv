@@ -19,7 +19,7 @@
 
 module Documentation.SBV.Examples.TP.Numeric where
 
-import Prelude hiding (sum, length)
+import Prelude hiding (sum, length, (^))
 
 import Data.SBV
 import Data.SBV.TP
@@ -124,6 +124,72 @@ sumSquareProof = do
                              =: spec (n+1)
                              =: qed
 
+-- * Sum of cubes of numbers
+
+-- | Prove that sum of cube of numbers from @0@ to @n@ is sum of numbers up to @n@ squared.
+-- This is attributed to Nicomachus, hence the name.
+--
+-- We have:
+--
+-- >>> runTP nicomachus
+-- Lemma: nn1IsEven                        Q.E.D. [Modulo: sorry]
+-- Inductive lemma: sum_correct
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: sum_squared
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D. [Modulo: nn1IsEven]
+--   Result:                               Q.E.D. [Modulo: nn1IsEven]
+-- Inductive lemma: nicomachus
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D. [Modulo: nn1IsEven]
+--   Result:                               Q.E.D. [Modulo: nn1IsEven]
+-- [Modulo: nn1IsEven] nicomachus :: Ɐn ∷ Integer → Bool
+nicomachus :: TP (Proof (Forall "n" Integer -> SBool))
+nicomachus = do
+   let (^) :: SInteger -> Integer -> SInteger
+       _ ^ 0 = 1
+       b ^ n = b * b ^ (n-1)
+       infixr 8 ^
+
+       sum, sumCubed :: SInteger -> SInteger
+       sum      = smtFunction "sum"      $ \n -> ite (n .<= 0) 0 (n   + sum      (n - 1))
+       sumCubed = smtFunction "sumCubed" $ \n -> ite (n .<= 0) 0 (n^3 + sumCubed (n - 1))
+
+       spec :: SInteger -> SInteger
+       spec n = sum n * sum n
+
+   -- The multiplication @n * (n+1)@ is always even. It's surprising that neither z3 nor cvc5 can prove this out-of-the box.
+   nn1IsEven <- lemma "nn1IsEven" (\(Forall @"n" n) -> 2 `sDivides` (n * (n+1))) [sorry]
+
+   -- Grab the proof of regular summation formula
+   sp <- sumProof
+
+   -- Square of the summation result. This is a trivial lemma for humans, but there are lots
+   -- of multiplications involved making the problem non-linear and we need to spell it out.
+   ssp <- calc "sum_squared"
+                (\(Forall @"n" n) -> n .>= 0 .=> (sum n)^2 .== (n^2 * (n+1)^2) `sEDiv` 4) $
+                \n -> [n .>= 0] |- (sum n)^2
+                                ?? sp `at` Inst @"n" n
+                                =: ((n * (n+1)) `sEDiv` 2)^2
+                                ?? nn1IsEven `at` Inst @"n" n
+                                =: ((n * (n+1))^2) `sEDiv` 4
+                                =: qed
+
+   -- We can finally put it together:
+   induct "nicomachus"
+          (\(Forall n) -> n .>= 0 .=> sumCubed n .== spec n) $
+          \ih n -> [n .>= 0]
+                |- sumCubed (n+1)
+                =: (n+1)^3 + sumCubed n
+                ?? ih
+                ?? ssp
+                =: spec (n+1)
+                =: qed
 
 -- * Exponents and divisibility by 7
 
