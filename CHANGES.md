@@ -8,6 +8,7 @@
 
   * TP:
       - Keep track of proofs with a unique id.
+      - Removed theorem variants; lemmas are almost exclusively used and the only difference was in printing.
       - Add method rootOfTrust which can be used to retrieve uses of sorry in a proof. The idea is that
         to get a proof clean, you need to resolve all the proofs returned by this call.
       - Renamed kdShowDepsHTML to showProofTreeHTML. (Along with showProofTree which renders in ASCII.)

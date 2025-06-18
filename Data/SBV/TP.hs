@@ -27,16 +27,16 @@ module Data.SBV.TP (
        , axiom
 
        -- * Basic proofs
-       , lemma, lemmaWith, theorem, theoremWith
+       , lemma, lemmaWith
 
        -- * Reasoning via calculation
-       , calc, calcWith, calcThm, calcThmWith
+       , calc, calcWith
 
        -- * Reasoning via regular induction
-       , induct,  inductWith, inductThm, inductThmWith
+       , induct, inductWith
 
        -- * Reasoning via measure-based strong induction
-       , sInduct, sInductWith, sInductThm, sInductThmWith, Measure(..)
+       , sInduct, sInductWith, Measure(..)
 
        -- * Creating instances of proofs
        , at, Inst(..)

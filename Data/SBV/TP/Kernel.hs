@@ -22,8 +22,8 @@
 module Data.SBV.TP.Kernel (
          Proposition,  Proof(..)
        , axiom
-       , lemma,   lemmaWith,   lemmaGen
-       , theorem, theoremWith
+       , lemma
+       , lemmaWith
        , internalAxiom
        , TPProofContext (..), smtProofStep
        ) where
@@ -79,15 +79,15 @@ internalAxiom nm p = Proof $ ProofObj { dependencies = []
                                       , isCached     = False
                                       }
 
--- | Helper to generate lemma/theorem statements.
-lemmaGen :: Proposition a => SMTConfig -> String -> String -> a -> [ProofObj] -> TP (Proof a)
-lemmaGen cfg@SMTConfig{tpOptions = TPOptions{printStats}} tag nm inputProp by = withProofCache nm $ do
+-- | Prove a lemma, using the given configuration
+lemmaWith :: Proposition a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
+lemmaWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} nm inputProp by = withProofCache nm $ do
                  tpSt <- getTPState
                  u    <- tpGetNextUnique
                  liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt u
   where go tpSt u mbStartTime = do qSaturateSavingObservables inputProp
                                    mapM_ (constrain . getObjProof) by
-                                   query $ smtProofStep cfg tpSt tag 0 (TPProofOneShot nm by) Nothing inputProp (good mbStartTime u)
+                                   query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp (good mbStartTime u)
 
         -- What to do if all goes well
         good mbStart u d = do mbElapsed <- getElapsedTime mbStart
@@ -105,19 +105,6 @@ lemmaGen cfg@SMTConfig{tpOptions = TPOptions{printStats}} tag nm inputProp by = 
 lemma :: Proposition a => String -> a -> [ProofObj] -> TP (Proof a)
 lemma nm f by = do cfg <- getTPConfig
                    lemmaWith cfg nm f by
-
--- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
-lemmaWith :: Proposition a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
-lemmaWith cfg = lemmaGen cfg "Lemma"
-
--- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
-theorem :: Proposition a => String -> a -> [ProofObj] -> TP (Proof a)
-theorem nm f by = do cfg <- getTPConfig
-                     theoremWith cfg nm f by
-
--- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
-theoremWith :: Proposition a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
-theoremWith cfg = lemmaGen cfg "Theorem"
 
 -- | Capture the general flow of a proof-step. Note that this is the only point where we call the backend solver
 -- in a TP proof.

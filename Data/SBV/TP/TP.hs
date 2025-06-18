@@ -26,12 +26,11 @@
 module Data.SBV.TP.TP (
          Proposition, Proof, proofOf, assumptionFromProof, Instantiatable(..), Inst(..), Measure(..)
        , rootOfTrust, RootOfTrust(..), ProofTree(..), showProofTree, showProofTreeHTML
-       , axiom
-       , lemma,   lemmaWith
-       , theorem, theoremWith
-       ,    calc,    calcWith,    calcThm,    calcThmWith
-       ,  induct,  inductWith,  inductThm,  inductThmWith
-       , sInduct, sInductWith, sInductThm, sInductThmWith
+       ,   axiom
+       ,   lemma,   lemmaWith
+       ,    calc,    calcWith
+       ,  induct,  inductWith
+       , sInduct, sInductWith
        , sorry
        , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpCache
        , (|-), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
@@ -147,23 +146,15 @@ class Calc a where
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
   calc :: (Proposition a, EqSymbolic t) => String -> a -> StepArgs a t -> TP (Proof a)
 
-  -- | Same as calc, except tagged as Theorem
-  calcThm :: (Proposition a, EqSymbolic t) => String -> a -> StepArgs a t -> TP (Proof a)
-
   -- | Prove a property via a series of equality steps, using the given solver.
   calcWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
-
-  -- | Same as calcWith, except tagged as Theorem
-  calcThmWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL calcSteps #-}
   calcSteps :: EqSymbolic t => a -> StepArgs a t -> Symbolic (SBool, CalcStrategy)
 
-  calc            nm p steps = getTPConfig >>= \cfg  -> calcWith          cfg                   nm p steps
-  calcThm         nm p steps = getTPConfig >>= \cfg  -> calcThmWith       cfg                   nm p steps
-  calcWith    cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric False (tpMergeCfg cfg cfg') nm p steps
-  calcThmWith cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric True  (tpMergeCfg cfg cfg') nm p steps
+  calc         nm p steps = getTPConfig >>= \cfg  -> calcWith          cfg                   nm p steps
+  calcWith cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric False (tpMergeCfg cfg cfg') nm p steps
 
   calcGeneric :: (EqSymbolic t, Proposition a) => Bool -> SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
   calcGeneric tagTheorem cfg nm result steps = withProofCache nm $ do
@@ -420,25 +411,13 @@ class Inductive a where
    -- partial correctness is guaranteed if non-terminating functions are involved.
    induct  :: (Proposition a, EqSymbolic t) => String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
 
-   -- | Inductively prove a theorem. Same as 'induct', but tagged as a theorem, using the default config.
-   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
-   -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductThm :: (Proposition a, EqSymbolic t) => String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
-
    -- | Same as 'induct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
    inductWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
 
-   -- | Same as 'inductThm', but with the given solver configuration.
-   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
-   -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductThmWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
-
-   induct            nm p steps = getTPConfig >>= \cfg  -> inductWith                             cfg                   nm p steps
-   inductThm         nm p steps = getTPConfig >>= \cfg  -> inductThmWith                          cfg                   nm p steps
-   inductWith    cfg nm p steps = getTPConfig >>= \cfg' -> inductionEngine RegularInduction False (tpMergeCfg cfg cfg') nm p (inductionStrategy p steps)
-   inductThmWith cfg nm p steps = getTPConfig >>= \cfg' -> inductionEngine RegularInduction True  (tpMergeCfg cfg cfg') nm p (inductionStrategy p steps)
+   induct         nm p steps = getTPConfig >>= \cfg  -> inductWith                             cfg                   nm p steps
+   inductWith cfg nm p steps = getTPConfig >>= \cfg' -> inductionEngine RegularInduction False (tpMergeCfg cfg cfg') nm p (inductionStrategy p steps)
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL inductionStrategy #-}
@@ -474,25 +453,13 @@ class SInductive a where
    -- partial correctness is guaranteed if non-terminating functions are involved.
    sInduct :: (Proposition a, Zero m, EqSymbolic t) => String -> a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
-   -- | Inductively prove a theorem, using measure based induction. Same as 'sInduct', but tagged as a theorem, using the default config.
-   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
-   -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductThm :: (Proposition a, Zero m, EqSymbolic t) => String -> a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> TP (Proof a)
-
    -- | Same as 'sInduct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
    sInductWith :: (Proposition a, Zero m, EqSymbolic t) => SMTConfig -> String -> a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
-   -- | Same as 'sInductThm', but with the given solver configuration.
-   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
-   -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductThmWith :: (Proposition a, Zero m, EqSymbolic t) => SMTConfig -> String -> a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> TP (Proof a)
-
-   sInduct            nm p m steps = getTPConfig >>= \cfg  -> sInductWith                            cfg                   nm p m steps
-   sInductThm         nm p m steps = getTPConfig >>= \cfg  -> sInductThmWith                         cfg                   nm p m steps
-   sInductWith    cfg nm p m steps = getTPConfig >>= \cfg' -> inductionEngine GeneralInduction False (tpMergeCfg cfg cfg') nm p (sInductionStrategy p m steps)
-   sInductThmWith cfg nm p m steps = getTPConfig >>= \cfg' -> inductionEngine GeneralInduction True  (tpMergeCfg cfg cfg') nm p (sInductionStrategy p m steps)
+   sInduct         nm p m steps = getTPConfig >>= \cfg  -> sInductWith                            cfg                   nm p m steps
+   sInductWith cfg nm p m steps = getTPConfig >>= \cfg' -> inductionEngine GeneralInduction False (tpMergeCfg cfg cfg') nm p (sInductionStrategy p m steps)
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL sInductionStrategy #-}
