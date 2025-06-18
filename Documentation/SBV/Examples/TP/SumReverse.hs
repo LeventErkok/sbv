@@ -56,16 +56,15 @@ revSum :: forall a. (SymVal a, Num (SBV a)) => IO (Proof (Forall "xs" [a] -> SBo
 revSum = runTP $ do
 
   -- helper: sum distributes over append.
-  sumAppend <-
-     induct "sumAppend"
-            (\(Forall xs) (Forall ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
-            \ih (x, xs) ys -> [] |- sum ((x .: xs) ++ ys)
-                                 =: sum (x .: (xs ++ ys))
-                                 =: x + sum (xs ++ ys)
-                                 ?? ih
-                                 =: x + sum xs + sum ys
-                                 =: sum (x .: xs) + sum ys
-                                 =: qed
+  sumAppend <- induct "sumAppend"
+                      (\(Forall xs) (Forall ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
+                      \ih (x, xs) ys -> [] |- sum ((x .: xs) ++ ys)
+                                           =: sum (x .: (xs ++ ys))
+                                           =: x + sum (xs ++ ys)
+                                           ?? ih
+                                           =: x + sum xs + sum ys
+                                           =: sum (x .: xs) + sum ys
+                                           =: qed
 
   -- Now prove the original theorem by induction
   induct "sumReverse"
