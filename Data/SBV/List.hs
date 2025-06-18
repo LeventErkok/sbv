@@ -62,7 +62,7 @@ module Data.SBV.List (
         , all, any, and, or
 
         -- * Generators
-        , replicate, inits, tails
+        , replicate, inits, tails, upFromTo, upFrom, downFromTo, downFrom
 
         -- * Sum and product
         , sum, product
@@ -955,6 +955,22 @@ sum = foldr ((+) @(SBV a)) 0
 -- | @`product` s@. Multiply out the given sequence.
 product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
+
+-- | @`upFromTo` begin end@. Return list of numbers @[begin .. end]@.
+upFromTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SList a
+upFromTo = smtFunction "upFromTo" $ \begin end -> ite (begin .> end) nil (begin .: upFromTo (begin+1) end)
+
+-- | @`downFromTo` end begin@. Return list of numbers @[end, end-1 .. begin]@.
+downFromTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SList a
+downFromTo = smtFunction "downFromTo" $ \end begin -> ite (end .< begin) nil (end .: downFromTo (end-1) begin)
+
+-- | @`upFrom` end@. Return list of numbers @[0 .. end]@.
+upFrom :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SList a
+upFrom = upFromTo 0
+
+-- | @`downFrom` end@. Return list of numbers @[end, end-1 .. 0]@.
+downFrom :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SList a
+downFrom end = downFromTo end 0
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
