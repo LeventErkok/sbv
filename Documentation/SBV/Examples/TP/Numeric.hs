@@ -171,10 +171,10 @@ nicomachus = do
    -- The multiplication @n * (n+1)@ is always even. It's surprising that I had to use induction here
    -- as neither z3 nor cvc5 can converge on this out-of-the-box.
    nn1IsEven <- induct "nn1IsEven"
-                       (\(Forall @"n" n) -> n .>= 0 .=> (n * (n+1)) `sMod` 2 .== 0) $
-                       \ih n -> [n .>= 0] |- ((n+1) * (n+2)) `sMod` 2 .== 0
-                                          =: (n*(n+1) + 2*(n+1)) `sMod` 2 .== 0
-                                          =: (n*(n+1)) `sMod` 2 .== 0
+                       (\(Forall @"n" n) -> n .>= 0 .=> 2 `sDivides` (n * (n+1))) $
+                       \ih n -> [n .>= 0] |- 2 `sDivides` ((n+1) * (n+2))
+                                          =: 2 `sDivides` (n*(n+1) + 2*(n+1))
+                                          =: 2 `sDivides` (n*(n+1))
                                           ?? ih
                                           =: sTrue
                                           =: qed
