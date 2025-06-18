@@ -86,9 +86,9 @@ forallConjunction p q = runTP $ do
     let qb = quantifiedBool
 
     lemma "forallConjunction"
-           (      (qb (\(Forall @"x" x) -> p x) .&& qb (\(Forall @"x" x) -> q x))
-            .<=> -----------------------------------------------------------------
-                          qb (\(Forall @"x" x) -> p x .&& q x)
+           (      (qb (\(Forall x) -> p x) .&& qb (\(Forall x) -> q x))
+            .<=> -------------------------------------------------------
+                          qb (\(Forall x) -> p x .&& q x)
            )
            []
 
@@ -102,9 +102,9 @@ existsDisjunction p q = runTP $ do
     let qb = quantifiedBool
 
     lemma "existsDisjunction"
-           (      (qb (\(Exists @"x" x) -> p x) .|| qb (\(Exists @"x" x) -> q x))
-            .<=> -----------------------------------------------------------------
-                          qb (\(Exists @"x" x) -> p x .|| q x)
+           (      (qb (\(Exists x) -> p x) .|| qb (\(Exists x) -> q x))
+            .<=> -------------------------------------------------------
+                          qb (\(Exists x) -> p x .|| q x)
            )
            []
 
@@ -133,9 +133,9 @@ forallDisjunctionNot p q = runTP $ do
 
     -- This won't prove!
     _won'tGoThrough <- lemma "forallConjunctionNot"
-                             (      (qb (\(Forall @"x" x) -> p x) .|| qb (\(Forall @"x" x) -> q x))
-                              .<=> -----------------------------------------------------------------
-                                              qb (\(Forall @"x" x) -> p x .|| q x)
+                             (      (qb (\(Forall x) -> p x) .|| qb (\(Forall x) -> q x))
+                              .<=> -------------------------------------------------------
+                                              qb (\(Forall x) -> p x .|| q x)
                              )
                              []
 
@@ -161,9 +161,9 @@ existsConjunctionNot p q = runTP $ do
     let qb = quantifiedBool
 
     _wont'GoThrough <- lemma "existsConjunctionNot"
-                             (      (qb (\(Exists @"x" x) -> p x) .&& qb (\(Exists @"x" x) -> q x))
-                              .<=> -----------------------------------------------------------------
-                                              qb (\(Exists @"x" x) -> p x .&& q x)
+                             (      (qb (\(Exists x) -> p x) .&& qb (\(Exists x) -> q x))
+                              .<=> -------------------------------------------------------
+                                              qb (\(Exists x) -> p x .&& q x)
                              )
                             []
 
@@ -192,7 +192,7 @@ noTerminationChecks = runTP $ do
    let f :: SInteger -> SInteger
        f = uninterpret "f"
 
-   badAxiom <- axiom "bad" (\(Forall @"n" n) -> f n .== 1 + f n)
+   badAxiom <- axiom "bad" (\(Forall n) -> f n .== 1 + f n)
 
    calc "noTerminationImpliesFalse"
         sFalse

@@ -53,11 +53,11 @@ bsearch array (low, high) = f array low high
 -- | A predicate testing whether a given array is non-decreasing in the given range
 nonDecreasing :: Arr -> Idx -> SBool
 nonDecreasing arr (low, high) = quantifiedBool $
-    \(Forall @"i" i) (Forall @"j" j) -> low .<= i .&& i .<= j .&& j .<= high .=> arr `readArray` i .<= arr `readArray` j
+    \(Forall i) (Forall j) -> low .<= i .&& i .<= j .&& j .<= high .=> arr `readArray` i .<= arr `readArray` j
 
 -- | A predicate testing whether an element is in the array within the given bounds
 inArray :: Arr -> Idx -> SInteger -> SBool
-inArray arr (low, high) elt = quantifiedBool $ \(Exists @"i" i) -> low .<= i .&& i .<= high .&& arr `readArray` i .== elt
+inArray arr (low, high) elt = quantifiedBool $ \(Exists i) -> low .<= i .&& i .<= high .&& arr `readArray` i .== elt
 
 -- | Correctness of binary search.
 --
@@ -112,35 +112,35 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
 
   -- Helper: if a value is not in a range, then it isn't in any subrange of it:
   notInRange <- lemma "notInRange"
-                           (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"m" md) (Forall @"x" x)
+                           (\(Forall arr) (Forall lo) (Forall hi) (Forall md) (Forall x)
                                ->  sNot (inArray arr (lo, hi) x) .&& lo .<= md .&& md .<= hi
                                .=> sNot (inArray arr (lo, md) x) .&& sNot (inArray arr (md, hi) x))
                            []
 
   -- Helper: if a value is in a range of a nonDecreasing array, and if its value is larger than a given mid point, then it's in the higher part
   inRangeHigh <- lemma "inRangeHigh"
-                       (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"m" md) (Forall @"x" x)
+                       (\(Forall arr) (Forall lo) (Forall hi) (Forall md) (Forall x)
                            ->  nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .&& lo .<= md .&& md .<= hi .&& x .> arr `readArray` md
                            .=> inArray arr (md+1, hi) x)
                        []
 
   -- Helper: if a value is in a range of a nonDecreasing array, and if its value is lower than a given mid point, then it's in the lowr part
   inRangeLow  <- lemma "inRangeLow"
-                       (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"m" md) (Forall @"x" x)
+                       (\(Forall arr) (Forall lo) (Forall hi) (Forall md) (Forall x)
                            ->  nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .&& lo .<= md .&& md .<= hi .&& x .< arr `readArray` md
                            .=> inArray arr (lo, md-1) x)
                        []
 
   -- Helper: if an array is nonDecreasing, then its parts are also non-decreasing when cut in any middle point
   nonDecreasingInRange <- lemma "nonDecreasing"
-                                (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"m" md)
+                                (\(Forall arr) (Forall lo) (Forall hi) (Forall md)
                                     ->  nonDecreasing arr (lo, hi) .&& lo .<= md .&& md .<= hi
                                     .=> nonDecreasing arr (lo, md) .&& nonDecreasing arr (md, hi))
                                 []
 
   -- Prove the case when the target is not in the array
   bsearchAbsent <- sInduct "bsearchAbsent"
-        (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
+        (\(Forall arr) (Forall lo) (Forall hi) (Forall x) ->
             nonDecreasing arr (lo, hi) .&& sNot (inArray arr (lo, hi) x) .=> isNothing (bsearch arr (lo, hi) x))
         (\_arr lo hi _x -> Measure (abs (hi - lo + 1))) $
         \ih arr lo hi x ->
@@ -193,7 +193,7 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
 
   -- Prove the case when the target is in the array
   bsearchPresent <- sInduct "bsearchPresent"
-        (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
+        (\(Forall arr) (Forall lo) (Forall hi) (Forall x) ->
             nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .=> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x)
         (\_arr lo hi _x -> Measure (abs (hi - lo + 1))) $
         \ih arr lo hi x ->

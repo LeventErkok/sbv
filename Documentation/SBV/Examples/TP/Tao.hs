@@ -58,6 +58,6 @@ mkUninterpretedSort ''T
 -- [Proven] tao :: Bool
 tao :: forall a. SymVal a => (SBV a -> SBV a -> SBV a) -> IO (Proof SBool)
 tao op = runTP $
-   lemma "tao" (    quantifiedBool (\(Forall @"x" x) (Forall @"y" y) -> ((x `op` x) `op` y) .== y `op` x)
-                .=> quantifiedBool (\(Forall @"x" x) (Forall @"y" y) -> (x `op` y) .== (y `op` x)))
+   lemma "tao" (    quantifiedBool (\(Forall x) (Forall y) -> ((x `op` x) `op` y) .== y `op` x)
+                .=> quantifiedBool (\(Forall x) (Forall y) -> (x `op` y) .== (y `op` x)))
                []

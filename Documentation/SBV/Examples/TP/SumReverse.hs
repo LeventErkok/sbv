@@ -58,7 +58,7 @@ revSum = runTP $ do
   -- helper: sum distributes over append.
   sumAppend <-
      induct "sumAppend"
-            (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
+            (\(Forall xs) (Forall ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
             \ih (x, xs) ys -> [] |- sum ((x .: xs) ++ ys)
                                  =: sum (x .: (xs ++ ys))
                                  =: x + sum (xs ++ ys)

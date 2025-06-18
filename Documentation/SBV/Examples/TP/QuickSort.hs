@@ -284,7 +284,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- llt correctness
   lltCorrect <-
      induct "lltCorrect"
-            (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"pivot" pivot) -> llt pivot xs .&& e `elem` xs .=> e .< pivot) $
+            (\(Forall xs) (Forall e) (Forall pivot) -> llt pivot xs .&& e `elem` xs .=> e .< pivot) $
             \ih (x, xs) e pivot -> [llt pivot (x .: xs), e `elem` (x .: xs)]
                                 |- e .< pivot
                                 ?? ih
@@ -294,7 +294,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- lge correctness
   lgeCorrect <-
      induct "lgeCorrect"
-            (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"pivot" pivot) -> lge pivot xs .&& e `elem` xs .=> e .>= pivot) $
+            (\(Forall xs) (Forall e) (Forall pivot) -> lge pivot xs .&& e `elem` xs .=> e .>= pivot) $
             \ih (x, xs) e pivot -> [lge pivot (x .: xs), e `elem` (x .: xs)]
                                 |- e .>= pivot
                                 ?? ih
@@ -304,7 +304,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- If a value is less than all the elements in a list, then it is also less than all the elements of any sublist of it
   lltSublist <-
      inductWith cvc5 "lltSublist"
-            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& xs `sublist` ys .=> llt pivot xs) $
+            (\(Forall xs) (Forall pivot) (Forall ys) -> llt pivot ys .&& xs `sublist` ys .=> llt pivot xs) $
             \ih (x, xs) pivot ys -> [llt pivot ys, (x .: xs) `sublist` ys]
                                  |- llt pivot (x .: xs)
                                  =: x .< pivot .&& llt pivot xs
@@ -323,7 +323,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- Variant of the above for the permutation case
   lltPermutation <-
      calc "lltPermutation"
-           (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& isPermutation xs ys .=> llt pivot xs) $
+           (\(Forall xs) (Forall pivot) (Forall ys) -> llt pivot ys .&& isPermutation xs ys .=> llt pivot xs) $
            \xs pivot ys -> [llt pivot ys, isPermutation xs ys]
                         |- llt pivot xs
                         ?? lltSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
@@ -334,7 +334,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- If a value is greater than or equal to all the elements in a list, then it is also less than all the elements of any sublist of it
   lgeSublist <-
      inductWith cvc5 "lgeSublist"
-            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& xs `sublist` ys .=> lge pivot xs) $
+            (\(Forall xs) (Forall pivot) (Forall ys) -> lge pivot ys .&& xs `sublist` ys .=> lge pivot xs) $
             \ih (x, xs) pivot ys -> [lge pivot ys, (x .: xs) `sublist` ys]
                                  |- lge pivot (x .: xs)
                                  =: x .>= pivot .&& lge pivot xs
@@ -353,7 +353,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- Variant of the above for the permutation case
   lgePermutation <-
      calc "lgePermutation"
-           (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& isPermutation xs ys .=> lge pivot xs) $
+           (\(Forall xs) (Forall pivot) (Forall ys) -> lge pivot ys .&& isPermutation xs ys .=> lge pivot xs) $
            \xs pivot ys -> [lge pivot ys, isPermutation xs ys]
                         |- lge pivot xs
                         ?? lgeSublist    `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
@@ -367,7 +367,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
 
   -- The first element of the partition produces all smaller elements
   partitionFstLT <- inductWith cvc5 "partitionFstLT"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> llt pivot (fst (partition pivot l))) $
+     (\(Forall l) (Forall pivot) -> llt pivot (fst (partition pivot l))) $
      \ih (a, as) pivot -> [] |- llt pivot (fst (partition pivot (a .: as)))
                              =: llt pivot (ite (a .< pivot)
                                                (a .: fst (partition pivot as))
@@ -382,7 +382,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
 
   -- The second element of the partition produces all greater-than-or-equal to elements
   partitionSndGE <- inductWith cvc5 "partitionSndGE"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> lge pivot (snd (partition pivot l))) $
+     (\(Forall l) (Forall pivot) -> lge pivot (snd (partition pivot l))) $
      \ih (a, as) pivot -> [] |- lge pivot (snd (partition pivot (a .: as)))
                              =: lge pivot (ite (a .< pivot)
                                                (     snd (partition pivot as))
@@ -397,7 +397,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
 
   -- The first element of partition does not increase in size
   partitionNotLongerFst <- sInduct "partitionNotLongerFst"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (fst (partition @a pivot l)) .<= length l)
+     (\(Forall l) (Forall pivot) -> length (fst (partition @a pivot l)) .<= length l)
      (\l _ -> Measure (length l)) $
      \ih l pivot -> [] |- length (fst (partition @a pivot l)) .<= length l
                        =: split l trivial
@@ -415,7 +415,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
 
   -- The second element of partition does not increase in size
   partitionNotLongerSnd <- sInduct "partitionNotLongerSnd"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (snd (partition @a pivot l)) .<= length l)
+     (\(Forall l) (Forall pivot) -> length (snd (partition @a pivot l)) .<= length l)
      (\l _ -> Measure (length l)) $
      \ih l pivot -> [] |- length (snd (partition @a pivot l)) .<= length l
                        =: split l trivial
@@ -442,7 +442,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
 
   countPartition <-
      induct "countPartition"
-            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"e" e) -> countTuple e (partition pivot xs) .== count e xs) $
+            (\(Forall xs) (Forall pivot) (Forall e) -> countTuple e (partition pivot xs) .== count e xs) $
             \ih (a, as) pivot e ->
                 [] |- countTuple e (partition pivot (a .: as))
                    ?? "expand partition"
@@ -478,7 +478,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
 
   sortCountsMatch <-
      sInduct "sortCountsMatch"
-             (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (quickSort xs))
+             (\(Forall xs) (Forall e) -> count e xs .== count e (quickSort xs))
              (\xs _ -> Measure (length xs)) $
              \ih xs e ->
                 [] |- count e (quickSort xs)
@@ -506,14 +506,14 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                                    =: count e xs
                                    =: qed)
 
-  sortIsPermutation <- lemma "sortIsPermutation" (\(Forall @"xs" xs) -> isPermutation xs (quickSort xs)) [proofOf sortCountsMatch]
+  sortIsPermutation <- lemma "sortIsPermutation" (\(Forall xs) -> isPermutation xs (quickSort xs)) [proofOf sortCountsMatch]
 
   --------------------------------------------------------------------------------------------
   -- Part VI. Helper lemmas for nonDecreasing
   --------------------------------------------------------------------------------------------
   nonDecreasingMerge <-
       inductWith cvc5 "nonDecreasingMerge"
-          (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) ->
+          (\(Forall xs) (Forall pivot) (Forall ys) ->
                      nonDecreasing xs .&& llt pivot xs
                  .&& nonDecreasing ys .&& lge pivot ys .=> nonDecreasing (xs ++ [pivot] ++ ys)) $
           \ih (x, xs) pivot ys ->
@@ -531,7 +531,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   --------------------------------------------------------------------------------------------
   sortIsNonDecreasing <-
      sInductWith cvc5 "sortIsNonDecreasing"
-             (\(Forall @"xs" xs) -> nonDecreasing (quickSort xs))
+             (\(Forall xs) -> nonDecreasing (quickSort xs))
              (Measure . length @a) $
              \ih xs ->
                 [] |- nonDecreasing (quickSort xs)

@@ -875,7 +875,7 @@ bookKeeping a f = do
 
    -- Helper: @foldr f y xs = foldr f a xs `f` y@
    helper <- induct "foldBase"
-                    (\(Forall @"xs" xs) (Forall @"y" y) -> lUnit .&& assoc .=> foldr f y xs .== foldr f a xs `f` y) $
+                    (\(Forall xs) (Forall y) -> lUnit .&& assoc .=> foldr f y xs .== foldr f a xs `f` y) $
                     \ih (x, xs) y -> [lUnit, assoc] |- foldr f y (x .: xs)
                                                     =: x `f` foldr f y xs
                                                     ?? ih
@@ -1195,7 +1195,7 @@ take_map f = do
     tc   <- take_cons @a
 
     map1 <- lemma "map1"
-                  (\(Forall @"x" x) (Forall @"xs" xs) -> map f (x .: xs) .== f x .: map f xs)
+                  (\(Forall x) (Forall xs) -> map f (x .: xs) .== f x .: map f xs)
                   []
 
     h1 <- lemma "take_map.n <= 0"
@@ -1531,16 +1531,14 @@ uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple
 interleaveRoundTrip :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 interleaveRoundTrip = do
 
-   revHelper <- lemma "revCons" (\(Forall @"a" a) (Forall @"as" as) (Forall @"bs" bs)
-                      -> reverse @a (a .: as) ++ bs .== reverse as ++ (a .: bs)) []
+   revHelper <- lemma "revCons" (\(Forall a) (Forall as) (Forall bs) -> reverse @a (a .: as) ++ bs .== reverse as ++ (a .: bs)) []
 
    -- Generalize the theorem first to take the helper lists explicitly
    roundTripGen <- sInductWith cvc5
          "roundTripGen"
          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"alts" alts) ->
-               length @a xs .== length ys
-                  .=> let (es, os) = untuple alts
-                      in uninterleaveGen (interleave xs ys) alts .== tuple (reverse es ++ xs, reverse os ++ ys))
+               length xs .== length ys .=> let (es, os) = untuple alts
+                                           in uninterleaveGen (interleave xs ys) alts .== tuple (reverse es ++ xs, reverse os ++ ys))
          (\xs ys _alts -> Measure (length xs + length ys)) $
          \ih xs ys alts -> [length xs .== length ys]
                         |- let (es, os) = untuple alts

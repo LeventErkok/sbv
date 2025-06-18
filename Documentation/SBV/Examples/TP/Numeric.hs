@@ -104,7 +104,7 @@ sumSquareProof = do
        sumSquare = sum . map sq . downFrom
 
    induct "sumSquare_correct"
-          (\(Forall @"n" n) -> n .>= 0 .=> sumSquare n .== (n*(n+1)*(2*n+1)) `sEDiv` 6) $
+          (\(Forall n) -> n .>= 0 .=> sumSquare n .== (n*(n+1)*(2*n+1)) `sEDiv` 6) $
           \ih n -> [n .>= 0] |- sumSquare (n+1)
                              =: sum (map sq (downFrom (n+1)))
                              =: sum (map sq (n+1 .: downFrom n))
@@ -158,7 +158,7 @@ nicomachus = do
    -- The multiplication @n * (n+1)@ is always even. It's surprising that I had to use induction here
    -- as neither z3 nor cvc5 can converge on this out-of-the-box.
    nn1IsEven <- induct "nn1IsEven"
-                       (\(Forall @"n" n) -> n .>= 0 .=> 2 `sDivides` (n * (n+1))) $
+                       (\(Forall n) -> n .>= 0 .=> 2 `sDivides` (n * (n+1))) $
                        \ih n -> [n .>= 0] |- 2 `sDivides` ((n+1) * (n+2))
                                           =: 2 `sDivides` (n*(n+1) + 2*(n+1))
                                           =: 2 `sDivides` (n*(n+1))
@@ -222,7 +222,7 @@ elevenMinusFour = do
        emf n = 7 `sDivides` (11 `pow` n - 4 `pow` n)
 
    -- helper
-   powN <- lemma "powN" (\(Forall @"x" x) (Forall @"n" n) -> n .>= 0 .=> x `pow` (n+1) .== x * x `pow` n) []
+   powN <- lemma "powN" (\(Forall x) (Forall n) -> n .>= 0 .=> x `pow` (n+1) .== x * x `pow` n) []
 
    inductWith cvc5 "elevenMinusFour"
           (\(Forall n) -> n .>= 0 .=> emf n) $

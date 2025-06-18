@@ -107,7 +107,7 @@ oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
   s1 <- lemma "oddSequence_1" (s 1 .== 3) []
 
   sNp2 <- sInduct "oddSequence_sNp2"
-                  (\(Forall @"n" n) -> n .>= 2 .=> s n .== 2 * n + 1)
+                  (\(Forall n) -> n .>= 2 .=> s n .== 2 * n + 1)
                   (Measure . abs) $
                   \ih n -> [n .>= 2] |- s n
                                      =: 2 * s (n-1) - s (n-2)
@@ -122,7 +122,7 @@ oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
                                      =: 2*n + 1
                                      =: qed
 
-  calc "oddSequence2" (\(Forall @"n" n) -> n .>= 0 .=> s n .== 2 * n + 1) $
+  calc "oddSequence2" (\(Forall n) -> n .>= 0 .=> s n .== 2 * n + 1) $
                       \n -> [n .>= 0] |- s n
                                       =: cases [ n .== 0 ==> trivial
                                                , n .== 1 ==> trivial
@@ -153,7 +153,7 @@ won'tProve1 = runTP $ do
 
    -- Run it for 5 seconds, as otherwise z3 will hang as it can't prove make the inductive step
    _ <- sInductWith z3{extraArgs = ["-t:5000"]} "lengthGood"
-                (\(Forall @"xs" xs) -> len xs .== length xs)
+                (\(Forall xs) -> len xs .== length xs)
                 (Measure . length) $
                 \ih xs -> [] |- len xs
                              -- incorrectly instantiate the IH at xs!
@@ -182,7 +182,7 @@ won'tProve2 = runTP $ do
                                                        (1 + len (tail xs)))
 
    _ <- sInduct "badLength"
-                (\(Forall @"xs" xs) -> len xs .== length xs)
+                (\(Forall xs) -> len xs .== length xs)
                 (Measure . length) $
                 \ih xs -> [] |- len xs
                              ?? ih `at` Inst @"xs" xs
@@ -232,7 +232,7 @@ won'tProve4 = runTP $ do
        weirdSum = smtFunction "weirdSum" (\x y -> ite (x .<= 0) y (weirdSum (x - 1) (y + 1)))
 
    _ <- sInductWith z3{extraArgs = ["-t:5000"]} "badMeasure"
-                (\(Forall @"x" x) (Forall @"y" y) -> x .>= 0 .=> weirdSum x y .== x + y)
+                (\(Forall x) (Forall y) -> x .>= 0 .=> weirdSum x y .== x + y)
                 -- This measure is not good, since it remains the same. Note that we do not get a
                 -- failure, but the proof will never converge either; so we put a time bound
                 (\x y -> Measure (abs x + abs y)) $
@@ -283,7 +283,7 @@ sumHalves = runTP $ do
                                                             in halvingSum f + halvingSum s)
 
     helper <- induct "sumAppend"
-                     (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
+                     (\(Forall xs) (Forall ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
                      \ih (x, xs) ys -> [] |- sum (x .: xs ++ ys)
                                           =: x + sum (xs ++ ys)
                                           ?? ih
@@ -293,7 +293,7 @@ sumHalves = runTP $ do
 
     -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
     sInductWith cvc5 "sumHalves"
-      (\(Forall @"xs" xs) -> halvingSum xs .== sum xs)
+      (\(Forall xs) -> halvingSum xs .== sum xs)
       (Measure . length) $
       \ih xs -> [] |- halvingSum xs
                    =: split xs qed

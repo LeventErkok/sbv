@@ -60,7 +60,7 @@ correctness :: IO (Proof (Forall "n" Integer -> SBool))
 correctness = runTP $ do
 
   helper <- induct "helper"
-                   (\(Forall @"n" n) (Forall @"k" k) ->
+                   (\(Forall n) (Forall k) ->
                        n .>= 0 .&& k .>= 0 .=> fib (fibonacci k) (fibonacci (k+1)) n .== fibonacci (k+n)) $
                    \ih n k -> [n .>= 0, k .>= 0]
                            |- fib (fibonacci k) (fibonacci (k+1)) (n+1)

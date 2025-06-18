@@ -139,7 +139,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
 
     mergeKeepsSort <-
         sInductWith cvc5 "mergeKeepsSort"
-           (\(Forall @"xs" xs) (Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys))
+           (\(Forall xs) (Forall ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys))
            (\xs ys -> Measure (length xs, length ys)) $
            \ih xs ys -> [nonDecreasing xs, nonDecreasing ys]
                      |- split2 (xs, ys)
@@ -167,7 +167,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
 
     sortNonDecreasing <-
         sInduct "sortNonDecreasing"
-                (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs))
+                (\(Forall xs) -> nonDecreasing (mergeSort xs))
                 (Measure . length) $
                 \ih xs -> [] |- split xs
                                       qed
@@ -196,8 +196,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
     --------------------------------------------------------------------------------------------
     mergeCount <-
         sInduct "mergeCount"
-                (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) ->
-                        count e (merge xs ys) .== count e xs + count e ys)
+                (\(Forall xs) (Forall ys) (Forall e) -> count e (merge xs ys) .== count e xs + count e ys)
                 (\xs ys _e -> Measure (length xs, length ys)) $
                 \ih as bs e -> [] |- split2 (as, bs)
                                             trivial
@@ -234,7 +233,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
 
     sortIsPermutation <-
         sInductWith cvc5 "sortIsPermutation"
-                (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs))
+                (\(Forall xs) (Forall e) -> count e xs .== count e (mergeSort xs))
                 (\xs _e -> Measure (length xs)) $
                 \ih as e -> [] |- split as
                                         trivial

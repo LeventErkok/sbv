@@ -130,12 +130,12 @@ correctness = runTP $ do
 
   -- We can now prove the main theorem, by instantiating the general version.
   correct <- lemma "majority"
-                   (\(Forall @"c" c) (Forall @"xs" xs) -> isMajority c xs .=> mjrty xs .== c)
+                   (\(Forall c) (Forall xs) -> isMajority c xs .=> mjrty xs .== c)
                    [proofOf majorityGeneral]
 
   -- Corollary: If there is a majority element, then what we return is a majority element:
   ifExistsFound <- lemma "ifExistsFound"
-                        (\(Forall @"c" c) (Forall @"xs" xs) -> isMajority c xs .=> isMajority (mjrty xs) xs)
+                        (\(Forall c) (Forall xs) -> isMajority c xs .=> isMajority (mjrty xs) xs)
                         [proofOf correct]
 
   -- Contrapositive to the above: If the returned value is not majority, then there is no majority:

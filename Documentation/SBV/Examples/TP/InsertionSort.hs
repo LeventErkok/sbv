@@ -126,7 +126,7 @@ correctness = runTPWith (tpRibbon 45 cvc5) $ do
 
     insertNonDecreasing <-
         induct "insertNonDecreasing"
-               (\(Forall @"xs" xs) (Forall @"e" e) -> nonDecreasing xs .=> nonDecreasing (insert e xs)) $
+               (\(Forall xs) (Forall e) -> nonDecreasing xs .=> nonDecreasing (insert e xs)) $
                \ih (x, xs) e -> [nonDecreasing (x .: xs)]
                              |- nonDecreasing (insert e (x .: xs))
                              ?? "unfold insert"

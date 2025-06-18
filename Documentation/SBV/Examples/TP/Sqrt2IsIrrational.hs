@@ -103,10 +103,10 @@ sqrt2IsIrrational = runTP $ do
     -- Define what it means to be co-prime. Note that we use euclidian notion of modulus here
     -- as z3 deals with that much better. Two numbers are co-prime if 1 is their only common divisor.
     let coPrime :: SInteger -> SInteger -> SBool
-        coPrime x y = quantifiedBool (\(Forall @"z" z) -> (x `sEMod` z .== 0 .&& y `sEMod` z .== 0) .=> z .== 1)
+        coPrime x y = quantifiedBool (\(Forall z) -> (x `sEMod` z .== 0 .&& y `sEMod` z .== 0) .=> z .== 1)
 
     -- Prove that square-root of 2 is irrational. We do this by showing for all pairs of integers @a@ and @b@
     -- such that @a*a == 2*b*b@, it must be the case that @a@ and @b@ can not be co-prime:
     lemma "sqrt2IsIrrational"
-          (quantifiedBool (\(Forall @"a" a) (Forall @"b" b) -> sq a .== 2 * sq b .=> sNot (coPrime a b)))
+          (quantifiedBool (\(Forall a) (Forall b) -> sq a .== 2 * sq b .=> sNot (coPrime a b)))
           [proofOf squareEvenImpliesEven, proofOf evenSquaredIsMult4]
