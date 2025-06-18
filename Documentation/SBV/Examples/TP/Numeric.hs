@@ -242,6 +242,57 @@ elevenMinusFour = do
                 =: sTrue
                 =: qed
 
+-- * A proof about factorials
+
+-- | @sum (map (\k -> k * k!) [0 .. n]) == (n+1)! - 1@
+--
+-- >>> runTP sumMulFactorial
+-- Lemma: fact (n+1)
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: sumMulFactorial
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Step: 7                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] sumMulFactorial :: Ɐn ∷ Integer → Bool
+sumMulFactorial :: TP (Proof (Forall "n" Integer -> SBool))
+sumMulFactorial = do
+  let fact :: SInteger -> SInteger
+      fact n = product $ downFromTo n 1
+
+  -- This is pure expansion, but without it z3 struggles in the next lemma.
+  helper <- calc "fact (n+1)"
+                 (\(Forall n) -> n .>= 0 .=> fact (n+1) .== (n+1) * fact n) $
+                 \n -> [n .>= 0] |- fact (n+1)
+                                 =: product (downFromTo (n+1) 1)
+                                 =: product (n+1 .: downFromTo n 1)
+                                 =: (n+1) * product (downFromTo n 1)
+                                 =: (n+1) * fact n
+                                 =: qed
+
+  induct "sumMulFactorial"
+         (\(Forall n) -> n .>= 0 .=> sum (map (\k -> k * fact k) (downFrom n)) .== fact (n+1) - 1) $
+         \ih n -> [n .>= 0] |- sum (map (\k -> k * fact k) (downFrom (n+1)))
+                            =: sum (map (\k -> k * fact k) (n+1 .: downFrom n))
+                            =: sum ((n+1) * fact (n+1) .: map (\k -> k * fact k) (downFrom n))
+                            =: (n+1) * fact (n+1) + sum (map (\k -> k * fact k) (downFrom n))
+                            ?? ih
+                            =: (n+1) * fact (n+1) + fact (n+1) - 1
+                            =: ((n+1) + 1) * fact (n+1) - 1
+                            =: (n+2) * fact (n+1) - 1
+                            ?? helper `at` Inst @"n" (n+1)
+                            =: fact (n+2) - 1
+                            =: qed
+
 -- * A negative example
 
 -- | The regular inductive proof on integers (i.e., proving at @0@, assuming at @n@ and proving at
