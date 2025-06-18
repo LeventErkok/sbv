@@ -254,12 +254,11 @@ badLengthProof = runTP $ do
 -- To demonstrate why caching can be unsound, simply consider a proof where we first prove true, and then prove false
 -- but we /trick/ TP by reusing the name. If you run this, you'll see:
 --
--- >>> runTP badCaching `catch` (\(_ :: SomeException) -> pure sorry)
+-- >>> runTP badCaching `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: evil                             Q.E.D.
 -- Lemma: evil
 -- *** Failed to prove evil.
 -- Falsifiable
--- [Modulo: sorry] sorry :: Bool
 --
 -- This is good, the proof failed since it's just not true. (Except for the confusing naming printed in the trace
 -- due to our own choice.)
@@ -269,7 +268,6 @@ badLengthProof = runTP $ do
 -- >>> runTPWith (tpCache z3) badCaching
 -- Lemma: evil                             Q.E.D.
 -- Cached: evil                            Q.E.D.
--- [Proven. Cached: evil] evil :: Bool
 --
 -- In this case we were able to ostensibly prove False, i.e., this result is unsound. But at least SBV warned us
 -- that we used a cached proof (@evil@), reminding us that using unique names is a proof of obligation for the user
@@ -281,9 +279,12 @@ badLengthProof = runTP $ do
 -- useless as opposed to soundness, but it is alarming as one can be led astray.
 --
 -- (Incidentally, if you really want to be evil, you can just use 'axiom' and assert false, but that's another story.)
-badCaching :: TP (Proof SBool)
+badCaching :: TP ()
 badCaching = do
-   _    <- lemma "evil" sTrue []
+   -- Prove true, giving it a bad name
+   _ <- lemma "evil" sTrue []
 
    -- Attempt to prove false, using evil:
-   lemma "evil" sFalse []
+   _ <- lemma "evil" sFalse []
+
+   pure ()
