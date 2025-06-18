@@ -185,13 +185,13 @@ nicomachus = do
    -- Square of the summation result. This is a trivial lemma for humans, but there are lots
    -- of multiplications involved making the problem non-linear and we need to spell it out.
    ssp <- calc "sum_squared"
-                (\(Forall @"n" n) -> n .>= 0 .=> sum n ^ 2 .== (n^2 * (n+1)^2) `sEDiv` 4) $
-                \n -> [n .>= 0] |- sum n ^ 2
-                                ?? sp `at` Inst @"n" n
-                                =: ((n * (n+1)) `sEDiv` 2)^2
-                                ?? nn1IsEven `at` Inst @"n" n
-                                =: ((n * (n+1))^2) `sEDiv` 4
-                                =: qed
+               (\(Forall @"n" n) -> n .>= 0 .=> sum n ^ 2 .== (n^2 * (n+1)^2) `sEDiv` 4) $
+               \n -> [n .>= 0] |- sum n ^ 2
+                               ?? sp `at` Inst @"n" n
+                               =: ((n * (n+1)) `sEDiv` 2)^2
+                               ?? nn1IsEven `at` Inst @"n" n
+                               =: ((n * (n+1))^2) `sEDiv` 4
+                               =: qed
 
    -- We can finally put it together:
    induct "nicomachus"
