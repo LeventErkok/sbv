@@ -132,7 +132,12 @@ sumSquareProof = do
 -- We have:
 --
 -- >>> runTP nicomachus
--- Lemma: nn1IsEven                        Q.E.D. [Modulo: sorry]
+-- Inductive lemma: nn1IsEven
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: sum_correct
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -141,14 +146,14 @@ sumSquareProof = do
 --   Result:                               Q.E.D.
 -- Lemma: sum_squared
 --   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D. [Modulo: nn1IsEven]
---   Result:                               Q.E.D. [Modulo: nn1IsEven]
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: nicomachus
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D. [Modulo: nn1IsEven]
---   Result:                               Q.E.D. [Modulo: nn1IsEven]
--- [Modulo: nn1IsEven] nicomachus :: Ɐn ∷ Integer → Bool
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] nicomachus :: Ɐn ∷ Integer → Bool
 nicomachus :: TP (Proof (Forall "n" Integer -> SBool))
 nicomachus = do
    let (^) :: SInteger -> Integer -> SInteger
@@ -163,8 +168,16 @@ nicomachus = do
        spec :: SInteger -> SInteger
        spec n = sum n * sum n
 
-   -- The multiplication @n * (n+1)@ is always even. It's surprising that neither z3 nor cvc5 can prove this out-of-the box.
-   nn1IsEven <- lemma "nn1IsEven" (\(Forall @"n" n) -> 2 `sDivides` (n * (n+1))) [sorry]
+   -- The multiplication @n * (n+1)@ is always even. It's surprising that I had to use induction here
+   -- as neither z3 nor cvc5 can converge on this out-of-the-box.
+   nn1IsEven <- induct "nn1IsEven"
+                       (\(Forall @"n" n) -> n .>= 0 .=> (n * (n+1)) `sMod` 2 .== 0) $
+                       \ih n -> [n .>= 0] |- ((n+1) * (n+2)) `sMod` 2 .== 0
+                                          =: (n*(n+1) + 2*(n+1)) `sMod` 2 .== 0
+                                          =: (n*(n+1)) `sMod` 2 .== 0
+                                          ?? ih
+                                          =: sTrue
+                                          =: qed
 
    -- Grab the proof of regular summation formula
    sp <- sumProof
