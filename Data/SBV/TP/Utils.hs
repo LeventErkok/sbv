@@ -353,15 +353,16 @@ instance Typeable a => Show (Proof a) where
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
 -- cannot deal with, or if we want to postpone the proof for the time being. TP will keep
 -- track of the uses of 'sorry' and will print them appropriately while printing proofs.
-sorry :: Proof a
-sorry = Proof $ ProofObj { dependencies = []
-                         , isUserAxiom  = False
-                         , getObjProof  = label "sorry" (quantifiedBool p)
-                         , getProp      = toDyn p
-                         , proofName    = "sorry"
-                         , uniqId       = TPSorry
-                         , isCached     = False
-                         }
+-- NB. We keep this as a t'ProofObj' as opposed to a t'Proof' as it is then easier to use it as a lemma helper.
+sorry :: ProofObj
+sorry = ProofObj { dependencies = []
+                 , isUserAxiom  = False
+                 , getObjProof  = label "sorry" (quantifiedBool p)
+                 , getProp      = toDyn p
+                 , proofName    = "sorry"
+                 , uniqId       = TPSorry
+                 , isCached     = False
+                 }
   where -- ideally, I'd rather just use
         --   p = sFalse
         -- but then SBV constant folds the boolean, and the generated script
@@ -377,7 +378,7 @@ rootOfTrust = rot . proofOf
   where rot p@ProofObj{uniqId, dependencies} = compress res
           where res = case uniqId of
                         TPInternal -> RootOfTrust Nothing
-                        TPSorry    -> RootOfTrust $ Just [proofOf sorry]
+                        TPSorry    -> RootOfTrust $ Just [sorry]
                         TPUser {}  -> self <> foldMap rot dependencies
 
                 -- if sorry is one of our direct dependencies, then we trust this proof
@@ -391,7 +392,7 @@ rootOfTrust = rot . proofOf
                 -- words, we do not need to (or want to) distinguish between different uses of sorry.
                 compress (RootOfTrust mbps) = RootOfTrust $ reduce <$> mbps
                   where reduce ps = case partition isSorry ps of
-                                      (_, []) -> [proofOf sorry]
+                                      (_, []) -> [sorry]
                                       (_, os) -> os
 
 -- | Calculate the modulo string for dependencies

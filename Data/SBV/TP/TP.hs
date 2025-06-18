@@ -1072,6 +1072,14 @@ instance Hinted a ~ TPProofRaw a => HintsTo a (Proof b) where
 instance Hinted a ~ TPProofRaw a => HintsTo a [Proof b] where
   a `addHint` ps = ProofStep a (map (HelperProof . proofOf) ps) qed
 
+-- | Giving just one proof-obj as a helper.
+instance Hinted a ~ TPProofRaw a => HintsTo a (ProofObj) where
+  a `addHint` p = ProofStep a [HelperProof p] qed
+
+-- | Giving a bunch of proof-objs at the same type as a helper.
+instance Hinted a ~ TPProofRaw a => HintsTo a [ProofObj] where
+  a `addHint` ps = ProofStep a (map HelperProof ps) qed
+
 -- | Giving just one boolean as a helper.
 instance Hinted a ~ TPProofRaw a => HintsTo a SBool where
   a `addHint` p = ProofStep a [HelperAssum p] qed
@@ -1101,6 +1109,12 @@ instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TP
   ProofStep   a hs ps `addHint` h = ProofStep   a (hs ++ [HelperProof (proofOf h)]) ps
   ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [HelperProof (proofOf h)]) bs
   ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [HelperProof (proofOf h)])
+
+-- | Giving just one proofobj as a helper, starting from a proof
+instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) ProofObj where
+  ProofStep   a hs ps `addHint` h = ProofStep   a (hs ++ [HelperProof h]) ps
+  ProofBranch b hs bs `addHint` h = ProofBranch b (hs ++ [HelperProof h]) bs
+  ProofEnd    b hs    `addHint` h = ProofEnd    b (hs ++ [HelperProof h])
 
 -- | Giving a bunch of proofs at the same type as a helper, starting from a proof
 instance {-# OVERLAPPING #-} Hinted (TPProofRaw a) ~ TPProofRaw a => HintsTo (TPProofRaw a) [Proof b] where
