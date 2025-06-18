@@ -1073,7 +1073,7 @@ instance Hinted a ~ TPProofRaw a => HintsTo a [Proof b] where
   a `addHint` ps = ProofStep a (map (HelperProof . proofOf) ps) qed
 
 -- | Giving just one proof-obj as a helper.
-instance Hinted a ~ TPProofRaw a => HintsTo a (ProofObj) where
+instance Hinted a ~ TPProofRaw a => HintsTo a ProofObj where
   a `addHint` p = ProofStep a [HelperProof p] qed
 
 -- | Giving a bunch of proof-objs at the same type as a helper.

@@ -15,7 +15,6 @@
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
-{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -26,6 +25,11 @@ import Prelude hiding (head, tail, null, reverse, (++))
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.TP
+
+#ifdef DOCTEST
+-- $setup
+-- >>> :set -XTypeApplications
+#endif
 
 -- * Reversing with an accummulator.
 
