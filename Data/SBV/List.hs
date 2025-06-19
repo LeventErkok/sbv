@@ -82,6 +82,7 @@ import qualified Prelude as P
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
+import Data.SBV.Core.SizedFloats
 
 import Data.SBV.Tuple
 
@@ -97,6 +98,7 @@ import GHC.Exts (IsList(..))
 import GHC.TypeLits
 
 import Data.Word
+import Data.Int
 
 #ifdef DOCTEST
 -- $setup
@@ -973,7 +975,7 @@ class (SymVal a, Ord a, Num (SBV a)) => SEnum a where
 
    -- | @`enumFromTo m n`@. Symbolic version of @[m .. n]@
    enumFromTo :: SBV a -> SBV a -> SList a
-   enumFromTo m = enumFromThenTo m 1
+   enumFromTo m = enumFromThenTo m (m+1)
 
    -- | @`enumFromThenTo m n`@. Symbolic version of @[m, m' .. n]@
    enumFromThenTo :: SBV a -> SBV a -> SBV a -> SList a
@@ -995,11 +997,37 @@ instance SEnum Integer where
    enumFromThen x y = go x (y-x)
      where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
+-- | 'SEnum' instance for words
 instance SEnum Word8
 instance SEnum Word16
 instance SEnum Word32
 instance SEnum Word64
 instance (KnownNat n, BVIsNonZero n) => SEnum (WordN n)
+
+-- | 'SEnum' instance for ints
+instance SEnum Int8
+instance SEnum Int16
+instance SEnum Int32
+instance SEnum Int64
+instance (KnownNat n, BVIsNonZero n) => SEnum (IntN n)
+
+-- | 'SEnum' instance for 'Float'
+instance SEnum Float where
+   enumFrom n       = enumFromThen n (n+1)
+   enumFromThen x y = go x (y-x)
+     where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
+
+-- | 'SEnum' instance for 'Double'
+instance SEnum Double where
+   enumFrom n       = enumFromThen n (n+1)
+   enumFromThen x y = go x (y-x)
+     where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
+
+-- | 'SEnum' instance for arbitrary floats
+instance (ValidFloat eb sb) => SEnum (FloatingPoint eb sb) where
+   enumFrom n       = enumFromThen n (n+1)
+   enumFromThen x y = go x (y-x)
+     where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
