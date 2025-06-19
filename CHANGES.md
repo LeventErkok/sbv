@@ -33,7 +33,7 @@
       - Documentation.SBV.Examples.TP.Reverse:    Proving a definition of reverse that uses no auxiliary definitions is correct.
       - Documentation.SBV.Examples.TP.SumReverse: Proving summing a list and its reverse are equivalent.
 
-  * Rework enum instances for symbolic values. They are now much more symbolic/proof friendly. In particular, there is now
+  * Reworked enum instances for symbolic values. They are now much more symbolic/proof friendly. In particular, there is now
     an sEnum quasiquoter that allows you to construct symbolic enumerations of the form [|sEnum|a, b .. c|] etc., akin to
     regular Haskell enumerations but working on symbolic values and constructing symbolic lists.
 
