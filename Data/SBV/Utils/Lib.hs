@@ -191,7 +191,9 @@ needsBars nm@(h:tl) = not (isEnclosedInBars nm || (isAscii h && all validChar tl
 -- | Converts a proxy to a readable result. This is useful when you want to write a polymorphic
 -- proof, so that the name contains the instantiated version properly.
 atProxy :: forall a. Typeable a => Proxy a -> String -> String
-atProxy _ nm = nm ++ " @" ++ show (typeRep @a)
+atProxy _ nm = nm ++ " @" ++ par (show (typeRep @a))
+ where par s | any isSpace s = '(' : s ++ ")"
+             | True          = s
 
 -- An infinite supply of names, starting with a given set
 nameSupply :: [String] -> [String]
