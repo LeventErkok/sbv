@@ -2454,6 +2454,7 @@ some inpName cond = mk f
 
         k = kindOf (Proxy @a)
 
+
                   chosen <- newExpr st k $ SBVApp (Uninterpreted nm') []
                   let ifExists  = quantifiedBool $ \(Exists ex) -> cond ex
                   internalConstraint st False [] (unSBV (ifExists .=> cond (mk (pure (pure chosen)))))
