@@ -836,6 +836,7 @@ MKSNUM((),                 SReal,                  KReal)
 MKSNUM((KnownNat n),       (SWord n),              (KBounded False (intOfProxy (Proxy @n))))
 MKSNUM((KnownNat n),       (SInt  n),              (KBounded True  (intOfProxy (Proxy @n))))
 MKSNUM((ValidFloat eb sb), (SFloatingPoint eb sb), (KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))))
+#undef MKSNUM
 
 -- | Extract a portion of bits to form a smaller bit-vector.
 bvExtract :: forall i j n bv proxy. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
