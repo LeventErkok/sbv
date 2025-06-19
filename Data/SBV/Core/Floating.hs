@@ -51,8 +51,6 @@ import Data.SBV.Core.Symbolic (addSValOptGoal)
 
 import Data.SBV.Utils.Numeric
 
-import Data.Ratio
-
 import GHC.TypeLits
 
 import LibBF
@@ -593,26 +591,6 @@ instance Metric Double where
                         addSValOptGoal $ unSBV `fmap` Maximize nm' (toMetricSpace o)
 
    annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
-
--- | Real instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
-instance ValidFloat eb sb => Real (FloatingPoint eb sb) where
-  toRational (FloatingPoint (FP _ _ r)) = case bfToRep r of
-                                            BFNaN     -> toRational (0/0 :: Double)
-                                            BFRep s n -> case n of
-                                                           Zero    -> 0 % 1
-                                                           Inf     -> (if s == Neg then -1 else 1) % 0
-                                                           Num x y -> -- The value here is x * 2^y
-                                                                      let v :: Integer
-                                                                          v   = 2 ^ abs (fromIntegral y :: Integer)
-                                                                          sgn = if s == Neg then ((-1) *) else id
-                                                                      in if y > 0
-                                                                            then sgn $ x * v % 1
-                                                                            else sgn $ x % v
-
--- | RealFrac instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
-instance ValidFloat eb sb => RealFrac (FloatingPoint eb sb) where
-  properFraction (FloatingPoint f) = (a, FloatingPoint b)
-     where (a, b) = properFraction f
 
 -- | RealFloat instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
 instance ValidFloat eb sb => RealFloat (FloatingPoint eb sb) where

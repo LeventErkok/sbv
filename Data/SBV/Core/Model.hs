@@ -1904,7 +1904,7 @@ instance {-# OVERLAPPING  #-} ToSizedBV SInt32  where toSized = sFromIntegral
 instance {-# OVERLAPPING  #-} ToSizedBV SInt64  where toSized = sFromIntegral
 instance {-# OVERLAPPABLE #-} ToSizedCstr arg => ToSizedBV arg where toSized = error "unreachable"
 
--- | Enum instance for unsigned words. Haskell requires 'succ' and 'pred' to error out if given max and min-bound
+-- | Enum instance for words/integers. Haskell requires 'succ' and 'pred' to error out if given max and min-bound
 -- respectively. For symbolic purposes, we return an unconstrained value instead, i.e., it is arbitrarily chosen.
 -- We try to be as symbolic as possible, though some of the types (like fromEnum) forces us to be partial.
 instance (SymVal a, Bounded a, Integral a, Num (SBV a)) => Enum (SBV a) where
@@ -1934,39 +1934,50 @@ instance (SymVal a, Bounded a, Integral a, Num (SBV a)) => Enum (SBV a) where
   -- but Haskell's Enum class requires regular lists.
   enumFromThenTo x y z = map fromIntegral [xi, yi .. zi]
     where xi, yi, zi :: Integer
-          xi = cvtForEnum "x" x
-          yi = cvtForEnum "y" y
-          zi = cvtForEnum "z" z
+          xi = cvtForEnum "x" fromIntegral x
+          yi = cvtForEnum "y" fromIntegral y
+          zi = cvtForEnum "z" fromIntegral z
 
--- | Custom integer instance for Enum. 'enumFromTo' and 'enumFromThenTo' instances cannot be implemented for symbolic values.
-instance {-# OVERLAPPING #-} Enum SInteger where
-  succ x = x + 1
-  pred x = x - 1
-  toEnum = literal . fromIntegral
+-- Avoid repetition for almost-copy instances below
 
-  fromEnum x | Just v <- unliteral x = fromInteger v
-             | True                  = error $ "Enum.fromEnum: Called on symbolic value: " ++ show x
+#define MKENUM(CSTR, TYP, XFORM)                                                                                              \
+instance {-# OVERLAPPING #-} CSTR => Enum (SBV TYP) where {                                                                           \
+  succ x = x + 1;                                                                                                       \
+  pred x = x - 1;                                                                                                       \
+  toEnum = literal . fromIntegral;                                                                                      \
+                                                                                                                        \
+  fromEnum x | Just v <- unliteral x = fromInteger (XFORM v)                                                            \
+             | True                  = error $ "Enum.fromEnum: Called on symbolic value: " ++ show x;                   \
+                                                                                                                        \
+  enumFrom     x   = x : enumFrom     (x+1);                                                                            \
+  enumFromThen x y = x : enumFromThen (x+y) y;                                                                          \
+  enumFromTo   x y = enumFromThenTo x (x+1) y;                                                                          \
+                                                                                                                        \
+  {- enumFromThenTo can only be implemented for concrete values. Why? Because otherwise we'd have to generate an SList, \
+   - but Haskell's Enum class requires regular lists.                                                                   \
+   -}                                                                                                                   \
+  enumFromThenTo x y z = map fromIntegral [xi, yi .. zi]                                                                \
+    where { xi, yi, zi :: Integer;                                                                                      \
+            xi = cvtForEnum "x" XFORM x;                                                                                \
+            yi = cvtForEnum "y" XFORM y;                                                                                \
+            zi = cvtForEnum "z" XFORM z;                                                                                \
+          };                                                                                                            \
+}
 
-  enumFrom     x   = x : enumFrom     (x+1)
-  enumFromThen x y = x : enumFromThen (x+y) y
-  enumFromTo   x y = enumFromThenTo x (x+1) y
-
-  -- enumFromThenTo can only be implemented for concrete values. Why? Because otherwise we'd have to generate an SList,
-  -- but Haskell's Enum class requires regular lists.
-  enumFromThenTo x y z = map fromIntegral [xi, yi .. zi]
-    where xi, yi, zi :: Integer
-          xi = cvtForEnum "x" x
-          yi = cvtForEnum "y" y
-          zi = cvtForEnum "z" z
+MKENUM((),                 Integer,               id)
+MKENUM((),                 Float,                 truncate)
+MKENUM((),                 Double,                truncate)
+MKENUM((ValidFloat eb sb), (FloatingPoint eb sb), truncate)
+#undef MKENUM
 
 -- | Helper for enum converter to get a concrete value
-cvtForEnum :: (SymVal a, Integral a, Num b) => String -> SBV a -> b
-cvtForEnum w v = case unliteral v of
-                    Nothing -> error $ unlines [ ""
-                                               , "*** Enum.enumFromThenTo." ++ w ++ ": Called on symbolic value " ++ show v
-                                               , "*** Use Data.SBV.List.{enumFrom, enumFromTo, enumFromThen, enumFromThenTo} instead."
-                                               ]
-                    Just lv -> fromIntegral lv
+cvtForEnum :: SymVal a => String -> (a -> Integer) -> SBV a -> Integer
+cvtForEnum w xform v = case unliteral v of
+                         Nothing -> error $ unlines [ ""
+                                                    , "*** Enum.enumFromThenTo." ++ w ++ ": Called on symbolic value " ++ show v
+                                                    , "*** Use Data.SBV.List.{enumFrom, enumFromTo, enumFromThen, enumFromThenTo} instead."
+                                                    ]
+                         Just lv -> xform lv
 
 -- | The 'SDivisible' class captures the essence of division.
 -- Unfortunately we cannot use Haskell's 'Integral' class since the 'Real'
