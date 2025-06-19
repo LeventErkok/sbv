@@ -15,6 +15,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                    #-}
+{-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -24,6 +25,7 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
@@ -92,6 +94,9 @@ import qualified Data.List as L (inits, tails, isSuffixOf, isPrefixOf, isInfixOf
 import Data.Proxy
 
 import GHC.Exts (IsList(..))
+import GHC.TypeLits
+
+import Data.Word
 
 #ifdef DOCTEST
 -- $setup
@@ -957,24 +962,44 @@ sum = foldr ((+) @(SBV a)) 0
 product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
 
--- | @`enumFrom m@. Symbolic version of @[m ..]@
-enumFrom :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SList a
-enumFrom = undefined
+-- | A class of symbolic aware enumerations. Minimal complete definition: Nothing if the type is bounded. Otherwise
+-- enumFrom and enumFromThen are required.
+class (SymVal a, Ord a, Num (SBV a)) => SEnum a where
+   -- | @`enumFrom m@. Symbolic version of @[m ..]@
+   enumFrom :: SBV a -> SList a
 
--- | @`enumFromThen m@. Symbolic version of @[m, m' ..]@
-enumFromThen :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SList a
-enumFromThen = undefined
+   -- | @`enumFromThen m@. Symbolic version of @[m, m' ..]@
+   enumFromThen :: SBV a -> SBV a -> SList a
 
--- | @`enumFromTo m n`@. Symbolic version of @[m .. n]@
-enumFromTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SList a
-enumFromTo m = enumFromThenTo m 1
+   -- | @`enumFromTo m n`@. Symbolic version of @[m .. n]@
+   enumFromTo :: SBV a -> SBV a -> SList a
+   enumFromTo m = enumFromThenTo m 1
 
--- | @`enumFromThenTo m n`@. Symbolic version of @[m, m' .. n]@
-enumFromThenTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SBV a -> SList a
-enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
-    where delta = y - x
-          up    = smtFunction "enumFromThenTo_up"   $ \start d end -> ite (start .> end) nil (start .: up   (start + d) d end)
-          down  = smtFunction "enumFromThenTo_down" $ \start d end -> ite (start .< end) nil (start .: down (start + d) d end)
+   -- | @`enumFromThenTo m n`@. Symbolic version of @[m, m' .. n]@
+   enumFromThenTo :: SBV a -> SBV a -> SBV a -> SList a
+   enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
+       where delta = y - x
+             up    = smtFunction "enumFromThenTo_up"   $ \start d end -> ite (start .> end) nil (start .: up   (start + d) d end)
+             down  = smtFunction "enumFromThenTo_down" $ \start d end -> ite (start .< end) nil (start .: down (start + d) d end)
+
+   -- Bounded instances can be auto-defined
+   default enumFrom :: Bounded a => SBV a -> SList a
+   enumFrom x = enumFromTo x maxBound
+
+   default enumFromThen :: Bounded a => SBV a -> SBV a -> SList a
+   enumFromThen x y = enumFromThenTo x y (ite (y .>= x) maxBound minBound)
+
+-- | Symbolic enumerations over integers
+instance SEnum Integer where
+   enumFrom n       = enumFromThen n (n+1)
+   enumFromThen x y = go x (y-x)
+     where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
+
+instance SEnum Word8
+instance SEnum Word16
+instance SEnum Word32
+instance SEnum Word64
+instance (KnownNat n, BVIsNonZero n) => SEnum (WordN n)
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
