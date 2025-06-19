@@ -958,7 +958,7 @@ product = foldr ((*) @(SBV a)) 1
 
 -- | @`enumFromTo m n`@. Symbolic version of @[m .. n]@
 enumFromTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SList a
-enumFromTo m n = enumFromThenTo m 1 n
+enumFromTo m = enumFromThenTo m 1
 
 -- | @`enumFromThenTo m n`@. Symbolic version of @[m, m' .. n]@
 enumFromThenTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SBV a -> SList a
