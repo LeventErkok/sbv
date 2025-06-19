@@ -64,7 +64,7 @@ module Data.SBV.List (
         , all, any, and, or
 
         -- * Generators
-        , replicate, inits, tails, enumFrom, enumFromThen, enumFromTo, enumFromThenTo
+        , replicate, inits, tails, SEnum(..)
 
         -- * Sum and product
         , sum, product
