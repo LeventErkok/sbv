@@ -1904,53 +1904,31 @@ instance {-# OVERLAPPING  #-} ToSizedBV SInt32  where toSized = sFromIntegral
 instance {-# OVERLAPPING  #-} ToSizedBV SInt64  where toSized = sFromIntegral
 instance {-# OVERLAPPABLE #-} ToSizedCstr arg => ToSizedBV arg where toSized = error "unreachable"
 
--- Avoid repetitive decls for fixed-word sizes, translating via the generic instance.
-#define MK_WORD_ENUM(TYPE, VIA)                                                                     \
-instance Enum TYPE where {                                                                          \
-  succ                 =     fromSized . succ           @(VIA) . toSized;                           \
-  pred                 =     fromSized . pred           @(VIA) . toSized;                           \
-  toEnum               =     fromSized . toEnum         @(VIA)          ;                           \
-  fromEnum             =                 fromEnum       @(VIA) . toSized;                           \
-  enumFrom             = map fromSized . enumFrom       @(VIA) . toSized;                           \
-  enumFromThen x y     = map fromSized $ enumFromThen   @(VIA) (toSized x) (toSized y);             \
-  enumFromTo   x y     = map fromSized $ enumFromTo     @(VIA) (toSized x) (toSized y);             \
-  enumFromThenTo x y z = map fromSized $ enumFromThenTo @(VIA) (toSized x) (toSized y) (toSized z); \
-}
-
-MK_WORD_ENUM(SWord8,  SWord  8)
-MK_WORD_ENUM(SWord16, SWord 16)
-MK_WORD_ENUM(SWord32, SWord 32)
-MK_WORD_ENUM(SWord64, SWord 64)
-#undef MK_WORD_ENUM
-
 -- | Enum instance for unsigned words. Haskell requires 'succ' and 'pred' to error out if given max and min-bound
 -- respectively. For symbolic purposes, we return an unconstrained value instead, i.e., it is arbitrarily chosen.
 -- We try to be as symbolic as possible, though some of the types (like fromEnum) forces us to be partial.
-instance (KnownNat n, BVIsNonZero n) => Enum (SWord n) where
+instance (SymVal a, Bounded a, Integral a, Num (SBV a)) => Enum (SBV a) where
   succ = smtFunction "succ" (\x -> ite (x .== maxBound) (some "succ_maxBound" (const sTrue)) (x+1))
   pred = smtFunction "pred" (\x -> ite (x .== minBound) (some "pred_minBound" (const sTrue)) (x-1))
 
   toEnum i
     | ii < minb = bad $ show i ++ " < minBound of " ++ show minb
     | ii > maxb = bad $ show i ++ " > maxBound of " ++ show maxb
-    | True      = literal r
+    | True      = fromIntegral i
     where minb, maxb :: Integer
-          (minb, maxb) = (fromIntegral (minBound @(WordN n)), fromIntegral (maxBound @(WordN n)))
+          (minb, maxb) = (fromIntegral (minBound @a), fromIntegral (maxBound @a))
 
           ii :: Integer
           ii = fromIntegral i
 
-          r :: WordN n
-          r = fromIntegral i
-
-          bad why = error $ "Enum." ++ showType r ++ ".toEnum: bad argument: (" ++ why ++ ")"
+          bad why = error $ "Enum." ++ showType (Proxy @(SBV a)) ++ ".toEnum: bad argument: (" ++ why ++ ")"
 
   fromEnum i | Just v <- unliteral i = fromIntegral v
-             | True                  = error $ "Enum." ++ showType (Proxy @(SWord n)) ++ ".fromEnum: Called on symbolic value " ++ show i
+             | True                  = error $ "Enum." ++ showType (Proxy @(SBV a)) ++ ".fromEnum: Called on symbolic value " ++ show i
 
   enumFrom     x   = enumFromTo x maxBound
   enumFromThen x y = enumFromThenTo x y (ite (y .>= x) maxBound minBound)
-  enumFromTo   x y = enumFromThenTo x 1 y
+  enumFromTo   x y = enumFromThenTo x (x+1) y
 
   -- enumFromThenTo can only be implemented for concrete values. Why? Because otherwise we'd have to generate an SList,
   -- but Haskell's Enum class requires regular lists.
@@ -1961,7 +1939,7 @@ instance (KnownNat n, BVIsNonZero n) => Enum (SWord n) where
           zi = cvtForEnum "z" z
 
 -- | Custom integer instance for Enum. 'enumFromTo' and 'enumFromThenTo' instances cannot be implemented for symbolic values.
-instance Enum SInteger where
+instance {-# OVERLAPPING #-} Enum SInteger where
   succ x = x + 1
   pred x = x - 1
   toEnum = literal . fromIntegral
@@ -1971,7 +1949,7 @@ instance Enum SInteger where
 
   enumFrom     x   = x : enumFrom     (x+1)
   enumFromThen x y = x : enumFromThen (x+y) y
-  enumFromTo   x y = enumFromThenTo x 1 y
+  enumFromTo   x y = enumFromThenTo x (x+1) y
 
   -- enumFromThenTo can only be implemented for concrete values. Why? Because otherwise we'd have to generate an SList,
   -- but Haskell's Enum class requires regular lists.
