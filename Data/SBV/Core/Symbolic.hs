@@ -52,7 +52,7 @@ module Data.SBV.Core.Symbolic
   , getUserName', getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex, sObserve
-  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), withNewIncState, IncState(..), incrementInternalCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), withNewIncState, IncState(..), incrementInternalCounter, incrementFreshNameCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..), UIName(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, newInternalVariable, lambdaVar, quantVar
@@ -1163,7 +1163,8 @@ data State  = State { sbvContext          :: SBVContext
                     , rIncState           :: IORef IncState
                     , rCInfo              :: IORef [(String, CV)]
                     , rObservables        :: IORef (S.Seq (Name, CV -> Bool, SV))
-                    , rctr                :: IORef Int
+                    , rctr                :: IORef Int             -- Used for numbering SVs
+                    , freshNameCtr        :: IORef Int             -- Used for calls to some
                     , rLambdaLevel        :: IORef (Maybe Int)     -- If Nothing, then top-level lambda
                     , rUsedKinds          :: IORef KindSet
                     , rUsedLbls           :: IORef (Set.Set String)
@@ -1274,6 +1275,13 @@ incrementInternalCounter st = do ctr <- readIORef (rctr st)
                                  modifyState st rctr (+1) (return ())
                                  return ctr
 {-# INLINE incrementInternalCounter #-}
+
+-- | Increment the fresh-var counter
+incrementFreshNameCounter :: State -> IO Int
+incrementFreshNameCounter st = do ctr <- readIORef (freshNameCtr st)
+                                  modifyState st freshNameCtr (+1) (return ())
+                                  return ctr
+{-# INLINE incrementFreshNameCounter #-}
 
 -- | Kind of code we have for uninterpretation
 data UICodeKind = UINone Bool     -- no code. If bool is true, then curried.
@@ -1790,6 +1798,7 @@ mkNewState cfg currentRunMode = liftIO $ do
                                              }
      rm                 <- newIORef currentRunMode
      ctr                <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
+     fnctr              <- newIORef 0
      lambda             <- newIORef $ case currentRunMode of
                                         SMTMode{}     -> Just 0
                                         CodeGen{}     -> Just 0
@@ -1830,6 +1839,7 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rCInfo              = cInfo
                   , rObservables        = observes
                   , rctr                = ctr
+                  , freshNameCtr        = fnctr
                   , rLambdaLevel        = lambda
                   , rUsedKinds          = usedKinds
                   , rUsedLbls           = usedLbls

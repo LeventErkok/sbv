@@ -111,6 +111,7 @@ inSubState scope inState comp = do
                    , stCfg               = fresh stCfg
                    , runMode             = fresh runMode
                    , rctr                = fresh rctr
+                   , freshNameCtr        = fresh freshNameCtr
                    , rLambdaLevel        = fresh rLambdaLevel
                    , rtblMap             = fresh rtblMap
                    , rinps               = fresh rinps
