@@ -11,6 +11,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -19,7 +20,7 @@
 
 module Documentation.SBV.Examples.TP.Numeric where
 
-import Prelude hiding (sum, map, product, length, (^), replicate, enumFromThenTo)
+import Prelude hiding (sum, map, product, length, (^), replicate)
 
 import Data.SBV
 import Data.SBV.TP
@@ -73,9 +74,9 @@ sumConstProof c = induct "sumConst_correct"
 -- [Proven] sum_correct :: Ɐn ∷ Integer → Bool
 sumProof :: TP (Proof (Forall "n" Integer -> SBool))
 sumProof = induct "sum_correct"
-                  (\(Forall n) -> n .>= 0 .=> sum (enumFromThenTo n (n-1) 0) .== (n * (n+1)) `sEDiv` 2) $
-                  \ih n -> [n .>= 0] |- sum (enumFromThenTo (n+1) n 0)
-                                     =: n+1 + sum (enumFromThenTo n (n-1) 0)
+                  (\(Forall n) -> n .>= 0 .=> sum [sEnum|n, n-1 .. 0|] .== (n * (n+1)) `sEDiv` 2) $
+                  \ih n -> [n .>= 0] |- sum [sEnum|n+1, n .. 0|]
+                                     =: n+1 + sum [sEnum|n, n-1 .. 0|]
                                      ?? ih
                                      =: n+1 + (n * (n+1)) `sEDiv` 2
                                      =: ((n+1) * (n+2)) `sEDiv` 2
@@ -101,15 +102,15 @@ sumSquareProof = do
    let sq :: SInteger -> SInteger
        sq k = k * k
 
-       sumSquare n = sum $ map sq $ enumFromThenTo n (n-1) 0
+       sumSquare n = sum $ map sq $ [sEnum|n, n-1 .. 0|]
 
    induct "sumSquare_correct"
           (\(Forall n) -> n .>= 0 .=> sumSquare n .== (n*(n+1)*(2*n+1)) `sEDiv` 6) $
           \ih n -> [n .>= 0] |- sumSquare (n+1)
-                             =: sum (map sq (enumFromThenTo (n+1) n 0))
-                             =: sum (map sq (n+1 .: enumFromThenTo n (n-1) 0))
-                             =: sum ((n+1)*(n+1) .: map sq (enumFromThenTo n (n-1) 0))
-                             =: (n+1)*(n+1) + sum (map sq (enumFromThenTo n (n-1) 0))
+                             =: sum (map sq [sEnum|n+1, n .. 0|])
+                             =: sum (map sq (n+1 .: [sEnum|n, n-1 .. 0|]))
+                             =: sum ((n+1)*(n+1) .: map sq [sEnum|n, n-1 .. 0|])
+                             =: (n+1)*(n+1) + sum (map sq [sEnum|n, n-1 .. 0|])
                              ?? ih
                              =: (n+1)*(n+1) + (n*(n+1)*(2*n+1)) `sEDiv` 6
                              =: ((n+1)*(n+2)*(2*n+3)) `sEDiv` 6
@@ -181,8 +182,8 @@ nicomachus = do
                                                =: qed
 
         calc "sum_squared"
-               (\(Forall @"n" n) -> n .>= 0 .=> sum (enumFromThenTo n (n-1) 0) ^ 2 .== (n^2 * (n+1)^2) `sEDiv` 4) $
-               \n -> [n .>= 0] |- sum (enumFromThenTo n (n-1) 0) ^ 2
+               (\(Forall @"n" n) -> n .>= 0 .=> sum [sEnum|n, n-1 .. 0|] ^ 2 .== (n^2 * (n+1)^2) `sEDiv` 4) $
+               \n -> [n .>= 0] |- sum [sEnum|n, n-1 .. 0|] ^ 2
                                ?? sp `at` Inst @"n" n
                                =: ((n * (n+1)) `sEDiv` 2)^2
                                ?? nn1IsEven `at` Inst @"n" n
@@ -192,13 +193,13 @@ nicomachus = do
 
    -- We can finally put it together:
    induct "nicomachus"
-          (\(Forall n) -> n .>= 0 .=> sumCubed n .== sum (enumFromThenTo n (n-1) 0) ^ 2) $
+          (\(Forall n) -> n .>= 0 .=> sumCubed n .== sum [sEnum|n, n-1 .. 0|] ^ 2) $
           \ih n -> [n .>= 0]
                 |- sumCubed (n+1)
                 =: (n+1)^3 + sumCubed n
                 ?? ih
                 ?? ssp
-                =: sum (enumFromThenTo (n+1) n 0) ^ 2
+                =: sum [sEnum|n+1, n .. 0|] ^ 2
                 =: qed
 
 -- * Exponents and divisibility by 7
@@ -277,24 +278,24 @@ elevenMinusFour = do
 sumMulFactorial :: TP (Proof (Forall "n" Integer -> SBool))
 sumMulFactorial = do
   let fact :: SInteger -> SInteger
-      fact n = product (enumFromThenTo n (n-1) 1)
+      fact n = product [sEnum|n, n-1 .. 1|]
 
   -- This is pure expansion, but without it z3 struggles in the next lemma.
   helper <- calc "fact (n+1)"
                  (\(Forall n) -> n .>= 0 .=> fact (n+1) .== (n+1) * fact n) $
                  \n -> [n .>= 0] |- fact (n+1)
-                                 =: product (enumFromThenTo (n+1) n 1)
-                                 =: product (n+1 .: enumFromThenTo n (n-1) 1)
-                                 =: (n+1) * product (enumFromThenTo n (n-1) 1)
+                                 =: product [sEnum|n+1, n .. 1|]
+                                 =: product (n+1 .: [sEnum|n, n-1 .. 1|])
+                                 =: (n+1) * product [sEnum|n, n-1 .. 1|]
                                  =: (n+1) * fact n
                                  =: qed
 
   induct "sumMulFactorial"
-         (\(Forall n) -> n .>= 0 .=> sum (map (\k -> k * fact k) (enumFromThenTo n (n-1) 0)) .== fact (n+1) - 1) $
-         \ih n -> [n .>= 0] |- sum (map (\k -> k * fact k) (enumFromThenTo (n+1) n 0))
-                            =: sum (map (\k -> k * fact k) (n+1 .: enumFromThenTo n (n-1) 0))
-                            =: sum ((n+1) * fact (n+1) .: map (\k -> k * fact k) (enumFromThenTo n (n-1) 0))
-                            =: (n+1) * fact (n+1) + sum (map (\k -> k * fact k) (enumFromThenTo n (n-1) 0))
+         (\(Forall n) -> n .>= 0 .=> sum (map (\k -> k * fact k) [sEnum|n, n-1 .. 0|]) .== fact (n+1) - 1) $
+         \ih n -> [n .>= 0] |- sum (map (\k -> k * fact k) [sEnum|n+1, n .. 0|])
+                            =: sum (map (\k -> k * fact k) (n+1 .: [sEnum|n, n-1 .. 0|]))
+                            =: sum ((n+1) * fact (n+1) .: map (\k -> k * fact k) [sEnum|n, n-1 .. 0|])
+                            =: (n+1) * fact (n+1) + sum (map (\k -> k * fact k) [sEnum|n, n-1 .. 0|])
                             ?? ih
                             =: (n+1) * fact (n+1) + fact (n+1) - 1
                             =: ((n+1) + 1) * fact (n+1) - 1

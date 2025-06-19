@@ -1986,7 +1986,7 @@ cvtForEnum :: (SymVal a, Integral a, Num b) => String -> SBV a -> b
 cvtForEnum w v = case unliteral v of
                     Nothing -> error $ unlines [ ""
                                                , "*** Enum.enumFromThenTo." ++ w ++ ": Called on symbolic value " ++ show v
-                                               , "*** Use Data.SBV.List.{enumFromThen, enumFromThenTo} instead."
+                                               , "*** Use Data.SBV.List.{enumFrom, enumFromTo, enumFromThen, enumFromThenTo} instead."
                                                ]
                     Just lv -> fromIntegral lv
 

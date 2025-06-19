@@ -236,6 +236,8 @@ module Data.SBV (
   -- ** Symbolic lists
   -- $lists
   , SList
+  -- ** Symbolic enumerators
+  , sEnum
   -- ** Tuples
   -- $tuples
   , SymTuple, STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
@@ -544,6 +546,7 @@ import GHC.TypeLits (KnownNat, type (<=), type (+), type (-))
 
 import Data.Char (isSpace, isPunctuation)
 import Data.SBV.List () -- instances only
+import Data.SBV.SEnum (sEnum)
 
 #ifdef DOCTEST
 --- $setup

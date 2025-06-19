@@ -62,7 +62,7 @@ module Data.SBV.List (
         , all, any, and, or
 
         -- * Generators
-        , replicate, inits, tails, enumFromTo, enumFromThenTo
+        , replicate, inits, tails, enumFrom, enumFromThen, enumFromTo, enumFromThenTo
 
         -- * Sum and product
         , sum, product
@@ -73,7 +73,8 @@ module Data.SBV.List (
 
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
-                       all, any, and, or, replicate, fst, snd, sum, product, enumFromTo, enumFromThenTo)
+                       all, any, and, or, replicate, fst, snd, sum, product,
+                       enumFrom, enumFromThen, enumFromTo, enumFromThenTo)
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
@@ -955,6 +956,14 @@ sum = foldr ((+) @(SBV a)) 0
 -- | @`product` s@. Multiply out the given sequence.
 product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
+
+-- | @`enumFrom m@. Symbolic version of @[m ..]@
+enumFrom :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SList a
+enumFrom = undefined
+
+-- | @`enumFromThen m@. Symbolic version of @[m, m' ..]@
+enumFromThen :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SList a
+enumFromThen = undefined
 
 -- | @`enumFromTo m n`@. Symbolic version of @[m .. n]@
 enumFromTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SList a
