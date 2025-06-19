@@ -820,8 +820,8 @@ svSymbolicMerge k force t a b
                     () | swt == trueSV  -> svToSV st a       -- these two cases should never be needed as we expect symbolicMerge to be
                     () | swt == falseSV -> svToSV st b       -- called with symbolic tests, but just in case..
                     () -> do {- It is tempting to record the choice of the test expression here as we branch down to the 'then' and 'else' branches. That is,
-                                when we evaluate 'a', we can make use of the fact that the test expression is True, and similarly we can use the fact that it
-                                is False when b is evaluated. In certain cases this can cut down on symbolic simulation significantly, for instance if
+                                when we evaluate @a@, we can make use of the fact that the test expression is True, and similarly we can use the fact that it
+                                is False when @b@ is evaluated. In certain cases this can cut down on symbolic simulation significantly, for instance if
                                 repetitive decisions are made in a recursive loop. Unfortunately, the implementation of this idea is quite tricky, due to
                                 our sharing based implementation. As the 'then' branch is evaluated, we will create many expressions that are likely going
                                 to be "reused" when the 'else' branch is executed. But, it would be *dead wrong* to share those values, as they were "cached"

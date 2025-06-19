@@ -967,17 +967,17 @@ product = foldr ((*) @(SBV a)) 1
 -- | A class of symbolic aware enumerations. Minimal complete definition: Nothing if the type is bounded. Otherwise
 -- enumFrom and enumFromThen are required.
 class (SymVal a, Ord a, Num (SBV a)) => SEnum a where
-   -- | @`enumFrom m@. Symbolic version of @[m ..]@
+   -- | @`enumFrom` m@. Symbolic version of @[m ..]@
    enumFrom :: SBV a -> SList a
 
-   -- | @`enumFromThen m@. Symbolic version of @[m, m' ..]@
+   -- | @`enumFromThen` m@. Symbolic version of @[m, m' ..]@
    enumFromThen :: SBV a -> SBV a -> SList a
 
-   -- | @`enumFromTo m n`@. Symbolic version of @[m .. n]@
+   -- | @`enumFromTo` m n@. Symbolic version of @[m .. n]@
    enumFromTo :: SBV a -> SBV a -> SList a
    enumFromTo m = enumFromThenTo m (m+1)
 
-   -- | @`enumFromThenTo m n`@. Symbolic version of @[m, m' .. n]@
+   -- | @`enumFromThenTo` m n@. Symbolic version of @[m, m' .. n]@
    enumFromThenTo :: SBV a -> SBV a -> SBV a -> SList a
    enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
        where delta = y - x
