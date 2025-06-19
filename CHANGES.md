@@ -43,7 +43,6 @@
 
   * Added functions 'sum', 'product', 'last', 'replicate', '\\', upFromTo, upFrom, downFromTo, and downFrom to Data.SBV.List.
 
-  * Removed Data.SBV.String, and unified list and string functions just as in Haskell. This was a long-time wart
   * [BACKWARDS COMPATIBILITY] Removed Data.SBV.String, and unified list and string functions just as in Haskell. This was a long-time wart
     in SBV, where we distinguished strings and list of characters since SMTLib does not equate them. SBV now
     treats these uniformly, obviating the need for Data.SBV.String.
