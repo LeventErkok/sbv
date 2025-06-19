@@ -2449,17 +2449,15 @@ instance (SymVal a, Bounded a) => Bounded (SBV a) where
 -- element will be one of those that do. The returned element is not guaranteed to be unique, least, greatest etc, unless
 -- there happens to be exactly one satisfying element.
 some :: forall a. (SymVal a, HasKind a) => String -> (SBV a -> SBool) -> SBV a
-some nm cond = mk f
+some inpName cond = mk f
   where mk = SBV . SVal k . Right . cache
 
         k = kindOf (Proxy @a)
 
-        f st = do nm' <- newUninterpreted st (UIGiven nm) Nothing (SBVType [k]) (UINone False)
                   chosen <- newExpr st k $ SBVApp (Uninterpreted nm') []
                   let ifExists  = quantifiedBool $ \(Exists ex) -> cond ex
                   internalConstraint st False [] (unSBV (ifExists .=> cond (mk (pure (pure chosen)))))
                   pure chosen
-
 
 -- | SMT definable constants and functions, which can also be uninterpeted.
 -- This class captures functions that we can generate standalone-code for
