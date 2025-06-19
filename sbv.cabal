@@ -72,6 +72,7 @@ common common-settings
                      ScopedTypeVariables
                      StandaloneDeriving
                      TemplateHaskell
+                     TemplateHaskellQuotes
                      TupleSections
                      TypeApplications
                      TypeFamilies
