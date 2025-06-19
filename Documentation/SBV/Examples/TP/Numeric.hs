@@ -19,7 +19,7 @@
 
 module Documentation.SBV.Examples.TP.Numeric where
 
-import Prelude hiding (sum, map, product, length, (^), replicate)
+import Prelude hiding (sum, map, product, length, (^), replicate, enumFromThenTo)
 
 import Data.SBV
 import Data.SBV.TP
@@ -73,9 +73,9 @@ sumConstProof c = induct "sumConst_correct"
 -- [Proven] sum_correct :: Ɐn ∷ Integer → Bool
 sumProof :: TP (Proof (Forall "n" Integer -> SBool))
 sumProof = induct "sum_correct"
-                  (\(Forall n) -> n .>= 0 .=> sum (downFrom n) .== (n * (n+1)) `sEDiv` 2) $
-                  \ih n -> [n .>= 0] |- sum (downFrom (n+1))
-                                     =: n+1 + sum (downFrom n)
+                  (\(Forall n) -> n .>= 0 .=> sum (enumFromThenTo n (n-1) 0) .== (n * (n+1)) `sEDiv` 2) $
+                  \ih n -> [n .>= 0] |- sum (enumFromThenTo (n+1) n 0)
+                                     =: n+1 + sum (enumFromThenTo n (n-1) 0)
                                      ?? ih
                                      =: n+1 + (n * (n+1)) `sEDiv` 2
                                      =: ((n+1) * (n+2)) `sEDiv` 2
@@ -101,15 +101,15 @@ sumSquareProof = do
    let sq :: SInteger -> SInteger
        sq k = k * k
 
-       sumSquare = sum . map sq . downFrom
+       sumSquare n = sum $ map sq $ enumFromThenTo n (n-1) 0
 
    induct "sumSquare_correct"
           (\(Forall n) -> n .>= 0 .=> sumSquare n .== (n*(n+1)*(2*n+1)) `sEDiv` 6) $
           \ih n -> [n .>= 0] |- sumSquare (n+1)
-                             =: sum (map sq (downFrom (n+1)))
-                             =: sum (map sq (n+1 .: downFrom n))
-                             =: sum ((n+1)*(n+1) .: map sq (downFrom n))
-                             =: (n+1)*(n+1) + sum (map sq (downFrom n))
+                             =: sum (map sq (enumFromThenTo (n+1) n 0))
+                             =: sum (map sq (n+1 .: enumFromThenTo n (n-1) 0))
+                             =: sum ((n+1)*(n+1) .: map sq (enumFromThenTo n (n-1) 0))
+                             =: (n+1)*(n+1) + sum (map sq (enumFromThenTo n (n-1) 0))
                              ?? ih
                              =: (n+1)*(n+1) + (n*(n+1)*(2*n+1)) `sEDiv` 6
                              =: ((n+1)*(n+2)*(2*n+3)) `sEDiv` 6
@@ -123,13 +123,14 @@ sumSquareProof = do
 -- We have:
 --
 -- >>> runTP nicomachus
--- Inductive lemma: nn1IsEven
+-- Inductive lemma: sum_correct
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma: sum_correct
+-- Lemma: evenHalfSquared                  Q.E.D.
+-- Inductive lemma: nn1IsEven
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -155,40 +156,49 @@ nicomachus = do
        sumCubed :: SInteger -> SInteger
        sumCubed = smtFunction "sumCubed" $ \n -> ite (n .<= 0) 0 (n^3 + sumCubed (n - 1))
 
-   -- The multiplication @n * (n+1)@ is always even. It's surprising that I had to use induction here
-   -- as neither z3 nor cvc5 can converge on this out-of-the-box.
-   nn1IsEven <- induct "nn1IsEven"
-                       (\(Forall n) -> n .>= 0 .=> 2 `sDivides` (n * (n+1))) $
-                       \ih n -> [n .>= 0] |- 2 `sDivides` ((n+1) * (n+2))
-                                          =: 2 `sDivides` (n*(n+1) + 2*(n+1))
-                                          =: 2 `sDivides` (n*(n+1))
-                                          ?? ih
-                                          =: sTrue
-                                          =: qed
-
    -- Grab the proof of regular summation formula
    sp <- sumProof
 
    -- Square of the summation result. This is a trivial lemma for humans, but there are lots
    -- of multiplications involved making the problem non-linear and we need to spell it out.
-   ssp <- calc "sum_squared"
-               (\(Forall @"n" n) -> n .>= 0 .=> sum (downFrom n) ^ 2 .== (n^2 * (n+1)^2) `sEDiv` 4) $
-               \n -> [n .>= 0] |- sum (downFrom n) ^ 2
+   ssp <- do
+        -- Squaring half of an even number? You can square the number and divide by 4 instead:
+        -- z3 can prove this out of the box, but without it being explicitly expressed, the
+        -- following proof doesn't go through.
+        evenHalfSquared <- lemma "evenHalfSquared"
+                                 (\(Forall n) -> 2 `sDivides` n .=> (n `sEDiv` 2) ^ 2 .== (n ^ 2) `sEDiv` 4)
+                                 []
+
+        -- The multiplication @n * (n+1)@ is always even. It's surprising that I had to use induction here
+        -- but neither z3 nor cvc5 can converge on this out-of-the-box.
+        nn1IsEven <- induct "nn1IsEven"
+                            (\(Forall n) -> n .>= 0 .=> 2 `sDivides` (n * (n+1))) $
+                            \ih n -> [n .>= 0] |- 2 `sDivides` ((n+1) * (n+2))
+                                               =: 2 `sDivides` (n*(n+1) + 2*(n+1))
+                                               =: 2 `sDivides` (n*(n+1))
+                                               ?? ih
+                                               =: sTrue
+                                               =: qed
+
+        calc "sum_squared"
+               (\(Forall @"n" n) -> n .>= 0 .=> sum (enumFromThenTo n (n-1) 0) ^ 2 .== (n^2 * (n+1)^2) `sEDiv` 4) $
+               \n -> [n .>= 0] |- sum (enumFromThenTo n (n-1) 0) ^ 2
                                ?? sp `at` Inst @"n" n
                                =: ((n * (n+1)) `sEDiv` 2)^2
                                ?? nn1IsEven `at` Inst @"n" n
+                               ?? evenHalfSquared `at` Inst @"n" (n * (n+1))
                                =: ((n * (n+1))^2) `sEDiv` 4
                                =: qed
 
    -- We can finally put it together:
    induct "nicomachus"
-          (\(Forall n) -> n .>= 0 .=> sumCubed n .== sum (downFrom n) ^ 2) $
+          (\(Forall n) -> n .>= 0 .=> sumCubed n .== sum (enumFromThenTo n (n-1) 0) ^ 2) $
           \ih n -> [n .>= 0]
                 |- sumCubed (n+1)
                 =: (n+1)^3 + sumCubed n
                 ?? ih
                 ?? ssp
-                =: sum (downFrom (n+1)) ^ 2
+                =: sum (enumFromThenTo (n+1) n 0) ^ 2
                 =: qed
 
 -- * Exponents and divisibility by 7
@@ -267,24 +277,24 @@ elevenMinusFour = do
 sumMulFactorial :: TP (Proof (Forall "n" Integer -> SBool))
 sumMulFactorial = do
   let fact :: SInteger -> SInteger
-      fact n = product $ downFromTo n 1
+      fact n = product (enumFromThenTo n (n-1) 1)
 
   -- This is pure expansion, but without it z3 struggles in the next lemma.
   helper <- calc "fact (n+1)"
                  (\(Forall n) -> n .>= 0 .=> fact (n+1) .== (n+1) * fact n) $
                  \n -> [n .>= 0] |- fact (n+1)
-                                 =: product (downFromTo (n+1) 1)
-                                 =: product (n+1 .: downFromTo n 1)
-                                 =: (n+1) * product (downFromTo n 1)
+                                 =: product (enumFromThenTo (n+1) n 1)
+                                 =: product (n+1 .: enumFromThenTo n (n-1) 1)
+                                 =: (n+1) * product (enumFromThenTo n (n-1) 1)
                                  =: (n+1) * fact n
                                  =: qed
 
   induct "sumMulFactorial"
-         (\(Forall n) -> n .>= 0 .=> sum (map (\k -> k * fact k) (downFrom n)) .== fact (n+1) - 1) $
-         \ih n -> [n .>= 0] |- sum (map (\k -> k * fact k) (downFrom (n+1)))
-                            =: sum (map (\k -> k * fact k) (n+1 .: downFrom n))
-                            =: sum ((n+1) * fact (n+1) .: map (\k -> k * fact k) (downFrom n))
-                            =: (n+1) * fact (n+1) + sum (map (\k -> k * fact k) (downFrom n))
+         (\(Forall n) -> n .>= 0 .=> sum (map (\k -> k * fact k) (enumFromThenTo n (n-1) 0)) .== fact (n+1) - 1) $
+         \ih n -> [n .>= 0] |- sum (map (\k -> k * fact k) (enumFromThenTo (n+1) n 0))
+                            =: sum (map (\k -> k * fact k) (n+1 .: enumFromThenTo n (n-1) 0))
+                            =: sum ((n+1) * fact (n+1) .: map (\k -> k * fact k) (enumFromThenTo n (n-1) 0))
+                            =: (n+1) * fact (n+1) + sum (map (\k -> k * fact k) (enumFromThenTo n (n-1) 0))
                             ?? ih
                             =: (n+1) * fact (n+1) + fact (n+1) - 1
                             =: ((n+1) + 1) * fact (n+1) - 1
