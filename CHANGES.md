@@ -3,8 +3,8 @@
 
 ### Version 11.7.5, Not yet released
   
-  * Renamed KnuckleDragger to TP, for theorem-proving. The original name was confusing, and the design has
-    diverged from Phil's tool in significant ways and goals.
+  * [BACKWARDS COMPATIBILITY] Renamed KnuckleDragger to TP, for theorem-proving. The original name was confusing, and
+    the design has diverged from Phil's tool in significant ways and goals.
 
   * TP:
       - Keep track of proofs with a unique id.
@@ -37,13 +37,14 @@
     an sEnum quasiquoter that allows you to construct symbolic enumerations of the form [|sEnum|a, b .. c|] etc., akin to
     regular Haskell enumerations but working on symbolic values and constructing symbolic lists.
 
-  * Remove Data.SBV.Tools.NaturalInduction. The functionality provided by this tool is much better
+  * [BACKWARDS COMPATIBILITY] Remove Data.SBV.Tools.NaturalInduction. The functionality provided by this tool is much better
     addressed by TP'sinduction methods. If you were using this functionality and have problems
     porting to TP, please get in touch!
 
   * Added functions 'sum', 'product', 'last', 'replicate', '\\', upFromTo, upFrom, downFromTo, and downFrom to Data.SBV.List.
 
   * Removed Data.SBV.String, and unified list and string functions just as in Haskell. This was a long-time wart
+  * [BACKWARDS COMPATIBILITY] Removed Data.SBV.String, and unified list and string functions just as in Haskell. This was a long-time wart
     in SBV, where we distinguished strings and list of characters since SMTLib does not equate them. SBV now
     treats these uniformly, obviating the need for Data.SBV.String.
 
