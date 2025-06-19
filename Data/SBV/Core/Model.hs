@@ -57,6 +57,7 @@ module Data.SBV.Core.Model (
   , zeroExtend, signExtend
   , sbvQuickCheck
   , readArray, writeArray, lambdaArray, listArray
+  , FromSized, ToSized, FromSizedBV(..), ToSizedBV(..)
   , smtHOFunction, Closure(..)
   )
   where
@@ -79,7 +80,7 @@ import qualified Data.Array as DA (listArray)
 
 import Data.Bits   (Bits(..))
 import Data.Int    (Int8, Int16, Int32, Int64)
-import Data.Kind   (Type)
+import Data.Kind   (Type, Constraint)
 import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe  (fromMaybe, mapMaybe)
 import Data.String (IsString(..))
@@ -103,7 +104,7 @@ import qualified Data.Foldable as F (toList)
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Sized
 import Data.SBV.Core.SizedFloats
-import Data.SBV.Core.Data
+import Data.SBV.Core.Data hiding (Constraint)
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 import Data.SBV.Core.Kind
@@ -1760,74 +1761,234 @@ sRotateRight = liftViaSVal svRotateRight
 sBarrelRotateRight :: (SFiniteBits a, SFiniteBits b) => SBV a -> SBV b -> SBV a
 sBarrelRotateRight = liftViaSVal svBarrelRotateRight
 
--- Enum instance. These instances are suitable for use with concrete values,
--- and will be less useful for symbolic values around. Note that `fromEnum` requires
--- a concrete argument for obvious reasons. Other variants (succ, pred, [x..]) etc are similarly
--- limited. While symbolic variants can be defined for many of these, they will just diverge
--- as final sizes cannot be determined statically.
-instance (Show a, Integral a, Num a, Num (SBV a), SymVal a) => Enum (SBV a) where
-  succ x
-    | Just (_, h :: a) <- minMaxBound, v == h
-    = error $ "Enum.succ{" ++ showType x ++ "}: tried to take `succ' of maxBound"
-    | True
-    = fromIntegral $ v + 1
-    where v = enumCvt "succ" x
+-- | Capturing non-matching instances for better error messages, conversions from sized
+type FromSizedErr (arg :: Type) =     'Text "fromSized: Cannot convert from type: " ':<>: 'ShowType arg
+                                ':$$: 'Text "           Source type must be one of SInt N, SWord N, IntN N, WordN N"
+                                ':$$: 'Text "           where N is 8, 16, 32, or 64."
 
-  pred x
-    | Just (l :: a, _) <- minMaxBound, v == l
-    = error $ "Enum.pred{" ++ showType x ++ "}: tried to take `pred' of minBound"
-    | True
-    = fromIntegral $ v - 1
-    where v = enumCvt "pred" x
+-- | Capturing non-matching instances for better error messages, conversions to sized
+type ToSizedErr (arg :: Type) =      'Text "toSized: Cannot convert from type: " ':<>: 'ShowType arg
+                              ':$$: 'Text "          Source type must be one of Int8/16/32/64"
+                              ':$$: 'Text "                                  OR Word8/16/32/64"
+                              ':$$: 'Text "                                  OR their symbolic variants."
 
-  toEnum x
-    | Just (l :: a, h) <- minMaxBound, xi < fromIntegral l || xi > fromIntegral h
-    = error $ "Enum.toEnum{" ++ showType r ++ "}: " ++ show x ++ " is out-of-bounds " ++ show (l, h)
-    | True
-    = r
-    where xi :: Integer
-          xi = fromIntegral x
-          r  :: SBV a
-          r  = fromIntegral x
+-- | Capture the correspondence between sized and fixed-sized BVs
+type family FromSized (t :: Type) :: Type where
+   FromSized (WordN  8) = Word8
+   FromSized (WordN 16) = Word16
+   FromSized (WordN 32) = Word32
+   FromSized (WordN 64) = Word64
+   FromSized (IntN   8) = Int8
+   FromSized (IntN  16) = Int16
+   FromSized (IntN  32) = Int32
+   FromSized (IntN  64) = Int64
+   FromSized (SWord  8) = SWord8
+   FromSized (SWord 16) = SWord16
+   FromSized (SWord 32) = SWord32
+   FromSized (SWord 64) = SWord64
+   FromSized (SInt   8) = SInt8
+   FromSized (SInt  16) = SInt16
+   FromSized (SInt  32) = SInt32
+   FromSized (SInt  64) = SInt64
 
-  fromEnum x
-     | r < fromIntegral (minBound :: Int) || r > fromIntegral (maxBound :: Int)
-     = error $ "Enum.fromEnum{" ++ showType x ++ "}:  value " ++ show r ++ " is outside of Int's bounds " ++ show (minBound :: Int, maxBound :: Int)
-     | True
-     = fromIntegral r
-    where r :: Integer
-          r = enumCvt "fromEnum" x
+-- | Capture the correspondence, in terms of a constraint
+type family FromSizedCstr (t :: Type) :: Constraint where
+   FromSizedCstr (WordN  8) = ()
+   FromSizedCstr (WordN 16) = ()
+   FromSizedCstr (WordN 32) = ()
+   FromSizedCstr (WordN 64) = ()
+   FromSizedCstr (IntN   8) = ()
+   FromSizedCstr (IntN  16) = ()
+   FromSizedCstr (IntN  32) = ()
+   FromSizedCstr (IntN  64) = ()
+   FromSizedCstr (SWord  8) = ()
+   FromSizedCstr (SWord 16) = ()
+   FromSizedCstr (SWord 32) = ()
+   FromSizedCstr (SWord 64) = ()
+   FromSizedCstr (SInt   8) = ()
+   FromSizedCstr (SInt  16) = ()
+   FromSizedCstr (SInt  32) = ()
+   FromSizedCstr (SInt  64) = ()
+   FromSizedCstr arg        = TypeError (FromSizedErr arg)
 
-  enumFrom x
-     | Just (_, h :: a) <- minMaxBound
-     = map fromIntegral [xi .. fromIntegral h]
-     | True
-     = error $ "Enum.enumFrom{" ++ showType x ++ "}: is not a bounded type, and SBV doesn't support infinite lists."
-     where xi :: Integer
-           xi = enumCvt "enumFrom" x
+-- | Conversion from a sized BV to a fixed-sized bit-vector.
+class FromSizedBV a where
+   -- | Convert a sized bit-vector to the corresponding fixed-sized bit-vector,
+   -- for instance 'SWord 16' to 'SWord16'. See also 'toSized'.
+   fromSized :: a -> FromSized a
 
-  enumFromThen x y
-     | Just (l :: a, h) <- minMaxBound
-     = if yi >= xi
-          then map fromIntegral [xi, yi .. fromIntegral h]
-          else map fromIntegral [xi, yi .. fromIntegral l]
-     | True
-     = error $ "Enum.enumFromThen{" ++ showType x ++ "}: is not a bounded type, and SBV doesn't support infinite lists."
-     where xi, yi :: Integer
-           xi = enumCvt "enumFromThen.x" x
-           yi = enumCvt "enumFromThen.y" y
+   default fromSized :: (Num (FromSized a), Integral a) => a -> FromSized a
+   fromSized = fromIntegral
 
+instance {-# OVERLAPPING  #-} FromSizedBV (WordN   8)
+instance {-# OVERLAPPING  #-} FromSizedBV (WordN  16)
+instance {-# OVERLAPPING  #-} FromSizedBV (WordN  32)
+instance {-# OVERLAPPING  #-} FromSizedBV (WordN  64)
+instance {-# OVERLAPPING  #-} FromSizedBV (IntN    8)
+instance {-# OVERLAPPING  #-} FromSizedBV (IntN   16)
+instance {-# OVERLAPPING  #-} FromSizedBV (IntN   32)
+instance {-# OVERLAPPING  #-} FromSizedBV (IntN   64)
+instance {-# OVERLAPPING  #-} FromSizedBV (SWord   8) where fromSized = sFromIntegral
+instance {-# OVERLAPPING  #-} FromSizedBV (SWord  16) where fromSized = sFromIntegral
+instance {-# OVERLAPPING  #-} FromSizedBV (SWord  32) where fromSized = sFromIntegral
+instance {-# OVERLAPPING  #-} FromSizedBV (SWord  64) where fromSized = sFromIntegral
+instance {-# OVERLAPPING  #-} FromSizedBV (SInt    8) where fromSized = sFromIntegral
+instance {-# OVERLAPPING  #-} FromSizedBV (SInt   16) where fromSized = sFromIntegral
+instance {-# OVERLAPPING  #-} FromSizedBV (SInt   32) where fromSized = sFromIntegral
+instance {-# OVERLAPPING  #-} FromSizedBV (SInt   64) where fromSized = sFromIntegral
+instance {-# OVERLAPPABLE #-} FromSizedCstr arg => FromSizedBV arg where fromSized = error "unreachable"
+
+-- | Capture the correspondence between fixed-sized and sized BVs
+type family ToSized (t :: Type) :: Type where
+   ToSized Word8   = WordN  8
+   ToSized Word16  = WordN 16
+   ToSized Word32  = WordN 32
+   ToSized Word64  = WordN 64
+   ToSized Int8    = IntN   8
+   ToSized Int16   = IntN  16
+   ToSized Int32   = IntN  32
+   ToSized Int64   = IntN  64
+   ToSized SWord8  = SWord  8
+   ToSized SWord16 = SWord 16
+   ToSized SWord32 = SWord 32
+   ToSized SWord64 = SWord 64
+   ToSized SInt8   = SInt   8
+   ToSized SInt16  = SInt  16
+   ToSized SInt32  = SInt  32
+   ToSized SInt64  = SInt  64
+
+-- | Capture the correspondence in terms of a constraint
+type family ToSizedCstr (t :: Type) :: Constraint where
+   ToSizedCstr Word8   = ()
+   ToSizedCstr Word16  = ()
+   ToSizedCstr Word32  = ()
+   ToSizedCstr Word64  = ()
+   ToSizedCstr Int8    = ()
+   ToSizedCstr Int16   = ()
+   ToSizedCstr Int32   = ()
+   ToSizedCstr Int64   = ()
+   ToSizedCstr SWord8  = ()
+   ToSizedCstr SWord16 = ()
+   ToSizedCstr SWord32 = ()
+   ToSizedCstr SWord64 = ()
+   ToSizedCstr SInt8   = ()
+   ToSizedCstr SInt16  = ()
+   ToSizedCstr SInt32  = ()
+   ToSizedCstr SInt64  = ()
+   ToSizedCstr arg     = TypeError (ToSizedErr arg)
+
+-- | Conversion from a fixed-sized BV to a sized bit-vector.
+class ToSizedBV a where
+   -- | Convert a fixed-sized bit-vector to the corresponding sized bit-vector,
+   -- for instance 'SWord16' to 'SWord 16'. See also 'fromSized'.
+   toSized :: a -> ToSized a
+
+   default toSized :: (Num (ToSized a), Integral a) => (a -> ToSized a)
+   toSized = fromIntegral
+
+instance {-# OVERLAPPING  #-} ToSizedBV Word8
+instance {-# OVERLAPPING  #-} ToSizedBV Word16
+instance {-# OVERLAPPING  #-} ToSizedBV Word32
+instance {-# OVERLAPPING  #-} ToSizedBV Word64
+instance {-# OVERLAPPING  #-} ToSizedBV Int8
+instance {-# OVERLAPPING  #-} ToSizedBV Int16
+instance {-# OVERLAPPING  #-} ToSizedBV Int32
+instance {-# OVERLAPPING  #-} ToSizedBV Int64
+instance {-# OVERLAPPING  #-} ToSizedBV SWord8  where toSized = sFromIntegral
+instance {-# OVERLAPPING  #-} ToSizedBV SWord16 where toSized = sFromIntegral
+instance {-# OVERLAPPING  #-} ToSizedBV SWord32 where toSized = sFromIntegral
+instance {-# OVERLAPPING  #-} ToSizedBV SWord64 where toSized = sFromIntegral
+instance {-# OVERLAPPING  #-} ToSizedBV SInt8   where toSized = sFromIntegral
+instance {-# OVERLAPPING  #-} ToSizedBV SInt16  where toSized = sFromIntegral
+instance {-# OVERLAPPING  #-} ToSizedBV SInt32  where toSized = sFromIntegral
+instance {-# OVERLAPPING  #-} ToSizedBV SInt64  where toSized = sFromIntegral
+instance {-# OVERLAPPABLE #-} ToSizedCstr arg => ToSizedBV arg where toSized = error "unreachable"
+
+-- Avoid repetitive decls for fixed-word sizes, translating via the generic instance.
+#define MK_WORD_ENUM(TYPE, VIA)                                                                     \
+instance Enum TYPE where {                                                                          \
+  succ                 =     fromSized . succ           @(VIA) . toSized;                           \
+  pred                 =     fromSized . pred           @(VIA) . toSized;                           \
+  toEnum               =     fromSized . toEnum         @(VIA)          ;                           \
+  fromEnum             =                 fromEnum       @(VIA) . toSized;                           \
+  enumFrom             = map fromSized . enumFrom       @(VIA) . toSized;                           \
+  enumFromThen x y     = map fromSized $ enumFromThen   @(VIA) (toSized x) (toSized y);             \
+  enumFromTo   x y     = map fromSized $ enumFromTo     @(VIA) (toSized x) (toSized y);             \
+  enumFromThenTo x y z = map fromSized $ enumFromThenTo @(VIA) (toSized x) (toSized y) (toSized z); \
+}
+
+MK_WORD_ENUM(SWord8,  SWord  8)
+MK_WORD_ENUM(SWord16, SWord 16)
+MK_WORD_ENUM(SWord32, SWord 32)
+MK_WORD_ENUM(SWord64, SWord 64)
+#undef MK_WORD_ENUM
+
+-- | Enum instance for unsigned words. Haskell requires 'succ' and 'pred' to error out if given max and min-bound
+-- respectively. For symbolic purposes, we return an unconstrained value instead, i.e., it is arbitrarily chosen.
+-- We try to be as symbolic as possible, though some of the types (like fromEnum) forces us to be partial.
+instance (KnownNat n, BVIsNonZero n) => Enum (SWord n) where
+  succ = smtFunction "succ" (\x -> ite (x .== maxBound) (some "succ_maxBound" (const sTrue)) (x+1))
+  pred = smtFunction "pred" (\x -> ite (x .== minBound) (some "pred_minBound" (const sTrue)) (x-1))
+
+  toEnum i
+    | ii < minb = bad $ show i ++ " < minBound of " ++ show minb
+    | ii > maxb = bad $ show i ++ " > maxBound of " ++ show maxb
+    | True      = literal r
+    where minb, maxb :: Integer
+          (minb, maxb) = (fromIntegral (minBound @(WordN n)), fromIntegral (maxBound @(WordN n)))
+
+          ii :: Integer
+          ii = fromIntegral i
+
+          r :: WordN n
+          r = fromIntegral i
+
+          bad why = error $ "Enum." ++ showType r ++ ".toEnum: bad argument: (" ++ why ++ ")"
+
+  fromEnum i | Just v <- unliteral i = fromIntegral v
+             | True                  = error $ "Enum." ++ showType (Proxy @(SWord n)) ++ ".fromEnum: Called on symbolic value " ++ show i
+
+  enumFrom     x   = enumFromTo x maxBound
+  enumFromThen x y = enumFromThenTo x y (ite (y .>= x) maxBound minBound)
+  enumFromTo   x y = enumFromThenTo x 1 y
+
+  -- enumFromThenTo can only be implemented for concrete values. Why? Because otherwise we'd have to generate an SList,
+  -- but Haskell's Enum class requires regular lists.
   enumFromThenTo x y z = map fromIntegral [xi, yi .. zi]
-       where xi, yi, zi :: Integer
-             xi = enumCvt "enumFromThenTo.x" x
-             yi = enumCvt "enumFromThenTo.y" y
-             zi = enumCvt "enumFromThenTo.z" z
+    where xi, yi, zi :: Integer
+          xi = cvtForEnum "x" x
+          yi = cvtForEnum "y" y
+          zi = cvtForEnum "z" z
 
--- | Helper function for use in enum operations
-enumCvt :: (SymVal a, Integral a, Num b) => String -> SBV a -> b
-enumCvt w x = case unliteral x of
-                Nothing -> error $ "Enum." ++ w ++ "{" ++ showType x ++ "}: Called on symbolic value " ++ show x
-                Just v  -> fromIntegral v
+-- | Custom integer instance for Enum. 'enumFromTo' and 'enumFromThenTo' instances cannot be implemented for symbolic values.
+instance Enum SInteger where
+  succ x = x + 1
+  pred x = x - 1
+  toEnum = literal . fromIntegral
+
+  fromEnum x | Just v <- unliteral x = fromInteger v
+             | True                  = error $ "Enum.fromEnum: Called on symbolic value: " ++ show x
+
+  enumFrom     x   = x : enumFrom     (x+1)
+  enumFromThen x y = x : enumFromThen (x+y) y
+  enumFromTo   x y = enumFromThenTo x 1 y
+
+  -- enumFromThenTo can only be implemented for concrete values. Why? Because otherwise we'd have to generate an SList,
+  -- but Haskell's Enum class requires regular lists.
+  enumFromThenTo x y z = map fromIntegral [xi, yi .. zi]
+    where xi, yi, zi :: Integer
+          xi = cvtForEnum "x" x
+          yi = cvtForEnum "y" y
+          zi = cvtForEnum "z" z
+
+-- | Helper for enum converter to get a concrete value
+cvtForEnum :: (SymVal a, Integral a, Num b) => String -> SBV a -> b
+cvtForEnum w v = case unliteral v of
+                    Nothing -> error $ unlines [ ""
+                                               , "*** Enum.enumFromThenTo." ++ w ++ ": Called on symbolic value " ++ show v
+                                               , "*** Use Data.SBV.List.{enumFromThen, enumFromThenTo} instead."
+                                               ]
+                    Just lv -> fromIntegral lv
 
 -- | The 'SDivisible' class captures the essence of division.
 -- Unfortunately we cannot use Haskell's 'Integral' class since the 'Real'

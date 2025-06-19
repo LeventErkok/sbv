@@ -62,7 +62,7 @@ module Data.SBV.List (
         , all, any, and, or
 
         -- * Generators
-        , replicate, inits, tails, upFromTo, upFrom, downFromTo, downFrom
+        , replicate, inits, tails, enumFromTo, enumFromThenTo
 
         -- * Sum and product
         , sum, product
@@ -73,7 +73,7 @@ module Data.SBV.List (
 
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
-                       all, any, and, or, replicate, fst, snd, sum, product)
+                       all, any, and, or, replicate, fst, snd, sum, product, enumFromTo, enumFromThenTo)
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
@@ -956,21 +956,16 @@ sum = foldr ((+) @(SBV a)) 0
 product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
 
--- | @`upFromTo` begin end@. Return list of numbers @[begin .. end]@.
-upFromTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SList a
-upFromTo = smtFunction "upFromTo" $ \begin end -> ite (begin .> end) nil (begin .: upFromTo (begin+1) end)
+-- | @`enumFromTo m n`@. Symbolic version of @[m .. n]@
+enumFromTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SList a
+enumFromTo m n = enumFromThenTo m 1 n
 
--- | @`downFromTo` end begin@. Return list of numbers @[end, end-1 .. begin]@.
-downFromTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SList a
-downFromTo = smtFunction "downFromTo" $ \end begin -> ite (end .< begin) nil (end .: downFromTo (end-1) begin)
-
--- | @`upFrom` end@. Return list of numbers @[0 .. end]@.
-upFrom :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SList a
-upFrom = upFromTo 0
-
--- | @`downFrom` end@. Return list of numbers @[end, end-1 .. 0]@.
-downFrom :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SList a
-downFrom end = downFromTo end 0
+-- | @`enumFromThenTo m n`@. Symbolic version of @[m, m' .. n]@
+enumFromThenTo :: forall a. (SymVal a, Ord a, Num (SBV a)) => SBV a -> SBV a -> SBV a -> SList a
+enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
+    where delta = y - x
+          up    = smtFunction "enumFromThenTo_up"   $ \start d end -> ite (start .> end) nil (start .: up   (start + d) d end)
+          down  = smtFunction "enumFromThenTo_down" $ \start d end -> ite (start .< end) nil (start .: down (start + d) d end)
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,

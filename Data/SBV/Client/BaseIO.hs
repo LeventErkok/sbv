@@ -30,7 +30,6 @@ import Data.SBV.Core.Data      (Kind, Outputtable, Penalty,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SRational, SMaybe, SSet, SArray, constrain, (.==))
-import Data.SBV.Core.Sized     (IntN, WordN)
 import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext, Symbolic, SBVRunMode, SMTConfig,
@@ -40,11 +39,7 @@ import Data.SBV.Provers.Prover (Provable, Satisfiable, SExecutable, ThmResult)
 import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult, OptimizeResult)
 import Data.SBV.Utils.Lib      (checkObservableName)
 
-import GHC.TypeLits (KnownNat, TypeError, ErrorMessage(..))
-import Data.Kind
-
-import Data.Int
-import Data.Word
+import GHC.TypeLits (KnownNat)
 
 import Data.IORef(readIORef, writeIORef)
 
@@ -907,146 +902,3 @@ sObserve m x
   = do st <- symbolicEnv
        liftIO $ do xsv <- Trans.sbvToSV st x
                    Trans.recordObservable st m (const True) xsv
-
--- | Capturing non-matching instances for better error messages, conversions from sized
-type FromSizedErr (arg :: Type) =     'Text "fromSized: Cannot convert from type: " ':<>: 'ShowType arg
-                                ':$$: 'Text "           Source type must be one of SInt N, SWord N, IntN N, WordN N"
-                                ':$$: 'Text "           where N is 8, 16, 32, or 64."
-
--- | Capturing non-matching instances for better error messages, conversions to sized
-type ToSizedErr (arg :: Type) =      'Text "toSized: Cannot convert from type: " ':<>: 'ShowType arg
-                              ':$$: 'Text "          Source type must be one of Int8/16/32/64"
-                              ':$$: 'Text "                                  OR Word8/16/32/64"
-                              ':$$: 'Text "                                  OR their symbolic variants."
-
--- | Capture the correspondence between sized and fixed-sized BVs
-type family FromSized (t :: Type) :: Type where
-   FromSized (WordN  8) = Word8
-   FromSized (WordN 16) = Word16
-   FromSized (WordN 32) = Word32
-   FromSized (WordN 64) = Word64
-   FromSized (IntN   8) = Int8
-   FromSized (IntN  16) = Int16
-   FromSized (IntN  32) = Int32
-   FromSized (IntN  64) = Int64
-   FromSized (SWord  8) = SWord8
-   FromSized (SWord 16) = SWord16
-   FromSized (SWord 32) = SWord32
-   FromSized (SWord 64) = SWord64
-   FromSized (SInt   8) = SInt8
-   FromSized (SInt  16) = SInt16
-   FromSized (SInt  32) = SInt32
-   FromSized (SInt  64) = SInt64
-
--- | Capture the correspondence, in terms of a constraint
-type family FromSizedCstr (t :: Type) :: Constraint where
-   FromSizedCstr (WordN  8) = ()
-   FromSizedCstr (WordN 16) = ()
-   FromSizedCstr (WordN 32) = ()
-   FromSizedCstr (WordN 64) = ()
-   FromSizedCstr (IntN   8) = ()
-   FromSizedCstr (IntN  16) = ()
-   FromSizedCstr (IntN  32) = ()
-   FromSizedCstr (IntN  64) = ()
-   FromSizedCstr (SWord  8) = ()
-   FromSizedCstr (SWord 16) = ()
-   FromSizedCstr (SWord 32) = ()
-   FromSizedCstr (SWord 64) = ()
-   FromSizedCstr (SInt   8) = ()
-   FromSizedCstr (SInt  16) = ()
-   FromSizedCstr (SInt  32) = ()
-   FromSizedCstr (SInt  64) = ()
-   FromSizedCstr arg        = TypeError (FromSizedErr arg)
-
--- | Conversion from a sized BV to a fixed-sized bit-vector.
-class FromSizedBV a where
-   -- | Convert a sized bit-vector to the corresponding fixed-sized bit-vector,
-   -- for instance 'SWord 16' to 'SWord16'. See also 'toSized'.
-   fromSized :: a -> FromSized a
-
-   default fromSized :: (Num (FromSized a), Integral a) => a -> FromSized a
-   fromSized = fromIntegral
-
-instance {-# OVERLAPPING  #-} FromSizedBV (WordN   8)
-instance {-# OVERLAPPING  #-} FromSizedBV (WordN  16)
-instance {-# OVERLAPPING  #-} FromSizedBV (WordN  32)
-instance {-# OVERLAPPING  #-} FromSizedBV (WordN  64)
-instance {-# OVERLAPPING  #-} FromSizedBV (IntN    8)
-instance {-# OVERLAPPING  #-} FromSizedBV (IntN   16)
-instance {-# OVERLAPPING  #-} FromSizedBV (IntN   32)
-instance {-# OVERLAPPING  #-} FromSizedBV (IntN   64)
-instance {-# OVERLAPPING  #-} FromSizedBV (SWord   8) where fromSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} FromSizedBV (SWord  16) where fromSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} FromSizedBV (SWord  32) where fromSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} FromSizedBV (SWord  64) where fromSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} FromSizedBV (SInt    8) where fromSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} FromSizedBV (SInt   16) where fromSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} FromSizedBV (SInt   32) where fromSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} FromSizedBV (SInt   64) where fromSized = Trans.sFromIntegral
-instance {-# OVERLAPPABLE #-} FromSizedCstr arg => FromSizedBV arg where fromSized = error "unreachable"
-
--- | Capture the correspondence between fixed-sized and sized BVs
-type family ToSized (t :: Type) :: Type where
-   ToSized Word8   = WordN  8
-   ToSized Word16  = WordN 16
-   ToSized Word32  = WordN 32
-   ToSized Word64  = WordN 64
-   ToSized Int8    = IntN   8
-   ToSized Int16   = IntN  16
-   ToSized Int32   = IntN  32
-   ToSized Int64   = IntN  64
-   ToSized SWord8  = SWord  8
-   ToSized SWord16 = SWord 16
-   ToSized SWord32 = SWord 32
-   ToSized SWord64 = SWord 64
-   ToSized SInt8   = SInt   8
-   ToSized SInt16  = SInt  16
-   ToSized SInt32  = SInt  32
-   ToSized SInt64  = SInt  64
-
--- | Capture the correspondence in terms of a constraint
-type family ToSizedCstr (t :: Type) :: Constraint where
-   ToSizedCstr Word8   = ()
-   ToSizedCstr Word16  = ()
-   ToSizedCstr Word32  = ()
-   ToSizedCstr Word64  = ()
-   ToSizedCstr Int8    = ()
-   ToSizedCstr Int16   = ()
-   ToSizedCstr Int32   = ()
-   ToSizedCstr Int64   = ()
-   ToSizedCstr SWord8  = ()
-   ToSizedCstr SWord16 = ()
-   ToSizedCstr SWord32 = ()
-   ToSizedCstr SWord64 = ()
-   ToSizedCstr SInt8   = ()
-   ToSizedCstr SInt16  = ()
-   ToSizedCstr SInt32  = ()
-   ToSizedCstr SInt64  = ()
-   ToSizedCstr arg     = TypeError (ToSizedErr arg)
-
--- | Conversion from a fixed-sized BV to a sized bit-vector.
-class ToSizedBV a where
-   -- | Convert a fixed-sized bit-vector to the corresponding sized bit-vector,
-   -- for instance 'SWord16' to 'SWord 16'. See also 'fromSized'.
-   toSized :: a -> ToSized a
-
-   default toSized :: (Num (ToSized a), Integral a) => (a -> ToSized a)
-   toSized = fromIntegral
-
-instance {-# OVERLAPPING  #-} ToSizedBV Word8
-instance {-# OVERLAPPING  #-} ToSizedBV Word16
-instance {-# OVERLAPPING  #-} ToSizedBV Word32
-instance {-# OVERLAPPING  #-} ToSizedBV Word64
-instance {-# OVERLAPPING  #-} ToSizedBV Int8
-instance {-# OVERLAPPING  #-} ToSizedBV Int16
-instance {-# OVERLAPPING  #-} ToSizedBV Int32
-instance {-# OVERLAPPING  #-} ToSizedBV Int64
-instance {-# OVERLAPPING  #-} ToSizedBV SWord8  where toSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} ToSizedBV SWord16 where toSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} ToSizedBV SWord32 where toSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} ToSizedBV SWord64 where toSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} ToSizedBV SInt8   where toSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} ToSizedBV SInt16  where toSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} ToSizedBV SInt32  where toSized = Trans.sFromIntegral
-instance {-# OVERLAPPING  #-} ToSizedBV SInt64  where toSized = Trans.sFromIntegral
-instance {-# OVERLAPPABLE #-} ToSizedCstr arg => ToSizedBV arg where toSized = error "unreachable"

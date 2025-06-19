@@ -33,6 +33,8 @@
       - Documentation.SBV.Examples.TP.Reverse:    Proving a definition of reverse that uses no auxiliary definitions is correct.
       - Documentation.SBV.Examples.TP.SumReverse: Proving summing a list and its reverse are equivalent.
 
+  * Rework enum instances for symbolic values. They are now much more symbolic/proof friendly.
+
   * Remove Data.SBV.Tools.NaturalInduction. The functionality provided by this tool is much better
     addressed by TP'sinduction methods. If you were using this functionality and have problems
     porting to TP, please get in touch!
