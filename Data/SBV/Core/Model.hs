@@ -3611,3 +3611,4 @@ smtHOFunction nm f hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cach
 {- HLint ignore module "Reduce duplication"   -}
 {- HLint ignore module "Eta reduce"           -}
 {- HLint ignore module "Avoid NonEmpty.unzip" -}
+{- HLint ignore module "Redundant id"         -}

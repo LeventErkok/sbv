@@ -24,8 +24,8 @@
 -- error is raised with source location.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE QuasiQuotes     #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
+{-# LANGUAGE QuasiQuotes           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

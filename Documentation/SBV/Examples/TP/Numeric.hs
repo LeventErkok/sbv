@@ -102,7 +102,7 @@ sumSquareProof = do
    let sq :: SInteger -> SInteger
        sq k = k * k
 
-       sumSquare n = sum $ map sq $ [sEnum|n, n-1 .. 0|]
+       sumSquare n = sum $ map sq [sEnum|n, n-1 .. 0|]
 
    induct "sumSquare_correct"
           (\(Forall n) -> n .>= 0 .=> sumSquare n .== (n*(n+1)*(2*n+1)) `sEDiv` 6) $
