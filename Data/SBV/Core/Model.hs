@@ -2455,6 +2455,11 @@ some inpName cond = mk f
         k = kindOf (Proxy @a)
 
 
+        f st = do ctr <- incrementFreshNameCounter st
+                  let pre = atProxy (Proxy @a) inpName
+                      nm  | ctr == 0 = pre
+                          | True     = pre ++ "_" ++ show ctr
+                  nm' <- newUninterpreted st (UIGiven nm) Nothing (SBVType [k]) (UINone False)
                   chosen <- newExpr st k $ SBVApp (Uninterpreted nm') []
                   let ifExists  = quantifiedBool $ \(Exists ex) -> cond ex
                   internalConstraint st False [] (unSBV (ifExists .=> cond (mk (pure (pure chosen)))))
