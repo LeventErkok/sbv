@@ -105,7 +105,7 @@ import Data.Int
 
 #ifdef DOCTEST
 -- $setup
--- >>> import Prelude hiding (head, tail, init, last, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any, replicate)
+-- >>> import Prelude hiding (head, tail, init, last, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any, replicate, lookup)
 -- >>> import qualified Prelude as P(map)
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds
@@ -1093,7 +1093,14 @@ instance (ValidFloat eb sb) => EnumSymbolic (FloatingPoint eb sb) where
    enumFromThen x y = go x (y-x)
      where go = smtFunction "EnumSymbolic.FloatingPoint.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
--- | Lookup. If we can't find, then we make up a name.
+-- | Lookup. If we can't find, then the result is unspecified.
+--
+-- >>> lookup (4 :: SInteger) (literal [(5, 12), (4, 3), (2, 6 :: Integer)])
+-- 3 :: SInteger
+-- >>> prove  $ \(x :: SInteger) -> x .== lookup 9 (literal [(5, 12), (4, 3), (2, 6 :: Integer)])
+-- Falsifiable. Counter-example:
+--   Data.SBV.List.lookup_notFound @Integer = 0 :: Integer
+--   s0                                     = 1 :: Integer
 lookup :: (SymVal k, SymVal v) => SBV k -> SList (k, v) -> SBV v
 lookup = smtFunction "Data.SBV.List.lookup" $ \k lst -> ite (null lst)
                                                             (some "Data.SBV.List.lookup_notFound" (const sTrue))
