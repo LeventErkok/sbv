@@ -57,6 +57,9 @@ module Data.SBV.List (
         -- * Zipping
         , zip, zipWith
 
+        -- * Lookup
+        , lookup
+
         -- * Filtering
         , filter, partition
 
@@ -75,7 +78,7 @@ module Data.SBV.List (
 
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
-                       all, any, and, or, replicate, fst, snd, sum, product, Enum(..))
+                       all, any, and, or, replicate, fst, snd, sum, product, Enum(..), lookup)
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
@@ -965,7 +968,7 @@ product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
 
 -- | A class of symbolic aware enumerations.
-class (SymVal a, Ord a) => EnumSymbolic a where
+class SymVal a => EnumSymbolic a where
    -- @`succ`@, same as in the 'Enum' class
    succ :: SBV a -> SBV a
 
@@ -1086,6 +1089,12 @@ instance (ValidFloat eb sb) => EnumSymbolic (FloatingPoint eb sb) where
 
    enumFromThen x y = go x (y-x)
      where go = smtFunction "EnumSymbolic.FloatingPoint.enumFromThen" $ \start delta -> start .: go (start+delta) delta
+
+-- | Lookup. If we can't find, then we make up a name.
+lookup :: (EqSymbolic k, SymVal v) => k -> [(k, SBV v)] -> SBV v
+lookup k = go
+  where go []               = some "lookup_notFound" (const sTrue)
+        go ((k', v) : rest) = ite (k .== k') v (go rest)
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,

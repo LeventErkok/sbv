@@ -36,6 +36,7 @@ import Data.SBV
 -- | U2 band members. We want to translate this to SMT-Lib as a data-type, and hence the
 -- call to mkSymbolicEnumeration.
 data U2Member = Bono | Edge | Adam | Larry
+              deriving (Eq, Ord)
 
 -- | Make 'U2Member' a symbolic value.
 mkSymbolicEnumeration ''U2Member

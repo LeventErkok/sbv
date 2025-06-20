@@ -26,6 +26,8 @@ module Data.SBV.Client
   , mkUninterpretedSort
   ) where
 
+import Prelude hiding(lookup)
+
 import Control.Monad (filterM)
 import Data.Generics
 
@@ -66,19 +68,13 @@ defaultSolverConfig Z3        = z3
 getAvailableSolvers :: IO [SMTConfig]
 getAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
 
--- | Turn a name into a symbolic type. If first argument is true, we'll also derive Eq and Ord instances.
+-- | Turn a name into a symbolic type. If first argument is true, then we're doing an enumeration, otherwise it's an uninterpreted type
 declareSymbolic :: Bool -> TH.Name -> TH.Q [TH.Dec]
 declareSymbolic isEnum typeName = do
     let typeCon = TH.conT typeName
 
     cstrs <- if isEnum then ensureEnumeration typeName
                        else ensureEmptyData   typeName
-
-    deriveEqOrds <- if isEnum
-                       then [d| deriving instance Eq  $typeCon
-                                deriving instance Ord $typeCon
-                            |]
-                       else pure []
 
     derives <- [d| deriving instance Show     $typeCon
                    deriving instance Read     $typeCon
@@ -109,7 +105,7 @@ declareSymbolic isEnum typeName = do
 
     addDocs (tname, btname) constrNames
 
-    pure $ deriveEqOrds ++ derives ++ symVals ++ [tdecl] ++ concat cdecls
+    pure $ derives ++ symVals ++ [tdecl] ++ concat cdecls
 
  where addDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
 #if MIN_VERSION_template_haskell(2,18,0)
