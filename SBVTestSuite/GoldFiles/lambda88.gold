@@ -26,8 +26,8 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.closureMap @SBV [Integer] -> SBV [Integer] -> SBV [Integer]_24b5487d7f @SBV ([Integer],[[Integer]]) -> SBV [[Integer]]| :: ([SInteger], [[SInteger]]) -> [[SInteger]] [Recursive]
-[GOOD] (define-fun-rec |sbv.closureMap @SBV [Integer] -> SBV [Integer] -> SBV [Integer]_24b5487d7f @SBV ([Integer],[[Integer]]) -> SBV [[Integer]]| ((l1_s0 (SBVTuple2 (Seq Int) (Seq (Seq Int))))) (Seq (Seq Int))
+[GOOD] ; |sbv.closureMap @(SBV [Integer] -> SBV [Integer] -> SBV [Integer])_24b5487d7f @(SBV ([Integer],[[Integer]]) -> SBV [[Integer]])| :: ([SInteger], [[SInteger]]) -> [[SInteger]] [Recursive]
+[GOOD] (define-fun-rec |sbv.closureMap @(SBV [Integer] -> SBV [Integer] -> SBV [Integer])_24b5487d7f @(SBV ([Integer],[[Integer]]) -> SBV [[Integer]])| ((l1_s0 (SBVTuple2 (Seq Int) (Seq (Seq Int))))) (Seq (Seq Int))
                                  (let ((l1_s3 0))
                                  (let ((l1_s5 (as seq.empty (Seq (Seq Int)))))
                                  (let ((l1_s10 1))
@@ -41,7 +41,7 @@
                                  (let ((l1_s11 (- l1_s2 l1_s10)))
                                  (let ((l1_s12 (seq.extract l1_s1 l1_s10 l1_s11)))
                                  (let ((l1_s13 ((as mkSBVTuple2 (SBVTuple2 (Seq Int) (Seq (Seq Int)))) l1_s7 l1_s12)))
-                                 (let ((l1_s14 (|sbv.closureMap @SBV [Integer] -> SBV [Integer] -> SBV [Integer]_24b5487d7f @SBV ([Integer],[[Integer]]) -> SBV [[Integer]]| l1_s13)))
+                                 (let ((l1_s14 (|sbv.closureMap @(SBV [Integer] -> SBV [Integer] -> SBV [Integer])_24b5487d7f @(SBV ([Integer],[[Integer]]) -> SBV [[Integer]])| l1_s13)))
                                  (let ((l1_s15 (seq.++ l1_s9 l1_s14)))
                                  (let ((l1_s16 (ite l1_s4 l1_s5 l1_s15)))
                                  l1_s16)))))))))))))))))
@@ -49,7 +49,7 @@
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] (define-fun s7 () (SBVTuple2 (Seq Int) (Seq (Seq Int))) ((as mkSBVTuple2 (SBVTuple2 (Seq Int) (Seq (Seq Int)))) s1 s0))
-[GOOD] (define-fun s8 () (Seq (Seq Int)) (|sbv.closureMap @SBV [Integer] -> SBV [Integer] -> SBV [Integer]_24b5487d7f @SBV ([Integer],[[Integer]]) -> SBV [[Integer]]| s7))
+[GOOD] (define-fun s8 () (Seq (Seq Int)) (|sbv.closureMap @(SBV [Integer] -> SBV [Integer] -> SBV [Integer])_24b5487d7f @(SBV ([Integer],[[Integer]]) -> SBV [[Integer]])| s7))
 [GOOD] (define-fun s9 () Bool (= s2 s8))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

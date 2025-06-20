@@ -21,8 +21,8 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.map @SBV Integer -> SBV Integer_b01b78a2e9 @SBV [Integer] -> SBV [Integer]| :: [SInteger] -> [SInteger] [Recursive]
-[GOOD] (define-fun-rec |sbv.map @SBV Integer -> SBV Integer_b01b78a2e9 @SBV [Integer] -> SBV [Integer]| ((l1_s0 (Seq Int))) (Seq Int)
+[GOOD] ; |sbv.map @(SBV Integer -> SBV Integer)_b01b78a2e9 @(SBV [Integer] -> SBV [Integer])| :: [SInteger] -> [SInteger] [Recursive]
+[GOOD] (define-fun-rec |sbv.map @(SBV Integer -> SBV Integer)_b01b78a2e9 @(SBV [Integer] -> SBV [Integer])| ((l1_s0 (Seq Int))) (Seq Int)
                                  (let ((l1_s2 0))
                                  (let ((l1_s4 (as seq.empty (Seq Int))))
                                  (let ((l1_s25 1))
@@ -50,13 +50,13 @@
                                  (let ((l1_s24 (seq.unit l1_s23)))
                                  (let ((l1_s26 (- l1_s1 l1_s25)))
                                  (let ((l1_s27 (seq.extract l1_s0 l1_s25 l1_s26)))
-                                 (let ((l1_s28 (|sbv.map @SBV Integer -> SBV Integer_b01b78a2e9 @SBV [Integer] -> SBV [Integer]| l1_s27)))
+                                 (let ((l1_s28 (|sbv.map @(SBV Integer -> SBV Integer)_b01b78a2e9 @(SBV [Integer] -> SBV [Integer])| l1_s27)))
                                  (let ((l1_s29 (seq.++ l1_s24 l1_s28)))
                                  (let ((l1_s30 (ite l1_s3 l1_s4 l1_s29)))
                                  l1_s30)))))))))))))))))))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq Int) (|sbv.map @SBV Integer -> SBV Integer_b01b78a2e9 @SBV [Integer] -> SBV [Integer]| s0))
+[GOOD] (define-fun s4 () (Seq Int) (|sbv.map @(SBV Integer -> SBV Integer)_b01b78a2e9 @(SBV [Integer] -> SBV [Integer])| s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

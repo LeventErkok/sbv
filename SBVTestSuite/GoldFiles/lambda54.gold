@@ -16,28 +16,28 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |bar @SBV Integer -> SBV Integer| :: SInteger -> SInteger
-[GOOD] (define-fun |bar @SBV Integer -> SBV Integer| ((l1_s0 Int)) Int
+[GOOD] ; |bar @(SBV Integer -> SBV Integer)| :: SInteger -> SInteger
+[GOOD] (define-fun |bar @(SBV Integer -> SBV Integer)| ((l1_s0 Int)) Int
                                  (let ((l1_s1 1))
                                  (let ((l1_s2 (+ l1_s0 l1_s1)))
                                  l1_s2)))
-[GOOD] ; |foo @SBV Integer -> SBV Integer| :: SInteger -> SInteger [Refers to: |bar @SBV Integer -> SBV Integer|]
-[GOOD] (define-fun |foo @SBV Integer -> SBV Integer| ((l1_s0 Int)) Int
+[GOOD] ; |foo @(SBV Integer -> SBV Integer)| :: SInteger -> SInteger [Refers to: |bar @(SBV Integer -> SBV Integer)|]
+[GOOD] (define-fun |foo @(SBV Integer -> SBV Integer)| ((l1_s0 Int)) Int
                                  (let ((l1_s2 1))
-                                 (let ((l1_s1 (|bar @SBV Integer -> SBV Integer| l1_s0)))
+                                 (let ((l1_s1 (|bar @(SBV Integer -> SBV Integer)| l1_s0)))
                                  (let ((l1_s3 (+ l1_s1 l1_s2)))
                                  l1_s3))))
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Int (|bar @SBV Integer -> SBV Integer| s0))
-[GOOD] (define-fun s2 () Int (|foo @SBV Integer -> SBV Integer| s0))
+[GOOD] (define-fun s1 () Int (|bar @(SBV Integer -> SBV Integer)| s0))
+[GOOD] (define-fun s2 () Int (|foo @(SBV Integer -> SBV Integer)| s0))
 [GOOD] (define-fun s3 () Int (+ s1 s2))
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s4)
 [GOOD] (declare-fun s5 () Int)
-[GOOD] (define-fun s6 () Int (|bar @SBV Integer -> SBV Integer| s5))
-[GOOD] (define-fun s7 () Int (|foo @SBV Integer -> SBV Integer| s5))
+[GOOD] (define-fun s6 () Int (|bar @(SBV Integer -> SBV Integer)| s5))
+[GOOD] (define-fun s7 () Int (|foo @(SBV Integer -> SBV Integer)| s5))
 [GOOD] (define-fun s8 () Int (+ s6 s7))
 [GOOD] (define-fun s9 () Bool (= s5 s8))
 [GOOD] (assert s9)

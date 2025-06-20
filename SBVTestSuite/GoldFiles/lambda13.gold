@@ -24,8 +24,8 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.map @SBV (Integer,Integer) -> SBV Integer_1fd06f7602 @SBV [(Integer,Integer)] -> SBV [Integer]| :: [(SInteger, SInteger)] -> [SInteger] [Recursive]
-[GOOD] (define-fun-rec |sbv.map @SBV (Integer,Integer) -> SBV Integer_1fd06f7602 @SBV [(Integer,Integer)] -> SBV [Integer]| ((l1_s0 (Seq (SBVTuple2 Int Int)))) (Seq Int)
+[GOOD] ; |sbv.map @(SBV (Integer,Integer) -> SBV Integer)_1fd06f7602 @(SBV [(Integer,Integer)] -> SBV [Integer])| :: [(SInteger, SInteger)] -> [SInteger] [Recursive]
+[GOOD] (define-fun-rec |sbv.map @(SBV (Integer,Integer) -> SBV Integer)_1fd06f7602 @(SBV [(Integer,Integer)] -> SBV [Integer])| ((l1_s0 (Seq (SBVTuple2 Int Int)))) (Seq Int)
                                  (let ((l1_s2 0))
                                  (let ((l1_s4 (as seq.empty (Seq Int))))
                                  (let ((l1_s10 1))
@@ -38,13 +38,13 @@
                                  (let ((l1_s9 (seq.unit l1_s8)))
                                  (let ((l1_s11 (- l1_s1 l1_s10)))
                                  (let ((l1_s12 (seq.extract l1_s0 l1_s10 l1_s11)))
-                                 (let ((l1_s13 (|sbv.map @SBV (Integer,Integer) -> SBV Integer_1fd06f7602 @SBV [(Integer,Integer)] -> SBV [Integer]| l1_s12)))
+                                 (let ((l1_s13 (|sbv.map @(SBV (Integer,Integer) -> SBV Integer)_1fd06f7602 @(SBV [(Integer,Integer)] -> SBV [Integer])| l1_s12)))
                                  (let ((l1_s14 (seq.++ l1_s9 l1_s13)))
                                  (let ((l1_s15 (ite l1_s3 l1_s4 l1_s14)))
                                  l1_s15))))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq Int) (|sbv.map @SBV (Integer,Integer) -> SBV Integer_1fd06f7602 @SBV [(Integer,Integer)] -> SBV [Integer]| s0))
+[GOOD] (define-fun s4 () (Seq Int) (|sbv.map @(SBV (Integer,Integer) -> SBV Integer)_1fd06f7602 @(SBV [(Integer,Integer)] -> SBV [Integer])| s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

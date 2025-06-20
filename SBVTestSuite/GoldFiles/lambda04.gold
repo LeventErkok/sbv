@@ -21,8 +21,8 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.map @SBV Integer -> SBV Bool_96a983e094 @SBV [Integer] -> SBV [Bool]| :: [SInteger] -> [SBool] [Recursive]
-[GOOD] (define-fun-rec |sbv.map @SBV Integer -> SBV Bool_96a983e094 @SBV [Integer] -> SBV [Bool]| ((l1_s0 (Seq Int))) (Seq Bool)
+[GOOD] ; |sbv.map @(SBV Integer -> SBV Bool)_96a983e094 @(SBV [Integer] -> SBV [Bool])| :: [SInteger] -> [SBool] [Recursive]
+[GOOD] (define-fun-rec |sbv.map @(SBV Integer -> SBV Bool)_96a983e094 @(SBV [Integer] -> SBV [Bool])| ((l1_s0 (Seq Int))) (Seq Bool)
                                  (let ((l1_s2 0))
                                  (let ((l1_s4 (as seq.empty (Seq Bool))))
                                  (let ((l1_s5 (seq.unit false)))
@@ -31,13 +31,13 @@
                                  (let ((l1_s3 (= l1_s1 l1_s2)))
                                  (let ((l1_s7 (- l1_s1 l1_s6)))
                                  (let ((l1_s8 (seq.extract l1_s0 l1_s6 l1_s7)))
-                                 (let ((l1_s9 (|sbv.map @SBV Integer -> SBV Bool_96a983e094 @SBV [Integer] -> SBV [Bool]| l1_s8)))
+                                 (let ((l1_s9 (|sbv.map @(SBV Integer -> SBV Bool)_96a983e094 @(SBV [Integer] -> SBV [Bool])| l1_s8)))
                                  (let ((l1_s10 (seq.++ l1_s5 l1_s9)))
                                  (let ((l1_s11 (ite l1_s3 l1_s4 l1_s10)))
                                  l1_s11))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq Bool) (|sbv.map @SBV Integer -> SBV Bool_96a983e094 @SBV [Integer] -> SBV [Bool]| s0))
+[GOOD] (define-fun s4 () (Seq Bool) (|sbv.map @(SBV Integer -> SBV Bool)_96a983e094 @(SBV [Integer] -> SBV [Bool])| s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

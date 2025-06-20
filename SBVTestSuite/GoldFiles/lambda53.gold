@@ -16,17 +16,17 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |foo @SBV Integer -> SBV Integer| :: SInteger -> SInteger
-[GOOD] (define-fun |foo @SBV Integer -> SBV Integer| ((l1_s0 Int)) Int
+[GOOD] ; |foo @(SBV Integer -> SBV Integer)| :: SInteger -> SInteger
+[GOOD] (define-fun |foo @(SBV Integer -> SBV Integer)| ((l1_s0 Int)) Int
          (+ s0 l1_s0))
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Int (|foo @SBV Integer -> SBV Integer| s0))
+[GOOD] (define-fun s1 () Int (|foo @(SBV Integer -> SBV Integer)| s0))
 [GOOD] (define-fun s2 () Bool (= s0 s1))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s2)
 [GOOD] (declare-fun s3 () Int)
-[GOOD] (define-fun s4 () Int (|foo @SBV Integer -> SBV Integer| s3))
+[GOOD] (define-fun s4 () Int (|foo @(SBV Integer -> SBV Integer)| s3))
 [GOOD] (define-fun s5 () Bool (= s3 s4))
 [GOOD] (assert s5)
 [SEND] (check-sat)

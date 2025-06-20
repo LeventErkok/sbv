@@ -26,8 +26,8 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.closureMap @SBV Integer -> SBV Integer -> SBV Integer_d8dc9e6fbd @SBV (Integer,[Integer]) -> SBV [Integer]| :: (SInteger, [SInteger]) -> [SInteger] [Recursive]
-[GOOD] (define-fun-rec |sbv.closureMap @SBV Integer -> SBV Integer -> SBV Integer_d8dc9e6fbd @SBV (Integer,[Integer]) -> SBV [Integer]| ((l1_s0 (SBVTuple2 Int (Seq Int)))) (Seq Int)
+[GOOD] ; |sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_d8dc9e6fbd @(SBV (Integer,[Integer]) -> SBV [Integer])| :: (SInteger, [SInteger]) -> [SInteger] [Recursive]
+[GOOD] (define-fun-rec |sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_d8dc9e6fbd @(SBV (Integer,[Integer]) -> SBV [Integer])| ((l1_s0 (SBVTuple2 Int (Seq Int)))) (Seq Int)
                                  (let ((l1_s3 0))
                                  (let ((l1_s5 (as seq.empty (Seq Int))))
                                  (let ((l1_s10 1))
@@ -41,12 +41,12 @@
                                  (let ((l1_s11 (- l1_s2 l1_s10)))
                                  (let ((l1_s12 (seq.extract l1_s1 l1_s10 l1_s11)))
                                  (let ((l1_s13 ((as mkSBVTuple2 (SBVTuple2 Int (Seq Int))) l1_s6 l1_s12)))
-                                 (let ((l1_s14 (|sbv.closureMap @SBV Integer -> SBV Integer -> SBV Integer_d8dc9e6fbd @SBV (Integer,[Integer]) -> SBV [Integer]| l1_s13)))
+                                 (let ((l1_s14 (|sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_d8dc9e6fbd @(SBV (Integer,[Integer]) -> SBV [Integer])| l1_s13)))
                                  (let ((l1_s15 (seq.++ l1_s9 l1_s14)))
                                  (let ((l1_s16 (ite l1_s4 l1_s5 l1_s15)))
                                  l1_s16)))))))))))))))))
-[GOOD] ; |sbv.map @SBV Integer -> SBV [Integer]_f086321e30 @SBV [Integer] -> SBV [[Integer]]| :: [SInteger] -> [[SInteger]] [Recursive] [Refers to: |sbv.closureMap @SBV Integer -> SBV Integer -> SBV Integer_d8dc9e6fbd @SBV (Integer,[Integer]) -> SBV [Integer]|]
-[GOOD] (define-fun-rec |sbv.map @SBV Integer -> SBV [Integer]_f086321e30 @SBV [Integer] -> SBV [[Integer]]| ((l1_s0 (Seq Int))) (Seq (Seq Int))
+[GOOD] ; |sbv.map @(SBV Integer -> SBV [Integer])_8a19cac1b3 @(SBV [Integer] -> SBV [[Integer]])| :: [SInteger] -> [[SInteger]] [Recursive] [Refers to: |sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_d8dc9e6fbd @(SBV (Integer,[Integer]) -> SBV [Integer])|]
+[GOOD] (define-fun-rec |sbv.map @(SBV Integer -> SBV [Integer])_8a19cac1b3 @(SBV [Integer] -> SBV [[Integer]])| ((l1_s0 (Seq Int))) (Seq (Seq Int))
                                  (let ((l1_s2 0))
                                  (let ((l1_s4 (as seq.empty (Seq (Seq Int)))))
                                  (let ((l1_s9 1))
@@ -54,16 +54,16 @@
                                  (let ((l1_s3 (= l1_s1 l1_s2)))
                                  (let ((l1_s5 (seq.nth l1_s0 l1_s2)))
                                  (let ((l1_s6 ((as mkSBVTuple2 (SBVTuple2 Int (Seq Int))) l1_s5 s0)))
-                                 (let ((l1_s7 (|sbv.closureMap @SBV Integer -> SBV Integer -> SBV Integer_d8dc9e6fbd @SBV (Integer,[Integer]) -> SBV [Integer]| l1_s6)))
+                                 (let ((l1_s7 (|sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_d8dc9e6fbd @(SBV (Integer,[Integer]) -> SBV [Integer])| l1_s6)))
                                  (let ((l1_s8 (seq.unit l1_s7)))
                                  (let ((l1_s10 (- l1_s1 l1_s9)))
                                  (let ((l1_s11 (seq.extract l1_s0 l1_s9 l1_s10)))
-                                 (let ((l1_s12 (|sbv.map @SBV Integer -> SBV [Integer]_f086321e30 @SBV [Integer] -> SBV [[Integer]]| l1_s11)))
+                                 (let ((l1_s12 (|sbv.map @(SBV Integer -> SBV [Integer])_8a19cac1b3 @(SBV [Integer] -> SBV [[Integer]])| l1_s11)))
                                  (let ((l1_s13 (seq.++ l1_s8 l1_s12)))
                                  (let ((l1_s14 (ite l1_s3 l1_s4 l1_s13)))
                                  l1_s14)))))))))))))))
-[GOOD] ; |sbv.closureMap @SBV Integer -> SBV Integer -> SBV Integer_3339bda50c @SBV (Integer,[Integer]) -> SBV [Integer]| :: (SInteger, [SInteger]) -> [SInteger] [Refers to: |sbv.closureMap @SBV Integer -> SBV Integer -> SBV Integer_d8dc9e6fbd @SBV (Integer,[Integer]) -> SBV [Integer]|]
-[GOOD] (define-fun |sbv.closureMap @SBV Integer -> SBV Integer -> SBV Integer_3339bda50c @SBV (Integer,[Integer]) -> SBV [Integer]| ((s0 (SBVTuple2 Int (Seq Int)))) (Seq Int)
+[GOOD] ; |sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_3339bda50c @(SBV (Integer,[Integer]) -> SBV [Integer])| :: (SInteger, [SInteger]) -> [SInteger] [Refers to: |sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_d8dc9e6fbd @(SBV (Integer,[Integer]) -> SBV [Integer])|]
+[GOOD] (define-fun |sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_3339bda50c @(SBV (Integer,[Integer]) -> SBV [Integer])| ((s0 (SBVTuple2 Int (Seq Int)))) (Seq Int)
                  (let ((s3 0))
                  (let ((s5 (as seq.empty (Seq Int))))
                  (let ((s10 1))
@@ -77,14 +77,14 @@
                  (let ((s11 (- s2 s10)))
                  (let ((s12 (seq.extract s1 s10 s11)))
                  (let ((s13 ((as mkSBVTuple2 (SBVTuple2 Int (Seq Int))) s6 s12)))
-                 (let ((s14 (|sbv.closureMap @SBV Integer -> SBV Integer -> SBV Integer_d8dc9e6fbd @SBV (Integer,[Integer]) -> SBV [Integer]| s13)))
+                 (let ((s14 (|sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_d8dc9e6fbd @(SBV (Integer,[Integer]) -> SBV [Integer])| s13)))
                  (let ((s15 (seq.++ s9 s14)))
                  (let ((s16 (ite s4 s5 s15)))
                  s16)))))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
-[GOOD] (define-fun s7 () (Seq (Seq Int)) (|sbv.map @SBV Integer -> SBV [Integer]_f086321e30 @SBV [Integer] -> SBV [[Integer]]| s1))
+[GOOD] (define-fun s7 () (Seq (Seq Int)) (|sbv.map @(SBV Integer -> SBV [Integer])_8a19cac1b3 @(SBV [Integer] -> SBV [[Integer]])| s1))
 [GOOD] (define-fun s8 () Bool (= s2 s7))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

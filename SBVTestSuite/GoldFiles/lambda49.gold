@@ -24,17 +24,17 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |isEvenOdd @SBV Integer -> SBV (Bool,Bool)| :: SInteger -> (SBool, SBool) [Recursive]
-[GOOD] (define-fun-rec |isEvenOdd @SBV Integer -> SBV (Bool,Bool)| ((l1_s0 Int)) (SBVTuple2 Bool Bool)
+[GOOD] ; |isEvenOdd @(SBV Integer -> SBV (Bool,Bool))| :: SInteger -> (SBool, SBool) [Recursive]
+[GOOD] (define-fun-rec |isEvenOdd @(SBV Integer -> SBV (Bool,Bool))| ((l1_s0 Int)) (SBVTuple2 Bool Bool)
                                  (let ((l1_s1 0))
                                  (let ((l1_s6 (mkSBVTuple2 true false)))
                                  (let ((l1_s7 1))
                                  (let ((l1_s2 (< l1_s0 l1_s1)))
                                  (let ((l1_s3 (- l1_s0)))
-                                 (let ((l1_s4 (|isEvenOdd @SBV Integer -> SBV (Bool,Bool)| l1_s3)))
+                                 (let ((l1_s4 (|isEvenOdd @(SBV Integer -> SBV (Bool,Bool))| l1_s3)))
                                  (let ((l1_s5 (= l1_s0 l1_s1)))
                                  (let ((l1_s8 (- l1_s0 l1_s7)))
-                                 (let ((l1_s9 (|isEvenOdd @SBV Integer -> SBV (Bool,Bool)| l1_s8)))
+                                 (let ((l1_s9 (|isEvenOdd @(SBV Integer -> SBV (Bool,Bool))| l1_s8)))
                                  (let ((l1_s10 (proj_2_SBVTuple2 l1_s9)))
                                  (let ((l1_s11 (proj_1_SBVTuple2 l1_s9)))
                                  (let ((l1_s12 ((as mkSBVTuple2 (SBVTuple2 Bool Bool)) l1_s10 l1_s11)))
@@ -43,7 +43,7 @@
                                  l1_s14)))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (SBVTuple2 Bool Bool) (|isEvenOdd @SBV Integer -> SBV (Bool,Bool)| s0))
+[GOOD] (define-fun s4 () (SBVTuple2 Bool Bool) (|isEvenOdd @(SBV Integer -> SBV (Bool,Bool))| s0))
 [GOOD] (define-fun s5 () Bool (proj_1_SBVTuple2 s4))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] (define-fun s7 () Bool (and s3 s6))
@@ -53,7 +53,7 @@
 [GOOD] (declare-fun s8 () Int)
 [GOOD] (declare-fun s9 () Bool)
 [GOOD] (define-fun s10 () Bool (= s2 s8))
-[GOOD] (define-fun s11 () (SBVTuple2 Bool Bool) (|isEvenOdd @SBV Integer -> SBV (Bool,Bool)| s8))
+[GOOD] (define-fun s11 () (SBVTuple2 Bool Bool) (|isEvenOdd @(SBV Integer -> SBV (Bool,Bool))| s8))
 [GOOD] (define-fun s12 () Bool (proj_1_SBVTuple2 s11))
 [GOOD] (define-fun s13 () Bool (= s9 s12))
 [GOOD] (define-fun s14 () Bool (and s10 s13))

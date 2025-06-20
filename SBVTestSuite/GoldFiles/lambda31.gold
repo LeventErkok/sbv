@@ -21,8 +21,8 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.filter @SBV Integer -> SBV Bool_72b7bf5d4c @SBV [Integer] -> SBV [Integer]| :: [SInteger] -> [SInteger] [Recursive]
-[GOOD] (define-fun-rec |sbv.filter @SBV Integer -> SBV Bool_72b7bf5d4c @SBV [Integer] -> SBV [Integer]| ((l1_s0 (Seq Int))) (Seq Int)
+[GOOD] ; |sbv.filter @(SBV Integer -> SBV Bool)_72b7bf5d4c @(SBV [Integer] -> SBV [Integer])| :: [SInteger] -> [SInteger] [Recursive]
+[GOOD] (define-fun-rec |sbv.filter @(SBV Integer -> SBV Bool)_72b7bf5d4c @(SBV [Integer] -> SBV [Integer])| ((l1_s0 (Seq Int))) (Seq Int)
                                  (let ((l1_s2 0))
                                  (let ((l1_s4 (as seq.empty (Seq Int))))
                                  (let ((l1_s6 2))
@@ -35,14 +35,14 @@
                                  (let ((l1_s9 (seq.unit l1_s5)))
                                  (let ((l1_s11 (- l1_s1 l1_s10)))
                                  (let ((l1_s12 (seq.extract l1_s0 l1_s10 l1_s11)))
-                                 (let ((l1_s13 (|sbv.filter @SBV Integer -> SBV Bool_72b7bf5d4c @SBV [Integer] -> SBV [Integer]| l1_s12)))
+                                 (let ((l1_s13 (|sbv.filter @(SBV Integer -> SBV Bool)_72b7bf5d4c @(SBV [Integer] -> SBV [Integer])| l1_s12)))
                                  (let ((l1_s14 (seq.++ l1_s9 l1_s13)))
                                  (let ((l1_s15 (ite l1_s8 l1_s14 l1_s13)))
                                  (let ((l1_s16 (ite l1_s3 l1_s4 l1_s15)))
                                  l1_s16)))))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq Int) (|sbv.filter @SBV Integer -> SBV Bool_72b7bf5d4c @SBV [Integer] -> SBV [Integer]| s0))
+[GOOD] (define-fun s4 () (Seq Int) (|sbv.filter @(SBV Integer -> SBV Bool)_72b7bf5d4c @(SBV [Integer] -> SBV [Integer])| s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

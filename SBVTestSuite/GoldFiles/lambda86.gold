@@ -24,8 +24,8 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.partition @SBV Integer -> SBV Bool_cb04f986c4 @SBV [Integer] -> SBV ([Integer],[Integer])| :: [SInteger] -> ([SInteger], [SInteger]) [Recursive]
-[GOOD] (define-fun-rec |sbv.partition @SBV Integer -> SBV Bool_cb04f986c4 @SBV [Integer] -> SBV ([Integer],[Integer])| ((l1_s0 (Seq Int))) (SBVTuple2 (Seq Int) (Seq Int))
+[GOOD] ; |sbv.partition @(SBV Integer -> SBV Bool)_cb04f986c4 @(SBV [Integer] -> SBV ([Integer],[Integer]))| :: [SInteger] -> ([SInteger], [SInteger]) [Recursive]
+[GOOD] (define-fun-rec |sbv.partition @(SBV Integer -> SBV Bool)_cb04f986c4 @(SBV [Integer] -> SBV ([Integer],[Integer]))| ((l1_s0 (Seq Int))) (SBVTuple2 (Seq Int) (Seq Int))
                                  (let ((l1_s2 0))
                                  (let ((l1_s4 (mkSBVTuple2 (as seq.empty (Seq Int)) (as seq.empty (Seq Int)))))
                                  (let ((l1_s6 2))
@@ -38,7 +38,7 @@
                                  (let ((l1_s9 (seq.unit l1_s5)))
                                  (let ((l1_s11 (- l1_s1 l1_s10)))
                                  (let ((l1_s12 (seq.extract l1_s0 l1_s10 l1_s11)))
-                                 (let ((l1_s13 (|sbv.partition @SBV Integer -> SBV Bool_cb04f986c4 @SBV [Integer] -> SBV ([Integer],[Integer])| l1_s12)))
+                                 (let ((l1_s13 (|sbv.partition @(SBV Integer -> SBV Bool)_cb04f986c4 @(SBV [Integer] -> SBV ([Integer],[Integer]))| l1_s12)))
                                  (let ((l1_s14 (proj_1_SBVTuple2 l1_s13)))
                                  (let ((l1_s15 (seq.++ l1_s9 l1_s14)))
                                  (let ((l1_s16 (proj_2_SBVTuple2 l1_s13)))
@@ -50,7 +50,7 @@
                                  l1_s21))))))))))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (SBVTuple2 (Seq Int) (Seq Int)) (|sbv.partition @SBV Integer -> SBV Bool_cb04f986c4 @SBV [Integer] -> SBV ([Integer],[Integer])| s0))
+[GOOD] (define-fun s4 () (SBVTuple2 (Seq Int) (Seq Int)) (|sbv.partition @(SBV Integer -> SBV Bool)_cb04f986c4 @(SBV [Integer] -> SBV ([Integer],[Integer]))| s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
