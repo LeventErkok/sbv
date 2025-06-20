@@ -91,13 +91,17 @@ parseSEnumExpr input = do
            walk (c:cs) sofar = walk cs (c : sofar)
            walk ""     sofar = pure (reverse sofar, "")
 
+           hasComma = ',' `elem` prefix
+
        (pre, post) <- walk prefix ""
 
        -- post can be empty but pre can't
        case (trim pre, trim post) of
-         ("", _)  -> errorWithLoc loc "Malformed enumeration: no start value found."
-         (a,  "") -> pure [a]
-         (a,  b)  -> pure [a, b]
+         ("", _)  | hasComma -> errorWithLoc loc "parse error on input ','"
+                  | True     -> errorWithLoc loc "parse error on input '..'"
+         (a,  "") | hasComma -> errorWithLoc loc "parse error on input '..'"
+                  | True     -> pure [a]
+         (a,  b)             -> pure [a, b]
 
   case (prefixParts, mEnd) of
     ([a],    Nothing) -> varE 'enumFrom       `appE` parseHaskellExpr loc a
