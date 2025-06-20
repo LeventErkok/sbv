@@ -35,7 +35,8 @@
 
   * Reworked enum instances for symbolic values. They are now much more symbolic/proof friendly. In particular, there is now
     an sEnum quasiquoter that allows you to construct symbolic enumerations of the form [|sEnum|a, b .. c|] etc., akin to
-    regular Haskell enumerations but working on symbolic values and constructing symbolic lists.
+    regular Haskell enumerations but working on symbolic values and constructing symbolic lists. The class 'EnumSymbolic' is the
+    symbolic counterpart of Haskell's 'Enum' class.
 
   * [BACKWARDS COMPATIBILITY] Remove Data.SBV.Tools.NaturalInduction. The functionality provided by this tool is much better
     addressed by TP'sinduction methods. If you were using this functionality and have problems

@@ -64,7 +64,7 @@ module Data.SBV.List (
         , all, any, and, or
 
         -- * Generators
-        , replicate, inits, tails, SEnum(..)
+        , replicate, inits, tails, EnumSymbolic(..)
 
         -- * Sum and product
         , sum, product
@@ -966,7 +966,7 @@ product = foldr ((*) @(SBV a)) 1
 
 -- | A class of symbolic aware enumerations. Minimal complete definition: Nothing if the type is bounded. Otherwise
 -- enumFrom and enumFromThen are required.
-class (SymVal a, Ord a, Num (SBV a)) => SEnum a where
+class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
    -- | @`enumFrom` m@. Symbolic version of @[m ..]@
    enumFrom :: SBV a -> SList a
 
@@ -992,39 +992,39 @@ class (SymVal a, Ord a, Num (SBV a)) => SEnum a where
    enumFromThen x y = enumFromThenTo x y (ite (y .>= x) maxBound minBound)
 
 -- | Symbolic enumerations over integers
-instance SEnum Integer where
+instance EnumSymbolic Integer where
    enumFrom n       = enumFromThen n (n+1)
    enumFromThen x y = go x (y-x)
      where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
--- | 'SEnum' instance for words
-instance SEnum Word8
-instance SEnum Word16
-instance SEnum Word32
-instance SEnum Word64
-instance (KnownNat n, BVIsNonZero n) => SEnum (WordN n)
+-- | 'EnumSymbolic instance for words
+instance EnumSymbolic Word8
+instance EnumSymbolic Word16
+instance EnumSymbolic Word32
+instance EnumSymbolic Word64
+instance (KnownNat n, BVIsNonZero n) => EnumSymbolic (WordN n)
 
--- | 'SEnum' instance for ints
-instance SEnum Int8
-instance SEnum Int16
-instance SEnum Int32
-instance SEnum Int64
-instance (KnownNat n, BVIsNonZero n) => SEnum (IntN n)
+-- | 'EnumSymbolic instance for ints
+instance EnumSymbolic Int8
+instance EnumSymbolic Int16
+instance EnumSymbolic Int32
+instance EnumSymbolic Int64
+instance (KnownNat n, BVIsNonZero n) => EnumSymbolic (IntN n)
 
--- | 'SEnum' instance for 'Float'
-instance SEnum Float where
+-- | 'EnumSymbolic instance for 'Float'
+instance EnumSymbolic Float where
    enumFrom n       = enumFromThen n (n+1)
    enumFromThen x y = go x (y-x)
      where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
--- | 'SEnum' instance for 'Double'
-instance SEnum Double where
+-- | 'EnumSymbolic instance for 'Double'
+instance EnumSymbolic Double where
    enumFrom n       = enumFromThen n (n+1)
    enumFromThen x y = go x (y-x)
      where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
--- | 'SEnum' instance for arbitrary floats
-instance (ValidFloat eb sb) => SEnum (FloatingPoint eb sb) where
+-- | 'EnumSymbolic instance for arbitrary floats
+instance (ValidFloat eb sb) => EnumSymbolic (FloatingPoint eb sb) where
    enumFrom n       = enumFromThen n (n+1)
    enumFromThen x y = go x (y-x)
      where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
