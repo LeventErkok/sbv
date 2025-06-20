@@ -1091,10 +1091,11 @@ instance (ValidFloat eb sb) => EnumSymbolic (FloatingPoint eb sb) where
      where go = smtFunction "EnumSymbolic.FloatingPoint.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
 -- | Lookup. If we can't find, then we make up a name.
-lookup :: (EqSymbolic k, SymVal v) => k -> [(k, SBV v)] -> SBV v
-lookup k = go
-  where go []               = some "lookup_notFound" (const sTrue)
-        go ((k', v) : rest) = ite (k .== k') v (go rest)
+lookup :: (SymVal k, SymVal v) => SBV k -> SList (k, v) -> SBV v
+lookup = smtFunction "Data.SBV.List.lookup" $ \k lst -> ite (null lst)
+                                                            (some "Data.SBV.List.lookup_notFound" (const sTrue))
+                                                            (let (k', v) = untuple (head lst)
+                                                             in ite (k .== k') v (lookup k (tail lst)))
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
