@@ -964,8 +964,7 @@ sum = foldr ((+) @(SBV a)) 0
 product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
 
--- | A class of symbolic aware enumerations. Minimal complete definition: Nothing if the type is bounded. Otherwise
--- enumFrom and enumFromThen are required.
+-- | A class of symbolic aware enumerations.
 class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
    -- @`succ`@, same as in the 'Enum' class
    succ :: SBV a -> SBV a
@@ -987,14 +986,11 @@ class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
 
    -- | @`enumFromTo` m n@. Symbolic version of @[m .. n]@
    enumFromTo :: SBV a -> SBV a -> SList a
-   enumFromTo m = enumFromThenTo m (m+1)
+   enumFromTo x y = map toEnum [fromEnum x .. fromEnum y]
 
    -- | @`enumFromThenTo` m n@. Symbolic version of @[m, m' .. n]@
    enumFromThenTo :: SBV a -> SBV a -> SBV a -> SList a
-   enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
-       where delta = y - x
-             up    = smtFunction "EnumSymbolic_enumFromThenTo_up"   $ \start d end -> ite (start .> end) nil (start .: up   (start + d) d end)
-             down  = smtFunction "EnumSymbolic_enumFromThenTo_down" $ \start d end -> ite (start .< end) nil (start .: down (start + d) d end)
+   enumFromThenTo x y z = map toEnum [fromEnum x, fromEnum y .. fromEnum z]
 
    -- Bounded/integral instances can be auto-defined
    default succ :: Bounded a => SBV a -> SBV a
@@ -1017,7 +1013,7 @@ class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
    default enumFromThen :: Bounded a => SBV a -> SBV a -> SList a
    enumFromThen x y = enumFromThenTo x y (ite (fromEnum y .>= fromEnum x) maxBound minBound)
 
--- | Symbolic enumerations over integers
+-- | Symbolic enumerations over integers.
 instance EnumSymbolic Integer where
    succ x = x + 1
    pred x = x - 1
@@ -1025,9 +1021,18 @@ instance EnumSymbolic Integer where
    toEnum   = id
    fromEnum = id
 
-   enumFrom n       = enumFromThen n (n+1)
+   enumFrom   n = enumFromThen   n (n+1)
+   enumFromTo n = enumFromThenTo n (n+1)
+
+   -- It is important that we define enumFromThen and enumFromThenTo explicitly and not rely on
+   -- the defaults. Why? Because the defaults go through this integer instance!
    enumFromThen x y = go x (y-x)
-     where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
+     where go = smtFunction "EnumSymbolic.Integer.enumFromThen" $ \start delta -> start .: go (start+delta) delta
+
+   enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
+     where delta = y - x
+           up    = smtFunction "EnumSymbolic.Integer.enumFromThenTo.up"   $ \start d end -> ite (start .> end) nil (start .: up   (start + d) d end)
+           down  = smtFunction "EnumSymbolic.Integer.enumFromThenTo.down" $ \start d end -> ite (start .< end) nil (start .: down (start + d) d end)
 
 -- | 'EnumSymbolic instance for words
 instance EnumSymbolic Word8
@@ -1051,9 +1056,10 @@ instance EnumSymbolic Float where
    toEnum   = sFromIntegral
    fromEnum = fromSFloat sRTZ
 
-   enumFrom n       = enumFromThen n (n+1)
+   enumFrom n = enumFromThen   n (n+1)
+
    enumFromThen x y = go x (y-x)
-     where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
+     where go = smtFunction "EnumSymbolic.Float.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
 -- | 'EnumSymbolic instance for 'Double'
 instance EnumSymbolic Double where
@@ -1063,9 +1069,10 @@ instance EnumSymbolic Double where
    toEnum   = sFromIntegral
    fromEnum = fromSDouble sRTZ
 
-   enumFrom n       = enumFromThen n (n+1)
+   enumFrom n = enumFromThen   n (n+1)
+
    enumFromThen x y = go x (y-x)
-     where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
+     where go = smtFunction "EnumSymbolic.Double.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
 -- | 'EnumSymbolic instance for arbitrary floats
 instance (ValidFloat eb sb) => EnumSymbolic (FloatingPoint eb sb) where
@@ -1075,9 +1082,10 @@ instance (ValidFloat eb sb) => EnumSymbolic (FloatingPoint eb sb) where
    toEnum   = sFromIntegral
    fromEnum = fromSFloatingPoint sRTZ
 
-   enumFrom n       = enumFromThen n (n+1)
+   enumFrom n   = enumFromThen   n (n+1)
+
    enumFromThen x y = go x (y-x)
-     where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
+     where go = smtFunction "EnumSymbolic.FloatingPoint.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
