@@ -64,6 +64,12 @@ sumConstProof c = induct "sumConst_correct"
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
+-- NB. We define the sum of numbers from @0@ to @n@ as @sum [sEnum|n, n-1 .. 0|]@, i.e., we
+-- construct the list starting from @n@ going down to @0@. Contrast this to the perhaps more natural
+-- definition of @sum [sEnum|0 .. n]@, i.e., going up. While the latter is equivalent functionality, the former
+-- works much better with the proof-structure: Since we induct on @n@, in each step we strip of one
+-- layer, and the recursion in the down-to construction matches the inductive schema.
+--
 -- >>> runTP sumProof
 -- Inductive lemma: sum_correct
 --   Step: Base                            Q.E.D.
