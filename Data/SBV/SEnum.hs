@@ -65,12 +65,12 @@ parseSEnumExpr :: String -> Q Exp
 parseSEnumExpr input = do
   loc <- location
 
-  (prefix, mEnd) <- case splitOn ".." input of
+  (prefix, mEnd) <- case filter (not . null) (splitOn ".." (trim input)) of
                       [pre]        -> pure (pre, Nothing)
                       [pre, end]   -> pure (pre, Just end)
                       _            -> errorWithLoc loc "Too many '..' parts in sequence"
 
-  let prefixParts = map trim $ splitOn "," prefix
+  let prefixParts = filter (not . null) $ map trim $ splitOn "," prefix
 
   case (prefixParts, mEnd) of
     ([a],    Nothing) -> varE 'enumFrom       `appE` parseHaskellExpr loc a
@@ -89,7 +89,12 @@ parseSEnumExpr input = do
 -- | Parses a string into a Haskell TH Exp using haskell-src-meta
 parseHaskellExpr :: Loc -> String -> Q Exp
 parseHaskellExpr loc s = case Meta.parseExp (trim s) of
-                           Left err -> errorWithLoc loc $ "Could not parse expression:\n  " ++ s ++ "\nError:\n  " ++ err
+                           Left err -> errorWithLoc loc $ unlines [ "*** Could not parse expression:"
+                                                                  , "***"
+                                                                  , "***   " ++ s ++ if all isSpace s then "<empty>" else ""
+                                                                  , "***"
+                                                                  , "*** Error: " ++ err
+                                                                  ]
                            Right e  -> return e
 
 -- | Utility: add filename and line number to an error
