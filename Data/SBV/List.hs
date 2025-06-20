@@ -532,21 +532,6 @@ reverse l
 -- we instantiate this class appropriately so it can handle both cases.
 class (SymVal a, SymVal b) => SMap func a b | func -> a b where
   -- | Map a function (or a closure) over a symbolic list.
-  map :: func -> SList a -> SList b
-
-  -- | Handle the concrete case of mapping. Used internally only.
-  concreteMap :: func -> (SBV a -> SBV b) -> SList a -> Maybe [b]
-  concreteMap _ f sas
-    | Just as <- unliteral sas
-    = case P.map (unliteral . f . literal) as of
-         bs | P.any isNothing bs -> Nothing
-            | True               -> Just (catMaybes bs)
-    | True
-    = Nothing
-
--- | Mapping symbolic functions.
-instance (SymVal a, SymVal b) => SMap (SBV a -> SBV b) a b where
-  -- | @`map` f s@ maps the operation on to sequence.
   --
   -- >>> map (+ (1 :: SInteger)) [1 .. 5 :: SInteger]
   -- [2,3,4,5,6] :: [SInteger]
@@ -563,6 +548,21 @@ instance (SymVal a, SymVal b) => SMap (SBV a -> SBV b) a b where
   -- >>> sat $ \l -> map (+(1 :: SInteger)) l .== [1,2,3 :: SInteger]
   -- Satisfiable. Model:
   --   s0 = [0,1,2] :: [Integer]
+  map :: func -> SList a -> SList b
+
+  -- | Handle the concrete case of mapping. Used internally only.
+  concreteMap :: func -> (SBV a -> SBV b) -> SList a -> Maybe [b]
+  concreteMap _ f sas
+    | Just as <- unliteral sas
+    = case P.map (unliteral . f . literal) as of
+         bs | P.any isNothing bs -> Nothing
+            | True               -> Just (catMaybes bs)
+    | True
+    = Nothing
+
+-- | Mapping symbolic functions.
+instance (SymVal a, SymVal b) => SMap (SBV a -> SBV b) a b where
+  -- | @`map` f s@ maps the operation on to sequence.
   map f l
     | Just concResult <- concreteMap f f l
     = literal concResult
@@ -590,6 +590,19 @@ concatMap f = concat . map f
 -- we instantiate this class appropriately so it can handle both cases.
 class (SymVal a, SymVal b) => SFoldL func a b | func -> a b where
   -- | @`foldl` f base s@ folds the from the left.
+  --
+  -- >>> foldl ((+) @SInteger) 0 [1 .. 5 :: SInteger]
+  -- 15 :: SInteger
+  -- >>> foldl ((*) @SInteger) 1 [1 .. 5 :: SInteger]
+  -- 120 :: SInteger
+  -- >>> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) [1 .. 5 :: SInteger]
+  -- [5,4,3,2,1] :: [SInteger]
+  --
+  -- Again, we can use 'Data.SBV.List.foldl' in the reverse too:
+  --
+  -- >>> sat $ \l -> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: SInteger]
+  -- Satisfiable. Model:
+  --   s0 = [1,2,3,4,5] :: [Integer]
   foldl :: (SymVal a, SymVal b) => func -> SBV b -> SList a -> SBV b
 
   -- | Handle the concrete case for folding left. Used internally only.
@@ -607,19 +620,6 @@ class (SymVal a, SymVal b) => SFoldL func a b | func -> a b where
 -- | Folding left with symbolic functions.
 instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
   -- | @`foldl` f b s@ folds the sequence from the left.
-  --
-  -- >>> foldl ((+) @SInteger) 0 [1 .. 5 :: SInteger]
-  -- 15 :: SInteger
-  -- >>> foldl ((*) @SInteger) 1 [1 .. 5 :: SInteger]
-  -- 120 :: SInteger
-  -- >>> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) [1 .. 5 :: SInteger]
-  -- [5,4,3,2,1] :: [SInteger]
-  --
-  -- Again, we can use 'Data.SBV.List.foldl' in the reverse too:
-  --
-  -- >>> sat $ \l -> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: SInteger]
-  -- Satisfiable. Model:
-  --   s0 = [1,2,3,4,5] :: [Integer]
   foldl f base l
     | Just concResult <- concreteFoldl f f base l
     = literal concResult
@@ -650,6 +650,13 @@ instance (SymVal env, SymVal a, SymVal b) => SFoldL (Closure (SBV env) (SBV b ->
 -- we instantiate this class appropriately so it can handle both cases.
 class (SymVal a, SymVal b) => SFoldR func a b | func -> a b where
   -- | @`foldr` f base s@ folds the from the right.
+  --
+  -- >>> foldr ((+) @SInteger) 0 [1 .. 5 :: SInteger]
+  -- 15 :: SInteger
+  -- >>> foldr ((*) @SInteger) 1 [1 .. 5 :: SInteger]
+  -- 120 :: SInteger
+  -- >>> foldr (\elt soFar -> soFar ++ [elt]) ([] :: SList Integer) [1 .. 5 :: SInteger]
+  -- [5,4,3,2,1] :: [SInteger]
   foldr :: func -> SBV b -> SList a -> SBV b
 
   -- | Handle the concrete case for folding left. Used internally only.
@@ -667,13 +674,6 @@ class (SymVal a, SymVal b) => SFoldR func a b | func -> a b where
 -- | Folding right with symbolic functions.
 instance (SymVal a, SymVal b) => SFoldR (SBV a -> SBV b -> SBV b) a b where
   -- | @`foldr` f base s@ folds the sequence from the right.
-  --
-  -- >>> foldr ((+) @SInteger) 0 [1 .. 5 :: SInteger]
-  -- 15 :: SInteger
-  -- >>> foldr ((*) @SInteger) 1 [1 .. 5 :: SInteger]
-  -- 120 :: SInteger
-  -- >>> foldr (\elt soFar -> soFar ++ [elt]) ([] :: SList Integer) [1 .. 5 :: SInteger]
-  -- [5,4,3,2,1] :: [SInteger]
   foldr f base l
     | Just concResult <- concreteFoldr f f base l
     = literal concResult
@@ -721,6 +721,11 @@ zip xs ys
 class (SymVal a, SymVal b, SymVal c) => SZipWith func a b c | func -> a b c where
   -- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
   -- The length of the final list is the minumum of the lengths of the given lists.
+   --
+   -- >>> zipWith ((+) @SInteger) (literal [1..10]) (literal [11..20])
+   -- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]
+   -- >>> foldr ((+) @SInteger) 0 (zipWith ((+) @SInteger) [1..10 :: SInteger] [10, 9..1 :: SInteger])
+   -- 110 :: SInteger
   zipWith :: func -> SList a -> SList b -> SList c
 
   -- | Handle the concrete case of zipping. Used internally only.
@@ -736,12 +741,7 @@ class (SymVal a, SymVal b, SymVal c) => SZipWith func a b c | func -> a b c wher
 
 -- | Zipping with symbolic functions.
 instance (SymVal a, SymVal b, SymVal c) => SZipWith (SBV a -> SBV b -> SBV c) a b c where
-   -- |
-   --
-   -- >>> zipWith ((+) @SInteger) (literal [1..10]) (literal [11..20])
-   -- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]
-   -- >>> foldr ((+) @SInteger) 0 (zipWith ((+) @SInteger) [1..10 :: SInteger] [10, 9..1 :: SInteger])
-   -- 110 :: SInteger
+   -- | @`zipWith`@ zips two sequences with a symbolic function.
    zipWith f xs ys
     | Just concResult <- concreteZipWith f f xs ys
     = literal concResult
@@ -866,6 +866,11 @@ infix 5 \\  -- CPP: do not eat the final newline
 -- and we instantiate this class appropriately so it can handle both cases.
 class SymVal a => SFilter func a | func -> a where
   -- | Filter a list via a predicate.
+  --
+  -- >>> filter (\(x :: SInteger) -> x `sMod` 2 .== 0) (literal [1 .. 10])
+  -- [2,4,6,8,10] :: [SInteger]
+  -- >>> filter (\(x :: SInteger) -> x `sMod` 2 ./= 0) (literal [1 .. 10])
+  -- [1,3,5,7,9] :: [SInteger]
   filter :: func -> SList a -> SList a
 
   -- | Handle the concrete case of filtering. Used internally only.
@@ -881,11 +886,6 @@ class SymVal a => SFilter func a | func -> a where
 -- | Filtering with symbolic functions.
 instance SymVal a => SFilter (SBV a -> SBool) a where
   -- | @filter f xs@ filters the list with the given predicate.
-  --
-  -- >>> filter (\(x :: SInteger) -> x `sMod` 2 .== 0) (literal [1 .. 10])
-  -- [2,4,6,8,10] :: [SInteger]
-  -- >>> filter (\(x :: SInteger) -> x `sMod` 2 ./= 0) (literal [1 .. 10])
-  -- [1,3,5,7,9] :: [SInteger]
   filter f l
     | Just concResult <- concreteFilter f f l
     = literal concResult
@@ -914,6 +914,9 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
 -- we instantiate this class appropriately so it can handle both cases.
 class SymVal a => SPartition func a | func -> a where
   -- | Partition a symbolic list according to a predicate.
+  --
+  -- >>> partition (\(x :: SInteger) -> x `sMod` 2 .== 0) (literal [1 .. 10])
+  -- ([2,4,6,8,10],[1,3,5,7,9]) :: ([SInteger], [SInteger])
   partition :: func -> SList a -> STuple [a] [a]
 
   -- | Handle the concrete case of partitioning. Used internally only.
