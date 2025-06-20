@@ -75,8 +75,7 @@ module Data.SBV.List (
 
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
-                       all, any, and, or, replicate, fst, snd, sum, product,
-                       enumFrom, enumFromThen, enumFromTo, enumFromThenTo)
+                       all, any, and, or, replicate, fst, snd, sum, product, Enum(..))
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
@@ -994,8 +993,8 @@ class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
    enumFromThenTo :: SBV a -> SBV a -> SBV a -> SList a
    enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
        where delta = y - x
-             up    = smtFunction "enumFromThenTo_up"   $ \start d end -> ite (start .> end) nil (start .: up   (start + d) d end)
-             down  = smtFunction "enumFromThenTo_down" $ \start d end -> ite (start .< end) nil (start .: down (start + d) d end)
+             up    = smtFunction "EnumSymbolic_enumFromThenTo_up"   $ \start d end -> ite (start .> end) nil (start .: up   (start + d) d end)
+             down  = smtFunction "EnumSymbolic_enumFromThenTo_down" $ \start d end -> ite (start .< end) nil (start .: down (start + d) d end)
 
    -- Bounded/integral instances can be auto-defined
    default succ :: Bounded a => SBV a -> SBV a
@@ -1016,7 +1015,7 @@ class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
    enumFrom x = enumFromTo x maxBound
 
    default enumFromThen :: Bounded a => SBV a -> SBV a -> SList a
-   enumFromThen x y = enumFromThenTo x y (ite (y .>= x) maxBound minBound)
+   enumFromThen x y = enumFromThenTo x y (ite (fromEnum y .>= fromEnum x) maxBound minBound)
 
 -- | Symbolic enumerations over integers
 instance EnumSymbolic Integer where
