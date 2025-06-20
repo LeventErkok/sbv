@@ -965,7 +965,7 @@ product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
 
 -- | A class of symbolic aware enumerations.
-class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
+class (SymVal a, Ord a) => EnumSymbolic a where
    -- @`succ`@, same as in the 'Enum' class
    succ :: SBV a -> SBV a
 
@@ -993,10 +993,10 @@ class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
    enumFromThenTo x y z = map toEnum [fromEnum x, fromEnum y .. fromEnum z]
 
    -- Bounded/integral instances can be auto-defined
-   default succ :: Bounded a => SBV a -> SBV a
+   default succ :: (Bounded a, Num (SBV a)) => SBV a -> SBV a
    succ = smtFunction "EnumSymbolic.succ" (\x -> ite (x .== maxBound) (some "EnumSymbolic_succ_maxBound" (const sTrue)) (x+1))
 
-   default pred :: Bounded a => SBV a -> SBV a
+   default pred :: (Bounded a, Num (SBV a)) => SBV a -> SBV a
    pred = smtFunction "EnumSymbolic.pred" (\x -> ite (x .== minBound) (some "EnumSymbolic_pred_minBound" (const sTrue)) (x-1))
 
    default toEnum :: (Integral a, Bounded a) => SInteger -> SBV a
