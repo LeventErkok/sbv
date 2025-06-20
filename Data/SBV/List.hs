@@ -969,16 +969,16 @@ product = foldr ((*) @(SBV a)) 1
 
 -- | A class of symbolic aware enumerations.
 class EnumSymbolic a where
-   -- @`succ`@, same as in the 'Enum' class
+   -- | @`succ`@, same as in the 'Enum' class
    succ :: SBV a -> SBV a
 
-   -- @`pred`@, same as in the 'Enum' class
+   -- | @`pred`@, same as in the 'Enum' class
    pred :: SBV a -> SBV a
 
-   -- @`toEnum`@, same as in the 'Enum' class, except it takes an 'SInteger'
+   -- | @`toEnum`@, same as in the 'Enum' class, except it takes an 'SInteger'
    toEnum :: SInteger -> SBV a
 
-   -- @`fromEnum`@, same as in the 'Enum' class, except it returns an 'SInteger'
+   -- | @`fromEnum`@, same as in the 'Enum' class, except it returns an 'SInteger'
    fromEnum :: SBV a -> SInteger
 
    -- | @`enumFrom` m@. Symbolic version of @[m ..]@
@@ -995,7 +995,7 @@ class EnumSymbolic a where
    enumFromThenTo :: SymVal a => SBV a -> SBV a -> SBV a -> SList a
    enumFromThenTo x y z = map toEnum [fromEnum x, fromEnum y .. fromEnum z]
 
-   -- Bounded/integral instances can be auto-defined
+   -- | Bounded/integral instances can be auto-defined
    default succ :: (SymVal a, Bounded a, Num (SBV a)) => SBV a -> SBV a
    succ = smtFunction "EnumSymbolic.succ" (\x -> ite (x .== maxBound) (some "EnumSymbolic_succ_maxBound" (const sTrue)) (x+1))
 
