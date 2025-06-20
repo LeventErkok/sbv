@@ -24,7 +24,7 @@ import Data.SBV.Control
 
 -- | Days of the week. We make it symbolic using the 'mkSymbolicEnumeration' splice.
 data Day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday
-         deriving (Eq, Ord)
+         deriving (Eq, Ord, Bounded, Enum)
 
 -- | Make 'Day' a symbolic value.
 mkSymbolicEnumeration ''Day

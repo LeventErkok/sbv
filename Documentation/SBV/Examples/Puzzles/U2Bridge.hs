@@ -36,7 +36,7 @@ import Data.SBV
 -- | U2 band members. We want to translate this to SMT-Lib as a data-type, and hence the
 -- call to mkSymbolicEnumeration.
 data U2Member = Bono | Edge | Adam | Larry
-              deriving (Eq, Ord)
+              deriving (Enum, Bounded, Eq, Ord)
 
 -- | Make 'U2Member' a symbolic value.
 mkSymbolicEnumeration ''U2Member
@@ -63,6 +63,7 @@ sCrossTime m =   ite (m .== sBono) (literal (crossTime Bono))
 
 -- | Location of the flash
 data Location = Here | There
+              deriving (Enum, Bounded)
 
 -- | Make 'Location' a symbolic value.
 mkSymbolicEnumeration ''Location

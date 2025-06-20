@@ -42,6 +42,7 @@ import Data.SBV
 
 -- | Colors of the flowers
 data Color = Red | Yellow | Blue
+          deriving (Enum, Bounded)
 
 -- | Make 'Color' a symbolic value.
 mkSymbolicEnumeration ''Color

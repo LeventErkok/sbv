@@ -26,10 +26,10 @@ module Data.SBV.Client
   , mkUninterpretedSort
   ) where
 
-import Prelude hiding(lookup)
-
 import Control.Monad (filterM)
 import Data.Generics
+
+import qualified Data.SBV.List as SL
 
 import qualified Control.Exception as C
 
@@ -87,6 +87,14 @@ declareSymbolic isEnum typeName = do
                      minMaxBound = Nothing
                |]
 
+    symEnum <- if isEnum
+                  then [d| instance SL.EnumSymbolic $typeCon where
+                              succ     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts (drop 1 elts))
+                              pred     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip (drop 1 elts) elts)
+                              toEnum   x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip [0..] elts)
+                              fromEnum x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts [0..])
+                       |]
+                  else pure []
 
     sType <- TH.conT ''SBV `TH.appT` typeCon
 
@@ -105,7 +113,7 @@ declareSymbolic isEnum typeName = do
 
     addDocs (tname, btname) constrNames
 
-    pure $ derives ++ symVals ++ [tdecl] ++ concat cdecls
+    pure $ derives ++ symVals ++ symEnum ++ [tdecl] ++ concat cdecls
 
  where addDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
 #if MIN_VERSION_template_haskell(2,18,0)

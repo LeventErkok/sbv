@@ -968,7 +968,7 @@ product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
 
 -- | A class of symbolic aware enumerations.
-class SymVal a => EnumSymbolic a where
+class EnumSymbolic a where
    -- @`succ`@, same as in the 'Enum' class
    succ :: SBV a -> SBV a
 
@@ -988,32 +988,32 @@ class SymVal a => EnumSymbolic a where
    enumFromThen :: SBV a -> SBV a -> SList a
 
    -- | @`enumFromTo` m n@. Symbolic version of @[m .. n]@
-   enumFromTo :: SBV a -> SBV a -> SList a
+   enumFromTo :: SymVal a => SBV a -> SBV a -> SList a
    enumFromTo x y = map toEnum [fromEnum x .. fromEnum y]
 
    -- | @`enumFromThenTo` m n@. Symbolic version of @[m, m' .. n]@
-   enumFromThenTo :: SBV a -> SBV a -> SBV a -> SList a
+   enumFromThenTo :: SymVal a => SBV a -> SBV a -> SBV a -> SList a
    enumFromThenTo x y z = map toEnum [fromEnum x, fromEnum y .. fromEnum z]
 
    -- Bounded/integral instances can be auto-defined
-   default succ :: (Bounded a, Num (SBV a)) => SBV a -> SBV a
+   default succ :: (SymVal a, Bounded a, Num (SBV a)) => SBV a -> SBV a
    succ = smtFunction "EnumSymbolic.succ" (\x -> ite (x .== maxBound) (some "EnumSymbolic_succ_maxBound" (const sTrue)) (x+1))
 
-   default pred :: (Bounded a, Num (SBV a)) => SBV a -> SBV a
+   default pred :: (SymVal a, Bounded a, Num (SBV a)) => SBV a -> SBV a
    pred = smtFunction "EnumSymbolic.pred" (\x -> ite (x .== minBound) (some "EnumSymbolic_pred_minBound" (const sTrue)) (x-1))
 
-   default toEnum :: (Integral a, Bounded a) => SInteger -> SBV a
+   default toEnum :: (SymVal a, Integral a, Bounded a) => SInteger -> SBV a
    toEnum = smtFunction "EnumSymbolic.toEnum" (\x -> ite (x .< sFromIntegral (minBound @(SBV a)) .|| x .> sFromIntegral (maxBound @(SBV a)))
                                                          (some "EnumSymbolic_toEnum_out_of_bounds" (const sTrue))
                                                          (sFromIntegral x))
 
-   default fromEnum :: (Integral a, Bounded a) => SBV a -> SInteger
+   default fromEnum :: (SymVal a, Integral a, Bounded a) => SBV a -> SInteger
    fromEnum = sFromIntegral
 
-   default enumFrom :: Bounded a => SBV a -> SList a
+   default enumFrom :: (SymVal a, Bounded a) => SBV a -> SList a
    enumFrom x = enumFromTo x maxBound
 
-   default enumFromThen :: Bounded a => SBV a -> SBV a -> SList a
+   default enumFromThen :: (SymVal a, Bounded a) => SBV a -> SBV a -> SList a
    enumFromThen x y = enumFromThenTo x y (ite (fromEnum y .>= fromEnum x) maxBound minBound)
 
 -- | Symbolic enumerations over integers.

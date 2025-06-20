@@ -32,7 +32,7 @@ import Data.SBV
 -- @TemplateHaskell@, @StandaloneDeriving@, @DeriveDataTypeable@, @DeriveAnyClass@ for
 -- this to work.
 data E = A | B | C
-       deriving (Eq, Ord)
+       deriving (Enum, Bounded, Eq, Ord)
 
 -- | Make 'E' a symbolic value.
 mkSymbolicEnumeration ''E

@@ -41,30 +41,35 @@ import Data.SBV
 
 -- | Colors of houses
 data Color = Red | Green | White | Yellow | Blue
+           deriving (Enum, Bounded)
 
 -- | Make 'Color' a symbolic value.
 mkSymbolicEnumeration ''Color
 
 -- | Nationalities of the occupants
 data Nationality = Briton | Dane | Swede | Norwegian | German
+                 deriving (Enum, Bounded)
 
 -- | Make 'Nationality' a symbolic value.
 mkSymbolicEnumeration ''Nationality
 
 -- | Beverage choices
 data Beverage = Tea | Coffee | Milk | Beer | Water
+              deriving (Enum, Bounded)
 
 -- | Make 'Beverage' a symbolic value.
 mkSymbolicEnumeration ''Beverage
 
 -- | Pets they keep
 data Pet = Dog | Horse | Cat | Bird | Fish
+         deriving (Enum, Bounded)
 
 -- | Make 'Pet' a symbolic value.
 mkSymbolicEnumeration ''Pet
 
 -- | Sports they engage in
 data Sport = Football | Baseball | Volleyball | Hockey | Tennis
+           deriving (Enum, Bounded)
 
 -- | Make 'Sport' a symbolic value.
 mkSymbolicEnumeration ''Sport

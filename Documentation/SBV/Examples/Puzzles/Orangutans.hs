@@ -31,13 +31,16 @@ import GHC.Generics (Generic)
 #endif
 
 -- | Orangutans in the puzzle.
-data Orangutan = Merah   | Ofallo  | Quirrel  | Shamir   deriving (Enum, Bounded)
+data Orangutan = Merah | Ofallo | Quirrel | Shamir
+               deriving (Enum, Bounded)
 
 -- | Handlers for each orangutan.
-data Handler   = Dolly   | Eva     | Francine | Gracie
+data Handler = Dolly | Eva | Francine | Gracie
+             deriving (Enum, Bounded)
 
 -- | Location for each orangutan.
-data Location  = Ambalat | Basahan | Kendisi  | Tarakan
+data Location = Ambalat | Basahan | Kendisi | Tarakan
+             deriving (Enum, Bounded)
 
 mkSymbolicEnumeration ''Orangutan
 mkSymbolicEnumeration ''Handler

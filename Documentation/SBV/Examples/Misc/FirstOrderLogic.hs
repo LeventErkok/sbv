@@ -45,6 +45,8 @@ mkUninterpretedSort ''V
 
 -- | An enumerated type for demo purposes, named 'E'
 data E = A | B | C
+       deriving (Enum, Bounded)
+
 mkSymbolicEnumeration ''E
 
 -- | Helper to turn quantified formula to a regular boolean. We

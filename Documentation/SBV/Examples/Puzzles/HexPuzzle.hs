@@ -54,6 +54,7 @@ import Data.Proxy
 
 -- | Colors we're allowed
 data Color = Black | Blue | Green | Red
+          deriving (Enum, Bounded)
 
 -- | Make 'Color' a symbolic value.
 mkSymbolicEnumeration ''Color
