@@ -31,7 +31,7 @@ import qualified Data.SBV.List as L
 
 import Utils.SBVTestFramework
 
-data E = A | B | C
+data E = A | B | C deriving (Bounded, Enum)
 mkSymbolicEnumeration ''E
 
 __unused :: SE

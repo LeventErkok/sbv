@@ -25,7 +25,7 @@ import Data.SBV.Control
 
 import Utils.SBVTestFramework
 
-data BinOp  = Plus | Minus | Times
+data BinOp  = Plus | Minus | Times deriving (Enum, Bounded)
 mkSymbolicEnumeration ''BinOp
 
 _unused :: a

@@ -1137,7 +1137,7 @@ you can use the 'mkSymbolicEnumeration' function to turn it into an enumeration 
 A simple example is:
 
 @
-    data X = A | B | C
+    data X = A | B | C deriving (Enum, Bounded)
     mkSymbolicEnumeration ''X
 @
 
@@ -1149,7 +1149,8 @@ options turned on:
 >   LANGUAGE DeriveDataTypeable
 >   LANGUAGE DeriveAnyClass
 
-The declaration will automatically introduce the type:
+and your own declaration must have instances of 'Enum' and 'Bounded'. (The instances can be derived, os above.)
+This will automatically introduce the type:
 
 @
     type SX = SBV X
@@ -1157,7 +1158,8 @@ The declaration will automatically introduce the type:
 
 along with symbolic values of each of the enumerated values @sA@, @sB@, and @sC@. This way,
 you can refer to the symbolic version as @SX@, treating it as a regular symbolic type ranging over the values @A@, @B@, and @C@. Such values can be compared for equality, and with the usual
-other comparison operators, such as @.==@, @./=@, @.>@, @.>=@, @<@, and @<=@. For each enumerated value @X@, the symbolic versions @sX@ is defined to be equal to @literal X@.
+other comparison operators, such as @.==@, @./=@, @.>@, @.>=@, @<@, and @<=@. For each enumerated value @X@, the symbolic versions @sX@ is defined to be equal to @literal X@. Furthermore, the symbolic type will be an instance of 'EnumSymbolic', allowing you to use
+arithmetic progressions on symbolic values.
 
 A simple query would look like:
 

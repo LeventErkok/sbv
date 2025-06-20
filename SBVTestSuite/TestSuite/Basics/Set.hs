@@ -28,7 +28,7 @@ import Data.SBV.Tuple
 
 import Utils.SBVTestFramework hiding (complement)
 
-data E = A | B | C
+data E = A | B | C deriving (Bounded, Enum, Ord, Eq)
 mkSymbolicEnumeration ''E
 
 __unused :: SE

@@ -22,7 +22,7 @@ module TestSuite.Queries.Uninterpreted where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
-data L = A | B
+data L = A | B deriving (Enum, Bounded)
 mkSymbolicEnumeration ''L
 
 -- Test suite
