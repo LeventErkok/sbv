@@ -25,7 +25,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE QuasiQuotes           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -36,11 +35,13 @@ import Language.Haskell.TH.Quote
 
 import qualified Language.Haskell.Meta.Parse as Meta
 
-import Data.List.Split (splitOn)
-import Data.Char       (isSpace)
+import Data.Char (isSpace)
 
 import Prelude hiding (enumFrom, enumFromThen, enumFromTo, enumFromThenTo)
 import Data.SBV.List  (enumFrom, enumFromThen, enumFromTo, enumFromThenTo)
+
+import Control.Monad (unless)
+import Data.List (isInfixOf, intercalate)
 
 -- | The `sEnum` quasiquoter.
 --
@@ -60,17 +61,43 @@ sEnum = QuasiQuoter { quoteExp  = parseSEnumExpr
                     }
   where err ctx = error $ "Data.SBV.sEnum does not support " ++ ctx
 
--- | Parse the sequence syntax into a TH Exp
+-- | Parse the sequence syntax into a TH Exp. This isn't the most robust parser, but it gets the job done.
 parseSEnumExpr :: String -> Q Exp
 parseSEnumExpr input = do
   loc <- location
 
-  (prefix, mEnd) <- case filter (not . null) (splitOn ".." (trim input)) of
-                      [pre]        -> pure (pre, Nothing)
-                      [pre, end]   -> pure (pre, Just end)
-                      _            -> errorWithLoc loc "Too many '..' parts in sequence"
+  -- Make sure there's a .. somewhere
+  unless (".." `isInfixOf` input) $ errorWithLoc loc "There must be exactly one occurrence of '..'"
 
-  let prefixParts = filter (not . null) $ map trim $ splitOn "," prefix
+  -- Find that occurrence of ..
+  (prefix, mEnd) <- do
+        let walk ('.':'.':cs) sofar
+             | ".." `isInfixOf` cs = errorWithLoc loc "Unexpected multiple occurrences of '..'"
+             | True                = pure (reverse sofar, cs)
+            walk (c:cs)         sofar = walk cs (c : sofar)
+            walk ""             sofar = pure (reverse sofar, "")
+
+        (pre, post) <- walk (trim input) ""
+        pure (trim pre, case trim post of
+                          "" -> Nothing
+                          s  -> Just s)
+
+  -- Now find the comma in the prefix. We only expect one comma here; though I suspect there might be more
+  -- in complicated expressions. Let's ignore that for now.
+  prefixParts <- do
+       let walk (',':cs) sofar
+            | ',' `elem` cs = errorWithLoc loc "Unexpected multiple commas."
+            | True          = pure (reverse sofar, cs)
+           walk (c:cs) sofar = walk cs (c : sofar)
+           walk ""     sofar = pure (reverse sofar, "")
+
+       (pre, post) <- walk prefix ""
+
+       -- post can be empty but pre can't
+       case (trim pre, trim post) of
+         ("", _)  -> errorWithLoc loc "Malformed enumeration: no start value found."
+         (a,  "") -> pure [a]
+         (a,  b)  -> pure [a, b]
 
   case (prefixParts, mEnd) of
     ([a],    Nothing) -> varE 'enumFrom       `appE` parseHaskellExpr loc a
@@ -78,7 +105,7 @@ parseSEnumExpr input = do
     ([a],    Just c)  -> varE 'enumFromTo     `appE` parseHaskellExpr loc a `appE`                               parseHaskellExpr loc c
     ([a, b], Just c)  -> varE 'enumFromThenTo `appE` parseHaskellExpr loc a `appE` parseHaskellExpr loc b `appE` parseHaskellExpr loc c
 
-    _ -> errorWithLoc loc $ unlines [ "Data.SBV.Enum: Invalid format. Use one of:\n"
+    _ -> errorWithLoc loc $ unlines [ "Data.SBV.Enum: Invalid format. Use one of:"
                                     , ""
                                     , "  [sEnum| a    ..   |]"
                                     , "  [sEnum| a, b ..   |]"
@@ -89,17 +116,19 @@ parseSEnumExpr input = do
 -- | Parses a string into a Haskell TH Exp using haskell-src-meta
 parseHaskellExpr :: Loc -> String -> Q Exp
 parseHaskellExpr loc s = case Meta.parseExp (trim s) of
-                           Left err -> errorWithLoc loc $ unlines [ "*** Could not parse expression:"
-                                                                  , "***"
-                                                                  , "***   " ++ s ++ if all isSpace s then "<empty>" else ""
-                                                                  , "***"
-                                                                  , "*** Error: " ++ err
-                                                                  ]
+                           Left err -> errorWithLoc loc $ intercalate "\n"
+                                                             [ "*** Could not parse expression:"
+                                                             , "***"
+                                                             , "***   " ++ s ++ if all isSpace s then "<empty>" else ""
+                                                             , "***"
+                                                             , "*** Error: " ++ err
+                                                             ]
                            Right e  -> return e
 
 -- | Utility: add filename and line number to an error
 errorWithLoc :: Loc -> String -> Q a
-errorWithLoc loc msg = fail $ "Data.SBV.sEnum: error at " ++ formatLoc loc ++ ":\n" ++ msg
+errorWithLoc loc msg = fail $ intercalate "\n" $ ("Data.SBV.sEnum: error at " ++ formatLoc loc)
+                                               : map ("        " ++) (lines msg)
 
 -- | Show `file.hs:line:col`
 formatLoc :: Loc -> String

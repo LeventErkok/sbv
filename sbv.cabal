@@ -110,7 +110,6 @@ Library
                   , pretty
                   , process
                   , random
-                  , split
                   , syb
                   , template-haskell
                   , text
