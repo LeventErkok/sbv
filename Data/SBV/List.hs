@@ -288,7 +288,7 @@ nil = literal []
 
 -- | Append two lists.
 --
--- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== [1 .. 12]
+-- >>> sat $ \x y (z :: SList Integer) -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== [1 .. 12]
 -- Satisfiable. Model:
 --   s0 =      [1,2,3,4,5] :: [Integer]
 --   s1 =              [6] :: [Integer]
