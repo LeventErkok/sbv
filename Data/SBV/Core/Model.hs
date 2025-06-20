@@ -1908,8 +1908,8 @@ instance {-# OVERLAPPABLE #-} ToSizedCstr arg => ToSizedBV arg where toSized = e
 -- respectively. For symbolic purposes, we return an unconstrained value instead, i.e., it is arbitrarily chosen.
 -- We try to be as symbolic as possible, though some of the types (like fromEnum) forces us to be partial.
 instance (SymVal a, Bounded a, Integral a, Num (SBV a)) => Enum (SBV a) where
-  succ = smtFunction "succ" (\x -> ite (x .== maxBound) (some "succ_maxBound" (const sTrue)) (x+1))
-  pred = smtFunction "pred" (\x -> ite (x .== minBound) (some "pred_minBound" (const sTrue)) (x-1))
+  succ = smtFunction "Enum.succ" (\x -> ite (x .== maxBound) (some "Enum_succ_maxBound" (const sTrue)) (x+1))
+  pred = smtFunction "Enum.pred" (\x -> ite (x .== minBound) (some "Enum_pred_minBound" (const sTrue)) (x-1))
 
   toEnum i
     | ii < minb = bad $ show i ++ " < minBound of " ++ show minb

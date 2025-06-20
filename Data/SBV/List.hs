@@ -83,6 +83,7 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.SizedFloats
+import Data.SBV.Core.Floating
 
 import Data.SBV.Tuple
 
@@ -967,6 +968,18 @@ product = foldr ((*) @(SBV a)) 1
 -- | A class of symbolic aware enumerations. Minimal complete definition: Nothing if the type is bounded. Otherwise
 -- enumFrom and enumFromThen are required.
 class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
+   -- @`succ`@, same as in the 'Enum' class
+   succ :: SBV a -> SBV a
+
+   -- @`pred`@, same as in the 'Enum' class
+   pred :: SBV a -> SBV a
+
+   -- @`toEnum`@, same as in the 'Enum' class, except it takes an 'SInteger'
+   toEnum :: SInteger -> SBV a
+
+   -- @`fromEnum`@, same as in the 'Enum' class, except it returns an 'SInteger'
+   fromEnum :: SBV a -> SInteger
+
    -- | @`enumFrom` m@. Symbolic version of @[m ..]@
    enumFrom :: SBV a -> SList a
 
@@ -984,7 +997,21 @@ class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
              up    = smtFunction "enumFromThenTo_up"   $ \start d end -> ite (start .> end) nil (start .: up   (start + d) d end)
              down  = smtFunction "enumFromThenTo_down" $ \start d end -> ite (start .< end) nil (start .: down (start + d) d end)
 
-   -- Bounded instances can be auto-defined
+   -- Bounded/integral instances can be auto-defined
+   default succ :: Bounded a => SBV a -> SBV a
+   succ = smtFunction "EnumSymbolic.succ" (\x -> ite (x .== maxBound) (some "EnumSymbolic_succ_maxBound" (const sTrue)) (x+1))
+
+   default pred :: Bounded a => SBV a -> SBV a
+   pred = smtFunction "EnumSymbolic.pred" (\x -> ite (x .== minBound) (some "EnumSymbolic_pred_minBound" (const sTrue)) (x-1))
+
+   default toEnum :: (Integral a, Bounded a) => SInteger -> SBV a
+   toEnum = smtFunction "EnumSymbolic.toEnum" (\x -> ite (x .< sFromIntegral (minBound @(SBV a)) .|| x .> sFromIntegral (maxBound @(SBV a)))
+                                                         (some "EnumSymbolic_toEnum_out_of_bounds" (const sTrue))
+                                                         (sFromIntegral x))
+
+   default fromEnum :: (Integral a, Bounded a) => SBV a -> SInteger
+   fromEnum = sFromIntegral
+
    default enumFrom :: Bounded a => SBV a -> SList a
    enumFrom x = enumFromTo x maxBound
 
@@ -993,6 +1020,12 @@ class (SymVal a, Ord a, Num (SBV a)) => EnumSymbolic a where
 
 -- | Symbolic enumerations over integers
 instance EnumSymbolic Integer where
+   succ x = x + 1
+   pred x = x - 1
+
+   toEnum   = id
+   fromEnum = id
+
    enumFrom n       = enumFromThen n (n+1)
    enumFromThen x y = go x (y-x)
      where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
@@ -1013,18 +1046,36 @@ instance (KnownNat n, BVIsNonZero n) => EnumSymbolic (IntN n)
 
 -- | 'EnumSymbolic instance for 'Float'
 instance EnumSymbolic Float where
+   succ x = x + 1
+   pred x = x - 1
+
+   toEnum   = sFromIntegral
+   fromEnum = fromSFloat sRTZ
+
    enumFrom n       = enumFromThen n (n+1)
    enumFromThen x y = go x (y-x)
      where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
 -- | 'EnumSymbolic instance for 'Double'
 instance EnumSymbolic Double where
+   succ x = x + 1
+   pred x = x - 1
+
+   toEnum   = sFromIntegral
+   fromEnum = fromSDouble sRTZ
+
    enumFrom n       = enumFromThen n (n+1)
    enumFromThen x y = go x (y-x)
      where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
 -- | 'EnumSymbolic instance for arbitrary floats
 instance (ValidFloat eb sb) => EnumSymbolic (FloatingPoint eb sb) where
+   succ x = x + 1
+   pred x = x - 1
+
+   toEnum   = sFromIntegral
+   fromEnum = fromSFloatingPoint sRTZ
+
    enumFrom n       = enumFromThen n (n+1)
    enumFromThen x y = go x (y-x)
      where go = smtFunction "enumFromThen" $ \start delta -> start .: go (start+delta) delta
