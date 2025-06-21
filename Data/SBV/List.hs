@@ -12,6 +12,8 @@
 -- so importing qualified is the recommended workflow. Also, it is recommended
 -- you use the @OverloadedLists@ and @OverloadedStrings@ extensions to allow literal
 -- lists and strings to be used as symbolic literals.
+--
+-- You can find proofs of many list related properties in "Data.SBV.TP.List".
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                    #-}
@@ -34,7 +36,7 @@ module Data.SBV.List (
           length, null
 
         -- * Deconstructing/Reconstructing
-        , head, tail, uncons, init, last, singleton, listToListAt, elemAt, (!!), implode, concat, (.:), snoc, nil, (++)
+        , nil, (.:), snoc, head, tail, uncons, init, last, singleton, listToListAt, elemAt, (!!), implode, concat, (++)
 
         -- * Containment
         , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
@@ -67,13 +69,16 @@ module Data.SBV.List (
         , all, any, and, or
 
         -- * Generators
-        , replicate, inits, tails, EnumSymbolic(..)
+        , replicate, inits, tails
 
         -- * Sum and product
         , sum, product
 
         -- * Conversion between strings and naturals
         , strToNat, natToStr
+
+        -- * Symbolic enumerations
+        , EnumSymbolic(..)
         ) where
 
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
@@ -105,7 +110,7 @@ import Data.Int
 
 #ifdef DOCTEST
 -- $setup
--- >>> import Prelude hiding (head, tail, init, last, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any, replicate, lookup)
+-- >>> import Prelude hiding (head, tail, init, last, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any, replicate, lookup, splitAt, concatMap, and, or, sum, product)
 -- >>> import qualified Prelude as P(map)
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds
@@ -113,6 +118,7 @@ import Data.Int
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
 -- >>> :set -XTypeApplications
+-- >>> :set -XQuasiQuotes
 #endif
 
 -- | IsList instance allows list literals to be written compactly.
@@ -256,6 +262,9 @@ elemAt l i
   = lift2 False (SeqNth (kindOf (Proxy @a))) Nothing l i
 
 -- | Short cut for 'elemAt'
+--
+-- >>> prove $ \(xs :: SList Integer) i -> xs !! i .== xs `elemAt` i
+-- Q.E.D.
 (!!) :: SymVal a => SList a -> SInteger -> SBV a
 (!!) = elemAt
 
@@ -275,11 +284,17 @@ implode :: SymVal a => [SBV a] -> SList a
 implode = P.foldr ((++) . \x -> [x]) (literal [])
 
 -- | Prepend an element, the traditional @cons@.
+--
+-- >>> 1 .: 2 .: 3 .: [4, 5, 6 :: SInteger]
+-- [1,2,3,4,5,6] :: [SInteger]
 infixr 5 .:
 (.:) :: SymVal a => SBV a -> SList a -> SList a
 a .: as = singleton a ++ as  -- NB. Don't do "[a] ++ as" here. That type-checks but is recursive due to how overloaded-lists work.
 
 -- | Append an element
+--
+-- >>> [1, 2, 3 :: SInteger] `snoc` 4 `snoc` 5 `snoc` 6
+-- [1,2,3,4,5,6] :: [SInteger]
 snoc :: SymVal a => SList a -> SBV a -> SList a
 as `snoc` a = as ++ [a]
 
@@ -312,10 +327,16 @@ x ++ y | isConcretelyEmpty x = y
        | True                = lift2 False (SeqConcat (kindOf (Proxy @a))) (Just (P.++)) x y
 
 -- | @`elem` e l@. Does @l@ contain the element @e@?
+--
+-- >>> prove $ \(xs :: SList Integer) x -> x `elem` xs .=> length xs .>= 1
+-- Q.E.D.
 elem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool
 e `elem` l = [e] `isInfixOf` l
 
 -- | @`notElem` e l@. Does @l@ not contain the element @e@?
+--
+-- >>> prove $ \(x :: SList Integer) -> x `notElem` []
+-- Q.E.D.
 notElem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool
 e `notElem` l = sNot (e `elem` l)
 
@@ -398,6 +419,9 @@ drop i s = ite (i .>= ls) (literal [])
   where ls = length s
 
 -- | @splitAt n xs = (take n xs, drop n xs)@
+--
+-- >>> prove $ \n (xs :: SList Integer) -> let (l, r) = splitAt n xs in l ++ r .== xs
+-- Q.E.D.
 splitAt :: SymVal a => SInteger -> SList a -> (SList a, SList a)
 splitAt n xs = (take n xs, drop n xs)
 
@@ -587,6 +611,9 @@ instance (SymVal env, SymVal a, SymVal b) => SMap (Closure (SBV env) (SBV a -> S
                              in ite (null xs) [] (closureFun cEnv h .: sbvMap (tuple (cEnv, t)))
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
+--
+-- >>> concatMap (\x -> [x, x] :: SList Integer) [1 .. 3 :: SInteger]
+-- [1,1,2,2,3,3] :: [SInteger]
 concatMap :: (SMap func a [b], SymVal b) => func -> SList a -> SList b
 concatMap f = concat . map f
 
@@ -798,10 +825,20 @@ any :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SBool
 any f = foldr ((.||) . f) sFalse
 
 -- | Conjunction of all the elements.
+--
+-- >>> and []
+-- True
+-- >>> prove $ \s -> and [s, sNot s] .== sFalse
+-- Q.E.D.
 and :: SList Bool -> SBool
 and = all id
 
 -- | Disjunction of all the elements.
+--
+-- >>> or []
+-- False
+-- >>> prove $ \s -> or [s, sNot s]
+-- Q.E.D.
 or :: SList Bool -> SBool
 or = any id
 
@@ -967,14 +1004,30 @@ instance (SymVal env, SymVal a) => SPartition (Closure (SBV env) (SBV a -> SBool
                                           (tuple (as, h .: bs))
 
 -- | @`sum` s@. Sum the given sequence.
+--
+-- >>> sum [1 .. 10::SInteger]
+-- 55 :: SInteger
 sum :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 sum = foldr ((+) @(SBV a)) 0
 
 -- | @`product` s@. Multiply out the given sequence.
+--
+-- >>> product [1 .. 10::SInteger]
+-- 3628800 :: SInteger
 product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
 
--- | A class of symbolic aware enumerations.
+-- | A class of symbolic aware enumerations. This is similar to Haskell's @Enum@ class,
+-- except some of the methods are generalized to work with symbolic values. Together
+-- with the 'Data.SBV.sEnum' quasiquoter, you can write symbolic arithmetic progressions,
+-- such as:
+--
+-- >>> [sEnum| 5, 7 .. 16::SInteger|]
+-- [5,7,9,11,13,15] :: [SInteger]
+-- >>> [sEnum| 4 ..|] :: SList (WordN 4)
+-- [4,5,6,7,8,9,10,11,12,13,14,15] :: [SWord 4]
+-- >>> [sEnum| 9, 12 ..|] :: SList (IntN 4)
+-- [-7,-4,-1,2,5] :: [SInt 4]
 class EnumSymbolic a where
    -- | @`succ`@, same as in the @Enum@ class
    succ :: SBV a -> SBV a
