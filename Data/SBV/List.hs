@@ -119,7 +119,7 @@ import Data.Int
 instance SymVal a => IsList (SList a) where
   type Item (SList a) = SBV a
 
-  fromList = P.foldr (.:) nil
+  fromList = P.foldr (.:) nil -- Don't use [] here for nil, as this is the very definition of doing overloaded lists
   toList x = case unliteral x of
                Nothing -> error "IsList.toList used in a symbolic context"
                Just xs -> P.map literal xs
@@ -195,6 +195,9 @@ tail l
  = subList l 1 (length l - 1)
 
 -- | @`uncons`@ returns the pair of the head and tail. Unspecified if the list is empty.
+--
+-- >>> prove $ \(x :: SInteger) xs -> uncons (x .: xs) .== (x, xs)
+-- Q.E.D.
 uncons :: SymVal a => SList a -> (SBV a, SList a)
 uncons l = (head l, tail l)
 
@@ -280,11 +283,12 @@ a .: as = singleton a ++ as  -- NB. Don't do "[a] ++ as" here. That type-checks 
 snoc :: SymVal a => SList a -> SBV a -> SList a
 as `snoc` a = as ++ [a]
 
--- | Empty list. This value has the property that it's the only list with length 0:
+-- | Empty list. This value has the property that it's the only list with length 0. If you use @OverloadedLists@ extension,
+-- you can write it as the familiar `[]`.
 --
--- >>> prove $ \(l :: SList Integer) -> length l .== 0 .<=> l .== nil
+-- >>> prove $ \(l :: SList Integer) -> length l .== 0 .<=> l .== []
 -- Q.E.D.
--- >>> prove $ \(l :: SString) -> length l .== 0 .<=> l .== nil
+-- >>> prove $ \(l :: SString) -> length l .== 0 .<=> l .== []
 -- Q.E.D.
 nil :: SymVal a => SList a
 nil = literal []
@@ -526,7 +530,7 @@ reverse l
   = literal (P.reverse l')
   | True
   = def l
-  where def = smtFunction "sbv.reverse" $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in def t ++ [h])
+  where def = smtFunction "sbv.reverse" $ \xs -> ite (null xs) [] (let (h, t) = uncons xs in def t ++ [h])
 
 -- | A class of mappable functions. In SBV, we make a distinction between closures and regular functions, and
 -- we instantiate this class appropriately so it can handle both cases.
@@ -568,7 +572,7 @@ instance (SymVal a, SymVal b) => SMap (SBV a -> SBV b) a b where
     = literal concResult
     | True
     = sbvMap l
-    where sbvMap = smtHOFunction "sbv.map" f $ \xs -> ite (null xs) nil (let (h, t) = uncons xs in f h .: sbvMap t)
+    where sbvMap = smtHOFunction "sbv.map" f $ \xs -> ite (null xs) [] (let (h, t) = uncons xs in f h .: sbvMap t)
 
 -- | Mapping symbolic closures.
 instance (SymVal env, SymVal a, SymVal b) => SMap (Closure (SBV env) (SBV a -> SBV b)) a b where
@@ -580,7 +584,7 @@ instance (SymVal env, SymVal a, SymVal b) => SMap (Closure (SBV env) (SBV a -> S
     where sbvMap = smtHOFunction "sbv.closureMap" closureFun
                  $ \envxs -> let (cEnv, xs) = untuple envxs
                                  (h, t)     = uncons xs
-                             in ite (null xs) nil (closureFun cEnv h .: sbvMap (tuple (cEnv, t)))
+                             in ite (null xs) [] (closureFun cEnv h .: sbvMap (tuple (cEnv, t)))
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
 concatMap :: (SMap func a [b], SymVal b) => func -> SList a -> SList b
@@ -714,7 +718,7 @@ zip xs ys
  = literal $ P.zip xs' ys'
  | True
  = def xs ys
- where def = smtFunction "sbv.zip" $ \as bs -> ite (null as .|| null bs) nil (tuple (head as, head bs) .: def (tail as) (tail bs))
+ where def = smtFunction "sbv.zip" $ \as bs -> ite (null as .|| null bs) [] (tuple (head as, head bs) .: def (tail as) (tail bs))
 
 -- | A class of function that we can zip-with. In SBV, we make a distinction between closures and regular
 -- functions, and we instantiate this class appropriately so it can handle both cases.
@@ -750,7 +754,7 @@ instance (SymVal a, SymVal b, SymVal c) => SZipWith (SBV a -> SBV b -> SBV c) a 
     where sbvZipWith = smtHOFunction "sbv.zipWith" (uncurry f . untuple)
                      $ \asbs -> let (as, bs) = untuple asbs
                                 in ite (null as .|| null bs)
-                                       nil
+                                       []
                                        (f (head as) (head bs) .: sbvZipWith (tuple (tail as, tail bs)))
 
 -- | Zipping with closures.
@@ -763,7 +767,7 @@ instance (SymVal env, SymVal a, SymVal b, SymVal c) => SZipWith (Closure (SBV en
     where sbvZipWith = smtHOFunction "sbv.closureZipWith" closureFun
                      $ \envasbs -> let (cEnv, as, bs) = untuple envasbs
                                    in ite (null as .|| null bs)
-                                          nil
+                                          []
                                           (closureFun cEnv (head as) (head bs) .: sbvZipWith (tuple (cEnv, tail as, tail bs)))
 
 -- | Concatenate list of lists.
@@ -771,7 +775,7 @@ instance (SymVal env, SymVal a, SymVal b, SymVal c) => SZipWith (Closure (SBV en
 -- >>> concat [[1..3::SInteger], [4..7], [8..10]]
 -- [1,2,3,4,5,6,7,8,9,10] :: [SInteger]
 concat :: forall a. SymVal a => SList [a] -> SList a
-concat = foldr (++) nil
+concat = foldr (++) []
 
 -- | Check all elements satisfy the predicate.
 --
@@ -813,7 +817,7 @@ replicate c e
  = literal (genericReplicate c' e')
  | True
  = def c e
- where def = smtFunction "sbv.replicate" $ \count elt -> ite (count .<= 0) nil (elt .: def (count - 1) elt)
+ where def = smtFunction "sbv.replicate" $ \count elt -> ite (count .<= 0) [] (elt .: def (count - 1) elt)
 
 -- | inits of a list.
 --
@@ -827,7 +831,7 @@ inits xs
  = literal (L.inits xs')
  | True
  = def xs
- where def = smtFunction "sbv.inits" $ \l -> ite (null l) [nil] (def (init l) ++ [l])
+ where def = smtFunction "sbv.inits" $ \l -> ite (null l) [[]] (def (init l) ++ [l])
 
 -- | tails of a list.
 --
@@ -841,7 +845,7 @@ tails xs
  = literal (L.tails xs')
  | True
  = def xs
- where def = smtFunction "sbv.tails" $ \l -> ite (null l) [nil] (l .: def (tail l))
+ where def = smtFunction "sbv.tails" $ \l -> ite (null l) [[]] (l .: def (tail l))
 
 -- | Difference.
 --
@@ -856,7 +860,7 @@ xs \\ ys
  | True
  = def xs ys
  where def = smtFunction "sbv.diff" $ \x y -> ite (null x)
-                                                  nil
+                                                  []
                                                   (let (h, t) = uncons x
                                                        r      = def t y
                                                    in ite (h `elem` y) r (h .: r))
@@ -892,7 +896,7 @@ instance SymVal a => SFilter (SBV a -> SBool) a where
     | True
     = sbvFilter l
     where sbvFilter = smtHOFunction "sbv.filter" f $ \xs -> ite (null xs)
-                                                                nil
+                                                                []
                                                                 (let (h, t) = uncons xs
                                                                      r      = sbvFilter t
                                                                  in ite (f h) (h .: r) r)
@@ -940,7 +944,7 @@ instance SymVal a => SPartition (SBV a -> SBool) a where
     | True
     = sbvPartition l
     where sbvPartition = smtHOFunction "sbv.partition" f $ \xs -> ite (null xs)
-                                                                      (tuple (nil, nil))
+                                                                      (tuple ([], []))
                                                                       (let (h, t)   = uncons xs
                                                                            (as, bs) = untuple $ sbvPartition t
                                                                        in ite (f h)
@@ -1037,8 +1041,8 @@ instance EnumSymbolic Integer where
 
    enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta = y - x
-           up    = smtFunction "EnumSymbolic.Integer.enumFromThenTo.up"   $ \start d end -> ite (start .> end) nil (start .: up   (start + d) d end)
-           down  = smtFunction "EnumSymbolic.Integer.enumFromThenTo.down" $ \start d end -> ite (start .< end) nil (start .: down (start + d) d end)
+           up    = smtFunction "EnumSymbolic.Integer.enumFromThenTo.up"   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
+           down  = smtFunction "EnumSymbolic.Integer.enumFromThenTo.down" $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
 
 -- | 'EnumSymbolic instance for words
 instance EnumSymbolic Word8
