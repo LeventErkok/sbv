@@ -17,8 +17,7 @@
 -- > [sEnum| a .. c |]     ==> enumFromTo a c
 -- > [sEnum| a, b .. c |]  ==> enumFromThenTo a b c
 --
--- All of `a`, `b`, `c` can be arbitrary expressions of numeric types
--- including `Int`, `Integer`, `Float`, `Double`, etc.
+-- All of @a@, @b@, @c@ can be arbitrary expressions.
 --
 -- If you pass invalid Haskell expressions or incorrect format, a detailed
 -- error is raised with source location.
