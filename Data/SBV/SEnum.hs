@@ -32,7 +32,9 @@ module Data.SBV.SEnum (sEnum) where
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
 
-import qualified Language.Haskell.Meta.Parse as Meta
+import qualified Language.Haskell.Exts                  as Exts
+import qualified Language.Haskell.Meta.Parse            as Meta
+import qualified Language.Haskell.Meta.Syntax.Translate as Meta
 
 import Data.Char (isSpace)
 
@@ -118,7 +120,7 @@ parseSEnumExpr input = do
 
 -- | Parses a string into a Haskell TH Exp using haskell-src-meta
 parseHaskellExpr :: Loc -> String -> Q Exp
-parseHaskellExpr loc s = case Meta.parseExp (trim s) of
+parseHaskellExpr loc s = case parse (trim s) of
                            Left err -> errorWithLoc loc $ intercalate "\n"
                                                              [ "*** Could not parse expression:"
                                                              , "***"
@@ -127,6 +129,13 @@ parseHaskellExpr loc s = case Meta.parseExp (trim s) of
                                                              , "*** Error: " ++ err
                                                              ]
                            Right e  -> return e
+  where parse = fmap Meta.toExp . Meta.parseResultToEither . Exts.parseExpWithMode mode
+        mode = Exts.defaultParseMode {
+                  Exts.extensions = Exts.extensions Exts.defaultParseMode
+                                        ++ [ Exts.EnableExtension Exts.TypeApplications
+                                           , Exts.EnableExtension Exts.DataKinds
+                                           ]
+              }
 
 -- | Utility: add filename and line number to an error
 errorWithLoc :: Loc -> String -> Q a

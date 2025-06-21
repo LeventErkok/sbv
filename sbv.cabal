@@ -104,6 +104,7 @@ Library
                   , deepseq
                   , directory
                   , filepath
+                  , haskell-src-exts
                   , haskell-src-meta
                   , libBF
                   , mtl
