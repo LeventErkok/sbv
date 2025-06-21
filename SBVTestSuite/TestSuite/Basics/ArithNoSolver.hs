@@ -11,9 +11,12 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP              #-}
+{-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Rank2Types       #-}
 {-# LANGUAGE TupleSections    #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE QuasiQuotes      #-}
 
 #if MIN_VERSION_base(4,19,0)
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns -Wno-x-partial #-}
@@ -76,6 +79,7 @@ tests = testGroup "Arith.NoSolver" $
         ++ genChars
         ++ genStrings
         ++ genLists
+        ++ genEnums
 
 genBinTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
 genBinTest nm op = map mkTest $
@@ -651,6 +655,59 @@ genLists = map mkTest1 (   [("length",        show l,                   check1 S
         check3 sop cop arg1 arg2 arg3 = case unliteral (sop (literal arg1) (literal arg2) (literal arg3)) of
                                           Nothing -> False
                                           Just x  -> x == cop arg1 arg2 arg3
+
+genEnums :: [TestTree]
+genEnums =
+    -- Only bounded for from, otherwise infinite
+    [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- univ @(WordN 4)]
+ ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- univ @(IntN  4)]
+ ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- w8s]
+ ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- i8s]
+
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- univ @(WordN 4), t <- univ @(WordN 4)]
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- univ @(IntN  4), t <- univ @(IntN  4)]
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- w8s            , t <- w8s            ]
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- i8s            , t <- i8s            ]
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- ints           , t <- ints           ]
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- floats         , t <- floats         ]
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- doubles        , t <- doubles        ]
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- fps            , t <- fps            ]
+
+    -- Only bounded for fromThen, otherwise infinite
+ ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t]
+ ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @(IntN  4), t <- univ @(IntN  4), s /= t]
+ ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- w8s            , t <- w8s            , s /= t]
+ ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- i8s            , t <- i8s            , s /= t]
+
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(WordN 4), t <- univ @(WordN 4), u <- univ @(WordN 4), s /= t]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(IntN  4), t <- univ @(IntN  4), u <- univ @(IntN  4), s /= t]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- w8s            , t <- w8s            , u <- w8s            , s /= t]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- i8s            , t <- i8s            , u <- i8s            , s /= t]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- ints           , t <- ints           , u <- ints           , s /= t]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- floats         , t <- floats         , u <- floats         , s /= t]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- doubles        , t <- doubles        , u <- doubles        , s /= t]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- fps            , t <- fps            , u <- fps            , s /= t]
+
+  where mkTest1 pre a     = testCase ("enum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show a)
+        mkTest2 pre a b   = testCase ("enum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show (a, b))
+        mkTest3 pre a b c = testCase ("enum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show (a, b, c))
+
+        eq c s = assert (maybe False (== c) (unliteral s))
+
+        univ :: (Enum n, Bounded n) => [n]
+        univ = [minBound .. maxBound]
+
+        ints :: [Integer]
+        ints = [-3 .. 3]
+
+        floats :: [Float]
+        floats = [-3.4, -3.2 .. 3.5]
+
+        doubles :: [Double]
+        doubles = [-3.4, -3.2 .. 3.5]
+
+        fps :: [FloatingPoint 5 4]
+        fps = [-3.4, -3.2 .. 3.5]
 
 -- Concrete test data
 xsUnsigned :: (Num a, Bounded a) => [a]
