@@ -72,6 +72,34 @@ instance Ord (FloatingPoint eb sb) where
   f0               >  f1               = f1 <  f0       -- See the note above
   f0               >= f1               = f1 <= f0       -- See the note above
 
+-- | 'Enum' instance for t'FloatingPoint'. Note that Haskell requires
+-- float termination conditions to go over @delta/2@.
+instance ValidFloat eb sb => Enum (FloatingPoint eb sb) where
+   succ x = x + 1
+   pred x = x - 1
+
+   toEnum                      = fromIntegral
+   fromEnum (FloatingPoint fp) = fromInteger (truncate fp)
+
+   enumFrom   n = enumFromThen   n (n+1)
+   enumFromTo n = enumFromThenTo n (n+1)
+
+   enumFromThen x y = go x
+     where delta = y - x
+           go s  = s : go (s + delta)
+
+   enumFromThenTo x y z
+     | delta >= 0 = up   x
+     | True       = down x
+     where delta = y - z
+           end   = z + delta / 2
+
+           up s   | s > end = []
+                  | True    = s : up (s + delta)
+
+           down s | s < end = []
+                  | True    = s : up (s + delta)
+
 -- | Abbreviation for IEEE half precision float, bit width 16 = 5 + 11.
 type FPHalf = FloatingPoint 5 11
 

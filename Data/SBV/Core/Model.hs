@@ -1927,74 +1927,72 @@ instance (SymVal a, Bounded a, Integral a, Num (SBV a)) => Enum (SBV a) where
              | True                  = error $ "Enum." ++ showType (Proxy @(SBV a)) ++ ".fromEnum: Called on symbolic value " ++ show i
 
   enumFrom x = map fromIntegral [xi ..]
-    where cvt = cvtForEnum "enumFrom" fromIntegral
-          xi  = cvt "x" x :: Integer
+    where cvt = cvtForEnum "enumFrom"
+          xi  = cvt "x" x :: a
 
   enumFromThen x y = map fromIntegral [xi, yi ..]
-    where cvt = cvtForEnum "enumFromThen" fromIntegral
-          xi  = cvt "x" x :: Integer
-          yi  = cvt "y" y :: Integer
+    where cvt = cvtForEnum "enumFromThen"
+          xi  = cvt "x" x :: a
+          yi  = cvt "y" y :: a
 
   enumFromTo x y = map fromIntegral [xi .. yi]
-    where cvt = cvtForEnum "enumFromTo" fromIntegral
-          xi  = cvt "x" x :: Integer
-          yi  = cvt "y" y :: Integer
+    where cvt = cvtForEnum "enumFromTo"
+          xi  = cvt "x" x :: a
+          yi  = cvt "y" y :: a
 
   enumFromThenTo x y z = map fromIntegral [xi, yi .. zi]
-    where cvt = cvtForEnum "enumFromThenTo" fromIntegral
-          xi  = cvt "x" x :: Integer
-          yi  = cvt "y" y :: Integer
-          zi  = cvt "z" z :: Integer
+    where cvt = cvtForEnum "enumFromThenTo"
+          xi  = cvt "x" x :: a
+          yi  = cvt "y" y :: a
+          zi  = cvt "z" z :: a
 
 -- Avoid repetition for almost-copy instances below
-#define MKENUM(CSTR, TYP, XFORM)                                                                        \
-instance {-# OVERLAPPING #-} CSTR => Enum (SBV TYP) where {                                             \
-  succ x = x + 1;                                                                                       \
-  pred x = x - 1;                                                                                       \
-  toEnum = literal . fromIntegral;                                                                      \
-                                                                                                        \
-  fromEnum x | Just v <- unliteral x = fromInteger (XFORM v)                                            \
-             | True                  = error $ "Enum.fromEnum: Called on symbolic value: " ++ show x;   \
-                                                                                                        \
-  enumFrom x = map fromIntegral [xi ..]                                                                 \
-    where { cvt = cvtForEnum "enumFrom" XFORM;                                                          \
-            xi  = cvt "x" x :: Integer;                                                                 \
-          };                                                                                            \
-                                                                                                        \
-  enumFromThen x y = map fromIntegral [xi, yi ..]                                                       \
-    where { cvt = cvtForEnum "enumFromThen" XFORM;                                                      \
-            xi  = cvt "x" x :: Integer;                                                                 \
-            yi  = cvt "y" y :: Integer;                                                                 \
-          };                                                                                            \
-                                                                                                        \
-  enumFromTo x y = map fromIntegral [xi .. yi]                                                          \
-    where { cvt = cvtForEnum "enumFromTo" XFORM;                                                        \
-            xi  = cvt "x" x :: Integer;                                                                 \
-            yi  = cvt "y" y :: Integer;                                                                 \
-          };                                                                                            \
-                                                                                                        \
-  enumFromThenTo x y z = map fromIntegral [xi, yi .. zi]                                                \
-    where { cvt = cvtForEnum "enumFromThenTo" XFORM;                                                    \
-            xi = cvt "x" x :: Integer;                                                                  \
-            yi = cvt "y" y :: Integer;                                                                  \
-            zi = cvt "z" z :: Integer;                                                                  \
-          };                                                                                            \
+#define MKENUM(CSTR, TYP, XFORM)                            \
+instance {-# OVERLAPPING #-} CSTR => Enum (SBV TYP) where { \
+  succ x = x + 1;                                           \
+  pred x = x - 1;                                           \
+  toEnum = literal . fromIntegral;                          \
+                                                            \
+  fromEnum x = XFORM (cvtForEnum "fromEnum" "x" x :: TYP);  \
+                                                            \
+  enumFrom x = map literal [xi ..]                          \
+    where { cvt = cvtForEnum "enumFrom";                    \
+            xi  = cvt "x" x :: TYP;                         \
+          };                                                \
+                                                            \
+  enumFromThen x y = map literal [xi, yi ..]                \
+    where { cvt = cvtForEnum "enumFromThen";                \
+            xi  = cvt "x" x :: TYP;                         \
+            yi  = cvt "y" y :: TYP;                         \
+          };                                                \
+                                                            \
+  enumFromTo x y = map literal [xi .. yi]                   \
+    where { xi  = cvtForEnum "enumFromTo" "x" x :: TYP;     \
+            yi  = cvtForEnum "enumFromTo" "y" y :: TYP;     \
+          };                                                \
+                                                            \
+  enumFromThenTo x y z = map literal [xi, yi .. zi]         \
+    where { cvt = cvtForEnum "enumFromThenTo";              \
+            xi = cvt "x" x :: TYP;                          \
+            yi = cvt "y" y :: TYP;                          \
+            zi = cvt "z" z :: TYP;                          \
+          };                                                \
 }
 
-MKENUM((),                 Integer,               id)
+MKENUM((),                 Integer,               fromInteger)
 MKENUM((),                 Float,                 truncate)
 MKENUM((),                 Double,                truncate)
 MKENUM((ValidFloat eb sb), (FloatingPoint eb sb), truncate)
 #undef MKENUM
 
 -- | Helper for enum converter to get a concrete value
-cvtForEnum :: SymVal a => String -> (a -> Integer) -> String -> SBV a -> Integer
-cvtForEnum fn xform arg v = case unliteral v of
-                              Nothing -> error $ unlines [ ""
-                                                         , "*** Enum." ++ fn ++ ": Called on symbolic value for " ++ arg ++ ": " ++ show v
-                                                         , "*** Use Data.SBV.List." ++ fn ++ " instead."
-                                                         ]
-                              Just lv -> xform lv
+cvtForEnum :: SymVal a => String -> String -> SBV a -> a
+cvtForEnum fn arg v = case unliteral v of
+                        Nothing -> error $ unlines [ ""
+                                                   , "*** Enum." ++ fn ++ ": Called on symbolic value for " ++ arg ++ ": " ++ show v
+                                                   , "*** Use Data.SBV.List." ++ fn ++ " instead."
+                                                   ]
+                        Just lv -> lv
 
 -- | The 'SDivisible' class captures the essence of division.
 -- Unfortunately we cannot use Haskell's 'Integral' class since the 'Real'

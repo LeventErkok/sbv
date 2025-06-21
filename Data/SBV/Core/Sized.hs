@@ -125,13 +125,51 @@ instance (KnownNat n, BVIsNonZero n) => Num (IntN n) where
 
 -- | 'Enum' instance for t'WordN'
 instance (KnownNat n, BVIsNonZero n) => Enum (WordN n) where
-   toEnum   = fromInteger  . toInteger
+   succ x | x == maxBound = error $ "Enum.succ{" ++ show (kindOf x) ++ "}: tried to take `succ' of last tag in enumeration"
+          | True          = x + 1
+
+   pred x | x == minBound = error $ "Enum.pred{" ++ show (kindOf x) ++ "}: tried to take `pred' of first tag in enumeration"
+          | True          = x - 1
+
+   toEnum i | toInteger i < toInteger (minBound :: WordN n) = bad $ show i ++ " < minBound of " ++ show (minBound :: WordN n)
+            | toInteger i > toInteger (maxBound :: WordN n) = bad $ show i ++ " > maxBound of " ++ show (maxBound :: WordN n)
+            | True                                          = fromInteger (toInteger i)
+     where bad why = error $ "Enum." ++ showType (Proxy @(WordN n)) ++ ".toEnum: bad argument: (" ++ why ++ ")"
+
    fromEnum = fromIntegral . toInteger
+
+   enumFrom   x   = enumFromTo x maxBound
+   enumFromTo x y = map fromIntegral [toInteger x .. toInteger y]
+
+   enumFromThen x y = enumFromThenTo x y bound
+     where bound | fromEnum y >= fromEnum x = maxBound
+                 | True                     = minBound
+
+   enumFromThenTo x y z = map fromIntegral [toInteger x, toInteger y .. toInteger z]
 
 -- | 'Enum' instance for t'IntN'
 instance (KnownNat n, BVIsNonZero n) => Enum (IntN n) where
-   toEnum   = fromInteger  . toInteger
+   succ x | x == maxBound = error $ "Enum.succ{" ++ show (kindOf x) ++ "}: tried to take `succ' of last tag in enumeration"
+          | True          = x + 1
+
+   pred x | x == minBound = error $ "Enum.pred{" ++ show (kindOf x) ++ "}: tried to take `pred' of first tag in enumeration"
+          | True          = x - 1
+
+   toEnum i | toInteger i < toInteger (minBound :: IntN n) = bad $ show i ++ " < minBound of " ++ show (minBound :: IntN n)
+            | toInteger i > toInteger (maxBound :: IntN n) = bad $ show i ++ " > maxBound of " ++ show (maxBound :: IntN n)
+            | True                                         = fromInteger (toInteger i)
+     where bad why = error $ "Enum." ++ showType (Proxy @(IntN n)) ++ ".toEnum: bad argument: (" ++ why ++ ")"
+
    fromEnum = fromIntegral . toInteger
+
+   enumFrom   x   = enumFromTo x maxBound
+   enumFromTo x y = map fromIntegral [toInteger x .. toInteger y]
+
+   enumFromThen x y = enumFromThenTo x y bound
+     where bound | fromEnum y >= fromEnum x = maxBound
+                 | True                     = minBound
+
+   enumFromThenTo x y z = map fromIntegral [toInteger x, toInteger y .. toInteger z]
 
 -- | 'Real' instance for t'WordN'
 instance (KnownNat n, BVIsNonZero n) => Real (WordN n) where
