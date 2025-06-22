@@ -1106,6 +1106,8 @@ instance EnumSymbolic Integer where
 
    enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta = y - x
+
+           up, down :: SInteger -> SInteger -> SInteger -> SList Integer
            up    = smtFunction "EnumSymbolic.Integer.enumFromThenTo.up"   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
            down  = smtFunction "EnumSymbolic.Integer.enumFromThenTo.down" $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
 
@@ -1127,8 +1129,11 @@ instance EnumSymbolic Float where
      where go = smtFunction "EnumSymbolic.Float.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
-     where delta = y - x
+     where delta, z :: SFloat
+           delta = y - x
            z     = zIn + delta / 2
+
+           up, down :: SFloat -> SFloat -> SFloat -> SList Float
            up    = smtFunction "EnumSymbolic.Float.enumFromThenTo.up"   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
            down  = smtFunction "EnumSymbolic.Float.enumFromThenTo.down" $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
 
@@ -1147,13 +1152,16 @@ instance EnumSymbolic Double where
      where go = smtFunction "EnumSymbolic.Double.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
-     where delta = y - x
+     where delta, z :: SDouble
+           delta = y - x
            z     = zIn + delta / 2
+
+           up, down :: SDouble -> SDouble -> SDouble -> SList Double
            up    = smtFunction "EnumSymbolic.Double.enumFromThenTo.up"   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
            down  = smtFunction "EnumSymbolic.Double.enumFromThenTo.down" $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
 
 -- | 'EnumSymbolic instance for arbitrary floats
-instance (ValidFloat eb sb) => EnumSymbolic (FloatingPoint eb sb) where
+instance ValidFloat eb sb => EnumSymbolic (FloatingPoint eb sb) where
    succ x = x + 1
    pred x = x - 1
 
@@ -1167,8 +1175,11 @@ instance (ValidFloat eb sb) => EnumSymbolic (FloatingPoint eb sb) where
      where go = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThen") $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
-     where delta = y - x
+     where delta, z :: SFloatingPoint eb sb
+           delta = y - x
            z     = zIn + delta / 2
+
+           up, down :: SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SList (FloatingPoint eb sb)
            up    = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThenTo.up")   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
            down  = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThenTo.down") $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
 
