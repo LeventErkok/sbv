@@ -15,6 +15,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -25,7 +26,7 @@ module Data.SBV.TP.List (
      appendNull, consApp, appendAssoc, initsLength, tailsLength, tailsAppend
 
      -- * Reverse
-   , revLen, revApp, revCons, revSnoc, revRev
+   , revLen, revApp, revCons, revSnoc, revRev, enumLen -- , revNM
 
      -- * Length
    , lengthTail, lenAppend, lenAppend2
@@ -346,6 +347,68 @@ revRev = do
                             =: [x] ++ xs
                             =: x .: xs
                             =: qed
+
+-- | @length [n .. m] == 0 `max` (m - n + 1)@
+--
+-- The proof uses the metric @|m-n|@.
+--
+-- >>> runTP enumLen
+-- Inductive lemma (strong): enumLen
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] enumLen :: Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
+enumLen :: TP (Proof (Forall "n" Integer -> Forall "m" Integer -> SBool))
+enumLen =
+  sInduct "enumLen"
+          (\(Forall n) (Forall m) -> length [sEnum|n .. m|] .== 0 `smax` (m - n + 1))
+          (\n m -> Measure (abs (m - n))) $
+          \ih n m -> [] |- length [sEnum|n+1 .. m|]
+                        =: cases [ n+1 .>  m ==> trivial
+                                 , n+1 .<= m ==> length (n+1 .: [sEnum|n+2 .. m|])
+                                              =: 1 + length [sEnum|n+2 .. m|]
+                                              ?? ih
+                                              =: 1 + (0 `smax` (m - (n+2) + 1))
+                                              =: 0 `smax` (m - (n+1) + 1)
+                                              =: qed
+                                 ]
+
+{-
+-- | @reverse [n .. m] == [m, m-1 .. n]@
+--
+-- The proof uses the metric @|m-n|@.
+--
+-- >>> runTP $ revNM
+revNM :: TP (Proof (Forall "n" Integer -> Forall "m" Integer -> SBool))
+revNM = do
+
+  helper <- induct "helper"
+                   (\(Forall @"m" (m :: SInteger)) (Forall @"n" n) ->
+                         n .<= m .=> [sEnum|m, m-1 .. n+1|] ++ [n] .== [sEnum|m, m-1 .. n|]) $
+                   \_h m n -> [n .<= m] |- [sEnum|m, m-1 .. n+1|] ++ [n]
+                                        =: [sEnum|m, m-1 .. n|]
+                                        =: qed
+
+  sInduct "revNM"
+          (\(Forall n) (Forall m) -> reverse [sEnum|n .. m|] .== [sEnum|m, m-1 .. n|])
+          (\n m -> Measure (abs (m - n))) $
+          \ih n m -> [] |- reverse [sEnum|n .. m|]
+                        =: cases [ n .>  m ==> trivial
+                                 , n .<= m ==> reverse (n .: [sEnum|(n+1) .. m|])
+                                            =: reverse [sEnum|(n+1) .. m|] ++ [n]
+                                            ?? ih
+                                            =: [sEnum|m, m-1 .. n+1|] ++ [n]
+                                            ?? helper
+                                            =: [sEnum|m, m-1 .. n|]
+                                            =: qed
+                                 ]
+-}
 
 -- | @length (x : xs) == 1 + length xs@
 --
