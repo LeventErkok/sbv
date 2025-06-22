@@ -1183,6 +1183,29 @@ instance ValidFloat eb sb => EnumSymbolic (FloatingPoint eb sb) where
            up    = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThenTo.up")   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
            down  = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThenTo.down") $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
 
+-- | 'EnumSymbolic instance for arbitrary AlgReal
+instance EnumSymbolic AlgReal where
+   succ x = x + 1
+   pred x = x - 1
+
+   toEnum   = sFromIntegral
+   fromEnum = sRealToSIntegerTruncate
+
+   enumFrom   n = enumFromThen   n (n+1)
+   enumFromTo n = enumFromThenTo n (n+1)
+
+   enumFromThen x y = go x (y-x)
+     where go = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThen") $ \start delta -> start .: go (start+delta) delta
+
+   enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
+     where delta, z :: SReal
+           delta = y - x
+           z     = zIn + delta / 2
+
+           up, down :: SReal -> SReal -> SReal -> SList AlgReal
+           up    = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThenTo.up")   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
+           down  = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThenTo.down") $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
+
 -- | Lookup. If we can't find, then the result is unspecified.
 --
 -- >>> lookup (4 :: SInteger) (literal [(5, 12), (4, 3), (2, 6 :: Integer)])
