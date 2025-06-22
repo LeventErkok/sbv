@@ -196,6 +196,7 @@ instance Real AlgReal where
   toRational (AlgRational True v) = v
   toRational x                    = error $ "AlgReal.toRational: Argument cannot be represented as a rational value: " ++ algRealToHaskell x
 
+-- | Random instance for rational needs to be careful to split the generator twice for numerator and denumerator
 instance Random Rational where
   random g = (a % b', g'')
      where (a, g')  = random g
@@ -210,10 +211,41 @@ instance Random Rational where
            r = a % b'
            d = h - l
 
+-- | Random generates a rational, so perhaps not as random as one wants
 instance Random AlgReal where
   random g = let (a, g') = random g in (AlgRational True a, g')
   randomR (AlgRational True l, AlgRational True h) g = let (a, g') = randomR (l, h) g in (AlgRational True a, g')
   randomR lh                                       _ = error $ "AlgReal.randomR: unsupported bounds: " ++ show lh
+
+instance Enum AlgReal where
+  succ x =  x + 1
+  pred x =  x - 1
+
+  toEnum n =  AlgRational True (fromIntegral n)
+
+  fromEnum (AlgRational True  r) = fromEnum r
+  fromEnum (AlgRational False r) = error $ "AlgReal.Enum: unsupported inexact rational: " ++ show r
+  fromEnum r@AlgPolyRoot{}       = error $ "AlgReal.Enum: unsupported inexact rational: " ++ show r
+  fromEnum r@AlgInterval{}       = error $ "AlgReal.Enum: unsupported inexact rational: " ++ show r
+
+  enumFrom   x   = enumFromThen   x (x+1)
+  enumFromTo x y = enumFromThenTo x (x+1) y
+
+  enumFromThen x y = go x
+    where delta = y - x
+          go s  = s : go (s + delta)
+
+  enumFromThenTo x y z
+    | delta >= 0 = up   x
+    | True       = down x
+    where delta = y - x
+          end   = z + delta / 2
+
+          up s   | s > end = []
+                 | True    = s : up   (s + delta)
+
+          down s | s < end = []
+                 | True    = s : down (s + delta)
 
 -- | Render an 'AlgReal' as an SMTLib2 value. Only supports rationals for the time being.
 algRealToSMTLib2 :: AlgReal -> String
