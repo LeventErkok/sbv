@@ -24,6 +24,7 @@ import qualified TestSuite.Arrays.Caching
 import qualified TestSuite.Basics.AllSat
 import qualified TestSuite.Basics.ArbFloats
 import qualified TestSuite.Basics.ArithNoSolver
+import qualified TestSuite.Basics.ArithNoSolver2
 import qualified TestSuite.Basics.ArithSolver
 import qualified TestSuite.Basics.Assert
 import qualified TestSuite.Basics.BasicTests
@@ -135,6 +136,7 @@ main = defaultMain $ testGroup "SBV" [
                       , TestSuite.Basics.AllSat.tests
                       , TestSuite.Basics.ArbFloats.tests
                       , TestSuite.Basics.ArithNoSolver.tests
+                      , TestSuite.Basics.ArithNoSolver2.tests
                       , TestSuite.Basics.ArithSolver.tests
                       , TestSuite.Basics.Assert.tests
                       , TestSuite.Basics.BarrelRotate.tests

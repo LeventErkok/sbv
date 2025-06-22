@@ -337,6 +337,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.AllSat
                   , TestSuite.Basics.ArbFloats
                   , TestSuite.Basics.ArithNoSolver
+                  , TestSuite.Basics.ArithNoSolver2
                   , TestSuite.Basics.ArithSolver
                   , TestSuite.Basics.Assert
                   , TestSuite.Basics.BarrelRotate
