@@ -404,21 +404,21 @@ genEnums =
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- w8s            , t <- w8s            , s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- i8s            , t <- i8s            , s /= t]
 
- ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(WordN 4), t <- univ @(WordN 4), u <- univ @(WordN 4), s /= t]
- ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(IntN  4), t <- univ @(IntN  4), u <- univ @(IntN  4), s /= t]
- ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- w8s            , t <- w8s            , u <- w8s            , s /= t]
- ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- i8s            , t <- i8s            , u <- i8s            , s /= t]
- ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- ints           , t <- ints           , u <- ints           , s /= t]
- ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- floats         , t <- floats         , u <- floats         , s /= t]
- ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- doubles        , t <- doubles        , u <- doubles        , s /= t]
- ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- fps            , t <- fps            , u <- fps            , s /= t]
- ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- lcs            , t <- lcs            , u <- lcs            , s /= t]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t, u <- univ @(WordN 4)]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(IntN  4), t <- univ @(IntN  4), s /= t, u <- univ @(IntN  4)]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- w8s            , t <- w8s            , s /= t, u <- w8s            ]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- i8s            , t <- i8s            , s /= t, u <- i8s            ]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- ints           , t <- ints           , s /= t, u <- ints           ]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- floats         , t <- floats         , s /= t, u <- floats         ]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- doubles        , t <- doubles        , s /= t, u <- doubles        ]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- fps            , t <- fps            , s /= t, u <- fps            ]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- lcs            , t <- lcs            , s /= t, u <- lcs            ]
 
   where mkTest1 pre a     = testCase ("enum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show a)
         mkTest2 pre a b   = testCase ("enum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show (a, b))
         mkTest3 pre a b c = testCase ("enum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show (a, b, c))
 
-        eq c s = assert (maybe False (== c) (unliteral s))
+        eq c s = assert (Just c == unliteral s)
 
         univ :: (Enum n, Bounded n) => [n]
         univ = [minBound .. maxBound]
