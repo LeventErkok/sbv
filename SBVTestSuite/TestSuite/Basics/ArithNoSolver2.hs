@@ -399,6 +399,7 @@ genEnums =
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- doubles        , t <- doubles        ]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- fps            , t <- fps            ]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- lcs            , t <- lcs            ]
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- rs             , t <- rs             ]
 
     -- Only bounded for fromThen, otherwise infinite (or too big for chars, so subset)
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t]
@@ -416,6 +417,7 @@ genEnums =
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- doubles        , t <- doubles        , s /= t, u <- doubles        ]
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- fps            , t <- fps            , s /= t, u <- fps            ]
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- lcs            , t <- lcs            , s /= t, u <- lcs            ]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- rs             , t <- rs             , s /= t, u <- rs             ]
 
   where mkTest1 pre a     = testCase ("enum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show a)
         mkTest2 pre a b   = testCase ("enum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show (a, b))
@@ -438,8 +440,10 @@ genEnums =
         -- doubles = [-3.4, -3.2 .. 3.5]   -- FAILS
 
         fps :: [FloatingPoint 5 4]
-        fps = [-3.4       .. 3.5]
-        -- fps = [-3.4, -3.2 .. 3.5]  -- FAILS
+        fps = [-3.4, -3.2 .. 3.5]
+
+        rs :: [AlgReal]
+        rs = [-3.4, -3.2 .. 3.5]
 
         -- don't add min/max bounds here. causes too big lists.
         lcs :: [Char]
