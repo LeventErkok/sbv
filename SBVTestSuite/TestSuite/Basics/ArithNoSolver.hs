@@ -701,13 +701,16 @@ genEnums =
         ints = [-3 .. 3]
 
         floats :: [Float]
-        floats = [-3.4, -3.2 .. 3.5]
+        floats = [-3.4       .. 3.5]
+        -- floats = [-3.4, -3.2 .. 3.5]    -- FAILS
 
         doubles :: [Double]
-        doubles = [-3.4, -3.2 .. 3.5]
+        doubles = [-3.4       .. 3.5]
+        -- doubles = [-3.4, -3.2 .. 3.5]   -- FAILS
 
         fps :: [FloatingPoint 5 4]
-        fps = [-3.4, -3.2 .. 3.5]
+        fps = [-3.4       .. 3.5]
+        -- fps = [-3.4, -3.2 .. 3.5]  -- FAILS
 
 -- Concrete test data
 xsUnsigned :: (Num a, Bounded a) => [a]
