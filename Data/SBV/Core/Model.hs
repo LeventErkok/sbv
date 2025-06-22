@@ -1995,7 +1995,14 @@ cvtForEnum :: SymVal a => String -> String -> SBV a -> a
 cvtForEnum fn arg v = case unliteral v of
                         Nothing -> error $ unlines [ ""
                                                    , "*** Enum." ++ fn ++ ": Called on symbolic value for " ++ arg ++ ": " ++ show v
-                                                   , "*** Use Data.SBV.List." ++ fn ++ " instead."
+                                                   , "***"
+                                                   , "*** Use the symbolic enumeration syntax:"
+                                                   , "***"
+                                                   , "***         [sEnum|n, m .. t|]"
+                                                   , "***"
+                                                   , "*** (Requires GHC's 'QuasiQuotes' extension.)"
+                                                   , "***"
+                                                   , "*** OR, Data.SBV.List." ++ fn ++ " instead."
                                                    ]
                         Just lv -> lv
 
