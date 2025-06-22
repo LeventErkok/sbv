@@ -663,6 +663,7 @@ genEnums =
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- univ @(IntN  4)]
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- w8s]
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- i8s]
+ ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- l2iCs]
 
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- univ @(WordN 4), t <- univ @(WordN 4)]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- univ @(IntN  4), t <- univ @(IntN  4)]
@@ -672,12 +673,14 @@ genEnums =
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- floats         , t <- floats         ]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- doubles        , t <- doubles        ]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- fps            , t <- fps            ]
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- lcs            , t <- lcs            ]
 
     -- Only bounded for fromThen, otherwise infinite
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @(IntN  4), t <- univ @(IntN  4), s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- w8s            , t <- w8s            , s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- i8s            , t <- i8s            , s /= t]
+ ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- l2iCs          , t <- l2iCs          , s /= t]
 
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(WordN 4), t <- univ @(WordN 4), u <- univ @(WordN 4), s /= t]
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(IntN  4), t <- univ @(IntN  4), u <- univ @(IntN  4), s /= t]
@@ -687,6 +690,7 @@ genEnums =
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- floats         , t <- floats         , u <- floats         , s /= t]
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- doubles        , t <- doubles        , u <- doubles        , s /= t]
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- fps            , t <- fps            , u <- fps            , s /= t]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- lcs            , t <- lcs            , u <- lcs            , s /= t]
 
   where mkTest1 pre a     = testCase ("enum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show a)
         mkTest2 pre a b   = testCase ("enum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show (a, b))
@@ -711,6 +715,14 @@ genEnums =
         fps :: [FloatingPoint 5 4]
         fps = [-3.4       .. 3.5]
         -- fps = [-3.4, -3.2 .. 3.5]  -- FAILS
+
+        -- There are too many chars; so upper bounds die.. Pick the last 2
+        l2iCs :: [Char]
+        l2iCs = map C.chr [C.ord maxBound - 1 .. maxBound]
+
+        -- A few chars
+        lcs :: [Char]
+        lcs = map C.chr [10, 20, 30]
 
 -- Concrete test data
 xsUnsigned :: (Num a, Bounded a) => [a]
@@ -800,7 +812,7 @@ cs :: String
 cs = map C.chr [0..255]
 
 -- For pair character ops, just take a subset
-iCs :: String
+iCs :: [Char]
 iCs = map C.chr $ [0..5] ++ [98..102] ++ [250..255]
 
 siCs :: [SChar]
