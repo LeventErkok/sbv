@@ -27,7 +27,7 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module Data.SBV.Char (
         -- * Occurrence in a string
@@ -53,7 +53,7 @@ import Data.SBV.Core.Model
 
 import qualified Data.Char as C
 
-import Data.SBV.List (isInfixOf)
+import Data.SBV.List (isInfixOf, EnumSymbolic(..))
 
 #ifdef DOCTEST
 -- $setup
@@ -290,3 +290,12 @@ isAsciiUpper = liftPredL1 C.isAsciiUpper
 -- Q.E.D.
 isAsciiLower :: SChar -> SBool
 isAsciiLower = liftPredL1 C.isAsciiLower
+
+-- | Symbolic enum instance for symbolic characters
+instance EnumSymbolic Char where
+   succ     = smtFunction "EnumSymbolic.succ"   (\x -> ite (x .== maxBound) (some "EnumSymbolic_succ_maxBound" (const sTrue)) (chr (ord x + 1)))
+   pred     = smtFunction "EnumSymbolic.pred"   (\x -> ite (x .== minBound) (some "EnumSymbolic_pred_minBound" (const sTrue)) (chr (ord x - 1)))
+   toEnum   = smtFunction "EnumSymbolic.toEnum" (\x -> ite (x .< ord (minBound :: SChar) .|| x .> ord (maxBound :: SChar))
+                                                           (some "EnumSymbolic_toEnum_out_of_bounds" (const sTrue))
+                                                           (chr x))
+   fromEnum = ord
