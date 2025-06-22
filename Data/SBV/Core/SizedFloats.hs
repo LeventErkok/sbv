@@ -91,14 +91,14 @@ instance ValidFloat eb sb => Enum (FloatingPoint eb sb) where
    enumFromThenTo x y z
      | delta >= 0 = up   x
      | True       = down x
-     where delta = y - z
+     where delta = y - x
            end   = z + delta / 2
 
            up s   | s > end = []
-                  | True    = s : up (s + delta)
+                  | True    = s : up   (s + delta)
 
            down s | s < end = []
-                  | True    = s : up (s + delta)
+                  | True    = s : down (s + delta)
 
 -- | Abbreviation for IEEE half precision float, bit width 16 = 5 + 11.
 type FPHalf = FloatingPoint 5 11
