@@ -16,7 +16,12 @@
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
+#if MIN_VERSION_template_haskell(2,22,1)
 {-# OPTIONS_GHC -Wall -Werror #-}
+#else
+{-# LANGUAGE DeriveLift #-}
+{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+#endif
 
 module Data.SBV.Client
   ( sbvCheckSolverInstallation
@@ -67,6 +72,17 @@ defaultSolverConfig Z3        = z3
 -- | Return the known available solver configs, installed on your machine.
 getAvailableSolvers :: IO [SMTConfig]
 getAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
+
+#if MIN_VERSION_template_haskell(2,22,1)
+-- Starting template haskell 2.22.1 the following instances are automatically provided
+#else
+deriving instance TH.Lift TH.OccName
+deriving instance TH.Lift TH.NameSpace
+deriving instance TH.Lift TH.PkgName
+deriving instance TH.Lift TH.ModName
+deriving instance TH.Lift TH.NameFlavour
+deriving instance TH.Lift TH.Name
+#endif
 
 -- | Turn a name into a symbolic type. If first argument is true, then we're doing an enumeration, otherwise it's an uninterpreted type
 declareSymbolic :: Bool -> TH.Name -> TH.Q [TH.Dec]
