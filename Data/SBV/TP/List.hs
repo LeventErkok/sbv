@@ -26,7 +26,7 @@ module Data.SBV.TP.List (
      appendNull, consApp, appendAssoc, initsLength, tailsLength, tailsAppend
 
      -- * Reverse
-   , revLen, revApp, revCons, revSnoc, revRev, enumLen -- , revNM
+   , revLen, revApp, revCons, revSnoc, revRev, enumLen, revNM
 
      -- * Length
    , lengthTail, lenAppend, lenAppend2
@@ -379,19 +379,39 @@ enumLen =
                                               =: qed
                                  ]
 
-{-
 -- | @reverse [n .. m] == [m, m-1 .. n]@
 --
 -- The proof uses the metric @|m-n|@.
 --
 -- >>> runTP $ revNM
+-- Inductive lemma (strong): helper
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma (strong): revNM
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] revNM :: Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 revNM :: TP (Proof (Forall "n" Integer -> Forall "m" Integer -> SBool))
 revNM = do
 
-  helper <- induct "helper"
-                   (\(Forall @"m" (m :: SInteger)) (Forall @"n" n) ->
-                         n .<= m .=> [sEnum|m, m-1 .. n+1|] ++ [n] .== [sEnum|m, m-1 .. n|]) $
-                   \_h m n -> [n .<= m] |- [sEnum|m, m-1 .. n+1|] ++ [n]
+  helper <- sInduct "helper"
+                    (\(Forall @"m" (m :: SInteger)) (Forall @"n" n) ->
+                          n .< m .=> [sEnum|m, m-1 .. n+1|] ++ [n] .== [sEnum|m, m-1 .. n|])
+                    (\m n -> Measure (abs (m - n))) $
+                    \ih m n -> [n .< m] |- [sEnum|m, m-1 .. n+1|] ++ [n]
+                                        =: m .: [sEnum|m-1, m-2 .. n+1|] ++ [n]
+                                        ?? ih
+                                        =: m .: [sEnum|m-1, m-2 .. n|]
                                         =: [sEnum|m, m-1 .. n|]
                                         =: qed
 
@@ -408,7 +428,6 @@ revNM = do
                                             =: [sEnum|m, m-1 .. n|]
                                             =: qed
                                  ]
--}
 
 -- | @length (x : xs) == 1 + length xs@
 --
