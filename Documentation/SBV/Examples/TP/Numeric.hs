@@ -20,7 +20,7 @@
 
 module Documentation.SBV.Examples.TP.Numeric where
 
-import Prelude hiding (sum, map, product, length, (^), replicate)
+import Prelude hiding (sum, map, product, length, (^), replicate, elem)
 
 import Data.SBV
 import Data.SBV.TP
@@ -309,6 +309,34 @@ sumMulFactorial = do
                             ?? helper `at` Inst @"n" (n+1)
                             =: fact (n+2) - 1
                             =: qed
+
+-- * Product with 0
+
+-- | \(\prod_{x \in xs} x = 0 \iff 0 \in xs\)
+--
+-- >>> runTP product0
+-- Inductive lemma: product0
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2 (2 way case split)
+--     Step: 2.1                           Q.E.D.
+--     Step: 2.2.1                         Q.E.D.
+--     Step: 2.2.2                         Q.E.D.
+--     Step: 2.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] product0 :: Ɐxs ∷ [Integer] → Bool
+product0 :: TP (Proof (Forall "xs" [Integer] -> SBool))
+product0 =
+  induct "product0"
+         (\(Forall @"xs" (xs :: SList Integer)) -> product xs .== 0 .<=> 0 `elem` xs) $
+         \ih (x, xs) -> [] |- (product (x .: xs) .== 0 .<=> 0 `elem` (x .: xs))
+                           =: (x * product xs .== 0 .<=> x .== 0 .|| 0 `elem` xs)
+                           =: cases [ x .== 0 ==> trivial
+                                    , x ./= 0 ==> (x * product xs .== 0 .<=> 0 `elem` xs)
+                                               ?? ih
+                                               =: sTrue
+                                               =: qed
+                                    ]
 
 -- * A negative example
 
