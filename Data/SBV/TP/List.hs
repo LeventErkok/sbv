@@ -348,7 +348,7 @@ revRev = do
                             =: x .: xs
                             =: qed
 
--- | @length [n .. m] == 0 `max` (m - n + 1)@
+-- | \(\text{length } [n \dots m] = \max(0,\; m - n + 1)\)
 --
 -- The proof uses the metric @|m-n|@.
 --
