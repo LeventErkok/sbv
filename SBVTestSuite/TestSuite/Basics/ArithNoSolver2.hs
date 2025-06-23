@@ -448,7 +448,10 @@ genEnums =
         doubles :: [Double]
         doubles = [-3.4, -3.2 .. 3.5]
 
-        fps :: [FloatingPoint 5 4]
+        -- NB. Precision here is important. If you pick too small of a significand
+        -- size then you can turn this enumeration into an infinite list, busting the tests.
+        -- For details see: https://gitlab.haskell.org/ghc/ghc/-/issues/15081
+        fps :: [FloatingPoint 5 8]
         fps = [-3.4, -3.2 .. 3.5]
 
         rs :: [AlgReal]
