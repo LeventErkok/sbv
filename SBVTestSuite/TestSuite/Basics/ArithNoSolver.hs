@@ -324,49 +324,49 @@ w8s :: [Word8]
 w8s = xsUnsigned
 
 sw8s :: [SWord8]
-sw8s = xsUnsigned
+sw8s = map literal xsUnsigned
 
 w16s :: [Word16]
 w16s = xsUnsigned
 
 sw16s :: [SWord16]
-sw16s = xsUnsigned
+sw16s = map literal xsUnsigned
 
 w32s :: [Word32]
 w32s = xsUnsigned
 
 sw32s :: [SWord32]
-sw32s = xsUnsigned
+sw32s = map literal xsUnsigned
 
 w64s :: [Word64]
 w64s = xsUnsigned
 
 sw64s :: [SWord64]
-sw64s = xsUnsigned
+sw64s = map literal xsUnsigned
 
 i8s :: [Int8]
 i8s = xsSigned
 
 si8s :: [SInt8]
-si8s = xsSigned
+si8s = map literal xsSigned
 
 i16s :: [Int16]
 i16s = xsSigned
 
 si16s :: [SInt16]
-si16s = xsSigned
+si16s = map literal xsSigned
 
 i32s :: [Int32]
 i32s = xsSigned
 
 si32s :: [SInt32]
-si32s = xsSigned
+si32s = map literal xsSigned
 
 i64s :: [Int64]
 i64s = xsSigned
 
 si64s :: [SInt64]
-si64s = xsSigned
+si64s = map literal xsSigned
 
 iUBs :: [Integer]
 iUBs = [-1000000 .. -999995] ++ [-5 .. 5] ++ [999995 ..  1000000]

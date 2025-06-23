@@ -68,7 +68,7 @@ q2 = do i <- sWord8 "i"
 
         setLogic QF_UFBV
 
-        query $ do constrain $ i .== select [0 .. 255] 0 i
+        query $ do constrain $ i .== select (map literal [0 .. 255]) 0 i
                    _ <- checkSat
                    getValue i
 
@@ -87,10 +87,10 @@ q4 = do i <- sWord8 "i"
 
         setLogic QF_UFBV
 
-        query $ do constrain $ i .== select [0 .. 255] 0 i
+        query $ do constrain $ i .== select (map literal [0 .. 255]) 0 i
                    _ <- checkSat
                    iv <- getValue i
-                   constrain $ j .== select [0 .. 255] 0 j
+                   constrain $ j .== select (map literal [0 .. 255]) 0 j
                    constrain $ i .== literal iv
                    constrain $ j .== i+1
                    _ <- checkSat

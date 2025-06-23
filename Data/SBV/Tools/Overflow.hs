@@ -346,7 +346,7 @@ signedMulOverflow x y = sNot zeroOut .&& overflow
         nonSignBitPos w = walk 0 rest
           where (sign, rest) = case blastBE w of
                                  []     -> error $ "Impossible happened, blastBE returned no bits for " ++ show w
-                                 (b:bs) -> (b, zip [0..] (reverse bs))
+                                 (b:bs) -> (b, zip (map literal [0..]) (reverse bs))
 
                 walk sofar []          = sofar
                 walk sofar ((i, b):bs) = walk (ite (b ./= sign) i sofar) bs

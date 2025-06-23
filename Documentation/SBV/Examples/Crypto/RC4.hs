@@ -78,7 +78,7 @@ initRC4 key
  | keyLength < 1 || keyLength > 256
  = error $ "RC4 requires a key of length between 1 and 256, received: " ++ show keyLength
  | True
- = snd $ foldl mix (0, initS) [0..255]
+ = snd $ foldl mix (0, initS) (map literal [0..255])
  where keyLength = length key
        mix :: (SWord8, S) -> SWord8 -> (SWord8, S)
        mix (j', s) i = let j = j' + readSTree s i + genericIndex key (fromJust (unliteral i) `mod` fromIntegral keyLength)

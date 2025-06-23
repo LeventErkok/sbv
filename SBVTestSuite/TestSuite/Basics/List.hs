@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -60,10 +61,10 @@ checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
                        Unk    -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" P.++ show r
 
 seqConcatSat :: Symbolic ()
-seqConcatSat = constrain $ [1..3] ++ [4..6] .== ([1..6] :: SList Integer)
+seqConcatSat = constrain $ [sEnum|1..3|] ++ [sEnum|4..6|] .== ([sEnum|1..6|] :: SList Integer)
 
 seqConcatUnsat :: Symbolic ()
-seqConcatUnsat = constrain $ [1..3] ++ [4..6] .== ([1..7] :: SList Integer)
+seqConcatUnsat = constrain $ [sEnum|1..3|] ++ [sEnum|4..6|] .== ([sEnum|1..7|] :: SList Integer)
 
 seqIndexOfSat :: Symbolic ()
 seqIndexOfSat = constrain $ L.indexOf ([1,2,3,1,2,3] :: SList Integer) [1] .== 0
@@ -90,15 +91,15 @@ seqExamples2 = do
 seqExamples3 :: Symbolic ()
 seqExamples3 = do
   [a, b, c :: SList Integer] <- sLists ["a", "b", "c"]
-  constrain $ a ++ b .== [1..4]
-  constrain $ b ++ c .== [3..6]
+  constrain $ a ++ b .== [sEnum|1..4|]
+  constrain $ b ++ c .== [sEnum|3..6|]
   constrain $ sNot $ b .== []
 
 -- There is a solution to a of length at most 2.
 seqExamples4 :: Symbolic ()
 seqExamples4 = do
   [a, b :: SList Integer] <- sLists ["a", "b"]
-  constrain $ [1..3] ++ a .== b ++ [3..5]
+  constrain $ [sEnum|1..3|] ++ a .== b ++ [sEnum|3..5|]
   constrain $ L.length a .<= 2
 
 -- There is a solution to a that is not a sequence of 1's.

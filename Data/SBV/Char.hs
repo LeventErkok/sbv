@@ -26,6 +26,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
@@ -45,7 +46,7 @@ module Data.SBV.Char (
         , isAscii, isLatin1, isAsciiUpper, isAsciiLower
         ) where
 
-import Prelude hiding (elem, notElem)
+import Prelude hiding (elem, notElem, Enum(..))
 import qualified Prelude as P
 
 import Data.SBV.Core.Data
@@ -53,7 +54,8 @@ import Data.SBV.Core.Model
 
 import qualified Data.Char as C
 
-import Data.SBV.List (isInfixOf, EnumSymbolic(..))
+import Data.SBV.List (EnumSymbolic(..))
+import qualified Data.SBV.List as SL
 
 #ifdef DOCTEST
 -- $setup
@@ -78,7 +80,7 @@ c `elem` s
  | Just cs <- unliteral s                            -- If only the second string is concrete, element-wise checking is still much better!
  = sAny (c .==) $ map literal cs
  | True
- = [c] `isInfixOf` s
+ = [c] `SL.isInfixOf` s
 
 -- | Is the character not in the string?
 --
@@ -293,9 +295,23 @@ isAsciiLower = liftPredL1 C.isAsciiLower
 
 -- | Symbolic enum instance for symbolic characters
 instance EnumSymbolic Char where
-   succ     = smtFunction "EnumSymbolic.succ"   (\x -> ite (x .== maxBound) (some "EnumSymbolic_succ_maxBound" (const sTrue)) (chr (ord x + 1)))
-   pred     = smtFunction "EnumSymbolic.pred"   (\x -> ite (x .== minBound) (some "EnumSymbolic_pred_minBound" (const sTrue)) (chr (ord x - 1)))
-   toEnum   = smtFunction "EnumSymbolic.toEnum" (\x -> ite (x .< ord (minBound :: SChar) .|| x .> ord (maxBound :: SChar))
-                                                           (some "EnumSymbolic_toEnum_out_of_bounds" (const sTrue))
-                                                           (chr x))
+   succ     = smtFunction "EnumSymbolic.Char.succ"   (\x -> ite (x .== maxBound) (some "EnumSymbolic.Char.succ_maxBound" (const sTrue)) (chr (ord x + 1)))
+   pred     = smtFunction "EnumSymbolic.Char.pred"   (\x -> ite (x .== minBound) (some "EnumSymbolic.Char.pred_minBound" (const sTrue)) (chr (ord x - 1)))
+   toEnum   = smtFunction "EnumSymbolic.Char.toEnum" (\x ->
+                            ite (x .< ord (minBound :: SChar)) (some "EnumSymbolic.Char.toEnum.<minBound" (const sTrue))
+                          $ ite (x .> ord (maxBound :: SChar)) (some "EnumSymbolic.Char.toEnum.>maxBound" (const sTrue))
+                          $ chr x)
+
    fromEnum = ord
+
+   enumFrom n   = SL.map chr (enumFromTo @Integer (ord n) (ord (maxBound @SChar)))
+   enumFromThen = smtFunction "EnumSymbolic.Char.enumFromThen" $ \n1 n2 ->
+                              let i_n1, i_n2 :: SInteger
+                                  i_n1 = ord n1
+                                  i_n2 = ord n2
+                              in SL.map chr (ite (i_n2 .>= i_n1)
+                                                 (enumFromThenTo i_n1 i_n2 (ord (maxBound @SChar)))
+                                                 (enumFromThenTo i_n1 i_n2 (ord (minBound @SChar))))
+
+   enumFromTo     n m   = SL.map chr (enumFromTo     @Integer (ord n) (ord m))
+   enumFromThenTo n m t = SL.map chr (enumFromThenTo @Integer (ord n) (ord m) (ord t))

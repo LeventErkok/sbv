@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -35,7 +36,7 @@ testQuery t rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=
 queryLists1 :: Symbolic [Integer]
 queryLists1 = do a :: SList Integer <- sList "a"
 
-                 constrain $ a .== [1..5]
+                 constrain $ a .== [sEnum|1..5|]
 
                  query $ do _ <- checkSat
 

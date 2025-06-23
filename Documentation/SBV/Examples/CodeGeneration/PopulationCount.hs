@@ -59,7 +59,7 @@ popCountFast inp = go inp 0 0
 -- value, from 0 to 255. Note that we do not \"hard-code\" the values, but
 -- merely use the slow version to compute them.
 pop8 :: [SWord8]
-pop8 = map popCountSlow [0 .. 255]
+pop8 = map (popCountSlow . literal) [0 .. 255]
 
 -----------------------------------------------------------------------------
 -- * Verification

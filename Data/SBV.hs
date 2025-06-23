@@ -1149,7 +1149,7 @@ options turned on:
 >   LANGUAGE DeriveDataTypeable
 >   LANGUAGE DeriveAnyClass
 
-and your own declaration must have instances of 'Enum' and 'Bounded'. (The instances can be derived, os above.)
+and your own declaration must have instances of 'Enum' and 'Bounded'. (The instances can be derived, as above.)
 This will automatically introduce the type:
 
 @

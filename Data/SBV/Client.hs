@@ -83,9 +83,13 @@ declareSymbolic isEnum typeName = do
                    deriving instance SatModel $typeCon
                |]
 
-    symVals <- [d| instance SymVal $typeCon where
-                     minMaxBound = Nothing
-               |]
+    symVals <- if isEnum
+                  then [d| instance SymVal $typeCon where
+                             minMaxBound = Just (minBound, maxBound)
+                       |]
+                  else [d| instance SymVal $typeCon where
+                             minMaxBound = Nothing
+                       |]
 
     symEnum <- if isEnum
                   then [d| instance SL.EnumSymbolic $typeCon where
@@ -93,6 +97,20 @@ declareSymbolic isEnum typeName = do
                               pred     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip (drop 1 elts) elts)
                               toEnum   x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip [0..] elts)
                               fromEnum x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts [0..])
+
+                              enumFrom n = SL.map SL.toEnum (SL.enumFromTo (SL.fromEnum n) (SL.fromEnum (literal (maxBound :: $typeCon))))
+
+                              enumFromThen = smtFunction ("EnumSymbolic." ++ TH.nameBase typeName ++ ".enumFromThen") $ \n1 n2 ->
+                                                         let i_n1, i_n2 :: SInteger
+                                                             i_n1 = SL.fromEnum n1
+                                                             i_n2 = SL.fromEnum n2
+                                                         in SL.map SL.toEnum (ite (i_n2 .>= i_n1)
+                                                                                  (SL.enumFromThenTo i_n1 i_n2 (SL.fromEnum (literal (maxBound :: $typeCon))))
+                                                                                  (SL.enumFromThenTo i_n1 i_n2 (SL.fromEnum (literal (minBound :: $typeCon)))))
+
+                              enumFromTo     n m   = SL.map SL.toEnum (SL.enumFromTo     (SL.fromEnum n) (SL.fromEnum m))
+
+                              enumFromThenTo n m t = SL.map SL.toEnum (SL.enumFromThenTo (SL.fromEnum n) (SL.fromEnum m) (SL.fromEnum t))
                        |]
                   else pure []
 

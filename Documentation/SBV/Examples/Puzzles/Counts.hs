@@ -44,7 +44,7 @@ count n cnts = ite (n .< 10)
                         (upd d1 (upd d2 (upd d3 cnts))))  -- three digits
   where (r1, d1)   = n  `sQuotRem` 10
         (d3, d2)   = r1 `sQuotRem` 10
-        upd d = zipWith inc [0..]
+        upd d = zipWith inc (map literal [0..])
           where inc i c = ite (i .== d) (c+1) c
 
 -- | Encoding of the puzzle. The solution is a sequence of 10 numbers

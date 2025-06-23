@@ -9,6 +9,7 @@
 -- Type-level sized floats.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleInstances    #-}
@@ -37,9 +38,9 @@ import Data.Char (intToDigit)
 import Data.List (isSuffixOf)
 import Data.Proxy
 import GHC.TypeLits
+import GHC.Internal.Real
 
 import Data.Bits
-import Data.Ratio
 import Numeric
 
 import Data.SBV.Core.Kind
@@ -73,7 +74,8 @@ instance Ord (FloatingPoint eb sb) where
   f0               >= f1               = f1 <= f0       -- See the note above
 
 -- | 'Enum' instance for t'FloatingPoint'. Note that Haskell requires
--- float termination conditions to go over @delta/2@.
+-- float termination conditions to go over @delta/2@. Also, repeated addition
+-- is wrong; instead we need to use multiplication to avoid accuracy issues per the report.
 instance ValidFloat eb sb => Enum (FloatingPoint eb sb) where
    succ x = x + 1
    pred x = x - 1
@@ -81,24 +83,10 @@ instance ValidFloat eb sb => Enum (FloatingPoint eb sb) where
    toEnum                      = fromIntegral
    fromEnum (FloatingPoint fp) = fromInteger (truncate fp)
 
-   enumFrom   n = enumFromThen   n (n+1)
-   enumFromTo n = enumFromThenTo n (n+1)
-
-   enumFromThen x y = go x
-     where delta = y - x
-           go s  = s : go (s + delta)
-
-   enumFromThenTo x y z
-     | delta >= 0 = up   x
-     | True       = down x
-     where delta = y - x
-           end   = z + delta / 2
-
-           up s   | s > end = []
-                  | True    = s : up   (s + delta)
-
-           down s | s < end = []
-                  | True    = s : down (s + delta)
+   enumFrom       = numericEnumFrom
+   enumFromTo     = numericEnumFromTo
+   enumFromThen   = numericEnumFromThen
+   enumFromThenTo = numericEnumFromThenTo
 
 -- | Abbreviation for IEEE half precision float, bit width 16 = 5 + 11.
 type FPHalf = FloatingPoint 5 11

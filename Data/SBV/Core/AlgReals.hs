@@ -36,7 +36,6 @@ import Control.DeepSeq (NFData)
 import Data.Char       (isDigit)
 
 import Data.List       (sortBy, isPrefixOf, partition)
-import Data.Ratio      ((%), numerator, denominator)
 import Data.Function   (on)
 import System.Random
 import Test.QuickCheck (Arbitrary(..))
@@ -47,6 +46,7 @@ import Text.Read(readMaybe)
 
 import qualified Data.Generics as G
 import GHC.Generics
+import GHC.Internal.Real
 
 -- | Is the endpoint included in the interval?
 data RealPoint a = OpenPoint   a -- ^ open: i.e., doesn't include the point
@@ -228,24 +228,10 @@ instance Enum AlgReal where
   fromEnum r@AlgPolyRoot{}       = error $ "AlgReal.Enum: unsupported inexact rational: " ++ show r
   fromEnum r@AlgInterval{}       = error $ "AlgReal.Enum: unsupported inexact rational: " ++ show r
 
-  enumFrom   x   = enumFromThen   x (x+1)
-  enumFromTo x y = enumFromThenTo x (x+1) y
-
-  enumFromThen x y = go x
-    where delta = y - x
-          go s  = s : go (s + delta)
-
-  enumFromThenTo x y z
-    | delta >= 0 = up   x
-    | True       = down x
-    where delta = y - x
-          end   = z + delta / 2
-
-          up s   | s > end = []
-                 | True    = s : up   (s + delta)
-
-          down s | s < end = []
-                 | True    = s : down (s + delta)
+  enumFrom       = numericEnumFrom
+  enumFromTo     = numericEnumFromTo
+  enumFromThen   = numericEnumFromThen
+  enumFromThenTo = numericEnumFromThenTo
 
 -- | Render an 'AlgReal' as an SMTLib2 value. Only supports rationals for the time being.
 algRealToSMTLib2 :: AlgReal -> String

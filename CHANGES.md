@@ -33,10 +33,14 @@
       - Documentation.SBV.Examples.TP.Reverse:    Proving a definition of reverse that uses no auxiliary definitions is correct.
       - Documentation.SBV.Examples.TP.SumReverse: Proving summing a list and its reverse are equivalent.
 
-  * Reworked enum instances for symbolic values. They are now much more symbolic/proof friendly. In particular, there is now
-    an sEnum quasiquoter that allows you to construct symbolic enumerations of the form [|sEnum|a, b .. c|] etc., akin to
-    regular Haskell enumerations but working on symbolic values and constructing symbolic lists. The class 'EnumSymbolic' is the
-    symbolic counterpart of Haskell's 'Enum' class, allowing arithmetic progressions over symbolic values.
+  * [BACKWARDS COMPATIBILITY] Reworked enum instances for symbolic values. Removed old Enum class instances for symbolic values,
+    as that API is not compatible with symbolic values, and only worked when the arguments used were literal constants. There is
+    now a new class 'EnumSymbolic' which has the exact same methods as 'Enum', except their types are more symbolic friendly. (For
+    instance, enumerations produce symbolic ists.) These definitions are now much more symbolic/proof friendly as well. In particular,
+    there is now an sEnum quasiquoter that allows you to construct symbolic enumerations of the form [|sEnum|a, b .. c|] etc., akin to
+    regular Haskell enumerations but working on symbolic values and constructing symbolic lists. If you had old code that relied
+    on Enum instances over constant symbolic values, you might have to use the underlying type for the enum, and then lift to
+    the symbolic level. Please get in touch if this causes issues.
 
   * [BACKWARDS COMPATIBILITY] Remove Data.SBV.Tools.NaturalInduction. The functionality provided by this tool is much better
     addressed by TP'sinduction methods. If you were using this functionality and have problems

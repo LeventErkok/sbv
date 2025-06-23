@@ -10,13 +10,17 @@
 -- the constant folding based arithmetic implementation in SBV
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP              #-}
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE Rank2Types       #-}
-{-# LANGUAGE TupleSections    #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE QuasiQuotes      #-}
+{-# LANGUAGE CPP                #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE Rank2Types         #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TupleSections      #-}
+{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE QuasiQuotes        #-}
 
 #if MIN_VERSION_base(4,19,0)
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns -Wno-x-partial #-}
@@ -36,6 +40,9 @@ import Data.List (genericIndex, isInfixOf, isPrefixOf, isSuffixOf, genericTake, 
 import qualified Data.Char       as C
 import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.List   as SL
+
+data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving (Bounded, Enum, Eq)
+mkSymbolicEnumeration  ''Day
 
 -- Test suite
 tests :: TestTree
@@ -386,12 +393,14 @@ genEnums =
     -- Only bounded for from, otherwise infinite (or too big for chars, so subset)
     [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- univ @(WordN 4)]
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- univ @(IntN  4)]
+ ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- univ @Day]
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- w8s]
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- i8s]
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- hiLCS]
 
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- univ @(WordN 4), t <- univ @(WordN 4)]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- univ @(IntN  4), t <- univ @(IntN  4)]
+ ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- univ @Day      , t <- univ @Day      ]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- w8s            , t <- w8s            ]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- i8s            , t <- i8s            ]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- ints           , t <- ints           ]
@@ -404,12 +413,14 @@ genEnums =
     -- Only bounded for fromThen, otherwise infinite (or too big for chars, so subset)
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @(IntN  4), t <- univ @(IntN  4), s /= t]
+ ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @Day      , t <- univ @Day      , s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- w8s            , t <- w8s            , s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- i8s            , t <- i8s            , s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- hiLCS          , t <- hiLCS          , s <  t]
 
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t, u <- univ @(WordN 4)]
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(IntN  4), t <- univ @(IntN  4), s /= t, u <- univ @(IntN  4)]
+ ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @Day      , t <- univ @Day      , s /= t, u <- univ @Day      ]
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- w8s            , t <- w8s            , s /= t, u <- w8s            ]
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- i8s            , t <- i8s            , s /= t, u <- i8s            ]
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- ints           , t <- ints           , s /= t, u <- ints           ]
@@ -432,12 +443,10 @@ genEnums =
         ints = [-3 .. 3]
 
         floats :: [Float]
-        floats = [-3.4       .. 3.5]
-        -- floats = [-3.4, -3.2 .. 3.5]    -- FAILS
+        floats = [-3.4, -3.2 .. 3.5]
 
         doubles :: [Double]
-        doubles = [-3.4       .. 3.5]
-        -- doubles = [-3.4, -3.2 .. 3.5]   -- FAILS
+        doubles = [-3.4, -3.2 .. 3.5]
 
         fps :: [FloatingPoint 5 4]
         fps = [-3.4, -3.2 .. 3.5]
@@ -488,25 +497,25 @@ i8s :: [Int8]
 i8s = xsSigned
 
 si8s :: [SInt8]
-si8s = xsSigned
+si8s = map literal xsSigned
 
 i16s :: [Int16]
 i16s = xsSigned
 
 si16s :: [SInt16]
-si16s = xsSigned
+si16s = map literal xsSigned
 
 i32s :: [Int32]
 i32s = xsSigned
 
 si32s :: [SInt32]
-si32s = xsSigned
+si32s = map literal xsSigned
 
 i64s :: [Int64]
 i64s = xsSigned
 
 si64s :: [SInt64]
-si64s = xsSigned
+si64s = map literal xsSigned
 
 iUBs :: [Integer]
 iUBs = [-1000000 .. -999995] ++ [-5 .. 5] ++ [999995 ..  1000000]
@@ -529,5 +538,9 @@ sl = [[], [0], [-1, 1], [-10, 0, 10], [3, 4, 5, 4, 5, 3]]
 -- Like wise, list of lists
 sll :: [[[Integer]]]
 sll = [[x, x, x] | x <- [[], [0], [-1, 1], [-10, 0, 10], [3, 4, 5, 4, 5, 3]]]
+
+-- Quiet GHC about unused enum elts
+_unused :: SDay
+_unused = undefined sMon sTue sWed sThu sFri sSat sSun
 
 {- HLint ignore module "Reduce duplication" -}

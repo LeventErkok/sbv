@@ -103,10 +103,6 @@ import qualified Data.List as L (inits, tails, isSuffixOf, isPrefixOf, isInfixOf
 import Data.Proxy
 
 import GHC.Exts (IsList(..))
-import GHC.TypeLits
-
-import Data.Word
-import Data.Int
 
 #ifdef DOCTEST
 -- $setup
@@ -1049,49 +1045,36 @@ class EnumSymbolic a where
 
    -- | @`enumFromTo` m n@. Symbolic version of @[m .. n]@
    enumFromTo :: SymVal a => SBV a -> SBV a -> SList a
-   enumFromTo x y = map toEnum [fromEnum x .. fromEnum y]
 
    -- | @`enumFromThenTo` m n@. Symbolic version of @[m, m' .. n]@
    enumFromThenTo :: SymVal a => SBV a -> SBV a -> SBV a -> SList a
-   enumFromThenTo x y z = map toEnum [fromEnum x, fromEnum y .. fromEnum z]
 
-   -- | Bounded/integral instances can be auto-defined
-   default succ :: (SymVal a, Bounded a, Num (SBV a)) => SBV a -> SBV a
-   succ = smtFunction "EnumSymbolic.succ" (\x -> ite (x .== maxBound) (some "EnumSymbolic_succ_maxBound" (const sTrue)) (x+1))
+-- | 'EnumSymbolic' instance for words
+instance {-# OVERLAPPABLE #-} (SymVal a, Bounded a, Integral a, Num a, Num (SBV a)) => EnumSymbolic a where
+  succ = smtFunction "EnumSymbolic.succ" (\x -> ite (x .== maxBound) (some "EnumSymbolic.succ.maxBound" (const sTrue)) (x+1))
+  pred = smtFunction "EnumSymbolic.pred" (\x -> ite (x .== minBound) (some "EnumSymbolic.pred.minBound" (const sTrue)) (x-1))
 
-   default pred :: (SymVal a, Bounded a, Num (SBV a)) => SBV a -> SBV a
-   pred = smtFunction "EnumSymbolic.pred" (\x -> ite (x .== minBound) (some "EnumSymbolic_pred_minBound" (const sTrue)) (x-1))
+  toEnum = smtFunction "EnumSymbolic.toEnum" $ \x ->
+                         ite (x .< sFromIntegral (minBound @(SBV a))) (some "EnumSymbolic.toEnum.<minBound" (const sTrue))
+                       $ ite (x .> sFromIntegral (maxBound @(SBV a))) (some "EnumSymbolic.toEnum.>maxBound" (const sTrue))
+                       $ sFromIntegral x
 
-   default toEnum :: (SymVal a, Integral a, Bounded a) => SInteger -> SBV a
-   toEnum = smtFunction "EnumSymbolic.toEnum" (\x -> ite (x .< sFromIntegral (minBound @(SBV a)) .|| x .> sFromIntegral (maxBound @(SBV a)))
-                                                         (some "EnumSymbolic_toEnum_out_of_bounds" (const sTrue))
-                                                         (sFromIntegral x))
+  fromEnum = sFromIntegral
 
-   default fromEnum :: (SymVal a, Integral a, Bounded a) => SBV a -> SInteger
-   fromEnum = sFromIntegral
+  enumFrom n   = map sFromIntegral (enumFromTo @Integer (sFromIntegral n) (sFromIntegral (maxBound @(SBV a))))
+  enumFromThen = smtFunction "EnumSymbolic.enumFromThen" $ \n1 n2 ->
+                             let i_n1, i_n2 :: SInteger
+                                 i_n1 = sFromIntegral n1
+                                 i_n2 = sFromIntegral n2
+                             in map sFromIntegral (ite (i_n2 .>= i_n1)
+                                                       (enumFromThenTo i_n1 i_n2 (sFromIntegral (maxBound @(SBV a))))
+                                                       (enumFromThenTo i_n1 i_n2 (sFromIntegral (minBound @(SBV a)))))
 
-   default enumFrom :: (SymVal a, Bounded a) => SBV a -> SList a
-   enumFrom x = enumFromTo x maxBound
+  enumFromTo     n m   = map sFromIntegral (enumFromTo     @Integer (sFromIntegral n) (sFromIntegral m))
+  enumFromThenTo n m t = map sFromIntegral (enumFromThenTo @Integer (sFromIntegral n) (sFromIntegral m) (sFromIntegral t))
 
-   default enumFromThen :: (SymVal a, Bounded a) => SBV a -> SBV a -> SList a
-   enumFromThen x y = enumFromThenTo x y (ite (fromEnum y .>= fromEnum x) maxBound minBound)
-
--- | 'EnumSymbolic instance for words
-instance EnumSymbolic Word8
-instance EnumSymbolic Word16
-instance EnumSymbolic Word32
-instance EnumSymbolic Word64
-instance (KnownNat n, BVIsNonZero n) => EnumSymbolic (WordN n)
-
--- | 'EnumSymbolic instance for ints
-instance EnumSymbolic Int8
-instance EnumSymbolic Int16
-instance EnumSymbolic Int32
-instance EnumSymbolic Int64
-instance (KnownNat n, BVIsNonZero n) => EnumSymbolic (IntN n)
-
--- | Symbolic enumerations over integers.
-instance EnumSymbolic Integer where
+-- | 'EnumSymbolic' instance for integer. NB. The above definition goes thru integers, hence we need to define this explicitly.
+instance {-# OVERLAPPING #-} EnumSymbolic Integer where
    succ x = x + 1
    pred x = x - 1
 
@@ -1115,7 +1098,7 @@ instance EnumSymbolic Integer where
 --      > For Float and Double, the semantics of the enumFrom family is given by the rules for Int above,
 --      > except that the list terminates when the elements become greater than @e3 + i/2@ for positive increment @i@,
 --      > or when they become less than @e3 + i/2@ for negative @i@.
-instance EnumSymbolic Float where
+instance {-# OVERLAPPING #-} EnumSymbolic Float where
    succ x = x + 1
    pred x = x - 1
 
@@ -1125,20 +1108,20 @@ instance EnumSymbolic Float where
    enumFrom   n = enumFromThen   n (n+1)
    enumFromTo n = enumFromThenTo n (n+1)
 
-   enumFromThen x y = go x (y-x)
-     where go = smtFunction "EnumSymbolic.Float.enumFromThen" $ \start delta -> start .: go (start+delta) delta
+   enumFromThen x y = go 0 x (y-x)
+     where go = smtFunction "EnumSymbolic.Float.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
-   enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
+   enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
      where delta, z :: SFloat
            delta = y - x
            z     = zIn + delta / 2
 
-           up, down :: SFloat -> SFloat -> SFloat -> SList Float
-           up    = smtFunction "EnumSymbolic.Float.enumFromThenTo.up"   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
-           down  = smtFunction "EnumSymbolic.Float.enumFromThenTo.down" $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
+           up, down :: SFloat -> SFloat -> SFloat -> SFloat -> SList Float
+           up    = smtFunction "EnumSymbolic.Float.enumFromThenTo.up"   $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
+           down  = smtFunction "EnumSymbolic.Float.enumFromThenTo.down" $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
 
 -- | 'EnumSymbolic instance for 'Double'
-instance EnumSymbolic Double where
+instance {-# OVERLAPPING #-} EnumSymbolic Double where
    succ x = x + 1
    pred x = x - 1
 
@@ -1148,20 +1131,20 @@ instance EnumSymbolic Double where
    enumFrom   n = enumFromThen   n (n+1)
    enumFromTo n = enumFromThenTo n (n+1)
 
-   enumFromThen x y = go x (y-x)
-     where go = smtFunction "EnumSymbolic.Double.enumFromThen" $ \start delta -> start .: go (start+delta) delta
+   enumFromThen x y = go 0 x (y-x)
+     where go = smtFunction "EnumSymbolic.Double.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
-   enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
+   enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
      where delta, z :: SDouble
            delta = y - x
            z     = zIn + delta / 2
 
-           up, down :: SDouble -> SDouble -> SDouble -> SList Double
-           up    = smtFunction "EnumSymbolic.Double.enumFromThenTo.up"   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
-           down  = smtFunction "EnumSymbolic.Double.enumFromThenTo.down" $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
+           up, down :: SDouble -> SDouble -> SDouble -> SDouble -> SList Double
+           up    = smtFunction "EnumSymbolic.Double.enumFromThenTo.up"   $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
+           down  = smtFunction "EnumSymbolic.Double.enumFromThenTo.down" $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
 
 -- | 'EnumSymbolic instance for arbitrary floats
-instance ValidFloat eb sb => EnumSymbolic (FloatingPoint eb sb) where
+instance {-# OVERLAPPING #-} ValidFloat eb sb => EnumSymbolic (FloatingPoint eb sb) where
    succ x = x + 1
    pred x = x - 1
 
@@ -1171,20 +1154,21 @@ instance ValidFloat eb sb => EnumSymbolic (FloatingPoint eb sb) where
    enumFrom   n = enumFromThen   n (n+1)
    enumFromTo n = enumFromThenTo n (n+1)
 
-   enumFromThen x y = go x (y-x)
-     where go = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThen") $ \start delta -> start .: go (start+delta) delta
+   enumFromThen x y = go 0 x (y-x)
+     where go = smtFunction "EnumSymbolic.FloatingPoint.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
-   enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
+   enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
      where delta, z :: SFloatingPoint eb sb
            delta = y - x
            z     = zIn + delta / 2
 
-           up, down :: SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SList (FloatingPoint eb sb)
-           up    = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThenTo.up")   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
-           down  = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThenTo.down") $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
+           up, down :: SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SList (FloatingPoint eb sb)
+           up    = smtFunction "EnumSymbolic.FloatingPoint.enumFromThenTo.up"   $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
+           down  = smtFunction "EnumSymbolic.FloatingPoint.enumFromThenTo.down" $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
 
--- | 'EnumSymbolic instance for arbitrary AlgReal
-instance EnumSymbolic AlgReal where
+-- | 'EnumSymbolic instance for arbitrary AlgReal. We don't have to use the multiplicative trick here
+-- since alg-reals are precise. But, following rational in Haskell, we do use the stopping point of @z + delta / 2@.
+instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
    succ x = x + 1
    pred x = x - 1
 
@@ -1195,7 +1179,7 @@ instance EnumSymbolic AlgReal where
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go x (y-x)
-     where go = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThen") $ \start delta -> start .: go (start+delta) delta
+     where go = smtFunction ("EnumSymbolic.AlgReal.enumFromThen") $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta, z :: SReal
@@ -1203,8 +1187,8 @@ instance EnumSymbolic AlgReal where
            z     = zIn + delta / 2
 
            up, down :: SReal -> SReal -> SReal -> SList AlgReal
-           up    = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThenTo.up")   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
-           down  = smtFunction ("EnumSymbolic." <> show (kindOf x) <> ".enumFromThenTo.down") $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
+           up    = smtFunction ("EnumSymbolic.AlgReal.enumFromThenTo.up")   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
+           down  = smtFunction ("EnumSymbolic.AlgReal.enumFromThenTo.down") $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
 
 -- | Lookup. If we can't find, then the result is unspecified.
 --

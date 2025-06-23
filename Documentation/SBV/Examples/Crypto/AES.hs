@@ -146,10 +146,10 @@ invMixColumns state = map fromBytes $ transpose $ mmult (map toBytes state)
        mB = select mBTable 0
        mD = select mDTable 0
        m9 = select m9Table 0
-       mETable = map (gf28Mult 0xE) [0..255]
-       mBTable = map (gf28Mult 0xB) [0..255]
-       mDTable = map (gf28Mult 0xD) [0..255]
-       m9Table = map (gf28Mult 0x9) [0..255]
+       mETable = map (gf28Mult 0xE . literal) [0..255]
+       mBTable = map (gf28Mult 0xB . literal) [0..255]
+       mDTable = map (gf28Mult 0xD . literal) [0..255]
+       m9Table = map (gf28Mult 0x9 . literal) [0..255]
 
 -- | Key expansion. Starting with the given key, returns an infinite sequence of
 -- words, as described by the AES standard, Section 5.2, Figure 11.
@@ -177,7 +177,7 @@ keyExpansion nk key = chop4 keys
 -- the code-generation will turn this into a mere look-up table, as it is just a
 -- constant table, all computation being done at \"compile-time\".
 sboxTable :: [GF28]
-sboxTable = [xformByte (gf28Inverse b) | b <- [0 .. 255]]
+sboxTable = [xformByte (gf28Inverse (literal b)) | b <- [0 .. 255]]
   where xformByte :: GF28 -> GF28
         xformByte b = foldr xor 0x63 [b `rotateR` i | i <- [0, 4, 5, 6, 7]]
 
@@ -194,7 +194,7 @@ sbox = select sboxTable 0
 
 -- | The values of the inverse S-box table. Again, the construction is programmatic.
 unSBoxTable :: [GF28]
-unSBoxTable = [gf28Inverse (xformByte b) | b <- [0 .. 255]]
+unSBoxTable = [gf28Inverse (xformByte (literal b)) | b <- [0 .. 255]]
   where xformByte :: GF28 -> GF28
         xformByte b = foldr xor 0x05 [b `rotateR` i | i <- [2, 5, 7]]
 
@@ -229,19 +229,19 @@ t0Func a = [s `gf28Mult` 2, s, s, s `gf28Mult` 3] where s = sbox a
 
 -- | First look-up table used in encryption
 t0 :: GF28 -> SWord 32
-t0 = select t0Table 0 where t0Table = [fromBytes (t0Func a)          | a <- [0..255]]
+t0 = select t0Table 0 where t0Table = [fromBytes (t0Func a)          | a <- map literal [0..255]]
 
 -- | Second look-up table used in encryption
 t1 :: GF28 -> SWord 32
-t1 = select t1Table 0 where t1Table = [fromBytes (t0Func a `rotR` 1) | a <- [0..255]]
+t1 = select t1Table 0 where t1Table = [fromBytes (t0Func a `rotR` 1) | a <- map literal [0..255]]
 
 -- | Third look-up table used in encryption
 t2 :: GF28 -> SWord 32
-t2 = select t2Table 0 where t2Table = [fromBytes (t0Func a `rotR` 2) | a <- [0..255]]
+t2 = select t2Table 0 where t2Table = [fromBytes (t0Func a `rotR` 2) | a <- map literal [0..255]]
 
 -- | Fourth look-up table used in encryption
 t3 :: GF28 -> SWord 32
-t3 = select t3Table 0 where t3Table = [fromBytes (t0Func a `rotR` 3) | a <- [0..255]]
+t3 = select t3Table 0 where t3Table = [fromBytes (t0Func a `rotR` 3) | a <- map literal [0..255]]
 
 -----------------------------------------------------------------------------
 -- ** Tables for T-Box decryption
@@ -253,19 +253,19 @@ u0Func a = [s `gf28Mult` 0xE, s `gf28Mult` 0x9, s `gf28Mult` 0xD, s `gf28Mult` 0
 
 -- | First look-up table used in decryption
 u0 :: GF28 -> SWord 32
-u0 = select t0Table 0 where t0Table = [fromBytes (u0Func a)          | a <- [0..255]]
+u0 = select t0Table 0 where t0Table = [fromBytes (u0Func a)          | a <- map literal [0..255]]
 
 -- | Second look-up table used in decryption
 u1 :: GF28 -> SWord 32
-u1 = select t1Table 0 where t1Table = [fromBytes (u0Func a `rotR` 1) | a <- [0..255]]
+u1 = select t1Table 0 where t1Table = [fromBytes (u0Func a `rotR` 1) | a <- map literal [0..255]]
 
 -- | Third look-up table used in decryption
 u2 :: GF28 -> SWord 32
-u2 = select t2Table 0 where t2Table = [fromBytes (u0Func a `rotR` 2) | a <- [0..255]]
+u2 = select t2Table 0 where t2Table = [fromBytes (u0Func a `rotR` 2) | a <- map literal [0..255]]
 
 -- | Fourth look-up table used in decryption
 u3 :: GF28 -> SWord 32
-u3 = select t3Table 0 where t3Table = [fromBytes (u0Func a `rotR` 3) | a <- [0..255]]
+u3 = select t3Table 0 where t3Table = [fromBytes (u0Func a `rotR` 3) | a <- map literal [0..255]]
 
 -----------------------------------------------------------------------------
 -- ** AES rounds
@@ -429,10 +429,10 @@ aesDecryptUnwoundKey ct decKS
                                     e3 = otfU3 $ unSBox (a !! ((j+1) `mod` 4) !! 3) `xor` (kbs !! j !! 3)
 
                 otfU0Func b = [b `gf28Mult` 0xE, b `gf28Mult` 0x9, b `gf28Mult` 0xD, b `gf28Mult` 0xB]
-                otfU0 = select t0Table 0 where t0Table = [fromBytes (otfU0Func a)          | a <- [0..255]]
-                otfU1 = select t1Table 0 where t1Table = [fromBytes (otfU0Func a `rotR` 1) | a <- [0..255]]
-                otfU2 = select t2Table 0 where t2Table = [fromBytes (otfU0Func a `rotR` 2) | a <- [0..255]]
-                otfU3 = select t3Table 0 where t3Table = [fromBytes (otfU0Func a `rotR` 3) | a <- [0..255]]
+                otfU0 = select t0Table 0 where t0Table = [fromBytes (otfU0Func a)          | a <- map literal [0..255]]
+                otfU1 = select t1Table 0 where t1Table = [fromBytes (otfU0Func a `rotR` 1) | a <- map literal [0..255]]
+                otfU2 = select t2Table 0 where t2Table = [fromBytes (otfU0Func a `rotR` 2) | a <- map literal [0..255]]
+                otfU3 = select t3Table 0 where t3Table = [fromBytes (otfU0Func a `rotR` 3) | a <- map literal [0..255]]
 
 -----------------------------------------------------------------------------
 -- * Test vectors

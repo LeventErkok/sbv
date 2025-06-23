@@ -120,9 +120,9 @@ a look-up table, as follows.
 
 -- | Compute the fibonacci numbers statically at /code-generation/ time and
 -- put them in a table, accessed by the 'select' call.
-fib2 :: SWord64 -> SWord64 -> SWord64
+fib2 :: Word64 -> SWord64 -> SWord64
 fib2 top = select table 0
-  where table = map (fib1 top) [0 .. top]
+  where table = map (fib1 (literal top) . literal) [0 .. top]
 
 -- | Once we have 'fib2', we can generate the C code straightforwardly. Below
 -- is an excerpt from the code that SBV generates for the call @genFib2 64@. Note
@@ -172,7 +172,7 @@ fib2 top = select table 0
 -- >   
 -- >   return s65;
 -- > }
-genFib2 :: SWord64 -> IO ()
+genFib2 :: Word64 -> IO ()
 genFib2 top = compileToC Nothing "fibLookup" $ do
         cgPerformRTCs True       -- protect against potential overflow, our table is not big enough
         x <- cgInput "x"

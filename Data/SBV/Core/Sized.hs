@@ -31,6 +31,7 @@ import Data.Maybe (fromJust)
 import Data.Proxy (Proxy(..))
 
 import GHC.TypeLits
+import GHC.Internal.Real
 
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Symbolic
@@ -138,14 +139,10 @@ instance (KnownNat n, BVIsNonZero n) => Enum (WordN n) where
 
    fromEnum = fromIntegral . toInteger
 
-   enumFrom   x   = enumFromTo x maxBound
-   enumFromTo x y = map fromIntegral [toInteger x .. toInteger y]
-
-   enumFromThen x y = enumFromThenTo x y bound
-     where bound | fromEnum y >= fromEnum x = maxBound
-                 | True                     = minBound
-
-   enumFromThenTo x y z = map fromIntegral [toInteger x, toInteger y .. toInteger z]
+   enumFrom       = integralEnumFrom
+   enumFromTo     = integralEnumFromTo
+   enumFromThen   = integralEnumFromThen
+   enumFromThenTo = integralEnumFromThenTo
 
 -- | 'Enum' instance for t'IntN'
 instance (KnownNat n, BVIsNonZero n) => Enum (IntN n) where
@@ -162,14 +159,10 @@ instance (KnownNat n, BVIsNonZero n) => Enum (IntN n) where
 
    fromEnum = fromIntegral . toInteger
 
-   enumFrom   x   = enumFromTo x maxBound
-   enumFromTo x y = map fromIntegral [toInteger x .. toInteger y]
-
-   enumFromThen x y = enumFromThenTo x y bound
-     where bound | fromEnum y >= fromEnum x = maxBound
-                 | True                     = minBound
-
-   enumFromThenTo x y z = map fromIntegral [toInteger x, toInteger y .. toInteger z]
+   enumFrom       = integralEnumFrom
+   enumFromTo     = integralEnumFromTo
+   enumFromThen   = integralEnumFromThen
+   enumFromThenTo = integralEnumFromThenTo
 
 -- | 'Real' instance for t'WordN'
 instance (KnownNat n, BVIsNonZero n) => Real (WordN n) where
