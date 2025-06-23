@@ -36,9 +36,7 @@ import Data.SBV.List
 
 -- * Sum of constants
 
--- | Prove that sum of constants @c@ from @0@ to @n@ is @n*c@.
---
--- We have:
+-- | \(\sum_{i=1}^{n} c = c \cdot n\)
 --
 -- >>> runTP $ sumConstProof (uninterpret "c")
 -- Inductive lemma: sumConst_correct
@@ -62,7 +60,7 @@ sumConstProof c = induct "sumConst_correct"
 
 -- * Sum of numbers
 
--- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
+-- | \(\sum_{i=0}^{n} i = \frac{n(n+1)}{2}\)
 --
 -- NB. We define the sum of numbers from @0@ to @n@ as @sum [sEnum|n, n-1 .. 0|]@, i.e., we
 -- construct the list starting from @n@ going down to @0@. Contrast this to the perhaps more natural
@@ -90,7 +88,7 @@ sumProof = induct "sum_correct"
 
 -- * Sum of squares of numbers
 --
--- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
+-- | \(\sum_{i=0}^{n} i^2 = \frac{n(n+1)(2n+1)}{6}\)
 --
 -- >>> runTP sumSquareProof
 -- Inductive lemma: sumSquare_correct
@@ -124,10 +122,9 @@ sumSquareProof = do
 
 -- * Sum of cubes of numbers
 
--- | Prove that sum of cube of numbers from @0@ to @n@ is sum of numbers up to @n@ squared.
--- This is attributed to Nicomachus, hence the name.
+-- | \(\sum_{i=0}^{n} i^3 = \left( \sum_{i=0}^{n} i \right)^2 = \left( \frac{n(n+1)}{2} \right)^2\)
 --
--- We have:
+-- This is attributed to Nicomachus, hence the name.
 --
 -- >>> runTP nicomachus
 -- Inductive lemma: sum_correct
@@ -210,11 +207,9 @@ nicomachus = do
 
 -- * Exponents and divisibility by 7
 
--- | Prove that @11^n - 4^n@ is always divisible by 7.
+-- | \(7 \mid \left(11^n - 4^n\right)\)
 --
 -- NB. As of Feb 2025, z3 struggles with the inductive step in this proof, but cvc5 performs just fine.
---
--- We have:
 --
 -- >>> runTP elevenMinusFour
 -- Lemma: powN                             Q.E.D.
@@ -261,7 +256,7 @@ elevenMinusFour = do
 
 -- * A proof about factorials
 
--- | @sum (map (\k -> k * k!) [0 .. n]) == (n+1)! - 1@
+-- | \(\sum_{k=0}^{n} k \cdot k! = (n+1)! - 1\)
 --
 -- >>> runTP sumMulFactorial
 -- Lemma: fact (n+1)
