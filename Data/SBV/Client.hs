@@ -95,6 +95,7 @@ declareSymbolic isEnum typeName = do
                   then [d| instance SL.EnumSymbolic $typeCon where
                               succ     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts (drop 1 elts))
                               pred     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip (drop 1 elts) elts)
+
                               toEnum   x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip [0..] elts)
                               fromEnum x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts [0..])
 
