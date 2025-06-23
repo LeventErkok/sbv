@@ -3303,7 +3303,7 @@ instance (KnownNat n, BVIsNonZero n) => Metric (IntN n) where
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
   property (SBV (SVal _ (Left b))) = property (cvToBool b)
-  property _                       = cantQuickCheck
+  property s                       = cantQuickCheck $ "Result did not evaluate to a concrete boolean: " ++ show s
 
 instance Testable (Symbolic SBool) where
    property prop = QC.monadicIO $ do (cond, r, modelVals) <- QC.run test
@@ -3312,38 +3312,39 @@ instance Testable (Symbolic SBool) where
                                      QC.assert r
      where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=(_, cs), resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic defaultSMTCfg (Concrete Nothing) prop
 
-                     let cval = fromMaybe cantQuickCheck . (`lookup` cs)
+                     let cval = fromMaybe (cantQuickCheck "A constraint did not evaluate to a concrete boolean") . (`lookup` cs)
                          cond = -- Only pick-up "hard" constraints, as indicated by False in the fist component
                                 and [cvToBool (cval v) | (False, _, v) <- F.toList cstrs]
 
                          getObservable (nm, f, v) = case v `lookup` cs of
                                                       Just cv -> if f cv then Just (nm, cv) else Nothing
-                                                      Nothing -> cantQuickCheck
+                                                      Nothing -> cantQuickCheck "An observable did not evaluate to a concrete value"
 
                      case map fst unints of
                        [] -> case unliteral r of
-                               Nothing -> cantQuickCheck
+                               Nothing -> cantQuickCheck "The result did not evaluate to a concrete value"
                                Just b  -> return (cond, b, tvals ++ mapMaybe getObservable ovals)
-                       _  -> cantQuickCheck
+                       uis -> cantQuickCheck $ "Uninterpreted constants remain: " ++ unwords uis
 
            complain qcInfo = showModel defaultSMTCfg (SMTModel [] Nothing qcInfo [])
 
 -- Complain if what we got isn't something we can quick-check
-cantQuickCheck :: a
-cantQuickCheck = error $ unlines [ "*** Data.SBV: Cannot quickcheck the given property."
-                                 , "***"
-                                 , "*** Certain SBV properties cannot be quick-checked. In particular,"
-                                 , "*** SBV can't quick-check in the presence of:"
-                                 , "***"
-                                 , "***   - Uninterpreted constants."
-                                 , "***   - Floating point operations with rounding modes other than RNE."
-                                 , "***   - Floating point FMA operation, regardless of rounding mode."
-                                 , "***   - Quantified booleans, i.e., uses of Forall/Exists/ExistsUnique."
-                                 , "***   - Calls to 'observe' (use 'sObserve' instead)"
-                                 , "***"
-                                 , "*** If you can't avoid the above features or run into an issue with"
-                                 , "*** quickcheck even though you haven't used these features, please report this as a bug!"
-                                 ]
+cantQuickCheck :: String -> a
+cantQuickCheck why = error $ unlines [ "*** Data.SBV: Cannot quickcheck the given property."
+                                     , "***"
+                                     , "*** Certain SBV properties cannot be quick-checked. In particular,"
+                                     , "*** SBV can't quick-check in the presence of:"
+                                     , "***"
+                                     , "***   - Uninterpreted constants."
+                                     , "***   - Floating point operations with rounding modes other than RNE."
+                                     , "***   - Floating point FMA operation, regardless of rounding mode."
+                                     , "***   - Quantified booleans, i.e., uses of Forall/Exists/ExistsUnique."
+                                     , "***   - Calls to 'observe' (use 'sObserve' instead)"
+                                     , "***"
+                                     , "*** If you can't avoid the above features or run into an issue with"
+                                     , "*** quickcheck even though you haven't used these features, please report this as a bug!"
+                                     , "*** Origin: " ++ why
+                                     ]
 
 -- | Quick check an SBV property. Note that a regular @quickCheck@ call will work just as
 -- well. Use this variant if you want to receive the boolean result.
