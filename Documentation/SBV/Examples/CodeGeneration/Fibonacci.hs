@@ -13,12 +13,19 @@
 -- and how to deal with such, eventually generating good C code.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.CodeGeneration.Fibonacci where
 
 import Data.SBV
 import Data.SBV.Tools.CodeGen
+
+#ifdef DOCTEST
+-- $setup
+-- >>> import Data.SBV
+#endif
 
 -----------------------------------------------------------------------------
 -- * A naive implementation
@@ -27,7 +34,7 @@ import Data.SBV.Tools.CodeGen
 -- | This is a naive implementation of fibonacci, and will work fine (albeit slow)
 -- for concrete inputs:
 --
--- >>> map fib0 [0..6]
+-- >>> map (fib0 . literal) [0..6]
 -- [0 :: SWord64,1 :: SWord64,1 :: SWord64,2 :: SWord64,3 :: SWord64,5 :: SWord64,8 :: SWord64]
 --
 -- However, it is not suitable for doing proofs or generating code, as it is not
@@ -55,7 +62,7 @@ can produce code as the unrolling will eventually stop.
 
 -- | The recursion-depth limited version of fibonacci. Limiting the maximum number to be 20, we can say:
 --
--- >>> map (fib1 20) [0..6]
+-- >>> map (fib1 20 . literal) [0..6]
 -- [0 :: SWord64,1 :: SWord64,1 :: SWord64,2 :: SWord64,3 :: SWord64,5 :: SWord64,8 :: SWord64]
 --
 -- The function will work correctly, so long as the index we query is at most @top@, and otherwise
