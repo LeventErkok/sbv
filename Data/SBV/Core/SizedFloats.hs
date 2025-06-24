@@ -9,7 +9,6 @@
 -- Type-level sized floats.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns         #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleInstances    #-}

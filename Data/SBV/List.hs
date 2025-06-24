@@ -17,7 +17,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                    #-}
-{-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -1179,7 +1178,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go x (y-x)
-     where go = smtFunction ("EnumSymbolic.AlgReal.enumFromThen") $ \start delta -> start .: go (start+delta) delta
+     where go = smtFunction "EnumSymbolic.AlgReal.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta, z :: SReal
@@ -1187,8 +1186,8 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
            z     = zIn + delta / 2
 
            up, down :: SReal -> SReal -> SReal -> SList AlgReal
-           up    = smtFunction ("EnumSymbolic.AlgReal.enumFromThenTo.up")   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
-           down  = smtFunction ("EnumSymbolic.AlgReal.enumFromThenTo.down") $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
+           up    = smtFunction "EnumSymbolic.AlgReal.enumFromThenTo.up"   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
+           down  = smtFunction "EnumSymbolic.AlgReal.enumFromThenTo.down" $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
 
 -- | Lookup. If we can't find, then the result is unspecified.
 --
