@@ -119,6 +119,8 @@ import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 import Data.IORef (readIORef, writeIORef)
 import Data.SBV.Utils.Lib
 
+import Data.Char
+
 -- Symbolic-Word class instances
 
 import Crypto.Hash.SHA512 (hash)
@@ -2518,9 +2520,16 @@ see different constructors. Such isn't the case when merging.
 -}
 
 -- Bounded instances
-instance (SymVal a, Bounded a) => Bounded (SBV a) where
+instance {-# OVERLAPPABLE #-} (SymVal a, Bounded a) => Bounded (SBV a) where
   minBound = literal minBound
   maxBound = literal maxBound
+
+-- Haskell and SMTLib differ in their default char ranges. In Haskell, maxbound is a lot larger.
+-- But in SMTLib, we only go upto 0x2FFFF. So, we adopt the SMTLib variant here. This is hardly
+-- an issue in practice, but the discrepancy is disconcerting.
+instance {-# OVERLAPPING #-} Bounded SChar where
+  minBound = literal (chr 0)
+  maxBound = literal (chr 0x2FFFF)
 
 -- | Choose a value that satisfies the given predicate. This is Hillbert's choice, essentially. Note that
 -- if the predicate given is not satisfiable (for instance @const sFalse@), then the element returned will be arbitrary.
