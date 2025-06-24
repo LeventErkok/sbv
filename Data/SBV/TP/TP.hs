@@ -303,11 +303,12 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
            case qcCount of
              Nothing  -> pure ()
              Just cnt -> do
-               liftIO $ do r <- quickCheckWithResult stdArgs{maxSize = cnt, chatty = False} sTrue
+               liftIO $ do r <- quickCheckWithResult stdArgs{maxSize = cnt, chatty = False}
+                                                     (sAnd (intros : as) .=> cur)
                            let err = case r of
                                        Success {}                -> Nothing
-                                       GaveUp  {}                -> Just "QuickCheck reported \"GaveUp\""
                                        Failure {QC.output = out} -> Just out
+                                       GaveUp  {}                -> Just "QuickCheck reported \"GaveUp\""    -- can this happen?
                                        NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
                            case err of
                              Nothing -> pure ()
