@@ -43,6 +43,7 @@ common common-settings
                      DeriveDataTypeable
                      DeriveFunctor
                      DeriveGeneric
+                     DeriveLift
                      DeriveTraversable
                      DerivingStrategies
                      ExistentialQuantification
