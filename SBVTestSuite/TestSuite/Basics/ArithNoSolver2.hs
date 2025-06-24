@@ -46,7 +46,7 @@ mkSymbolicEnumeration  ''Day
 
 -- Test suite
 tests :: TestTree
-tests = testGroup "Arith.NoSolver" $
+tests = testGroup "Arith.NoSolver2" $
            genIntTest      False "setBit"        setBit
         ++ genIntTest      False "clearBit"      clearBit
         ++ genIntTest      False "complementBit" complementBit
