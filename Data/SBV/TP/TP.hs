@@ -34,6 +34,7 @@ module Data.SBV.TP.TP (
        , sorry
        , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpCache
        , (|-), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
+       , qc
        ) where
 
 import Data.SBV
@@ -61,6 +62,9 @@ import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
 
+import qualified Test.QuickCheck as QC
+import Test.QuickCheck (quickCheckWithResult, stdArgs, maxSize, chatty, Result(..))
+
 -- | Captures the steps for a calculationa proof
 data CalcStrategy = CalcStrategy { calcIntros    :: SBool
                                  , calcProofTree :: TPProof
@@ -75,6 +79,7 @@ proofTreeSaturatables = go
 
         getH (HelperProof  p) = [getObjProof p]
         getH (HelperAssum  b) = [b]
+        getH HelperQC{}       = []
         getH HelperString{}   = []
 
 -- | Things that are inside calc-strategy that we have to saturate
@@ -290,8 +295,29 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                                          (sAnd as)
                                          finalizer
 
+           -- Are we asked to do quick-check?
+           let qcCount = case [i | HelperQC i <- hs] of
+                           [] -> Nothing
+                           is -> Just (maximum (0 : is))
+
+           case qcCount of
+             Nothing  -> pure ()
+             Just cnt -> do
+               liftIO $ do r <- quickCheckWithResult stdArgs{maxSize = cnt, chatty = False} sTrue
+                           let err = case r of
+                                       Success {}                -> Nothing
+                                       GaveUp  {}                -> Just "QuickCheck reported \"GaveUp\""
+                                       Failure {QC.output = out} -> Just out
+                                       NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
+                           case err of
+                             Nothing -> pure ()
+                             Just e  -> do putStrLn $ "\n*** QuickCheck failed for " ++ intercalate "." (nm : stepName)
+                                           putStrLn e
+                                           error "Failed"
+
            -- Now prove the step
            let by = concatMap getHelperProofs hs
+
            smtProofStep cfg tpSt "Step" level
                                  (TPProofStep False nm ss stepName)
                                  (Just (sAnd (intros : as ++ map getObjProof by)))
@@ -964,6 +990,7 @@ instantiate ap (Proof p@ProofObj{getProp, proofName}) a = case fromDynamic getPr
 -- | Helpers for a step
 data Helper = HelperProof  ProofObj  -- A previously proven theorem
             | HelperAssum  SBool     -- A hypothesis
+            | HelperQC     Int       -- Quickcheck with this many tests
             | HelperString String    -- Just a text, only used for diagnostics
 
 -- | Get all helpers used in a proof
@@ -976,12 +1003,14 @@ getAllHelpers (ProofEnd    _           hs                ) = hs
 getHelperProofs :: Helper -> [ProofObj]
 getHelperProofs (HelperProof p) = [p]
 getHelperProofs HelperAssum {}  = []
+getHelperProofs HelperQC    {}  = []
 getHelperProofs HelperString{}  = []
 
 -- | Get proofs from helpers
 getHelperAssumes :: Helper -> [SBool]
 getHelperAssumes HelperProof  {} = []
 getHelperAssumes (HelperAssum b) = [b]
+getHelperAssumes HelperQC     {} = []
 getHelperAssumes HelperString {} = []
 
 -- | Get hint strings from helpers. If there's an explicit comment given, just pass that. If not, collect all the names
@@ -992,6 +1021,7 @@ getHelperText hs = case [s | HelperString s <- hs] of
   where collect :: Helper -> [String]
         collect (HelperProof  p) = [proofName p | isUserAxiom p]  -- Don't put out internals (inductive hypotheses)
         collect HelperAssum  {}  = []
+        collect (HelperQC     i) = ["passed " ++ show i ++ " tests"]
         collect (HelperString s) = [s]
 
 -- | A proof is a sequence of steps, supporting branching
@@ -1239,6 +1269,9 @@ split2 (xs, ys) ee ec ce cc = ProofBranch False
         (hy, ty) = SL.uncons ys
         ycons    = sNot ynil .&& ys .== hy SL..: ty
 
+-- | A quick-check step
+qc :: Int -> Helper
+qc = HelperQC
 
 -- | Specifying a case-split, helps with the boolean case.
 (==>) :: SBool -> TPProofRaw a -> (SBool, TPProofRaw a)

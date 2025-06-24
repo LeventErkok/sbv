@@ -169,6 +169,19 @@ existsConjunctionNot p q = runTP $ do
 
     pure ()
 
+-- * QuickCheck steps
+
+-- | Using quick-check as a step
+--
+-- >>> runTP qcExample
+qcExample :: TP (Proof (Forall "n" Integer -> SBool))
+qcExample = calc "qcExample"
+                 (\(Forall n) -> n + n .== 2 * n) $
+                 \n -> [] |- n + n
+                          ?? qc 1000
+                          =: 2 * n
+                          =: qed
+
 -- * No termination checks
 
 -- | It's important to realize that TP proofs in SBV neither check nor guarantee that the
