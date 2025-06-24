@@ -305,7 +305,7 @@ nil = literal []
 
 -- | Append two lists.
 --
--- >>> sat $ \x y (z :: SList Integer) -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== [1 .. 12]
+-- >>> sat $ \x y (z :: SList Integer) -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== [sEnum|1 .. 12|]
 -- Satisfiable. Model:
 --   s0 =      [1,2,3,4,5] :: [Integer]
 --   s1 =              [6] :: [Integer]
@@ -426,11 +426,11 @@ splitAt n xs = (take n xs, drop n xs)
 --
 -- >>> prove $ \(l :: SList Integer) i -> i .>= 0 .&& i .< length l .=> subList l 0 i ++ subList l i (length l - i) .== l
 -- Q.E.D.
--- >>> sat  $ \i j -> subList [1..5] i j .== ([2..4] :: SList Integer)
+-- >>> sat  $ \i j -> subList [sEnum|1..5|] i j .== [sEnum|2..4::SInteger|]
 -- Satisfiable. Model:
 --   s0 = 1 :: Integer
 --   s1 = 3 :: Integer
--- >>> sat  $ \i j -> subList [1..5] i j .== ([6..7] :: SList Integer)
+-- >>> sat  $ \i j -> subList [sEnum|1..5|] i j .== [sEnum|6..7::SInteger|]
 -- Unsatisfiable
 -- >>> prove $ \(s1 :: SString) (s2 :: SString) -> subList (s1 ++ s2) (length s1) 1 .== subList s2 0 1
 -- Q.E.D.
@@ -461,7 +461,7 @@ subList l offset len
 
 -- | @`replace` l src dst@. Replace the first occurrence of @src@ by @dst@ in @s@
 --
--- >>> prove $ \l -> replace [1..5] l [6..10] .== [6..10] .=> l .== ([1..5] :: SList Word8)
+-- >>> prove $ \l -> replace [sEnum|1..5|] l [sEnum|6..10|] .== [sEnum|6..10|] .=> l .== [sEnum|1..5::SWord8|]
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 l3 -> length l2 .> length l1 .=> replace l1 l2 l3 .== l1
 -- Q.E.D.
@@ -556,11 +556,11 @@ reverse l
 class (SymVal a, SymVal b) => SMap func a b | func -> a b where
   -- | Map a function (or a closure) over a symbolic list.
   --
-  -- >>> map (+ (1 :: SInteger)) [1 .. 5 :: SInteger]
+  -- >>> map (+ (1 :: SInteger)) [sEnum|1 .. 5 :: SInteger|]
   -- [2,3,4,5,6] :: [SInteger]
-  -- >>> map (+ (1 :: SWord 8)) [1 .. 5 :: SWord 8]
+  -- >>> map (+ (1 :: SWord 8)) [sEnum|1 .. 5 :: SWord 8|]
   -- [2,3,4,5,6] :: [SWord8]
-  -- >>> map (\x -> [x] :: SList Integer) [1 .. 3 :: SInteger]
+  -- >>> map (\x -> [x] :: SList Integer) [sEnum|1 .. 3 :: SInteger|]
   -- [[1],[2],[3]] :: [[SInteger]]
   -- >>> import Data.SBV.Tuple
   -- >>> map (\t -> t^._1 + t^._2) (literal [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
@@ -607,7 +607,7 @@ instance (SymVal env, SymVal a, SymVal b) => SMap (Closure (SBV env) (SBV a -> S
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
 --
--- >>> concatMap (\x -> [x, x] :: SList Integer) [1 .. 3 :: SInteger]
+-- >>> concatMap (\x -> [x, x] :: SList Integer) [sEnum|1 .. 3|]
 -- [1,1,2,2,3,3] :: [SInteger]
 concatMap :: (SMap func a [b], SymVal b) => func -> SList a -> SList b
 concatMap f = concat . map f
@@ -617,11 +617,11 @@ concatMap f = concat . map f
 class (SymVal a, SymVal b) => SFoldL func a b | func -> a b where
   -- | @`foldl` f base s@ folds the from the left.
   --
-  -- >>> foldl ((+) @SInteger) 0 [1 .. 5 :: SInteger]
+  -- >>> foldl ((+) @SInteger) 0 [sEnum|1 .. 5|]
   -- 15 :: SInteger
-  -- >>> foldl ((*) @SInteger) 1 [1 .. 5 :: SInteger]
+  -- >>> foldl ((*) @SInteger) 1 [sEnum|1 .. 5|]
   -- 120 :: SInteger
-  -- >>> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) [1 .. 5 :: SInteger]
+  -- >>> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) [sEnum|1 .. 5|]
   -- [5,4,3,2,1] :: [SInteger]
   --
   -- Again, we can use 'Data.SBV.List.foldl' in the reverse too:
@@ -677,11 +677,11 @@ instance (SymVal env, SymVal a, SymVal b) => SFoldL (Closure (SBV env) (SBV b ->
 class (SymVal a, SymVal b) => SFoldR func a b | func -> a b where
   -- | @`foldr` f base s@ folds the from the right.
   --
-  -- >>> foldr ((+) @SInteger) 0 [1 .. 5 :: SInteger]
+  -- >>> foldr ((+) @SInteger) 0 [sEnum|1 .. 5|]
   -- 15 :: SInteger
-  -- >>> foldr ((*) @SInteger) 1 [1 .. 5 :: SInteger]
+  -- >>> foldr ((*) @SInteger) 1 [sEnum|1 .. 5|]
   -- 120 :: SInteger
-  -- >>> foldr (\elt soFar -> soFar ++ [elt]) ([] :: SList Integer) [1 .. 5 :: SInteger]
+  -- >>> foldr (\elt soFar -> soFar ++ [elt]) ([] :: SList Integer) [sEnum|1 .. 5|]
   -- [5,4,3,2,1] :: [SInteger]
   foldr :: func -> SBV b -> SList a -> SBV b
 
@@ -729,10 +729,10 @@ instance (SymVal env, SymVal a, SymVal b) => SFoldR (Closure (SBV env) (SBV a ->
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
 --
--- >>> zip [1..10 :: SInteger] [11..20 :: SInteger]
+-- >>> zip [sEnum|1..10 :: SInteger|] [sEnum|11..20 :: SInteger|]
 -- [(1,11),(2,12),(3,13),(4,14),(5,15),(6,16),(7,17),(8,18),(9,19),(10,20)] :: [(SInteger, SInteger)]
 -- >>> import Data.SBV.Tuple
--- >>> foldr ((+) @SInteger) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [1..10 :: SInteger] [10, 9..1 :: SInteger]))
+-- >>> foldr ((+) @SInteger) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [sEnum|1..10|] [sEnum|10, 9..1|]))
 -- 110 :: SInteger
 zip :: forall a b. (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
 zip xs ys
@@ -748,9 +748,9 @@ class (SymVal a, SymVal b, SymVal c) => SZipWith func a b c | func -> a b c wher
   -- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
   -- The length of the final list is the minumum of the lengths of the given lists.
    --
-   -- >>> zipWith ((+) @SInteger) (literal [1..10]) (literal [11..20])
+   -- >>> zipWith ((+) @SInteger) ([sEnum|1..10::SInteger|]) ([sEnum|11..20::SInteger|])
    -- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]
-   -- >>> foldr ((+) @SInteger) 0 (zipWith ((+) @SInteger) [1..10 :: SInteger] [10, 9..1 :: SInteger])
+   -- >>> foldr ((+) @SInteger) 0 (zipWith ((+) @SInteger) [sEnum|1..10 :: SInteger|] [sEnum|10, 9..1 :: SInteger|])
    -- 110 :: SInteger
   zipWith :: func -> SList a -> SList b -> SList c
 
@@ -794,7 +794,7 @@ instance (SymVal env, SymVal a, SymVal b, SymVal c) => SZipWith (Closure (SBV en
 
 -- | Concatenate list of lists.
 --
--- >>> concat [[1..3::SInteger], [4..7], [8..10]]
+-- >>> concat [[sEnum|1..3::SInteger|], [sEnum|4..7|], [sEnum|8..10|]]
 -- [1,2,3,4,5,6,7,8,9,10] :: [SInteger]
 concat :: forall a. SymVal a => SList [a] -> SList a
 concat = foldr (++) []
@@ -1000,14 +1000,14 @@ instance (SymVal env, SymVal a) => SPartition (Closure (SBV env) (SBV a -> SBool
 
 -- | @`sum` s@. Sum the given sequence.
 --
--- >>> sum [1 .. 10::SInteger]
+-- >>> sum [sEnum|1 .. 10::SInteger|]
 -- 55 :: SInteger
 sum :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 sum = foldr ((+) @(SBV a)) 0
 
 -- | @`product` s@. Multiply out the given sequence.
 --
--- >>> product [1 .. 10::SInteger]
+-- >>> product [sEnum|1 .. 10::SInteger|]
 -- 3628800 :: SInteger
 product :: forall a. (SymVal a, Num (SBV a)) => SList a -> SBV a
 product = foldr ((*) @(SBV a)) 1
