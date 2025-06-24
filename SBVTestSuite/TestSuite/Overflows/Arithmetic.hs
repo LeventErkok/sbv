@@ -22,7 +22,7 @@ module TestSuite.Overflows.Arithmetic(tests) where
 
 import Data.SBV
 import Data.SBV.Dynamic
-import Data.SBV.Internals (unSBV, SBV(..))
+import Data.SBV.Internals (unSBV, SBV(..), SymVal(minMaxBound))
 
 import Data.SBV.Tools.Overflow
 
@@ -160,8 +160,13 @@ overflow op cond = do x  <- free "x"
                           extResult :: SLarge
                           extResult = toLarge x `op` toLarge y
 
-                      return $ overflowHappens `exactlyWhen` (      (extResult `svGreaterThan` toLarge (maxBound :: SBV a))
-                                                             `svOr` (extResult `svLessThan`    toLarge (minBound :: SBV a))
+                          minb, maxb :: a
+                          (minb, maxb) = case minMaxBound of
+                                           Nothing -> error "overflow on type that doesn't support bounded"
+                                           Just ab -> ab
+
+                      return $ overflowHappens `exactlyWhen` (      (extResult `svGreaterThan` toLarge (literal maxb))
+                                                             `svOr` (extResult `svLessThan`    toLarge (literal minb))
                                                              )
 
 overflow1 :: forall a. (Integral a, Bounded a, SymVal a) => (SLarge -> SLarge) -> (SBV a -> SBool) -> Predicate
@@ -172,8 +177,13 @@ overflow1 op cond = do x  <- free "x"
                            extResult :: SLarge
                            extResult = op $ toLarge x
 
-                       return $ overflowHappens `exactlyWhen` (       (extResult `svGreaterThan` toLarge (maxBound :: SBV a))
-                                                               `svOr` (extResult `svLessThan`    toLarge (minBound :: SBV a)))
+                           minb, maxb :: a
+                           (minb, maxb) = case minMaxBound of
+                                            Nothing -> error "overflow on type that doesn't support bounded"
+                                            Just ab -> ab
+
+                       return $ overflowHappens `exactlyWhen` (       (extResult `svGreaterThan` toLarge (literal maxb))
+                                                               `svOr` (extResult `svLessThan`    toLarge (literal minb)))
 
 -- Custom checker for signedMulOverflow
 smulCheck :: forall proxy n. ( KnownNat n,          BVIsNonZero n

@@ -390,13 +390,12 @@ genLists = map mkTest1 (   [("length",        show l,                   check1 S
 -- Test these with make test TGT=enum_
 genEnums :: [TestTree]
 genEnums =
-    -- Only bounded for from, otherwise infinite (or too big for chars, so subset)
+    -- Only bounded for from, otherwise infinite (or too big for chars)
     [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- univ @(WordN 4)]
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- univ @(IntN  4)]
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- univ @Day]
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- w8s]
  ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- i8s]
- ++ [mkTest1 "from"       s     (eq [s..    ] [sEnum|literal s..                    |]) | s <- hiLCS]
 
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- univ @(WordN 4), t <- univ @(WordN 4)]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- univ @(IntN  4), t <- univ @(IntN  4)]
@@ -410,13 +409,12 @@ genEnums =
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- lcs            , t <- lcs            ]
  ++ [mkTest2 "fromTo"     s t   (eq [s..t   ] [sEnum|literal s..literal t           |]) | s <- rs             , t <- rs             ]
 
-    -- Only bounded for fromThen, otherwise infinite (or too big for chars, so subset)
+    -- Only bounded for fromThen, otherwise infinite (or too big for chars)
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @(IntN  4), t <- univ @(IntN  4), s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- univ @Day      , t <- univ @Day      , s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- w8s            , t <- w8s            , s /= t]
  ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- i8s            , t <- i8s            , s /= t]
- ++ [mkTest2 "fromThen"   s t   (eq [s, t.. ] [sEnum|literal s, literal t..         |]) | s <- hiLCS          , t <- hiLCS          , s <  t]
 
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t, u <- univ @(WordN 4)]
  ++ [mkTest3 "fromThenTo" s t u (eq [s, t..u] [sEnum|literal s, literal t..literal u|]) | s <- univ @(IntN  4), t <- univ @(IntN  4), s /= t, u <- univ @(IntN  4)]
@@ -460,10 +458,6 @@ genEnums =
         -- don't add min/max bounds here. causes too big lists.
         lcs :: [Char]
         lcs = map C.chr [5, 10, 30, 40, 41, 42, 43, 90, 100]
-
-        -- This is the upper end of the chars, so when we test upper-bound we go quick
-        hiLCS :: [Char]
-        hiLCS = ['\1114105' ..]
 
 -- Concrete test data
 xsUnsigned :: (Num a, Bounded a) => [a]

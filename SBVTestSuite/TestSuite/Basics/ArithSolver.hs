@@ -12,10 +12,16 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
 
 #if MIN_VERSION_base(4,19,0)
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns -Wno-x-partial #-}
@@ -35,6 +41,9 @@ import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.List   as SL
 
 import Data.SBV.Rational
+
+data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving (Bounded, Enum, Eq)
+mkSymbolicEnumeration  ''Day
 
 -- Test suite
 tests :: TestTree
@@ -83,6 +92,7 @@ tests =
      ++ genChars
      ++ genStrings
      ++ genLists
+     ++ genEnums
      ++ misc
      )
 
@@ -331,16 +341,16 @@ genIntCasts = map mkTest $  cast w8s ++ cast w16s ++ cast w32s ++ cast w64s
                                       return $ literal res .== sFromIntegral a
 
 genReals :: [TestTree]
-genReals = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x <- rs, y <- rs        ]
-                      ++ [("-",  show x, show y, mkThm2 (-)   x y (x -  y)) | x <- rs, y <- rs        ]
-                      ++ [("*",  show x, show y, mkThm2 (*)   x y (x *  y)) | x <- rs, y <- rs        ]
-                      ++ [("/",  show x, show y, mkThm2 (/)   x y (x /  y)) | x <- rs, y <- rs, y /= 0]
-                      ++ [("<",  show x, show y, mkThm2 (.<)  x y (x <  y)) | x <- rs, y <- rs        ]
-                      ++ [("<=", show x, show y, mkThm2 (.<=) x y (x <= y)) | x <- rs, y <- rs        ]
-                      ++ [(">",  show x, show y, mkThm2 (.>)  x y (x >  y)) | x <- rs, y <- rs        ]
-                      ++ [(">=", show x, show y, mkThm2 (.>=) x y (x >= y)) | x <- rs, y <- rs        ]
-                      ++ [("==", show x, show y, mkThm2 (.==) x y (x == y)) | x <- rs, y <- rs        ]
-                      ++ [("/=", show x, show y, mkThm2 (./=) x y (x /= y)) | x <- rs, y <- rs        ]
+genReals = map mkTest $  [("+",  show x, show y, mkThm2 (+)   x y (x +  y)) | x <- ars, y <- ars        ]
+                      ++ [("-",  show x, show y, mkThm2 (-)   x y (x -  y)) | x <- ars, y <- ars        ]
+                      ++ [("*",  show x, show y, mkThm2 (*)   x y (x *  y)) | x <- ars, y <- ars        ]
+                      ++ [("/",  show x, show y, mkThm2 (/)   x y (x /  y)) | x <- ars, y <- ars, y /= 0]
+                      ++ [("<",  show x, show y, mkThm2 (.<)  x y (x <  y)) | x <- ars, y <- ars        ]
+                      ++ [("<=", show x, show y, mkThm2 (.<=) x y (x <= y)) | x <- ars, y <- ars        ]
+                      ++ [(">",  show x, show y, mkThm2 (.>)  x y (x >  y)) | x <- ars, y <- ars        ]
+                      ++ [(">=", show x, show y, mkThm2 (.>=) x y (x >= y)) | x <- ars, y <- ars        ]
+                      ++ [("==", show x, show y, mkThm2 (.==) x y (x == y)) | x <- ars, y <- ars        ]
+                      ++ [("/=", show x, show y, mkThm2 (./=) x y (x /= y)) | x <- ars, y <- ars        ]
   where mkTest (nm, x, y, t) = testCase ("genReals.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
         mkThm2 op x y r = isTheorem $ do [a, b] <- mapM free ["x", "y"]
                                          constrain $ a .== literal x
@@ -464,7 +474,7 @@ genFPConverts = [tst1 ("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
                  ++  [("toFP_Float_ToFloat",    show x, mkThm1 (m toSFloat) x                           x  ) | x <- fs  ]
                  ++  [("toFP_Double_ToFloat",   show x, mkThm1 (m toSFloat) x (                   fp2fp x )) | x <- ds  ]
                  ++  [("toFP_Integer_ToFloat",  show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- iUBs]
-                 ++  [("toFP_Real_ToFloat",     show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- rs  ]
+                 ++  [("toFP_Real_ToFloat",     show x, mkThmC (m toSFloat) x (fromRational (toRational x))) | x <- ars ]
 
                  ++  [("toFP_Int8_ToDouble",    show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- i8s ]
                  ++  [("toFP_Int16_ToDouble",   show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- i16s]
@@ -477,7 +487,7 @@ genFPConverts = [tst1 ("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
                  ++  [("toFP_Float_ToDouble",   show x, mkThm1 (m toSDouble) x (                   fp2fp x )) | x <- fs  ]
                  ++  [("toFP_Double_ToDouble",  show x, mkThm1 (m toSDouble) x                           x )  | x <- ds  ]
                  ++  [("toFP_Integer_ToDouble", show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- iUBs]
-                 ++  [("toFP_Real_ToDouble",    show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- rs  ]
+                 ++  [("toFP_Real_ToDouble",    show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- ars ]
 
                  -- Conversions from floats are only well-defined if the input is in-bounds. So we just check round-trip for these.
                  -- Also note that we clamp Int32/Word32/Int64/Word64 conversions further as floats become too sparse to handle those.
@@ -832,8 +842,8 @@ in8s = xsSigned
 iUBs :: [Integer]
 iUBs = [-1000000] ++ [-1 .. 1] ++ [1000000]
 
-rs :: [AlgReal]
-rs = [fromRational (i % d) | i <- is, d <- dens]
+ars :: [AlgReal]
+ars = [fromRational (i % d) | i <- is, d <- dens]
  where is   = [-1000000] ++ [-1 .. 1] ++ [10000001]
        dens = [5,100,1000000]
 
@@ -883,5 +893,123 @@ misc = [ testCase "misc-t1" $ assertIsSat t1
  where -- https://stackoverflow.com/questions/69033969/trivial-rationals-problems-without-variables-in-sbv-solver-in-haskell
        t1 = do _xs <- sRationals []
                constrain $ (5.%1:: SRational) .<= (5.%1:: SRational)
+
+-- Test these with make test TGT=sEnum_
+genEnums :: [TestTree]
+genEnums =
+    -- Only bounded for from, otherwise infinite (or too big for chars)
+    [mkTest1 "from"       s     (from [s..    ] s) | s <- univ @(WordN 4)]
+ ++ [mkTest1 "from"       s     (from [s..    ] s) | s <- univ @(IntN  4)]
+ ++ [mkTest1 "from"       s     (from [s..    ] s) | s <- univ @Day]
+ ++ [mkTest1 "from"       s     (from [s..    ] s) | s <- w8s]
+ ++ [mkTest1 "from"       s     (from [s..    ] s) | s <- i8s]
+
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- univ @(WordN 4), t <- univ @(WordN 4)]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- univ @(IntN  4), t <- univ @(IntN  4)]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- univ @Day      , t <- univ @Day      ]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- w8s            , t <- w8s            ]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- i8s            , t <- i8s            ]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- ints           , t <- ints           ]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- floats         , t <- floats         ]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- doubles        , t <- doubles        ]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- fps            , t <- fps            ]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- lcs            , t <- lcs            ]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- rs             , t <- rs             ]
+
+    -- Only bounded for fromThen, otherwise infinite (or too big for chars)
+ ++ [mkTest2 "fromThen"   s t   (fromThen [s, t.. ] s t) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t]
+ ++ [mkTest2 "fromThen"   s t   (fromThen [s, t.. ] s t) | s <- univ @(IntN  4), t <- univ @(IntN  4), s /= t]
+ ++ [mkTest2 "fromThen"   s t   (fromThen [s, t.. ] s t) | s <- univ @Day      , t <- univ @Day      , s /= t]
+ ++ [mkTest2 "fromThen"   s t   (fromThen [s, t.. ] s t) | s <- w8s            , t <- w8s            , s /= t]
+ ++ [mkTest2 "fromThen"   s t   (fromThen [s, t.. ] s t) | s <- i8s            , t <- i8s            , s /= t]
+
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t, u <- univ @(WordN 4)]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- univ @(IntN  4), t <- univ @(IntN  4), s /= t, u <- univ @(IntN  4)]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- univ @Day      , t <- univ @Day      , s /= t, u <- univ @Day      ]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- w8s            , t <- w8s            , s /= t, u <- w8s            ]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- i8s            , t <- i8s            , s /= t, u <- i8s            ]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- ints           , t <- ints           , s /= t, u <- ints           ]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- floats         , t <- floats         , s /= t, u <- floats         ]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- doubles        , t <- doubles        , s /= t, u <- doubles        ]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- fps            , t <- fps            , s /= t, u <- fps            ]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- lcs            , t <- lcs            , s /= t, u <- lcs            ]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- rs             , t <- rs             , s /= t, u <- rs             ]
+
+  where mkTest1 pre a     = testCase ("sEnum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show a)
+        mkTest2 pre a b   = testCase ("sEnum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show (a, b))
+        mkTest3 pre a b c = testCase ("sEnum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show (a, b, c))
+
+        from cr a1 = assert $ isTheorem $ do
+                        sa1 <- free_
+                        constrain $ sa1 .== literal a1
+
+                        pure $ [sEnum|sa1..|] .== literal cr
+
+        fromTo cr a1 a2 = assert $ isTheorem $ do
+                            sa1 <- free_
+                            constrain $ sa1 .== literal a1
+
+                            sa2 <- free_
+                            constrain $ sa2 .== literal a2
+
+                            pure $ [sEnum|sa1..sa2|] .== literal cr
+
+        fromThen cr a1 a2 = assert $ isTheorem $ do
+                              sa1 <- free_
+                              constrain $ sa1 .== literal a1
+
+                              sa2 <- free_
+                              constrain $ sa2 .== literal a2
+
+                              pure $ [sEnum|sa1, sa2 ..|] .== literal cr
+
+        fromThenTo cr a1 a2 a3 = assert $ isTheorem $ do
+                                   sa1 <- free_
+                                   constrain $ sa1 .== literal a1
+
+                                   sa2 <- free_
+                                   constrain $ sa2 .== literal a2
+
+                                   sa3 <- free_
+                                   constrain $ sa3 .== literal a3
+
+                                   pure $ [sEnum|sa1, sa2 .. sa3|] .== literal cr
+
+        univ :: (Enum n, Bounded n) => [n]
+        univ = [minBound .. maxBound]
+
+        ints :: [Integer]
+        ints = [-3 .. 3]
+
+        -- Floats create too big a problem for z3, even though we have ground terms. So, skip
+        floats :: [Float]
+        -- floats = [-3.4, -3.2 .. 3.5]
+        floats = []
+
+        -- Ditto here
+        doubles :: [Double]
+        -- doubles = [-3.4, -3.2 .. 3.5]
+        doubles = []
+
+        -- NB. Precision here is important. If you pick too small of a significand
+        -- size then you can turn this enumeration into an infinite list, busting the tests.
+        -- For details see: https://gitlab.haskell.org/ghc/ghc/-/issues/15081
+        -- And likewise, constant folding doesn't happen, too difficult for z3
+        fps :: [FloatingPoint 5 8]
+        -- fps = [-3.4, -3.2 .. 3.5]
+        fps = []
+
+        -- This one works, but is way too slow. So we further reduce the range
+        rs :: [AlgReal]
+        -- rs = [-3.4, -3.2 .. 3.5]
+        rs = [-0.4, -0.2 .. 0.4]
+
+        -- don't add min/max bounds here. causes too big lists.
+        lcs :: [Char]
+        lcs = map C.chr [5, 10, 30, 40, 41, 42, 43, 90, 100]
+
+-- Quiet GHC about unused enum elts
+_unused :: SDay
+_unused = undefined sMon sTue sWed sThu sFri sSat sSun
 
 {- HLint ignore module "Reduce duplication" -}
