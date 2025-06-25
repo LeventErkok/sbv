@@ -23,7 +23,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.Utils (
-         TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry
+         TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof
        , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML, shortProofName
@@ -179,9 +179,10 @@ finishTP cfg@SMTConfig{tpOptions = TPOptions{ribbonLength}} what (skip, mbT) ext
        mkTiming t = '[' : showTDiff t ++ "]"
 
 -- | Unique identifier for each proof.
-data TPUnique = TPInternal
-              | TPSorry
-              | TPUser Int64
+data TPUnique = TPInternal    -- IH's
+              | TPSorry       -- sorry
+              | TPQC          -- qc (quick-check)
+              | TPUser Int64  -- user given
               deriving (NFData, Generic, Eq)
 
 -- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
@@ -263,8 +264,9 @@ depsToTree shouldCompress visited xform (cnt, ProofTree top ds) = (nVisited, Nod
 
         -- Don't show internal axioms, not interesting
         interesting (ProofTree p _) = case uniqId p of
-                                        TPSorry    -> True
                                         TPInternal -> False
+                                        TPSorry    -> True
+                                        TPQC       -> True
                                         TPUser{}   -> True
 
         -- If a proof is used twice in the same proof, compress it
@@ -371,28 +373,48 @@ sorry = ProofObj { dependencies = []
         -- solver to determine as false, we avoid the constant folding.
         p (Forall @"__sbvTP_sorry" (x :: SBool)) = label "SORRY: TP, proof uses \"sorry\"" x
 
+-- | Quick-check uses this proof. It's equivalent to sorry, really; except for its name
+quickCheckProof :: ProofObj
+quickCheckProof = ProofObj { dependencies = []
+                           , isUserAxiom  = False
+                           , getObjProof  = label "quickCheck" (quantifiedBool p)
+                           , getProp      = toDyn p
+                           , proofName    = "quickCheck"
+                           , uniqId       = TPQC
+                           , isCached     = False
+                           }
+  where -- ideally, I'd rather just use
+        --   p = sFalse
+        -- but then SBV constant folds the boolean, and the generated script
+        -- doesn't contain the actual contents, as SBV determines unsatisfiability
+        -- itself. By using the following proposition (which is easy for the backend
+        -- solver to determine as false, we avoid the constant folding.
+        p (Forall @"__sbvTP_quickCheck" (x :: SBool)) = label "QUICKCHECK: TP, proof uses \"qc\"" x
+
 -- | Calculate the root of trust. The returned list of proofs, if any, will need to be sorry-free to
 -- have the given proof to be sorry-free.
 rootOfTrust :: Proof a -> RootOfTrust
 rootOfTrust = rot . proofOf
-  where rot p@ProofObj{uniqId, dependencies} = compress res
-          where res = case uniqId of
+  where rot p@ProofObj{uniqId = curUniq, dependencies} = compress res
+          where res = case curUniq of
                         TPInternal -> RootOfTrust Nothing
+                        TPQC       -> RootOfTrust $ Just [quickCheckProof]
                         TPSorry    -> RootOfTrust $ Just [sorry]
                         TPUser {}  -> self <> foldMap rot dependencies
 
                 -- if sorry is one of our direct dependencies, then we trust this proof
-                self | any isSorry dependencies = RootOfTrust $ Just [p]
-                     | True                     = mempty
+                self | any isUnsafe dependencies = RootOfTrust $ Just [p]
+                     | True                      = mempty
 
-                isSorry ProofObj{uniqId = u} = u == TPSorry
+                isUnsafe ProofObj{uniqId = u} = u `elem` [TPSorry, TPQC]
 
                 -- If we have any dependency that is not sorry itself, then we can skip all the sorries.
                 -- Why? Because "sorry" will implicitly be coming from one of these anyhow. (In other
                 -- words, we do not need to (or want to) distinguish between different uses of sorry.
                 compress (RootOfTrust mbps) = RootOfTrust $ reduce <$> mbps
-                  where reduce ps = case partition isSorry ps of
-                                      (_, []) -> [sorry]
+                  where reduce ps = case partition isUnsafe ps of
+                                      (l, []) | TPSorry `elem` map uniqId l -> [sorry]
+                                              | True                        -> [quickCheckProof]
                                       (_, os) -> os
 
 -- | Calculate the modulo string for dependencies

@@ -302,30 +302,32 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                            [] -> Nothing
                            is -> Just (maximum (0 : is))
 
-           case qcCount of
-             Nothing  -> pure ()
-             Just cnt -> do
-               liftIO $ do r <- quickCheckInstance stdArgs{maxSize = cnt, chatty = False}
+           extras <- case qcCount of
+                       Nothing  -> pure []
 
-                           let err = case r of
-                                       QC.Success {}                -> Nothing
-                                       QC.Failure {QC.output = out} -> Just out
-                                       QC.GaveUp  {}                -> Just "QuickCheck reported \"GaveUp\""    -- can this happen?
-                                       QC.NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
-                           case err of
-                             Nothing -> pure ()
-                             Just e  -> do putStrLn $ "\n*** QuickCheck failed for " ++ intercalate "." (nm : stepName)
-                                           putStrLn e
-                                           error "Failed"
+                       Just cnt -> liftIO $ do
+                                       r <- quickCheckInstance stdArgs{maxSize = cnt, chatty = False}
 
+                                       let err = case r of
+                                               QC.Success {}                -> Nothing
+                                               QC.Failure {QC.output = out} -> Just out
+                                               QC.GaveUp  {}                -> Just "QuickCheck reported \"GaveUp\""    -- can this happen?
+                                               QC.NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
+                                       case err of
+                                         Just e  -> do putStrLn $ "\n*** QuickCheck failed for " ++ intercalate "." (nm : stepName)
+                                                       putStrLn e
+                                                       error "Failed"
+
+                                         Nothing -> -- prove by qc proof so it gets recorded
+                                                    pure [quickCheckProof]
            -- Now prove the step
-           let by = concatMap getHelperProofs hs
+           let by = concatMap getHelperProofs hs ++ extras
 
            smtProofStep cfg tpSt "Step" level
-                                 (TPProofStep False nm ss stepName)
-                                 (Just (sAnd (intros : as ++ map getObjProof by)))
-                                 cur
-                                 (finish [] by)
+                            (TPProofStep False nm ss stepName)
+                            (Just (sAnd (intros : as ++ map getObjProof by)))
+                            cur
+                            (finish [] by)
 
            -- Move to next
            walk intros level (next bn, p)
@@ -1038,7 +1040,7 @@ getAllHelpers (ProofEnd    _           hs                ) = hs
 getHelperProofs :: Helper -> [ProofObj]
 getHelperProofs (HelperProof p) = [p]
 getHelperProofs HelperAssum {}  = []
-getHelperProofs HelperQC    {}  = []
+getHelperProofs HelperQC    {}  = [quickCheckProof]
 getHelperProofs HelperString{}  = []
 
 -- | Get proofs from helpers
