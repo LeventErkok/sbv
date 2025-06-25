@@ -179,9 +179,7 @@ multInverse = prove $ do a <- sFloat "a"
 --
 -- we see that the "more precise" result is larger than what the 'Float' value is, justifying the
 -- larger value with 'RoundTowardPositive. A more detailed study is beyond our current scope, so we'll
--- merely note that floating point representation and semantics is indeed a thorny
--- subject, and point to <http://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> as
--- an excellent guide.
+-- merely note that floating point representation and semantics is indeed a thorny subject.
 roundingAdd :: IO SatResult
 roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
                        constrain $ m ./= literal RoundNearestTiesToEven
