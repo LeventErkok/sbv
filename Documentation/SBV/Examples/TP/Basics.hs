@@ -172,8 +172,6 @@ existsConjunctionNot p q = runTP $ do
 -- * QuickCheck steps
 
 -- | Using quick-check as a step
---
--- >>> runTP qcExample
 qcExample :: TP (Proof (Forall "n" Integer -> SBool))
 qcExample = calc "qcExample"
                  (\(Forall n) -> n + n .== 2 * n) $
