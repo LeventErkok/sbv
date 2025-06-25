@@ -797,8 +797,7 @@ instance (MonadQuery m, Monoid w) => MonadQuery (LW.WriterT w m)
 -- | A query is a user-guided mechanism to directly communicate and extract
 -- results from the solver. A generalization of 'Data.SBV.Query'.
 newtype QueryT m a = QueryT { runQueryT :: ReaderT State m a }
-    deriving newtype (Applicative, Functor, Monad, MonadIO, MonadTrans,
-              MonadError e, MonadState s, MonadWriter w)
+    deriving newtype (Applicative, Functor, Monad, MonadIO, MonadTrans, MonadError e, MonadState s, MonadWriter w)
 
 instance Monad m => MonadQuery (QueryT m) where
   queryState = QueryT ask
