@@ -45,10 +45,17 @@ import qualified Data.Generics as G
 
 import GHC.Generics
 
+import Test.QuickCheck (Arbitrary(..))
+
 -- | A 'RCSet' is either a regular set or a set given by its complement from the corresponding universal set.
 data RCSet a = RegularSet    (Set a)
              | ComplementSet (Set a)
              deriving (NFData, G.Data, Generic)
+
+instance (Ord a, Arbitrary a) => Arbitrary (RCSet a) where
+  arbitrary = do c :: Bool <- arbitrary
+                 if c then RegularSet    <$> arbitrary
+                      else ComplementSet <$> arbitrary
 
 -- | Show instance. Regular sets are shown as usual.
 -- Complements are shown "U -" notation.

@@ -24,7 +24,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
@@ -96,6 +96,8 @@ import Data.SBV.Core.Operations
 import Data.SBV.Control.Types
 
 import Data.SBV.Utils.Lib
+
+import Test.QuickCheck (Arbitrary(..))
 
 -- | Get the current path condition
 getPathCondition :: State -> SBool
@@ -596,7 +598,7 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 -- * Symbolic Values
 -------------------------------------------------------------------------------
 -- | A 'SymVal' is a potential symbolic value that can be created instances of to be fed to a symbolic program.
-class (HasKind a, Typeable a) => SymVal a where
+class (HasKind a, Typeable a, Arbitrary a) => SymVal a where
   -- | Generalization of 'Data.SBV.mkSymVal'
   mkSymVal :: MonadSymbolic m => VarContext -> Maybe String -> m (SBV a)
 

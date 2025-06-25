@@ -34,6 +34,8 @@ module Data.SBV.Client
 import Control.Monad (filterM)
 import Data.Generics
 
+import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
+
 import qualified Data.SBV.List as SL
 
 import qualified Control.Exception as C
@@ -102,9 +104,24 @@ declareSymbolic isEnum typeName = do
     symVals <- if isEnum
                   then [d| instance SymVal $typeCon where
                              minMaxBound = Just (minBound, maxBound)
+
+                           instance Arbitrary $typeCon where
+                             arbitrary = arbitraryBoundedEnum
                        |]
                   else [d| instance SymVal $typeCon where
                              minMaxBound = Nothing
+
+                           -- It's unfortunate we have to give this instance to make things
+                           -- simple; but uninterpreted types don't really fit with the testing strategy.
+                           instance {-# OVERLAPPABLE #-} Arbitrary $typeCon where
+                             arbitrary = error $ unlines [ ""
+                                                         , "*** Data.SBV: Cannot quickcheck the given property."
+                                                         , "***"
+                                                         , "*** Default arbitrary instance for " ++ TH.nameBase typeName ++ " is too limited."
+                                                         , "***"
+                                                         , "*** You can overcome this by giving your own Arbitrary instance."
+                                                         , "*** Please get in touch if this workaround is not suitable for your case."
+                                                         ]
                        |]
 
     symEnum <- if isEnum

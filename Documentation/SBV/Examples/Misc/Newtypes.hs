@@ -15,13 +15,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 
-{-# OPTIONS_GHC -Wall -Werror           #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Misc.Newtypes where
 
 import Prelude hiding (ceiling)
 import Data.SBV
 import qualified Data.SBV.Internals as SI
+import Test.QuickCheck(Arbitrary)
 
 #ifdef DOCTEST
 -- $setup
@@ -29,10 +30,10 @@ import qualified Data.SBV.Internals as SI
 #endif
 
 -- | A t'Metres' is a newtype wrapper around 'Integer'.
-newtype Metres = Metres Integer deriving (Real, Integral, Num, Enum, Eq, Ord)
+newtype Metres = Metres Integer deriving (Real, Integral, Num, Enum, Eq, Ord, Arbitrary)
 
 -- | Symbolic version of t'Metres'.
-type SMetres   = SBV Metres
+type SMetres = SBV Metres
 
 -- | To use t'Metres' symbolically, we associate it with the underlying symbolic
 -- type's kind.
@@ -51,7 +52,7 @@ instance SymVal Metres where
 -- consider measuring the human height in centimetres? The tallest person in history,
 -- Robert Wadlow, was 272 cm. We don't need negative values, so 'Word16' is the smallest type that
 -- suits our needs.
-newtype HumanHeightInCm = HumanHeightInCm Word16 deriving (Real, Integral, Num, Enum, Eq, Ord, Bounded)
+newtype HumanHeightInCm = HumanHeightInCm Word16 deriving (Real, Integral, Num, Enum, Eq, Ord, Bounded, Arbitrary)
 
 -- | Symbolic version of t'HumanHeightInCm'.
 type SHumanHeightInCm = SBV HumanHeightInCm

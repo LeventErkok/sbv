@@ -63,11 +63,12 @@ import Data.SBV.Utils.TDiff
 import Data.Dynamic
 
 import qualified Test.QuickCheck as QC
-import Test.QuickCheck (quickCheckWithResult, stdArgs, maxSize, chatty, Result(..))
+import Test.QuickCheck (quickCheckWithResult, stdArgs, maxSize, chatty, Testable)
 
 -- | Captures the steps for a calculationa proof
-data CalcStrategy = CalcStrategy { calcIntros    :: SBool
-                                 , calcProofTree :: TPProof
+data CalcStrategy = CalcStrategy { calcIntros     :: SBool
+                                 , calcProofTree  :: TPProof
+                                 , calcQCInstance :: QC.Args -> IO QC.Result
                                  }
 
 -- | Saturatable things in steps
@@ -84,7 +85,7 @@ proofTreeSaturatables = go
 
 -- | Things that are inside calc-strategy that we have to saturate
 getCalcStrategySaturatables :: CalcStrategy -> [SBool]
-getCalcStrategySaturatables (CalcStrategy calcIntros calcProofTree) = calcIntros : proofTreeSaturatables calcProofTree
+getCalcStrategySaturatables (CalcStrategy calcIntros calcProofTree _calcQCInstance) = calcIntros : proofTreeSaturatables calcProofTree
 
 -- | Propagate the settings for ribbon/timing from top to current. Because in any subsequent configuration
 -- in a lemmaWith, inductWith etc., we just want to change the solver, not the actual settings for TP.
@@ -172,12 +173,12 @@ class Calc a where
 
          message cfg $ (if tagTheorem then "Theorem" else "Lemma") ++ ": " ++ nm ++ "\n"
 
-         (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
+         (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree, calcQCInstance}) <- calcSteps result steps
 
          -- Collect all subterms and saturate them
          mapM_ qSaturateSavingObservables $ getCalcStrategySaturatables strategy
 
-         query $ proveProofTree cfg tpSt nm (result, calcGoal) calcIntros calcProofTree u
+         query $ proveProofTree cfg tpSt nm (result, calcGoal) calcIntros calcProofTree u calcQCInstance
 
 -- | Prove the proof tree. The arguments are:
 --
@@ -198,13 +199,14 @@ class Calc a where
 proveProofTree :: Proposition a
                => SMTConfig
                -> TPState
-               -> String       -- ^ the name of the top result
-               -> (a, SBool)   -- ^ goal: as a proposition and as a boolean
-               -> SBool        -- ^ hypotheses
-               -> TPProof      -- ^ proof tree
-               -> TPUnique     -- ^ unique id
+               -> String                    -- ^ the name of the top result
+               -> (a, SBool)                -- ^ goal: as a proposition and as a boolean
+               -> SBool                     -- ^ hypotheses
+               -> TPProof                   -- ^ proof tree
+               -> TPUnique                  -- ^ unique id
+               -> (QC.Args -> IO QC.Result) -- ^ quick-checker
                -> Query (Proof a)
-proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree uniq = do
+proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree uniq quickCheckInstance = do
 
   let SMTConfig{tpOptions = TPOptions{printStats}} = cfg
   mbStartTime <- getTimeStampIf printStats
@@ -303,13 +305,13 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
            case qcCount of
              Nothing  -> pure ()
              Just cnt -> do
-               liftIO $ do r <- quickCheckWithResult stdArgs{maxSize = cnt, chatty = False}
-                                                     (sAnd (intros : as) .=> cur)
+               liftIO $ do r <- quickCheckInstance stdArgs{maxSize = cnt, chatty = False}
+
                            let err = case r of
-                                       Success {}                -> Nothing
-                                       Failure {QC.output = out} -> Just out
-                                       GaveUp  {}                -> Just "QuickCheck reported \"GaveUp\""    -- can this happen?
-                                       NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
+                                       QC.Success {}                -> Nothing
+                                       QC.Failure {QC.output = out} -> Just out
+                                       QC.GaveUp  {}                -> Just "QuickCheck reported \"GaveUp\""    -- can this happen?
+                                       QC.NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
                            case err of
                              Nothing -> pure ()
                              Just e  -> do putStrLn $ "\n*** QuickCheck failed for " ++ intercalate "." (nm : stepName)
@@ -354,10 +356,11 @@ data CalcContext a = CalcStart     [Helper] -- Haven't started yet
                    | CalcStep  a a [Helper] -- Intermediate step: first value, prev value
 
 -- | Turn a sequence of steps into a chain of equalities
-mkCalcSteps :: EqSymbolic a => (SBool, TPProofRaw a) -> CalcStrategy
-mkCalcSteps (intros, tpp) = CalcStrategy { calcIntros    = intros
-                                         , calcProofTree = go (CalcStart []) tpp
-                                         }
+mkCalcSteps :: EqSymbolic a => (SBool, TPProofRaw a) -> (QC.Args -> IO QC.Result) -> CalcStrategy
+mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
+                                                    , calcProofTree  = go (CalcStart []) tpp
+                                                    , calcQCInstance = qcInstance
+                                                    }
   where go :: EqSymbolic a => CalcContext a -> TPProofRaw a -> TPProof
 
         -- End of the proof; tie the begin and end
@@ -379,42 +382,47 @@ mkCalcSteps (intros, tpp) = CalcStrategy { calcIntros    = intros
         go (CalcStart hs)           (ProofStep cur hs' p) =                               go (CalcStep cur   cur (hs' ++ hs)) p
         go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev  .== cur) hs (go (CalcStep first cur hs')         p)
 
+-- | Quick-check wrapper. Internal use only.
+quick :: Testable p => p -> QC.Args -> IO QC.Result
+quick = flip quickCheckWithResult
+
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
-   calcSteps result steps = pure (result, mkCalcSteps steps)
+   calcSteps result steps = pure (result, mkCalcSteps steps (quick result))
 
 -- | Chaining lemmas that depend on a single extra variable.
 instance (KnownSymbol na, SymVal a) => Calc (Forall na a -> SBool) where
    calcSteps result steps = do a <- free (symbolVal (Proxy @na))
-                               pure (result (Forall a), mkCalcSteps (steps a))
+                               pure (result (Forall a), mkCalcSteps (steps a) (quick (\aa -> result (Forall aa))))
 
 -- | Chaining lemmas that depend on two extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Calc (Forall na a -> Forall nb b -> SBool) where
    calcSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
-                               pure (result (Forall a) (Forall b), mkCalcSteps (steps a b))
+                               pure (result (Forall a) (Forall b), mkCalcSteps (steps a b) (quick (\aa ab -> result (Forall aa) (Forall ab))))
 
 -- | Chaining lemmas that depend on three extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Calc (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
    calcSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c))
+                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c) (quick (\aa ab ac -> result (Forall aa) (Forall ab) (Forall ac))))
 
 -- | Chaining lemmas that depend on four extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
    calcSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d))
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d) (quick (\aa ab ac ad -> result (Forall aa) (Forall ab) (Forall ac) (Forall ad))))
 
 -- | Chaining lemmas that depend on five extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
       => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
    calcSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e))
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e) (quick (\aa ab ac ad ae -> result (Forall aa) (Forall ab) (Forall ac) (Forall ad) (Forall ae))))
 
 -- | Captures the schema for an inductive proof. Base case might be nothing, to cover strong induction.
-data InductionStrategy = InductionStrategy { inductionIntros    :: SBool
-                                           , inductionMeasure   :: Maybe SBool
-                                           , inductionBaseCase  :: Maybe SBool
-                                           , inductionProofTree :: TPProof
-                                           , inductiveStep      :: SBool
+data InductionStrategy = InductionStrategy { inductionIntros     :: SBool
+                                           , inductionMeasure    :: Maybe SBool
+                                           , inductionBaseCase   :: Maybe SBool
+                                           , inductionProofTree  :: TPProof
+                                           , inductiveStep       :: SBool
+                                           , inductiveQCInstance :: QC.Args -> IO QC.Result
                                            }
 
 -- | Are we doing regular induction or measure based general induction?
@@ -425,7 +433,8 @@ getInductionStrategySaturatables (InductionStrategy inductionIntros
                                                     inductionMeasure
                                                     inductionBaseCase
                                                     inductionProofSteps
-                                                    inductiveStep)
+                                                    inductiveStep
+                                                    _inductiveQCInstance)
   = inductionIntros : inductiveStep : proofTreeSaturatables inductionProofSteps ++ maybeToList inductionBaseCase ++ maybeToList inductionMeasure
 
 -- | A class for doing regular inductive proofs.
@@ -513,6 +522,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
                                  , inductionBaseCase
                                  , inductionProofTree
                                  , inductiveStep
+                                 , inductiveQCInstance
                                  } <- getStrategy
 
       mapM_ qSaturateSavingObservables $ getInductionStrategySaturatables strategy
@@ -536,17 +546,18 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
                                               bc
                                               (\d -> finishTP cfg "Q.E.D." d [])
 
-       proveProofTree cfg tpSt nm (result, inductiveStep) inductionIntros inductionProofTree u
+       proveProofTree cfg tpSt nm (result, inductiveStep) inductionIntros inductionProofTree u inductiveQCInstance
 
 -- Induction strategy helper
-mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw a) -> SBool -> InductionStrategy
-mkIndStrategy mbMeasure mbBaseCase indSteps step =
-        let CalcStrategy { calcIntros, calcProofTree } = mkCalcSteps indSteps
-        in InductionStrategy { inductionIntros    = calcIntros
-                             , inductionMeasure   = mbMeasure
-                             , inductionBaseCase  = mbBaseCase
-                             , inductionProofTree = calcProofTree
-                             , inductiveStep      = step
+mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw a) -> SBool -> (QC.Args -> IO QC.Result) -> InductionStrategy
+mkIndStrategy mbMeasure mbBaseCase indSteps step indQCInstance =
+        let CalcStrategy { calcIntros, calcProofTree, calcQCInstance } = mkCalcSteps indSteps indQCInstance
+        in InductionStrategy { inductionIntros     = calcIntros
+                             , inductionMeasure    = mbMeasure
+                             , inductionBaseCase   = mbBaseCase
+                             , inductionProofTree  = calcProofTree
+                             , inductiveStep       = step
+                             , inductiveQCInstance = calcQCInstance
                              }
 
 -- | Create a new variable with the given name, return both the variable and the name
@@ -578,6 +589,7 @@ instance KnownSymbol nn => Inductive (Forall nn Integer -> SBool) where
                             (Just (result (Forall 0)))
                             (steps (internalAxiom "IH" (Measure n .>= zero .=> result (Forall n))) n)
                             (indResult [nn ++ "+1"] (result (Forall (n+1))))
+                            (quick (\an -> result (Forall an)))
 
 -- | Induction over 'SInteger', taking an extra argument
 instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Integer -> Forall na a -> SBool) where
@@ -591,6 +603,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Inte
                             (Just (result (Forall 0) (Forall a)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> Measure n .>= zero .=> result (Forall n) (Forall a'))) n a)
                             (indResult [nn ++ "+1", na] (result (Forall (n+1)) (Forall a)))
+                            (quick (\an aa -> result (Forall an) (Forall aa)))
 
 -- | Induction over 'SInteger', taking two extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) where
@@ -605,6 +618,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) =>
                             (Just (result (Forall 0) (Forall a) (Forall b)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b'))) n a b)
                             (indResult [nn ++ "+1", na, nb] (result (Forall (n+1)) (Forall a) (Forall b)))
+                            (quick (\an aa ab -> result (Forall an) (Forall aa) (Forall ab)))
 
 -- | Induction over 'SInteger', taking three extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -620,6 +634,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c'))) n a b c)
                             (indResult [nn ++ "+1", na, nb, nc] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c)))
+                            (quick (\an aa ab ac -> result (Forall an) (Forall aa) (Forall ab) (Forall ac)))
 
 -- | Induction over 'SInteger', taking four extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -636,6 +651,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))) n a b c d)
                             (indResult [nn ++ "+1", na, nb, nc, nd] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d)))
+                            (quick (\an aa ab ac ad -> result (Forall an) (Forall aa) (Forall ab) (Forall ac) (Forall ad)))
 
 -- | Induction over 'SInteger', taking five extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -653,6 +669,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) n a b c d e)
                             (indResult [nn ++ "+1", na, nb, nc, nd, ne] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
+                            (quick (\an aa ab ac ad ae -> result (Forall an) (Forall aa) (Forall ab) (Forall ac) (Forall ad) (Forall ae)))
 
 -- Given a user name for the list, get a name for the element, in the most suggestive way possible
 --   xs  -> x
@@ -674,6 +691,7 @@ instance (KnownSymbol nxs, SymVal x) => Inductive (Forall nxs [x] -> SBool) wher
                             (Just (result (Forall SL.nil)))
                             (steps (internalAxiom "IH" (result (Forall xs))) (x, xs))
                             (indResult [nxxs] (result (Forall (x SL..: xs))))
+                            (quick (\axs -> result (Forall axs)))
 
 -- | Induction over 'SList', taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (Forall nxs [x] -> Forall na a -> SBool) where
@@ -687,6 +705,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (For
                             (Just (result (Forall SL.nil) (Forall a)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs) (Forall a'))) (x, xs) a)
                             (indResult [nxxs, na] (result (Forall (x SL..: xs)) (Forall a)))
+                            (quick (\axs aa -> result (Forall axs) (Forall aa)))
 
 -- | Induction over 'SList', taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) where
@@ -701,6 +720,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (Just (result (Forall SL.nil) (Forall a) (Forall b)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs) (Forall a') (Forall b'))) (x, xs) a b)
                             (indResult [nxxs, na, nb] (result (Forall (x SL..: xs)) (Forall a) (Forall b)))
+                            (quick (\axs aa ab -> result (Forall axs) (Forall aa) (Forall ab)))
 
 -- | Induction over 'SList', taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -716,6 +736,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs) (Forall a') (Forall b') (Forall c'))) (x, xs) a b c)
                             (indResult [nxxs, na, nb, nc] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c)))
+                            (quick (\axs aa ab ac -> result (Forall axs) (Forall aa) (Forall ab) (Forall ac)))
 
 -- | Induction over 'SList', taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -732,6 +753,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d'))) (x, xs) a b c d)
                             (indResult [nxxs, na, nb, nc, nd] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d)))
+                            (quick (\axs aa ab ac ad -> result (Forall axs) (Forall aa) (Forall ab) (Forall ac) (Forall ad)))
 
 -- | Induction over 'SList', taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -749,6 +771,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (x, xs) a b c d e)
                             (indResult [nxxs, na, nb, nc, nd, ne] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
+                            (quick (\axs aa ab ac ad ae -> result (Forall axs) (Forall aa) (Forall ab) (Forall ac) (Forall ad) (Forall ae)))
 
 -- | Induction over two 'SList', simultaneously
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((Forall nxs [x], Forall nys [y]) -> SBool) where
@@ -762,6 +785,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((F
                             (Just (result (Forall SL.nil, Forall SL.nil) .&& result (Forall SL.nil, Forall (y SL..: ys)) .&& result (Forall (x SL..: xs), Forall SL.nil)))
                             (steps (internalAxiom "IH" (result (Forall xs, Forall ys))) (x, xs, y, ys))
                             (indResult [nxxs, nyys] (result (Forall (x SL..: xs), Forall (y SL..: ys))))
+                            (quick (\axs ays -> result (Forall axs, Forall ays)))
 
 -- | Induction over two 'SList', simultaneously, taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) where
@@ -776,6 +800,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs, Forall ys) (Forall a'))) (x, xs, y, ys) a)
                             (indResult [nxxs, nyys, na] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a)))
+                            (quick (\axs ays aa -> result (Forall axs, Forall ays) (Forall aa)))
 
 -- | Induction over two 'SList', simultaneously, taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) where
@@ -791,6 +816,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs, Forall ys) (Forall a') (Forall b'))) (x, xs, y, ys) a b)
                             (indResult [nxxs, nyys, na, nb] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b)))
+                            (quick (\axs ays aa ab -> result (Forall axs, Forall ays) (Forall aa) (Forall ab)))
 
 -- | Induction over two 'SList', simultaneously, taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -807,6 +833,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c'))) (x, xs, y, ys) a b c)
                             (indResult [nxxs, nyys, na, nb, nc] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c)))
+                            (quick (\axs ays aa ab ac -> result (Forall axs, Forall ays) (Forall aa) (Forall ab) (Forall ac)))
 
 -- | Induction over two 'SList', simultaneously, taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -824,6 +851,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d'))) (x, xs, y, ys) a b c d)
                             (indResult [nxxs, nyys, na, nb, nc, nd] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d)))
+                            (quick (\axs ays aa ab ac ad -> result (Forall axs, Forall ays) (Forall aa) (Forall ab) (Forall ac) (Forall ad)))
 
 -- | Induction over two 'SList', simultaneously, taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -842,6 +870,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (x, xs, y, ys) a b c d e)
                             (indResult [nxxs, nyys, na, nb, nc, nd, ne] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
+                            (quick (\axs ays aa ab ac ad ae -> result (Forall axs, Forall ays) (Forall aa) (Forall ab) (Forall ac) (Forall ad) (Forall ae)))
 
 
 -- | Generalized induction with one parameter
@@ -852,6 +881,7 @@ instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> measure a' .< measure a .=> result (Forall a'))) a)
                            (indResult [na] (result (Forall a)))
+                           (quick (\aa -> result (Forall aa)))
 
 -- | Generalized induction with two parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (Forall na a -> Forall nb b -> SBool) where
@@ -862,6 +892,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (For
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .< measure a b .=> result (Forall a') (Forall b'))) a b)
                            (indResult [na, nb] (result (Forall a) (Forall b)))
+                           (quick (\aa ab -> result (Forall aa) (Forall ab)))
 
 -- | Generalized induction with three parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -873,6 +904,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .< measure a b c .=> result (Forall a') (Forall b') (Forall c'))) a b c)
                            (indResult [na, nb, nc] (result (Forall a) (Forall b) (Forall c)))
+                           (quick (\aa ab ac -> result (Forall aa) (Forall ab) (Forall ac)))
 
 -- | Generalized induction with four parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -885,6 +917,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .< measure a b c d .=> result (Forall a') (Forall b') (Forall c') (Forall d'))) a b c d)
                            (indResult [na, nb, nc, nd] (result (Forall a) (Forall b) (Forall c) (Forall d)))
+                           (quick (\aa ab ac ad -> result (Forall aa) (Forall ab) (Forall ac) (Forall ad)))
 
 -- | Generalized induction with five parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -898,6 +931,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .< measure a b c d e .=> result (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) a b c d e)
                            (indResult [na, nb, nc, nd, ne] (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
+                           (quick (\aa ab ac ad ae -> result (Forall aa) (Forall ab) (Forall ac) (Forall ad) (Forall ae)))
 
 -- | Instantiation for a universally quantified variable
 newtype Inst (nm :: Symbol) a = Inst (SBV a)

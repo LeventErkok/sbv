@@ -17,7 +17,7 @@
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module Data.SBV.Core.SizedFloats (
         -- * Type-sized floats
@@ -51,6 +51,8 @@ import qualified LibBF as BF
 import qualified Data.Generics as G
 
 import Control.DeepSeq(NFData(..))
+
+import Test.QuickCheck (Arbitrary(..))
 
 -- | A floating point value, indexed by its exponent and significand sizes.
 --
@@ -121,6 +123,15 @@ data FP = FP { fpExponentSize    :: Int
 -- Not full, but good enough
 instance NFData FP where
   rnf (FP e s _) = e `seq` s `seq` ()
+
+instance ValidFloat eb sb => Arbitrary (FloatingPoint eb sb) where
+  arbitrary = do v <- arbitrary
+                 pure $ FloatingPoint (FP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb)) v)
+
+-- | This arbitrary instance is questionable, but seems to work ok. We get an arbitrary double,
+-- and just use that. Probably not good enough for real random work, but good enough here.
+instance Arbitrary BigFloat where
+  arbitrary = BF.bfFromDouble <$> arbitrary
 
 -- Manually implemented instance as GHC generated a non-IEEE 754 compliant instance.
 -- Note that we cannot pack the values in a tuple and then compare them as that will

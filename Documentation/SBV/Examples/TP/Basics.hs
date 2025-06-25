@@ -176,10 +176,10 @@ existsConjunctionNot p q = runTP $ do
 -- >>> runTP qcExample
 qcExample :: TP (Proof (Forall "n" Integer -> SBool))
 qcExample = calc "qcExample"
-                 (\(Forall n) -> n + n .== 2 * n + 1) $
+                 (\(Forall n) -> n + n .== 2 * n) $
                  \n -> [] |- n + n
                           ?? qc 1000
-                          =: 2 * n + 1
+                          =: 2 * n
                           =: qed
 
 -- * No termination checks

@@ -59,6 +59,8 @@ import Data.SBV.Utils.Lib (isKString)
 import GHC.Generics
 import qualified Data.Generics.Uniplate.Data as G
 
+import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
+
 -- | Kind of symbolic value
 data Kind = KBool
           | KBounded !Bool !Int
@@ -533,6 +535,10 @@ data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable 
 
 -- | 'RoundingMode' kind
 instance HasKind RoundingMode
+
+-- | An arbitrary rounding mode
+instance Arbitrary RoundingMode where
+  arbitrary = arbitraryBoundedEnum
 
 -- | Convert a rounding mode to the format SMT-Lib2 understands.
 smtRoundingMode :: RoundingMode -> String

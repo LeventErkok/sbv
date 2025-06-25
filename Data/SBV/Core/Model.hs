@@ -367,6 +367,9 @@ instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (ArrayModel a b) w
 
   minMaxBound = Nothing
 
+instance (Arbitrary a, Arbitrary b) => Arbitrary (ArrayModel a b) where
+  arbitrary = ArrayModel <$> arbitrary <*> arbitrary
+
 instance (Ord a, SymVal a) => SymVal (RCSet a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(RCSet a)))
 
