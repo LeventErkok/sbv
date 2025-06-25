@@ -125,8 +125,7 @@ instance NFData FP where
   rnf (FP e s _) = e `seq` s `seq` ()
 
 instance ValidFloat eb sb => Arbitrary (FloatingPoint eb sb) where
-  arbitrary = do v <- arbitrary
-                 pure $ FloatingPoint (FP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb)) v)
+  arbitrary = FloatingPoint . FP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))  <$> arbitrary
 
 -- | This arbitrary instance is questionable, but seems to work ok. We get an arbitrary double,
 -- and just use that. Probably not good enough for real random work, but good enough here.

@@ -393,7 +393,7 @@ instance Calc SBool where
 -- | Chaining lemmas that depend on a single extra variable.
 instance (KnownSymbol na, SymVal a) => Calc (Forall na a -> SBool) where
    calcSteps result steps = do a <- free (symbolVal (Proxy @na))
-                               pure (result (Forall a), mkCalcSteps (steps a) (quick (\aa -> result (Forall aa))))
+                               pure (result (Forall a), mkCalcSteps (steps a) (quick (result . Forall)))
 
 -- | Chaining lemmas that depend on two extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Calc (Forall na a -> Forall nb b -> SBool) where
@@ -589,7 +589,7 @@ instance KnownSymbol nn => Inductive (Forall nn Integer -> SBool) where
                             (Just (result (Forall 0)))
                             (steps (internalAxiom "IH" (Measure n .>= zero .=> result (Forall n))) n)
                             (indResult [nn ++ "+1"] (result (Forall (n+1))))
-                            (quick (\an -> result (Forall an)))
+                            (quick (result . Forall))
 
 -- | Induction over 'SInteger', taking an extra argument
 instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Integer -> Forall na a -> SBool) where
@@ -691,7 +691,7 @@ instance (KnownSymbol nxs, SymVal x) => Inductive (Forall nxs [x] -> SBool) wher
                             (Just (result (Forall SL.nil)))
                             (steps (internalAxiom "IH" (result (Forall xs))) (x, xs))
                             (indResult [nxxs] (result (Forall (x SL..: xs))))
-                            (quick (\axs -> result (Forall axs)))
+                            (quick (result . Forall))
 
 -- | Induction over 'SList', taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (Forall nxs [x] -> Forall na a -> SBool) where
@@ -881,7 +881,7 @@ instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> measure a' .< measure a .=> result (Forall a'))) a)
                            (indResult [na] (result (Forall a)))
-                           (quick (\aa -> result (Forall aa)))
+                           (quick (result . Forall))
 
 -- | Generalized induction with two parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (Forall na a -> Forall nb b -> SBool) where
