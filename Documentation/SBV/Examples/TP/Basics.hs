@@ -177,7 +177,7 @@ qcExample = calc "qcExample"
                  (\(Forall n) -> n + n .== 2 * n) $
                  \n -> [] |- n + n
                           ?? qc 1000
-                          =: 2 * n
+                          =: 2 * n + 1
                           =: qed
 
 -- * No termination checks
