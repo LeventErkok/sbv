@@ -383,86 +383,47 @@ mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
         go (CalcStart hs)           (ProofStep cur hs' p) =                               go (CalcStep cur   cur (hs' ++ hs)) p
         go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev  .== cur) hs (go (CalcStep first cur hs')         p)
 
--- | Quick-check wrapper. Internal use only.
-class QCWrap a where
-  quick :: a -> [Int] -> QC.Args -> Query QC.Result
-
 -- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree
 -- for the step that's marked as such.
-qcWalk :: [Int] -> (SBool, TPProofRaw t) -> Query SBool
-qcWalk step = error $ "I wish I knew how to implement qcWalk. I'm at: " ++ show step
-
--- Regular Calc instances
-instance QCWrap (SBool, TPProofRaw t) where
-  quick r step qcArgs = do t <- qcWalk step r
-                           liftIO (quickCheckWithResult qcArgs t)
-
--- Inductive proofs over lists
-instance SymVal x => QCWrap (Proof unused -> (SBV x, SList x) -> (SBool, TPProofRaw t)) where
-  quick r step qcArgs = do let p = error "Unsupported: QuickCheck: Shouldn't be referring to the proof arg! (list case)"
-                           x  <- freshVar_
-                           xs <- freshVar_
-                           t  <- qcWalk step (r p (x, xs))
-                           liftIO (quickCheckWithResult qcArgs t)
-
--- Inductive proofs over two lists
-instance (SymVal x, SymVal y) => QCWrap (Proof unused -> (SBV x, SList x, SBV y, SList y) -> (SBool, TPProofRaw t)) where
-  quick r step qcArgs = do let p = error "Unsupported: QuickCheck: Shouldn't be referring to the proof arg! (list case)"
-                           x  <- freshVar_
-                           xs <- freshVar_
-                           y  <- freshVar_
-                           ys <- freshVar_
-                           t  <- qcWalk step (r p (x, xs, y, ys))
-                           liftIO (quickCheckWithResult qcArgs t)
-
--- Strong induction
-instance QCWrap (Proof unused -> (SBool, TPProofRaw t)) where
-  quick r step qcArgs = do let p = error "Unsupported: QuickCheck: Shouldn't be referring to the proof arg! (list case)"
-                           t  <- qcWalk step (r p)
-                           liftIO (quickCheckWithResult qcArgs t)
-
--- | Instances that extend quick-check to arbitrary number of elements
-instance (SymVal a, QCWrap r) => QCWrap (SBV a -> r) where
-  quick f step args = freshVar_ >>= \v -> quick (f v) step args
-
-instance (SymVal x, SymVal a, QCWrap (Proof unused -> (SBV x, SList x) -> r)) => QCWrap (Proof unused -> (SBV x, SList x) -> SBV a -> r) where
-  quick f step args = freshVar_ >>= \v -> quick (\p i -> (f p i v)) step args
-
-instance (SymVal x, SymVal y, SymVal a, QCWrap (Proof unused -> (SBV x, SList x, SBV y, SList y) -> r)) => QCWrap (Proof unused -> (SBV x, SList x, SBV y, SList y) -> SBV a -> r) where
-  quick f step args = freshVar_ >>= \v -> quick (\p i -> (f p i v)) step args
-
-instance (SymVal a, QCWrap (Proof unused -> r)) => QCWrap (Proof unused -> SBV a -> r) where
-  quick f step args = freshVar_ >>= \v -> quick (\p -> (f p v)) step args
+qcWalk :: (SBool, (SBool, TPProofRaw t)) -> [Int] -> QC.Args -> Query QC.Result
+qcWalk _qcTree lbl qcArgs = liftIO (quickCheckWithResult qcArgs runTrace)
+  where runTrace :: SBool
+        runTrace = error $ "I wish I knew how to implement qcWalk. I'm at: " ++ show lbl
 
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
-   calcSteps result steps = pure (result, mkCalcSteps steps (quick steps))
+   calcSteps result steps = pure (result, mkCalcSteps steps (qcWalk (sTrue, steps)))
 
 -- | Chaining lemmas that depend on a single extra variable.
 instance (KnownSymbol na, SymVal a) => Calc (Forall na a -> SBool) where
-   calcSteps result steps = do a <- free (symbolVal (Proxy @na))
-                               pure (result (Forall a), mkCalcSteps (steps a) (quick steps))
+   calcSteps result steps = do a  <- free (symbolVal (Proxy @na))
+                               let rSteps = steps a
+                               pure (result (Forall a), mkCalcSteps rSteps (qcWalk (sTrue, rSteps)))
 
 -- | Chaining lemmas that depend on two extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Calc (Forall na a -> Forall nb b -> SBool) where
    calcSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
-                               pure (result (Forall a) (Forall b), mkCalcSteps (steps a b) (quick steps))
+                               let rSteps = steps a b
+                               pure (result (Forall a) (Forall b), mkCalcSteps rSteps (qcWalk (sTrue, rSteps)))
 
 -- | Chaining lemmas that depend on three extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Calc (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
    calcSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c) (quick steps))
+                               let rSteps = steps a b c
+                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps rSteps (qcWalk (sTrue, rSteps)))
 
 -- | Chaining lemmas that depend on four extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
    calcSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d) (quick steps))
+                               let rSteps = steps a b c d
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps rSteps (qcWalk (sTrue, rSteps)))
 
 -- | Chaining lemmas that depend on five extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
       => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
    calcSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e) (quick steps))
+                               let rSteps = steps a b c d e
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps rSteps (qcWalk (sTrue, rSteps)))
 
 -- | Captures the schema for an inductive proof. Base case might be nothing, to cover strong induction.
 data InductionStrategy = InductionStrategy { inductionIntros     :: SBool
@@ -633,11 +594,16 @@ instance KnownSymbol nn => Inductive (Forall nn Integer -> SBool) where
 
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
+
+       let bc     = result (Forall 0)
+           ih     = internalAxiom "IH" (Measure n .>= zero .=> result (Forall n))
+           rSteps = steps ih n
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall 0)))
-                            (steps (internalAxiom "IH" (Measure n .>= zero .=> result (Forall n))) n)
+                            (Just bc)
+                            rSteps
                             (indResult [nn ++ "+1"] (result (Forall (n+1))))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over 'SInteger', taking an extra argument
 instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Integer -> Forall na a -> SBool) where
@@ -647,11 +613,16 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Inte
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
+
+       let bc     = result (Forall 0) (Forall a)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) -> Measure n .>= zero .=> result (Forall n) (Forall a'))
+           rSteps = steps ih n a
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall 0) (Forall a)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> Measure n .>= zero .=> result (Forall n) (Forall a'))) n a)
+                            (Just bc)
+                            rSteps
                             (indResult [nn ++ "+1", na] (result (Forall (n+1)) (Forall a)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over 'SInteger', taking two extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) where
@@ -662,11 +633,16 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) =>
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
        (b, nb) <- mkVar (Proxy @nb)
+
+       let bc     = result (Forall 0) (Forall a) (Forall b)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b'))
+           rSteps = steps ih n a b
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall 0) (Forall a) (Forall b)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b'))) n a b)
+                            (Just bc)
+                            rSteps
                             (indResult [nn ++ "+1", na, nb] (result (Forall (n+1)) (Forall a) (Forall b)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over 'SInteger', taking three extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -678,11 +654,16 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (a, na) <- mkVar (Proxy @na)
        (b, nb) <- mkVar (Proxy @nb)
        (c, nc) <- mkVar (Proxy @nc)
+
+       let bc     = result (Forall 0) (Forall a) (Forall b) (Forall c)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c'))
+           rSteps = steps ih n a b c
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall 0) (Forall a) (Forall b) (Forall c)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c'))) n a b c)
+                            (Just bc)
+                            rSteps
                             (indResult [nn ++ "+1", na, nb, nc] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over 'SInteger', taking four extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -695,11 +676,16 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (b, nb) <- mkVar (Proxy @nb)
        (c, nc) <- mkVar (Proxy @nc)
        (d, nd) <- mkVar (Proxy @nd)
+
+       let bc     = result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))
+           rSteps = steps ih n a b c d
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))) n a b c d)
+                            (Just bc)
+                            rSteps
                             (indResult [nn ++ "+1", na, nb, nc, nd] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over 'SInteger', taking five extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -713,11 +699,16 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (c, nc) <- mkVar (Proxy @nc)
        (d, nd) <- mkVar (Proxy @nd)
        (e, ne) <- mkVar (Proxy @ne)
+
+       let bc     = result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
+           rSteps = steps ih n a b c d e
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) n a b c d e)
+                            (Just bc)
+                            rSteps
                             (indResult [nn ++ "+1", na, nb, nc, nd, ne] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- Given a user name for the list, get a name for the element, in the most suggestive way possible
 --   xs  -> x
@@ -735,11 +726,16 @@ instance (KnownSymbol nxs, SymVal x) => Inductive (Forall nxs [x] -> SBool) wher
 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
+
+       let bc     = result (Forall SL.nil)
+           ih     = internalAxiom "IH" (result (Forall xs))
+           rSteps = steps ih (x, xs)
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil)))
-                            (steps (internalAxiom "IH" (result (Forall xs))) (x, xs))
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs] (result (Forall (x SL..: xs))))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over 'SList', taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (Forall nxs [x] -> Forall na a -> SBool) where
@@ -749,11 +745,16 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (For
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
+
+       let bc     = result (Forall SL.nil) (Forall a)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs) (Forall a'))
+           rSteps = steps ih (x, xs) a
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil) (Forall a)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs) (Forall a'))) (x, xs) a)
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, na] (result (Forall (x SL..: xs)) (Forall a)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over 'SList', taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) where
@@ -764,11 +765,16 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
        (b, nb)       <- mkVar  (Proxy @nb)
+
+       let bc     = result (Forall SL.nil) (Forall a) (Forall b)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs) (Forall a') (Forall b'))
+           rSteps = steps ih (x, xs) a b
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil) (Forall a) (Forall b)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs) (Forall a') (Forall b'))) (x, xs) a b)
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, na, nb] (result (Forall (x SL..: xs)) (Forall a) (Forall b)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over 'SList', taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -780,11 +786,16 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (a, na)       <- mkVar  (Proxy @na)
        (b, nb)       <- mkVar  (Proxy @nb)
        (c, nc)       <- mkVar  (Proxy @nc)
+
+       let bc     = result (Forall SL.nil) (Forall a) (Forall b) (Forall c)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs) (Forall a') (Forall b') (Forall c'))
+           rSteps = steps ih (x, xs) a b c
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs) (Forall a') (Forall b') (Forall c'))) (x, xs) a b c)
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, na, nb, nc] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over 'SList', taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -797,11 +808,16 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (b, nb)       <- mkVar  (Proxy @nb)
        (c, nc)       <- mkVar  (Proxy @nc)
        (d, nd)       <- mkVar  (Proxy @nd)
+
+       let bc     = result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d'))
+           rSteps = steps ih (x, xs) a b c d
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d'))) (x, xs) a b c d)
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, na, nb, nc, nd] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over 'SList', taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -815,11 +831,16 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (c, nc)       <- mkVar  (Proxy @nc)
        (d, nd)       <- mkVar  (Proxy @nd)
        (e, ne)       <- mkVar  (Proxy @ne)
+
+       let bc     = result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
+           rSteps = steps ih (x, xs) a b c d e
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (x, xs) a b c d e)
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, na, nb, nc, nd, ne] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over two 'SList', simultaneously
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((Forall nxs [x], Forall nys [y]) -> SBool) where
@@ -829,11 +850,16 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((F
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
+
+       let bc     = result (Forall SL.nil, Forall SL.nil) .&& result (Forall SL.nil, Forall (y SL..: ys)) .&& result (Forall (x SL..: xs), Forall SL.nil)
+           ih     = internalAxiom "IH" (result (Forall xs, Forall ys))
+           rSteps = steps ih (x, xs, y, ys)
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil, Forall SL.nil) .&& result (Forall SL.nil, Forall (y SL..: ys)) .&& result (Forall (x SL..: xs), Forall SL.nil)))
-                            (steps (internalAxiom "IH" (result (Forall xs, Forall ys))) (x, xs, y, ys))
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, nyys] (result (Forall (x SL..: xs), Forall (y SL..: ys))))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over two 'SList', simultaneously, taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) where
@@ -844,11 +870,16 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
        (a, na)       <- mkVar  (Proxy @na)
+
+       let bc     = result (Forall SL.nil, Forall SL.nil) (Forall a) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs, Forall ys) (Forall a'))
+           rSteps = steps ih (x, xs, y, ys) a
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs, Forall ys) (Forall a'))) (x, xs, y, ys) a)
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, nyys, na] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over two 'SList', simultaneously, taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) where
@@ -860,11 +891,16 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (y, ys, nyys) <- mkLVar (Proxy @nys)
        (a, na)       <- mkVar  (Proxy @na)
        (b, nb)       <- mkVar  (Proxy @nb)
+
+       let bc     = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs, Forall ys) (Forall a') (Forall b'))
+           rSteps = steps ih (x, xs, y, ys) a b
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs, Forall ys) (Forall a') (Forall b'))) (x, xs, y, ys) a b)
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, nyys, na, nb] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over two 'SList', simultaneously, taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -877,11 +913,16 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (a, na)       <- mkVar  (Proxy @na)
        (b, nb)       <- mkVar  (Proxy @nb)
        (c, nc)       <- mkVar  (Proxy @nc)
+
+       let bc     = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c'))
+           rSteps = steps ih (x, xs, y, ys) a b c
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c'))) (x, xs, y, ys) a b c)
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, nyys, na, nb, nc] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over two 'SList', simultaneously, taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -895,11 +936,16 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (b, nb)       <- mkVar  (Proxy @nb)
        (c, nc)       <- mkVar  (Proxy @nc)
        (d, nd)       <- mkVar  (Proxy @nd)
+
+       let bc     = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d'))
+           rSteps = steps ih (x, xs, y, ys) a b c d
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d'))) (x, xs, y, ys) a b c d)
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, nyys, na, nb, nc, nd] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 -- | Induction over two 'SList', simultaneously, taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -914,33 +960,48 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (c, nc)       <- mkVar  (Proxy @nc)
        (d, nd)       <- mkVar  (Proxy @nd)
        (e, ne)       <- mkVar  (Proxy @ne)
+
+       let bc     = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
+           rSteps = steps ih (x, xs, y, ys) a b c d e
+
        pure $ mkIndStrategy Nothing
-                            (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (x, xs, y, ys) a b c d e)
+                            (Just bc)
+                            rSteps
                             (indResult [nxxs, nyys, na, nb, nc, nd, ne] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (quick steps)
+                            (qcWalk (bc, rSteps))
 
 
 -- | Generalized induction with one parameter
 instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
   sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
+
+      let ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) -> measure a' .< measure a .=> result (Forall a'))
+          rSteps = steps ih a
+          conc   = result (Forall a)
+
       pure $ mkIndStrategy (Just (measure a .>= zero))
                            Nothing
-                           (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> measure a' .< measure a .=> result (Forall a'))) a)
-                           (indResult [na] (result (Forall a)))
-                           (quick steps)
+                           rSteps
+                           (indResult [na] conc)
+                           (qcWalk (conc, rSteps))
 
 -- | Generalized induction with two parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (Forall na a -> Forall nb b -> SBool) where
   sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
+
+      let ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .< measure a b .=> result (Forall a') (Forall b'))
+          rSteps = steps ih a b
+          conc   = result (Forall a) (Forall b)
+
       pure $ mkIndStrategy (Just (measure a b .>= zero))
                            Nothing
-                           (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .< measure a b .=> result (Forall a') (Forall b'))) a b)
-                           (indResult [na, nb] (result (Forall a) (Forall b)))
-                           (quick steps)
+                           rSteps
+                           (indResult [na, nb] conc)
+                           (qcWalk (conc, rSteps))
 
 -- | Generalized induction with three parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -948,11 +1009,16 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
+
+      let ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .< measure a b c .=> result (Forall a') (Forall b') (Forall c'))
+          rSteps = steps ih a b c
+          conc   = result (Forall a) (Forall b) (Forall c)
+
       pure $ mkIndStrategy (Just (measure a b c .>= zero))
                            Nothing
-                           (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .< measure a b c .=> result (Forall a') (Forall b') (Forall c'))) a b c)
-                           (indResult [na, nb, nc] (result (Forall a) (Forall b) (Forall c)))
-                           (quick steps)
+                           rSteps
+                           (indResult [na, nb, nc] conc)
+                           (qcWalk (conc, rSteps))
 
 -- | Generalized induction with four parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -961,11 +1027,16 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
       (d, nd) <- mkVar (Proxy @nd)
+
+      let ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .< measure a b c d .=> result (Forall a') (Forall b') (Forall c') (Forall d'))
+          rSteps = steps ih a b c d
+          conc   = result (Forall a) (Forall b) (Forall c) (Forall d)
+
       pure $ mkIndStrategy (Just (measure a b c d .>= zero))
                            Nothing
-                           (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .< measure a b c d .=> result (Forall a') (Forall b') (Forall c') (Forall d'))) a b c d)
-                           (indResult [na, nb, nc, nd] (result (Forall a) (Forall b) (Forall c) (Forall d)))
-                           (quick steps)
+                           rSteps
+                           (indResult [na, nb, nc, nd] conc)
+                           (qcWalk (conc, rSteps))
 
 -- | Generalized induction with five parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -975,11 +1046,16 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       (c, nc) <- mkVar (Proxy @nc)
       (d, nd) <- mkVar (Proxy @nd)
       (e, ne) <- mkVar (Proxy @ne)
+
+      let ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .< measure a b c d e .=> result (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
+          rSteps = steps ih a b c d e
+          conc   = result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+
       pure $ mkIndStrategy (Just (measure a b c d e .>= zero))
                            Nothing
-                           (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .< measure a b c d e .=> result (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) a b c d e)
-                           (indResult [na, nb, nc, nd, ne] (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                           (quick steps)
+                           rSteps
+                           (indResult [na, nb, nc, nd, ne] conc)
+                           (qcWalk (conc, rSteps))
 
 -- | Instantiation for a universally quantified variable
 newtype Inst (nm :: Symbol) a = Inst (SBV a)
