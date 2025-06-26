@@ -196,6 +196,9 @@ class Calc a where
 --     - The above will give us a bunch of results, for each leaf node in the tree.
 --     - Then prove: (intros .=> sAnd results) .=> resultBool
 --     - Then conclude result, based on what assumption that proving resultBool establishes result
+--
+-- NB. This function needs to be in "sync" with qcWalk below for obvious reasons. So, any changes there
+-- make it here too!
 proveProofTree :: Proposition a
                => SMTConfig
                -> TPState
@@ -395,7 +398,9 @@ qcWalk assumptions (intros, tree) _checkedLabel qcArgs = liftIO (quickCheckWithR
                    constrain intros
                    runTree tree
 
-        -- "run" the tree, and if we hit the correct label return the result
+        -- "run" the tree, and if we hit the correct label return the result.
+        -- This needs to be in "sync" with proveProofTree for obvious reasons. So, any changes there
+        -- make it here too!
         runTree :: TPProof -> Symbolic SBool
         runTree _ = pure sTrue
 
