@@ -392,17 +392,29 @@ mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
 -- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree
 -- for the step that's marked as such.
 qcWalk :: SBool -> (SBool, TPProof) -> [Int] -> QC.Args -> Query QC.Result
-qcWalk assumptions (intros, tree) _checkedLabel qcArgs = liftIO (quickCheckWithResult qcArgs qcRun)
+qcWalk assumptions (intros, tree) checkedLabel qcArgs = liftIO (quickCheckWithResult qcArgs qcRun)
   where qcRun :: Symbolic SBool
         qcRun = do constrain assumptions
                    constrain intros
-                   runTree tree
+                   runTree 1 ([1], tree)
 
         -- "run" the tree, and if we hit the correct label return the result.
         -- This needs to be in "sync" with proveProofTree for obvious reasons. So, any changes there
         -- make it here too!
-        runTree :: TPProof -> Symbolic SBool
-        runTree _ = pure sTrue
+        runTree :: Int -> ([Int], TPProof) -> Symbolic SBool
+        runTree level (bn, p) = case p of
+           ProofEnd{}         -> error $ unlines [ ""
+                                                 , "*** Data.SBV.qcWalk: Impossible happened."
+                                                 , "***"
+                                                 , "*** Exhausted the proof tree without hitting the relevant node."
+                                                 , "*** While trying to quickcheck at level " ++ show checkedLabel
+                                                 , "***"
+                                                 , "*** Currently at level: " ++ show (level, bn)
+                                                 , "***"
+                                                 , "*** Please report this as a bug!"
+                                                 ]
+           ProofBranch{} -> error "tbd"
+           ProofStep{}   -> error "tbd"
 
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
