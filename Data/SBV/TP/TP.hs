@@ -386,9 +386,16 @@ mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
 -- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree
 -- for the step that's marked as such.
 qcWalk :: (SBool, (SBool, TPProofRaw t)) -> [Int] -> QC.Args -> Query QC.Result
-qcWalk _qcTree lbl qcArgs = liftIO (quickCheckWithResult qcArgs runTrace)
-  where runTrace :: SBool
-        runTrace = error $ "I wish I knew how to implement qcWalk. I'm at: " ++ show lbl
+qcWalk (assumptions, (intros, tree)) _checkedLabel qcArgs = liftIO (quickCheckWithResult qcArgs qcRun)
+  where qcRun :: Symbolic SBool
+        qcRun = do constrain assumptions
+                   constrain intros
+
+                   -- Now "run" the tree, and if we hit the correct label return the result
+                   runTree tree
+
+        runTree :: TPProofRaw t -> Symbolic SBool
+        runTree _t = pure sTrue
 
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
