@@ -397,8 +397,7 @@ qcWalk assumptions (intros, tree) checkedLabel qcArgs = liftIO (quickCheckWithRe
   where qcRun :: Symbolic SBool
         qcRun = do results <- runTree sTrue 1 ([1], tree)
                    case [b | (l, b) <- results, l == checkedLabel] of
-                     [(caseCond, b)] -> do liftIO $ putStrLn $ "Found label: " ++ show checkedLabel
-                                           constrain $ assumptions .&& intros .&& caseCond
+                     [(caseCond, b)] -> do constrain $ assumptions .&& intros .&& caseCond
                                            pure b
                      []              -> die "Exhausted the proof tree without hitting the relevant node."
                      _               -> die "Hit the label multiple times."
