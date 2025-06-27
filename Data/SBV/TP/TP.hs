@@ -180,6 +180,12 @@ class Calc a where
 
          query $ proveProofTree cfg tpSt nm (result, calcGoal) calcIntros calcProofTree u calcQCInstance
 
+-- | In the proof tree, what's the next node label?
+nextProofStep :: [Int] -> [Int]
+nextProofStep bs = case reverse bs of
+                     i : rs -> reverse $ i + 1 : rs
+                     []     -> [1]
+
 -- | Prove the proof tree. The arguments are:
 --
 --      result           : The ultimate goal we want to prove. Note that this is a general proposition, and we don't actually prove it. See the next param.
@@ -212,12 +218,6 @@ proveProofTree :: Proposition a
 proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree uniq quickCheckInstance = do
 
   let SMTConfig{tpOptions = TPOptions{printStats}} = cfg
-  mbStartTime <- getTimeStampIf printStats
-
-  let next :: [Int] -> [Int]
-      next bs = case reverse bs of
-                  i : rs -> reverse $ i + 1 : rs
-                  []     -> [1]
 
       isEnd ProofEnd{}    = True
       isEnd ProofStep{}   = False
@@ -332,12 +332,13 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                             (finish [] by)
 
            -- Move to next
-           walk intros level (next bn, p)
+           walk intros level (nextProofStep bn, p)
 
   results <- walk initialHypotheses 1 ([1], calcProofTree)
 
   queryDebug [nm ++ ": Proof end: proving the result:"]
 
+  mbStartTime <- getTimeStampIf printStats
   smtProofStep cfg tpSt "Result" 1
                (TPProofStep False nm [] [""])
                (Just (initialHypotheses .=> sAnd results))
@@ -394,27 +395,34 @@ mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
 qcWalk :: SBool -> (SBool, TPProof) -> [Int] -> QC.Args -> Query QC.Result
 qcWalk assumptions (intros, tree) checkedLabel qcArgs = liftIO (quickCheckWithResult qcArgs qcRun)
   where qcRun :: Symbolic SBool
-        qcRun = do constrain assumptions
-                   constrain intros
-                   runTree 1 ([1], tree)
+        qcRun = do results <- runTree sTrue 1 ([1], tree)
+                   case [b | (l, b) <- results, l == checkedLabel] of
+                     [(caseCond, b)] -> do liftIO $ putStrLn $ "Found label: " ++ show checkedLabel
+                                           constrain $ assumptions .&& intros .&& caseCond
+                                           pure b
+                     []              -> die "Exhausted the proof tree without hitting the relevant node."
+                     _               -> die "Hit the label multiple times."
+
+        die why =  error $ unlines [ ""
+                                   , "*** Data.SBV.qcWalk: Impossible happened."
+                                   , "***"
+                                   , "*** " ++ why
+                                   , "***"
+                                   , "*** While trying to quickcheck at level " ++ show checkedLabel
+                                   , "*** Please report this as a bug!"
+                                   ]
 
         -- "run" the tree, and if we hit the correct label return the result.
         -- This needs to be in "sync" with proveProofTree for obvious reasons. So, any changes there
         -- make it here too!
-        runTree :: Int -> ([Int], TPProof) -> Symbolic SBool
-        runTree level (bn, p) = case p of
-           ProofEnd{}         -> error $ unlines [ ""
-                                                 , "*** Data.SBV.qcWalk: Impossible happened."
-                                                 , "***"
-                                                 , "*** Exhausted the proof tree without hitting the relevant node."
-                                                 , "*** While trying to quickcheck at level " ++ show checkedLabel
-                                                 , "***"
-                                                 , "*** Currently at level: " ++ show (level, bn)
-                                                 , "***"
-                                                 , "*** Please report this as a bug!"
-                                                 ]
-           ProofBranch{} -> error "tbd"
-           ProofStep{}   -> error "tbd"
+        runTree :: SBool -> Int -> ([Int], TPProof) -> Symbolic [([Int], (SBool, SBool))]
+        runTree _        _     (_,  ProofEnd{})         = pure []
+        runTree caseCond level (bn, ProofBranch _ _ ps) = concat <$> sequence [runTree (caseCond .&& branchCond) (level + 1) (bn ++ [i, 1], p)
+                                                                              | (i, (branchCond, p)) <- zip [1..] ps
+                                                                              ]
+        runTree caseCond level (bn, ProofStep cur _s p) = do rest <- runTree caseCond level (nextProofStep bn, p)
+                                                             pure $ (bn, (caseCond, cur)) : rest
+
 
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
