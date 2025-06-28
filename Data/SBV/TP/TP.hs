@@ -377,8 +377,8 @@ mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
                                      -- This means we're given a sequence of no-steps. While this is useless in the
                                      -- general case, it's quite valid in a case-split; where one of the case-splits
                                      -- might be easy enough for the solver to deduce so the user simply says "just derive it for me."
-                                     CalcStart hs'          -> ProofEnd sTrue           (hs' ++ hs) -- Nothing proven!
-                                     CalcStep begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
+                                     CalcStart hs'           -> ProofEnd sTrue           (hs' ++ hs) -- Nothing proven!
+                                     CalcStep  begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
 
         -- Branch: Just push it down. We use the hints from previous step, and pass the current ones down.
         go step (ProofBranch c hs ps) = ProofBranch c (getHelperText hs) [(branchCond, go step' p) | (branchCond, p) <- ps]
