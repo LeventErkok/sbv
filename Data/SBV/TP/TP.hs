@@ -387,8 +387,8 @@ mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
                            CalcStep  a b hs' -> CalcStep a b (hs' ++ hs)
 
         -- Step:
-        go (CalcStart hs)           (ProofStep cur hs' p) =                               go (CalcStep cur   cur (hs' ++ hs)) p
-        go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev  .== cur) hs (go (CalcStep first cur hs')         p)
+        go (CalcStart hs)           (ProofStep cur hs' p) =                              go (CalcStep cur   cur (hs' ++ hs)) p
+        go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev .== cur) hs (go (CalcStep first cur hs')         p)
 
 -- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree
 -- for the step that's marked as such.
