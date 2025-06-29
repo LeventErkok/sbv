@@ -68,7 +68,7 @@ import Test.QuickCheck (quickCheckWithResult, stdArgs, maxSize, chatty)
 -- | Captures the steps for a calculationa proof
 data CalcStrategy = CalcStrategy { calcIntros     :: SBool
                                  , calcProofTree  :: TPProof
-                                 , calcQCInstance :: [Int] -> QC.Args -> Query QC.Result
+                                 , calcQCInstance :: [Int] -> QC.Args -> IO QC.Result
                                  }
 
 -- | Saturatable things in steps
@@ -167,13 +167,15 @@ class Calc a where
       tpSt <- getTPState
       u    <- tpGetNextUnique
 
+      (_, CalcStrategy {calcQCInstance}) <- liftIO $ runSMTWith defaultSMTCfg (calcSteps result steps)
+
       liftIO $ runSMTWith cfg $ do
 
          qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
          message cfg $ (if tagTheorem then "Theorem" else "Lemma") ++ ": " ++ nm ++ "\n"
 
-         (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree, calcQCInstance}) <- calcSteps result steps
+         (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
 
          -- Collect all subterms and saturate them
          mapM_ qSaturateSavingObservables $ getCalcStrategySaturatables strategy
@@ -208,12 +210,12 @@ nextProofStep bs = case reverse bs of
 proveProofTree :: Proposition a
                => SMTConfig
                -> TPState
-               -> String                                -- ^ the name of the top result
-               -> (a, SBool)                            -- ^ goal: as a proposition and as a boolean
-               -> SBool                                 -- ^ hypotheses
-               -> TPProof                               -- ^ proof tree
-               -> TPUnique                              -- ^ unique id
-               -> ([Int] -> QC.Args -> Query QC.Result) -- ^ quick-checker
+               -> String                             -- ^ the name of the top result
+               -> (a, SBool)                         -- ^ goal: as a proposition and as a boolean
+               -> SBool                              -- ^ hypotheses
+               -> TPProof                            -- ^ proof tree
+               -> TPUnique                           -- ^ unique id
+               -> ([Int] -> QC.Args -> IO QC.Result) -- ^ quick-checker
                -> Query (Proof a)
 proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree uniq quickCheckInstance = do
 
@@ -308,15 +310,19 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
            extras <- case qcCount of
                        Nothing  -> pure []
 
-                       Just cnt -> do r <- quickCheckInstance bn stdArgs{maxSize = cnt, chatty = False}
-                                      liftIO $ do
+                       Just cnt -> liftIO $ do
+                                       r <- quickCheckInstance bn stdArgs{maxSize = cnt, chatty = False}
                                        let err = case r of
                                                QC.Success {}                -> Nothing
                                                QC.Failure {QC.output = out} -> Just out
                                                QC.GaveUp  {}                -> Just "QuickCheck reported \"GaveUp\""    -- can this happen?
                                                QC.NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
                                        case err of
-                                         Just e  -> do putStrLn $ "\n*** QuickCheck failed for " ++ intercalate "." (nm : stepName)
+                                         Just e  -> do let hs' = concatMap xform hs
+                                                           xform (HelperQC{}) = [HelperString "Failed during quickTest."]
+                                                           xform _            = []
+                                                       _ <- startTP cfg True "Step" level (TPProofStep False nm (getHelperText hs') stepName)
+                                                       putStrLn $ "\n*** QuickCheck failed for " ++ intercalate "." (nm : stepName)
                                                        putStrLn e
                                                        error "Failed"
 
@@ -361,7 +367,7 @@ data CalcContext a = CalcStart     [Helper] -- Haven't started yet
                    | CalcStep  a a [Helper] -- Intermediate step: first value, prev value
 
 -- | Turn a sequence of steps into a chain of equalities
-mkCalcSteps :: EqSymbolic a => (SBool, TPProofRaw a) -> ((SBool, TPProof) -> [Int] -> QC.Args -> Query QC.Result) -> CalcStrategy
+mkCalcSteps :: EqSymbolic a => (SBool, TPProofRaw a) -> ((SBool, TPProof) -> [Int] -> QC.Args -> IO QC.Result) -> CalcStrategy
 mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
                                                     , calcProofTree  = pt
                                                     , calcQCInstance = qcInstance (intros, pt)
@@ -392,8 +398,8 @@ mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
 
 -- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree
 -- for the step that's marked as such.
-qcWalk :: SBool -> (SBool, TPProof) -> [Int] -> QC.Args -> Query QC.Result
-qcWalk assumptions (intros, tree) checkedLabel qcArgs = liftIO (quickCheckWithResult qcArgs qcRun)
+qcWalk :: SBool -> (SBool, TPProof) -> [Int] -> QC.Args -> IO QC.Result
+qcWalk assumptions (intros, tree) checkedLabel qcArgs = quickCheckWithResult qcArgs qcRun
   where qcRun :: Symbolic SBool
         qcRun = do results <- runTree sTrue 1 ([1], tree)
                    case [b | (l, b) <- results, l == checkedLabel] of
@@ -430,8 +436,62 @@ instance Calc SBool where
 -- | Chaining lemmas that depend on a single extra variable.
 instance (KnownSymbol na, SymVal a) => Calc (Forall na a -> SBool) where
    calcSteps result steps = do a  <- free (symbolVal (Proxy @na))
-                               pure (result (Forall a), mkCalcSteps (steps a) (qcWalk sTrue))
+                               pure (result (Forall a), mkCalcSteps (steps a) (\_ -> patch sTrue))
+     where
+        patch :: SBool -> [Int] -> QC.Args -> IO QC.Result
+        patch assumptions checkedLabel qcArgs = do
+                quickCheckWithResult qcArgs $ do
+                   aa <- free (symbolVal (Proxy @na))
+                   let (intros, tpp) = steps aa
+                       tree          = go (CalcStart []) tpp
+                   qcRun intros tree
+          where qcRun intros tree = do results <- runTree sTrue 1 ([1], tree)
+                                       case [b | (l, b) <- results, l == checkedLabel] of
+                                         [(caseCond, b)] -> do constrain $ assumptions .&& intros .&& caseCond
+                                                               pure b
+                                         []              -> die "Exhausted the proof tree without hitting the relevant node."
+                                         _               -> die "Hit the label multiple times."
 
+                die why =  error $ unlines [ ""
+                                           , "*** Data.SBV.patch: Impossible happened."
+                                           , "***"
+                                           , "*** " ++ why
+                                           , "***"
+                                           , "*** While trying to quickcheck at level " ++ show checkedLabel
+                                           , "*** Please report this as a bug!"
+                                           ]
+
+                -- "run" the tree, and if we hit the correct label return the result.
+                -- This needs to be in "sync" with proveProofTree for obvious reasons. So, any changes there
+                -- make it here too!
+                runTree :: SBool -> Int -> ([Int], TPProof) -> Symbolic [([Int], (SBool, SBool))]
+                runTree _        _     (_,  ProofEnd{})         = pure []
+                runTree caseCond level (bn, ProofBranch _ _ ps) = concat <$> sequence [runTree (caseCond .&& branchCond) (level + 1) (bn ++ [i, 1], p)
+                                                                                      | (i, (branchCond, p)) <- zip [1..] ps
+                                                                                      ]
+                runTree caseCond level (bn, ProofStep cur _s p) = do rest <- runTree caseCond level (nextProofStep bn, p)
+                                                                     pure $ (bn, (caseCond, cur)) : rest
+
+        -- go :: EqSymbolic a => CalcContext a -> TPProofRaw a -> TPProof
+
+        -- End of the proof; tie the begin and end
+        go step (ProofEnd () hs) = case step of
+                                     -- It's tempting to error out if we're at the start and already reached the end
+                                     -- This means we're given a sequence of no-steps. While this is useless in the
+                                     -- general case, it's quite valid in a case-split; where one of the case-splits
+                                     -- might be easy enough for the solver to deduce so the user simply says "just derive it for me."
+                                     CalcStart hs'           -> ProofEnd sTrue           (hs' ++ hs) -- Nothing proven!
+                                     CalcStep  begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
+
+        -- Branch: Just push it down. We use the hints from previous step, and pass the current ones down.
+        go step (ProofBranch c hs ps) = ProofBranch c (getHelperText hs) [(branchCond, go step' p) | (branchCond, p) <- ps]
+           where step' = case step of
+                           CalcStart hs'     -> CalcStart (hs' ++ hs)
+                           CalcStep  a b hs' -> CalcStep a b (hs' ++ hs)
+
+        -- Step:
+        go (CalcStart hs)           (ProofStep cur hs' p) =                              go (CalcStep cur   cur (hs' ++ hs)) p
+        go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev .== cur) hs (go (CalcStep first cur hs')         p)
 -- | Chaining lemmas that depend on two extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Calc (Forall na a -> Forall nb b -> SBool) where
    calcSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
@@ -459,7 +519,7 @@ data InductionStrategy = InductionStrategy { inductionIntros     :: SBool
                                            , inductionBaseCase   :: Maybe SBool
                                            , inductionProofTree  :: TPProof
                                            , inductiveStep       :: SBool
-                                           , inductiveQCInstance :: [Int] -> QC.Args -> Query QC.Result
+                                           , inductiveQCInstance :: [Int] -> QC.Args -> IO QC.Result
                                            }
 
 -- | Are we doing regular induction or measure based general induction?
@@ -586,7 +646,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
        proveProofTree cfg tpSt nm (result, inductiveStep) inductionIntros inductionProofTree u inductiveQCInstance
 
 -- Induction strategy helper
-mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw a) -> SBool -> ((SBool, TPProof) -> [Int] -> QC.Args -> Query QC.Result) -> InductionStrategy
+mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw a) -> SBool -> ((SBool, TPProof) -> [Int] -> QC.Args -> IO QC.Result) -> InductionStrategy
 mkIndStrategy mbMeasure mbBaseCase indSteps step indQCInstance =
         let CalcStrategy { calcIntros, calcProofTree, calcQCInstance } = mkCalcSteps indSteps indQCInstance
         in InductionStrategy { inductionIntros     = calcIntros
