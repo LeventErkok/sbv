@@ -205,7 +205,7 @@ nextProofStep bs = case reverse bs of
 --     - Then prove: (intros .=> sAnd results) .=> resultBool
 --     - Then conclude result, based on what assumption that proving resultBool establishes result
 --
--- NB. This function needs to be in "sync" with qcWalk below for obvious reasons. So, any changes there
+-- NB. This function needs to be in "sync" with qcRun below for obvious reasons. So, any changes there
 -- make it here too!
 proveProofTree :: Proposition a
                => SMTConfig
@@ -362,22 +362,15 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                                             , isCached     = False
                                             }
 
--- Helper data-type for calc-step below
+-- | Helper data-type for calc-step below
 data CalcContext a = CalcStart     [Helper] -- Haven't started yet
                    | CalcStep  a a [Helper] -- Intermediate step: first value, prev value
 
--- | Turn a sequence of steps into a chain of equalities
-mkCalcSteps :: EqSymbolic a => (SBool, TPProofRaw a) -> ((SBool, TPProof) -> [Int] -> QC.Args -> IO QC.Result) -> CalcStrategy
-mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
-                                                    , calcProofTree  = pt
-                                                    , calcQCInstance = qcInstance (intros, pt)
-                                                    }
-  where pt :: TPProof
-        pt = go (CalcStart []) tpp
 
-        go :: EqSymbolic a => CalcContext a -> TPProofRaw a -> TPProof
-
-        -- End of the proof; tie the begin and end
+-- | Turn a raw (i.e., as written by the user) proof tree to a tree where the successive equalities are made explicit.
+mkProofTree :: EqSymbolic a => TPProofRaw a -> TPProof
+mkProofTree = go (CalcStart [])
+  where -- End of the proof; tie the begin and end
         go step (ProofEnd () hs) = case step of
                                      -- It's tempting to error out if we're at the start and already reached the end
                                      -- This means we're given a sequence of no-steps. While this is useless in the
@@ -396,122 +389,82 @@ mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
         go (CalcStart hs)           (ProofStep cur hs' p) =                              go (CalcStep cur   cur (hs' ++ hs)) p
         go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev .== cur) hs (go (CalcStep first cur hs')         p)
 
--- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree
--- for the step that's marked as such.
-qcWalk :: SBool -> (SBool, TPProof) -> [Int] -> QC.Args -> IO QC.Result
-qcWalk assumptions (intros, tree) checkedLabel qcArgs = quickCheckWithResult qcArgs qcRun
-  where qcRun :: Symbolic SBool
-        qcRun = do results <- runTree sTrue 1 ([1], tree)
-                   case [b | (l, b) <- results, l == checkedLabel] of
-                     [(caseCond, b)] -> do constrain $ assumptions .&& intros .&& caseCond
-                                           pure b
-                     []              -> die "Exhausted the proof tree without hitting the relevant node."
-                     _               -> die "Hit the label multiple times."
+-- | Turn a sequence of steps into a chain of equalities
+mkCalcSteps :: EqSymbolic a => (SBool, TPProofRaw a) -> ([Int] -> QC.Args -> IO QC.Result) -> CalcStrategy
+mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
+                                                    , calcProofTree  = mkProofTree tpp
+                                                    , calcQCInstance = qcInstance
+                                                    }
 
-        die why =  error $ unlines [ ""
-                                   , "*** Data.SBV.qcWalk: Impossible happened."
-                                   , "***"
-                                   , "*** " ++ why
-                                   , "***"
-                                   , "*** While trying to quickcheck at level " ++ show checkedLabel
-                                   , "*** Please report this as a bug!"
-                                   ]
+-- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree for the step that's marked as such.
+qcRun :: EqSymbolic a => SBool -> (SBool, TPProofRaw a) -> [Int] -> Symbolic SBool
+qcRun assumptions (intros, tpp) checkedLabel = do
+        results <- runTree sTrue 1 ([1], tree)
+        case [b | (l, b) <- results, l == checkedLabel] of
+          [(caseCond, b)] -> do constrain $ assumptions .&& intros .&& caseCond
+                                pure b
+          []              -> die "Exhausted the proof tree without hitting the relevant node."
+          _               -> die "Hit the label multiple times."
 
-        -- "run" the tree, and if we hit the correct label return the result.
-        -- This needs to be in "sync" with proveProofTree for obvious reasons. So, any changes there
-        -- make it here too!
-        runTree :: SBool -> Int -> ([Int], TPProof) -> Symbolic [([Int], (SBool, SBool))]
-        runTree _        _     (_,  ProofEnd{})         = pure []
-        runTree caseCond level (bn, ProofBranch _ _ ps) = concat <$> sequence [runTree (caseCond .&& branchCond) (level + 1) (bn ++ [i, 1], p)
-                                                                              | (i, (branchCond, p)) <- zip [1..] ps
-                                                                              ]
-        runTree caseCond level (bn, ProofStep cur _s p) = do rest <- runTree caseCond level (nextProofStep bn, p)
-                                                             pure $ (bn, (caseCond, cur)) : rest
+ where tree = mkProofTree tpp
+       die why =  error $ unlines [ ""
+                                  , "*** Data.SBV.patch: Impossible happened."
+                                  , "***"
+                                  , "*** " ++ why
+                                  , "***"
+                                  , "*** While trying to quickcheck at level " ++ show checkedLabel
+                                  , "*** Please report this as a bug!"
+                                  ]
 
+       -- "run" the tree, and if we hit the correct label return the result.
+       -- This needs to be in "sync" with proveProofTree for obvious reasons. So, any changes there
+       -- make it here too!
+       runTree :: SBool -> Int -> ([Int], TPProof) -> Symbolic [([Int], (SBool, SBool))]
+       runTree _        _     (_,  ProofEnd{})         = pure []
+       runTree caseCond level (bn, ProofBranch _ _ ps) = concat <$> sequence [runTree (caseCond .&& branchCond) (level + 1) (bn ++ [i, 1], p)
+                                                                             | (i, (branchCond, p)) <- zip [1..] ps
+                                                                             ]
+       runTree caseCond level (bn, ProofStep cur _s p) = do rest <- runTree caseCond level (nextProofStep bn, p)
+                                                            pure $ (bn, (caseCond, cur)) : rest
+
+tbd :: a
+tbd = error "tbd"
 
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
-   calcSteps result steps = pure (result, mkCalcSteps steps (qcWalk sTrue))
+   calcSteps result steps = pure (result, mkCalcSteps steps tbd)
 
 -- | Chaining lemmas that depend on a single extra variable.
 instance (KnownSymbol na, SymVal a) => Calc (Forall na a -> SBool) where
    calcSteps result steps = do a  <- free (symbolVal (Proxy @na))
-                               pure (result (Forall a), mkCalcSteps (steps a) (\_ -> patch sTrue))
+                               pure (result (Forall a), mkCalcSteps (steps a) (patch sTrue))
      where
         patch :: SBool -> [Int] -> QC.Args -> IO QC.Result
         patch assumptions checkedLabel qcArgs = do
                 quickCheckWithResult qcArgs $ do
                    aa <- free (symbolVal (Proxy @na))
-                   let (intros, tpp) = steps aa
-                       tree          = go (CalcStart []) tpp
-                   qcRun intros tree
-          where qcRun intros tree = do results <- runTree sTrue 1 ([1], tree)
-                                       case [b | (l, b) <- results, l == checkedLabel] of
-                                         [(caseCond, b)] -> do constrain $ assumptions .&& intros .&& caseCond
-                                                               pure b
-                                         []              -> die "Exhausted the proof tree without hitting the relevant node."
-                                         _               -> die "Hit the label multiple times."
+                   qcRun assumptions (steps aa) checkedLabel
 
-                die why =  error $ unlines [ ""
-                                           , "*** Data.SBV.patch: Impossible happened."
-                                           , "***"
-                                           , "*** " ++ why
-                                           , "***"
-                                           , "*** While trying to quickcheck at level " ++ show checkedLabel
-                                           , "*** Please report this as a bug!"
-                                           ]
-
-                -- "run" the tree, and if we hit the correct label return the result.
-                -- This needs to be in "sync" with proveProofTree for obvious reasons. So, any changes there
-                -- make it here too!
-                runTree :: SBool -> Int -> ([Int], TPProof) -> Symbolic [([Int], (SBool, SBool))]
-                runTree _        _     (_,  ProofEnd{})         = pure []
-                runTree caseCond level (bn, ProofBranch _ _ ps) = concat <$> sequence [runTree (caseCond .&& branchCond) (level + 1) (bn ++ [i, 1], p)
-                                                                                      | (i, (branchCond, p)) <- zip [1..] ps
-                                                                                      ]
-                runTree caseCond level (bn, ProofStep cur _s p) = do rest <- runTree caseCond level (nextProofStep bn, p)
-                                                                     pure $ (bn, (caseCond, cur)) : rest
-
-        -- go :: EqSymbolic a => CalcContext a -> TPProofRaw a -> TPProof
-
-        -- End of the proof; tie the begin and end
-        go step (ProofEnd () hs) = case step of
-                                     -- It's tempting to error out if we're at the start and already reached the end
-                                     -- This means we're given a sequence of no-steps. While this is useless in the
-                                     -- general case, it's quite valid in a case-split; where one of the case-splits
-                                     -- might be easy enough for the solver to deduce so the user simply says "just derive it for me."
-                                     CalcStart hs'           -> ProofEnd sTrue           (hs' ++ hs) -- Nothing proven!
-                                     CalcStep  begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
-
-        -- Branch: Just push it down. We use the hints from previous step, and pass the current ones down.
-        go step (ProofBranch c hs ps) = ProofBranch c (getHelperText hs) [(branchCond, go step' p) | (branchCond, p) <- ps]
-           where step' = case step of
-                           CalcStart hs'     -> CalcStart (hs' ++ hs)
-                           CalcStep  a b hs' -> CalcStep a b (hs' ++ hs)
-
-        -- Step:
-        go (CalcStart hs)           (ProofStep cur hs' p) =                              go (CalcStep cur   cur (hs' ++ hs)) p
-        go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev .== cur) hs (go (CalcStep first cur hs')         p)
 -- | Chaining lemmas that depend on two extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Calc (Forall na a -> Forall nb b -> SBool) where
    calcSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
-                               pure (result (Forall a) (Forall b), mkCalcSteps (steps a b) (qcWalk sTrue))
+                               pure (result (Forall a) (Forall b), mkCalcSteps (steps a b) tbd)
 
 -- | Chaining lemmas that depend on three extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Calc (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
    calcSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c) (qcWalk sTrue))
+                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c) tbd)
 
 -- | Chaining lemmas that depend on four extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
    calcSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d) (qcWalk sTrue))
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d) tbd)
 
 -- | Chaining lemmas that depend on five extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
       => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
    calcSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e) (qcWalk sTrue))
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e) tbd)
 
 -- | Captures the schema for an inductive proof. Base case might be nothing, to cover strong induction.
 data InductionStrategy = InductionStrategy { inductionIntros     :: SBool
@@ -646,7 +599,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
        proveProofTree cfg tpSt nm (result, inductiveStep) inductionIntros inductionProofTree u inductiveQCInstance
 
 -- Induction strategy helper
-mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw a) -> SBool -> ((SBool, TPProof) -> [Int] -> QC.Args -> IO QC.Result) -> InductionStrategy
+mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw a) -> SBool -> ([Int] -> QC.Args -> IO QC.Result) -> InductionStrategy
 mkIndStrategy mbMeasure mbBaseCase indSteps step indQCInstance =
         let CalcStrategy { calcIntros, calcProofTree, calcQCInstance } = mkCalcSteps indSteps indQCInstance
         in InductionStrategy { inductionIntros     = calcIntros
@@ -690,7 +643,7 @@ instance KnownSymbol nn => Inductive (Forall nn Integer -> SBool) where
                             (Just bc)
                             (steps ih n)
                             (indResult [nn ++ "+1"] (result (Forall (n+1))))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over 'SInteger', taking an extra argument
 instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Integer -> Forall na a -> SBool) where
@@ -708,7 +661,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Inte
                             (Just bc)
                             (steps ih n a)
                             (indResult [nn ++ "+1", na] (result (Forall (n+1)) (Forall a)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over 'SInteger', taking two extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) where
@@ -727,7 +680,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) =>
                             (Just bc)
                             (steps ih n a b)
                             (indResult [nn ++ "+1", na, nb] (result (Forall (n+1)) (Forall a) (Forall b)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over 'SInteger', taking three extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -747,7 +700,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (Just bc)
                             (steps ih n a b c)
                             (indResult [nn ++ "+1", na, nb, nc] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over 'SInteger', taking four extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -768,7 +721,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (Just bc)
                             (steps ih n a b c d)
                             (indResult [nn ++ "+1", na, nb, nc, nd] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over 'SInteger', taking five extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -790,7 +743,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (Just bc)
                             (steps ih n a b c d e)
                             (indResult [nn ++ "+1", na, nb, nc, nd, ne] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (qcWalk bc)
+                            tbd
 
 -- Given a user name for the list, get a name for the element, in the most suggestive way possible
 --   xs  -> x
@@ -816,7 +769,7 @@ instance (KnownSymbol nxs, SymVal x) => Inductive (Forall nxs [x] -> SBool) wher
                             (Just bc)
                             (steps ih (x, xs))
                             (indResult [nxxs] (result (Forall (x SL..: xs))))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over 'SList', taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (Forall nxs [x] -> Forall na a -> SBool) where
@@ -834,7 +787,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (For
                             (Just bc)
                             (steps ih (x, xs) a)
                             (indResult [nxxs, na] (result (Forall (x SL..: xs)) (Forall a)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over 'SList', taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) where
@@ -853,7 +806,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (Just bc)
                             (steps ih (x, xs) a b)
                             (indResult [nxxs, na, nb] (result (Forall (x SL..: xs)) (Forall a) (Forall b)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over 'SList', taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -873,7 +826,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (Just bc)
                             (steps ih (x, xs) a b c)
                             (indResult [nxxs, na, nb, nc] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over 'SList', taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -894,7 +847,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (Just bc)
                             (steps ih (x, xs) a b c d)
                             (indResult [nxxs, na, nb, nc, nd] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over 'SList', taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -916,7 +869,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (Just bc)
                             (steps ih (x, xs) a b c d e)
                             (indResult [nxxs, na, nb, nc, nd, ne] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over two 'SList', simultaneously
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((Forall nxs [x], Forall nys [y]) -> SBool) where
@@ -934,7 +887,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((F
                             (Just bc)
                             (steps ih (x, xs, y, ys))
                             (indResult [nxxs, nyys] (result (Forall (x SL..: xs), Forall (y SL..: ys))))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over two 'SList', simultaneously, taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) where
@@ -953,7 +906,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just bc)
                             (steps ih (x, xs, y, ys) a)
                             (indResult [nxxs, nyys, na] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over two 'SList', simultaneously, taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) where
@@ -973,7 +926,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just bc)
                             (steps ih (x, xs, y, ys) a b)
                             (indResult [nxxs, nyys, na, nb] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over two 'SList', simultaneously, taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -994,7 +947,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just bc)
                             (steps ih (x, xs, y, ys) a b c)
                             (indResult [nxxs, nyys, na, nb, nc] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over two 'SList', simultaneously, taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -1016,7 +969,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just bc)
                             (steps ih (x, xs, y, ys) a b c d)
                             (indResult [nxxs, nyys, na, nb, nc, nd] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (qcWalk bc)
+                            tbd
 
 -- | Induction over two 'SList', simultaneously, taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -1039,7 +992,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just bc)
                             (steps ih (x, xs, y, ys) a b c d e)
                             (indResult [nxxs, nyys, na, nb, nc, nd, ne] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (qcWalk bc)
+                            tbd
 
 
 -- | Generalized induction with one parameter
@@ -1054,7 +1007,7 @@ instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
                            Nothing
                            (steps ih a)
                            (indResult [na] conc)
-                           (qcWalk conc)
+                           tbd
 
 -- | Generalized induction with two parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (Forall na a -> Forall nb b -> SBool) where
@@ -1069,7 +1022,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (For
                            Nothing
                            (steps ih a b)
                            (indResult [na, nb] conc)
-                           (qcWalk conc)
+                           tbd
 
 -- | Generalized induction with three parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -1085,7 +1038,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            Nothing
                            (steps ih a b c)
                            (indResult [na, nb, nc] conc)
-                           (qcWalk conc)
+                           tbd
 
 -- | Generalized induction with four parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -1102,7 +1055,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            Nothing
                            (steps ih a b c d)
                            (indResult [na, nb, nc, nd] conc)
-                           (qcWalk conc)
+                           tbd
 
 -- | Generalized induction with five parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -1120,7 +1073,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            Nothing
                            (steps ih a b c d e)
                            (indResult [na, nb, nc, nd, ne] conc)
-                           (qcWalk conc)
+                           tbd
 
 -- | Instantiation for a universally quantified variable
 newtype Inst (nm :: Symbol) a = Inst (SBV a)
