@@ -427,9 +427,6 @@ qcRun assumptions checkedLabel (intros, tpp) = do
        runTree caseCond level (bn, ProofStep cur _s p) = do rest <- runTree caseCond level (nextProofStep bn, p)
                                                             pure $ (bn, (caseCond, cur)) : rest
 
-tbd :: a
-tbd = error "tbd"
-
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
    calcSteps result steps = pure (result, mkCalcSteps steps (\l -> qcRun sTrue l steps))
@@ -1004,14 +1001,14 @@ instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
   sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
 
-      let ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) -> measure a' .< measure a .=> result (Forall a'))
-          conc   = result (Forall a)
+      let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) -> measure a' .< measure a .=> result (Forall a'))
+          conc = result (Forall a)
 
       pure $ mkIndStrategy (Just (measure a .>= zero))
                            Nothing
                            (steps ih a)
                            (indResult [na] conc)
-                           tbd
+                           (\checkedLabel -> steps ih <$> free na >>= qcRun sTrue checkedLabel)
 
 -- | Generalized induction with two parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (Forall na a -> Forall nb b -> SBool) where
@@ -1019,14 +1016,14 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (For
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
 
-      let ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .< measure a b .=> result (Forall a') (Forall b'))
-          conc   = result (Forall a) (Forall b)
+      let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .< measure a b .=> result (Forall a') (Forall b'))
+          conc = result (Forall a) (Forall b)
 
       pure $ mkIndStrategy (Just (measure a b .>= zero))
                            Nothing
                            (steps ih a b)
                            (indResult [na, nb] conc)
-                           tbd
+                           (\checkedLabel -> steps ih <$> free na <*> free nb >>= qcRun sTrue checkedLabel)
 
 -- | Generalized induction with three parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -1035,14 +1032,14 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
 
-      let ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .< measure a b c .=> result (Forall a') (Forall b') (Forall c'))
-          conc   = result (Forall a) (Forall b) (Forall c)
+      let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .< measure a b c .=> result (Forall a') (Forall b') (Forall c'))
+          conc = result (Forall a) (Forall b) (Forall c)
 
       pure $ mkIndStrategy (Just (measure a b c .>= zero))
                            Nothing
                            (steps ih a b c)
                            (indResult [na, nb, nc] conc)
-                           tbd
+                           (\checkedLabel -> steps ih <$> free na <*> free nb <*> free nc >>= qcRun sTrue checkedLabel)
 
 -- | Generalized induction with four parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -1052,14 +1049,14 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       (c, nc) <- mkVar (Proxy @nc)
       (d, nd) <- mkVar (Proxy @nd)
 
-      let ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .< measure a b c d .=> result (Forall a') (Forall b') (Forall c') (Forall d'))
-          conc   = result (Forall a) (Forall b) (Forall c) (Forall d)
+      let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .< measure a b c d .=> result (Forall a') (Forall b') (Forall c') (Forall d'))
+          conc = result (Forall a) (Forall b) (Forall c) (Forall d)
 
       pure $ mkIndStrategy (Just (measure a b c d .>= zero))
                            Nothing
                            (steps ih a b c d)
                            (indResult [na, nb, nc, nd] conc)
-                           tbd
+                           (\checkedLabel -> steps ih <$> free na <*> free nb <*> free nc <*> free nd >>= qcRun sTrue checkedLabel)
 
 -- | Generalized induction with five parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -1070,14 +1067,14 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       (d, nd) <- mkVar (Proxy @nd)
       (e, ne) <- mkVar (Proxy @ne)
 
-      let ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .< measure a b c d e .=> result (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
-          conc   = result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+      let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .< measure a b c d e .=> result (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
+          conc = result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
 
       pure $ mkIndStrategy (Just (measure a b c d e .>= zero))
                            Nothing
                            (steps ih a b c d e)
                            (indResult [na, nb, nc, nd, ne] conc)
-                           tbd
+                           (\checkedLabel -> steps ih <$> free na <*> free nb <*> free nc <*> free nd <*> free ne >>= qcRun sTrue checkedLabel)
 
 -- | Instantiation for a universally quantified variable
 newtype Inst (nm :: Symbol) a = Inst (SBV a)
