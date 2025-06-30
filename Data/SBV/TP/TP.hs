@@ -68,7 +68,7 @@ import Test.QuickCheck (quickCheckWithResult, stdArgs, maxSize, chatty)
 -- | Captures the steps for a calculationa proof
 data CalcStrategy = CalcStrategy { calcIntros     :: SBool
                                  , calcProofTree  :: TPProof
-                                 , calcQCInstance :: [Int] -> QC.Args -> IO QC.Result
+                                 , calcQCInstance :: [Int] -> Symbolic SBool
                                  }
 
 -- | Saturatable things in steps
@@ -210,12 +210,12 @@ nextProofStep bs = case reverse bs of
 proveProofTree :: Proposition a
                => SMTConfig
                -> TPState
-               -> String                             -- ^ the name of the top result
-               -> (a, SBool)                         -- ^ goal: as a proposition and as a boolean
-               -> SBool                              -- ^ hypotheses
-               -> TPProof                            -- ^ proof tree
-               -> TPUnique                           -- ^ unique id
-               -> ([Int] -> QC.Args -> IO QC.Result) -- ^ quick-checker
+               -> String                    -- ^ the name of the top result
+               -> (a, SBool)                -- ^ goal: as a proposition and as a boolean
+               -> SBool                     -- ^ hypotheses
+               -> TPProof                   -- ^ proof tree
+               -> TPUnique                  -- ^ unique id
+               -> ([Int] -> Symbolic SBool) -- ^ quick-checker
                -> Query (Proof a)
 proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree uniq quickCheckInstance = do
 
@@ -311,7 +311,7 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                        Nothing  -> pure []
 
                        Just cnt -> liftIO $ do
-                                       r <- quickCheckInstance bn stdArgs{maxSize = cnt, chatty = False}
+                                       r <- quickCheckWithResult stdArgs{maxSize = cnt, chatty = verbose cfg} $ quickCheckInstance bn
                                        let err = case r of
                                                QC.Success {}                -> Nothing
                                                QC.Failure {QC.output = out} -> Just out
@@ -390,15 +390,15 @@ mkProofTree = go (CalcStart [])
         go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev .== cur) hs (go (CalcStep first cur hs')         p)
 
 -- | Turn a sequence of steps into a chain of equalities
-mkCalcSteps :: EqSymbolic a => (SBool, TPProofRaw a) -> ([Int] -> QC.Args -> IO QC.Result) -> CalcStrategy
+mkCalcSteps :: EqSymbolic a => (SBool, TPProofRaw a) -> ([Int] -> Symbolic SBool) -> CalcStrategy
 mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
                                                     , calcProofTree  = mkProofTree tpp
                                                     , calcQCInstance = qcInstance
                                                     }
 
 -- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree for the step that's marked as such.
-qcRun :: EqSymbolic a => SBool -> (SBool, TPProofRaw a) -> [Int] -> Symbolic SBool
-qcRun assumptions (intros, tpp) checkedLabel = do
+qcRun :: EqSymbolic a => SBool -> [Int] -> (SBool, TPProofRaw a) -> Symbolic SBool
+qcRun assumptions checkedLabel (intros, tpp) = do
         results <- runTree sTrue 1 ([1], tree)
         case [b | (l, b) <- results, l == checkedLabel] of
           [(caseCond, b)] -> do constrain $ assumptions .&& intros .&& caseCond
@@ -432,39 +432,43 @@ tbd = error "tbd"
 
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
-   calcSteps result steps = pure (result, mkCalcSteps steps tbd)
+   calcSteps result steps = pure (result, mkCalcSteps steps (\l -> qcRun sTrue l steps))
 
 -- | Chaining lemmas that depend on a single extra variable.
 instance (KnownSymbol na, SymVal a) => Calc (Forall na a -> SBool) where
    calcSteps result steps = do a  <- free (symbolVal (Proxy @na))
-                               pure (result (Forall a), mkCalcSteps (steps a) (patch sTrue))
-     where
-        patch :: SBool -> [Int] -> QC.Args -> IO QC.Result
-        patch assumptions checkedLabel qcArgs = do
-                quickCheckWithResult qcArgs $ do
-                   aa <- free (symbolVal (Proxy @na))
-                   qcRun assumptions (steps aa) checkedLabel
+                               let q checkedLabel = do aa <- free (symbolVal (Proxy @na))
+                                                       qcRun sTrue checkedLabel (steps aa)
+                               pure (result (Forall a), mkCalcSteps (steps a) q)
 
 -- | Chaining lemmas that depend on two extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Calc (Forall na a -> Forall nb b -> SBool) where
    calcSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
-                               pure (result (Forall a) (Forall b), mkCalcSteps (steps a b) tbd)
+                               let q checkedLabel = do (aa, ab) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
+                                                       qcRun sTrue checkedLabel (steps aa ab)
+                               pure (result (Forall a) (Forall b), mkCalcSteps (steps a b) q)
 
 -- | Chaining lemmas that depend on three extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Calc (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
    calcSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c) tbd)
+                               let q checkedLabel = do (aa, ab, ac) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
+                                                       qcRun sTrue checkedLabel (steps aa ab ac)
+                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c) q)
 
 -- | Chaining lemmas that depend on four extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
    calcSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d) tbd)
+                               let q checkedLabel = do sb <- steps <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
+                                                       qcRun sTrue checkedLabel sb
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d) q)
 
 -- | Chaining lemmas that depend on five extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
       => Calc (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
    calcSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e) tbd)
+                               let q checkedLabel = do sb <- steps <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
+                                                       qcRun sTrue checkedLabel sb
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e) q)
 
 -- | Captures the schema for an inductive proof. Base case might be nothing, to cover strong induction.
 data InductionStrategy = InductionStrategy { inductionIntros     :: SBool
@@ -472,7 +476,7 @@ data InductionStrategy = InductionStrategy { inductionIntros     :: SBool
                                            , inductionBaseCase   :: Maybe SBool
                                            , inductionProofTree  :: TPProof
                                            , inductiveStep       :: SBool
-                                           , inductiveQCInstance :: [Int] -> QC.Args -> IO QC.Result
+                                           , inductiveQCInstance :: [Int] -> Symbolic SBool
                                            }
 
 -- | Are we doing regular induction or measure based general induction?
@@ -599,7 +603,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
        proveProofTree cfg tpSt nm (result, inductiveStep) inductionIntros inductionProofTree u inductiveQCInstance
 
 -- Induction strategy helper
-mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw a) -> SBool -> ([Int] -> QC.Args -> IO QC.Result) -> InductionStrategy
+mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw a) -> SBool -> ([Int] -> Symbolic SBool) -> InductionStrategy
 mkIndStrategy mbMeasure mbBaseCase indSteps step indQCInstance =
         let CalcStrategy { calcIntros, calcProofTree, calcQCInstance } = mkCalcSteps indSteps indQCInstance
         in InductionStrategy { inductionIntros     = calcIntros
@@ -617,12 +621,12 @@ mkVar x = do let nn = symbolVal x
              pure (n, nn)
 
 -- | Create a new variable with the given name, return both the variable and the name. List version.
-mkLVar :: (KnownSymbol n, SymVal a) => proxy n -> Symbolic (SBV a, SList a, String)
+mkLVar :: (KnownSymbol n, SymVal a) => proxy n -> Symbolic (SBV a, SList a, String, String, String)
 mkLVar x = do let nxs = symbolVal x
                   nx  = singular nxs
               e  <- free nx
               es <- free nxs
-              pure (e, es, nx ++ ":" ++ nxs)
+              pure (e, es, nx, nxs, nx ++ ":" ++ nxs)
 
 -- | Helper for induction result
 indResult :: [String] -> SBool -> SBool
@@ -636,14 +640,15 @@ instance KnownSymbol nn => Inductive (Forall nn Integer -> SBool) where
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
 
-       let bc     = result (Forall 0)
-           ih     = internalAxiom "IH" (Measure n .>= zero .=> result (Forall n))
+       let bc = result (Forall 0)
+           ih = internalAxiom "IH" (Measure n .>= zero .=> result (Forall n))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih n)
                             (indResult [nn ++ "+1"] (result (Forall (n+1))))
-                            tbd
+                            (\checkedLabel -> steps ih <$> free nn >>= qcRun bc checkedLabel)
+
 
 -- | Induction over 'SInteger', taking an extra argument
 instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Integer -> Forall na a -> SBool) where
@@ -654,14 +659,14 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Inte
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
 
-       let bc     = result (Forall 0) (Forall a)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) -> Measure n .>= zero .=> result (Forall n) (Forall a'))
+       let bc = result (Forall 0) (Forall a)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) -> Measure n .>= zero .=> result (Forall n) (Forall a'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih n a)
                             (indResult [nn ++ "+1", na] (result (Forall (n+1)) (Forall a)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> free nn <*> free na >>= qcRun bc checkedLabel)
 
 -- | Induction over 'SInteger', taking two extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) where
@@ -673,14 +678,14 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) =>
        (a, na) <- mkVar (Proxy @na)
        (b, nb) <- mkVar (Proxy @nb)
 
-       let bc     = result (Forall 0) (Forall a) (Forall b)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b'))
+       let bc = result (Forall 0) (Forall a) (Forall b)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih n a b)
                             (indResult [nn ++ "+1", na, nb] (result (Forall (n+1)) (Forall a) (Forall b)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> free nn <*> free na <*> free nb >>= qcRun bc checkedLabel)
 
 -- | Induction over 'SInteger', taking three extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -693,14 +698,14 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (b, nb) <- mkVar (Proxy @nb)
        (c, nc) <- mkVar (Proxy @nc)
 
-       let bc     = result (Forall 0) (Forall a) (Forall b) (Forall c)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c'))
+       let bc = result (Forall 0) (Forall a) (Forall b) (Forall c)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih n a b c)
                             (indResult [nn ++ "+1", na, nb, nc] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> free nn <*> free na <*> free nb <*> free nc >>= qcRun bc checkedLabel)
 
 -- | Induction over 'SInteger', taking four extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -714,14 +719,14 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (c, nc) <- mkVar (Proxy @nc)
        (d, nd) <- mkVar (Proxy @nd)
 
-       let bc     = result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))
+       let bc = result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih n a b c d)
                             (indResult [nn ++ "+1", na, nb, nc, nd] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> free nn <*> free na <*> free nb <*> free nc <*> free nd >>= qcRun bc checkedLabel)
 
 -- | Induction over 'SInteger', taking five extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -736,14 +741,14 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (d, nd) <- mkVar (Proxy @nd)
        (e, ne) <- mkVar (Proxy @ne)
 
-       let bc     = result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
+       let bc = result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih n a b c d e)
                             (indResult [nn ++ "+1", na, nb, nc, nd, ne] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> free nn <*> free na <*> free nb <*> free nc <*> free nd <*> free ne >>= qcRun bc checkedLabel)
 
 -- Given a user name for the list, get a name for the element, in the most suggestive way possible
 --   xs  -> x
@@ -760,16 +765,16 @@ instance (KnownSymbol nxs, SymVal x) => Inductive (Forall nxs [x] -> SBool) wher
   type IHArg  (Forall nxs [x] -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
 
-       let bc     = result (Forall SL.nil)
-           ih     = internalAxiom "IH" (result (Forall xs))
+       let bc = result (Forall SL.nil)
+           ih = internalAxiom "IH" (result (Forall xs))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs))
                             (indResult [nxxs] (result (Forall (x SL..: xs))))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,) <$> free nx <*> free nxs) >>= qcRun bc checkedLabel)
 
 -- | Induction over 'SList', taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (Forall nxs [x] -> Forall na a -> SBool) where
@@ -777,17 +782,17 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (For
   type IHArg  (Forall nxs [x] -> Forall na a -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (a, na)       <- mkVar  (Proxy @na)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (a, na)                <- mkVar  (Proxy @na)
 
-       let bc     = result (Forall SL.nil) (Forall a)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs) (Forall a'))
+       let bc = result (Forall SL.nil) (Forall a)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs) (Forall a'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs) a)
                             (indResult [nxxs, na] (result (Forall (x SL..: xs)) (Forall a)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,) <$> free nx <*> free nxs) <*> free na >>= qcRun bc checkedLabel)
 
 -- | Induction over 'SList', taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) where
@@ -795,18 +800,18 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
   type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (a, na)       <- mkVar  (Proxy @na)
-       (b, nb)       <- mkVar  (Proxy @nb)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (a, na)                <- mkVar  (Proxy @na)
+       (b, nb)                <- mkVar  (Proxy @nb)
 
-       let bc     = result (Forall SL.nil) (Forall a) (Forall b)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs) (Forall a') (Forall b'))
+       let bc = result (Forall SL.nil) (Forall a) (Forall b)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs) (Forall a') (Forall b'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs) a b)
                             (indResult [nxxs, na, nb] (result (Forall (x SL..: xs)) (Forall a) (Forall b)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,) <$> free nx <*> free nxs) <*> free na <*> free nb >>= qcRun bc checkedLabel)
 
 -- | Induction over 'SList', taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -814,19 +819,19 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
   type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (a, na)       <- mkVar  (Proxy @na)
-       (b, nb)       <- mkVar  (Proxy @nb)
-       (c, nc)       <- mkVar  (Proxy @nc)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (a, na)                <- mkVar  (Proxy @na)
+       (b, nb)                <- mkVar  (Proxy @nb)
+       (c, nc)                <- mkVar  (Proxy @nc)
 
-       let bc     = result (Forall SL.nil) (Forall a) (Forall b) (Forall c)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs) (Forall a') (Forall b') (Forall c'))
+       let bc = result (Forall SL.nil) (Forall a) (Forall b) (Forall c)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs) (Forall a') (Forall b') (Forall c'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs) a b c)
                             (indResult [nxxs, na, nb, nc] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,) <$> free nx <*> free nxs) <*> free na <*> free nb <*> free nc >>= qcRun bc checkedLabel)
 
 -- | Induction over 'SList', taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -834,20 +839,20 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
   type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (a, na)       <- mkVar  (Proxy @na)
-       (b, nb)       <- mkVar  (Proxy @nb)
-       (c, nc)       <- mkVar  (Proxy @nc)
-       (d, nd)       <- mkVar  (Proxy @nd)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (a, na)                <- mkVar  (Proxy @na)
+       (b, nb)                <- mkVar  (Proxy @nb)
+       (c, nc)                <- mkVar  (Proxy @nc)
+       (d, nd)                <- mkVar  (Proxy @nd)
 
-       let bc     = result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d'))
+       let bc = result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs) a b c d)
                             (indResult [nxxs, na, nb, nc, nd] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,) <$> free nx <*> free nxs) <*> free na <*> free nb <*> free nc <*> free nd >>= qcRun bc checkedLabel)
 
 -- | Induction over 'SList', taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -855,21 +860,21 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
   type IHArg  (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SBV x, SList x)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (a, na)       <- mkVar  (Proxy @na)
-       (b, nb)       <- mkVar  (Proxy @nb)
-       (c, nc)       <- mkVar  (Proxy @nc)
-       (d, nd)       <- mkVar  (Proxy @nd)
-       (e, ne)       <- mkVar  (Proxy @ne)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (a, na)                <- mkVar  (Proxy @na)
+       (b, nb)                <- mkVar  (Proxy @nb)
+       (c, nc)                <- mkVar  (Proxy @nc)
+       (d, nd)                <- mkVar  (Proxy @nd)
+       (e, ne)                <- mkVar  (Proxy @ne)
 
-       let bc     = result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
+       let bc = result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs) a b c d e)
                             (indResult [nxxs, na, nb, nc, nd, ne] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,) <$> free nx <*> free nxs) <*> free na <*> free nb <*> free nc <*> free nd <*> free ne >>= qcRun bc checkedLabel)
 
 -- | Induction over two 'SList', simultaneously
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((Forall nxs [x], Forall nys [y]) -> SBool) where
@@ -877,17 +882,17 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((F
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (y, ys, nyys) <- mkLVar (Proxy @nys)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (y, ys, ny, nys, nyys) <- mkLVar (Proxy @nys)
 
-       let bc     = result (Forall SL.nil, Forall SL.nil) .&& result (Forall SL.nil, Forall (y SL..: ys)) .&& result (Forall (x SL..: xs), Forall SL.nil)
-           ih     = internalAxiom "IH" (result (Forall xs, Forall ys))
+       let bc = result (Forall SL.nil, Forall SL.nil) .&& result (Forall SL.nil, Forall (y SL..: ys)) .&& result (Forall (x SL..: xs), Forall SL.nil)
+           ih = internalAxiom "IH" (result (Forall xs, Forall ys))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs, y, ys))
                             (indResult [nxxs, nyys] (result (Forall (x SL..: xs), Forall (y SL..: ys))))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,,,) <$> free nx <*> free nxs <*> free ny <*> free nys) >>= qcRun bc checkedLabel)
 
 -- | Induction over two 'SList', simultaneously, taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) where
@@ -895,18 +900,18 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (y, ys, nyys) <- mkLVar (Proxy @nys)
-       (a, na)       <- mkVar  (Proxy @na)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (y, ys, ny, nys, nyys) <- mkLVar (Proxy @nys)
+       (a, na)                <- mkVar  (Proxy @na)
 
-       let bc     = result (Forall SL.nil, Forall SL.nil) (Forall a) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs, Forall ys) (Forall a'))
+       let bc = result (Forall SL.nil, Forall SL.nil) (Forall a) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs, Forall ys) (Forall a'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs, y, ys) a)
                             (indResult [nxxs, nyys, na] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,,,) <$> free nx <*> free nxs <*> free ny <*> free nys) <*> free na >>= qcRun bc checkedLabel)
 
 -- | Induction over two 'SList', simultaneously, taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) where
@@ -914,19 +919,19 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (y, ys, nyys) <- mkLVar (Proxy @nys)
-       (a, na)       <- mkVar  (Proxy @na)
-       (b, nb)       <- mkVar  (Proxy @nb)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (y, ys, ny, nys, nyys) <- mkLVar (Proxy @nys)
+       (a, na)                <- mkVar  (Proxy @na)
+       (b, nb)                <- mkVar  (Proxy @nb)
 
-       let bc     = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs, Forall ys) (Forall a') (Forall b'))
+       let bc = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs, Forall ys) (Forall a') (Forall b'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs, y, ys) a b)
                             (indResult [nxxs, nyys, na, nb] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,,,) <$> free nx <*> free nxs <*> free ny <*> free nys) <*> free na <*> free nb >>= qcRun bc checkedLabel)
 
 -- | Induction over two 'SList', simultaneously, taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) where
@@ -934,20 +939,20 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (y, ys, nyys) <- mkLVar (Proxy @nys)
-       (a, na)       <- mkVar  (Proxy @na)
-       (b, nb)       <- mkVar  (Proxy @nb)
-       (c, nc)       <- mkVar  (Proxy @nc)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (y, ys, ny, nys, nyys) <- mkLVar (Proxy @nys)
+       (a, na)                <- mkVar  (Proxy @na)
+       (b, nb)                <- mkVar  (Proxy @nb)
+       (c, nc)                <- mkVar  (Proxy @nc)
 
-       let bc     = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c'))
+       let bc = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs, y, ys) a b c)
                             (indResult [nxxs, nyys, na, nb, nc] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,,,) <$> free nx <*> free nxs <*> free ny <*> free nys) <*> free na <*> free nb <*> free nc >>= qcRun bc checkedLabel)
 
 -- | Induction over two 'SList', simultaneously, taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
@@ -955,21 +960,21 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (y, ys, nyys) <- mkLVar (Proxy @nys)
-       (a, na)       <- mkVar  (Proxy @na)
-       (b, nb)       <- mkVar  (Proxy @nb)
-       (c, nc)       <- mkVar  (Proxy @nc)
-       (d, nd)       <- mkVar  (Proxy @nd)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (y, ys, ny, nys, nyys) <- mkLVar (Proxy @nys)
+       (a, na)                <- mkVar  (Proxy @na)
+       (b, nb)                <- mkVar  (Proxy @nb)
+       (c, nc)                <- mkVar  (Proxy @nc)
+       (d, nd)                <- mkVar  (Proxy @nd)
 
-       let bc     = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d'))
+       let bc = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs, y, ys) a b c d)
                             (indResult [nxxs, nyys, na, nb, nc, nd] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            tbd
+                            (\checkedLabel -> steps ih <$> ((,,,) <$> free nx <*> free nxs <*> free ny <*> free nys) <*> free na <*> free nb <*> free nc <*> free nd >>= qcRun bc checkedLabel)
 
 -- | Induction over two 'SList', simultaneously, taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
@@ -977,23 +982,22 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
   type IHArg  ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) = (SBV x, SList x, SBV y, SList y)
 
   inductionStrategy result steps = do
-       (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       (y, ys, nyys) <- mkLVar (Proxy @nys)
-       (a, na)       <- mkVar  (Proxy @na)
-       (b, nb)       <- mkVar  (Proxy @nb)
-       (c, nc)       <- mkVar  (Proxy @nc)
-       (d, nd)       <- mkVar  (Proxy @nd)
-       (e, ne)       <- mkVar  (Proxy @ne)
+       (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
+       (y, ys, ny, nys, nyys) <- mkLVar (Proxy @nys)
+       (a, na)                <- mkVar  (Proxy @na)
+       (b, nb)                <- mkVar  (Proxy @nb)
+       (c, nc)                <- mkVar  (Proxy @nc)
+       (d, nd)                <- mkVar  (Proxy @nd)
+       (e, ne)                <- mkVar  (Proxy @ne)
 
-       let bc     = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
-           ih     = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
+       let bc = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
 
        pure $ mkIndStrategy Nothing
                             (Just bc)
                             (steps ih (x, xs, y, ys) a b c d e)
                             (indResult [nxxs, nyys, na, nb, nc, nd, ne] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            tbd
-
+                            (\checkedLabel -> steps ih <$> ((,,,) <$> free nx <*> free nxs <*> free ny <*> free nys) <*> free na <*> free nb <*> free nc <*> free nd <*> free ne >>= qcRun bc checkedLabel)
 
 -- | Generalized induction with one parameter
 instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
