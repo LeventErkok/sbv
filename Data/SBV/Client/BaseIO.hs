@@ -31,7 +31,6 @@ import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext, Sy
 import Data.SBV.Control.Types  (SMTOption)
 import Data.SBV.Provers.Prover (Provable, Satisfiable, SExecutable, ThmResult)
 import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult, OptimizeResult)
-import Data.SBV.Utils.Lib      (checkObservableName)
 
 import GHC.TypeLits (KnownNat)
 
@@ -889,10 +888,4 @@ outputSVal = Trans.outputSVal
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sObserve'
 sObserve :: SymVal a => String -> SBV a -> Symbolic ()
-sObserve m x
-  | Just bad <- checkObservableName m
-  = error bad
-  | True
-  = do st <- symbolicEnv
-       liftIO $ do xsv <- Trans.sbvToSV st x
-                   Trans.recordObservable st m (const True) xsv
+sObserve m x = Trans.sObserve m (Trans.unSBV x)

@@ -36,10 +36,13 @@ module Data.SBV.TP.TP (
        , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpCache
        , (|-), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        , qc, qcWith
+       , disp
        ) where
 
 import Data.SBV
-import Data.SBV.Core.Model (qSaturateSavingObservables)
+import Data.SBV.Core.Model    (qSaturateSavingObservables)
+import Data.SBV.Core.Data     (SBV(..), SVal(..))
+import qualified Data.SBV.Core.Symbolic as S (sObserve)
 
 import Data.SBV.Control hiding (getProof)
 
@@ -83,6 +86,7 @@ proofTreeSaturatables = go
         getH (HelperAssum  b) = [b]
         getH HelperQC{}       = []
         getH HelperString{}   = []
+        getH HelperDisp{}     = []
 
 -- | Things that are inside calc-strategy that we have to saturate
 getCalcStrategySaturatables :: CalcStrategy -> [SBool]
@@ -276,6 +280,7 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                                                        (TPProofStep False nm [] (stepName ++ ["Completeness"]))
                                                        (Just intros)
                                                        (sOr (map fst ps))
+                                                       []
                                                        (\d -> finishTP cfg "Q.E.D." d [])
         pure results
 
@@ -284,6 +289,7 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
 
            let finish et helpers d = finishTP cfg ("Q.E.D." ++ concludeModulo helpers) d et
                stepName            = mkStepName level bn p
+               disps               = [(n, v) | HelperDisp n v <- hs]
 
            -- First prove the assumptions, if there are any. We stay quiet, unless timing is asked for
            let (quietCfg, finalizer)
@@ -298,6 +304,7 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                                          (TPProofStep True nm [] stepName)
                                          (Just intros)
                                          (sAnd as)
+                                         disps
                                          finalizer
 
            -- Are we asked to do quick-check?
@@ -323,6 +330,7 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                                                                                               , "*** to see if we can handle the problem via custom Arbitrary instances."
                                                                                               ]
                                                QC.NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
+
                                        case err of
                                          Just e  -> do let hs' = concatMap xform hs ++ [HelperString "Failed during quickTest"]
                                                            xform h@(HelperString{}) = [h]
@@ -341,6 +349,7 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                             (TPProofStep False nm ss stepName)
                             (Just (sAnd (intros : as ++ map getObjProof by)))
                             cur
+                            disps
                             (finish [] by)
 
            -- Move to next
@@ -354,7 +363,7 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
   smtProofStep cfg tpSt "Result" 1
                (TPProofStep False nm [] [""])
                (Just (initialHypotheses .=> sAnd results))
-               resultBool $ \d ->
+               resultBool [] $ \d ->
                  do mbElapsed <- getElapsedTime mbStartTime
                     let modulo = concludeModulo (concatMap getHelperProofs (getAllHelpers calcProofTree))
                     finishTP cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
@@ -430,9 +439,11 @@ qcRun assumptions checkedLabel (intros, tpp) = do
        runTree caseCond level (bn, ProofBranch _ _ ps) = concat <$> sequence [runTree (caseCond .&& branchCond) (level + 1) (bn ++ [i, 1], p)
                                                                              | (i, (branchCond, p)) <- zip [1..] ps
                                                                              ]
-       runTree caseCond level (bn, ProofStep (lhs, rhs, cur) _s p) = do rest <- runTree caseCond level (nextProofStep bn, p)
-                                                                        when (bn == checkedLabel) $ do sObserve "lhs" lhs
-                                                                                                       sObserve "rhs" rhs
+       runTree caseCond level (bn, ProofStep (lhs, rhs, cur) hs p) = do rest <- runTree caseCond level (nextProofStep bn, p)
+                                                                        when (bn == checkedLabel) $ do
+                                                                                sObserve "lhs" lhs
+                                                                                sObserve "rhs" rhs
+                                                                                mapM_ (uncurry S.sObserve) [(n, v) | HelperDisp n v <- hs]
                                                                         pure $ (bn, (caseCond, cur)) : rest
 
 -- | Chaining lemmas that depend on no extra variables
@@ -595,6 +606,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
                                               (TPProofStep False nm [] ["Measure is non-negative"])
                                               (Just inductionIntros)
                                               ms
+                                              []
                                               (\d -> finishTP cfg "Q.E.D." d [])
        case inductionBaseCase of
           Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no base case to prove."]
@@ -603,6 +615,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
                                               (TPProofStep False nm [] ["Base"])
                                               (Just inductionIntros)
                                               bc
+                                              []
                                               (\d -> finishTP cfg "Q.E.D." d [])
 
        proveProofTree cfg tpSt nm (result, inductiveStep) inductionIntros inductionProofTree u inductiveQCInstance
@@ -1174,10 +1187,11 @@ instantiate ap (Proof p@ProofObj{getProp, proofName}) a = case fromDynamic getPr
                | True                                     = '(' : s ++ ")"
 
 -- | Helpers for a step
-data Helper = HelperProof  ProofObj  -- A previously proven theorem
-            | HelperAssum  SBool     -- A hypothesis
-            | HelperQC     QC.Args   -- Quickcheck with these args
-            | HelperString String    -- Just a text, only used for diagnostics
+data Helper = HelperProof  ProofObj     -- A previously proven theorem
+            | HelperAssum  SBool        -- A hypothesis
+            | HelperQC     QC.Args      -- Quickcheck with these args
+            | HelperString String       -- Just a text, only used for diagnostics
+            | HelperDisp   String SVal  -- Show the value of this expression in case of failure
 
 -- | Get all helpers used in a proof
 getAllHelpers :: TPProof -> [Helper]
@@ -1191,6 +1205,7 @@ getHelperProofs (HelperProof p) = [p]
 getHelperProofs HelperAssum {}  = []
 getHelperProofs HelperQC    {}  = [quickCheckProof]
 getHelperProofs HelperString{}  = []
+getHelperProofs HelperDisp{}    = []
 
 -- | Get proofs from helpers
 getHelperAssumes :: Helper -> [SBool]
@@ -1198,6 +1213,7 @@ getHelperAssumes HelperProof  {} = []
 getHelperAssumes (HelperAssum b) = [b]
 getHelperAssumes HelperQC     {} = []
 getHelperAssumes HelperString {} = []
+getHelperAssumes HelperDisp{}    = []
 
 -- | Get hint strings from helpers. If there's an explicit comment given, just pass that. If not, collect all the names
 getHelperText :: [Helper] -> [String]
@@ -1209,6 +1225,7 @@ getHelperText hs = case [s | HelperString s <- hs] of
         collect HelperAssum  {}  = []
         collect (HelperQC     i) = ["passed " ++ show (maxSize i) ++ " tests"]
         collect (HelperString s) = [s]
+        collect HelperDisp{}     = []
 
 -- | A proof is a sequence of steps, supporting branching
 data TPProofGen a bh b = ProofStep   a    [Helper] (TPProofGen a bh b)          -- ^ A single step
@@ -1462,6 +1479,10 @@ qc cnt = HelperQC stdArgs{maxSize = cnt}
 -- | A quick-check step, with specific quick-check args.
 qcWith :: QC.Args -> Helper
 qcWith = HelperQC
+
+-- | Observing values in case of failure.
+disp :: String -> SBV a -> Helper
+disp n v = HelperDisp n (unSBV v)
 
 -- | Specifying a case-split, helps with the boolean case.
 (==>) :: SBool -> TPProofRaw a -> (SBool, TPProofRaw a)

@@ -33,7 +33,7 @@ import Control.Monad.Trans  (liftIO, MonadIO)
 import Data.List  (intercalate)
 import Data.Maybe (catMaybes)
 
-import Data.SBV.Core.Data hiding (None)
+import Data.SBV.Core.Data     hiding (None)
 import Data.SBV.Trans.Control hiding (getProof)
 
 import Data.SBV.SMT.SMT
@@ -87,7 +87,7 @@ lemmaWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} nm inputProp by = wit
                  liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt u
   where go tpSt u mbStartTime = do qSaturateSavingObservables inputProp
                                    mapM_ (constrain . getObjProof) by
-                                   query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp (good mbStartTime u)
+                                   query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp [] (good mbStartTime u)
 
         -- What to do if all goes well
         good mbStart u d = do mbElapsed <- getElapsedTime mbStart
@@ -116,9 +116,10 @@ smtProofStep :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    -> TPProofContext                         -- ^ the context in which we're doing the proof
    -> Maybe SBool                            -- ^ Assumptions under which we do the check-sat. If there's one we'll push/pop
    -> a                                      -- ^ what we want to prove
+   -> [(String, SVal)]                       -- ^ Values to display in case of failure
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState tag level ctx mbAssumptions prop unsat = do
+smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState tag level ctx mbAssumptions prop disps unsat = do
 
         case mbAssumptions of
            Nothing  -> do queryDebug ["; smtProofStep: No context value to push."]
@@ -165,7 +166,9 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
          liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
 
          res <- case ctx of
-                  TPProofStep{}       -> Satisfiable cfg <$> getModel
+                  TPProofStep{}       -> do
+                        m   <- getModel
+                        pure $ Satisfiable cfg m
                   TPProofOneShot _ by ->
                      -- When trying to get a counter-example not in query mode, we
                      -- do a skolemized sat call, which gets better counter-examples.
@@ -176,6 +179,7 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
                      do SatResult res <- liftIO $ satWith cfg $ do
                                            qSaturateSavingObservables prop
                                            mapM_ constrain [getObjProof | ProofObj{isUserAxiom, getObjProof} <- by, isUserAxiom] :: Symbolic ()
+                                           mapM_ (uncurry sObserve) disps
                                            pure $ skolemize (qNot prop)
                         pure res
 

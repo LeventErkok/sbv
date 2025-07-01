@@ -64,6 +64,9 @@ module Data.SBV.TP (
 
        -- * Finishing up a calculational proof
        , qed, trivial, contradiction
+
+       -- * Displaying intermediate values of expressions
+       , disp
        ) where
 
 import Data.SBV.TP.TP
