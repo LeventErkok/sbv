@@ -382,11 +382,7 @@ mkProofTree symEq = go (CalcStart [])
                                                                    pure $ ProofEnd e (hs' ++ hs)
 
         -- Branch: Just push it down. We use the hints from previous step, and pass the current ones down.
-        go step (ProofBranch c hs ps) = do let walk []               = pure []
-                                               walk ((bc, p) : rest) = do r  <- go step' p
-                                                                          rs <- walk rest
-                                                                          pure $ (bc, r) : rs
-                                           ProofBranch c (getHelperText hs) <$> walk ps
+        go step (ProofBranch c hs ps) = ProofBranch c (getHelperText hs) <$> mapM (\(bc, p) -> (bc,) <$> go step' p) ps
            where step' = case step of
                            CalcStart hs'     -> CalcStart (hs' ++ hs)
                            CalcStep  a b hs' -> CalcStep a b (hs' ++ hs)
