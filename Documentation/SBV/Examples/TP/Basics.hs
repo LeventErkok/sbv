@@ -200,6 +200,23 @@ qcExample = calc "qcExample"
                           =: 2 * n + 1
                           =: qed
 
+-- | We can't really prove Fermat's last theorem. But we can quick-check instances of it.
+--
+-- >>> runTP (qcFermat 3)
+-- Lemma: qcFermat 3
+--   Step: 1 (passed 1000 tests)           Q.E.D. [Modulo: quickCheck]
+--   Result:                               Q.E.D. [Modulo: quickCheck]
+-- [Modulo: qcFermat 3] qcFermat 3 :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
+qcFermat :: Integer -> TP (Proof (Forall "x" Integer -> Forall "y" Integer -> Forall "z" Integer -> SBool))
+qcFermat e = calc ("qcFermat " <> show e)
+                  (\(Forall x) (Forall y) (Forall z) -> n .> 2 .=> x.^n + y.^n ./= z.^n) $
+                  \x y z -> [n .> 2]
+                         |- x .^ n + y .^ n ./= z .^ n
+                         ?? qc 1000
+                         =: sTrue
+                         =: qed
+  where n = literal e
+
 -- * No termination checks
 
 -- | It's important to realize that TP proofs in SBV neither check nor guarantee that the
