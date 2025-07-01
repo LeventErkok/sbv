@@ -35,6 +35,7 @@ import Data.Maybe (catMaybes)
 
 import Data.SBV.Core.Data     hiding (None)
 import Data.SBV.Trans.Control hiding (getProof)
+import Data.SBV.Core.Symbolic (MonadSymbolic)
 
 import Data.SBV.SMT.SMT
 import Data.SBV.Core.Model
@@ -108,7 +109,7 @@ lemma nm f by = do cfg <- getTPConfig
 
 -- | Capture the general flow of a proof-step. Note that this is the only point where we call the backend solver
 -- in a TP proof.
-smtProofStep :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
+smtProofStep :: (SolverContext m, MonadIO m, MonadQuery m, MonadSymbolic m, Proposition a)
    => SMTConfig                              -- ^ config
    -> TPState                                -- ^ TPState
    -> String                                 -- ^ tag
@@ -130,6 +131,8 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
 
  where check = do
            tab <- liftIO $ startTP cfg verbose tag level ctx
+
+           mapM_ (uncurry sObserve) disps
 
            -- It's tempting to skolemize here.. But skolemization creates fresh constants
            -- based on the name given, and they mess with all else. So, don't skolemize!
@@ -166,9 +169,7 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
          liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
 
          res <- case ctx of
-                  TPProofStep{}       -> do
-                        m   <- getModel
-                        pure $ Satisfiable cfg m
+                  TPProofStep{} -> Satisfiable cfg <$> getModel
                   TPProofOneShot _ by ->
                      -- When trying to get a counter-example not in query mode, we
                      -- do a skolemized sat call, which gets better counter-examples.
