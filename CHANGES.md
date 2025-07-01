@@ -24,6 +24,7 @@
         solver for a specific lemma, we'll only change the solver, not TP-options.
       - Generalize various TP list/sort proofs.
       - Added qc/qcWith helpers, which allow you to run quick-check on specific proof steps
+      - Added disp as TP helper: It allows you to print the value of arbitrary expressions if a proof-step fails. Good for debugging.
 
    * New TP examples:
       - Documentation.SBV.Examples.TP.Fibonacci:  Proving tail-recursive fibonacci is equivalent to textbook definition
