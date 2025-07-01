@@ -132,8 +132,6 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
  where check = do
            tab <- liftIO $ startTP cfg verbose tag level ctx
 
-           mapM_ (uncurry sObserve) disps
-
            -- It's tempting to skolemize here.. But skolemization creates fresh constants
            -- based on the name given, and they mess with all else. So, don't skolemize!
            constrain $ sNot (quantifiedBool prop)
@@ -169,7 +167,8 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
          liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
 
          res <- case ctx of
-                  TPProofStep{} -> Satisfiable cfg <$> getModel
+                  TPProofStep{} -> do mapM_ (uncurry sObserve) disps
+                                      Satisfiable cfg <$> getModel
                   TPProofOneShot _ by ->
                      -- When trying to get a counter-example not in query mode, we
                      -- do a skolemized sat call, which gets better counter-examples.

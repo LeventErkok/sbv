@@ -40,10 +40,11 @@ module Data.SBV.TP.TP (
        ) where
 
 import Data.SBV
-import Data.SBV.Core.Model    (qSaturateSavingObservables)
-import Data.SBV.Core.Data     (SBV(..), SVal(..))
+import Data.SBV.Core.Model (qSaturateSavingObservables)
+import Data.SBV.Core.Data  (SBV(..), SVal(..))
 import qualified Data.SBV.Core.Symbolic as S (sObserve)
 
+import Data.SBV.Core.Operations (svEqual)
 import Data.SBV.Control hiding (getProof)
 
 import Data.SBV.TP.Kernel
@@ -86,7 +87,7 @@ proofTreeSaturatables = go
         getH (HelperAssum  b) = [b]
         getH HelperQC{}       = []
         getH HelperString{}   = []
-        getH HelperDisp{}     = []
+        getH (HelperDisp _ v) = [SBV (v `svEqual` v)]
 
 -- | Things that are inside calc-strategy that we have to saturate
 getCalcStrategySaturatables :: CalcStrategy -> [SBool]
