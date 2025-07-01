@@ -369,17 +369,16 @@ data CalcContext a = CalcStart     [Helper] -- Haven't started yet
 
 
 -- | Turn a raw (i.e., as written by the user) proof tree to a tree where the successive equalities are made explicit.
-mkProofTree :: SymVal a => (SBV a -> SBV a -> Symbolic SBool) -> TPProofRaw (SBV a) -> Symbolic TPProof
+mkProofTree :: SymVal a => (SBV a -> SBV a -> Symbolic c) -> TPProofRaw (SBV a) -> Symbolic (TPProofGen c [String] SBool)
 mkProofTree symEq = go (CalcStart [])
   where -- End of the proof; tie the begin and end
-        go step (ProofEnd () hs) = case step of
-                                     -- It's tempting to error out if we're at the start and already reached the end
-                                     -- This means we're given a sequence of no-steps. While this is useless in the
-                                     -- general case, it's quite valid in a case-split; where one of the case-splits
-                                     -- might be easy enough for the solver to deduce so the user simply says "just derive it for me."
-                                     CalcStart hs'           -> pure $ ProofEnd sTrue (hs' ++ hs) -- Nothing proven!
-                                     CalcStep  begin end hs' -> do e <- symEq begin end
-                                                                   pure $ ProofEnd e (hs' ++ hs)
+        go step (ProofEnd () hs) = pure $ case step of
+                                             -- It's tempting to error out if we're at the start and already reached the end
+                                             -- This means we're given a sequence of no-steps. While this is useless in the
+                                             -- general case, it's quite valid in a case-split; where one of the case-splits
+                                             -- might be easy enough for the solver to deduce so the user simply says "just derive it for me."
+                                             CalcStart hs'           -> ProofEnd sTrue (hs' ++ hs) -- Nothing proven!
+                                             CalcStep  begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
 
         -- Branch: Just push it down. We use the hints from previous step, and pass the current ones down.
         go step (ProofBranch c hs ps) = ProofBranch c (getHelperText hs) <$> mapM (\(bc, p) -> (bc,) <$> go step' p) ps
@@ -412,9 +411,7 @@ qcRun assumptions checkedLabel (intros, tpp) = do
           []              -> die "Exhausted the proof tree without hitting the relevant node."
           _               -> die "Hit the label multiple times."
 
- where obEq a b = do sObserve "lhs" a
-                     sObserve "rhs" b
-                     pure $ a .== b
+ where obEq a b = pure $ (a, b, a .== b)
 
        die why =  error $ unlines [ ""
                                   , "*** Data.SBV.patch: Impossible happened."
@@ -428,13 +425,15 @@ qcRun assumptions checkedLabel (intros, tpp) = do
        -- "run" the tree, and if we hit the correct label return the result.
        -- This needs to be in "sync" with proveProofTree for obvious reasons. So, any changes there
        -- make it here too!
-       runTree :: SBool -> Int -> ([Int], TPProof) -> Symbolic [([Int], (SBool, SBool))]
+       runTree :: SymVal a => SBool -> Int -> ([Int], TPProofGen (SBV a, SBV a, SBool) [String] SBool) -> Symbolic [([Int], (SBool, SBool))]
        runTree _        _     (_,  ProofEnd{})         = pure []
        runTree caseCond level (bn, ProofBranch _ _ ps) = concat <$> sequence [runTree (caseCond .&& branchCond) (level + 1) (bn ++ [i, 1], p)
                                                                              | (i, (branchCond, p)) <- zip [1..] ps
                                                                              ]
-       runTree caseCond level (bn, ProofStep cur _s p) = do rest <- runTree caseCond level (nextProofStep bn, p)
-                                                            pure $ (bn, (caseCond, cur)) : rest
+       runTree caseCond level (bn, ProofStep (lhs, rhs, cur) _s p) = do rest <- runTree caseCond level (nextProofStep bn, p)
+                                                                        when (bn == checkedLabel) $ do sObserve "lhs" lhs
+                                                                                                       sObserve "rhs" rhs
+                                                                        pure $ (bn, (caseCond, cur)) : rest
 
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
