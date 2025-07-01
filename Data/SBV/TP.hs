@@ -57,7 +57,7 @@ module Data.SBV.TP (
        , (??), (∵)
 
        -- * Using quickcheck
-       , qc
+       , qc, qcWith
 
        -- * Case splits
        , split, split2, cases, (⟹), (==>)

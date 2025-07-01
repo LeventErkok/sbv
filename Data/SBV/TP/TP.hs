@@ -35,7 +35,7 @@ module Data.SBV.TP.TP (
        , sorry
        , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpCache
        , (|-), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
-       , qc
+       , qc, qcWith
        ) where
 
 import Data.SBV
@@ -304,24 +304,32 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                                          finalizer
 
            -- Are we asked to do quick-check?
-           let qcCount = case [i | HelperQC i <- hs] of
-                           [] -> Nothing
-                           is -> Just (maximum (0 : is))
+           let qcArgs = case [qcArg | HelperQC qcArg <- hs] of
+                          [] -> Nothing
+                          xs -> Just (last xs) -- take the last one if multiple exists. Why not?
 
-           extras <- case qcCount of
+           extras <- case qcArgs of
                        Nothing  -> pure []
 
-                       Just cnt -> liftIO $ do
-                                       r <- quickCheckWithResult stdArgs{maxSize = cnt, chatty = verbose cfg} $ quickCheckInstance bn
+                       Just args -> liftIO $ do
+                                       r <- quickCheckWithResult args{chatty = verbose cfg} $ quickCheckInstance bn
+
                                        let err = case r of
                                                QC.Success {}                -> Nothing
                                                QC.Failure {QC.output = out} -> Just out
-                                               QC.GaveUp  {}                -> Just "QuickCheck reported \"GaveUp\""    -- can this happen?
+                                               QC.GaveUp  {}                -> Just $ unlines [ "*** QuickCheck reported \"GaveUp\""
+                                                                                              , "***"
+                                                                                              , "*** This can happen if you have assumptions in the environment"
+                                                                                              , "*** that makes it hard for quick-check to generate valid test values."
+                                                                                              , "***"
+                                                                                              , "*** See if you can reduce assumptions. If not, please get in touch,"
+                                                                                              , "*** to see if we can handle the problem via custom Arbitrary instances."
+                                                                                              ]
                                                QC.NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
                                        case err of
-                                         Just e  -> do let hs' = concatMap xform hs
-                                                           xform (HelperQC{}) = [HelperString "Failed during quickTest."]
-                                                           xform _            = []
+                                         Just e  -> do let hs' = concatMap xform hs ++ [HelperString "Failed during quickTest"]
+                                                           xform h@(HelperString{}) = [h]
+                                                           xform _                  = []
                                                        _ <- startTP cfg True "Step" level (TPProofStep False nm (getHelperText hs') stepName)
                                                        putStrLn $ "\n*** QuickCheck failed for " ++ intercalate "." (nm : stepName)
                                                        putStrLn e
@@ -369,51 +377,46 @@ data CalcContext a = CalcStart     [Helper] -- Haven't started yet
 
 
 -- | Turn a raw (i.e., as written by the user) proof tree to a tree where the successive equalities are made explicit.
-mkProofTree :: SymVal a => (SBV a -> SBV a -> Symbolic c) -> TPProofRaw (SBV a) -> Symbolic (TPProofGen c [String] SBool)
+mkProofTree :: SymVal a => (SBV a -> SBV a -> c) -> TPProofRaw (SBV a) -> TPProofGen c [String] SBool
 mkProofTree symEq = go (CalcStart [])
   where -- End of the proof; tie the begin and end
-        go step (ProofEnd () hs) = pure $ case step of
-                                             -- It's tempting to error out if we're at the start and already reached the end
-                                             -- This means we're given a sequence of no-steps. While this is useless in the
-                                             -- general case, it's quite valid in a case-split; where one of the case-splits
-                                             -- might be easy enough for the solver to deduce so the user simply says "just derive it for me."
-                                             CalcStart hs'           -> ProofEnd sTrue (hs' ++ hs) -- Nothing proven!
-                                             CalcStep  begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
+        go step (ProofEnd () hs) = case step of
+                                     -- It's tempting to error out if we're at the start and already reached the end
+                                     -- This means we're given a sequence of no-steps. While this is useless in the
+                                     -- general case, it's quite valid in a case-split; where one of the case-splits
+                                     -- might be easy enough for the solver to deduce so the user simply says "just derive it for me."
+                                     CalcStart hs'           -> ProofEnd sTrue (hs' ++ hs) -- Nothing proven!
+                                     CalcStep  begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
 
         -- Branch: Just push it down. We use the hints from previous step, and pass the current ones down.
-        go step (ProofBranch c hs ps) = ProofBranch c (getHelperText hs) <$> mapM (\(bc, p) -> (bc,) <$> go step' p) ps
+        go step (ProofBranch c hs ps) = ProofBranch c (getHelperText hs) [(bc, go step' p) | (bc, p) <- ps]
            where step' = case step of
                            CalcStart hs'     -> CalcStart (hs' ++ hs)
                            CalcStep  a b hs' -> CalcStep a b (hs' ++ hs)
 
         -- Step:
-        go (CalcStart hs)           (ProofStep cur hs' p) = go (CalcStep cur   cur (hs' ++ hs)) p
-        go (CalcStep first prev hs) (ProofStep cur hs' p) = do e <- symEq prev cur
-                                                               ProofStep e hs <$> go (CalcStep first cur hs') p
+        go (CalcStart hs)           (ProofStep cur hs' p) = go (CalcStep cur cur (hs' ++ hs)) p
+        go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (symEq prev cur) hs (go (CalcStep first cur hs') p)
 
 -- | Turn a sequence of steps into a chain of equalities
 mkCalcSteps :: SymVal a => (SBool, TPProofRaw (SBV a)) -> ([Int] -> Symbolic SBool) -> Symbolic CalcStrategy
 mkCalcSteps (intros, tpp) qcInstance = do
-        pt <- mkProofTree (\a b -> pure (a .== b)) tpp
         pure $ CalcStrategy { calcIntros     = intros
-                            , calcProofTree  = pt
+                            , calcProofTree  = mkProofTree (.==) tpp
                             , calcQCInstance = qcInstance
                             }
 
 -- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree for the step that's marked as such.
 qcRun :: SymVal a => SBool -> [Int] -> (SBool, TPProofRaw (SBV a)) -> Symbolic SBool
 qcRun assumptions checkedLabel (intros, tpp) = do
-        tree <- mkProofTree obEq tpp
-        results <- runTree sTrue 1 ([1], tree)
+        results <- runTree sTrue 1 ([1], mkProofTree (\a b -> (a, b, a .== b)) tpp)
         case [b | (l, b) <- results, l == checkedLabel] of
           [(caseCond, b)] -> do constrain $ assumptions .&& intros .&& caseCond
                                 pure b
           []              -> die "Exhausted the proof tree without hitting the relevant node."
           _               -> die "Hit the label multiple times."
 
- where obEq a b = pure $ (a, b, a .== b)
-
-       die why =  error $ unlines [ ""
+ where die why =  error $ unlines [ ""
                                   , "*** Data.SBV.patch: Impossible happened."
                                   , "***"
                                   , "*** " ++ why
@@ -1176,7 +1179,7 @@ instantiate ap (Proof p@ProofObj{getProp, proofName}) a = case fromDynamic getPr
 -- | Helpers for a step
 data Helper = HelperProof  ProofObj  -- A previously proven theorem
             | HelperAssum  SBool     -- A hypothesis
-            | HelperQC     Int       -- Quickcheck with this many tests
+            | HelperQC     QC.Args   -- Quickcheck with these args
             | HelperString String    -- Just a text, only used for diagnostics
 
 -- | Get all helpers used in a proof
@@ -1207,7 +1210,7 @@ getHelperText hs = case [s | HelperString s <- hs] of
   where collect :: Helper -> [String]
         collect (HelperProof  p) = [proofName p | isUserAxiom p]  -- Don't put out internals (inductive hypotheses)
         collect HelperAssum  {}  = []
-        collect (HelperQC     i) = ["passed " ++ show i ++ " tests"]
+        collect (HelperQC     i) = ["passed " ++ show (maxSize i) ++ " tests"]
         collect (HelperString s) = [s]
 
 -- | A proof is a sequence of steps, supporting branching
@@ -1455,9 +1458,13 @@ split2 (xs, ys) ee ec ce cc = ProofBranch False
         (hy, ty) = SL.uncons ys
         ycons    = sNot ynil .&& ys .== hy SL..: ty
 
--- | A quick-check step
+-- | A quick-check step, taking number of tests.
 qc :: Int -> Helper
-qc = HelperQC
+qc cnt = HelperQC stdArgs{maxSize = cnt}
+
+-- | A quick-check step, with specific quick-check args.
+qcWith :: QC.Args -> Helper
+qcWith = HelperQC
 
 -- | Specifying a case-split, helps with the boolean case.
 (==>) :: SBool -> TPProofRaw a -> (SBool, TPProofRaw a)

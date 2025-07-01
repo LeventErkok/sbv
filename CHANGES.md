@@ -23,6 +23,7 @@
         Note that all these utils will be in effect with the closest call to runTP/runTPWith. If you change the
         solver for a specific lemma, we'll only change the solver, not TP-options.
       - Generalize various TP list/sort proofs.
+      - Added qc/qcWith helpers, which allow you to run quick-check on specific proof steps
 
    * New TP examples:
       - Documentation.SBV.Examples.TP.Fibonacci:  Proving tail-recursive fibonacci is equivalent to textbook definition
