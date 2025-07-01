@@ -169,14 +169,34 @@ existsConjunctionNot p q = runTP $ do
 
     pure ()
 
--- * QuickCheck steps
+-- * QuickCheck
 
--- | Using quick-check as a step
-qcExample :: TP (Proof (Forall "n" Integer -> SBool))
+-- | Using quick-check as a step. This can come in handy if a proof step isn't converging,
+-- or if you want to quickly see if there are any obvious counterexamples. This example prints:
+--
+-- @
+-- Lemma: qcExample
+--   Step: 1 (passed 1000 tests)           Q.E.D. [Modulo: quickCheck]
+--   Step: 2 (bad, Failed during quickTest)
+--
+-- *** QuickCheck failed for qcExample.2
+-- *** Failed! Assertion failed (after 1 test):
+--   n   = 241 :: Word8
+--   lhs = 226 :: Word8
+--   rhs = 227 :: Word8
+--
+-- *** Exception: Failed
+-- @
+--
+-- Of course, the counterexample you get might differ depending on the quickcheck outcome.
+qcExample :: TP (Proof (Forall "n" Word8 -> SBool))
 qcExample = calc "qcExample"
                  (\(Forall n) -> n + n .== 2 * n) $
                  \n -> [] |- n + n
                           ?? qc 1000
+                          =: 2 * n
+                          ?? qc 1000
+                          ?? "bad"
                           =: 2 * n + 1
                           =: qed
 
