@@ -25,7 +25,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.TP (
-         Proposition, Proof, proofOf, assumptionFromProof, Instantiatable(..), Inst(..), Measure(..)
+         Proposition, Proof, proofOf, assumptionFromProof, Instantiatable(..), Inst(..)
        , rootOfTrust, RootOfTrust(..), ProofTree(..), showProofTree, showProofTreeHTML
        ,   axiom
        ,   lemma,   lemmaWith
@@ -102,17 +102,14 @@ type family StepArgs a t = result | result -> t where
   StepArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d                -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw (SBV t)))
   StepArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw (SBV t)))
 
--- | Wrapper around measure values.
-newtype Measure t = Measure t deriving newtype (EqSymbolic, OrdSymbolic, Mergeable)
-
 -- | Use an injective type family to allow for curried use of measures in strong induction instances
 type family MeasureArgs a t = result | result -> t where
-  MeasureArgs                                                                             SBool  t = (                                             Measure t)
-  MeasureArgs (Forall na a                                                             -> SBool) t = (SBV a                                     -> Measure t)
-  MeasureArgs (Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> Measure t)
-  MeasureArgs (Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> Measure t)
-  MeasureArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d                -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d          -> Measure t)
-  MeasureArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> Measure t)
+  MeasureArgs                                                                             SBool  t = (                                             SBV t)
+  MeasureArgs (Forall na a                                                             -> SBool) t = (SBV a                                     -> SBV t)
+  MeasureArgs (Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> SBV t)
+  MeasureArgs (Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> SBV t)
+  MeasureArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d                -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d          -> SBV t)
+  MeasureArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV t)
 
 -- | Use an injective type family to allow for curried use of regular induction steps. The first argument is the inductive arg that comes separately,
 -- and hence is not used in the right-hand side of the equation.
@@ -522,27 +519,27 @@ class Inductive a where
    inductionStrategy :: (Proposition a, SymVal t, EqSymbolic (SBV t)) => a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> Symbolic InductionStrategy
 
 -- | A class of values, capturing the zero of a measure value
-class OrdSymbolic a => Zero a where
-  zero :: Measure a
+class OrdSymbolic (SBV a) => Zero a where
+  zero :: SBV a
 
 -- | An integer as a measure
-instance Zero SInteger where
-   zero = Measure 0
+instance Zero Integer where
+   zero = literal 0
 
 -- | A tuple of integers as a measure
-instance Zero (SInteger, SInteger) where
-  zero = Measure (0, 0)
+instance Zero (Integer, Integer) where
+  zero = literal (0, 0)
 
 -- | A triple of integers as a measure
-instance Zero (SInteger, SInteger, SInteger) where
-  zero = Measure (0, 0, 0)
+instance Zero (Integer, Integer, Integer) where
+  zero = literal (0, 0, 0)
 
 -- | A quadruple of integers as a measure
-instance Zero (SInteger, SInteger, SInteger, SInteger) where
-  zero = Measure (0, 0, 0, 0)
+instance Zero (Integer, Integer, Integer, Integer) where
+  zero = literal (0, 0, 0, 0)
 
-instance Zero (SInteger, SInteger, SInteger, SInteger, SInteger) where
-  zero = Measure (0, 0, 0, 0, 0)
+instance Zero (Integer, Integer, Integer, Integer, Integer) where
+  zero = literal (0, 0, 0, 0, 0)
 
 -- | A class for doing generalized measure based strong inductive proofs.
 class SInductive a where
@@ -649,7 +646,7 @@ instance KnownSymbol nn => Inductive (Forall nn Integer -> SBool) where
        (n, nn) <- mkVar (Proxy @nn)
 
        let bc = result (Forall 0)
-           ih = internalAxiom "IH" (Measure n .>= zero .=> result (Forall n))
+           ih = internalAxiom "IH" (n .>= zero .=> result (Forall n))
 
        mkIndStrategy Nothing
                      (Just bc)
@@ -668,7 +665,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Inte
        (a, na) <- mkVar (Proxy @na)
 
        let bc = result (Forall 0) (Forall a)
-           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) -> Measure n .>= zero .=> result (Forall n) (Forall a'))
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) -> n .>= zero .=> result (Forall n) (Forall a'))
 
        mkIndStrategy Nothing
                      (Just bc)
@@ -687,7 +684,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) =>
        (b, nb) <- mkVar (Proxy @nb)
 
        let bc = result (Forall 0) (Forall a) (Forall b)
-           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b'))
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b'))
 
        mkIndStrategy Nothing
                      (Just bc)
@@ -707,7 +704,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (c, nc) <- mkVar (Proxy @nc)
 
        let bc = result (Forall 0) (Forall a) (Forall b) (Forall c)
-           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c'))
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c'))
 
        mkIndStrategy Nothing
                      (Just bc)
@@ -728,7 +725,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (d, nd) <- mkVar (Proxy @nd)
 
        let bc = result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d)
-           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))
 
        mkIndStrategy Nothing
                      (Just bc)
@@ -750,7 +747,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (e, ne) <- mkVar (Proxy @ne)
 
        let bc = result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
-           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> Measure n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
+           ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
 
        mkIndStrategy Nothing
                      (Just bc)

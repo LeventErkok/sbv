@@ -398,7 +398,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- The first element of partition does not increase in size
   partitionNotLongerFst <- sInduct "partitionNotLongerFst"
      (\(Forall l) (Forall pivot) -> length (fst (partition @a pivot l)) .<= length l)
-     (\l _ -> Measure (length l)) $
+     (\l _ -> length l) $
      \ih l pivot -> [] |- length (fst (partition @a pivot l)) .<= length l
                        =: split l trivial
                                 (\a as -> let lo = fst (partition pivot as)
@@ -416,7 +416,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- The second element of partition does not increase in size
   partitionNotLongerSnd <- sInduct "partitionNotLongerSnd"
      (\(Forall l) (Forall pivot) -> length (snd (partition @a pivot l)) .<= length l)
-     (\l _ -> Measure (length l)) $
+     (\l _ -> length l) $
      \ih l pivot -> [] |- length (snd (partition @a pivot l)) .<= length l
                        =: split l trivial
                                 (\a as -> let hi = snd (partition pivot as)
@@ -479,7 +479,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   sortCountsMatch <-
      sInduct "sortCountsMatch"
              (\(Forall xs) (Forall e) -> count e xs .== count e (quickSort xs))
-             (\xs _ -> Measure (length xs)) $
+             (\xs _ -> length xs) $
              \ih xs e ->
                 [] |- count e (quickSort xs)
                    =: split xs trivial
@@ -532,7 +532,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   sortIsNonDecreasing <-
      sInductWith cvc5 "sortIsNonDecreasing"
              (\(Forall xs) -> nonDecreasing (quickSort xs))
-             (Measure . length @a) $
+             (length @a) $
              \ih xs ->
                 [] |- nonDecreasing (quickSort xs)
                    =: split xs trivial

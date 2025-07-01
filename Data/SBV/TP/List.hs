@@ -136,7 +136,7 @@ initsLength :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 initsLength =
    sInduct "initsLength"
            (\(Forall xs) -> length (inits xs) .== 1 + length xs)
-           (Measure . length @a) $
+           (length @a) $
            \ih xs -> [] |- length (inits xs)
                         ?? ih
                         =: 1 + length xs
@@ -368,7 +368,7 @@ enumLen :: TP (Proof (Forall "n" Integer -> Forall "m" Integer -> SBool))
 enumLen =
   sInduct "enumLen"
           (\(Forall n) (Forall m) -> length [sEnum|n .. m|] .== 0 `smax` (m - n + 1))
-          (\n m -> Measure (abs (m - n))) $
+          (\n m -> abs (m - n)) $
           \ih n m -> [] |- length [sEnum|n+1 .. m|]
                         =: cases [ n+1 .>  m ==> trivial
                                  , n+1 .<= m ==> length (n+1 .: [sEnum|n+2 .. m|])
@@ -407,7 +407,7 @@ revNM = do
   helper <- sInduct "helper"
                     (\(Forall @"m" (m :: SInteger)) (Forall @"n" n) ->
                           n .< m .=> [sEnum|m, m-1 .. n+1|] ++ [n] .== [sEnum|m, m-1 .. n|])
-                    (\m n -> Measure (abs (m - n))) $
+                    (\m n -> abs (m - n)) $
                     \ih m n -> [n .< m] |- [sEnum|m, m-1 .. n+1|] ++ [n]
                                         =: m .: [sEnum|m-1, m-2 .. n+1|] ++ [n]
                                         ?? ih
@@ -417,7 +417,7 @@ revNM = do
 
   sInduct "revNM"
           (\(Forall n) (Forall m) -> reverse [sEnum|n .. m|] .== [sEnum|m, m-1 .. n|])
-          (\n m -> Measure (abs (m - n))) $
+          (\n m -> abs (m - n)) $
           \ih n m -> [] |- reverse [sEnum|n .. m|]
                         =: cases [ n .>  m ==> trivial
                                  , n .<= m ==> reverse (n .: [sEnum|(n+1) .. m|])
@@ -1562,7 +1562,7 @@ interleave = smtFunction "interleave" (\xs ys -> ite (null  xs) ys (head xs .: i
 interleaveLen :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 interleaveLen = sInduct "interleaveLen"
                         (\(Forall xs) (Forall ys) -> length xs + length ys .== length (interleave xs ys))
-                        (\xs ys -> Measure (length xs + length ys)) $
+                        (\xs ys -> length xs + length ys) $
                         \ih xs ys -> [] |- length xs + length ys .== length (interleave xs ys)
                                         =: split xs
                                                  trivial
@@ -1621,7 +1621,7 @@ interleaveRoundTrip = do
          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"alts" alts) ->
                length xs .== length ys .=> let (es, os) = untuple alts
                                            in uninterleaveGen (interleave xs ys) alts .== tuple (reverse es ++ xs, reverse os ++ ys))
-         (\xs ys _alts -> Measure (length xs + length ys)) $
+         (\xs ys _alts -> length xs + length ys) $
          \ih xs ys alts -> [length xs .== length ys]
                         |- let (es, os) = untuple alts
                         in uninterleaveGen (interleave xs ys) alts

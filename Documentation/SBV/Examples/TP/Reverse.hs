@@ -126,7 +126,7 @@ correctness = runTP $ do
 
   sInductWith cvc5 "revCorrect"
     (\(Forall xs) -> rev xs .== reverse xs)
-    (Measure . length) $
+    length $
     \ih xs -> [] |- rev xs
                  =: split xs trivial
                           (\a as -> split as trivial
