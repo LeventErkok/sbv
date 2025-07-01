@@ -94,12 +94,12 @@ tpMergeCfg cur top = cur{tpOptions = tpOptions top}
 
 -- | Use an injective type family to allow for curried use of calc and strong induction steps.
 type family StepArgs a t = result | result -> t where
-  StepArgs                                                                             SBool  t =                                               (SBool, TPProofRaw t)
-  StepArgs (Forall na a                                                             -> SBool) t = (SBV a                                     -> (SBool, TPProofRaw t))
-  StepArgs (Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> (SBool, TPProofRaw t))
-  StepArgs (Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))
-  StepArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d                -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw t))
-  StepArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw t))
+  StepArgs                                                                             SBool  t =                                               (SBool, TPProofRaw (SBV t))
+  StepArgs (Forall na a                                                             -> SBool) t = (SBV a                                     -> (SBool, TPProofRaw (SBV t)))
+  StepArgs (Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> (SBool, TPProofRaw (SBV t)))
+  StepArgs (Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw (SBV t)))
+  StepArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d                -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw (SBV t)))
+  StepArgs (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw (SBV t)))
 
 -- | Wrapper around measure values.
 newtype Measure t = Measure t deriving newtype (EqSymbolic, OrdSymbolic, Mergeable)
@@ -116,18 +116,18 @@ type family MeasureArgs a t = result | result -> t where
 -- | Use an injective type family to allow for curried use of regular induction steps. The first argument is the inductive arg that comes separately,
 -- and hence is not used in the right-hand side of the equation.
 type family IStepArgs a t = result | result -> t where
-  IStepArgs ( Forall nx x                                                                                          -> SBool) t =                                               (SBool, TPProofRaw t)
-  IStepArgs ( Forall nx x               -> Forall na a                                                             -> SBool) t = (SBV a ->                                     (SBool, TPProofRaw t))
-  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> (SBool, TPProofRaw t))
-  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))
-  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d                -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw t))
-  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw t))
-  IStepArgs ((Forall nx x, Forall ny y)                                                                            -> SBool) t =                                               (SBool, TPProofRaw t)
-  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a                                                             -> SBool) t = (SBV a ->                                     (SBool, TPProofRaw t))
-  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> (SBool, TPProofRaw t))
-  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw t))
-  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d                -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw t))
-  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw t))
+  IStepArgs ( Forall nx x                                                                                          -> SBool) t =                                               (SBool, TPProofRaw (SBV t))
+  IStepArgs ( Forall nx x               -> Forall na a                                                             -> SBool) t = (SBV a ->                                     (SBool, TPProofRaw (SBV t)))
+  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> (SBool, TPProofRaw (SBV t)))
+  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw (SBV t)))
+  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d                -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw (SBV t)))
+  IStepArgs ( Forall nx x               -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw (SBV t)))
+  IStepArgs ((Forall nx x, Forall ny y)                                                                            -> SBool) t =                                               (SBool, TPProofRaw (SBV t))
+  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a                                                             -> SBool) t = (SBV a ->                                     (SBool, TPProofRaw (SBV t)))
+  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b                                              -> SBool) t = (SBV a -> SBV b                            -> (SBool, TPProofRaw (SBV t)))
+  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> Forall nc c                               -> SBool) t = (SBV a -> SBV b -> SBV c                   -> (SBool, TPProofRaw (SBV t)))
+  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d                -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d          -> (SBool, TPProofRaw (SBV t)))
+  IStepArgs ((Forall nx x, Forall ny y) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) t = (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, TPProofRaw (SBV t)))
 
 -- | A class for doing equational reasoning style calculational proofs. Use 'calc' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
@@ -150,19 +150,19 @@ class Calc a where
   -- non-boolean steps.
   --
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
-  calc :: (Proposition a, EqSymbolic t) => String -> a -> StepArgs a t -> TP (Proof a)
+  calc :: (Proposition a, SymVal t, EqSymbolic (SBV t)) => String -> a -> StepArgs a t -> TP (Proof a)
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  calcWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
+  calcWith :: (Proposition a, SymVal t, EqSymbolic (SBV t)) => SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL calcSteps #-}
-  calcSteps :: EqSymbolic t => a -> StepArgs a t -> Symbolic (SBool, CalcStrategy)
+  calcSteps :: (SymVal t, EqSymbolic (SBV t)) => a -> StepArgs a t -> Symbolic (SBool, CalcStrategy)
 
   calc         nm p steps = getTPConfig >>= \cfg  -> calcWith          cfg                   nm p steps
   calcWith cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric False (tpMergeCfg cfg cfg') nm p steps
 
-  calcGeneric :: (EqSymbolic t, Proposition a) => Bool -> SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
+  calcGeneric :: (SymVal t, EqSymbolic (SBV t), Proposition a) => Bool -> SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
   calcGeneric tagTheorem cfg nm result steps = withProofCache nm $ do
       tpSt <- getTPState
       u    <- tpGetNextUnique
@@ -368,16 +368,16 @@ data CalcContext a = CalcStart     [Helper] -- Haven't started yet
 
 
 -- | Turn a raw (i.e., as written by the user) proof tree to a tree where the successive equalities are made explicit.
-mkProofTree :: EqSymbolic a => TPProofRaw a -> TPProof
-mkProofTree = go (CalcStart [])
+mkProofTree :: (SBV a -> SBV a -> SBool) -> TPProofRaw (SBV a) -> TPProof
+mkProofTree eq = go (CalcStart [])
   where -- End of the proof; tie the begin and end
         go step (ProofEnd () hs) = case step of
                                      -- It's tempting to error out if we're at the start and already reached the end
                                      -- This means we're given a sequence of no-steps. While this is useless in the
                                      -- general case, it's quite valid in a case-split; where one of the case-splits
                                      -- might be easy enough for the solver to deduce so the user simply says "just derive it for me."
-                                     CalcStart hs'           -> ProofEnd sTrue           (hs' ++ hs) -- Nothing proven!
-                                     CalcStep  begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
+                                     CalcStart hs'           -> ProofEnd sTrue            (hs' ++ hs) -- Nothing proven!
+                                     CalcStep  begin end hs' -> ProofEnd (begin `eq` end) (hs' ++ hs)
 
         -- Branch: Just push it down. We use the hints from previous step, and pass the current ones down.
         go step (ProofBranch c hs ps) = ProofBranch c (getHelperText hs) [(branchCond, go step' p) | (branchCond, p) <- ps]
@@ -386,18 +386,18 @@ mkProofTree = go (CalcStart [])
                            CalcStep  a b hs' -> CalcStep a b (hs' ++ hs)
 
         -- Step:
-        go (CalcStart hs)           (ProofStep cur hs' p) =                              go (CalcStep cur   cur (hs' ++ hs)) p
-        go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev .== cur) hs (go (CalcStep first cur hs')         p)
+        go (CalcStart hs)           (ProofStep cur hs' p) =                               go (CalcStep cur   cur (hs' ++ hs)) p
+        go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev `eq` cur) hs (go (CalcStep first cur hs')         p)
 
 -- | Turn a sequence of steps into a chain of equalities
-mkCalcSteps :: EqSymbolic a => (SBool, TPProofRaw a) -> ([Int] -> Symbolic SBool) -> CalcStrategy
+mkCalcSteps :: SymVal a => (SBool, TPProofRaw (SBV a)) -> ([Int] -> Symbolic SBool) -> CalcStrategy
 mkCalcSteps (intros, tpp) qcInstance = CalcStrategy { calcIntros     = intros
-                                                    , calcProofTree  = mkProofTree tpp
+                                                    , calcProofTree  = mkProofTree (.==) tpp
                                                     , calcQCInstance = qcInstance
                                                     }
 
 -- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree for the step that's marked as such.
-qcRun :: EqSymbolic a => SBool -> [Int] -> (SBool, TPProofRaw a) -> Symbolic SBool
+qcRun :: SymVal a => SBool -> [Int] -> (SBool, TPProofRaw (SBV a)) -> Symbolic SBool
 qcRun assumptions checkedLabel (intros, tpp) = do
         results <- runTree sTrue 1 ([1], tree)
         case [b | (l, b) <- results, l == checkedLabel] of
@@ -406,7 +406,7 @@ qcRun assumptions checkedLabel (intros, tpp) = do
           []              -> die "Exhausted the proof tree without hitting the relevant node."
           _               -> die "Hit the label multiple times."
 
- where tree = mkProofTree tpp
+ where tree = mkProofTree (\a b -> observe "lhs" a .== observe "rhs" b) tpp
        die why =  error $ unlines [ ""
                                   , "*** Data.SBV.patch: Impossible happened."
                                   , "***"
@@ -496,19 +496,19 @@ class Inductive a where
    -- | Inductively prove a lemma, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   induct  :: (Proposition a, EqSymbolic t) => String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
+   induct  :: (Proposition a, SymVal t, EqSymbolic (SBV t)) => String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
 
    -- | Same as 'induct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   inductWith :: (Proposition a, EqSymbolic t) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
+   inductWith :: (Proposition a, SymVal t, EqSymbolic (SBV t)) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
 
    induct         nm p steps = getTPConfig >>= \cfg  -> inductWith                             cfg                   nm p steps
    inductWith cfg nm p steps = getTPConfig >>= \cfg' -> inductionEngine RegularInduction False (tpMergeCfg cfg cfg') nm p (inductionStrategy p steps)
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL inductionStrategy #-}
-   inductionStrategy :: (Proposition a, EqSymbolic t) => a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> Symbolic InductionStrategy
+   inductionStrategy :: (Proposition a, SymVal t, EqSymbolic (SBV t)) => a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> Symbolic InductionStrategy
 
 -- | A class of values, capturing the zero of a measure value
 class OrdSymbolic a => Zero a where
@@ -538,19 +538,19 @@ class SInductive a where
    -- | Inductively prove a lemma, using measure based induction, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInduct :: (Proposition a, Zero m, EqSymbolic t) => String -> a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> TP (Proof a)
+   sInduct :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => String -> a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
    -- | Same as 'sInduct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductWith :: (Proposition a, Zero m, EqSymbolic t) => SMTConfig -> String -> a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> TP (Proof a)
+   sInductWith :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => SMTConfig -> String -> a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
    sInduct         nm p m steps = getTPConfig >>= \cfg  -> sInductWith                            cfg                   nm p m steps
    sInductWith cfg nm p m steps = getTPConfig >>= \cfg' -> inductionEngine GeneralInduction False (tpMergeCfg cfg cfg') nm p (sInductionStrategy p m steps)
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL sInductionStrategy #-}
-   sInductionStrategy :: (Proposition a, Zero m, EqSymbolic t) => a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> Symbolic InductionStrategy
+   sInductionStrategy :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> Symbolic InductionStrategy
 
 -- | Do an inductive proof, based on the given strategy
 inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> TP (Proof a)
@@ -600,7 +600,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
        proveProofTree cfg tpSt nm (result, inductiveStep) inductionIntros inductionProofTree u inductiveQCInstance
 
 -- Induction strategy helper
-mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw a) -> SBool -> ([Int] -> Symbolic SBool) -> InductionStrategy
+mkIndStrategy :: (SymVal a, EqSymbolic (SBV a)) => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw (SBV a)) -> SBool -> ([Int] -> Symbolic SBool) -> InductionStrategy
 mkIndStrategy mbMeasure mbBaseCase indSteps step indQCInstance =
         let CalcStrategy { calcIntros, calcProofTree, calcQCInstance } = mkCalcSteps indSteps indQCInstance
         in InductionStrategy { inductionIntros     = calcIntros
