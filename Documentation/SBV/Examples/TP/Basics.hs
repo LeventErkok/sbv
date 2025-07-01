@@ -177,13 +177,14 @@ existsConjunctionNot p q = runTP $ do
 -- @
 -- Lemma: qcExample
 --   Step: 1 (passed 1000 tests)           Q.E.D. [Modulo: quickCheck]
---   Step: 2 (bad, Failed during quickTest)
---
+--   Step: 2 (Failed during quickTest)
+-- 
 -- *** QuickCheck failed for qcExample.2
 -- *** Failed! Assertion failed (after 1 test):
---   n   = 241 :: Word8
---   lhs = 226 :: Word8
---   rhs = 227 :: Word8
+--   n   = 175 :: Word8
+--   lhs =  94 :: Word8
+--   rhs =  95 :: Word8
+--   val =  94 :: Word8
 --
 -- *** Exception: Failed
 -- @
@@ -196,7 +197,7 @@ qcExample = calc "qcExample"
                           ?? qc 1000
                           =: 2 * n
                           ?? qc 1000
-                          ?? "bad"
+                          ?? disp "val" (2 * n)
                           =: 2 * n + 1
                           =: qed
 
