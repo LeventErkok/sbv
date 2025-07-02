@@ -205,7 +205,7 @@ qcExample = calc "qcExample"
 --
 -- >>> runTP (qcFermat 3)
 -- Lemma: qcFermat 3
---   Step: 1 (passed 1000 tests)           Q.E.D. [Modulo: quickCheck]
+--   Step: 1 (qc: Running 1000 tests)      QC OK
 --   Result:                               Q.E.D. [Modulo: quickCheck]
 -- [Modulo: qcFermat 3] qcFermat 3 :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
 qcFermat :: Integer -> TP (Proof (Forall "x" Integer -> Forall "y" Integer -> Forall "z" Integer -> SBool))

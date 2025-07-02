@@ -68,7 +68,7 @@ import Data.SBV.Utils.TDiff
 import Data.Dynamic
 
 import qualified Test.QuickCheck as QC
-import Test.QuickCheck (quickCheckWithResult, stdArgs, maxSize, chatty)
+import Test.QuickCheck (quickCheckWithResult)
 
 -- | Captures the steps for a calculationa proof
 data CalcStrategy = CalcStrategy { calcIntros     :: SBool
@@ -221,162 +221,164 @@ proveProofTree :: Proposition a
                -> ([Int] -> Symbolic SBool) -- ^ quick-checker
                -> Query (Proof a)
 proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree uniq quickCheckInstance = do
+    results <- walk initialHypotheses 1 ([1], calcProofTree)
 
-  let SMTConfig{tpOptions = TPOptions{printStats}} = cfg
+    queryDebug [nm ++ ": Proof end: proving the result:"]
 
-      isEnd ProofEnd{}    = True
-      isEnd ProofStep{}   = False
-      isEnd ProofBranch{} = False
+    mbStartTime <- getTimeStampIf printStats
+    smtProofStep cfg tpSt "Result" 1
+                 (TPProofStep False nm [] [""])
+                 (Just (initialHypotheses .=> sAnd results))
+                 resultBool [] $ \d ->
+                   do mbElapsed <- getElapsedTime mbStartTime
+                      let modulo = concludeModulo (concatMap getHelperProofs (getAllHelpers calcProofTree))
+                      finishTP cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
-      -- trim the branch-name, if we're in a deeper level, and we're at the end
-      trimBN level bn | level > 1, 1 : _ <- reverse bn = init bn
-                      | True                           = bn
+                      pure $ Proof $ ProofObj { dependencies = getDependencies calcProofTree
+                                              , isUserAxiom  = False
+                                              , getObjProof  = label nm (quantifiedBool result)
+                                              , getProp      = toDyn result
+                                              , proofName    = nm
+                                              , uniqId       = uniq
+                                              , isCached     = False
+                                              }
 
-      -- If the next step is ending and we're the 1st step; our number can be skipped
-      mkStepName level bn nextStep | isEnd nextStep = map show (trimBN level bn)
-                                   | True           = map show bn
+  where SMTConfig{tpOptions = TPOptions{printStats}} = cfg
 
-      walk :: SBool -> Int -> ([Int], TPProof) -> Query [SBool]
+        isEnd ProofEnd{}    = True
+        isEnd ProofStep{}   = False
+        isEnd ProofBranch{} = False
 
-      -- End of proof, return what it established. If there's a hint associated here, it was probably by mistake; so tell it to the user.
-      walk intros level (bn, ProofEnd calcResult hs)
-         | not (null hs)
-         = error $ unlines [ ""
-                           , "*** Incorrect calc/induct lemma calculations."
-                           , "***"
-                           , "***    The last step in the proof has a helper, which isn't used."
-                           , "***"
-                           , "*** Perhaps the hint is off-by-one in its placement?"
-                           ]
-         | True
-         =  do -- If we're not at the top-level and this is the only step, print it.
-               -- Otherwise the noise isn't necessary.
-               when (level > 1) $ case reverse bn of
-                                    1 : _ -> liftIO $ do tab <- startTP cfg False "Step" level (TPProofStep False nm [] (map show (init bn)))
-                                                         finishTP cfg "Q.E.D." (tab, Nothing) []
-                                    _     -> pure ()
+        -- trim the branch-name, if we're in a deeper level, and we're at the end
+        trimBN level bn | level > 1, 1 : _ <- reverse bn = init bn
+                        | True                           = bn
 
-               pure [intros .=> calcResult]
+        -- If the next step is ending and we're the 1st step; our number can be skipped
+        mkStepName level bn nextStep | isEnd nextStep = map show (trimBN level bn)
+                                     | True           = map show bn
 
-      -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
-      -- is essentially the assumption here.
-      walk intros level (bnTop, ProofBranch checkCompleteness hintStrings ps) = do
+        walk :: SBool -> Int -> ([Int], TPProof) -> Query [SBool]
 
-        let bn = trimBN level bnTop
+        -- End of proof, return what it established. If there's a hint associated here, it was probably by mistake; so tell it to the user.
+        walk intros level (bn, ProofEnd calcResult hs)
+           | not (null hs)
+           = error $ unlines [ ""
+                             , "*** Incorrect calc/induct lemma calculations."
+                             , "***"
+                             , "***    The last step in the proof has a helper, which isn't used."
+                             , "***"
+                             , "*** Perhaps the hint is off-by-one in its placement?"
+                             ]
+           | True
+           =  do -- If we're not at the top-level and this is the only step, print it.
+                 -- Otherwise the noise isn't necessary.
+                 when (level > 1) $ case reverse bn of
+                                      1 : _ -> liftIO $ do tab <- startTP cfg False "Step" level (TPProofStep False nm [] (map show (init bn)))
+                                                           finishTP cfg "Q.E.D." (tab, Nothing) []
+                                      _     -> pure ()
 
-            addSuffix xs s = case reverse xs of
-                                l : p -> reverse $ (l ++ s) : p
-                                []    -> [s]
+                 pure [intros .=> calcResult]
 
-            full | checkCompleteness = ""
-                 | True              = "full "
+        -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
+        -- is essentially the assumption here.
+        walk intros level (bnTop, ProofBranch checkCompleteness hintStrings ps) = do
 
-            stepName = map show bn
+          let bn = trimBN level bnTop
 
-        _ <- io $ startTP cfg True "Step" level (TPProofStep False nm hintStrings (addSuffix stepName (" (" ++ show (length ps) ++ " way " ++ full ++ "case split)")))
+              addSuffix xs s = case reverse xs of
+                                  l : p -> reverse $ (l ++ s) : p
+                                  []    -> [s]
 
-        results <- concat <$> sequence [walk (intros .&& branchCond) (level + 1) (bn ++ [i, 1], p) | (i, (branchCond, p)) <- zip [1..] ps]
+              full | checkCompleteness = ""
+                   | True              = "full "
 
-        when checkCompleteness $ smtProofStep cfg tpSt "Step" (level+1)
-                                                       (TPProofStep False nm [] (stepName ++ ["Completeness"]))
-                                                       (Just intros)
-                                                       (sOr (map fst ps))
-                                                       []
-                                                       (\d -> finishTP cfg "Q.E.D." d [])
-        pure results
+              stepName = map show bn
 
-      -- Do a proof step
-      walk intros level (bn, ProofStep cur hs p) = do
+          _ <- io $ startTP cfg True "Step" level (TPProofStep False nm hintStrings (addSuffix stepName (" (" ++ show (length ps) ++ " way " ++ full ++ "case split)")))
 
-           let finish et helpers d = finishTP cfg ("Q.E.D." ++ concludeModulo helpers) d et
-               stepName            = mkStepName level bn p
-               disps               = [(n, v) | HelperDisp n v <- hs]
+          results <- concat <$> sequence [walk (intros .&& branchCond) (level + 1) (bn ++ [i, 1], p) | (i, (branchCond, p)) <- zip [1..] ps]
 
-           -- First prove the assumptions, if there are any. We stay quiet, unless timing is asked for
-           let (quietCfg, finalizer)
-                 | printStats = (cfg,                                             finish [] [])
-                 | True       = (cfg{tpOptions = (tpOptions cfg) {quiet = True}}, const (pure ()))
+          when checkCompleteness $ smtProofStep cfg tpSt "Step" (level+1)
+                                                         (TPProofStep False nm [] (stepName ++ ["Completeness"]))
+                                                         (Just intros)
+                                                         (sOr (map fst ps))
+                                                         []
+                                                         (\d -> finishTP cfg "Q.E.D." d [])
+          pure results
 
-               as = concatMap getHelperAssumes hs
-               ss = getHelperText hs
-           case as of
-             [] -> pure ()
-             _  -> smtProofStep quietCfg tpSt "Asms" level
-                                         (TPProofStep True nm [] stepName)
-                                         (Just intros)
-                                         (sAnd as)
+        -- Do a proof step
+        walk intros level (bn, ProofStep cur hs p) = do
+
+             let finish et helpers d = finishTP cfg ("Q.E.D." ++ concludeModulo helpers) d et
+                 stepName            = mkStepName level bn p
+                 disps               = [(n, v) | HelperDisp n v <- hs]
+
+                 -- First prove the assumptions, if there are any. We stay quiet, unless timing is asked for
+                 (quietCfg, finalizer)
+                   | printStats = (cfg,                                             finish [] [])
+                   | True       = (cfg{tpOptions = (tpOptions cfg) {quiet = True}}, const (pure ()))
+
+                 as = concatMap getHelperAssumes hs
+                 ss = getHelperText hs
+
+             case as of
+               [] -> pure ()
+               _  -> smtProofStep quietCfg tpSt "Asms" level
+                                           (TPProofStep True nm [] stepName)
+                                           (Just intros)
+                                           (sAnd as)
+                                           disps
+                                           finalizer
+
+             -- Are we asked to do quick-check?
+             case [qcArg | HelperQC qcArg <- hs] of
+               [] -> do -- No quickcheck. Just prove the step
+                        let by = concatMap getHelperProofs hs
+
+                        smtProofStep cfg tpSt "Step" level
+                                         (TPProofStep False nm ss stepName)
+                                         (Just (sAnd (intros : as ++ map getObjProof by)))
+                                         cur
                                          disps
-                                         finalizer
+                                         (finish [] by)
 
-           -- Are we asked to do quick-check?
-           let qcArgs = case [qcArg | HelperQC qcArg <- hs] of
-                          [] -> Nothing
-                          xs -> Just (last xs) -- take the last one if multiple exists. Why not?
+               xs -> do let qcArg = last xs -- take the last one if multiple exists. Why not?
 
-           extras <- case qcArgs of
-                       Nothing  -> pure []
+                            hs' = concatMap xform hs ++ [HelperString ("qc: Running " ++ show (QC.maxSuccess qcArg) ++ " tests")]
+                            xform HelperProof{}    = []
+                            xform HelperAssum{}    = []
+                            xform h@HelperQC{}     = [h]
+                            xform h@HelperString{} = [h]
+                            xform HelperDisp{}     = []
 
-                       Just args -> liftIO $ do
-                                       r <- quickCheckWithResult args{chatty = verbose cfg} $ quickCheckInstance bn
+                        liftIO $ do
 
-                                       let err = case r of
-                                               QC.Success {}                -> Nothing
-                                               QC.Failure {QC.output = out} -> Just out
-                                               QC.GaveUp  {}                -> Just $ unlines [ "*** QuickCheck reported \"GaveUp\""
-                                                                                              , "***"
-                                                                                              , "*** This can happen if you have assumptions in the environment"
-                                                                                              , "*** that makes it hard for quick-check to generate valid test values."
-                                                                                              , "***"
-                                                                                              , "*** See if you can reduce assumptions. If not, please get in touch,"
-                                                                                              , "*** to see if we can handle the problem via custom Arbitrary instances."
-                                                                                              ]
-                                               QC.NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
+                           tab <- startTP cfg (verbose cfg) "Step" level (TPProofStep False nm (getHelperText hs') stepName)
 
-                                       case err of
-                                         Just e  -> do let hs' = concatMap xform hs ++ [HelperString "Failed during quickTest"]
-                                                           xform h@(HelperString{}) = [h]
-                                                           xform _                  = []
-                                                       _ <- startTP cfg True "Step" level (TPProofStep False nm (getHelperText hs') stepName)
-                                                       putStrLn $ "\n*** QuickCheck failed for " ++ intercalate "." (nm : stepName)
-                                                       putStrLn e
-                                                       error "Failed"
+                           r <- quickCheckWithResult qcArg{QC.chatty = verbose cfg} $ quickCheckInstance bn
 
-                                         Nothing -> -- prove by qc proof so it gets recorded
-                                                    pure [quickCheckProof]
-           -- Now prove the step
-           let by = concatMap getHelperProofs hs ++ extras
+                           let err = case r of
+                                   QC.Success {}                -> Nothing
+                                   QC.Failure {QC.output = out} -> Just out
+                                   QC.GaveUp  {}                -> Just $ unlines [ "*** QuickCheck reported \"GaveUp\""
+                                                                                  , "***"
+                                                                                  , "*** This can happen if you have assumptions in the environment"
+                                                                                  , "*** that makes it hard for quick-check to generate valid test values."
+                                                                                  , "***"
+                                                                                  , "*** See if you can reduce assumptions. If not, please get in touch,"
+                                                                                  , "*** to see if we can handle the problem via custom Arbitrary instances."
+                                                                                  ]
+                                   QC.NoExpectedFailure {}      -> Just "Expected failure but test passed." -- can't happen
 
-           smtProofStep cfg tpSt "Step" level
-                            (TPProofStep False nm ss stepName)
-                            (Just (sAnd (intros : as ++ map getObjProof by)))
-                            cur
-                            disps
-                            (finish [] by)
+                           case err of
+                             Just e  -> do putStrLn $ "\n*** QuickCheck failed for " ++ intercalate "." (nm : stepName)
+                                           putStrLn e
+                                           error "Failed"
 
-           -- Move to next
-           walk intros level (nextProofStep bn, p)
+                             Nothing -> finishTP cfg "QC OK" (tab, Nothing) []
 
-  results <- walk initialHypotheses 1 ([1], calcProofTree)
-
-  queryDebug [nm ++ ": Proof end: proving the result:"]
-
-  mbStartTime <- getTimeStampIf printStats
-  smtProofStep cfg tpSt "Result" 1
-               (TPProofStep False nm [] [""])
-               (Just (initialHypotheses .=> sAnd results))
-               resultBool [] $ \d ->
-                 do mbElapsed <- getElapsedTime mbStartTime
-                    let modulo = concludeModulo (concatMap getHelperProofs (getAllHelpers calcProofTree))
-                    finishTP cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
-
-                    pure $ Proof $ ProofObj { dependencies = getDependencies calcProofTree
-                                            , isUserAxiom  = False
-                                            , getObjProof  = label nm (quantifiedBool result)
-                                            , getProp      = toDyn result
-                                            , proofName    = nm
-                                            , uniqId       = uniq
-                                            , isCached     = False
-                                            }
+             -- Move to next
+             walk intros level (nextProofStep bn, p)
 
 -- | Helper data-type for calc-step below
 data CalcContext a = CalcStart     [Helper] -- Haven't started yet
@@ -1224,7 +1226,7 @@ getHelperText hs = case [s | HelperString s <- hs] of
   where collect :: Helper -> [String]
         collect (HelperProof  p) = [proofName p | isUserAxiom p]  -- Don't put out internals (inductive hypotheses)
         collect HelperAssum  {}  = []
-        collect (HelperQC     i) = ["passed " ++ show (maxSize i) ++ " tests"]
+        collect (HelperQC     i) = ["qc: Running " ++ show (QC.maxSuccess i) ++ " tests"]
         collect (HelperString s) = [s]
         collect HelperDisp{}     = []
 
@@ -1475,7 +1477,7 @@ split2 (xs, ys) ee ec ce cc = ProofBranch False
 
 -- | A quick-check step, taking number of tests.
 qc :: Int -> Helper
-qc cnt = HelperQC stdArgs{maxSize = cnt}
+qc cnt = HelperQC QC.stdArgs{QC.maxSuccess = cnt}
 
 -- | A quick-check step, with specific quick-check args.
 qcWith :: QC.Args -> Helper
