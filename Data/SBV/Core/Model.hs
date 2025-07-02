@@ -66,6 +66,8 @@ import Control.Applicative    (ZipList(ZipList))
 import Control.Monad          (when, unless, mplus, replicateM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
+import qualified Control.Exception as C
+
 import GHC.Generics (M1(..), U1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
 
@@ -3322,7 +3324,10 @@ instance Testable (Symbolic SBool) where
                                      QC.pre cond
                                      unless (r || null modelVals) $ QC.monitor (QC.counterexample (complain modelVals))
                                      QC.assert r
-     where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=(_, cs), resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic defaultSMTCfg (Concrete Nothing) prop
+     where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=(_, cs), resConstraints=cstrs, resUIConsts=unints}) <- 
+                                 C.catch (runSymbolic defaultSMTCfg (Concrete Nothing) prop)
+                                         (\(e :: C.SomeException) -> cantQuickCheck (show e))
+
 
                      let cval = fromMaybe (cantQuickCheck "A constraint did not evaluate to a concrete boolean") . (`lookup` cs)
                          cond = -- Only pick-up "hard" constraints, as indicated by False in the fist component
@@ -3348,6 +3353,7 @@ cantQuickCheck why = error $ unlines [ "*** Data.SBV: Cannot quickcheck the give
                                      , "*** SBV can't quick-check in the presence of:"
                                      , "***"
                                      , "***   - Uninterpreted constants."
+                                     , "***   - Uninterpreted types."
                                      , "***   - Floating point operations with rounding modes other than RNE."
                                      , "***   - Floating point FMA operation, regardless of rounding mode."
                                      , "***   - Quantified booleans, i.e., uses of Forall/Exists/ExistsUnique."
@@ -3355,6 +3361,7 @@ cantQuickCheck why = error $ unlines [ "*** Data.SBV: Cannot quickcheck the give
                                      , "***"
                                      , "*** If you can't avoid the above features or run into an issue with"
                                      , "*** quickcheck even though you haven't used these features, please report this as a bug!"
+                                     , "***"
                                      , "*** Origin: " ++ why
                                      ]
 
