@@ -170,7 +170,7 @@ class Calc a where
       tpSt <- getTPState
       u    <- tpGetNextUnique
 
-      (_, CalcStrategy {calcQCInstance}) <- liftIO $ runSMTWith defaultSMTCfg (calcSteps result steps)
+      (_, CalcStrategy {calcQCInstance}) <- liftIO $ runSMTWith cfg (calcSteps result steps)
 
       liftIO $ runSMTWith cfg $ do
 
@@ -294,8 +294,8 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
 
            -- First prove the assumptions, if there are any. We stay quiet, unless timing is asked for
            let (quietCfg, finalizer)
-                 | printStats = (cfg,                                              finish [] [])
-                 | True       = (cfg{tpOptions = (tpOptions cfg) { quiet = True}}, const (pure ()))
+                 | printStats = (cfg,                                             finish [] [])
+                 | True       = (cfg{tpOptions = (tpOptions cfg) {quiet = True}}, const (pure ()))
 
                as = concatMap getHelperAssumes hs
                ss = getHelperText hs
