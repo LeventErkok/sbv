@@ -493,25 +493,32 @@ randomCVal k =
     KString            -> do l <- randomRIO (0, 100)
                              CString <$> replicateM l (chr <$> randomRIO (0, 255))
     KChar              -> CChar . chr <$> randomRIO (0, 255)
+
     KUserSort s es     -> case es of
                             Just vs@(_:_) -> do i <- randomRIO (0, length vs - 1)
                                                 pure $ CUserSort (Just i, vs !! i)
                             _             -> error $ "randomCVal: Not supported for completely uninterpreted type: " ++ s
+
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)
+
     KSet  ek           -> do i <- randomIO                           -- regular or complement
                              l <- randomRIO (0, 100)                 -- some set upto 100 elements
                              vals <- Set.fromList <$> replicateM l (randomCVal ek)
                              return $ CSet $ if i then RegularSet vals else ComplementSet vals
+
     KTuple ks          -> CTuple <$> traverse randomCVal ks
+
     KMaybe ke          -> do i <- randomIO
                              if i
                                 then return $ CMaybe Nothing
                                 else CMaybe . Just <$> randomCVal ke
+
     KEither k1 k2      -> do i <- randomIO
                              if i
                                 then CEither . Left  <$> randomCVal k1
                                 else CEither . Right <$> randomCVal k2
+
     KArray k1 k2       -> do l   <- randomRIO (0, 100)
                              ks  <- replicateM l (randomCVal k1)
                              vs  <- replicateM l (randomCVal k2)
