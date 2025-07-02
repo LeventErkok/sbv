@@ -391,7 +391,7 @@ quickCheckProof = ProofObj { dependencies = []
         -- solver to determine as false, we avoid the constant folding.
         p (Forall @"__sbvTP_quickCheck" (x :: SBool)) = label "QUICKCHECK: TP, proof uses \"qc\"" x
 
--- | Calculate the root of trust. The returned list of proofs, if any, will need to be sorry-free to
+-- | Calculate the root of trust. The returned list of proofs, if any, will need to be sorry and quickcheck free to
 -- have the given proof to be sorry-free.
 rootOfTrust :: Proof a -> RootOfTrust
 rootOfTrust = rot . proofOf
@@ -402,7 +402,7 @@ rootOfTrust = rot . proofOf
                         TPSorry    -> RootOfTrust $ Just [sorry]
                         TPUser {}  -> self <> foldMap rot dependencies
 
-                -- if sorry is one of our direct dependencies, then we trust this proof
+                -- if sorry or quickcheck is one of our direct dependencies, then we trust this proof
                 self | any isUnsafe dependencies = RootOfTrust $ Just [p]
                      | True                      = mempty
 
