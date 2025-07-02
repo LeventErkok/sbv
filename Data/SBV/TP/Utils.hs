@@ -394,16 +394,19 @@ quickCheckProof = ProofObj { dependencies = []
 -- | Calculate the root of trust. The returned list of proofs, if any, will need to be sorry and quickcheck free to
 -- have the given proof to be sorry-free.
 rootOfTrust :: Proof a -> RootOfTrust
-rootOfTrust = rot . proofOf
-  where rot p@ProofObj{uniqId = curUniq, dependencies} = compress res
+rootOfTrust = rot True . proofOf
+  where rot atTop p@ProofObj{uniqId = curUniq, dependencies} = compress res
           where res = case curUniq of
                         TPInternal -> RootOfTrust Nothing
                         TPQC       -> RootOfTrust $ Just [quickCheckProof]
                         TPSorry    -> RootOfTrust $ Just [sorry]
-                        TPUser {}  -> self <> foldMap rot dependencies
+                        TPUser {}  -> self <> foldMap (rot False) dependencies
 
-                -- if sorry or quickcheck is one of our direct dependencies, then we trust this proof
-                self | any isUnsafe dependencies = RootOfTrust $ Just [p]
+                -- if sorry or quickcheck is one of our direct dependencies, then we trust this proof.
+                -- Note that we skip this at the top. Why? at that level, we want to see the direct
+                -- dependency. But if we're down at a lower level, we just want to pick up
+                self | atTop                     = mempty
+                     | any isUnsafe dependencies = RootOfTrust $ Just [p]
                      | True                      = mempty
 
                 isUnsafe ProofObj{uniqId = u} = u `elem` [TPSorry, TPQC]
