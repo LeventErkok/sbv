@@ -34,7 +34,7 @@ revApp = induct "revApp"
                                       =: qed
 ```
 
-The above would print:
+Running this proof produces:
 
 ```haskell
 ghci> runTP $ revApp @Integer
