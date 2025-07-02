@@ -1665,10 +1665,15 @@ svMkSymVarGen isTracker varContext k mbNm st = do
         rm <- readIORef (runMode st)
 
         let varInfo = case mbNm of
-                        Nothing -> ", of type " ++ show k
-                        Just nm -> ", while defining " ++ nm ++ " :: " ++ show k
+                        Nothing -> "While defining a variable of type " ++ show k
+                        Just nm -> "While defining: " ++ nm ++ " :: " ++ show k
 
-            disallow what  = error $ "Data.SBV: Unsupported: " ++ what ++ varInfo ++ " in mode: " ++ show rm
+            disallow what  = error $ unlines [ "*** Data.SBV: Unsupported: " ++ what
+                                             , "***"
+                                             , "*** " ++ varInfo
+                                             , "*** "
+                                             , "*** In mode: " ++ show rm
+                                             ]
 
             noUI cont
               | isUserSort k  = disallow "User defined sorts"

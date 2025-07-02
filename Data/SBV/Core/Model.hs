@@ -3362,7 +3362,9 @@ cantQuickCheck why = error $ unlines [ "*** Data.SBV: Cannot quickcheck the give
                                      , "*** If you can't avoid the above features or run into an issue with"
                                      , "*** quickcheck even though you haven't used these features, please report this as a bug!"
                                      , "***"
-                                     , "*** Origin: " ++ why
+                                     , "*** Origin:"
+                                     , "***"
+                                     , why
                                      ]
 
 -- | Quick check an SBV property. Note that a regular @quickCheck@ call will work just as
