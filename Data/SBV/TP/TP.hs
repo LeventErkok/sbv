@@ -12,7 +12,6 @@
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -456,7 +455,7 @@ qcRun checkedLabel (intros, tpp) = do
 
 -- | Chaining lemmas that depend on no extra variables
 instance Calc SBool where
-   calcSteps result steps = (result,) <$> mkCalcSteps steps (\l -> qcRun l steps)
+   calcSteps result steps = (result,) <$> mkCalcSteps steps (`qcRun` steps)
 
 -- | Chaining lemmas that depend on a single extra variable.
 instance (KnownSymbol na, SymVal a) => Calc (Forall na a -> SBool) where
@@ -673,8 +672,7 @@ instance KnownSymbol nn => Inductive (Forall nn Integer -> SBool) where
                      (Just bc)
                      (steps ih n)
                      (indResult [nn ++ "+1"] (result (Forall (n+1))))
-                     (\checkedLabel -> steps ih <$> free nn >>= qcRun checkedLabel)
-
+                     (\checkedLabel -> free nn >>= qcRun checkedLabel . steps ih)
 
 -- | Induction over 'SInteger', taking an extra argument
 instance (KnownSymbol nn, KnownSymbol na, SymVal a) => Inductive (Forall nn Integer -> Forall na a -> SBool) where
@@ -800,7 +798,7 @@ instance (KnownSymbol nxs, SymVal x) => Inductive (Forall nxs [x] -> SBool) wher
                      (Just bc)
                      (steps ih (x, xs))
                      (indResult [nxxs] (result (Forall (x SL..: xs))))
-                     (\checkedLabel -> steps ih <$> ((,) <$> free nx <*> free nxs) >>= qcRun checkedLabel)
+                     (\checkedLabel ->  ((,) <$> free nx <*> free nxs) >>= qcRun checkedLabel . steps ih)
 
 -- | Induction over 'SList', taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (Forall nxs [x] -> Forall na a -> SBool) where
@@ -918,7 +916,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((F
                      (Just bc)
                      (steps ih (x, xs, y, ys))
                      (indResult [nxxs, nyys] (result (Forall (x SL..: xs), Forall (y SL..: ys))))
-                     (\checkedLabel -> steps ih <$> ((,,,) <$> free nx <*> free nxs <*> free ny <*> free nys) >>= qcRun checkedLabel)
+                     (\checkedLabel -> ((,,,) <$> free nx <*> free nxs <*> free ny <*> free nys) >>= qcRun checkedLabel . steps ih)
 
 -- | Induction over two 'SList', simultaneously, taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) where
@@ -1037,7 +1035,7 @@ instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
                     Nothing
                     (steps ih a)
                     (indResult [na] conc)
-                    (\checkedLabel -> steps ih <$> free na >>= qcRun checkedLabel)
+                    (\checkedLabel -> free na >>= qcRun checkedLabel . steps ih)
 
 -- | Generalized induction with two parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (Forall na a -> Forall nb b -> SBool) where
