@@ -6,6 +6,8 @@ On Hackage: http://hackage.haskell.org/package/sbv
 
 Express properties about Haskell programs and automatically prove them using SMT solvers.
 
+On one end, SBV can be used as a push-button prover over many types:
+
 ```haskell
 $ ghci
 ghci> :m Data.SBV
@@ -16,7 +18,42 @@ Falsifiable. Counter-example:
   s0 = 32 :: Word8
 ```
 
-The function `prove` establishes theorem-hood, while `sat` finds a satisfying model if it exists.
+On the other extreme, SBV can be used as an SMT-based proof assistant to prove equational and inductive program properties:
+
+```haskell
+revApp :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
+revApp = induct "revApp"
+                 (\(Forall xs) (Forall ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
+                 \ih (x, xs) ys -> [] |- reverse ((x .: xs) ++ ys)
+                                      =: reverse (x .: (xs ++ ys))
+                                      =: reverse (xs ++ ys) ++ [x]
+                                      ?? ih
+                                      =: (reverse ys ++ reverse xs) ++ [x]
+                                      =: reverse ys ++ (reverse xs ++ [x])
+                                      =: reverse ys ++ reverse (x .: xs)
+                                      =: qed
+```
+
+The above would print:
+
+```haskell
+ghci> runTP $ revApp @Integer
+Inductive lemma: revApp
+  Step: Base                            Q.E.D.
+  Step: 1                               Q.E.D.
+  Step: 2                               Q.E.D.
+  Step: 3                               Q.E.D.
+  Step: 4                               Q.E.D.
+  Step: 5                               Q.E.D.
+  Result:                               Q.E.D.
+[Proven] revApp :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
+```
+
+Establishing how `reverse` distributes over `++` (at the monomorpic type of list of integers).
+
+The function `prove` establishes theorem-hood, while `sat` finds a satisfying model if it exists. The `runTP` function
+runs a proof script, establishing theorems with user guidance.
+
 All satisfying models can be computed using `allSat`.
 SBV can also perform static assertion checks, such as absence of division-by-0, and other user given properties.
 Furthermore, SBV can perform optimization, minimizing/maximizing arithmetic goals for their optimal values.
