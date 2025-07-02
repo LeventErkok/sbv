@@ -207,7 +207,7 @@ qcExample = calc "qcExample"
 -- Lemma: qcFermat 3
 --   Step: 1 (qc: Running 1000 tests)      QC OK
 --   Result:                               Q.E.D. [Modulo: quickCheck]
--- [Modulo: qcFermat 3] qcFermat 3 :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
+-- [Modulo: quickCheck] qcFermat 3 :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
 qcFermat :: Integer -> TP (Proof (Forall "x" Integer -> Forall "y" Integer -> Forall "z" Integer -> SBool))
 qcFermat e = calc ("qcFermat " <> show e)
                   (\(Forall x) (Forall y) (Forall z) -> n .> 2 .=> x.^n + y.^n ./= z.^n) $
