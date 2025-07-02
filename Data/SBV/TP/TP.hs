@@ -355,7 +355,11 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
 
                            tab <- startTP cfg (verbose cfg) "Step" level (TPProofStep False nm (getHelperText hs') stepName)
 
-                           r <- quickCheckWithResult qcArg{QC.chatty = verbose cfg} $ quickCheckInstance bn
+                           (mbT, r) <- timeIf printStats $ quickCheckWithResult qcArg{QC.chatty = verbose cfg} $ quickCheckInstance bn
+
+                           case mbT of
+                             Nothing -> pure ()
+                             Just t  -> updStats tpSt (\s -> s{qcElapsed = qcElapsed s + t})
 
                            let err = case r of
                                    QC.Success {}                -> Nothing
@@ -375,7 +379,8 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                                            putStrLn e
                                            error "Failed"
 
-                             Nothing -> finishTP cfg "QC OK" (tab, Nothing) []
+                             Nothing -> let extra = [' ' | printStats]  -- aligns better when printing stats
+                                        in finishTP cfg ("QC OK" ++ extra) (tab, mbT) []
 
              -- Move to next
              walk intros level (nextProofStep bn, p)

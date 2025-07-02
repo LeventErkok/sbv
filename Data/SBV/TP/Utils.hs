@@ -70,6 +70,7 @@ import Data.Map (Map)
 -- | Various statistics we collect
 data TPStats = TPStats { noOfCheckSats :: Int
                        , solverElapsed :: NominalDiffTime
+                       , qcElapsed     :: NominalDiffTime
                        }
 
 -- | Extra state we carry in a TP context
@@ -115,15 +116,16 @@ runTP = runTPWith defaultSMTCfg
 -- | Run a TP proof, using the given configuration.
 runTPWith :: SMTConfig -> TP a -> IO a
 runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
-   rStats <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0 }
+   rStats <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0, qcElapsed = 0 }
    rCache <- newIORef Map.empty
    (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = cfg, stats = rStats, proofCache = rCache}
    case mbT of
      Nothing -> pure ()
-     Just t  -> do TPStats noOfCheckSats solverTime <- readIORef rStats
+     Just t  -> do TPStats noOfCheckSats solverTime qcElapsed <- readIORef rStats
 
-                   let stats = [ ("SBV",       showTDiff (t - solverTime))
+                   let stats = [ ("SBV",       showTDiff (t - solverTime - qcElapsed))
                                , ("Solver",    showTDiff solverTime)
+                               , ("QC",        showTDiff qcElapsed)
                                , ("Total",     showTDiff t)
                                , ("Decisions", show noOfCheckSats)
                                ]
