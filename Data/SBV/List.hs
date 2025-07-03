@@ -62,7 +62,7 @@ module Data.SBV.List (
         , lookup
 
         -- * Filtering
-        , filter, partition
+        , filter, partition, takeWhile, dropWhile
 
         -- * Predicate transformers
         , all, any, and, or
@@ -82,7 +82,8 @@ module Data.SBV.List (
 
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
-                       all, any, and, or, replicate, fst, snd, sum, product, Enum(..), lookup)
+                       all, any, and, or, replicate, fst, snd, sum, product, Enum(..), lookup,
+                       takeWhile, dropWhile)
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
@@ -105,7 +106,7 @@ import GHC.Exts (IsList(..))
 
 #ifdef DOCTEST
 -- $setup
--- >>> import Prelude hiding (head, tail, init, last, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any, replicate, lookup, splitAt, concatMap, and, or, sum, product)
+-- >>> import Prelude hiding (head, tail, init, last, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any, replicate, lookup, splitAt, concatMap, and, or, sum, product, takeWhile, dropWhile)
 -- >>> import qualified Prelude as P(map)
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds
@@ -898,7 +899,7 @@ xs \\ ys
                                                    in ite (h `elem` y) r (h .: r))
 infix 5 \\  -- CPP: do not eat the final newline
 
--- | A class of filtering functions. In SBV, we make a distinction between closures and regular functions,
+-- | A class of filtering-like functions. In SBV, we make a distinction between closures and regular functions,
 -- and we instantiate this class appropriately so it can handle both cases.
 class SymVal a => SFilter func a | func -> a where
   -- | Filter a list via a predicate.
@@ -919,36 +920,6 @@ class SymVal a => SFilter func a | func -> a where
    | True
    = Nothing
 
--- | Filtering with symbolic functions.
-instance SymVal a => SFilter (SBV a -> SBool) a where
-  -- | @filter f xs@ filters the list with the given predicate.
-  filter f l
-    | Just concResult <- concreteFilter f f l
-    = literal concResult
-    | True
-    = sbvFilter l
-    where sbvFilter = smtHOFunction "sbv.filter" f $ \xs -> ite (null xs)
-                                                                []
-                                                                (let (h, t) = uncons xs
-                                                                     r      = sbvFilter t
-                                                                 in ite (f h) (h .: r) r)
-
--- | Filtering with closures.
-instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) a where
-  filter cls@Closure{closureEnv, closureFun} l
-    | Just concResult <- concreteFilter cls (closureFun closureEnv) l
-    = literal concResult
-    | True
-    = sbvFilter (tuple (closureEnv, l))
-    where sbvFilter = smtHOFunction "sbv.closureFilter" closureFun
-                    $ \envxs -> let (cEnv, xs) = untuple envxs
-                                    (h, t)     = uncons xs
-                                    r          = sbvFilter (tuple (cEnv, t))
-                                in ite (closureFun cEnv h) (h .: r) r
-
--- | A class of functions we can partition with. In SBV, we make a distinction between closures and regular functions, and
--- we instantiate this class appropriately so it can handle both cases.
-class SymVal a => SPartition func a | func -> a where
   -- | Partition a symbolic list according to a predicate.
   --
   -- >>> partition (\(x :: SInteger) -> x `sMod` 2 .== 0) (literal [1 .. 10])
@@ -966,8 +937,55 @@ class SymVal a => SPartition func a | func -> a where
     | True
     = Nothing
 
--- | Partitioning with symbolic functions.
-instance SymVal a => SPartition (SBV a -> SBool) a where
+  -- | Symbolic equivalent of @takeWhile@
+  --
+  -- >>> takeWhile (\(x :: SInteger) -> x `sMod` 2 .== 0) (literal [1..10])
+  -- [] :: [SInteger]
+  -- >>> takeWhile (\(x :: SInteger) -> x `sMod` 2 ./= 0) (literal [1..10])
+  -- [1] :: [SInteger]
+  takeWhile :: func -> SList a -> SList a
+
+  -- | Handle the concrete case of take-while. Used internally only.
+  concreteTakeWhile :: func -> (SBV a -> SBool) -> SList a -> Maybe [a]
+  concreteTakeWhile _ f sas
+   | Just as <- unliteral sas
+   = case P.map (unliteral . f . literal) as of
+        xs | P.any isNothing xs -> Nothing
+           | True               -> Just (P.map P.snd (P.takeWhile P.fst (P.zip (catMaybes xs) as)))
+   | True
+   = Nothing
+
+  -- | Symbolic equivalent of @dropWhile@
+  -- >>> dropWhile (\(x :: SInteger) -> x `sMod` 2 .== 0) (literal [1..10])
+  -- [1,2,3,4,5,6,7,8,9,10] :: [SInteger]
+  -- >>> dropWhile (\(x :: SInteger) -> x `sMod` 2 ./= 0) (literal [1..10])
+  -- [2,3,4,5,6,7,8,9,10] :: [SInteger]
+  dropWhile :: func -> SList a -> SList a
+
+  -- | Handle the concrete case of take-while. Used internally only.
+  concreteDropWhile :: func -> (SBV a -> SBool) -> SList a -> Maybe [a]
+  concreteDropWhile _ f sas
+   | Just as <- unliteral sas
+   = case P.map (unliteral . f . literal) as of
+        xs | P.any isNothing xs -> Nothing
+           | True               -> Just (P.map P.snd (P.dropWhile P.fst (P.zip (catMaybes xs) as)))
+   | True
+   = Nothing
+
+-- | Filtering with symbolic functions.
+instance SymVal a => SFilter (SBV a -> SBool) a where
+  -- | @filter f xs@ filters the list with the given predicate.
+  filter f l
+    | Just concResult <- concreteFilter f f l
+    = literal concResult
+    | True
+    = sbvFilter l
+    where sbvFilter = smtHOFunction "sbv.filter" f $ \xs -> ite (null xs)
+                                                                []
+                                                                (let (h, t) = uncons xs
+                                                                     r      = sbvFilter t
+                                                                 in ite (f h) (h .: r) r)
+
   -- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
   -- first element, and those that don't in the second.
   partition f l
@@ -983,8 +1001,41 @@ instance SymVal a => SPartition (SBV a -> SBool) a where
                                                                               (tuple (h .: as, bs))
                                                                               (tuple (as, h .: bs)))
 
--- | Partitioning with closures.
-instance (SymVal env, SymVal a) => SPartition (Closure (SBV env) (SBV a -> SBool)) a where
+  -- | @takeWhile f xs@ takes the prefix of @xs@ that satisfy the predicate.
+  takeWhile f l
+    | Just concResult <- concreteTakeWhile f f l
+    = literal concResult
+    | True
+    = sbvTakeWhile l
+    where sbvTakeWhile = smtHOFunction "sbv.takeWhile" f $ \xs -> ite (null xs)
+                                                                      []
+                                                                      (let (h, t) = uncons xs
+                                                                       in ite (f h) (h .: sbvTakeWhile t) [])
+
+  -- | @dropWhile f xs@ drops the prefix of @xs@ that satisfy the predicate.
+  dropWhile f l
+    | Just concResult <- concreteDropWhile f f l
+    = literal concResult
+    | True
+    = sbvDropWhile l
+    where sbvDropWhile = smtHOFunction "sbv.dropWhile" f $ \xs -> ite (null xs)
+                                                                      []
+                                                                      (let (h, t) = uncons xs
+                                                                       in ite (f h) (sbvDropWhile t) xs)
+
+-- | Filtering with closures.
+instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) a where
+  filter cls@Closure{closureEnv, closureFun} l
+    | Just concResult <- concreteFilter cls (closureFun closureEnv) l
+    = literal concResult
+    | True
+    = sbvFilter (tuple (closureEnv, l))
+    where sbvFilter = smtHOFunction "sbv.closureFilter" closureFun
+                    $ \envxs -> let (cEnv, xs) = untuple envxs
+                                    (h, t)     = uncons xs
+                                    r          = sbvFilter (tuple (cEnv, t))
+                                in ite (closureFun cEnv h) (h .: r) r
+
   partition cls@Closure{closureEnv, closureFun} l
     | Just concResult <- concretePartition cls (closureFun closureEnv) l
     = literal concResult
@@ -997,6 +1048,26 @@ instance (SymVal env, SymVal a) => SPartition (Closure (SBV env) (SBV a -> SBool
                                    in ite (closureFun cEnv h)
                                           (tuple (h .: as, bs))
                                           (tuple (as, h .: bs))
+
+  takeWhile cls@Closure{closureEnv, closureFun} l
+    | Just concResult <- concreteTakeWhile cls (closureFun closureEnv) l
+    = literal concResult
+    | True
+    = sbvTakeWhile (tuple (closureEnv, l))
+    where sbvTakeWhile = smtHOFunction "sbv.closureTakeWhile" closureFun
+                       $ \envxs -> let (cEnv, xs) = untuple envxs
+                                       (h, t)     = uncons xs
+                                in ite (closureFun cEnv h) (h .: sbvTakeWhile (tuple (cEnv, t))) []
+
+  dropWhile cls@Closure{closureEnv, closureFun} l
+    | Just concResult <- concreteDropWhile cls (closureFun closureEnv) l
+    = literal concResult
+    | True
+    = sbvDropWhile (tuple (closureEnv, l))
+    where sbvDropWhile = smtHOFunction "sbv.closureDropWhile" closureFun
+                       $ \envxs -> let (cEnv, xs) = untuple envxs
+                                       (h, t)     = uncons xs
+                                in ite (closureFun cEnv h) (sbvDropWhile (tuple (cEnv, t))) xs
 
 -- | @`sum` s@. Sum the given sequence.
 --

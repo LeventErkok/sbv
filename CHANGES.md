@@ -48,10 +48,11 @@
     addressed by TP'sinduction methods. If you were using this functionality and have problems
     porting to TP, please get in touch!
 
-  * Added functions 'sum', 'product', 'last', 'replicate', '\\', upFromTo, upFrom, downFromTo, and downFrom to Data.SBV.List.
+  * Added functions 'takeWhile', 'dropWhile', 'sum', 'product', 'last', 'replicate', '\\', upFromTo, upFrom,
+    downFromTo, and downFrom to Data.SBV.List; corresponding to the symbolic equivalents of usual list processing functions.
 
-  * [BACKWARDS COMPATIBILITY] Removed Data.SBV.String, and unified list and string functions just as in Haskell. This was a long-time wart
-    in SBV, where we distinguished strings and list of characters since SMTLib does not equate them. SBV now
+  * [BACKWARDS COMPATIBILITY] Removed Data.SBV.String, and unified list and string functions just as in Haskell. This was a
+    long-time wart in SBV, where we distinguished strings and list of characters since SMTLib does not equate them. SBV now
     treats these uniformly, obviating the need for Data.SBV.String.
 
   * Improved smt-function definitions: You can now define polymorphic, recursive, and higher-order functions in SBV
