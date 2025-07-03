@@ -45,7 +45,7 @@ module Data.SBV.TP.List (
    , bookKeeping
 
      -- * Filter
-   , filterAppend, filterConcat
+   , filterAppend, filterConcat, takeDropWhile
 
      -- * Difference
    , appendDiff, diffAppend, diffDiff
@@ -1038,6 +1038,33 @@ filterConcat p = do
                              ?? ih
                              =: concatMap (filter p) (xs .: xss)
                              =: qed
+
+-- | @takeWhile f xs ++ dropWhile f xs == xs@
+--
+-- >>> runTP $ takeDropWhile @Integer (uninterpret "f")
+-- Inductive lemma: takeDropWhile
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] takeDropWhile :: Ɐxs ∷ [Integer] → Bool
+takeDropWhile :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
+takeDropWhile f =
+   induct "takeDropWhile"
+          (\(Forall xs) -> takeWhile f xs ++ dropWhile f xs .== xs) $
+          \ih (x, xs) -> [] |- takeWhile f (x .: xs) ++ dropWhile f (x .: xs)
+                            =: cases [ f x        ==> x .: takeWhile f xs ++ dropWhile f xs
+                                                   ?? ih
+                                                   =: x .: xs
+                                                   =: qed
+                                     , sNot (f x) ==> [] ++ x .: xs
+                                                   =: x .: xs
+                                                   =: qed
+                                     ]
 
 -- | @(as ++ bs) \\ cs == (as \\ cs) ++ (bs \\ cs)@
 --
