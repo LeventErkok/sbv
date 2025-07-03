@@ -1430,7 +1430,6 @@ instance Contradiction (TPProofRaw SBool) where
 instance Contradiction a => Contradiction (b -> a) where
   contradiction = const contradiction
 
-
 -- | Start a calculational proof, with the given hypothesis. Use @[]@ as the
 -- first argument if the calculation holds unconditionally. The first argument is
 -- typically used to introduce hypotheses in proofs of implications such as @A .=> B .=> C@, where
