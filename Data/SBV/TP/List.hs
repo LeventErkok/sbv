@@ -47,6 +47,9 @@ module Data.SBV.TP.List (
      -- * Filter
    , filterAppend, filterConcat, takeDropWhile
 
+     -- * Stutter removal
+   , destutter, destutterIdempotent
+
      -- * Difference
    , appendDiff, diffAppend, diffDiff
 
@@ -1065,6 +1068,98 @@ takeDropWhile f =
                                                    =: x .: xs
                                                    =: qed
                                      ]
+-- | Remove adjacent duplicates.
+destutter :: SymVal a => SList a -> SList a
+destutter = smtFunction "destutter" $ \xs -> ite (null xs .|| null (tail xs))
+                                                 xs
+                                                 (let (a, as) = uncons xs
+                                                      r       = destutter as
+                                                  in ite (a .== head as) r (a .: r))
+
+-- | @destutter (destutter xs) == destutter xs@
+--
+-- >>> runTP $ destutterIdempotent @Integer
+-- Inductive lemma: helper1
+--   Step: Base                            Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma: helper2
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma (strong): helper3
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way full case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2 (2 way full case split)
+--       Step: 1.2.1                       Q.E.D.
+--       Step: 1.2.2.1                     Q.E.D.
+--       Step: 1.2.2.2 (2 way case split)
+--         Step: 1.2.2.2.1.1               Q.E.D.
+--         Step: 1.2.2.2.1.2               Q.E.D.
+--         Step: 1.2.2.2.2.1               Q.E.D.
+--         Step: 1.2.2.2.2.2               Q.E.D.
+--         Step: 1.2.2.2.Completeness      Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: destutterIdempotent              Q.E.D.
+-- [Proven] destutterIdempotent :: Ɐxs ∷ [Integer] → Bool
+destutterIdempotent :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
+destutterIdempotent = do
+
+   -- No adjacent duplicates
+   let noAdd = smtFunction "noAdd" $ \xs -> null xs .|| null (tail xs) .|| (head xs ./= head (tail xs) .&& noAdd (tail xs))
+
+   -- Helper: The head of a destuttered non-empty list does not change
+   helper1 <- induct "helper1"
+                     (\(Forall @"xs" (xs :: SList a)) (Forall @"h" h) -> head (destutter (h .: xs)) .== h) $
+                     \ih (x, xs) h -> []
+                                   |- head (destutter (h .: x .: xs))
+                                   =: cases [ h ./= x ==> trivial
+                                            , h .== x ==> head (destutter (x .: xs))
+                                                       ?? ih
+                                                       =: x
+                                                       =: qed
+                                            ]
+
+   -- Helper: show that if a list has no adjacent duplicates, then destutter leaves it unchanged:
+   helper2 <- induct "helper2"
+                     (\(Forall @"xs" (xs :: SList a)) -> noAdd xs .=> destutter xs .== xs) $
+                     \ih (x, xs) -> [noAdd (x .: xs)]
+                                 |- destutter (x .: xs)
+                                 ?? ih
+                                 =: x .: xs
+                                 =: qed
+
+   -- Helper: prove that noAdd is true for the result of destutter
+   helper3 <- sInductWith cvc5 "helper3"
+                  (\(Forall @"xs" (xs :: SList a)) -> noAdd (destutter xs))
+                  length $
+                  \ih xs -> []
+                         |- noAdd (destutter xs)
+                         =: split xs
+                                  trivial
+                                  (\a as -> split as
+                                                  trivial
+                                                  (\b bs -> noAdd (destutter (a .: b .: bs))
+                                                         =: cases [a .== b  ==> noAdd (destutter (b .: bs))
+                                                                             ?? ih
+                                                                             =: sTrue
+                                                                             =: qed
+                                                                  , a ./= b ==> noAdd (a .: destutter (b .: bs))
+                                                                             ?? helper1 `at` (Inst @"xs" bs, Inst @"h" b)
+                                                                             ?? ih
+                                                                             =: sTrue
+                                                                             =: qed
+                                                                  ]))
+
+   -- Now we can prove idempotency easily:
+   lemma "destutterIdempotent"
+          (\(Forall xs) -> destutter (destutter xs) .== destutter xs)
+          [proofOf helper2, proofOf helper3]
 
 -- | @(as ++ bs) \\ cs == (as \\ cs) ++ (bs \\ cs)@
 --
