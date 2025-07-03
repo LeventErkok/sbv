@@ -3357,6 +3357,7 @@ cantQuickCheck why = error $ unlines [ "*** Data.SBV: Cannot quickcheck the give
                                      , "***   - Floating point operations with rounding modes other than RNE."
                                      , "***   - Floating point FMA operation, regardless of rounding mode."
                                      , "***   - Quantified booleans, i.e., uses of Forall/Exists/ExistsUnique."
+                                     , "***   - Uses of quantifiedBool"
                                      , "***   - Calls to 'observe' (use 'sObserve' instead)"
                                      , "***"
                                      , "*** If you can't avoid the above features or run into an issue with"
