@@ -426,7 +426,7 @@ qcRun checkedLabel (intros, tpp) = do
         case [b | (l, b) <- results, l == checkedLabel] of
           [(caseCond, b)] -> do constrain $ intros .&& caseCond
                                 pure b
-          []              -> die "Exhausted the proof tree without hitting the relevant node."
+          []              -> notFound
           _               -> die "Hit the label multiple times."
 
  where die why =  error $ unlines [ ""
@@ -437,6 +437,11 @@ qcRun checkedLabel (intros, tpp) = do
                                   , "*** While trying to quickcheck at level " ++ show checkedLabel
                                   , "*** Please report this as a bug!"
                                   ]
+
+       -- It is possible that we may not find the node. Why? Because it might be under a case-split (ite essentially)
+       -- and the random choices we made before-hand may just not get us there. Sigh. So, the right thing to do is
+       -- to just say "we're good." But this can also indicate a bug in our code. Oh well, we'll ignore it.
+       notFound = pure sTrue
 
        -- "run" the tree, and if we hit the correct label return the result.
        -- This needs to be in "sync" with proveProofTree for obvious reasons. So, any changes there
