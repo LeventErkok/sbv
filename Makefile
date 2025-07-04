@@ -65,15 +65,14 @@ install: tags
 HADDOCK_OPTS=${CABAL_OPTS} --enable-documentation
 
 docs:
-	@cabal haddock ${HADDOCK_OPTS} --haddock-option=--hyperlinked-source      | ghc ./buildUtils/simpHaddock.hs -e main
+	@cabal haddock ${HADDOCK_OPTS} --haddock-option=--hyperlinked-source | ghc ./buildUtils/simpHaddock.hs -e main
 
-# To upload docs to hackage, first run the below target (part of release), then run the next target..
+# To upload docs to hackage, first run the below target, then run the command it spits out
 hackage-docs:
 	@cabal haddock ${HADDOCK_OPTS} --haddock-for-hackage | ghc ./buildUtils/simpHaddock.hs -e main
 	@echo "*** If all is well, then run:"
 	@echo "      cabal upload -d --publish ./dist-newstyle/sbv-XXX-docs.tar.gz"
 	@echo "*** If the above fails for some reason, use the workaround in: https://github.com/haskell/cabal/issues/10252#issuecomment-2422130252"
-	@echo "*** Don't forget to UPGRADE cabal version"
 
 ghci:
 ifdef TGT
