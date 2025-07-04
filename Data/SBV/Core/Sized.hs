@@ -31,7 +31,7 @@ import Data.Maybe (fromJust)
 import Data.Proxy (Proxy(..))
 
 import GHC.TypeLits
-import GHC.Internal.Real
+import GHC.Real
 
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Symbolic

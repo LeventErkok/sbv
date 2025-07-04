@@ -37,7 +37,7 @@ import Data.Char (intToDigit)
 import Data.List (isSuffixOf)
 import Data.Proxy
 import GHC.TypeLits
-import GHC.Internal.Real
+import GHC.Real
 
 import Data.Bits
 import Numeric

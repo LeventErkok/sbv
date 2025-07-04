@@ -46,7 +46,7 @@ import Text.Read(readMaybe)
 
 import qualified Data.Generics as G
 import GHC.Generics
-import GHC.Internal.Real
+import GHC.Real
 
 -- | Is the endpoint included in the interval?
 data RealPoint a = OpenPoint   a -- ^ open: i.e., doesn't include the point
