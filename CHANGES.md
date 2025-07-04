@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 11.7.5, Not yet released
+### Version 12.0, 2025-07-04
   
   * [BACKWARDS COMPATIBILITY] Renamed KnuckleDragger to TP, for theorem-proving. The original name was confusing, and
     the design has diverged from Phil's tool in significant ways and goals.
