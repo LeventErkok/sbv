@@ -3,7 +3,8 @@
 
 ### Version 12.0.5, Not yet released
 
-  * Mark new dev version
+  * Add missing instances for strong-equality, extending it to lists/Maybe etc. (Only impacts floats and structures
+    that contain floats.)
 
 ### Version 12.0, 2025-07-04
   

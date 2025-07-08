@@ -709,8 +709,10 @@ infix 4 .==, ./=, .===, ./==
 class EqSymbolic a where
   -- | Symbolic equality.
   (.==) :: a -> a -> SBool
+
   -- | Symbolic inequality.
   (./=) :: a -> a -> SBool
+
   -- | Strong equality. On floats ('SFloat'/'SDouble'), strong equality is object equality; that
   -- is @NaN == NaN@ holds, but @+0 == -0@ doesn't. On other types, (.===) is simply (.==).
   -- Note that (.==) is the /right/ notion of equality for floats per IEEE754 specs, since by
@@ -721,6 +723,7 @@ class EqSymbolic a where
   --
   -- NB. If you do not care about or work with floats, simply use (.==) and (./=).
   (.===) :: a -> a -> SBool
+
   -- | Negation of strong equality. Equaivalent to negation of (.===) on all types.
   (./==) :: a -> a -> SBool
 

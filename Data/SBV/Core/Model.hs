@@ -1062,9 +1062,13 @@ instance EqSymbolic Bool where
 
 -- Lists
 instance EqSymbolic a => EqSymbolic [a] where
-  []     .== []     = sTrue
-  (x:xs) .== (y:ys) = x .== y .&& xs .== ys
-  _      .== _      = sFalse
+  []     .==  []     = sTrue
+  (x:xs) .==  (y:ys) = x .== y .&& xs .== ys
+  _      .==  _      = sFalse
+
+  []     .=== []     = sTrue
+  (x:xs) .=== (y:ys) = x .=== y .&& xs .=== ys
+  _      .=== _      = sFalse
 
 instance OrdSymbolic a => OrdSymbolic [a] where
   []     .< []     = sFalse
@@ -1074,7 +1078,8 @@ instance OrdSymbolic a => OrdSymbolic [a] where
 
 -- NonEmpty
 instance EqSymbolic a => EqSymbolic (NonEmpty a) where
-  (x :| xs) .== (y :| ys) = x : xs .== y : ys
+  (x :| xs) .==  (y :| ys) = x : xs .==  y : ys
+  (x :| xs) .=== (y :| ys) = x : xs .=== y : ys
 
 instance OrdSymbolic a => OrdSymbolic (NonEmpty a) where
    (x :| xs) .< (y :| ys) = x : xs .< y : ys
@@ -1093,9 +1098,13 @@ instance OrdSymbolic a => OrdSymbolic (Maybe a) where
 
 -- Either
 instance (EqSymbolic a, EqSymbolic b) => EqSymbolic (Either a b) where
-  Left a  .== Left b  = a .== b
-  Right a .== Right b = a .== b
-  _       .== _       = sFalse
+  Left a  .==  Left b  = a .== b
+  Right a .==  Right b = a .== b
+  _       .==  _       = sFalse
+
+  Left a  .=== Left b  = a .=== b
+  Right a .=== Right b = a .=== b
+  _       .=== _       = sFalse
 
 instance (OrdSymbolic a, OrdSymbolic b) => OrdSymbolic (Either a b) where
   Left a  .< Left b  = a .< b
@@ -1105,35 +1114,40 @@ instance (OrdSymbolic a, OrdSymbolic b) => OrdSymbolic (Either a b) where
 
 -- 2-Tuple
 instance (EqSymbolic a, EqSymbolic b) => EqSymbolic (a, b) where
-  (a0, b0) .== (a1, b1) = a0 .== a1 .&& b0 .== b1
+  (a0, b0) .==  (a1, b1) = a0 .==  a1 .&& b0 .==  b1
+  (a0, b0) .=== (a1, b1) = a0 .=== a1 .&& b0 .=== b1
 
 instance (OrdSymbolic a, OrdSymbolic b) => OrdSymbolic (a, b) where
   (a0, b0) .< (a1, b1) = a0 .< a1 .|| (a0 .== a1 .&& b0 .< b1)
 
 -- 3-Tuple
 instance (EqSymbolic a, EqSymbolic b, EqSymbolic c) => EqSymbolic (a, b, c) where
-  (a0, b0, c0) .== (a1, b1, c1) = (a0, b0) .== (a1, b1) .&& c0 .== c1
+  (a0, b0, c0) .==  (a1, b1, c1) = (a0, b0) .==  (a1, b1) .&& c0 .==  c1
+  (a0, b0, c0) .=== (a1, b1, c1) = (a0, b0) .=== (a1, b1) .&& c0 .=== c1
 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c) => OrdSymbolic (a, b, c) where
   (a0, b0, c0) .< (a1, b1, c1) = (a0, b0) .< (a1, b1) .|| ((a0, b0) .== (a1, b1) .&& c0 .< c1)
 
 -- 4-Tuple
 instance (EqSymbolic a, EqSymbolic b, EqSymbolic c, EqSymbolic d) => EqSymbolic (a, b, c, d) where
-  (a0, b0, c0, d0) .== (a1, b1, c1, d1) = (a0, b0, c0) .== (a1, b1, c1) .&& d0 .== d1
+  (a0, b0, c0, d0) .==  (a1, b1, c1, d1) = (a0, b0, c0) .==  (a1, b1, c1) .&& d0 .==  d1
+  (a0, b0, c0, d0) .=== (a1, b1, c1, d1) = (a0, b0, c0) .=== (a1, b1, c1) .&& d0 .=== d1
 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d) => OrdSymbolic (a, b, c, d) where
   (a0, b0, c0, d0) .< (a1, b1, c1, d1) = (a0, b0, c0) .< (a1, b1, c1) .|| ((a0, b0, c0) .== (a1, b1, c1) .&& d0 .< d1)
 
 -- 5-Tuple
 instance (EqSymbolic a, EqSymbolic b, EqSymbolic c, EqSymbolic d, EqSymbolic e) => EqSymbolic (a, b, c, d, e) where
-  (a0, b0, c0, d0, e0) .== (a1, b1, c1, d1, e1) = (a0, b0, c0, d0) .== (a1, b1, c1, d1) .&& e0 .== e1
+  (a0, b0, c0, d0, e0) .==  (a1, b1, c1, d1, e1) = (a0, b0, c0, d0) .==  (a1, b1, c1, d1) .&& e0 .==  e1
+  (a0, b0, c0, d0, e0) .=== (a1, b1, c1, d1, e1) = (a0, b0, c0, d0) .=== (a1, b1, c1, d1) .&& e0 .=== e1
 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymbolic e) => OrdSymbolic (a, b, c, d, e) where
   (a0, b0, c0, d0, e0) .< (a1, b1, c1, d1, e1) = (a0, b0, c0, d0) .< (a1, b1, c1, d1) .|| ((a0, b0, c0, d0) .== (a1, b1, c1, d1) .&& e0 .< e1)
 
 -- 6-Tuple
 instance (EqSymbolic a, EqSymbolic b, EqSymbolic c, EqSymbolic d, EqSymbolic e, EqSymbolic f) => EqSymbolic (a, b, c, d, e, f) where
-  (a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) = (a0, b0, c0, d0, e0) .== (a1, b1, c1, d1, e1) .&& f0 .== f1
+  (a0, b0, c0, d0, e0, f0) .==  (a1, b1, c1, d1, e1, f1) = (a0, b0, c0, d0, e0) .==  (a1, b1, c1, d1, e1) .&& f0 .==  f1
+  (a0, b0, c0, d0, e0, f0) .=== (a1, b1, c1, d1, e1, f1) = (a0, b0, c0, d0, e0) .=== (a1, b1, c1, d1, e1) .&& f0 .=== f1
 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymbolic e, OrdSymbolic f) => OrdSymbolic (a, b, c, d, e, f) where
   (a0, b0, c0, d0, e0, f0) .< (a1, b1, c1, d1, e1, f1) =    (a0, b0, c0, d0, e0) .<  (a1, b1, c1, d1, e1)
@@ -1141,7 +1155,8 @@ instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymboli
 
 -- 7-Tuple
 instance (EqSymbolic a, EqSymbolic b, EqSymbolic c, EqSymbolic d, EqSymbolic e, EqSymbolic f, EqSymbolic g) => EqSymbolic (a, b, c, d, e, f, g) where
-  (a0, b0, c0, d0, e0, f0, g0) .== (a1, b1, c1, d1, e1, f1, g1) = (a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) .&& g0 .== g1
+  (a0, b0, c0, d0, e0, f0, g0) .==  (a1, b1, c1, d1, e1, f1, g1) = (a0, b0, c0, d0, e0, f0) .==  (a1, b1, c1, d1, e1, f1) .&& g0 .==  g1
+  (a0, b0, c0, d0, e0, f0, g0) .=== (a1, b1, c1, d1, e1, f1, g1) = (a0, b0, c0, d0, e0, f0) .=== (a1, b1, c1, d1, e1, f1) .&& g0 .=== g1
 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymbolic e, OrdSymbolic f, OrdSymbolic g) => OrdSymbolic (a, b, c, d, e, f, g) where
   (a0, b0, c0, d0, e0, f0, g0) .< (a1, b1, c1, d1, e1, f1, g1) =    (a0, b0, c0, d0, e0, f0) .<  (a1, b1, c1, d1, e1, f1)
