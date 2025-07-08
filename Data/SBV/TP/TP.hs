@@ -415,14 +415,14 @@ mkProofTree symEq = go (CalcStart [])
 mkCalcSteps :: SymVal a => (SBool, TPProofRaw (SBV a)) -> ([Int] -> Symbolic SBool) -> Symbolic CalcStrategy
 mkCalcSteps (intros, tpp) qcInstance = do
         pure $ CalcStrategy { calcIntros     = intros
-                            , calcProofTree  = mkProofTree (.==) tpp
+                            , calcProofTree  = mkProofTree (.===) tpp
                             , calcQCInstance = qcInstance
                             }
 
 -- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree for the step that's marked as such.
 qcRun :: SymVal a => [Int] -> (SBool, TPProofRaw (SBV a)) -> Symbolic SBool
 qcRun checkedLabel (intros, tpp) = do
-        results <- runTree sTrue 1 ([1], mkProofTree (\a b -> (a, b, a .== b)) tpp)
+        results <- runTree sTrue 1 ([1], mkProofTree (\a b -> (a, b, a .=== b)) tpp)
         case [b | (l, b) <- results, l == checkedLabel] of
           [(caseCond, b)] -> do constrain $ intros .&& caseCond
                                 pure b
