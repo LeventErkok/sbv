@@ -42,14 +42,16 @@ import Data.SBV.List
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
+--   Step: 4 (associativity)               Q.E.D.
+--   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Inductive lemma: sumReverse
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
+--   Step: 4 (commutativity)               Q.E.D.
+--   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumReverse :: Ɐxs ∷ [Integer] → Bool
 revSum :: forall a. (SymVal a, Num (SBV a)) => IO (Proof (Forall "xs" [a] -> SBool))
@@ -62,7 +64,9 @@ revSum = runTP $ do
                                            =: sum (x .: (xs ++ ys))
                                            =: x + sum (xs ++ ys)
                                            ?? ih
-                                           =: x + sum xs + sum ys
+                                           =: x + (sum xs + sum ys)
+                                           ?? "associativity"
+                                           =: (x + sum xs) + sum ys
                                            =: sum (x .: xs) + sum ys
                                            =: qed
 
@@ -75,5 +79,7 @@ revSum = runTP $ do
                            =: sum (reverse xs) + sum [x]
                            ?? ih
                            =: sum xs + x
+                           ?? "commutativity"
+                           =: x + sum xs
                            =: sum (x .: xs)
                            =: qed
