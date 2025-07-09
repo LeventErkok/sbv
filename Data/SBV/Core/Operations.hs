@@ -379,7 +379,7 @@ compareSV op x y
                     (KFloat,   CFloat  a, CFloat  b) -> svBool (a `cOp` b)
                     (KDouble,  CDouble a, CDouble b) -> svBool (a `cOp` b)
                     (KFP{}  ,  CFP     a, CFP     b) -> svBool (a `cOp` b)
-                    _                                  -> symResult
+                    _                                -> symResult
       Just r  -> svBool $ case op of
                             Equal       -> r == EQ
                             NotEqual    -> r /= EQ
