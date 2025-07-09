@@ -404,7 +404,7 @@ compareSV op x y
                             -- know these are the same nodes, provided we
                             -- don't have a float case. (Recall that NaN doesn't
                             -- compare equal to itself, so avoid that.)
-                            if svx == svy && not (isFloat k || isDouble k || isFP k)
+                            if svx == svy && eqCheckIsObjectEq k
                                then case op of
                                        Equal       -> pure trueSV
                                        LessEq      -> pure trueSV

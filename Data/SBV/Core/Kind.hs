@@ -374,7 +374,7 @@ intOfProxy p
         r  = fromEnum iv
 
 -- | Is this a type we can safely do equality on? Essentially it avoids floats (@NaN@ /= @NaN@, @+0 = -0@), and reals (due
--- to the possible presence of non-exact rationals.
+-- to the possible presence of non-exact rationals. In short, this will return True if there are no floats/reals under the hood.
 eqCheckIsObjectEq :: Kind -> Bool
 eqCheckIsObjectEq = not . any bad . expandKinds
   where bad KFloat  = True
