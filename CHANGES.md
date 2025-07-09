@@ -6,6 +6,12 @@
   * Add missing instances for strong-equality, extending it to lists/Maybe etc. (Only impacts floats and structures
     that contain floats.)
 
+  * Be more careful about applications of equality when floats are involved. Previously, we were using regular SMTLib
+    equality for structures. (i.e., lists of values or any other container that have a float element stored somewhere.)
+    Unfortunately the IEEE-754 semantics for equality does not correspond to SMTLib's notion of equality in these
+    cases, causing semantic differences. Now we are more careful, and we also warn the user about performance
+    implications and ask them to use custom-functions instead.
+
 ### Version 12.0, 2025-07-04
   
   * [BACKWARDS COMPATIBILITY] Renamed KnuckleDragger to TP, for theorem-proving. The original name was confusing, and

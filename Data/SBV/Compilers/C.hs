@@ -746,7 +746,8 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         rtc = cgRTC cfg
 
         cBinOps = [ (Plus, "+"),  (Times, "*"), (Minus, "-")
-                  , (Equal, "=="), (NotEqual, "!="), (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
+                  , (Equal False, "==")  -- no strong equality!
+                  , (NotEqual, "!="), (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
                   , (And, "&"), (Or, "|"), (XOr, "^")
                   ]
 

@@ -324,7 +324,7 @@ svStrongEqual x y | isFloat x,  Just f1 <- getF x,  Just f2 <- getF y  = svBool 
                   | isDouble x, Just f1 <- getD x,  Just f2 <- getD y  = svBool $ f1 `fpIsEqualObjectH` f2
                   | isFP x,     Just f1 <- getFP x, Just f2 <- getFP y = svBool $ f1 `fpIsEqualObjectH` f2
                   | isFloat x || isDouble x || isFP x                  = SVal KBool $ Right $ cache r
-                  | True                                               = svEqual x y
+                  | True                                               = compareSV (Equal True) x y
   where getF (SVal _ (Left (CV _ (CFloat f)))) = Just f
         getF _                                 = Nothing
 
@@ -342,15 +342,18 @@ svStrongEqual x y | isFloat x,  Just f1 <- getF x,  Just f2 <- getF y  = svBool 
 compareSV :: Op -> SVal -> SVal -> SVal
 compareSV op x y
   -- Make sure we don't get anything we can't handle or expect
-  | op `notElem` [Equal, NotEqual, LessThan, GreaterThan, LessEq, GreaterEq] = error $ "Unexpected call to compareSV: "              ++ show (op, x, y)
-  | kx /= ky                                                                 = error $ "Mismatched kinds in call to compareSV:"      ++ show (op, x, kindOf x, kindOf y)
-  | (isSet kx || isArray ky) && op `notElem` [Equal, NotEqual]               = error $ "Unexpected Set/Array not-equal comparison: " ++ show (op, x, k)
+  | op `notElem` [Equal True, Equal False, NotEqual, LessThan, GreaterThan, LessEq, GreaterEq]
+  = error $ "Unexpected call to compareSV: "              ++ show (op, x, y)
+  | kx /= ky
+  = error $ "Mismatched kinds in call to compareSV:"      ++ show (op, x, kindOf x, kindOf y)
+  | (isSet kx || isArray ky) && op `notElem` [Equal True, Equal False, NotEqual]
+  = error $ "Unexpected Set/Array not-equal comparison: " ++ show (op, x, k)
 
   -- Boolean equality optimizations
-  | k == KBool, op == Equal,    SVal _ (Left xv) <- x, xv == trueCV  = y         -- true  .== y     --> y
-  | k == KBool, op == Equal,    SVal _ (Left yv) <- y, yv == trueCV  = x         -- x     .== true  --> x
-  | k == KBool, op == Equal,    SVal _ (Left xv) <- x, xv == falseCV = svNot y   -- false .== y     --> svNot y
-  | k == KBool, op == Equal,    SVal _ (Left yv) <- y, yv == falseCV = svNot x   -- x     .== false --> svNot x
+  | k == KBool, Equal{} <- op,    SVal _ (Left xv) <- x, xv == trueCV  = y       -- true  .== y     --> y
+  | k == KBool, Equal{} <- op,    SVal _ (Left yv) <- y, yv == trueCV  = x       -- x     .== true  --> x
+  | k == KBool, Equal{} <- op,    SVal _ (Left xv) <- x, xv == falseCV = svNot y -- false .== y     --> svNot y
+  | k == KBool, Equal{} <- op,    SVal _ (Left yv) <- y, yv == falseCV = svNot x -- x     .== false --> svNot x
 
   | k == KBool, op == NotEqual, SVal _ (Left xv) <- x, xv == trueCV  = svNot y   -- true  ./= y     --> svNot y
   | k == KBool, op == NotEqual, SVal _ (Left yv) <- y, yv == trueCV  = svNot x   -- x     ./= true  --> svNot x
@@ -376,12 +379,12 @@ compareSV op x y
       Nothing -> -- cCompare is conservative on floats. Give those one more chance, only at the top-level.
                  -- (i.e., if stored under a Maybe/Either/List etc., we'll resort to a symbolic result.)
                  case (k, cvVal xv, cvVal yv) of
-                    (KFloat,   CFloat  a, CFloat  b) -> svBool (a `cOp` b)
-                    (KDouble,  CDouble a, CDouble b) -> svBool (a `cOp` b)
-                    (KFP{}  ,  CFP     a, CFP     b) -> svBool (a `cOp` b)
+                    (KFloat,   CFloat  a, CFloat  b) -> svBool (a `cFPOp` b)
+                    (KDouble,  CDouble a, CDouble b) -> svBool (a `cFPOp` b)
+                    (KFP{}  ,  CFP     a, CFP     b) -> svBool (a `cFPOp` b)
                     _                                -> symResult
       Just r  -> svBool $ case op of
-                            Equal       -> r == EQ
+                            Equal _     -> r == EQ
                             NotEqual    -> r /= EQ
                             LessThan    -> r == LT
                             GreaterThan -> r == GT
@@ -396,17 +399,24 @@ compareSV op x y
          ky = kindOf y
          k  = kx       -- only used after we ensured kx == ky
 
-         symResult = SVal KBool $ Right $ cache res
+         -- Are there any floats embedded down from here? if so, we have to be careful due to presence of NaN
+         safeEq =  op == Equal True                     -- strong equality ok
+                || isWeird k                            -- top level OK
+                || all (not . isWeird) (expandKinds k)  -- but not internal
+           where isWeird knd = isFloat knd || isDouble knd || isFP knd
+
+         symResult
+           | safeEq = symResultSafe
+           | True   = symResultFP
+
+         -- This will go down to SMTLib's =. So only use it if we're safe to do so!
+         symResultSafe = SVal KBool $ Right $ cache res
           where res st = do svx :: SV <- svToSV st x
                             svy :: SV <- svToSV st y
 
-                            -- We might be able to further optimize if we
-                            -- know these are the same nodes, provided we
-                            -- don't have a float case. (Recall that NaN doesn't
-                            -- compare equal to itself, so avoid that.)
-                            if svx == svy && eqCheckIsObjectEq k
+                            if svx == svy
                                then case op of
-                                       Equal       -> pure trueSV
+                                       Equal{}     -> pure trueSV
                                        LessEq      -> pure trueSV
                                        GreaterEq   -> pure trueSV
                                        NotEqual    -> pure falseSV
@@ -415,14 +425,39 @@ compareSV op x y
                                        _           -> error $ "Unexpected call to compareSV, equal SV case: " ++ show (op, svx)
                                else newExpr st KBool (SBVApp op [svx, svy])
 
-         a `cOp` b = case op of
-                      Equal       -> a == b
-                      NotEqual    -> a /= b
-                      LessThan    -> a <  b
-                      GreaterThan -> a >  b
-                      LessEq      -> a <= b
-                      GreaterEq   -> a >= b
-                      _           -> error $ "Unexpected call to cOp: " ++ show op
+         a `cFPOp` b = case op of
+                         Equal False -> a == b
+                         Equal True  -> a `fpIsEqualObjectH` b
+                         NotEqual    -> a /= b
+                         LessThan    -> a <  b
+                         GreaterThan -> a >  b
+                         LessEq      -> a <= b
+                         GreaterEq   -> a >= b
+                         _           -> error $ "Unexpected call to cFPOp: " ++ show op
+
+         -- OK, we have a result that has floats embedded in it. So comparison is problematic.
+         -- Certain subsets of this is supported elsewhere. Here, we simply bail out.
+         symResultFP = error $ unlines $  [ ""
+                                          , "*** Data.SBV: Unsupported complicated comparison:"
+                                          , "***"
+                                          , "***   Op  : " ++ show op
+                                          , "***   Type: " ++ show k
+                                          , "***"
+                                          , "*** Due to the presence of NaN, comparisons over this type require"
+                                          , "*** special support in SMTLib. And in general this can lead to"
+                                          , "*** performance issues since the comparison is no longer a natively"
+                                          , "*** supported operation in the logic."
+                                          , "***"
+                                          ]
+                                       ++ case alternative of
+                                            Nothing -> ["*** Please report this as a feature request."]
+                                            Just a  -> [ "*** For this case, please use: " ++ a
+                                                       , "*** but beware of performance/decidability implications."
+                                                       ]
+
+              where alternative = case (op, k) of
+                                    (Equal False, KList f) | isFloat f || isDouble f || isFP f -> Just "Data.SBV.List.listEq"
+                                    _                                                          -> Nothing
 
 -- Compare two CVals; if we can. We're being conservative here and deferring to a symbolic result if we get something complicated.
 cCompare :: Kind -> Op -> CVal -> CVal -> Maybe Ordering
@@ -485,23 +520,23 @@ cCompare k op x y =
 
       -- Arrays and sets only support equality/inequality. And they have object-equality semantics. So
       -- if there are any floats or non-exact-rationals down in the index or element kinds, we bail
-      (CSet a, CSet b)     | op `elem` [Equal, NotEqual]
+      (CSet a, CSet b)     | op `elem` [Equal True, Equal False, NotEqual]
                            , KSet ke <- k
                            -> case svSetEqual ke a b of
                                  Nothing    -> Nothing  -- We don't know
                                  Just True  -> Just EQ  -- They're equal
-                                 Just False -> Just $ if op == Equal
+                                 Just False -> Just $ if op `elem` [Equal True, Equal False]
                                                          then GT  -- Pick GT, So equality    test will fail
                                                          else EQ  -- Pick EQ, So in-equality test will fail
                            | True
                            -> error $ "cCompare: Received unexpected set comparison: " ++ show (op, k)
 
-      (CArray a, CArray b) | op `elem` [Equal, NotEqual]
+      (CArray a, CArray b) | op `elem` [Equal True, Equal False, NotEqual]
                            , KArray k1 k2 <- k
                            -> case svArrEqual k1 k2 a b of
                                 Nothing    -> Nothing  -- We don't know
                                 Just True  -> Just EQ  -- They're equal
-                                Just False -> Just $ if op == Equal
+                                Just False -> Just $ if op `elem` [Equal True, Equal False]
                                                         then GT  -- Pick GT, So equality    test will fail
                                                         else EQ  -- Pick EQ, So in-equality test will fail
                            | True
@@ -565,9 +600,9 @@ cCompare k op x y =
                 (True,  False, True) -> Just True  -- keys match, but defs don't. But we keys are complete, so def mismatch is OK
                 _                    -> Nothing    -- otherwise, we don't really know. So, remain symbolic.
 
--- | Equality.
+-- | Equality. This is SMT object equality.
 svEqual :: SVal -> SVal -> SVal
-svEqual = compareSV Equal
+svEqual = compareSV (Equal False)
 
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal

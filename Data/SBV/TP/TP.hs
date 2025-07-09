@@ -390,8 +390,8 @@ data CalcContext a = CalcStart     [Helper] -- Haven't started yet
 
 
 -- | Turn a raw (i.e., as written by the user) proof tree to a tree where the successive equalities are made explicit.
-mkProofTree :: SymVal a => (SBV a -> SBV a -> c) -> TPProofRaw (SBV a) -> TPProofGen c [String] SBool
-mkProofTree symEq = go (CalcStart [])
+mkProofTree :: SymVal a => (SBV a -> SBV a -> c, SBV a -> SBV a -> SBool) -> TPProofRaw (SBV a) -> TPProofGen c [String] SBool
+mkProofTree (symTraceEq, symEq) = go (CalcStart [])
   where -- End of the proof; tie the begin and end
         go step (ProofEnd () hs) = case step of
                                      -- It's tempting to error out if we're at the start and already reached the end
@@ -399,7 +399,7 @@ mkProofTree symEq = go (CalcStart [])
                                      -- general case, it's quite valid in a case-split; where one of the case-splits
                                      -- might be easy enough for the solver to deduce so the user simply says "just derive it for me."
                                      CalcStart hs'           -> ProofEnd sTrue (hs' ++ hs) -- Nothing proven!
-                                     CalcStep  begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
+                                     CalcStep  begin end hs' -> ProofEnd (begin `symEq` end) (hs' ++ hs)
 
         -- Branch: Just push it down. We use the hints from previous step, and pass the current ones down.
         go step (ProofBranch c hs ps) = ProofBranch c (getHelperText hs) [(bc, go step' p) | (bc, p) <- ps]
@@ -409,20 +409,20 @@ mkProofTree symEq = go (CalcStart [])
 
         -- Step:
         go (CalcStart hs)           (ProofStep cur hs' p) = go (CalcStep cur cur (hs' ++ hs)) p
-        go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (symEq prev cur) hs (go (CalcStep first cur hs') p)
+        go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev `symTraceEq` cur) hs (go (CalcStep first cur hs') p)
 
 -- | Turn a sequence of steps into a chain of equalities
 mkCalcSteps :: SymVal a => (SBool, TPProofRaw (SBV a)) -> ([Int] -> Symbolic SBool) -> Symbolic CalcStrategy
 mkCalcSteps (intros, tpp) qcInstance = do
         pure $ CalcStrategy { calcIntros     = intros
-                            , calcProofTree  = mkProofTree (.===) tpp
+                            , calcProofTree  = mkProofTree ((.===), (.===)) tpp
                             , calcQCInstance = qcInstance
                             }
 
 -- | Given initial hypothesis, and a raw proof tree, build the quick-check walk over this tree for the step that's marked as such.
 qcRun :: SymVal a => [Int] -> (SBool, TPProofRaw (SBV a)) -> Symbolic SBool
 qcRun checkedLabel (intros, tpp) = do
-        results <- runTree sTrue 1 ([1], mkProofTree (\a b -> (a, b, a .=== b)) tpp)
+        results <- runTree sTrue 1 ([1], mkProofTree (\a b -> (a, b, a .=== b), (.==)) tpp)
         case [b | (l, b) <- results, l == checkedLabel] of
           [(caseCond, b)] -> do constrain $ intros .&& caseCond
                                 pure b
@@ -1457,7 +1457,7 @@ split :: SymVal a => SList a -> TPProofRaw r -> (SBV a -> SList a -> TPProofRaw 
 split xs empty cons = ProofBranch False [] [(cnil, empty), (ccons, cons h t)]
    where cnil   = SL.null   xs
          (h, t) = SL.uncons xs
-         ccons  = sNot cnil .&& xs .== h SL..: t
+         ccons  = sNot cnil .&& xs .=== h SL..: t
 
 -- | Case splitting over two lists; empty and full cases for each
 split2 :: (SymVal a, SymVal b)
@@ -1476,11 +1476,11 @@ split2 (xs, ys) ee ec ce cc = ProofBranch False
                                           ]
   where xnil     = SL.null   xs
         (hx, tx) = SL.uncons xs
-        xcons    = sNot xnil .&& xs .== hx SL..: tx
+        xcons    = sNot xnil .&& xs .=== hx SL..: tx
 
         ynil     = SL.null   ys
         (hy, ty) = SL.uncons ys
-        ycons    = sNot ynil .&& ys .== hy SL..: ty
+        ycons    = sNot ynil .&& ys .=== hy SL..: ty
 
 -- | A quick-check step, taking number of tests.
 qc :: Int -> Helper

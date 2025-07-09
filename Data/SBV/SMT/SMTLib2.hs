@@ -1027,7 +1027,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                 , (Abs,           liftAbs)
                                 , (Quot,          lift2S  "bvudiv" "bvsdiv")
                                 , (Rem,           lift2S  "bvurem" "bvsrem")
-                                , (Equal,         eqBV)
+                                , (Equal True,    eqBV)
+                                , (Equal False,   eqBV)
                                 , (NotEqual,      neqBV)
                                 , (LessThan,      lift2S  "bvult" "bvslt")
                                 , (GreaterThan,   lift2S  "bvugt" "bvsgt")
@@ -1065,7 +1066,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                     , (Times,         lift2WM "*" "fp.mul")
                                     , (UNeg,          lift1FP "-" "fp.neg")
                                     , (Abs,           liftAbs)
-                                    , (Equal,         equal)
+                                    , (Equal True,    equal)
+                                    , (Equal False,   equal)
                                     , (NotEqual,      notEqual)
                                     , (LessThan,      lift2Cmp  "<"  "fp.lt")
                                     , (GreaterThan,   lift2Cmp  ">"  "fp.gt")
@@ -1078,7 +1080,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                              , (Times,       lift2Rat "sbv.rat.times")
                              , (UNeg,        liftRat  "sbv.rat.uneg")
                              , (Abs,         liftRat  "sbv.rat.abs")
-                             , (Equal,       lift2Rat "sbv.rat.eq")
+                             , (Equal True,  lift2Rat "sbv.rat.eq")
+                             , (Equal False, lift2Rat "sbv.rat.eq")
                              , (NotEqual,    lift2Rat "sbv.rat.notEq")
                              , (LessThan,    lift2Rat "sbv.rat.lt")
                              , (GreaterThan, lift2Rat "sbv.rat.lt" . swap)
@@ -1093,7 +1096,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                               swap sbvs         = error $ "SBV.SMTLib2.sh.swap: Unexpected arguments: "   ++ show sbvs
 
                 -- equality and comparisons are the only thing that works on uninterpreted sorts and pretty much everything else
-                uninterpretedTable = [ (Equal,       lift2S "="        "="        True)
+                uninterpretedTable = [ (Equal True,  lift2S "="        "="        True)
+                                     , (Equal False, lift2S "="        "="        True)
                                      , (NotEqual,    liftNS "distinct" "distinct" True)
                                      , (LessThan,    unintComp "<")
                                      , (GreaterThan, unintComp ">")
@@ -1102,7 +1106,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                      ]
 
                 -- For strings, equality and comparisons are the only operators
-                smtStringTable = [ (Equal,       lift2S "="        "="        True)
+                smtStringTable = [ (Equal True,  lift2S "="        "="        True)
+                                 , (Equal False, lift2S "="        "="        True)
                                  , (NotEqual,    liftNS "distinct" "distinct" True)
                                  , (LessThan,    stringCmp False "str.<")
                                  , (GreaterThan, stringCmp True  "str.<")
@@ -1110,9 +1115,9 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                  , (GreaterEq,   stringCmp True  "str.<=")
                                  ]
 
-                -- For lists, equality is really the only operator
+                -- For lists, equality is really the only operator. Also, not strong-equality due to lists of floats.
                 -- Likewise here, things might change for comparisons
-                smtListTable = [ (Equal,       lift2S "="        "="        True)
+                smtListTable = [ (Equal False, lift2S "="        "="        True)
                                , (NotEqual,    liftNS "distinct" "distinct" True)
                                , (LessThan,    seqCmp False "seq.<")
                                , (GreaterThan, seqCmp True  "seq.<")

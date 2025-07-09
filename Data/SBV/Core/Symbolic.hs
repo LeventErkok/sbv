@@ -210,7 +210,7 @@ data Op = Plus
         | Abs
         | Quot
         | Rem
-        | Equal
+        | Equal Bool   -- ^ If bool is True then this is strong (i.e., object equality). Matters for floats or structures containing them.
         | Implies
         | NotEqual
         | LessThan
@@ -630,7 +630,7 @@ instance Show Op where
     where syms = [ (Plus, "+"), (Times, "*"), (Minus, "-"), (UNeg, "-"), (Abs, "abs")
                  , (Quot, "quot")
                  , (Rem,  "rem")
-                 , (Equal, "=="), (NotEqual, "/="), (Implies, "=>")
+                 , (Equal True, "==="), (Equal False, "=="), (NotEqual, "/="), (Implies, "=>")
                  , (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
                  , (Ite, "if_then_else")
                  , (And, "&"), (Or, "|"), (XOr, "^"), (Not, "~")
@@ -674,7 +674,7 @@ reorder s = case s of
               SBVApp op [a, b] | isCommutative op && a > b -> SBVApp op [b, a]
               _ -> s
   where isCommutative :: Op -> Bool
-        isCommutative o = o `elem` [Plus, Times, Equal, NotEqual, And, Or, XOr]
+        isCommutative o = o `elem` [Plus, Times, Equal True, Equal False, NotEqual, And, Or, XOr]
 
 -- Show instance for 'SBVExpr'. Again, only for debugging purposes.
 instance Show SBVExpr where
@@ -693,7 +693,7 @@ instance Show SBVExpr where
 showOpInfix :: Op -> Bool
 showOpInfix = (`elem` infixOps)
   where infixOps = [ Plus, Times, Minus, Quot, Rem, Implies
-                   , Equal, NotEqual, LessThan, GreaterThan, LessEq, GreaterEq
+                   , Equal True, Equal False, NotEqual, LessThan, GreaterThan, LessEq, GreaterEq
                    , And, Or, XOr, Join
                    ]
 

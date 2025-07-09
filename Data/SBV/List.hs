@@ -40,6 +40,9 @@ module Data.SBV.List (
         -- * Containment
         , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
 
+        -- * List equality
+        , listEq
+
         -- * Sublists
         , take, drop, splitAt, subList, replace, indexOf, offsetIndexOf
 
@@ -369,6 +372,12 @@ pre `isPrefixOf` l
   = literal True
   | True
   = lift2 True (SeqPrefixOf (kindOf (Proxy @a))) (Just L.isPrefixOf) pre l
+
+-- | @listEq@ is a variant of equality that you can use for lists of floats. It respects @NaN /= NaN@. The reason
+-- we do not do this automatically is that it complicates proof objectives usually, as it does not simply resolve to
+-- the native equality check.
+listEq :: SymVal a => SList a -> SList a -> SBool
+listEq = smtFunction "listEq" $ \xs ys -> ite (null xs) (null ys) (head xs .== head ys .&& listEq (tail xs) (tail ys))
 
 -- | @`isSuffixOf` suf l@. Is @suf@ a suffix of @l@?
 --
