@@ -611,6 +611,7 @@ mapReverse f = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] mapCompose :: Ɐxs ∷ [Integer] → Bool
 mapCompose :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> (SBV b -> SBV c) -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -621,6 +622,7 @@ mapCompose f g =
                            =: map g (f x .: map f xs)
                            =: g (f x) .: map g (map f xs)
                            ?? ih
+                           =: g (f x) .: map (g . f) xs
                            =: (g . f) x .: map (g . f) xs
                            =: map (g . f) (x .: xs)
                            =: qed
