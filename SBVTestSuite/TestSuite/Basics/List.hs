@@ -51,6 +51,7 @@ tests =
     , goldenCapturedIO "seqExamples8"  $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples8    Unsat
     , goldenCapturedIO "listFloat1"    $ run listFloat1
     , goldenCapturedIO "listFloat2"    $ run listFloat2
+    , goldenCapturedIO "listFloat3"    $ run listFloat3
     , testCase         "seqExamples9"  $ assert seqExamples9
     ]
 
@@ -163,3 +164,7 @@ listFloat1 = do x :: SFloat <- free "x"
 listFloat2 :: Symbolic SBool
 listFloat2 = do x :: SFloat <- free "x"
                 pure $ L.singleton x `L.listEq` L.singleton x
+
+listFloat3 :: Symbolic SBool
+listFloat3 = do x :: SFloat <- free "x"
+                pure $ L.singleton x .=== L.singleton x

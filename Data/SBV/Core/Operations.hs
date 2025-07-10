@@ -447,6 +447,8 @@ compareSV op x y
                                           , "*** performance issues since the comparison is no longer a natively"
                                           , "*** supported operation in the logic."
                                           , "***"
+                                          , "*** NB. If you want the semantics NaN == NaN, and +0 /= -0, then you can use .=== instead."
+                                          , "***"
                                           ]
                                        ++ case alternative of
                                             Nothing -> ["*** Please report this as a feature request."]
