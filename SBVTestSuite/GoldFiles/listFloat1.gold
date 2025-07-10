@@ -1,0 +1,16 @@
+
+EXCEPTION:
+
+*** Data.SBV: Unsupported complicated comparison:
+***
+***   Op  : ==
+***   Type: [SFloat]
+***
+*** Due to the presence of NaN, comparisons over this type require
+*** special support in SMTLib. And in general this can lead to
+*** performance issues since the comparison is no longer a natively
+*** supported operation in the logic.
+***
+*** For this case, please use: Data.SBV.List.listEq
+*** but beware of performance/decidability implications.
+

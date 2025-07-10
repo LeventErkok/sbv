@@ -9,6 +9,7 @@
 -- Test the sequence/list functions.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -19,6 +20,8 @@ module TestSuite.Basics.List(tests)  where
 
 import Data.SBV.Control
 import Utils.SBVTestFramework
+
+import qualified Control.Exception as C
 
 import           Prelude hiding ((++), (!!))
 import qualified Prelude as P   ((++))
@@ -46,6 +49,8 @@ tests =
     , goldenCapturedIO "seqExamples6"  $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples6    Unsat
     , goldenCapturedIO "seqExamples7"  $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples7    Sat
     , goldenCapturedIO "seqExamples8"  $ \rf -> checkWith z3{redirectVerbose=Just rf} seqExamples8    Unsat
+    , goldenCapturedIO "listFloat1"    $ run listFloat1
+    , goldenCapturedIO "listFloat2"    $ run listFloat2
     , testCase         "seqExamples9"  $ assert seqExamples9
     ]
 
@@ -145,3 +150,16 @@ seqExamples9 = do m <- allSat $ do (s :: SList Word8) <- sList "s"
                       vals = sort $ concat (catMaybes (getModelValues "s" m) :: [[Word8]])
 
                   return $ vals == [0..255]
+
+run :: Provable a => a -> FilePath -> IO ()
+run t gf = do r <- proveWith defaultSMTCfg{verbose=True, redirectVerbose = Just gf} t
+              appendFile gf ("\nFINAL OUTPUT:\n" <> show r <> "\n")
+        `C.catch` (\(e :: C.SomeException) -> appendFile gf ("\nEXCEPTION:\n" <> show e <> "\n"))
+
+listFloat1 :: Symbolic SBool
+listFloat1 = do x :: SFloat <- free "x"
+                pure $ L.singleton x .== L.singleton x
+
+listFloat2 :: Symbolic SBool
+listFloat2 = do x :: SFloat <- free "x"
+                pure $ L.singleton x `L.listEq` L.singleton x
