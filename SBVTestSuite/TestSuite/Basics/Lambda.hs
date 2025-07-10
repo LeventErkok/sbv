@@ -72,7 +72,7 @@ tests =
                                                                                         , P.sum . P.map P.sum
                                                                                         )
 
-      , goldenCapturedIO "lambda08" $ eval1 [1 .. 5 :: Float]   (mapl (+1), P.map (+1))
+      , goldenCapturedIO "lambda08" $ eval1 [1 .. 5 :: Int64]   (mapl (+1), P.map (+1))
       , goldenCapturedIO "lambda09" $ eval1 [1 .. 5 :: Int8]    (mapl (+1), P.map (+1))
       , goldenCapturedIO "lambda10" $ eval1 [1 .. 5 :: Integer] (mapl (+1), P.map (+1))
       , goldenCapturedIO "lambda11" $ eval1 [1 .. 5 :: Word8]   (mapl (+1), P.map (+1))

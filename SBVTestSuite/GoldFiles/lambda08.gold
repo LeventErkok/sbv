@@ -13,34 +13,34 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () (Seq (_ FloatingPoint  8 24)) (seq.++ (seq.unit ((_ to_fp 8 24) roundNearestTiesToEven (/ 1.0 1.0))) (seq.unit ((_ to_fp 8 24) roundNearestTiesToEven (/ 2.0 1.0))) (seq.unit ((_ to_fp 8 24) roundNearestTiesToEven (/ 3.0 1.0))) (seq.unit ((_ to_fp 8 24) roundNearestTiesToEven (/ 4.0 1.0))) (seq.unit ((_ to_fp 8 24) roundNearestTiesToEven (/ 5.0 1.0)))))
+[GOOD] (define-fun s2 () (Seq (_ BitVec 64)) (seq.++ (seq.unit #x0000000000000001) (seq.unit #x0000000000000002) (seq.unit #x0000000000000003) (seq.unit #x0000000000000004) (seq.unit #x0000000000000005)))
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (Seq (_ FloatingPoint  8 24)))
-[GOOD] (declare-fun s1 () (Seq (_ FloatingPoint  8 24)))
+[GOOD] (declare-fun s0 () (Seq (_ BitVec 64)))
+[GOOD] (declare-fun s1 () (Seq (_ BitVec 64)))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |sbv.map @(SBV Float -> SBV Float)_55d10191cd @(SBV [Float] -> SBV [Float])| :: [SFloat] -> [SFloat] [Recursive]
-[GOOD] (define-fun-rec |sbv.map @(SBV Float -> SBV Float)_55d10191cd @(SBV [Float] -> SBV [Float])| ((l1_s0 (Seq (_ FloatingPoint  8 24)))) (Seq (_ FloatingPoint  8 24))
+[GOOD] ; |sbv.map @(SBV Int64 -> SBV Int64)_bc2a222730 @(SBV [Int64] -> SBV [Int64])| :: [SInt64] -> [SInt64] [Recursive]
+[GOOD] (define-fun-rec |sbv.map @(SBV Int64 -> SBV Int64)_bc2a222730 @(SBV [Int64] -> SBV [Int64])| ((l1_s0 (Seq (_ BitVec 64)))) (Seq (_ BitVec 64))
                                  (let ((l1_s2 0))
-                                 (let ((l1_s4 (as seq.empty (Seq (_ FloatingPoint  8 24)))))
-                                 (let ((l1_s6 ((_ to_fp 8 24) roundNearestTiesToEven (/ 1.0 1.0))))
+                                 (let ((l1_s4 (as seq.empty (Seq (_ BitVec 64)))))
+                                 (let ((l1_s6 #x0000000000000001))
                                  (let ((l1_s9 1))
                                  (let ((l1_s1 (seq.len l1_s0)))
                                  (let ((l1_s3 (= l1_s1 l1_s2)))
                                  (let ((l1_s5 (seq.nth l1_s0 l1_s2)))
-                                 (let ((l1_s7 (fp.add roundNearestTiesToEven l1_s5 l1_s6)))
+                                 (let ((l1_s7 (bvadd l1_s5 l1_s6)))
                                  (let ((l1_s8 (seq.unit l1_s7)))
                                  (let ((l1_s10 (- l1_s1 l1_s9)))
                                  (let ((l1_s11 (seq.extract l1_s0 l1_s9 l1_s10)))
-                                 (let ((l1_s12 (|sbv.map @(SBV Float -> SBV Float)_55d10191cd @(SBV [Float] -> SBV [Float])| l1_s11)))
+                                 (let ((l1_s12 (|sbv.map @(SBV Int64 -> SBV Int64)_bc2a222730 @(SBV [Int64] -> SBV [Int64])| l1_s11)))
                                  (let ((l1_s13 (seq.++ l1_s8 l1_s12)))
                                  (let ((l1_s14 (ite l1_s3 l1_s4 l1_s13)))
                                  l1_s14)))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq (_ FloatingPoint  8 24)) (|sbv.map @(SBV Float -> SBV Float)_55d10191cd @(SBV [Float] -> SBV [Float])| s0))
+[GOOD] (define-fun s4 () (Seq (_ BitVec 64)) (|sbv.map @(SBV Int64 -> SBV Int64)_bc2a222730 @(SBV [Int64] -> SBV [Int64])| s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
@@ -49,26 +49,26 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s1))
-[RECV] ((s1 (seq.++ (seq.unit (fp #b0 #x80 #b00000000000000000000000))
-               (seq.unit (fp #b0 #x80 #b10000000000000000000000))
-               (seq.unit (fp #b0 #x81 #b00000000000000000000000))
-               (seq.unit (fp #b0 #x81 #b01000000000000000000000))
-               (seq.unit (fp #b0 #x81 #b10000000000000000000000)))))
+[RECV] ((s1 (seq.++ (seq.unit #x0000000000000002)
+               (seq.unit #x0000000000000003)
+               (seq.unit #x0000000000000004)
+               (seq.unit #x0000000000000005)
+               (seq.unit #x0000000000000006))))
 [SEND] (get-value (s0))
-[RECV] ((s0 (seq.++ (seq.unit (fp #b0 #x7f #b00000000000000000000000))
-               (seq.unit (fp #b0 #x80 #b00000000000000000000000))
-               (seq.unit (fp #b0 #x80 #b10000000000000000000000))
-               (seq.unit (fp #b0 #x81 #b00000000000000000000000))
-               (seq.unit (fp #b0 #x81 #b01000000000000000000000)))))
+[RECV] ((s0 (seq.++ (seq.unit #x0000000000000001)
+               (seq.unit #x0000000000000002)
+               (seq.unit #x0000000000000003)
+               (seq.unit #x0000000000000004)
+               (seq.unit #x0000000000000005))))
 [SEND] (get-value (s1))
-[RECV] ((s1 (seq.++ (seq.unit (fp #b0 #x80 #b00000000000000000000000))
-               (seq.unit (fp #b0 #x80 #b10000000000000000000000))
-               (seq.unit (fp #b0 #x81 #b00000000000000000000000))
-               (seq.unit (fp #b0 #x81 #b01000000000000000000000))
-               (seq.unit (fp #b0 #x81 #b10000000000000000000000)))))
+[RECV] ((s1 (seq.++ (seq.unit #x0000000000000002)
+               (seq.unit #x0000000000000003)
+               (seq.unit #x0000000000000004)
+               (seq.unit #x0000000000000005)
+               (seq.unit #x0000000000000006))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 RESULT:
-  s0 = [1.0,2.0,3.0,4.0,5.0] :: [Float]
-  s1 = [2.0,3.0,4.0,5.0,6.0] :: [Float]
+  s0 = [1,2,3,4,5] :: [Int64]
+  s1 = [2,3,4,5,6] :: [Int64]
