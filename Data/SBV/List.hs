@@ -376,8 +376,12 @@ pre `isPrefixOf` l
 -- | @listEq@ is a variant of equality that you can use for lists of floats. It respects @NaN /= NaN@. The reason
 -- we do not do this automatically is that it complicates proof objectives usually, as it does not simply resolve to
 -- the native equality check.
-listEq :: SymVal a => SList a -> SList a -> SBool
-listEq = smtFunction "listEq" $ \xs ys -> ite (null xs) (null ys) (head xs .== head ys .&& listEq (tail xs) (tail ys))
+listEq :: forall a. SymVal a => SList a -> SList a -> SBool
+listEq
+  | containsFloats (kindOf (Proxy @a))
+  = smtFunction "listEq" $ \xs ys -> ite (null xs) (null ys) (head xs .== head ys .&& listEq (tail xs) (tail ys))
+  | True
+  = (.==)
 
 -- | @`isSuffixOf` suf l@. Is @suf@ a suffix of @l@?
 --

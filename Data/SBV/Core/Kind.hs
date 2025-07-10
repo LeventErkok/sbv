@@ -30,7 +30,7 @@ module Data.SBV.Core.Kind (
           Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
         , BVIsNonZero, ValidFloat, intOfProxy
         , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
-        , eqCheckIsObjectEq, expandKinds
+        , eqCheckIsObjectEq, containsFloats, isSomeKindOfFloat, expandKinds
         ) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
@@ -377,11 +377,16 @@ intOfProxy p
 -- to the possible presence of non-exact rationals. In short, this will return True if there are no floats/reals under the hood.
 eqCheckIsObjectEq :: Kind -> Bool
 eqCheckIsObjectEq = not . any bad . expandKinds
-  where bad KFloat  = True
-        bad KDouble = True
-        bad KFP{}   = True
-        bad KReal   = True
-        bad _       = False
+  where bad KReal   = True
+        bad k       = isSomeKindOfFloat k
+
+-- | Same as above, except only for floats
+containsFloats :: Kind -> Bool
+containsFloats = not . any isSomeKindOfFloat . expandKinds
+
+-- | Is some sort of a float?
+isSomeKindOfFloat :: Kind -> Bool
+isSomeKindOfFloat k = isFloat k || isDouble k || isFP k
 
 -- | Do we have a completely uninterpreted sort lying around anywhere?
 hasUninterpretedSorts :: Kind -> Bool

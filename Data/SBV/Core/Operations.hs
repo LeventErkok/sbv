@@ -400,10 +400,9 @@ compareSV op x y
          k  = kx       -- only used after we ensured kx == ky
 
          -- Are there any floats embedded down from here? if so, we have to be careful due to presence of NaN
-         safeEq =  op == Equal True                     -- strong equality ok
-                || isWeird k                            -- top level OK
-                || all (not . isWeird) (expandKinds k)  -- but not internal
-           where isWeird knd = isFloat knd || isDouble knd || isFP knd
+         safeEq =  op == Equal True       -- strong equality ok
+                || isSomeKindOfFloat k    -- top level OK
+                || not (containsFloats k) -- has floats somewhere: not ok
 
          symResult
            | safeEq = symResultSafe
