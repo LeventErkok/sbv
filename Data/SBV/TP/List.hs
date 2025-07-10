@@ -1395,10 +1395,7 @@ take_cons = lemma "take_cons"
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: take_map
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
+--   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] take_map :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
@@ -1428,15 +1425,11 @@ take_map f = do
 
     calc "take_map"
          (\(Forall n) (Forall xs) -> take n (map f xs) .== map f (take n xs)) $
-         \n xs -> [] |- cases [n .<= 0 ==> take n (map f xs)
-                                        ?? h1
-                                        =: map f (take n xs)
-                                        =: qed
-                             , n .> 0  ==> take n (map f xs)
-                                        ?? h2
-                                        =: map f (take n xs)
-                                        =: qed
-                             ]
+         \n xs -> [] |- take n (map f xs)
+                     ?? h1
+                     ?? h2
+                     =: map f (take n xs)
+                     =: qed
 
 -- | @n .> 0 ==> drop n (x .: xs) == drop (n - 1) xs@
 --
