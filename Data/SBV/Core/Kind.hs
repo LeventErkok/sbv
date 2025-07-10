@@ -382,7 +382,7 @@ eqCheckIsObjectEq = not . any bad . expandKinds
 
 -- | Same as above, except only for floats
 containsFloats :: Kind -> Bool
-containsFloats = not . any isSomeKindOfFloat . expandKinds
+containsFloats = any isSomeKindOfFloat . expandKinds
 
 -- | Is some sort of a float?
 isSomeKindOfFloat :: Kind -> Bool
