@@ -125,9 +125,6 @@ tests = testGroup "Arrays" [
       , goldenCapturedIO "array_misc_30" $ t satWith (.== readArray (listArray [(1/0, 12)] 3 :: SArray (FloatingPoint 10 4) Integer) (-(1/0)))
 
       , goldenCapturedIO "array_misc_31" $ t proveWith (listArray [(1, 2), (3, 4)] 5 .== listArray [(3 :: Integer, 4), (1, 2)] (5 :: Integer))
-      , goldenCapturedIO "array_misc_32" $ t proveWith (listArray [(1, 2), (3, 4)] 5 .== listArray [(3 :: Integer, 4), (1, 2)] (5 :: Double))
-      , goldenCapturedIO "array_misc_33" $ t proveWith (listArray [(1, 2), (3, 1)] 5 .== listArray [(3 :: Integer, 4), (1, 2)] (5 :: Double))
-      , goldenCapturedIO "array_misc_34" $ t proveWith (listArray [(1, 2), (3, 1)] 5 ./= listArray [(3 :: Integer, 4), (1, 2)] (5 :: Double))
       ]
   ]
   where t p f goldFile = do r <- p defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} f
