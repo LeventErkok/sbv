@@ -866,7 +866,7 @@ foldrFoldlDualityGeneralized e (@) = do
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] foldrFoldl :: Ɐxs ∷ [Integer] → Bool
-foldrFoldl :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> (SBV b -> SBV a -> SBV b) -> SBV b-> TP (Proof (Forall "xs" [a] -> SBool))
+foldrFoldl :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> (SBV b -> SBV a -> SBV b) -> SBV b -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrFoldl (<+>) (<*>) e = do
    -- Assumptions about the operators
    let -- (x <+> y) <*> z == x <+> (y <*> z)
