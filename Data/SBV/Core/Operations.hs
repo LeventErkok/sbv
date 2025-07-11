@@ -413,7 +413,7 @@ compareSV op x y
           where res st = do svx :: SV <- svToSV st x
                             svy :: SV <- svToSV st y
 
-                            if svx == svy
+                            if svx == svy && eqCheckIsObjectEq k
                                then case op of
                                        Equal{}     -> pure trueSV
                                        LessEq      -> pure trueSV
