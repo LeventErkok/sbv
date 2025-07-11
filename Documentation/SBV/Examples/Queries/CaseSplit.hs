@@ -41,7 +41,7 @@ csDemo1 = runSMT $ do
 
        x <- sFloat "x"
 
-       constrain $ x ./= x -- yes, in the FP land, this does hold
+       constrain $ x ./= x -- yes, in the FP land, this is satisfiable by NaN
 
        query $ do mbR <- caseSplit True [ ("fpIsNegativeZero", fpIsNegativeZero x)
                                         , ("fpIsPositiveZero", fpIsPositiveZero x)
