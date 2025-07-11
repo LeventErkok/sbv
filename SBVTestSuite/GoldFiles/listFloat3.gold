@@ -21,9 +21,10 @@
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () (Seq (_ FloatingPoint  8 24)) (seq.unit s0))
+[GOOD] (define-fun s2 () Bool (= s1 s1))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert false)
+[GOOD] (assert (not s2))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
