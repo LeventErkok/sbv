@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 12.0.5, Not yet released
+### Version 12.1, 2025-07-11
 
   * Add missing instances for strong-equality, extending it to lists/Maybe etc. (Only impacts floats and structures
     that contain floats.)
