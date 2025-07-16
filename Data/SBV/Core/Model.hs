@@ -2142,11 +2142,11 @@ sEDivMod a b = (a `sEDiv` b, a `sEMod` b)
 
 -- | Euclidian division.
 sEDiv :: SInteger -> SInteger -> SInteger
-sEDiv (SBV a) (SBV b) = SBV $ a `svQuot` b
+sEDiv (SBV a) sb@(SBV b) = ite (sb .== 0) 0 (SBV $ a `svQuot` b)
 
 -- | Euclidian modulus.
 sEMod :: SInteger -> SInteger -> SInteger
-sEMod (SBV a) (SBV b) = SBV $ a `svRem` b
+sEMod sa@(SBV a) sb@(SBV b) = ite (sb .== 0) sa (SBV $ a `svRem` b)
 
 -- Quickcheck interface
 instance (SymVal a, Arbitrary a) => Arbitrary (SBV a) where

@@ -268,7 +268,7 @@ svDecrement x = svAddConstant x (-1 :: Integer)
 -- "div" operator ("Euclidean" division, which always has a
 -- non-negative remainder). For unsigned bitvectors, it is "bvudiv";
 -- and for signed bitvectors it is "bvsdiv", which rounds toward zero.
--- Division by 0 is defined s.t. @x/0 = 0@, which holds even when @x@ itself is @0@.
+-- Note that this variant does not respect the division/reminder by 0. That's handled at the SBV level.
 svQuot :: SVal -> SVal -> SVal
 svQuot x y
   | isConcreteZero x = x

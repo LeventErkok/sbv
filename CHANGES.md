@@ -4,6 +4,7 @@
 ### Version 12.1.5, New dev version
 
   * Fix floating-point constant-folding code, which inadvertently constant-folded for symbolic rounding modes.
+  * Fix Euclidian division/modulus operations to respect division by 0 standard for SBV
 
 ### Version 12.1, 2025-07-11
 
