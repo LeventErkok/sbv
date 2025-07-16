@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 12.1.5, New dev version
+
+  * Fix floating-point constant-folding code, which inadvertently constant-folded for symbolic rounding modes.
+
 ### Version 12.1, 2025-07-11
 
   * Add missing instances for strong-equality, extending it to lists/Maybe etc. (Only impacts floats and structures

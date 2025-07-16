@@ -32,7 +32,7 @@ module Data.SBV.Core.Floating (
        , svFloatingPointAsSWord
        ) where
 
-import Control.Monad (when)
+import Control.Monad (when, guard)
 
 import Data.Bits (testBit)
 import Data.Int  (Int8,  Int16,  Int32,  Int64)
@@ -344,34 +344,34 @@ instance ValidFloat eb sb => IEEEFloatConvertible (FloatingPoint eb sb) where
   -- From and To are the same when the source is an arbitrary float!
   fromSFloatingPoint = toSFloatingPoint
 
+-- | Is this RM safe to concretely calculate with? OK if there's no RM for this op, or if it is RNE
+safeRM :: Maybe SRoundingMode -> Bool
+safeRM Nothing                                                   = True
+safeRM (Just srm) | Just RoundNearestTiesToEven <- unliteral srm = True
+                  | True                                         = False
+
 -- | Concretely evaluate one arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval1 :: SymVal a => Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> Maybe (SBV a)
 concEval1 mbOp mbRm a = do op <- mbOp
                            v  <- unliteral a
-                           case unliteral =<< mbRm of
-                                   Nothing                     -> (Just . literal) (op v)
-                                   Just RoundNearestTiesToEven -> (Just . literal) (op v)
-                                   _                           -> Nothing
+                           guard (safeRM mbRm)
+                           pure $ literal (op v)
 
 -- | Concretely evaluate two arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval2 :: SymVal a => Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> Maybe (SBV a)
 concEval2 mbOp mbRm a b = do op <- mbOp
                              v1 <- unliteral a
                              v2 <- unliteral b
-                             case unliteral =<< mbRm of
-                                     Nothing                     -> (Just . literal) (v1 `op` v2)
-                                     Just RoundNearestTiesToEven -> (Just . literal) (v1 `op` v2)
-                                     _                           -> Nothing
+                             guard (safeRM mbRm)
+                             pure $ literal (v1 `op` v2)
 
 -- | Concretely evaluate a bool producing two arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval2B :: SymVal a => Maybe (a -> a -> Bool) -> Maybe SRoundingMode -> SBV a -> SBV a -> Maybe SBool
 concEval2B mbOp mbRm a b = do op <- mbOp
                               v1 <- unliteral a
                               v2 <- unliteral b
-                              case unliteral =<< mbRm of
-                                      Nothing                     -> (Just . literal) (v1 `op` v2)
-                                      Just RoundNearestTiesToEven -> (Just . literal) (v1 `op` v2)
-                                      _                           -> Nothing
+                              guard (safeRM mbRm)
+                              pure $ literal (v1 `op` v2)
 
 -- | Concretely evaluate two arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval3 :: SymVal a => Maybe (a -> a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a -> Maybe (SBV a)
@@ -379,10 +379,8 @@ concEval3 mbOp mbRm a b c = do op <- mbOp
                                v1 <- unliteral a
                                v2 <- unliteral b
                                v3 <- unliteral c
-                               case unliteral =<< mbRm of
-                                       Nothing                     -> (Just . literal) (op v1 v2 v3)
-                                       Just RoundNearestTiesToEven -> (Just . literal) (op v1 v2 v3)
-                                       _                           -> Nothing
+                               guard (safeRM mbRm)
+                               pure $ literal (op v1 v2 v3)
 
 -- | Add the converted rounding mode if given as an argument
 addRM :: State -> Maybe SRoundingMode -> [SV] -> IO [SV]
@@ -731,12 +729,12 @@ lift3FP bfOp mkDef rm a b c
 
 -- Sized-floats have a special instance, since it can handle arbitrary rounding modes when it matters.
 instance ValidFloat eb sb => IEEEFloating (FloatingPoint eb sb) where
-  fpAdd  = lift2FP bfAdd      (lift2 FP_Add  (Just (+)))
-  fpSub  = lift2FP bfSub      (lift2 FP_Sub  (Just (-)))
-  fpMul  = lift2FP bfMul      (lift2 FP_Mul  (Just (*)))
-  fpDiv  = lift2FP bfDiv      (lift2 FP_Div  (Just (/)))
-  fpFMA  = lift3FP bfFMA      (lift3 FP_FMA  Nothing)
-  fpSqrt = lift1FP bfSqrt     (lift1 FP_Sqrt (Just sqrt))
+  fpAdd  = lift2FP bfAdd  (lift2 FP_Add  (Just (+)))
+  fpSub  = lift2FP bfSub  (lift2 FP_Sub  (Just (-)))
+  fpMul  = lift2FP bfMul  (lift2 FP_Mul  (Just (*)))
+  fpDiv  = lift2FP bfDiv  (lift2 FP_Div  (Just (/)))
+  fpFMA  = lift3FP bfFMA  (lift3 FP_FMA  Nothing)
+  fpSqrt = lift1FP bfSqrt (lift1 FP_Sqrt (Just sqrt))
 
   fpRoundToIntegral rm a
     | Just (FloatingPoint (FP ei si v)) <- unliteral a
