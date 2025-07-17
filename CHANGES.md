@@ -4,7 +4,11 @@
 ### Version 12.1.5, New dev version
 
   * Fix floating-point constant-folding code, which inadvertently constant-folded for symbolic rounding modes.
-  * Fix Euclidian division/modulus operations to respect division by 0 standard for SBV
+
+  * Clarify that Euclidian modulus/division does not restrict division by 0. Following SMTLib,
+    we allow sEDiv and sEMod to underconstrain the value if the divisor is 0. The main motivation
+    for this is to allow for direct translation to SMTLib for these operations where solvers
+    perform much better. (NB. No code change, just comments are fixed.)
 
 ### Version 12.1, 2025-07-11
 

@@ -2140,13 +2140,15 @@ instance SDivisible SInteger where
 sEDivMod :: SInteger -> SInteger -> (SInteger, SInteger)
 sEDivMod a b = (a `sEDiv` b, a `sEMod` b)
 
--- | Euclidian division.
+-- | Euclidian division. Note that unlike regular division, Euclidian division by @0@
+-- is unconstrained. i.e., it can take any value whatsoever.
 sEDiv :: SInteger -> SInteger -> SInteger
-sEDiv (SBV a) sb@(SBV b) = ite (sb .== 0) 0 (SBV $ a `svQuot` b)
+sEDiv (SBV a) (SBV b) = SBV $ a `svQuot` b
 
--- | Euclidian modulus.
+-- | Euclidian modulus. Note that unlike regular modulus, Euclidian division by @0@
+-- is unconstrained. i.e., it can take any value whatsoever.
 sEMod :: SInteger -> SInteger -> SInteger
-sEMod sa@(SBV a) sb@(SBV b) = ite (sb .== 0) sa (SBV $ a `svRem` b)
+sEMod (SBV a) (SBV b) = SBV $ a `svRem` b
 
 -- Quickcheck interface
 instance (SymVal a, Arbitrary a) => Arbitrary (SBV a) where
