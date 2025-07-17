@@ -27,8 +27,8 @@ flag doctest_is_running
   manual     : True
 
 source-repository head
-    type:       git
-    location:   git://github.com/LeventErkok/sbv.git
+  type    : git
+  location: https://github.com/LeventErkok/sbv.git
 
 common common-settings
    default-language: Haskell2010
