@@ -5,10 +5,10 @@
 
   * Fix floating-point constant-folding code, which inadvertently constant-folded for symbolic rounding modes.
 
-  * Clarify that Euclidian modulus/division does not restrict division by 0. Following SMTLib,
-    we allow sEDiv and sEMod to underconstrain the value if the divisor is 0. The main motivation
-    for this is to allow for direct translation to SMTLib for these operations where solvers
-    perform much better. (NB. No code change, just comments are fixed.)
+  * Euclidian modulus/division does not restrict division by 0. Following SMTLib, we allow sEDiv and sEMod
+    to underconstrain the value if the divisor is 0. The main motivation for this is to allow for direct translation
+    to SMTLib for these operations where solvers perform much better. Fixed the code to avoid unintended constant
+    folding for the euclidian case.
 
 ### Version 12.1, 2025-07-11
 

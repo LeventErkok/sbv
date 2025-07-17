@@ -271,14 +271,17 @@ svDecrement x = svAddConstant x (-1 :: Integer)
 -- Note that this variant does not respect the division/reminder by 0. That's handled at the SBV level.
 svQuot :: SVal -> SVal -> SVal
 svQuot x y
-  | isConcreteZero x = x
-  | isConcreteZero y = svInteger (kindOf x) 0
-  | isConcreteOne  y = x
-  | True             = liftSym2 (mkSymOp Quot) [nonzeroCheck]
-                                (noReal "quot") quot' (noFloat "quot") (noDouble "quot") (noFP "quot") (noRat "quot") x y
+  | not isInteger && isConcreteZero x = x
+  | not isInteger && isConcreteZero y = svInteger (kindOf x) 0
+  | not isInteger && isConcreteOne  y = x
+  | True
+  = liftSym2 (mkSymOp Quot) [nonzeroCheck]
+             (noReal "quot") quot' (noFloat "quot") (noDouble "quot") (noFP "quot") (noRat "quot") x y
   where
-    quot' a b | kindOf x == KUnbounded = div a (abs b) * signum b
-              | otherwise              = quot a b
+    isInteger = kindOf x == KUnbounded
+
+    quot' a b | isInteger = div a (abs b) * signum b
+              | otherwise = quot a b
 
 -- | Remainder: Overloaded operation whose meaning depends on the kind at which
 -- it is used: For unbounded integers, it corresponds to the SMT-Lib
@@ -288,14 +291,17 @@ svQuot x y
 -- defined s.t. @x/0 = 0@, which holds even when @x@ itself is @0@.
 svRem :: SVal -> SVal -> SVal
 svRem x y
-  | isConcreteZero x = x
-  | isConcreteZero y = x
-  | isConcreteOne  y = svInteger (kindOf x) 0
-  | True             = liftSym2 (mkSymOp Rem) [nonzeroCheck]
-                                (noReal "rem") rem' (noFloat "rem") (noDouble "rem") (noFP "rem") (noRat "rem") x y
+  | not isInteger && isConcreteZero x = x
+  | not isInteger && isConcreteZero y = x
+  | not isInteger && isConcreteOne  y = svInteger (kindOf x) 0
+  | True
+  = liftSym2 (mkSymOp Rem) [nonzeroCheck]
+             (noReal "rem") rem' (noFloat "rem") (noDouble "rem") (noFP "rem") (noRat "rem") x y
   where
-    rem' a b | kindOf x == KUnbounded = mod a (abs b)
-             | otherwise              = rem a b
+    isInteger = kindOf x == KUnbounded
+
+    rem' a b | isInteger = mod a (abs b)
+             | otherwise = rem a b
 
 -- | Combination of quot and rem
 svQuotRem :: SVal -> SVal -> (SVal, SVal)
