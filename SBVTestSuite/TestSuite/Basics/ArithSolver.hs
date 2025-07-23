@@ -62,16 +62,16 @@ tests =
      ++ genUnTest        True  "negate"           negate
      ++ genUnTest        True  "abs"              abs
      ++ genUnTest        True  "signum"           signum
-     ++ genBinTest       False ".&."              (.&.)
-     ++ genBinTest       False ".|."              (.|.)
+     ++ genBitTest       False ".&."              (.&.)
+     ++ genBitTest       False ".|."              (.|.)
      ++ genBoolTest            "<"                (<)  (.<)
      ++ genBoolTest            "<="               (<=) (.<=)
      ++ genBoolTest            ">"                (>)  (.>)
      ++ genBoolTest            ">="               (>=) (.>=)
      ++ genBoolTest            "=="               (==) (.==)
      ++ genBoolTest            "/="               (/=) (./=)
-     ++ genBinTest       False "xor"              xor
-     ++ genUnTest        False "complement"       complement
+     ++ genBitTest       False "xor"              xor
+     ++ genUnTestBit     False "complement"       complement
      ++ genIntTest       False "setBit"           setBit
      ++ genIntTest       False "clearBit"         clearBit
      ++ genIntTest       False "complementBit"    complementBit
@@ -125,7 +125,7 @@ genConcats = map mkTest $  [("word", show x, show y, mkThm2 (#) x y (literal x #
       | True
       = return False
 
-genBinTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
+genBinTest :: Bool -> String -> (forall a. Num a => a -> a -> a) -> [TestTree]
 genBinTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- w8s ]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- w16s]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- w32s]
@@ -134,8 +134,25 @@ genBinTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i16s, y <- i16s]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- i32s]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- i64s]
+                                          ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- rs,   y <- rs]
                                           ++ [(show x, show y, mkThm2 x y (x `op` y)) | unboundedOK, x <- iUBs, y <- iUBs]
   where mkTest (x, y, t) = testCase ("genBinTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
+        mkThm2 x y r = isTheorem $ do [a, b] <- mapM free ["x", "y"]
+                                      constrain $ a .== literal x
+                                      constrain $ b .== literal y
+                                      return $ literal r .== a `op` b
+
+genBitTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
+genBitTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- w8s ]
+                                          ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w16s, y <- w16s]
+                                          ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w32s, y <- w32s]
+                                          ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- w64s, y <- w64s]
+                                          ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i8s,  y <- i8s ]
+                                          ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i16s, y <- i16s]
+                                          ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i32s, y <- i32s]
+                                          ++ [(show x, show y, mkThm2 x y (x `op` y)) | x <- i64s, y <- i64s]
+                                          ++ [(show x, show y, mkThm2 x y (x `op` y)) | unboundedOK, x <- iUBs, y <- iUBs]
+  where mkTest (x, y, t) = testCase ("genBitTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
         mkThm2 x y r = isTheorem $ do [a, b] <- mapM free ["x", "y"]
                                       constrain $ a .== literal x
                                       constrain $ b .== literal y
@@ -155,6 +172,7 @@ genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2  x y (x `op` y)) 
                                    ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- fs,        y <- fs       ]
                                    ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- ds,        y <- ds       ]
                                    ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- ss,        y <- ss       ]
+                                   ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- rs,        y <- rs       ]
                                    ++ [(show x, show y, mkThm2L x y (x `op` y)) | nm `elem` allowedListComps, x <- sl,        y <- sl       ]
                                    ++ [(show x, show y, mkThm2M x y (x `op` y)) |                             x <- sm,        y <- sm       ]
                                    ++ [(show x, show y, mkThm2E x y (x `op` y)) |                             x <- se,        y <- se       ]
@@ -184,7 +202,7 @@ genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2  x y (x `op` y)) 
                                        constrain $ b .== literal y
                                        return $ literal r .== a `opS` b
 
-genUnTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a) -> [TestTree]
+genUnTest :: Bool -> String -> (forall a. Num a => a -> a) -> [TestTree]
 genUnTest unboundedOK nm op = map mkTest $  [(show x, mkThm x (op x)) | x <- w8s ]
                                          ++ [(show x, mkThm x (op x)) | x <- w16s]
                                          ++ [(show x, mkThm x (op x)) | x <- w32s]
@@ -193,8 +211,24 @@ genUnTest unboundedOK nm op = map mkTest $  [(show x, mkThm x (op x)) | x <- w8s
                                          ++ [(show x, mkThm x (op x)) | x <- i16s]
                                          ++ [(show x, mkThm x (op x)) | x <- i32s]
                                          ++ [(show x, mkThm x (op x)) | x <- i64s]
+                                         ++ [(show x, mkThm x (op x)) | x <- rs  ]
                                          ++ [(show x, mkThm x (op x)) | unboundedOK, x <- iUBs]
   where mkTest (x, t) = testCase ("genUnTest.arithmetic-" ++ nm ++ "." ++ x) (assert t)
+        mkThm x r = isTheorem $ do a <- free "x"
+                                   constrain $ a .== literal x
+                                   return $ literal r .== op a
+
+genUnTestBit :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a) -> [TestTree]
+genUnTestBit unboundedOK nm op = map mkTest $  [(show x, mkThm x (op x)) | x <- w8s ]
+                                         ++ [(show x, mkThm x (op x)) | x <- w16s]
+                                         ++ [(show x, mkThm x (op x)) | x <- w32s]
+                                         ++ [(show x, mkThm x (op x)) | x <- w64s]
+                                         ++ [(show x, mkThm x (op x)) | x <- i8s ]
+                                         ++ [(show x, mkThm x (op x)) | x <- i16s]
+                                         ++ [(show x, mkThm x (op x)) | x <- i32s]
+                                         ++ [(show x, mkThm x (op x)) | x <- i64s]
+                                         ++ [(show x, mkThm x (op x)) | unboundedOK, x <- iUBs]
+  where mkTest (x, t) = testCase ("genUnTestBit.arithmetic-" ++ nm ++ "." ++ x) (assert t)
         mkThm x r = isTheorem $ do a <- free "x"
                                    constrain $ a .== literal x
                                    return $ literal r .== op a
@@ -843,7 +877,10 @@ iUBs :: [Integer]
 iUBs = [-1000000] ++ [-1 .. 1] ++ [1000000]
 
 ars :: [AlgReal]
-ars = [fromRational (i % d) | i <- is, d <- dens]
+ars = map fromRational rs
+
+rs :: [Ratio Integer]
+rs = [i % d | i <- is, d <- dens]
  where is   = [-1000000] ++ [-1 .. 1] ++ [10000001]
        dens = [5,100,1000000]
 
@@ -914,7 +951,7 @@ genEnums =
  ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- doubles        , t <- doubles        ]
  ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- fps            , t <- fps            ]
  ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- lcs            , t <- lcs            ]
- ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- rs             , t <- rs             ]
+ ++ [mkTest2 "fromTo"     s t   (fromTo [s..t   ] s t) | s <- rrs            , t <- rrs            ]
 
     -- Only bounded for fromThen, otherwise infinite (or too big for chars)
  ++ [mkTest2 "fromThen"   s t   (fromThen [s, t.. ] s t) | s <- univ @(WordN 4), t <- univ @(WordN 4), s /= t]
@@ -933,7 +970,7 @@ genEnums =
  ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- doubles        , t <- doubles        , s /= t, u <- doubles        ]
  ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- fps            , t <- fps            , s /= t, u <- fps            ]
  ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- lcs            , t <- lcs            , s /= t, u <- lcs            ]
- ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- rs             , t <- rs             , s /= t, u <- rs             ]
+ ++ [mkTest3 "fromThenTo" s t u (fromThenTo [s, t..u] s t u) | s <- rrs            , t <- rrs            , s /= t, u <- rrs            ]
 
   where mkTest1 pre a     = testCase ("sEnum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show a)
         mkTest2 pre a b   = testCase ("sEnum_" ++ pre ++ "_|" ++ show (kindOf a) ++ "|_" ++ show (a, b))
@@ -1000,9 +1037,9 @@ genEnums =
         fps = []
 
         -- This one works, but is way too slow. So we further reduce the range
-        rs :: [AlgReal]
-        -- rs = [-3.4, -3.2 .. 3.5]
-        rs = [-0.4, -0.2 .. 0.4]
+        rrs :: [AlgReal]
+        -- rrs = [-3.4, -3.2 .. 3.5]
+        rrs = [-0.4, -0.2 .. 0.4]
 
         -- don't add min/max bounds here. causes too big lists.
         lcs :: [Char]

@@ -45,18 +45,18 @@ tests = testGroup "Arith.NoSolver" $
         ++ genUnTest             "negate"        negate
         ++ genUnTest             "abs"           abs
         ++ genUnTest             "signum"        signum
-        ++ genBinTest            ".&."           (.&.)
-        ++ genBinTest            ".|."           (.|.)
+        ++ genBitTest            ".&."           (.&.)
+        ++ genBitTest            ".|."           (.|.)
         ++ genBoolTest           "<"             (<)  (.<)
         ++ genBoolTest           "<="            (<=) (.<=)
         ++ genBoolTest           ">"             (>)  (.>)
         ++ genBoolTest           ">="            (>=) (.>=)
         ++ genBoolTest           "=="            (==) (.==)
         ++ genBoolTest           "/="            (/=) (./=)
-        ++ genBinTest            "xor"           xor
-        ++ genUnTest             "complement"    complement
+        ++ genBitTest            "xor"           xor
+        ++ genUnTestBit          "complement"    complement
 
-genBinTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
+genBinTest :: String -> (forall a. Num a => a -> a -> a) -> [TestTree]
 genBinTest nm op = map mkTest $
         zipWith pair [(show x, show y, x `op` y) | x <- w8s,  y <- w8s ] [x `op` y | x <- sw8s,  y <- sw8s ]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- w16s, y <- w16s] [x `op` y | x <- sw16s, y <- sw16s]
@@ -67,7 +67,23 @@ genBinTest nm op = map mkTest $
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i32s, y <- i32s] [x `op` y | x <- si32s, y <- si32s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `op` y | x <- si64s, y <- si64s]
      ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `op` y | x <- siUBs, y <- siUBs]
-  where pair (x, y, a) b = (x, y, show (fromIntegral a `asTypeOf` b) == show b)
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- rs,   y <- rs]   [x `op` y | x <- srs,   y <- srs]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- rs,   y <- rs]   [x `op` y | x <- sras,  y <- sras]
+  where pair (x, y, a) b = (x, y, show a == show b)
+        mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
+
+genBitTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
+genBitTest nm op = map mkTest $
+        zipWith pair [(show x, show y, x `op` y) | x <- w8s,  y <- w8s ] [x `op` y | x <- sw8s,  y <- sw8s ]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- w16s, y <- w16s] [x `op` y | x <- sw16s, y <- sw16s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- w32s, y <- w32s] [x `op` y | x <- sw32s, y <- sw32s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- w64s, y <- w64s] [x `op` y | x <- sw64s, y <- sw64s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- i8s,  y <- i8s ] [x `op` y | x <- si8s,  y <- si8s ]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- i16s, y <- i16s] [x `op` y | x <- si16s, y <- si16s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- i32s, y <- i32s] [x `op` y | x <- si32s, y <- si32s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `op` y | x <- si64s, y <- si64s]
+     ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `op` y | x <- siUBs, y <- siUBs]
+  where pair (x, y, a) b = (x, y, show a == show b)
         mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
 
 genBoolTest :: String -> (forall a. Ord a => a -> a -> Bool) -> (forall a. OrdSymbolic a => a -> a -> SBool) -> [TestTree]
@@ -87,12 +103,28 @@ genBoolTest nm op opS = map mkTest $
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- ssm,  y <- ssm ] [x `opS` y | x <- ssm,   y <- ssm  ]
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- sse,  y <- sse ] [x `opS` y | x <- sse,   y <- sse  ]
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- sst,  y <- sst ] [x `opS` y | x <- sst,   y <- sst  ]
+     ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- sras, y <- sras] [x `opS` y | x <- sras,  y <- sras ]
   where pair (x, y, a) b = (x, y, Just a == unliteral b)
         mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
         toL x = fromMaybe (error "genBoolTest: Cannot extract a literal!") (unliteral x)
 
-genUnTest :: String -> (forall a. (Num a, Bits a) => a -> a) -> [TestTree]
+genUnTest :: String -> (forall a. Num a => a -> a) -> [TestTree]
 genUnTest nm op = map mkTest $
+        zipWith pair [(show x, op x) | x <- w8s ] [op x | x <- sw8s ]
+     ++ zipWith pair [(show x, op x) | x <- w16s] [op x | x <- sw16s]
+     ++ zipWith pair [(show x, op x) | x <- w32s] [op x | x <- sw32s]
+     ++ zipWith pair [(show x, op x) | x <- w64s] [op x | x <- sw64s]
+     ++ zipWith pair [(show x, op x) | x <- i8s ] [op x | x <- si8s ]
+     ++ zipWith pair [(show x, op x) | x <- i16s] [op x | x <- si16s]
+     ++ zipWith pair [(show x, op x) | x <- i32s] [op x | x <- si32s]
+     ++ zipWith pair [(show x, op x) | x <- i64s] [op x | x <- si64s]
+     ++ zipWith pair [(show x, op x) | x <- iUBs] [op x | x <- siUBs]
+     ++ zipWith pair [(show x, op x) | x <- iUBs] [op x | x <- sras]
+  where pair (x, a) b = (x, show (fromIntegral a `asTypeOf` b) == show b)
+        mkTest (x, s) = testCase ("arithCF-" ++ nm ++ "." ++ x) (s `showsAs` "True")
+
+genUnTestBit :: String -> (forall a. (Num a, Bits a) => a -> a) -> [TestTree]
+genUnTestBit nm op = map mkTest $
         zipWith pair [(show x, op x) | x <- w8s ] [op x | x <- sw8s ]
      ++ zipWith pair [(show x, op x) | x <- w16s] [op x | x <- sw16s]
      ++ zipWith pair [(show x, op x) | x <- w32s] [op x | x <- sw32s]
@@ -374,10 +406,16 @@ iUBs = [-1000000 .. -999995] ++ [-5 .. 5] ++ [999995 ..  1000000]
 siUBs :: [SInteger]
 siUBs = map literal iUBs
 
-rs :: [AlgReal]
-rs = [fromRational (i % d) | i <- nums, d <- dens]
+ras :: [Rational]
+ras = [i % d | i <- nums, d <- dens]
  where nums = [-1000000 .. -999998] ++ [-2 .. 2] ++ [999998 ..  1000001]
        dens = [2 .. 5] ++ [98 .. 102] ++ [999998 .. 1000000]
+
+sras :: [SRational]
+sras = map literal ras
+
+rs :: [AlgReal]
+rs = map fromRational ras
 
 srs :: [SReal]
 srs = map literal rs
