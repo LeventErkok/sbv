@@ -58,32 +58,32 @@ tests = testGroup "Arith.NoSolver" $
 
 genBinTest :: String -> (forall a. Num a => a -> a -> a) -> [TestTree]
 genBinTest nm op = map mkTest $
-        zipWith pair [(show x, show y, x `op` y) | x <- w8s,  y <- w8s ] [x `op` y | x <- sw8s,  y <- sw8s ]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- w16s, y <- w16s] [x `op` y | x <- sw16s, y <- sw16s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- w32s, y <- w32s] [x `op` y | x <- sw32s, y <- sw32s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- w64s, y <- w64s] [x `op` y | x <- sw64s, y <- sw64s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i8s,  y <- i8s ] [x `op` y | x <- si8s,  y <- si8s ]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i16s, y <- i16s] [x `op` y | x <- si16s, y <- si16s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i32s, y <- i32s] [x `op` y | x <- si32s, y <- si32s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `op` y | x <- si64s, y <- si64s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `op` y | x <- siUBs, y <- siUBs]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- rs,   y <- rs]   [x `op` y | x <- srs,   y <- srs]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- rs,   y <- rs]   [x `op` y | x <- sras,  y <- sras]
-  where pair (x, y, a) b = (x, y, show a == show b)
+        zipWith pair [(show x, show y, literal (x `op` y)) | x <- w8s,  y <- w8s ] [x `op` y | x <- sw8s,  y <- sw8s ]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- w16s, y <- w16s] [x `op` y | x <- sw16s, y <- sw16s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- w32s, y <- w32s] [x `op` y | x <- sw32s, y <- sw32s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- w64s, y <- w64s] [x `op` y | x <- sw64s, y <- sw64s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- i8s,  y <- i8s ] [x `op` y | x <- si8s,  y <- si8s ]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- i16s, y <- i16s] [x `op` y | x <- si16s, y <- si16s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- i32s, y <- i32s] [x `op` y | x <- si32s, y <- si32s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- i64s, y <- i64s] [x `op` y | x <- si64s, y <- si64s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- iUBs, y <- iUBs] [x `op` y | x <- siUBs, y <- siUBs]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- rs,   y <- rs]   [x `op` y | x <- srs,   y <- srs]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- ras,  y <- ras]  [x `op` y | x <- sras,  y <- sras]
+  where pair (x, y, a) b = (x, y, a == b)
         mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
 
 genBitTest :: String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
 genBitTest nm op = map mkTest $
-        zipWith pair [(show x, show y, x `op` y) | x <- w8s,  y <- w8s ] [x `op` y | x <- sw8s,  y <- sw8s ]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- w16s, y <- w16s] [x `op` y | x <- sw16s, y <- sw16s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- w32s, y <- w32s] [x `op` y | x <- sw32s, y <- sw32s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- w64s, y <- w64s] [x `op` y | x <- sw64s, y <- sw64s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i8s,  y <- i8s ] [x `op` y | x <- si8s,  y <- si8s ]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i16s, y <- i16s] [x `op` y | x <- si16s, y <- si16s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i32s, y <- i32s] [x `op` y | x <- si32s, y <- si32s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- i64s, y <- i64s] [x `op` y | x <- si64s, y <- si64s]
-     ++ zipWith pair [(show x, show y, x `op` y) | x <- iUBs, y <- iUBs] [x `op` y | x <- siUBs, y <- siUBs]
-  where pair (x, y, a) b = (x, y, show a == show b)
+        zipWith pair [(show x, show y, literal (x `op` y)) | x <- w8s,  y <- w8s ] [x `op` y | x <- sw8s,  y <- sw8s ]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- w16s, y <- w16s] [x `op` y | x <- sw16s, y <- sw16s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- w32s, y <- w32s] [x `op` y | x <- sw32s, y <- sw32s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- w64s, y <- w64s] [x `op` y | x <- sw64s, y <- sw64s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- i8s,  y <- i8s ] [x `op` y | x <- si8s,  y <- si8s ]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- i16s, y <- i16s] [x `op` y | x <- si16s, y <- si16s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- i32s, y <- i32s] [x `op` y | x <- si32s, y <- si32s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- i64s, y <- i64s] [x `op` y | x <- si64s, y <- si64s]
+     ++ zipWith pair [(show x, show y, literal (x `op` y)) | x <- iUBs, y <- iUBs] [x `op` y | x <- siUBs, y <- siUBs]
+  where pair (x, y, a) b = (x, y, a == b)
         mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
 
 genBoolTest :: String -> (forall a. Ord a => a -> a -> Bool) -> (forall a. OrdSymbolic a => a -> a -> SBool) -> [TestTree]
@@ -110,17 +110,17 @@ genBoolTest nm op opS = map mkTest $
 
 genUnTest :: String -> (forall a. Num a => a -> a) -> [TestTree]
 genUnTest nm op = map mkTest $
-        zipWith pair [(show x, op x) | x <- w8s ] [op x | x <- sw8s ]
-     ++ zipWith pair [(show x, op x) | x <- w16s] [op x | x <- sw16s]
-     ++ zipWith pair [(show x, op x) | x <- w32s] [op x | x <- sw32s]
-     ++ zipWith pair [(show x, op x) | x <- w64s] [op x | x <- sw64s]
-     ++ zipWith pair [(show x, op x) | x <- i8s ] [op x | x <- si8s ]
-     ++ zipWith pair [(show x, op x) | x <- i16s] [op x | x <- si16s]
-     ++ zipWith pair [(show x, op x) | x <- i32s] [op x | x <- si32s]
-     ++ zipWith pair [(show x, op x) | x <- i64s] [op x | x <- si64s]
-     ++ zipWith pair [(show x, op x) | x <- iUBs] [op x | x <- siUBs]
-     ++ zipWith pair [(show x, op x) | x <- iUBs] [op x | x <- sras]
-  where pair (x, a) b = (x, show (fromIntegral a `asTypeOf` b) == show b)
+        zipWith pair [(show x, literal (op x)) | x <- w8s ] [op x | x <- sw8s ]
+     ++ zipWith pair [(show x, literal (op x)) | x <- w16s] [op x | x <- sw16s]
+     ++ zipWith pair [(show x, literal (op x)) | x <- w32s] [op x | x <- sw32s]
+     ++ zipWith pair [(show x, literal (op x)) | x <- w64s] [op x | x <- sw64s]
+     ++ zipWith pair [(show x, literal (op x)) | x <- i8s ] [op x | x <- si8s ]
+     ++ zipWith pair [(show x, literal (op x)) | x <- i16s] [op x | x <- si16s]
+     ++ zipWith pair [(show x, literal (op x)) | x <- i32s] [op x | x <- si32s]
+     ++ zipWith pair [(show x, literal (op x)) | x <- i64s] [op x | x <- si64s]
+     ++ zipWith pair [(show x, literal (op x)) | x <- iUBs] [op x | x <- siUBs]
+     ++ zipWith pair [(show x, literal (op x)) | x <- ras]  [op x | x <- sras]
+  where pair (x, a) b = (x, a == b)
         mkTest (x, s) = testCase ("arithCF-" ++ nm ++ "." ++ x) (s `showsAs` "True")
 
 genUnTestBit :: String -> (forall a. (Num a, Bits a) => a -> a) -> [TestTree]
