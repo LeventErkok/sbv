@@ -1050,12 +1050,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                     , (GreaterEq,     lift2Cmp  ">=" "fp.geq")
                                     ]
 
-                ratOpTable = [ (Plus,        lift2Rat "sbv.rat.plus")
-                             , (Minus,       lift2Rat "sbv.rat.minus")
-                             , (Times,       lift2Rat "sbv.rat.times")
-                             , (UNeg,        liftRat  "sbv.rat.uneg")
-                             , (Abs,         liftRat  "sbv.rat.abs")
-                             , (Equal True,  lift2Rat "sbv.rat.eq")
+                ratOpTable = [ (Equal True,  lift2Rat "sbv.rat.eq")
                              , (Equal False, lift2Rat "sbv.rat.eq")
                              , (NotEqual,    lift2Rat "sbv.rat.notEq")
                              , (LessThan,    lift2Rat "sbv.rat.lt")
@@ -1065,10 +1060,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                              ]
                         where lift2Rat o [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
                               lift2Rat o sbvs   = error $ "SBV.SMTLib2.sh.lift2Rat: Unexpected arguments: "   ++ show (o, sbvs)
-                              liftRat  o [x]    = "(" ++ o ++ " " ++ x ++ ")"
-                              liftRat  o sbvs   = error $ "SBV.SMTLib2.sh.lift2Rat: Unexpected arguments: "   ++ show (o, sbvs)
-                              swap [x, y]       = [y, x]
-                              swap sbvs         = error $ "SBV.SMTLib2.sh.swap: Unexpected arguments: "   ++ show sbvs
+                              swap [x, y] = [y, x]
+                              swap sbvs   = error $ "SBV.SMTLib2.sh.swap: Unexpected arguments: "   ++ show sbvs
 
                 -- equality and comparisons are the only thing that works on uninterpreted sorts and pretty much everything else
                 uninterpretedTable = [ (Equal True,  lift2S "="        "="        True)
