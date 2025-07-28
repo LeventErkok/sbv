@@ -23,7 +23,7 @@ import qualified Data.Ratio as R
 import Data.SBV.Core.Data
 import Data.SBV.Core.Operations
 
-import Data.SBV.Core.Model
+import Data.SBV.Core.Model () -- instances only
 
 infixl 7 .%
 
