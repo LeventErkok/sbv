@@ -60,11 +60,11 @@ doNotExport_denominator x = SBV $ SVal KUnbounded $ Right $ cache res
 -- | Num instance for SRational
 instance Num SRational where
   fromInteger i  = SBV $ SVal KRational $ Left $ mkConstCV KRational (fromIntegral i :: Integer)
-  (+)            = lift2 (\(t1, b1) (t2, b2) -> (t1 * b2 + t2 * b1) .% (b1 * b2))
-  (-)            = lift2 (\(t1, b1) (t2, b2) -> (t1 * b2 - t2 * b1) .% (b1 * b2))
-  (*)            = lift2 (\(t1, b1) (t2, b2) -> (t1      * t2     ) .% (b1 * b2))
-  abs            = lift1 (\(t, b) -> abs t .% b)
-  negate         = lift1 (\(t, b) -> negate t .% b)
+  (+)            = lift2 (+)    (\(t1, b1) (t2, b2) -> (t1 * b2 + t2 * b1) .% (b1 * b2))
+  (-)            = lift2 (-)    (\(t1, b1) (t2, b2) -> (t1 * b2 - t2 * b1) .% (b1 * b2))
+  (*)            = lift2 (*)    (\(t1, b1) (t2, b2) -> (t1      * t2     ) .% (b1 * b2))
+  abs            = lift1 abs    (\(t, b) -> abs t .% b)
+  negate         = lift1 negate (\(t, b) -> negate t .% b)
   signum (SBV a) = SBV $ svSignum a
 
 -- | Get the top and bottom parts. Internal only; do not export!
@@ -72,12 +72,20 @@ doNotExport_getTB :: SRational -> (SInteger, SInteger)
 doNotExport_getTB a = (doNotExport_numerator a, doNotExport_denominator a)
 
 -- | Lift a function over one rational
-lift1 :: ((SInteger,  SInteger) -> t) -> SRational -> t
-lift1 f a = f (doNotExport_getTB a)
+lift1 :: SymVal t => (Rational -> t) -> ((SInteger,  SInteger) -> SBV t) -> SRational -> SBV t
+lift1 cf f a
+ | Just va <- unliteral a
+ = literal (cf va)
+ | True
+ = f (doNotExport_getTB a)
 
 -- | Lift a function over two rationals
-lift2 :: ((SInteger,  SInteger) -> (SInteger,  SInteger) -> t) -> SRational -> SRational -> t
-lift2 f a b = f (doNotExport_getTB a) (doNotExport_getTB b)
+lift2 :: SymVal t => (Rational -> Rational -> t) -> ((SInteger,  SInteger) -> (SInteger,  SInteger) -> SBV t) -> SRational -> SRational -> SBV t
+lift2 cf f a b
+ | Just va <- unliteral a, Just vb <- unliteral b
+ = literal (va `cf` vb)
+ | True
+ = f (doNotExport_getTB a) (doNotExport_getTB b)
 
 {- HLint ignore type doNotExport_numerator   "Use camelCase" -}
 {- HLint ignore type doNotExport_denominator "Use camelCase" -}
