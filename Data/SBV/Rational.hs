@@ -30,8 +30,8 @@ infixl 7 .%
 -- | Construct a symbolic rational from a given numerator and denominator. Note that
 -- it is not possible to deconstruct a rational by taking numerator and denominator
 -- fields, since we do not represent them canonically. (This is due to the fact that
--- SMTLib has no functions to compute the GCD. One can use the maximization engine
--- to compute the GCD of numbers, but not as a function.)
+-- SMTLib has no functions to compute the GCD. While we can define a recursive function
+-- to do so, it would almost always imply non-decidability for even the simplest queries.)
 (.%) :: SInteger -> SInteger -> SRational
 top .% bot
  | Just t <- unliteral top
