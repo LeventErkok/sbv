@@ -226,7 +226,7 @@ module Data.SBV (
   , SFPQuad, FPQuad
   , fpFromInteger
   -- ** Rationals
-  , SRational
+  , SRational, (.%)
   -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal(..), sRealToSInteger, algRealToRational, RealPoint(..), realPoint, RationalCV(..)
@@ -547,6 +547,8 @@ import GHC.TypeLits (KnownNat, type (<=), type (+), type (-))
 import Data.Char (isSpace, isPunctuation)
 import Data.SBV.List (EnumSymbolic(..))
 import Data.SBV.SEnum (sEnum)
+
+import Data.SBV.Rational
 
 #ifdef DOCTEST
 --- $setup

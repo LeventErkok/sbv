@@ -9,7 +9,9 @@
 -- Symbolic rationals, corresponds to Haskell's 'Rational' type
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# LANGUAGE FlexibleInstances #-}
+
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module Data.SBV.Rational (
     -- * Constructing rationals
@@ -19,7 +21,9 @@ module Data.SBV.Rational (
 import qualified Data.Ratio as R
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model () -- instances only
+import Data.SBV.Core.Operations
+
+import Data.SBV.Core.Model
 
 infixl 7 .%
 
@@ -38,3 +42,43 @@ top .% bot
  where res st = do t <- sbvToSV st top
                    b <- sbvToSV st bot
                    newExpr st KRational $ SBVApp RationalConstructor [t, b]
+
+-- | Get the numerator. Note that this is always symbolic since we don't have a concrete representation.
+-- Furthermore this is only used internally and is not exported to the user, since it is not canonical.
+doNotExport_numerator :: SRational -> SInteger
+doNotExport_numerator x = SBV $ SVal KUnbounded $ Right $ cache res
+  where res st = do xv <- sbvToSV st x
+                    newExpr st KUnbounded $ SBVApp (Uninterpreted "sbv.rat.numerator") [xv]
+
+-- | Get the numerator. Note that this is always symbolic since we don't have a concrete representation.
+-- Furthermore this is only used internally and is not exported to the user, since it is not canonical.
+doNotExport_denominator :: SRational -> SInteger
+doNotExport_denominator x = SBV $ SVal KUnbounded $ Right $ cache res
+  where res st = do xv <- sbvToSV st x
+                    newExpr st KUnbounded $ SBVApp (Uninterpreted "sbv.rat.denominator") [xv]
+
+-- | Num instance for SRational
+instance Num SRational where
+  fromInteger i  = SBV $ SVal KRational $ Left $ mkConstCV KRational (fromIntegral i :: Integer)
+  (+)            = lift2 (\(t1, b1) (t2, b2) -> (t1 * b2 + t2 * b1) .% (b1 * b2))
+  (-)            = lift2 (\(t1, b1) (t2, b2) -> (t1 * b2 - t2 * b1) .% (b1 * b2))
+  (*)            = lift2 (\(t1, b1) (t2, b2) -> (t1      * t2     ) .% (b1 * b2))
+  abs            = lift1 (\(t, b) -> abs t .% b)
+  negate         = lift1 (\(t, b) -> negate t .% b)
+  signum (SBV a) = SBV $ svSignum a
+
+-- | Get the top and bottom parts. Internal only; do not export!
+doNotExport_getTB :: SRational -> (SInteger, SInteger)
+doNotExport_getTB a = (doNotExport_numerator a, doNotExport_denominator a)
+
+-- | Lift a function over one rational
+lift1 :: ((SInteger,  SInteger) -> t) -> SRational -> t
+lift1 f a = f (doNotExport_getTB a)
+
+-- | Lift a function over two rationals
+lift2 :: ((SInteger,  SInteger) -> (SInteger,  SInteger) -> t) -> SRational -> SRational -> t
+lift2 f a b = f (doNotExport_getTB a) (doNotExport_getTB b)
+
+{- HLint ignore type doNotExport_numerator   "Use camelCase" -}
+{- HLint ignore type doNotExport_denominator "Use camelCase" -}
+{- HLint ignore type doNotExport_getTB       "Use camelCase" -}
