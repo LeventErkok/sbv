@@ -35,31 +35,6 @@
           (<= (* (sbv.rat.numerator   x) (sbv.rat.denominator y))
               (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))
        )
-
-[GOOD] (define-fun sbv.rat.plus ((x SBVRational) (y SBVRational)) SBVRational
-          (SBV.Rational (+ (* (sbv.rat.numerator   x) (sbv.rat.denominator y))
-                           (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))
-                        (* (sbv.rat.denominator x) (sbv.rat.denominator y)))
-       )
-
-[GOOD] (define-fun sbv.rat.minus ((x SBVRational) (y SBVRational)) SBVRational
-          (SBV.Rational (- (* (sbv.rat.numerator   x) (sbv.rat.denominator y))
-                           (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))
-                        (* (sbv.rat.denominator x) (sbv.rat.denominator y)))
-       )
-
-[GOOD] (define-fun sbv.rat.times ((x SBVRational) (y SBVRational)) SBVRational
-          (SBV.Rational (* (sbv.rat.numerator   x) (sbv.rat.numerator y))
-                        (* (sbv.rat.denominator x) (sbv.rat.denominator y)))
-       )
-
-[GOOD] (define-fun sbv.rat.uneg ((x SBVRational)) SBVRational
-          (SBV.Rational (* (- 1) (sbv.rat.numerator x)) (sbv.rat.denominator x))
-       )
-
-[GOOD] (define-fun sbv.rat.abs ((x SBVRational)) SBVRational
-          (SBV.Rational (abs (sbv.rat.numerator x)) (sbv.rat.denominator x))
-       )
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Array (SBVTuple2 String SBVRational) (SBVTuple2 SBVRational String))) ; tracks user variable "x"
