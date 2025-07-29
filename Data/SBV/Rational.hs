@@ -70,8 +70,8 @@ instance Num SRational where
 instance OrdSymbolic SRational where
    (.<)  = lift2 (<)  (\(t1, b1) (t2, b2) -> (t1 * b2) .<  (b1 * t2))
    (.<=) = lift2 (<=) (\(t1, b1) (t2, b2) -> (t1 * b2) .<= (b1 * t2))
-   (.>)  = lift2 (<)  (\(t1, b1) (t2, b2) -> (t1 * b2) .>  (b1 * t2))
-   (.>=) = lift2 (<=) (\(t1, b1) (t2, b2) -> (t1 * b2) .>= (b1 * t2))
+   (.>)  = lift2 (>)  (\(t1, b1) (t2, b2) -> (t1 * b2) .>  (b1 * t2))
+   (.>=) = lift2 (>=) (\(t1, b1) (t2, b2) -> (t1 * b2) .>= (b1 * t2))
 
 -- | Get the top and bottom parts. Internal only; do not export!
 doNotExport_getTB :: SRational -> (SInteger, SInteger)
