@@ -825,7 +825,8 @@ instance CSTR => Num TYPE where {                                               
   negate (SBV a) = SBV $ svUNeg   a;                                                    \
 }
 
--- Derive basic instances we need
+-- Derive basic instances we need. NB. We don't give the SRational instance here. It's handled
+-- in Data/SBV/Rational due to representation issues.
 MKSNUM((),                 SInteger,               KUnbounded)
 MKSNUM((),                 SWord8,                 (KBounded False  8))
 MKSNUM((),                 SWord16,                (KBounded False 16))

@@ -1014,19 +1014,51 @@ instance (HasKind a, SymVal a) => EqSymbolic (SBV a) where
                               val    <- sbvToSV st value
                               newExpr st k (SBVApp WriteArray [arr, keyVal, val])
 
--- | If comparison is over something SMTLib can handle, just translate it. Otherwise desugar.
-instance (Ord a, SymVal a) => OrdSymbolic (SBV a) where
-  a@(SBV x) .<  b@(SBV y) | smtComparable "<"   a b = SBV (svLessThan x y)
-                          | True                    = SBV (svStructuralLessThan x y)
+-- We don't want to do a generic OrdSymbolic (SBV a) instance; since that would be dangerous, like the case
+-- for Num. So, we explicitly define for each type we care about.
 
-  a@(SBV x) .<= b@(SBV y) | smtComparable ".<=" a b = SBV (svLessEq x y)
-                          | True                    = a .< b .|| a .== b
+#define MKSORD(CSTR, TYPE)                                                            \
+instance CSTR => OrdSymbolic TYPE where {                                             \
+  a@(SBV x) .<  b@(SBV y) | smtComparable "<"   a b = SBV (svLessThan x y)            \
+                          | True                    = SBV (svStructuralLessThan x y); \
+                                                                                      \
+  a@(SBV x) .<= b@(SBV y) | smtComparable ".<=" a b = SBV (svLessEq x y)              \
+                          | True                    = a .< b .|| a .== b;             \
+                                                                                      \
+  a@(SBV x) .>  b@(SBV y) | smtComparable ">"   a b = SBV (svGreaterThan x y)         \
+                          | True                    = b .< a;                         \
+                                                                                      \
+  a@(SBV x) .>= b@(SBV y) | smtComparable ">="  a b = SBV (svGreaterEq x y)           \
+                          | True                    = b .<= a;                        \
+}                                                                                     \
 
-  a@(SBV x) .>  b@(SBV y) | smtComparable ">"   a b = SBV (svGreaterThan x y)
-                          | True                    = b .< a
+-- Derive basic instances we need. NB. We don't give the SRational instance here. It's handled
+-- in Data/SBV/Rational due to representation issues.
+MKSORD((),                          SInteger)
+MKSORD((),                          SWord8)
+MKSORD((),                          SWord16)
+MKSORD((),                          SWord32)
+MKSORD((),                          SWord64)
+MKSORD((),                          SInt8)
+MKSORD((),                          SInt16)
+MKSORD((),                          SInt32)
+MKSORD((),                          SInt64)
+MKSORD((),                          SFloat)
+MKSORD((),                          SDouble)
+MKSORD((),                          SReal)
+MKSORD((KnownNat n, BVIsNonZero n), (SWord n))
+MKSORD((KnownNat n, BVIsNonZero n), (SInt  n))
+MKSORD((ValidFloat eb sb),          (SFloatingPoint eb sb))
 
-  a@(SBV x) .>= b@(SBV y) | smtComparable ">="  a b = SBV (svGreaterEq x y)
-                          | True                    = b .<= a
+-- Tuples
+MKSORD((SymVal a, SymVal b),                                                             (SBV (a, b)))
+MKSORD((SymVal a, SymVal b, SymVal c),                                                   (SBV (a, b, c)))
+MKSORD((SymVal a, SymVal b, SymVal c, SymVal d),                                         (SBV (a, b, c, d)))
+MKSORD((SymVal a, SymVal b, SymVal c, SymVal d, SymVal e),                               (SBV (a, b, c, d, e)))
+MKSORD((SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f),                     (SBV (a, b, c, d, e, f)))
+MKSORD((SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g),           (SBV (a, b, c, d, e, f, g)))
+MKSORD((SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h), (SBV (a, b, c, d, e, f, g, h)))
+#undef MKSORD
 
 -- Is this a type that's comparable by underlying translation to SMTLib?
 -- Note that we allow concrete versions to go through unless the type is a set, as there's really no reason not to.
@@ -1230,7 +1262,7 @@ signExtend n = SBV $ svSignExtend i (unSBV n)
 -- | Finite bit-length symbolic values. Essentially the same as 'SIntegral', but further leaves out 'Integer'. Loosely
 -- based on Haskell's @FiniteBits@ class, but with more methods defined and structured differently to fit into the
 -- symbolic world view. Minimal complete definition: 'sFiniteBitSize'.
-class (Ord a, SymVal a, Num a, Num (SBV a), Bits a) => SFiniteBits a where
+class (Ord a, SymVal a, Num a, Num (SBV a), OrdSymbolic (SBV a), Bits a) => SFiniteBits a where
     -- | Bit size.
     sFiniteBitSize      :: SBV a -> Int
     -- | Least significant bit of a word, always stored at index 0.
@@ -2183,7 +2215,7 @@ class Mergeable a where
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@
    -- underflows/overflows.
-   select :: (Ord b, SymVal b, Num b, Num (SBV b)) => [a] -> a -> SBV b -> a
+   select :: (Ord b, SymVal b, Num b, Num (SBV b), OrdSymbolic (SBV b)) => [a] -> a -> SBV b -> a
    -- NB. Earlier implementation of select used the binary-search trick
    -- on the index to chop down the search space. While that is a good trick
    -- in general, it doesn't work for SBV since we do not have any notion of
