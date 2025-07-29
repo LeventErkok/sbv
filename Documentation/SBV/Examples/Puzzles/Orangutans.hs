@@ -14,6 +14,7 @@
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE OverloadedRecordDot #-}

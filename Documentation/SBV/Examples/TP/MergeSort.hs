@@ -11,6 +11,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -38,7 +39,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 -- * Merge sort
 
 -- | Merge two already sorted lists into another
-merge :: (Ord a, SymVal a) => SList a -> SList a -> SList a
+merge :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a -> SList a
 merge = smtFunction "merge" $ \l r -> ite (null l) r
                                     $ ite (null r) l
                                     $ let (a, as) = uncons l
@@ -46,7 +47,7 @@ merge = smtFunction "merge" $ \l r -> ite (null l) r
                                       in ite (a .<= b) (a .: merge as r) (b .: merge l bs)
 
 -- | Merge sort, using 'merge' above to successively sort halved input
-mergeSort :: (Ord a, SymVal a) => SList a -> SList a
+mergeSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
 mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
                                               $ let (h1, h2) = splitAt (length l `sEDiv` 2) l
                                                 in merge (mergeSort h1) (mergeSort h2)
@@ -121,7 +122,7 @@ mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
 --   Result:                                                   Q.E.D.
 -- Lemma: mergeSortIsCorrect                                   Q.E.D.
 -- [Proven] mergeSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
-correctness :: forall a. (Ord a, SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
+correctness :: forall a. (OrdSymbolic (SBV a), SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
 correctness = runTPWith (tpRibbon 60 z3) $ do
 
     --------------------------------------------------------------------------------------------

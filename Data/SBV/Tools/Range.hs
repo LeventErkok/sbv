@@ -101,11 +101,11 @@ instance Show a => Show (Range a) where
 -- [(-oo,0.0]]
 -- >>> ranges $ \(x :: SWord 4) -> 2*x .== 4
 -- [[2,3),(9,10]]
-ranges :: forall a. (Ord a, Num a, SymVal a,  SatModel a, Metric a, SymVal (MetricSpace a), SatModel (MetricSpace a)) => (SBV a -> SBool) -> IO [Range a]
+ranges :: forall a. (OrdSymbolic (SBV a), Num a, SymVal a,  SatModel a, Metric a, SymVal (MetricSpace a), SatModel (MetricSpace a)) => (SBV a -> SBool) -> IO [Range a]
 ranges = rangesWith defaultSMTCfg
 
 -- | Compute ranges, using the given solver configuration.
-rangesWith :: forall a. (Ord a, Num a, SymVal a,  SatModel a, Metric a, SymVal (MetricSpace a), SatModel (MetricSpace a)) => SMTConfig -> (SBV a -> SBool) -> IO [Range a]
+rangesWith :: forall a. (OrdSymbolic (SBV a), Num a, SymVal a,  SatModel a, Metric a, SymVal (MetricSpace a), SatModel (MetricSpace a)) => SMTConfig -> (SBV a -> SBool) -> IO [Range a]
 rangesWith cfg prop = do mbBounds <- getInitialBounds
                          case mbBounds of
                            Nothing -> return []

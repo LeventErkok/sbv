@@ -1150,6 +1150,7 @@ options turned on:
 >   LANGUAGE StandaloneDeriving
 >   LANGUAGE DeriveDataTypeable
 >   LANGUAGE DeriveAnyClass
+>   LANGUAGE FlexibleInstances
 
 and your own declaration must have instances of 'Enum' and 'Bounded'. (The instances can be derived, as above.)
 This will automatically introduce the type:

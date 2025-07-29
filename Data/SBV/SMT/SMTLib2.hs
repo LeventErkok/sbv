@@ -388,16 +388,6 @@ declRationals = [ "(declare-datatype SBVRational ((SBV.Rational (sbv.rat.numerat
                 , "(define-fun sbv.rat.notEq ((x SBVRational) (y SBVRational)) Bool"
                 , "   (not (sbv.rat.eq x y))"
                 , ")"
-                , ""
-                , "(define-fun sbv.rat.lt ((x SBVRational) (y SBVRational)) Bool"
-                , "   (<  (* (sbv.rat.numerator   x) (sbv.rat.denominator y))"
-                , "       (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))"
-                , ")"
-                , ""
-                , "(define-fun sbv.rat.leq ((x SBVRational) (y SBVRational)) Bool"
-                , "   (<= (* (sbv.rat.numerator   x) (sbv.rat.denominator y))"
-                , "       (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))"
-                , ")"
                 ]
 
 -- | Convert in a query context.

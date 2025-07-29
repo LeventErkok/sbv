@@ -21,9 +21,8 @@ module Data.SBV.Rational (
 import qualified Data.Ratio as R
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
-
-import Data.SBV.Core.Model () -- instances only
 
 infixl 7 .%
 
@@ -57,15 +56,22 @@ doNotExport_denominator x = SBV $ SVal KUnbounded $ Right $ cache res
   where res st = do xv <- sbvToSV st x
                     newExpr st KUnbounded $ SBVApp (Uninterpreted "sbv.rat.denominator") [xv]
 
--- | Num instance for SRational
+-- | Num instance for SRational. Note that denominators are always positive.
 instance Num SRational where
   fromInteger i  = SBV $ SVal KRational $ Left $ mkConstCV KRational (fromIntegral i :: Integer)
   (+)            = lift2 (+)    (\(t1, b1) (t2, b2) -> (t1 * b2 + t2 * b1) .% (b1 * b2))
   (-)            = lift2 (-)    (\(t1, b1) (t2, b2) -> (t1 * b2 - t2 * b1) .% (b1 * b2))
   (*)            = lift2 (*)    (\(t1, b1) (t2, b2) -> (t1      * t2     ) .% (b1 * b2))
-  abs            = lift1 abs    (\(t, b) -> abs t .% b)
+  abs            = lift1 abs    (\(t, b) -> abs    t .% b)
   negate         = lift1 negate (\(t, b) -> negate t .% b)
   signum (SBV a) = SBV $ svSignum a
+
+-- | Symbolic ordering for SRational. Note that denominators are always positive.
+instance OrdSymbolic SRational where
+   (.<)  = lift2 (<)  (\(t1, b1) (t2, b2) -> (t1 * b2) .<  (b1 * t2))
+   (.<=) = lift2 (<=) (\(t1, b1) (t2, b2) -> (t1 * b2) .<= (b1 * t2))
+   (.>)  = lift2 (<)  (\(t1, b1) (t2, b2) -> (t1 * b2) .>  (b1 * t2))
+   (.>=) = lift2 (<=) (\(t1, b1) (t2, b2) -> (t1 * b2) .>= (b1 * t2))
 
 -- | Get the top and bottom parts. Internal only; do not export!
 doNotExport_getTB :: SRational -> (SInteger, SInteger)

@@ -11,6 +11,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -36,13 +37,13 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 -- * Insertion sort
 
 -- | Insert an element into an already sorted list in the correct place.
-insert :: (Ord a, SymVal a) => SBV a -> SList a -> SList a
+insert :: (OrdSymbolic (SBV a), SymVal a) => SBV a -> SList a -> SList a
 insert = smtFunction "insert" $ \e l -> ite (null l) [e]
                                       $ let (x, xs) = uncons l
                                         in ite (e .<= x) (e .: x .: xs) (x .: insert e xs)
 
 -- | Insertion sort, using 'insert' above to successively insert the elements.
-insertionSort :: (Ord a, SymVal a) => SList a -> SList a
+insertionSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
 insertionSort = smtFunction "insertionSort" $ \l -> ite (null l) nil
                                                   $ let (x, xs) = uncons l
                                                     in insert x (insertionSort xs)
@@ -110,7 +111,7 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 --   Result:                                    Q.E.D.
 -- Lemma: insertionSortIsCorrect                Q.E.D.
 -- [Proven] insertionSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
-correctness :: forall a. (Ord a, SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
+correctness :: forall a. (OrdSymbolic (SBV a), Eq a, SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
 correctness = runTPWith (tpRibbon 45 cvc5) $ do
 
     --------------------------------------------------------------------------------------------

@@ -46,7 +46,7 @@ import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 #endif
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model () -- instances only
+import Data.SBV.Core.Model
 import Data.SBV.Provers.Prover
 
 -- | Check whether the given solver is installed and is ready to go. This call does a
@@ -89,7 +89,8 @@ deriving instance TH.Lift TH.Name
 -- | Turn a name into a symbolic type. If first argument is true, then we're doing an enumeration, otherwise it's an uninterpreted type
 declareSymbolic :: Bool -> TH.Name -> TH.Q [TH.Dec]
 declareSymbolic isEnum typeName = do
-    let typeCon = TH.conT typeName
+    let typeCon  = TH.conT typeName
+        sTypeCon = TH.conT ''SBV `TH.appT` typeCon
 
     cstrs <- if isEnum then ensureEnumeration typeName
                        else ensureEmptyData   typeName
@@ -145,10 +146,16 @@ declareSymbolic isEnum typeName = do
                               enumFromTo     n m   = SL.map SL.toEnum (SL.enumFromTo     (SL.fromEnum n) (SL.fromEnum m))
 
                               enumFromThenTo n m t = SL.map SL.toEnum (SL.enumFromThenTo (SL.fromEnum n) (SL.fromEnum m) (SL.fromEnum t))
+
+                           instance OrdSymbolic $sTypeCon where
+                             a .<  b = SL.fromEnum a .<  SL.fromEnum b
+                             a .<= b = SL.fromEnum a .<= SL.fromEnum b
+                             a .>  b = SL.fromEnum a .>  SL.fromEnum b
+                             a .>= b = SL.fromEnum a .>= SL.fromEnum b
                        |]
                   else pure []
 
-    sType <- TH.conT ''SBV `TH.appT` typeCon
+    sType <- sTypeCon
 
     let declConstructor c = ((nm, bnm), [sig, def])
           where bnm  = TH.nameBase c

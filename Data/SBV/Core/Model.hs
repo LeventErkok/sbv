@@ -2212,10 +2212,12 @@ class Mergeable a where
    -- make but unfortunately necessary for getting symbolic simulation
    -- working efficiently.
    symbolicMerge :: Bool -> SBool -> a -> a -> a
+
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@
    -- underflows/overflows.
    select :: (Ord b, SymVal b, Num b, Num (SBV b), OrdSymbolic (SBV b)) => [a] -> a -> SBV b -> a
+
    -- NB. Earlier implementation of select used the binary-search trick
    -- on the index to chop down the search space. While that is a good trick
    -- in general, it doesn't work for SBV since we do not have any notion of

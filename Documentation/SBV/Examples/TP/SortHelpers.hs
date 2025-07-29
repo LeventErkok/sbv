@@ -11,6 +11,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -33,7 +34,7 @@ import Data.SBV.TP.List
 #endif
 
 -- | A predicate testing whether a given list is non-decreasing.
-nonDecreasing :: (Ord a, SymVal a) => SList a -> SBool
+nonDecreasing :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SBool
 nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
                                                  .|| let (x, l') = uncons l
                                                          (y, _)  = uncons l'
@@ -48,7 +49,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 -- >>> runTP $ nonDecrTail @Integer
 -- Lemma: nonDecrTail                      Q.E.D.
 -- [Proven] nonDecrTail :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
-nonDecrTail :: forall a. (Ord a, SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
+nonDecrTail :: forall a. (OrdSymbolic (SBV a), SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 nonDecrTail = lemma "nonDecrTail"
                     (\(Forall x) (Forall xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
                     []
@@ -58,7 +59,7 @@ nonDecrTail = lemma "nonDecrTail"
 -- >>> runTP $ nonDecrIns @Integer
 -- Lemma: nonDecrInsert                    Q.E.D.
 -- [Proven] nonDecrInsert :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
-nonDecrIns :: forall a. (Ord a, SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
+nonDecrIns :: forall a. (OrdSymbolic (SBV a), SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 nonDecrIns = lemma "nonDecrInsert"
                    (\(Forall x) (Forall xs) -> nonDecreasing xs .&& sNot (null xs) .&& x .<= head xs .=> nonDecreasing (x .: xs))
                    []

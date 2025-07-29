@@ -14,6 +14,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
@@ -42,7 +43,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 -- * Quick sort
 
 -- | Quick-sort, using the first element as pivot.
-quickSort :: (Ord a, SymVal a) => SList a -> SList a
+quickSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
 quickSort = smtFunction "quickSort" $ \l -> ite (null l)
                                                 nil
                                                 (let (x,  xs) = uncons l
@@ -52,7 +53,7 @@ quickSort = smtFunction "quickSort" $ \l -> ite (null l)
 -- | We define @partition@ as an explicit function. Unfortunately, we can't just replace this
 -- with @\pivot xs -> Data.List.SBV.partition (.< pivot) xs@ because that would create a firstified version of partition
 -- with a free-variable captured, which isn't supported due to higher-order limitations in SMTLib.
-partition :: (Ord a, SymVal a) => SBV a -> SList a -> STuple [a] [a]
+partition :: (OrdSymbolic (SBV a), SymVal a) => SBV a -> SList a -> STuple [a] [a]
 partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
                                                        (tuple (nil, nil))
                                                        (let (a,  as) = uncons xs
@@ -256,7 +257,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     │  └╴sublistIfPerm
 --     └╴nonDecreasingMerge
 -- [Proven] quickSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
-correctness :: forall a. (Ord a, SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
+correctness :: forall a. (Eq a, OrdSymbolic (SBV a), SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
 correctness = runTPWith (tpRibbon 60 z3) $ do
 
   --------------------------------------------------------------------------------------------
