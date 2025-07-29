@@ -1043,15 +1043,9 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                 ratOpTable = [ (Equal True,  lift2Rat "sbv.rat.eq")
                              , (Equal False, lift2Rat "sbv.rat.eq")
                              , (NotEqual,    lift2Rat "sbv.rat.notEq")
-                             , (LessThan,    lift2Rat "sbv.rat.lt")
-                             , (GreaterThan, lift2Rat "sbv.rat.lt" . swap)
-                             , (LessEq,      lift2Rat "sbv.rat.leq")
-                             , (GreaterEq,   lift2Rat "sbv.rat.leq" . swap)
                              ]
                         where lift2Rat o [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
                               lift2Rat o sbvs   = error $ "SBV.SMTLib2.sh.lift2Rat: Unexpected arguments: "   ++ show (o, sbvs)
-                              swap [x, y] = [y, x]
-                              swap sbvs   = error $ "SBV.SMTLib2.sh.swap: Unexpected arguments: "   ++ show sbvs
 
                 -- equality and comparisons are the only thing that works on uninterpreted sorts and pretty much everything else
                 uninterpretedTable = [ (Equal True,  lift2S "="        "="        True)
