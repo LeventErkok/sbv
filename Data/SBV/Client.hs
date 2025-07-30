@@ -149,7 +149,10 @@ declareSymbolic isEnum typeName = do
                               enumFromThenTo n m t = SL.map SL.toEnum (SL.enumFromThenTo (SL.fromEnum n) (SL.fromEnum m) (SL.fromEnum t))
 
                            instance OrdSymbolic $sTypeCon where
-                             SBV a .< SBV b = SBV (a `svLessThan` b)
+                             SBV a .<  SBV b = SBV (a `svLessThan`    b)
+                             SBV a .<= SBV b = SBV (a `svLessEq`      b)
+                             SBV a .>  SBV b = SBV (a `svGreaterThan` b)
+                             SBV a .>= SBV b = SBV (a `svGreaterEq`   b)
                        |]
                   else pure []
 
