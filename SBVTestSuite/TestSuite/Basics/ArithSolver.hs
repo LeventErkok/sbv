@@ -16,6 +16,7 @@
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -395,7 +396,7 @@ genFloats = genIEEE754 "genFloats" fs
 genDoubles :: [TestTree]
 genDoubles = genIEEE754 "genDoubles" ds
 
-genIEEE754 :: (IEEEFloating a, Num (SBV a), Show a) => String -> [a] -> [TestTree]
+genIEEE754 :: (IEEEFloating a, OrdSymbolic (SBV a), Num (SBV a), Show a) => String -> [a] -> [TestTree]
 genIEEE754 origin vs =  [tst1 ("pred_"   ++ nm, x, y)    | (nm, x, y)    <- preds]
                      ++ [tst1 ("unary_"  ++ nm, x, y)    | (nm, x, y)    <- uns]
                      ++ [tst2 ("binary_" ++ nm, x, y, r) | (nm, x, y, r) <- bins]
