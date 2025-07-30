@@ -22,7 +22,6 @@ import qualified Data.Ratio as R
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
-import Data.SBV.Core.Operations
 
 infixl 7 .%
 
@@ -64,7 +63,7 @@ instance Num SRational where
   (*)            = lift2 (*)    (\(t1, b1) (t2, b2) -> (t1      * t2     ) .% (b1 * b2))
   abs            = lift1 abs    (\(t, b) -> abs    t .% b)
   negate         = lift1 negate (\(t, b) -> negate t .% b)
-  signum (SBV a) = SBV $ svSignum a
+  signum a       = ite (a .> 0) 1 $ ite (a .< 0) (-1) 0
 
 -- | Symbolic ordering for SRational. Note that denominators are always positive.
 instance OrdSymbolic SRational where
