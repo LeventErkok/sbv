@@ -12,6 +12,10 @@
 
   * Add missing Num instance for SRational and beef up test suite. Thanks to Jan Grant for reporting.
 
+  * Reworked OrdSymbolic and Numeric instances, making them more robust. While this should be mostly invisible
+    to end-users, you might have to add an extra 'FlexibleInstances' pragma that wasn't needed before. Please get
+    in touch if you see inadvertent effects due to uses of symbolic ordering.
+
 ### Version 12.1, 2025-07-11
 
   * Add missing instances for strong-equality, extending it to lists/Maybe etc. (Only impacts floats and structures
