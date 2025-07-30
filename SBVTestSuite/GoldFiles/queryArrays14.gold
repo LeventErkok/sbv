@@ -22,16 +22,6 @@
 [GOOD] (define-fun sbv.rat.notEq ((x SBVRational) (y SBVRational)) Bool
           (not (sbv.rat.eq x y))
        )
-
-[GOOD] (define-fun sbv.rat.lt ((x SBVRational) (y SBVRational)) Bool
-          (<  (* (sbv.rat.numerator   x) (sbv.rat.denominator y))
-              (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))
-       )
-
-[GOOD] (define-fun sbv.rat.leq ((x SBVRational) (y SBVRational)) Bool
-          (<= (* (sbv.rat.numerator   x) (sbv.rat.denominator y))
-              (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))
-       )
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Array SBVRational SBVRational)) ; tracks user variable "x"
