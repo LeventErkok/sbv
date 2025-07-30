@@ -47,6 +47,7 @@ import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
+import Data.SBV.Core.Operations
 import Data.SBV.Provers.Prover
 
 -- | Check whether the given solver is installed and is ready to go. This call does a
@@ -148,10 +149,7 @@ declareSymbolic isEnum typeName = do
                               enumFromThenTo n m t = SL.map SL.toEnum (SL.enumFromThenTo (SL.fromEnum n) (SL.fromEnum m) (SL.fromEnum t))
 
                            instance OrdSymbolic $sTypeCon where
-                             a .<  b = SL.fromEnum a .<  SL.fromEnum b
-                             a .<= b = SL.fromEnum a .<= SL.fromEnum b
-                             a .>  b = SL.fromEnum a .>  SL.fromEnum b
-                             a .>= b = SL.fromEnum a .>= SL.fromEnum b
+                             SBV a .< SBV b = SBV (a `svLessThan` b)
                        |]
                   else pure []
 
