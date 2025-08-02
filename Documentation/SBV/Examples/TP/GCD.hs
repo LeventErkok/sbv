@@ -9,6 +9,7 @@
 -- Proving Euclid's GCD algorithm correct.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeAbstractions #-}
 {-# LANGUAGE TypeApplications #-}
@@ -21,6 +22,11 @@ import Prelude hiding (gcd)
 
 import Data.SBV
 import Data.SBV.TP
+
+#ifdef DOCTEST
+-- $setup
+-- >>> import Data.SBV.TP
+#endif
 
 -- * Calculating GCD
 
@@ -46,6 +52,7 @@ gcd = smtFunction "gcd" $ \a b -> let aa = abs a
 
 -- | GCD is always non-negative.
 --
+-- ==== __Proof__
 -- >>> runTP gcdNonNegative
 -- Inductive lemma (strong): nonNegativeNGCD
 --   Step: Measure is non-negative         Q.E.D.
@@ -57,7 +64,6 @@ gcd = smtFunction "gcd" $ \a b -> let aa = abs a
 --   Result:                               Q.E.D.
 -- Lemma: nonNegative                      Q.E.D.
 -- [Proven] nonNegative :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
--- TODO: Check
 gcdNonNegative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdNonNegative = do
      -- We first prove over nGCD, using strong induction with the measure @a+b@.
@@ -79,8 +85,23 @@ gcdNonNegative = do
 
 -- | If GCD is @0@, then both arguments must be @0@.
 --
+-- ==== __Proof__
 -- >>> runTP gcdZero
--- TODO: check
+-- Inductive lemma (strong): nGCDZero
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: gcdZero
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] gcdZero :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdZero :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdZero = do
 
@@ -109,19 +130,19 @@ gcdZero = do
 
 -- | GCD is commutative.
 --
+-- ==== __Proof__
 -- >>> runTP commutative
 -- Lemma: commutative                      Q.E.D.
 -- [Proven] commutative :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
--- TODO: Check
 commutative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 commutative = lemma "commutative" (\(Forall a) (Forall b) -> gcd a b .== gcd b a) []
 
 -- | @gcd (-a) b = gcd a b = gcd a (-b)@
 --
+-- ==== __Proof__
 -- >>> runTP negGCD
 -- Lemma: negGCD                           Q.E.D.
 -- [Proven] negGCD :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
--- TODO: Check
 negGCD :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b .== g .&& g .== gcd a (-b)) []
 
@@ -129,10 +150,10 @@ negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b
 --
 -- Note that this also implies @gcd 0 0 = 0@.
 --
+-- ==== __Proof__
 -- >>> runTP zeroGCD
 -- Lemma: negGCD                           Q.E.D.
 -- [Proven] negGCD :: Ɐa ∷ Integer → Bool
--- TODO: Check
 zeroGCD :: TP (Proof (Forall "a" Integer -> SBool))
 zeroGCD = lemma "negGCD" (\(Forall a) -> gcd a 0 .== gcd 0 a .&& gcd 0 a .== abs a) []
 
@@ -148,6 +169,7 @@ a `dvd` b = ite (a .== 0) (b .== 0) (b `sEMod` a .== 0)
 -- seems obvious, I was unable to get z3 to prove it. Even CVC5 needs a bit of help to guide it through
 -- the case split on @b@.
 --
+-- ==== __Proof__
 -- >>> runTP dvdAbs
 -- Lemma: dvdAbs_l2r
 --   Step: 1 (2 way case split)
@@ -163,7 +185,6 @@ a `dvd` b = ite (a .== 0) (b .== 0) (b `sEMod` a .== 0)
 --   Result:                               Q.E.D.
 -- Lemma: dvdAbs                           Q.E.D.
 -- [Proven] dvdAbs :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
--- TODO: Check
 dvdAbs :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 dvdAbs = do
    l2r <- calcWith cvc5 "dvdAbs_l2r"
@@ -189,6 +210,7 @@ dvdAbs = do
 -- | GCD of two numbers divide these numbers. This is part one of the proof, where we are
 -- not concerned with maximality. Our goal is to show that the calculated gcd divides both inputs.
 --
+-- ==== __Proof__
 -- >>> runTP gcdDivides
 -- Lemma: dvdAbs_l2r
 --   Step: 1 (2 way case split)
@@ -216,7 +238,6 @@ dvdAbs = do
 --   Result:                               Q.E.D.
 -- Lemma: gcdDivides                       Q.E.D.
 -- [Proven] gcdDivides :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
--- TODO: CHECK
 gcdDivides :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdDivides = do
 
@@ -258,6 +279,7 @@ gcdDivides = do
 
 -- | Maximality. Any divisor of the inputs divides the GCD.
 --
+-- ==== __Proof__
 -- >>> runTP gcdMaximal
 -- Lemma: dvdAbs_l2r
 --   Step: 1 (2 way case split)
@@ -295,7 +317,6 @@ gcdDivides = do
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] gcdMaximal :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐx ∷ Integer → Bool
--- TODO: check
 gcdMaximal :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
 gcdMaximal = do
 
@@ -360,6 +381,7 @@ gcdMaximal = do
 
 -- | Putting it all together.
 --
+-- ==== __Proof__
 -- >>> runTP gcdCorrect
 -- Lemma: dvdAbs_l2r
 --   Step: 1 (2 way case split)
@@ -426,7 +448,6 @@ gcdMaximal = do
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] gcdCorrect :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
--- TODO: check
 gcdCorrect :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdCorrect = do
   divides <- gcdDivides
@@ -454,8 +475,71 @@ gcdCorrect = do
 -- not the largest divisor of @0@ and @0@. (Since any number is a GCD for the pair @(0, 0)@, there is
 -- no maximum.)
 --
+-- ==== __Proof__
 -- >>> runTP gcdLargest
--- TODO: check
+-- Lemma: dvdAbs_l2r
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: dvdAbs_r2l
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: dvdAbs                           Q.E.D.
+-- Lemma: eDiv                             Q.E.D.
+-- Lemma: helper
+--   Step: 1 (x `dvd` a && x `dvd` b)      Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma (strong): mNGCD
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: gcdMaximal
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma (strong): nGCDZero
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: gcdZero
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma (strong): nonNegativeNGCD
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: nonNegative                      Q.E.D.
+-- Lemma: gcdLargest
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] gcdLargest :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐx ∷ Integer → Bool
 gcdLargest :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
 gcdLargest = do
    maximal <- gcdMaximal
