@@ -165,6 +165,7 @@
 -- See "Data.SBV.TP" for the API, and
 --
 --    - "Documentation.SBV.Examples.TP.BinarySearch"
+--    - "Documentation.SBV.Examples.TP.GCD"
 --    - "Documentation.SBV.Examples.TP.InsertionSort"
 --    - "Documentation.SBV.Examples.TP.MergeSort"
 --    - "Documentation.SBV.Examples.TP.QuickSort"

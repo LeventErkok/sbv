@@ -239,6 +239,7 @@ Library
                   , Documentation.SBV.Examples.TP.BinarySearch
                   , Documentation.SBV.Examples.TP.CaseSplit
                   , Documentation.SBV.Examples.TP.Fibonacci
+                  , Documentation.SBV.Examples.TP.GCD
                   , Documentation.SBV.Examples.TP.InsertionSort
                   , Documentation.SBV.Examples.TP.Kleene
                   , Documentation.SBV.Examples.TP.McCarthy91

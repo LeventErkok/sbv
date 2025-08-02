@@ -16,6 +16,9 @@
     to end-users, you might have to add an extra 'FlexibleInstances' pragma that wasn't needed before. Please get
     in touch if you see inadvertent effects due to uses of symbolic ordering.
 
+  * Added Documentation.SBV.Examples.TP.GCD, which proves correctness and several other properties of Euclidian
+    GCD algorithm.
+
 ### Version 12.1, 2025-07-11
 
   * Add missing instances for strong-equality, extending it to lists/Maybe etc. (Only impacts floats and structures
