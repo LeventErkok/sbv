@@ -77,14 +77,35 @@ gcdNonNegative = do
            (\(Forall a) (Forall b) -> gcd a b .>= 0)
            [proofOf nn]
 
--- | If GCD is @0@, then both numbers must be @0@.
+-- | If GCD is @0@, then both arguments must be @0@.
 --
 -- >>> runTP gcdZero
 -- TODO: check
 gcdZero :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
-gcdZero = lemma "gcdZero"
-                (\(Forall @"a" a) (Forall @"b" b) -> gcd a b .== 0 .=> (a .== 0 .&& b .== 0))
-                [sorry]
+gcdZero = do
+
+  -- First prove over nGCD:
+  nGCDZero <-
+    sInduct "nGCDZero"
+            (\(Forall @"a" a) (Forall @"b" b) -> a .>= b .&& b .>= 0 .&& nGCD a b .== 0 .=> a .== 0 .&& b .== 0)
+            (\a b -> a + b) $
+            \ih a b -> [a .>= b, b .>= 0]
+                    |- (nGCD a b .== 0 .=> a .== 0 .&& b .== 0)
+                    =: cases [ b .== 0 ==> trivial
+                             , b .>  0 ==> (nGCD b (a `sEMod` b) .== 0 .=> a .== 0 .&& b .== 0)
+                                        ?? ih `at` (Inst @"a" b, Inst @"b" (a `sEMod` b))
+                                        =: sTrue
+                                        =: qed
+                             ]
+
+  calc "gcdZero"
+       (\(Forall @"a" a) (Forall @"b" b) -> gcd a b .== 0 .=> a .== 0 .&& b .== 0) $
+       \a b -> [gcd a b .== 0]
+            |- a .== 0 .&& b .== 0
+            ?? nGCDZero
+            =: cases [ abs a .>= abs b ==> nGCD (abs a) (abs b) .== 0 =: trivial
+                     , abs a .<  abs b ==> nGCD (abs b) (abs a) .== 0 =: trivial
+                     ]
 
 -- | GCD is commutative.
 --
