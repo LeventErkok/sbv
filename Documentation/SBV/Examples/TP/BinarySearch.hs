@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proving binary search correct
+-- Proving binary search correct.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
