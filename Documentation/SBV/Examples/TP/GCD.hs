@@ -30,9 +30,7 @@ import Data.SBV.TP
 
 -- * Calculating GCD
 
--- | @nGCD@ is the version of GCD that works on non-negative integers. Furthermore, if it's called
--- with the arguments @a@ and @b@ s.t. @a >= b && b >= 0@ holds, then it will maintain this invariant
--- in each recursive call it makes. (This comes in handy in proving its properties.)
+-- | @nGCD@ is the version of GCD that works on non-negative integers.
 --
 -- Ideally, we should make this function local to @gcd@, but then we can't refer to it explicitly in our proofs.
 --
@@ -42,11 +40,9 @@ import Data.SBV.TP
 nGCD :: SInteger -> SInteger -> SInteger
 nGCD = smtFunction "nGCD" $ \a b -> ite (b .== 0) a (nGCD b (a `sEMod` b))
 
--- | Generalized GCD, working for all integers. We simply arrange for the invariant of @nGCD@ to hold and call it.
+-- | Generalized GCD, working for all integers. We simply call @nGCD@ with the absolute value of the arguments.
 gcd :: SInteger -> SInteger -> SInteger
-gcd a b = ite (aa .>= ab) (nGCD aa ab) (nGCD ab aa)
- where aa = abs a
-       ab = abs b
+gcd a b = nGCD (abs a) (abs b)
 
 -- * Basic properties
 
@@ -68,9 +64,9 @@ gcdNonNegative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdNonNegative = do
      -- We first prove over nGCD, using strong induction with the measure @a+b@.
      nn <- sInduct "nonNegativeNGCD"
-                   (\(Forall a) (Forall b) -> a .>= b .&& b .>= 0 .=> nGCD a b .>= 0)
-                   (\a b -> a + b) $
-                   \ih a b -> [a .>= b, b .>= 0]
+                   (\(Forall a) (Forall b) -> a .>= 0 .&& b .>= 0 .=> nGCD a b .>= 0)
+                   (\_a b -> b) $
+                   \ih a b -> [a .>= 0, b .>= 0]
                            |- cases [ b .== 0 ==> trivial
                                     , b ./= 0 ==> nGCD a b .>= 0
                                                =: nGCD b (a `sEMod` b) .>= 0
@@ -83,7 +79,7 @@ gcdNonNegative = do
            (\(Forall a) (Forall b) -> gcd a b .>= 0)
            [proofOf nn]
 
--- | \(\gcd\, a\ b=0\iff a=0\land b=0\)
+-- | \(\gcd\, a\ b=0\implies a=0\land b=0\)
 --
 -- ==== __Proof__
 -- >>> runTP gcdZero
@@ -95,12 +91,7 @@ gcdNonNegative = do
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: gcdZero
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+-- Lemma: gcdZero                          Q.E.D.
 -- [Proven] gcdZero :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdZero :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdZero = do
@@ -108,9 +99,9 @@ gcdZero = do
   -- First prove over nGCD:
   nGCDZero <-
     sInduct "nGCDZero"
-            (\(Forall @"a" a) (Forall @"b" b) -> a .>= b .&& b .>= 0 .&& nGCD a b .== 0 .=> a .== 0 .&& b .== 0)
-            (\a b -> a + b) $
-            \ih a b -> [a .>= b, b .>= 0]
+            (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .&& nGCD a b .== 0 .=> a .== 0 .&& b .== 0)
+            (\_a b -> b) $
+            \ih a b -> [a .>= 0, b .>= 0]
                     |- (nGCD a b .== 0 .=> a .== 0 .&& b .== 0)
                     =: cases [ b .== 0 ==> trivial
                              , b .>  0 ==> (nGCD b (a `sEMod` b) .== 0 .=> a .== 0 .&& b .== 0)
@@ -119,14 +110,9 @@ gcdZero = do
                                         =: qed
                              ]
 
-  calc "gcdZero"
-       (\(Forall @"a" a) (Forall @"b" b) -> gcd a b .== 0 .=> a .== 0 .&& b .== 0) $
-       \a b -> [gcd a b .== 0]
-            |- a .== 0 .&& b .== 0
-            ?? nGCDZero
-            =: cases [ abs a .>= abs b ==> nGCD (abs a) (abs b) .== 0 =: trivial
-                     , abs a .<  abs b ==> nGCD (abs b) (abs a) .== 0 =: trivial
-                     ]
+  lemma "gcdZero"
+        (\(Forall @"a" a) (Forall @"b" b) -> gcd a b .== 0 .=> a .== 0 .&& b .== 0) 
+        [proofOf nGCDZero]
 
 -- | \(\gcd\, a\ b=\gcd\, b\ a\)
 --
@@ -135,7 +121,7 @@ gcdZero = do
 -- Lemma: commutative                      Q.E.D.
 -- [Proven] commutative :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 commutative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
-commutative = lemma "commutative" (\(Forall a) (Forall b) -> gcd a b .== gcd b a) []
+commutative = lemma "commutative" (\(Forall a) (Forall b) -> gcd a b .== gcd b a) [sorry]
 
 -- | \(\gcd\,(-a)\,b = \gcd\,a\,b = \gcd\,a\,(-b)\)
 --
@@ -260,9 +246,9 @@ gcdDivides = do
 
    -- Use strong induction to prove divisibility over non-negative numbers.
    dNGCD <- sInduct "dvdNGCD"
-                     (\(Forall @"a" a) (Forall @"b" b) -> a .>= b .&& b .>= 0 .=> nGCD a b `dvd` a .&& nGCD a b `dvd` b)
-                     (\a b -> a + b) $
-                     \ih a b -> [a .>= b, b .>= 0]
+                     (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD a b `dvd` a .&& nGCD a b `dvd` b)
+                     (\_a b -> b) $
+                     \ih a b -> [a .>= 0, b .>= 0]
                              |- let g = nGCD a b
                              in g `dvd` a .&& g `dvd` b
                              =: cases [ b .== 0 ==> trivial
@@ -351,10 +337,10 @@ gcdMaximal = do
    -- Now prove maximality for non-negative integers:
    mNGCD <- sInduct "mNGCD"
                     (\(Forall @"a" a) (Forall @"b" b) (Forall @"x" x) ->
-                          a .>= b .&& b .>= 0 .&& x `dvd` a .&& x `dvd` b .=> x `dvd` nGCD a b)
-                    (\a b _x -> a + b) $
+                          a .>= 0 .&& b .>= 0 .&& x `dvd` a .&& x `dvd` b .=> x `dvd` nGCD a b)
+                    (\_a b _x -> b) $
                     \ih a b x -> let g = nGCD a b
-                              in [a .>= b, b .>= 0, x `dvd` a .&& x `dvd` b]
+                              in [a .>= 0, b .>= 0, x `dvd` a .&& x `dvd` b]
                               |- x `dvd` g
                               =: cases [ b .== 0 ==> trivial
                                        , b .>  0 ==> x `dvd` nGCD b (a `sEMod` b)
@@ -528,12 +514,7 @@ gcdCorrect = do
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: gcdZero
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+-- Lemma: gcdZero                          Q.E.D.
 -- Inductive lemma (strong): nonNegativeNGCD
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way case split)
