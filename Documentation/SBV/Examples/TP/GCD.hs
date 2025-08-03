@@ -44,9 +44,9 @@ nGCD = smtFunction "nGCD" $ \a b -> ite (b .== 0) a (nGCD b (a `sEMod` b))
 
 -- | Generalized GCD, working for all integers. We simply arrange for the invariant of @nGCD@ to hold and call it.
 gcd :: SInteger -> SInteger -> SInteger
-gcd = smtFunction "gcd" $ \a b -> let aa = abs a
-                                      ab = abs b
-                                  in ite (aa .>= ab) (nGCD aa ab) (nGCD ab aa)
+gcd a b = ite (aa .>= ab) (nGCD aa ab) (nGCD ab aa)
+ where aa = abs a
+       ab = abs b
 
 -- * Basic properties
 
