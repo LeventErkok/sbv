@@ -118,10 +118,37 @@ gcdZero = do
 --
 -- ==== __Proof__
 -- >>> runTP commutative
--- Lemma: commutative                      Q.E.D.
+-- Lemma: nGCDCommutative
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: commutative
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] commutative :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 commutative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
-commutative = lemma "commutative" (\(Forall a) (Forall b) -> gcd a b .== gcd b a) [sorry]
+commutative = do
+    -- First prove over nGCD. Simple enough proof, but we need to tell the solver to case-split
+    -- ordering @a@ and @b@.
+    nGCDComm <-
+        calc "nGCDCommutative"
+             (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD a b .== nGCD b a) $
+             \a b -> [a .>= 0, b .>= 0]
+                  |- nGCD a b
+                  =: cases [ a .<  b ==> trivial
+                           , a .>= b ==> trivial
+                           ]
+
+    -- It's unfortunate we have to spell this out explicitly, a simple lemma call
+    -- that uses the above proof doesn't converge.
+    calc "commutative"
+          (\(Forall a) (Forall b) -> gcd a b .== gcd b a) $
+          \a b -> [] |- gcd a b
+                     ?? nGCDComm
+                     =: gcd b a
+                     =: qed
 
 -- | \(\gcd\,(-a)\,b = \gcd\,a\,b = \gcd\,a\,(-b)\)
 --
