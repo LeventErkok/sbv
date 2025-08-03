@@ -28,7 +28,7 @@ module Data.SBV.TP.Utils (
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML, shortProofName
        , withProofCache
-       , tpQuiet, tpRibbon, tpStats, tpCache
+       , tpQuiet, tpRibbon, tpAsms, tpStats, tpCache
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -455,3 +455,9 @@ tpStats cfg = cfg{tpOptions = (tpOptions cfg) { printStats = True }}
 -- inherit the caching behavior settings from the surrounding environment.
 tpCache :: SMTConfig -> SMTConfig
 tpCache cfg = cfg{tpOptions = (tpOptions cfg) { cacheProofs = True }}
+
+-- | When proving assumptions for each step, print them as well. Normally, SBV doesn't
+-- print assumptions in each proof step, though it does prove them as they are typically trivial.
+-- But in certain cases seeing them would be helpful.
+tpAsms :: SMTConfig -> SMTConfig
+tpAsms cfg = cfg{tpOptions = (tpOptions cfg) { printAsms = True }}

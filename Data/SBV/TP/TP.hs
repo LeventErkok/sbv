@@ -32,7 +32,7 @@ module Data.SBV.TP.TP (
        ,  induct,  inductWith
        , sInduct, sInductWith
        , sorry
-       , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpCache
+       , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms, tpCache
        , (|-), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        , qc, qcWith
        , disp
@@ -242,7 +242,7 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                                               , isCached     = False
                                               }
 
-  where SMTConfig{tpOptions = TPOptions{printStats}} = cfg
+  where SMTConfig{tpOptions = TPOptions{printStats, printAsms}} = cfg
 
         isEnd ProofEnd{}    = True
         isEnd ProofStep{}   = False
@@ -314,8 +314,8 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
 
                  -- First prove the assumptions, if there are any. We stay quiet, unless timing is asked for
                  (quietCfg, finalizer)
-                   | printStats = (cfg,                                             finish [] [])
-                   | True       = (cfg{tpOptions = (tpOptions cfg) {quiet = True}}, const (pure ()))
+                   | printStats || printAsms = (cfg,                                             finish [] [])
+                   | True                    = (cfg{tpOptions = (tpOptions cfg) {quiet = True}}, const (pure ()))
 
                  as = concatMap getHelperAssumes hs
                  ss = getHelperText hs

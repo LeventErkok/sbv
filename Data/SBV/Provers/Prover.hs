@@ -109,6 +109,7 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , firstifyUniqueLen           = 10
                                             , tpOptions                   = TPOptions { ribbonLength = 40
                                                                                       , quiet        = False
+                                                                                      , printAsms    = False
                                                                                       , printStats   = False
                                                                                       , cacheProofs  = False
                                                                                       }

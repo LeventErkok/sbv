@@ -16,6 +16,10 @@
     to end-users, you might have to add an extra 'FlexibleInstances' pragma that wasn't needed before. Please get
     in touch if you see inadvertent effects due to uses of symbolic ordering.
 
+  * TP: Add tpAsms, which explicitly prints the assumption-proving step for each proof transition. Default is False,
+    as assumptions are typically simple to prove. But if you use complicated booleans, this step can come in handy
+    in seeing where a proof gets stuck.
+
   * Added Documentation.SBV.Examples.TP.GCD, which proves correctness and several other properties of Euclidian
     GCD algorithm.
 
