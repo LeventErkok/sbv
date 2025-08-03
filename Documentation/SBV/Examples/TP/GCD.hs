@@ -50,7 +50,7 @@ gcd = smtFunction "gcd" $ \a b -> let aa = abs a
 
 -- * Basic properties
 
--- | GCD is always non-negative.
+-- | \(\gcd\, a\ b \geq 0\)
 --
 -- ==== __Proof__
 -- >>> runTP gcdNonNegative
@@ -83,7 +83,7 @@ gcdNonNegative = do
            (\(Forall a) (Forall b) -> gcd a b .>= 0)
            [proofOf nn]
 
--- | If GCD is @0@, then both arguments must be @0@.
+-- | \(\gcd\, a\ b=0\iff a=0\land b=0\)
 --
 -- ==== __Proof__
 -- >>> runTP gcdZero
@@ -128,7 +128,7 @@ gcdZero = do
                      , abs a .<  abs b ==> nGCD (abs b) (abs a) .== 0 =: trivial
                      ]
 
--- | GCD is commutative.
+-- | \(\gcd\, a\ b=\gcd\, b\ a\)
 --
 -- ==== __Proof__
 -- >>> runTP commutative
@@ -137,7 +137,7 @@ gcdZero = do
 commutative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 commutative = lemma "commutative" (\(Forall a) (Forall b) -> gcd a b .== gcd b a) []
 
--- | @gcd (-a) b = gcd a b = gcd a (-b)@
+-- | \(\gcd\,(-a)\,b = \gcd\,a\,b = \gcd\,a\,(-b)\)
 --
 -- ==== __Proof__
 -- >>> runTP negGCD
@@ -146,7 +146,7 @@ commutative = lemma "commutative" (\(Forall a) (Forall b) -> gcd a b .== gcd b a
 negGCD :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b .== g .&& g .== gcd a (-b)) []
 
--- | @gcd a 0 = gcd 0 a = abs a@
+-- | \( \gcd\,a\,0 = \gcd\,0\,a = |a|\)
 --
 -- Note that this also implies @gcd 0 0 = 0@.
 --
@@ -163,7 +163,7 @@ zeroGCD = lemma "negGCD" (\(Forall a) -> gcd a 0 .== gcd 0 a .&& gcd 0 a .== abs
 dvd :: SInteger -> SInteger -> SBool
 a `dvd` b = ite (a .== 0) (b .== 0) (b `sEMod` a .== 0)
 
--- | @a `dvd` (abs b) .<=> a `dvd` b@.
+-- | \(a \mid |b| \iff a \mid b\)
 --
 -- A number divides another exactly when it also divides its absolute value. While this property
 -- seems obvious, I was unable to get z3 to prove it. Even CVC5 needs a bit of help to guide it through
@@ -207,7 +207,9 @@ dvdAbs = do
 
 -- * Correctness of GCD
 
--- | GCD of two numbers divide these numbers. This is part one of the proof, where we are
+-- | \(\gcd\,a\,b \mid a \land \gcd\,a\,b \mid b\)
+--
+-- GCD of two numbers divide these numbers. This is part one of the proof, where we are
 -- not concerned with maximality. Our goal is to show that the calculated gcd divides both inputs.
 --
 -- ==== __Proof__
@@ -277,7 +279,9 @@ gcdDivides = do
         (\(Forall a) (Forall b) -> gcd a b `dvd` a .&& gcd a b `dvd` b)
         [proofOf dAbs, proofOf dNGCD]
 
--- | Maximality. Any divisor of the inputs divides the GCD.
+-- | \(x \mid a \land x \mid b \implies x \mid \gcd\,a\,b\)
+--
+-- Maximality. Any divisor of the inputs divides the GCD.
 --
 -- ==== __Proof__
 -- >>> runTP gcdMaximal
@@ -379,7 +383,9 @@ gcdMaximal = do
                                            =: qed
                         ]
 
--- | Putting it all together.
+-- | \(\gcd\,a\,b \mid a \land \gcd\,a\,b \mid b \land (x \mid a \land x \mid b \implies x \mid \gcd\,a\,b)\)
+--
+-- Putting it all together: GCD divides both arguments, and its maximal.
 --
 -- ==== __Proof__
 -- >>> runTP gcdCorrect
@@ -470,7 +476,9 @@ gcdCorrect = do
             =: sTrue
             =: qed
 
--- | Additionally prove that GCD is really maximum, i.e., it is the largest in the regular sense. Note
+-- | \(\bigl((a \neq 0 \lor b \neq 0) \land x \mid a \land x \mid b \bigr) \implies x \leq \gcd\,a\,b\)
+--
+-- Additionally prove that GCD is really maximum, i.e., it is the largest in the regular sense. Note
 -- that we have to make an exception for @gcd 0 0@ since by definition the GCD is @0@, which is clearly
 -- not the largest divisor of @0@ and @0@. (Since any number is a GCD for the pair @(0, 0)@, there is
 -- no maximum.)
