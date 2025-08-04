@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proving Euclid's GCD algorithm correct.
+-- Proving Euclidian GCD algorithm correct.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP              #-}
