@@ -119,10 +119,7 @@ gcdZero = do
 -- ==== __Proof__
 -- >>> runTP commutative
 -- Lemma: nGCDCommutative
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
+--   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: commutative
 --   Step: 1                               Q.E.D.
@@ -130,16 +127,15 @@ gcdZero = do
 -- [Proven] commutative :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 commutative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 commutative = do
-    -- First prove over nGCD. Simple enough proof, but we need to tell the solver to case-split
-    -- ordering @a@ and @b@.
+    -- First prove over nGCD. Simple enough proof, but quantifiers and recursive functions
+    -- cause z3 to diverge. So, we have to explicitly write it out.
     nGCDComm <-
         calc "nGCDCommutative"
              (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD a b .== nGCD b a) $
              \a b -> [a .>= 0, b .>= 0]
                   |- nGCD a b
-                  =: cases [ a .<  b ==> trivial
-                           , a .>= b ==> trivial
-                           ]
+                  =: nGCD b a
+                  =: qed
 
     -- It's unfortunate we have to spell this out explicitly, a simple lemma call
     -- that uses the above proof doesn't converge.
@@ -159,16 +155,14 @@ commutative = do
 negGCD :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b .== g .&& g .== gcd a (-b)) []
 
--- | \( \gcd\,a\,0 = \gcd\,0\,a = |a|\)
---
--- Note that this also implies @gcd 0 0 = 0@.
+-- | \( \gcd\,a\,0 = \gcd\,0\,a = |a| \land \gcd\,0\,0 = 0\)
 --
 -- ==== __Proof__
 -- >>> runTP zeroGCD
 -- Lemma: negGCD                           Q.E.D.
 -- [Proven] negGCD :: Ɐa ∷ Integer → Bool
 zeroGCD :: TP (Proof (Forall "a" Integer -> SBool))
-zeroGCD = lemma "negGCD" (\(Forall a) -> gcd a 0 .== gcd 0 a .&& gcd 0 a .== abs a) []
+zeroGCD = lemma "negGCD" (\(Forall a) -> gcd a 0 .== gcd 0 a .&& gcd 0 a .== abs a .&& gcd 0 0 .== 0) []
 
 -- * Divisibility
 
