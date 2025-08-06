@@ -591,61 +591,37 @@ gcdSub a b = nGCDSub (abs a) (abs b)
 -- >>> runTP gcdSubEquiv
 gcdSubEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdSubEquiv = do
-   modSub <- calc "modSub"
-                  (\(Forall @"a" a) (Forall @"b" b) -> a .> b .&& b .> 0 .=> a `sEMod` b .== (a - b) `sEMod` b) $
-                  \a b -> [a .> b, b .> 0]
-                       |- a `sEMod` b
-                       =: (b * a `sEDiv` b + a `sEMod` b) `sEMod` b
-                       =: qed
 
-   comm <-
-     sInduct "ngcdSubComm"
-             (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCDSub a b .== nGCDSub b a)
-             (\a b -> a + b) $
-             \ih a b -> [a .>= 0, b .>= 0]
-                     |- nGCDSub a b
-                     ?? ih `at` (Inst @"a" (a - b), Inst @"b" b)
-                     ?? ih `at` (Inst @"a" a, Inst @"b" (b - a))
-                     =: nGCDSub b a
-                     =: qed
+   -- A helper on original gcd:
+   subG <- lemma "subG" (\(Forall @"x" x) (Forall @"y" y) -> 0 .<= x .&& x .< y .=> nGCD x y .== nGCD x (y - x)) [sorry]
 
-   -- Helper relating the subtraction to modulus in nGCDSub
-   ngcdSubMod <-
-     sInduct "ngcdSubMod"
-             (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .> 0 .=> nGCDSub a b .== nGCDSub (a `sEMod` b) b)
-             (\a b -> a + b) $
-             \ih a b -> [a .>= 0, b .> 0]
-                     |- nGCDSub a b
-                     =: cases [ a .== b ==> nGCDSub (a `sEMod` b) b =: qed
-                              , a .== 0 ==> nGCDSub (a `sEMod` b) b =: qed
-                              , a .> b  ==> nGCDSub (a - b) b
-                                         ?? ih `at` (Inst @"a" (a - b), Inst @"b" b)
-                                         =: nGCDSub ((a - b) `sEMod` b) b
-                                         ?? modSub `at` (Inst @"a" a, Inst @"b" b)
-                                         =: nGCDSub (a `sEMod` b) b
-                                         =: qed
-                              , a .<  b ==> nGCDSub a (b - a)
-                                         ?? ih `at` (Inst @"a" a, Inst @"b" (b - a))
-                                         =: nGCDSub (a `sEMod` (b - a)) (b - a)
-                                         ?? sorry
-                                         =: nGCDSub (a `sEMod` b) b
-                                         =: qed
-                              ]
+   -- We'll be using the commutativity of GCD
+   comm <- commutative
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDSubEquiv"
-                  (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD a b .== nGCDSub a b)
-                  (\_a b -> b) $
+                  (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCDSub a b .== nGCD a b)
+                  (\a b -> a + b) $
                   \ih a b -> [a .>= 0, b .>= 0]
-                          |- nGCD a b
-                          =: cases [ a .== b .|| b .== 0 ==> nGCDSub a b =: qed
-                                   , a ./= b .&& b ./= 0 ==> nGCD b (a `sEMod` b)
+                          |- nGCDSub a b
+                          =: cases [ a .== b             ==> trivial
+                                   , a .== 0             ==> trivial
+                                   , b .== 0             ==> trivial
+                                   , a .> b  .&& b ./= 0 ==> nGCDSub (a - b) b
                                                           ?? ih
-                                                          =: nGCDSub b (a `sEMod` b)
-                                                          ?? comm `at` (Inst @"a" b, Inst @"b" (a `sEMod` b))
-                                                          =: nGCDSub (a `sEMod` b) b
-                                                          ?? ngcdSubMod
-                                                          =: nGCDSub a b
+                                                          =: nGCD (a - b) b
+                                                          ?? comm `at` (Inst @"a" (a - b), Inst @"b" b)
+                                                          =: nGCD b (a - b)
+                                                          ?? subG `at` (Inst @"x" b, Inst @"y" a)
+                                                          =: nGCD b a
+                                                          ?? comm `at` (Inst @"a" b, Inst @"b" a)
+                                                          =: nGCD a b
+                                                          =: qed
+                                   , a .< b  .&& a ./= 0 ==> nGCDSub a (b - a)
+                                                          ?? ih
+                                                          =: nGCD a (b - a)
+                                                          ?? subG `at` (Inst @"x" a, Inst @"y" b)
+                                                          =: nGCD a b
                                                           =: qed
                                    ]
 
