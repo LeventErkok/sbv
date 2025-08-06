@@ -593,7 +593,21 @@ gcdSubEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdSubEquiv = do
 
    -- A helper on original gcd:
-   subG <- lemma "subG" (\(Forall @"x" x) (Forall @"y" y) -> 0 .<= x .&& x .< y .=> nGCD x y .== nGCD x (y - x)) [sorry]
+   modSub <- calc "modSub"
+               (\(Forall @"a" a) (Forall @"b" b) -> a .> b .&& b .> 0 .=> a `sEMod` b .== (a - b) `sEMod` b) $
+               \a b -> [a .> b, b .> 0]
+                    |- a `sEMod` b
+                    =: (b * a `sEDiv` b + a `sEMod` b) `sEMod` b
+                    =: qed
+
+   subG <- calc "subG"
+                (\(Forall @"a" a) (Forall @"b" b) -> 0 .<= a .&& a .< b .=> nGCD a b .== nGCD a (b - a)) $
+                \a b -> [0 .<= a, a .< b]
+                     |- nGCD a b
+                     ?? modSub
+                     ?? sorry
+                     =: nGCD a (b - a)
+                     =: qed
 
    -- We'll be using the commutativity of GCD
    comm <- commutative
@@ -612,7 +626,7 @@ gcdSubEquiv = do
                                                           =: nGCD (a - b) b
                                                           ?? comm `at` (Inst @"a" (a - b), Inst @"b" b)
                                                           =: nGCD b (a - b)
-                                                          ?? subG `at` (Inst @"x" b, Inst @"y" a)
+                                                          ?? subG `at` (Inst @"a" b, Inst @"b" a)
                                                           =: nGCD b a
                                                           ?? comm `at` (Inst @"a" b, Inst @"b" a)
                                                           =: nGCD a b
@@ -620,7 +634,7 @@ gcdSubEquiv = do
                                    , a .< b  .&& a ./= 0 ==> nGCDSub a (b - a)
                                                           ?? ih
                                                           =: nGCD a (b - a)
-                                                          ?? subG `at` (Inst @"x" a, Inst @"y" b)
+                                                          ?? subG `at` (Inst @"a" a, Inst @"b" b)
                                                           =: nGCD a b
                                                           =: qed
                                    ]
