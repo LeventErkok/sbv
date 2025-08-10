@@ -575,10 +575,13 @@ nGCDAdd = do
    calc "nGCDAdd"
         (\(Forall @"a" a) (Forall @"b" b) -> 0 .<= a .&& 0 .<= b .=> nGCD a b .== nGCD (a + b) b) $
         \a b -> [0 .<= a, 0 .<= b]
-             |- nGCD a b
-             ?? sorry
-             =: nGCD (a + b) b
-             =: qed
+             |- nGCD (a + b) b
+             =: cases [ b .== 0 ==> trivial
+                      , b ./= 0 ==> nGCD b ((a + b) `sEMod` b)
+                                 =: nGCD b a
+                                 =: nGCD a b
+                                 =: qed
+                      ]
 
 -- * GCD via subtraction
 
