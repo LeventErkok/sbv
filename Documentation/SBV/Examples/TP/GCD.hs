@@ -155,6 +155,31 @@ commutative = do
 negGCD :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b .== g .&& g .== gcd a (-b)) []
 
+-- | \(0 \leq a < b \implies \mathrm{nGCD}\, a\, b = \mathrm{nGCD}\, (a + b)\, b\)
+--
+-- >>> runTP nGCDAdd
+nGCDAdd :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
+nGCDAdd = do
+   modSub <- calc "modSub"
+               (\(Forall @"a" a) (Forall @"b" b) -> b ./= 0 .=> a `sEMod` b .== (a + b) `sEMod` b) $
+               \a b -> [b ./= 0]
+                    |- a `sEMod` b
+                    =: (b * a `sEDiv` b + a `sEMod` b) `sEMod` b
+                    =: qed
+
+   calc "nGCDAdd"
+        (\(Forall @"a" a) (Forall @"b" b) -> 0 .<= a .&& 0 .<= b .=> nGCD a b .== nGCD (a + b) b) $
+        \a b -> [0 .<= a, 0 .<= b]
+             |- nGCD (a + b) b
+             =: cases [ b .== 0 ==> trivial
+                      , b ./= 0 ==> nGCD b ((a + b) `sEMod` b)
+                                 ?? modSub
+                                 =: nGCD b (a `sEMod` b)
+                                 =: nGCD b a
+                                 =: nGCD a b
+                                 =: qed
+                      ]
+
 -- | \( \gcd\,a\,0 = \gcd\,0\,a = |a| \land \gcd\,0\,0 = 0\)
 --
 -- ==== __Proof__
@@ -566,22 +591,6 @@ gcdLargest = do
                ?? nn    `at` (Inst @"a" a, Inst @"b" b)
                =: sTrue
                =: qed
-
--- | \(0 \leq a < b \implies \mathrm{nGCD}\, a\, b = \mathrm{nGCD}\, (a + b)\, b\)
---
--- >>> runTP nGCDAdd
-nGCDAdd :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
-nGCDAdd = do
-   calc "nGCDAdd"
-        (\(Forall @"a" a) (Forall @"b" b) -> 0 .<= a .&& 0 .<= b .=> nGCD a b .== nGCD (a + b) b) $
-        \a b -> [0 .<= a, 0 .<= b]
-             |- nGCD (a + b) b
-             =: cases [ b .== 0 ==> trivial
-                      , b ./= 0 ==> nGCD b ((a + b) `sEMod` b)
-                                 =: nGCD b a
-                                 =: nGCD a b
-                                 =: qed
-                      ]
 
 -- * GCD via subtraction
 
