@@ -567,26 +567,17 @@ gcdLargest = do
                =: sTrue
                =: qed
 
--- | \(0 \leq a < b \implies \mathrm{nGCD}\, a\, b = \mathrm{nGCD}\, a\, (b - a)\)
+-- | \(0 \leq a < b \implies \mathrm{nGCD}\, a\, b = \mathrm{nGCD}\, (a + b)\, b\)
 --
--- >>> runTP nGCDSubtract
-nGCDSubtract :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
-nGCDSubtract = do
-   -- A helper on original gcd:
-   modSub <- calc "modSub"
-               (\(Forall @"a" a) (Forall @"b" b) -> a .> b .&& b .> 0 .=> a `sEMod` b .== (a - b) `sEMod` b) $
-               \a b -> [a .> b, b .> 0]
-                    |- a `sEMod` b
-                    =: (b * a `sEDiv` b + a `sEMod` b) `sEMod` b
-                    =: qed
-
-   calc "nGCDSubtract"
-        (\(Forall @"a" a) (Forall @"b" b) -> 0 .<= a .&& a .< b .=> nGCD a b .== nGCD a (b - a)) $
-        \a b -> [0 .<= a, a .< b]
+-- >>> runTP nGCDAdd
+nGCDAdd :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
+nGCDAdd = do
+   calc "nGCDAdd"
+        (\(Forall @"a" a) (Forall @"b" b) -> 0 .<= a .&& 0 .<= b .=> nGCD a b .== nGCD (a + b) b) $
+        \a b -> [0 .<= a, 0 .<= b]
              |- nGCD a b
-             ?? modSub
              ?? sorry
-             =: nGCD a (b - a)
+             =: nGCD (a + b) b
              =: qed
 
 -- * GCD via subtraction
@@ -614,9 +605,9 @@ gcdSub a b = nGCDSub (abs a) (abs b)
 gcdSubEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdSubEquiv = do
 
-   -- We'll be using the commutativity of GCD and the subGCD property
+   -- We'll be using the commutativity of GCD and the nGCDAdd property
    comm <- commutative
-   subG <- nGCDSubtract
+   addG <- nGCDAdd
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDSubEquiv"
@@ -624,23 +615,23 @@ gcdSubEquiv = do
                   (\a b -> a + b) $
                   \ih a b -> [a .>= 0, b .>= 0]
                           |- nGCDSub a b
-                          =: cases [ a .== b             ==> trivial
-                                   , a .== 0             ==> trivial
-                                   , b .== 0             ==> trivial
+                          =: cases [ a .== b             ==> nGCD a b =: qed
+                                   , a .== 0             ==> nGCD a b =: qed
+                                   , b .== 0             ==> nGCD a b =: qed
                                    , a .> b  .&& b ./= 0 ==> nGCDSub (a - b) b
                                                           ?? ih
                                                           =: nGCD (a - b) b
-                                                          ?? comm `at` (Inst @"a" (a - b), Inst @"b" b)
-                                                          =: nGCD b (a - b)
-                                                          ?? subG `at` (Inst @"a" b, Inst @"b" a)
-                                                          =: nGCD b a
-                                                          ?? comm `at` (Inst @"a" b, Inst @"b" a)
+                                                          ?? addG `at` (Inst @"a" (a - b), Inst @"b" b)
                                                           =: nGCD a b
                                                           =: qed
                                    , a .< b  .&& a ./= 0 ==> nGCDSub a (b - a)
                                                           ?? ih
                                                           =: nGCD a (b - a)
-                                                          ?? subG `at` (Inst @"a" a, Inst @"b" b)
+                                                          ?? comm
+                                                          =: nGCD (b - a) a
+                                                          ?? addG `at` (Inst @"a" (b - a), Inst @"b" a)
+                                                          =: nGCD b a
+                                                          ?? comm
                                                           =: nGCD a b
                                                           =: qed
                                    ]
