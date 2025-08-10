@@ -158,13 +158,28 @@ negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b
 -- | \(0 \leq a < b \implies \mathrm{nGCD}\, a\, b = \mathrm{nGCD}\, (a + b)\, b\)
 --
 -- >>> runTP nGCDAdd
+-- Lemma: modAdd
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: nGCDAdd
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] nGCDAdd :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 nGCDAdd :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 nGCDAdd = do
-   modSub <- calc "modSub"
+   modAdd <- calc "modAdd"
                (\(Forall @"a" a) (Forall @"b" b) -> b ./= 0 .=> a `sEMod` b .== (a + b) `sEMod` b) $
                \a b -> [b ./= 0]
-                    |- a `sEMod` b
-                    =: (b * a `sEDiv` b + a `sEMod` b) `sEMod` b
+                    |- (a + b) `sEMod` b
+                    =: ((a + b) `sEDiv` b * b + (a + b) `sEMod` b) `sEMod` b
+                    =: a `sEMod` b
                     =: qed
 
    calc "nGCDAdd"
@@ -173,7 +188,7 @@ nGCDAdd = do
              |- nGCD (a + b) b
              =: cases [ b .== 0 ==> trivial
                       , b ./= 0 ==> nGCD b ((a + b) `sEMod` b)
-                                 ?? modSub
+                                 ?? modAdd `at` (Inst @"a" a, Inst @"b" b)
                                  =: nGCD b (a `sEMod` b)
                                  =: nGCD b a
                                  =: nGCD a b
@@ -614,6 +629,47 @@ gcdSub a b = nGCDSub (abs a) (abs b)
 -- all the properties we already established.
 --
 -- >>> runTP gcdSubEquiv
+-- Lemma: nGCDCommutative
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: commutative
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAdd
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: nGCDAdd
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Inductive lemma (strong): nGCDSubEquiv
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (5 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.3                           Q.E.D.
+--     Step: 1.4.1                         Q.E.D.
+--     Step: 1.4.2                         Q.E.D.
+--     Step: 1.4.3                         Q.E.D.
+--     Step: 1.5.1                         Q.E.D.
+--     Step: 1.5.2                         Q.E.D.
+--     Step: 1.5.3                         Q.E.D.
+--     Step: 1.5.4                         Q.E.D.
+--     Step: 1.5.5                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: gcdSubEquiv
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] gcdSubEquiv :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdSubEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdSubEquiv = do
 
