@@ -155,7 +155,7 @@ commutative = do
 negGCD :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b .== g .&& g .== gcd a (-b)) []
 
--- | \(0 \leq a < b \implies \mathrm{nGCD}\, a\, b = \mathrm{nGCD}\, (a + b)\, b\)
+-- | \(0 \leq a \land 0 \leq b \implies \mathrm{nGCD}\, a\, b = \mathrm{nGCD}\, (a + b)\, b\)
 --
 -- >>> runTP nGCDAdd
 -- Lemma: modAdd
