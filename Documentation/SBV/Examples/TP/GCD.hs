@@ -567,6 +567,28 @@ gcdLargest = do
                =: sTrue
                =: qed
 
+-- | \(0 \leq a < b \implies \mathrm{nGCD}\, a\, b = \mathrm{nGCD}\, a\, (b - a)\)
+--
+-- >>> runTP nGCDSubtract
+nGCDSubtract :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
+nGCDSubtract = do
+   -- A helper on original gcd:
+   modSub <- calc "modSub"
+               (\(Forall @"a" a) (Forall @"b" b) -> a .> b .&& b .> 0 .=> a `sEMod` b .== (a - b) `sEMod` b) $
+               \a b -> [a .> b, b .> 0]
+                    |- a `sEMod` b
+                    =: (b * a `sEDiv` b + a `sEMod` b) `sEMod` b
+                    =: qed
+
+   calc "nGCDSubtract"
+        (\(Forall @"a" a) (Forall @"b" b) -> 0 .<= a .&& a .< b .=> nGCD a b .== nGCD a (b - a)) $
+        \a b -> [0 .<= a, a .< b]
+             |- nGCD a b
+             ?? modSub
+             ?? sorry
+             =: nGCD a (b - a)
+             =: qed
+
 -- * GCD via subtraction
 
 -- | @nGCDSub@ is the original verision of Euclid, which uses subtraction instead of modulus. This is the version that
@@ -592,25 +614,9 @@ gcdSub a b = nGCDSub (abs a) (abs b)
 gcdSubEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdSubEquiv = do
 
-   -- A helper on original gcd:
-   modSub <- calc "modSub"
-               (\(Forall @"a" a) (Forall @"b" b) -> a .> b .&& b .> 0 .=> a `sEMod` b .== (a - b) `sEMod` b) $
-               \a b -> [a .> b, b .> 0]
-                    |- a `sEMod` b
-                    =: (b * a `sEDiv` b + a `sEMod` b) `sEMod` b
-                    =: qed
-
-   subG <- calc "subG"
-                (\(Forall @"a" a) (Forall @"b" b) -> 0 .<= a .&& a .< b .=> nGCD a b .== nGCD a (b - a)) $
-                \a b -> [0 .<= a, a .< b]
-                     |- nGCD a b
-                     ?? modSub
-                     ?? sorry
-                     =: nGCD a (b - a)
-                     =: qed
-
-   -- We'll be using the commutativity of GCD
+   -- We'll be using the commutativity of GCD and the subGCD property
    comm <- commutative
+   subG <- nGCDSubtract
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDSubEquiv"
