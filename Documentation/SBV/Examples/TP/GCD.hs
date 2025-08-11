@@ -241,15 +241,13 @@ dvdSum1 =
 -- | \(d \mid (a + b) \land d \mid b \implies d \mid a \)
 --
 -- ==== __Proof__
--- >>> runTP dvdSum2
 -- Lemma: dvdSum2
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3 (2 way case split)
---     Step: 3.1                           Q.E.D.
---     Step: 3.2.1                         Q.E.D.
---     Step: 3.2.2                         Q.E.D.
---     Step: 3.Completeness                Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] dvdSum2 :: Ɐd ∷ Integer → Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 dvdSum2 :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -257,15 +255,14 @@ dvdSum2 =
   calc "dvdSum2"
        (\(Forall d) (Forall a) (Forall b) -> d `dvd` (a + b) .&& d `dvd` b .=> d `dvd` a) $
        \d a b -> [d `dvd` (a + b) .&& d `dvd` b]
-              |- let k1 = (a + b) `sEDiv` d
-                     k2 =      b  `sEDiv` d
-              in a + b .== k1 * d
-              =: a + k2 * d .== k1 * d
-              =: a .== (k1 - k2) * d
-              =: cases [ k1 .== k2 ==> trivial
-                       , k1 ./= k2 ==> d .== a `sEDiv` (k1 - k2)
-                                    =: a `sEMod` (k1-k2) .== 0
-                                    =: qed
+              |- cases [ d .== 0 ==> trivial
+                       , d ./= 0 ==> let k1 = (a + b) `sEDiv` d
+                                         k2 =      b  `sEDiv` d
+                                     in a `sEDiv` d
+                                     =: (a + b - b) `sEDiv` d
+                                     =: (k1 * d - k2 * d) `sEDiv` d
+                                     =: (k1 - k2) * d `sEDiv` d
+                                     =: qed
                        ]
 
 -- * Correctness of GCD
@@ -636,13 +633,12 @@ gcdLargest = do
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: dvdSum2
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3 (2 way case split)
---     Step: 3.1                           Q.E.D.
---     Step: 3.2.1                         Q.E.D.
---     Step: 3.2.2                         Q.E.D.
---     Step: 3.Completeness                Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: dvdAbs_l2r
 --   Step: 1 (2 way case split)
@@ -805,13 +801,12 @@ gcdSub a b = nGCDSub (abs a) (abs b)
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: dvdSum2
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3 (2 way case split)
---     Step: 3.1                           Q.E.D.
---     Step: 3.2.1                         Q.E.D.
---     Step: 3.2.2                         Q.E.D.
---     Step: 3.Completeness                Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: dvdAbs_l2r
 --   Step: 1 (2 way case split)
