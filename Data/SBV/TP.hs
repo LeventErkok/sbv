@@ -67,6 +67,9 @@ module Data.SBV.TP (
 
        -- * Displaying intermediate values of expressions
        , disp
+
+       -- * Recall an old proof, quietly proving it
+       , recall
        ) where
 
 import Data.SBV.TP.TP

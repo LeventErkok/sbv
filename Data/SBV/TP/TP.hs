@@ -36,6 +36,7 @@ module Data.SBV.TP.TP (
        , (|-), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        , qc, qcWith
        , disp
+       , recall
        ) where
 
 import Data.SBV
@@ -1503,5 +1504,19 @@ infix 0 ==>
 (⟹) :: SBool -> TPProofRaw a -> (SBool, TPProofRaw a)
 (⟹) = (==>)
 infix 0 ⟹
+
+-- | Recalling a proof. This essentially sets the verbose output off during this proof. Note that
+-- if we're doing stats, we ignore this as the whole point of doing stats is to see steps in detail.
+recall :: String -> TP (Proof a) -> TP (Proof a)
+recall nm prf = do
+  cfg <- getTPConfig
+  if printStats (tpOptions cfg)
+     then prf
+     else do tab <- liftIO $ startTP cfg (verbose cfg) "Lemma" 0 (TPProofOneShot nm [])
+             setTPConfig cfg{tpOptions = (tpOptions cfg) {quiet = True}}
+             r@Proof{proofOf = ProofObj{dependencies}} <- prf
+             setTPConfig cfg
+             liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo dependencies) (tab, Nothing) []
+             pure r
 
 {- HLint ignore module "Eta reduce" -}

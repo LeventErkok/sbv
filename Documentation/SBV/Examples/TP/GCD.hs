@@ -241,6 +241,7 @@ dvdSum1 =
 -- | \(d \mid (a + b) \land d \mid b \implies d \mid a \)
 --
 -- ==== __Proof__
+-- >>> runTP dvdSum2
 -- Lemma: dvdSum2
 --   Step: 1 (2 way case split)
 --     Step: 1.1                           Q.E.D.
@@ -274,18 +275,6 @@ dvdSum2 =
 --
 -- ==== __Proof__
 -- >>> runTP gcdDivides
--- Lemma: dvdAbs_l2r
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_r2l
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
 -- Lemma: dvdAbs                           Q.E.D.
 -- Lemma: helper
 --   Step: 1                               Q.E.D.
@@ -303,7 +292,7 @@ dvdSum2 =
 gcdDivides :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdDivides = do
 
-   dAbs <- dvdAbs
+   dAbs <- recall "dvdAbs" dvdAbs
 
    -- Helper about divisibility. If @x | b@ and @x | a%b@, then @x | a@.
    helper <- calc "helper"
@@ -345,18 +334,6 @@ gcdDivides = do
 --
 -- ==== __Proof__
 -- >>> runTP gcdMaximal
--- Lemma: dvdAbs_l2r
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_r2l
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
 -- Lemma: dvdAbs                           Q.E.D.
 -- Lemma: eDiv                             Q.E.D.
 -- Lemma: helper
@@ -384,7 +361,7 @@ gcdDivides = do
 gcdMaximal :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
 gcdMaximal = do
 
-   dAbs  <- dvdAbs
+   dAbs  <- recall "dvdAbs" dvdAbs
 
    eDiv <- lemma "eDiv"
                  (\(Forall @"x" x) (Forall @"y" y) -> y ./= 0 .=> x .== (x `sEDiv` y) * y + x `sEMod` y)
@@ -449,66 +426,8 @@ gcdMaximal = do
 --
 -- ==== __Proof__
 -- >>> runTP gcdCorrect
--- Lemma: dvdAbs_l2r
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_r2l
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs                           Q.E.D.
--- Lemma: helper
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): dvdNGCD
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
 -- Lemma: gcdDivides                       Q.E.D.
--- Lemma: dvdAbs_l2r
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_r2l
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs                           Q.E.D.
--- Lemma: eDiv                             Q.E.D.
--- Lemma: helper
---   Step: 1 (x `dvd` a && x `dvd` b)      Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): mNGCD
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: gcdMaximal
---   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+-- Lemma: gcdMaximal                       Q.E.D.
 -- Lemma: gcdCorrect
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -516,8 +435,8 @@ gcdMaximal = do
 -- [Proven] gcdCorrect :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdCorrect :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdCorrect = do
-  divides <- gcdDivides
-  maximal <- gcdMaximal
+  divides <- recall "gcdDivides" gcdDivides
+  maximal <- recall "gcdMaximal" gcdMaximal
 
   calc "gcdCorrect"
        (\(Forall a) (Forall b) ->
@@ -545,59 +464,9 @@ gcdCorrect = do
 --
 -- ==== __Proof__
 -- >>> runTP gcdLargest
--- Lemma: dvdAbs_l2r
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_r2l
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs                           Q.E.D.
--- Lemma: eDiv                             Q.E.D.
--- Lemma: helper
---   Step: 1 (x `dvd` a && x `dvd` b)      Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): mNGCD
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: gcdMaximal
---   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): nGCDZero
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+-- Lemma: gcdMaximal                       Q.E.D.
 -- Lemma: gcdZero                          Q.E.D.
--- Inductive lemma (strong): nonNegativeNGCD
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: nonNegative                      Q.E.D.
+-- Lemma: gcdNonNegative                   Q.E.D.
 -- Lemma: gcdLargest
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -605,9 +474,9 @@ gcdCorrect = do
 -- [Proven] gcdLargest :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐx ∷ Integer → Bool
 gcdLargest :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
 gcdLargest = do
-   maximal <- gcdMaximal
-   zero    <- gcdZero
-   nn      <- gcdNonNegative
+   maximal <- recall "gcdMaximal"     gcdMaximal
+   zero    <- recall "gcdZero"        gcdZero
+   nn      <- recall "gcdNonNegative" gcdNonNegative
 
    calc "gcdLargest"
         (\(Forall a) (Forall b) (Forall x) -> (a ./= 0 .|| b ./= 0) .&& x `dvd` a .&& x `dvd` b .=> x .<= gcd a b) $
@@ -624,104 +493,10 @@ gcdLargest = do
 --
 -- ==== __Proof__
 -- >>> runTP gcdAdd
--- Lemma: dvdSum1
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdSum2
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_l2r
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_r2l
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs                           Q.E.D.
--- Lemma: helper
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): dvdNGCD
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+-- Lemma: dvdSum1                          Q.E.D.
+-- Lemma: dvdSum2                          Q.E.D.
 -- Lemma: gcdDivides                       Q.E.D.
--- Lemma: dvdAbs_l2r
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_r2l
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs                           Q.E.D.
--- Lemma: eDiv                             Q.E.D.
--- Lemma: helper
---   Step: 1 (x `dvd` a && x `dvd` b)      Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): mNGCD
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: gcdMaximal
---   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): nGCDZero
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: gcdZero                          Q.E.D.
--- Inductive lemma (strong): nonNegativeNGCD
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: nonNegative                      Q.E.D.
--- Lemma: gcdLargest
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+-- Lemma: gcdLargest                       Q.E.D.
 -- Lemma: gcdAdd
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -732,10 +507,10 @@ gcdLargest = do
 gcdAdd :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdAdd = do
 
-   dSum1    <- dvdSum1
-   dSum2    <- dvdSum2
-   divides  <- gcdDivides
-   largest  <- gcdLargest
+   dSum1   <- recall "dvdSum1"    dvdSum1
+   dSum2   <- recall "dvdSum2"    dvdSum2
+   divides <- recall "gcdDivides" gcdDivides
+   largest <- recall "gcdLargest" gcdLargest
 
    calc "gcdAdd"
         (\(Forall @"a" a) (Forall @"b" b) -> gcd a b .== gcd (a + b) b) $
@@ -786,116 +561,8 @@ gcdSub a b = nGCDSub (abs a) (abs b)
 --
 -- ==== __Proof__
 -- >>> runTP gcdSubEquiv
--- Lemma: nGCDCommutative
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: commutative
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdSum1
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdSum2
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_l2r
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_r2l
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs                           Q.E.D.
--- Lemma: helper
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): dvdNGCD
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: gcdDivides                       Q.E.D.
--- Lemma: dvdAbs_l2r
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_r2l
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs                           Q.E.D.
--- Lemma: eDiv                             Q.E.D.
--- Lemma: helper
---   Step: 1 (x `dvd` a && x `dvd` b)      Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): mNGCD
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: gcdMaximal
---   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma (strong): nGCDZero
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: gcdZero                          Q.E.D.
--- Inductive lemma (strong): nonNegativeNGCD
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: nonNegative                      Q.E.D.
--- Lemma: gcdLargest
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: gcdAdd
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+-- Lemma: commutative                      Q.E.D.
+-- Lemma: gcdAdd                           Q.E.D.
 -- Inductive lemma (strong): nGCDSubEquiv
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (5 way case split)
@@ -922,8 +589,8 @@ gcdSubEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdSubEquiv = do
 
    -- We'll be using the commutativity of GCD and the gcdAdd property
-   comm <- commutative
-   addG <- gcdAdd
+   comm <- recall "commutative" commutative
+   addG <- recall "gcdAdd"      gcdAdd
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDSubEquiv"

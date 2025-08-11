@@ -20,6 +20,9 @@
     as assumptions are typically simple to prove. But if you use complicated booleans, this step can come in handy
     in seeing where a proof gets stuck.
 
+  * TP: Add 'recall': Which turns of printing for a TP computation. This allows for non-verbose output in proof-scripts
+    when we reuse an old proof.
+
   * Added Documentation.SBV.Examples.TP.GCD, which proves correctness and several other properties of Euclidian
     GCD algorithm.
 

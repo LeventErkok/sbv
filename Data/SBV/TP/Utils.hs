@@ -24,7 +24,7 @@
 
 module Data.SBV.TP.Utils (
          TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof
-       , startTP, finishTP, getTPState, getTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
+       , startTP, finishTP, getTPState, getTPConfig, setTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML, shortProofName
        , withProofCache
@@ -76,7 +76,7 @@ data TPStats = TPStats { noOfCheckSats :: Int
 -- | Extra state we carry in a TP context
 data TPState = TPState { stats      :: IORef TPStats
                        , proofCache :: IORef (Map (String, TypeRep) ProofObj)
-                       , config     :: SMTConfig
+                       , config     :: IORef SMTConfig
                        }
 
 -- | Monad for running TP proofs in.
@@ -86,7 +86,8 @@ newtype TP a = TP (ReaderT TPState IO a)
 -- | If caches are enabled, see if we cached this proof and return it; otherwise generate it, cache it, and return it
 withProofCache :: forall a. Typeable a => String -> TP (Proof a) -> TP (Proof a)
 withProofCache nm genProof = do
-  TPState{proofCache, config = cfg@SMTConfig {tpOptions = TPOptions {cacheProofs}}} <- getTPState
+  TPState{proofCache, config} <- getTPState
+  cfg@SMTConfig {tpOptions = TPOptions {cacheProofs}} <- liftIO $ readIORef config
 
   let key = (nm, typeOf (Proxy @a))
 
@@ -118,7 +119,8 @@ runTPWith :: SMTConfig -> TP a -> IO a
 runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
    rStats <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0, qcElapsed = 0 }
    rCache <- newIORef Map.empty
-   (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = cfg, stats = rStats, proofCache = rCache}
+   rCfg   <- newIORef cfg
+   (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = rCfg, stats = rStats, proofCache = rCache}
    case mbT of
      Nothing -> pure ()
      Just t  -> do TPStats noOfCheckSats solverTime qcElapsed <- readIORef rStats
@@ -143,7 +145,13 @@ tpGetNextUnique = TPUser <$> liftIO randomIO
 
 -- | get the configuration
 getTPConfig :: TP SMTConfig
-getTPConfig = config <$> getTPState
+getTPConfig = do rCfg <- config <$> getTPState
+                 liftIO (readIORef rCfg)
+
+-- | set the configuration
+setTPConfig :: SMTConfig -> TP ()
+setTPConfig cfg = do st <- getTPState
+                     liftIO (writeIORef (config st) cfg)
 
 -- | Update stats
 updStats :: MonadIO m => TPState -> (TPStats -> TPStats) -> m ()
