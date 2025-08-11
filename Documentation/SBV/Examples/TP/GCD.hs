@@ -733,7 +733,6 @@ gcdLargest = do
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] gcdAdd :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
-
 gcdAdd :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdAdd = do
 
