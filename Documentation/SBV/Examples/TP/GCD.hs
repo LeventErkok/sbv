@@ -745,8 +745,14 @@ gcdBinEquiv = do
                                                             ?? sorry
                                                             =: nGCD a b
                                                             =: qed
-                                   , a .<= b               ==> trivial
-                                   , a .>  b               ==> trivial
+                                   , a .<= b               ==> nGCDBin a b
+                                                            ?? sorry
+                                                            =: nGCD a b
+                                                            =: qed
+                                   , a .>  b               ==> nGCDBin a b
+                                                            ?? sorry
+                                                            =: nGCD a b
+                                                            =: qed
                                    ]
 
    -- Now prove over all integers
