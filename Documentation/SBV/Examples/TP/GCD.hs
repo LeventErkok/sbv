@@ -566,7 +566,7 @@ nGCDSub = smtFunction "nGCDSub" $ \a b -> ite (a .== b) a
 gcdSub :: SInteger -> SInteger -> SInteger
 gcdSub a b = nGCDSub (abs a) (abs b)
 
--- | \(\gcd\, a\, b = \mathrm{gcdSub}\, a\, b\)
+-- | \(\mathrm{gcdSub}\, a\, b = \gcd\, a\, b\)
 --
 -- Instead of proving @gcdSub@ correct, we'll simply show that it is equivalent to @gcd@, hence it has
 -- all the properties we already established.
@@ -658,7 +658,7 @@ nGCDBin = smtFunction "nGCDBin" $ \a b -> ite (b .== 0) a
 gcdBin :: SInteger -> SInteger -> SInteger
 gcdBin a b = nGCDBin (abs a) (abs b)
 
--- | \(\gcd\, a\, b = \mathrm{gcdBin}\, a\, b\)
+-- | \(\mathrm{gcdBin}\, a\, b = \gcd\, a\, b\)
 --
 -- Instead of proving @gcdBin@ correct, we'll simply show that it is equivalent to @gcd@, hence it has
 -- all the properties we already established.
