@@ -21,7 +21,8 @@
     in seeing where a proof gets stuck.
 
   * TP: Add 'recall': Which turns of printing for a TP computation. This allows for non-verbose output in proof-scripts
-    when we reuse an old proof.
+    when we reuse an old proof. Note that this is safe: We still run the proof mentioned so any failures in it will
+    be caught; it's just that we do it quietly to reduce verbosity in the re-calling proof.
 
   * TP: Add '|->': This is similar to '|-', except it applies to a boolean-chain of reasoning where each step is
     equivalent to the conjunction of the previous and the next. This allows for concise expression of boolean
