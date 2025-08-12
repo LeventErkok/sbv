@@ -640,3 +640,36 @@ gcdSubEquiv = do
                     =: nGCDSub (abs a) (abs b)
                     =: gcdSub a b
                     =: qed
+
+-- * Binary GCD
+
+-- | @nGCDBin@ is the binary GCD algorithm that works on non-negative numbers.
+nGCDBin :: SInteger -> SInteger -> SInteger
+nGCDBin = smtFunction "nGCDBin" $ \a b -> ite (b .== 0) a
+                                        $ ite (isEven a .&& isEven b) (2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2))
+                                        $ ite (isOdd  a .&& isEven b) (    nGCDBin a             (b `sEDiv` 2))
+                                        $ ite (a .<= b)               (    nGCDBin a             (b - a))
+                                                                      (    nGCDBin (a - b)       b)
+  where isEven, isOdd :: SInteger -> SBool
+        isEven = (2 `sDivides`)
+        isOdd  = sNot . isEven
+
+-- | Generalized version that works on arbitrary integers.
+gcdBin :: SInteger -> SInteger -> SInteger
+gcdBin a b = nGCDBin (abs a) (abs b)
+
+-- | \(\gcd\, a\, b = \mathrm{gcdBin}\, a\, b\)
+--
+-- Instead of proving @gcdBin@ correct, we'll simply show that it is equivalent to @gcd@, hence it has
+-- all the properties we already established.
+--
+-- ==== __Proof__
+-- >>> runTP gcdBinEquiv
+-- TODO
+gcdBinEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
+gcdBinEquiv = calc "gcdBinEquiv"
+                   (\(Forall a) (Forall b) -> gcdBin a b .== gcd a b) $
+                   \a b -> [] |- gcdBin a b
+                              ?? qc 100
+                              =: gcd a b
+                              =: qed
