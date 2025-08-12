@@ -667,9 +667,25 @@ gcdBin a b = nGCDBin (abs a) (abs b)
 -- >>> runTP gcdBinEquiv
 -- TODO
 gcdBinEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
-gcdBinEquiv = calc "gcdBinEquiv"
-                   (\(Forall a) (Forall b) -> gcdBin a b .== gcd a b) $
-                   \a b -> [] |- gcdBin a b
-                              ?? qc 100
-                              =: gcd a b
-                              =: qed
+gcdBinEquiv = do
+   -- First prove over the non-negative numbers:
+   nEq <- sInduct "nGCDBinEquiv"
+                  (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCDBin a b .== nGCD a b)
+                  (\a b -> a + b) $
+                  \ih a b -> [a .>= 0, b .>= 0]
+                          |- nGCDBin a b
+                          ?? ih
+                          ?? sorry
+                          =: nGCD a b
+                          =: qed
+
+
+   -- Now prove over all integers
+   calcWith cvc5 "gcdBinEquiv"
+         (\(Forall a) (Forall b) -> gcd a b .== gcdBin a b) $
+         \a b -> [] |- gcd a b
+                    =: nGCD (abs a) (abs b)
+                    ?? nEq `at` (Inst @"a" (abs a), Inst @"b" (abs b))
+                    =: nGCDBin (abs a) (abs b)
+                    =: gcdBin a b
+                    =: qed
