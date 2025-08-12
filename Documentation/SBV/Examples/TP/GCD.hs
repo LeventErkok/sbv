@@ -552,55 +552,53 @@ gcdAdd = do
 
 -- | \(\gcd\, 2a\, 2b = 2 \gcd\,a\, b\)
 --
--- >>> runTP gcdEven
+-- >>> runTP gcdEvenEven
 -- Lemma: modEE                            Q.E.D.
--- Inductive lemma (strong): nGCDEven
+-- Inductive lemma (strong): nGCDEvenEven
 --   Step: Measure is non-negative         Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2 (2 way case split)
---     Step: 2.1                           Q.E.D.
---     Step: 2.2.1                         Q.E.D.
---     Step: 2.2.2                         Q.E.D.
---     Step: 2.2.3                         Q.E.D.
---     Step: 2.2.4                         Q.E.D.
---     Step: 2.Completeness                Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: gcdEven
+-- Lemma: gcdEvenEven
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] gcdEven :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
-gcdEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
-gcdEven = do
+-- [Proven] gcdEvenEven :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
+gcdEvenEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
+gcdEvenEven = do
 
    modEE <- lemma "modEE"
                   (\(Forall @"a" a) (Forall @"b" b) -> b ./= 0 .=> (2 * a) `sEMod` (2 * b) .== 2 * (a `sEMod` b))
                   []
 
-   nGCDEven <- sInduct "nGCDEven"
-                       (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD (2*a) (2*b) .== 2 * nGCD a b)
-                       (\_a b -> b) $
-                       \ih a b -> [a .>= 0, b .>= 0]
-                               |- nGCD (2*a) (2*b)
-                               =: nGCD (2*a) (2*b)
-                               =: cases [ b .== 0 ==> trivial
-                                        , b ./= 0 ==> nGCD (2 * a) (2 * b)
-                                                   =: nGCD (2 * b) ((2 * a) `sEMod` (2 * b))
-                                                   ?? modEE `at` (Inst @"a" a, Inst @"b" b)
-                                                   =: nGCD (2 * b) (2 * (a `sEMod` b))
-                                                   ?? ih
-                                                   =: 2 * nGCD a b
-                                                   =: qed
-                                     ]
+   nGCDEvenEven <- sInduct "nGCDEvenEven"
+                           (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD (2*a) (2*b) .== 2 * nGCD a b)
+                           (\_a b -> b) $
+                           \ih a b -> [a .>= 0, b .>= 0]
+                                   |- nGCD (2*a) (2*b)
+                                   =: cases [ b .== 0 ==> trivial
+                                            , b ./= 0 ==> nGCD (2 * a) (2 * b)
+                                                       =: nGCD (2 * b) ((2 * a) `sEMod` (2 * b))
+                                                       ?? modEE `at` (Inst @"a" a, Inst @"b" b)
+                                                       =: nGCD (2 * b) (2 * (a `sEMod` b))
+                                                       ?? ih
+                                                       =: 2 * nGCD a b
+                                                       =: qed
+                                         ]
 
-   calc "gcdEven"
+   calc "gcdEvenEven"
         (\(Forall a) (Forall b) -> gcd (2*a) (2*b) .== 2 * gcd a b) $
         \a b -> [] |- gcd (2*a) (2*b)
                    =: nGCD (abs (2*a)) (abs (2*b))
                    =: nGCD (2 * abs a) (2 * abs b)
-                   ?? nGCDEven `at` (Inst @"a" (abs a), Inst @"b" (abs b))
+                   ?? nGCDEvenEven `at` (Inst @"a" (abs a), Inst @"b" (abs b))
                    =: 2 * nGCD (abs a) (abs b)
                    =: 2 * gcd a b
                    =: qed
@@ -727,7 +725,7 @@ gcdBin a b = nGCDBin (abs a) (abs b)
 -- TODO
 gcdBinEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdBinEquiv = do
-   gEven <- recall "gcdEven" gcdEven
+   gEvenEven <- recall "gcdEvenEven" gcdEvenEven
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDBinEquiv"
@@ -739,13 +737,16 @@ gcdBinEquiv = do
                                    , isEven a .&& isEven b ==> 2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2)
                                                             ?? ih `at` (Inst @"a" (a `sEDiv` 2), Inst @"b" (b `sEDiv` 2))
                                                             =: 2 * gcd (a `sEDiv` 2) (b `sEDiv` 2)
-                                                            ?? gEven
-                                                            =: gcd a b
+                                                            ?? gEvenEven
+                                                            =: nGCD a b
                                                             =: qed
-                                   , sTrue                 ==> nGCDBin a b
+                                   , isOdd a  .&& isEven b ==> nGCDBin a (b `sEDiv` 2)
+                                                            ?? ih `at` (Inst @"a" a, Inst @"b" (b `sEDiv` 2))
                                                             ?? sorry
-                                                            =: gcd a b
+                                                            =: nGCD a b
                                                             =: qed
+                                   , a .<= b               ==> trivial
+                                   , a .>  b               ==> trivial
                                    ]
 
    -- Now prove over all integers
