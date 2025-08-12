@@ -502,6 +502,9 @@ gcdLargest = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Step: 7                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] gcdAdd :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdAdd :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -514,29 +517,38 @@ gcdAdd = do
 
    calc "gcdAdd"
         (\(Forall @"a" a) (Forall @"b" b) -> gcd a b .== gcd (a + b) b) $
-        \a b -> [] |- let g1 = gcd a       b
-                          g2 = gcd (a + b) b
-                   in sTrue
+        \a b -> [] |-> let g1 = gcd a       b
+                           g2 = gcd (a + b) b
+                    in sTrue
 
-                   -- First use the divides property to conclude that @g1@ divides @a@ and @b@
-                   -- and @g2@ divides @a+b@ and @b@.
-                   ?? divides `at` (Inst @"a" a,       Inst @"b" b)
-                   ?? divides `at` (Inst @"a" (a + b), Inst @"b" b)
-                   =: let commonDivides = g1 `dvd` a .&& g1 `dvd` b .&& g2 `dvd` (a+b) .&& g2 `dvd` b
-                   in commonDivides
+                    -- First use the divides property to conclude that @g1@ divides @a@ and @b@
+                    ?? divides `at` (Inst @"a" a, Inst @"b" b)
+                    =: g1 `dvd` a .&& g1 `dvd` b
 
-                   -- Now show that @g1@ divides @a+b@ and @g2@ divides @a@
-                   ?? dSum1 `at` (Inst @"d" g1, Inst @"a" a, Inst @"b" b)
-                   ?? dSum2 `at` (Inst @"d" g2, Inst @"a" a, Inst @"b" b)
-                   =: let extraDivides = g1 `dvd` (a+b) .&& g2 `dvd` a
-                   in commonDivides .&& extraDivides
+                    -- Same for @g2@ for @a+b@ and @b@
+                    ?? divides `at` (Inst @"a" (a + b), Inst @"b" b)
+                    =: g2 `dvd` (a+b) .&& g2 `dvd` b
 
-                   -- Now use largest to show @g1 >= g2@ and @g2 >= g1@, from which we deduce @g1 .== g2@
-                   ?? largest `at` (Inst @"a" a,     Inst @"b" b, Inst @"x" g2)
-                   ?? largest `at` (Inst @"a" (a+b), Inst @"b" b, Inst @"x" g1)
-                   =: commonDivides .&& extraDivides .&& g1 .>= g2 .&& g2 .>= g1
-                   =: commonDivides .&& extraDivides .&& g1 .>= g2 .&& g2 .>= g1 .&& g1 .== g2
-                   =: qed
+                    -- Use dSum1 to show @g1@ divides @a+b@
+                    -- Now show that @g1@ divides @a+b@ and @g2@ divides @a@
+                    ?? dSum1 `at` (Inst @"d" g1, Inst @"a" a, Inst @"b" b)
+                    =: g1 `dvd` (a+b)
+
+                    -- Similarly, use dSum2 to show @g2@ divides @a@
+                    ?? dSum2 `at` (Inst @"d" g2, Inst @"a" a, Inst @"b" b)
+                    =:  g2 `dvd` a
+
+                    -- Now use largest to show @g1 >= g2@
+                    ?? largest `at` (Inst @"a" a,     Inst @"b" b, Inst @"x" g2)
+                    =: g1 .>= g2
+
+                    -- But again via largest, we can show @g2 >= g1@
+                    ?? largest `at` (Inst @"a" (a+b), Inst @"b" b, Inst @"x" g1)
+                    =: g2 .>= g1
+
+                    -- Finally conclude @g1 = g2@ since both are greater-than-equal to each other:
+                    =: g1 .== g2
+                    =: qed
 
 -- * GCD via subtraction
 

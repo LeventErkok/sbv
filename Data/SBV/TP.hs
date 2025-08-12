@@ -48,7 +48,7 @@ module Data.SBV.TP (
        , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms, tpCache
 
        -- * Starting a calculation proof
-       , (|-), (⊢)
+       , (|-), (⊢), (|->)
 
        -- * Sequence of calculation steps
        , (=:), (≡)

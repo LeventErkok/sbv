@@ -33,7 +33,7 @@ module Data.SBV.TP.TP (
        , sInduct, sInductWith
        , sorry
        , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms, tpCache
-       , (|-), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
+       , (|-), (|->), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        , qc, qcWith
        , disp
        , recall
@@ -45,7 +45,7 @@ import Data.SBV.Core.Data  (SBV(..), SVal(..))
 import qualified Data.SBV.Core.Symbolic as S (sObserve)
 
 import Data.SBV.Core.Operations (svEqual)
-import Data.SBV.Control hiding (getProof)
+import Data.SBV.Control hiding (getProof, (|->))
 
 import Data.SBV.TP.Kernel
 import Data.SBV.TP.Utils
@@ -1443,6 +1443,17 @@ instance Contradiction a => Contradiction (b -> a) where
 (|-) :: [SBool] -> TPProofRaw a -> (SBool, TPProofRaw a)
 bs |- p = (sAnd bs, p)
 infixl 0 |-
+
+-- | Start an implicational  proof, with the given hypothesis. Use @[]@ as the
+-- first argument if the calculation holds unconditionally. Each step will be a cascading
+-- chain of conjunctions of the previous, starting from @sTrue@.
+(|->) :: [SBool] -> TPProofRaw SBool -> (SBool, TPProofRaw SBool)
+bs |-> p = (sAnd bs, xform sTrue p)
+  where xform :: SBool -> TPProofGen SBool [Helper] () -> TPProofGen SBool [Helper] ()
+        xform conj (ProofStep   a hs r)  = let ca = conj .&& a in ProofStep ca hs (xform ca r)
+        xform conj (ProofBranch b bh ss) = ProofBranch b bh [(bc, xform conj r) | (bc, r) <- ss]
+        xform _    (ProofEnd    b hs )   = ProofEnd b hs
+infixl 0 |->
 
 -- | Alternative unicode for `|-`.
 (⊢) :: [SBool] -> TPProofRaw a -> (SBool, TPProofRaw a)

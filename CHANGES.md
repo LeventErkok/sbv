@@ -23,6 +23,10 @@
   * TP: Add 'recall': Which turns of printing for a TP computation. This allows for non-verbose output in proof-scripts
     when we reuse an old proof.
 
+  * TP: Add '|->': This is similar to '|-', except it applies to a boolean-chain of reasoning where each step is
+    equivalent to the conjunction of the previous and the next. This allows for concise expression of boolean
+    reasoning steps. See gcdAdd in Documentation.SBV.Examples.TP.GCD for an example.
+
   * Added Documentation.SBV.Examples.TP.GCD, which proves correctness and several other properties of Euclidian
     GCD algorithm.
 
