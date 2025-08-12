@@ -650,9 +650,13 @@ nGCDBin = smtFunction "nGCDBin" $ \a b -> ite (b .== 0) a
                                         $ ite (isOdd  a .&& isEven b) (    nGCDBin a             (b `sEDiv` 2))
                                         $ ite (a .<= b)               (    nGCDBin a             (b - a))
                                                                       (    nGCDBin (a - b)       b)
-  where isEven, isOdd :: SInteger -> SBool
-        isEven = (2 `sDivides`)
-        isOdd  = sNot . isEven
+-- | Is the given integer even?
+isEven :: SInteger -> SBool
+isEven = (2 `sDivides`)
+
+-- | Is the given integer odd?
+isOdd :: SInteger -> SBool
+isOdd  = sNot . isEven
 
 -- | Generalized version that works on arbitrary integers.
 gcdBin :: SInteger -> SInteger -> SInteger
@@ -674,11 +678,18 @@ gcdBinEquiv = do
                   (\a b -> a + b) $
                   \ih a b -> [a .>= 0, b .>= 0]
                           |- nGCDBin a b
-                          ?? ih
-                          ?? sorry
-                          =: nGCD a b
-                          =: qed
-
+                          =: cases [ b .== 0               ==> trivial
+                                   , isEven a .&& isEven b ==> 2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2)
+                                                            ?? ih `at` (Inst @"a" (a `sEDiv` 2), Inst @"b" (b `sEDiv` 2))
+                                                            =: 2 * gcd (a `sEDiv` 2) (b `sEDiv` 2)
+                                                            ?? sorry
+                                                            =: gcd a b
+                                                            =: qed
+                                   , sTrue                 ==> nGCDBin a b
+                                                            ?? sorry
+                                                            =: gcd a b
+                                                            =: qed
+                                   ]
 
    -- Now prove over all integers
    calcWith cvc5 "gcdBinEquiv"
