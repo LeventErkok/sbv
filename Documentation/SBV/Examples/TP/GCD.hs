@@ -876,6 +876,7 @@ gcdBinEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdBinEquiv = do
    gEvenEven <- recall "gcdEvenEven" gcdEvenEven
    gOddEven  <- recall "gcdOddEven"  gcdOddEven
+   gAdd      <- recall "gcdAdd"      gcdAdd
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDBinEquiv"
@@ -913,7 +914,7 @@ gcdBinEquiv = do
                                                                                             =: nGCDBin (a - b) b
                                                                                             ?? ih `at` (Inst @"a" (a - b), Inst @"b" b)
                                                                                             =: nGCD (a - b) b
-                                                                                            ?? sorry
+                                                                                            ?? gAdd `at` (Inst @"a" a, Inst @"b" (-b))
                                                                                             =: nGCD a b
                                                                                             =: qed
                                                                      ]
