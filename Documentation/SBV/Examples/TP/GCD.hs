@@ -264,16 +264,15 @@ dvdOddThenOdd = calc "dvdOddThenOdd"
 -- ==== __Proof__
 -- >>> runTP dvdEvenWhenOdd
 -- Lemma: dvdEvenWhenOdd
---   Step: 1                               Q.E.D. [0.003s]
---   Step: 2                               Q.E.D. [0.001s]
---   Step: 3                               Q.E.D. [0.000s]
---   Step: 4                               Q.E.D. [0.000s]
---   Step: 5                               Q.E.D. [0.001s]
---   Step: 6                               Q.E.D. [0.000s]
---   Step: 7                               Q.E.D. [0.030s]
---   Step: 8                               Q.E.D. [0.000s]
---   Result:                               Q.E.D. [0.000s][0.001s]
--- [SBV: 0.032s, Solver: 0.035s, QC: 0.000s, Total: 0.068s, Decisions: 9]
+-- Lemma: dvdEvenWhenOdd
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Step: 7                               Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] dvdEvenWhenOdd :: Ɐd ∷ Integer → Ɐa ∷ Integer → Bool
 dvdEvenWhenOdd :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> SBool))
 dvdEvenWhenOdd = calc "dvdEvenWhenOdd"
@@ -308,7 +307,6 @@ dvdEvenWhenOdd = calc "dvdEvenWhenOdd"
                             =: d `dvd` a
 
                             -- Done!
-                            =: sTrue
                             =: qed
 
 -- | \(d \mid a \land d \mid b \implies d \mid (a + b)\)
@@ -393,7 +391,7 @@ gcdDivides = do
 
    dAbs <- recall "dvdAbs" dvdAbs
 
-   -- Helper about divisibility. If @x | b@ and @x | a%b@, then @x | a@.
+   -- Helper about divisibility. If x|b and x| a%b, then x|a.
    helper <- calc "helper"
                   (\(Forall @"a" a) (Forall @"b" b) (Forall @"x" x) ->
                            b ./= 0 .&& x `dvd` b .&& x `dvd` (a `sEMod` b)
@@ -466,7 +464,7 @@ gcdMaximal = do
                  (\(Forall @"x" x) (Forall @"y" y) -> y ./= 0 .=> x .== (x `sEDiv` y) * y + x `sEMod` y)
                  []
 
-   -- Helper: If @x | a@, @x | b@ then @x | a%b@.
+   -- Helper: If x|a, x|b then x|a%b.
    helper <- calc "helper"
                   (\(Forall @"a" a) (Forall @"b" b) (Forall @"x" x) ->
                            x ./= 0 .&& b ./= 0 .&& x `dvd` a .&& x `dvd` b
@@ -620,32 +618,31 @@ gcdAdd = do
                            g2 = gcd (a + b) b
                     in sTrue
 
-                    -- First use the divides property to conclude that @g1@ divides @a@ and @b@
+                    -- First use the divides property to conclude that g1 divides a and b
                     ?? divides `at` (Inst @"a" a, Inst @"b" b)
                     =: g1 `dvd` a .&& g1 `dvd` b
 
-                    -- Same for @g2@ for @a+b@ and @b@
+                    -- Same for g2 for a+b and b
                     ?? divides `at` (Inst @"a" (a + b), Inst @"b" b)
                     =: g2 `dvd` (a+b) .&& g2 `dvd` b
 
-                    -- Use dSum1 to show @g1@ divides @a+b@
-                    -- Now show that @g1@ divides @a+b@ and @g2@ divides @a@
+                    -- Use dSum1 to show g1 divides a+b
                     ?? dSum1 `at` (Inst @"d" g1, Inst @"a" a, Inst @"b" b)
                     =: g1 `dvd` (a+b)
 
-                    -- Similarly, use dSum2 to show @g2@ divides @a@
+                    -- Similarly, use dSum2 to show g2 divides a
                     ?? dSum2 `at` (Inst @"d" g2, Inst @"a" a, Inst @"b" b)
                     =:  g2 `dvd` a
 
-                    -- Now use largest to show @g1 >= g2@
+                    -- Now use largest to show g1 >= g2
                     ?? largest `at` (Inst @"a" a,     Inst @"b" b, Inst @"x" g2)
                     =: g1 .>= g2
 
-                    -- But again via largest, we can show @g2 >= g1@
+                    -- But again via largest, we can show g2 >= g1
                     ?? largest `at` (Inst @"a" (a+b), Inst @"b" b, Inst @"x" g1)
                     =: g2 .>= g1
 
-                    -- Finally conclude @g1 = g2@ since both are greater-than-equal to each other:
+                    -- Finally conclude g1 = g2, since both are greater-than-equal to each other:
                     =: g1 .== g2
                     =: qed
 
@@ -721,35 +718,35 @@ gcdOddEven = do
                            g2 = gcd (2*a+1) b
                    in sTrue
 
-                   -- First use the divides property to conclude that @g1@ divides @2*a+1@ and @2*b@
+                   -- First use the divides property to conclude that g1 divides both 2*a+1 and 2*b
                    ?? divides `at` (Inst @"a" (2*a+1), Inst @"b" (2*b))
                    =: g1 `dvd` (2*a+1) .&& g1 `dvd` (2*b)
 
-                   -- Same for @g2@ for @2*a+1@ and @b@
+                   -- Same for g2, for 2*a+1 and b
                    ?? divides `at` (Inst @"a" (2*a+1), Inst @"b" b)
                    =: g2 `dvd` (2*a+1) .&& g2 `dvd` b
 
-                   -- By arithmetic, @g2@ divides @2*b@
+                   -- By arithmetic, g2 divides 2*b
                    ?? dMul `at` (Inst @"d" g2, Inst @"a" b, Inst @"k" 2)
                    =: g2 `dvd` (2*b)
 
-                   -- Observe that @g1@ must be odd
+                   -- Observe that g1 must be odd
                    ?? dOddThenOdd `at` (Inst @"d" g1, Inst @"a" a)
                    =: isOdd g1
 
-                   -- Conclude that @g1@ must divide @b@
+                   -- Conclude that g1 must divide b
                    ?? dEvenWhenOdd `at` (Inst @"d" g1, Inst @"a" b)
                    =: g1 `dvd` b
 
-                   -- Now use largest to show @g1 >= g2@
+                   -- Now use largest to show g1 >= g2
                    ?? largest `at` (Inst @"a" (2*a+1),  Inst @"b" (2*b), Inst @"x" g2)
                    =: g1 .>= g2
 
-                   -- But again via largest, we can show @g2 >= g1@
+                   -- But again via largest, we can show g2 >= g1
                    ?? largest `at` (Inst @"a" (2*a+1), Inst @"b" b, Inst @"x" g1)
                    =: g2 .>= g1
 
-                   -- Finally conclude @g1 = g2@ since both are greater-than-equal to each other:
+                   -- Finally conclude g1 = g2 since both are greater-than-equal to each other:
                    =: g1 .== g2
                    =: qed
 
