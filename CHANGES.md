@@ -29,7 +29,7 @@
     reasoning steps. See gcdAdd in Documentation.SBV.Examples.TP.GCD for an example.
 
   * Added Documentation.SBV.Examples.TP.GCD, which proves correctness and several other properties of Euclidian
-    GCD algorithm.
+    GCD algorithm. We also prove subtraction based and the so-called binary-GCD algorithms correct.
 
 ### Version 12.1, 2025-07-11
 
