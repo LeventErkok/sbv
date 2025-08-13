@@ -22,6 +22,7 @@ import Prelude hiding (gcd)
 
 import Data.SBV
 import Data.SBV.TP
+import Data.SBV.Tuple
 
 #ifdef DOCTEST
 -- $setup
@@ -878,13 +879,15 @@ gcdBinEquiv = do
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDBinEquiv"
                   (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCDBin a b .== nGCD a b)
-                  (\a b -> a + b) $
+                  (\a b -> tuple (a, b)) $
                   \ih a b -> [a .>= 0, b .>= 0]
                           |- nGCDBin a b
                           =: cases [ b .== 0               ==> trivial
                                    , isEven a .&& isEven b ==> 2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2)
                                                             ?? ih `at` (Inst @"a" (a `sEDiv` 2), Inst @"b" (b `sEDiv` 2))
-                                                            =: 2 * gcd (a `sEDiv` 2) (b `sEDiv` 2)
+                                                            =: 2 * nGCD (a `sEDiv` 2) (b `sEDiv` 2)
+                                                            ?? a .== 2 * a `sEDiv` 2
+                                                            ?? b .== 2 * b `sEDiv` 2
                                                             ?? gEvenEven `at` (Inst @"a" (a `sEDiv` 2), Inst @"b" (b `sEDiv` 2))
                                                             =: nGCD a b
                                                             =: qed
@@ -892,6 +895,7 @@ gcdBinEquiv = do
                                                             ?? ih `at` (Inst @"a" a, Inst @"b" (b `sEDiv` 2))
                                                             =: nGCD a (b `sEDiv` 2)
                                                             ?? a .== 2 * ((a-1) `sEDiv` 2) + 1
+                                                            ?? b .== 2 * b `sEDiv` 2
                                                             ?? gOddEven `at` (Inst @"a" ((a-1) `sEDiv` 2), Inst @"b" (b `sEDiv` 2))
                                                             =: nGCD a b
                                                             =: qed
