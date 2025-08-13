@@ -603,6 +603,33 @@ gcdEvenEven = do
                    =: 2 * gcd a b
                    =: qed
 
+-- | \(\gcd\, 2a+1\, 2b = \gcd\,2a+1\, b\)
+--
+-- >>> runTP gcdOddEven
+-- TODO
+gcdOddEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
+gcdOddEven = do
+
+   nGCDOddEven<- sInduct "nGCDOddEven"
+                         (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD (2*a+1) (2*b) .== nGCD (2*a+1) b)
+                         (\_a b -> b) $
+                         \ih a b -> [a .>= 0, b .>= 0]
+                                 |- nGCD (2*a+1) (2*b)
+                                 ?? ih
+                                 ?? sorry
+                                 =: nGCD (2*a+1) b
+                                 =: qed
+
+   calc "gcdOddEven"
+        (\(Forall a) (Forall b) -> gcd (2*a+1) (2*b) .== gcd (2*a+1) b) $
+        \a b -> [] |- gcd (2*a+1) (2*b)
+                   =: nGCD (abs (2*a+1)) (abs (2*b))
+                   =: nGCD (2 * abs a + 1) (2 * abs b)
+                   ?? nGCDOddEven `at` (Inst @"a" (abs a), Inst @"b" (abs b))
+                   =: nGCD (2 * abs a + 1) (abs b)
+                   =: gcd (2*a+1) b
+                   =: qed
+
 -- * GCD via subtraction
 
 -- | @nGCDSub@ is the original verision of Euclid, which uses subtraction instead of modulus. This is the version that
@@ -726,6 +753,7 @@ gcdBin a b = nGCDBin (abs a) (abs b)
 gcdBinEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdBinEquiv = do
    gEvenEven <- recall "gcdEvenEven" gcdEvenEven
+   gOddEven  <- recall "gcdOddEven"  gcdOddEven
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDBinEquiv"
@@ -742,6 +770,7 @@ gcdBinEquiv = do
                                                             =: qed
                                    , isOdd a  .&& isEven b ==> nGCDBin a (b `sEDiv` 2)
                                                             ?? ih `at` (Inst @"a" a, Inst @"b" (b `sEDiv` 2))
+                                                            ?? gOddEven
                                                             ?? sorry
                                                             =: nGCD a b
                                                             =: qed
