@@ -265,7 +265,6 @@ dvdOddThenOdd = calc "dvdOddThenOdd"
 -- ==== __Proof__
 -- >>> runTP dvdEvenWhenOdd
 -- Lemma: dvdEvenWhenOdd
--- Lemma: dvdEvenWhenOdd
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
@@ -703,7 +702,22 @@ gcdEvenEven = do
 -- | \(\gcd\, 2a+1\, 2b = \gcd\,2a+1\, b\)
 --
 -- >>> runTP gcdOddEven
--- TODO
+-- Lemma: gcdDivides                       Q.E.D.
+-- Lemma: gcdLargest                       Q.E.D.
+-- Lemma: dvdMul                           Q.E.D.
+-- Lemma: dvdOddThenOdd                    Q.E.D.
+-- Lemma: dvdEvenWhenOdd                   Q.E.D.
+-- Lemma: gcdOddEven
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Step: 7                               Q.E.D.
+--   Step: 8                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] gcdOddEven :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdOddEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdOddEven = do
 
@@ -871,12 +885,48 @@ gcdBin a b = nGCDBin (abs a) (abs b)
 --
 -- ==== __Proof__
 -- >>> runTP gcdBinEquiv
--- TODO
+-- Lemma: gcdEvenEven                      Q.E.D.
+-- Lemma: gcdOddEven                       Q.E.D.
+-- Lemma: gcdAdd                           Q.E.D.
+-- Lemma: commutative                      Q.E.D.
+-- Inductive lemma (strong): nGCDBinEquiv
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (5 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.3.1                         Q.E.D.
+--     Step: 1.3.2                         Q.E.D.
+--     Step: 1.3.3                         Q.E.D.
+--     Step: 1.4.1                         Q.E.D.
+--     Step: 1.4.2                         Q.E.D.
+--     Step: 1.4.3                         Q.E.D.
+--     Step: 1.5 (3 way case split)
+--       Step: 1.5.1                       Q.E.D.
+--       Step: 1.5.2.1                     Q.E.D.
+--       Step: 1.5.2.2                     Q.E.D.
+--       Step: 1.5.2.3                     Q.E.D.
+--       Step: 1.5.2.4                     Q.E.D.
+--       Step: 1.5.2.5                     Q.E.D.
+--       Step: 1.5.2.6                     Q.E.D.
+--       Step: 1.5.3.1                     Q.E.D.
+--       Step: 1.5.3.2                     Q.E.D.
+--       Step: 1.5.3.3                     Q.E.D.
+--       Step: 1.5.3.4                     Q.E.D.
+--       Step: 1.5.Completeness            Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: gcdBinEquiv
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] gcdBinEquiv :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdBinEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdBinEquiv = do
    gEvenEven <- recall "gcdEvenEven" gcdEvenEven
    gOddEven  <- recall "gcdOddEven"  gcdOddEven
    gAdd      <- recall "gcdAdd"      gcdAdd
+   comm      <- recall "commutative" commutative
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDBinEquiv"
@@ -907,7 +957,11 @@ gcdBinEquiv = do
                                                                                             =: nGCDBin a (b - a)
                                                                                             ?? ih `at` (Inst @"a" a, Inst @"b" (b - a))
                                                                                             =: nGCD a (b - a)
-                                                                                            ?? sorry
+                                                                                            ?? comm `at` (Inst @"a" a, Inst @"b" (b - a))
+                                                                                            =: nGCD (b - a) a
+                                                                                            ?? gAdd `at` (Inst @"a" (b - a), Inst @"b" a)
+                                                                                            =: nGCD b a
+                                                                                            ?? comm `at` (Inst @"a" b, Inst @"b" a)
                                                                                             =: nGCD a b
                                                                                             =: qed
                                                                      , a .>  b             ==> nGCDBin a b
