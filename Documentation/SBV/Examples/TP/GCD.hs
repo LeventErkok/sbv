@@ -846,7 +846,8 @@ gcdSubEquiv = do
 
 -- | @nGCDBin@ is the binary GCD algorithm that works on non-negative numbers.
 nGCDBin :: SInteger -> SInteger -> SInteger
-nGCDBin = smtFunction "nGCDBin" $ \a b -> ite (b .== 0) a
+nGCDBin = smtFunction "nGCDBin" $ \a b -> ite (a .== 0)               b
+                                        $ ite (b .== 0)               a
                                         $ ite (isEven a .&& isEven b) (2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2))
                                         $ ite (isOdd  a .&& isEven b) (    nGCDBin a             (b `sEDiv` 2))
                                         $ ite (a .<= b)               (    nGCDBin a             (b - a))
@@ -882,7 +883,8 @@ gcdBinEquiv = do
                   (\a b -> tuple (a, b)) $
                   \ih a b -> [a .>= 0, b .>= 0]
                           |- nGCDBin a b
-                          =: cases [ b .== 0               ==> trivial
+                          =: cases [ a .== 0               ==> trivial
+                                   , b .== 0               ==> trivial
                                    , isEven a .&& isEven b ==> 2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2)
                                                             ?? ih `at` (Inst @"a" (a `sEDiv` 2), Inst @"b" (b `sEDiv` 2))
                                                             =: 2 * nGCD (a `sEDiv` 2) (b `sEDiv` 2)
@@ -899,14 +901,22 @@ gcdBinEquiv = do
                                                             ?? gOddEven `at` (Inst @"a" ((a-1) `sEDiv` 2), Inst @"b" (b `sEDiv` 2))
                                                             =: nGCD a b
                                                             =: qed
-                                   , a .<= b               ==> nGCDBin a b
-                                                            ?? sorry
-                                                            =: nGCD a b
-                                                            =: qed
-                                   , a .>  b               ==> nGCDBin a b
-                                                            ?? sorry
-                                                            =: nGCD a b
-                                                            =: qed
+                                   , isOdd b               ==> cases [ a .== 0             ==> trivial
+                                                                     , a ./= 0 .&& a .<= b ==> nGCDBin a b
+                                                                                            =: nGCDBin a (b - a)
+                                                                                            ?? ih `at` (Inst @"a" a, Inst @"b" (b - a))
+                                                                                            =: nGCD a (b - a)
+                                                                                            ?? sorry
+                                                                                            =: nGCD a b
+                                                                                            =: qed
+                                                                     , a .>  b             ==> nGCDBin a b
+                                                                                            =: nGCDBin (a - b) b
+                                                                                            ?? ih `at` (Inst @"a" (a - b), Inst @"b" b)
+                                                                                            =: nGCD (a - b) b
+                                                                                            ?? sorry
+                                                                                            =: nGCD a b
+                                                                                            =: qed
+                                                                     ]
                                    ]
 
    -- Now prove over all integers
