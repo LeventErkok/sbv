@@ -212,6 +212,105 @@ dvdAbs = do
          (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` b .== a `dvd` (abs b))
          [proofOf l2r, proofOf r2l]
 
+-- | \(d \mid a \implies d \mid k*a\)
+--
+-- ==== __Proof__
+-- >>> runTP dvdMul
+-- Lemma: dvdMul
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] dvdMul :: Ɐd ∷ Integer → Ɐa ∷ Integer → Ɐk ∷ Integer → Bool
+dvdMul :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> Forall "k" Integer -> SBool))
+dvdMul = calc "dvdMul"
+              (\(Forall d) (Forall a) (Forall k) -> d `dvd` a .=> d `dvd` (k*a)) $
+              \d a k -> [d `dvd` a]
+                     |- cases [ d .== 0 ==> d `dvd` (k*a)
+                                         ?? a .== 0
+                                         =: sTrue
+                                         =: qed
+                              , d ./= 0 ==> d `dvd` (k*a)
+                                         ?? a .== d * a `sEDiv` d
+                                         =: d `dvd` (k * d * a `sEDiv` d)
+                                         =: qed
+                              ]
+
+-- | \(d \mid (2a + 1) \implies \mathrm{isOdd}(d)\)
+--
+-- ==== __Proof__
+-- >>> runTP dvdOddThenOdd
+-- Lemma: dvdOddThenOdd
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] dvdOddThenOdd :: Ɐd ∷ Integer → Ɐa ∷ Integer → Bool
+dvdOddThenOdd :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> SBool))
+dvdOddThenOdd = calc "dvdOddThenOdd"
+                     (\(Forall d) (Forall a) -> d `dvd` (2*a+1) .=> isOdd d) $
+                     \d a -> [d `dvd` (2*a+1)]
+                          |- cases [ isOdd  d ==> trivial
+                                   , isEven d ==> (2 * (d `sEDiv` 2)) `dvd` (2*a+1)
+                                               =: 2 `dvd` (2*a+1)
+                                               =: contradiction
+                                   ]
+
+-- | \(\mathrm{isOdd}(d) \land d \mid 2a \implies d \mid a\)
+--
+-- ==== __Proof__
+-- >>> runTP dvdEvenWhenOdd
+-- Lemma: dvdEvenWhenOdd
+--   Step: 1                               Q.E.D. [0.003s]
+--   Step: 2                               Q.E.D. [0.001s]
+--   Step: 3                               Q.E.D. [0.000s]
+--   Step: 4                               Q.E.D. [0.000s]
+--   Step: 5                               Q.E.D. [0.001s]
+--   Step: 6                               Q.E.D. [0.000s]
+--   Step: 7                               Q.E.D. [0.030s]
+--   Step: 8                               Q.E.D. [0.000s]
+--   Result:                               Q.E.D. [0.000s][0.001s]
+-- [SBV: 0.032s, Solver: 0.035s, QC: 0.000s, Total: 0.068s, Decisions: 9]
+-- [Proven] dvdEvenWhenOdd :: Ɐd ∷ Integer → Ɐa ∷ Integer → Bool
+dvdEvenWhenOdd :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> SBool))
+dvdEvenWhenOdd = calc "dvdEvenWhenOdd"
+                      (\(Forall d) (Forall a) -> isOdd d .&& d `dvd` (2*a) .=> d `dvd` a) $
+                      \d a ->  [isOdd d, d `dvd` (2*a)]
+                           |-> let t = (d - 1) `sEDiv` 2
+                                   m = (2*a)   `sEDiv` d
+                            in sTrue
+
+                            -- Observe that d = 2t+1 and 2a = dm
+                            =: d .== 2*t + 1 .&& 2*a .== d*m
+
+                            -- So, 2a == (2t+1)m holds
+                            =: 2*a .== (2*t+1) * m
+
+                            -- Arithmetic gives us
+                            =: 2*a .== 2*t*m + m .&& 2*(a-t*m) .== m
+
+                            -- So, we now now m is even
+                            =: 2 `sDivides` m
+
+                            -- Give that divisor a name:
+                            =: let n = m `sEDiv` 2
+
+                            -- It follows that 2a = d(2n) = 2(dn)
+                            in 2*a .== d * (2 * n) .&& 2 * a .== 2 * (d * n)
+
+                            -- From which we can conclude a = dn
+                            =: a .== d * n
+
+                            -- Thus we can deduce d must divide a
+                            =: d `dvd` a
+
+                            -- Done!
+                            =: sTrue
+                            =: qed
+
 -- | \(d \mid a \land d \mid b \implies d \mid (a + b)\)
 --
 -- ==== __Proof__
@@ -610,33 +709,49 @@ gcdEvenEven = do
 gcdOddEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdOddEven = do
 
-   nGCDOddEven<- sInduct "nGCDOddEven"
-                         (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD (2*a+1) (2*b) .== nGCD (2*a+1) b)
-                         (\_a b -> b) $
-                         \ih a b -> [a .>= 0, b .>= 0]
-                                 |- nGCD (2*a+1) (2*b)
-                                 ?? ih
-                                 ?? sorry
-                                 =: nGCD (2*a+1) b
-                                 =: qed
+   divides      <- recall "gcdDivides"     gcdDivides
+   largest      <- recall "gcdLargest"     gcdLargest
+   dMul         <- recall "dvdMul"         dvdMul
+   dOddThenOdd  <- recall "dvdOddThenOdd"  dvdOddThenOdd
+   dEvenWhenOdd <- recall "dvdEvenWhenOdd" dvdEvenWhenOdd
 
    calc "gcdOddEven"
         (\(Forall a) (Forall b) -> gcd (2*a+1) (2*b) .== gcd (2*a+1) b) $
-        \a b -> [] |- gcd (2*a+1) (2*b)
-                   =: cases [a .>= 0 ==> nGCD (abs (2*a+1)) (abs (2*b))
-                                      =: nGCD (2 * abs a + 1) (2 * abs b)
-                                      ?? nGCDOddEven `at` (Inst @"a" (abs a), Inst @"b" (abs b))
-                                      =: nGCD (2 * abs a + 1) (abs b)
-                                      =: gcd (2*a+1) b
-                                      =: qed
-                            , a .< 0 ==> nGCD (abs (2*a+1)) (abs (2*b))
-                                      ?? abs (2*a+1) .== 2*abs (-a-1)+1
-                                      =: nGCD (2 * abs (-a-1) + 1) (2 * abs b)
-                                      ?? nGCDOddEven `at` (Inst @"a" (abs (-a-1)), Inst @"b" (abs b))
-                                      =: nGCD (2 * abs (-a-1) + 1) (abs b)
-                                      =: qed
+        \a b -> [] |-> let g1 = gcd (2*a+1) (2*b)
+                           g2 = gcd (2*a+1) b
+                   in sTrue
 
-                            ]
+                   -- First use the divides property to conclude that @g1@ divides @2*a+1@ and @2*b@
+                   ?? divides `at` (Inst @"a" (2*a+1), Inst @"b" (2*b))
+                   =: g1 `dvd` (2*a+1) .&& g1 `dvd` (2*b)
+
+                   -- Same for @g2@ for @2*a+1@ and @b@
+                   ?? divides `at` (Inst @"a" (2*a+1), Inst @"b" b)
+                   =: g2 `dvd` (2*a+1) .&& g2 `dvd` b
+
+                   -- By arithmetic, @g2@ divides @2*b@
+                   ?? dMul `at` (Inst @"d" g2, Inst @"a" b, Inst @"k" 2)
+                   =: g2 `dvd` (2*b)
+
+                   -- Observe that @g1@ must be odd
+                   ?? dOddThenOdd `at` (Inst @"d" g1, Inst @"a" a)
+                   =: isOdd g1
+
+                   -- Conclude that @g1@ must divide @b@
+                   ?? dEvenWhenOdd `at` (Inst @"d" g1, Inst @"a" b)
+                   =: g1 `dvd` b
+
+                   -- Now use largest to show @g1 >= g2@
+                   ?? largest `at` (Inst @"a" (2*a+1),  Inst @"b" (2*b), Inst @"x" g2)
+                   =: g1 .>= g2
+
+                   -- But again via largest, we can show @g2 >= g1@
+                   ?? largest `at` (Inst @"a" (2*a+1), Inst @"b" b, Inst @"x" g1)
+                   =: g2 .>= g1
+
+                   -- Finally conclude @g1 = g2@ since both are greater-than-equal to each other:
+                   =: g1 .== g2
+                   =: qed
 
 -- * GCD via subtraction
 
@@ -773,13 +888,14 @@ gcdBinEquiv = do
                                    , isEven a .&& isEven b ==> 2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2)
                                                             ?? ih `at` (Inst @"a" (a `sEDiv` 2), Inst @"b" (b `sEDiv` 2))
                                                             =: 2 * gcd (a `sEDiv` 2) (b `sEDiv` 2)
-                                                            ?? gEvenEven
+                                                            ?? gEvenEven `at` (Inst @"a" (a `sEDiv` 2), Inst @"b" (b `sEDiv` 2))
                                                             =: nGCD a b
                                                             =: qed
                                    , isOdd a  .&& isEven b ==> nGCDBin a (b `sEDiv` 2)
                                                             ?? ih `at` (Inst @"a" a, Inst @"b" (b `sEDiv` 2))
-                                                            ?? gOddEven
-                                                            ?? sorry
+                                                            =: nGCD a (b `sEDiv` 2)
+                                                            ?? a .== 2 * ((a-1) `sEDiv` 2) + 1
+                                                            ?? gOddEven `at` (Inst @"a" ((a-1) `sEDiv` 2), Inst @"b" (b `sEDiv` 2))
                                                             =: nGCD a b
                                                             =: qed
                                    , a .<= b               ==> nGCDBin a b
