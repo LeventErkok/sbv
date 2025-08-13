@@ -6,7 +6,12 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proving Euclidian GCD algorithm correct.
+-- We define three different versions of the GCD algorithm: (1) Regular
+-- version using the modulus operator, (2) the more basic version using
+-- subtraction, and (3) the so called binary GCD. We prove that the modulus
+-- based algorithm correct, i.e., that it calculates the greatest-common-divisor
+-- of its arguments. We then prove that the other two variants are equivalent
+-- to this version, thus establishing their correctness as well.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP              #-}
@@ -165,6 +170,16 @@ negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b
 zeroGCD :: TP (Proof (Forall "a" Integer -> SBool))
 zeroGCD = lemma "negGCD" (\(Forall a) -> gcd a 0 .== gcd 0 a .&& gcd 0 a .== abs a .&& gcd 0 0 .== 0) []
 
+-- * Even and odd
+
+-- | Is the given integer even?
+isEven :: SInteger -> SBool
+isEven = (2 `sDivides`)
+
+-- | Is the given integer odd?
+isOdd :: SInteger -> SBool
+isOdd  = sNot . isEven
+
 -- * Divisibility
 
 -- | Divides relation. By definition we @0@ only divides @0@. (But every number divides @0@).
@@ -213,7 +228,7 @@ dvdAbs = do
          (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` b .== a `dvd` (abs b))
          [proofOf l2r, proofOf r2l]
 
--- | \(d \mid a \implies d \mid k*a\)
+-- | \(d \mid a \implies d \mid ka\)
 --
 -- ==== __Proof__
 -- >>> runTP dvdMul
@@ -586,6 +601,8 @@ gcdLargest = do
                =: sTrue
                =: qed
 
+-- * Other GCD Facts
+
 -- | \(\gcd\, a\, b = \gcd\, (a + b)\, b\)
 --
 -- ==== __Proof__
@@ -646,8 +663,9 @@ gcdAdd = do
                     =: g1 .== g2
                     =: qed
 
--- | \(\gcd\, 2a\, 2b = 2 \gcd\,a\, b\)
+-- | \(\gcd\, (2a)\, (2b) = 2 (\gcd\,a\, b)\)
 --
+-- ==== __Proof__
 -- >>> runTP gcdEvenEven
 -- Lemma: modEE                            Q.E.D.
 -- Inductive lemma (strong): nGCDEvenEven
@@ -699,8 +717,9 @@ gcdEvenEven = do
                    =: 2 * gcd a b
                    =: qed
 
--- | \(\gcd\, 2a+1\, 2b = \gcd\,2a+1\, b\)
+-- | \(\gcd\, (2a+1)\, (2b) = \gcd\,(2a+1)\, b\)
 --
+-- ==== __Proof__
 -- >>> runTP gcdOddEven
 -- Lemma: gcdDivides                       Q.E.D.
 -- Lemma: gcdLargest                       Q.E.D.
@@ -866,14 +885,6 @@ nGCDBin = smtFunction "nGCDBin" $ \a b -> ite (a .== 0)               b
                                         $ ite (isOdd  a .&& isEven b) (    nGCDBin a             (b `sEDiv` 2))
                                         $ ite (a .<= b)               (    nGCDBin a             (b - a))
                                                                       (    nGCDBin (a - b)       b)
--- | Is the given integer even?
-isEven :: SInteger -> SBool
-isEven = (2 `sDivides`)
-
--- | Is the given integer odd?
-isOdd :: SInteger -> SBool
-isOdd  = sNot . isEven
-
 -- | Generalized version that works on arbitrary integers.
 gcdBin :: SInteger -> SInteger -> SInteger
 gcdBin a b = nGCDBin (abs a) (abs b)
