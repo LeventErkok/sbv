@@ -630,7 +630,7 @@ gcdOddEven = do
                                       =: gcd (2*a+1) b
                                       =: qed
                             , a .< 0 ==> nGCD (abs (2*a+1)) (abs (2*b))
-                                      ?? abs (2*a+1) .== 2*abs(-a-1)+1
+                                      ?? abs (2*a+1) .== 2*abs (-a-1)+1
                                       =: nGCD (2 * abs (-a-1) + 1) (2 * abs b)
                                       ?? nGCDOddEven `at` (Inst @"a" (abs (-a-1)), Inst @"b" (abs b))
                                       =: nGCD (2 * abs (-a-1) + 1) (abs b)
