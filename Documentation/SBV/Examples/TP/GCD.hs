@@ -623,12 +623,20 @@ gcdOddEven = do
    calc "gcdOddEven"
         (\(Forall a) (Forall b) -> gcd (2*a+1) (2*b) .== gcd (2*a+1) b) $
         \a b -> [] |- gcd (2*a+1) (2*b)
-                   =: nGCD (abs (2*a+1)) (abs (2*b))
-                   =: nGCD (2 * abs a + 1) (2 * abs b)
-                   ?? nGCDOddEven `at` (Inst @"a" (abs a), Inst @"b" (abs b))
-                   =: nGCD (2 * abs a + 1) (abs b)
-                   =: gcd (2*a+1) b
-                   =: qed
+                   =: cases [a .>= 0 ==> nGCD (abs (2*a+1)) (abs (2*b))
+                                      =: nGCD (2 * abs a + 1) (2 * abs b)
+                                      ?? nGCDOddEven `at` (Inst @"a" (abs a), Inst @"b" (abs b))
+                                      =: nGCD (2 * abs a + 1) (abs b)
+                                      =: gcd (2*a+1) b
+                                      =: qed
+                            , a .< 0 ==> nGCD (abs (2*a+1)) (abs (2*b))
+                                      ?? abs (2*a+1) .== 2*abs(-a-1)+1
+                                      =: nGCD (2 * abs (-a-1) + 1) (2 * abs b)
+                                      ?? nGCDOddEven `at` (Inst @"a" (abs (-a-1)), Inst @"b" (abs b))
+                                      =: nGCD (2 * abs (-a-1) + 1) (abs b)
+                                      =: qed
+
+                            ]
 
 -- * GCD via subtraction
 
