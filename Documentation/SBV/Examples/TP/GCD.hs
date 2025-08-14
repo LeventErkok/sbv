@@ -211,21 +211,21 @@ a `dvd` b = ite (a .== 0) (b .== 0) (b `sEMod` a .== 0)
 dvdAbs :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 dvdAbs = do
    l2r <- calcWith cvc5 "dvdAbs_l2r"
-                   (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` (abs b) .=> a `dvd` b) $
-                   \a b -> [a `dvd` (abs b)]
+                   (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` abs b .=> a `dvd` b) $
+                   \a b -> [a `dvd` abs b]
                         |- cases [ b .<  0 ==> sTrue =: qed
                                  , b .>= 0 ==> sTrue =: qed
                                  ]
 
    r2l <- calcWith cvc5 "dvdAbs_r2l"
-                   (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` b .=> a `dvd` (abs b)) $
+                   (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` b .=> a `dvd` abs b) $
                    \a b -> [a `dvd` b]
                         |- cases [ b .<  0 ==> sTrue =: qed
                                  , b .>= 0 ==> sTrue =: qed
                                  ]
 
    lemma "dvdAbs"
-         (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` b .== a `dvd` (abs b))
+         (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` b .== a `dvd` abs b)
          [proofOf l2r, proofOf r2l]
 
 -- | \(d \mid a \implies d \mid ka\)
@@ -994,3 +994,6 @@ gcdBinEquiv = do
                     =: nGCDBin (abs a) (abs b)
                     =: gcdBin a b
                     =: qed
+
+{- HLint ignore gcdSubEquiv "Avoid lambda" -}
+{- HLint ignore gcdBinEquiv "Use curry"    -}
