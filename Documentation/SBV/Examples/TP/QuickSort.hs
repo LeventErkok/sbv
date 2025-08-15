@@ -136,9 +136,10 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --   Result:                                                   Q.E.D.
 -- Inductive lemma: partitionFstLT
 --   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2 (push llt down)                                   Q.E.D.
---   Step: 3                                                   Q.E.D.
+--   Step: 1 (unroll partition)                                Q.E.D.
+--   Step: 2 (push fst down, simplify)                         Q.E.D.
+--   Step: 3 (push llt down)                                   Q.E.D.
+--   Step: 4                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Inductive lemma: partitionSndGE
 --   Step: Base                                                Q.E.D.
@@ -196,6 +197,10 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     Step: 1.2.1                                             Q.E.D.
 --     Step: 1.2.2                                             Q.E.D.
 --     Step: 1.2.3                                             Q.E.D.
+--     Step: 1.2.4                                             Q.E.D.
+--     Step: 1.2.5                                             Q.E.D.
+--     Step: 1.2.6                                             Q.E.D.
+--     Step: 1.2.7                                             Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): sortIsNonDecreasing
 --   Step: Measure is non-negative                             Q.E.D.
@@ -370,13 +375,15 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   partitionFstLT <- inductWith cvc5 "partitionFstLT"
      (\(Forall l) (Forall pivot) -> llt pivot (fst (partition pivot l))) $
      \ih (a, as) pivot -> [] |- llt pivot (fst (partition pivot (a .: as)))
-                             =: llt pivot (ite (a .< pivot)
-                                               (a .: fst (partition pivot as))
-                                               (     fst (partition pivot as)))
+                             ?? "unroll partition"
+                             =: let (lo, hi) = untuple (partition pivot as)
+                             in llt pivot (fst (ite (a .< pivot)
+                                                    (tuple (a .: lo, hi))
+                                                    (tuple (lo, a .: hi))))
+                             ?? "push fst down, simplify"
+                             =: llt pivot (ite (a .< pivot) (a .: lo) lo)
                              ?? "push llt down"
-                             =: ite (a .< pivot)
-                                    (a .< pivot .&& llt pivot (fst (partition pivot as)))
-                                    (               llt pivot (fst (partition pivot as)))
+                             =: ite (a .< pivot) (llt pivot (a .: lo)) (llt pivot lo)
                              ?? ih
                              =: sTrue
                              =: qed
@@ -521,8 +528,14 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                 [nonDecreasing (x .: xs), llt pivot xs, nonDecreasing ys, lge pivot ys]
              |- nonDecreasing (x .: xs ++ [pivot] ++ ys)
              =: split xs trivial
-                      (\a as -> nonDecreasing (x .: a .: as ++ [pivot] ++ ys)
-                             =: x .<= a .&& nonDecreasing (a .: as ++ [pivot] ++ ys)
+                      (\a as -> nonDecreasing (x .: (a .: as) ++ [pivot] ++ ys)
+                             =: nonDecreasing (x .: a .: (as ++ [pivot] ++ ys))
+                             =: x .<= a .&& nonDecreasing (a .: (as ++ [pivot] ++ ys))
+                             =: nonDecreasing (a .: (as ++ [pivot] ++ ys))
+                             =: nonDecreasing ((a .: as) ++ [pivot] ++ ys)
+                             =: nonDecreasing (xs ++ [pivot] ++ ys)
+                             -- This hint shouldn't be necessary, but it makes the proof go faster!
+                             ?? nonDecreasing xs
                              ?? ih
                              =: sTrue
                              =: qed)
