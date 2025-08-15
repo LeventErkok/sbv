@@ -176,7 +176,7 @@ tailsLength =
 -- tail. So, we slightly modify it to fit the standard definition. (NB. z3 is finicky on this
 -- problem, while cvc5 works much better.)
 --
--- >>> runTP cvc5 $ tailsAppend @Integer
+-- >>> runTPWith cvc5 $ tailsAppend @Integer
 -- Inductive lemma: base case
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
