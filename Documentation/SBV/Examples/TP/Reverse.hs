@@ -36,6 +36,7 @@ import qualified Data.SBV.TP.List as TP
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XTypeApplications
+-- >>> import Data.SBV.TP
 #endif
 
 -- * Reversing with no auxiliaries
@@ -53,7 +54,7 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 
 -- | Correctness the function 'rev'. We have:
 --
--- >>> correctness @Integer
+-- >>> runTP $ correctness @Integer
 -- Inductive lemma: revLen
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -115,14 +116,14 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --       Step: 1.2.2.14                    Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] revCorrect :: Ɐxs ∷ [Integer] → Bool
-correctness :: forall a. SymVal a => IO (Proof (Forall "xs" [a] -> SBool))
-correctness = runTP $ do
+correctness :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
+correctness = do
 
-  -- Import a few helpers from "Data.SBV.TP.List"
-  revLen  <- TP.revLen  @a
-  revApp  <- TP.revApp  @a
-  revSnoc <- TP.revSnoc @a
-  revRev  <- TP.revRev  @a
+  -- Quietly import a few helpers from "Data.SBV.TP.List"
+  revLen  <- recall "revLen"  $ TP.revLen  @a
+  revApp  <- recall "revApp"  $ TP.revApp  @a
+  revSnoc <- recall "revSnoc" $ TP.revSnoc @a
+  revRev  <- recall "revRev"  $ TP.revRev  @a
 
   sInductWith cvc5 "revCorrect"
     (\(Forall xs) -> rev xs .== reverse xs)
@@ -132,6 +133,9 @@ correctness = runTP $ do
                           (\a as -> split as trivial
                                           (\_ _ -> head (rev as) .: rev (a .: rev (tail (rev as)))
                                                 ?? ih `at` Inst @"xs" as
+                                                =: head (reverse as) .: rev (a .: rev (tail (rev as)))
+                                                ?? ih `at` Inst @"xs" as
+                                                ?? "slow"
                                                 =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
                                                 ?? ih `at` Inst @"xs" (tail (rev as))
                                                 =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
@@ -154,7 +158,7 @@ correctness = runTP $ do
                                                 =: b .: reverse (a .: w)
                                                 ?? "substitute"
                                                 =: last as .: reverse (a .: init as)
-                                                ?? revApp `at` (Inst @"xs" (init as), Inst @"ys" [last as])
+                                                ?? revApp `at` (Inst @"xs" (a .: init as), Inst @"ys" [last as])
                                                 =: reverse (a .: init as ++ [last as])
                                                 =: reverse (a .: as)
                                                 =: reverse xs
