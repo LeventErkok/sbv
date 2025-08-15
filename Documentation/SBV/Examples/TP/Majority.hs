@@ -102,15 +102,15 @@ correctness = runTP $ do
 
   -- Helper definition
   let isMajority :: SBV a -> SList a -> SBool
-      isMajority e xs = length xs `sEDiv` 2 .< TP.count e xs
+      isMajority e xs = length xs `sEDiv` 2 .< howMany e xs
 
   -- First prove the generalized majority theorem
   majorityGeneral <-
      induct "majorityGeneral"
             (\(Forall @"xs" xs) (Forall @"i" i) (Forall @"e" (e :: SBV a)) (Forall @"c" c)
-                  -> i .>= 0 .&& (length xs + i) `sEDiv` 2 .< ite (e .== c) i 0 + TP.count e xs .=> majority c i xs .== e) $
+                  -> i .>= 0 .&& (length xs + i) `sEDiv` 2 .< ite (e .== c) i 0 + howMany e xs .=> majority c i xs .== e) $
             \ih (x, xs) i e c ->
-                   [i .>= 0, (length (x .: xs) + i) `sEDiv` 2 .< ite (e .== c) i 0 + TP.count e (x .: xs)]
+                   [i .>= 0, (length (x .: xs) + i) `sEDiv` 2 .< ite (e .== c) i 0 + howMany e (x .: xs)]
                 |- majority c i (x .: xs)
                 =: cases [ i .== 0 ==> majority x 1 xs
                                     ?? ih `at` (Inst @"i" 1, Inst @"e" e, Inst @"c" x)
