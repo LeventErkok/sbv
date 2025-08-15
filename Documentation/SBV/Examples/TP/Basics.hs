@@ -261,7 +261,7 @@ noTerminationChecks = runTP $ do
 -- Lemma: badRevLen
 -- *** Failed to prove badRevLen.
 -- Falsifiable. Counter-example:
---   xs = [14,11,14] :: [Integer]
+--   xs = [17,17,17] :: [Integer]
 badRevLen :: IO ()
 badRevLen = runTP $
    void $ lemma "badRevLen"
@@ -277,7 +277,7 @@ badRevLen = runTP $
 -- Lemma: badLengthProof
 -- *** Failed to prove badLengthProof.
 -- Falsifiable. Counter-example:
---   xs   = [15,11,13,16,27,42] :: [Integer]
+--   xs   = [12,15,20,24,33,42] :: [Integer]
 --   imp  =                  42 :: Integer
 --   spec =                   6 :: Integer
 badLengthProof :: IO ()
