@@ -55,45 +55,10 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 -- | Correctness the function 'rev'. We have:
 --
 -- >>> runTP $ correctness @Integer
--- Inductive lemma: revLen
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma: revApp
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma: revApp
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+-- Lemma: revLen                           Q.E.D.
+-- Lemma: revApp                           Q.E.D.
 -- Lemma: revSnoc                          Q.E.D.
--- Inductive lemma: revApp
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
--- Inductive lemma: revRev
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+-- Lemma: revRev                           Q.E.D.
 -- Inductive lemma (strong): revCorrect
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way full case split)
@@ -104,16 +69,17 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 --       Step: 1.2.2.2                     Q.E.D.
 --       Step: 1.2.2.3                     Q.E.D.
 --       Step: 1.2.2.4                     Q.E.D.
---       Step: 1.2.2.5 (simplify head)     Q.E.D.
---       Step: 1.2.2.6                     Q.E.D.
---       Step: 1.2.2.7 (simplify tail)     Q.E.D.
---       Step: 1.2.2.8                     Q.E.D.
+--       Step: 1.2.2.5                     Q.E.D.
+--       Step: 1.2.2.6 (simplify head)     Q.E.D.
+--       Step: 1.2.2.7                     Q.E.D.
+--       Step: 1.2.2.8 (simplify tail)     Q.E.D.
 --       Step: 1.2.2.9                     Q.E.D.
 --       Step: 1.2.2.10                    Q.E.D.
---       Step: 1.2.2.11 (substitute)       Q.E.D.
---       Step: 1.2.2.12                    Q.E.D.
+--       Step: 1.2.2.11                    Q.E.D.
+--       Step: 1.2.2.12 (substitute)       Q.E.D.
 --       Step: 1.2.2.13                    Q.E.D.
 --       Step: 1.2.2.14                    Q.E.D.
+--       Step: 1.2.2.15                    Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] revCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
@@ -135,7 +101,6 @@ correctness = do
                                                 ?? ih `at` Inst @"xs" as
                                                 =: head (reverse as) .: rev (a .: rev (tail (rev as)))
                                                 ?? ih `at` Inst @"xs" as
-                                                ?? "slow"
                                                 =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
                                                 ?? ih `at` Inst @"xs" (tail (rev as))
                                                 =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
