@@ -173,9 +173,10 @@ tailsLength =
 -- This property comes from Richard Bird's "Pearls of functional Algorithm Design" book, chapter 2.
 -- Note that it is not exactly as stated there, as the definition of @tail@ Bird uses is different
 -- than the standard Haskell function @tails@: Bird's version does not return the empty list as the
--- tail. So, we slightly modify it to fit the standard definition.
+-- tail. So, we slightly modify it to fit the standard definition. (NB. z3 is finicky on this
+-- problem, while cvc5 works much better.)
 --
--- >>> runTP $ tailsAppend @Integer
+-- >>> runTP cvc5 $ tailsAppend @Integer
 -- Inductive lemma: base case
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
