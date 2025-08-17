@@ -84,7 +84,7 @@ sqrt2IsIrrational = runTP $ do
                                            =: 4*k*k + 4*k + 1
                                            =: qed
 
-    -- Prove that if a perfect square is even, then it be the square of an even number. For z3, the above proof
+    -- Prove that if a perfect square is even, then it has to be the square of an even number. For z3, the above proof
     -- is enough to establish this.
     squareEvenImpliesEven <- lemma "squareEvenImpliesEven"
                                    (\(Forall @"a" a) -> even (sq a) .=> even a)
