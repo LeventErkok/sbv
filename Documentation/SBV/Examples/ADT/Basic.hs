@@ -32,4 +32,4 @@ mkSymbolicADT ''Expr
 --   s0 = Add (Num 0) (Num 0) :: Expr
 --   s1 =               Num 0 :: Expr
 test :: IO SatResult
-test = satWith z3{verbose=True} $ \x y -> x ./= (y :: SExpr) -- .&& y ./= literal (Num 0)
+test = satWith z3{verbose=True} $ \x y -> x ./= (y :: SExpr) .&& y ./= literal (Num 0)
