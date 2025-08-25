@@ -46,6 +46,7 @@ instance CrackNum CV where
                                KUnbounded {}  -> Nothing
                                KReal      {}  -> Nothing
                                KUserSort  {}  -> Nothing
+                               KADT       {}  -> Nothing
                                KChar      {}  -> Nothing
                                KString    {}  -> Nothing
                                KList      {}  -> Nothing

@@ -81,7 +81,6 @@ import Data.Typeable          (Typeable)
 
 import GHC.Generics (Generic, U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
 import qualified GHC.Generics  as G
-import qualified Data.Generics as G (Data(..))
 
 import System.Random
 
@@ -619,13 +618,8 @@ class (HasKind a, Typeable a, Arbitrary a) => SymVal a where
   -- Giving no instances is okay when defining an uninterpreted/enumerated sort, but otherwise you really
   -- want to define: literal, fromCV, mkSymVal
 
-  default mkSymVal :: (MonadSymbolic m, Read a, G.Data a) => VarContext -> Maybe String -> m (SBV a)
-  mkSymVal vc mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar vc k mbNm)
-    where -- NB.A call of the form
-          --      constructUKind (Proxy @a)
-          -- would be wrong here, as it would uninterpret the Proxy datatype!
-          -- So, we have to use the dreaded undefined value in this case.
-          k = constructUKind (undefined :: a)
+  default mkSymVal :: MonadSymbolic m => VarContext -> Maybe String -> m (SBV a)
+  mkSymVal vc mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar vc (kindOf (undefined :: a)) mbNm)
 
   default literal :: Show a => a -> SBV a
   literal x = let k  = kindOf x

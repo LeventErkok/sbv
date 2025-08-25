@@ -29,6 +29,7 @@ module Data.SBV.Client
   , getAvailableSolvers
   , mkSymbolicEnumeration
   , mkUninterpretedSort
+  , mkSymbolicADT
   ) where
 
 import Control.Monad (filterM)
@@ -241,3 +242,66 @@ ensureEmptyData nm = do
                                            , "    To create an uninterpreted sort, use an empty datatype declaration."
                                            ]
                   pure []
+
+-- | Create a symbolic ADT
+mkSymbolicADT :: TH.Name -> TH.Q [TH.Dec]
+mkSymbolicADT typeName = do
+  let bad m = do TH.reportError $ unlines [ "Data.SBV.mkUninterpretedSort: Invalid argument " ++ show typeName
+                                          , "    " ++ m
+                                          ]
+                 undefined :: TH.Q a
+
+      sh      = unmod . show
+      shi s i = sh s ++ "_" ++ show i
+
+      -- We'll just drop the modules to keep this simple
+      -- If you use multiple expressions named the same (coming from different modules), oh well.
+      unmod = reverse . takeWhile (/= '.') . reverse
+
+      typeCon  = TH.conT typeName
+      sTypeCon = TH.conT ''SBV `TH.appT` typeCon
+
+      getT (TH.ConT t)
+        | t == ''Integer = "Int"
+        | t == ''String  = "String"
+        | True           = sh t
+      getT t           = error $ "Type is too complicated for me: " ++ show t
+
+      mkF a t = a ++ " " ++ getT t
+
+      mkC (TH.NormalC nm []) = sh nm
+      mkC (TH.NormalC nm ps) = sh nm ++ " " ++ unwords ['(' : mkF (shi nm i) p ++ ")" | (i, (_, p)) <- zip [(1::Int)..] ps]
+      mkC (TH.RecC    nm ps) = sh nm ++ " " ++ unwords ['(' : mkF (sh a)     p ++ ")" | (a, _, p) <- ps]
+      mkC c                  = error $ "Constructor is too complicated for me: " ++ show c
+
+  cstrs <- do c <- TH.reify typeName
+              case c of
+                TH.TyConI d -> case d of
+                                 TH.DataD _ _ _ _ cons _ -> pure cons
+                                 _                       -> bad "The name given is not a datatype."
+                _           -> bad "The name given is not a datatype"
+
+  sType <- sTypeCon
+
+  let btname = TH.nameBase typeName
+      tname  = TH.mkName ('S' : btname)
+      tdecl  = TH.TySynD tname [] sType
+      st     = sh typeName
+
+      decl =  ("(declare-datatype " ++ st ++ " (")
+           :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
+           ++ ["))"]
+
+  decls <- [d|instance HasKind $typeCon where
+                kindOf _ = KADT st decl
+
+              instance SymVal $typeCon where
+                literal      = error "literal"
+                fromCV       = error "fromCV"
+                minMaxBound  = Nothing
+
+              instance Arbitrary $typeCon where
+                arbitrary   = undefined
+           |]
+
+  pure $ tdecl : decls

@@ -111,6 +111,7 @@ data CVal = CAlgReal  !AlgReal                -- ^ Algebraic real
           | CList     ![CVal]                 -- ^ List
           | CSet      !(RCSet CVal)           -- ^ Set. Can be regular or complemented.
           | CUserSort !(Maybe Int, String)    -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
+          | CADT      String                  -- ^ ADT: Just keep the string
           | CTuple    ![CVal]                 -- ^ Tuple
           | CMaybe    !(Maybe CVal)           -- ^ Maybe
           | CEither   !(Either CVal CVal)     -- ^ Disjoint union
@@ -130,10 +131,11 @@ cvRank CString   {} =  7
 cvRank CList     {} =  8
 cvRank CSet      {} =  9
 cvRank CUserSort {} = 10
-cvRank CTuple    {} = 11
-cvRank CMaybe    {} = 12
-cvRank CEither   {} = 13
-cvRank CArray    {} = 14
+cvRank CADT      {} = 11
+cvRank CTuple    {} = 12
+cvRank CMaybe    {} = 13
+cvRank CEither   {} = 14
+cvRank CArray    {} = 15
 
 -- | Eq instance for CVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
@@ -333,6 +335,7 @@ mapCV r i f d af ra x  = normCV $ CV (kindOf x) $ case cvVal x of
                                                     CChar{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with chars!"
                                                     CString{}   -> error "Data.SBV.mapCV: Unexpected call through mapCV with strings!"
                                                     CUserSort{} -> error "Data.SBV.mapCV: Unexpected call through mapCV with uninterpreted sorts!"
+                                                    CADT{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with ADTs!"
                                                     CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
                                                     CSet{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sets!"
                                                     CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
@@ -395,6 +398,7 @@ showCV shk w = sh (cvVal w) ++ kInfo
         sh (CChar     v) = show v
         sh (CString   v) = show v
         sh (CUserSort v) = snd  v
+        sh (CADT      v) = v
         sh (CList     v) = shL  v
         sh (CSet      v) = shS  v
         sh (CTuple    v) = shT  v
@@ -463,6 +467,7 @@ mkConstCV KRational       a = normCV $ CV KRational  (CRational (fromInteger (to
 mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: "   ++ show (toInteger a)
 mkConstCV KString         a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
 mkConstCV (KUserSort s _) a = error $ "Unexpected call to mkConstCV with user kind: " ++ s ++ " with value: " ++ show (toInteger a)
+mkConstCV (KADT s _)      a = error $ "Unexpected call to mkConstCV with user kind: " ++ s ++ " with value: " ++ show (toInteger a)
 mkConstCV k@KList{}       a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KSet{}        a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KTuple{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
@@ -498,6 +503,9 @@ randomCVal k =
                             Just vs@(_:_) -> do i <- randomRIO (0, length vs - 1)
                                                 pure $ CUserSort (Just i, vs !! i)
                             _             -> error $ "randomCVal: Not supported for completely uninterpreted type: " ++ s
+
+    -- TODO: Can we do something here?
+    KADT s _           -> error $ "randomCVal: Not supported for ADT: " ++ s
 
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)

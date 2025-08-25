@@ -873,6 +873,7 @@ defaultKindedValue k = CV k $ cvt k
         cvt KUnbounded       = CInteger 0
         cvt KReal            = CAlgReal 0
         cvt (KUserSort s ui) = uninterp s ui
+        cvt (KADT s _)       = error ("defaultKindedValue not supported for ADT: " ++ s) -- tough luck
         cvt KFloat           = CFloat 0
         cvt KDouble          = CDouble 0
         cvt KRational        = CRational 0
@@ -892,6 +893,7 @@ defaultKindedValue k = CV k $ cvt k
 
         -- A completely uninterpreted sort, i.e., no elements. Return the witness element for it.
         uninterp s Nothing      = CUserSort (Nothing, witnessName s)
+
 
 -- | Go from an SExpr directly to a value
 sexprToVal :: forall a. SymVal a => SExpr -> Maybe a
@@ -915,6 +917,8 @@ recoverKindedValue k e = case k of
 
                            KUserSort{} | ECon s <- e           -> Just $ CV k $ CUserSort (getUIIndex k s, simplifyECon s)
                                        | True                  -> Nothing
+
+                           KADT{}                              -> Just $ CV k $ CADT (shADT e)
 
                            KFloat      | ENum (i, _) <- e      -> Just $ mkConstCV k i
                                        | EFloat i    <- e      -> Just $ CV KFloat (CFloat i)
@@ -1123,6 +1127,22 @@ recoverKindedValue k e = case k of
                                          Just (CV _ x) -> x
                                          _             -> tbd $ "Cannot convert value: " ++ show v
                          cvt _ vs   = tbd $ "Unexpected function-like-value as array index" ++ show vs
+
+        -- For ADT values, we simply pretty-print them
+        shADT = trim . sh
+          where sh sexpr = case sexpr of
+                             ECon           s      -> s
+                             ENum           (i, _) -> show i
+                             EReal          a      -> show a
+                             EFloat         f      -> show f
+                             EFloatingPoint f      -> show f
+                             EDouble        d      -> show d
+                             EApp           xs     -> '(' : unwords (map sh xs) ++ ")"
+
+                trim inp@('(':cs) = case reverse cs of
+                                      ')' : rest -> trim (reverse rest)
+                                      _          -> inp
+                trim xs           = xs
 
 -- | Generalization of 'Data.SBV.Control.getValueCV'
 getValueCV :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV

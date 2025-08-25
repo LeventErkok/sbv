@@ -67,6 +67,7 @@ data Kind = KBool
           | KUnbounded
           | KReal
           | KUserSort String (Maybe [String])  -- name. Uninterpreted, or enumeration constants.
+          | KADT      String [String]          -- An algebraic datatype. Name and SMTLib declarator
           | KFloat
           | KDouble
           | KFP !Int !Int
@@ -95,6 +96,7 @@ instance Show Kind where
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
   show (KUserSort s _)    = s
+  show (KADT s _)         = s
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
   show (KFP eb sb)        = "SFloatingPoint " ++ show eb ++ " " ++ show sb
@@ -117,6 +119,7 @@ showBaseKind = sh
         sh k@KUnbounded       = noS (show k)
         sh k@KReal            = noS (show k)
         sh k@KUserSort{}      = show k     -- Leave user-sorts untouched!
+        sh k@KADT{}           = show k     -- Leave user-sorts untouched!
         sh k@KFloat           = noS (show k)
         sh k@KDouble          = noS (show k)
         sh k@KFP{}            = noS (show k)
@@ -161,6 +164,7 @@ smtType KChar           = "String"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
 smtType (KUserSort s _) = s
+smtType (KADT s _)      = s
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 smtType KRational       = "SBVRational"
@@ -185,6 +189,7 @@ kindHasSign = \case KBool        -> False
                     KFP{}        -> True
                     KRational    -> True
                     KUserSort{}  -> False
+                    KADT{}       -> False
                     KString      -> False
                     KChar        -> False
                     KList{}      -> False
@@ -266,6 +271,7 @@ class HasKind a where
                   KFP i j       -> i + j
                   KRational     -> error "SBV.HasKind.intSizeOf((S)Rational)"
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
+                  KADT s _      -> error $ "SBV.HasKind.intSizeOf: Algebraic data type: " ++ s
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
                   KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)"   ++ show ek
@@ -446,6 +452,7 @@ needsFlattening = any check . expandKinds
         check KMaybe{}    = True
         check KEither{}   = True
         check KArray{}    = True
+        check KADT{}      = True
 
         -- no need to expand bases
         check KBool       = False

@@ -1435,6 +1435,8 @@ registerKind :: State -> Kind -> IO ()
 registerKind st k
   | KUserSort sortName _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
+  | KADT  sortName _ <- k, isReserved sortName
+  = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = do -- Adding a kind to the incState is tricky; we only need to add it
        --     *    If it's an uninterpreted sort that's not already in the general state
@@ -1450,6 +1452,7 @@ registerKind st k
                           -- want to re-add because double-declaration would be wrong. See 'cvtInc' for details.
                           let needsAdding = case k of
                                               KUserSort{} -> k `notElem` existingKinds
+                                              KADT{}      -> k `notElem` existingKinds
                                               KList{}     -> k `notElem` existingKinds
                                               KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
                                               KMaybe{}    -> k `notElem` existingKinds
@@ -1465,6 +1468,7 @@ registerKind st k
          KUnbounded{}    -> return ()
          KReal     {}    -> return ()
          KUserSort {}    -> return ()
+         KADT {}         -> return ()
          KFloat    {}    -> return ()
          KDouble   {}    -> return ()
          KFP       {}    -> return ()

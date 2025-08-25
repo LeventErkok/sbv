@@ -347,6 +347,9 @@ module Data.SBV (
   -- $enumerations
   , mkSymbolicEnumeration
 
+  -- * Algebraic data types
+  , mkSymbolicADT
+
   -- * Uninterpreted sorts, constants, and functions
   -- $uninterpreted
   , mkUninterpretedSort

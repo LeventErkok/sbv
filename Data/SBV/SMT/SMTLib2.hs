@@ -65,6 +65,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = not (null [() | KBounded{} <- allKinds])
         usorts         = [(s, dt) | KUserSort s dt <- allKinds]
+        adts           = [(s, dt) | KADT s dt <- allKinds]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi allTopOps]
@@ -75,6 +76,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasEither      = any isEither kindInfo
         hasMaybe       = any isMaybe  kindInfo
         hasRational    = any isRational kindInfo
+        hasADTs        = not . null $ adts
         rm             = roundingMode cfg
         solverCaps     = capabilities (solver cfg)
 
@@ -84,7 +86,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
         doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not (have solverCaps)]
-           where checks = [ ("data types",             supportsDataTypes,          hasTuples || hasEither || hasMaybe)
+           where checks = [ ("data types",             supportsDataTypes,          hasTuples || hasEither || hasMaybe || hasADTs)
                           , ("set operations",         supportsSets,               hasSets)
                           , ("bit vectors",            supportsBitVectors,         hasBVs)
                           , ("special relations",      supportsSpecialRels,        needsSpecialRels)
@@ -147,6 +149,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
            | hasRational           = setAll "has rational values"
            | hasReal               = setAll "has algebraic reals"
            | not (null trueUSorts) = setAll "has user-defined sorts"
+           | hasADTs               = setAll "has user-defined data-types"
            | hasNonBVArrays        = setAll "has non-bitvector arrays"
            | hasTuples             = setAll "has tuples"
            | hasEither             = setAll "has either type"
@@ -218,6 +221,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ settings
              ++ [ "; --- uninterpreted sorts ---" ]
              ++ concatMap declSort usorts
+             ++ concatMap declADT  adts
              ++ [ "; --- tuples ---" ]
              ++ concatMap declTuple tupleArities
              ++ [ "; --- sums ---" ]
@@ -314,6 +318,10 @@ declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (
               body [_]    i = show i
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
+-- | Declare ADTs
+declADT :: (String, [String]) -> [String]
+declADT (s, d) = ("; User defined ADT: " ++ s) : d
+
 -- | Declare tuple datatypes
 --
 -- eg:
@@ -401,6 +409,7 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
                settings
             -- sorts
             ++ concatMap declSort [(s, dt) | KUserSort s dt <- newKinds]
+            ++ concatMap declADT  [(s, dt) | KADT      s dt  <- newKinds]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- sums
@@ -770,6 +779,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                               KBounded _ n  -> (2::Integer)^n > fromIntegral l
                               KUnbounded    -> True
                               KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                              KADT s _      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT valued index: " ++ s
                               KReal         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
                               KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
                               KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
@@ -802,6 +812,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                 KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                                KADT  s _     -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT valued index: " ++ s
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
                                 KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
                                 KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
@@ -1140,6 +1151,7 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         walk _d nm f k@KUnbounded{}         = f k nm
         walk _d nm f k@KReal     {}         = f k nm
         walk _d nm f k@KUserSort {}         = f k nm
+        walk _d nm f k@KADT      {}         = f k nm
         walk _d nm f k@KFloat    {}         = f k nm
         walk _d nm f k@KDouble   {}         = f k nm
         walk _d nm f k@KRational {}         = f k nm
