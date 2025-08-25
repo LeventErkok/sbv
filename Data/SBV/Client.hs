@@ -254,6 +254,9 @@ mkSymbolicADT typeName = do
       sh      = unmod . show
       shi s i = sh s ++ "_" ++ show i
 
+      -- The name of the type we're defining
+      tName = sh typeName
+
       -- We'll just drop the modules to keep this simple
       -- If you use multiple expressions named the same (coming from different modules), oh well.
       unmod = reverse . takeWhile (/= '.') . reverse
@@ -261,17 +264,18 @@ mkSymbolicADT typeName = do
       typeCon  = TH.conT typeName
       sTypeCon = TH.conT ''SBV `TH.appT` typeCon
 
+      -- TODO: Support other base types
       getT (TH.ConT t)
         | t == ''Integer = "Int"
         | t == ''String  = "String"
         | True           = sh t
-      getT t           = error $ "Type is too complicated for me: " ++ show t
+      getT t = error $ "Type is too complicated for me: " ++ show t
 
-      mkF a t = a ++ " " ++ getT t
+      mkF a t = tName ++ "_" ++ a ++ " " ++ getT t
 
       mkC (TH.NormalC nm []) = sh nm
-      mkC (TH.NormalC nm ps) = sh nm ++ " " ++ unwords ['(' : mkF (shi nm i) p ++ ")" | (i, (_, p)) <- zip [(1::Int)..] ps]
-      mkC (TH.RecC    nm ps) = sh nm ++ " " ++ unwords ['(' : mkF (sh a)     p ++ ")" | (a, _, p) <- ps]
+      mkC (TH.NormalC nm ps) = sh nm ++ " " ++ unwords ['(' : mkF (shi nm i) p ++ ")" | (i, (   _, p)) <- zip [(1::Int)..] ps]
+      mkC (TH.RecC    nm ps) = sh nm ++ " " ++ unwords ['(' : mkF (shi nm i) p ++ ")" | (i, (_, _, p)) <- zip [(1::Int)..] ps]
       mkC c                  = error $ "Constructor is too complicated for me: " ++ show c
 
   cstrs <- do c <- TH.reify typeName
@@ -286,19 +290,18 @@ mkSymbolicADT typeName = do
   let btname = TH.nameBase typeName
       tname  = TH.mkName ('S' : btname)
       tdecl  = TH.TySynD tname [] sType
-      st     = sh typeName
 
-      decl =  ("(declare-datatype " ++ st ++ " (")
+      decl =  ("(declare-datatype " ++ tName ++ " (")
            :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
            ++ ["))"]
 
   decls <- [d|instance HasKind $typeCon where
-                kindOf _ = KADT st decl
+                kindOf _ = KADT tName decl
 
               instance SymVal $typeCon where
-                literal      = error "literal"
-                fromCV       = error "fromCV"
-                minMaxBound  = Nothing
+                literal     = error "literal"
+                fromCV      = error "fromCV"
+                minMaxBound = Nothing
 
               instance Arbitrary $typeCon where
                 arbitrary   = undefined
