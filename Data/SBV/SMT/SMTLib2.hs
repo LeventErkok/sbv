@@ -221,9 +221,10 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ settings
              ++ [ "; --- uninterpreted sorts ---" ]
              ++ concatMap declSort usorts
-             ++ concatMap declADT  adts
              ++ [ "; --- tuples ---" ]
              ++ concatMap declTuple tupleArities
+             ++ [ "; --- ADTs  --- " | not (null adts)]
+             ++ concatMap declADT  adts
              ++ [ "; --- sums ---" ]
              ++ (if containsSum       kindInfo then declSum       else [])
              ++ (if containsMaybe     kindInfo then declMaybe     else [])
@@ -319,8 +320,16 @@ declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
 -- | Declare ADTs
-declADT :: (String, [String]) -> [String]
-declADT (s, d) = ("; User defined ADT: " ++ s) : d
+declADT :: (String, [(String, [Maybe Kind])]) -> [String]
+declADT (tName, cstrs) = ("; User defined ADT: " ++ tName) : decl
+  where decl =  ("(declare-datatype " ++ tName ++ " (")
+             :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
+             ++ ["))"]
+
+        mkC (nm, []) = nm
+        mkC (nm, ts) = nm ++ " " ++ unwords ['(' : mkF (nm ++ "_" ++ show i) t ++ ")" | (i, t) <- zip [(1::Int)..] ts]
+        mkF a Nothing  = tName ++ "_" ++ a ++ " " ++ tName
+        mkF a (Just t) = tName ++ "_" ++ a ++ " " ++ smtType t
 
 -- | Declare tuple datatypes
 --

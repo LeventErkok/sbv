@@ -10,18 +10,14 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DeriveLift          #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
-#if MIN_VERSION_template_haskell(2,22,1)
-{-# OPTIONS_GHC -Wall -Werror #-}
-#else
-{-# LANGUAGE DeriveLift #-}
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
-#endif
 
 module Data.SBV.Client
   ( sbvCheckSolverInstallation
@@ -32,8 +28,10 @@ module Data.SBV.Client
   , mkSymbolicADT
   ) where
 
-import Control.Monad (filterM)
 import Data.Generics
+import Data.Maybe (catMaybes)
+
+import Control.Monad (filterM)
 
 import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
@@ -47,7 +45,6 @@ import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 #endif
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Provers.Prover
@@ -88,6 +85,9 @@ deriving instance TH.Lift TH.ModName
 deriving instance TH.Lift TH.NameFlavour
 deriving instance TH.Lift TH.Name
 #endif
+
+-- A few other things we need to TH lift
+deriving instance TH.Lift Kind
 
 -- | Turn a name into a symbolic type. If first argument is true, then we're doing an enumeration, otherwise it's an uninterpreted type
 declareSymbolic :: Bool -> TH.Name -> TH.Q [TH.Dec]
@@ -215,13 +215,12 @@ ensureEnumeration nm = do
 
        check c                 = bad $ "Constructor " ++ show c ++ " is not an enumeration value."
 
-       bad m = do TH.reportError $ unlines [ "Data.SBV.mkSymbolicEnumeration: Invalid argument " ++ show n
-                                           , ""
-                                           , "    Expected an enumeration. " ++ m
-                                           , ""
-                                           , "    To create an enumerated sort, use a simple Haskell enumerated type."
-                                           ]
-                  pure []
+       bad m = do fail $ unlines [ "Data.SBV.mkSymbolicEnumeration: Invalid argument " ++ show n
+                                 , ""
+                                 , "    Expected an enumeration. " ++ m
+                                 , ""
+                                 , "    To create an enumerated sort, use a simple Haskell enumerated type."
+                                 ]
 
 -- | Make sure the given type is an empty data
 ensureEmptyData :: TH.Name -> TH.Q [TH.Name]
@@ -247,72 +246,113 @@ ensureEmptyData nm = do
 -- | Create a symbolic ADT
 mkSymbolicADT :: TH.Name -> TH.Q [TH.Dec]
 mkSymbolicADT typeName = do
-  let bad m = do TH.reportError $ unlines [ "Data.SBV.mkUninterpretedSort: Invalid argument " ++ show typeName
-                                          , "    " ++ m
-                                          ]
-                 undefined :: TH.Q a
+  let bad what extras = fail $ unlines $ ("mkSymbolicADT: " ++ what) : map ("      " ++) extras
 
-      sh      = unmod . show
-      shi s i = sh s ++ "_" ++ show i
+      report  =  "Please report this as a feature request."
 
       -- The name of the type we're defining
-      tName = sh typeName
+      tName = unmod typeName
 
       -- We'll just drop the modules to keep this simple
       -- If you use multiple expressions named the same (coming from different modules), oh well.
-      unmod = reverse . takeWhile (/= '.') . reverse
+      unmod = reverse . takeWhile (/= '.') . reverse . show
 
       typeCon  = TH.conT typeName
       sTypeCon = TH.conT ''SBV `TH.appT` typeCon
 
       -- Find the SBV kind for this type
-      toSBV (TH.ConT t)
-        | t == typeName = Nothing -- recursive case
-        | True          = Just (extract t)
-      toSBV t           = error $ "Type is too complicated for me: " ++ show t
+      toSBV :: TH.Name -> TH.Type -> TH.Q (Maybe Kind)
+      toSBV nm (TH.ConT c)
+         | c == typeName = pure Nothing -- recursive case
+         | True          = Just <$> extract nm c
+
+      -- tuples
+      toSBV nm t
+         | Just ps <- getTuple t = do mbKs <- mapM (toSBV nm) ps
+                                      case [i | (i, Nothing) <- zip [(1::Int)..] mbKs] of
+                                        []    -> pure $ Just (KTuple (catMaybes mbKs))
+                                        (i:_) -> bad "Unsupported tuple" [ "Datatype   : " ++ show typeName
+                                                                         , "Constructor: " ++ show nm
+                                                                         , "Field no   : " ++ show i
+                                                                         , ""
+                                                                         , "This field has a tuple that recursively refers to the type."
+                                                                         , "Please simplify and make all recursive cases stand-alone fields."
+                                                                         , ""
+                                                                         , "If this isn't possible, please report this as a feature request."
+                                                                         ]
+
+      -- giving up
+      toSBV nm t = bad "Unsupported constructor kind" [ "Datatype   : " ++ show typeName
+                                                      , "Constructor: " ++ show nm
+                                                      , "Kind       : " ++ show t
+                                                      , ""
+                                                      , report
+                                                      ]
+
+
+      -- Extract an N-tuple
+      getTuple = go []
+        where go sofar (TH.AppT (TH.TupleT _) p) = Just $ p : sofar
+              go sofar (TH.AppT t p)             = go (p : sofar) t
+              go _     _                         = Nothing
 
       -- Given the name of a type, what's the equivalent in the SBV domain?
-      extract :: TH.Name -> Kind
-      extract t
-        | t == ''Integer = KUnbounded
-        | t == ''String  = KString
-        | True           = error "what's this"
-
-      mkF :: String -> Maybe Kind -> String
-      mkF a Nothing  = tName ++ "_" ++ a ++ " " ++ tName
-      mkF a (Just t) = tName ++ "_" ++ a ++ " " ++ smtType t
+      extract :: TH.Name -> TH.Name -> TH.Q Kind
+      extract c t
+        | t == ''Bool           = pure KBool
+        | t == ''Integer        = pure KUnbounded
+        | t == ''Float          = pure KFloat
+        | t == ''Double         = pure KDouble
+        | t == ''Char           = pure KChar
+        | t == ''String         = pure KString
+        {-
+         - TODO: how do we map to these?
+          | KBounded !Bool !Int
+          | KReal
+          | KUserSort String (Maybe [String])
+          | KADT      String [String]
+          | KFP !Int !Int
+          | KList Kind
+          | KSet  Kind
+          | KMaybe  Kind
+          | KRational
+          | KEither Kind Kind
+          | KArray  Kind Kind
+        -}
+        | True
+        = bad "Unsupported field type"
+              [ "    Datatype   : " ++ show typeName
+              , "    Constructor: " ++ show c
+              , "    Field type : " ++ show t
+              , ""
+              , report
+              ]
 
       -- For ech constructor, extract the constructor name and the kinds for fields
-      collect :: TH.Con -> (TH.Name, [Maybe Kind])
-      collect (TH.NormalC nm ps) = (nm, map (\(_,    t) -> toSBV t) ps)
-      collect (TH.RecC    nm ps) = (nm, map (\(_, _, t) -> toSBV t) ps)
-      collect c                  = error $ "Constructor is too complicated for me: " ++ show c
-
-      mkC (nm, []) = sh nm
-      mkC (nm, ts) = sh nm ++ " " ++ unwords ['(' : mkF (shi nm i) t ++ ")" | (i, t) <- zip [(1::Int)..] ts]
+      collect :: TH.Con -> TH.Q (String, [Maybe Kind])
+      collect (TH.NormalC nm ps) = (,) <$> pure (unmod nm) <*> mapM (\(_,    t) -> toSBV nm t) ps
+      collect (TH.RecC    nm ps) = (,) <$> pure (unmod nm) <*> mapM (\(_, _, t) -> toSBV nm t) ps
+      collect c                  = bad "Unsupported constructor kind"
+                                       [ "    Datatype   : " ++ show typeName
+                                       , "    Constructor: " ++ show c
+                                       , ""
+                                       , report
+                               ]
 
   cstrs <- do c <- TH.reify typeName
               case c of
-                TH.TyConI d -> case d of
-                                 TH.DataD _ _ _ _ cons _ -> pure cons
-                                 _                       -> bad "The name given is not a datatype."
-                _           -> bad "The name given is not a datatype"
+                TH.TyConI (TH.DataD _ _ _ _ cons _) -> pure cons
+                _                                   -> bad "Not a datatype." ["    Argument: " ++ show typeName]
 
-
-  sType <- sTypeCon
+  sType           <- sTypeCon
+  sbvConstructors <- mapM collect cstrs
 
   let btname = TH.nameBase typeName
       tname  = TH.mkName ('S' : btname)
       tdecl  = TH.TySynD tname [] sType
 
-      sbvConstructors = map collect cstrs
-
-      decl =  ("(declare-datatype " ++ tName ++ " (")
-           :  ["    (" ++ mkC c ++ ")" | c <- sbvConstructors]
-           ++ ["))"]
-
   decls <- [d|instance HasKind $typeCon where
-                kindOf _ = KADT tName decl
+                kindOf _ = KADT tName sbvConstructors
 
               instance SymVal $typeCon where
                 literal     = error "literal"

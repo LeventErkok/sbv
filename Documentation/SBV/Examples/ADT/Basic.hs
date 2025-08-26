@@ -21,6 +21,7 @@ data Expr = Var String
           | Num Integer
           | Add Expr Expr
           | Let String Expr Expr
+          | Interval (Expr, Expr)
 
 -- | Make it a symbolic value
 mkSymbolicADT ''Expr

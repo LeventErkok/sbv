@@ -76,7 +76,7 @@ import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
 import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy, isPrefixOf)
-import Data.Maybe                  (fromMaybe)
+import Data.Maybe                  (fromMaybe, catMaybes)
 import Data.String                 (IsString(fromString))
 
 import Data.Time (getCurrentTime, UTCTime)
@@ -1468,13 +1468,14 @@ registerKind st k
          KUnbounded{}    -> return ()
          KReal     {}    -> return ()
          KUserSort {}    -> return ()
-         KADT {}         -> return ()
          KFloat    {}    -> return ()
          KDouble   {}    -> return ()
          KFP       {}    -> return ()
          KRational {}    -> return ()
          KChar     {}    -> return ()
          KString   {}    -> return ()
+
+         KADT _    ps    -> mapM_ (registerKind st) (concat [catMaybes ks | (_, ks) <- ps])
          KList     ek    -> registerKind st ek
          KSet      ek    -> registerKind st ek
          KTuple    eks   -> mapM_ (registerKind st) eks

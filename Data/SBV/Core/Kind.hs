@@ -66,8 +66,8 @@ data Kind = KBool
           | KBounded !Bool !Int
           | KUnbounded
           | KReal
-          | KUserSort String (Maybe [String])  -- name. Uninterpreted, or enumeration constants.
-          | KADT      String [String]          -- An algebraic datatype. Name and SMTLib declarator
+          | KUserSort String (Maybe [String])          -- name. Uninterpreted, or enumeration constants.
+          | KADT      String [(String, [Maybe Kind])]  -- An algebraic datatype. Name and constructor info. Nothing is recursive case
           | KFloat
           | KDouble
           | KFP !Int !Int
