@@ -47,6 +47,7 @@ import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 #endif
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Provers.Prover
@@ -264,17 +265,27 @@ mkSymbolicADT typeName = do
       typeCon  = TH.conT typeName
       sTypeCon = TH.conT ''SBV `TH.appT` typeCon
 
-      -- TODO: Support other base types
-      getT (TH.ConT t)
-        | t == ''Integer = "Int"
-        | t == ''String  = "String"
-        | True           = sh t
-      getT t = error $ "Type is too complicated for me: " ++ show t
+      -- Find the SBV kind for this type
+      toSBV (TH.ConT t)
+        | t == typeName = Nothing -- recursive case
+        | True          = Just (extract t)
+      toSBV t           = error $ "Type is too complicated for me: " ++ show t
 
-      mkF a t = tName ++ "_" ++ a ++ " " ++ getT t
+      -- Given the name of a type, what's the equivalent in the SBV domain?
+      extract :: TH.Name -> Kind
+      extract t
+        | t == ''Integer = KUnbounded
+        | t == ''String  = KString
+        | True           = error "what's this"
 
-      collect (TH.NormalC nm ps) = (nm, map (\(_,    t) -> t) ps)
-      collect (TH.RecC    nm ps) = (nm, map (\(_, _, t) -> t) ps)
+      mkF :: String -> Maybe Kind -> String
+      mkF a Nothing  = tName ++ "_" ++ a ++ " " ++ tName
+      mkF a (Just t) = tName ++ "_" ++ a ++ " " ++ smtType t
+
+      -- For ech constructor, extract the constructor name and the kinds for fields
+      collect :: TH.Con -> (TH.Name, [Maybe Kind])
+      collect (TH.NormalC nm ps) = (nm, map (\(_,    t) -> toSBV t) ps)
+      collect (TH.RecC    nm ps) = (nm, map (\(_, _, t) -> toSBV t) ps)
       collect c                  = error $ "Constructor is too complicated for me: " ++ show c
 
       mkC (nm, []) = sh nm
@@ -295,6 +306,7 @@ mkSymbolicADT typeName = do
       tdecl  = TH.TySynD tname [] sType
 
       sbvConstructors = map collect cstrs
+
       decl =  ("(declare-datatype " ++ tName ++ " (")
            :  ["    (" ++ mkC c ++ ")" | c <- sbvConstructors]
            ++ ["))"]
