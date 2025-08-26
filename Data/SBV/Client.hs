@@ -273,10 +273,12 @@ mkSymbolicADT typeName = do
 
       mkF a t = tName ++ "_" ++ a ++ " " ++ getT t
 
-      mkC (TH.NormalC nm []) = sh nm
-      mkC (TH.NormalC nm ps) = sh nm ++ " " ++ unwords ['(' : mkF (shi nm i) p ++ ")" | (i, (   _, p)) <- zip [(1::Int)..] ps]
-      mkC (TH.RecC    nm ps) = sh nm ++ " " ++ unwords ['(' : mkF (shi nm i) p ++ ")" | (i, (_, _, p)) <- zip [(1::Int)..] ps]
-      mkC c                  = error $ "Constructor is too complicated for me: " ++ show c
+      collect (TH.NormalC nm ps) = (nm, map (\(_,    t) -> t) ps)
+      collect (TH.RecC    nm ps) = (nm, map (\(_, _, t) -> t) ps)
+      collect c                  = error $ "Constructor is too complicated for me: " ++ show c
+
+      mkC (nm, []) = sh nm
+      mkC (nm, ts) = sh nm ++ " " ++ unwords ['(' : mkF (shi nm i) t ++ ")" | (i, t) <- zip [(1::Int)..] ts]
 
   cstrs <- do c <- TH.reify typeName
               case c of
@@ -285,14 +287,16 @@ mkSymbolicADT typeName = do
                                  _                       -> bad "The name given is not a datatype."
                 _           -> bad "The name given is not a datatype"
 
+
   sType <- sTypeCon
 
   let btname = TH.nameBase typeName
       tname  = TH.mkName ('S' : btname)
       tdecl  = TH.TySynD tname [] sType
 
+      sbvConstructors = map collect cstrs
       decl =  ("(declare-datatype " ++ tName ++ " (")
-           :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
+           :  ["    (" ++ mkC c ++ ")" | c <- sbvConstructors]
            ++ ["))"]
 
   decls <- [d|instance HasKind $typeCon where
