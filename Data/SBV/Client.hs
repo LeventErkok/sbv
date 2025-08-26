@@ -29,7 +29,6 @@ module Data.SBV.Client
   ) where
 
 import Data.Generics
-import Data.Maybe (catMaybes)
 
 import Control.Monad (filterM)
 
@@ -261,25 +260,13 @@ mkSymbolicADT typeName = do
       sTypeCon = TH.conT ''SBV `TH.appT` typeCon
 
       -- Find the SBV kind for this type
-      toSBV :: TH.Name -> TH.Type -> TH.Q (Maybe Kind)
+      toSBV :: TH.Name -> TH.Type -> TH.Q Kind
       toSBV nm (TH.ConT c)
-         | c == typeName = pure Nothing -- recursive case
-         | True          = Just <$> extract nm c
+         | c == typeName = pure $ KADT tName Nothing -- recursive case: use site, so fields are nothing
+         | True          = extract nm c
 
       -- tuples
-      toSBV nm t
-         | Just ps <- getTuple t = do mbKs <- mapM (toSBV nm) ps
-                                      case [i | (i, Nothing) <- zip [(1::Int)..] mbKs] of
-                                        []    -> pure $ Just (KTuple (catMaybes mbKs))
-                                        (i:_) -> bad "Unsupported tuple" [ "Datatype   : " ++ show typeName
-                                                                         , "Constructor: " ++ show nm
-                                                                         , "Field no   : " ++ show i
-                                                                         , ""
-                                                                         , "This field has a tuple that recursively refers to the type."
-                                                                         , "Please simplify and make all recursive cases stand-alone fields."
-                                                                         , ""
-                                                                         , "If this isn't possible, please report this as a feature request."
-                                                                         ]
+      toSBV nm t | Just ps <- getTuple t = KTuple <$> mapM (toSBV nm) ps
 
       -- giving up
       toSBV nm t = bad "Unsupported constructor kind" [ "Datatype   : " ++ show typeName
@@ -292,9 +279,9 @@ mkSymbolicADT typeName = do
 
       -- Extract an N-tuple
       getTuple = go []
-        where go sofar (TH.AppT (TH.TupleT _) p) = Just $ p : sofar
-              go sofar (TH.AppT t p)             = go (p : sofar) t
-              go _     _                         = Nothing
+        where go sofar (TH.TupleT _) = Just sofar
+              go sofar (TH.AppT t p) = go (p : sofar) t
+              go _     _             = Nothing
 
       -- Given the name of a type, what's the equivalent in the SBV domain?
       extract :: TH.Name -> TH.Name -> TH.Q Kind
@@ -329,7 +316,7 @@ mkSymbolicADT typeName = do
               ]
 
       -- For ech constructor, extract the constructor name and the kinds for fields
-      collect :: TH.Con -> TH.Q (String, [Maybe Kind])
+      collect :: TH.Con -> TH.Q (String, [Kind])
       collect (TH.NormalC nm ps) = (,) <$> pure (unmod nm) <*> mapM (\(_,    t) -> toSBV nm t) ps
       collect (TH.RecC    nm ps) = (,) <$> pure (unmod nm) <*> mapM (\(_, _, t) -> toSBV nm t) ps
       collect c                  = bad "Unsupported constructor kind"
@@ -352,7 +339,7 @@ mkSymbolicADT typeName = do
       tdecl  = TH.TySynD tname [] sType
 
   decls <- [d|instance HasKind $typeCon where
-                kindOf _ = KADT tName sbvConstructors
+                kindOf _ = KADT tName (Just sbvConstructors)
 
               instance SymVal $typeCon where
                 literal     = error "literal"

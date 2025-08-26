@@ -76,7 +76,7 @@ import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
 import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy, isPrefixOf)
-import Data.Maybe                  (fromMaybe, catMaybes)
+import Data.Maybe                  (fromMaybe)
 import Data.String                 (IsString(fromString))
 
 import Data.Time (getCurrentTime, UTCTime)
@@ -1475,13 +1475,16 @@ registerKind st k
          KChar     {}    -> return ()
          KString   {}    -> return ()
 
-         KADT _    ps    -> mapM_ (registerKind st) (concat [catMaybes ks | (_, ks) <- ps])
-         KList     ek    -> registerKind st ek
-         KSet      ek    -> registerKind st ek
-         KTuple    eks   -> mapM_ (registerKind st) eks
-         KMaybe    ke    -> registerKind st ke
-         KEither   k1 k2 -> mapM_ (registerKind st) [k1, k2]
-         KArray    k1 k2 -> mapM_ (registerKind st) [k1, k2]
+         -- Register subkinds in an ADT. Remember that a 'Nothing' is a use site, so nothing further to do.
+         KADT _    (Just ps) -> mapM_ (registerKind st) (concatMap snd ps)
+         KADT _    Nothing   -> return ()
+
+         KList     ek        -> registerKind st ek
+         KSet      ek        -> registerKind st ek
+         KTuple    eks       -> mapM_ (registerKind st) eks
+         KMaybe    ke        -> registerKind st ke
+         KEither   k1 k2     -> mapM_ (registerKind st) [k1, k2]
+         KArray    k1 k2     -> mapM_ (registerKind st) [k1, k2]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()
