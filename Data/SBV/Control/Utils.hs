@@ -1128,10 +1128,10 @@ recoverKindedValue k e = case k of
                                          _             -> tbd $ "Cannot convert value: " ++ show v
                          cvt _ vs   = tbd $ "Unexpected function-like-value as array index" ++ show vs
 
-        -- For ADT values, we simply pretty-print them
-        shADT = trim . sh
+        -- For ADT values, we simply pretty-print them after some simplifications
+        shADT = trim . sh . simp
           where sh sexpr = case sexpr of
-                             ECon           s      -> s
+                             ECon           s      -> constant s
                              ENum           (i, _) -> show i
                              EReal          a      -> show a
                              EFloat         f      -> show f
@@ -1143,6 +1143,14 @@ recoverKindedValue k e = case k of
                                       ')' : rest -> trim (reverse rest)
                                       _          -> inp
                 trim xs           = xs
+
+                simp (EApp [ECon "as", v, _]) = simp v
+                simp (EApp xs)                = EApp (map simp xs)
+                simp x                        = x
+
+                -- render certain constants more simply
+                constant "seq.empty" = "[]"
+                constant s           = s
 
 -- | Generalization of 'Data.SBV.Control.getValueCV'
 getValueCV :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV

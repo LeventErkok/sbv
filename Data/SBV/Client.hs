@@ -263,56 +263,60 @@ dissect typeName = do
 
         -- Find the SBV kind for this type
         toSBV :: TH.Name -> TH.Type -> TH.Q Kind
-        toSBV nm (TH.ConT c)
-           | c == typeName = pure $ KADT tName Nothing -- recursive case: use site, so fields are nothing
-           | True          = extract nm c
+        toSBV constructorName = go
+          where go (TH.ConT c)
+                 | c == typeName = pure $ KADT tName Nothing -- recursive case: use site, so fields are nothing
+                 | True          = extract c
 
-        -- tuples
-        toSBV nm t | Just ps <- getTuple t = KTuple <$> mapM (toSBV nm) ps
+                -- tuples
+                go t | Just ps <- getTuple t = KTuple <$> mapM go ps
 
-        -- giving up
-        toSBV nm t = bad "Unsupported constructor kind" [ "Datatype   : " ++ show typeName
-                                                        , "Constructor: " ++ show nm
-                                                        , "Kind       : " ++ show t
-                                                        , ""
-                                                        , report
-                                                        ]
+                -- lists
+                go (TH.AppT TH.ListT t) = KList <$> go t
+
+                -- giving up
+                go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ show typeName
+                                                          , "Constructor: " ++ show constructorName
+                                                          , "Kind       : " ++ show t
+                                                          , ""
+                                                          , report
+                                                          ]
 
 
-        -- Extract an N-tuple
-        getTuple = go []
-          where go sofar (TH.TupleT _) = Just sofar
-                go sofar (TH.AppT t p) = go (p : sofar) t
-                go _     _             = Nothing
+                -- Extract an N-tuple
+                getTuple = tup []
+                  where tup sofar (TH.TupleT _) = Just sofar
+                        tup sofar (TH.AppT t p) = tup (p : sofar) t
+                        tup _     _             = Nothing
 
-        -- Given the name of a type, what's the equivalent in the SBV domain?
-        extract :: TH.Name -> TH.Name -> TH.Q Kind
-        extract c t
-          | t == ''Bool    = pure KBool
-          | t == ''Integer = pure KUnbounded
-          | t == ''Float   = pure KFloat
-          | t == ''Double  = pure KDouble
-          | t == ''Char    = pure KChar
-          | t == ''String  = pure KString
-          {-
-           - TODO: how do we map to these?
-            | KBounded !Bool !Int
-            | KReal
-            | KUserSort String (Maybe [String])
-            | KADT      String [String]
-            | KFP !Int !Int
-            | KList Kind
-            | KSet  Kind
-            | KMaybe  Kind
-            | KRational
-            | KEither Kind Kind
-            | KArray  Kind Kind
-          -}
-          | True
-          = bad "Unsupported field type"
-                [ "    Datatype   : " ++ show typeName
-                , "    Constructor: " ++ show c
-                , "    Field type : " ++ show t
-                , ""
-                , report
-                ]
+                -- Given the name of a type, what's the equivalent in the SBV domain?
+                extract :: TH.Name -> TH.Q Kind
+                extract t
+                  | t == ''Bool    = pure KBool
+                  | t == ''Integer = pure KUnbounded
+                  | t == ''Float   = pure KFloat
+                  | t == ''Double  = pure KDouble
+                  | t == ''Char    = pure KChar
+                  | t == ''String  = pure KString
+                  {-
+                   - TODO: how do we map to these?
+                    | KBounded !Bool !Int
+                    | KReal
+                    | KUserSort String (Maybe [String])
+                    | KADT      String [String]
+                    | KFP !Int !Int
+                    | KList Kind
+                    | KSet  Kind
+                    | KMaybe  Kind
+                    | KRational
+                    | KEither Kind Kind
+                    | KArray  Kind Kind
+                  -}
+                  | True
+                  = bad "Unsupported field type"
+                        [ "    Datatype   : " ++ show typeName
+                        , "    Constructor: " ++ show constructorName
+                        , "    Field type : " ++ show t
+                        , ""
+                        , report
+                        ]
