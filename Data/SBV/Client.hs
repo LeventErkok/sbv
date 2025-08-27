@@ -44,6 +44,7 @@ import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
+import Data.SBV.Core.SizedFloats
 import Data.SBV.Provers.Prover
 import qualified Data.SBV.List as SL
 
@@ -284,15 +285,12 @@ dissect typeName = do
 
                 -- arbitrary words/ints
                 go (TH.AppT (TH.ConT nm) (TH.LitT (TH.NumTyLit n)))
-                    | badSize n     = bad "Invalid bit-vector size"
-                                          [ "Size: " ++ show n
-                                          , ""
-                                          , "Must be >= 1 and <= maxBound (" ++ show (maxBound :: Int) ++ ") :: Int"
-                                          ]
                     | nm == ''WordN = pure $ KBounded False (fromIntegral n)
                     | nm == ''IntN  = pure $ KBounded True  (fromIntegral n)
 
-                    where badSize i = i < 1 || i > fromIntegral (maxBound :: Int)
+                -- arbitrary floats
+                go (TH.AppT (TH.AppT (TH.ConT nm) (TH.LitT (TH.NumTyLit eb))) (TH.LitT (TH.NumTyLit sb)))
+                    | nm == ''FloatingPoint = pure $ KFP (fromIntegral eb) (fromIntegral sb)
 
                 -- giving up
                 go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ show typeName
@@ -317,6 +315,8 @@ dissect typeName = do
                   | t == ''Double  = pure KDouble
                   | t == ''Char    = pure KChar
                   | t == ''String  = pure KString
+                  | t == ''AlgReal = pure KReal
+                  | t == ''Rational= pure KRational
                   | t == ''Word8   = pure $ KBounded False  8
                   | t == ''Word16  = pure $ KBounded False 16
                   | t == ''Word32  = pure $ KBounded False 32
@@ -327,13 +327,10 @@ dissect typeName = do
                   | t == ''Int64   = pure $ KBounded True  64
                   {-
                    - TODO: how do we map to these?
-                    | KReal
                     | KUserSort String (Maybe [String])
                     | KADT      String [String]
-                    | KFP !Int !Int
-                    | KSet  Kind
-                    | KRational
-                    | KArray  Kind Kind
+                    | KSet      Kind
+                    | KArray    Kind Kind
                   -}
                   | True
                   = bad "Unsupported field type"
