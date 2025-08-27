@@ -223,12 +223,12 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ concatMap declSort usorts
              ++ [ "; --- tuples ---" ]
              ++ concatMap declTuple tupleArities
-             ++ [ "; --- ADTs  --- " | not (null adts)]
-             ++ concatMap declADT  adts
              ++ [ "; --- sums ---" ]
              ++ (if containsSum       kindInfo then declSum       else [])
              ++ (if containsMaybe     kindInfo then declMaybe     else [])
              ++ (if containsRationals kindInfo then declRationals else [])
+             ++ [ "; --- ADTs  --- " | not (null adts)]
+             ++ concatMap declADT  adts
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
              ++ [ "; --- top level inputs ---"]
