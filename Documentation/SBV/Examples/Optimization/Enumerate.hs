@@ -29,7 +29,7 @@ data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun
          deriving (Enum, Bounded)
 
 -- | Make 'Day' a symbolic value.
-mkSymbolicEnumeration ''Day
+mkSymbolic ''Day
 
 -- | Make day an optimizable value, by mapping it to 'Word8' in the most
 -- obvious way. We can map it to any value the underlying solver can optimize,

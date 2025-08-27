@@ -43,7 +43,7 @@ import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.List   as SL
 
 data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving (Bounded, Enum, Eq)
-mkSymbolicEnumeration  ''Day
+mkSymbolic  ''Day
 
 -- Test suite
 tests :: TestTree

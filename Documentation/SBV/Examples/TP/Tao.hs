@@ -41,7 +41,7 @@ import Data.SBV.TP
 
 -- | Create an uninterpreted type to do the proofs over.
 data T
-mkUninterpretedSort ''T
+mkSymbolic ''T
 
 -- | Prove that:
 --

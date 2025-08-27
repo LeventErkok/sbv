@@ -30,7 +30,7 @@ import Data.SBV
 data Rabbit
 
 -- | Make rabbits symbolically available.
-mkUninterpretedSort ''Rabbit
+mkSymbolic ''Rabbit
 
 -- | Identify those rabbits that are greedy. Note that we leave the predicate uninterpreted.
 greedy :: SRabbit -> SBool

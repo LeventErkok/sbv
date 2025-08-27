@@ -24,7 +24,7 @@ data Expr = Var String
           | Interval (Expr, Expr)
 
 -- | Make it a symbolic value
-mkSymbolicADT ''Expr
+mkSymbolic ''Expr
 
 -- | Create two different values:
 --

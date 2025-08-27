@@ -343,16 +343,9 @@ module Data.SBV (
   -- ** Showing values in detail
   , crack
 
-  -- * Enumerations
-  -- $enumerations
-  , mkSymbolicEnumeration
-
-  -- * Algebraic data types
-  , mkSymbolicADT
-
-  -- * Uninterpreted sorts, constants, and functions
-  -- $uninterpreted
-  , mkUninterpretedSort
+  -- * Symbolic data types
+  -- $symbolicADT
+  , mkSymbolic
 
   -- * Stopping unrolling: Defined functions
   , SMTDefinable(..), smtHOFunction, Closure(..), registerType
@@ -1117,37 +1110,28 @@ where the backend solver can be queried to obtain an unsat core in case the cons
 See 'Data.SBV.Control.getUnsatCore' for details and "Documentation.SBV.Examples.Queries.UnsatCore" for an example use case.
 -}
 
-{- $uninterpreted
+{- $symbolicADT
 Users can introduce new uninterpreted sorts simply by defining an empty data-type in Haskell and registering it as such. The
 following example demonstrates:
 
   @
      data B
-     mkUninterpretedSort ''B
+     mkSymbolic ''B
   @
-
-(Note that you'll also need to use pragmas @TemplateHaskell@, @StandAloneDeriving@, @DeriveDataTypeable@, and @DeriveAnyClass@ for this to work, follow GHC's error messages!)
 
 This is all it takes to introduce @B@ as an uninterpreted sort in SBV, which makes the type @SBV B@ automagically become available as the type
 of symbolic values that ranges over @B@ values. Note that this will also introduce the type @SB@ into your environment, which is a synonym
 for @SBV B@.
 
-
-Uninterpreted functions over both uninterpreted and regular sorts can be declared using the facilities introduced by
-the 'Data.SBV.Core.Model.SMTDefinable' class.
--}
-
-{- $enumerations
 If the uninterpreted sort definition takes the form of an enumeration (i.e., a simple data type with all nullary constructors), then
-you can use the 'mkSymbolicEnumeration' function to turn it into an enumeration in SMTLib.
-A simple example is:
+it will turn into an enumeration in SMTLib.  A simple example is:
 
 @
     data X = A | B | C deriving (Enum, Bounded)
-    mkSymbolicEnumeration ''X
+    mkSymbolic ''X
 @
 
-Note the magic incantation @mkSymbolicEnumeration ''X@. For this to work, you need to have the following
+Note the magic incantation @mkSymbolic ''X@, requires the following extensions:
 options turned on:
 
 >   LANGUAGE TemplateHaskell
@@ -1156,39 +1140,8 @@ options turned on:
 >   LANGUAGE DeriveAnyClass
 >   LANGUAGE FlexibleInstances
 
-and your own declaration must have instances of 'Enum' and 'Bounded'. (The instances can be derived, as above.)
-This will automatically introduce the type:
-
-@
-    type SX = SBV X
-@
-
-along with symbolic values of each of the enumerated values @sA@, @sB@, and @sC@. This way,
-you can refer to the symbolic version as @SX@, treating it as a regular symbolic type ranging over the values @A@, @B@, and @C@. Such values can be compared for equality, and with the usual
-other comparison operators, such as @.==@, @./=@, @.>@, @.>=@, @<@, and @<=@. For each enumerated value @X@, the symbolic versions @sX@ is defined to be equal to @literal X@. Furthermore, the symbolic type will be an instance of 'EnumSymbolic', allowing you to use
-arithmetic progressions on symbolic values.
-
-A simple query would look like:
-
-@
-     allSat $ \x -> x .== (x :: SX)
-@
-
-which would list all three elements of this domain as satisfying solutions.
-
-@
-     Solution #1:
-       s0 = A :: X
-     Solution #2:
-       s0 = B :: X
-     Solution #3:
-       s0 = C :: X
-     Found 3 different solutions.
-@
-
-Note that the result is properly typed as @X@ elements; these are not mere strings.
-
-See "Documentation.SBV.Examples.Misc.Enumerate" for an extended example on how to use symbolic enumerations.
+SBV also supports good old ADT's as well, with fields. The support for this is similar, where SBV will create the
+corresponding datatype in a symbolic manner.
 -}
 
 {- $cardIntro

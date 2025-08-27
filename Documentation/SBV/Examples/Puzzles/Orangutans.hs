@@ -43,9 +43,9 @@ data Handler = Dolly | Eva | Francine | Gracie
 data Location = Ambalat | Basahan | Kendisi | Tarakan
              deriving (Enum, Bounded)
 
-mkSymbolicEnumeration ''Orangutan
-mkSymbolicEnumeration ''Handler
-mkSymbolicEnumeration ''Location
+mkSymbolic ''Orangutan
+mkSymbolic ''Handler
+mkSymbolic ''Location
 
 -- | An assignment is solution to the puzzle
 data Assignment = MkAssignment { orangutan :: SOrangutan

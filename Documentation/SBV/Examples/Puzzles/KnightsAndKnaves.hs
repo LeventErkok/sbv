@@ -27,19 +27,19 @@ import Data.SBV.Control
 
 -- | Inhabitants of the island, as an uninterpreted sort
 data Inhabitant
-mkUninterpretedSort ''Inhabitant
+mkSymbolic ''Inhabitant
 
 -- | Each inhabitant is either a knave or a knight
 data Identity = Knave | Knight
               deriving (Enum, Bounded)
 
-mkSymbolicEnumeration ''Identity
+mkSymbolic ''Identity
 
 -- | Statements are utterances which are either true or false
 data Statement = Truth | Falsity
                deriving (Enum, Bounded)
 
-mkSymbolicEnumeration ''Statement
+mkSymbolic ''Statement
 
 -- | John is an inhabitant of the island.
 john :: SInhabitant

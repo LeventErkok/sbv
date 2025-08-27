@@ -27,7 +27,7 @@ import Data.SBV.Control
 import Utils.SBVTestFramework
 
 data BinOp  = Plus | Minus | Times deriving (Enum, Bounded)
-mkSymbolicEnumeration ''BinOp
+mkSymbolic ''BinOp
 
 _unused :: a
 _unused = error "stop GHC from complaining unused names" sPlus sMinus sTimes

@@ -27,7 +27,7 @@ data Q
 -- | Make 'Q' an uinterpreted sort. This will automatically introduce the
 -- type 'SQ' into our environment, which is the symbolic version of the
 -- carrier type 'Q'.
-mkUninterpretedSort ''Q
+mkSymbolic ''Q
 
 -- | Declare an uninterpreted function that works over Q's
 f :: SQ -> SQ

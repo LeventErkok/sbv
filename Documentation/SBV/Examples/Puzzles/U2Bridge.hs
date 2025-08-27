@@ -33,13 +33,12 @@ import Data.SBV
 -- * Modeling the puzzle
 -------------------------------------------------------------
 
--- | U2 band members. We want to translate this to SMT-Lib as a data-type, and hence the
--- call to mkSymbolicEnumeration.
+-- | U2 band members.
 data U2Member = Bono | Edge | Adam | Larry
               deriving (Enum, Bounded, Eq, Ord)
 
 -- | Make 'U2Member' a symbolic value.
-mkSymbolicEnumeration ''U2Member
+mkSymbolic ''U2Member
 
 -- | Model time using 32 bits
 type Time  = Word32
@@ -66,7 +65,7 @@ data Location = Here | There
               deriving (Enum, Bounded)
 
 -- | Make 'Location' a symbolic value.
-mkSymbolicEnumeration ''Location
+mkSymbolic ''Location
 
 -- | The status of the puzzle after each move
 --

@@ -36,7 +36,7 @@ data E = A | B | C
        deriving (Enum, Bounded, Eq, Ord)
 
 -- | Make 'E' a symbolic value.
-mkSymbolicEnumeration ''E
+mkSymbolic ''E
 
 -- | Have the SMT solver enumerate the elements of the domain. We have:
 --

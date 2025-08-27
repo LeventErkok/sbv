@@ -22,7 +22,7 @@ module TestSuite.Uninterpreted.Sort(tests) where
 import Utils.SBVTestFramework
 
 data L
-mkUninterpretedSort ''L
+mkSymbolic ''L
 
 tests :: TestTree
 tests =

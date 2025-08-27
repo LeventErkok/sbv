@@ -33,7 +33,7 @@ data B
 
 -- | Make this sort uninterpreted. This splice will automatically introduce
 -- the type 'SB' into the environment, as a synonym for 'SBV' 'B'.
-mkUninterpretedSort ''B
+mkSymbolic ''B
 
 -----------------------------------------------------------------------------
 -- * Uninterpreted connectives over 'B'

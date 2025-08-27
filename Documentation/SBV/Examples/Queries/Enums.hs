@@ -23,12 +23,12 @@ module Documentation.SBV.Examples.Queries.Enums where
 import Data.SBV
 import Data.SBV.Control
 
--- | Days of the week. We make it symbolic using the 'mkSymbolicEnumeration' splice.
+-- | Days of the week. We make it symbolic using the 'mkSymbolic' splice.
 data Day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday
          deriving (Eq, Ord, Bounded, Enum)
 
 -- | Make 'Day' a symbolic value.
-mkSymbolicEnumeration ''Day
+mkSymbolic ''Day
 
 -- | A trivial query to find three consecutive days that's all before 'Thursday'. The point
 -- here is that we can perform queries on such enumerated values and use 'getValue' on them

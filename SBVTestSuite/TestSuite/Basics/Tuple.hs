@@ -33,7 +33,7 @@ import qualified Data.SBV.List as L
 import Utils.SBVTestFramework
 
 data E = A | B | C deriving (Bounded, Enum)
-mkSymbolicEnumeration ''E
+mkSymbolic ''E
 
 __unused :: SE
 __unused = error "stop GHC from complaining unused names" sA sB sC

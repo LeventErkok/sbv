@@ -46,7 +46,7 @@ import Data.Proxy
 import Utils.SBVTestFramework
 
 data P
-mkUninterpretedSort ''P
+mkSymbolic ''P
 
 drinker :: Predicate
 drinker = pure $ quantifiedBool $ \(Exists x) (Forall y) -> d x .=> d y

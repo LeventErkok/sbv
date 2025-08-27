@@ -45,35 +45,35 @@ data Color = Red | Green | White | Yellow | Blue
            deriving (Enum, Bounded)
 
 -- | Make 'Color' a symbolic value.
-mkSymbolicEnumeration ''Color
+mkSymbolic ''Color
 
 -- | Nationalities of the occupants
 data Nationality = Briton | Dane | Swede | Norwegian | German
                  deriving (Enum, Bounded)
 
 -- | Make 'Nationality' a symbolic value.
-mkSymbolicEnumeration ''Nationality
+mkSymbolic ''Nationality
 
 -- | Beverage choices
 data Beverage = Tea | Coffee | Milk | Beer | Water
               deriving (Enum, Bounded)
 
 -- | Make 'Beverage' a symbolic value.
-mkSymbolicEnumeration ''Beverage
+mkSymbolic ''Beverage
 
 -- | Pets they keep
 data Pet = Dog | Horse | Cat | Bird | Fish
          deriving (Enum, Bounded)
 
 -- | Make 'Pet' a symbolic value.
-mkSymbolicEnumeration ''Pet
+mkSymbolic ''Pet
 
 -- | Sports they engage in
 data Sport = Football | Baseball | Volleyball | Hockey | Tennis
            deriving (Enum, Bounded)
 
 -- | Make 'Sport' a symbolic value.
-mkSymbolicEnumeration ''Sport
+mkSymbolic ''Sport
 
 -- | We have:
 --

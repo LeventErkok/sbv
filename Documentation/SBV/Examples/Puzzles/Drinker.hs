@@ -31,7 +31,7 @@ import Data.SBV
 data P
 
 -- | Make 'P' an uninterpreted sort, introducing the type 'SP' for its symbolic version
-mkUninterpretedSort ''P
+mkSymbolic ''P
 
 -- | Declare the uninterpret function 'd', standing for drinking. For each person, this function
 -- assigns whether they are drinking; but is otherwise completely uninterpreted. (i.e., our theorem

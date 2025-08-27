@@ -27,7 +27,7 @@ import Data.List (sortOn)
 import qualified Control.Exception as C
 
 data Q
-mkUninterpretedSort ''Q
+mkSymbolic ''Q
 
 tests :: TestTree
 tests =

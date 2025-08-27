@@ -31,7 +31,7 @@ import Data.SBV.TP
 
 -- | An uninterpreted sort, corresponding to the type of Kleene algebra strings.
 data Kleene
-mkUninterpretedSort ''Kleene
+mkSymbolic ''Kleene
 
 -- | Star operator over kleene algebras. We're leaving this uninterpreted.
 star :: SKleene -> SKleene

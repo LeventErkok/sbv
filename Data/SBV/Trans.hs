@@ -85,11 +85,8 @@ module Data.SBV.Trans (
   , blastSDouble
   , blastSFloatingPoint
 
-  -- * Enumerations
-  , mkSymbolicEnumeration
-
-  -- * Uninterpreted sorts, axioms, constants, and functions
-  , mkUninterpretedSort, SMTDefinable(..)
+  -- * Symbolic types
+  , mkSymbolic, SMTDefinable(..)
 
   -- * Properties, proofs, and satisfiability
   , Predicate, ConstraintSet, ProvableM(..), Provable, SatisfiableM(..), Satisfiable

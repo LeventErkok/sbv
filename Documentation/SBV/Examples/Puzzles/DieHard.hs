@@ -32,7 +32,7 @@ import Data.SBV.Tools.BMC
 data Action = Initial | FillBig | FillSmall | EmptyBig | EmptySmall | BigToSmall | SmallToBig
             deriving (Enum, Bounded)
 
-mkSymbolicEnumeration ''Action
+mkSymbolic ''Action
 
 -- | We represent the state with two quantities, the amount of water in each jug. The
 -- action is how we got into this state.
