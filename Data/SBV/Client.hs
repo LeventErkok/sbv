@@ -235,23 +235,29 @@ unmod = reverse . takeWhile (/= '.') . reverse . show
 -- | Given a type name, determine what kind of a data-type it is.
 dissect :: TH.Name -> TH.Q ADT
 dissect typeName = do
-        c <- TH.reify typeName
-        case c of
-          TH.TyConI (TH.DataD _ _ _ _ cons _) -> do cs <- mapM collect cons
-                                                    pure $ if all (null . snd) cs
-                                                              then ADTEnum (map fst cs)
-                                                              else ADTFull cs
-          _ -> fail $ unlines [ "Data.SBV.mkSymbolic: Invalid argument " ++ show typeName
-                              , ""
-                              , "  Reified to: " ++ show c
-                              , ""
-                              , "This is not a type SBV supports symbolically. Please report this as a feature request."
-                              ]
+        cs <- mapM collect =<< getConstructors typeName
+        pure $ if all (null . snd) cs
+               then ADTEnum (map fst cs)
+               else ADTFull cs
 
   where tName = unmod typeName
 
         bad what extras = fail $ unlines $ ("mkSymbolic: " ++ what) : map ("      " ++) extras
         report          = "Please report this as a feature request."
+
+        -- Grab the constructors. Eventually, we might want to fully expand
+        -- type synonyms too. There's a th-expand-syns package on hackage that
+        -- allegedly does this; so we might want to utilize that.
+        getConstructors :: TH.Name -> TH.Q [TH.Con]
+        getConstructors nm = TH.reify nm >>= grab
+          where grab (TH.TyConI (TH.DataD _ _ _ _ cons _)) = pure cons
+                grab c = bad ("Invalid argument " ++ show typeName)
+                             [ ""
+                             , "Reified to: " ++ show c
+                             , ""
+                             , "This is not a type SBV currently supports symbolically."
+                             , "Please report this as a feature request."
+                             ]
 
         -- For ech constructor, extract the constructor name and the kinds for fields
         collect :: TH.Con -> TH.Q (TH.Name, [Kind])
