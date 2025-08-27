@@ -29,12 +29,12 @@ module Data.SBV.Client
 import Data.Generics
 
 import Control.Monad (filterM)
-
 import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
-import qualified Data.SBV.List as SL
-
 import qualified Control.Exception as C
+
+import Data.Word
+import Data.Int
 
 import qualified "template-haskell" Language.Haskell.TH        as TH
 #if MIN_VERSION_template_haskell(2,18,0)
@@ -45,6 +45,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Provers.Prover
+import qualified Data.SBV.List as SL
+
 
 -- | Check whether the given solver is installed and is ready to go. This call does a
 -- simple call to the solver to ensure all is well.
@@ -274,6 +276,24 @@ dissect typeName = do
                 -- lists
                 go (TH.AppT TH.ListT t) = KList <$> go t
 
+                -- maybe
+                go (TH.AppT (TH.ConT nm) t) | nm == ''Maybe = KMaybe <$> go t
+
+                -- either
+                go (TH.AppT (TH.AppT (TH.ConT nm) t1) t2) | nm == ''Either = KEither <$> go t1 <*> go t2
+
+                -- arbitrary words/ints
+                go (TH.AppT (TH.ConT nm) (TH.LitT (TH.NumTyLit n)))
+                    | badSize n     = bad "Invalid bit-vector size"
+                                          [ "Size: " ++ show n
+                                          , ""
+                                          , "Must be >= 1 and <= maxBound (" ++ show (maxBound :: Int) ++ ") :: Int"
+                                          ]
+                    | nm == ''WordN = pure $ KBounded False (fromIntegral n)
+                    | nm == ''IntN  = pure $ KBounded True  (fromIntegral n)
+
+                    where badSize i = i < 1 || i > fromIntegral (maxBound :: Int)
+
                 -- giving up
                 go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ show typeName
                                                           , "Constructor: " ++ show constructorName
@@ -281,7 +301,6 @@ dissect typeName = do
                                                           , ""
                                                           , report
                                                           ]
-
 
                 -- Extract an N-tuple
                 getTuple = tup []
@@ -298,18 +317,22 @@ dissect typeName = do
                   | t == ''Double  = pure KDouble
                   | t == ''Char    = pure KChar
                   | t == ''String  = pure KString
+                  | t == ''Word8   = pure $ KBounded False  8
+                  | t == ''Word16  = pure $ KBounded False 16
+                  | t == ''Word32  = pure $ KBounded False 32
+                  | t == ''Word64  = pure $ KBounded False 64
+                  | t == ''Int8    = pure $ KBounded True   8
+                  | t == ''Int16   = pure $ KBounded True  16
+                  | t == ''Int32   = pure $ KBounded True  32
+                  | t == ''Int64   = pure $ KBounded True  64
                   {-
                    - TODO: how do we map to these?
-                    | KBounded !Bool !Int
                     | KReal
                     | KUserSort String (Maybe [String])
                     | KADT      String [String]
                     | KFP !Int !Int
-                    | KList Kind
                     | KSet  Kind
-                    | KMaybe  Kind
                     | KRational
-                    | KEither Kind Kind
                     | KArray  Kind Kind
                   -}
                   | True
