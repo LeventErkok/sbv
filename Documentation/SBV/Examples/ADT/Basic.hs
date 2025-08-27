@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall -Werror #-}
 
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Documentation.SBV.Examples.ADT.Basic where
@@ -22,6 +23,14 @@ data Expr = Var String
           | Add Expr Expr
           | Let String Expr Expr
           | Interval (Expr, Expr)
+          | CL [Expr]
+          | CM (Maybe (Expr, Integer))
+          | CE (Either Integer Expr)
+          | W8   Word8
+          | I65  [WordN 5]
+          | FP16 [FloatingPoint 5 10]
+          | KReal     AlgReal
+          | KRational Rational
 
 -- | Make it a symbolic value
 mkSymbolic ''Expr
@@ -33,4 +42,4 @@ mkSymbolic ''Expr
 --   s0 = Add (Num 0) (Num 0) :: Expr
 --   s1 =               Num 0 :: Expr
 test :: IO SatResult
-test = satWith z3{verbose=True} $ \x y -> x ./= (y :: SExpr) .&& y ./= literal (Num 0)
+test = satWith z3{verbose=True} $ \x y -> x ./== (y :: SExpr) .&& y ./= literal (W8 0)
