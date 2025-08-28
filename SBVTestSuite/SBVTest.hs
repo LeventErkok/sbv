@@ -17,6 +17,7 @@ module Main(main) where
 
 import Test.Tasty
 
+import qualified TestSuite.ADT.ADT
 import qualified TestSuite.Arrays.InitVals
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Arrays.Query
@@ -129,7 +130,8 @@ import qualified TestSuite.Uninterpreted.Uninterpreted
 
 main :: IO ()
 main = defaultMain $ testGroup "SBV" [
-                        TestSuite.Arrays.InitVals.tests
+                        TestSuite.ADT.ADT.tests
+                      , TestSuite.Arrays.InitVals.tests
                       , TestSuite.Arrays.Memory.tests
                       , TestSuite.Arrays.Query.tests
                       , TestSuite.Arrays.Caching.tests
