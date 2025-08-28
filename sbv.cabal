@@ -114,6 +114,7 @@ Library
                   , random
                   , syb
                   , template-haskell
+                  , th-expand-syns
                   , text
                   , time
                   , transformers

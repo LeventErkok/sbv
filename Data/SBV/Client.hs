@@ -16,6 +16,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TupleSections       #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
@@ -35,11 +36,14 @@ import qualified Control.Exception as C
 
 import Data.Word
 import Data.Int
+import Data.Ratio
 
 import qualified "template-haskell" Language.Haskell.TH        as TH
 #if MIN_VERSION_template_haskell(2,18,0)
 import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 #endif
+
+import Language.Haskell.TH.ExpandSyns as TH
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
@@ -235,7 +239,8 @@ unmod = reverse . takeWhile (/= '.') . reverse . show
 -- | Given a type name, determine what kind of a data-type it is.
 dissect :: TH.Name -> TH.Q ADT
 dissect typeName = do
-        cs <- mapM collect =<< getConstructors typeName
+        tcs <- getConstructors typeName
+        cs  <- mapM (\(n, ts) -> (n,) <$> mapM (\t -> toSBV n =<< expandSyns t) ts) tcs
         pure $ if all (null . snd) cs
                then ADTEnum (map fst cs)
                else ADTFull cs
@@ -245,30 +250,75 @@ dissect typeName = do
         bad what extras = fail $ unlines $ ("mkSymbolic: " ++ what) : map ("      " ++) extras
         report          = "Please report this as a feature request."
 
-        -- Grab the constructors. Eventually, we might want to fully expand
-        -- type synonyms too. There's a th-expand-syns package on hackage that
-        -- allegedly does this; so we might want to utilize that.
-        getConstructors :: TH.Name -> TH.Q [TH.Con]
-        getConstructors nm = TH.reify nm >>= grab
-          where grab (TH.TyConI (TH.DataD _ _ _ _ cons _)) = pure cons
-                grab c = bad ("Invalid argument " ++ show typeName)
-                             [ ""
-                             , "Reified to: " ++ show c
-                             , ""
-                             , "This is not a type SBV currently supports symbolically."
-                             , "Please report this as a feature request."
-                             ]
+        headCon :: TH.Type -> Maybe (TH.Name, [TH.Type])
+        headCon = go []
+          where go args (TH.ConT n)    = Just (n, reverse args)
+                go args (TH.AppT t a)  = go   (a:args) t
+                go args (TH.SigT t _)  = go      args t
+                go args (TH.ParensT t) = go      args t
+                go _    _              = Nothing
 
-        -- For ech constructor, extract the constructor name and the kinds for fields
-        collect :: TH.Con -> TH.Q (TH.Name, [Kind])
-        collect (TH.NormalC nm ps) = (,) <$> pure nm <*> mapM (\(_,    t) -> toSBV nm t) ps
-        collect (TH.RecC    nm ps) = (,) <$> pure nm <*> mapM (\(_, _, t) -> toSBV nm t) ps
-        collect c                  = bad "Unsupported constructor kind"
-                                         [ "    Datatype   : " ++ show typeName
-                                         , "    Constructor: " ++ show c
-                                         , ""
-                                         , report
-                                         ]
+        getConstructors :: TH.Name -> TH.Q [(TH.Name, [TH.Type])]
+        getConstructors topName = getConstructorsFromType (TH.ConT topName)
+
+        getConstructorsFromType :: TH.Type -> TH.Q [(TH.Name, [TH.Type])]
+        getConstructorsFromType ty = do ty' <- expandSyns ty
+                                        case headCon ty' of
+                                          Just (n, args) -> reifyFromHead n args
+                                          Nothing        -> bad "Not a type constructor"
+                                                                [ "Name    : " ++ show typeName
+                                                                , "Type    : " ++ show ty
+                                                                , "Expanded: " ++ show ty'
+                                                                ]
+
+        reifyFromHead :: TH.Name -> [TH.Type] -> TH.Q [(TH.Name, [TH.Type])]
+        reifyFromHead n args = do info <- TH.reify n
+                                  case info of
+                                    TH.TyConI (TH.DataD    _ _ tvs _ cons _) -> mapM (expandCon (mkSubst tvs args)) cons
+                                    TH.TyConI (TH.NewtypeD _ _ tvs _ con  _) -> mapM (expandCon (mkSubst tvs args)) [con]
+                                    TH.TyConI (TH.TySynD _ tvs rhs)          -> getConstructorsFromType (applySubst (mkSubst tvs args) rhs)
+                                    _ -> bad "Unsupported kind"
+                                             [ "Type : " ++ show typeName
+                                             , "Name : " ++ show n
+                                             , "Kind : " ++ show info
+                                             ]
+
+        expandCon :: [(TH.Name, TH.Type)] -> TH.Con -> TH.Q (TH.Name, [TH.Type])
+        expandCon sub (TH.NormalC  n fields)          = (n,) <$> mapM (expandSyns . applySubst sub . snd) fields
+        expandCon sub (TH.RecC     n fields)          = (n,) <$> mapM (expandSyns . applySubst sub . (\(_,_,t) -> t)) fields
+        expandCon sub (TH.InfixC   (_, t1) n (_, t2)) = (n,) <$> mapM (expandSyns . applySubst sub) [t1, t2]
+        {- These don't have proper correspondences in SMTLib; so ignore.
+        expandCon sub (TH.ForallC  _ _ c)             = expandCon sub c
+        expandCon sub (TH.GadtC    [n] fields _)      = (n,) <$> mapM (expandSyns . applySubst sub . snd) fields
+        expandCon sub (TH.RecGadtC [n] fields _)      = (n,) <$> mapM (expandSyns . applySubst sub . (\(_,_,t) -> t)) fields
+        -}
+        expandCon _   c                               = bad "Unsupported constructor form: "
+                                                            [ "Type       : " ++ show typeName
+                                                            , "Constructor: " ++ show c
+                                                            , ""
+                                                            , report
+                                                            ]
+
+        -- | Make substitution from type variables to actual args
+        mkSubst :: [TH.TyVarBndr TH.BndrVis] -> [TH.Type] -> [(TH.Name, TH.Type)]
+        mkSubst tvs args = zip (map tvName tvs) args
+          where tvName (TH.PlainTV  n _)   = n
+                tvName (TH.KindedTV n _ _) = n
+
+        -- | Apply substitution to a Type
+        applySubst :: [(TH.Name, TH.Type)] -> TH.Type -> TH.Type
+        applySubst sub = go
+          where go (TH.VarT    n)        = maybe      (TH.VarT n) id (n `lookup` sub)
+                go (TH.AppT    t1 t2)    = TH.AppT    (go t1) (go t2)
+                go (TH.SigT    t k)      = TH.SigT    (go t)  k
+                go (TH.ParensT t)        = TH.ParensT (go t)
+                go (TH.InfixT  t1 n t2)  = TH.InfixT  (go t1) n (go t2)
+                go (TH.UInfixT t1 n t2)  = TH.UInfixT (go t1) n (go t2)
+                go (TH.ForallT bs ctx t) = TH.ForallT bs (map goPred ctx) (go t)
+                go t                     = t
+
+                goPred (TH.AppT t1 t2) = TH.AppT (go t1) (go t2)
+                goPred p               = p
 
         -- Find the SBV kind for this type
         toSBV :: TH.Name -> TH.Type -> TH.Q Kind
@@ -279,6 +329,9 @@ dissect typeName = do
 
                 -- tuples
                 go t | Just ps <- getTuple t = KTuple <$> mapM go ps
+
+                -- recognize strings, since we don't (yet) support chars
+                go (TH.AppT TH.ListT (TH.ConT t)) | t == ''Char = pure KString
 
                 -- lists
                 go (TH.AppT TH.ListT t) = KList <$> go t
@@ -298,6 +351,10 @@ dissect typeName = do
                 go (TH.AppT (TH.AppT (TH.ConT nm) (TH.LitT (TH.NumTyLit eb))) (TH.LitT (TH.NumTyLit sb)))
                     | nm == ''FloatingPoint = pure $ KFP (fromIntegral eb) (fromIntegral sb)
 
+                -- rational
+                go (TH.AppT (TH.ConT nm) (TH.ConT p))
+                    | nm == ''Ratio && p == ''Integer = pure KRational
+
                 -- giving up
                 go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ show typeName
                                                           , "Constructor: " ++ show constructorName
@@ -315,22 +372,34 @@ dissect typeName = do
                 -- Given the name of a type, what's the equivalent in the SBV domain?
                 extract :: TH.Name -> TH.Q Kind
                 extract t
-                  | t == ''Bool    = pure KBool
-                  | t == ''Integer = pure KUnbounded
-                  | t == ''Float   = pure KFloat
-                  | t == ''Double  = pure KDouble
-                  | t == ''Char    = pure KChar
-                  | t == ''String  = pure KString
-                  | t == ''AlgReal = pure KReal
-                  | t == ''Rational= pure KRational
-                  | t == ''Word8   = pure $ KBounded False  8
-                  | t == ''Word16  = pure $ KBounded False 16
-                  | t == ''Word32  = pure $ KBounded False 32
-                  | t == ''Word64  = pure $ KBounded False 64
-                  | t == ''Int8    = pure $ KBounded True   8
-                  | t == ''Int16   = pure $ KBounded True  16
-                  | t == ''Int32   = pure $ KBounded True  32
-                  | t == ''Int64   = pure $ KBounded True  64
+                  | t == ''Bool     = pure KBool
+                  | t == ''Integer  = pure KUnbounded
+                  | t == ''Float    = pure KFloat
+                  | t == ''Double   = pure KDouble
+
+                  -- Punt on char. Because SMTLib's string translation requires us to put extra constraints.
+                  -- We'll do that when we get there.
+                  -- | t == ''Char     = pure KChar
+                  | t == ''Char     = bad "Unsupported type: Char"
+                                          [ "Datatype   : " ++ show typeName
+                                          , "Constructor: " ++ show constructorName
+                                          , "Kind       : " ++ show t
+                                          , ""
+                                          , "While SBV supports SChar, ADT fields with characters are not yet supported."
+                                          , report
+                                          ]
+
+                  | t == ''String   = pure KString
+                  | t == ''AlgReal  = pure KReal
+                  | t == ''Rational = pure KRational
+                  | t == ''Word8    = pure $ KBounded False  8
+                  | t == ''Word16   = pure $ KBounded False 16
+                  | t == ''Word32   = pure $ KBounded False 32
+                  | t == ''Word64   = pure $ KBounded False 64
+                  | t == ''Int8     = pure $ KBounded True   8
+                  | t == ''Int16    = pure $ KBounded True  16
+                  | t == ''Int32    = pure $ KBounded True  32
+                  | t == ''Int64    = pure $ KBounded True  64
                   {-
                    - TODO: how do we map to these?
                     | KUserSort String (Maybe [String])
