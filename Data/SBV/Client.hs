@@ -400,6 +400,14 @@ dissect typeName = do
                   | t == ''Int16    = pure $ KBounded True  16
                   | t == ''Int32    = pure $ KBounded True  32
                   | t == ''Int64    = pure $ KBounded True  64
+                  | t == ''Int || t == ''Word
+                  = bad ("Unsupported platform specific type: " ++ show t)
+                        [ "    Datatype   : " ++ show typeName
+                        , "    Constructor: " ++ show constructorName
+                        , "    Field type : " ++ show t
+                        , ""
+                        , "Please pick a more specific type, such as Integer, Word8, WordN 32, IntN 16 etc."
+                        ]
                   {-
                    - TODO: how do we map to these?
                     | KUserSort String (Maybe [String])
