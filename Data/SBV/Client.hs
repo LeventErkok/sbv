@@ -18,6 +18,12 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TupleSections       #-}
 
+#if MIN_VERSION_template_haskell(2,22,1)
+-- No need for newer versions of TH
+#else
+{-# LANGUAGE FlexibleInstances   #-}
+#endif
+
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.Client
@@ -89,6 +95,8 @@ deriving instance TH.Lift TH.ModName
 deriving instance TH.Lift TH.NameFlavour
 deriving instance TH.Lift TH.Name
 deriving instance TH.Lift TH.Type
+deriving instance TH.Lift TH.Specificity
+deriving instance TH.Lift (TH.TyVarBndr TH.Specificity)
 #endif
 
 -- A few other things we need to TH lift
