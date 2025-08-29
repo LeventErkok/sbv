@@ -27,5 +27,5 @@ mkSymbolic ''Expr
 -- | Create two different values:
 --
 -- >>> test
-test :: IO ThmResult
-test = proveWith z3{verbose=True} $ \x y -> x ./== (y :: SExpr) .&& y ./= literal (Num 3)
+test :: IO SatResult
+test = satWith z3{verbose=True} $ \x y -> x ./== (y :: SExpr) .&& y .== sNum 3

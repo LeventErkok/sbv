@@ -228,7 +228,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ (if containsMaybe     kindInfo then declMaybe     else [])
              ++ (if containsRationals kindInfo then declRationals else [])
              ++ [ "; --- ADTs  --- " | not (null adts)]
-             ++ concatMap declADT  adts
+             ++ concatMap declADT adts
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
              ++ [ "; --- top level inputs ---"]

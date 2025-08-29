@@ -94,8 +94,8 @@ deriving instance TH.Lift TH.Name
 deriving instance TH.Lift Kind
 
 -- | What kind of type is this?
-data ADT = ADTEnum [TH.Name]           -- Enumeration. If the list is empty, then this is an uninterpreted type.
-         | ADTFull [(TH.Name, [Kind])] -- Constructors and fields
+data ADT = ADTEnum [TH.Name]                      -- Enumeration. If the list is empty, then an uninterpreted
+         | ADTFull [(TH.Name, [(TH.Type, Kind)])] -- Constructors and fields
 
 -- | Create a symbolic ADT
 mkSymbolic :: TH.Name -> TH.Q [TH.Dec]
@@ -195,41 +195,63 @@ mkEnum typeName cstrs = do
 
     pure $ derives ++ symVals ++ symEnum ++ [tdecl] ++ concat cdecls
 
- where addDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
+-- | Add document to a generated declaration
+addDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
 #if MIN_VERSION_template_haskell(2,18,0)
-       addDocs (tnm, ts) cnms = do addDoc True (tnm, ts)
-                                   mapM_  (addDoc False) cnms
-          where addDoc True  (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the type '"        ++ cs ++ "'."
-                addDoc False (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the constructor '" ++ cs ++ "'."
+addDocs (tnm, ts) cnms = do addDoc True (tnm, ts)
+                            mapM_  (addDoc False) cnms
+   where addDoc True  (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the type '"        ++ cs ++ "'."
+         addDoc False (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the constructor '" ++ cs ++ "'."
 #else
-       addDocs _ _ = pure ()
+addDocs _ _ = pure ()
 #endif
 
 -- | Create a symbolic ADT
-mkADT :: TH.Name -> [(TH.Name, [Kind])] -> TH.Q [TH.Dec]
+mkADT :: TH.Name -> [(TH.Name, [(TH.Type, Kind)])] -> TH.Q [TH.Dec]
 mkADT typeName cstrs = do
-     let typeCon  = TH.conT typeName
-         sTypeCon = TH.conT ''SBV `TH.appT` typeCon
+    let mkSBV :: TH.Type -> TH.Type
+        mkSBV a = TH.ConT ''SBV `TH.AppT` a
 
-         btname = TH.nameBase typeName
-         tname  = TH.mkName ('S' : btname)
+        typeCon = TH.ConT typeName
+        sType   = mkSBV typeCon
 
-     sType <- sTypeCon
+    decls <- [d|instance HasKind $(pure typeCon) where
+                  kindOf _ = KADT (unmod typeName) (Just [(unmod n, map snd tks) | (n, tks) <- cstrs])
 
-     decls <- [d|instance HasKind $typeCon where
-                   kindOf _ = KADT (unmod typeName) (Just [(unmod n, ks) | (n, ks) <- cstrs])
+                instance SymVal $(pure typeCon) where
+                  literal     = error "literal"
+                  fromCV      = error "fromCV"
+                  minMaxBound = Nothing
 
-                 instance SymVal $typeCon where
-                   literal     = error "literal"
-                   fromCV      = error "fromCV"
-                   minMaxBound = Nothing
+                instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
+                   arbitrary = error $ unlines [ ""
+                                               , "*** Data.SBV: Cannot quickcheck the given property."
+                                               , "***"
+                                               , "*** Default arbitrary instance for " ++ TH.nameBase typeName ++ " is too limited."
+                                               , "***"
+                                               , "*** You can overcome this by giving your own Arbitrary instance."
+                                               , "*** Please get in touch if this workaround is not suitable for your case."
+                                               ]
+             |]
 
-                 instance Arbitrary $typeCon where
-                   arbitrary   = undefined
-              |]
+    let declConstructor :: (TH.Name, [(TH.Type, Kind)]) -> TH.Q ((TH.Name, String), [TH.Dec])
+        declConstructor (c, tks) = do let ats = map (mkSBV . fst) tks
+                                      let ty = foldr (\a b -> TH.AppT (TH.AppT TH.ArrowT a) b) sType ats
+                                      pure ((nm, bnm), [TH.SigD nm ty, def])
+          where bnm  = TH.nameBase c
+                nm   = TH.mkName $ 's' : bnm
+                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
+                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL bnm))
 
-     let tdecl  = TH.TySynD tname [] sType
-     pure $ tdecl : decls
+    (constrNames, cdecls) <- unzip <$> mapM declConstructor cstrs
+
+    let btname = TH.nameBase typeName
+        tname  = TH.mkName ('S' : btname)
+        tdecl  = TH.TySynD tname [] sType
+
+    addDocs (tname, btname) constrNames
+
+    pure $ tdecl : decls ++ concat cdecls
 
 -- We'll just drop the modules to keep this simple
 -- If you use multiple expressions named the same (coming from different modules), oh well.
@@ -240,7 +262,12 @@ unmod = reverse . takeWhile (/= '.') . reverse . show
 dissect :: TH.Name -> TH.Q ADT
 dissect typeName = do
         tcs <- getConstructors typeName
-        cs  <- mapM (\(n, ts) -> (n,) <$> mapM (\t -> toSBV n =<< expandSyns t) ts) tcs
+
+        let mk n t = do k <- expandSyns t >>= toSBV n
+                        pure (t, k)
+
+        cs  <- mapM (\(n, ts) -> (n,) <$> mapM (mk n) ts) tcs
+
         pure $ if all (null . snd) cs
                then ADTEnum (map fst cs)
                else ADTFull cs

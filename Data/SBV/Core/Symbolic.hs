@@ -66,7 +66,7 @@ module Data.SBV.Core.Symbolic
   ) where
 
 import Control.DeepSeq             (NFData(..))
-import Control.Monad               (when)
+import Control.Monad               (when, unless)
 import Control.Monad.Except        (MonadError, ExceptT)
 import Control.Monad.Reader        (MonadReader(..), ReaderT, runReaderT,
                                     mapReaderT)
@@ -1287,9 +1287,9 @@ data UICodeKind = UINone Bool     -- no code. If bool is true, then curried.
                 | UISMT  SMTDef   -- SMTLib, first argument are the free-variables in it
                 | UICgC  [String] -- Code-gen, currently only C
 
--- | A newtype wrapper for uninterpreted function names. This is in preparation
--- for a possibility of having other alternatives here, which we haven't needed so far.
-newtype UIName = UIGiven String -- ^ Full name
+-- | A newtype wrapper for uninterpreted function names. We distinguish between user names and those of constructors
+data UIName = UIGiven String -- ^ Full name
+            | UICstr  String -- ^ The name of a constructor
 
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
@@ -1329,8 +1329,9 @@ prefixNameToUnique st pre = do
 newUninterpreted :: State -> UIName -> Maybe [String] -> SBVType -> UICodeKind -> IO String
 newUninterpreted st uiName mbArgNames t uiCode = do
 
-  candName <- case uiName of
-                UIGiven n -> pure n
+  let (isConstructor, candName) = case uiName of
+                                    UIGiven n -> (False, n)
+                                    UICstr  n -> (True,  n)
 
       -- determine the final name
   let nm = case () of
@@ -1371,14 +1372,16 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                           ++ "      Previously used at: " ++ show t'
         | True    = cont
 
-  uiMap <- readIORef (rUIMap st)
-  case nm `Map.lookup` uiMap of
-    Just (_, _, t') -> checkType t' (return ())
-    Nothing         -> modifyState st rUIMap (Map.insert nm (isCurried, mbArgNames, t))
-                         $ modifyIncState st rNewUIs
-                                            (\newUIs -> case nm `Map.lookup` newUIs of
-                                                          Just (_, _, t') -> checkType t' newUIs
-                                                          Nothing         -> Map.insert nm (isCurried, mbArgNames, t) newUIs)
+  -- If we're not a constructor, register it:
+  unless isConstructor $ do
+    uiMap <- readIORef (rUIMap st)
+    case nm `Map.lookup` uiMap of
+      Just (_, _, t') -> checkType t' (return ())
+      Nothing         -> modifyState st rUIMap (Map.insert nm (isCurried, mbArgNames, t))
+                           $ modifyIncState st rNewUIs
+                                              (\newUIs -> case nm `Map.lookup` newUIs of
+                                                            Just (_, _, t') -> checkType t' newUIs
+                                                            Nothing         -> Map.insert nm (isCurried, mbArgNames, t) newUIs)
 
   pure nm
 

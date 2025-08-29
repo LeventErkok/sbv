@@ -2728,10 +2728,14 @@ class SMTDefinable a where
   -- | Render an uninterpeted value as an SMTLib definition
   sbv2smt :: ExtractIO m => a -> m String
 
+  -- | Make this name a constructor, coming from an ADT. Only used internally
+  mkConstructor :: String -> a
+
   {-# MINIMAL sbvDefineValue, sbv2smt #-}
 
   -- defaults:
   uninterpret         nm         = sbvDefineValue (UIGiven nm) Nothing   $ UIFree True
+  mkConstructor       nm         = sbvDefineValue (UICstr  nm) Nothing   $ UIFree True
   uninterpretWithArgs nm  as     = sbvDefineValue (UIGiven nm) (Just as) $ UIFree True
   cgUninterpret       nm  code v = sbvDefineValue (UIGiven nm) Nothing   $ UICodeC (v, code)
   sym                            = uninterpret
@@ -2745,7 +2749,6 @@ class SMTDefinable a where
                           let b = SBV $ SVal k $ Right $ cache (const (pure v))
                           registerFunction $ f b
 
-
 -- | Kind of uninterpretation
 data UIKind a = UIFree  Bool                            -- ^ completely uninterpreted. If Bool is true, then this is curried.
               | UIFun   (a, State -> Kind -> IO SMTDef) -- ^ has code for SMTLib, with final type of kind (note this is the result
@@ -2756,6 +2759,7 @@ data UIKind a = UIFree  Bool                            -- ^ completely uninterp
 -- Get the code associated with the UI, unless we've already did this once. (To support recursive defs.)
 retrieveUICode :: UIName -> State -> Kind -> UIKind a -> IO UICodeKind
 retrieveUICode _             _  _  (UIFree  c)      = pure $ UINone c
+retrieveUICode (UICstr _)    _  _  _                = pure $ UINone True
 retrieveUICode (UIGiven  nm) st fk (UIFun   (_, f)) = do userFuncs <- readIORef (rUserFuncs st)
                                                          if nm `Set.member` userFuncs
                                                             then pure $ UINone True
