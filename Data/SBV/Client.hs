@@ -97,6 +97,7 @@ deriving instance TH.Lift TH.Name
 deriving instance TH.Lift TH.Type
 deriving instance TH.Lift TH.Specificity
 deriving instance TH.Lift (TH.TyVarBndr TH.Specificity)
+deriving instance TH.Lift (TH.TyVarBndr ())
 #endif
 
 -- A few other things we need to TH lift
