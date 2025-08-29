@@ -88,6 +88,7 @@ deriving instance TH.Lift TH.PkgName
 deriving instance TH.Lift TH.ModName
 deriving instance TH.Lift TH.NameFlavour
 deriving instance TH.Lift TH.Name
+deriving instance TH.Lift TH.Type
 #endif
 
 -- A few other things we need to TH lift
