@@ -204,7 +204,19 @@ mkEnum typeName cstrs = do
 
     addDocs (tname, btname) constrNames
 
-    pure $ derives ++ symVals ++ symEnum ++ [tdecl] ++ concat cdecls
+    -- Declare testers
+    let declTester c = let ty  = TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
+                            in ((nm, bnm), [TH.SigD nm ty, def])
+          where bnm  = TH.nameBase c
+                nm   = TH.mkName $ "is" ++ bnm
+                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
+                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL ("(_ is " ++ bnm ++ ")")))
+
+    let (testerNames, testerDecls) = unzip $ map declTester cstrs
+
+    addDocs (tname, btname) testerNames
+
+    pure $ derives ++ symVals ++ symEnum ++ [tdecl] ++ concat cdecls ++ concat testerDecls
 
 -- | Add document to a generated declaration
 addDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
