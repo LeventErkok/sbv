@@ -86,7 +86,7 @@ fromECon _        = Nothing
 -- Collect strings appearing, used in 'getOption' only
 stringsOf :: SExpr -> [String]
 stringsOf (ECon s)           = [s]
-stringsOf (ENum (i, _))      = [show i]
+stringsOf (ENum (i, _, _))   = [show i]
 stringsOf (EReal   r)        = [show r]
 stringsOf (EFloat  f)        = [show f]
 stringsOf (EFloatingPoint f) = [show f]
@@ -97,7 +97,7 @@ stringsOf (EApp ss)          = concatMap stringsOf ss
 serialize :: Bool -> SExpr -> String
 serialize removeQuotes = go
   where go (ECon s)           = if removeQuotes then unQuote s else s
-        go (ENum (i, _))      = showNegativeNumber i
+        go (ENum (i, _, _))   = showNegativeNumber i
         go (EReal   r)        = showNegativeNumber r
         go (EFloat  f)        = showNegativeNumber f
         go (EDouble d)        = showNegativeNumber d
@@ -133,7 +133,7 @@ getInfo flag = do
           then return $ Resp_AllStatistics $ grabAllStats pe
           else case pe of
                  ECon "unsupported"                                        -> return Resp_Unsupported
-                 EApp [ECon ":assertion-stack-levels", ENum (i, _)]        -> return $ Resp_AssertionStackLevels i
+                 EApp [ECon ":assertion-stack-levels", ENum (i, _, _)]     -> return $ Resp_AssertionStackLevels i
                  EApp (ECon ":authors" : ns)                               -> return $ Resp_Authors (map render ns)
                  EApp [ECon ":error-behavior", ECon "immediate-exit"]      -> return $ Resp_Error ErrorImmediateExit
                  EApp [ECon ":error-behavior", ECon "continued-execution"] -> return $ Resp_Error ErrorContinuedExecution
@@ -189,12 +189,12 @@ getOption f = case f undefined of
         string c (ECon s) _ = return $ Just $ c s
         string _ e        k = k $ Just ["Expected string, but got: " ++ show (serialize False e)]
 
-        bool c (ENum (0, _)) _ = return $ Just $ c False
-        bool c (ENum (1, _)) _ = return $ Just $ c True
-        bool _ e             k = k $ Just ["Expected boolean, but got: " ++ show (serialize False e)]
+        bool c (ENum (0, _, True)) _ = return $ Just $ c False
+        bool c (ENum (1, _, True)) _ = return $ Just $ c True
+        bool _ e                   k = k $ Just ["Expected boolean, but got: " ++ show (serialize False e)]
 
-        integer c (ENum (i, _)) _ = return $ Just $ c i
-        integer _ e             k = k $ Just ["Expected integer, but got: " ++ show (serialize False e)]
+        integer c (ENum (i, _, _)) _ = return $ Just $ c i
+        integer _ e                k = k $ Just ["Expected integer, but got: " ++ show (serialize False e)]
 
         -- free format, really
         stringList c e _ = return $ Just $ c $ stringsOf e
@@ -400,7 +400,7 @@ getObjectiveValues = do let cmd = "(get-objectives)"
                         cvt (ECon "oo")                    = return $ Infinite  k
                         cvt (ECon "epsilon")               = return $ Epsilon   k
                         cvt (EApp [ECon "interval", x, y]) =          Interval  <$> cvt x <*> cvt y
-                        cvt (ENum    (i, _))               = return $ BoundedCV $ mkConstCV k i
+                        cvt (ENum    (i, _, _))            = return $ BoundedCV $ mkConstCV k i
                         cvt (EReal   r)                    = return $ BoundedCV $ CV k $ CAlgReal r
                         cvt (EFloat  f)                    = return $ BoundedCV $ CV k $ CFloat   f
                         cvt (EDouble d)                    = return $ BoundedCV $ CV k $ CDouble  d
@@ -733,9 +733,9 @@ getAssignment = do
                                   ]
 
             -- we're expecting boolean assignment to labels, essentially
-            grab (EApp [ECon s, ENum (0, _)]) = Just (unQuote s, False)
-            grab (EApp [ECon s, ENum (1, _)]) = Just (unQuote s, True)
-            grab _                            = Nothing
+            grab (EApp [ECon s, ENum (0, _, _)]) = Just (unQuote s, False)
+            grab (EApp [ECon s, ENum (1, _, _)]) = Just (unQuote s, True)
+            grab _                               = Nothing
 
         r <- ask cmd
 

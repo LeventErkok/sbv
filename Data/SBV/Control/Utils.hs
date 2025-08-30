@@ -448,12 +448,12 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
 -- up. And I think it'll only be necessary then, I haven't seen z3 try anything smarter in other scenarios.
 pointWiseExtract ::  forall m. (MonadIO m, MonadQuery m) => String -> SBVType -> m (Maybe ([([SExpr], SExpr)], SExpr))
 pointWiseExtract nm typ = tryPointWise
-  where trueSExpr  = ENum (1, Nothing)
-        falseSExpr = ENum (0, Nothing)
+  where trueSExpr  = ENum (1, Nothing, True)
+        falseSExpr = ENum (0, Nothing, True)
 
-        isTrueSExpr (ENum (1, Nothing)) = True
-        isTrueSExpr (ENum (0, Nothing)) = False
-        isTrueSExpr s                   = error $ "Data.SBV.pointWiseExtract: Impossible happened: Received: " ++ show s
+        isTrueSExpr (ENum (1, Nothing, True)) = True
+        isTrueSExpr (ENum (0, Nothing, True)) = False
+        isTrueSExpr s                         = error $ "Data.SBV.pointWiseExtract: Impossible happened: Received: " ++ show s
 
         (nArgs, isBoolFunc) = case typ of
                                 SBVType ts -> (length ts - 1, all (== KBool) ts)
@@ -902,17 +902,17 @@ sexprToVal e = fromCV <$> recoverKindedValue (kindOf (Proxy @a)) e
 -- | Recover a given solver-printed value with a possible interpretation
 recoverKindedValue :: Kind -> SExpr -> Maybe CV
 recoverKindedValue k e = case k of
-                           KBool       | ENum (i, _) <- e      -> Just $ mkConstCV k i
+                           KBool       | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
                                        | True                  -> Nothing
 
-                           KBounded{}  | ENum (i, _) <- e      -> Just $ mkConstCV k i
+                           KBounded{}  | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
                                        | True                  -> Nothing
 
-                           KUnbounded  | ENum (i, _) <- e      -> Just $ mkConstCV k i
+                           KUnbounded  | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
                                        | True                  -> Nothing
 
-                           KReal       | ENum (i, _) <- e      -> Just $ mkConstCV k i
-                                       | EReal i     <- e      -> Just $ CV KReal (CAlgReal i)
+                           KReal       | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
+                                       | EReal i        <- e   -> Just $ CV KReal (CAlgReal i)
                                        | True                  -> interpretInterval e
 
                            KUserSort{} | ECon s <- e           -> Just $ CV k $ CUserSort (getUIIndex k s, simplifyECon s)
@@ -920,15 +920,15 @@ recoverKindedValue k e = case k of
 
                            KADT{}                              -> Just $ CV k $ CADT (shADT e)
 
-                           KFloat      | ENum (i, _) <- e      -> Just $ mkConstCV k i
-                                       | EFloat i    <- e      -> Just $ CV KFloat (CFloat i)
+                           KFloat      | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
+                                       | EFloat i       <- e   -> Just $ CV KFloat (CFloat i)
                                        | True                  -> Nothing
 
-                           KDouble     | ENum (i, _) <- e      -> Just $ mkConstCV k i
-                                       | EDouble i   <- e      -> Just $ CV KDouble (CDouble i)
+                           KDouble     | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
+                                       | EDouble i      <- e   -> Just $ CV KDouble (CDouble i)
                                        | True                  -> Nothing
 
-                           KFP eb sb   | ENum (i, _)      <- e -> Just $ CV k $ CFP $ fpFromInteger eb sb i
+                           KFP eb sb   | ENum (i, _, _)   <- e -> Just $ CV k $ CFP $ fpFromInteger eb sb i
                                        | EFloat f         <- e -> Just $ CV k $ CFP $ fpFromFloat   eb sb f
                                        | EDouble d        <- e -> Just $ CV k $ CFP $ fpFromDouble  eb sb d
                                        | EFloatingPoint c <- e -> Just $ CV k $ CFP c
@@ -1003,8 +1003,8 @@ recoverKindedValue k e = case k of
                                          ]
 
 
-                 isTrue (ENum (1, Nothing)) = True
-                 isTrue (ENum (0, Nothing)) = False
+                 isTrue (ENum (1, Nothing, True)) = True
+                 isTrue (ENum (0, Nothing, True)) = False
                  isTrue bad                 = tbd $ "Non-boolean membership value seen: " ++ show bad
 
                  isUniversal (EApp [EApp [ECon "as", ECon "const", EApp [ECon "Array", _, ECon "Bool"]], r]) = isTrue r
@@ -1130,18 +1130,25 @@ recoverKindedValue k e = case k of
 
         -- For ADT values, we simply pretty-print them after some simplifications
         shADT = trim . sh . simp
-          where sh sexpr = case sexpr of
-                             ECon           s      -> constant s
-                             ENum           (i, _) -> show i
-                             EReal          a      -> show a
-                             EFloat         f      -> show f
-                             EFloatingPoint f      -> show f
-                             EDouble        d      -> show d
+          where sh :: SExpr -> String
+                sh sexpr = case sexpr of
+                             ECon           s            -> constant s
+                             ENum           (0, _, True) -> "False"
+                             ENum           (1, _, True) -> "True"
+                             ENum           (i, _, _)    -> show i
+                             EReal          a            -> show a
+                             EFloat         f            -> show f
+                             EFloatingPoint f            -> show f
+                             EDouble        d            -> show d
 
                              -- lists
+                             EApp (ECon "seq.++" : es) ->
+                                let collect sofar []                                 = reverse sofar
+                                    collect sofar (EApp [ECon "seq.unit", v] : rest) = collect (v : sofar) rest
+                                    collect sofar (v                         : rest) = collect (v : sofar) rest
+                                in '[' : intercalate "," (map sh (collect [] es)) ++ "]"
+
                              EApp [ECon "seq.unit", v] -> '[' : sh v ++ "]"
-                             EApp (ECon "seq.++" : []) -> "[]"
-                             EApp (ECon "seq.++" : es) -> foldr1 (\a b -> a ++ " ++ " ++ b) (map sh es)
 
                              -- rationals
                              EApp [ECon "SBV.Rational", v1, v2] -> sh v1 ++ "%" ++ sh v2
@@ -1158,6 +1165,7 @@ recoverKindedValue k e = case k of
                                       _          -> inp
                 trim xs           = xs
 
+                simp :: SExpr -> SExpr
                 simp (EApp [ECon "as", v, _]) = simp v
                 simp (EApp xs)                = EApp (map simp xs)
                 simp x                        = x
