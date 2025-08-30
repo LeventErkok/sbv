@@ -68,7 +68,7 @@
        ))
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s1 () (_ BitVec 64) #x0000000000000004)
-[GOOD] (define-fun s3 () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 SBVRational (Seq Bool)))) ((as just_SBVMaybe (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 SBVRational (Seq Bool))))) (mkSBVTuple3 0.0 ((_ to_fp 8 24) roundNearestTiesToEven (/ 12.0 1.0)) (mkSBVTuple2 (SBV.Rational 3 1) (seq.unit false)))))
+[GOOD] (define-fun s3 () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 SBVRational (Seq Bool)))) ((as just_SBVMaybe (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 SBVRational (Seq Bool))))) (mkSBVTuple3 0.0 ((_ to_fp 8 24) roundNearestTiesToEven (/ 12.0 1.0)) (mkSBVTuple2 (SBV.Rational 3 1) (seq.++ (seq.unit false) (seq.unit true))))))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () ADT) ; tracks user variable "e"
 [GOOD] ; --- constant tables ---
@@ -90,8 +90,9 @@
               (AMaybe (just_SBVMaybe (mkSBVTuple3 0.0
                                                   (fp #b0 #x82 #b10000000000000000000000)
                                                   (mkSBVTuple2 (SBV.Rational 3 1)
-                                                               (seq.unit false))))))))
+                                                               (seq.++ (seq.unit false)
+                                                                       (seq.unit true)))))))))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("e",APair (AInt64 4) (AMaybe (Just (0.0,12.0,(3%1,[0])))) :: ADT)], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("e",APair (AInt64 4) (AMaybe (Just (0.0,12.0,(3%1,[False,True])))) :: ADT)], modelUIFuns = []}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

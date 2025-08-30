@@ -80,4 +80,4 @@ t00 = do (a :: SADT) <- free "e"
 
 t01 :: Symbolic ()
 t01 = do (a :: SADT) <- free "e"
-         constrain $ a .=== literal (APair (AInt64 4) (AMaybe (Just (0, 12, (3, [False])))))
+         constrain $ a .=== literal (APair (AInt64 4) (AMaybe (Just (0, 12, (3, [False, True])))))
