@@ -1333,9 +1333,10 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                                     UIGiven n -> (False, n)
                                     UICstr  n -> (True,  n)
 
-      -- determine the final name
+  -- determine the final name. We leave constructors alone.
   let nm = case () of
              () | "__internal_sbv_" `isPrefixOf` candName -> candName                -- internal names go thru
+                | isConstructor                           -> candName                -- constructors (and testers) go thru
                 | True                                    -> barify candName         -- surround with bars if not legitimate in SMTLib
 
       extraComment = case uiName of

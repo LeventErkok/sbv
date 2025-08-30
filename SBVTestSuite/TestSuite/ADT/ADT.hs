@@ -62,6 +62,8 @@ tests =
   testGroup "ADT" [
       goldenCapturedIO "adt00" $ \rf -> checkWith rf t00
     , goldenCapturedIO "adt01" $ \rf -> checkWith rf t01
+    , goldenCapturedIO "adt02" $ \rf -> checkWith rf t02
+    , goldenCapturedIO "adt03" $ \rf -> checkWith rf t03
     ]
 
 checkWith :: FilePath -> Symbolic () -> IO ()
@@ -81,3 +83,11 @@ t00 = do (a :: SADT) <- free "e"
 t01 :: Symbolic ()
 t01 = do (a :: SADT) <- free "e"
          constrain $ a .=== literal (APair (AInt64 4) (AMaybe (Just (0, 12, (3, [False, True])))))
+
+t02 :: Symbolic ()
+t02 = do (a :: SADT) <- free "e"
+         constrain $ isAList a
+
+t03 :: Symbolic ()
+t03 = do (a :: SADT) <- free "e"
+         constrain $ isAList a .&& isAFP a

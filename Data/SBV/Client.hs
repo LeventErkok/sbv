@@ -259,16 +259,17 @@ mkADT typeName cstrs = do
                                                ]
              |]
 
-    let declConstructor :: (TH.Name, [(TH.Type, Kind)]) -> TH.Q ((TH.Name, String), [TH.Dec])
-        declConstructor (c, tks) = do let ats = map (mkSBV . fst) tks
-                                      let ty = foldr (\a b -> TH.AppT (TH.AppT TH.ArrowT a) b) sType ats
-                                      pure ((nm, bnm), [TH.SigD nm ty, def])
+    -- Declare constructors
+    let declConstructor :: (TH.Name, [(TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
+        declConstructor (c, tks) = let ats = map (mkSBV . fst) tks
+                                       ty  = foldr (\a b -> TH.AppT (TH.AppT TH.ArrowT a) b) sType ats
+                                   in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
                 nm   = TH.mkName $ 's' : bnm
                 def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
                 body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL bnm))
 
-    (constrNames,  cdecls) <- unzip <$> mapM declConstructor cstrs
+    let (constrNames, cdecls) = unzip $ map declConstructor cstrs
 
     let btname = TH.nameBase typeName
         tname  = TH.mkName ('S' : btname)
@@ -276,7 +277,20 @@ mkADT typeName cstrs = do
 
     addDocs (tname, btname) constrNames
 
-    pure $ tdecl : symVal : decls ++ concat cdecls
+    -- Declare testers
+    let declTester :: (TH.Name, [(TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
+        declTester (c, _) = let ty  = TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
+                            in ((nm, bnm), [TH.SigD nm ty, def])
+          where bnm  = TH.nameBase c
+                nm   = TH.mkName $ "is" ++ bnm
+                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
+                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL ("(_ is " ++ bnm ++ ")")))
+
+    let (testerNames, testerDecls) = unzip $ map declTester cstrs
+
+    addDocs (tname, btname) testerNames
+
+    pure $ tdecl : symVal : decls ++ concat cdecls ++ concat testerDecls
 
 -- We'll just drop the modules to keep this simple
 -- If you use multiple expressions named the same (coming from different modules), oh well.
