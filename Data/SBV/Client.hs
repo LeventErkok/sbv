@@ -226,13 +226,27 @@ mkADT typeName cstrs = do
         typeCon = TH.ConT typeName
         sType   = mkSBV typeCon
 
+    litFun <- do let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
+                                              let cn      = TH.mkName $ 's' : TH.nameBase n
+                                                  app a b = TH.AppE a (TH.AppE (TH.VarE 'literal) b)
+                                              pure $ TH.Clause [TH.ConP n [] (map TH.VarP as)]
+                                                               (TH.NormalB (foldl app (TH.VarE cn) (map TH.VarE as)))
+                                                               []
+                 TH.FunD 'literal <$> mapM mkLitClause cstrs
+
+    let symVal = let notNeeded s = TH.AppE (TH.VarE 'error)
+                                           (TH.LitE (TH.StringL (unlines [ "Data.SBV: Method " ++ s
+                                                                         , "Should not be needed for " ++ show typeName
+                                                                         , "Please report this as a bug."
+                                                                         ])))
+                 in TH.InstanceD Nothing [] (TH.AppT (TH.ConT ''SymVal) typeCon)
+                                            [ litFun
+                                            , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB (notNeeded "fromCV")) []]
+                                            , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB (TH.ConE 'Nothing)) []]
+                                            ]
+
     decls <- [d|instance HasKind $(pure typeCon) where
                   kindOf _ = KADT (unmod typeName) (Just [(unmod n, map snd tks) | (n, tks) <- cstrs])
-
-                instance SymVal $(pure typeCon) where
-                  literal     = error "literal"
-                  fromCV      = error "fromCV"
-                  minMaxBound = Nothing
 
                 instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
                    arbitrary = error $ unlines [ ""
@@ -254,7 +268,7 @@ mkADT typeName cstrs = do
                 def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
                 body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL bnm))
 
-    (constrNames, cdecls) <- unzip <$> mapM declConstructor cstrs
+    (constrNames,  cdecls) <- unzip <$> mapM declConstructor cstrs
 
     let btname = TH.nameBase typeName
         tname  = TH.mkName ('S' : btname)
@@ -262,7 +276,7 @@ mkADT typeName cstrs = do
 
     addDocs (tname, btname) constrNames
 
-    pure $ tdecl : decls ++ concat cdecls
+    pure $ tdecl : symVal : decls ++ concat cdecls
 
 -- We'll just drop the modules to keep this simple
 -- If you use multiple expressions named the same (coming from different modules), oh well.
