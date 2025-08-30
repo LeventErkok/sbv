@@ -316,7 +316,7 @@ mkADT typeName cstrs = do
                                    in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
                 anm  = "get" ++ bnm ++ "_" ++ show i
-                nm   = TH.mkName $ anm
+                nm   = TH.mkName anm
                 def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
                 body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL anm))
 
@@ -324,7 +324,34 @@ mkADT typeName cstrs = do
 
     mapM_ (addDoc "Accessor" . fst) accessorNames
 
-    pure $ tdecl : symVal : decls ++ concat cdecls ++ concat testerDecls ++ concat accessorDecls
+    -- Declare the case analyzer
+    caseFun <- do let bnm = TH.nameBase typeName
+                      cnm = TH.mkName $ "sCase" ++ bnm
+
+                  se <- TH.newName ('s' : bnm)
+                  fs <- mapM (\(nm, _) -> TH.newName ('f' : TH.nameBase nm)) cstrs
+
+                  let def = TH.FunD cnm [TH.Clause (map TH.VarP (se : fs)) (TH.NormalB (iteChain (zipWith (mkCase se) fs cstrs))) []]
+
+                      iteChain :: [(TH.Exp, TH.Exp)] -> TH.Exp
+                      iteChain []       = error $ unlines $ [ "Data.SBV.mkADT: Impossible happened!"
+                                                            , ""
+                                                            , "   Received an empty list for: " ++ show typeName
+                                                            , ""
+                                                            , "While building the case-analyzer."
+                                                            , "Please report this as a bug."
+                                                            ]
+                      iteChain [(_, l)]        = l
+                      iteChain ((t, e) : rest) = foldl TH.AppE (TH.VarE 'ite) [TH.AppE t (TH.VarE se), e, iteChain rest]
+
+                      mkCase :: TH.Name -> TH.Name -> (TH.Name, [(TH.Type, Kind)]) -> (TH.Exp, TH.Exp)
+                      mkCase cexpr func (c, fields) = (TH.VarE (TH.mkName ("is" ++ TH.nameBase c)), foldl TH.AppE (TH.VarE func) args)
+                         where getters = [TH.mkName ("get" ++ TH.nameBase c ++ "_" ++ show i) | (i, _) <- zip [(1 :: Int) ..] fields]
+                               args    = map (\g -> TH.AppE (TH.VarE g) (TH.VarE cexpr)) getters
+
+                  pure def
+
+    pure $ tdecl : symVal : decls ++ concat cdecls ++ concat testerDecls ++ concat accessorDecls ++ [caseFun]
 
 -- We'll just drop the modules to keep this simple
 -- If you use multiple expressions named the same (coming from different modules), oh well.
