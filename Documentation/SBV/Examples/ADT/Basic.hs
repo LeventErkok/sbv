@@ -8,7 +8,7 @@
 --
 -- Basic ADT examples.
 -----------------------------------------------------------------------------
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
 
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -28,4 +28,4 @@ mkSymbolic ''Expr
 --
 -- >>> test
 test :: IO SatResult
-test = satWith z3{verbose=True} $ \x y -> x ./== (y :: SExpr) .&& y .== sNum 3
+test = satWith z3{verbose=True} $ \x y -> x ./== (y :: SExpr) .&& y .== literal (Let "x" (Num 12) (Add (Var "x") (Num 3)))
