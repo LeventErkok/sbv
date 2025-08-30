@@ -46,6 +46,7 @@ data ADT  = AEmpty
           | ATuple   (Double, [(WordN 5, [Float])])
           | AMaybe   (Maybe (AlgReal, Float, (Rational, [Bool])))
           | AEither  (Either (Maybe Integer, Bool) [Rational])
+          | APair    ADT ADT
           {-
           | KUserSort String (Maybe [String])
           | KADT      String (Maybe [(String, [Kind])])
@@ -60,6 +61,7 @@ tests :: TestTree
 tests =
   testGroup "ADT" [
       goldenCapturedIO "adt00" $ \rf -> checkWith rf t00
+    , goldenCapturedIO "adt01" $ \rf -> checkWith rf t01
     ]
 
 checkWith :: FilePath -> Symbolic () -> IO ()
@@ -75,3 +77,7 @@ checkWith rf props = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
 t00 :: Symbolic ()
 t00 = do (a :: SADT) <- free "e"
          constrain $ a ./== a
+
+t01 :: Symbolic ()
+t01 = do (a :: SADT) <- free "e"
+         constrain $ a .=== literal (APair (AInt64 4) (AMaybe (Just (0, 12, (3, [False])))))

@@ -1137,7 +1137,21 @@ recoverKindedValue k e = case k of
                              EFloat         f      -> show f
                              EFloatingPoint f      -> show f
                              EDouble        d      -> show d
-                             EApp           xs     -> '(' : unwords (map sh xs) ++ ")"
+
+                             -- lists
+                             EApp [ECon "seq.unit", v] -> '[' : sh v ++ "]"
+                             EApp (ECon "seq.++" : []) -> "[]"
+                             EApp (ECon "seq.++" : es) -> foldr1 (\a b -> a ++ " ++ " ++ b) (map sh es)
+
+                             -- rationals
+                             EApp [ECon "SBV.Rational", v1, v2] -> sh v1 ++ "%" ++ sh v2
+
+                             -- tuples
+                             EApp (ECon t : as)
+                              | "mkSBVTuple" `isPrefixOf` t -> '(' : intercalate "," (map sh as) ++ ")"
+
+                             -- otherwise, just prefix
+                             EApp xs -> '(' : unwords (map sh xs) ++ ")"
 
                 trim inp@('(':cs) = case reverse cs of
                                       ')' : rest -> trim (reverse rest)
@@ -1149,8 +1163,12 @@ recoverKindedValue k e = case k of
                 simp x                        = x
 
                 -- render certain constants more simply
-                constant "seq.empty" = "[]"
-                constant s           = s
+                constant "seq.empty"        = "[]"
+                constant "just_SBVMaybe"    = "Just"
+                constant "nothing_SBVMaybe" = "Nothing"
+                constant "left_SBVEither"   = "Left"
+                constant "right_SBVEither"  = "Right"
+                constant s                  = s
 
 -- | Generalization of 'Data.SBV.Control.getValueCV'
 getValueCV :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV
