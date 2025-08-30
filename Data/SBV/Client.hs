@@ -115,7 +115,7 @@ mkSymbolic typeName = do
      tKind <- dissect typeName
 
      case tKind of
-       ADTEnum cs    -> mkEnum typeName cs
+       ADTEnum cs    -> mkEnum typeName cs      -- also handles uninterpreted types
        ADTFull cstrs -> mkADT  typeName cstrs
 
 -- | Make an uninterpreted or enumeration type
@@ -202,7 +202,7 @@ mkEnum typeName cstrs = do
         tname  = TH.mkName ('S' : btname)
         tdecl  = TH.TySynD tname [] sType
 
-    addDocs (tname, btname) constrNames
+    addDeclDocs (tname, btname) constrNames
 
     -- Declare testers
     let declTester c = let ty  = TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
@@ -214,19 +214,27 @@ mkEnum typeName cstrs = do
 
     let (testerNames, testerDecls) = unzip $ map declTester cstrs
 
-    addDocs (tname, btname) testerNames
+    mapM_ (addDoc "Tester" . fst) testerNames
 
     pure $ derives ++ symVals ++ symEnum ++ [tdecl] ++ concat cdecls ++ concat testerDecls
 
--- | Add document to a generated declaration
-addDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
+-- | Add document to a generated declaration for the declaration
+addDeclDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
 #if MIN_VERSION_template_haskell(2,18,0)
-addDocs (tnm, ts) cnms = do addDoc True (tnm, ts)
-                            mapM_  (addDoc False) cnms
-   where addDoc True  (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the type '"        ++ cs ++ "'."
-         addDoc False (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the constructor '" ++ cs ++ "'."
+addDeclDocs (tnm, ts) cnms = do add True (tnm, ts)
+                                mapM_  (add False) cnms
+   where add True  (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the type '"        ++ cs ++ "'."
+         add False (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the constructor '" ++ cs ++ "'."
 #else
-addDocs _ _ = pure ()
+addDeclDocs _ _ = pure ()
+#endif
+
+-- | Add document to a generated function
+addDoc :: String -> TH.Name -> TH.Q ()
+#if MIN_VERSION_template_haskell(2,18,0)
+addDoc what tnm = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc tnm) what
+#else
+addDoc _ _ = pure ()
 #endif
 
 -- | Create a symbolic ADT
@@ -287,11 +295,11 @@ mkADT typeName cstrs = do
         tname  = TH.mkName ('S' : btname)
         tdecl  = TH.TySynD tname [] sType
 
-    addDocs (tname, btname) constrNames
+    addDeclDocs (tname, btname) constrNames
 
     -- Declare testers
     let declTester :: (TH.Name, [(TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
-        declTester (c, _) = let ty  = TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
+        declTester (c, _) = let ty = TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
                             in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
                 nm   = TH.mkName $ "is" ++ bnm
@@ -300,9 +308,23 @@ mkADT typeName cstrs = do
 
     let (testerNames, testerDecls) = unzip $ map declTester cstrs
 
-    addDocs (tname, btname) testerNames
+    mapM_ (addDoc "Tester" . fst) testerNames
 
-    pure $ tdecl : symVal : decls ++ concat cdecls ++ concat testerDecls
+    -- Declare accessors
+    let declAccessor :: TH.Name -> (TH.Type, Kind) -> Int -> ((TH.Name, String), [TH.Dec])
+        declAccessor c (ft, _) i = let ty = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
+                                   in ((nm, bnm), [TH.SigD nm ty, def])
+          where bnm  = TH.nameBase c
+                anm  = "get" ++ bnm ++ "_" ++ show i
+                nm   = TH.mkName $ anm
+                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
+                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL anm))
+
+    let (accessorNames, accessorDecls) = unzip $ concat [zipWith (declAccessor c) fs [(1::Int) ..] | (c, fs) <- cstrs]
+
+    mapM_ (addDoc "Accessor" . fst) accessorNames
+
+    pure $ tdecl : symVal : decls ++ concat cdecls ++ concat testerDecls ++ concat accessorDecls
 
 -- We'll just drop the modules to keep this simple
 -- If you use multiple expressions named the same (coming from different modules), oh well.
