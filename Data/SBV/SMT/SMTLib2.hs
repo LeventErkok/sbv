@@ -329,7 +329,7 @@ declADT (tName, Just cstrs) = ("; User defined ADT: " ++ tName) : decl
 
         mkC (nm, []) = nm
         mkC (nm, ts) = nm ++ " " ++ unwords ['(' : mkF (nm ++ "_" ++ show i) t ++ ")" | (i, t) <- zip [(1::Int)..] ts]
-        mkF a t      = tName ++ "_" ++ a ++ " " ++ smtType t
+        mkF a t      = "get" ++ a ++ " " ++ smtType t
 
 -- | Declare tuple datatypes
 --
