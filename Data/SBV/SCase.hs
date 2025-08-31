@@ -61,8 +61,8 @@ sCase = QuasiQuoter
     matchToPair (Match pat (NormalB rhs) []) =
       case pat of
         ConP conName _ subpats -> do
-          vars <- traverse patToVar subpats
-          let lam = LamE (map VarP vars) rhs
+          ps <- traverse patToVar subpats
+          let lam = LamE ps rhs
           pure (Just conName, lam)
         WildP -> do
           let lam = LamE [] rhs
@@ -77,8 +77,9 @@ sCase = QuasiQuoter
                           -- _ <- error (show (cstrs, cases))
                           pure $ map snd cases
 
-    patToVar :: Pat -> Q Name
-    patToVar (VarP n) = pure n
+    patToVar :: Pat -> Q Pat
+    patToVar p@VarP{} = pure p
+    patToVar p@WildP  = pure p
     patToVar p        = fail $ "sCase: constructor arguments must be variables, not: " <> show p
 
     parts = go ""
