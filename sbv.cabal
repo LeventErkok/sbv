@@ -285,6 +285,7 @@ Library
                   , Data.SBV.Compilers.C
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.Lambda
+                  , Data.SBV.SCase
                   , Data.SBV.SEnum
                   , Data.SBV.SMT.SMT
                   , Data.SBV.SMT.SMTLib

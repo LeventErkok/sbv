@@ -239,6 +239,8 @@ module Data.SBV (
   , SList
   -- ** Symbolic enumerators
   , EnumSymbolic(..), sEnum
+  -- ** Symbolic case-expressions
+  , sCase
   -- ** Tuples
   -- $tuples
   , SymTuple, STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
@@ -544,6 +546,7 @@ import GHC.TypeLits (KnownNat, type (<=), type (+), type (-))
 import Data.Char (isSpace, isPunctuation)
 import Data.SBV.List (EnumSymbolic(..))
 import Data.SBV.SEnum (sEnum)
+import Data.SBV.SCase (sCase)
 
 import Data.SBV.Rational
 
