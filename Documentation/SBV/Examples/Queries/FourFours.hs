@@ -98,9 +98,9 @@ fill F         = return F
 
 -- | Minor helper for writing "symbolic" case statements. Simply walks down a list
 -- of values to match against a symbolic version of the key.
-sCase :: (Eq a, SymVal a, Mergeable v) => SBV a -> [(a, v)] -> v
-sCase k = walk
-  where walk []              = error "sCase: Expected a non-empty list of cases!"
+cases :: (Eq a, SymVal a, Mergeable v) => SBV a -> [(a, v)] -> v
+cases k = walk
+  where walk []              = error "cases: Expected a non-empty list of cases!"
         walk [(_, v)]        = v
         walk ((k1, v1):rest) = ite (k .== literal k1) v1 (walk rest)
 
@@ -117,7 +117,7 @@ eval tree = case tree of
   where binOp :: SBinOp -> SInteger -> SInteger -> Symbolic SInteger
         binOp o l r = do constrain $ o .== sDivide .=> r .== 4 .|| r .== 2
                          constrain $ o .== sExpt   .=> r .== 0
-                         return $ sCase o
+                         return $ cases o
                                     [ (Plus,    l+r)
                                     , (Minus,   l-r)
                                     , (Times,   l*r)
@@ -128,7 +128,7 @@ eval tree = case tree of
         uOp :: SUnOp -> SInteger -> Symbolic SInteger
         uOp o v = do constrain $ o .== sSqrt      .=> v .== 4
                      constrain $ o .== sFactorial .=> v .== 4
-                     return $ sCase o
+                     return $ cases o
                                 [ (Negate,    -v)
                                 , (Sqrt,       2)  -- argument is restricted to 4, so the value is 2
                                 , (Factorial, 24)  -- argument is restricted to 4, so the value is 24
