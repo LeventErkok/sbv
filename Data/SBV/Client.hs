@@ -325,33 +325,42 @@ mkADT typeName cstrs = do
     mapM_ (addDoc "Accessor" . fst) accessorNames
 
     -- Declare the case analyzer
-    caseFun <- do let bnm = TH.nameBase typeName
-                      cnm = TH.mkName $ "sCase" ++ bnm
+    (caseSig, caseFun) <- do
+        let bnm = TH.nameBase typeName
+            cnm = TH.mkName $ "sCase" ++ bnm
 
-                  se <- TH.newName ('s' : bnm)
-                  fs <- mapM (\(nm, _) -> TH.newName ('f' : TH.nameBase nm)) cstrs
+        se   <- TH.newName ('s' : bnm)
+        fs   <- mapM (\(nm, _) -> TH.newName ('f' : TH.nameBase nm)) cstrs
+        res  <- TH.newName "result"
 
-                  let def = TH.FunD cnm [TH.Clause (map TH.VarP (se : fs)) (TH.NormalB (iteChain (zipWith (mkCase se) fs cstrs))) []]
+        let def = TH.FunD cnm [TH.Clause (map TH.VarP (se : fs)) (TH.NormalB (iteChain (zipWith (mkCase se) fs cstrs))) []]
 
-                      iteChain :: [(TH.Exp, TH.Exp)] -> TH.Exp
-                      iteChain []       = error $ unlines $ [ "Data.SBV.mkADT: Impossible happened!"
-                                                            , ""
-                                                            , "   Received an empty list for: " ++ show typeName
-                                                            , ""
-                                                            , "While building the case-analyzer."
-                                                            , "Please report this as a bug."
-                                                            ]
-                      iteChain [(_, l)]        = l
-                      iteChain ((t, e) : rest) = foldl TH.AppE (TH.VarE 'ite) [TH.AppE t (TH.VarE se), e, iteChain rest]
+            iteChain :: [(TH.Exp, TH.Exp)] -> TH.Exp
+            iteChain []       = error $ unlines $ [ "Data.SBV.mkADT: Impossible happened!"
+                                                  , ""
+                                                  , "   Received an empty list for: " ++ show typeName
+                                                  , ""
+                                                  , "While building the case-analyzer."
+                                                  , "Please report this as a bug."
+                                                  ]
+            iteChain [(_, l)]        = l
+            iteChain ((t, e) : rest) = foldl TH.AppE (TH.VarE 'ite) [TH.AppE t (TH.VarE se), e, iteChain rest]
 
-                      mkCase :: TH.Name -> TH.Name -> (TH.Name, [(TH.Type, Kind)]) -> (TH.Exp, TH.Exp)
-                      mkCase cexpr func (c, fields) = (TH.VarE (TH.mkName ("is" ++ TH.nameBase c)), foldl TH.AppE (TH.VarE func) args)
-                         where getters = [TH.mkName ("get" ++ TH.nameBase c ++ "_" ++ show i) | (i, _) <- zip [(1 :: Int) ..] fields]
-                               args    = map (\g -> TH.AppE (TH.VarE g) (TH.VarE cexpr)) getters
+            mkCase :: TH.Name -> TH.Name -> (TH.Name, [(TH.Type, Kind)]) -> (TH.Exp, TH.Exp)
+            mkCase cexpr func (c, fields) = (TH.VarE (TH.mkName ("is" ++ TH.nameBase c)), foldl TH.AppE (TH.VarE func) args)
+               where getters = [TH.mkName ("get" ++ TH.nameBase c ++ "_" ++ show i) | (i, _) <- zip [(1 :: Int) ..] fields]
+                     args    = map (\g -> TH.AppE (TH.VarE g) (TH.VarE cexpr)) getters
 
-                  pure def
+            rvar   = TH.VarT res
+            mkFun  = foldr (TH.AppT . TH.AppT TH.ArrowT) rvar
+            fTypes = [mkFun (map (mkSBV . fst) ftks) | (_, ftks) <- cstrs]
+            sig    = TH.SigD cnm (TH.ForallT [TH.PlainTV res TH.SpecifiedSpec]
+                                             [TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)]
+                                             (mkFun (sType : fTypes)))
 
-    pure $ tdecl : symVal : decls ++ concat cdecls ++ concat testerDecls ++ concat accessorDecls ++ [caseFun]
+        pure (sig, def)
+
+    pure $ tdecl : symVal : decls ++ concat cdecls ++ concat testerDecls ++ concat accessorDecls ++ [caseSig, caseFun]
 
 -- We'll just drop the modules to keep this simple
 -- If you use multiple expressions named the same (coming from different modules), oh well.
