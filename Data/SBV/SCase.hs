@@ -6,7 +6,8 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Add support for symbolic case expressions. Constructed with the help of ChatGPT.
+-- Add support for symbolic case expressions. Constructed with the help of ChatGPT,
+-- which was remarkably good at giving me the basic structure.
 --
 -- Provides a quasiquoter  `[sCase|Expr expr of ... |]` for symbolic cases
 -- where 'Expr' is the underlying type.
@@ -22,6 +23,8 @@ module Data.SBV.SCase (sCase) where
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
 import qualified Language.Haskell.Meta.Parse as Meta
+
+import Data.SBV.Client (getConstructors)
 
 import Data.Char (isSpace)
 
@@ -49,8 +52,8 @@ sCase = QuasiQuoter
                 Just n  -> pure (VarE n)
                 Nothing -> fail $ "sCase: unknown function " <> fnTok
               validateWildcards matches
-              cases <- mapM matchToPair matches
-              pure $ foldl AppE (fnName `AppE` scrut) (orient cases)
+              cases <- mapM matchToPair matches >>= orient typ
+              pure $ foldl AppE (fnName `AppE` scrut) cases
             Right _  -> fail "sCase: internal parse error, not a case-expression"
             Left err -> fail ("sCase parse error:\n" <> err <> "\nwhile parsing:\n" <> fullCase)
 
@@ -69,7 +72,10 @@ sCase = QuasiQuoter
       fail "sCase: only simple matches with normal RHS are supported"
 
     -- Orient needs to work harder to make sure the cases are exhaustive
-    orient = map snd
+    orient :: String -> [(Maybe Name, Exp)] -> Q [Exp]
+    orient typ cases = do _cstrs <- getConstructors (mkName typ)
+                          -- _ <- error (show (cstrs, cases))
+                          pure $ map snd cases
 
     patToVar :: Pat -> Q Name
     patToVar (VarP n) = pure n
