@@ -57,13 +57,13 @@ sCase = QuasiQuoter
             Right _  -> fail "sCase: internal parse error, not a case-expression"
             Left err -> fail ("sCase parse error:\n" <> err <> "\nwhile parsing:\n" <> fullCase)
 
-    matchToPair :: Match -> Q (Maybe Name, Exp)
+    matchToPair :: Match -> Q (Maybe (Name, Int), Exp)
     matchToPair (Match pat (NormalB rhs) []) =
       case pat of
         ConP conName _ subpats -> do
           ps <- traverse patToVar subpats
           let lam = LamE ps rhs
-          pure (Just conName, lam)
+          pure (Just (conName, length ps), lam)
         WildP -> do
           let lam = LamE [] rhs
           pure (Nothing, lam)
@@ -71,8 +71,8 @@ sCase = QuasiQuoter
     matchToPair _ =
       fail "sCase: only simple matches with normal RHS are supported"
 
-    -- Orient needs to work harder to make sure the cases are exhaustive
-    orient :: String -> [(Maybe Name, Exp)] -> Q [Exp]
+    -- Orient makes sure things are in good shape..
+    orient :: String -> [(Maybe (Name, Int), Exp)] -> Q [Exp]
     orient typ cases = do _cstrs <- getConstructors (mkName typ)
                           -- _ <- error (show (cstrs, cases))
                           pure $ map snd cases
