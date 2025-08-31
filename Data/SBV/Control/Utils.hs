@@ -1130,16 +1130,20 @@ recoverKindedValue k e = case k of
 
         -- For ADT values, we simply pretty-print them after some simplifications
         shADT = trim . sh . simp
-          where sh :: SExpr -> String
+          where pIfNeg :: String -> String
+                pIfNeg ('-':s) = "(-" ++ s ++ ")"
+                pIfNeg s       = s
+
+                sh :: SExpr -> String
                 sh sexpr = case sexpr of
                              ECon           s            -> constant s
                              ENum           (0, _, True) -> "False"
                              ENum           (1, _, True) -> "True"
-                             ENum           (i, _, _)    -> show i
-                             EReal          a            -> show a
-                             EFloat         f            -> show f
-                             EFloatingPoint f            -> show f
-                             EDouble        d            -> show d
+                             ENum           (i, _, _)    -> pIfNeg $ show i
+                             EReal          a            -> pIfNeg $ show a
+                             EFloat         f            -> pIfNeg $ show f
+                             EFloatingPoint f            -> pIfNeg $ show f
+                             EDouble        d            -> pIfNeg $ show d
 
                              -- lists
                              EApp (ECon "seq.++" : es) ->
