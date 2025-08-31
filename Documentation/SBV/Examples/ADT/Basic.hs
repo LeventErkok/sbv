@@ -8,9 +8,10 @@
 --
 -- Basic ADT examples.
 -----------------------------------------------------------------------------
--- {-# OPTIONS_GHC -Wall -Werror #-}
 {-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
+-- {-# OPTIONS_GHC -Wall -Werror #-}
 
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
@@ -31,11 +32,12 @@ mkSymbolic ''Expr
 eval :: SExpr -> SInteger
 eval = go SL.nil
  where go :: SList (String, Integer) -> SExpr -> SInteger
-       go = smtFunction "eval" $ \env expr -> sCaseExpr expr
-                                                        (\{- Num -} i     -> i)
-                                                        (\{- Var -} s     -> get env s)
-                                                        (\{- Add -} l r   -> go env l + go env r)
-                                                        (\{- Let -} s e r -> go (tuple (s, go env e) SL..: env) r)
+       go = smtFunction "eval" $ \env expr -> [sCase|Expr expr of
+                                                 Num i     -> i
+                                                 Var s     -> get env s
+                                                 Add l r   -> go env l + go env r
+                                                 Let s e r -> go (tuple (s, go env e) SL..: env) r
+                                              |]
 
        get :: SList (String, Integer) -> SString -> SInteger
        get = smtFunction "get" $ \env s -> ite (SL.null env) 0
