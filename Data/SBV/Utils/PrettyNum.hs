@@ -22,7 +22,7 @@ module Data.SBV.Utils.PrettyNum (
       ) where
 
 import Data.Bits  ((.&.), countTrailingZeros)
-import Data.Char  (intToDigit, ord, chr)
+import Data.Char  (intToDigit, ord, chr, isSpace)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, listToMaybe)
@@ -439,6 +439,9 @@ cvToSMTLib rm x
 
   -- Arrays become sequence of stores
   | isArray x        , CArray ac       <- cvVal x = smtLibArray (kindOf x) ac
+
+  -- ADTs
+  | isADT x          , CADT v          <- cvVal x = if any isSpace v then '(' : v ++ ")" else v
 
   | True = error $ "SBV.cvtCV: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])

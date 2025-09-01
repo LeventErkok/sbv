@@ -155,6 +155,7 @@ instance Eq CVal where
   CTuple    a == CTuple    b = a == b
   CMaybe    a == CMaybe    b = a == b
   CEither   a == CEither   b = a == b
+  CADT      a == CADT      b = a == b
 
   -- This is legit since we don't use this equality for actual semantic" equality, but rather as an index into maps
   CArray    (ArrayModel a1 d1) == CArray (ArrayModel a2 d2) = (a1, d1) == (a2, d2)
@@ -185,6 +186,7 @@ instance Ord CVal where
   CTuple    a `compare` CTuple    b = a `compare`                  b
   CMaybe    a `compare` CMaybe    b = a `compare`                  b
   CEither   a `compare` CEither   b = a `compare`                  b
+  CADT      a `compare` CADT      b = a `compare`                  b
 
   -- This is legit since we don't use this equality for actual semantic order, but rather as an index into maps
   CArray    (ArrayModel a1 d1) `compare` CArray (ArrayModel a2 d2) = (a1, d1) `compare` (a2, d2)

@@ -250,6 +250,7 @@ class HasKind a where
   isFP        :: a -> Bool
   isUnbounded :: a -> Bool
   isUserSort  :: a -> Bool
+  isADT       :: a -> Bool
   isChar      :: a -> Bool
   isString    :: a -> Bool
   isList      :: a -> Bool
@@ -308,6 +309,9 @@ class HasKind a where
 
   isUserSort      (kindOf -> KUserSort{})  = True
   isUserSort      _                        = False
+
+  isADT           (kindOf -> KADT{})       = True
+  isADT           _                        = False
 
   isChar          (kindOf -> KChar{})      = True
   isChar          _                        = False

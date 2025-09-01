@@ -10,6 +10,10 @@
 -----------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall -Werror #-}
 
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -27,6 +31,9 @@ data Expr = Num Integer
           | Let String Expr Expr
 
 mkSymbolic ''Expr
+
+data I = I1 | I2 deriving (Enum, Bounded)
+mkSymbolic ''I
 
 eval :: SExpr -> SInteger
 eval = go SL.nil
