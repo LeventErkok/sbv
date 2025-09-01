@@ -551,6 +551,8 @@ toSBV typeName constructorName = go
           | t == ''Int16    = pure $ KBounded True  16
           | t == ''Int32    = pure $ KBounded True  32
           | t == ''Int64    = pure $ KBounded True  64
+
+          -- Platform specific: Complain
           | t == ''Int || t == ''Word
           = bad ("Unsupported platform specific type: " ++ show t)
                 [ "    Datatype   : " ++ show typeName
