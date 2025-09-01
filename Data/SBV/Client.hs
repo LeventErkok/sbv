@@ -528,21 +528,22 @@ toSBV typeName constructorName = go
           | t == ''Float    = pure KFloat
           | t == ''Double   = pure KDouble
 
-          -- Punt on char. Because SMTLib's string translation requires us to put extra constraints.
+          -- Punt on char and rational. Because SMTLib's string translation requires us to put extra constraints.
           -- We'll do that when we get there.
           -- | t == ''Char     = pure KChar
-          | t == ''Char     = bad "Unsupported type: Char"
-                                  [ "Datatype   : " ++ show typeName
-                                  , "Constructor: " ++ show constructorName
-                                  , "Kind       : " ++ show t
-                                  , ""
-                                  , "While SBV supports SChar, ADT fields with characters are not yet supported."
-                                  , report
-                                  ]
+          -- | t == ''Rational = pure KRational
+          | t == ''Char || t == ''Rational
+          = bad "Unsupported type: Char"
+                [ "Datatype   : " ++ show typeName
+                , "Constructor: " ++ show constructorName
+                , "Kind       : " ++ show t
+                , ""
+                , "While SBV supports SChar, ADT fields with characters are not yet supported."
+                , report
+                ]
 
           | t == ''String   = pure KString
           | t == ''AlgReal  = pure KReal
-          | t == ''Rational = pure KRational
           | t == ''Word8    = pure $ KBounded False  8
           | t == ''Word16   = pure $ KBounded False 16
           | t == ''Word32   = pure $ KBounded False 32
