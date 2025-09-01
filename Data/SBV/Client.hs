@@ -205,19 +205,14 @@ mkEnum typeName cstrs = do
 
     addDeclDocs (tname, btname) constrNames
 
-    -- Declare testers
-    let declTester c = let ty  = TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
-                            in ((nm, bnm), [TH.SigD nm ty, def])
-          where bnm  = TH.nameBase c
-                nm   = TH.mkName $ "is" ++ bnm
-                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
-                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL ("(_ is " ++ bnm ++ ")")))
+    -- Declare testers and case analyzer, if this is an enumeration
+    testsAndCase <- if isEnum
+                    then do ts <- mkTesters sType (map (, []) cstrs)
+                            (caseSig, caseFun) <- mkCaseAnalyzer typeName (map (, []) cstrs)
+                            pure $ caseSig : caseFun : ts
+                    else pure []
 
-    let (testerNames, testerDecls) = unzip $ map declTester cstrs
-
-    mapM_ (addDoc "Tester" . fst) testerNames
-
-    pure $ derives ++ symVals ++ symEnum ++ [tdecl] ++ concat cdecls ++ concat testerDecls
+    pure $ derives ++ symVals ++ symEnum ++ [tdecl] ++ concat cdecls ++ testsAndCase
 
 -- | Add document to a generated declaration for the declaration
 addDeclDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
@@ -238,13 +233,15 @@ addDoc what tnm = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc tnm) what
 addDoc _ _ = pure ()
 #endif
 
+-- | Symbolic version of a type
+mkSBV :: TH.Type -> TH.Type
+mkSBV a = TH.ConT ''SBV `TH.AppT` a
+
 -- | Create a symbolic ADT
 mkADT :: TH.Name -> [(TH.Name, [(TH.Type, Kind)])] -> TH.Q [TH.Dec]
 mkADT typeName cstrs = do
-    let mkSBV :: TH.Type -> TH.Type
-        mkSBV a = TH.ConT ''SBV `TH.AppT` a
 
-        typeCon = TH.ConT typeName
+    let typeCon = TH.ConT typeName
         sType   = mkSBV typeCon
 
     litFun <- do let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
@@ -298,19 +295,6 @@ mkADT typeName cstrs = do
 
     addDeclDocs (tname, btname) constrNames
 
-    -- Declare testers
-    let declTester :: (TH.Name, [(TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
-        declTester (c, _) = let ty = TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
-                            in ((nm, bnm), [TH.SigD nm ty, def])
-          where bnm  = TH.nameBase c
-                nm   = TH.mkName $ "is" ++ bnm
-                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
-                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL ("(_ is " ++ bnm ++ ")")))
-
-    let (testerNames, testerDecls) = unzip $ map declTester cstrs
-
-    mapM_ (addDoc "Tester" . fst) testerNames
-
     -- Declare accessors
     let declAccessor :: TH.Name -> (TH.Type, Kind) -> Int -> ((TH.Name, String), [TH.Dec])
         declAccessor c (ft, _) i = let ty = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
@@ -325,9 +309,21 @@ mkADT typeName cstrs = do
 
     mapM_ (addDoc "Accessor" . fst) accessorNames
 
-    -- Declare the case analyzer
-    (caseSig, caseFun) <- do
-        let bnm = TH.nameBase typeName
+    -- Declare testers
+    testerDecls <- mkTesters sType cstrs
+
+    -- Get the case analyzer
+    (caseSig, caseFun) <- mkCaseAnalyzer typeName cstrs
+
+    pure $ tdecl : symVal : decls ++ concat cdecls ++ testerDecls ++ concat accessorDecls ++ [caseSig, caseFun]
+
+-- | Make a case analyzer for the type. Works for ADTs and enums. Returns sig and defn
+mkCaseAnalyzer :: TH.Name -> [(TH.Name, [(TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
+mkCaseAnalyzer typeName cstrs = do
+        let typeCon = TH.ConT typeName
+            sType   = mkSBV typeCon
+
+            bnm = TH.nameBase typeName
             cnm = TH.mkName $ "sCase" ++ bnm
 
         se   <- TH.newName ('s' : bnm)
@@ -361,7 +357,22 @@ mkADT typeName cstrs = do
 
         pure (sig, def)
 
-    pure $ tdecl : symVal : decls ++ concat cdecls ++ concat testerDecls ++ concat accessorDecls ++ [caseSig, caseFun]
+-- | Declare testers
+mkTesters :: TH.Type -> [(TH.Name, [(TH.Type, Kind)])] -> TH.Q [TH.Dec]
+mkTesters sType cstrs = do
+    let declTester :: (TH.Name, [(TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
+        declTester (c, _) = let ty = TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
+                            in ((nm, bnm), [TH.SigD nm ty, def])
+          where bnm  = TH.nameBase c
+                nm   = TH.mkName $ "is" ++ bnm
+                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
+                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL ("(_ is " ++ bnm ++ ")")))
+
+    let (testerNames, testerDecls) = unzip $ map declTester cstrs
+
+    mapM_ (addDoc "Tester" . fst) testerNames
+
+    pure $ concat testerDecls
 
 -- We'll just drop the modules to keep this simple
 -- If you use multiple expressions named the same (coming from different modules), oh well.
