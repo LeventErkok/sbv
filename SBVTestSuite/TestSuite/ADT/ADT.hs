@@ -60,14 +60,15 @@ mkSymbolic ''ADT
 tests :: TestTree
 tests =
   testGroup "ADT" [
-      goldenCapturedIO "adt00" $ \rf -> checkWith rf t00
-    , goldenCapturedIO "adt01" $ \rf -> checkWith rf t01
-    , goldenCapturedIO "adt02" $ \rf -> checkWith rf t02
-    , goldenCapturedIO "adt03" $ \rf -> checkWith rf t03
+      goldenCapturedIO "adt00" $ checkWith t00
+    , goldenCapturedIO "adt01" $ checkWith t01
+    , goldenCapturedIO "adt02" $ checkWith t02
+    , goldenCapturedIO "adt03" $ checkWith t03
+    , goldenCapturedIO "adt04" t04
     ]
 
-checkWith :: FilePath -> Symbolic () -> IO ()
-checkWith rf props = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+checkWith :: Symbolic () -> FilePath -> IO ()
+checkWith props rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
         _ <- props
         query $ do cs <- checkSat
                    case cs of
@@ -91,3 +92,12 @@ t02 = do (a :: SADT) <- free "e"
 t03 :: Symbolic ()
 t03 = do (a :: SADT) <- free "e"
          constrain $ isAList a .&& isAFP a
+
+t04 :: FilePath -> IO ()
+t04 rf = do AllSatResult _ _ _ ms <- allSatWith z3{verbose=True, redirectVerbose = Just rf} t
+            let sh m = appendFile rf $ "\nMODEL:" ++ show (SatResult m)
+            mapM_ sh ms
+  where t = do (a :: SADT) <- free "a"
+               constrain $ isAInteger a
+               constrain $ getAInteger_1 a .>= 0
+               constrain $ getAInteger_1 a .<= 5
