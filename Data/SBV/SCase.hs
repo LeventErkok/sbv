@@ -24,7 +24,7 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Quote
 import qualified Language.Haskell.Meta.Parse as Meta
 
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 
 import Data.SBV.Client (getConstructors)
 
@@ -149,7 +149,15 @@ sCase = QuasiQuoter
                                                               ]
                                     Just de -> pure $ LamE (map (const WildP) ps) de
 
-                          mapM collect cstrs
+                          res <- mapM collect cstrs
+
+                          -- If we reached here, all is well; except we might have an extra wildcard that we did not use
+                          when (length cases /= length cstrs) $
+                            case defaultCase of
+                              Nothing -> pure ()
+                              Just _  -> fail "sCase: Wildcard match is redundant"
+
+                          pure res
 
     patToVar :: Pat -> Q Pat
     patToVar p@VarP{} = pure p
