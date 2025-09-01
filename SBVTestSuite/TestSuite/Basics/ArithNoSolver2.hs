@@ -539,6 +539,8 @@ sll = [[x, x, x] | x <- [[], [0], [-1, 1], [-10, 0, 10], [3, 4, 5, 4, 5, 3]]]
 
 -- Quiet GHC about unused enum elts
 _unused :: SDay
-_unused = undefined sMon sTue sWed sThu sFri sSat sSun
+_unused = undefined  sMon  sTue  sWed  sThu  sFri  sSat  sSun
+                    isMon isTue isWed isThu isFri isSat isSun
+                    (sCaseDay @SInteger)
 
 {- HLint ignore module "Reduce duplication" -}

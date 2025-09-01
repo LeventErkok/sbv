@@ -15,6 +15,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -33,7 +34,7 @@ data E = A | B | C deriving (Bounded, Enum, Ord, Eq)
 mkSymbolic ''E
 
 __unused :: SE
-__unused = error "stop GHC from complaining unused names" sA sB sC
+__unused = error "stop GHC from complaining unused names" sA sB sC isA isB isC (sCaseE @SInteger)
 
 type SC = SSet  Integer
 type RC = RCSet Integer

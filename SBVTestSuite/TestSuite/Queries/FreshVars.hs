@@ -17,6 +17,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -30,7 +31,8 @@ data BinOp  = Plus | Minus | Times deriving (Enum, Bounded)
 mkSymbolic ''BinOp
 
 _unused :: a
-_unused = error "stop GHC from complaining unused names" sPlus sMinus sTimes
+_unused = error "stop GHC from complaining unused names"
+                sPlus sMinus sTimes isPlus isMinus isTimes (sCaseBinOp @SInteger)
 
 -- Test suite
 tests :: TestTree

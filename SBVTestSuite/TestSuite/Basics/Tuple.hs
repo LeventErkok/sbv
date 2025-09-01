@@ -36,7 +36,7 @@ data E = A | B | C deriving (Bounded, Enum)
 mkSymbolic ''E
 
 __unused :: SE
-__unused = error "stop GHC from complaining unused names" sA sB sC
+__unused = error "stop GHC from complaining unused names" sA sB sC isA isB isC (sCaseE @SInteger)
 
 -- Test suite
 tests :: TestTree

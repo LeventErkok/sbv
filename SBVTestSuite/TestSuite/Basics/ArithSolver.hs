@@ -1046,6 +1046,8 @@ genEnums =
 
 -- Quiet GHC about unused enum elts
 _unused :: SDay
-_unused = undefined sMon sTue sWed sThu sFri sSat sSun
+_unused = undefined  sMon  sTue  sWed  sThu  sFri  sSat  sSun
+                    isMon isTue isWed isThu isFri isSat isSun
+                    (sCaseDay @SInteger)
 
 {- HLint ignore module "Reduce duplication" -}

@@ -124,7 +124,7 @@ finished = do
     return $ map (.== 1) locs `pbExactly` 1
 
 perform :: SInput -> Engine ()
-perform (verb, noun) = sCase verb (return ())
+perform (verb, noun) = goCase verb (return ())
     [ (1, builtin_go)
     , (10, builtin_get)
     ]
@@ -153,8 +153,8 @@ xs .!! i = case xs of
 replaceAt :: (Mergeable a) => SInt16 -> a -> [a] -> [a]
 replaceAt i x' = zipWith (\j x -> ite (i .== literal j) x' x) [0..]
 
-sCase :: (Mergeable a) => SInt16 -> a -> [(Int16, a)] -> a
-sCase x def = go
+goCase :: (Mergeable a) => SInt16 -> a -> [(Int16, a)] -> a
+goCase x def = go
   where
     go [] = def
     go ((k,v):kvs) = ite (x .== literal k) v (go kvs)
