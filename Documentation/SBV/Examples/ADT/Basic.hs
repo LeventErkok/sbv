@@ -8,8 +8,7 @@
 --
 -- Basic ADT examples.
 -----------------------------------------------------------------------------
-{-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
--- {-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
