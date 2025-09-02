@@ -65,6 +65,7 @@ tests =
     , goldenCapturedIO "adt02" $ checkWith t02
     , goldenCapturedIO "adt03" $ checkWith t03
     , goldenCapturedIO "adt04" t04
+    , goldenCapturedIO "adt05" t05
     ]
 
 checkWith :: Symbolic () -> FilePath -> IO ()
@@ -101,3 +102,13 @@ t04 rf = do AllSatResult _ _ _ ms <- allSatWith z3{verbose=True, redirectVerbose
                constrain $ isAInteger a
                constrain $ getAInteger_1 a .>= 0
                constrain $ getAInteger_1 a .<= 5
+
+-- z3 is buggy on this. So we use cvc5. See: https://github.com/Z3Prover/z3/issues/7842
+t05 :: FilePath -> IO ()
+t05 rf = do AllSatResult _ _ _ ms <- allSatWith cvc5{verbose=True, redirectVerbose = Just rf, allSatMaxModelCount=Just 10} t
+            let sh m = appendFile rf $ "\nMODEL:" ++ show (SatResult m)
+            mapM_ sh ms
+  where t = do (a :: SADT) <- free "a"
+               (b :: SADT) <- free "b"
+               constrain $ isAFloat a .&& getAFloat_1 a .== 4
+               constrain $ isAFloat b .&& fpIsNaN (getAFloat_1 b)
