@@ -1439,6 +1439,9 @@ registerKind :: State -> Kind -> IO ()
 registerKind st k
   | KUserSort sortName _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
+  -- Do not register "use" sites for KADTs
+  | KADT _ Nothing <- k
+  = pure ()
   | KADT  sortName _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
@@ -1481,7 +1484,10 @@ registerKind st k
 
          -- Register subkinds in an ADT. Remember that a 'Nothing' is a use site, so nothing further to do.
          KADT _    (Just ps) -> mapM_ (registerKind st) (concatMap snd ps)
-         KADT _    Nothing   -> return ()
+         -- NB: The following case is *not* required; why? Because KADT _ Nothing is matched and handled
+         -- earlier. And GHC is smart enough to know that so if I have the following, it complains
+         -- that it's redundant. Kudos!
+         -- KADT _    Nothing   -> return ()
 
          KList     ek        -> registerKind st ek
          KSet      ek        -> registerKind st ek
