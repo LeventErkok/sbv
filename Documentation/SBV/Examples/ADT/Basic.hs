@@ -24,11 +24,14 @@ import Data.SBV
 import Data.SBV.Tuple
 import qualified Data.SBV.List as SL
 
+import Data.SBV.Control
+
 -- | A basic arithmetic expression type
 data Expr = Num Integer
           | Var String
           | Add Expr Expr
           | Let String Expr Expr
+          deriving Show
 
 mkSymbolic ''Expr
 
@@ -65,3 +68,12 @@ test = satWith z3{verbose=True} $ do
           constrain $ isLet x
           constrain $ eval x .== 3
           constrain $ eval x .== eval y + 5
+
+test2 :: IO ()
+test2 = runSMT $ do a :: SExpr <- free "a"
+                    constrain $ isAdd a
+                    query $ do cs <- checkSat
+                               case cs of
+                                 Sat{} -> do v <- getValue a
+                                             io $ putStrLn $ "Got: " ++ show v
+                                 _     -> error $ "Unexpected: " ++ show cs
