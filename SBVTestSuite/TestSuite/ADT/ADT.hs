@@ -80,26 +80,26 @@ checkWith props rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                      Unk    -> getUnknownReason >>= \r -> io $ appendFile rf $ "\nUNKNOWN: " ++ show r ++ "\nDONE."
 
 t00 :: Symbolic ()
-t00 = do (a :: SADT) <- free "e"
+t00 = do a :: SADT <- free "e"
          constrain $ a ./== a
 
 t01 :: Symbolic ()
-t01 = do (a :: SADT) <- free "e"
+t01 = do a :: SADT <- free "e"
          constrain $ a .=== literal (APair (AInt64 4) (AMaybe (Just (0, 12, (3, [False, True])))))
 
 t02 :: Symbolic ()
-t02 = do (a :: SADT) <- free "e"
+t02 = do a :: SADT <- free "e"
          constrain $ isAList a
 
 t03 :: Symbolic ()
-t03 = do (a :: SADT) <- free "e"
+t03 = do a :: SADT <- free "e"
          constrain $ isAList a .&& isAFP a
 
 t04 :: FilePath -> IO ()
 t04 rf = do AllSatResult _ _ _ ms <- allSatWith z3{verbose=True, redirectVerbose = Just rf} t
             let sh m = appendFile rf $ "\nMODEL:" ++ show (SatResult m)
             mapM_ sh ms
-  where t = do (a :: SADT) <- free "a"
+  where t = do a :: SADT <- free "a"
                constrain $ isAInteger a
                constrain $ getAInteger_1 a .>= 0
                constrain $ getAInteger_1 a .<= 5
@@ -109,7 +109,7 @@ t05 :: FilePath -> IO ()
 t05 rf = do AllSatResult _ _ _ ms <- allSatWith cvc5{verbose=True, redirectVerbose = Just rf, allSatMaxModelCount=Just 10} t
             let sh m = appendFile rf $ "\nMODEL:" ++ show (SatResult m)
             mapM_ sh ms
-  where t = do (a :: SADT) <- free "a"
-               (b :: SADT) <- free "b"
+  where t = do a :: SADT <- free "a"
+               b :: SADT <- free "b"
                constrain $ isAFloat a .&& getAFloat_1 a .== 4
                constrain $ isAFloat b .&& fpIsNaN (getAFloat_1 b)
