@@ -252,16 +252,16 @@ mkADT typeName cstrs = do
                                                                []
                  TH.FunD 'literal <$> mapM mkLitClause cstrs
 
-    let symVal = let notNeeded s = TH.AppE (TH.VarE 'error)
-                                           (TH.LitE (TH.StringL (unlines [ "Data.SBV: Method " ++ s
-                                                                         , "Should not be needed for " ++ show typeName
-                                                                         , "Please report this as a bug."
-                                                                         ])))
-                 in TH.InstanceD Nothing [] (TH.AppT (TH.ConT ''SymVal) typeCon)
-                                            [ litFun
-                                            , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB (notNeeded "fromCV")) []]
-                                            , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB (TH.ConE 'Nothing)) []]
-                                            ]
+    getFromCV <- [| \x -> case x of
+                            CV k (CADT {}) -> error $ "fromCV: Not yet supported for kind: " ++ show k
+                            CV k _         -> error $ "Was expecting a CADT value for: " ++ show typeName ++ ", but got: " ++ show k
+                 |]
+
+    let symVal = TH.InstanceD Nothing [] (TH.AppT (TH.ConT ''SymVal) typeCon) $
+                                         [ litFun
+                                         , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB (TH.ConE 'Nothing)) []]
+                                         , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV)          []]
+                                         ]
 
     decls <- [d|instance HasKind $(pure typeCon) where
                   kindOf _ = KADT (unmod typeName) (Just [(unmod n, map snd tks) | (n, tks) <- cstrs])
