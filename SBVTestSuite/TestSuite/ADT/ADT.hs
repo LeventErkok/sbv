@@ -67,6 +67,7 @@ tests =
     , goldenCapturedIO "adt03" $ checkWith t03
     , goldenCapturedIO "adt04" t04
     , goldenCapturedIO "adt05" t05
+    , goldenCapturedIO "adt06" t06
     ]
 
 checkWith :: Symbolic () -> FilePath -> IO ()
@@ -113,3 +114,13 @@ t05 rf = do AllSatResult _ _ _ ms <- allSatWith cvc5{verbose=True, redirectVerbo
                b :: SADT <- free "b"
                constrain $ isAFloat a .&& getAFloat_1 a .== 4
                constrain $ isAFloat b .&& fpIsNaN (getAFloat_1 b)
+
+t06 :: FilePath -> IO ()
+t06 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+             a :: SADT <- free "a"
+             constrain $ isAMaybe a
+             query $ do cs <- checkSat
+                        case cs of
+                         Sat{} -> do v <- getValue a
+                                     io $ appendFile rf $ "\ngetValue: " ++ show v
+                         _     -> error ("BAD RESULT: " ++ show cs)
