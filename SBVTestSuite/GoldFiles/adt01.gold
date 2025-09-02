@@ -93,6 +93,6 @@
                                                                (seq.++ (seq.unit false)
                                                                        (seq.unit true)))))))))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("e",APair (AInt64 4) (AMaybe (Just (0.0,12.0,(3%1,[False,True])))) :: ADT)], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("e",APair (AInt64 4) (AMaybe (Just (0.0,12.0,(3 % 1,[False,True])))) :: ADT)], modelUIFuns = []}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

@@ -458,8 +458,12 @@ showCV shk w = sh (cvVal w) ++ kInfo
 
         shADT (c, fs)
           | null @[] flds = c
-          | True          = '(' : unwords (c : flds) ++ ")"
-          where flds = case wk of
+          | True          = unwords (c : map wrap flds)
+          where wrap v
+                 | any isSpace v || take 1 v == "-" = '(' : v ++ ")"
+                 | True                             = v
+
+                flds = case wk of
                         KADT topADTName (Just cks)
                           | Just ks <- c `lookup` cks
                           -> if length fs == length ks
