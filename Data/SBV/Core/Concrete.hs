@@ -111,7 +111,7 @@ data CVal = CAlgReal  !AlgReal                -- ^ Algebraic real
           | CList     ![CVal]                 -- ^ List
           | CSet      !(RCSet CVal)           -- ^ Set. Can be regular or complemented.
           | CUserSort !(Maybe Int, String)    -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
-          | CADT      String                  -- ^ ADT: Just keep the string
+          | CADT      (String, [CVal])        -- ^ ADT: Constructor, and fields
           | CTuple    ![CVal]                 -- ^ Tuple
           | CMaybe    !(Maybe CVal)           -- ^ Maybe
           | CEither   !(Either CVal CVal)     -- ^ Disjoint union
@@ -391,22 +391,22 @@ showCV shk w = sh (cvVal w) ++ kInfo
 
         wk = kindOf w
 
-        sh (CAlgReal  v) = show v
-        sh (CInteger  v) = show v
-        sh (CFloat    v) = show v
-        sh (CDouble   v) = show v
-        sh (CFP       v) = show v
-        sh (CRational v) = show v
-        sh (CChar     v) = show v
-        sh (CString   v) = show v
-        sh (CUserSort v) = snd  v
-        sh (CADT      v) = v
-        sh (CList     v) = shL  v
-        sh (CSet      v) = shS  v
-        sh (CTuple    v) = shT  v
-        sh (CMaybe    v) = shM  v
-        sh (CEither   v) = shE  v
-        sh (CArray    v) = shA  v
+        sh (CAlgReal  v) = show  v
+        sh (CInteger  v) = show  v
+        sh (CFloat    v) = show  v
+        sh (CDouble   v) = show  v
+        sh (CFP       v) = show  v
+        sh (CRational v) = show  v
+        sh (CChar     v) = show  v
+        sh (CString   v) = show  v
+        sh (CUserSort v) = snd   v
+        sh (CADT      c) = shADT c
+        sh (CList     v) = shL   v
+        sh (CSet      v) = shS   v
+        sh (CTuple    v) = shT   v
+        sh (CMaybe    v) = shM   v
+        sh (CEither   v) = shE   v
+        sh (CArray    v) = shA   v
 
         shL xs = "[" ++ intercalate "," (map (showCV False . CV ke) xs) ++ "]"
           where ke = case wk of
@@ -455,6 +455,29 @@ showCV shk w = sh (cvVal w) ++ kInfo
           where needsParen = case dropWhile isSpace v of
                                []         -> False
                                rest@(x:_) -> x == '-' || (any isSpace rest && x `notElem` "{[(")
+
+        shADT (c, fs)
+          | null @[] flds = c
+          | True          = '(' : unwords (c : flds) ++ ")"
+          where flds = case wk of
+                        KADT topADTName (Just cks)
+                          | Just ks <- c `lookup` cks
+                          -> if length fs == length ks
+                             then let -- fix references
+                                      fixRef (KADT curADTName Nothing) | topADTName == curADTName = wk
+                                      fixRef fk                                                   = fk
+                                  in zipWith (\k f -> showCV False (CV (fixRef k) f)) ks fs
+                             else error $ unlines $ [ "Data.SBV.showCV: Impossible happened."
+                                                    , "   Mismatching field count for constructor."
+                                                    , "   Constructor: " ++ show c
+                                                    , "   Kinds      : " ++ show ks
+                                                    , "   Received   : " ++ show (length fs) ++ " fields."
+                                                    , "   Expecting  : " ++ show (length ks)
+                                                    ]
+
+                        KADT n Nothing -> error $ "Data.SBV.showCV: Unexpected: A reference to ADT for " ++ show n ++ " seen."
+
+                        _ -> error $ "Data.SBV.showCV: Impossible happened, expected ADT got: " ++ show (c, wk)
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
