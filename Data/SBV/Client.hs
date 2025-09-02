@@ -252,9 +252,19 @@ mkADT typeName cstrs = do
                                                                []
                  TH.FunD 'literal <$> mapM mkLitClause cstrs
 
-    getFromCV <- [| \x -> case x of
-                            CV k (CADT {}) -> error $ "fromCV: Not yet supported for kind: " ++ show k
-                            CV k _         -> error $ "Was expecting a CADT value for: " ++ show typeName ++ ", but got: " ++ show k
+    getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
+                        fixRef kRef (KADT curName Nothing) | curName == unmod typeName = kRef
+                        fixRef _    k                                                  = k
+                    in \x -> case x of
+                               CV kTop@(KADT _ (Just fks)) (CADT (c, vs)) ->
+                                 case c `lookup` fks of
+                                   Nothing  -> unexpected $ "Cannot find constructor in kind: " ++ show (c, fks)
+                                   Just ks
+                                     | length ks /= length vs
+                                     -> unexpected $ "Mismatching arity for " ++ show typeName ++ " " ++ show (c, length ks, length vs)
+                                     | True
+                                     -> reconstruct c (zipWith CV (map (fixRef kTop) ks) vs)
+                               CV k _ -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k
                  |]
 
     let symVal = TH.InstanceD Nothing [] (TH.AppT (TH.ConT ''SymVal) typeCon) $

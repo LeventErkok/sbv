@@ -8,7 +8,7 @@
 --
 -- Basic ADT examples.
 -----------------------------------------------------------------------------
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-partial-type-signatures #-}
 
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
@@ -17,6 +17,8 @@
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE PartialTypeSignatures#-}
+{-# LANGUAGE FlexibleContexts     #-}
 
 module Documentation.SBV.Examples.ADT.Basic where
 
@@ -32,6 +34,13 @@ data Expr = Num Integer
           | Add Expr Expr
           | Let String Expr Expr
           deriving Show
+
+reconstruct :: SymVal Expr => String -> [_] -> Expr
+reconstruct "Num" [i]    = Num $ fromCV i
+reconstruct "Var" [s]    = Var $ fromCV s
+reconstruct "Add" [a, b] = Add (fromCV a) (fromCV b)
+reconstruct "Let" [s, a, b] = Let (fromCV s) (fromCV a) (fromCV b)
+reconstruct _ _ = error "reconstruct"
 
 mkSymbolic ''Expr
 
