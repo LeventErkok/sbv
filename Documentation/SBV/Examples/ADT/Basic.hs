@@ -60,7 +60,7 @@ test = satWith z3{verbose=True} $ do
 
           q :: SInteger <- free "q"
 
-          constrain $ x ./== (y :: SExpr)
+          constrain $ x ./== y
           constrain $ y .=== sLet (literal "x") (sNum q) (sAdd (sVar (literal "x")) (sNum 3))
           constrain $ isLet x
           constrain $ eval x .== 3
