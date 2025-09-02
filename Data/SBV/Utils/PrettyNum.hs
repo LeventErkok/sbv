@@ -520,7 +520,7 @@ cvToSMTLib rm x
           | Just ks <- c `lookup` cks, length ks == length fs
           = case fs of
               [] -> c
-              _  -> '(' : c ++ unwords (zipWith (\k v -> cvToSMTLib rm (CV  k v)) ks fs) ++ ")"
+              _  -> '(' : unwords (c : (zipWith (\k v -> cvToSMTLib rm (CV  k v)) ks fs)) ++ ")"
         smtLibADT k (c, _) = error $ "SBV.cvToSMTLib: Impossible case (smtLibADT), received incompatible kind: " ++ show (k, c)
 
 -- | Show a float as a binary
