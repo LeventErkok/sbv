@@ -22,7 +22,7 @@ module Data.SBV.Utils.PrettyNum (
       ) where
 
 import Data.Bits  ((.&.), countTrailingZeros)
-import Data.Char  (intToDigit, ord, chr, isSpace)
+import Data.Char  (intToDigit, ord, chr)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, listToMaybe)
@@ -438,10 +438,10 @@ cvToSMTLib rm x
   | isEither x       , CEither ec       <- cvVal x = smtLibEither (kindOf x) ec
 
   -- Arrays become sequence of stores
-  | isArray x        , CArray ac       <- cvVal x = smtLibArray (kindOf x) ac
+  | isArray x        , CArray ac       <- cvVal x  = smtLibArray (kindOf x) ac
 
   -- ADTs
-  | isADT x          , CADT v          <- cvVal x = if any isSpace v then '(' : v ++ ")" else v
+  | isADT x          , CADT c          <- cvVal x = smtLibADT (kindOf x) c
 
   | True = error $ "SBV.cvtCV: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
@@ -513,6 +513,15 @@ cvToSMTLib rm x
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
         mkMinBound :: Int -> String
         mkMinBound i = "#b1" ++ replicate (i-1) '0'
+
+        -- ADTs
+        smtLibADT :: Kind -> (String,  [CVal]) -> String
+        smtLibADT (KADT _ (Just cks)) (c, fs)
+          | Just ks <- c `lookup` cks, length ks == length fs
+          = case fs of
+              [] -> c
+              _  -> '(' : c ++ unwords (zipWith (\k v -> cvToSMTLib rm (CV  k v)) ks fs) ++ ")"
+        smtLibADT k (c, _) = error $ "SBV.cvToSMTLib: Impossible case (smtLibADT), received incompatible kind: " ++ show (k, c)
 
 -- | Show a float as a binary
 showBFloat :: (Show a, RealFloat a) => a -> ShowS

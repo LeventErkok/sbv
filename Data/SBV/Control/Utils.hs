@@ -86,7 +86,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
 import Data.SBV.Core.SizedFloats (fpZero, fpFromInteger, fpFromFloat, fpFromDouble)
-import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts)
+import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts, expandKinds, isSomeKindOfFloat)
 import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr, svEqual)
 
 import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..))
@@ -918,7 +918,7 @@ recoverKindedValue k e = case k of
                            KUserSort{} | ECon s <- e           -> Just $ CV k $ CUserSort (getUIIndex k s, simplifyECon s)
                                        | True                  -> Nothing
 
-                           KADT{}                              -> Just $ CV k $ CADT (shADT e)
+                           KADT{}                              -> Just $ CV k $ CADT $ interpretADT k e
 
                            KFloat      | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
                                        | EFloat i       <- e   -> Just $ CV KFloat (CFloat i)
@@ -1128,59 +1128,38 @@ recoverKindedValue k e = case k of
                                          _             -> tbd $ "Cannot convert value: " ++ show v
                          cvt _ vs   = tbd $ "Unexpected function-like-value as array index" ++ show vs
 
-        -- For ADT values, we simply pretty-print them after some simplifications
-        shADT = trim . sh . simp
-          where pIfNeg :: String -> String
-                pIfNeg ('-':s) = "(-" ++ s ++ ")"
-                pIfNeg s       = s
+        interpretADT :: Kind -> SExpr -> (String, [CVal])
+        interpretADT adtK@(KADT topADTName (Just cks)) expr
+           | Just ks <- cstr `lookup` cks
+           = if length fs == length ks
+             then (cstr, zipWith convert (zip [1..] ks) fs)
+             else bad ["Mismatching field count: " ++ show (fs, ks)]
+           | True
+           = bad ["Cannot find constructor in the kind: " ++ show (cstr, adtK)]
+          where (cstr, fs) = case expr of
+                               ECon c             -> (c, [])
+                               EApp (ECon c : cs) -> (c, cs)
+                               _                  -> bad ["Unexpected expression value; does not start with a constructor."]
 
-                sh :: SExpr -> String
-                sh sexpr = case sexpr of
-                             ECon           s            -> constant s
-                             ENum           (0, _, True) -> "False"
-                             ENum           (1, _, True) -> "True"
-                             ENum           (i, _, _)    -> pIfNeg $ show i
-                             EReal          a            -> pIfNeg $ show a
-                             EFloat         f            -> pIfNeg $ show f
-                             EFloatingPoint f            -> pIfNeg $ show f
-                             EDouble        d            -> pIfNeg $ show d
+                bad :: [String] -> a
+                bad extras = error $ unlines $ [ "Data.SBV.interpretADT: Cannot recover ADT value from solver output."
+                                               , "   Kind: " ++ show adtK
+                                               , "   Expr: " ++ show expr
+                                               ] ++ extras
 
-                             -- lists
-                             EApp (ECon "seq.++" : es) ->
-                                let collect sofar []                                 = reverse sofar
-                                    collect sofar (EApp [ECon "seq.unit", v] : rest) = collect (v : sofar) rest
-                                    collect sofar (v                         : rest) = collect (v : sofar) rest
-                                in '[' : intercalate "," (map sh (collect [] es)) ++ "]"
+                convert :: (Int, Kind) -> SExpr -> CVal
+                convert (i, fk) f = case recoverKindedValue (fixRef fk) f of
+                                      Just (CV _ v) -> v
+                                      Nothing       -> bad ["Couldn't convert field " ++ show i ++ ": " ++ show (fk, f)]
 
-                             EApp [ECon "seq.unit", v] -> '[' : sh v ++ "]"
+                -- If we have a recursive case, we can have a cyclic reference. Let's fix that here.
+                fixRef (KADT curADTName Nothing) | topADTName == curADTName = adtK
+                fixRef fk                                                   = fk
 
-                             -- rationals
-                             EApp [ECon "SBV.Rational", v1, v2] -> sh v1 ++ "%" ++ sh v2
-
-                             -- tuples
-                             EApp (ECon t : as)
-                              | "mkSBVTuple" `isPrefixOf` t -> '(' : intercalate "," (map sh as) ++ ")"
-
-                             -- otherwise, just prefix
-                             EApp xs -> '(' : unwords (map sh xs) ++ ")"
-
-                trim inp@('(':cs) = case reverse cs of
-                                      ')' : rest -> trim (reverse rest)
-                                      _          -> inp
-                trim xs           = xs
-
-                simp :: SExpr -> SExpr
-                simp (EApp [ECon "as", v, _]) = simp v
-                simp (EApp xs)                = EApp (map simp xs)
-                simp x                        = x
-
-                -- render certain constants more simply
-                constant "seq.empty"        = "[]"
-                constant "just_SBVMaybe"    = "Just"
-                constant "nothing_SBVMaybe" = "Nothing"
-                constant "left_SBVEither"   = "Left"
-                constant "right_SBVEither"  = "Right"
-                constant s                  = s
+        interpretADT someK expr = error $ unlines [ "Data.SBV.interpretADT: Expected an ADT kind, but got something else."
+                                                  , "   Expr: " ++ show expr
+                                                  , "   Kind: " ++ show someK
+                                                  ]
 
 -- | Generalization of 'Data.SBV.Control.getValueCV'
 getValueCV :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV
