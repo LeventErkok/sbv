@@ -23,14 +23,14 @@ import Data.SBV.Control
 data ADT  = AEmpty
           | ABool    Bool
           | AInteger Integer
-          | AWord8   (Word8)
-          | AWord16  (Word16)
-          | AWord32  (Word32)
-          | AWord64  (Word64)
-          | AInt8    (Int8)
-          | AInt16   (Int16)
-          | AInt32   (Int32)
-          | AInt64   (Int64)
+          | AWord8   Word8
+          | AWord16  Word16
+          | AWord32  Word32
+          | AWord64  Word64
+          | AInt8    Int8
+          | AInt16   Int16
+          | AInt32   Int32
+          | AInt64   Int64
           | AWord1   (WordN  1)
           | AWord5   (WordN  5)
           | AWord30  (WordN 30)
@@ -54,6 +54,7 @@ data ADT  = AEmpty
           | KSet  Kind
           | KArray  Kind Kind
           -}
+          deriving Show
 
 mkSymbolic ''ADT
 
