@@ -1555,7 +1555,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                        cstr shouldReject (sv, cv) = constrain (SBV $ mkEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) :: SBool)
                                                          where mkEq :: Kind -> SVal -> SVal -> SVal
                                                                mkEq k a b
-                                                                | isDouble k || isFloat k || isFP k || isADT k
+                                                                | any isSomeKindOfFloat (expandKinds k)
                                                                 = if shouldReject
                                                                      then svNot  (a `fpEq` b)
                                                                      else         a `fpEq` b
