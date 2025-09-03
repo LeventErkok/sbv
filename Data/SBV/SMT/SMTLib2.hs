@@ -924,7 +924,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (OverflowOp op) args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         -- Note the unfortunate reversal in StrInRe..
-        sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in.re " ++ unwords (map cvtSV args) ++ " " ++ regExpToSMTString r ++ ")"
+        sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in_re " ++ unwords (map cvtSV args) ++ " " ++ regExpToSMTString r ++ ")"
         sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (RegExOp o@RegExEq{})  []) = show o
