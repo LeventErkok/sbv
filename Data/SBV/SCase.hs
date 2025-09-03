@@ -152,7 +152,7 @@ sCase = QuasiQuoter
                           res <- mapM collect cstrs
 
                           -- If we reached here, all is well; except we might have an extra wildcard that we did not use
-                          when (length cases /= length cstrs) $
+                          when (length cases > length cstrs) $
                             case defaultCase of
                               Nothing -> pure ()
                               Just _  -> fail "sCase: Wildcard match is redundant"
