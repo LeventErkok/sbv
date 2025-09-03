@@ -18,6 +18,7 @@ module Main(main) where
 import Test.Tasty
 
 import qualified TestSuite.ADT.ADT
+import qualified TestSuite.ADT.Expr
 import qualified TestSuite.Arrays.InitVals
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Arrays.Query
