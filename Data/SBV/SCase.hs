@@ -31,6 +31,10 @@ import Data.SBV.Client (getConstructors)
 import Data.Char (isSpace)
 import Data.List (intercalate)
 
+-- | What kind of case-match are we given
+data Case = Full    Exp  -- Fully saturated constructor match. Exp is the lambda ready to go
+          | Partial Exp  -- Wild-card or record match. Exp is the rhs, must be turned into a lambda by expanding with constructors
+
 -- | Quasi-quoter for symbolic case expressions.
 sCase :: QuasiQuoter
 sCase = QuasiQuoter
@@ -61,22 +65,19 @@ sCase = QuasiQuoter
                            [l, _, e] -> fail $ "sCase parse error [Line " <> l <> "]: " <> e
                            _         -> fail $ "sCase parse error: " <> err
 
-    matchToPair :: Match -> Q (Maybe (Name, [Pat]), Exp)
+    matchToPair :: Match -> Q (Maybe (Name, [Pat]), Case)
     matchToPair (Match pat (NormalB rhs) []) =
       case pat of
-        ConP conName _ subpats -> do
-          ps <- traverse patToVar subpats
-          let lam = LamE ps rhs
-          pure (Just (conName, ps), lam)
-        WildP -> do
-          let lam = LamE [] rhs
-          pure (Nothing, lam)
+        ConP conName _ subpats -> do ps <- traverse patToVar subpats
+                                     pure (Just (conName, ps), Full (LamE ps rhs))
+        WildP                  -> pure (Nothing,            Partial rhs)
+        RecP conName []        -> pure (Just (conName, []), Partial rhs)
         _ -> fail $ "sCase: only constructor patterns with variables, or _ for default, are supported. Saw: " <> pprint pat
     matchToPair _ =
       fail "sCase: only simple matches with normal RHS are supported"
 
     -- Orient makes sure things are in good shape..
-    orient :: String -> [(Maybe (Name, [Pat]), Exp)] -> Q [Exp]
+    orient :: String -> [(Maybe (Name, [Pat]), Case)] -> Q [Exp]
     orient typ cases = do cstrsOrig <- getConstructors (mkName typ)
 
                           -- This is a bit dicey as we "trim" the cstr names, but oh well
@@ -98,16 +99,19 @@ sCase = QuasiQuoter
 
                           -- Step 2: Make sure every constructor listed actually exists and
                           -- matches in arity.
-                          let chk1 (Nothing,      _) = pure ()
-                              chk1 (Just (n, ps), _)
+                          let chk1 :: (Maybe (Name, [Pat]), Case) -> Q ()
+                              chk1 (Nothing,      _)    = pure ()
+                              chk1 (Just (n, ps), kind)
                                 | Just ts <- nameBase n `lookup` cstrs
-                                = unless (length ts == length ps)
-                                       $ fail $ unlines [ "sCase: Arity mismatch."
-                                                        , "        Type       : " ++ typ
-                                                        , "        Constructor: " ++ show n
-                                                        , "        Expected   : " ++ show (length ts)
-                                                        , "        Given      : " ++ show (length ps)
-                                                        ]
+                                = case kind of
+                                    Full{}    -> unless (length ts == length ps)
+                                                  $ fail $ unlines [ "sCase: Arity mismatch."
+                                                                   , "        Type       : " ++ typ
+                                                                   , "        Constructor: " ++ show n
+                                                                   , "        Expected   : " ++ show (length ts)
+                                                                   , "        Given      : " ++ show (length ps)
+                                                                   ]
+                                    Partial{} -> pure ()
                                 | True
                                 = fail $ unlines [ "sCase: Unknown constructor: " <> show n
                                                  , "        Type          : " ++ typ
@@ -135,9 +139,13 @@ sCase = QuasiQuoter
                           let defaultCase  = Nothing `lookup` cases
                               givens       = [(nameBase c, e) | (Just (c, _), e) <- cases]
 
+                              case2rhs :: Case -> [Type] -> Exp
+                              case2rhs (Full e)    _  = e
+                              case2rhs (Partial e) ts = LamE (map (const WildP) ts) e
+
                               collect (cstr, ps)
-                                | Just e <- cstr `lookup` givens 
-                                =  pure e
+                                | Just e <- cstr `lookup` givens
+                                = pure $ case2rhs e ps
                                 | True
                                 = case defaultCase of
                                     Nothing -> fail $ unlines [ "sCase: Pattern match(es) are non-exhaustive."
@@ -147,7 +155,7 @@ sCase = QuasiQuoter
                                                               , ""
                                                               , "      You can use a '_' to match multiple cases."
                                                               ]
-                                    Just de -> pure $ LamE (map (const WildP) ps) de
+                                    Just de -> pure $ case2rhs de ps
 
                           res <- mapM collect cstrs
 
