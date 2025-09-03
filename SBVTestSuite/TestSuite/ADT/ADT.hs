@@ -19,6 +19,7 @@ module TestSuite.ADT.ADT(tests) where
 
 import Utils.SBVTestFramework
 import Data.SBV.Control
+import Data.SBV.Maybe
 
 data ADT  = AEmpty
           | ABool    Bool
@@ -119,8 +120,10 @@ t06 :: FilePath -> IO ()
 t06 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
              a :: SADT <- free "a"
              constrain $ isAMaybe a
+             constrain $ isJust (getAMaybe_1 a)
              query $ do cs <- checkSat
                         case cs of
                          Sat{} -> do v <- getValue a
-                                     io $ appendFile rf $ "\ngetValue: " ++ show v
+                                     io $ do appendFile rf $ "\ngetValue: " ++ show v
+                                             appendFile rf $ "\nDONE\n"
                          _     -> error ("BAD RESULT: " ++ show cs)
