@@ -29,6 +29,21 @@ data Expr = Num Integer
           deriving Show
 mkSymbolic ''Expr
 
+-- | Validity: We require each variable appearing to be an identifier (lowercase letter followed by
+-- any number of upper-lower case letters and digits), and all expressions are closed; i.e., any
+-- variable referenced is introduced by an enclosing let expression.
+isValid :: SExpr -> SBool
+isValid = go SL.nil
+  where isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
+        go :: SList String -> SExpr -> SBool
+        go = smtFunction "valid" $ \env expr -> [sCase|Expr expr of
+                                                   Var s     -> isId s .&& s `SL.elem` env
+                                                   Num _     -> sTrue
+                                                   Add l r   -> go env l .&& go env r
+                                                   Let s a b -> isId s .&& go env a .&& go (s SL..: env) b
+                                                |]
+
+-- | Evaluate an expression.
 eval :: SExpr -> SInteger
 eval = go SL.nil
  where go :: SList (String, Integer) -> SExpr -> SInteger
@@ -44,20 +59,9 @@ eval = go SL.nil
                                          $ let (k, v) = untuple (SL.head env)
                                            in ite (s .== k) v (get (SL.tail env) s)
 
--- Make sure variables are scoped correctly and they are valid
-isValid :: SExpr -> SBool
-isValid = go SL.nil
-  where isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
-        go :: SList String -> SExpr -> SBool
-        go = smtFunction "valid" $ \env expr -> [sCase|Expr expr of
-                                                   Var s     -> isId s .&& s `SL.elem` env
-                                                   Num _     -> sTrue
-                                                   Add l r   -> go env l .&& go env r
-                                                   Let s a b -> isId s .&& go env a .&& go (s SL..: env) b
-                                                |]
 
 
--- | Create two different values:
+-- | A basic test.
 --
 -- >>> test
 test :: IO SatResult
