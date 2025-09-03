@@ -131,6 +131,7 @@ import qualified TestSuite.Uninterpreted.Uninterpreted
 main :: IO ()
 main = defaultMain $ testGroup "SBV" [
                         TestSuite.ADT.ADT.tests
+                      , TestSuite.ADT.Expr.tests
                       , TestSuite.Arrays.InitVals.tests
                       , TestSuite.Arrays.Memory.tests
                       , TestSuite.Arrays.Query.tests

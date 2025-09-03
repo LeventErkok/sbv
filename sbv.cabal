@@ -336,6 +336,7 @@ Test-Suite SBVTest
   main-is         : SBVTest.hs
   other-modules   : Utils.SBVTestFramework
                   , TestSuite.ADT.ADT
+                  , TestSuite.ADT.Expr
                   , TestSuite.Arrays.InitVals
                   , TestSuite.Arrays.Memory
                   , TestSuite.Arrays.Query
