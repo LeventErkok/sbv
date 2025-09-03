@@ -27,6 +27,8 @@ data Expr = Num Integer
           | Add Expr Expr
           | Let String Expr Expr
           deriving Show
+
+-- | Create a symbolic version of expressions.
 mkSymbolic ''Expr
 
 -- | Validity: We require each variable appearing to be an identifier (lowercase letter followed by
@@ -60,30 +62,20 @@ eval = go SL.nil
                                            in ite (s .== k) v (get (SL.tail env) s)
 
 
--- | Depth of an expression.
-depth :: SExpr -> SInteger
-depth = smtFunction "depth" $ \expr -> [sCase|Expr expr of
-                                          Num{}     -> 1
-                                          Var{}     -> 1
-                                          Add l r   -> depth l `smax` depth r
-                                          Let _ e r -> depth e `smax` depth r
-                                       |]
-
--- | A basic test.
+-- | A basic test, generating a few examples
 --
 -- >>> test
+-- Satisfiable. Model:
+--   e1 =    Let "n" (Num 3) (Var "n") :: Expr
+--   e2 = Let "h" (Num (-2)) (Var "h") :: Expr
 test :: IO SatResult
-test = satWith z3{verbose=True} $ do
-          x :: SExpr <- free "x"
-          y :: SExpr <- free "y"
+test = sat $ do e1 :: SExpr <- free "e1"
+                e2 :: SExpr <- free "e2"
 
-          q :: SInteger <- free "q"
+                constrain $ isValid e1
+                constrain $ isValid e2
 
-          constrain $ isValid x
-          constrain $ isValid y
-
-          constrain $ x ./== y
-          constrain $ y .=== sLet (literal "x") (sNum q) (sAdd (sVar (literal "x")) (sNum 3))
-          constrain $ isLet x
-          constrain $ eval x .== 3
-          constrain $ eval x .== eval y + 5
+                constrain $ e1 ./== e2
+                constrain $ isLet e1
+                constrain $ eval e1 .== 3
+                constrain $ eval e1 .== eval e2 + 5
