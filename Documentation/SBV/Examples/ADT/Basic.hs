@@ -60,6 +60,14 @@ eval = go SL.nil
                                            in ite (s .== k) v (get (SL.tail env) s)
 
 
+-- | Depth of an expression.
+depth :: SExpr -> SInteger
+depth = smtFunction "depth" $ \expr -> [sCase|Expr expr of
+                                          Num{}     -> 1
+                                          Var{}     -> 1
+                                          Add l r   -> depth l `smax` depth r
+                                          Let _ e r -> depth e `smax` depth r
+                                       |]
 
 -- | A basic test.
 --
