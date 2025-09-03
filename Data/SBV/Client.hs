@@ -252,6 +252,29 @@ mkADT typeName cstrs = do
                                                                []
                  TH.FunD 'literal <$> mapM mkLitClause cstrs
 
+    fromCVFunName <- TH.newName ("fromCV_" ++ TH.nameBase typeName)
+    let fromCVSig = TH.SigD fromCVFunName (foldr (TH.AppT . TH.AppT TH.ArrowT) typeCon [TH.ConT ''String, TH.AppT TH.ListT (TH.ConT ''CV)])
+
+        fromCVCls :: (TH.Name, [(TH.Type, Kind)]) -> TH.Q (TH.Clause)
+        fromCVCls (nm, args) = do
+            ns <- mapM (\(i, _) -> TH.newName ("a" ++ show i)) (zip [(1::Int)..] args)
+            let pat = foldr (\p acc -> TH.ConP '(:) [] [p, acc]) (TH.ConP '[] [] []) (map TH.VarP ns)
+            pure $ TH.Clause [TH.LitP (TH.StringL (TH.nameBase nm)), pat]
+                             (TH.NormalB (foldl TH.AppE (TH.ConE nm)
+                                                        [TH.AppE (TH.VarE 'fromCV) (TH.VarE n) | n <- ns]))
+                             []
+
+    catchAll <- do s <- TH.newName "s"
+                   l <- TH.newName "l"
+                   let errStr   = TH.LitE (TH.StringL ("fromCV " ++ TH.nameBase typeName ++ ": Unexpected constructor/arity: "))
+                       tup      = TH.TupE [Just (TH.VarE s), Just (TH.AppE (TH.VarE 'length) (TH.VarE l))]
+                       showCall = TH.AppE (TH.VarE 'show) tup
+                       errMsg   = TH.InfixE (Just errStr) (TH.VarE '(++)) (Just showCall)
+                   pure $ TH.Clause [TH.VarP s, TH.VarP l] (TH.NormalB (TH.AppE (TH.VarE 'error) errMsg)) []
+
+    fromCVFun <- do clss <- mapM fromCVCls cstrs
+                    pure $ TH.FunD fromCVFunName (clss ++ [catchAll])
+
     getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
                         fixRef kRef (KADT curName Nothing) | curName == unmod typeName = kRef
                         fixRef _    k                                                  = k
@@ -263,7 +286,7 @@ mkADT typeName cstrs = do
                                      | length ks /= length vs
                                      -> unexpected $ "Mismatching arity for " ++ show typeName ++ " " ++ show (c, length ks, length vs)
                                      | True
-                                     -> reconstruct c (zipWith CV (map (fixRef kTop) ks) vs)
+                                     -> $(TH.varE fromCVFunName) c (zipWith CV (map (fixRef kTop) ks) vs)
                                CV k _ -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k
                  |]
 
@@ -325,7 +348,7 @@ mkADT typeName cstrs = do
     -- Get the case analyzer
     (caseSig, caseFun) <- mkCaseAnalyzer typeName cstrs
 
-    pure $ tdecl : symVal : decls ++ concat cdecls ++ testerDecls ++ concat accessorDecls ++ [caseSig, caseFun]
+    pure $ tdecl : symVal : decls ++ concat cdecls ++ testerDecls ++ concat accessorDecls ++ [caseSig, caseFun] ++ [fromCVSig, fromCVFun]
 
 -- | Make a case analyzer for the type. Works for ADTs and enums. Returns sig and defn
 mkCaseAnalyzer :: TH.Name -> [(TH.Name, [(TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
