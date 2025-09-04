@@ -79,3 +79,10 @@ test = sat $ do e1 :: SExpr <- free "e1"
                 constrain $ isLet e1
                 constrain $ eval e1 .== 3
                 constrain $ eval e1 .== eval e2 + 5
+
+t :: SExpr -> SInteger
+t e = [sCase|Expr e of
+         Var s | s .== "a"              -> 5
+               | s .== "b" || s .== "c" -> 6
+         _ -> 12
+      |]
