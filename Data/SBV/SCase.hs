@@ -33,14 +33,31 @@ import Data.List  (intercalate)
 import Data.Maybe (isJust)
 
 -- | What kind of case-match are we given. In each case, the maybe is the possible guard.
-data Case = Full    [Pat] Exp (Maybe Exp) -- Fully saturated constructor match: [Pat] -> Body.
-          | Partial       Exp (Maybe Exp) -- Wild-card or record match. Exp is the rhs, must be turned
-                                          -- into a lambda by expanding with constructors (found later)
+data Case = CFull    Name [Pat] Exp (Maybe Exp) -- Cstr a b _ c d
+          | CRecord  Name       Exp (Maybe Exp) -- Cstr{}           (NB: We don't allow field matches)
+          | CWild               Exp (Maybe Exp) -- _
+
+-- | Show a case nicely
+showCase :: Case -> String
+showCase sc = case sc of
+                CFull   c ps _ mbG -> unwords $ pprint c : map pprint ps ++ shGuard mbG
+                CRecord c    _ mbG -> unwords $ pprint c : "{}"           : shGuard mbG
+                CWild        _ mbG -> unwords $ "_"                       : shGuard mbG
+ where shGuard Nothing  = []
+       shGuard (Just e) = ["|", pprint e]
+
+
+-- | Get the name of the constructor, if any
+getCaseConstructor :: Case -> Maybe Name
+getCaseConstructor (CFull    nm _ _ _) = Just nm
+getCaseConstructor (CRecord  nm   _ _) = Just nm
+getCaseConstructor (CWild         _ _) = Nothing
 
 -- | Get the guard, if any
 getCaseGuard :: Case -> Maybe Exp
-getCaseGuard (Full _  _ mbg) = mbg
-getCaseGuard (Partial _ mbg) = mbg
+getCaseGuard (CFull    _ _ _ mbg) = mbg
+getCaseGuard (CRecord  _   _ mbg) = mbg
+getCaseGuard (CWild        _ mbg) = mbg
 
 -- | Is there a guard?
 isGuarded :: Case -> Bool
@@ -91,14 +108,14 @@ sCase = QuasiQuoter
     addLocals [] e = e
     addLocals ds e = LetE ds e
 
-    matchToPair :: Match -> Q [(Maybe (Name, [Pat]), Case)]
+    matchToPair :: Match -> Q [Case]
     matchToPair (Match pat grhs locals) = do
       rhss <- getGuards grhs locals
       case pat of
         ConP conName _ subpats -> do ps <- traverse patToVar subpats
-                                     pure [(Just (conName, ps), Full ps rhs t) | (rhs, t) <- rhss]
-        WildP                  ->    pure [(Nothing,            Partial rhs t) | (rhs, t) <- rhss]
-        RecP conName []        ->    pure [(Just (conName, []), Partial rhs t) | (rhs, t) <- rhss]
+                                     pure [CFull   conName ps rhs t | (rhs, t) <- rhss]
+        WildP                  ->    pure [CWild              rhs t | (rhs, t) <- rhss]
+        RecP conName []        ->    pure [CRecord conName    rhs t | (rhs, t) <- rhss]
         _ -> fail $ unlines [ "sCase: Unsupported pattern:"
                             , "            Saw: " <> pprint pat
                             , ""
@@ -109,56 +126,52 @@ sCase = QuasiQuoter
                             ]
 
     -- Make sure things are in good-shape and decide if we have guards
-    checkCase :: String -> [(Maybe (Name, [Pat]), Case)] -> Q (Either [Exp] [(Maybe Name, Maybe Exp, Exp)])
+    checkCase :: String -> [Case] -> Q (Either [Exp] [(Maybe Name, Maybe Exp, Exp)])
     checkCase typ cases = do
         cstrsOrig <- getConstructors (mkName typ)
 
         -- This is a bit dicey as we "trim" the cstr names, but oh well
         let cstrs = [(nameBase c, fts) | (c, fts) <- cstrsOrig]
 
-            shGuard :: Case -> String
-            shGuard c = case getCaseGuard c of
-                          Nothing -> ""
-                          Just e  -> "| " <> pprint e
-
-            shM (Nothing     , g) = "_" <> shGuard g
-            shM (Just (c, ps), g) = unwords $ pprint c : map pprint ps ++ [shGuard g]
-
-        -- Step 0: If there's an unguarded wild-card, make sure nothing else follows it:
-        let checkWild []                    = pure ()
-            checkWild ((Just{}, _)  : rest) = checkWild rest
-            checkWild ((Nothing, c) : rest)
-              | isGuarded c
-              = checkWild rest
-              | True
-              = case rest of
-                  []  -> pure ()
-                  red  -> let w | length red > 1 = "matches are"
-                                | True           = "match is"
-                          in fail $ unlines $ ("sCase: Pattern " ++ w ++ " redundant")
-                                            : ["        " ++ shM r | r <- red]
+        -- Step 0: If there's an unguarded wild-card, make sure nothing else follows it.
+        -- Note that this also handles wild-card being present twice.
+        let checkWild []                       = pure ()
+            checkWild (CFull{}         : rest) = checkWild rest
+            checkWild (CRecord{}       : rest) = checkWild rest
+            checkWild (CWild _ Just{}  : rest) = checkWild rest
+            checkWild (CWild _ Nothing : rest) = case rest of
+                                                  []  -> pure ()
+                                                  red  -> let w | length red > 1 = "matches are"
+                                                                | True           = "match is"
+                                                          in fail $ unlines $ ("sCase: Pattern " ++ w ++ " redundant")
+                                                                            : ["        " ++ showCase r | r <- red]
         checkWild cases
 
         -- Step 2: Make sure every constructor listed actually exists and matches in arity.
-        let chk1 :: (Maybe (Name, [Pat]), Case) -> Q ()
-            chk1 (Nothing,      _)    = pure ()
-            chk1 (Just (n, ps), kind)
-              | Just ts <- nameBase n `lookup` cstrs
-              = case kind of
-                  Full{}    -> unless (length ts == length ps)
-                                $ fail $ unlines [ "sCase: Arity mismatch."
-                                                 , "        Type       : " ++ typ
-                                                 , "        Constructor: " ++ show n
-                                                 , "        Expected   : " ++ show (length ts)
-                                                 , "        Given      : " ++ show (length ps)
-                                                 ]
-                  Partial{} -> pure ()
-              | True
-              = fail $ unlines [ "sCase: Unknown constructor: " <> show n
-                               , "        Type          : " ++ typ
-                               , "        Saw           : " ++ show n
-                               , "        Must be one of: " ++ intercalate ", " (map fst cstrs)
-                               ]
+        let chk1 :: Case -> Q ()
+            chk1 c = case c of
+                       CFull   nm ps _ _ -> isSafe nm (Just (length ps))
+                       CRecord nm    _ _ -> isSafe nm Nothing
+                       CWild         _ _ -> pure ()
+              where isSafe nm mbLen
+                      | Just ts <- nameBase nm `lookup` cstrs
+                      = case mbLen of
+                           Nothing  -> pure ()
+                           Just cnt -> unless (length ts == cnt)
+                                            $ fail $ unlines [ "sCase: Arity mismatch."
+                                                             , "        Type       : " ++ typ
+                                                             , "        Constructor: " ++ pprint nm
+                                                             , "        Expected   : " ++ show (length ts)
+                                                             , "        Given      : " ++ show cnt
+                                                             ]
+                      | True
+                      = fail $ unlines [ "sCase: Unknown constructor:"
+                                       , "        Type          : " ++ typ
+                                       , "        Saw           : " ++ pprint nm
+                                       , "        Must be one of: " ++ intercalate ", " (map fst cstrs)
+                                       ]
+
+        mapM_ chk1 cases
 
         -- Step 2: Make sure constructors that have no guards are not repeated.
         let dups []     = Nothing
@@ -172,28 +185,46 @@ sCase = QuasiQuoter
                                                   , "        Repeated: " ++ show x
                                                   ]
 
-        mapM_ chk1 cases
-        chk2 [n | (Just (n, _), c) <- cases, not (isGuarded c)]
+            pick (CFull   nm _ _ Nothing)  = [nm]
+            pick (CRecord nm _   Nothing)  = [nm]
+            pick (CFull   _  _ _ Just{})   = []
+            pick (CRecord _  _   Just{})   = []
+            pick (CWild      _   _)        = []
+        chk2 (concatMap pick cases)
 
         -- At this point, we either have a simple case with no guards, in which case
         -- we translate this to an sCase for that type. So find all alternatives.
         -- Otherwise, this will become an ite-chain
-        let hasGuards = any (isGuarded . snd) cases
+        let hasGuards = any isGuarded cases
 
         if not hasGuards
-           then do let -- NB. We don't have to worry about the default having a guard here since we have no guards in this case
-                       defaultCase  = Nothing `lookup` cases
-                       givens       = [(nameBase c, e) | (Just (c, _), e) <- cases]
+           then do let defaultCase  = case [((e, mbg), c) | c@(CWild e mbg) <- cases] of
+                                        []                  -> Nothing
+                                        [((e, Nothing), _)] -> Just e
+                                        cs -> fail $ unlines $   "sCase: Impossible happened; found unexpected cases:"
+                                                             :  [ "        " ++ showCase c | c <- map snd cs]
+                                                             ++ [ ""
+                                                                , "      Please report this as a bug."
+                                                                ]
+                       find _ []     = Nothing
+                       find w (c:cs)
+                         | matches = Just c
+                         | True    = find w cs
+                         where matches = case c of
+                                           CFull   nm _ _ _ -> nameBase nm == w
+                                           CRecord nm   _ _ -> nameBase nm == w
+                                           CWild        _ _ -> False
 
                        case2rhs :: Case -> [Type] -> (Maybe Exp, Exp)
                        case2rhs cs ts = (LamE pats <$> mbGuard, LamE pats e)
                          where (mbGuard, e, pats) = case cs of
-                                                      Full ps rhs mbt -> (mbt, rhs, ps)
-                                                      Partial rhs mbt -> (mbt, rhs, map (const WildP) ts)
+                                                      CFull   _ ps rhs mbt -> (mbt, rhs, ps)
+                                                      CRecord _    rhs mbt -> (mbt, rhs, map (const WildP) ts)
+                                                      CWild        rhs mbt -> (mbt, rhs, map (const WildP) ts)
 
-                       collect (cstr, ps)
-                         | Just e <- cstr `lookup` givens
-                         = pure $ case2rhs e ps
+                       collect (cstr, ts)
+                         | Just e <- find cstr cases
+                         = pure $ case2rhs e ts
                          | True
                          = case defaultCase of
                              Nothing -> fail $ unlines [ "sCase: Pattern match(es) are non-exhaustive."
@@ -203,7 +234,8 @@ sCase = QuasiQuoter
                                                        , ""
                                                        , "      You can use a '_' to match multiple cases."
                                                        ]
-                             Just de -> pure $ case2rhs de ps
+                             Just de -> do let ps = map (const WildP) ts
+                                           pure (Nothing, LamE ps de)
 
                    res <- mapM collect cstrs
 
@@ -216,22 +248,25 @@ sCase = QuasiQuoter
                    -- Double check that we had no guards and return the cases
                    case [r | (Just{}, r) <- res] of
                      [] -> pure $ Left $ map snd res
-                     rs -> fail $ unlines $ "sCase: Impossible happened; found a guard in no-guard case."
-                                          : [ "        " ++ pprint r | r <- rs]
+                     rs -> fail $ unlines $    "sCase: Impossible happened; found a guard in no-guard case."
+                                          :  [ "        " ++ pprint r | r <- rs]
+                                          ++ [ ""
+                                             , "      Please report this as a bug."
+                                             ]
 
            else do -- We have guards. For each constructor without a guard, make sure we cover all the cases. If not we complain.
-                   let unguardedCases      = [nameBase cstr | (Just (cstr, _), c) <- cases, not (isGuarded c)]
-                       hasUnguardedDefault = or [True | (Nothing, c) <- cases, not (isGuarded c)]
+                   let hasUnguardedDefault = or [True | CWild _ Nothing <- cases]
 
-                   case filter (`notElem` unguardedCases) (map fst cstrs) of
-                     [] | hasUnguardedDefault -> fail "sCase: Wildcard match is redundant"
-                     _                        -> pure ()
+                   when hasUnguardedDefault $ do
+                          let unguardedCases = [nameBase n | c <- cases, not (isGuarded c), Just n <- [getCaseConstructor c]]
+                          case filter (`notElem` unguardedCases) (map fst cstrs) of
+                            [] -> fail "sCase: Wildcard match is redundant"
+                            _  -> pure ()
 
-                   let collect :: (Maybe (Name, [Pat]), Case) -> Q (Maybe Name, Maybe Exp, Exp)
+                   let collect :: Case -> Q (Maybe Name, Maybe Exp, Exp)
 
                        -- Wild card match, full constructor application
-                       collect (Nothing, Full ps e Nothing)  = pure (Nothing, Nothing,          LamE ps e)
-                       collect (Nothing, Full ps e (Just t)) = pure (Nothing, Just (LamE ps t), LamE ps e)
+                       collect _ = fail "sCase: collect guards: TODO"
 
                    res <- mapM collect cases
                    pure $ Right res
