@@ -29,6 +29,7 @@ import qualified Language.Haskell.Exts as E
 import Control.Monad (unless, when, zipWithM)
 
 import Data.SBV.Client (getConstructors)
+import Data.SBV.Core.Model (ite)
 
 import Data.Char  (isSpace)
 import Data.List  (intercalate)
@@ -158,8 +159,11 @@ sCase = QuasiQuoter
                            [l, _, e] -> fail Unknown $ "sCase parse error [Line " <> l <> "]: " <> e
                            _         -> fail Unknown $ "sCase parse error: " <> err
 
-    buildCase caseFunc scrut (Left   cases) = pure $ foldl AppE (caseFunc `AppE` scrut) cases
-    buildCase _caseFunc _scrut (Right _chain) = fail Unknown $ "Guarded case TBD"
+    buildCase caseFunc scrut   (Left  cases) = pure $ foldl AppE (caseFunc `AppE` scrut) cases
+    buildCase _        _       (Right cases) = iteChain cases
+      where iteChain []              = fail Unknown $ "Unable to build the final case, received no alternatives!"
+            iteChain ((t, e) : rest) = do r <- iteChain rest
+                                          pure $ foldl AppE (VarE 'ite) [t, e, r]
 
     getGuards :: Body -> [Dec] -> Q [(Exp, Maybe Exp)]
     getGuards (NormalB  rhs)  locals = pure [(addLocals locals rhs, Nothing)]
@@ -200,7 +204,7 @@ sCase = QuasiQuoter
                                     ]
 
     -- Make sure things are in good-shape and decide if we have guards
-    checkCase :: String -> [Case] -> Q (Either [Exp] [(Maybe Name, Maybe Exp, Exp)])
+    checkCase :: String -> [Case] -> Q (Either [Exp] [(Exp, Exp)])
     checkCase typ cases = do
         loc   <- location
 
@@ -380,8 +384,8 @@ sCase = QuasiQuoter
                        | True
                        -> pure ()
 
-                   let collect :: Case -> Q (Maybe Name, Maybe Exp, Exp)
-                       collect c = fail (caseOffset c) "sCase: collect guards: TODO"
+                   let collect :: Case -> Q (Exp, Exp)
+                       collect _ = fail Unknown "todo"
 
                    res <- mapM collect cases
                    pure $ Right res
