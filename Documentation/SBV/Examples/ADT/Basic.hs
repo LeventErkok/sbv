@@ -84,5 +84,8 @@ t :: SExpr -> SInteger
 t e = [sCase|Expr e of
          Var s | s .== "a"              -> 5
                | s .== "b" || s .== "c" -> 6
-         _ -> 12
+         Var s -> 12
+         Num{} | 2 .== 5 -> 4
+         Add{} -> 4
+         _ -> 2
       |]
