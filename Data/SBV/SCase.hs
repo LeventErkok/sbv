@@ -30,10 +30,11 @@ import Control.Monad (unless, when, zipWithM)
 
 import Data.SBV.Client (getConstructors)
 import Data.SBV.Core.Model (ite, sym)
+import Data.SBV.Core.Data  (sTrue)
 
 import Data.Char  (isSpace)
 import Data.List  (intercalate)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromMaybe)
 
 import Prelude hiding (fail)
 import qualified Prelude as P(fail)
@@ -385,7 +386,8 @@ sCase = QuasiQuoter
                        -> pure ()
 
                    let collect :: Case -> Q (Exp, Exp)
-                       collect _ = fail Unknown "todo"
+                       collect (CMatch _ _ _ _ _)     = fail Unknown "todo: wild"
+                       collect (CWild  _     rhs mbG) = pure (rhs, fromMaybe (VarE 'sTrue) mbG)
 
                    res <- mapM collect cases
                    pure $ Right res
