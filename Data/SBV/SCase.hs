@@ -155,7 +155,7 @@ sCase = QuasiQuoter
                              | cur == [fst m] = Just (co + length (takeWhile isSpace s), length (fst m))
                              | cur == [snd m] = Just (co + length (takeWhile isSpace s), length (snd m))
                              | True           = find (co + length pre + 1) (drop 1 post)
-                            where cur         = take 1 (words s)
+                            where cur         = take 1 (map (takeWhile (`notElem` "{")) (words s))
                                   (pre, post) = break (== ';') s
 
       rhss <- getGuards grhs locals
@@ -225,15 +225,13 @@ sCase = QuasiQuoter
         mapM_ chk1 cases
 
         -- Step 2: Make sure constructors matches are not overlapping
-        let overlap       o x    = fail o $ unlines [ "sCase: Overlapping case constructors:"
-                                                    , "        Type       : " ++ typ
-                                                    , "        Constructor: " ++ showCase x
-                                                    ]
+        let problem w x = fail (caseOffset x) $ unlines [ "sCase: " ++ w ++ ":"
+                                                        , "        Type       : " ++ typ
+                                                        , "        Constructor: " ++ showCase x
+                                                        ]
 
-            unmatched     o x    = fail o $ unlines [ "sCase: Non-exhaustive match:"
-                                                    , "        Type       : " ++ typ
-                                                    , "        Constructor: " ++ showCase x
-                                                    ]
+            overlap   = problem "Overlapping case constructors"
+            unmatched = problem "Non-exhaustive match"
 
             nonExhaustive o cstr = fail o $ unlines [ "sCase: Pattern match(es) are non-exhaustive."
                                                     , "        Not matched     : " ++ pprint cstr
@@ -248,25 +246,25 @@ sCase = QuasiQuoter
             -- If we have a guarded match, then this guard can fail. So either there must be a match
             -- for it later on, or there must be a catch-all. Note that if it exists later, we don't
             -- care if that occurrence is guarded or not; because if it is guarded, we'll fail on the last one.
-            chk2 (c@(CMatch o nm _ _ (Just {})) : rest)
+            chk2 (c@(CMatch _ nm _ _ (Just {})) : rest)
               | hasCatchAll || Just nm `elem` map getCaseConstructor rest
               = chk2 rest
               | True
-              = unmatched o c
+              = unmatched c
 
             -- If we have a non-guarded match, then there must be no matches for this constructor later on
-            chk2 (c@(CMatch o nm _ _ Nothing) : rest)
+            chk2 (c@(CMatch _ nm _ _ Nothing) : rest)
               | Just nm `elem` map getCaseConstructor rest
-              = overlap o c
+              = overlap c
               | True
               = chk2 rest
 
             -- If there's a guarded wildcard, must make sure there's a catch all afterwards
-            chk2 (c@(CWild o _ Just{}) : rest)
+            chk2 (c@(CWild _ _ Just{}) : rest)
               | hasCatchAll
               = chk2 rest
               | True
-              = unmatched o c
+              = unmatched c
 
             -- No need to worry about anything following catch-all, since we already covered that before
             chk2 (CWild _ _ Nothing : rest) = chk2 rest
