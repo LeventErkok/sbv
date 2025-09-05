@@ -24,7 +24,9 @@ import Language.Haskell.TH
 import Language.Haskell.TH.Quote
 import qualified Language.Haskell.Meta.Parse as Meta
 
-import Control.Monad (unless, when)
+import qualified Language.Haskell.Exts as E
+
+import Control.Monad (unless, when, zipWithM)
 
 import Data.SBV.Client (getConstructors)
 
@@ -39,17 +41,23 @@ import System.FilePath
 
 -- | TH parse trees don't have location. Let's have a simple mechanism to keep track of them for our use case
 data Offset = Unknown | OffBy Int Int Int
+ deriving Show
 
+-- | Better fail method, keeping track of offsets
 fail :: Offset -> String -> Q a
-fail Unknown         s = P.fail s
-fail (OffBy lo co w) s = do loc@Loc{loc_start = (sl, _)} <- location
-                            let start = (sl + lo, co + 1)
-                                end   = (sl + lo, co + w)
-                                newLoc = loc {loc_start = start, loc_end = end}
-                            P.fail (fmtLoc newLoc ++ ": " ++  s)
-  where fmtLoc loc = takeFileName (loc_filename loc) ++ ":" ++ sh (loc_start loc) (loc_end loc)
-        sh ab@(a, b) cd@(c, d) | a == c = show a ++ ":" ++ show b ++ "-" ++ show d
+fail Unknown     s = P.fail s
+fail off@OffBy{} s = do loc <- location
+                        P.fail (fmtLoc loc off ++ ": " ++  s)
+
+-- | Format a given location by the offset
+fmtLoc :: Loc -> Offset -> String
+fmtLoc loc@Loc{loc_start = (sl, _)} off = takeFileName (loc_filename newLoc) ++ ":" ++ sh (loc_start newLoc) (loc_end newLoc)
+  where sh ab@(a, b) cd@(c, d) | a == c = show a ++ ":" ++ show b ++ "-" ++ show d
                                | True   = show ab ++ "-" ++ show cd
+
+        newLoc = case off of
+                   Unknown       -> loc
+                   OffBy lo co w -> loc {loc_start = (sl + lo, co + 1), loc_end = (sl + lo, co + w)}
 
 -- | What kind of case-match are we given. In each case, the last maybe exp is the possible guard.
 data Case = CMatch Offset Name (Maybe [Pat]) Exp (Maybe Exp) -- Cstr a b _ c d if maybe, Cstr{} if nothing on pats
@@ -62,13 +70,20 @@ caseOffset (CWild  o     _ _) = o
 
 -- | Show a case nicely
 showCase :: Case -> String
-showCase sc = case sc of
-                CMatch _ c (Just ps) _ mbG -> unwords $ nameBase c : map pprint ps ++ shGuard mbG
-                CMatch _ c Nothing   _ mbG -> unwords $ nameBase c : "{}"           : shGuard mbG
-                CWild  _             _ mbG -> unwords $ "_"                         : shGuard mbG
+showCase = showCaseGen Nothing
+
+-- | Show a case nicely, with location
+showCaseGen :: Maybe Loc -> Case -> String
+showCaseGen mbLoc sc = case sc of
+                         CMatch _ c (Just ps) _ mbG -> loc ++ unwords (nameBase c : map pprint ps ++ shGuard mbG)
+                         CMatch _ c Nothing   _ mbG -> loc ++ unwords (nameBase c : "{}"           : shGuard mbG)
+                         CWild  _             _ mbG -> loc ++ unwords ("_"                         : shGuard mbG)
  where shGuard Nothing  = []
        shGuard (Just e) = ["|", pprint e]
 
+       loc = case mbLoc of
+               Nothing -> ""
+               Just l  -> fmtLoc l (caseOffset sc) ++ ": "
 
 -- | Get the name of the constructor, if any
 getCaseConstructor :: Case -> Maybe Name
@@ -83,6 +98,28 @@ getCaseGuard (CWild  _     _ mbg) = mbg
 -- | Is there a guard?
 isGuarded :: Case -> Bool
 isGuarded = isJust . getCaseGuard
+
+-- | Find offset of each successive match. This isn't perfect, but it does the job
+findOffsets :: String -> [Offset]
+findOffsets s = analyze $ E.parseExpWithMode E.defaultParseMode $ "case ()" ++ tab ++ rest
+  where rest = relevant s
+        -- there's a chance the replication below might yield a negative value, which can make our
+        -- offset calculation slightly off. But this should be exceedingly rare because it'd have to be that
+        -- matches are on the same line and the "Type expr" part of the original must be shorter than 7 chars.
+        -- Let's ignore that possibility.
+        tab  = replicate (length s - length rest - 7) ' '
+        relevant r@(' ':'o':'f':_) = r
+        relevant ""                = ""
+        relevant (_:cs)            = relevant cs
+
+        analyze E.ParseFailed{} = [] -- Just ignore
+        analyze (E.ParseOk e)   = case e of
+                                   E.Case _ _ alts -> map getOff alts
+                                   _               -> []
+          where getOff (E.Alt l p _ _) = OffBy (E.srcSpanStartLine as - 1) (E.srcSpanStartColumn as - 1) w
+                   where as = E.srcInfoSpan l
+                         cs = E.srcInfoSpan (E.ann p)
+                         w  = E.srcSpanEndColumn cs - E.srcSpanStartColumn cs
 
 -- | Quasi-quoter for symbolic case expressions.
 sCase :: QuasiQuoter
@@ -108,12 +145,13 @@ sCase = QuasiQuoter
         Just ((typ, scrutStr), altsStr) -> do
           let fnTok    = "sCase" <> typ
               fullCase = "case " <> scrutStr <> " of " <> altsStr
+              offsets  = findOffsets src
           case Meta.parseExp fullCase of
             Right (CaseE scrut matches) -> do
               fnName <- lookupValueName fnTok >>= \case
                 Just n  -> pure (VarE n)
                 Nothing -> fail Unknown $ "sCase: unknown function " <> fnTok
-              cases <- mapM (matchToPair src) matches >>= checkCase typ . concat
+              cases <- zipWithM matchToPair (offsets ++ repeat Unknown) matches >>= checkCase typ . concat
               buildCase fnName scrut cases
             Right _  -> fail Unknown "sCase: internal parse error, not a case-expression"
             Left err -> case lines err of
@@ -142,32 +180,16 @@ sCase = QuasiQuoter
                                     Nothing -> fail off $ "sCase: Not in scope: data constructor: " <> pprint refName
                                     Just n  -> pure n
 
-    matchToPair :: String -> Match -> Q [Case]
-    matchToPair entireExp (Match pat grhs locals) = do
-      let linesOfExp  = zip [0..] (lines entireExp)
-          getOffset w = walk (maybe ("_", "_") (\n -> (pprint n, nameBase n)) w) linesOfExp
-            where walk _ []           = Unknown
-                  walk m ((lo, l):ls) = case find 0 l of
-                                          Just (co, wdth) -> OffBy lo co wdth
-                                          Nothing         -> walk m ls
-                    where find _ "" = Nothing
-                          find co s
-                             | cur == [fst m] = Just (co + length (takeWhile isSpace s), length (fst m))
-                             | cur == [snd m] = Just (co + length (takeWhile isSpace s), length (snd m))
-                             | True           = find (co + length pre + 1) (drop 1 post)
-                            where cur         = take 1 (map (takeWhile (`notElem` "{")) (words s))
-                                  (pre, post) = break (== ';') s
-
+    matchToPair :: Offset -> Match -> Q [Case]
+    matchToPair off (Match pat grhs locals) = do
       rhss <- getGuards grhs locals
       case pat of
-        ConP conName _ subpats -> do let off = getOffset (Just conName)
-                                     ps  <- traverse (patToVar off) subpats
+        ConP conName _ subpats -> do ps  <- traverse (patToVar off) subpats
                                      con <- getReference off conName
                                      pure [CMatch off con (Just ps) rhs t | (rhs, t) <- rhss]
-        RecP conName []        -> do let off = getOffset (Just conName)
-                                     con <- getReference off conName
-                                     pure [CMatch off                 con Nothing   rhs t | (rhs, t) <- rhss]
-        WildP                  ->    pure [CWild  (getOffset Nothing)               rhs t | (rhs, t) <- rhss]
+        RecP conName []        -> do con <- getReference off conName
+                                     pure [CMatch off con Nothing   rhs t | (rhs, t) <- rhss]
+        WildP                  ->    pure [CWild  off               rhs t | (rhs, t) <- rhss]
         _ -> fail Unknown $ unlines [ "sCase: Unsupported pattern:"
                                     , "            Saw: " <> pprint pat
                                     , ""
@@ -180,6 +202,8 @@ sCase = QuasiQuoter
     -- Make sure things are in good-shape and decide if we have guards
     checkCase :: String -> [Case] -> Q (Either [Exp] [(Maybe Name, Maybe Exp, Exp)])
     checkCase typ cases = do
+        loc   <- location
+
         cstrs <- getConstructors (mkName typ)
 
         -- Is there a catch all clause?
@@ -231,16 +255,17 @@ sCase = QuasiQuoter
                                                                  ]
                                                               ++ [ "      " ++ e | e <- extras]
 
-            overlap = problem "Overlapping case constructors" []
+            overlap x xs = problem "Overlapping case constructors" extras x
+              where extras = "Overlaps with:" : ["  " ++ p | p <- map (showCaseGen (Just loc)) xs]
 
             unmatched x
              | isGuarded x = problem "Non-exhaustive match" ["NB. Guarded match might fail."] x
              | True        = problem "Non-exhaustive match" []                                x
 
             nonExhaustive o cstr = fail o $ unlines [ "sCase: Pattern match(es) are non-exhaustive."
-                                                    , "        Not matched     : " ++ pprint cstr
+                                                    , "        Not matched     : " ++ nameBase cstr
                                                     , "        Patterns of type: " ++ typ
-                                                    , "        Must match each : " ++ intercalate ", " (map (pprint . fst) cstrs)
+                                                    , "        Must match each : " ++ intercalate ", " (map (nameBase . fst) cstrs)
                                                     , ""
                                                     , "      You can use a '_' to match multiple cases."
                                                     ]
@@ -256,12 +281,11 @@ sCase = QuasiQuoter
               | True
               = unmatched c
 
-            -- If we have a non-guarded match, then there must be no matches for this constructor later on
+            -- If we have a non-guarded match, then there must be no matches for this constructor later on. If so, they're redundant.
             chk2 (c@(CMatch _ nm _ _ Nothing) : rest)
-              | Just nm `elem` map getCaseConstructor rest
-              = overlap c
-              | True
-              = chk2 rest
+              = case filter (\oc -> getCaseConstructor oc == Just nm) rest of
+                  [] -> chk2 rest
+                  os -> overlap (last os) (c : init os)
 
             -- If there's a guarded wildcard, must make sure there's a catch all afterwards
             chk2 (c@(CWild _ _ Just{}) : rest)
@@ -282,7 +306,7 @@ sCase = QuasiQuoter
 
         if not hasGuards
            then do defaultCase <- case [((e, mbg), c) | c@(CWild _ e mbg) <- cases] of
-                                    []                  -> pure $ Nothing
+                                    []                  -> pure Nothing
                                     [((e, Nothing), c)] -> pure $ Just (caseOffset c, e)
                                     cs@((_, c):_)       -> fail (caseOffset c)
                                                          $ unlines $   "sCase: Impossible happened; found unexpected cases:"
@@ -332,6 +356,9 @@ sCase = QuasiQuoter
                                                     ]
 
            else do -- We have guards.
+                   defaultCase <- case [(c, e) | c@(CWild _ e Nothing) <- cases] of
+                                    []         -> pure Nothing
+                                    ((c, e):_) -> pure $ Just (caseOffset c, e)
 
                    -- Collect, for each constructor, the corresponding cases:
                    let cstrMatches :: [(Name, ([Type], [Case]))]
@@ -343,6 +370,15 @@ sCase = QuasiQuoter
                    unless hasCatchAll $ case [nm | (nm, (_, [])) <- cstrMatches] of
                                           []    -> pure ()
                                           (x:_) -> nonExhaustive Unknown x
+
+                   -- If every constructor have a full match, then catch-all, if exists, is redundant:
+                   case defaultCase of
+                     Nothing     -> pure ()
+                     Just (o, _)
+                       | map fst cstrs == [nm | (nm, (_, cs)) <- cstrMatches, any (not . isGuarded) cs]
+                       -> fail o "sCase: Wildcard match is redundant"
+                       | True
+                       -> pure ()
 
                    let collect :: Case -> Q (Maybe Name, Maybe Exp, Exp)
                        collect c = fail (caseOffset c) "sCase: collect guards: TODO"
