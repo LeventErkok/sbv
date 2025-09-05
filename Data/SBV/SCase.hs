@@ -225,13 +225,17 @@ sCase = QuasiQuoter
         mapM_ chk1 cases
 
         -- Step 2: Make sure constructors matches are not overlapping
-        let problem w x = fail (caseOffset x) $ unlines [ "sCase: " ++ w ++ ":"
-                                                        , "        Type       : " ++ typ
-                                                        , "        Constructor: " ++ showCase x
-                                                        ]
+        let problem w extras x = fail (caseOffset x) $ unlines $ [ "sCase: " ++ w ++ ":"
+                                                                 , "        Type       : " ++ typ
+                                                                 , "        Constructor: " ++ showCase x
+                                                                 ]
+                                                              ++ [ "      " ++ e | e <- extras]
 
-            overlap   = problem "Overlapping case constructors"
-            unmatched = problem "Non-exhaustive match"
+            overlap = problem "Overlapping case constructors" []
+
+            unmatched x
+             | isGuarded x = problem "Non-exhaustive match" ["NB. Guarded match might fail."] x
+             | True        = problem "Non-exhaustive match" []                                x
 
             nonExhaustive o cstr = fail o $ unlines [ "sCase: Pattern match(es) are non-exhaustive."
                                                     , "        Not matched     : " ++ pprint cstr
