@@ -29,7 +29,7 @@ import qualified Language.Haskell.Exts as E
 import Control.Monad (unless, when, zipWithM)
 
 import Data.SBV.Client (getConstructors)
-import Data.SBV.Core.Model (ite)
+import Data.SBV.Core.Model (ite, sym)
 
 import Data.Char  (isSpace)
 import Data.List  (intercalate)
@@ -153,15 +153,15 @@ sCase = QuasiQuoter
                 Just n  -> pure (VarE n)
                 Nothing -> fail Unknown $ "sCase: unknown function " <> fnTok
               cases <- zipWithM matchToPair (offsets ++ repeat Unknown) matches >>= checkCase typ . concat
-              buildCase fnName scrut cases
+              buildCase typ fnName scrut cases
             Right _  -> fail Unknown "sCase: internal parse error, not a case-expression"
             Left err -> case lines err of
                            [l, _, e] -> fail Unknown $ "sCase parse error [Line " <> l <> "]: " <> e
                            _         -> fail Unknown $ "sCase parse error: " <> err
 
-    buildCase caseFunc scrut   (Left  cases) = pure $ foldl AppE (caseFunc `AppE` scrut) cases
-    buildCase _        _       (Right cases) = iteChain cases
-      where iteChain []              = fail Unknown $ "Unable to build the final case, received no alternatives!"
+    buildCase _     caseFunc scrut (Left  cases) = pure $ foldl AppE (caseFunc `AppE` scrut) cases
+    buildCase typ _caseFunc _      (Right cases) = iteChain cases
+      where iteChain []              = pure $ AppE (VarE 'sym) (LitE (StringL ("unmatched_sCase|" ++ typ)))
             iteChain ((t, e) : rest) = do r <- iteChain rest
                                           pure $ foldl AppE (VarE 'ite) [t, e, r]
 
