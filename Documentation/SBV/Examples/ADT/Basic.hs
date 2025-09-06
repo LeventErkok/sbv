@@ -66,7 +66,6 @@ eval = go SL.nil
                                          $ let (k, v) = untuple (SL.head env)
                                            in ite (s .== k) v (get (SL.tail env) s)
 
-
 -- | A basic test, generating a few examples
 --
 -- >>> test
@@ -89,7 +88,7 @@ t :: SExpr -> SInteger
 t e = [sCase|Expr e of
          Var s | s .== "a"               -> 5
                | s .== "b" .|| s .== "c" -> 6
-         Var s -> 12
+         Var _ -> 12
          Num i | 2 .== (5 :: SInteger) -> i + 1
          Add{} -> 4
          _ -> 2
