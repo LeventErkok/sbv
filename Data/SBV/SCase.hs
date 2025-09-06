@@ -39,6 +39,10 @@ import Data.Maybe (isJust, fromMaybe)
 import Prelude hiding (fail)
 import qualified Prelude as P(fail)
 
+import Data.Generics
+import qualified Data.Set as Set
+import Data.Set (Set)
+
 import System.FilePath
 
 -- | TH parse trees don't have location. Let's have a simple mechanism to keep track of them for our use case
@@ -397,21 +401,22 @@ sCase = QuasiQuoter
                                                       | (i, _) <- zip [(1 :: Int) ..] ts]
                                                rec  = VarE $ mkName $ "is" ++ nameBase nm
 
-
-                                               -- mkLam ps f = LamE ps f. But we make sure to supress
-                                               -- the patterns that bind variables that are not mentioned in the
-                                               -- right hand side, so GHC doesn't complain about unsued variables
-                                               mkLam f = LamE pats f
+                                               -- What are the free variables in the guard and the rhs that we bind?
+                                               allFrees  = Set.fromList [n | VarP n <- pats]
+                                                              `Set.intersection`
+                                                           (maybe Set.empty freeVars mbG `Set.union` freeVars rhs)
+                                               close e = foldr1 (\x -> AppE (AppE (VarE 'const) x)) (e:extras)
+                                                 where extras = map VarE $ Set.toList (allFrees Set.\\ freeVars e)
 
                                                mkApp f | null pats = f
-                                                       | True      = foldl AppE (mkLam f) args
+                                                       | True      = foldl AppE (LamE pats f) args
 
                                                grd :: Exp
                                                grd = case mbG of
                                                        Nothing -> AppE rec scrut
-                                                       Just g  -> foldl1 AppE [VarE '(.&&), AppE rec scrut, mkApp g]
+                                                       Just g  -> foldl1 AppE [VarE '(.&&), AppE rec scrut, mkApp (close g)]
 
-                                           pure (grd, mkApp rhs)
+                                           pure (grd, mkApp (close rhs))
 
                    Right <$> mapM collect cases
 
@@ -424,3 +429,19 @@ sCase = QuasiQuoter
       where go _     ""             = Nothing
             go sofar ('o':'f':rest) = Just (break isSpace (dropWhile isSpace (reverse sofar)), rest)
             go sofar (c:cs)         = go (c:sofar) cs
+
+-- | Free variables = used – bound
+freeVars :: Exp -> Set Name
+freeVars e = usedVars e Set.\\ boundVars e
+ where boundVars :: Exp -> Set Name
+       boundVars = everything Set.union (mkQ Set.empty f)
+         where f :: Pat -> Set Name
+               f (VarP n)  = Set.singleton n
+               f (AsP n _) = Set.singleton n
+               f _         = Set.empty
+
+       usedVars :: Exp -> Set Name
+       usedVars = everything Set.union (mkQ Set.empty f)
+         where f :: Exp -> Set Name
+               f (VarE n) = Set.singleton n
+               f _        = Set.empty
