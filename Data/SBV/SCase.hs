@@ -30,7 +30,7 @@ import Control.Monad (unless, when, zipWithM)
 
 import Data.SBV.Client (getConstructors)
 import Data.SBV.Core.Model (ite, sym)
-import Data.SBV.Core.Data  (sTrue)
+import Data.SBV.Core.Data  (sTrue, (.&&))
 
 import Data.Char  (isSpace)
 import Data.List  (intercalate)
@@ -153,15 +153,15 @@ sCase = QuasiQuoter
               fnName <- lookupValueName fnTok >>= \case
                 Just n  -> pure (VarE n)
                 Nothing -> fail Unknown $ "sCase: unknown function " <> fnTok
-              cases <- zipWithM matchToPair (offsets ++ repeat Unknown) matches >>= checkCase typ . concat
+              cases <- zipWithM matchToPair (offsets ++ repeat Unknown) matches >>= checkCase scrut typ . concat
               buildCase typ fnName scrut cases
             Right _  -> fail Unknown "sCase: internal parse error, not a case-expression"
             Left err -> case lines err of
                            [l, _, e] -> fail Unknown $ "sCase parse error [Line " <> l <> "]: " <> e
                            _         -> fail Unknown $ "sCase parse error: " <> err
 
-    buildCase _     caseFunc scrut (Left  cases) = pure $ foldl AppE (caseFunc `AppE` scrut) cases
-    buildCase typ _caseFunc _      (Right cases) = iteChain cases
+    buildCase _    caseFunc  scrut (Left  cases) = pure $ foldl AppE (caseFunc `AppE` scrut) cases
+    buildCase typ _caseFunc _scrut (Right cases) = iteChain cases
       where iteChain []              = pure $ AppE (VarE 'sym) (LitE (StringL ("unmatched_sCase|" ++ typ)))
             iteChain ((t, e) : rest) = do r <- iteChain rest
                                           pure $ foldl AppE (VarE 'ite) [t, e, r]
@@ -205,8 +205,8 @@ sCase = QuasiQuoter
                                     ]
 
     -- Make sure things are in good-shape and decide if we have guards
-    checkCase :: String -> [Case] -> Q (Either [Exp] [(Exp, Exp)])
-    checkCase typ cases = do
+    checkCase :: Exp -> String -> [Case] -> Q (Either [Exp] [(Exp, Exp)])
+    checkCase scrut typ cases = do
         loc   <- location
 
         cstrs <- getConstructors (mkName typ)
@@ -386,11 +386,34 @@ sCase = QuasiQuoter
                        -> pure ()
 
                    let collect :: Case -> Q (Exp, Exp)
-                       collect (CMatch _ _ _ _ _)     = fail Unknown "todo: wild"
-                       collect (CWild  _     rhs mbG) = pure (rhs, fromMaybe (VarE 'sTrue) mbG)
+                       collect (CWild  _        rhs mbG) = pure (fromMaybe (VarE 'sTrue) mbG, rhs)
+                       collect (CMatch o nm mbp rhs mbG) = do
+                           case nm `lookup` cstrs of
+                             Nothing -> fail o $ unlines [ "sCase: Impossible happened."
+                                                         , "        Unable to determine params for: " <> pprint nm
+                                                         ]
+                             Just ts -> do let pats = fromMaybe (map (const WildP) ts) mbp
+                                               args = [ AppE (VarE (mkName ("get" ++ nameBase nm ++ "_" ++ show i))) scrut
+                                                      | (i, _) <- zip [(1 :: Int) ..] ts]
+                                               rec  = VarE $ mkName $ "is" ++ nameBase nm
 
-                   res <- mapM collect cases
-                   pure $ Right res
+
+                                               -- mkLam ps f = LamE ps f. But we make sure to supress
+                                               -- the patterns that bind variables that are not mentioned in the
+                                               -- right hand side, so GHC doesn't complain about unsued variables
+                                               mkLam f = LamE pats f
+
+                                               mkApp f | null pats = f
+                                                       | True      = foldl AppE (mkLam f) args
+
+                                               grd :: Exp
+                                               grd = case mbG of
+                                                       Nothing -> AppE rec scrut
+                                                       Just g  -> foldl1 AppE [VarE '(.&&), AppE rec scrut, mkApp g]
+
+                                           pure (grd, mkApp rhs)
+
+                   Right <$> mapM collect cases
 
     patToVar :: Offset -> Pat -> Q Pat
     patToVar _ p@VarP{} = pure p

@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall -Werror #-}
 
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -21,8 +22,10 @@ import Data.SBV.RegExp
 import Data.SBV.Tuple
 import qualified Data.SBV.List as SL
 
--- | A basic arithmetic expression type
-data Expr = Num Integer
+-- | A basic arithmetic expression type. Zero isn't necessary here,
+-- but we keep it to demonstrate nullary constructors.
+data Expr = Zero
+          | Num Integer
           | Var String
           | Add Expr Expr
           | Let String Expr Expr
@@ -39,6 +42,7 @@ isValid = go SL.nil
   where isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
         go :: SList String -> SExpr -> SBool
         go = smtFunction "valid" $ \env expr -> [sCase|Expr expr of
+                                                   Zero      -> sTrue
                                                    Var s     -> isId s .&& s `SL.elem` env
                                                    Num _     -> sTrue
                                                    Add l r   -> go env l .&& go env r
@@ -50,6 +54,7 @@ eval :: SExpr -> SInteger
 eval = go SL.nil
  where go :: SList (String, Integer) -> SExpr -> SInteger
        go = smtFunction "eval" $ \env expr -> [sCase|Expr expr of
+                                                 Zero      -> 0
                                                  Num i     -> i
                                                  Var s     -> get env s
                                                  Add l r   -> go env l + go env r
@@ -82,10 +87,10 @@ test = sat $ do e1 :: SExpr <- free "e1"
 
 t :: SExpr -> SInteger
 t e = [sCase|Expr e of
-         Var s | s .== "a"              -> 5
-               | s .== "b" || s .== "c" -> 6
+         Var s | s .== "a"               -> 5
+               | s .== "b" .|| s .== "c" -> 6
          Var s -> 12
-         Num{} | 2 .== 5 -> 4
+         Num i | 2 .== (5 :: SInteger) -> i + 1
          Add{} -> 4
          _ -> 2
       |]
