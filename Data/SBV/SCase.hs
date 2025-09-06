@@ -423,8 +423,11 @@ sCase = QuasiQuoter
     patToVar :: Offset -> Pat -> Q Pat
     patToVar _ p@VarP{} = pure p
     patToVar _ p@WildP  = pure p
-    patToVar o p        = fail o $ "sCase: constructor arguments must be variables, not: " <> pprint p
-
+    patToVar o p        = fail o $ unlines [ "sCase: Unsupported complex pattern match."
+                                           , "        Saw: " <> pprint p
+                                           , ""
+                                           , "      Only variables and wild-card are supported."
+                                           ]
     parts = go ""
       where go _     ""             = Nothing
             go sofar ('o':'f':rest) = Just (break isSpace (dropWhile isSpace (reverse sofar)), rest)
