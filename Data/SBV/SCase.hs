@@ -229,12 +229,11 @@ sCase = QuasiQuoter
         let checkWild []                         = pure ()
             checkWild (CMatch{}          : rest) = checkWild rest
             checkWild (CWild _ _ Just{}  : rest) = checkWild rest
-            checkWild (CWild o _ Nothing : rest) = case rest of
-                                                  []  -> pure ()
-                                                  red  -> let w | length red > 1 = "matches are"
-                                                                | True           = "match is"
-                                                          in fail o $ unlines $ ("sCase: Pattern " ++ w ++ " redundant")
-                                                                              : ["        " ++ showCase r | r <- red]
+            checkWild (CWild o _ Nothing : rest) =
+                  case rest of
+                    []  -> pure ()
+                    red  -> fail o $ unlines $ "sCase: Wildcard makes the remaining matches redundant:"
+                                             : ["        " ++ showCaseGen (Just loc) r | r <- red]
         checkWild cases
 
         -- Step 2: Make sure every constructor listed actually exists and matches in arity.

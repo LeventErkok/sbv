@@ -1,0 +1,15 @@
+SCase12.hs:9:14: error: [GHC-39584]
+    " SCase12.hs:12:16: sCase: Wildcard makes the remaining matches redundant:
+        SCase12.hs:13:16: _
+
+    " In the quasi-quotation:
+        [sCase|Expr e of
+               Zero          -> 0
+               Num i         -> i
+               _ -> 3
+               _ -> 5
+      |]
+  |
+9 | t e = [sCase|Expr e of
+  |              ^^^^^^^^^...
+

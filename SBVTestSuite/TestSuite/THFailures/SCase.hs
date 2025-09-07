@@ -101,4 +101,6 @@ tests =
    , mkCase "SCase08"
    , mkCase "SCase09"
    , mkCase "SCase10"
+   , mkCase "SCase11"
+   , mkCase "SCase12"
    ]
