@@ -326,6 +326,7 @@ Test-Suite SBVTest
                   , directory
                   , filepath
                   , mtl
+                  , process
                   , random
                   , sbv
                   , tasty
@@ -439,6 +440,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.UISat
                   , TestSuite.Queries.UISatEx
                   , TestSuite.QuickCheck.QC
+                  , TestSuite.THFailures.SCase
                   , TestSuite.Transformers.SymbolicEval
                   , TestSuite.Uninterpreted.AUF
                   , TestSuite.Uninterpreted.Axioms

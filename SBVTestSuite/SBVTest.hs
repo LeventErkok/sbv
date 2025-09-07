@@ -122,6 +122,7 @@ import qualified TestSuite.Queries.UISat
 import qualified TestSuite.Queries.UISatEx
 import qualified TestSuite.Queries.Uninterpreted
 import qualified TestSuite.QuickCheck.QC
+import qualified TestSuite.THFailures.SCase
 import qualified TestSuite.Transformers.SymbolicEval
 import qualified TestSuite.Uninterpreted.AUF
 import qualified TestSuite.Uninterpreted.Axioms
@@ -238,6 +239,7 @@ main = defaultMain $ testGroup "SBV" [
                       , TestSuite.Queries.UISatEx.tests
                       , TestSuite.Queries.Uninterpreted.tests
                       , TestSuite.QuickCheck.QC.tests
+                      , TestSuite.THFailures.SCase.tests
                       , TestSuite.Transformers.SymbolicEval.tests
                       , TestSuite.Uninterpreted.AUF.tests
                       , TestSuite.Uninterpreted.Axioms.tests
