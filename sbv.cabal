@@ -333,6 +333,7 @@ Test-Suite SBVTest
                   , tasty-golden
                   , tasty-hunit
                   , tasty-quickcheck
+                  , temporary
   hs-source-dirs  : SBVTestSuite
   main-is         : SBVTest.hs
   other-modules   : Utils.SBVTestFramework

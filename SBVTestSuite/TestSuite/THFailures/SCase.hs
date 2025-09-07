@@ -15,12 +15,49 @@ module TestSuite.THFailures.SCase(tests) where
 
 import Utils.SBVTestFramework
 
-import Test.Tasty.Golden
+import Control.Exception (evaluate)
 import System.Exit
 import System.Process
-import System.Directory (withCurrentDirectory)
+import Test.Tasty.Golden
+
+import System.IO hiding (stderr)
+import System.IO.Temp (withSystemTempDirectory)
+
 import qualified Data.ByteString.Lazy.Char8 as BL
 
+-- | Like readProcessWithExitCode, but in a given directory
+readProcessInDir :: FilePath -> String -> [String] -> String -> IO (ExitCode, String, String)
+readProcessInDir dir cmd args input = do
+    let cp = (proc cmd args)
+                { cwd     = Just dir
+                , std_in  = CreatePipe
+                , std_out = CreatePipe
+                , std_err = CreatePipe
+                }
+    withCreateProcess cp $ \mIn mOut mErr ph -> do
+        -- feed input if needed
+        case mIn of
+            Just hin -> hPutStr hin input >> hClose hin
+            Nothing  -> return ()
+
+        out <- case mOut of
+            Just hout -> do
+                s <- hGetContents hout
+                _ <- evaluate (length s)  -- force full read
+                return s
+            Nothing -> return ""
+
+        err <- case mErr of
+            Just herr -> do
+                s <- hGetContents herr
+                _ <- evaluate (length s)  -- force full read
+                return s
+            Nothing -> return ""
+
+        exitCode <- waitForProcess ph
+        return (exitCode, out, err)
+
+-- | Make a compilation test
 mkCase :: TestName -> TestTree
 mkCase nm = goldenVsStringDiff nm diffCmd (pre ++ nm ++ ".stderr") (compileFail (nm ++ ".hs"))
   where pre = "SBVTestSuite/TestSuite/THFailures/Files/"
@@ -42,11 +79,11 @@ mkCase nm = goldenVsStringDiff nm diffCmd (pre ++ nm ++ ".stderr") (compileFail 
                    , "uniplate"
                    ]
 
-        args     =  "-XHaskell2010 -fforce-recomp -tmpdir /tmp -outputdir /tmp"
+        args td  =  "-XHaskell2010 -fforce-recomp -tmpdir " ++ td ++ " -outputdir " ++ td
                  ++ concat [" -package " ++ pkg | pkg <- packages]
 
-        compileFail path = do
-           (exitCode, _stdout, stderr) <- withCurrentDirectory pre $ readProcessWithExitCode "ghc" (words args ++ [path]) ""
+        compileFail path = withSystemTempDirectory "SBVTempDir" $ \tmpDir -> do
+           (exitCode, _stdout, stderr) <- readProcessInDir pre "ghc" (words (args tmpDir) ++ [path]) ""
            case exitCode of
              ExitSuccess   -> return $ BL.pack "Expected failure, but compilation succeeded.\n"
              ExitFailure _ -> return $ BL.pack stderr
