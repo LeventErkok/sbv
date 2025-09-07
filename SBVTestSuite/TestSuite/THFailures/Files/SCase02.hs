@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module SCase01 where
+module T where
 
 import Expr
 import Data.SBV
