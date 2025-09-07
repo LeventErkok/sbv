@@ -1,17 +1,17 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : TestSuite.THFailures.SCase
+-- Module    : TestSuite.THTests.SCase
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Testing TH failure messages
+-- Testing TH messages
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module TestSuite.THFailures.SCase(tests) where
+module TestSuite.THTests.SCase(tests) where
 
 import Utils.SBVTestFramework
 
@@ -20,7 +20,7 @@ import System.Exit
 import System.Process
 import Test.Tasty.Golden
 
-import System.IO hiding (stderr)
+import System.IO hiding (stderr, stdout)
 import System.IO.Temp (withSystemTempDirectory)
 
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -59,8 +59,8 @@ readProcessInDir dir cmd args input = do
 
 -- | Make a compilation test
 mkCase :: TestName -> TestTree
-mkCase nm = goldenVsStringDiff nm diffCmd (pre ++ nm ++ ".stderr") (compileFail (nm ++ ".hs"))
-  where pre = "SBVTestSuite/TestSuite/THFailures/Files/"
+mkCase nm = goldenVsStringDiff nm diffCmd (pre ++ nm ++ ".stderr") (compile (nm ++ ".hs"))
+  where pre = "SBVTestSuite/TestSuite/THTests/Files/"
 
         diffCmd ref new = ["diff", "-u", ref, new]
 
@@ -82,14 +82,14 @@ mkCase nm = goldenVsStringDiff nm diffCmd (pre ++ nm ++ ".stderr") (compileFail 
         args td  =  "-XHaskell2010 -fforce-recomp -tmpdir " ++ td ++ " -outputdir " ++ td
                  ++ concat [" -package " ++ pkg | pkg <- packages]
 
-        compileFail path = withSystemTempDirectory "SBVTempDir" $ \tmpDir -> do
-           (exitCode, _stdout, stderr) <- readProcessInDir pre "ghc" (words (args tmpDir) ++ [path]) ""
+        compile path = withSystemTempDirectory "SBVTempDir" $ \tmpDir -> do
+           (exitCode, stdout, stderr) <- readProcessInDir pre "ghc" (words (args tmpDir) ++ [path]) ""
            case exitCode of
-             ExitSuccess   -> return $ BL.pack "Expected failure, but compilation succeeded.\n"
+             ExitSuccess   -> return $ BL.pack stdout
              ExitFailure _ -> return $ BL.pack stderr
 
 tests :: TestTree
-tests = testGroup "THFailures.SCase" $ [ mkCase $ "SCase" ++ sh2 i | i <- [(1::Int) .. sCaseTestCnt] ]
-  where sCaseTestCnt = 15
+tests = testGroup "THTests.SCase" $ [ mkCase $ "SCase" ++ sh2 i | i <- [(1::Int) .. sCaseTestCnt] ]
+  where sCaseTestCnt = 17
         sh2 i | i < 10 = '0' : show i
               | True   =       show i
