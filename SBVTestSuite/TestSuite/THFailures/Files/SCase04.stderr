@@ -1,0 +1,6 @@
+SCase04.hs:9:8: error: [GHC-39584]
+    sCase: not usable in declaration context
+  |
+9 | [sCase|Expr e of
+  |        ^^^^^^^^^...
+
