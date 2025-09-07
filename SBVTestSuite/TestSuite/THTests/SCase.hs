@@ -23,6 +23,9 @@ import Test.Tasty.Golden
 import System.IO hiding (stderr)
 import System.IO.Temp (withSystemTempDirectory)
 
+import System.FilePath
+import System.FilePath.Glob (glob)
+
 import qualified Data.ByteString.Lazy.Char8 as BL
 
 -- | Like readProcessWithExitCode, but in a given directory
@@ -57,12 +60,13 @@ readProcessInDir dir cmd args input = do
         exitCode <- waitForProcess ph
         return (exitCode, out, err)
 
+testPath :: FilePath
+testPath = "SBVTestSuite/TestSuite/THTests/Files"
+
 -- | Make a compilation test
 mkCase :: TestName -> TestTree
-mkCase nm = goldenVsStringDiff nm diffCmd (pre ++ nm ++ ".stderr") (compile (nm ++ ".hs"))
-  where pre = "SBVTestSuite/TestSuite/THTests/Files/"
-
-        diffCmd ref new = ["diff", "-u", ref, new]
+mkCase nm = goldenVsStringDiff nm diffCmd (testPath </> nm <.> "stderr") (compile (nm <.> "hs"))
+  where diffCmd ref new = ["diff", "-u", ref, new]
 
         packages = [ "QuickCheck"
                    , "array"
@@ -83,13 +87,11 @@ mkCase nm = goldenVsStringDiff nm diffCmd (pre ++ nm ++ ".stderr") (compile (nm 
                  ++ concat [" -package " ++ pkg | pkg <- packages]
 
         compile path = withSystemTempDirectory "SBVTempDir" $ \tmpDir -> do
-           (exitCode, _stdout, stderr) <- readProcessInDir pre "ghc" (words (args tmpDir) ++ [path]) ""
+           (exitCode, _stdout, stderr) <- readProcessInDir testPath "ghc" (words (args tmpDir) ++ [path]) ""
            case exitCode of
              ExitSuccess   -> return $ BL.pack "There was no failure during compilation."
              ExitFailure _ -> return $ BL.pack stderr
 
-tests :: TestTree
-tests = testGroup "THTests.SCase" $ [ mkCase $ "SCase" ++ sh2 i | i <- [(1::Int) .. sCaseTestCnt] ]
-  where sCaseTestCnt = 18
-        sh2 i | i < 10 = '0' : show i
-              | True   =       show i
+tests :: IO TestTree
+tests = do fs <- glob $ testPath </> "SCase*.hs"
+           return $ testGroup "THTests.SCase" (map (mkCase . takeBaseName) fs)
