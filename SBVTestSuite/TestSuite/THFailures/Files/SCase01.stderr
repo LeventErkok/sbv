@@ -1,0 +1,8 @@
+SCase01.hs:18:14: error: [GHC-39584]
+    " SCase01.hs:18:14-14: Parse error: EOF
+
+    " In the quasi-quotation: [sCase|Expr e of|]
+   |
+18 | t e = [sCase|Expr e of|]
+   |              ^^^^^^^^^^^
+
