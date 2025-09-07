@@ -90,6 +90,6 @@ mkCase nm = goldenVsStringDiff nm diffCmd (pre ++ nm ++ ".stderr") (compile (nm 
 
 tests :: TestTree
 tests = testGroup "THTests.SCase" $ [ mkCase $ "SCase" ++ sh2 i | i <- [(1::Int) .. sCaseTestCnt] ]
-  where sCaseTestCnt = 17
+  where sCaseTestCnt = 18
         sh2 i | i < 10 = '0' : show i
               | True   =       show i
