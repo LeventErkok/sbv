@@ -1,0 +1,12 @@
+SCase06.hs:10:14: error: [GHC-39584]
+    " sCase: Unknown symbolic ADT: FExpr
+
+        To use a symbolic case expression, declare your ADT, and then:
+             mkSymbolic ''FExpr
+        In a template-haskell context.
+
+    " In the quasi-quotation: [sCase|FExpr e of Num _ -> 1|]
+   |
+10 | t e = [sCase|FExpr e of Num _ -> 1|]
+   |              ^^^^^^^^^^^^^^^^^^^^^^^
+

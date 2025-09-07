@@ -156,7 +156,12 @@ sCase = QuasiQuoter
             Right (CaseE scrut matches) -> do
               fnName <- lookupValueName fnTok >>= \case
                 Just n  -> pure (VarE n)
-                Nothing -> fail Unknown $ "sCase: unknown function " <> fnTok
+                Nothing -> fail Unknown $ unlines [ "sCase: Unknown symbolic ADT: " <> typ
+                                                  , ""
+                                                  , "        To use a symbolic case expression, declare your ADT, and then:"
+                                                  , "             mkSymbolic ''" <> typ
+                                                  , "        In a template-haskell context."
+                                                  ]
               cases <- zipWithM matchToPair (offsets ++ repeat Unknown) matches >>= checkCase scrut typ . concat
               buildCase typ fnName scrut cases
             Right _  -> fail Unknown "sCase: Parse error, cannot extract a case-expression."
