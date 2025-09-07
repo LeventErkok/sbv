@@ -1,0 +1,17 @@
+SCase02.hs:9:14: error: [GHC-39584]
+    " sCase: Pattern match(es) are non-exhaustive.
+        Not matched     : Var
+        Patterns of type: Expr
+        Must match each : Zero, Num, Var, Add, Let
+
+      You can use a '_' to match multiple cases.
+
+    " In the quasi-quotation:
+        [sCase|Expr e of
+        Zero  -> 0
+        Num i -> i
+      |]
+  |
+9 | t e = [sCase|Expr e of
+  |              ^^^^^^^^^...
+

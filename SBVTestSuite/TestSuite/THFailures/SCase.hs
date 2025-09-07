@@ -55,4 +55,5 @@ tests :: TestTree
 tests =
   testGroup "THFailures.SCase"
    [ mkCase "SCase01"
+   , mkCase "SCase02"
    ]
