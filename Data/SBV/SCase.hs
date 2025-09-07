@@ -94,7 +94,7 @@ showCaseGen mbLoc sc = case sc of
 -- | Get the name of the constructor, if any
 getCaseConstructor :: Case -> Maybe Name
 getCaseConstructor (CMatch _ nm _ _ _) = Just nm
-getCaseConstructor (CWild  _      _ _) = Nothing
+getCaseConstructor CWild{}             = Nothing
 
 -- | Get the guard, if any
 getCaseGuard :: Case -> Maybe Exp
@@ -236,7 +236,7 @@ sCase = QuasiQuoter
         let chk1 :: Case -> Q ()
             chk1 c = case c of
                        CMatch o nm ps _ _ -> isSafe o nm (length <$> ps)
-                       CWild  _       _ _ -> pure ()
+                       CWild  {}          -> pure ()
               where isSafe :: Offset -> Name -> Maybe Int -> Q ()
                     isSafe o nm mbLen
                       | Just ts <- nm `lookup` cstrs
@@ -245,7 +245,7 @@ sCase = QuasiQuoter
                            Just cnt -> unless (length ts == cnt)
                                             $ fail o $ unlines [ "sCase: Arity mismatch."
                                                                , "        Type       : " ++ typ
-                                                               , "        Constructor: " ++ (nameBase nm)
+                                                               , "        Constructor: " ++ nameBase nm
                                                                , "        Expected   : " ++ show (length ts)
                                                                , "        Given      : " ++ show cnt
                                                                ]
@@ -330,7 +330,7 @@ sCase = QuasiQuoter
                          | True    = find w cs
                          where matches = case c of
                                            CMatch _ nm _ _ _ -> nm == w
-                                           CWild  _      _ _ -> False
+                                           CWild  {}         -> False
 
                        case2rhs :: Case -> [Type] -> (Maybe Exp, Exp)
                        case2rhs cs ts = (LamE pats <$> mbGuard, LamE pats e)
@@ -385,7 +385,7 @@ sCase = QuasiQuoter
                    case defaultCase of
                      Nothing     -> pure ()
                      Just (o, _)
-                       | map fst cstrs == [nm | (nm, (_, cs)) <- cstrMatches, any (not . isGuarded) cs]
+                       | map fst cstrs == [nm | (nm, (_, cs)) <- cstrMatches, not (all isGuarded cs)]
                        -> fail o "sCase: Wildcard match is redundant"
                        | True
                        -> pure ()
@@ -406,7 +406,7 @@ sCase = QuasiQuoter
                                                allFrees  = Set.fromList [n | VarP n <- pats]
                                                               `Set.intersection`
                                                            (maybe Set.empty freeVars mbG `Set.union` freeVars rhs)
-                                               close e = foldr1 (\x -> AppE (AppE (VarE 'const) x)) (e:extras)
+                                               close e = foldr1 (AppE . AppE (VarE 'const)) (e:extras)
                                                  where extras = map VarE $ Set.toList (allFrees Set.\\ freeVars e)
 
                                                mkApp f | null pats = f

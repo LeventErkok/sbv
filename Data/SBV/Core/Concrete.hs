@@ -471,13 +471,13 @@ showCV shk w = sh (cvVal w) ++ kInfo
                                       fixRef (KADT curADTName Nothing) | topADTName == curADTName = wk
                                       fixRef fk                                                   = fk
                                   in zipWith (\k f -> showCV False (CV (fixRef k) f)) ks fs
-                             else error $ unlines $ [ "Data.SBV.showCV: Impossible happened."
-                                                    , "   Mismatching field count for constructor."
-                                                    , "   Constructor: " ++ show c
-                                                    , "   Kinds      : " ++ show ks
-                                                    , "   Received   : " ++ show (length fs) ++ " fields."
-                                                    , "   Expecting  : " ++ show (length ks)
-                                                    ]
+                             else error $ unlines [ "Data.SBV.showCV: Impossible happened."
+                                                  , "   Mismatching field count for constructor."
+                                                  , "   Constructor: " ++ show c
+                                                  , "   Kinds      : " ++ show ks
+                                                  , "   Received   : " ++ show (length fs) ++ " fields."
+                                                  , "   Expecting  : " ++ show (length ks)
+                                                  ]
 
                         KADT n Nothing -> error $ "Data.SBV.showCV: Unexpected: A reference to ADT for " ++ show n ++ " seen."
 

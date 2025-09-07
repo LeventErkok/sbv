@@ -11,6 +11,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DeriveLift          #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -40,6 +41,8 @@ import Control.Monad (filterM)
 import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
 import qualified Control.Exception as C
+
+import Data.Maybe (fromMaybe)
 
 import Data.Word
 import Data.Int
@@ -255,10 +258,10 @@ mkADT typeName cstrs = do
     fromCVFunName <- TH.newName ("fromCV_" ++ TH.nameBase typeName)
     let fromCVSig = TH.SigD fromCVFunName (foldr (TH.AppT . TH.AppT TH.ArrowT) typeCon [TH.ConT ''String, TH.AppT TH.ListT (TH.ConT ''CV)])
 
-        fromCVCls :: (TH.Name, [(TH.Type, Kind)]) -> TH.Q (TH.Clause)
+        fromCVCls :: (TH.Name, [(TH.Type, Kind)]) -> TH.Q TH.Clause
         fromCVCls (nm, args) = do
             ns <- mapM (\(i, _) -> TH.newName ("a" ++ show i)) (zip [(1::Int)..] args)
-            let pat = foldr (\p acc -> TH.ConP '(:) [] [p, acc]) (TH.ConP '[] [] []) (map TH.VarP ns)
+            let pat = foldr ((\p acc -> TH.ConP '(:) [] [p, acc]) . TH.VarP) (TH.ConP '[] [] []) ns
             pure $ TH.Clause [TH.LitP (TH.StringL (TH.nameBase nm)), pat]
                              (TH.NormalB (foldl TH.AppE (TH.ConE nm)
                                                         [TH.AppE (TH.VarE 'fromCV) (TH.VarE n) | n <- ns]))
@@ -278,8 +281,7 @@ mkADT typeName cstrs = do
     getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
                         fixRef kRef (KADT curName Nothing) | curName == unmod typeName = kRef
                         fixRef _    k                                                  = k
-                    in \x -> case x of
-                               CV kTop@(KADT _ (Just fks)) (CADT (c, vs)) ->
+                    in \case CV kTop@(KADT _ (Just fks)) (CADT (c, vs)) ->
                                  case c `lookup` fks of
                                    Nothing  -> unexpected $ "Cannot find constructor in kind: " ++ show (c, fks)
                                    Just ks
@@ -287,10 +289,10 @@ mkADT typeName cstrs = do
                                      -> unexpected $ "Mismatching arity for " ++ show typeName ++ " " ++ show (c, length ks, length vs)
                                      | True
                                      -> $(TH.varE fromCVFunName) c (zipWith CV (map (fixRef kTop) ks) vs)
-                               CV k _ -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k
+                             CV k _ -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k
                  |]
 
-    let symVal = TH.InstanceD Nothing [] (TH.AppT (TH.ConT ''SymVal) typeCon) $
+    let symVal = TH.InstanceD Nothing [] (TH.AppT (TH.ConT ''SymVal) typeCon)
                                          [ litFun
                                          , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB (TH.ConE 'Nothing)) []]
                                          , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV)          []]
@@ -313,7 +315,7 @@ mkADT typeName cstrs = do
     -- Declare constructors
     let declConstructor :: (TH.Name, [(TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
         declConstructor (c, tks) = let ats = map (mkSBV . fst) tks
-                                       ty  = foldr (\a b -> TH.AppT (TH.AppT TH.ArrowT a) b) sType ats
+                                       ty  = foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
                                    in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
                 nm   = TH.mkName $ 's' : bnm
@@ -366,13 +368,13 @@ mkCaseAnalyzer typeName cstrs = do
         let def = TH.FunD cnm [TH.Clause (map TH.VarP (se : fs)) (TH.NormalB (iteChain (zipWith (mkCase se) fs cstrs))) []]
 
             iteChain :: [(TH.Exp, TH.Exp)] -> TH.Exp
-            iteChain []       = error $ unlines $ [ "Data.SBV.mkADT: Impossible happened!"
-                                                  , ""
-                                                  , "   Received an empty list for: " ++ show typeName
-                                                  , ""
-                                                  , "While building the case-analyzer."
-                                                  , "Please report this as a bug."
-                                                  ]
+            iteChain []       = error $ unlines [ "Data.SBV.mkADT: Impossible happened!"
+                                                , ""
+                                                , "   Received an empty list for: " ++ show typeName
+                                                , ""
+                                                , "While building the case-analyzer."
+                                                , "Please report this as a bug."
+                                                ]
             iteChain [(_, l)]        = l
             iteChain ((t, e) : rest) = foldl TH.AppE (TH.VarE 'ite) [TH.AppE t (TH.VarE se), e, iteChain rest]
 
@@ -483,14 +485,14 @@ getConstructors typeName = getConstructorsFromType (TH.ConT typeName)
 
         -- | Make substitution from type variables to actual args
         mkSubst :: [TH.TyVarBndr TH.BndrVis] -> [TH.Type] -> [(TH.Name, TH.Type)]
-        mkSubst tvs args = zip (map tvName tvs) args
+        mkSubst tvs = zip (map tvName tvs)
           where tvName (TH.PlainTV  n _)   = n
                 tvName (TH.KindedTV n _ _) = n
 
         -- | Apply substitution to a Type
         applySubst :: [(TH.Name, TH.Type)] -> TH.Type -> TH.Type
         applySubst sub = go
-          where go (TH.VarT    n)        = maybe      (TH.VarT n) id (n `lookup` sub)
+          where go (TH.VarT    n)        = fromMaybe  (TH.VarT n) (n `lookup` sub)
                 go (TH.AppT    t1 t2)    = TH.AppT    (go t1) (go t2)
                 go (TH.SigT    t k)      = TH.SigT    (go t)  k
                 go (TH.ParensT t)        = TH.ParensT (go t)

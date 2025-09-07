@@ -11,9 +11,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
 
 module TestSuite.ADT.Expr(tests) where
 
@@ -48,5 +46,5 @@ t00 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                        case cs of
                          Sat{} -> do v <- getValue a
                                      io $ do appendFile rf $ "\nGot: " ++ show v
-                                             appendFile rf $ "\nDONE\n"
+                                             appendFile rf   "\nDONE\n"
                          _     -> error $ "Unexpected: " ++ show cs

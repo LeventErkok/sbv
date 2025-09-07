@@ -125,5 +125,5 @@ t06 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                         case cs of
                          Sat{} -> do v <- getValue a
                                      io $ do appendFile rf $ "\ngetValue: " ++ show v
-                                             appendFile rf $ "\nDONE\n"
+                                             appendFile rf   "\nDONE\n"
                          _     -> error ("BAD RESULT: " ++ show cs)
