@@ -245,7 +245,7 @@ sCase = QuasiQuoter
                            Just cnt -> unless (length ts == cnt)
                                             $ fail o $ unlines [ "sCase: Arity mismatch."
                                                                , "        Type       : " ++ typ
-                                                               , "        Constructor: " ++ pprint nm
+                                                               , "        Constructor: " ++ (nameBase nm)
                                                                , "        Expected   : " ++ show (length ts)
                                                                , "        Given      : " ++ show cnt
                                                                ]
