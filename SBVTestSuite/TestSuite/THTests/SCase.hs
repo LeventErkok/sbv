@@ -15,10 +15,5 @@ module TestSuite.THTests.SCase(tests) where
 
 import Utils.SBVTestFramework
 
-import System.FilePath
-import System.FilePath.Glob (glob)
-
 tests :: IO TestTree
-tests = do let testPath = "SBVTestSuite/TestSuite/THTests/Files"
-           fs <- glob $ testPath </> "SCase*.hs"
-           return $ testGroup "THTests.SCase" (map (mkCompileTest testPath . takeBaseName) fs)
+tests = testGroup "THTests.SCase" <$> mkCompileTestGlob "SBVTestSuite/TestSuite/THTests/Files/SCase*.hs"

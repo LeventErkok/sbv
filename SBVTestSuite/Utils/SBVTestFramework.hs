@@ -27,6 +27,7 @@ module Utils.SBVTestFramework (
         , qc1, qc2
         , shouldNotTypeCheck
         , mkCompileTest
+        , mkCompileTestGlob
         -- module exports to simplify life
         , module Test.Tasty
         , module Test.Tasty.HUnit
@@ -55,7 +56,9 @@ import Test.Tasty.Runners hiding (Result)
 import Data.SBV
 import Data.SBV.Control
 
-import System.FilePath ((</>), (<.>))
+import System.FilePath      ((</>), (<.>), takeDirectory, takeBaseName)
+import System.FilePath.Glob (glob)
+
 import Data.List       (isInfixOf, isSuffixOf)
 
 import System.Exit
@@ -270,10 +273,18 @@ readProcessInDir dir cmd args input = do
         exitCode <- waitForProcess ph
         return (exitCode, out, err)
 
+-- | Make a compilation test from all the files matching glob
+mkCompileTestGlob :: String -> IO [TestTree]
+mkCompileTestGlob g = do fs <- glob g
+                         pure $ map mkCompileTest fs
+
 -- | Make a compilation test
-mkCompileTest :: FilePath -> TestName -> TestTree
-mkCompileTest testDir nm = goldenVsStringDiff nm diffCmd (testDir </> nm <.> "stderr") (compile (nm <.> "hs"))
-  where diffCmd ref new = ["diff", "-u", ref, new]
+mkCompileTest :: FilePath -> TestTree
+mkCompileTest file = goldenVsStringDiff nm diffCmd (testDir </> nm <.> "stderr") (compile (nm <.> "hs"))
+  where testDir = takeDirectory file
+        nm      = takeBaseName  file
+
+        diffCmd ref new = ["diff", "-u", ref, new]
 
         packages = [ "QuickCheck"
                    , "array"
