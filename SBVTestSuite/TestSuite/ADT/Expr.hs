@@ -25,7 +25,10 @@ tests :: TestTree
 tests =
   testGroup "ADT" [
       goldenCapturedIO "adt_expr00" t00
+    , goldenCapturedIO "adt_expr01" $ evalTest (e01, v01)
     ]
+    where e01 = eval (sNum 3)
+          v01 = 3
 
 -- Create something like:
 --       let a = _
@@ -48,3 +51,11 @@ t00 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                                      io $ do appendFile rf $ "\nGot: " ++ show v
                                              appendFile rf   "\nDONE\n"
                          _     -> error $ "Unexpected: " ++ show cs
+
+evalTest :: SymVal a => (SBV a, a) -> FilePath -> IO ()
+evalTest (sv, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+                        constrain $ sv ./= literal v
+                        query $ do cs <- checkSat
+                                   case cs of
+                                     Unsat{} -> io $ do appendFile rf $ "All good."
+                                     _       -> error $ "Unexpected: " ++ show cs
