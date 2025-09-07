@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : TestSuite.THTests.SCase
+-- Module    : TestSuite.CompileTests.SCase
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -11,9 +11,9 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module TestSuite.THTests.SCase(tests) where
+module TestSuite.CompileTests.SCase(tests) where
 
 import Utils.SBVTestFramework
 
 tests :: IO TestTree
-tests = testGroup "THTests.SCase" <$> mkCompileTestGlob "SBVTestSuite/TestSuite/THTests/Files/SCase*.hs"
+tests = testGroup "THTests.SCase" <$> mkCompileTestGlob "SBVTestSuite/TestSuite/CompileTests/SCase/SCase*.hs"

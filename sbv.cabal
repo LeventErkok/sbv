@@ -16,7 +16,9 @@ Homepage           : http://github.com/LeventErkok/sbv
 Bug-reports        : http://github.com/LeventErkok/sbv/issues
 Maintainer         : Levent Erkok (erkokl@gmail.com)
 Build-Type         : Simple
-Data-Files         : SBVTestSuite/GoldFiles/*.gold SBVTestSuite/TestSuite/THTests/Files/*.hs SBVTestSuite/TestSuite/THTests/Files/*.stderr
+Data-Files         : SBVTestSuite/GoldFiles/*.gold
+                     SBVTestSuite/TestSuite/CompileTests/SCase/*.hs
+                     SBVTestSuite/TestSuite/CompileTests/SCase/*.stderr
 Extra-Doc-Files    : INSTALL, README.md, COPYRIGHT, CHANGES.md
 
 Tested-With        : GHC==9.10.1
@@ -376,6 +378,11 @@ Test-Suite SBVTest
                   , TestSuite.Basics.TOut
                   , TestSuite.Basics.Tuple
                   , TestSuite.Basics.UISat
+                  , TestSuite.CRC.CCITT
+                  , TestSuite.CRC.CCITT_Unidir
+                  , TestSuite.CRC.GenPoly
+                  , TestSuite.CRC.Parity
+                  , TestSuite.CRC.USB5
                   , TestSuite.Char.Char
                   , TestSuite.BitPrecise.BitTricks
                   , TestSuite.BitPrecise.Legato
@@ -389,11 +396,7 @@ Test-Suite SBVTest
                   , TestSuite.CodeGeneration.GCD
                   , TestSuite.CodeGeneration.PopulationCount
                   , TestSuite.CodeGeneration.Uninterpreted
-                  , TestSuite.CRC.CCITT
-                  , TestSuite.CRC.CCITT_Unidir
-                  , TestSuite.CRC.GenPoly
-                  , TestSuite.CRC.Parity
-                  , TestSuite.CRC.USB5
+                  , TestSuite.CompileTests.SCase
                   , TestSuite.Crypto.AES
                   , TestSuite.Crypto.RC4
                   , TestSuite.Crypto.SHA
@@ -442,7 +445,6 @@ Test-Suite SBVTest
                   , TestSuite.Queries.UISat
                   , TestSuite.Queries.UISatEx
                   , TestSuite.QuickCheck.QC
-                  , TestSuite.THTests.SCase
                   , TestSuite.Transformers.SymbolicEval
                   , TestSuite.Uninterpreted.AUF
                   , TestSuite.Uninterpreted.Axioms

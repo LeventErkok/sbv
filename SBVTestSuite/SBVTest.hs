@@ -122,7 +122,7 @@ import qualified TestSuite.Queries.UISat
 import qualified TestSuite.Queries.UISatEx
 import qualified TestSuite.Queries.Uninterpreted
 import qualified TestSuite.QuickCheck.QC
-import qualified TestSuite.THTests.SCase
+import qualified TestSuite.CompileTests.SCase
 import qualified TestSuite.Transformers.SymbolicEval
 import qualified TestSuite.Uninterpreted.AUF
 import qualified TestSuite.Uninterpreted.Axioms
@@ -131,7 +131,7 @@ import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
 
 main :: IO ()
-main = do sCaseTests <- TestSuite.THTests.SCase.tests
+main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
           defaultMain $ testGroup "SBV" [
                         TestSuite.ADT.ADT.tests
                       , TestSuite.ADT.Expr.tests
