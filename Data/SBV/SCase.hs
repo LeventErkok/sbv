@@ -262,7 +262,7 @@ sCase = QuasiQuoter
 
         mapM_ chk1 cases
 
-        -- Step 2: Make sure constructors matches are not overlapping
+        -- Step 2: Make sure constructor matches are not overlapping
         let problem w extras x = fail (caseOffset x) $ unlines $ [ "sCase: " ++ w ++ ":"
                                                                  , "        Type       : " ++ typ
                                                                  , "        Constructor: " ++ showCase x
