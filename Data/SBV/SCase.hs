@@ -32,7 +32,7 @@ import Data.SBV.Client (getConstructors)
 import Data.SBV.Core.Model (ite, sym)
 import Data.SBV.Core.Data  (sTrue, (.&&))
 
-import Data.Char  (isSpace)
+import Data.Char  (isSpace, isDigit)
 import Data.List  (intercalate)
 import Data.Maybe (isJust, fromMaybe)
 
@@ -159,10 +159,11 @@ sCase = QuasiQuoter
                 Nothing -> fail Unknown $ "sCase: unknown function " <> fnTok
               cases <- zipWithM matchToPair (offsets ++ repeat Unknown) matches >>= checkCase scrut typ . concat
               buildCase typ fnName scrut cases
-            Right _  -> fail Unknown "sCase: internal parse error, not a case-expression"
+            Right _  -> fail Unknown "sCase: Parse error, cannot extract a case-expression."
             Left err -> case lines err of
-                           [l, _, e] -> fail Unknown $ "sCase parse error [Line " <> l <> "]: " <> e
-                           _         -> fail Unknown $ "sCase parse error: " <> err
+                          (_:loc:res) | ["SrcLoc", _, l, c] <- words loc, all isDigit l, all isDigit c
+                             -> fail (OffBy (read l - 1) (read c) 1) (unlines res)
+                          _  -> fail Unknown $ "sCase parse error: " <> err
 
     buildCase _    caseFunc  scrut (Left  cases) = pure $ foldl AppE (caseFunc `AppE` scrut) cases
     buildCase typ _caseFunc _scrut (Right cases) = iteChain cases
