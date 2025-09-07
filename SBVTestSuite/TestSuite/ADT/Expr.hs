@@ -25,17 +25,19 @@ tests :: TestTree
 tests =
   testGroup "ADT" [
       goldenCapturedIO "adt_gen00"  t00
-    , goldenCapturedIO "adt_expr00" $ evalTest (eval e00,  3)
-    , goldenCapturedIO "adt_expr01" $ evalTest (eval e01,  7)
-    , goldenCapturedIO "adt_expr02" $ evalTest (eval e02, 21)
-    , goldenCapturedIO "adt_expr03" $ evalTest (eval e03, 28)
+    , goldenCapturedIO "adt_expr00" $ evalCheck (eval e00,  3)
+    , goldenCapturedIO "adt_expr01" $ evalCheck (eval e01,  7)
+    , goldenCapturedIO "adt_expr02" $ evalCheck (eval e02, 21)
+    , goldenCapturedIO "adt_expr03" $ evalCheck (eval e03, 28)
+    , goldenCapturedIO "adt_expr04" $ evalTest  (eval e04)
     ]
     where a = literal "a"
 
-          e00 = 3
-          e01 = 3 + 4
-          e02 = e00 * e01
-          e03 = sLet a e02 (sVar a + e01)
+          e00 = 3                                -- 3
+          e01 = 3 + 4                            -- 7
+          e02 = e00 * e01                        -- 21
+          e03 = sLet a e02 (sVar a + e01)        -- 28
+          e04 = e03 + sLet a e03 (sVar a + e01)  -- 28 + 28 + 7 = 63
 
 -- Create something like:
 --       let a = _
@@ -59,10 +61,20 @@ t00 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                                              appendFile rf   "\nDONE\n"
                          _     -> error $ "Unexpected: " ++ show cs
 
-evalTest :: SymVal a => (SBV a, a) -> FilePath -> IO ()
-evalTest (sv, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+evalCheck :: SymVal a => (SBV a, a) -> FilePath -> IO ()
+evalCheck (sv, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                         constrain $ sv ./= literal v
                         query $ do cs <- checkSat
                                    case cs of
-                                     Unsat{} -> io $ do appendFile rf $ "All good.\n"
+                                     Unsat{} -> io $ appendFile rf $ "All good.\n"
                                      _       -> error $ "Unexpected: " ++ show cs
+
+evalTest :: (Show a, SymVal a) => SBV a -> FilePath -> IO ()
+evalTest sv rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+                    res <- free "res"
+                    constrain $ sv .== res
+                    query $ do cs <- checkSat
+                               case cs of
+                                 Sat -> do r <- getValue res
+                                           io $ appendFile rf ("Result: " ++ show r ++ "\n")
+                                 _       -> error $ "Unexpected: " ++ show cs
