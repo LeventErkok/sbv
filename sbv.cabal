@@ -16,7 +16,7 @@ Homepage           : http://github.com/LeventErkok/sbv
 Bug-reports        : http://github.com/LeventErkok/sbv/issues
 Maintainer         : Levent Erkok (erkokl@gmail.com)
 Build-Type         : Simple
-Data-Files         : SBVTestSuite/GoldFiles/*.gold SBVTestSuite/TestSuite/THFailures/Files/*
+Data-Files         : SBVTestSuite/GoldFiles/*.gold SBVTestSuite/TestSuite/THFailures/Files/*.hs SBVTestSuite/TestSuite/THFailures/Files/*.stderr
 Extra-Doc-Files    : INSTALL, README.md, COPYRIGHT, CHANGES.md
 
 Tested-With        : GHC==9.10.1
