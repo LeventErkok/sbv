@@ -1,5 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module T where
 
 import Expr

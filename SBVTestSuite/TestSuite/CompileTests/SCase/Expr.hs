@@ -1,5 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Expr where
 
 import Data.SBV
