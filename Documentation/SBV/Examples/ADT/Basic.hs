@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall -Werror #-}
 
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -18,6 +19,7 @@
 module Documentation.SBV.Examples.ADT.Basic where
 
 import Data.SBV
+import Data.SBV.Control
 import Data.SBV.RegExp
 import Data.SBV.Tuple
 import qualified Data.SBV.List as SL
@@ -26,11 +28,37 @@ import qualified Data.SBV.List as SL
 data Expr = Num Integer
           | Var String
           | Add Expr Expr
+          | Mul Expr Expr
           | Let String Expr Expr
-          deriving Show
 
 -- | Create a symbolic version of expressions.
 mkSymbolic ''Expr
+
+-- | Show instance for 'Expr'.
+instance Show Expr where
+  show (Num i)     = show i
+  show (Var a)     = a
+  show (Add l r)   = "(" ++ show l ++ " + " ++ show r ++ ")"
+  show (Mul l r)   = "(" ++ show l ++ " * " ++ show r ++ ")"
+  show (Let s a b) = "(let " ++ s ++ " = " ++ show a ++ " in " ++ show b ++ ")"
+
+-- | Num instance, simplifies construction of values
+instance Num Expr where
+  fromInteger = Num
+  (+)         = Add
+  (*)         = Mul
+  abs         = error "Num Expr: undefined abs"
+  signum      = error "Num Expr: undefined signum"
+  negate      = error "Num Expr: undefined negate"
+
+-- | Num instaance for the symbolic version
+instance Num SExpr where
+  fromInteger = sNum . literal
+  (+)          = sAdd
+  (*)          = sMul
+  abs         = error "Num SExpr: undefined abs"
+  signum      = error "Num SExpr: undefined signum"
+  negate      = error "Num SExpr: undefined negate"
 
 -- | Validity: We require each variable appearing to be an identifier (lowercase letter followed by
 -- any number of upper-lower case letters and digits), and all expressions are closed; i.e., any
@@ -43,6 +71,7 @@ isValid = go SL.nil
                                                    Var s     -> isId s .&& s `SL.elem` env
                                                    Num _     -> sTrue
                                                    Add l r   -> go env l .&& go env r
+                                                   Mul l r   -> go env l .&& go env r
                                                    Let s a b -> isId s .&& go env a .&& go (s SL..: env) b
                                                 |]
 
@@ -54,6 +83,7 @@ eval = go SL.nil
                                                  Num i     -> i
                                                  Var s     -> get env s
                                                  Add l r   -> go env l + go env r
+                                                 Mul l r   -> go env l * go env r
                                                  Let s e r -> go (tuple (s, go env e) SL..: env) r
                                               |]
 
@@ -62,14 +92,40 @@ eval = go SL.nil
                                          $ let (k, v) = untuple (SL.head env)
                                            in ite (s .== k) v (get (SL.tail env) s)
 
--- | A basic test, generating a few examples
+-- | A basic theorem about 'eval'.
+-- >>> evalPlus5
+-- Q.E.D.
+evalPlus5 :: IO ThmResult
+evalPlus5 = prove $ do e :: SExpr <- free "e"
+                       pure $ eval (e + 5) .== 5 + eval e
+
+-- | A simple sat result example.
 --
--- >>> test
+-- >>> evalSat
 -- Satisfiable. Model:
---   e1 =    Let "n" (Num 3) (Var "n") :: Expr
---   e2 = Let "h" (Num (-2)) (Var "h") :: Expr
-test :: IO SatResult
-test = sat $ do e1 :: SExpr <- free "e1"
+--   e = Let "t" (Num 1) (Var "t") :: Expr
+--   a =                         9 :: Integer
+--   b =                        10 :: Integer
+evalSat :: IO SatResult
+evalSat = sat $ do e :: SExpr    <- free "e"
+                   constrain $ isValid e
+                   constrain $ isLet   e
+
+                   a :: SInteger <- free "a"
+                   b :: SInteger <- free "b"
+                   constrain $ a .>= 4
+                   constrain $ b .>= 10
+
+                   pure $ eval (e + sNum a) .== b * eval e
+
+-- | Another test, generating some (mildly) interesting examples.
+--
+-- >>> genE
+-- Satisfiable. Model:
+--   e1 = Let "p" (Num 5) (Let "p" (Num 7) (Let "k" (Num 9) (Num 3))) :: Expr
+--   e2 =                                                    Num (-2) :: Expr
+genE :: IO SatResult
+genE = sat $ do e1 :: SExpr <- free "e1"
                 e2 :: SExpr <- free "e2"
 
                 constrain $ isValid e1
@@ -79,3 +135,29 @@ test = sat $ do e1 :: SExpr <- free "e1"
                 constrain $ isLet e1
                 constrain $ eval e1 .== 3
                 constrain $ eval e1 .== eval e2 + 5
+
+-- | Query mode example.
+--
+-- >>> queryE
+-- e1: (let p = 5 in (let p = 7 in (let k = 9 in 3)))
+-- e2: -2
+queryE :: IO ()
+queryE = runSMT $ do
+           e1 :: SExpr <- free "e1"
+           e2 :: SExpr <- free "e2"
+
+           constrain $ isValid e1
+           constrain $ isValid e2
+
+           constrain $ e1 ./== e2
+           constrain $ isLet e1
+           constrain $ eval e1 .== 3
+           constrain $ eval e1 .== eval e2 + 5
+
+           query $ do cs <- checkSat
+                      case cs of
+                        Sat -> do e1v <- getValue e1
+                                  e2v <- getValue e2
+                                  io $ putStrLn $ "e1: " ++ show e1v
+                                  io $ putStrLn $ "e2: " ++ show e2v
+                        _   -> error $ "Unexpected result: " ++ show cs
