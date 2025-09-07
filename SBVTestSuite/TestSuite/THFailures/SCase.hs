@@ -89,18 +89,7 @@ mkCase nm = goldenVsStringDiff nm diffCmd (pre ++ nm ++ ".stderr") (compileFail 
              ExitFailure _ -> return $ BL.pack stderr
 
 tests :: TestTree
-tests =
-  testGroup "THFailures.SCase"
-   [ mkCase "SCase01"
-   , mkCase "SCase02"
-   , mkCase "SCase03"
-   , mkCase "SCase04"
-   , mkCase "SCase05"
-   , mkCase "SCase06"
-   , mkCase "SCase07"
-   , mkCase "SCase08"
-   , mkCase "SCase09"
-   , mkCase "SCase10"
-   , mkCase "SCase11"
-   , mkCase "SCase12"
-   ]
+tests = testGroup "THFailures.SCase" $ [ mkCase $ "SCase" ++ sh2 i | i <- [(1::Int) .. sCaseTestCnt] ]
+  where sCaseTestCnt = 14
+        sh2 i | i < 10 = '0' : show i
+              | True   =       show i
