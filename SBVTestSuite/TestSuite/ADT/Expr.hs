@@ -28,10 +28,14 @@ tests =
     , goldenCapturedIO "adt_expr00" $ evalTest (eval e00,  3)
     , goldenCapturedIO "adt_expr01" $ evalTest (eval e01,  7)
     , goldenCapturedIO "adt_expr02" $ evalTest (eval e02, 21)
+    , goldenCapturedIO "adt_expr03" $ evalTest (eval e03, 28)
     ]
-    where e00 = 3
+    where a = literal "a"
+
+          e00 = 3
           e01 = 3 + 4
           e02 = e00 * e01
+          e03 = sLet a e02 (sVar a + e01)
 
 -- Create something like:
 --       let a = _
@@ -60,5 +64,5 @@ evalTest (sv, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ d
                         constrain $ sv ./= literal v
                         query $ do cs <- checkSat
                                    case cs of
-                                     Unsat{} -> io $ do appendFile rf $ "All good."
+                                     Unsat{} -> io $ do appendFile rf $ "All good.\n"
                                      _       -> error $ "Unexpected: " ++ show cs

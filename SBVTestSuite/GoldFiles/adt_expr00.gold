@@ -89,5 +89,6 @@
 [GOOD] (assert s4)
 [SEND] (check-sat)
 [RECV] unsat
-All good.*** Solver   : Z3
+All good.
+*** Solver   : Z3
 *** Exit code: ExitSuccess
