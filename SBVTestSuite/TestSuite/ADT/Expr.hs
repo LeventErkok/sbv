@@ -25,10 +25,11 @@ tests :: TestTree
 tests =
   testGroup "ADT" [
       goldenCapturedIO "adt_expr00" t00
-    , goldenCapturedIO "adt_expr01" $ evalTest (e01, v01)
+    , goldenCapturedIO "adt_expr01" $ evalTest (eval e01, 3)
+    , goldenCapturedIO "adt_expr02" $ evalTest (eval e02, 7)
     ]
-    where e01 = eval (sNum 3)
-          v01 = 3
+    where e01 = 3
+          e02 = 3 + 4
 
 -- Create something like:
 --       let a = _
