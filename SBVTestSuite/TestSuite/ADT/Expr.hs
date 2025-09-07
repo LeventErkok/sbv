@@ -24,12 +24,14 @@ import Documentation.SBV.Examples.ADT.Basic
 tests :: TestTree
 tests =
   testGroup "ADT" [
-      goldenCapturedIO "adt_expr00" t00
-    , goldenCapturedIO "adt_expr01" $ evalTest (eval e01, 3)
-    , goldenCapturedIO "adt_expr02" $ evalTest (eval e02, 7)
+      goldenCapturedIO "adt_gen00"  t00
+    , goldenCapturedIO "adt_expr00" $ evalTest (eval e00,  3)
+    , goldenCapturedIO "adt_expr01" $ evalTest (eval e01,  7)
+    , goldenCapturedIO "adt_expr02" $ evalTest (eval e02, 21)
     ]
-    where e01 = 3
-          e02 = 3 + 4
+    where e00 = 3
+          e01 = 3 + 4
+          e02 = e00 * e01
 
 -- Create something like:
 --       let a = _
