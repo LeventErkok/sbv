@@ -1,5 +1,5 @@
-SCase21.hs:9:14: error: [GHC-39584]
-    " SCase21.hs:11:16-20: sCase: Non-exhaustive match:
+SCase21.hs:11:14: error: [GHC-39584]
+    " SCase21.hs:13:16-20: sCase: Non-exhaustive match:
         Type       : Expr
         Constructor: Num i | i .> 4
       NB. Guarded match might fail.
@@ -12,7 +12,7 @@ SCase21.hs:9:14: error: [GHC-39584]
                Add a b        -> t e + t b
                Let _   _a  b  -> t b
       |]
-  |
-9 | t e = [sCase|Expr e of
-  |              ^^^^^^^^^...
+   |
+11 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
 

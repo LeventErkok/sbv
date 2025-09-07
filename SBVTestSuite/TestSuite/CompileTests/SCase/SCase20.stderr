@@ -1,5 +1,5 @@
-SCase20.hs:9:14: error: [GHC-39584]
-    " SCase20.hs:15:16: sCase: Wildcard match is redundant
+SCase20.hs:11:14: error: [GHC-39584]
+    " SCase20.hs:17:16: sCase: Wildcard match is redundant
     " In the quasi-quotation:
         [sCase|Expr e of
                Zero           -> 0
@@ -9,7 +9,7 @@ SCase20.hs:9:14: error: [GHC-39584]
                Let _   _a  b  -> t b
                _ -> 4
       |]
-  |
-9 | t e = [sCase|Expr e of
-  |              ^^^^^^^^^...
+   |
+11 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
 

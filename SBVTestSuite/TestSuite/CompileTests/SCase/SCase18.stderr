@@ -1,9 +1,9 @@
-SCase18.hs:9:14: error: [GHC-39584]
-    " SCase18.hs:12:16-20: sCase: Overlapping case constructors:
+SCase18.hs:11:14: error: [GHC-39584]
+    " SCase18.hs:14:16-20: sCase: Overlapping case constructors:
         Type       : Expr
         Constructor: Num i | i .< 3
       Overlaps with:
-        SCase18.hs:11:16-20: Num i
+        SCase18.hs:13:16-20: Num i
 
     " In the quasi-quotation:
         [sCase|Expr e of
@@ -14,7 +14,7 @@ SCase18.hs:9:14: error: [GHC-39584]
                Add a b        -> t e + t b
                Let _   _a  b  -> t b
       |]
-  |
-9 | t e = [sCase|Expr e of
-  |              ^^^^^^^^^...
+   |
+11 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
 

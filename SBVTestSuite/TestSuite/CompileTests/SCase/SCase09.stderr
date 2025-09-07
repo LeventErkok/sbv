@@ -1,5 +1,5 @@
-SCase09.hs:9:14: error: [GHC-39584]
-    " SCase09.hs:12:16-21: sCase: Not in scope: data constructor: Viar
+SCase09.hs:11:14: error: [GHC-39584]
+    " SCase09.hs:14:16-21: sCase: Not in scope: data constructor: Viar
     " In the quasi-quotation:
         [sCase|Expr e of
                Zero          -> 0
@@ -8,7 +8,7 @@ SCase09.hs:9:14: error: [GHC-39584]
                Add a b       -> t e + t b
                Let _   _a  b -> t b
       |]
-  |
-9 | t e = [sCase|Expr e of
-  |              ^^^^^^^^^...
+   |
+11 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
 

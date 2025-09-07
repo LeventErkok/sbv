@@ -1,5 +1,5 @@
-SCase15.hs:9:14: error: [GHC-39584]
-    " SCase15.hs:14:20: Parse error in pattern: _
+SCase15.hs:11:14: error: [GHC-39584]
+    " SCase15.hs:16:20: Parse error in pattern: _
 
     " In the quasi-quotation:
         [sCase|Expr e of
@@ -9,7 +9,7 @@ SCase15.hs:9:14: error: [GHC-39584]
                Add a b       -> t e + t b
                _ _ -> 3
       |]
-  |
-9 | t e = [sCase|Expr e of
-  |              ^^^^^^^^^...
+   |
+11 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
 

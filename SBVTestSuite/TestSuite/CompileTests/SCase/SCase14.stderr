@@ -1,5 +1,5 @@
-SCase14.hs:9:14: error: [GHC-39584]
-    " SCase14.hs:12:16-22: sCase: Arity mismatch.
+SCase14.hs:11:14: error: [GHC-39584]
+    " SCase14.hs:14:16-22: sCase: Arity mismatch.
         Type       : Expr
         Constructor: Var
         Expected   : 1
@@ -13,7 +13,7 @@ SCase14.hs:9:14: error: [GHC-39584]
                Add a b       -> t e + t b
                Let _   _a  b -> t b
       |]
-  |
-9 | t e = [sCase|Expr e of
-  |              ^^^^^^^^^...
+   |
+11 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
 

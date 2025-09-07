@@ -1,4 +1,4 @@
-SCase05.hs:10:14: error: [GHC-39584]
+SCase05.hs:12:14: error: [GHC-39584]
     " sCase: Failed to parse a symbolic case-expression.
 
            Instead of:   case      expr of alts
@@ -8,6 +8,6 @@ SCase05.hs:10:14: error: [GHC-39584]
 
     " In the quasi-quotation: [sCase|Expr e + 1|]
    |
-10 | t e = [sCase|Expr e + 1|]
+12 | t e = [sCase|Expr e + 1|]
    |              ^^^^^^^^^^^^
 

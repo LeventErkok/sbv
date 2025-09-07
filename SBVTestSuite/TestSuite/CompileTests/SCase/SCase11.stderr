@@ -1,8 +1,8 @@
-SCase11.hs:9:14: error: [GHC-39584]
-    " SCase11.hs:12:16: sCase: Wildcard makes the remaining matches redundant:
-        SCase11.hs:13:16-20: Var s
-        SCase11.hs:14:16-22: Add a b
-        SCase11.hs:15:16-28: Let _ _a b
+SCase11.hs:11:14: error: [GHC-39584]
+    " SCase11.hs:14:16: sCase: Wildcard makes the remaining matches redundant:
+        SCase11.hs:15:16-20: Var s
+        SCase11.hs:16:16-22: Add a b
+        SCase11.hs:17:16-28: Let _ _a b
 
     " In the quasi-quotation:
         [sCase|Expr e of
@@ -13,7 +13,7 @@ SCase11.hs:9:14: error: [GHC-39584]
                Add a b       -> t e + t b
                Let _   _a  b -> t b
       |]
-  |
-9 | t e = [sCase|Expr e of
-  |              ^^^^^^^^^...
+   |
+11 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
 
