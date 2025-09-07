@@ -1,0 +1,15 @@
+SCase15.hs:9:14: error: [GHC-39584]
+    " SCase15.hs:14:20: Parse error in pattern: _
+
+    " In the quasi-quotation:
+        [sCase|Expr e of
+               Zero          -> 0
+               Num i         -> i
+               Var s         -> ite (s .== "a") 1 2
+               Add a b       -> t e + t b
+               _ _ -> 3
+      |]
+  |
+9 | t e = [sCase|Expr e of
+  |              ^^^^^^^^^...
+
