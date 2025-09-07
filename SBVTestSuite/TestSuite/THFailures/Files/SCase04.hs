@@ -1,4 +1,4 @@
-{-# LANGUAGE QuasiQuotes     #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module SCase04 where
 
