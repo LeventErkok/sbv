@@ -1,5 +1,5 @@
 SCase01.hs:9:14: error: [GHC-39584]
-    " SCase01.hs:9:14-14: Parse error: EOF
+    " SCase01.hs:9:14: Parse error: EOF
 
     " In the quasi-quotation: [sCase|Expr e of|]
   |
