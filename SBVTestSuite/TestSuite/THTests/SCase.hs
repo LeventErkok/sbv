@@ -20,7 +20,7 @@ import System.Exit
 import System.Process
 import Test.Tasty.Golden
 
-import System.IO hiding (stderr, stdout)
+import System.IO hiding (stderr)
 import System.IO.Temp (withSystemTempDirectory)
 
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -83,9 +83,9 @@ mkCase nm = goldenVsStringDiff nm diffCmd (pre ++ nm ++ ".stderr") (compile (nm 
                  ++ concat [" -package " ++ pkg | pkg <- packages]
 
         compile path = withSystemTempDirectory "SBVTempDir" $ \tmpDir -> do
-           (exitCode, stdout, stderr) <- readProcessInDir pre "ghc" (words (args tmpDir) ++ [path]) ""
+           (exitCode, _stdout, stderr) <- readProcessInDir pre "ghc" (words (args tmpDir) ++ [path]) ""
            case exitCode of
-             ExitSuccess   -> return $ BL.pack stdout
+             ExitSuccess   -> return $ BL.pack "There was no failure during compilation."
              ExitFailure _ -> return $ BL.pack stderr
 
 tests :: TestTree
