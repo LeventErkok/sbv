@@ -26,6 +26,7 @@ module Utils.SBVTestFramework (
         , goldenCapturedIO
         , qc1, qc2
         , shouldNotTypeCheck
+        , mkCompileTest
         -- module exports to simplify life
         , module Test.Tasty
         , module Test.Tasty.HUnit
@@ -44,7 +45,7 @@ import System.Directory   (removeFile)
 import Test.Tasty            (testGroup, TestTree, TestName)
 import Test.Tasty.HUnit      ((@?), Assertion, testCase, AssertionPredicable, assertFailure)
 
-import Test.Tasty.Golden     (goldenVsString, goldenVsFileDiff)
+import Test.Tasty.Golden     (goldenVsString, goldenVsFileDiff, goldenVsStringDiff)
 
 import qualified Test.Tasty.QuickCheck   as QC
 import qualified Test.QuickCheck.Monadic as QC
@@ -57,6 +58,11 @@ import Data.SBV.Control
 import System.FilePath ((</>), (<.>))
 import Data.List       (isInfixOf, isSuffixOf)
 
+import System.Exit
+import System.Process
+import System.IO hiding (stderr)
+
+import System.IO.Temp (withSystemTempDirectory)
 
 import Data.SBV.Internals (runSymbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..), QueryContext(..), Outputtable)
 
@@ -231,5 +237,66 @@ shouldNotTypeCheck a = do
               -> pure ()
       | True
       -> throwIO e
+
+-- | Like readProcessWithExitCode, but in a given directory
+readProcessInDir :: FilePath -> String -> [String] -> String -> IO (ExitCode, String, String)
+readProcessInDir dir cmd args input = do
+    let cp = (proc cmd args)
+                { cwd     = Just dir
+                , std_in  = CreatePipe
+                , std_out = CreatePipe
+                , std_err = CreatePipe
+                }
+    withCreateProcess cp $ \mIn mOut mErr ph -> do
+        -- feed input if needed
+        case mIn of
+            Just hin -> hPutStr hin input >> hClose hin
+            Nothing  -> return ()
+
+        out <- case mOut of
+            Just hout -> do
+                s <- hGetContents hout
+                _ <- evaluate (length s)  -- force full read
+                return s
+            Nothing -> return ""
+
+        err <- case mErr of
+            Just herr -> do
+                s <- hGetContents herr
+                _ <- evaluate (length s)  -- force full read
+                return s
+            Nothing -> return ""
+
+        exitCode <- waitForProcess ph
+        return (exitCode, out, err)
+
+-- | Make a compilation test
+mkCompileTest :: FilePath -> TestName -> TestTree
+mkCompileTest testDir nm = goldenVsStringDiff nm diffCmd (testDir </> nm <.> "stderr") (compile (nm <.> "hs"))
+  where diffCmd ref new = ["diff", "-u", ref, new]
+
+        packages = [ "QuickCheck"
+                   , "array"
+                   , "containers"
+                   , "deepseq"
+                   , "libBF"
+                   , "mtl"
+                   , "random"
+                   , "syb"
+                   , "template-haskell"
+                   , "text"
+                   , "time"
+                   , "transformers"
+                   , "uniplate"
+                   ]
+
+        args td  =  "-XHaskell2010 -fforce-recomp -tmpdir " ++ td ++ " -outputdir " ++ td
+                 ++ concat [" -package " ++ pkg | pkg <- packages]
+
+        compile path = withSystemTempDirectory "SBVTempDir" $ \tmpDir -> do
+           (exitCode, _stdout, stderr) <- readProcessInDir testDir "ghc" (words (args tmpDir) ++ [path]) ""
+           case exitCode of
+             ExitSuccess   -> return $ LBC.pack "There was no failure during compilation."
+             ExitFailure _ -> return $ LBC.pack stderr
 
 {- HLint ignore module "Reduce duplication" -}
