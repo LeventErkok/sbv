@@ -1,0 +1,13 @@
+SCase05.hs:10:14: error: [GHC-39584]
+    " sCase: Failed to parse a symbolic case-expression.
+
+           Instead of:   case      expr of alts
+           Write     : [sCase|Type expr of alts|]
+
+        where Type is the underlying concrete type of the expression.
+
+    " In the quasi-quotation: [sCase|Expr e + 1|]
+   |
+10 | t e = [sCase|Expr e + 1|]
+   |              ^^^^^^^^^^^^
+
