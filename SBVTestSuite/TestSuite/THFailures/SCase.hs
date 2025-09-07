@@ -93,4 +93,5 @@ tests =
   testGroup "THFailures.SCase"
    [ mkCase "SCase01"
    , mkCase "SCase02"
+   , mkCase "SCase03"
    ]

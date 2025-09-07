@@ -1,0 +1,19 @@
+SCase03.hs:9:14: error: [GHC-39584]
+    " SCase03.hs:11:9-15: sCase: Arity mismatch.
+        Type       : Expr
+        Constructor: Num
+        Expected   : 1
+        Given      : 2
+
+    " In the quasi-quotation:
+        [sCase|Expr e of
+        Zero  -> 0
+        Num _ _ -> i
+        Var _ -> 0
+        Add _ _ -> 2
+        Let _ _ _ -> 3
+      |]
+  |
+9 | t e = [sCase|Expr e of
+  |              ^^^^^^^^^...
+
