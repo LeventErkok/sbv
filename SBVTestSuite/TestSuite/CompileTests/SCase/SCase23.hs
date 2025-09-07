@@ -12,6 +12,6 @@ t e = [sCase|Expr e of
                Zero           -> 0
                Num i          -> 4
                Var s          -> ite (s .== literal "a") 1 2
-               Add a b        -> t e + t b
+               Add a b        -> t a + t b
                Let _   _a  b  -> t b
       |]
