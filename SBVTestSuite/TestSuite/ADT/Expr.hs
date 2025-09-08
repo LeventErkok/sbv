@@ -36,7 +36,7 @@ tests =
     , goldenCapturedIO "adt_expr08" $ evalCheck (f (sVar (literal "c")), 1)
     , goldenCapturedIO "adt_expr09" $ evalCheck (f (sVar (literal "d")), 2)
     , goldenCapturedIO "adt_expr10" $ evalCheck (sum (map (f . sNum . literal) [-5 .. 9]),  45)
-    , goldenCapturedIO "adt_expr11" $ evalCheck (sum (map (f . sNum . literal) [10]),        4)
+    , goldenCapturedIO "adt_expr11" $ evalCheck (sum (map (f . sNum . literal) [10, 10]),    8)
     , goldenCapturedIO "adt_expr12" $ evalCheck (sum (map (f . sNum . literal) [11 .. 20]), 50)
     , goldenCapturedIO "adt_expr13" $ evalCheck (f e00, 3)
     , goldenCapturedIO "adt_expr14" $ evalCheck (f e01, 6)
@@ -73,7 +73,7 @@ evalCheck (sv, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ 
                         constrain $ sv ./= literal v
                         query $ do cs <- checkSat
                                    case cs of
-                                     Unsat{} -> io $ appendFile rf $ "All good.\n"
+                                     Unsat{} -> io $ appendFile rf "All good.\n"
                                      _       -> error $ "Unexpected: " ++ show cs
 
 evalTest :: (Show a, SymVal a) => SBV a -> FilePath -> IO ()
@@ -149,5 +149,5 @@ tSat i rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                            Sat{} -> do v <- getValue a
                                        io $ do appendFile rf $ "\nGot: " ++ show v
                                                appendFile rf   "\nDONE\n"
-                           Unsat -> io $ do appendFile rf $ "\nUNSAT\n"
+                           Unsat -> io $ do appendFile rf "\nUNSAT\n"
                            _     -> error $ "Unexpected: " ++ show cs

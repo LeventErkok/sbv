@@ -12,3 +12,5 @@ import Data.SBV
         Zero  -> 0
         Num i -> i
       |]
+
+{- HLint ignore module "Unused LANGUAGE pragma" -}

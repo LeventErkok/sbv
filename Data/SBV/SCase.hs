@@ -58,7 +58,7 @@ fail off@OffBy{} s = do loc <- location
 -- | Format a given location by the offset
 fmtLoc :: Loc -> Offset -> String
 fmtLoc loc@Loc{loc_start = (sl, _)} off = takeFileName (loc_filename newLoc) ++ ":" ++ sh (loc_start newLoc) (loc_end newLoc)
-  where sh ab@(a, b) cd@(c, d) | a == c = show a ++ ":" ++ show b ++ if b == d then "" else ('-' : show d)
+  where sh ab@(a, b) cd@(c, d) | a == c = show a ++ ":" ++ show b ++ if b == d then "" else '-' : show d
                                | True   = show ab ++ "-" ++ show cd
 
         newLoc = case off of
