@@ -30,14 +30,17 @@ tests =
     , goldenCapturedIO "adt_expr02" $ evalCheck (eval e02, 21)
     , goldenCapturedIO "adt_expr03" $ evalCheck (eval e03, 28)
     , goldenCapturedIO "adt_expr04" $ evalTest  (eval e04)
+    , goldenCapturedIO "adt_expr05" $ evalTest  (eval e05)
     ]
     where a = literal "a"
+          b = literal "a"
 
           e00 = 3                                -- 3
           e01 = 3 + 4                            -- 7
           e02 = e00 * e01                        -- 21
           e03 = sLet a e02 (sVar a + e01)        -- 28
           e04 = e03 + sLet a e03 (sVar a + e01)  -- 28 + 28 + 7 = 63
+          e05 = sLet b e04 (sVar b * sVar b)     -- 63 * 63 = 3969
 
 -- Create something like:
 --       let a = _
