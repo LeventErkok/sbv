@@ -81,7 +81,7 @@
 --
 --   * Uninterpreted sorts, and proofs over such sorts, potentially with axioms.
 --
---   * Algebraic data types, allowing self-recursion.
+--   *  Algebraic data types, including recursive fields..
 --
 --   * Ability to define SMTLib functions, generated directly from Haskell versions,
 --     including support for recursive and mutually recursive functions.
