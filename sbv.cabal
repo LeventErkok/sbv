@@ -150,6 +150,7 @@ Library
                   , Data.SBV.Trans
                   , Data.SBV.Trans.Control
                   , Documentation.SBV.Examples.ADT.Expr
+                  , Documentation.SBV.Examples.ADT.Types
                   , Documentation.SBV.Examples.BitPrecise.BitTricks
                   , Documentation.SBV.Examples.BitPrecise.BrokenSearch
                   , Documentation.SBV.Examples.BitPrecise.Legato
