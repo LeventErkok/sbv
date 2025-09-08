@@ -1,0 +1,11 @@
+SCase27.hs:14:1: error: [GHC-39584]
+    mkSymbolic: Unsupported field accessor definition.
+      Multiply used: u
+      
+      SBV does not support cases where accessor fields are replicated.
+      Please use each accessor only once.
+
+   |
+14 | mkSymbolic ''A
+   | ^^^^^^^^^^^^^^
+
