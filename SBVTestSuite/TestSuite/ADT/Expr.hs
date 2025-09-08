@@ -39,6 +39,12 @@ tests =
     , goldenCapturedIO "adt_expr10" $ evalCheck (sum (map (f . sNum . literal) [-5 .. 9]),  45)
     , goldenCapturedIO "adt_expr11" $ evalCheck (sum (map (f . sNum . literal) [10]),        4)
     , goldenCapturedIO "adt_expr12" $ evalCheck (sum (map (f . sNum . literal) [11 .. 20]), 50)
+    , goldenCapturedIO "adt_expr13" $ evalCheck (f e00, 3)
+    , goldenCapturedIO "adt_expr14" $ evalCheck (f e01, 6)
+    , goldenCapturedIO "adt_expr15" $ evalCheck (f e02, 6)
+    , goldenCapturedIO "adt_expr16" $ evalCheck (f e03, 6)
+    , goldenCapturedIO "adt_expr17" $ evalCheck (f e04, 6)
+    , goldenCapturedIO "adt_expr18" $ evalCheck (f e05, 6)
     ]
     where a = literal "a"
           b = literal "a"
