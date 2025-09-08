@@ -231,7 +231,9 @@ sCase = QuasiQuoter
     checkCase scrut typ cases = do
         loc   <- location
 
-        cstrs <- getConstructors (mkName typ)
+        cstrs <- -- We don't need the field names if user supplied them; so drop them here
+                 let dropFieldNames (c, nts) = (c, map snd nts)
+                 in map dropFieldNames <$> getConstructors (mkName typ)
 
         -- Is there a catch all clause?
         let hasCatchAll = or [True | CWild _ Nothing _ <- cases]

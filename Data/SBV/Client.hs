@@ -109,8 +109,8 @@ deriving instance TH.Lift TH.TyLit
 deriving instance TH.Lift Kind
 
 -- | What kind of type is this?
-data ADT = ADTEnum [TH.Name]                      -- Enumeration. If the list is empty, then an uninterpreted
-         | ADTFull [(TH.Name, [(TH.Type, Kind)])] -- Constructors and fields
+data ADT = ADTEnum [TH.Name]                                     -- Enumeration. If the list is empty, then an uninterpreted
+         | ADTFull [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -- Constructors and fields
 
 -- | Create a symbolic ADT
 mkSymbolic :: TH.Name -> TH.Q [TH.Dec]
@@ -241,7 +241,7 @@ mkSBV :: TH.Type -> TH.Type
 mkSBV a = TH.ConT ''SBV `TH.AppT` a
 
 -- | Create a symbolic ADT
-mkADT :: TH.Name -> [(TH.Name, [(TH.Type, Kind)])] -> TH.Q [TH.Dec]
+mkADT :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
 mkADT typeName cstrs = do
 
     let typeCon = TH.ConT typeName
@@ -258,7 +258,7 @@ mkADT typeName cstrs = do
     fromCVFunName <- TH.newName ("fromCV_" ++ TH.nameBase typeName)
     let fromCVSig = TH.SigD fromCVFunName (foldr (TH.AppT . TH.AppT TH.ArrowT) typeCon [TH.ConT ''String, TH.AppT TH.ListT (TH.ConT ''CV)])
 
-        fromCVCls :: (TH.Name, [(TH.Type, Kind)]) -> TH.Q TH.Clause
+        fromCVCls :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Clause
         fromCVCls (nm, args) = do
             ns <- mapM (\(i, _) -> TH.newName ("a" ++ show i)) (zip [(1::Int)..] args)
             let pat = foldr ((\p acc -> TH.ConP '(:) [] [p, acc]) . TH.VarP) (TH.ConP '[] [] []) ns
@@ -299,7 +299,7 @@ mkADT typeName cstrs = do
                                          ]
 
     decls <- [d|instance HasKind $(pure typeCon) where
-                  kindOf _ = KADT (unmod typeName) (Just [(unmod n, map snd tks) | (n, tks) <- cstrs])
+                  kindOf _ = KADT (unmod typeName) (Just [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs])
 
                 instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
                    arbitrary = error $ unlines [ ""
@@ -313,10 +313,10 @@ mkADT typeName cstrs = do
              |]
 
     -- Declare constructors
-    let declConstructor :: (TH.Name, [(TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
-        declConstructor (c, tks) = let ats = map (mkSBV . fst) tks
-                                       ty  = foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
-                                   in ((nm, bnm), [TH.SigD nm ty, def])
+    let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
+        declConstructor (c, ntks) = let ats = map (mkSBV . (\(_, t, _) -> t)) ntks
+                                        ty  = foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
+                                    in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
                 nm   = TH.mkName $ 's' : bnm
                 def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
@@ -331,9 +331,9 @@ mkADT typeName cstrs = do
     addDeclDocs (tname, btname) constrNames
 
     -- Declare accessors
-    let declAccessor :: TH.Name -> (TH.Type, Kind) -> Int -> ((TH.Name, String), [TH.Dec])
-        declAccessor c (ft, _) i = let ty = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
-                                   in ((nm, bnm), [TH.SigD nm ty, def])
+    let declAccessor :: TH.Name -> (Maybe TH.Name, TH.Type, Kind) -> Int -> ((TH.Name, String), [TH.Dec])
+        declAccessor c (_, ft, _) i = let ty = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
+                                      in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
                 anm  = "get" ++ bnm ++ "_" ++ show i
                 nm   = TH.mkName anm
@@ -353,7 +353,7 @@ mkADT typeName cstrs = do
     pure $ tdecl : symVal : decls ++ concat cdecls ++ testerDecls ++ concat accessorDecls ++ [caseSig, caseFun] ++ [fromCVSig, fromCVFun]
 
 -- | Make a case analyzer for the type. Works for ADTs and enums. Returns sig and defn
-mkCaseAnalyzer :: TH.Name -> [(TH.Name, [(TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
+mkCaseAnalyzer :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
 mkCaseAnalyzer typeName cstrs = do
         let typeCon = TH.ConT typeName
             sType   = mkSBV typeCon
@@ -378,14 +378,14 @@ mkCaseAnalyzer typeName cstrs = do
             iteChain [(_, l)]        = l
             iteChain ((t, e) : rest) = foldl TH.AppE (TH.VarE 'ite) [TH.AppE t (TH.VarE se), e, iteChain rest]
 
-            mkCase :: TH.Name -> TH.Name -> (TH.Name, [(TH.Type, Kind)]) -> (TH.Exp, TH.Exp)
+            mkCase :: TH.Name -> TH.Name -> (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> (TH.Exp, TH.Exp)
             mkCase cexpr func (c, fields) = (TH.VarE (TH.mkName ("is" ++ TH.nameBase c)), foldl TH.AppE (TH.VarE func) args)
                where getters = [TH.mkName ("get" ++ TH.nameBase c ++ "_" ++ show i) | (i, _) <- zip [(1 :: Int) ..] fields]
                      args    = map (\g -> TH.AppE (TH.VarE g) (TH.VarE cexpr)) getters
 
             rvar   = TH.VarT res
             mkFun  = foldr (TH.AppT . TH.AppT TH.ArrowT) rvar
-            fTypes = [mkFun (map (mkSBV . fst) ftks) | (_, ftks) <- cstrs]
+            fTypes = [mkFun (map (mkSBV . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
             sig    = TH.SigD cnm (TH.ForallT [TH.PlainTV res TH.SpecifiedSpec]
                                              [TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)]
                                              (mkFun (sType : fTypes)))
@@ -393,9 +393,9 @@ mkCaseAnalyzer typeName cstrs = do
         pure (sig, def)
 
 -- | Declare testers
-mkTesters :: TH.Type -> [(TH.Name, [(TH.Type, Kind)])] -> TH.Q [TH.Dec]
+mkTesters :: TH.Type -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
 mkTesters sType cstrs = do
-    let declTester :: (TH.Name, [(TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
+    let declTester :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
         declTester (c, _) = let ty = TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
                             in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
@@ -419,8 +419,8 @@ dissect :: TH.Name -> TH.Q ADT
 dissect typeName = do
         tcs <- getConstructors typeName
 
-        let mk n t = do k <- expandSyns t >>= toSBV typeName n
-                        pure (t, k)
+        let mk n (mbfn, t) = do k <- expandSyns t >>= toSBV typeName n
+                                pure (mbfn, t, k)
 
         cs  <- mapM (\(n, ts) -> (n,) <$> mapM (mk n) ts) tcs
 
@@ -435,9 +435,9 @@ report :: String
 report = "Please report this as a feature request."
 
 -- | Collect the constructors
-getConstructors :: TH.Name -> TH.Q [(TH.Name, [TH.Type])]
+getConstructors :: TH.Name -> TH.Q [(TH.Name, [(Maybe TH.Name, TH.Type)])]
 getConstructors typeName = getConstructorsFromType (TH.ConT typeName)
-  where getConstructorsFromType :: TH.Type -> TH.Q [(TH.Name, [TH.Type])]
+  where getConstructorsFromType :: TH.Type -> TH.Q [(TH.Name, [(Maybe TH.Name, TH.Type)])]
         getConstructorsFromType ty = do ty' <- expandSyns ty
                                         case headCon ty' of
                                           Just (n, args) -> reifyFromHead n args
@@ -455,7 +455,7 @@ getConstructors typeName = getConstructorsFromType (TH.ConT typeName)
                 go args (TH.ParensT t) = go      args t
                 go _    _              = Nothing
 
-        reifyFromHead :: TH.Name -> [TH.Type] -> TH.Q [(TH.Name, [TH.Type])]
+        reifyFromHead :: TH.Name -> [TH.Type] -> TH.Q [(TH.Name, [(Maybe TH.Name, TH.Type)])]
         reifyFromHead n args = do info <- TH.reify n
                                   case info of
                                     TH.TyConI (TH.DataD    _ _ tvs _ cons _) -> mapM (expandCon (mkSubst tvs args)) cons
@@ -467,14 +467,16 @@ getConstructors typeName = getConstructorsFromType (TH.ConT typeName)
                                              , "Kind : " ++ show info
                                              ]
 
-        expandCon :: [(TH.Name, TH.Type)] -> TH.Con -> TH.Q (TH.Name, [TH.Type])
-        expandCon sub (TH.NormalC  n fields)          = (n,) <$> mapM (expandSyns . applySubst sub . snd) fields
-        expandCon sub (TH.RecC     n fields)          = (n,) <$> mapM (expandSyns . applySubst sub . (\(_,_,t) -> t)) fields
-        expandCon sub (TH.InfixC   (_, t1) n (_, t2)) = (n,) <$> mapM (expandSyns . applySubst sub) [t1, t2]
+        onSnd f (a, b) = (a,) <$> f b
+
+        expandCon :: [(TH.Name, TH.Type)] -> TH.Con -> TH.Q (TH.Name, [(Maybe TH.Name, TH.Type)])
+        expandCon sub (TH.NormalC  n fields)          = (n,) <$> mapM (onSnd (expandSyns . applySubst sub) . (\(   _,t) -> (Nothing, t))) fields
+        expandCon sub (TH.RecC     n fields)          = (n,) <$> mapM (onSnd (expandSyns . applySubst sub) . (\(fn,_,t) -> (Just fn, t))) fields
+        expandCon sub (TH.InfixC   (_, t1) n (_, t2)) = (n,) <$> mapM (onSnd (expandSyns . applySubst sub)) [(Nothing, t1), (Nothing, t2)]
         {- These don't have proper correspondences in SMTLib; so ignore.
         expandCon sub (TH.ForallC  _ _ c)             = expandCon sub c
-        expandCon sub (TH.GadtC    [n] fields _)      = (n,) <$> mapM (expandSyns . applySubst sub . snd) fields
-        expandCon sub (TH.RecGadtC [n] fields _)      = (n,) <$> mapM (expandSyns . applySubst sub . (\(_,_,t) -> t)) fields
+        expandCon sub (TH.GadtC    [n] fields _)      = (n,) <$> mapM (onSnd (expandSyns . applySubst sub) . (\(   _,t) -> (Nothing, t))) fields
+        expandCon sub (TH.RecGadtC [n] fields _)      = (n,) <$> mapM (onSnd (expandSyns . applySubst sub) . (\(fn,_,t) -> (Just fn, t))) fields
         -}
         expandCon _   c                               = bad "Unsupported constructor form: "
                                                             [ "Type       : " ++ show typeName
