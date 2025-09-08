@@ -3,7 +3,26 @@
 
 ### Version 12.2.5: New development version
 
-  * Not yet released
+  * SBV now supports algebraic data-types. A new function 'mkSymbolic' is introduced, which takes an ADT name
+    and turns it into a data-type that you can symbolically process. Clearly, Haskell ADTs are extremely rich:
+    We do not support all variants. In particular, we do not support data-types with parameters, nor data-types
+    that have fields that refer to other data-types. Self reference is OK; i.e., data-types can have fields
+    referring to themselves, but not others. GADTs are also not supported. This should cover most use cases, but
+    clearly not everything. Depending on SMTLib developments, we might add other features as feasible. Please
+    get in touch if you have a use case that is currently not supported.
+
+  * Introduced a new quasiquoter, named sCase, which allows writing case-expressions over symbolic ADTs. It supports
+    wildcards, and guards. It does not support pattern guards, nor complex patterns. (Each pattern is either a
+    variable or an underscore.) Symbolic-boolean guards allow for concise expressions. These expressions are
+    subject to all regular quasi-quotation limitations; i.e., they do not nest and type-errors post splicing can
+    be hard to detect due to expanded form not matching what the user wrote in a 1:1 fashion. However, it should
+    still make reasoning with ADTs much simpler.
+
+  * Added examples under Documentation.SBV.Examples.ADT, demonstrating the use of basic ADTs and a case study 
+    of modeling type-checking constraints.
+
+  * [BACKWARDS COMPATIBILITY] The old functions 'mkSymbolicEnumeration' and 'mkUninterpretedSort' are now removed,
+    since their functionality is subsumed by 'mkSymbolic' describred above.
 
 ### Version 12.2, 2025-08-15
 

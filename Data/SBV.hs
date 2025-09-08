@@ -1144,7 +1144,41 @@ options turned on:
 >   LANGUAGE FlexibleInstances
 
 SBV also supports good old ADT's as well, with fields. The support for this is similar, where SBV will create the
-corresponding datatype in a symbolic manner.
+corresponding datatype in a symbolic manner:
+
+@
+-- | A basic arithmetic expression type.
+data Expr = Num Integer
+          | Var String
+          | Add Expr Expr
+          | Mul Expr Expr
+          | Let String Expr Expr
+
+-- | Create a symbolic version of expressions.
+mkSymbolic ''Expr
+@
+
+We also support a symbolic case-expression quasi-quoter, allowing us to write:
+
+@
+eval :: SExpr -> SInteger
+eval = go SL.nil
+ where go :: SList (String, Integer) -> SExpr -> SInteger
+       go = smtFunction "eval" $ \env expr -> [sCase|Expr expr of
+                                                 Num i     -> i
+                                                 Var s     -> get env s
+                                                 Add l r   -> go env l + go env r
+                                                 Mul l r   -> go env l * go env r
+                                                 Let s e r -> go (tuple (s, go env e) SL..: env) r
+                                              |]
+
+       get :: SList (String, Integer) -> SString -> SInteger
+       get = smtFunction "get" $ \env s -> ite (SL.null env) 0
+                                         $ let (k, v) = untuple (SL.head env)
+                                           in ite (s .== k) v (get (SL.tail env) s)
+@
+
+which defines an interpreter for this data-type.
 -}
 
 {- $cardIntro
