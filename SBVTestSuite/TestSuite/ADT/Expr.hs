@@ -11,6 +11,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestSuite.ADT.Expr(tests) where
@@ -31,6 +32,7 @@ tests =
     , goldenCapturedIO "adt_expr03" $ evalCheck (eval e03, 28)
     , goldenCapturedIO "adt_expr04" $ evalTest  (eval e04)
     , goldenCapturedIO "adt_expr05" $ evalTest  (eval e05)
+    , goldenCapturedIO "adt_expr06" $ evalCheck (f (sVar (literal "a")), 0)
     ]
     where a = literal "a"
           b = literal "a"
@@ -81,3 +83,16 @@ evalTest sv rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                                  Sat -> do r <- getValue res
                                            io $ appendFile rf ("Result: " ++ show r ++ "\n")
                                  _       -> error $ "Unexpected: " ++ show cs
+
+f :: SExpr -> SInteger
+f e = [sCase|Expr e of
+         Var s     | s .== literal "a"                       -> 0
+                   | s .== literal "b" .|| s .== literal "c" -> 1
+                   | sTrue                                   -> 2
+
+         Num i     | i .<  10                                -> 3
+                   | i .== 10                                -> 4
+                   | i .>  10                                -> 5
+
+         _                                                   -> 6
+      |]
