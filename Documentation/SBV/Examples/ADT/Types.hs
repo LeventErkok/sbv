@@ -29,7 +29,7 @@ data M = Var { var   :: String }     -- ^ Variables: @x@
 
 -- | Types.
 data T = TInt                        -- ^ Integers
-       | TString                     -- ^ Strings
+       | TStr                        -- ^ Strings
        | TArr { dom :: T, rng :: T } -- ^ Functions: @t -> t@
 
 -- | Make terms and types symbolic
@@ -86,10 +86,10 @@ wellTyped m = tc m (typeOf m)
 -- >>> idWF
 -- Satisfiable. Model:
 --   env :: String -> T
---   env _ = TString
+--   env _ = TStr
 -- <BLANKLINE>
 --   typeOf :: M -> T
---   typeOf _ = TArr TString TString
+--   typeOf _ = TArr TStr TStr
 --
 -- The model is rather uninteresting, but it shows that identity can have the type String to String, where
 -- all variables are mapped to Strings.
@@ -112,7 +112,7 @@ intFuncAppString = sat $ do
 
         -- Introduce the constant @str :: String@
         str <- free "str"
-        constrain $ tc str sTString
+        constrain $ tc str sTStr
 
         -- Check if the application of plus1 to str can be well-typed
         pure $ wellTyped $ sApp plus1 str
