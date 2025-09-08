@@ -1,0 +1,36 @@
+SCase25.hs:11:14: error: [GHC-40910] [-Wunused-matches, Werror=unused-matches]
+    Defined but not used: i
+   |
+11 | f e = [sCase|Expr e of
+   |              ^^^^^^^^^...
+
+SCase25.hs:11:14: error: [GHC-40910] [-Wunused-matches, Werror=unused-matches]
+    Defined but not used: i
+   |
+11 | f e = [sCase|Expr e of
+   |              ^^^^^^^^^...
+
+SCase25.hs:11:14: error: [GHC-40910] [-Wunused-matches, Werror=unused-matches]
+    Defined but not used: i
+   |
+11 | f e = [sCase|Expr e of
+   |              ^^^^^^^^^...
+
+SCase25.hs:11:14: error: [GHC-40910] [-Wunused-matches, Werror=unused-matches]
+    Defined but not used: i
+   |
+11 | f e = [sCase|Expr e of
+   |              ^^^^^^^^^...
+
+SCase25.hs:11:14: error: [GHC-40910] [-Wunused-matches, Werror=unused-matches]
+    Defined but not used: i
+   |
+11 | f e = [sCase|Expr e of
+   |              ^^^^^^^^^...
+
+SCase25.hs:11:14: error: [GHC-40910] [-Wunused-matches, Werror=unused-matches]
+    Defined but not used: i
+   |
+11 | f e = [sCase|Expr e of
+   |              ^^^^^^^^^...
+
