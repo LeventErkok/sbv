@@ -440,7 +440,21 @@ report = "Please report this as a feature request."
 
 -- | Collect the constructors
 getConstructors :: TH.Name -> TH.Q [(TH.Name, [(Maybe TH.Name, TH.Type)])]
-getConstructors typeName = getConstructorsFromType (TH.ConT typeName)
+getConstructors typeName = do cstrs <- getConstructorsFromType (TH.ConT typeName)
+
+                              -- make sure accessors are unique
+                              let noDup [] = pure ()
+                                  noDup (n:ns)
+                                    | n `elem` ns = bad "Unsupported field accessor definition."
+                                                        [ "Multiply used: " ++ TH.nameBase n
+                                                        , ""
+                                                        , "SBV does not support cases where accessor fields are replicated."
+                                                        , "Please use each accessor only once."
+                                                        ]
+                                    | True        = noDup ns
+                              noDup [n | (_, fs) <- cstrs, (Just n, _) <- fs]
+
+                              pure cstrs
   where getConstructorsFromType :: TH.Type -> TH.Q [(TH.Name, [(Maybe TH.Name, TH.Type)])]
         getConstructorsFromType ty = do ty' <- expandSyns ty
                                         case headCon ty' of
