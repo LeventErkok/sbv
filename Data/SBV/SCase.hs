@@ -66,13 +66,20 @@ fmtLoc loc@Loc{loc_start = (sl, _)} off = takeFileName (loc_filename newLoc) ++ 
                    OffBy lo co w -> loc {loc_start = (sl + lo, co + 1), loc_end = (sl + lo, co + w)}
 
 -- | What kind of case-match are we given. In each case, the last maybe exp is the possible guard.
-data Case = CMatch Offset Name (Maybe [Pat]) Exp (Maybe Exp) -- Cstr a b _ c d if maybe, Cstr{} if nothing on pats
-          | CWild  Offset                    Exp (Maybe Exp) -- wild-card: _
+data Case = CMatch Offset          -- regular match
+                   Name            -- name of the constructor
+                   (Maybe [Pat])   -- [a, b, c] in C a b c. Or Nothing if C{}
+                   (Maybe Exp)     -- guard
+                   Exp             -- rhs
+                   (Set Name)      -- All variables used all RHSs and All guards
+          | CWild  Offset          -- wild card
+                   (Maybe Exp)     -- guard
+                   Exp             -- rhs
 
 -- | What's the offset?
 caseOffset :: Case -> Offset
-caseOffset (CMatch o _ _ _ _) = o
-caseOffset (CWild  o     _ _) = o
+caseOffset (CMatch o _ _ _ _ _) = o
+caseOffset (CWild  o       _ _) = o
 
 -- | Show a case nicely
 showCase :: Case -> String
@@ -81,9 +88,9 @@ showCase = showCaseGen Nothing
 -- | Show a case nicely, with location
 showCaseGen :: Maybe Loc -> Case -> String
 showCaseGen mbLoc sc = case sc of
-                         CMatch _ c (Just ps) _ mbG -> loc ++ unwords (nameBase c : map pprint ps ++ shGuard mbG)
-                         CMatch _ c Nothing   _ mbG -> loc ++ unwords (nameBase c : "{}"           : shGuard mbG)
-                         CWild  _             _ mbG -> loc ++ unwords ("_"                         : shGuard mbG)
+                         CMatch _ c (Just ps) mbG _ _ -> loc ++ unwords (nameBase c : map pprint ps ++ shGuard mbG)
+                         CMatch _ c Nothing   mbG _ _ -> loc ++ unwords (nameBase c : "{}"           : shGuard mbG)
+                         CWild  _             mbG _   -> loc ++ unwords ("_"                         : shGuard mbG)
  where shGuard Nothing  = []
        shGuard (Just e) = ["|", pprint e]
 
@@ -93,13 +100,13 @@ showCaseGen mbLoc sc = case sc of
 
 -- | Get the name of the constructor, if any
 getCaseConstructor :: Case -> Maybe Name
-getCaseConstructor (CMatch _ nm _ _ _) = Just nm
-getCaseConstructor CWild{}             = Nothing
+getCaseConstructor (CMatch _ nm _ _ _ _) = Just nm
+getCaseConstructor CWild{}               = Nothing
 
 -- | Get the guard, if any
 getCaseGuard :: Case -> Maybe Exp
-getCaseGuard (CMatch _ _ _ _ mbg) = mbg
-getCaseGuard (CWild  _     _ mbg) = mbg
+getCaseGuard (CMatch _ _ _ mbg _ _) = mbg
+getCaseGuard (CWild  _     mbg _  ) = mbg
 
 -- | Is there a guard?
 isGuarded :: Case -> Bool
@@ -176,10 +183,10 @@ sCase = QuasiQuoter
             iteChain ((t, e) : rest) = do r <- iteChain rest
                                           pure $ foldl AppE (VarE 'ite) [t, e, r]
 
-    getGuards :: Body -> [Dec] -> Q [(Exp, Maybe Exp)]
-    getGuards (NormalB  rhs)  locals = pure [(addLocals locals rhs, Nothing)]
+    getGuards :: Body -> [Dec] -> Q [(Maybe Exp, Exp)]
+    getGuards (NormalB  rhs)  locals = pure [(Nothing, addLocals locals rhs)]
     getGuards (GuardedB exps) locals = mapM get exps
-      where get (NormalG e,  rhs) = pure (addLocals locals rhs, Just e)
+      where get (NormalG e,  rhs) = pure (Just e, addLocals locals rhs)
             get (PatG stmts, _)   = fail Unknown $ unlines $  "sCase: Pattern guards are not supported: "
                                                            : ["        " ++ pprint s | s <- stmts]
 
@@ -198,13 +205,18 @@ sCase = QuasiQuoter
     matchToPair :: Offset -> Match -> Q [Case]
     matchToPair off (Match pat grhs locals) = do
       rhss <- getGuards grhs locals
+      let allUsed = Set.unions (map (\(mbG, e) -> maybe Set.empty freeVars mbG `Set.union` freeVars e) rhss)
+
       case pat of
         ConP conName _ subpats -> do ps  <- traverse (patToVar off) subpats
                                      con <- getReference off conName
-                                     pure [CMatch off con (Just ps) rhs t | (rhs, t) <- rhss]
+                                     pure [CMatch off con (Just ps) mbG rhs allUsed | (mbG, rhs) <- rhss]
+
         RecP conName []        -> do con <- getReference off conName
-                                     pure [CMatch off con Nothing   rhs t | (rhs, t) <- rhss]
-        WildP                  ->    pure [CWild  off               rhs t | (rhs, t) <- rhss]
+                                     pure [CMatch off con Nothing   mbG rhs allUsed | (mbG, rhs) <- rhss]
+
+        WildP                  ->    pure [CWild  off               mbG rhs         | (mbG, rhs) <- rhss]
+
         _ -> fail Unknown $ unlines [ "sCase: Unsupported pattern:"
                                     , "            Saw: " <> pprint pat
                                     , ""
@@ -222,14 +234,14 @@ sCase = QuasiQuoter
         cstrs <- getConstructors (mkName typ)
 
         -- Is there a catch all clause?
-        let hasCatchAll = or [True | CWild _ _ Nothing <- cases]
+        let hasCatchAll = or [True | CWild _ Nothing _ <- cases]
 
         -- Step 0: If there's an unguarded wild-card, make sure nothing else follows it.
         -- Note that this also handles wild-card being present twice.
         let checkWild []                         = pure ()
             checkWild (CMatch{}          : rest) = checkWild rest
-            checkWild (CWild _ _ Just{}  : rest) = checkWild rest
-            checkWild (CWild o _ Nothing : rest) =
+            checkWild (CWild _ Just{}  _ : rest) = checkWild rest
+            checkWild (CWild o Nothing _ : rest) =
                   case rest of
                     []  -> pure ()
                     red  -> fail o $ unlines $ "sCase: Wildcard makes the remaining matches redundant:"
@@ -239,8 +251,8 @@ sCase = QuasiQuoter
         -- Step 2: Make sure every constructor listed actually exists and matches in arity.
         let chk1 :: Case -> Q ()
             chk1 c = case c of
-                       CMatch o nm ps _ _ -> isSafe o nm (length <$> ps)
-                       CWild  {}          -> pure ()
+                       CMatch o nm ps _ _ _ -> isSafe o nm (length <$> ps)
+                       CWild  {}            -> pure ()
               where isSafe :: Offset -> Name -> Maybe Int -> Q ()
                     isSafe o nm mbLen
                       | Just ts <- nm `lookup` cstrs
@@ -289,27 +301,27 @@ sCase = QuasiQuoter
             -- If we have a guarded match, then this guard can fail. So either there must be a match
             -- for it later on, or there must be a catch-all. Note that if it exists later, we don't
             -- care if that occurrence is guarded or not; because if it is guarded, we'll fail on the last one.
-            chk2 (c@(CMatch _ nm _ _ (Just {})) : rest)
+            chk2 (c@(CMatch _ nm _ (Just {}) _ _) : rest)
               | hasCatchAll || Just nm `elem` map getCaseConstructor rest
               = chk2 rest
               | True
               = unmatched c
 
             -- If we have a non-guarded match, then there must be no matches for this constructor later on. If so, they're redundant.
-            chk2 (c@(CMatch _ nm _ _ Nothing) : rest)
+            chk2 (c@(CMatch _ nm _ Nothing _ _) : rest)
               = case filter (\oc -> getCaseConstructor oc == Just nm) rest of
                   [] -> chk2 rest
                   os -> overlap (last os) (c : init os)
 
             -- If there's a guarded wildcard, must make sure there's a catch all afterwards
-            chk2 (c@(CWild _ _ Just{}) : rest)
+            chk2 (c@(CWild _ Just{} _) : rest)
               | hasCatchAll
               = chk2 rest
               | True
               = unmatched c
 
             -- No need to worry about anything following catch-all, since we already covered that before
-            chk2 (CWild _ _ Nothing : rest) = chk2 rest
+            chk2 (CWild _ Nothing _ : rest) = chk2 rest
 
         chk2 cases
 
@@ -319,7 +331,7 @@ sCase = QuasiQuoter
         let hasGuards = any isGuarded cases
 
         if not hasGuards
-           then do defaultCase <- case [((e, mbg), c) | c@(CWild _ e mbg) <- cases] of
+           then do defaultCase <- case [((e, mbg), c) | c@(CWild _ mbg e) <- cases] of
                                     []                  -> pure Nothing
                                     [((e, Nothing), c)] -> pure $ Just (caseOffset c, e)
                                     cs@((_, c):_)       -> fail (caseOffset c)
@@ -333,15 +345,15 @@ sCase = QuasiQuoter
                          | matches = Just c
                          | True    = find w cs
                          where matches = case c of
-                                           CMatch _ nm _ _ _ -> nm == w
-                                           CWild  {}         -> False
+                                           CMatch _ nm _ _ _ _ -> nm == w
+                                           CWild  {}           -> False
 
                        case2rhs :: Case -> [Type] -> (Maybe Exp, Exp)
                        case2rhs cs ts = (LamE pats <$> mbGuard, LamE pats e)
                          where (mbGuard, e, pats) = case cs of
-                                                      CMatch _ _ (Just ps) rhs mbt -> (mbt, rhs, ps)
-                                                      CMatch _ _ Nothing   rhs mbt -> (mbt, rhs, map (const WildP) ts)
-                                                      CWild  _             rhs mbt -> (mbt, rhs, map (const WildP) ts)
+                                                      CMatch _ _ (Just ps) mbG rhs _ -> (mbG, rhs, ps)
+                                                      CMatch _ _ Nothing   mbG rhs _ -> (mbG, rhs, map (const WildP) ts)
+                                                      CWild  _             mbG rhs   -> (mbG, rhs, map (const WildP) ts)
 
                        collect (cstr, ts)
                          | Just e <- find cstr cases
@@ -370,7 +382,7 @@ sCase = QuasiQuoter
                                                     ]
 
            else do -- We have guards.
-                   defaultCase <- case [(c, e) | c@(CWild _ e Nothing) <- cases] of
+                   defaultCase <- case [(c, e) | c@(CWild _ Nothing e) <- cases] of
                                     []         -> pure Nothing
                                     ((c, e):_) -> pure $ Just (caseOffset c, e)
 
@@ -395,8 +407,8 @@ sCase = QuasiQuoter
                        -> pure ()
 
                    let collect :: Case -> Q (Exp, Exp)
-                       collect (CWild  _        rhs mbG) = pure (fromMaybe (VarE 'sTrue) mbG, rhs)
-                       collect (CMatch o nm mbp rhs mbG) = do
+                       collect (CWild  _        mbG rhs        ) = pure (fromMaybe (VarE 'sTrue) mbG, rhs)
+                       collect (CMatch o nm mbp mbG rhs allUsed) = do
                            case nm `lookup` cstrs of
                              Nothing -> fail o $ unlines [ "sCase: Impossible happened."
                                                          , "        Unable to determine params for: " <> pprint nm
@@ -407,11 +419,9 @@ sCase = QuasiQuoter
                                                rec  = VarE $ mkName $ "is" ++ nameBase nm
 
                                                -- What are the free variables in the guard and the rhs that we bind?
-                                               allFrees  = Set.fromList [n | VarP n <- pats]
-                                                              `Set.intersection`
-                                                           (maybe Set.empty freeVars mbG `Set.union` freeVars rhs)
+                                               used    = Set.fromList [n | VarP n <- pats] `Set.intersection` allUsed
                                                close e = foldr1 (AppE . AppE (VarE 'const)) (e:extras)
-                                                 where extras = map VarE $ Set.toList (allFrees Set.\\ freeVars e)
+                                                 where extras = map VarE $ Set.toList (used Set.\\ freeVars e)
 
                                                mkApp f | null pats = f
                                                        | True      = foldl AppE (LamE pats f) args
