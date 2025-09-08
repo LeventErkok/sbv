@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.ADT.Basic
+-- Module    : Documentation.SBV.Examples.ADT.Expr
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Basic ADT examples.
+-- A basic expression ADT example.
 -----------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -16,7 +16,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
-module Documentation.SBV.Examples.ADT.Basic where
+module Documentation.SBV.Examples.ADT.Expr where
 
 import Data.SBV
 import Data.SBV.Control

@@ -20,7 +20,7 @@ import Data.SBV
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
-import Documentation.SBV.Examples.ADT.Basic
+import Documentation.SBV.Examples.ADT.Expr
 
 tests :: TestTree
 tests =
