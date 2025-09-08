@@ -331,16 +331,20 @@ mkADT typeName cstrs = do
     addDeclDocs (tname, btname) constrNames
 
     -- Declare accessors
-    let declAccessor :: TH.Name -> (Maybe TH.Name, TH.Type, Kind) -> Int -> ((TH.Name, String), [TH.Dec])
-        declAccessor c (_, ft, _) i = let ty = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
-                                      in ((nm, bnm), [TH.SigD nm ty, def])
+    let declAccessor :: TH.Name -> (Maybe TH.Name, TH.Type, Kind) -> Int -> [((TH.Name, String), [TH.Dec])]
+        declAccessor c (mbUN, ft, _) i = let ty    = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
+                                             def n = TH.FunD n [TH.Clause [] (TH.NormalB body) []]
+                                         in ((nm, bnm), [TH.SigD nm ty, def nm])
+                                          : case mbUN of
+                                             Nothing -> []
+                                             Just un -> let sun = TH.mkName $ 's' : TH.nameBase un
+                                                        in [((sun, bnm), [TH.SigD sun ty, def sun])]
           where bnm  = TH.nameBase c
                 anm  = "get" ++ bnm ++ "_" ++ show i
                 nm   = TH.mkName anm
-                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
                 body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL anm))
 
-    let (accessorNames, accessorDecls) = unzip $ concat [zipWith (declAccessor c) fs [(1::Int) ..] | (c, fs) <- cstrs]
+    let (accessorNames, accessorDecls) = unzip $ concat (concat [zipWith (declAccessor c) fs [(1::Int) ..] | (c, fs) <- cstrs])
 
     mapM_ (addDoc "Accessor" . fst) accessorNames
 
