@@ -33,6 +33,7 @@ tests =
     , goldenCapturedIO "adt_expr04" $ evalTest  (eval e04)
     , goldenCapturedIO "adt_expr05" $ evalTest  (eval e05)
     , goldenCapturedIO "adt_expr06" $ evalCheck (f (sVar (literal "a")), 0)
+    , goldenCapturedIO "adt_expr07" $ evalCheck (f (sVar (literal "b")), 1)
     ]
     where a = literal "a"
           b = literal "a"
