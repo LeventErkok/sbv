@@ -251,6 +251,7 @@ Library
                   , Documentation.SBV.Examples.TP.Majority
                   , Documentation.SBV.Examples.TP.MergeSort
                   , Documentation.SBV.Examples.TP.Numeric
+                  , Documentation.SBV.Examples.TP.Peano
                   , Documentation.SBV.Examples.TP.PowerMod
                   , Documentation.SBV.Examples.TP.QuickSort
                   , Documentation.SBV.Examples.TP.RevAcc
