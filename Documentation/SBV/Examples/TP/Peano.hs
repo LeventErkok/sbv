@@ -129,4 +129,4 @@ n2i2n = do let p :: SNat -> SBool
                                         =: qed
 
            lemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n)
-                         [proofOf caseSucc, proofOf (natIH p)]
+                         [proofOf (natIH p), proofOf caseSucc]
