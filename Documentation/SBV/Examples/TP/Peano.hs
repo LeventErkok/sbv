@@ -22,8 +22,6 @@ module Documentation.SBV.Examples.TP.Peano where
 import Data.SBV
 import Data.SBV.TP
 
-import Data.SBV.Internals (internalAxiom)
-
 #ifdef DOCTEST
 -- $setup
 -- >>> import Data.SBV
@@ -72,8 +70,8 @@ n2iNonNeg = do let p :: SNat -> SBool
                                             =: sTrue
                                             =: qed
 
-               lemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0)
-                                 [proofOf caseSucc, proofOf (natIH p)]
+               sNatInduct "n2iNonNeg" (\(Forall n) -> n2i n .>= 0)
+                                       [proofOf caseSucc]
 
 -- | Round trip from 'Integer' to 'Nat' and back:
 --
@@ -94,12 +92,6 @@ i2n2i = induct "i2n2i"
                                   ?? ih
                                   =: 1+i
                                   =: qed
-
-natIH :: (SNat -> SBool) -> Proof SBool
-natIH p = internalAxiom "natIH" $ sAnd [ p sZero
-                                       , quantifiedBool (\(Forall n) -> p n .=> p (sSucc n))
-                                       ]
-                                  .=> quantifiedBool (\(Forall n) -> p n)
 
 -- | Round trip from 'Nat' to 'Integer' and back:
 --
@@ -128,5 +120,5 @@ n2i2n = do let p :: SNat -> SBool
                                         =: sSucc n
                                         =: qed
 
-           lemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n)
-                         [proofOf (natIH p), proofOf caseSucc]
+           sNatInduct "n2i2n" (\(Forall n) -> i2n (n2i n) .== n)
+                              [proofOf caseSucc]

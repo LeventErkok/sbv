@@ -62,6 +62,11 @@ import Data.SBV.Core.SizedFloats
 import Data.SBV.Provers.Prover
 import qualified Data.SBV.List as SL
 
+import Data.SBV.TP.Kernel
+import Data.SBV.TP.Utils (TP, ProofObj)
+
+import GHC.TypeLits (KnownSymbol)
+
 
 -- | Check whether the given solver is installed and is ready to go. This call does a
 -- simple call to the solver to ensure all is well.
@@ -110,7 +115,7 @@ deriving instance TH.Lift Kind
 
 -- | What kind of type is this?
 data ADT = ADTEnum [TH.Name]                                     -- Enumeration. If the list is empty, then an uninterpreted
-         | ADTFull [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -- Constructors and fields
+         | ADTFull [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -- Constructors and fields. Maybe is the accessor if given.
 
 -- | Create a symbolic ADT
 mkSymbolic :: TH.Name -> TH.Q [TH.Dec]
@@ -354,7 +359,16 @@ mkADT typeName cstrs = do
     -- Get the case analyzer
     (caseSig, caseFun) <- mkCaseAnalyzer typeName cstrs
 
-    pure $ tdecl : symVal : decls ++ concat cdecls ++ testerDecls ++ concat accessorDecls ++ [caseSig, caseFun] ++ [fromCVSig, fromCVFun]
+    -- Get the induction schema
+    (indSig, indSchema) <- mkInductionSchema typeName cstrs
+
+    pure $ tdecl : symVal : decls
+         ++ concat cdecls
+         ++ testerDecls
+         ++ concat accessorDecls
+         ++ [fromCVSig, fromCVFun]
+         ++ [caseSig, caseFun]
+         ++ [indSig,  indSchema]
 
 -- | Make a case analyzer for the type. Works for ADTs and enums. Returns sig and defn
 mkCaseAnalyzer :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
@@ -632,3 +646,60 @@ toSBV typeName constructorName = go
                 , ""
                 , report
                 ]
+
+-- | Make an induction schema for the type
+mkInductionSchema :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
+mkInductionSchema typeName cstrs = do
+   let nm = 's' : TH.nameBase typeName ++ "Induct"
+       s  = TH.mkName "s"
+       p  = TH.mkName "p"
+       pf = TH.mkName "pf"
+       xs = TH.mkName "xs"
+       ih = TH.mkName "ih"
+
+       mkCase :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Exp
+       mkCase (cstr, flds)
+          | null flds = [| $(TH.varE pf) $(scstr) |]
+          | True
+          = do as <- mapM (const (TH.newName "a")) flds
+               let isRecursive (_, _, k) = k == KADT (TH.nameBase typeName) Nothing
+                   recFields = [a | (a, f) <- zip as flds, isRecursive f]
+               TH.appE (TH.varE 'quantifiedBool)
+                       (TH.lamE (map (\a -> TH.conP 'Forall [TH.varP a]) as)
+                                (mkImp recFields (TH.appE (TH.varE pf) (foldl TH.appE scstr (map TH.varE as)))))
+         where cnm   = TH.nameBase cstr
+               scstr = TH.varE (TH.mkName ('s' : cnm))
+
+               mkImp []  e = e
+               mkImp [i] e = foldl1 TH.appE [TH.varE '(.=>), assume i, e]
+               mkImp is  e = foldl1 TH.appE [TH.varE '(.=>), foldl1 TH.appE [TH.varE 'sAnd, TH.listE (map assume is)], e]
+
+               assume n = [| $(TH.varE pf) $(TH.varE n) |]
+
+   cases <- mapM mkCase cstrs
+   post  <- [| quantifiedBool (\(Forall n) -> $(TH.varE pf) n) |]
+
+   let pre    = foldl1 TH.AppE [TH.VarE 'sAnd,  TH.ListE cases]
+       schema = foldl1 TH.AppE [TH.VarE '(.=>), pre, post]
+       ihB    = TH.AppE (TH.VarE 'proofOf) (foldl1 TH.AppE [TH.VarE 'internalAxiom,  TH.LitE (TH.StringL nm), schema])
+
+   body <- [| lemma $(TH.varE s) $(TH.varE p) ($(TH.varE ih) ($(TH.varE p) . Forall) : $(TH.varE xs)) |]
+
+   let tn    = TH.varT (TH.mkName "n")
+       sType = TH.conT typeName
+   sig  <- TH.sigD (TH.mkName nm)
+                   [t| KnownSymbol $(tn)
+                        => String -> (Forall $(tn) $(sType) -> SBool)
+                                  -> [ProofObj]
+                                  -> TP (Proof (Forall $(tn) $(sType) -> SBool))
+                   |]
+
+   let st = pure $ mkSBV (TH.ConT typeName)
+   ihT <- [t| ($(st) -> SBool) -> ProofObj |]
+   let def = TH.FunD (TH.mkName nm) [TH.Clause (map TH.VarP [s, p, xs]) (TH.NormalB body)
+                                               [ TH.SigD ih ihT
+                                               , TH.FunD ih [TH.Clause [TH.VarP pf] (TH.NormalB ihB) []]
+                                               ]
+                                    ]
+
+   pure (sig, def)
