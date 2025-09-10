@@ -9,15 +9,11 @@
 -- Some basic TP usage.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP             #-}
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE QuasiQuotes     #-}
-{-# LANGUAGE TemplateHaskell #-}
-
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE TypeFamilies        #-}
+{-# LANGUAGE CPP              #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE QuasiQuotes      #-}
+{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TypeAbstractions #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -26,9 +22,7 @@ module Documentation.SBV.Examples.TP.Peano where
 import Data.SBV
 import Data.SBV.TP
 
-import Data.SBV.Internals hiding (free)
-import Data.Proxy
-import GHC.TypeLits (KnownSymbol, symbolVal)
+import Data.SBV.Internals (internalAxiom)
 
 #ifdef DOCTEST
 -- $setup
@@ -55,6 +49,32 @@ n2i = smtFunction "n2i" $ \n -> [sCase|Nat n of
 i2n :: SInteger -> SNat
 i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) sZero (sSucc (i2n (i - 1)))
 
+-- | n2i is always non-negative
+--
+-- >>> runTP n2iNonNeg
+-- Lemma: caseSucc
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: n2iNonNeg                        Q.E.D.
+-- [Proven] n2iNonNeg :: Ɐn ∷ Nat → Bool
+n2iNonNeg  :: TP (Proof (Forall "n" Nat -> SBool))
+n2iNonNeg = do let p :: SNat -> SBool
+                   p n = n2i n .>= 0
+
+               caseSucc <- calc "caseSucc"
+                                (\(Forall @"n" n) -> p n .=> p (sSucc n)) $
+                                \n -> [p n] |- p (sSucc n)
+                                            =: n2i (sSucc n) .>= 0
+                                            =: 1 + n2i n .>= 0
+                                            ?? p n
+                                            =: sTrue
+                                            =: qed
+
+               lemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0)
+                                 [proofOf caseSucc, proofOf (natIH p)]
+
 -- | Round trip from 'Integer' to 'Nat' and back:
 --
 -- >>> runTP i2n2i
@@ -75,61 +95,38 @@ i2n2i = induct "i2n2i"
                                   =: 1+i
                                   =: qed
 
-instance KnownSymbol n => Inductive (Forall n Nat -> SBool) where
-  type IHType (Forall n Nat -> SBool) = SBool
-  type IHArg  (Forall n Nat -> SBool) = SNat
-
-  inductionStrategy result steps = do
-     let nn = symbolVal (Proxy @n)
-     n  <- free nn
-
-     let bc = result (Forall sZero)
-         ih = internalAxiom "IH" (result (Forall n))
-
-     mkIndStrategy Nothing
-                   (Just bc)
-                   (steps ih n)
-                   (observeIf not  ("P(" ++ nn ++ ")") (result (Forall (sSucc n))))
-                   (\checkedLabel -> free nn >>= qcRun checkedLabel . steps ih)
-
-
--- | n2i is always non-negative
---
--- >>> runTP n2iNonNeg
--- Inductive lemma: n2iNonNeg
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] n2iNonNeg :: Ɐn ∷ Nat → Bool
-n2iNonNeg  :: TP (Proof (Forall "n" Nat -> SBool))
-n2iNonNeg = induct "n2iNonNeg"
-                    (\(Forall n) -> n2i n .>= 0) $
-                    \ih n -> [] |- n2i (sSucc n) .>= 0
-                                =: 1 + n2i n .>= 0
-                                ?? ih
-                                =: sTrue
-                                =: qed
+natIH :: (SNat -> SBool) -> Proof SBool
+natIH p = internalAxiom "natIH" $ sAnd [ p sZero
+                                       , quantifiedBool (\(Forall n) -> p n .=> p (sSucc n))
+                                       ]
+                                  .=> quantifiedBool (\(Forall n) -> p n)
 
 -- | Round trip from 'Nat' to 'Integer' and back:
 --
 -- >>> runTP n2i2n
--- Lemma: n2iNonNeg                        Q.E.D.
--- Inductive lemma: n2i2n
---   Step: Base                            Q.E.D.
+-- Lemma: n2iNN                            Q.E.D.
+-- Lemma: caseSucc
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Lemma: n2i2n                            Q.E.D.
 -- [Proven] n2i2n :: Ɐn ∷ Nat → Bool
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
-n2i2n = do n2iNN <- recall "n2iNonNeg" n2iNonNeg
-           induct "n2i2n"
-                  (\(Forall n) -> i2n (n2i n) .== n) $
-                  \ih n -> [] |- i2n (n2i (sSucc n))
-                              =: i2n (1 + n2i n)
-                              ?? n2iNN
-                              =: sSucc (i2n (n2i n))
-                              ?? ih
-                              =: sSucc n
-                              =: qed
+n2i2n = do let p :: SNat -> SBool
+               p n = i2n (n2i n) .== n
+
+           n2iNN <- recall "n2iNN" n2iNonNeg
+
+           caseSucc <- calc "caseSucc"
+                            (\(Forall @"n" n) -> p n .=> p (sSucc n)) $
+                            \n -> [p n] |- i2n (n2i (sSucc n))
+                                        =: i2n (1 + n2i n)
+                                        ?? n2iNN
+                                        =: sSucc (i2n (n2i n))
+                                        ?? p n
+                                        =: sSucc n
+                                        =: qed
+
+           lemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n)
+                         [proofOf caseSucc, proofOf (natIH p)]
