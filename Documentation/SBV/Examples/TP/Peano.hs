@@ -142,9 +142,6 @@ i2n2i = induct "i2n2i"
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
 n2i2n = inductNat "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 
-{- We can't write this one since our induction method takes only one argument
- - as a parameter. Need to either come up with 2-param versions, or a class based
- - mechanism. Likely the former.
 
 -- * Arithmetic
 
@@ -152,6 +149,15 @@ n2i2n = inductNat "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 --
 -- >>> runTP addCorrect
 addCorrect :: TP (Proof (Forall "n" Nat -> Forall "m" Nat -> SBool))
-addCorrect = inductNat "addCorrect"
-                       (\(Forall n) (Forall m) -> n + m .== i2n (n2i n + n2i m)) []
--}
+addCorrect = do
+  let ih pf = axiom "inductNat" (sAnd [ quantifiedBool (\(Forall b)            -> pf sZero b)
+                                      , quantifiedBool (\(Forall a) (Forall b) -> pf a b .=> pf (sSucc a) b)
+                                      ]
+                                 .=> quantifiedBool (\(Forall a) (Forall b) -> pf a b))
+
+  let inductNat2 s p xs = do schema <- ih (\a b -> p (Forall a) (Forall b))
+                             lemma s p (proofOf schema : xs)
+
+  inductNat2 "addCorrect"
+             (\(Forall n) (Forall m) -> n2i (n + m) .== n2i n + n2i m)
+             []
