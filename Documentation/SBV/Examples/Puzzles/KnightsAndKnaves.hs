@@ -17,6 +17,7 @@
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
 
 module Documentation.SBV.Examples.Puzzles.KnightsAndKnaves where
 

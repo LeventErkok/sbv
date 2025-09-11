@@ -11,8 +11,10 @@
 -----------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-{-# LANGUAGE QuasiQuotes     #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE QuasiQuotes      #-}
+{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Documentation.SBV.Examples.ADT.Types where
 

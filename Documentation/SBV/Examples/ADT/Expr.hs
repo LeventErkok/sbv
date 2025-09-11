@@ -10,11 +10,13 @@
 -----------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall -Werror #-}
 
+{-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module Documentation.SBV.Examples.ADT.Expr where
 

@@ -17,9 +17,10 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE StandaloneDeriving    #-}
-{-# LANGUAGE OverloadedRecordDot   #-}
 {-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE OverloadedRecordDot   #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
