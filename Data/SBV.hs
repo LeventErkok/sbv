@@ -1136,14 +1136,17 @@ it will turn into an enumeration in SMTLib.  A simple example is:
     mkSymbolic ''X
 @
 
-Note the magic incantation @mkSymbolic ''X@, requires the following extensions:
-options turned on:
+Note the magic incantation @mkSymbolic ''X@, requires certain extensions to be turned on. Follow GHC's advice,
+but in general you need some subset of:
 
->   LANGUAGE TemplateHaskell
->   LANGUAGE StandaloneDeriving
->   LANGUAGE DeriveDataTypeable
->   LANGUAGE DeriveAnyClass
->   LANGUAGE FlexibleInstances
+> LANGUAGE DataKinds
+> LANGUAGE DeriveAnyClass
+> LANGUAGE DeriveDataTypeable
+> LANGUAGE FlexibleInstances
+> LANGUAGE StandaloneDeriving
+> LANGUAGE TemplateHaskell
+> LANGUAGE TypeAbstractions
+> LANGUAGE TypeApplications
 
 SBV also supports good old ADT's as well, with fields. The support for this is similar, where SBV will create the
 corresponding datatype in a symbolic manner:
@@ -1180,7 +1183,8 @@ eval = go SL.nil
                                            in ite (s .== k) v (get (SL.tail env) s)
 @
 
-which defines an interpreter for this data-type.
+which defines an interpreter for this data-type. Such definitions also come with an induction principle
+to perform TP based proofs on. These functions will be called 'inductExpr' and 'inductExprWith'.
 -}
 
 {- $cardIntro
