@@ -9,12 +9,14 @@
 -- Some basic TP usage.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP              #-}
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE QuasiQuotes      #-}
-{-# LANGUAGE TemplateHaskell  #-}
-{-# LANGUAGE TypeAbstractions #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE CPP                  #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE QuasiQuotes          #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TypeAbstractions     #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -31,9 +33,65 @@ import Data.SBV.TP
 
 -- * Natural numbers
 data Nat = Zero
-         | Succ Nat
+         | Succ { prev :: Nat }
 
 mkSymbolic ''Nat
+
+-- | Numeric instance. Choices: We clamp everything at 'Zero'. Negation is identity.
+instance Num Nat where
+  fromInteger i | i <= 0 = Zero
+                | True   = Succ (fromInteger (i - 1))
+
+  a + Zero   = a
+  a + Succ b = Succ (a + b)
+
+  Zero   - _      = Zero
+  Succ a - Zero   = Succ a
+  Succ a - Succ b = a - b
+
+  _ * Zero   = Zero
+  a * Succ b = a + a * b
+
+  abs = id
+
+  signum Zero = 0
+  signum _    = 1
+
+  negate = id
+
+-- Symbolic numeric instance, mirroring the above
+instance Num SNat where
+  fromInteger = literal . fromInteger
+
+  (+) = plus
+      where plus = smtFunction "sNatPlus" $
+                     \a b -> [sCase|Nat b of
+                               Zero   -> a
+                               Succ p -> sSucc (a `plus` p)
+                             |]
+
+  (-) = subt
+      where -- Quasi-quotes cannot be nested, so we have to have this explicit ite.
+            subt = smtFunction "sNatSubtract" $
+                     \a b -> ite (isZero a) sZero [sCase|Nat b of
+                                                    Zero -> a
+                                                    Succ p -> sprev a `subt` p
+                                                  |]
+
+  (*) = times
+      where times = smtFunction "sNatTimes" $
+                      \a b -> [sCase|Nat b of
+                                Zero   -> sZero
+                                Succ p -> a + a `times` p
+                              |]
+
+  abs = id
+
+  signum a = [sCase|Nat a of
+               Zero -> 0
+               _    -> 1
+             |]
+
 
 -- * Conversion to and from integers
 
@@ -83,3 +141,17 @@ i2n2i = induct "i2n2i"
 -- [Proven] n2i2n :: Ɐn ∷ Nat → Bool
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
 n2i2n = inductNat "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
+
+{- We can't write this one since our induction method takes only one argument
+ - as a parameter. Need to either come up with 2-param versions, or a class based
+ - mechanism. Likely the former.
+
+-- * Arithmetic
+
+-- | Correctness of addition
+--
+-- >>> runTP addCorrect
+addCorrect :: TP (Proof (Forall "n" Nat -> Forall "m" Nat -> SBool))
+addCorrect = inductNat "addCorrect"
+                       (\(Forall n) (Forall m) -> n + m .== i2n (n2i n + n2i m)) []
+-}
