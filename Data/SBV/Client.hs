@@ -360,7 +360,7 @@ mkADT typeName cstrs = do
     (caseSig, caseFun) <- mkCaseAnalyzer typeName cstrs
 
     -- Get the induction schema
-    (indSig, indSchema) <- mkInductionSchema typeName cstrs
+    indDecs <- mkInductionSchema typeName cstrs
 
     pure $ tdecl : symVal : decls
          ++ concat cdecls
@@ -368,7 +368,7 @@ mkADT typeName cstrs = do
          ++ concat accessorDecls
          ++ [fromCVSig, fromCVFun]
          ++ [caseSig, caseFun]
-         ++ [indSig,  indSchema]
+         ++ indDecs
 
 -- | Make a case analyzer for the type. Works for ADTs and enums. Returns sig and defn
 mkCaseAnalyzer :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
@@ -648,16 +648,18 @@ toSBV typeName constructorName = go
                 ]
 
 -- | Make an induction schema for the type
-mkInductionSchema :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
+mkInductionSchema :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
 mkInductionSchema typeName cstrs = do
-   let nm = 's' : TH.nameBase typeName ++ "Induct"
-       s  = TH.mkName "s"
-       p  = TH.mkName "p"
-       pf = TH.mkName "pf"
-       xs = TH.mkName "xs"
-       ih = TH.mkName "ih"
+   let nm     = 's' : TH.nameBase typeName ++ "Induct"
+       nmWith = 's' : TH.nameBase typeName ++ "InductWith"
 
-       mkCase :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Exp
+   s  <- TH.newName "s"
+   p  <- TH.newName "p"
+   pf <- TH.newName "pf"
+   xs <- TH.newName "xs"
+   ih <- TH.newName "ih"
+
+   let mkCase :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Exp
        mkCase (cstr, flds)
           | null flds = [| $(TH.varE pf) $(scstr) |]
           | True
@@ -683,23 +685,32 @@ mkInductionSchema typeName cstrs = do
        schema = foldl1 TH.AppE [TH.VarE '(.=>), pre, post]
        ihB    = TH.AppE (TH.VarE 'proofOf) (foldl1 TH.AppE [TH.VarE 'internalAxiom,  TH.LitE (TH.StringL nm), schema])
 
-   body <- [| lemma $(TH.varE s) $(TH.varE p) ($(TH.varE ih) ($(TH.varE p) . Forall) : $(TH.varE xs)) |]
-
    let tn    = TH.varT (TH.mkName "n")
        sType = TH.conT typeName
-   sig  <- TH.sigD (TH.mkName nm)
-                   [t| KnownSymbol $(tn)
-                        => String -> (Forall $(tn) $(sType) -> SBool)
-                                  -> [ProofObj]
-                                  -> TP (Proof (Forall $(tn) $(sType) -> SBool))
-                   |]
 
    let st = pure $ mkSBV (TH.ConT typeName)
    ihT <- [t| ($(st) -> SBool) -> ProofObj |]
-   let def = TH.FunD (TH.mkName nm) [TH.Clause (map TH.VarP [s, p, xs]) (TH.NormalB body)
-                                               [ TH.SigD ih ihT
-                                               , TH.FunD ih [TH.Clause [TH.VarP pf] (TH.NormalB ihB) []]
-                                               ]
-                                    ]
 
-   pure (sig, def)
+   conf <- TH.newName "cfg"
+
+   let mkDef hasConf dn = do
+         body <- if hasConf
+                    then [| lemmaWith $(TH.varE conf) $(TH.varE s) $(TH.varE p) ($(TH.varE ih) ($(TH.varE p) . Forall) : $(TH.varE xs)) |]
+                    else [| lemma                     $(TH.varE s) $(TH.varE p) ($(TH.varE ih) ($(TH.varE p) . Forall) : $(TH.varE xs)) |]
+
+         let ps | hasConf = [conf, s, p, xs]
+                | True    = [      s, p, xs]
+
+         pure $ TH.FunD (TH.mkName dn) [TH.Clause (map TH.VarP ps)
+                                                  (TH.NormalB body)
+                                                  [ TH.SigD ih ihT
+                                                  , TH.FunD ih [TH.Clause [TH.VarP pf] (TH.NormalB ihB) []]
+                                                  ]
+                                       ]
+
+   sigNm      <- TH.sigD (TH.mkName nm)     [t| KnownSymbol $(tn) =>              String -> (Forall $(tn) $(sType) -> SBool) -> [ProofObj] -> TP (Proof (Forall $(tn) $(sType) -> SBool))|]
+   sigNmWith  <- TH.sigD (TH.mkName nmWith) [t| KnownSymbol $(tn) => SMTConfig -> String -> (Forall $(tn) $(sType) -> SBool) -> [ProofObj] -> TP (Proof (Forall $(tn) $(sType) -> SBool))|]
+   bodyNm     <- mkDef False nm
+   bodyNmWith <- mkDef True  nmWith
+
+   pure [sigNm, bodyNm, sigNmWith, bodyNmWith]
