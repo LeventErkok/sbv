@@ -65,8 +65,9 @@ instance Num SNat where
 
   (+) = plus
       where plus = smtFunction "sNatPlus" $
-                               Zero   -> a
-                               Succ p -> sSucc (a `plus` p)
+                     \a b -> [sCase|Nat a of
+                               Zero   -> b
+                               Succ p -> sSucc (p `plus` b)
                              |]
 
   (-) = subt
