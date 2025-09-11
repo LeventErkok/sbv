@@ -14,6 +14,7 @@
 {-# LANGUAGE QuasiQuotes      #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeAbstractions #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -53,7 +54,7 @@ i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) sZero (sSucc (i2n (i - 1)))
 -- Lemma: n2iNonNeg                        Q.E.D.
 -- [Proven] n2iNonNeg :: Ɐn ∷ Nat → Bool
 n2iNonNeg  :: TP (Proof (Forall "n" Nat -> SBool))
-n2iNonNeg = sNatInduct "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
+n2iNonNeg = inductNat "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 
 -- | Round trip from 'Integer' to 'Nat' and back:
 --
@@ -81,4 +82,4 @@ i2n2i = induct "i2n2i"
 -- Lemma: n2i2n                            Q.E.D.
 -- [Proven] n2i2n :: Ɐn ∷ Nat → Bool
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
-n2i2n = sNatInduct "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
+n2i2n = inductNat "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
