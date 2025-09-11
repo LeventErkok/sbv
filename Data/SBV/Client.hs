@@ -123,9 +123,29 @@ mkSymbolic typeName = do
 
      tKind <- dissect typeName
 
-     case tKind of
-       ADTEnum cs    -> mkEnum typeName cs      -- also handles uninterpreted types
-       ADTFull cstrs -> mkADT  typeName cstrs
+     ds <- case tKind of
+             ADTEnum cs    -> mkEnum typeName cs      -- also handles uninterpreted types
+             ADTFull cstrs -> mkADT  typeName cstrs
+
+     -- declare an "undefiner" so we don't have stray names
+     nm <- TH.newName $ "_undefiner_" ++ TH.nameBase typeName
+
+     -- undefiner must be careful in putting ascriptions
+     let undefine n
+            | base == "sCase"  ++ tbase           = TH.AppTypeE (TH.VarE n) (TH.ConT ''Integer)
+            | base == "induct" ++ tbase           = TH.AppTypeE (TH.VarE n) (TH.LitT (TH.StrTyLit "x"))
+            | base == "induct" ++ tbase ++ "With" = TH.AppTypeE (TH.VarE n) (TH.LitT (TH.StrTyLit "x"))
+            | True                                = TH.VarE n
+           where tbase = TH.nameBase typeName
+                 base  = TH.nameBase n
+
+     let names     = [undefine n | TH.FunD n _ <- ds]
+         body      = foldl TH.AppE (TH.VarE 'undefined)
+                                   (names ++ [TH.SigE (TH.VarE 'undefined) (TH.ConT (TH.mkName ('S' : TH.nameBase typeName)))])
+         undefSig  = TH.SigD nm (TH.VarT (TH.mkName "a"))
+         undefBody = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
+
+     pure $ ds ++ [undefSig, undefBody]
 
 -- | Make an uninterpreted or enumeration type
 mkEnum :: TH.Name -> [TH.Name] -> TH.Q [TH.Dec]
@@ -650,8 +670,9 @@ toSBV typeName constructorName = go
 -- | Make an induction schema for the type
 mkInductionSchema :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
 mkInductionSchema typeName cstrs = do
-   let nm     = 's' : TH.nameBase typeName ++ "Induct"
-       nmWith = 's' : TH.nameBase typeName ++ "InductWith"
+   let btype  = TH.nameBase typeName
+       nm     = "induct" ++ btype
+       nmWith = "induct" ++ btype ++ "With"
 
    s  <- TH.newName "s"
    p  <- TH.newName "p"
@@ -664,7 +685,7 @@ mkInductionSchema typeName cstrs = do
           | null flds = [| $(TH.varE pf) $(scstr) |]
           | True
           = do as <- mapM (const (TH.newName "a")) flds
-               let isRecursive (_, _, k) = k == KADT (TH.nameBase typeName) Nothing
+               let isRecursive (_, _, k) = k == KADT btype Nothing
                    recFields = [a | (a, f) <- zip as flds, isRecursive f]
                TH.appE (TH.varE 'quantifiedBool)
                        (TH.lamE (map (\a -> TH.conP 'Forall [TH.varP a]) as)
@@ -689,7 +710,7 @@ mkInductionSchema typeName cstrs = do
        sType = TH.conT typeName
 
    let st = pure $ mkSBV (TH.ConT typeName)
-   ihT <- [t| ($(st) -> SBool) -> ProofObj |]
+   ihT <- [t| ($st -> SBool) -> ProofObj |]
 
    conf <- TH.newName "cfg"
 
@@ -708,8 +729,8 @@ mkInductionSchema typeName cstrs = do
                                                   ]
                                        ]
 
-   sigNm      <- TH.sigD (TH.mkName nm)     [t| KnownSymbol $(tn) =>              String -> (Forall $(tn) $(sType) -> SBool) -> [ProofObj] -> TP (Proof (Forall $(tn) $(sType) -> SBool))|]
-   sigNmWith  <- TH.sigD (TH.mkName nmWith) [t| KnownSymbol $(tn) => SMTConfig -> String -> (Forall $(tn) $(sType) -> SBool) -> [ProofObj] -> TP (Proof (Forall $(tn) $(sType) -> SBool))|]
+   sigNm      <- TH.sigD (TH.mkName nm)     [t| KnownSymbol $tn =>              String -> (Forall $tn $sType -> SBool) -> [ProofObj] -> TP (Proof (Forall $tn $sType -> SBool))|]
+   sigNmWith  <- TH.sigD (TH.mkName nmWith) [t| KnownSymbol $tn => SMTConfig -> String -> (Forall $tn $sType -> SBool) -> [ProofObj] -> TP (Proof (Forall $tn $sType -> SBool))|]
    bodyNm     <- mkDef False nm
    bodyNmWith <- mkDef True  nmWith
 
