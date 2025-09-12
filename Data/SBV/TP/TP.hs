@@ -27,10 +27,11 @@ module Data.SBV.TP.TP (
          Proposition, Proof, proofOf, assumptionFromProof, Instantiatable(..), Inst(..)
        , rootOfTrust, RootOfTrust(..), ProofTree(..), showProofTree, showProofTreeHTML
        ,   axiom
-       ,   lemma,   lemmaWith
-       ,    calc,    calcWith
-       ,  induct,  inductWith
-       , sInduct, sInductWith
+       ,            lemma,          lemmaWith
+       ,   inductiveLemma, inductiveLemmaWith
+       ,             calc,           calcWith
+       ,           induct,         inductWith
+       ,          sInduct,        sInductWith
        , sorry
        , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms, tpCache
        , (|-), (|->), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
