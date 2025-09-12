@@ -29,13 +29,16 @@ module Data.SBV.TP (
        -- * Basic proofs
        , lemma, lemmaWith
 
+       -- * Basic proofs, with induction schema
+       , inductiveLemma, inductiveLemmaWith
+
        -- * Reasoning via calculation
        , calc, calcWith
 
-       -- * Reasoning via regular induction
+       -- * Reasoning via explicit regular induction
        , induct, inductWith
 
-       -- * Reasoning via measure-based strong induction
+       -- * Reasoning via explicit measure-based strong induction
        , sInduct, sInductWith
 
        -- * Creating instances of proofs
