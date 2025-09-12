@@ -117,22 +117,10 @@ n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 -- | Round trip from 'Integer' to 'Nat' and back:
 --
 -- >>> runTP i2n2i
--- Inductive lemma: i2n2i
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+-- Lemma: i2n2i                            Q.E.D.
 -- [Proven] i2n2i :: Ɐi ∷ Integer → Bool
 i2n2i :: TP (Proof (Forall "i" Integer -> SBool))
-i2n2i = induct "i2n2i"
-               (\(Forall i) -> i .>= 0 .=> n2i (i2n i) .== i) $
-               \ih i -> [i .>= 0] |- n2i (i2n (i+1))
-                                  =: n2i (sSucc (i2n i))
-                                  =: 1 + n2i (i2n i)
-                                  ?? ih
-                                  =: 1 + i
-                                  =: qed
+i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> i .>= 0 .=> n2i (i2n i) .== i) []
 
 -- | Round trip from 'Nat' to 'Integer' and back:
 --
