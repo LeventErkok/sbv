@@ -63,10 +63,6 @@ import Data.SBV.Provers.Prover
 import qualified Data.SBV.List as SL
 
 import Data.SBV.TP.Kernel
-import Data.SBV.TP.Utils (TP, ProofObj)
-
-import GHC.TypeLits (KnownSymbol)
-
 
 -- | Check whether the given solver is installed and is ready to go. This call does a
 -- simple call to the solver to ensure all is well.
@@ -132,10 +128,8 @@ mkSymbolic typeName = do
 
      -- undefiner must be careful in putting ascriptions
      let undefine n
-            | base == "sCase"  ++ tbase           = TH.AppTypeE (TH.VarE n) (TH.ConT ''Integer)
-            | base == "induct" ++ tbase           = TH.AppTypeE (TH.VarE n) (TH.LitT (TH.StrTyLit "x"))
-            | base == "induct" ++ tbase ++ "With" = TH.AppTypeE (TH.VarE n) (TH.LitT (TH.StrTyLit "x"))
-            | True                                = TH.VarE n
+            | base == "sCase"  ++ tbase = TH.AppTypeE (TH.VarE n) (TH.ConT ''Integer)
+            | True                      = TH.VarE n
            where tbase = TH.nameBase typeName
                  base  = TH.nameBase n
 
@@ -672,13 +666,8 @@ mkInductionSchema :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] ->
 mkInductionSchema typeName cstrs = do
    let btype  = TH.nameBase typeName
        nm     = "induct" ++ btype
-       nmWith = "induct" ++ btype ++ "With"
 
-   s  <- TH.newName "s"
-   p  <- TH.newName "p"
    pf <- TH.newName "pf"
-   xs <- TH.newName "xs"
-   ih <- TH.newName "ih"
 
    let mkCase :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Exp
        mkCase (cstr, flds)
@@ -704,34 +693,23 @@ mkInductionSchema typeName cstrs = do
 
    let pre    = foldl1 TH.AppE [TH.VarE 'sAnd,  TH.ListE cases]
        schema = foldl1 TH.AppE [TH.VarE '(.=>), pre, post]
-       ihB    = TH.AppE (TH.VarE 'proofOf) (foldl1 TH.AppE [TH.VarE 'internalAxiom,  TH.LitE (TH.StringL nm), schema])
+       ihB    = TH.AppE (TH.VarE 'proofOf) (foldl1 TH.AppE [TH.VarE 'internalAxiom, TH.LitE (TH.StringL nm), schema])
 
-   let tn    = TH.varT (TH.mkName "n")
-       sType = TH.conT typeName
+       instHead = TH.AppT (TH.ConT ''HasInductionSchema)
+                          (TH.AppT (TH.AppT TH.ArrowT
+                                            (TH.AppT (TH.ConT ''Forall) (TH.VarT (TH.mkName "a")) `TH.AppT` TH.ConT typeName))
+                                   (TH.ConT ''SBool))
 
-   let st = pure $ mkSBV (TH.ConT typeName)
-   ihT <- [t| ($st -> SBool) -> ProofObj |]
+       pfFun = TH.FunD pf [TH.Clause [TH.VarP (TH.mkName "a")]
+                                     (TH.NormalB (TH.AppE (TH.VarE (TH.mkName "prop"))
+                                                 (TH.AppE (TH.ConE 'Forall) (TH.VarE (TH.mkName "a")))))
+                                     []
+                          ]
 
-   conf <- TH.newName "cfg"
+       method = TH.FunD 'inductionSchema 
+                        [TH.Clause [TH.VarP (TH.mkName "prop")]
+                                   (TH.NormalB (TH.LetE [pfFun] ihB))
+                                   []
+                        ]
 
-   let mkDef hasConf dn = do
-         body <- if hasConf
-                    then [| lemmaWith $(TH.varE conf) $(TH.varE s) $(TH.varE p) ($(TH.varE ih) ($(TH.varE p) . Forall) : $(TH.varE xs)) |]
-                    else [| lemma                     $(TH.varE s) $(TH.varE p) ($(TH.varE ih) ($(TH.varE p) . Forall) : $(TH.varE xs)) |]
-
-         let ps | hasConf = [conf, s, p, xs]
-                | True    = [      s, p, xs]
-
-         pure $ TH.FunD (TH.mkName dn) [TH.Clause (map TH.VarP ps)
-                                                  (TH.NormalB body)
-                                                  [ TH.SigD ih ihT
-                                                  , TH.FunD ih [TH.Clause [TH.VarP pf] (TH.NormalB ihB) []]
-                                                  ]
-                                       ]
-
-   sigNm      <- TH.sigD (TH.mkName nm)     [t| KnownSymbol $tn =>              String -> (Forall $tn $sType -> SBool) -> [ProofObj] -> TP (Proof (Forall $tn $sType -> SBool))|]
-   sigNmWith  <- TH.sigD (TH.mkName nmWith) [t| KnownSymbol $tn => SMTConfig -> String -> (Forall $tn $sType -> SBool) -> [ProofObj] -> TP (Proof (Forall $tn $sType -> SBool))|]
-   bodyNm     <- mkDef False nm
-   bodyNmWith <- mkDef True  nmWith
-
-   pure [sigNm, bodyNm, sigNmWith, bodyNmWith]
+   pure [TH.InstanceD Nothing [] instHead [method]]
