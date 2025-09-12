@@ -16,6 +16,7 @@
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeAbstractions     #-}
+{-# LANGUAGE TypeApplications     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -48,6 +49,10 @@ import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
 
+import Type.Reflection (typeRep)
+
+import qualified Data.SBV.List as SL (nil, (.:))
+
 -- | A proposition is something SBV is capable of proving/disproving in TP.
 type Proposition a = ( QNot a
                      , QuantifiedBool a
@@ -72,6 +77,20 @@ instance ( SymVal typ
          , HasInductionSchema (Forall nm typ                    -> SBool))
       =>   HasInductionSchema (Forall nm typ -> Forall nm' typ' -> SBool) where
    inductionSchema p = inductionSchema (quantifiedBool . p)
+
+-- | Induction schema for integers.
+instance HasInductionSchema (Forall nm Integer -> SBool) where
+   inductionSchema p = proofOf $ internalAxiom "inductInteger" ax
+     where pf = p . Forall
+           ax =   sAnd [pf 0, quantifiedBool (\(Forall i) -> pf i .=> pf (i + 1))]
+              .=> quantifiedBool (\(Forall i) -> pf i)
+
+-- | Induction schema for lists.
+instance SymVal a => HasInductionSchema (Forall nm [a] -> SBool) where
+   inductionSchema p = proofOf $ internalAxiom ("induct" ++ show (typeRep @[a])) ax
+     where pf = p . Forall
+           ax =   sAnd [pf SL.nil, quantifiedBool (\(Forall x) (Forall xs) -> pf xs .=> pf (x SL..: xs))]
+              .=> quantifiedBool (\(Forall xs) -> pf xs)
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
