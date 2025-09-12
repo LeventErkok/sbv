@@ -22,10 +22,10 @@
 module Data.SBV.TP.Kernel (
          Proposition,  Proof(..)
        , axiom
-       , lemma
-       , lemmaWith
+       , lemma,          lemmaWith
+       , inductiveLemma, inductiveLemmaWith
        , internalAxiom
-       , TPProofContext (..), smtProofStep
+       , TPProofContext (..), smtProofStep, HasInductionSchema(..)
        ) where
 
 import Control.Monad.Trans  (liftIO, MonadIO)
@@ -57,6 +57,21 @@ type Proposition a = ( QNot a
                      , Constraint  Symbolic  (SkolemsTo (NegatesTo a))
                      , Typeable a
                      )
+
+-- | An inductive proposition is a proposition that has an induction scheme associated with it.
+type Inductive a = (HasInductionSchema a, Proposition a)
+
+-- | A class of values that has an associated induction schema. SBV manages this internally.
+class HasInductionSchema a where
+  inductionSchema :: a -> ProofObj
+
+-- | Individual instances will have to provide the basic induction schema. But if we have
+-- one for a type, then we can derive the extra arguments for free.
+instance ( SymVal typ
+         , SymVal typ'
+         , HasInductionSchema (Forall nm typ                    -> SBool))
+      =>   HasInductionSchema (Forall nm typ -> Forall nm' typ' -> SBool) where
+   inductionSchema p = inductionSchema (quantifiedBool . p)
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
@@ -106,6 +121,15 @@ lemmaWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} nm inputProp by = wit
 lemma :: Proposition a => String -> a -> [ProofObj] -> TP (Proof a)
 lemma nm f by = do cfg <- getTPConfig
                    lemmaWith cfg nm f by
+
+-- | Prove a given statement, using the induction schema for the proposition. Using the default solver.
+inductiveLemma :: Inductive a => String -> a -> [ProofObj] -> TP (Proof a)
+inductiveLemma nm f by = do cfg <- getTPConfig
+                            inductiveLemmaWith cfg nm f (inductionSchema f : by)
+
+-- | Prove a given statement, using the induction schema for the proposition. Using the default solver.
+inductiveLemmaWith :: Inductive a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
+inductiveLemmaWith = lemmaWith
 
 -- | Capture the general flow of a proof-step. Note that this is the only point where we call the backend solver
 -- in a TP proof.
