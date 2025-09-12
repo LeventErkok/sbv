@@ -112,7 +112,7 @@ i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) sZero (sSucc (i2n (i - 1)))
 -- Lemma: n2iNonNeg                        Q.E.D.
 -- [Proven] n2iNonNeg :: Ɐn ∷ Nat → Bool
 n2iNonNeg  :: TP (Proof (Forall "n" Nat -> SBool))
-n2iNonNeg = inductNat "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
+n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 
 -- | Round trip from 'Integer' to 'Nat' and back:
 --
@@ -140,8 +140,7 @@ i2n2i = induct "i2n2i"
 -- Lemma: n2i2n                            Q.E.D.
 -- [Proven] n2i2n :: Ɐn ∷ Nat → Bool
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
-n2i2n = inductNat "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
-
+n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 
 -- * Arithmetic
 
@@ -149,15 +148,6 @@ n2i2n = inductNat "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 --
 -- >>> runTP addCorrect
 addCorrect :: TP (Proof (Forall "n" Nat -> Forall "m" Nat -> SBool))
-addCorrect = do
-  let ih pf = axiom "inductNat" (sAnd [ quantifiedBool (\(Forall b)            -> pf sZero b)
-                                      , quantifiedBool (\(Forall a) (Forall b) -> pf a b .=> pf (sSucc a) b)
-                                      ]
-                                 .=> quantifiedBool (\(Forall a) (Forall b) -> pf a b))
-
-  let inductNat2 s p xs = do schema <- ih (\a b -> p (Forall a) (Forall b))
-                             lemma s p (proofOf schema : xs)
-
-  inductNat2 "addCorrect"
-             (\(Forall n) (Forall m) -> n2i (n + m) .== n2i n + n2i m)
-             []
+addCorrect = inductiveLemma "addCorrect"
+                            (\(Forall n) (Forall m) -> n2i (n + m) .== n2i n + n2i m)
+                            []
