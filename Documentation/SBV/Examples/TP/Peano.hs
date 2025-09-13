@@ -131,6 +131,7 @@ n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 
 -- * Arithmetic
 
+-- | Correctness of addition: \(\overline{x} + \overline{y} = \overline{x + y}\)
 --
 -- >>> runTP addCorrect
 -- Lemma: addCorrect                       Q.E.D.
