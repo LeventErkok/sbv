@@ -78,11 +78,13 @@ instance ( SymVal typ
       =>   HasInductionSchema (Forall nm typ -> Forall nm' typ' -> SBool) where
    inductionSchema p = inductionSchema (quantifiedBool . p)
 
--- | Induction schema for integers.
+-- | Induction schema for integers. Note that this is good for proving properties over naturals really.
+-- There are other instances that would apply to all integers, but this one is really the most useful
+-- in practice.
 instance HasInductionSchema (Forall nm Integer -> SBool) where
    inductionSchema p = proofOf $ internalAxiom "inductInteger" ax
      where pf = p . Forall
-           ax =   sAnd [pf 0, quantifiedBool (\(Forall i) -> pf i .=> pf (i + 1))]
+           ax =   sAnd [pf 0, quantifiedBool (\(Forall i) -> (i .>= 0 .=> pf i) .=> pf (i + 1))]
               .=> quantifiedBool (\(Forall i) -> pf i)
 
 -- | Induction schema for lists.
