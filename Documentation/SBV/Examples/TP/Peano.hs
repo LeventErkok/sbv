@@ -9,13 +9,13 @@
 -- Modeling Peano arithmetic in SBV and proving various properties using TP.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                  #-}
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE QuasiQuotes          #-}
-{-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE TypeAbstractions     #-}
-{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE CPP               #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeAbstractions  #-}
+{-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -135,7 +135,7 @@ i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> i .>= 0 .=> n2i (i2n i) .== i) []
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
 n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 
--- * Arithmetic
+-- * Correctness of addition
 
 -- | \(\overline{m + n} = \overline{m} + \overline{n}\)
 --
@@ -147,6 +147,8 @@ addCorrect = inductiveLemma "addCorrect"
                             (\(Forall m) (Forall n) -> n2i (m + n) .== n2i m + n2i n)
                             []
 
+-- * Correctness of multiplication
+
 -- | \(\overline{m * n} = \overline{m} * \overline{n}\)
 --
 -- >>> runTP mulCorrect
@@ -157,7 +159,9 @@ addCorrect = inductiveLemma "addCorrect"
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: 5 (defn of n2i)                 Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6 (defn of n2i)                 Q.E.D.
+--   Step: 7                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: mulCorrect                       Q.E.D.
 -- [Proven] mulCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
@@ -171,24 +175,9 @@ mulCorrect = do
     add <- recall "addCorrect" addCorrect
 
     caseSucc <- calc "caseSucc"
-                      (\(Forall @"n" n) (Forall @"m" m) ->
-                            n2i (n * m) .== n2i n * n2i m .=> n2i (sSucc n * m) .== n2i (sSucc n) * n2i m) $
-                      \n m -> let ih = n2i (n * m) .== n2i n * n2i m
-                           in [ih] |- n2i (sSucc n * m)
-                                   =: n2i (m + n * m)
-                                   ?? add `at` (Inst @"m" m, Inst @"n" (n*m))
-                                   =: n2i m + n2i (n * m)
-                                   ?? ih
-                                   =: n2i m + n2i n * n2i m
-                                   =: n2i m * (1 + n2i n)
-                                   ?? "defn of n2i"
-                                   =: n2i (sSucc n) * n2i m
-                                   =: qed
-{-
-    caseSucc <- calc "caseSucc"
                       (\(Forall @"m" m) (Forall @"n" n) ->
                             n2i (m * n) .== n2i m * n2i n .=> n2i (sSucc m * n) .== n2i (sSucc m) * n2i n) $
-                      \n m -> let ih = n2i (m * n) .== n2i m * n2i n
+                      \m n -> let ih = n2i (m * n) .== n2i m * n2i n
                            in [ih] |- n2i (sSucc m * n)
                                    =: n2i (n + m * n)
                                    ?? add `at` (Inst @"m" n, Inst @"n" (m * n))
@@ -201,13 +190,10 @@ mulCorrect = do
                                    =: n2i n * n2i (sSucc m)
                                    =: n2i (sSucc m) * n2i n
                                    =: qed
--}
 
     inductiveLemma
        "mulCorrect"
        (\(Forall m) (Forall n) -> n2i (m * n) .== n2i m * n2i n)
        [proofOf caseZero, proofOf caseSucc]
-
--- * Properties
 
 -- Prove 15 theorems in: https://en.wikipedia.org/wiki/Peano_axioms
