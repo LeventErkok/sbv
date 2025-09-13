@@ -27,7 +27,7 @@ import Data.SBV.Tuple
 import qualified Data.SBV.List as SL
 
 -- | A basic arithmetic expression type.
-data Expr = Num Integer
+data Expr = Val Integer
           | Var String
           | Add Expr Expr
           | Mul Expr Expr
@@ -38,7 +38,7 @@ mkSymbolic ''Expr
 
 -- | Show instance for 'Expr'.
 instance Show Expr where
-  show (Num i)     = show i
+  show (Val i)     = show i
   show (Var a)     = a
   show (Add l r)   = "(" ++ show l ++ " + " ++ show r ++ ")"
   show (Mul l r)   = "(" ++ show l ++ " * " ++ show r ++ ")"
@@ -46,7 +46,7 @@ instance Show Expr where
 
 -- | Num instance, simplifies construction of values
 instance Num Expr where
-  fromInteger = Num
+  fromInteger = Val
   (+)         = Add
   (*)         = Mul
   abs         = error "Num Expr: undefined abs"
@@ -55,9 +55,9 @@ instance Num Expr where
 
 -- | Num instaance for the symbolic version
 instance Num SExpr where
-  fromInteger = sNum . literal
-  (+)          = sAdd
-  (*)          = sMul
+  fromInteger = sVal . literal
+  (+)         = sAdd
+  (*)         = sMul
   abs         = error "Num SExpr: undefined abs"
   signum      = error "Num SExpr: undefined signum"
   negate      = error "Num SExpr: undefined negate"
@@ -71,7 +71,7 @@ isValid = go SL.nil
         go :: SList String -> SExpr -> SBool
         go = smtFunction "valid" $ \env expr -> [sCase|Expr expr of
                                                    Var s     -> isId s .&& s `SL.elem` env
-                                                   Num _     -> sTrue
+                                                   Val _     -> sTrue
                                                    Add l r   -> go env l .&& go env r
                                                    Mul l r   -> go env l .&& go env r
                                                    Let s a b -> isId s .&& go env a .&& go (s SL..: env) b
@@ -82,7 +82,7 @@ eval :: SExpr -> SInteger
 eval = go SL.nil
  where go :: SList (String, Integer) -> SExpr -> SInteger
        go = smtFunction "eval" $ \env expr -> [sCase|Expr expr of
-                                                 Num i     -> i
+                                                 Val i     -> i
                                                  Var s     -> get env s
                                                  Add l r   -> go env l + go env r
                                                  Mul l r   -> go env l * go env r
@@ -105,7 +105,7 @@ evalPlus5 = prove $ do e :: SExpr <- free "e"
 --
 -- >>> evalSat
 -- Satisfiable. Model:
---   e = Let "t" (Num 1) (Var "t") :: Expr
+--   e = Let "t" (Val 1) (Var "t") :: Expr
 --   a =                         9 :: Integer
 --   b =                        10 :: Integer
 evalSat :: IO SatResult
@@ -118,14 +118,14 @@ evalSat = sat $ do e :: SExpr    <- free "e"
                    constrain $ a .>= 4
                    constrain $ b .>= 10
 
-                   pure $ eval (e + sNum a) .== b * eval e
+                   pure $ eval (e + sVal a) .== b * eval e
 
 -- | Another test, generating some (mildly) interesting examples.
 --
 -- >>> genE
 -- Satisfiable. Model:
---   e1 = Let "p" (Num 5) (Let "p" (Num 7) (Let "k" (Num 9) (Num 3))) :: Expr
---   e2 =                                                    Num (-2) :: Expr
+--   e1 = Let "p" (Val 5) (Let "p" (Val 7) (Let "k" (Val 9) (Val 3))) :: Expr
+--   e2 =                                                    Val (-2) :: Expr
 genE :: IO SatResult
 genE = sat $ do e1 :: SExpr <- free "e1"
                 e2 :: SExpr <- free "e2"
