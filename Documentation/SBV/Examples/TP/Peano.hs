@@ -94,7 +94,7 @@ instance Num SNat where
 
 -- * Conversion to and from integers
 
--- | Convert from 'Nat' to 'Integer':
+-- | Convert from 'Nat' to 'Integer'.
 n2i :: SNat -> SInteger
 n2i = smtFunction "n2i" $ \n -> [sCase|Nat n of
                                    Zero   -> 0
@@ -105,7 +105,7 @@ n2i = smtFunction "n2i" $ \n -> [sCase|Nat n of
 i2n :: SInteger -> SNat
 i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) sZero (sSucc (i2n (i - 1)))
 
--- | n2i is always non-negative
+-- | n2i is always non-negative.
 --
 -- >>> runTP n2iNonNeg
 -- Lemma: n2iNonNeg                        Q.E.D.
@@ -113,7 +113,7 @@ i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) sZero (sSucc (i2n (i - 1)))
 n2iNonNeg  :: TP (Proof (Forall "n" Nat -> SBool))
 n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 
--- | Round trip from 'Integer' to 'Nat' and back:
+-- | Round trip from 'Integer' to 'Nat' and back.
 --
 -- >>> runTP i2n2i
 -- Lemma: i2n2i                            Q.E.D.
@@ -121,7 +121,7 @@ n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 i2n2i :: TP (Proof (Forall "i" Integer -> SBool))
 i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> i .>= 0 .=> n2i (i2n i) .== i) []
 
--- | Round trip from 'Nat' to 'Integer' and back:
+-- | Round trip from 'Nat' to 'Integer' and back.
 --
 -- >>> runTP n2i2n
 -- Lemma: n2i2n                            Q.E.D.
@@ -131,7 +131,7 @@ n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 
 -- * Arithmetic
 
--- | Correctness of addition
+-- | Correctness of addition.
 --
 -- >>> runTP addCorrect
 -- Lemma: addCorrect                       Q.E.D.
@@ -141,7 +141,7 @@ addCorrect = inductiveLemma "addCorrect"
                             (\(Forall n) (Forall m) -> n2i (n + m) .== n2i n + n2i m)
                             []
 
--- | Correctness of multiplication
+-- | Correctness of multiplication.
 --
 -- >>> runTP mulCorrect
 -- Lemma: caseZero                         Q.E.D.
