@@ -94,6 +94,8 @@ instance Num SNat where
 -- * Conversion to and from integers
 
 -- | Convert from 'Nat' to 'Integer'.
+--
+-- NB. When writing the properties below, we use the notation \(\overline{x}\) to mean @n2i x@.
 n2i :: SNat -> SInteger
 n2i = smtFunction "n2i" $ \n -> [sCase|Nat n of
                                    Zero   -> 0
