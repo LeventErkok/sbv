@@ -144,11 +144,11 @@ lemma nm f by = do cfg <- getTPConfig
 -- | Prove a given statement, using the induction schema for the proposition. Using the default solver.
 inductiveLemma :: Inductive a => String -> a -> [ProofObj] -> TP (Proof a)
 inductiveLemma nm f by = do cfg <- getTPConfig
-                            inductiveLemmaWith cfg nm f (inductionSchema f : by)
+                            inductiveLemmaWith cfg nm f by
 
 -- | Prove a given statement, using the induction schema for the proposition. Using the default solver.
 inductiveLemmaWith :: Inductive a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
-inductiveLemmaWith = lemmaWith
+inductiveLemmaWith cfg nm f by = lemmaWith cfg nm f (inductionSchema f : by)
 
 -- | Capture the general flow of a proof-step. Note that this is the only point where we call the backend solver
 -- in a TP proof.
