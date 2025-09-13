@@ -35,9 +35,9 @@ tests =
     , goldenCapturedIO "adt_expr07" $ evalCheck (f (sVar (literal "b")), 1)
     , goldenCapturedIO "adt_expr08" $ evalCheck (f (sVar (literal "c")), 1)
     , goldenCapturedIO "adt_expr09" $ evalCheck (f (sVar (literal "d")), 2)
-    , goldenCapturedIO "adt_expr10" $ evalCheck (sum (map (f . sNum . literal) [-5 .. 9]),  45)
-    , goldenCapturedIO "adt_expr11" $ evalCheck (sum (map (f . sNum . literal) [10, 10]),    8)
-    , goldenCapturedIO "adt_expr12" $ evalCheck (sum (map (f . sNum . literal) [11 .. 20]), 50)
+    , goldenCapturedIO "adt_expr10" $ evalCheck (sum (map (f . sVal . literal) [-5 .. 9]),  45)
+    , goldenCapturedIO "adt_expr11" $ evalCheck (sum (map (f . sVal . literal) [10, 10]),    8)
+    , goldenCapturedIO "adt_expr12" $ evalCheck (sum (map (f . sVal . literal) [11 .. 20]), 50)
     , goldenCapturedIO "adt_expr13" $ evalCheck (f e00, 3)
     , goldenCapturedIO "adt_expr14" $ evalCheck (f e01, 6)
     , goldenCapturedIO "adt_expr15" $ evalCheck (f e02, 6)
@@ -92,7 +92,7 @@ f e = [sCase|Expr e of
                    | s .== literal "b" .|| s .== literal "c" -> 1
                    | sTrue                                   -> 2
 
-         Num i     | i .<  10                                -> 3
+         Val i     | i .<  10                                -> 3
                    | i .== 10                                -> 4
                    | i .>  10                                -> 5
 
@@ -127,7 +127,7 @@ g e = [sCase|Expr e of
                    | s .== literal "b" .|| s .== literal "c" -> 1
                    | sTrue                                   -> 2
 
-         Num i     | i .<  10                                -> 3
+         Val i     | i .<  10                                -> 3
                    | i .== 10                                -> 4
                    | i .>  10                                -> 5
 
