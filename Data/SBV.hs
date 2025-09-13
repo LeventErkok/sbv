@@ -1184,7 +1184,7 @@ eval = go SL.nil
 @
 
 which defines an interpreter for this data-type. Such definitions also come with an induction principle
-to perform TP based proofs on. These functions will be called 'inductExpr' and 'inductExprWith'.
+to perform TP based proofs on. These can be accessed using the 'Data.SBV.TP.inductiveLemma' function.
 -}
 
 {- $cardIntro
