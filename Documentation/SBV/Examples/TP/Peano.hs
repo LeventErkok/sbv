@@ -171,6 +171,21 @@ mulCorrect = do
     add <- recall "addCorrect" addCorrect
 
     caseSucc <- calc "caseSucc"
+                      (\(Forall @"n" n) (Forall @"m" m) ->
+                            n2i (n * m) .== n2i n * n2i m .=> n2i (sSucc n * m) .== n2i (sSucc n) * n2i m) $
+                      \n m -> let ih = n2i (n * m) .== n2i n * n2i m
+                           in [ih] |- n2i (sSucc n * m)
+                                   =: n2i (m + n * m)
+                                   ?? add `at` (Inst @"m" m, Inst @"n" (n*m))
+                                   =: n2i m + n2i (n * m)
+                                   ?? ih
+                                   =: n2i m + n2i n * n2i m
+                                   =: n2i m * (1 + n2i n)
+                                   ?? "defn of n2i"
+                                   =: n2i (sSucc n) * n2i m
+                                   =: qed
+{-
+    caseSucc <- calc "caseSucc"
                       (\(Forall @"m" m) (Forall @"n" n) ->
                             n2i (m * n) .== n2i m * n2i n .=> n2i (sSucc m * n) .== n2i (sSucc m) * n2i n) $
                       \n m -> let ih = n2i (m * n) .== n2i m * n2i n
@@ -186,6 +201,7 @@ mulCorrect = do
                                    =: n2i n * n2i (sSucc m)
                                    =: n2i (sSucc m) * n2i n
                                    =: qed
+-}
 
     inductiveLemma
        "mulCorrect"
