@@ -113,7 +113,7 @@ deriving instance TH.Lift Kind
 data ADT = ADTEnum [TH.Name]                                     -- Enumeration. If the list is empty, then an uninterpreted
          | ADTFull [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -- Constructors and fields. Maybe is the accessor if given.
 
--- | Create a symbolic ADT
+-- | Create a symbolic ADT.
 mkSymbolic :: TH.Name -> TH.Q [TH.Dec]
 mkSymbolic typeName = do
 
