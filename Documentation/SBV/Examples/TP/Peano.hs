@@ -106,6 +106,8 @@ n2i = smtFunction "n2i" $ \n -> [sCase|Nat n of
                                 |]
 
 -- | Convert Non-negative integers to 'Nat'. Negative numbers become 'Zero'.
+--
+-- NB. When writing the properties below, we use the notation \(\underline{i}\) to mean @i2n i@.
 i2n :: SInteger -> SNat
 i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) sZero (sSucc (i2n (i - 1)))
 
@@ -158,34 +160,36 @@ addCorrect = inductiveLemma "addCorrect"
 --   Step: 5 (defn of n2i)                 Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: mulCorrect                       Q.E.D.
--- [Proven] mulCorrect :: Ɐn ∷ Nat → Ɐm ∷ Nat → Bool
-mulCorrect :: TP (Proof (Forall "n" Nat -> Forall "m" Nat -> SBool))
+-- [Proven] mulCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+mulCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 mulCorrect = do
     caseZero <- inductiveLemma
                   "caseZero"
-                  (\(Forall @"m" m) -> n2i (sZero * m) .== n2i sZero * n2i m)
+                  (\(Forall @"n" n) -> n2i (sZero * n) .== n2i sZero * n2i n)
                   []
 
     add <- recall "addCorrect" addCorrect
 
     caseSucc <- calc "caseSucc"
-                      (\(Forall @"n" n) (Forall @"m" m) ->
-                            n2i (n * m) .== n2i n * n2i m .=> n2i (sSucc n * m) .== n2i (sSucc n) * n2i m) $
-                      \n m -> let ih = n2i (n * m) .== n2i n * n2i m
-                           in [ih] |- n2i (sSucc n * m)
-                                   =: n2i (m + n * m)
-                                   ?? add `at` (Inst @"n" m, Inst @"m" (n*m))
-                                   =: n2i m + n2i (n * m)
+                      (\(Forall @"m" m) (Forall @"n" n) ->
+                            n2i (m * n) .== n2i m * n2i n .=> n2i (sSucc m * n) .== n2i (sSucc m) * n2i n) $
+                      \n m -> let ih = n2i (m * n) .== n2i m * n2i n
+                           in [ih] |- n2i (sSucc m * n)
+                                   =: n2i (n + m * n)
+                                   ?? add `at` (Inst @"m" n, Inst @"n" (m * n))
+                                   =: n2i n + n2i (m * n)
                                    ?? ih
-                                   =: n2i m + n2i n * n2i m
-                                   =: n2i m * (1 + n2i n)
+                                   =: n2i n + n2i m * n2i n
+                                   =: n2i n + n2i n * n2i m
+                                   =: n2i n * (1 + n2i m)
                                    ?? "defn of n2i"
-                                   =: n2i (sSucc n) * n2i m
+                                   =: n2i n * n2i (sSucc m)
+                                   =: n2i (sSucc m) * n2i n
                                    =: qed
 
     inductiveLemma
        "mulCorrect"
-       (\(Forall n) (Forall m) -> n2i (n * m) .== n2i n * n2i m)
+       (\(Forall m) (Forall n) -> n2i (m * n) .== n2i m * n2i n)
        [proofOf caseZero, proofOf caseSucc]
 
 -- * Properties
