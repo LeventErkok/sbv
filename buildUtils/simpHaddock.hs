@@ -129,6 +129,7 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
                    , "TP.TP.IStepArgs"
                    , "TP.TP.MeasureArgs"
                    , "TP.TP.StepArgs"
+                   , "TP.Kernel.Inductive"
                    , "Tools.STree.STreeInternal"
                    , "Tuple.Tuple"
                    , "Tuple.HasField"
