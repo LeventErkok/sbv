@@ -30,10 +30,13 @@ import Data.SBV.TP
 -- >>> import Data.SBV.TP
 #endif
 
--- | Natural numbers
+-- | Natural numbers. (If you are looking at the haddock documents, note the plethora of definitions
+-- the call to 'mkSymbolic' generates. You can mostly ignore these, except for the case analyzer,
+-- the testers and accessors.)
 data Nat = Zero
          | Succ { prev :: Nat }
 
+-- | Create a symbolic version of naturals.
 mkSymbolic ''Nat
 
 -- | Numeric instance. Choices: We clamp everything at 'Zero'. Negation is identity.
@@ -95,7 +98,7 @@ instance Num SNat where
 
 -- | Convert from 'Nat' to 'Integer'.
 --
--- NB. When writing the properties below, we use the notation \(\overline{x}\) to mean @n2i x@.
+-- NB. When writing the properties below, we use the notation \(\overline{n}\) to mean @n2i n@.
 n2i :: SNat -> SInteger
 n2i = smtFunction "n2i" $ \n -> [sCase|Nat n of
                                    Zero   -> 0
@@ -106,7 +109,7 @@ n2i = smtFunction "n2i" $ \n -> [sCase|Nat n of
 i2n :: SInteger -> SNat
 i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) sZero (sSucc (i2n (i - 1)))
 
--- | n2i is always non-negative.
+-- | \(\overline{n} \geq 0\)
 --
 -- >>> runTP n2iNonNeg
 -- Lemma: n2iNonNeg                        Q.E.D.
@@ -114,7 +117,7 @@ i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) sZero (sSucc (i2n (i - 1)))
 n2iNonNeg  :: TP (Proof (Forall "n" Nat -> SBool))
 n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 
--- | Round trip from 'Integer' to 'Nat' and back.
+-- | \(i \geq 0 \;\Rightarrow\; \overline{\underline{i}} = i\).
 --
 -- >>> runTP i2n2i
 -- Lemma: i2n2i                            Q.E.D.
@@ -122,7 +125,7 @@ n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 i2n2i :: TP (Proof (Forall "i" Integer -> SBool))
 i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> i .>= 0 .=> n2i (i2n i) .== i) []
 
--- | Round trip from 'Nat' to 'Integer' and back.
+-- | \(\underline{\overline{n}} = n\)
 --
 -- >>> runTP n2i2n
 -- Lemma: n2i2n                            Q.E.D.
@@ -132,17 +135,17 @@ n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 
 -- * Arithmetic
 
--- | Correctness of addition: \(\overline{x} + \overline{y} = \overline{x + y}\)
+-- | \(\overline{m + n} = \overline{m} + \overline{n}\)
 --
 -- >>> runTP addCorrect
 -- Lemma: addCorrect                       Q.E.D.
--- [Proven] addCorrect :: Ɐn ∷ Nat → Ɐm ∷ Nat → Bool
-addCorrect :: TP (Proof (Forall "n" Nat -> Forall "m" Nat -> SBool))
+-- [Proven] addCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+addCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 addCorrect = inductiveLemma "addCorrect"
-                            (\(Forall n) (Forall m) -> n2i (n + m) .== n2i n + n2i m)
+                            (\(Forall m) (Forall n) -> n2i (m + n) .== n2i m + n2i n)
                             []
 
--- | Correctness of multiplication: \(\overline{x} * \overline{y} = \overline{x * y}\)
+-- | \(\overline{m * n} = \overline{m} * \overline{n}\)
 --
 -- >>> runTP mulCorrect
 -- Lemma: caseZero                         Q.E.D.
