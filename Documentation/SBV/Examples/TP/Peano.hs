@@ -135,6 +135,8 @@ n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 -- | Correctness of addition
 --
 -- >>> runTP addCorrect
+-- Lemma: addCorrect                       Q.E.D.
+-- [Proven] addCorrect :: Ɐn ∷ Nat → Ɐm ∷ Nat → Bool
 addCorrect :: TP (Proof (Forall "n" Nat -> Forall "m" Nat -> SBool))
 addCorrect = inductiveLemma "addCorrect"
                             (\(Forall n) (Forall m) -> n2i (n + m) .== n2i n + n2i m)
