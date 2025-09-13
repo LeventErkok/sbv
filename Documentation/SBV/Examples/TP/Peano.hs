@@ -67,7 +67,7 @@ instance Num SNat where
       where plus = smtFunction "sNatPlus" $
                      \a b -> [sCase|Nat a of
                                Zero   -> b
-                               Succ p -> sSucc (p `plus` b)
+                               Succ p -> sSucc (p + b)
                              |]
 
   (-) = subt
@@ -75,14 +75,14 @@ instance Num SNat where
             subt = smtFunction "sNatSubtract" $
                      \a b -> ite (isZero a) sZero [sCase|Nat b of
                                                     Zero -> a
-                                                    Succ p -> sprev a `subt` p
+                                                    Succ p -> sprev a - p
                                                   |]
 
   (*) = times
       where times = smtFunction "sNatTimes" $
-                      \a b -> [sCase|Nat b of
+                      \a b -> [sCase|Nat a of
                                 Zero   -> sZero
-                                Succ p -> a + a `times` p
+                                Succ p -> b + p * b
                               |]
 
   abs = id
@@ -91,7 +91,6 @@ instance Num SNat where
                Zero -> 0
                _    -> 1
              |]
-
 
 -- * Conversion to and from integers
 
@@ -141,3 +140,46 @@ addCorrect :: TP (Proof (Forall "n" Nat -> Forall "m" Nat -> SBool))
 addCorrect = inductiveLemma "addCorrect"
                             (\(Forall n) (Forall m) -> n2i (n + m) .== n2i n + n2i m)
                             []
+
+-- | Correctness of multiplication
+--
+-- >>> runTP mulCorrect
+-- Lemma: caseZero                         Q.E.D.
+-- Lemma: addCorrect                       Q.E.D.
+-- Lemma: caseSucc
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5 (defn of n2i)                 Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: mulCorrect                       Q.E.D.
+-- [Proven] mulCorrect :: Ɐn ∷ Nat → Ɐm ∷ Nat → Bool
+mulCorrect :: TP (Proof (Forall "n" Nat -> Forall "m" Nat -> SBool))
+mulCorrect = do
+    caseZero <- inductiveLemma
+                  "caseZero"
+                  (\(Forall @"m" m) -> n2i (sZero * m) .== n2i sZero * n2i m)
+                  []
+
+    add <- recall "addCorrect" addCorrect
+
+    caseSucc <- calc "caseSucc"
+                      (\(Forall @"n" n) (Forall @"m" m) ->
+                            n2i (n * m) .== n2i n * n2i m .=> n2i (sSucc n * m) .== n2i (sSucc n) * n2i m) $
+                      \n m -> let ih = n2i (n * m) .== n2i n * n2i m
+                           in [ih] |- n2i (sSucc n * m)
+                                   =: n2i (m + n * m)
+                                   ?? add `at` (Inst @"n" m, Inst @"m" (n*m))
+                                   =: n2i m + n2i (n * m)
+                                   ?? ih
+                                   =: n2i m + n2i n * n2i m
+                                   =: n2i m * (1 + n2i n)
+                                   ?? "defn of n2i"
+                                   =: n2i (sSucc n) * n2i m
+                                   =: qed
+
+    inductiveLemma
+       "mulCorrect"
+       (\(Forall n) (Forall m) -> n2i (n * m) .== n2i n * n2i m)
+       [proofOf caseZero, proofOf caseSucc]
