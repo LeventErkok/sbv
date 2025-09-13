@@ -15,7 +15,7 @@
 [GOOD] ; --- ADTs  --- 
 [GOOD] ; User defined ADT: Expr
 [GOOD] (declare-datatype Expr (
-           (Num (getNum_1 Int))
+           (Val (getVal_1 Int))
            (Var (getVar_1 String))
            (Add (getAdd_1 Expr) (getAdd_2 Expr))
            (Mul (getMul_1 Expr) (getMul_2 Expr))
@@ -39,8 +39,8 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s2 () Expr (Num s1))
-[GOOD] (define-fun s4 () Expr (Num s3))
+[GOOD] (define-fun s2 () Expr (Val s1))
+[GOOD] (define-fun s4 () Expr (Val s3))
 [GOOD] (define-fun s5 () Expr (Add s2 s4))
 [GOOD] (define-fun s6 () Expr (Mul s2 s5))
 [GOOD] (define-fun s7 () Expr (Var s0))
@@ -58,8 +58,8 @@
 [GOOD] (define-fun s22 () Bool (= s15 s21))
 [GOOD] (define-fun s23 () Bool (or s20 s22))
 [GOOD] (define-fun s24 () Bool (and s14 s23))
-[GOOD] (define-fun s27 () Bool ((_ is Num) s13))
-[GOOD] (define-fun s28 () Int (getNum_1 s13))
+[GOOD] (define-fun s27 () Bool ((_ is Val) s13))
+[GOOD] (define-fun s28 () Int (getVal_1 s13))
 [GOOD] (define-fun s30 () Bool (< s28 s29))
 [GOOD] (define-fun s31 () Bool (and s27 s30))
 [GOOD] (define-fun s32 () Bool (= s28 s29))

@@ -15,7 +15,7 @@
 [GOOD] ; --- ADTs  --- 
 [GOOD] ; User defined ADT: Expr
 [GOOD] (declare-datatype Expr (
-           (Num (getNum_1 Int))
+           (Val (getVal_1 Int))
            (Var (getVar_1 String))
            (Add (getAdd_1 Expr) (getAdd_2 Expr))
            (Mul (getMul_1 Expr) (getMul_2 Expr))
@@ -33,13 +33,14 @@
 [GOOD] (define-fun s23 () Int 4)
 [GOOD] (define-fun s26 () Int 5)
 [GOOD] (define-fun s27 () Int 6)
+[GOOD] (define-fun s35 () Int 8)
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Expr (Num s0))
+[GOOD] (define-fun s1 () Expr (Val s0))
 [GOOD] (define-fun s2 () Bool ((_ is Var) s1))
 [GOOD] (define-fun s3 () String (getVar_1 s1))
 [GOOD] (define-fun s5 () Bool (= s3 s4))
@@ -48,8 +49,8 @@
 [GOOD] (define-fun s11 () Bool (= s3 s10))
 [GOOD] (define-fun s12 () Bool (or s9 s11))
 [GOOD] (define-fun s13 () Bool (and s2 s12))
-[GOOD] (define-fun s16 () Bool ((_ is Num) s1))
-[GOOD] (define-fun s17 () Int (getNum_1 s1))
+[GOOD] (define-fun s16 () Bool ((_ is Val) s1))
+[GOOD] (define-fun s17 () Int (getVal_1 s1))
 [GOOD] (define-fun s18 () Bool (< s17 s0))
 [GOOD] (define-fun s19 () Bool (and s16 s18))
 [GOOD] (define-fun s21 () Bool (= s0 s17))
@@ -62,10 +63,11 @@
 [GOOD] (define-fun s31 () Int (ite s2 s15 s30))
 [GOOD] (define-fun s32 () Int (ite s13 s14 s31))
 [GOOD] (define-fun s33 () Int (ite s6 s7 s32))
-[GOOD] (define-fun s34 () Bool (distinct s23 s33))
+[GOOD] (define-fun s34 () Int (+ s33 s33))
+[GOOD] (define-fun s36 () Bool (distinct s34 s35))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s34)
+[GOOD] (assert s36)
 [SEND] (check-sat)
 [RECV] unsat
 All good.

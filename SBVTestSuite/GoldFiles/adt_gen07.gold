@@ -15,7 +15,7 @@
 [GOOD] ; --- ADTs  --- 
 [GOOD] ; User defined ADT: Expr
 [GOOD] (declare-datatype Expr (
-           (Num (getNum_1 Int))
+           (Val (getVal_1 Int))
            (Var (getVar_1 String))
            (Add (getAdd_1 Expr) (getAdd_2 Expr))
            (Mul (getMul_1 Expr) (getMul_2 Expr))
@@ -51,8 +51,8 @@
 [GOOD] (define-fun s10 () Bool (= s2 s9))
 [GOOD] (define-fun s11 () Bool (or s8 s10))
 [GOOD] (define-fun s12 () Bool (and s1 s11))
-[GOOD] (define-fun s15 () Bool ((_ is Num) s0))
-[GOOD] (define-fun s16 () Int (getNum_1 s0))
+[GOOD] (define-fun s15 () Bool ((_ is Val) s0))
+[GOOD] (define-fun s16 () Int (getVal_1 s0))
 [GOOD] (define-fun s18 () Bool (< s16 s17))
 [GOOD] (define-fun s19 () Bool (and s15 s18))
 [GOOD] (define-fun s21 () Bool (= s16 s17))
@@ -78,7 +78,7 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Num 11)))
+[RECV] ((s0 (Val 11)))
 
 Got: 11
 DONE
