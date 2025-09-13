@@ -140,6 +140,7 @@ addCorrect = inductiveLemma "addCorrect"
                             (\(Forall n) (Forall m) -> n2i (n + m) .== n2i n + n2i m)
                             []
 
+-- | Correctness of multiplication: \(\overline{x} * \overline{y} = \overline{x * y}\)
 --
 -- >>> runTP mulCorrect
 -- Lemma: caseZero                         Q.E.D.
@@ -182,3 +183,6 @@ mulCorrect = do
        (\(Forall n) (Forall m) -> n2i (n * m) .== n2i n * n2i m)
        [proofOf caseZero, proofOf caseSucc]
 
+-- * Properties
+
+-- Prove 15 theorems in: https://en.wikipedia.org/wiki/Peano_axioms
