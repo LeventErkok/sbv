@@ -10,7 +10,7 @@
 -- which was remarkably good at giving me the basic structure.
 --
 -- Provides a quasiquoter  `[sCase|Expr expr of ... |]` for symbolic cases
--- where 'Expr' is the underlying type.
+-- where @Expr@ is the underlying type.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE LambdaCase            #-}
