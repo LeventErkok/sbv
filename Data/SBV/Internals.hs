@@ -70,6 +70,9 @@ module Data.SBV.Internals (
 
   -- * Lambdas and axioms
   , lambda, lambdaStr, constraint, constraintStr, Lambda(..), Constraint(..), LambdaScope(..)
+
+  -- * TP induction extras
+  , HasInductionSchema(..), internalAxiom
   ) where
 
 import Control.Monad.IO.Class (MonadIO)
@@ -102,6 +105,8 @@ import GHC.TypeLits
 import qualified Data.SBV.Control.Utils as Query
 
 import Data.SBV.Lambda
+
+import Data.SBV.TP.Kernel
 
 #ifdef DOCTEST
 --- $setup
