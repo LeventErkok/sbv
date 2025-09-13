@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Some basic TP usage.
+-- Modeling Peano arithmetic in SBV and proving various properties using TP.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                  #-}
