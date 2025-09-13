@@ -31,7 +31,7 @@ import Data.SBV.TP
 -- >>> import Data.SBV.TP
 #endif
 
--- * Natural numbers
+-- | Natural numbers
 data Nat = Zero
          | Succ { prev :: Nat }
 
@@ -131,7 +131,6 @@ n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 
 -- * Arithmetic
 
--- | Correctness of addition.
 --
 -- >>> runTP addCorrect
 -- Lemma: addCorrect                       Q.E.D.
@@ -141,7 +140,6 @@ addCorrect = inductiveLemma "addCorrect"
                             (\(Forall n) (Forall m) -> n2i (n + m) .== n2i n + n2i m)
                             []
 
--- | Correctness of multiplication.
 --
 -- >>> runTP mulCorrect
 -- Lemma: caseZero                         Q.E.D.
@@ -183,3 +181,4 @@ mulCorrect = do
        "mulCorrect"
        (\(Forall n) (Forall m) -> n2i (n * m) .== n2i n * n2i m)
        [proofOf caseZero, proofOf caseSucc]
+
