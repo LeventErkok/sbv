@@ -349,12 +349,109 @@ mulLeftUnit = inductiveLemma "mulLeftUnit" (\(Forall m) -> sSucc sZero * m .== m
 mulRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
 mulRightUnit = inductiveLemma "mulRightUnit" (\(Forall m) -> m * sSucc sZero .== m) []
 
+-- ** Distribution over addition
+
+-- | \(m * (n + o) = m * n + m * o\)
+--
+-- >>> runTP distribLeft
+-- Lemma: caseZero                         Q.E.D.
+-- Lemma: addAssoc                         Q.E.D.
+-- Lemma: addCommutative                   Q.E.D.
+-- Lemma: caseSucc
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Step: 7                               Q.E.D.
+--   Step: 8                               Q.E.D.
+--   Step: 9                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: distribLeft                      Q.E.D.
+-- [Proven] distribLeft :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
+distribLeft :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
+distribLeft = do
+   caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" o) -> sZero * (n + o) .== sZero * n + sZero * o) []
+
+   addAsc <- recall "addAssoc"       addAssoc
+   addCom <- recall "addCommutative" addCommutative
+
+   caseSucc <- calc "caseSucc"
+                    (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
+                        m * (n + o) .== m * n + m * o .=> sSucc m * (n + o) .== sSucc m * n + sSucc m * o ) $
+               \m n o -> let ih = m * (n + o) .== m * n + m * o
+                      in [ih] |- sSucc m * (n + o)
+                              =: (n + o) + m * (n + o)
+                              ?? ih
+                              =: (n + o) + (m * n + m * o)
+                              ?? addAsc `at` (Inst @"m" n, Inst @"n" o, Inst @"o" (m * n + m * o))
+                              =: n + (o + (m * n + m * o))
+                              ?? addCom `at` (Inst @"m" (m * n), Inst @"n" (m * o))
+                              =: n + (o + (m * o + m * n))
+                              ?? addAsc `at` (Inst @"m" o, Inst @"n" (m * o), Inst @"o" (m * n))
+                              =: n + ((o + m * o) + m * n)
+                              =: n + (sSucc m * o + m * n)
+                              ?? addCom `at` (Inst @"m" (sSucc m * o), Inst @"n" (m * n))
+                              =: n + (m * n + sSucc m * o)
+                              ?? addAsc `at` (Inst @"m" n, Inst @"n" (m * n), Inst @"o" (sSucc m * o))
+                              =: (n + m * n) + sSucc m * o
+                              =: sSucc m * n + sSucc m * o
+                              =: qed
+
+   inductiveLemma
+     "distribLeft"
+     (\(Forall m) (Forall n) (Forall o) -> m * (n + o) .== m * n + m * o)
+     [proofOf caseZero, proofOf caseSucc]
+
+-- | \((m + n) * o = m * o + n * o\)
+--
+-- >>> runTP distribRight
+distribRight :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
+distribRight = inductiveLemma
+                "distribLeft"
+                (\(Forall m) (Forall n) (Forall o) -> (m + n) * o .== m * o + n * o)
+                [sorry]
+
+-- ** Associativity
+
+-- | \(m * (n * o) = (m * n) * o\)
+--
+-- >>> runTP mulAssoc
+-- Lemma: mulAssoc                         Q.E.D.
+-- [Proven] mulAssoc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
+mulAssoc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
+mulAssoc = do
+   caseZero <- lemma "caseZero"
+                     (\(Forall @"n" n) (Forall @"o" o) -> sZero * (n * o) .== (sZero * n) * o)
+                     []
+
+   dr <- recall "distribRight" distribRight
+
+   caseSucc <- calc "caseSucc"
+                    (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
+                       m * (n * o) .== (m * n) * o .=> sSucc m * (n * o) .== (sSucc m * n) * o) $
+                    \m n o -> let ih = m * (n * o) .== (m * n) * o
+                              in [ih] |- sSucc m * (n * o)
+                                      =: (n * o) + m * (n * o)
+                                      ?? ih
+                                      =: (n * o) + (m * n) * o
+                                      ?? dr `at` (Inst @"m" n, Inst @"n" (m * n), Inst @"o" o)
+                                      =: (n + m * n) * o
+                                      =: (sSucc m * n) * o
+                                      =: qed
+
+   inductiveLemma
+     "mulAssoc"
+     (\(Forall m) (Forall n) (Forall o) -> m * (n * o) .== (m * n) * o)
+     [proofOf caseZero, proofOf caseSucc]
+
 {-
 https://en.wikipedia.org/wiki/Peano_axioms
 
  3.   mult associative
  4.   mult commutative
- 5.   mult distributes over add
+ 5.   mult distributes over add left and right
  6.   DONE: right-mul-0
  7.   DONE: mul-1
  8.   < transitive
