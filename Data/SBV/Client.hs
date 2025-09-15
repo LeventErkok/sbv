@@ -376,8 +376,8 @@ mkADT typeName cstrs = do
     -- Get the case analyzer
     (caseSig, caseFun) <- mkCaseAnalyzer typeName cstrs
 
-    -- Get the induction schema
-    indDecs <- mkInductionSchema typeName cstrs
+    -- Get the induction schema, upto 5 extra args
+    indDecs <- mapM (mkInductionSchema typeName cstrs) [0 .. 5]
 
     pure $ tdecl : symVal : decls
          ++ concat cdecls
@@ -385,7 +385,7 @@ mkADT typeName cstrs = do
          ++ concat accessorDecls
          ++ [fromCVSig, fromCVFun]
          ++ [caseSig, caseFun]
-         ++ indDecs
+         ++ concat indDecs
 
 -- | Make a case analyzer for the type. Works for ADTs and enums. Returns sig and defn
 mkCaseAnalyzer :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
@@ -665,24 +665,32 @@ toSBV typeName constructorName = go
                 , report
                 ]
 
--- | Make an induction schema for the type
-mkInductionSchema :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
-mkInductionSchema typeName cstrs = do
-   let btype  = TH.nameBase typeName
-       nm     = "induct" ++ btype
+-- | Make an induction schema for the type, with n extra arguments.
+mkInductionSchema :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> Int -> TH.Q [TH.Dec]
+mkInductionSchema typeName cstrs extraArgCnt = do
+   let btype = TH.nameBase typeName
+       nm    = "induct" ++ btype ++ if extraArgCnt == 0 then "" else show extraArgCnt
 
    pf <- TH.newName "pf"
 
-   let mkCase :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Exp
-       mkCase (cstr, flds)
-          | null flds = [| $(TH.varE pf) $(scstr) |]
-          | True
-          = do as <- mapM (const (TH.newName "a")) flds
-               let isRecursive (_, _, k) = k == KADT btype Nothing
-                   recFields = [a | (a, f) <- zip as flds, isRecursive f]
-               TH.appE (TH.varE 'quantifiedBool)
-                       (TH.lamE (map (\a -> TH.conP 'Forall [TH.varP a]) as)
-                                (mkImp recFields (TH.appE (TH.varE pf) (foldl TH.appE scstr (map TH.varE as)))))
+   extraNames <- mapM (const (TH.newName "extraN")) [0 .. extraArgCnt-1]
+   extraSyms  <- mapM (const (TH.newName "extraS")) [0 .. extraArgCnt-1]
+   extraTypes <- mapM (const (TH.newName "extraT")) [0 .. extraArgCnt-1]
+
+   let mkLam as body = TH.lamE (map (\a -> TH.conP 'Forall [TH.varP a]) (as ++ extraNames)) body
+
+   let mkIndCase :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Exp
+       mkIndCase (cstr, flds)
+         | null flds && null extraNames
+         = [| $(TH.varE pf) $(scstr) |]
+         | True
+         = do as <- mapM (const (TH.newName "a")) flds
+              let isRecursive (_, _, k) = k == KADT btype Nothing
+                  recFields = [a | (a, f) <- zip as flds, isRecursive f]
+              TH.appE (TH.varE 'quantifiedBool)
+                      (mkLam as (mkImp recFields (foldl TH.appE
+                                                        (TH.appE (TH.varE pf) (foldl TH.appE scstr (map TH.varE as)))
+                                                        (map TH.varE extraNames))))
          where cnm   = TH.nameBase cstr
                scstr = TH.varE (TH.mkName ('s' : cnm))
 
@@ -690,30 +698,40 @@ mkInductionSchema typeName cstrs = do
                mkImp [i] e = foldl1 TH.appE [TH.varE '(.=>), assume i, e]
                mkImp is  e = foldl1 TH.appE [TH.varE '(.=>), foldl1 TH.appE [TH.varE 'sAnd, TH.listE (map assume is)], e]
 
-               assume n = [| $(TH.varE pf) $(TH.varE n) |]
+               assume :: TH.Name -> TH.Q TH.Exp
+               assume n = foldl TH.appE (TH.varE pf) (map TH.varE (n : extraNames))
 
-   cases <- mapM mkCase cstrs
-   post  <- [| quantifiedBool (\(Forall n) -> $(TH.varE pf) n) |]
+   cases <- mapM mkIndCase cstrs
+   post  <- do a <- TH.newName "recVal"
+               TH.appE (TH.varE 'quantifiedBool)
+                       (mkLam [a] $ foldl TH.appE (TH.varE pf) (map TH.varE (a : extraNames)))
+
+   propName <- TH.newName "prop"
+   argName  <- TH.newName "a"
 
    let pre    = foldl1 TH.AppE [TH.VarE 'sAnd,  TH.ListE cases]
        schema = foldl1 TH.AppE [TH.VarE '(.=>), pre, post]
        ihB    = TH.AppE (TH.VarE 'proofOf) (foldl1 TH.AppE [TH.VarE 'internalAxiom, TH.LitE (TH.StringL nm), schema])
 
        instHead = TH.AppT (TH.ConT ''HasInductionSchema)
-                          (TH.AppT (TH.AppT TH.ArrowT
-                                            (TH.AppT (TH.ConT ''Forall) (TH.VarT (TH.mkName "a")) `TH.AppT` TH.ConT typeName))
-                                   (TH.ConT ''SBool))
+                          (foldr (TH.AppT . TH.AppT TH.ArrowT)
+                                 (TH.ConT ''SBool)
+                                 [  TH.AppT (TH.ConT ''Forall) (TH.VarT es) `TH.AppT` et
+                                  | (es, et) <- zip (TH.mkName "a" : extraSyms) (TH.ConT typeName : map TH.VarT extraTypes)])
 
-       pfFun = TH.FunD pf [TH.Clause [TH.VarP (TH.mkName "a")]
-                                     (TH.NormalB (TH.AppE (TH.VarE (TH.mkName "prop"))
-                                                 (TH.AppE (TH.ConE 'Forall) (TH.VarE (TH.mkName "a")))))
+       pfFun = TH.FunD pf [TH.Clause (map TH.VarP (argName : extraNames))
+                                     (TH.NormalB (foldl TH.AppE
+                                                        (TH.VarE propName)
+                                                        [TH.AppE (TH.ConE 'Forall) (TH.VarE a) | a <- argName : extraNames]))
                                      []
                           ]
 
-       method = TH.FunD 'inductionSchema 
-                        [TH.Clause [TH.VarP (TH.mkName "prop")]
+       method = TH.FunD 'inductionSchema
+                        [TH.Clause [TH.VarP propName]
                                    (TH.NormalB (TH.LetE [pfFun] ihB))
                                    []
                         ]
 
-   pure [TH.InstanceD Nothing [] instHead [method]]
+   context <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- extraTypes]
+
+   pure [TH.InstanceD Nothing context instHead [method]]
