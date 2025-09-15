@@ -119,13 +119,13 @@ i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) sZero (sSucc (i2n (i - 1)))
 n2iNonNeg  :: TP (Proof (Forall "n" Nat -> SBool))
 n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 
--- | \(i \geq 0 \;\Rightarrow\; \overline{\underline{i}} = i\).
+-- | \(\overline{\underline{i}} = \max(i, 0)\).
 --
 -- >>> runTP i2n2i
 -- Lemma: i2n2i                            Q.E.D.
 -- [Proven] i2n2i :: Ɐi ∷ Integer → Bool
 i2n2i :: TP (Proof (Forall "i" Integer -> SBool))
-i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> i .>= 0 .=> n2i (i2n i) .== i) []
+i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> n2i (i2n i) .== i `smax` 0) []
 
 -- | \(\underline{\overline{n}} = n\)
 --
@@ -137,82 +137,20 @@ n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 
 -- * Correctness of addition
 
--- | \(m + n = \underline{\overline{m} + \overline{n}}\)
+-- | \(\overline{m + n} = \overline{m} + \overline{n}\)
 --
 -- >>> runTP addCorrect
--- Lemma: n2i2n                            Q.E.D.
--- Lemma: caseZero                         Q.E.D.
--- Lemma: caseSucc
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
 -- Lemma: addCorrect                       Q.E.D.
 -- [Proven] addCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 addCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
-addCorrect = do
-   pn2i2n <- recall "n2i2n" n2i2n
-
-   caseZero <- lemma "caseZero"
-                     (\(Forall @"n" n) -> sZero + n .== i2n (n2i sZero + n2i n))
-                     [proofOf pn2i2n]
-
-   caseSucc <- calc "caseSucc"
-                    (\(Forall @"m" m) (Forall @"n" n) ->
-                                    m + n .== i2n (n2i        m  + n2i n)
-                          .=> sSucc m + n .== i2n (n2i (sSucc m) + n2i n)) $
-                    \m n -> let ih = m + n .== i2n (n2i m + n2i n)
-                         in [ih] |- i2n (n2i (sSucc m) + n2i n)
-                                 =: i2n ((1 + n2i m) + n2i n)
-                                 =: i2n (1 + (n2i m + n2i n))
-                                 =: 1 + i2n (n2i m + n2i n)
-                                 ?? ih
-                                 =: 1 + (m + n)
-                                 =: (1 + m) + n
-                                 =: sSucc m + n
-                                 =: qed
-
-   inductiveLemma "addCorrect"
-                  (\(Forall m) (Forall n) -> m + n .== i2n (n2i m + n2i n))
-                  [proofOf caseZero, proofOf caseSucc]
-
--- * Correctness of subtraction
-
--- | \(m - n = \underline{\overline{m} - \overline{n}}\)
---
--- >>> runTP subCorrect
--- Lemma: subCorrect                       Q.E.D.
--- [Proven] subCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
-subCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
-subCorrect = do
-   pn2i2n <- recall "n2i2n" n2i2n
-
-   caseZero <- lemma "caseZero"
-                     (\(Forall @"n" n) -> sZero - n .== i2n (n2i sZero - n2i n))
-                     [proofOf pn2i2n]
-
-   caseSucc <- calc "caseSucc"
-                    (\(Forall @"m" m) (Forall @"n" n) ->
-                                    m - n .== i2n (n2i        m  - n2i n)
-                          .=> sSucc m - n .== i2n (n2i (sSucc m) - n2i n)) $
-                    \m n -> let ih = m - n .== i2n (n2i m - n2i n)
-                         in [ih] |- i2n (n2i (sSucc m) - n2i n)
-                                 =: i2n ((1 + n2i m) - n2i n)
-                                 =: i2n (1 + (n2i m - n2i n))
-                                 ?? sorry
-                                 =: sSucc m - n
-                                 =: qed
-
-   inductiveLemma "subCorrect"
-                  (\(Forall m) (Forall n) -> m - n .== i2n (n2i m - n2i n))
-                  [proofOf caseZero, proofOf caseSucc]
+addCorrect = inductiveLemma
+               "addCorrect"
+               (\(Forall m) (Forall n) -> n2i (m + n) .== n2i m + n2i n)
+               []
 
 -- * Correctness of multiplication
 
--- | \(m * n = \underline{\overline{m} * \overline{n}}\)
+-- | \(\overline{m * n} = \overline{m} * \overline{n}\)
 --
 -- >>> runTP mulCorrect
 -- Lemma: caseZero                         Q.E.D.
@@ -223,11 +161,9 @@ subCorrect = do
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: 6 (defn of n2i)                 Q.E.D.
---   Step: 7                               Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: mulCorrect                       Q.E.D.
--- [Proven] mulCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+-- Lemma: mullCorrect                      Q.E.D.
+-- [Proven] mullCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 mulCorrect = do
     caseZero <- inductiveLemma
@@ -235,14 +171,25 @@ mulCorrect = do
                   (\(Forall @"n" n) -> n2i (sZero * n) .== n2i sZero * n2i n)
                   []
 
-    caseSucc <- lemma"caseSucc"
-                      (\(Forall @"m" m) (Forall @"n" n) ->
-                            m * n .== i2n (n2i m * n2i n) .=> sSucc m * n .== i2n (n2i (sSucc m) * n2i n))
-                      [sorry]
+    addC <- recall "addCorrect" addCorrect
+
+    caseSucc <- calc "caseSucc"
+                     (\(Forall @"m" m) (Forall @"n" n) ->
+                           n2i (m * n) .== n2i m * n2i n .=> n2i (sSucc m * n) .== n2i (sSucc m) * n2i n) $
+                     \m n -> let ih = n2i (m * n) .== n2i m * n2i n
+                          in [ih] |- n2i (sSucc m * n)
+                                  =: n2i (n + m * n)
+                                  ?? addC `at` (Inst @"m" n, Inst @"n" (m * n))
+                                  =: n2i n + n2i (m * n)
+                                  ?? ih
+                                  =: n2i n + n2i m * n2i n
+                                  =: n2i n * (1 + n2i m)
+                                  =: n2i n * n2i (sSucc m)
+                                  =: qed
 
     inductiveLemma
-       "mulCorrect"
-       (\(Forall m) (Forall n) -> m * n .== i2n (n2i m * n2i n))
-       [proofOf caseZero, proofOf caseSucc]
+            "mullCorrect"
+            (\(Forall @"m" m) (Forall @"n" n) -> n2i (m * n) .== n2i m * n2i n)
+            [proofOf caseZero, proofOf caseSucc]
 
 -- Prove 15 theorems in: https://en.wikipedia.org/wiki/Peano_axioms
