@@ -176,10 +176,9 @@ addCorrect = inductiveLemma
 -- [Proven] mullCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 mulCorrect = do
-    caseZero <- inductiveLemma
-                  "caseZero"
-                  (\(Forall @"n" n) -> n2i (sZero * n) .== n2i sZero * n2i n)
-                  []
+    caseZero <- lemma "caseZero"
+                      (\(Forall @"n" n) -> n2i (sZero * n) .== n2i sZero * n2i n)
+                      []
 
     addC <- recall "addCorrect" addCorrect
 
