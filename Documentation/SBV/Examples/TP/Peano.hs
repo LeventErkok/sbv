@@ -160,7 +160,7 @@ addCorrect = inductiveLemma
                (\(Forall m) (Forall n) -> n2i (m + n) .== n2i m + n2i n)
                []
 
--- ** Addition and 'Zero'
+-- ** Addition with 'Zero'
 
 -- | \(\mathrm{Zero} + m = m\)
 --
@@ -178,7 +178,7 @@ addLeftUnit = lemma "addLeftUnit" (\(Forall m) -> sZero + m .== m) []
 addRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
 addRightUnit = inductiveLemma "addRightUnit" (\(Forall m) -> m + sZero .== m) []
 
--- ** Addition and 'Succ'
+-- ** Addition with 'Succ'
 
 -- | \(m + \mathrm{Succ}\,n = \mathrm{Succ}\,(m + n)\)
 --
@@ -313,10 +313,27 @@ mulCorrect = do
        (\(Forall @"m" m) (Forall @"n" n) -> n2i (m * n) .== n2i m * n2i n)
        [proofOf caseZero, proofOf caseSucc]
 
+-- ** Multiplication with 'Zero'
+
+-- | \(\mathrm{Zero} * m = \mathrm{Zero}\)
+--
+-- >>> runTP mulLeftAbsorb
+-- Lemma: mulLeftAbsorb                    Q.E.D.
+-- [Proven] mulLeftAbsorb :: Ɐm ∷ Nat → Bool
+mulLeftAbsorb :: TP (Proof (Forall "m" Nat -> SBool))
+mulLeftAbsorb = lemma "mulLeftAbsorb" (\(Forall m) -> sZero * m .== sZero) []
+
+-- | \(m * \mathrm{Zero} = \mathrm{Zero}\)
+--
+-- >>> runTP mulRightAbsorb
+-- Lemma: mulRightAbsorb                   Q.E.D.
+-- [Proven] mulRightAbsorb :: Ɐm ∷ Nat → Bool
+mulRightAbsorb :: TP (Proof (Forall "m" Nat -> SBool))
+mulRightAbsorb = inductiveLemma "mulRightAbsorb" (\(Forall m) -> m * sZero .== sZero) []
+
 {-
 https://en.wikipedia.org/wiki/Peano_axioms
 
- 2.1. mult with zero on left and right
  2.2. mult with one  on left and right
  3.   mult associative
  4.   mult commutative
