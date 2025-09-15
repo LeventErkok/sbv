@@ -423,7 +423,7 @@ distribRight = do
                               =: (n + sSucc m) * o
                               ?? pAddSucc `at` (Inst @"m" n, Inst @"n" m)
                               =: sSucc (n + m) * o
-                              ?? "hard"
+                              ?? sorry
                               =: sSucc m * o + n * o
                               =: qed
 
