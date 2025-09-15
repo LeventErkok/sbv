@@ -35,6 +35,7 @@ import Data.SBV.TP
 -- the testers and accessors.)
 data Nat = Zero
          | Succ { prev :: Nat }
+         deriving (Eq, Ord)
 
 -- | Create a symbolic version of naturals.
 mkSymbolic ''Nat
@@ -93,6 +94,15 @@ instance Num SNat where
                Zero -> 0
                _    -> 1
              |]
+
+-- | Symbolic ordering, mirroring the derived instance.
+instance OrdSymbolic SNat where
+   (.<) = lt
+        where lt = smtFunction "sNatLessThan" $
+                      \a b -> isSucc b .&& [sCase|Nat a of
+                                              Zero   -> sTrue
+                                              Succ p -> p .< sprev b
+                                           |]
 
 -- * Conversion to and from integers
 
