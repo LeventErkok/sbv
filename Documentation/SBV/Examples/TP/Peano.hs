@@ -379,7 +379,7 @@ distribLeft = do
 
    caseSucc <- calc "caseSucc"
                     (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
-                        m * (n + o) .== m * n + m * o .=> sSucc m * (n + o) .== sSucc m * n + sSucc m * o ) $
+                        m * (n + o) .== m * n + m * o .=> sSucc m * (n + o) .== sSucc m * n + sSucc m * o) $
                \m n o -> let ih = m * (n + o) .== m * n + m * o
                       in [ih] |- sSucc m * (n + o)
                               =: (n + o) + m * (n + o)
@@ -408,10 +408,29 @@ distribLeft = do
 --
 -- >>> runTP distribRight
 distribRight :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
-distribRight = inductiveLemma
-                "distribLeft"
-                (\(Forall m) (Forall n) (Forall o) -> (m + n) * o .== m * o + n * o)
-                [sorry]
+distribRight = do
+   caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" o) -> (sZero + n) * o .== sZero * o + n * o) []
+
+   pAddCom  <- recall "addCommutative" addCommutative
+   pAddSucc <- recall "addSucc"        addSucc
+
+   caseSucc <- calc "caseSucc"
+                    (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
+                        (m + n) * o .== m * o + n * o .=> (sSucc m + n) * o .== sSucc m * o + n * o) $
+               \m n o -> let ih = (m + n) * o .== m * o + n * o
+                      in [ih] |- (sSucc m + n) * o
+                              ?? pAddCom `at` (Inst @"m" (sSucc m), Inst @"n" n)
+                              =: (n + sSucc m) * o
+                              ?? pAddSucc `at` (Inst @"m" n, Inst @"n" m)
+                              =: sSucc (n + m) * o
+                              ?? "hard"
+                              =: sSucc m * o + n * o
+                              =: qed
+
+   inductiveLemma
+     "distribRight"
+     (\(Forall m) (Forall n) (Forall o) -> (m + n) * o .== m * o + n * o)
+     [proofOf caseZero, proofOf caseSucc]
 
 -- ** Associativity
 
@@ -426,7 +445,7 @@ mulAssoc = do
                      (\(Forall @"n" n) (Forall @"o" o) -> sZero * (n * o) .== (sZero * n) * o)
                      []
 
-   dr <- recall "distribRight" distribRight
+   distR <- recall "distribRight" distribRight
 
    caseSucc <- calc "caseSucc"
                     (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
@@ -436,7 +455,7 @@ mulAssoc = do
                                       =: (n * o) + m * (n * o)
                                       ?? ih
                                       =: (n * o) + (m * n) * o
-                                      ?? dr `at` (Inst @"m" n, Inst @"n" (m * n), Inst @"o" o)
+                                      ?? distR `at` (Inst @"m" n, Inst @"n" (m * n), Inst @"o" o)
                                       =: (n + m * n) * o
                                       =: (sSucc m * n) * o
                                       =: qed
