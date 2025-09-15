@@ -145,7 +145,9 @@ i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> n2i (i2n i) .== i `smax` 0) []
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
 n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 
--- * Correctness of addition
+-- * Addition
+
+-- ** Correctness
 
 -- | \(\overline{m + n} = \overline{m} + \overline{n}\)
 --
@@ -158,7 +160,117 @@ addCorrect = inductiveLemma
                (\(Forall m) (Forall n) -> n2i (m + n) .== n2i m + n2i n)
                []
 
--- * Correctness of multiplication
+-- ** Addition and 'Zero'
+
+-- | \(\mathrm{Zero} + m = m\)
+--
+-- >>> runTP addLeftUnit
+-- Lemma: addLeftUnit                      Q.E.D.
+-- [Proven] addLeftUnit :: Ɐm ∷ Nat → Bool
+addLeftUnit :: TP (Proof (Forall "m" Nat -> SBool))
+addLeftUnit = lemma "addLeftUnit" (\(Forall m) -> sZero + m .== m) []
+
+-- | \(m + \mathrm{Zero} = m\)
+--
+-- >>> runTP addRightUnit
+-- Lemma: addRightUnit                     Q.E.D.
+-- [Proven] addRightUnit :: Ɐm ∷ Nat → Bool
+addRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
+addRightUnit = inductiveLemma "addRightUnit" (\(Forall m) -> m + sZero .== m) []
+
+-- ** Addition and 'Succ'
+
+-- | \(m + \mathrm{Succ}\,n = \mathrm{Succ}\,(m + n)\)
+--
+-- >>> runTP addSucc
+-- Lemma: caseZero                         Q.E.D.
+-- Lemma: caseSucc
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: addSucc                          Q.E.D.
+-- [Proven] addSucc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+addSucc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
+addSucc = do
+   caseZero <- lemma "caseZero"
+                      (\(Forall @"n" n) -> sZero + sSucc n .== sSucc (sZero + n))
+                      []
+
+   caseSucc <- calc "caseSucc"
+                    (\(Forall @"m" m) (Forall @"n" n) ->
+                        m + sSucc n .== sSucc (m + n) .=> sSucc m + sSucc n .== sSucc (sSucc m + n)) $
+                    \m n -> let ih = m + sSucc n .== sSucc (m + n)
+                         in [ih] |- sSucc m + sSucc n
+                                 =: sSucc (m + sSucc n)
+                                 ?? ih
+                                 =: sSucc (sSucc (m + n))
+                                 =: sSucc (sSucc m + n)
+                                 =: qed
+
+   inductiveLemma
+      "addSucc"
+      (\(Forall @"m" m) (Forall @"n" n) -> m + sSucc n .== sSucc (m + n))
+      [proofOf caseZero, proofOf caseSucc]
+
+-- ** Associativity
+
+-- | \(m + (n + o) = (m + n) + o\)
+--
+-- >>> runTP addAssoc
+-- Lemma: addAssoc                         Q.E.D.
+-- [Proven] addAssoc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
+addAssoc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
+addAssoc = inductiveLemma
+             "addAssoc"
+             (\(Forall m) (Forall n) (Forall o) -> m + (n + o) .== (m + n) + o)
+             []
+
+-- ** Commutativity
+
+-- | \(m + n = n + m\)
+--
+-- >>> runTP addCommutative
+-- Lemma: addLeftUnit                      Q.E.D.
+-- Lemma: addRightUnit                     Q.E.D.
+-- Lemma: caseZero                         Q.E.D.
+-- Lemma: addSucc                          Q.E.D.
+-- Lemma: caseSucc
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: addCommutative                   Q.E.D.
+-- [Proven] addCommutative :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+addCommutative :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
+addCommutative = do
+    alu <- recall "addLeftUnit"  addLeftUnit
+    aru <- recall "addRightUnit" addRightUnit
+
+    caseZero <- lemma "caseZero"
+                      (\(Forall @"y" n) -> sZero + n .== n + sZero)
+                      [proofOf alu, proofOf aru]
+
+    as <- recall "addSucc" addSucc
+
+    caseSucc <- calc "caseSucc"
+                     (\(Forall @"m" m) (Forall @"n" n) -> m + n .== n + m .=> sSucc m + n .== n + sSucc m) $
+                     \m n -> let ih = m + n .== n + m
+                          in [ih] |- sSucc m + n
+                                  =: sSucc (m + n)
+                                  ?? ih
+                                  =: sSucc (n + m)
+                                  ?? as `at` (Inst @"m" n, Inst @"n" m)
+                                  =: n + sSucc m
+                                  =: qed
+
+    inductiveLemma "addCommutative"
+                   (\(Forall m) (Forall n) -> m + n .== n + m)
+                   [proofOf caseZero, proofOf caseSucc]
+
+-- * Multiplication
+
+-- ** Correctness
 
 -- | \(\overline{m * n} = \overline{m} * \overline{n}\)
 --
@@ -176,29 +288,47 @@ addCorrect = inductiveLemma
 -- [Proven] mullCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 mulCorrect = do
-    caseZero <- lemma "caseZero"
-                      (\(Forall @"n" n) -> n2i (sZero * n) .== n2i sZero * n2i n)
-                      []
+   caseZero <- lemma "caseZero"
+                     (\(Forall @"n" n) -> n2i (sZero * n) .== n2i sZero * n2i n)
+                     []
 
-    addC <- recall "addCorrect" addCorrect
+   addC <- recall "addCorrect" addCorrect
 
-    caseSucc <- calc "caseSucc"
-                     (\(Forall @"m" m) (Forall @"n" n) ->
-                           n2i (m * n) .== n2i m * n2i n .=> n2i (sSucc m * n) .== n2i (sSucc m) * n2i n) $
-                     \m n -> let ih = n2i (m * n) .== n2i m * n2i n
-                          in [ih] |- n2i (sSucc m * n)
-                                  =: n2i (n + m * n)
-                                  ?? addC `at` (Inst @"m" n, Inst @"n" (m * n))
-                                  =: n2i n + n2i (m * n)
-                                  ?? ih
-                                  =: n2i n + n2i m * n2i n
-                                  =: n2i n * (1 + n2i m)
-                                  =: n2i n * n2i (sSucc m)
-                                  =: qed
+   caseSucc <- calc "caseSucc"
+                    (\(Forall @"m" m) (Forall @"n" n) ->
+                          n2i (m * n) .== n2i m * n2i n .=> n2i (sSucc m * n) .== n2i (sSucc m) * n2i n) $
+                    \m n -> let ih = n2i (m * n) .== n2i m * n2i n
+                         in [ih] |- n2i (sSucc m * n)
+                                 =: n2i (n + m * n)
+                                 ?? addC `at` (Inst @"m" n, Inst @"n" (m * n))
+                                 =: n2i n + n2i (m * n)
+                                 ?? ih
+                                 =: n2i n + n2i m * n2i n
+                                 =: n2i n * (1 + n2i m)
+                                 =: n2i n * n2i (sSucc m)
+                                 =: qed
 
-    inductiveLemma
-            "mullCorrect"
-            (\(Forall @"m" m) (Forall @"n" n) -> n2i (m * n) .== n2i m * n2i n)
-            [proofOf caseZero, proofOf caseSucc]
+   inductiveLemma
+       "mullCorrect"
+       (\(Forall @"m" m) (Forall @"n" n) -> n2i (m * n) .== n2i m * n2i n)
+       [proofOf caseZero, proofOf caseSucc]
 
--- Prove 15 theorems in: https://en.wikipedia.org/wiki/Peano_axioms
+{-
+https://en.wikipedia.org/wiki/Peano_axioms
+
+ 2.1. mult with zero on left and right
+ 2.2. mult with one  on left and right
+ 3.   mult associative
+ 4.   mult commutative
+ 5.   mult distributes over add
+ 6.   DONE: right-mul-0
+ 7.   DONE: mul-1
+ 8.   < transitive
+ 9.   < irreflexive
+10.   trichotomy
+11.   from wiki
+12.   from wiki
+13.   from wiki
+14.   from wiki
+15.   from wiki
+-}
