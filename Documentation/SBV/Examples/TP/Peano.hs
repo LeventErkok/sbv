@@ -331,10 +331,27 @@ mulLeftAbsorb = lemma "mulLeftAbsorb" (\(Forall m) -> sZero * m .== sZero) []
 mulRightAbsorb :: TP (Proof (Forall "m" Nat -> SBool))
 mulRightAbsorb = inductiveLemma "mulRightAbsorb" (\(Forall m) -> m * sZero .== sZero) []
 
+-- ** Multiplication with 'Succ Zero'
+
+-- | \(\mathrm{Succ\,Zero} * m = m\)
+--
+-- >>> runTP mulLeftUnit
+-- Lemma: mulLeftUnit                      Q.E.D.
+-- [Proven] mulLeftUnit :: Ɐm ∷ Nat → Bool
+mulLeftUnit :: TP (Proof (Forall "m" Nat -> SBool))
+mulLeftUnit = inductiveLemma "mulLeftUnit" (\(Forall m) -> sSucc sZero * m .== m) []
+
+-- | \(m * \mathrm{Succ\,Zero} = m\)
+--
+-- >>> runTP mulRightAbsorb
+-- Lemma: mulRightAbsorb                   Q.E.D.
+-- [Proven] mulRightAbsorb :: Ɐm ∷ Nat → Bool
+mulRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
+mulRightUnit = inductiveLemma "mulRightUnit" (\(Forall m) -> m * sSucc sZero .== m) []
+
 {-
 https://en.wikipedia.org/wiki/Peano_axioms
 
- 2.2. mult with one  on left and right
  3.   mult associative
  4.   mult commutative
  5.   mult distributes over add
