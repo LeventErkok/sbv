@@ -508,4 +508,5 @@ https://en.wikipedia.org/wiki/Peano_axioms
 14.   from wiki
 15.   from wiki
 16.   correctness of subtraction
+17.   subtraction related props. with zero at least; follow add props
 -}
