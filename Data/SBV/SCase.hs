@@ -303,7 +303,7 @@ sCase = QuasiQuoter
             -- If we have a guarded match, then this guard can fail. So either there must be a match
             -- for it later on, or there must be a catch-all. Note that if it exists later, we don't
             -- care if that occurrence is guarded or not; because if it is guarded, we'll fail on the last one.
-            chk2 (c@(CMatch _ nm _ (Just {}) _ _) : rest)
+            chk2 (c@(CMatch _ nm _ Just{} _ _) : rest)
               | hasCatchAll || Just nm `elem` map getCaseConstructor rest
               = chk2 rest
               | True
