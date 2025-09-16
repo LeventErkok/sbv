@@ -7,6 +7,7 @@
 -- Stability : experimental
 --
 -- Modeling Peano arithmetic in SBV and proving various properties using TP.
+-- Most of the properties we prove come from <https://en.wikipedia.org/wiki/Peano_axioms>.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP               #-}
