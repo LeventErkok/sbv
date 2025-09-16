@@ -76,12 +76,12 @@ instance Num SNat where
                              |]
 
   (-) = subt
-      where -- Quasi-quotes cannot be nested, so we have to have this explicit ite.
-            subt = smtFunction "sNatSubtract" $
-                     \m n -> ite (isZero m) 0 [sCase|Nat n of
-                                                 Zero   -> m
-                                                 Succ p -> sprev m - p
-                                              |]
+      where subt = smtFunction "sNatSubtract" $
+                     \m n -> [sCase|Nat m of
+                               Zero              -> 0
+                               Succ p | isZero n -> sSucc p
+                                      | sTrue    -> p - sprev n
+                             |]
 
   (*) = times
       where times = smtFunction "sNatTimes" $
