@@ -230,7 +230,7 @@ addAssoc = inductiveLemma
 
 -- | \(m + n = n + m\)
 --
--- >>> runTP addCommutative
+-- >>> runTP addComm
 -- Lemma: addLeftUnit                      Q.E.D.
 -- Lemma: addRightUnit                     Q.E.D.
 -- Lemma: caseZero                         Q.E.D.
@@ -240,10 +240,10 @@ addAssoc = inductiveLemma
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: addCommutative                   Q.E.D.
--- [Proven] addCommutative :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
-addCommutative :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
-addCommutative = do
+-- Lemma: addComm                          Q.E.D.
+-- [Proven] addComm :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+addComm :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
+addComm = do
     alu <- recall "addLeftUnit"  addLeftUnit
     aru <- recall "addRightUnit" addRightUnit
 
@@ -264,7 +264,7 @@ addCommutative = do
                                   =: n + sSucc m
                                   =: qed
 
-    inductiveLemma "addCommutative"
+    inductiveLemma "addComm"
                    (\(Forall m) (Forall n) -> m + n .== n + m)
                    [proofOf caseZero, proofOf caseSucc]
 
@@ -356,7 +356,7 @@ mulRightUnit = inductiveLemma "mulRightUnit" (\(Forall m) -> m * sSucc sZero .==
 -- >>> runTP distribLeft
 -- Lemma: caseZero                         Q.E.D.
 -- Lemma: addAssoc                         Q.E.D.
--- Lemma: addCommutative                   Q.E.D.
+-- Lemma: addComm                          Q.E.D.
 -- Lemma: caseSucc
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -374,8 +374,8 @@ distribLeft :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> 
 distribLeft = do
    caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" o) -> sZero * (n + o) .== sZero * n + sZero * o) []
 
-   addAsc <- recall "addAssoc"       addAssoc
-   addCom <- recall "addCommutative" addCommutative
+   addAsc <- recall "addAssoc" addAssoc
+   addCom <- recall "addComm"  addComm
 
    caseSucc <- calc "caseSucc"
                     (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
@@ -409,7 +409,7 @@ distribLeft = do
 -- >>> runTP distribRight
 -- Lemma: caseZero                         Q.E.D.
 -- Lemma: addAssoc                         Q.E.D.
--- Lemma: addCommutative                   Q.E.D.
+-- Lemma: addComm                          Q.E.D.
 -- Lemma: addSucc                          Q.E.D.
 -- Lemma: caseSucc
 --   Step: 1                               Q.E.D.
@@ -426,9 +426,9 @@ distribRight :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat ->
 distribRight = do
    caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" o) -> (sZero + n) * o .== sZero * o + n * o) []
 
-   pAddAssoc <- recall "addAssoc"       addAssoc
-   pAddCom   <- recall "addCommutative" addCommutative
-   pAddSucc  <- recall "addSucc"        addSucc
+   pAddAssoc <- recall "addAssoc" addAssoc
+   pAddCom   <- recall "addComm"  addComm
+   pAddSucc  <- recall "addSucc"  addSucc
 
    caseSucc <- calc "caseSucc"
                     (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
@@ -462,7 +462,7 @@ distribRight = do
 -- Lemma: addLeftUnit                      Q.E.D.
 -- Lemma: distribLeft                      Q.E.D.
 -- Lemma: mulRightUnit                     Q.E.D.
--- Lemma: addCommutative                   Q.E.D.
+-- Lemma: addComm                          Q.E.D.
 -- Lemma: mulSucc
 --   Step: 1                               Q.E.D.
 --   Step: 2 (defn of +)                   Q.E.D.
@@ -476,7 +476,7 @@ mulSucc = do
    alu <- recall "addLeftUnit"    addLeftUnit
    dL  <- recall "distribLeft"    distribLeft
    mru <- recall "mulRightUnit"   mulRightUnit
-   ac  <- recall "addCommutative" addCommutative
+   ac  <- recall "addComm"        addComm
 
    calc "mulSucc"
         (\(Forall @"m" m) (Forall @"n" n) -> m * sSucc n .== m * n + m) $
@@ -534,10 +534,59 @@ mulAssoc = do
      (\(Forall m) (Forall n) (Forall o) -> m * (n * o) .== (m * n) * o)
      [proofOf caseZero, proofOf caseSucc]
 
+-- ** Commutativity
+
+-- | \(m * n = n * m\)
+--
+-- >>> runTP mulComm
+-- Lemma: mulRightAbsorb                   Q.E.D.
+-- Lemma: caseZero                         Q.E.D.
+-- Lemma: mulRightUnit                     Q.E.D.
+-- Lemma: distribLeft                      Q.E.D.
+-- Lemma: caseSucc
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: mulComm                          Q.E.D.
+-- [Proven] mulComm :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+mulComm :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
+mulComm = do
+  mra <- recall "mulRightAbsorb" mulRightAbsorb
+
+  caseZero <- lemma "caseZero"
+                    (\(Forall @"m" m) -> sZero * m .== m * sZero)
+                    [proofOf mra]
+
+  mru <- recall "mulRightUnit" mulRightUnit
+  dL  <- recall "distribLeft"  distribLeft
+
+  caseSucc <- calc "caseSucc"
+                   (\(Forall @"m" m) (Forall @"n" n) -> m * n .== n * m .=> sSucc m * n .== n * sSucc m) $
+                   \m n -> let ih = m * n .== n * m
+                        in [ih] |- sSucc m * n
+                                =: n + m * n
+                                ?? ih
+                                =: n + n * m
+                                ?? mru
+                                =: n * sSucc sZero + n * m
+                                ?? dL `at` (Inst @"m" n, Inst @"n" (sSucc sZero), Inst @"o" m)
+                                =: n * (sSucc sZero + m)
+                                =: n * sSucc (sZero + m)
+                                =: n * sSucc m
+                                =: qed
+
+  inductiveLemma
+    "mulComm"
+    (\(Forall @"m" m) (Forall @"n" n) -> m * n .== n * m)
+    [proofOf caseZero, proofOf caseSucc]
+
 {-
 https://en.wikipedia.org/wiki/Peano_axioms
 
- 4.   mult commutative
  8.   < transitive
  9.   < irreflexive
 10.   trichotomy
