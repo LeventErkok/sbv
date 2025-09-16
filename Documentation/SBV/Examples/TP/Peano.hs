@@ -507,4 +507,5 @@ https://en.wikipedia.org/wiki/Peano_axioms
 13.   from wiki
 14.   from wiki
 15.   from wiki
+16.   correctness of subtraction
 -}
