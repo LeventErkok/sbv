@@ -847,11 +847,41 @@ mulOrder = do
                =: m * o .< n * o
                =: qed
 
+-- ** Order and sum
+
+-- | \(m < n \;\rightarrow\; \exists o.\; m + o = n\)
+--
+-- >>> runTP orderSum
+-- Lemma: orderSum                         Q.E.D.
+-- [Proven] orderSum :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+orderSum :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
+orderSum = lemma "orderSum"
+                 (\(Forall m) (Forall n) -> m .< n .=> quantifiedBool (\(Exists o) -> m + o .== n))
+                 []
+
+-- ** 0 and 1 relationship
+
+-- | \(0 < 1\)
+--
+-- >>> runTP zeroLtOne
+-- Lemma: zeroLtOne                        Q.E.D.
+-- [Proven] zeroLtOne :: Bool
+zeroLtOne :: TP (Proof SBool)
+zeroLtOne = lemma "zeroLtOne" (0 .< (1 :: SNat)) []
+
+-- | \(m > 0 \;\rightarrow\; m \geq 1\)
+--
+-- >>> runTP nothingBetweenZeroAndOne
+-- Lemma: nothingBetweenZeroAndOne         Q.E.D.
+-- [Proven] nothingBetweenZeroAndOne :: Ɐm ∷ Nat → Bool
+nothingBetweenZeroAndOne :: TP (Proof (Forall "m" Nat -> SBool))
+nothingBetweenZeroAndOne = lemma "nothingBetweenZeroAndOne"
+                                 (\(Forall m) -> m .> 0 .=> m .>= 1)
+                                 []
+
 {-
 https://en.wikipedia.org/wiki/Peano_axioms
 
-13.   from wiki
-14.   from wiki
 15.   from wiki
 16.   correctness of subtraction
 17.   subtraction related props. with zero at least; follow add props
