@@ -70,29 +70,29 @@ instance Num SNat where
 
   (+) = plus
       where plus = smtFunction "sNatPlus" $
-                     \a b -> [sCase|Nat a of
-                               Zero   -> b
-                               Succ p -> sSucc (p + b)
+                     \m n -> [sCase|Nat m of
+                               Zero   -> n
+                               Succ p -> sSucc (p + n)
                              |]
 
   (-) = subt
       where -- Quasi-quotes cannot be nested, so we have to have this explicit ite.
             subt = smtFunction "sNatSubtract" $
-                     \a b -> ite (isZero a) 0 [sCase|Nat b of
-                                                 Zero -> a
-                                                 Succ p -> sprev a - p
+                     \m n -> ite (isZero m) 0 [sCase|Nat n of
+                                                 Zero   -> m
+                                                 Succ p -> sprev m - p
                                               |]
 
   (*) = times
       where times = smtFunction "sNatTimes" $
-                      \a b -> [sCase|Nat a of
+                      \m n -> [sCase|Nat m of
                                 Zero   -> 0
-                                Succ p -> b + p * b
+                                Succ p -> n + p * n
                               |]
 
   abs = id
 
-  signum a = [sCase|Nat a of
+  signum m = [sCase|Nat m of
                Zero -> 0
                _    -> 1
              |]
