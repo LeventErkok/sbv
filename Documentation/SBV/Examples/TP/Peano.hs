@@ -95,14 +95,9 @@ instance Num SNat where
                _    -> 1
              |]
 
--- | Symbolic ordering, mirroring the derived instance.
+-- | Symbolic ordering. We only define less-than, other methods use the defaults.
 instance OrdSymbolic SNat where
-   (.<) = lt
-        where lt = smtFunction "sNatLessThan" $
-                      \a b -> isSucc b .&& [sCase|Nat a of
-                                              Zero   -> sTrue
-                                              Succ p -> p .< sprev b
-                                           |]
+   m .< n = quantifiedBool (\(Exists k) -> n .== m + sSucc k)
 
 -- * Conversion to and from integers
 
@@ -584,10 +579,45 @@ mulComm = do
     (\(Forall @"m" m) (Forall @"n" n) -> m * n .== n * m)
     [proofOf caseZero, proofOf caseSucc]
 
+-- * Comparisons
+
+-- ** Transitivity of @<@
+
+-- | \(m < n \;\wedge\; n < o \;\rightarrow\; m < o\)
+--
+-- >>> runTP ltTrans
+-- Lemma: addAssoc                         Q.E.D.
+-- Lemma: ltTrans
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] ltTrans :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
+ltTrans :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
+ltTrans = do
+  aa <- recall "addAssoc" addAssoc
+
+  calc "ltTrans"
+       (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) -> m .< n .&& n .< o .=> m .< o) $
+       \m n o ->  [m .< n, n .< o]
+              |-> let k1 = some "k1" (\k -> n .== m + sSucc k)
+                      k2 = some "k2" (\k -> o .== n + sSucc k)
+               in n .== m + sSucc k1
+               =: o .== n + sSucc k2
+               =: o .== (m + sSucc k1) + sSucc k2
+               ?? aa `at` (Inst @"m" m, Inst @"n" (sSucc k1), Inst @"o" (sSucc k2))
+               =: o .== m + (sSucc k1 + sSucc k2)
+               =: o .== m + (sSucc (k1 + sSucc k2))
+               =: m .< o
+               =: sTrue
+               =: qed
+
 {-
 https://en.wikipedia.org/wiki/Peano_axioms
 
- 8.   < transitive
  9.   < irreflexive
 10.   trichotomy
 11.   from wiki
