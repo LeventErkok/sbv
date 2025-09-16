@@ -579,7 +579,7 @@ mulComm = do
     (\(Forall @"m" m) (Forall @"n" n) -> m * n .== n * m)
     [proofOf caseZero, proofOf caseSucc]
 
--- * Comparisons
+-- * Ordering
 
 -- ** Transitivity of @<@
 
@@ -615,10 +615,35 @@ ltTrans = do
                =: sTrue
                =: qed
 
+-- ** Irreflexivity of @<@
+
+-- | \(\neg(m < m)\)
+--
+-- >>> runTP ltIrreflexive
+-- Lemma: cancel                           Q.E.D.
+-- Lemma: ltIrreflexive
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] ltIrreflexive :: Ɐm ∷ Nat → Bool
+ltIrreflexive :: TP (Proof (Forall "m" Nat -> SBool))
+ltIrreflexive = do
+  cancel <- inductiveLemma
+              "cancel"
+              (\(Forall @"m" m) (Forall @"n" n) -> m + n .== m .=> n .== sZero)
+              []
+
+  calc "ltIrreflexive"
+       (\(Forall @"m" m) -> sNot (m .< m)) $
+       \m -> [m .< m] |-> let k = some "k" (\d -> m .== m + sSucc d)
+                      in m .== m + sSucc k
+                      ?? cancel `at` (Inst @"m" m, Inst @"n" (sSucc k))
+                      =: sSucc k .== sZero
+                      =: contradiction
+
 {-
 https://en.wikipedia.org/wiki/Peano_axioms
 
- 9.   < irreflexive
 10.   trichotomy
 11.   from wiki
 12.   from wiki
