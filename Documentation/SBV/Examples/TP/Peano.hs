@@ -50,9 +50,7 @@ instance Num Nat where
   a + Zero   = a
   a + Succ b = Succ (a + b)
 
-  Zero   - _      = Zero
-  Succ a - Zero   = Succ a
-  Succ a - Succ b = a - b
+  (-) = error "Nat: No support for subtraction"
 
   _ * Zero   = Zero
   a * Succ b = a + a * b
@@ -75,13 +73,7 @@ instance Num SNat where
                                Succ p -> sSucc (p + n)
                              |]
 
-  (-) = subt
-      where subt = smtFunction "sNatSubtract" $
-                     \m n -> [sCase|Nat m of
-                               Zero              -> 0
-                               Succ p | isZero n -> sSucc p
-                                      | sTrue    -> p - sprev n
-                             |]
+  (-) = error "SNat: No support for subtraction"
 
   (*) = times
       where times = smtFunction "sNatTimes" $
@@ -898,12 +890,3 @@ minimumElt = lemma "minimumElt" (\(Forall m) -> m .>= 0) []
 -- [Proven] noMaximumElt :: Ɐm ∷ Nat → ∃n ∷ Nat → Bool
 noMaximumElt :: TP (Proof (Forall "m" Nat -> Exists "n" Nat -> SBool))
 noMaximumElt = lemma "noMaximumElt" (\(Forall m) (Exists n) -> m .< n) []
-
-{-
-More props:
-
-correctness of subtraction
-subtraction related props. with zero at least; follow add props
-exponentiation. correctness.
-factorial. correctness.
--}
