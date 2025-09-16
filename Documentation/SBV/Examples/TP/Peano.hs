@@ -548,4 +548,6 @@ https://en.wikipedia.org/wiki/Peano_axioms
 15.   from wiki
 16.   correctness of subtraction
 17.   subtraction related props. with zero at least; follow add props
+18.   exponentiation. correctness.
+19.   factorial. correctness.
 -}
