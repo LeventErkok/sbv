@@ -186,9 +186,18 @@ sCase = QuasiQuoter
     getGuards :: Body -> [Dec] -> Q [(Maybe Exp, Exp)]
     getGuards (NormalB  rhs)  locals = pure [(Nothing, addLocals locals rhs)]
     getGuards (GuardedB exps) locals = mapM get exps
-      where get (NormalG e,  rhs) = pure (Just e, addLocals locals rhs)
+      where get (NormalG e,  rhs)
+              | isSTrue e
+              = pure (Nothing, addLocals locals rhs)
+              | True
+              = pure (Just e, addLocals locals rhs)
             get (PatG stmts, _)   = fail Unknown $ unlines $  "sCase: Pattern guards are not supported: "
                                                            : ["        " ++ pprint s | s <- stmts]
+
+            -- Is this literally sTrue? This is a bit dangerous since
+            -- we just look at the base-name, but good enough
+            isSTrue (VarE nm) = nameBase nm == nameBase 'sTrue
+            isSTrue _         = False
 
     -- Turn where clause into simple let
     addLocals :: [Dec] -> Exp -> Exp
