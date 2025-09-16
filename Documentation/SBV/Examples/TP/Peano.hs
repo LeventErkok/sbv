@@ -879,12 +879,31 @@ nothingBetweenZeroAndOne = lemma "nothingBetweenZeroAndOne"
                                  (\(Forall m) -> m .> 0 .=> m .>= 1)
                                  []
 
-{-
-https://en.wikipedia.org/wiki/Peano_axioms
+-- ** 0 is the minimum
 
-15.   from wiki
-16.   correctness of subtraction
-17.   subtraction related props. with zero at least; follow add props
-18.   exponentiation. correctness.
-19.   factorial. correctness.
+-- | \(m \geq 0\)
+--
+-- >>> runTP minimumElt
+-- Lemma: minimumElt                       Q.E.D.
+-- [Proven] minimumElt :: Ɐm ∷ Nat → Bool
+minimumElt :: TP (Proof (Forall "m" Nat -> SBool))
+minimumElt = lemma "minimumElt" (\(Forall m) -> m .>= 0) []
+
+-- ** There is no maximum element
+
+-- | \(\forall m \;\exists n \;.\; m < n\)
+--
+-- >>> runTP noMaximumElt
+-- Lemma: noMaximumElt                     Q.E.D.
+-- [Proven] noMaximumElt :: Ɐm ∷ Nat → ∃n ∷ Nat → Bool
+noMaximumElt :: TP (Proof (Forall "m" Nat -> Exists "n" Nat -> SBool))
+noMaximumElt = lemma "noMaximumElt" (\(Forall m) (Exists n) -> m .< n) []
+
+{-
+More props:
+
+correctness of subtraction
+subtraction related props. with zero at least; follow add props
+exponentiation. correctness.
+factorial. correctness.
 -}
