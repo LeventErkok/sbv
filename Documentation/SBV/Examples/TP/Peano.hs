@@ -140,6 +140,14 @@ i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> n2i (i2n i) .== i `smax` 0) []
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
 n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 
+-- | \(\overline{m + n} = \overline{m} + \overline{n}\)
+--
+-- >>> runTP n2iAdd
+-- Lemma: n2iAdd                           Q.E.D.
+-- [Proven] n2iAdd :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+n2iAdd :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
+n2iAdd = inductiveLemma "n2iAdd" (\(Forall m) (Forall n) -> n2i (m + n) .== n2i m + n2i n) []
+
 -- * Addition
 
 -- ** Correctness
@@ -641,10 +649,136 @@ ltIrreflexive = do
                       =: sSucc k .== sZero
                       =: contradiction
 
+-- ** Trichotomy
+
+-- | \(m \geq n = \overline{m} \geq \overline{n}\)
+--
+-- >>> runTP lteEquiv
+-- Lemma: n2iAdd                           Q.E.D.
+-- Lemma: n2iNonNeg                        Q.E.D.
+-- Lemma: n2i2n                            Q.E.D.
+-- Lemma: i2n2i                            Q.E.D.
+-- Lemma: addRightUnit                     Q.E.D.
+-- Lemma: lteEquiv_ltr
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: lteEquiv_rtl
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Step: 7 (2 way case split)
+--     Step: 7.1                           Q.E.D.
+--     Step: 7.2.1                         Q.E.D.
+--     Step: 7.2.2                         Q.E.D.
+--     Step: 7.2.3                         Q.E.D.
+--     Step: 7.2.4                         Q.E.D.
+--     Step: 7.2.5                         Q.E.D.
+--     Step: 7.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: lteEquiv                         Q.E.D.
+-- [Proven] lteEquiv :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+lteEquiv :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
+lteEquiv = do
+    n2ia    <- recall "n2iAdd"       n2iAdd
+    nn      <- recall "n2iNonNeg"    n2iNonNeg
+    n2i2nId <- recall "n2i2n"        n2i2n
+    i2n2iId <- recall "i2n2i"        i2n2i
+    aru     <- recall "addRightUnit" addRightUnit
+
+    ltr <- calcWith cvc5 "lteEquiv_ltr"
+              (\(Forall @"m" m) (Forall @"n" n) -> (m .>= n) .=> (n2i m .>= n2i n)) $
+              \m n -> [m .>= n]
+                   |- n2i m .>= n2i n
+                    =: cases [ m .== n ==> trivial
+                             , m .>  n ==> let k = some "k" (\d -> m .== n + sSucc d)
+                                        in n2i m .>= n2i n
+                                        ?? m .> n
+                                        =: n2i (n + sSucc k) .>= n2i n
+                                        ?? n2ia `at` (Inst @"m" n, Inst @"n" (sSucc k))
+                                        =: n2i n + n2i (sSucc k) .>= n2i n
+                                        ?? nn `at` (Inst @"n" (sSucc k))
+                                        =: sTrue
+                                        =: qed
+                             ]
+
+    rtl <- calc "lteEquiv_rtl"
+                (\(Forall @"m" m) (Forall @"n" n) -> (n2i m .>= n2i n) .=> (m .>= n)) $
+                \m n -> [n2i m .>= n2i n]
+                     |-> let k = n2i m - n2i n
+                     in k .>= 0
+                     =: n2i m .== n2i n + k
+                     ?? i2n2iId `at` (Inst @"i" k)
+                     =: n2i m .== n2i n + n2i (i2n k)
+                     ?? n2ia `at` (Inst @"m" n, Inst @"n" (i2n k))
+                     =: n2i m .== n2i (n + i2n k)
+                     =: i2n (n2i m) .== i2n (n2i (n + i2n k))
+                     ?? n2i2nId `at` Inst @"n" m
+                     =: m .== i2n (n2i (n + i2n k))
+                     ?? n2i2nId `at` Inst @"n" (n + i2n k)
+                     =: m .== n + i2n k
+                     =: cases [ k .>  0 ==> trivial
+                              , k .<= 0 ==> m .== n + i2n k
+                                         ?? i2n k .== sZero
+                                         =: m .== n + sZero
+                                         ?? aru
+                                         =: m .== n
+                                         =: m .== n .|| m .> n
+                                         =: m .>= n
+                                         =: qed
+                              ]
+
+    lemma "lteEquiv"
+          (\(Forall m) (Forall n) -> (n2i m .>= n2i n) .== (m .>= n))
+          [proofOf ltr, proofOf rtl]
+
+-- | \(m \geq n \;\lor\; n \geq m\)
+--
+-- >>> runTP ordered
+-- Lemma: lteEquiv                         Q.E.D.
+-- Lemma: ordered
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] ordered :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+ordered :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
+ordered = do
+   lteEq <- recall "lteEquiv" lteEquiv
+
+   calcWith cvc5 "ordered"
+        (\(Forall m) (Forall n) -> m .>= n .|| n .>= m) $
+        \m n -> [] |- (m .>= n .|| n .>= m)
+                   ?? lteEq `at` (Inst @"m" m, Inst @"n" n)
+                   =: (n2i m .>= n2i n .|| n .>= m)
+                   ?? lteEq `at` (Inst @"m" n, Inst @"n" m)
+                   =: (n2i m .>= n2i n .|| n2i n .>= n2i m)
+                   =: qed
+
+-- | \(m < n \;\lor\; m = n \;\lor\; n < m\)
+--
+-- >>> runTP trichotomy
+-- Lemma: ordered                          Q.E.D.
+-- Lemma: trichotomy                       Q.E.D.
+-- [Proven] trichotomy :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+trichotomy :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
+trichotomy = do
+   pOrdered <- recall "ordered" ordered
+
+   lemma "trichotomy"
+         (\(Forall m) (Forall n) -> m .< n .|| m .== n .|| n .< m)
+         [proofOf pOrdered]
+
 {-
 https://en.wikipedia.org/wiki/Peano_axioms
 
-10.   trichotomy
 11.   from wiki
 12.   from wiki
 13.   from wiki
