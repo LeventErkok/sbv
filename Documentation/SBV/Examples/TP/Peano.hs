@@ -10,13 +10,14 @@
 -- Most of the properties we prove come from <https://en.wikipedia.org/wiki/Peano_axioms>.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP               #-}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE QuasiQuotes       #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeAbstractions  #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE QuasiQuotes         #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeAbstractions    #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -77,15 +78,15 @@ instance Num SNat where
   (-) = subt
       where -- Quasi-quotes cannot be nested, so we have to have this explicit ite.
             subt = smtFunction "sNatSubtract" $
-                     \a b -> ite (isZero a) sZero [sCase|Nat b of
-                                                    Zero -> a
-                                                    Succ p -> sprev a - p
-                                                  |]
+                     \a b -> ite (isZero a) 0 [sCase|Nat b of
+                                                 Zero -> a
+                                                 Succ p -> sprev a - p
+                                              |]
 
   (*) = times
       where times = smtFunction "sNatTimes" $
                       \a b -> [sCase|Nat a of
-                                Zero   -> sZero
+                                Zero   -> 0
                                 Succ p -> b + p * b
                               |]
 
@@ -115,7 +116,7 @@ n2i = smtFunction "n2i" $ \n -> [sCase|Nat n of
 --
 -- NB. When writing the properties below, we use the notation \(\underline{i}\) to mean @i2n i@.
 i2n :: SInteger -> SNat
-i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) sZero (sSucc (i2n (i - 1)))
+i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) 0 (sSucc (i2n (i - 1)))
 
 -- | \(\overline{n} \geq 0\)
 --
@@ -166,21 +167,21 @@ addCorrect = inductiveLemma
 
 -- ** Left and right unit
 
--- | \(\mathrm{Zero} + m = m\)
+-- | \(0 + m = m\)
 --
 -- >>> runTP addLeftUnit
 -- Lemma: addLeftUnit                      Q.E.D.
 -- [Proven] addLeftUnit :: Ɐm ∷ Nat → Bool
 addLeftUnit :: TP (Proof (Forall "m" Nat -> SBool))
-addLeftUnit = lemma "addLeftUnit" (\(Forall m) -> sZero + m .== m) []
+addLeftUnit = lemma "addLeftUnit" (\(Forall m) -> 0 + m .== m) []
 
--- | \(m + \mathrm{Zero} = m\)
+-- | \(m + 0 = m\)
 --
 -- >>> runTP addRightUnit
 -- Lemma: addRightUnit                     Q.E.D.
 -- [Proven] addRightUnit :: Ɐm ∷ Nat → Bool
 addRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
-addRightUnit = inductiveLemma "addRightUnit" (\(Forall m) -> m + sZero .== m) []
+addRightUnit = inductiveLemma "addRightUnit" (\(Forall m) -> m + 0 .== m) []
 
 -- ** Addition with non-zero values
 
@@ -198,7 +199,7 @@ addRightUnit = inductiveLemma "addRightUnit" (\(Forall m) -> m + sZero .== m) []
 addSucc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 addSucc = do
    caseZero <- lemma "caseZero"
-                      (\(Forall @"n" n) -> sZero + sSucc n .== sSucc (sZero + n))
+                      (\(Forall @"n" n) -> 0 + sSucc n .== sSucc (0 + n))
                       []
 
    caseSucc <- calc "caseSucc"
@@ -252,7 +253,7 @@ addComm = do
     aru <- recall "addRightUnit" addRightUnit
 
     caseZero <- lemma "caseZero"
-                      (\(Forall @"y" n) -> sZero + n .== n + sZero)
+                      (\(Forall @"n" (n :: SNat)) -> 0 + n .== n + 0)
                       [proofOf alu, proofOf aru]
 
     as <- recall "addSucc" addSucc
@@ -293,7 +294,7 @@ addComm = do
 mulCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 mulCorrect = do
    caseZero <- lemma "caseZero"
-                     (\(Forall @"n" n) -> n2i (sZero * n) .== n2i sZero * n2i n)
+                     (\(Forall @"n" n) -> n2i (0 * n) .== n2i 0 * n2i n)
                      []
 
    addC <- recall "addCorrect" addCorrect
@@ -319,39 +320,39 @@ mulCorrect = do
 
 -- ** Left and right absorption
 
--- | \(\mathrm{Zero} * m = \mathrm{Zero}\)
+-- | \(0 * m = 0\)
 --
 -- >>> runTP mulLeftAbsorb
 -- Lemma: mulLeftAbsorb                    Q.E.D.
 -- [Proven] mulLeftAbsorb :: Ɐm ∷ Nat → Bool
 mulLeftAbsorb :: TP (Proof (Forall "m" Nat -> SBool))
-mulLeftAbsorb = lemma "mulLeftAbsorb" (\(Forall m) -> sZero * m .== sZero) []
+mulLeftAbsorb = lemma "mulLeftAbsorb" (\(Forall m) -> 0 * m .== 0) []
 
--- | \(m * \mathrm{Zero} = \mathrm{Zero}\)
+-- | \(m * 0 = 0\)
 --
 -- >>> runTP mulRightAbsorb
 -- Lemma: mulRightAbsorb                   Q.E.D.
 -- [Proven] mulRightAbsorb :: Ɐm ∷ Nat → Bool
 mulRightAbsorb :: TP (Proof (Forall "m" Nat -> SBool))
-mulRightAbsorb = inductiveLemma "mulRightAbsorb" (\(Forall m) -> m * sZero .== sZero) []
+mulRightAbsorb = inductiveLemma "mulRightAbsorb" (\(Forall m) -> m * 0 .== 0) []
 
 -- ** Left and right unit
 
--- | \(\mathrm{Succ\,Zero} * m = m\)
+-- | \(\mathrm{Succ\,0} * m = m\)
 --
 -- >>> runTP mulLeftUnit
 -- Lemma: mulLeftUnit                      Q.E.D.
 -- [Proven] mulLeftUnit :: Ɐm ∷ Nat → Bool
 mulLeftUnit :: TP (Proof (Forall "m" Nat -> SBool))
-mulLeftUnit = inductiveLemma "mulLeftUnit" (\(Forall m) -> sSucc sZero * m .== m) []
+mulLeftUnit = inductiveLemma "mulLeftUnit" (\(Forall m) -> sSucc 0 * m .== m) []
 
--- | \(m * \mathrm{Succ\,Zero} = m\)
+-- | \(m * \mathrm{Succ\,0} = m\)
 --
 -- >>> runTP mulRightUnit
 -- Lemma: mulRightUnit                     Q.E.D.
 -- [Proven] mulRightUnit :: Ɐm ∷ Nat → Bool
 mulRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
-mulRightUnit = inductiveLemma "mulRightUnit" (\(Forall m) -> m * sSucc sZero .== m) []
+mulRightUnit = inductiveLemma "mulRightUnit" (\(Forall m) -> m * sSucc 0 .== m) []
 
 -- ** Distribution over addition
 
@@ -376,7 +377,7 @@ mulRightUnit = inductiveLemma "mulRightUnit" (\(Forall m) -> m * sSucc sZero .==
 -- [Proven] distribLeft :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 distribLeft :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 distribLeft = do
-   caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" o) -> sZero * (n + o) .== sZero * n + sZero * o) []
+   caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" (o :: SNat)) -> 0 * (n + o) .== 0 * n + 0 * o) []
 
    addAsc <- recall "addAssoc" addAssoc
    addCom <- recall "addComm"  addComm
@@ -428,7 +429,7 @@ distribLeft = do
 -- [Proven] distribRight :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 distribRight :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 distribRight = do
-   caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" o) -> (sZero + n) * o .== sZero * o + n * o) []
+   caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" (o :: SNat)) -> (0 + n) * o .== 0 * o + n * o) []
 
    pAddAssoc <- recall "addAssoc" addAssoc
    pAddCom   <- recall "addComm"  addComm
@@ -486,11 +487,11 @@ mulSucc = do
         (\(Forall @"m" m) (Forall @"n" n) -> m * sSucc n .== m * n + m) $
         \m n -> [] |- m * sSucc n
                    ?? alu
-                   =: m * sSucc (sZero + n)
+                   =: m * sSucc (0 + n)
                    ?? "defn of +"
-                   =: m * (sSucc sZero + n)
-                   ?? dL `at` (Inst @"m" m, Inst @"n" (sSucc sZero), Inst @"o" n)
-                   =: m * sSucc sZero + m * n
+                   =: m * (sSucc 0 + n)
+                   ?? dL `at` (Inst @"m" m, Inst @"n" (sSucc 0), Inst @"o" n)
+                   =: m * sSucc 0 + m * n
                    ?? mru
                    =: m + m * n
                    ?? ac `at` (Inst @"m" m, Inst @"n" (m * n))
@@ -515,7 +516,7 @@ mulSucc = do
 mulAssoc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 mulAssoc = do
    caseZero <- lemma "caseZero"
-                     (\(Forall @"n" n) (Forall @"o" o) -> sZero * (n * o) .== (sZero * n) * o)
+                     (\(Forall @"n" n) (Forall @"o" (o :: SNat)) -> 0 * (n * o) .== (0 * n) * o)
                      []
 
    distR <- recall "distribRight" distribRight
@@ -562,7 +563,7 @@ mulComm = do
   mra <- recall "mulRightAbsorb" mulRightAbsorb
 
   caseZero <- lemma "caseZero"
-                    (\(Forall @"m" m) -> sZero * m .== m * sZero)
+                    (\(Forall @"m" (m :: SNat)) -> 0 * m .== m * 0)
                     [proofOf mra]
 
   mru <- recall "mulRightUnit" mulRightUnit
@@ -576,10 +577,10 @@ mulComm = do
                                 ?? ih
                                 =: n + n * m
                                 ?? mru
-                                =: n * sSucc sZero + n * m
-                                ?? dL `at` (Inst @"m" n, Inst @"n" (sSucc sZero), Inst @"o" m)
-                                =: n * (sSucc sZero + m)
-                                =: n * sSucc (sZero + m)
+                                =: n * sSucc 0 + n * m
+                                ?? dL `at` (Inst @"m" n, Inst @"n" (sSucc 0), Inst @"o" m)
+                                =: n * (sSucc 0 + m)
+                                =: n * sSucc (0 + m)
                                 =: n * sSucc m
                                 =: qed
 
@@ -639,7 +640,7 @@ ltIrreflexive :: TP (Proof (Forall "m" Nat -> SBool))
 ltIrreflexive = do
   cancel <- inductiveLemma
               "cancel"
-              (\(Forall @"m" m) (Forall @"n" n) -> m + n .== m .=> n .== sZero)
+              (\(Forall @"m" m) (Forall @"n" n) -> m + n .== m .=> n .== 0)
               []
 
   calc "ltIrreflexive"
@@ -647,7 +648,7 @@ ltIrreflexive = do
        \m -> [m .< m] |-> let k = some "k" (\d -> m .== m + sSucc d)
                       in m .== m + sSucc k
                       ?? cancel `at` (Inst @"m" m, Inst @"n" (sSucc k))
-                      =: sSucc k .== sZero
+                      =: sSucc k .== 0
                       =: contradiction
 
 -- ** Trichotomy
@@ -728,8 +729,8 @@ lteEquiv = do
                      =: m .== n + i2n k
                      =: cases [ k .>  0 ==> trivial
                               , k .<= 0 ==> m .== n + i2n k
-                                         ?? i2n k .== sZero
-                                         =: m .== n + sZero
+                                         ?? i2n k .== 0
+                                         =: m .== n + 0
                                          ?? aru
                                          =: m .== n
                                          =: m .== n .|| m .> n
@@ -777,11 +778,78 @@ trichotomy = do
          (\(Forall m) (Forall n) -> m .< n .|| m .== n .|| n .< m)
          [proofOf pOrdered]
 
+-- ** Addition and ordering
+
+-- | \(m < n \;\rightarrow\; m + o < n + o\)
+--
+-- >>> runTP addOrder
+-- Lemma: addAssoc                         Q.E.D.
+-- Lemma: addComm                          Q.E.D.
+-- Lemma: addOrder
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] addOrder :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
+addOrder :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
+addOrder = do
+  pAddAssoc <- recall "addAssoc" addAssoc
+  pAddComm  <- recall "addComm"  addComm
+
+  calc "addOrder"
+       (\(Forall m) (Forall n) (Forall o) -> m .< n .=> m + o .< n + o) $
+       \m n o -> [m .< n]
+              |-> let k = some "k" (\d -> n .== m + sSucc d)
+               in n .== m + sSucc k
+               =: n + o .== (m + sSucc k) + o
+               ?? pAddAssoc `at` (Inst @"m" m, Inst @"n" (sSucc k), Inst @"o" o)
+               =: n + o .== m + (sSucc k + o)
+               ?? pAddComm `at` (Inst @"m" (sSucc k), Inst @"n" o)
+               =: n + o .== m + (o + sSucc k)
+               ?? pAddAssoc `at` (Inst @"m" m, Inst @"n" o, Inst @"o" (sSucc k))
+               =: n + o .== (m + o) + sSucc k
+               =: m + o .<= n + o
+               =: qed
+
+-- ** Multiplication and ordering
+
+-- | \(o > 0 \;\wedge\; m < n \;\rightarrow\; m * o < n * o\)
+--
+-- >>> runTP mulOrder
+-- Lemma: distribRight                     Q.E.D.
+-- Lemma: mulOrder
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] mulOrder :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
+mulOrder :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
+mulOrder = do
+  pDistribRight <- recall "distribRight" distribRight
+
+  calc "mulOrder"
+       (\(Forall m) (Forall n) (Forall o) -> 0 .< o .&& m .< n .=> m * o .< n * o) $
+       \m n o -> [0 .< o, m .< n]
+              |-> let k = some "k" (\d -> n .== m + sSucc d)
+               in n .== m + sSucc k
+               =: n * o .== (m + sSucc k) * o
+               ?? pDistribRight `at` (Inst @"m" m, Inst @"n" (sSucc k), Inst @"o" o)
+               =: n * o .== m * o + sSucc k * o
+               ?? 0 .< o
+               =: n * o .== m * o + sSucc k * sSucc (sprev o)
+               =: n * o .== m * o + (sSucc (sprev o) + k * sSucc (sprev o))
+               =: n * o .== m * o + sSucc (sprev o + k * sSucc (sprev o))
+               =: m * o .< n * o
+               =: qed
+
 {-
 https://en.wikipedia.org/wiki/Peano_axioms
 
-11.   from wiki
-12.   from wiki
 13.   from wiki
 14.   from wiki
 15.   from wiki
