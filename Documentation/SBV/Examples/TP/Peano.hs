@@ -454,6 +454,45 @@ distribRight = do
      (\(Forall m) (Forall n) (Forall o) -> (m + n) * o .== m * o + n * o)
      [proofOf caseZero, proofOf caseSucc]
 
+-- ** Multiplication with non-zero values
+
+-- | \(m * \mathrm{Succ}\,n = m * n + m\)
+--
+-- >>> runTP mulSucc
+-- Lemma: addLeftUnit                      Q.E.D.
+-- Lemma: distribLeft                      Q.E.D.
+-- Lemma: mulRightUnit                     Q.E.D.
+-- Lemma: addCommutative                   Q.E.D.
+-- Lemma: mulSucc
+--   Step: 1                               Q.E.D.
+--   Step: 2 (defn of +)                   Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] mulSucc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
+mulSucc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
+mulSucc = do
+   alu <- recall "addLeftUnit"    addLeftUnit
+   dL  <- recall "distribLeft"    distribLeft
+   mru <- recall "mulRightUnit"   mulRightUnit
+   ac  <- recall "addCommutative" addCommutative
+
+   calc "mulSucc"
+        (\(Forall @"m" m) (Forall @"n" n) -> m * sSucc n .== m * n + m) $
+        \m n -> [] |- m * sSucc n
+                   ?? alu
+                   =: m * sSucc (sZero + n)
+                   ?? "defn of +"
+                   =: m * (sSucc sZero + n)
+                   ?? dL `at` (Inst @"m" m, Inst @"n" (sSucc sZero), Inst @"o" n)
+                   =: m * sSucc sZero + m * n
+                   ?? mru
+                   =: m + m * n
+                   ?? ac `at` (Inst @"m" m, Inst @"n" (m * n))
+                   =: m * n + m
+                   =: qed
+
 -- ** Associativity
 
 -- | \(m * (n * o) = (m * n) * o\)
