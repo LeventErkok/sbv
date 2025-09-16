@@ -160,7 +160,7 @@ addCorrect = inductiveLemma
                (\(Forall m) (Forall n) -> n2i (m + n) .== n2i m + n2i n)
                []
 
--- ** Addition with 'Zero'
+-- ** Left and right unit
 
 -- | \(\mathrm{Zero} + m = m\)
 --
@@ -178,7 +178,7 @@ addLeftUnit = lemma "addLeftUnit" (\(Forall m) -> sZero + m .== m) []
 addRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
 addRightUnit = inductiveLemma "addRightUnit" (\(Forall m) -> m + sZero .== m) []
 
--- ** Addition with 'Succ'
+-- ** Addition with non-zero values
 
 -- | \(m + \mathrm{Succ}\,n = \mathrm{Succ}\,(m + n)\)
 --
@@ -313,7 +313,7 @@ mulCorrect = do
        (\(Forall @"m" m) (Forall @"n" n) -> n2i (m * n) .== n2i m * n2i n)
        [proofOf caseZero, proofOf caseSucc]
 
--- ** Multiplication with 'Zero'
+-- ** Left and right absorption
 
 -- | \(\mathrm{Zero} * m = \mathrm{Zero}\)
 --
@@ -331,7 +331,7 @@ mulLeftAbsorb = lemma "mulLeftAbsorb" (\(Forall m) -> sZero * m .== sZero) []
 mulRightAbsorb :: TP (Proof (Forall "m" Nat -> SBool))
 mulRightAbsorb = inductiveLemma "mulRightAbsorb" (\(Forall m) -> m * sZero .== sZero) []
 
--- ** Multiplication with 'Succ Zero'
+-- ** Left and right unit
 
 -- | \(\mathrm{Succ\,Zero} * m = m\)
 --
@@ -343,9 +343,9 @@ mulLeftUnit = inductiveLemma "mulLeftUnit" (\(Forall m) -> sSucc sZero * m .== m
 
 -- | \(m * \mathrm{Succ\,Zero} = m\)
 --
--- >>> runTP mulRightAbsorb
--- Lemma: mulRightAbsorb                   Q.E.D.
--- [Proven] mulRightAbsorb :: Ɐm ∷ Nat → Bool
+-- >>> runTP mulRightUnit
+-- Lemma: mulRightUnit                     Q.E.D.
+-- [Proven] mulRightUnit :: Ɐm ∷ Nat → Bool
 mulRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
 mulRightUnit = inductiveLemma "mulRightUnit" (\(Forall m) -> m * sSucc sZero .== m) []
 
@@ -407,12 +407,28 @@ distribLeft = do
 -- | \((m + n) * o = m * o + n * o\)
 --
 -- >>> runTP distribRight
+-- Lemma: caseZero                         Q.E.D.
+-- Lemma: addAssoc                         Q.E.D.
+-- Lemma: addCommutative                   Q.E.D.
+-- Lemma: addSucc                          Q.E.D.
+-- Lemma: caseSucc
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Step: 7                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: distribRight                     Q.E.D.
+-- [Proven] distribRight :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 distribRight :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 distribRight = do
    caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" o) -> (sZero + n) * o .== sZero * o + n * o) []
 
-   pAddCom  <- recall "addCommutative" addCommutative
-   pAddSucc <- recall "addSucc"        addSucc
+   pAddAssoc <- recall "addAssoc"       addAssoc
+   pAddCom   <- recall "addCommutative" addCommutative
+   pAddSucc  <- recall "addSucc"        addSucc
 
    caseSucc <- calc "caseSucc"
                     (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
@@ -423,7 +439,13 @@ distribRight = do
                               =: (n + sSucc m) * o
                               ?? pAddSucc `at` (Inst @"m" n, Inst @"n" m)
                               =: sSucc (n + m) * o
-                              ?? sorry
+                              ?? pAddCom `at` (Inst @"m" n, Inst @"n" m)
+                              =: sSucc (m + n) * o
+                              =: o + (m + n) * o
+                              ?? ih
+                              =: o + (m * o + n *o)
+                              ?? pAddAssoc `at` (Inst @"m" o, Inst @"n" (m * o), Inst @"o" (n * o))
+                              =: (o + m * o) + n * o
                               =: sSucc m * o + n * o
                               =: qed
 
@@ -437,6 +459,14 @@ distribRight = do
 -- | \(m * (n * o) = (m * n) * o\)
 --
 -- >>> runTP mulAssoc
+-- Lemma: caseZero                         Q.E.D.
+-- Lemma: distribRight                     Q.E.D.
+-- Lemma: caseSucc
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
 -- Lemma: mulAssoc                         Q.E.D.
 -- [Proven] mulAssoc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 mulAssoc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
@@ -468,11 +498,7 @@ mulAssoc = do
 {-
 https://en.wikipedia.org/wiki/Peano_axioms
 
- 3.   mult associative
  4.   mult commutative
- 5.   mult distributes over add left and right
- 6.   DONE: right-mul-0
- 7.   DONE: mul-1
  8.   < transitive
  9.   < irreflexive
 10.   trichotomy
