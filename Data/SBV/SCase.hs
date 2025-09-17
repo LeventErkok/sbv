@@ -309,6 +309,12 @@ sCase = QuasiQuoter
             -- We're done
             chk2 [] = pure ()
 
+            -- If we have a non-guarded match, then there must be no matches for this constructor later on. If so, they're redundant.
+            chk2 (c@(CMatch _ nm _ Nothing _ _) : rest)
+              = case filter (\oc -> getCaseConstructor oc == Just nm) rest of
+                  [] -> chk2 rest
+                  os -> overlap (last os) (c : init os)
+
             -- If we have a guarded match, then this guard can fail. So either there must be a match
             -- for it later on, or there must be a catch-all. Note that if it exists later, we don't
             -- care if that occurrence is guarded or not; because if it is guarded, we'll fail on the last one.
@@ -317,12 +323,6 @@ sCase = QuasiQuoter
               = chk2 rest
               | True
               = unmatched c
-
-            -- If we have a non-guarded match, then there must be no matches for this constructor later on. If so, they're redundant.
-            chk2 (c@(CMatch _ nm _ Nothing _ _) : rest)
-              = case filter (\oc -> getCaseConstructor oc == Just nm) rest of
-                  [] -> chk2 rest
-                  os -> overlap (last os) (c : init os)
 
             -- If there's a guarded wildcard, must make sure there's a catch all afterwards
             chk2 (c@(CWild _ Just{} _) : rest)
