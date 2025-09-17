@@ -462,7 +462,8 @@ dissect typeName = do
 
         pure $ if all (null . snd) cs
                then ADTEnum (map fst cs)
-               else ADTFull cs
+               else ADTFull -- cs
+                            (map (\(c, fs) -> (c, [(n, t, k) | (n, t, Right k) <- fs])) cs)
 
 bad :: MonadFail m => String -> [String] -> m a
 bad what extras = fail $ unlines $ ("mkSymbolic: " ++ what) : map ("      " ++) extras
@@ -556,20 +557,22 @@ getConstructors typeName = do cstrs <- getConstructorsFromType (TH.ConT typeName
                 goPred (TH.AppT t1 t2) = TH.AppT (go t1) (go t2)
                 goPred p               = p
 
--- | Find the SBV kind for this type
-toSBV :: TH.Name -> TH.Name -> TH.Type -> TH.Q Kind
+-- | Find the SBV kind for this type. Either a straight kind, or the type-var
+toSBV :: TH.Name -> TH.Name -> TH.Type -> TH.Q (Either TH.Name Kind)
 toSBV typeName constructorName = go
   where tName = unmod typeName
 
+        right = pure . Right
+
         go (TH.ConT c)
-         | c == typeName = pure $ KADT tName Nothing -- recursive case: use site, so fields are nothing
+         | c == typeName = right $ KADT tName Nothing -- recursive case: use site, so fields are nothing
          | True          = extract c
 
         -- tuples
         go t | Just ps <- getTuple t = KTuple <$> mapM go ps
 
         -- recognize strings, since we don't (yet) support chars
-        go (TH.AppT TH.ListT (TH.ConT t)) | t == ''Char = pure KString
+        go (TH.AppT TH.ListT (TH.ConT t)) | t == ''Char = right KString
 
         -- lists
         go (TH.AppT TH.ListT t) = KList <$> go t
@@ -592,6 +595,9 @@ toSBV typeName constructorName = go
         -- rational
         go (TH.AppT (TH.ConT nm) (TH.ConT p))
             | nm == ''Ratio && p == ''Integer = pure KRational
+
+        -- Application to parameter
+        go (TH.VarT nm) = pure $ Right nm
 
         -- giving up
         go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ show typeName
