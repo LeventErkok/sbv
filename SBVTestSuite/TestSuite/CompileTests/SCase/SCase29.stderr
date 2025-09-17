@@ -1,0 +1,22 @@
+SCase29.hs:11:14: error: [GHC-39584]
+    " SCase29.hs:14:16-20: sCase: Overlapping case constructors:
+        Type       : Expr
+        Constructor: Num i | i > 12
+      Overlaps with:
+        SCase29.hs:12:16-20: Num i
+
+    " In the quasi-quotation:
+        [sCase|Expr e of
+               Num i | i > 3  -> 5
+                     | sTrue  -> 12
+               Num i | i > 12 -> 7
+
+               Zero{} -> 0
+               Var{}  -> 0
+               Add{}  -> 0
+               Let{}  -> 0
+      |]
+   |
+11 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
+
