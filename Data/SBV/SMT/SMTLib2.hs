@@ -783,25 +783,27 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (LkUp (t, aKnd, _, l) i e) [])
           | needsCheck = "(ite " ++ cond ++ cvtSV e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
-          where needsCheck = case aKnd of
+          where unexpected = error $ "SBV.SMT.SMTLib2.cvtExp: Unexpected: " ++ show aKnd
+                needsCheck = case aKnd of
                               KBool         -> (2::Integer) > fromIntegral l
                               KBounded _ n  -> (2::Integer)^n > fromIntegral l
                               KUnbounded    -> True
-                              KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
-                              KADT s _      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT valued index: " ++ s
-                              KReal         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
-                              KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
-                              KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
-                              KFP{}         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected arbitrary float valued index"
-                              KRational{}   -> error "SBV.SMT.SMTLib2.cvtExp: unexpected rational valued index"
-                              KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
-                              KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                              KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
-                              KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued: " ++ show k
-                              KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
-                              KMaybe k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued: " ++ show k
-                              KEither k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
-                              KArray  k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected array valued: " ++ show (k1, k2)
+                              KVar _        -> unexpected
+                              KUserSort _ _ -> unexpected
+                              KADT _ _      -> unexpected
+                              KReal         -> unexpected
+                              KFloat        -> unexpected
+                              KDouble       -> unexpected
+                              KFP _ _       -> unexpected
+                              KRational     -> unexpected
+                              KChar         -> unexpected
+                              KString       -> unexpected
+                              KList _       -> unexpected
+                              KSet  _       -> unexpected
+                              KTuple _      -> unexpected
+                              KMaybe _      -> unexpected
+                              KEither _ _   -> unexpected
+                              KArray  _ _   -> unexpected
 
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ cvtSV i ++ ")"
 
@@ -810,6 +812,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                  | True      = gtl ++ " "
 
                 (less, leq) = case aKnd of
+                                KVar _        -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected variable index: " ++ show aKnd
                                 KBool         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
                                 KBounded{}    -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
                                 KUnbounded    -> ("<", "<=")
@@ -1155,6 +1158,7 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         mkAnd cs  context = context $ "(and " ++ unwords cs ++ ")"
 
         walk :: Int -> String -> (Kind -> String -> [String]) -> Kind -> [String]
+        walk _d nm f k@KVar      {}         = f k nm
         walk _d nm f k@KBool     {}         = f k nm
         walk _d nm f k@KBounded  {}         = f k nm
         walk _d nm f k@KUnbounded{}         = f k nm

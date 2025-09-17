@@ -493,6 +493,7 @@ mkConstCV KFloat          a = normCV $ CV KFloat     (CFloat    (fromInteger (to
 mkConstCV KDouble         a = normCV $ CV KDouble    (CDouble   (fromInteger (toInteger a)))
 mkConstCV k@(KFP eb sb)   a = normCV $ CV k          (CFP       (fpFromInteger eb sb (toInteger a)))
 mkConstCV KRational       a = normCV $ CV KRational  (CRational (fromInteger (toInteger a)))
+mkConstCV (KVar nm)       a = error $ "Unexpected call to mkConstCV (KVar) with value: "   ++ show (nm, toInteger a)
 mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: "   ++ show (toInteger a)
 mkConstCV KString         a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
 mkConstCV (KUserSort s _) a = error $ "Unexpected call to mkConstCV with user kind: " ++ s ++ " with value: " ++ show (toInteger a)
@@ -508,6 +509,8 @@ mkConstCV k@KArray{}      a = error $ "Unexpected call to mkConstCV (" ++ show k
 randomCVal :: Kind -> IO CVal
 randomCVal k =
   case k of
+    KVar{}             -> error $ "randomCVal: Unexpected call at kind: " ++ show k
+
     KBool              -> CInteger  <$> randomRIO (0, 1)
     KBounded s w       -> CInteger  <$> randomRIO (bounds s w)
     KUnbounded         -> CInteger  <$> randomIO
