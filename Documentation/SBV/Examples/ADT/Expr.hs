@@ -8,8 +8,6 @@
 --
 -- A basic expression ADT example.
 -----------------------------------------------------------------------------
-{-# OPTIONS_GHC -Wall -Werror #-}
-
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -17,6 +15,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
+
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.ADT.Expr where
 
