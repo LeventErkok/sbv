@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -9,8 +9,8 @@ import Data.SBV
 
 t :: SExpr -> SInteger
 t e = [sCase|Expr e of
-               Num i | i > 3 -> 5
-                     | sTrue -> 12
+               Num i | i .> 3 -> 5
+                     | sTrue  -> 12
 
                Zero{} -> 0
                Var{}  -> 0
