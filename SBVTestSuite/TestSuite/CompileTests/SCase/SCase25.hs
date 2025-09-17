@@ -14,8 +14,6 @@ f e = [sCase|Expr e of
                    | sTrue                                   -> 2
 
          Num i     | sTrue                                   -> 3
-                   | sTrue                                   -> 4
-                   | sTrue                                   -> 5
 
          _                                                   -> 6
       |]
