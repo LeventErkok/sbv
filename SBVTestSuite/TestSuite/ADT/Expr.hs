@@ -9,10 +9,13 @@
 -- Testing ADTs, expressions
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror #-}
-
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
+
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.ADT.Expr(tests) where
 
@@ -21,6 +24,14 @@ import Data.SBV.Control
 import Utils.SBVTestFramework
 
 import Documentation.SBV.Examples.ADT.Expr
+
+-- Testing constructor/type name conflct
+data A = A Integer
+       | B Word8
+       | C A A
+       deriving Show
+
+mkSymbolic ''A
 
 tests :: TestTree
 tests =
@@ -57,6 +68,7 @@ tests =
     , goldenCapturedIO "adt_gen10"  $ tSat 8
     , goldenCapturedIO "adt_gen11"  $ tSat 9
     , goldenCapturedIO "adt_gen12"  $ tSat 100
+    , goldenCapturedIO "adt_chk01"  $ evalTest (t (sA 12))
     ]
     where a = literal "a"
           b = literal "a"
@@ -151,3 +163,11 @@ tSat i rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                                                appendFile rf   "\nDONE\n"
                            Unsat -> io $ do appendFile rf "\nUNSAT\n"
                            _     -> error $ "Unexpected: " ++ show cs
+
+t :: SA -> SA
+t = smtFunction "t" $ \a ->
+       [sCase|A a of
+         A u     -> sA (u+1)
+         B w     -> sB (w+2)
+         C a1 a2 -> sC (t a1) (t a2)
+      |]
