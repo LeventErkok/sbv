@@ -1072,7 +1072,6 @@ smtComparable op x y
   = True
   | True
   = case k of
-      KVar       {} -> error $ "Data.SBV.OrdSymbolic: Unexpected comparable request for: " ++ show k
       KBool         -> True
       KBounded   {} -> True
       KUnbounded {} -> True
@@ -1552,7 +1551,6 @@ instance (Ord a, Num (SBV a), SymVal a, Fractional a) => Fractional (SBV a) wher
                       KReal              -> True
                       KRational          -> True
                       -- Following cases should not happen since these types should *not* be instances of Fractional
-                      k@KVar{}      -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KBounded{}  -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUnbounded  -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KBool       -> error $ "Unexpected Fractional case for: " ++ show k

@@ -42,7 +42,6 @@ instance CrackNum CV where
   crackNum cv verbose mbIV = case kindOf cv of
                                -- Maybe one day we'll have a use for these, currently cracking them
                                -- any further seems overkill
-                               KVar       {}  -> Nothing
                                KBool      {}  -> Nothing
                                KUnbounded {}  -> Nothing
                                KReal      {}  -> Nothing

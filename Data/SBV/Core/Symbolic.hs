@@ -1470,7 +1470,6 @@ registerKind st k
 
        -- Don't forget to register subkinds!
        case k of
-         KVar      {}    -> return ()
          KBool     {}    -> return ()
          KBounded  {}    -> return ()
          KUnbounded{}    -> return ()

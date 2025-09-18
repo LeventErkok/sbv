@@ -62,8 +62,7 @@ import qualified Data.Generics.Uniplate.Data as G
 import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
 -- | Kind of symbolic value
-data Kind = KVar String                                 -- Only used in TH generated ADTs
-          | KBool
+data Kind = KBool
           | KBounded !Bool !Int
           | KUnbounded
           | KReal
@@ -92,7 +91,6 @@ expandKinds = sort . nubOrd . G.universe
 -- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
 -- the reserved names; see 'constructUKind' for details.
 instance Show Kind where
-  show (KVar s)           = s
   show KBool              = "SBool"
   show (KBounded False n) = pickType n "SWord" "SWord " ++ show n
   show (KBounded True n)  = pickType n "SInt"  "SInt "  ++ show n
@@ -116,8 +114,7 @@ instance Show Kind where
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
 showBaseKind = sh
-  where sh (KVar s)           = s
-        sh k@KBool            = noS (show k)
+  where sh k@KBool            = noS (show k)
         sh (KBounded False n) = pickType n "Word" "WordN " ++ show n
         sh (KBounded True n)  = pickType n "Int"  "IntN "  ++ show n
         sh k@KUnbounded       = noS (show k)
@@ -156,7 +153,6 @@ kindParen s | any isSpace s = '(' : s ++ ")"
 
 -- | How the type maps to SMT land
 smtType :: Kind -> String
-smtType (KVar s)        = s
 smtType KBool           = "Bool"
 smtType (KBounded _ sz) = "(_ BitVec " ++ show sz ++ ")"
 smtType KUnbounded      = "Int"
@@ -185,8 +181,7 @@ instance Ord G.DataType where
 
 -- | Does this kind represent a signed quantity?
 kindHasSign :: Kind -> Bool
-kindHasSign = \case KVar _       -> False
-                    KBool        -> False
+kindHasSign = \case KBool        -> False
                     KBounded b _ -> b
                     KUnbounded   -> True
                     KReal        -> True
@@ -269,7 +264,6 @@ class HasKind a where
   hasSign x = kindHasSign (kindOf x)
 
   intSizeOf x = case kindOf x of
-                  KVar _        -> error "SBV.HasKind.intSizeOf(KVar)"
                   KBool         -> error "SBV.HasKind.intSizeOf((S)Bool)"
                   KBounded _ s  -> s
                   KUnbounded    -> error "SBV.HasKind.intSizeOf((S)Integer)"
@@ -466,7 +460,6 @@ needsFlattening = any check . expandKinds
         check KADT{}      = True
 
         -- no need to expand bases
-        check KVar{}      = False
         check KBool       = False
         check KBounded{}  = False
         check KUnbounded  = False

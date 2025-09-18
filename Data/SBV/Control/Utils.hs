@@ -868,7 +868,6 @@ getValueCVHelper mbi s
 defaultKindedValue :: Kind -> CV
 defaultKindedValue k = CV k $ cvt k
   where cvt :: Kind -> CVal
-        cvt KVar{}           = error ("defaultKindedValue not supported for variable kind: " ++ show k) -- can't happen?
         cvt KBool            = CInteger 0
         cvt KBounded{}       = CInteger 0
         cvt KUnbounded       = CInteger 0
@@ -903,8 +902,6 @@ sexprToVal e = fromCV <$> recoverKindedValue (kindOf (Proxy @a)) e
 -- | Recover a given solver-printed value with a possible interpretation
 recoverKindedValue :: Kind -> SExpr -> Maybe CV
 recoverKindedValue k e = case k of
-                           KVar {} -> error $ "Data.SBV: recovedKindedValue: Received unexpected kind: " ++ show k
-
                            KBool       | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
                                        | True                  -> Nothing
 
