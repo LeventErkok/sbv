@@ -198,6 +198,7 @@ showCType i = case kindOf i of
 -- | The printf specifier for the type
 specifier :: CgConfig -> SV -> Doc
 specifier cfg sv = case kindOf sv of
+                     KVar{}        -> die $ "variable sort: " ++ show (kindOf sv)
                      KBool         -> spec (False, 1)
                      KBounded b i  -> spec (b, i)
                      KUnbounded    -> spec (True, fromJust (cgInteger cfg))
@@ -534,7 +535,8 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                ResultLamInps is       -> die $ "Unexpected inputs  : " ++ show is
 
        typeWidth = getMax 0 $ [len (kindOf s) | (s, _) <- assignments] ++ [len (kindOf s) | NamedSymVar s _ <- ins]
-                where len KReal{}            = 5
+                where len (KVar s)           = die $ "Variable: " ++ s
+                      len KReal{}            = 5
                       len KFloat{}           = 6 -- SFloat
                       len KDouble{}          = 7 -- SDouble
                       len KString{}          = 7 -- SString
@@ -802,6 +804,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                 canOverflow False sz = (2::Integer)^sz    -1 >= fromIntegral len
 
                 (needsCheckL, needsCheckR) = case k of
+                                               KVar{}          -> die $ "array index with variable: " ++ show k
                                                KBool           -> (False, canOverflow False (1::Int))
                                                KBounded sg sz  -> (sg, canOverflow sg sz)
                                                KReal           -> die "array index with real value"

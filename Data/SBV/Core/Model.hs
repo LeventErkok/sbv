@@ -1072,6 +1072,7 @@ smtComparable op x y
   = True
   | True
   = case k of
+      KVar       {} -> False
       KBool         -> True
       KBounded   {} -> True
       KUnbounded {} -> True
@@ -1545,6 +1546,7 @@ instance (Ord a, Num (SBV a), SymVal a, Fractional a) => Fractional (SBV a) wher
        where res  = SBV (svDivide x y)
              -- Identify those kinds where we have a div-0 equals 0 exception
              div0 = case kindOf sy of
+                      KVar{}             -> error $ "Unexpected Fractional case for: " ++ show (kindOf sy)
                       KFloat             -> False
                       KDouble            -> False
                       KFP{}              -> False

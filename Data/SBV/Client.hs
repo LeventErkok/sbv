@@ -111,7 +111,8 @@ deriving instance TH.Lift Kind
 
 -- | What kind of type is this?
 data ADT = ADTEnum [TH.Name]                                     -- Enumeration. If the list is empty, then an uninterpreted
-         | ADTFull [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -- Constructors and fields. Maybe is the accessor if given.
+         | ADTFull [TH.Name]                                     -- Parameters
+                   [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -- Constructors and fields. Maybe is the accessor if given.
 
 -- | Create a symbolic ADT.
 mkSymbolic :: TH.Name -> TH.Q [TH.Dec]
@@ -120,8 +121,8 @@ mkSymbolic typeName = do
      tKind <- dissect typeName
 
      ds <- case tKind of
-             ADTEnum cs    -> mkEnum typeName cs      -- also handles uninterpreted types
-             ADTFull cstrs -> mkADT  typeName cstrs
+             ADTEnum cs           -> mkEnum typeName cs           -- also handles uninterpreted types
+             ADTFull params cstrs -> mkADT  typeName params cstrs
 
      -- declare an "undefiner" so we don't have stray names
      nm <- TH.newName $ "_undefiner_" ++ TH.nameBase typeName
@@ -261,8 +262,8 @@ mkSBV :: TH.Type -> TH.Type
 mkSBV a = TH.ConT ''SBV `TH.AppT` a
 
 -- | Create a symbolic ADT
-mkADT :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
-mkADT typeName cstrs = do
+mkADT :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
+mkADT typeName _params cstrs = do
 
     let typeCon = TH.ConT typeName
         sType   = mkSBV typeCon
@@ -455,18 +456,14 @@ dissect :: TH.Name -> TH.Q ADT
 dissect typeName = do
         (args, tcs) <- getConstructors typeName
 
-        case args of
-          [] -> pure ()
-          _  -> error $ "Can't handle args: " ++ show args
-
-        let mk n (mbfn, t) = do k <- expandSyns t >>= toSBV typeName n
+        let mk n (mbfn, t) = do k <- expandSyns t >>= toSBV typeName args n
                                 pure (mbfn, t, k)
 
         cs  <- mapM (\(n, ts) -> (n,) <$> mapM (mk n) ts) tcs
 
         pure $ if all (null . snd) cs
                then ADTEnum (map fst cs)
-               else ADTFull cs
+               else ADTFull args cs
 
 bad :: MonadFail m => String -> [String] -> m a
 bad what extras = fail $ unlines $ ("mkSymbolic: " ++ what) : map ("      " ++) extras
@@ -564,9 +561,12 @@ getConstructors typeName = do res@(_, cstrs) <- getConstructorsFromType (TH.ConT
                 goPred p               = p
 
 -- | Find the SBV kind for this type
-toSBV :: TH.Name -> TH.Name -> TH.Type -> TH.Q Kind
-toSBV typeName constructorName = go
+toSBV :: TH.Name -> [TH.Name] -> TH.Name -> TH.Type -> TH.Q Kind
+toSBV typeName _args constructorName = go
   where tName = unmod typeName
+
+        -- Handle type variables (parameters)
+        go (TH.VarT v) = pure $ KVar (TH.nameBase v)
 
         -- Is this our own type, possibly applied to some parameters?
         go t | Just ps <- getSelf t

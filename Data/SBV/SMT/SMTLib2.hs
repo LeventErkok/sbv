@@ -785,6 +785,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
           | True       = lkUp
           where unexpected = error $ "SBV.SMT.SMTLib2.cvtExp: Unexpected: " ++ show aKnd
                 needsCheck = case aKnd of
+                              KVar{}        -> unexpected
                               KBool         -> (2::Integer) > fromIntegral l
                               KBounded _ n  -> (2::Integer)^n > fromIntegral l
                               KUnbounded    -> True
@@ -811,6 +812,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                  | True      = gtl ++ " "
 
                 (less, leq) = case aKnd of
+                                KVar{}        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected variable index"
                                 KBool         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
                                 KBounded{}    -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
                                 KUnbounded    -> ("<", "<=")
@@ -1156,6 +1158,7 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         mkAnd cs  context = context $ "(and " ++ unwords cs ++ ")"
 
         walk :: Int -> String -> (Kind -> String -> [String]) -> Kind -> [String]
+        walk _d nm f k@KVar      {}         = f k nm
         walk _d nm f k@KBool     {}         = f k nm
         walk _d nm f k@KBounded  {}         = f k nm
         walk _d nm f k@KUnbounded{}         = f k nm

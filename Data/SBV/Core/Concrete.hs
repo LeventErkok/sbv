@@ -485,6 +485,7 @@ showCV shk w = sh (cvVal w) ++ kInfo
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
+mkConstCV k@(KVar{})      _ = error $ "mkConstCV: Unexpected kind: " ++ show k
 mkConstCV KBool           a = normCV $ CV KBool      (CInteger  (toInteger a))
 mkConstCV k@KBounded{}    a = normCV $ CV k          (CInteger  (toInteger a))
 mkConstCV KUnbounded      a = normCV $ CV KUnbounded (CInteger  (toInteger a))
@@ -508,6 +509,7 @@ mkConstCV k@KArray{}      a = error $ "Unexpected call to mkConstCV (" ++ show k
 randomCVal :: Kind -> IO CVal
 randomCVal k =
   case k of
+    KVar{}             -> error $ "randomCVal: Unexpected kind: " ++ show k
     KBool              -> CInteger  <$> randomRIO (0, 1)
     KBounded s w       -> CInteger  <$> randomRIO (bounds s w)
     KUnbounded         -> CInteger  <$> randomIO
