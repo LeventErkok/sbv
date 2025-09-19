@@ -322,14 +322,18 @@ declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (
 -- | Declare ADTs
 declADT :: (String, [String], Maybe [(String, [Kind])]) -> [String]
 declADT (_,      _, Nothing)    = []  -- recursive use site
-declADT (tName, _s, Just cstrs) = ("; User defined ADT: " ++ tName) : decl
-  where decl =  ("(declare-datatype " ++ tName ++ " (")
+declADT (tName, ps, Just cstrs) = ("; User defined ADT: " ++ tName) : decl
+  where decl =  ("(declare-datatype " ++ tName ++ parOpen ++ " (")
              :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
-             ++ ["))"]
+             ++ ["))" ++ parClose]
 
         mkC (nm, []) = nm
         mkC (nm, ts) = nm ++ " " ++ unwords ['(' : mkF (nm ++ "_" ++ show i) t ++ ")" | (i, t) <- zip [(1::Int)..] ts]
         mkF a t      = "get" ++ a ++ " " ++ smtType t
+
+        (parOpen, parClose) = case ps of
+                                [] -> ("", "")
+                                _  -> (" (par (" ++ unwords ps ++ ")", ")")
 
 -- | Declare tuple datatypes
 --
