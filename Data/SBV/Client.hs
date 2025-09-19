@@ -234,7 +234,7 @@ mkEnum typeName cstrs = do
 
     -- Declare testers and case analyzer, if this is an enumeration
     testsAndCase <- if isEnum
-                    then do ts <- mkTesters sType (map (, []) cstrs)
+                    then do ts <- mkTesters sType [] (map (, []) cstrs)
                             (caseSig, caseFun) <- mkCaseAnalyzer typeName [] (map (, []) cstrs)
                             pure $ caseSig : caseFun : ts
                     else pure []
@@ -391,7 +391,7 @@ mkADT typeName params cstrs = do
     mapM_ (addDoc "Field accessor function." . fst) accessorNames
 
     -- Declare testers
-    testerDecls <- mkTesters sType cstrs
+    testerDecls <- mkTesters sType params cstrs
 
     -- Get the case analyzer
     (caseSig, caseFun) <- mkCaseAnalyzer typeName params cstrs
@@ -450,10 +450,13 @@ mkCaseAnalyzer typeName params cstrs = do
         pure (sig, def)
 
 -- | Declare testers
-mkTesters :: TH.Type -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
-mkTesters sType cstrs = do
-    let declTester :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
-        declTester (c, _) = let ty = TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
+mkTesters :: TH.Type -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
+mkTesters sType params cstrs = do
+    let tvars  = [TH.PlainTV n TH.SpecifiedSpec | n <- params]
+        symCtx = [TH.AppT (TH.ConT ''SymVal) (TH.VarT n) | n <- params]
+
+        declTester :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
+        declTester (c, _) = let ty = TH.ForallT tvars symCtx $ TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
                             in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
                 nm   = TH.mkName $ "is" ++ bnm
@@ -782,6 +785,6 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
                                    []
                         ]
 
-   context <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- extraTypes]
+   context <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params ++ extraTypes]
 
    pure [TH.InstanceD Nothing context instHead [method]]
