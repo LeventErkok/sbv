@@ -9,8 +9,9 @@
 -- An example of parameterized ADTs
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TemplateHaskell  #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
 
