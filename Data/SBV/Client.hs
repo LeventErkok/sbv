@@ -330,19 +330,25 @@ mkADT typeName params cstrs = do
                       , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV)          []]
                       ]
 
-    decls <- [d|instance HasKind $(pure typeCon) where
-                  kindOf _ = KADT (unmod typeName) $(TH.lift params) (Just [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs])
+    kindCtx <- TH.cxt [TH.appT (TH.conT ''HasKind) (TH.varT n) | n <- params]
 
-                instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
-                   arbitrary = error $ unlines [ ""
-                                               , "*** Data.SBV: Cannot quickcheck the given property."
-                                               , "***"
-                                               , "*** Default arbitrary instance for " ++ TH.nameBase typeName ++ " is too limited."
-                                               , "***"
-                                               , "*** You can overcome this by giving your own Arbitrary instance."
-                                               , "*** Please get in touch if this workaround is not suitable for your case."
-                                               ]
-             |]
+    kindDef <- [| KADT (unmod typeName) $(TH.lift params) (Just [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs]) |]
+    let kindDecl = TH.InstanceD
+                        Nothing
+                        kindCtx
+                        (TH.AppT (TH.ConT ''HasKind) typeCon)
+                        [TH.FunD 'kindOf [TH.Clause [] (TH.NormalB kindDef) []]]
+
+    arbDecl <- [d|instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
+                     arbitrary = error $ unlines [ ""
+                                                 , "*** Data.SBV: Cannot quickcheck the given property."
+                                                 , "***"
+                                                 , "*** Default arbitrary instance for " ++ TH.nameBase typeName ++ " is too limited."
+                                                 , "***"
+                                                 , "*** You can overcome this by giving your own Arbitrary instance."
+                                                 , "*** Please get in touch if this workaround is not suitable for your case."
+                                                 ]
+               |]
 
     -- Declare constructors
     let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
@@ -389,7 +395,8 @@ mkADT typeName params cstrs = do
     -- Get the induction schema, upto 5 extra args
     indDecs <- mapM (mkInductionSchema typeName cstrs) [0 .. 5]
 
-    pure $ tdecl : symVal : decls
+    pure $  [tdecl, symVal, kindDecl]
+         ++ arbDecl
          ++ concat cdecls
          ++ testerDecls
          ++ concat accessorDecls
