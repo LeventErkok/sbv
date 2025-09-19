@@ -65,7 +65,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = not (null [() | KBounded{} <- allKinds])
         usorts         = [(s, dt) | KUserSort s dt <- allKinds]
-        adts           = [(s, dt) | KADT s dt <- allKinds]
+        adts           = [(s, ps, dt) | KADT s ps dt <- allKinds]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi allTopOps]
@@ -320,9 +320,9 @@ declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
 -- | Declare ADTs
-declADT :: (String, Maybe [(String, [Kind])]) -> [String]
-declADT (_,     Nothing)    = []  -- recursive use site
-declADT (tName, Just cstrs) = ("; User defined ADT: " ++ tName) : decl
+declADT :: (String, [String], Maybe [(String, [Kind])]) -> [String]
+declADT (_,      _, Nothing)    = []  -- recursive use site
+declADT (tName, _s, Just cstrs) = ("; User defined ADT: " ++ tName) : decl
   where decl =  ("(declare-datatype " ++ tName ++ " (")
              :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
              ++ ["))"]
@@ -417,8 +417,8 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
-            ++ concatMap declSort [(s, dt) | KUserSort s dt <- newKinds]
-            ++ concatMap declADT  [(s, dt) | KADT      s dt  <- newKinds]
+            ++ concatMap declSort [(s,     dt) | KUserSort s    dt <- newKinds]
+            ++ concatMap declADT  [(s, ps, dt) | KADT      s ps dt <- newKinds]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- sums
@@ -790,7 +790,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                               KBounded _ n  -> (2::Integer)^n > fromIntegral l
                               KUnbounded    -> True
                               KUserSort _ _ -> unexpected
-                              KADT _ _      -> unexpected
+                              KADT _ _ _    -> unexpected
                               KReal         -> unexpected
                               KFloat        -> unexpected
                               KDouble       -> unexpected
@@ -824,7 +824,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                 KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
-                                KADT  s _     -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT valued index: " ++ s
+                                KADT  s _ _   -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT valued index: " ++ s
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
                                 KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
                                 KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k

@@ -232,7 +232,7 @@ mkEnum typeName cstrs = do
     -- Declare testers and case analyzer, if this is an enumeration
     testsAndCase <- if isEnum
                     then do ts <- mkTesters sType (map (, []) cstrs)
-                            (caseSig, caseFun) <- mkCaseAnalyzer typeName (map (, []) cstrs)
+                            (caseSig, caseFun) <- mkCaseAnalyzer typeName [] (map (, []) cstrs)
                             pure $ caseSig : caseFun : ts
                     else pure []
 
@@ -258,15 +258,16 @@ addDoc _ _ = pure ()
 #endif
 
 -- | Symbolic version of a type
-mkSBV :: TH.Type -> TH.Type
-mkSBV a = TH.ConT ''SBV `TH.AppT` a
+mkSBV :: [TH.Name] -> TH.Type -> TH.Type
+mkSBV params a = TH.ConT ''SBV `TH.AppT` t
+  where t = foldr (\p b -> TH.AppT b (TH.VarT p)) a params
 
 -- | Create a symbolic ADT
 mkADT :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
-mkADT typeName _params cstrs = do
+mkADT typeName params cstrs = do
 
     let typeCon = TH.ConT typeName
-        sType   = mkSBV typeCon
+        sType   = mkSBV params typeCon
 
     litFun <- do let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
                                               let cn      = TH.mkName $ 's' : TH.nameBase n
@@ -302,9 +303,9 @@ mkADT typeName _params cstrs = do
                     pure $ TH.FunD fromCVFunName (clss ++ [catchAll])
 
     getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
-                        fixRef kRef (KADT curName Nothing) | curName == unmod typeName = kRef
-                        fixRef _    k                                                  = k
-                    in \case CV kTop@(KADT _ (Just fks)) (CADT (c, vs)) ->
+                        fixRef kRef (KADT curName _ Nothing) | curName == unmod typeName = kRef
+                        fixRef _    k                                                    = k
+                    in \case CV kTop@(KADT _ _ (Just fks)) (CADT (c, vs)) ->
                                  case c `lookup` fks of
                                    Nothing  -> unexpected $ "Cannot find constructor in kind: " ++ show (c, fks)
                                    Just ks
@@ -315,14 +316,19 @@ mkADT typeName _params cstrs = do
                              CV k _ -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k
                  |]
 
-    let symVal = TH.InstanceD Nothing [] (TH.AppT (TH.ConT ''SymVal) typeCon)
-                                         [ litFun
-                                         , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB (TH.ConE 'Nothing)) []]
-                                         , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV)          []]
-                                         ]
+    symCtx <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params]
+
+    let symVal = TH.InstanceD
+                      Nothing
+                      symCtx
+                      (TH.AppT (TH.ConT ''SymVal) (foldr (\p b -> TH.AppT b (TH.VarT p)) typeCon params))
+                      [ litFun
+                      , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB (TH.ConE 'Nothing)) []]
+                      , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV)          []]
+                      ]
 
     decls <- [d|instance HasKind $(pure typeCon) where
-                  kindOf _ = KADT (unmod typeName) (Just [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs])
+                  kindOf _ = KADT (unmod typeName) $(TH.lift params) (Just [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs])
 
                 instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
                    arbitrary = error $ unlines [ ""
@@ -337,7 +343,7 @@ mkADT typeName _params cstrs = do
 
     -- Declare constructors
     let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
-        declConstructor (c, ntks) = let ats = map (mkSBV . (\(_, t, _) -> t)) ntks
+        declConstructor (c, ntks) = let ats = map (mkSBV [] . (\(_, t, _) -> t)) ntks
                                         ty  = foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
                                     in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
@@ -349,13 +355,13 @@ mkADT typeName _params cstrs = do
 
     let btname = TH.nameBase typeName
         tname  = TH.mkName ('S' : btname)
-        tdecl  = TH.TySynD tname [] sType
+        tdecl  = TH.TySynD tname [TH.PlainTV p TH.BndrReq | p <- params] sType
 
     addDeclDocs (tname, btname) constrNames
 
     -- Declare accessors
     let declAccessor :: TH.Name -> (Maybe TH.Name, TH.Type, Kind) -> Int -> [((TH.Name, String), [TH.Dec])]
-        declAccessor c (mbUN, ft, _) i = let ty    = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
+        declAccessor c (mbUN, ft, _) i = let ty    = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV params ft)
                                              def n = TH.FunD n [TH.Clause [] (TH.NormalB body) []]
                                          in ((nm, bnm), [TH.SigD nm ty, def nm])
                                           : case mbUN of
@@ -375,24 +381,28 @@ mkADT typeName _params cstrs = do
     testerDecls <- mkTesters sType cstrs
 
     -- Get the case analyzer
-    (caseSig, caseFun) <- mkCaseAnalyzer typeName cstrs
+    (caseSig, caseFun) <- mkCaseAnalyzer typeName params cstrs
 
     -- Get the induction schema, upto 5 extra args
     indDecs <- mapM (mkInductionSchema typeName cstrs) [0 .. 5]
 
-    pure $ tdecl : symVal : decls
-         ++ concat cdecls
-         ++ testerDecls
-         ++ concat accessorDecls
-         ++ [fromCVSig, fromCVFun]
-         ++ [caseSig, caseFun]
-         ++ concat indDecs
+    let debug = TH.nameBase typeName == "PExpr"
+
+    if debug
+        then pure $ tdecl : symVal : concat accessorDecls
+        else pure $ tdecl : symVal : decls
+                  ++ concat cdecls
+                  ++ testerDecls
+                  ++ concat accessorDecls
+                  ++ [fromCVSig, fromCVFun]
+                  ++ [caseSig, caseFun]
+                  ++ concat indDecs
 
 -- | Make a case analyzer for the type. Works for ADTs and enums. Returns sig and defn
-mkCaseAnalyzer :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
-mkCaseAnalyzer typeName cstrs = do
+mkCaseAnalyzer :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
+mkCaseAnalyzer typeName params cstrs = do
         let typeCon = TH.ConT typeName
-            sType   = mkSBV typeCon
+            sType   = mkSBV params typeCon
 
             bnm = TH.nameBase typeName
             cnm = TH.mkName $ "sCase" ++ bnm
@@ -421,7 +431,7 @@ mkCaseAnalyzer typeName cstrs = do
 
             rvar   = TH.VarT res
             mkFun  = foldr (TH.AppT . TH.AppT TH.ArrowT) rvar
-            fTypes = [mkFun (map (mkSBV . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
+            fTypes = [mkFun (map (mkSBV params . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
             sig    = TH.SigD cnm (TH.ForallT [TH.PlainTV res TH.SpecifiedSpec]
                                              [TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)]
                                              (mkFun (sType : fTypes)))
@@ -461,7 +471,7 @@ dissect typeName = do
 
         cs  <- mapM (\(n, ts) -> (n,) <$> mapM (mk n) ts) tcs
 
-        pure $ if all (null . snd) cs
+        pure $ if null args && all (null . snd) cs
                then ADTEnum (map fst cs)
                else ADTFull args cs
 
@@ -562,7 +572,7 @@ getConstructors typeName = do res@(_, cstrs) <- getConstructorsFromType (TH.ConT
 
 -- | Find the SBV kind for this type
 toSBV :: TH.Name -> [TH.Name] -> TH.Name -> TH.Type -> TH.Q Kind
-toSBV typeName _args constructorName = go
+toSBV typeName args constructorName = go
   where tName = unmod typeName
 
         -- Handle type variables (parameters)
@@ -570,8 +580,17 @@ toSBV typeName _args constructorName = go
 
         -- Is this our own type, possibly applied to some parameters?
         go t | Just ps <- getSelf t
-             , length ps == length ps -- TODO: Check that the order is the same
-             = pure $ KADT tName Nothing -- field is Nothing when we "refer" to ourself.
+             = if ps == args
+                  then -- field is Nothing when we "refer" to ourself.
+                       pure $ KADT tName (map TH.nameBase args) Nothing
+                  else bad "Unsupported type permutation"
+                           [ "Datatype  : " ++ show typeName
+                           , "Parameters: " ++ show args
+                           , "Used at   : " ++ show ps
+                           , ""
+                           , "SBV only supports recursive uses at precisely the same parameterization"
+                           , "as the definition itself."
+                           ]
 
         go (TH.ConT c) = extract c
 
@@ -701,7 +720,9 @@ mkInductionSchema typeName cstrs extraArgCnt = do
          = [| $(TH.varE pf) $(scstr) |]
          | True
          = do as <- mapM (const (TH.newName "a")) flds
-              let isRecursive (_, _, k) = k == KADT btype Nothing
+              let isRecursive (_, _, k) = case k of
+                                            KADT t _ Nothing -> t == btype
+                                            _                -> False
                   recFields = [a | (a, f) <- zip as flds, isRecursive f]
               TH.appE (TH.varE 'quantifiedBool)
                       (mkLam as (mkImp recFields (foldl TH.appE

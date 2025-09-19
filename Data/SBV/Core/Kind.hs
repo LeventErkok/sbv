@@ -62,25 +62,51 @@ import qualified Data.Generics.Uniplate.Data as G
 import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
 -- | Kind of symbolic value
-data Kind = KVar      String                            -- Type variable/parameter
-          | KBool
+data Kind =
+          -- Base types
+            KBool
+
+          -- Word and Int. Boolean is True for Int.
           | KBounded !Bool !Int
+
+          -- Unbounded integers
           | KUnbounded
+
+          -- Reals
           | KReal
-          | KUserSort String (Maybe [String])           -- name. Uninterpreted, or enumeration constants.
-          | KADT      String (Maybe [(String, [Kind])]) -- An algebraic datatype. Name and constructor info.
-                                                        -- Nothing is recursive "use"-site. Just is the definition site.
+
+          -- Floats, standard and generalized
           | KFloat
           | KDouble
           | KFP !Int !Int
+
+          -- Rationals
+          | KRational
+
+          -- Chars and strings
           | KChar
           | KString
+
+          -- Uninterpreted, or enumeration constants.
+          | KUserSort String (Maybe [String])
+
+          -- Algebraic datatypes
+          | KVar String        -- only used temporarily during ADT construction
+
+          | KADT String                     -- Name
+                 [String]                   -- Params
+                 (Maybe [(String, [Kind])]) -- If Nothing: Use site. If Just: Constructors
+
+          -- Collections
           | KList Kind
           | KSet  Kind
           | KTuple [Kind]
+
+          -- Maybe and Either
           | KMaybe  Kind
-          | KRational
           | KEither Kind Kind
+
+          -- Arrays
           | KArray  Kind Kind
           deriving (Eq, Ord, G.Data, NFData, Generic)
 
@@ -99,7 +125,8 @@ instance Show Kind where
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
   show (KUserSort s _)    = s
-  show (KADT s _)         = s
+  show (KADT s [] _)      = s
+  show (KADT s ps _)      = '(' : unwords (s : ps) ++ ")"
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
   show (KFP eb sb)        = "SFloatingPoint " ++ show eb ++ " " ++ show sb
@@ -169,7 +196,8 @@ smtType KChar           = "String"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
 smtType (KUserSort s _) = s
-smtType (KADT s _)      = s
+smtType (KADT s [] _)   = s
+smtType (KADT s ps _)   = '(' : unwords (s : ps) ++ ")"
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 smtType KRational       = "SBVRational"
@@ -279,7 +307,7 @@ class HasKind a where
                   KFP i j       -> i + j
                   KRational     -> error "SBV.HasKind.intSizeOf((S)Rational)"
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
-                  KADT s _      -> error $ "SBV.HasKind.intSizeOf: Algebraic data type: " ++ s
+                  KADT s _ _    -> error $ "SBV.HasKind.intSizeOf: Algebraic data type: " ++ s
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
                   KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)"   ++ show ek

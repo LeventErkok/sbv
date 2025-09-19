@@ -516,7 +516,7 @@ cvToSMTLib rm x
 
         -- ADTs
         smtLibADT :: Kind -> (String,  [CVal]) -> String
-        smtLibADT (KADT _ (Just cks)) (c, fs)
+        smtLibADT (KADT _ _ (Just cks)) (c, fs)
           | Just ks <- c `lookup` cks, length ks == length fs
           = case fs of
               [] -> c

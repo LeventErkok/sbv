@@ -1439,11 +1439,11 @@ registerKind :: State -> Kind -> IO ()
 registerKind st k
   | KUserSort sortName _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
-  -- Do not register "use" sites for KADTs
-  | KADT _ Nothing <- k
-  = pure ()
-  | KADT  sortName _ <- k, isReserved sortName
+  | KADT  sortName _ _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
+  -- Do not register "use" sites for KADTs
+  | KADT _ _ Nothing <- k
+  = pure ()
   | True
   = do -- Adding a kind to the incState is tricky; we only need to add it
        --     *    If it's an uninterpreted sort that's not already in the general state
@@ -1484,7 +1484,7 @@ registerKind st k
          KString   {}    -> return ()
 
          -- Register subkinds in an ADT. Remember that a 'Nothing' is a use site, so nothing further to do.
-         KADT _    (Just ps) -> mapM_ (registerKind st) (concatMap snd ps)
+         KADT _  _ (Just ps) -> mapM_ (registerKind st) (concatMap snd ps)
          -- NB: The following case is *not* required; why? Because KADT _ Nothing is matched and handled
          -- earlier. And GHC is smart enough to know that so if I have the following, it complains
          -- that it's redundant. Kudos!

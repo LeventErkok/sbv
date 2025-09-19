@@ -212,7 +212,7 @@ specifier cfg sv = case kindOf sv of
                      KList k       -> die $ "list sort: "   ++ show k
                      KSet  k       -> die $ "set sort: "    ++ show k
                      KUserSort s _ -> die $ "user sort: "   ++ s
-                     KADT  s _     -> die $ "ADT: "         ++ s
+                     KADT  s _ _   -> die $ "ADT: "         ++ s
                      KTuple k      -> die $ "tuple sort: "  ++ show k
                      KMaybe  k     -> die $ "maybe sort: "  ++ show k
                      KEither k1 k2 -> die $ "either sort: " ++ show (k1, k2)
@@ -554,7 +554,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                       len (KEither k1 k2)    = die $ "Either sort: " ++ show (k1, k2)
                       len (KArray  k1 k2)    = die $ "Array sort:  " ++ show (k1, k2)
                       len (KUserSort s _)    = die $ "Uninterpreted sort: " ++ s
-                      len (KADT s _)         = die $ "Uninterpreted ADT: " ++ s
+                      len (KADT s _ _)       = die $ "Uninterpreted ADT: " ++ s
 
                       getMax 8 _      = 8  -- 8 is the max we can get with SInteger, so don't bother looking any further
                       getMax m []     = m
@@ -824,7 +824,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                KEither   k1 k2 -> die $ "Either sort " ++ show (k1, k2)
                                                KArray    k1 k2 -> die $ "Array  sort " ++ show (k1, k2)
                                                KUserSort s _   -> die $ "Uninterpreted sort: " ++ s
-                                               KADT      s _   -> die $ "ADT: " ++ s
+                                               KADT      s _ _ -> die $ "ADT: " ++ s
 
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
         -- NB: Quot is supposed to truncate toward 0; Not clear to me if C guarantees this behavior.
