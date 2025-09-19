@@ -335,7 +335,8 @@ mkADT typeName params cstrs = do
 
     kindCtx <- TH.cxt [TH.appT (TH.conT ''HasKind) (TH.varT n) | n <- params]
 
-    kindDef <- [| KADT (unmod typeName) $(TH.lift (map TH.nameBase params)) (Just [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs]) |]
+    kindDef <- [| KADT (unmod typeName) $(TH.lift (map TH.nameBase params))
+                       (Just [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs]) |]
     let kindDecl = TH.InstanceD
                         Nothing
                         kindCtx
