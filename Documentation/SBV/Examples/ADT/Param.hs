@@ -13,21 +13,17 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
 
-{-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.ADT.Param where
 
 import Data.SBV
 
--- | A basic parameterized type
-data Expr a = E a
-{-
 data Expr nm a = Var nm
                | Val nm
                | Add    (Expr nm a) (Expr nm a)
                | Mul    (Expr nm a) (Expr nm a)
                | Let nm (Expr nm a) (Expr nm a)
--}
 
 -- | Create a symbolic version of expressions.
 mkSymbolic ''Expr
