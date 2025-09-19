@@ -438,7 +438,7 @@ mkCaseAnalyzer typeName params cstrs = do
             rvar   = TH.VarT res
             mkFun  = foldr (TH.AppT . TH.AppT TH.ArrowT) rvar
             fTypes = [mkFun (map (mkSBV . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
-            sig    = TH.SigD cnm (TH.ForallT [TH.PlainTV res TH.SpecifiedSpec]
+            sig    = TH.SigD cnm (TH.ForallT [TH.PlainTV p TH.SpecifiedSpec | p <- res : params]
                                              [TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)]
                                              (mkFun (sType : fTypes)))
 
