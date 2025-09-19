@@ -242,7 +242,7 @@ sCase = QuasiQuoter
 
         cstrs <- -- We don't need the field names if user supplied them; so drop them here
                  let dropFieldNames (c, nts) = (c, map snd nts)
-                 in map dropFieldNames <$> getConstructors (mkName typ)
+                 in map dropFieldNames <$> snd <$> getConstructors (mkName typ)
 
         -- Is there a catch all clause?
         let hasCatchAll = or [True | CWild _ Nothing _ <- cases]

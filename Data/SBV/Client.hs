@@ -453,7 +453,11 @@ unmod = reverse . takeWhile (/= '.') . reverse . show
 -- | Given a type name, determine what kind of a data-type it is.
 dissect :: TH.Name -> TH.Q ADT
 dissect typeName = do
-        tcs <- getConstructors typeName
+        (args, tcs) <- getConstructors typeName
+
+        case args of
+          [] -> pure ()
+          _  -> error $ "Can't handle args: " ++ show args
 
         let mk n (mbfn, t) = do k <- expandSyns t >>= toSBV typeName n
                                 pure (mbfn, t, k)
@@ -471,8 +475,8 @@ report :: String
 report = "Please report this as a feature request."
 
 -- | Collect the constructors
-getConstructors :: TH.Name -> TH.Q [(TH.Name, [(Maybe TH.Name, TH.Type)])]
-getConstructors typeName = do cstrs <- getConstructorsFromType (TH.ConT typeName)
+getConstructors :: TH.Name -> TH.Q ([TH.Name], [(TH.Name, [(Maybe TH.Name, TH.Type)])])
+getConstructors typeName = do res@(_, cstrs) <- getConstructorsFromType (TH.ConT typeName)
 
                               -- make sure accessors are unique
                               let noDup [] = pure ()
@@ -486,8 +490,9 @@ getConstructors typeName = do cstrs <- getConstructorsFromType (TH.ConT typeName
                                     | True        = noDup ns
                               noDup [n | (_, fs) <- cstrs, (Just n, _) <- fs]
 
-                              pure cstrs
-  where getConstructorsFromType :: TH.Type -> TH.Q [(TH.Name, [(Maybe TH.Name, TH.Type)])]
+                              pure res
+
+  where getConstructorsFromType :: TH.Type -> TH.Q ([TH.Name], [(TH.Name, [(Maybe TH.Name, TH.Type)])])
         getConstructorsFromType ty = do ty' <- expandSyns ty
                                         case headCon ty' of
                                           Just (n, args) -> reifyFromHead n args
@@ -505,11 +510,11 @@ getConstructors typeName = do cstrs <- getConstructorsFromType (TH.ConT typeName
                 go args (TH.ParensT t) = go      args t
                 go _    _              = Nothing
 
-        reifyFromHead :: TH.Name -> [TH.Type] -> TH.Q [(TH.Name, [(Maybe TH.Name, TH.Type)])]
+        reifyFromHead :: TH.Name -> [TH.Type] -> TH.Q ([TH.Name], [(TH.Name, [(Maybe TH.Name, TH.Type)])])
         reifyFromHead n args = do info <- TH.reify n
                                   case info of
-                                    TH.TyConI (TH.DataD    _ _ tvs _ cons _) -> mapM (expandCon (mkSubst tvs args)) cons
-                                    TH.TyConI (TH.NewtypeD _ _ tvs _ con  _) -> mapM (expandCon (mkSubst tvs args)) [con]
+                                    TH.TyConI (TH.DataD    _ _ tvs _ cons _) -> (map tvName tvs,) <$> mapM (expandCon (mkSubst tvs args)) cons
+                                    TH.TyConI (TH.NewtypeD _ _ tvs _ con  _) -> (map tvName tvs,) <$> mapM (expandCon (mkSubst tvs args)) [con]
                                     TH.TyConI (TH.TySynD _ tvs rhs)          -> getConstructorsFromType (applySubst (mkSubst tvs args) rhs)
                                     _ -> bad "Unsupported kind"
                                              [ "Type : " ++ show typeName
@@ -535,11 +540,13 @@ getConstructors typeName = do cstrs <- getConstructorsFromType (TH.ConT typeName
                                                             , report
                                                             ]
 
+        tvName :: TH.TyVarBndr TH.BndrVis -> TH.Name
+        tvName (TH.PlainTV  n _)   = n
+        tvName (TH.KindedTV n _ _) = n
+
         -- | Make substitution from type variables to actual args
         mkSubst :: [TH.TyVarBndr TH.BndrVis] -> [TH.Type] -> [(TH.Name, TH.Type)]
         mkSubst tvs = zip (map tvName tvs)
-          where tvName (TH.PlainTV  n _)   = n
-                tvName (TH.KindedTV n _ _) = n
 
         -- | Apply substitution to a Type
         applySubst :: [(TH.Name, TH.Type)] -> TH.Type -> TH.Type
@@ -595,10 +602,6 @@ toSBV typeName constructorName = go
         -- rational
         go (TH.AppT (TH.ConT nm) (TH.ConT p))
             | nm == ''Ratio && p == ''Integer = pure KRational
-
-        -- Application to parameter. We only support this if it's the data-type
-        -- we're currently defining.
-        go (TH.VarT nm) = pure $ KVar (TH.nameBase nm)
 
         -- giving up
         go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ show typeName
