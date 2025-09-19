@@ -267,7 +267,7 @@ mkSBV a = TH.ConT ''SBV `TH.AppT` a
 
 -- | Saturate the type with its parameters
 saturate :: TH.Type -> [TH.Name] -> TH.Type
-saturate t ps = foldr (\p b -> TH.AppT b (TH.VarT p)) t ps
+saturate t ps = foldr (\p b -> TH.AppT b (TH.VarT p)) t (reverse ps)
 
 -- | Create a symbolic ADT
 mkADT :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
