@@ -337,7 +337,7 @@ mkADT typeName params cstrs = do
                         Nothing
                         kindCtx
                         (TH.AppT (TH.ConT ''HasKind) typeCon)
-                        [TH.FunD 'kindOf [TH.Clause [] (TH.NormalB kindDef) []]]
+                        [TH.FunD 'kindOf [TH.Clause [TH.WildP] (TH.NormalB kindDef) []]]
 
     arbDecl <- [d|instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
                      arbitrary = error $ unlines [ ""
