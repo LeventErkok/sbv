@@ -131,12 +131,13 @@ mkSymbolic typeName = do
 
      -- undefiner must be careful in putting ascriptions
      let undefine n
-            | base == "sCase"  ++ tbase = TH.AppTypeE (TH.VarE n) (TH.ConT ''Integer)
-            | True                      = TH.VarE n
-           where tbase = TH.nameBase typeName
-                 base  = TH.nameBase n
+           | base == "sCase" ++ tbase = wrap 1   -- Needs an extra param
+           | True                     = wrap 0
+           where tbase  = TH.nameBase typeName
+                 base   = TH.nameBase n
+                 wrap c = foldl TH.AppTypeE (TH.VarE n) (replicate (c + length params) (TH.ConT ''Integer))
 
-     let names     = [undefine n | TH.FunD n _ <- ds]
+         names     = [undefine n | TH.FunD n _ <- ds]
          body      = foldl TH.AppE (TH.VarE 'undefined)
                                    (names ++ [TH.SigE (TH.VarE 'undefined) 
                                                       (saturate (TH.ConT (TH.mkName ('S' : TH.nameBase typeName)))
@@ -234,7 +235,7 @@ mkEnum typeName cstrs = do
 
     -- Declare testers and case analyzer, if this is an enumeration
     testsAndCase <- if isEnum
-                    then do ts <- mkTesters sType [] (map (, []) cstrs)
+                    then do ts <- mkTesters sType id (map (, []) cstrs)
                             (caseSig, caseFun) <- mkCaseAnalyzer typeName [] (map (, []) cstrs)
                             pure $ caseSig : caseFun : ts
                     else pure []
@@ -275,6 +276,9 @@ mkADT typeName params cstrs = do
     let typeCon = saturate (TH.ConT typeName) params
         sType   = mkSBV typeCon
 
+    let inSymValContext = TH.ForallT tvars [TH.AppT (TH.ConT ''SymVal) (TH.VarT n) | n <- params]
+           where tvars  = [TH.PlainTV n TH.SpecifiedSpec | n <- params]
+
     litFun <- do let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
                                               let cn      = TH.mkName $ 's' : TH.nameBase n
                                                   app a b = TH.AppE a (TH.AppE (TH.VarE 'literal) b)
@@ -286,7 +290,9 @@ mkADT typeName params cstrs = do
     fromCVFunName <- TH.newName ("cv2" ++ TH.nameBase typeName)
     addDoc ("Conversion from SMT values to " ++ TH.nameBase typeName ++ " values.") fromCVFunName
 
-    let fromCVSig = TH.SigD fromCVFunName (foldr (TH.AppT . TH.AppT TH.ArrowT) typeCon [TH.ConT ''String, TH.AppT TH.ListT (TH.ConT ''CV)])
+    let fromCVSig = TH.SigD fromCVFunName
+                           (inSymValContext (foldr (TH.AppT . TH.AppT TH.ArrowT) typeCon
+                                                   [TH.ConT ''String, TH.AppT TH.ListT (TH.ConT ''CV)]))
 
         fromCVCls :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Clause
         fromCVCls (nm, args) = do
@@ -322,7 +328,8 @@ mkADT typeName params cstrs = do
                              CV k _ -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k
                  |]
 
-    symCtx <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params]
+    let symValParams = [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params]
+    symCtx <- TH.cxt symValParams
 
     let symVal = TH.InstanceD
                       Nothing
@@ -357,7 +364,7 @@ mkADT typeName params cstrs = do
     -- Declare constructors
     let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
         declConstructor (c, ntks) = let ats = map (mkSBV . (\(_, t, _) -> t)) ntks
-                                        ty  = foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
+                                        ty  = inSymValContext $ foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
                                     in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
                 nm   = TH.mkName $ 's' : bnm
@@ -374,7 +381,7 @@ mkADT typeName params cstrs = do
 
     -- Declare accessors
     let declAccessor :: TH.Name -> (Maybe TH.Name, TH.Type, Kind) -> Int -> [((TH.Name, String), [TH.Dec])]
-        declAccessor c (mbUN, ft, _) i = let ty    = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
+        declAccessor c (mbUN, ft, _) i = let ty    = inSymValContext $ TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
                                              def n = TH.FunD n [TH.Clause [] (TH.NormalB body) []]
                                          in ((nm, bnm), [TH.SigD nm ty, def nm])
                                           : case mbUN of
@@ -390,8 +397,7 @@ mkADT typeName params cstrs = do
 
     mapM_ (addDoc "Field accessor function." . fst) accessorNames
 
-    -- Declare testers
-    testerDecls <- mkTesters sType params cstrs
+    testerDecls <- mkTesters sType inSymValContext cstrs
 
     -- Get the case analyzer
     (caseSig, caseFun) <- mkCaseAnalyzer typeName params cstrs
@@ -443,20 +449,18 @@ mkCaseAnalyzer typeName params cstrs = do
             mkFun  = foldr (TH.AppT . TH.AppT TH.ArrowT) rvar
             fTypes = [mkFun (map (mkSBV . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
             sig    = TH.SigD cnm (TH.ForallT [TH.PlainTV p TH.SpecifiedSpec | p <- res : params]
-                                             [TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)]
+                                             (TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)
+                                             : [TH.AppT (TH.ConT ''SymVal) (TH.VarT p) | p <- params])
                                              (mkFun (sType : fTypes)))
 
         addDoc ("Case analyzer for the type " ++ bnm ++ ".") cnm
         pure (sig, def)
 
 -- | Declare testers
-mkTesters :: TH.Type -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
-mkTesters sType params cstrs = do
-    let tvars  = [TH.PlainTV n TH.SpecifiedSpec | n <- params]
-        symCtx = [TH.AppT (TH.ConT ''SymVal) (TH.VarT n) | n <- params]
-
-        declTester :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
-        declTester (c, _) = let ty = TH.ForallT tvars symCtx $ TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
+mkTesters :: TH.Type -> (TH.Type -> TH.Type) -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
+mkTesters sType inSymValContext cstrs = do
+    let declTester :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
+        declTester (c, _) = let ty = inSymValContext $ TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
                             in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
                 nm   = TH.mkName $ "is" ++ bnm
