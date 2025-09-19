@@ -120,9 +120,10 @@ mkSymbolic typeName = do
 
      tKind <- dissect typeName
 
-     ds <- case tKind of
-             ADTEnum cs           -> mkEnum typeName cs           -- also handles uninterpreted types
-             ADTFull params cstrs -> mkADT  typeName params cstrs
+     (params, ds)
+        <- case tKind of
+             ADTEnum        cstrs -> ([],)     <$> mkEnum typeName        cstrs
+             ADTFull params cstrs -> (params,) <$> mkADT  typeName params cstrs
 
      -- declare an "undefiner" so we don't have stray names
      nm <- TH.newName $ "_undefiner_" ++ TH.nameBase typeName
@@ -137,7 +138,9 @@ mkSymbolic typeName = do
 
      let names     = [undefine n | TH.FunD n _ <- ds]
          body      = foldl TH.AppE (TH.VarE 'undefined)
-                                   (names ++ [TH.SigE (TH.VarE 'undefined) (TH.ConT (TH.mkName ('S' : TH.nameBase typeName)))])
+                                   (names ++ [TH.SigE (TH.VarE 'undefined) 
+                                                      (saturate (TH.ConT (TH.mkName ('S' : TH.nameBase typeName)))
+                                                                params)])
          undefSig  = TH.SigD nm (TH.VarT (TH.mkName "a"))
          undefBody = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
 
@@ -393,7 +396,7 @@ mkADT typeName params cstrs = do
     (caseSig, caseFun) <- mkCaseAnalyzer typeName params cstrs
 
     -- Get the induction schema, upto 5 extra args
-    indDecs <- mapM (mkInductionSchema typeName cstrs) [0 .. 5]
+    indDecs <- mapM (mkInductionSchema typeName params cstrs) [0 .. 5]
 
     pure $  [tdecl, symVal, kindDecl]
          ++ arbDecl
@@ -707,8 +710,8 @@ toSBV typeName args constructorName = go
                 ]
 
 -- | Make an induction schema for the type, with n extra arguments.
-mkInductionSchema :: TH.Name -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> Int -> TH.Q [TH.Dec]
-mkInductionSchema typeName cstrs extraArgCnt = do
+mkInductionSchema :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> Int -> TH.Q [TH.Dec]
+mkInductionSchema typeName params cstrs extraArgCnt = do
    let btype = TH.nameBase typeName
        nm    = "induct" ++ btype ++ if extraArgCnt == 0 then "" else show extraArgCnt
 
@@ -751,6 +754,7 @@ mkInductionSchema typeName cstrs extraArgCnt = do
 
    propName <- TH.newName "prop"
    argName  <- TH.newName "a"
+   taName   <- TH.newName "ta"
 
    let pre    = foldl1 TH.AppE [TH.VarE 'sAnd,  TH.ListE cases]
        schema = foldl1 TH.AppE [TH.VarE '(.=>), pre, post]
@@ -760,7 +764,9 @@ mkInductionSchema typeName cstrs extraArgCnt = do
                           (foldr (TH.AppT . TH.AppT TH.ArrowT)
                                  (TH.ConT ''SBool)
                                  [  TH.AppT (TH.ConT ''Forall) (TH.VarT es) `TH.AppT` et
-                                  | (es, et) <- zip (TH.mkName "a" : extraSyms) (TH.ConT typeName : map TH.VarT extraTypes)])
+                                  | (es, et) <- zip (taName : extraSyms)
+                                                    (saturate (TH.ConT typeName) params : map TH.VarT extraTypes)
+                                 ])
 
        pfFun = TH.FunD pf [TH.Clause (map TH.VarP (argName : extraNames))
                                      (TH.NormalB (foldl TH.AppE
