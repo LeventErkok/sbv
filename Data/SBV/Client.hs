@@ -258,16 +258,19 @@ addDoc _ _ = pure ()
 #endif
 
 -- | Symbolic version of a type
-mkSBV :: [TH.Name] -> TH.Type -> TH.Type
-mkSBV params a = TH.ConT ''SBV `TH.AppT` t
-  where t = foldr (\p b -> TH.AppT b (TH.VarT p)) a params
+mkSBV :: TH.Type -> TH.Type
+mkSBV a = TH.ConT ''SBV `TH.AppT` a
+
+-- | Saturate the type with its parameters
+saturate :: TH.Type -> [TH.Name] -> TH.Type
+saturate t ps = foldr (\p b -> TH.AppT b (TH.VarT p)) t ps
 
 -- | Create a symbolic ADT
 mkADT :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
 mkADT typeName params cstrs = do
 
-    let typeCon = TH.ConT typeName
-        sType   = mkSBV params typeCon
+    let typeCon = saturate (TH.ConT typeName) params
+        sType   = mkSBV typeCon
 
     litFun <- do let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
                                               let cn      = TH.mkName $ 's' : TH.nameBase n
@@ -321,7 +324,7 @@ mkADT typeName params cstrs = do
     let symVal = TH.InstanceD
                       Nothing
                       symCtx
-                      (TH.AppT (TH.ConT ''SymVal) (foldr (\p b -> TH.AppT b (TH.VarT p)) typeCon params))
+                      (TH.AppT (TH.ConT ''SymVal) typeCon)
                       [ litFun
                       , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB (TH.ConE 'Nothing)) []]
                       , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV)          []]
@@ -343,7 +346,7 @@ mkADT typeName params cstrs = do
 
     -- Declare constructors
     let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
-        declConstructor (c, ntks) = let ats = map (mkSBV [] . (\(_, t, _) -> t)) ntks
+        declConstructor (c, ntks) = let ats = map (mkSBV . (\(_, t, _) -> t)) ntks
                                         ty  = foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
                                     in ((nm, bnm), [TH.SigD nm ty, def])
           where bnm  = TH.nameBase c
@@ -361,7 +364,7 @@ mkADT typeName params cstrs = do
 
     -- Declare accessors
     let declAccessor :: TH.Name -> (Maybe TH.Name, TH.Type, Kind) -> Int -> [((TH.Name, String), [TH.Dec])]
-        declAccessor c (mbUN, ft, _) i = let ty    = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV params ft)
+        declAccessor c (mbUN, ft, _) i = let ty    = TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
                                              def n = TH.FunD n [TH.Clause [] (TH.NormalB body) []]
                                          in ((nm, bnm), [TH.SigD nm ty, def nm])
                                           : case mbUN of
@@ -386,23 +389,19 @@ mkADT typeName params cstrs = do
     -- Get the induction schema, upto 5 extra args
     indDecs <- mapM (mkInductionSchema typeName cstrs) [0 .. 5]
 
-    let debug = TH.nameBase typeName == "PExpr"
-
-    if debug
-        then pure $ tdecl : symVal : concat accessorDecls
-        else pure $ tdecl : symVal : decls
-                  ++ concat cdecls
-                  ++ testerDecls
-                  ++ concat accessorDecls
-                  ++ [fromCVSig, fromCVFun]
-                  ++ [caseSig, caseFun]
-                  ++ concat indDecs
+    pure $ tdecl : symVal : decls
+         ++ concat cdecls
+         ++ testerDecls
+         ++ concat accessorDecls
+         ++ [fromCVSig, fromCVFun]
+         ++ [caseSig, caseFun]
+         ++ concat indDecs
 
 -- | Make a case analyzer for the type. Works for ADTs and enums. Returns sig and defn
 mkCaseAnalyzer :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
 mkCaseAnalyzer typeName params cstrs = do
-        let typeCon = TH.ConT typeName
-            sType   = mkSBV params typeCon
+        let typeCon = saturate (TH.ConT typeName) params
+            sType   = mkSBV typeCon
 
             bnm = TH.nameBase typeName
             cnm = TH.mkName $ "sCase" ++ bnm
@@ -431,7 +430,7 @@ mkCaseAnalyzer typeName params cstrs = do
 
             rvar   = TH.VarT res
             mkFun  = foldr (TH.AppT . TH.AppT TH.ArrowT) rvar
-            fTypes = [mkFun (map (mkSBV params . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
+            fTypes = [mkFun (map (mkSBV . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
             sig    = TH.SigD cnm (TH.ForallT [TH.PlainTV res TH.SpecifiedSpec]
                                              [TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)]
                                              (mkFun (sType : fTypes)))
