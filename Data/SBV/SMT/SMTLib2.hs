@@ -28,7 +28,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds)
+import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds, KADT(..))
 import Data.SBV.Control.Types
 
 import Data.SBV.SMT.Utils
@@ -65,7 +65,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = not (null [() | KBounded{} <- allKinds])
         usorts         = [(s, dt) | KUserSort s dt <- allKinds]
-        adts           = [(s, ps, dt) | KADT s ps dt <- allKinds]
+        adts           = [(s, k)  | KADT s k <- allKinds]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi allTopOps]
@@ -228,7 +228,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ (if containsMaybe     kindInfo then declMaybe     else [])
              ++ (if containsRationals kindInfo then declRationals else [])
              ++ [ "; --- ADTs  --- " | not (null adts)]
-             ++ concatMap declADT adts
+             ++ concatMap (uncurry declADT) adts
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
              ++ [ "; --- top level inputs ---"]
@@ -320,9 +320,10 @@ declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
 -- | Declare ADTs
-declADT :: (String, [String], Maybe [(String, [Kind])]) -> [String]
-declADT (_,      _, Nothing)    = []  -- recursive use site
-declADT (tName, ps, Just cstrs) = ("; User defined ADT: " ++ tName) : decl
+declADT :: String -> KADT -> [String]
+declADT _     KADTRec             = []
+declADT _     (KADTUse _)         = []
+declADT tName (KADTDefn ps cstrs) = ("; User defined ADT: " ++ tName) : decl
   where decl =  ("(declare-datatype " ++ tName ++ parOpen ++ " (")
              :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
              ++ ["))" ++ parClose]
@@ -422,7 +423,7 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
                settings
             -- sorts
             ++ concatMap declSort [(s,     dt) | KUserSort s    dt <- newKinds]
-            ++ concatMap declADT  [(s, ps, dt) | KADT      s ps dt <- newKinds]
+            ++ concat [declADT s a | KADT s a <- newKinds]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- sums
@@ -794,7 +795,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                               KBounded _ n  -> (2::Integer)^n > fromIntegral l
                               KUnbounded    -> True
                               KUserSort _ _ -> unexpected
-                              KADT _ _ _    -> unexpected
+                              KADT _ _      -> unexpected
                               KReal         -> unexpected
                               KFloat        -> unexpected
                               KDouble       -> unexpected
@@ -828,7 +829,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                 KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
-                                KADT  s _ _   -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT valued index: " ++ s
+                                KADT  s _     -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT valued index: " ++ s
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
                                 KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
                                 KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k

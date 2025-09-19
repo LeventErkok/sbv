@@ -56,6 +56,7 @@ import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 import Language.Haskell.TH.ExpandSyns as TH
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Core.SizedFloats
@@ -107,6 +108,7 @@ deriving instance TH.Lift TH.TyLit
 #endif
 
 -- A few other things we need to TH lift
+deriving instance TH.Lift KADT
 deriving instance TH.Lift Kind
 
 -- | What kind of type is this?
@@ -343,7 +345,9 @@ mkADT typeName params cstrs = do
     kindCtx <- TH.cxt [TH.appT (TH.conT ''HasKind) (TH.varT n) | n <- params]
 
     kindDef <- [| KADT (unmod typeName) $(TH.lift (map TH.nameBase params))
-                       (Just [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs]) |]
+                       (Just [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs])
+               |]
+
     let kindDecl = TH.InstanceD
                         Nothing
                         kindCtx
@@ -598,8 +602,7 @@ toSBV typeName args constructorName = go
         -- Is this our own type, possibly applied to some parameters?
         go t | Just ps <- getSelf t
              = if ps == args
-                  then -- field is Nothing when we "refer" to ourself.
-                       pure $ KADT tName (map TH.nameBase args) Nothing
+                  then pure $ KADT tName KADTRec -- recursive ref
                   else bad "Unsupported type permutation"
                            [ "Datatype  : " ++ show typeName
                            , "Parameters: " ++ show args
@@ -738,8 +741,8 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
          | True
          = do as <- mapM (const (TH.newName "a")) flds
               let isRecursive (_, _, k) = case k of
-                                            KADT t _ Nothing -> t == btype
-                                            _                -> False
+                                            KADT t KADTRec -> t == btype
+                                            _              -> False
                   recFields = [a | (a, f) <- zip as flds, isRecursive f]
               TH.appE (TH.varE 'quantifiedBool)
                       (mkLam as (mkImp recFields (foldl TH.appE

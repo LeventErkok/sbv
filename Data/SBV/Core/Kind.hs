@@ -27,7 +27,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.Core.Kind (
-          Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
+          Kind(..), KADT(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
         , BVIsNonZero, ValidFloat, intOfProxy
         , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
         , eqCheckIsObjectEq, containsFloats, isSomeKindOfFloat, expandKinds
@@ -61,6 +61,13 @@ import qualified Data.Generics.Uniplate.Data as G
 
 import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
+-- | ADT kinds appear in a few different formats
+data KADT = KADTDefn [String]           -- Parameters
+                     [(String, [Kind])] -- Constructors, and their fields
+          | KADTRec                     -- A recursive field reference, used during the definition itself
+          | KADTUse  [Kind]             -- A use site, applied to these parameters
+          deriving (Eq, Ord, G.Data, NFData, Generic)
+
 -- | Kind of symbolic value
 data Kind =
           -- Base types
@@ -92,10 +99,7 @@ data Kind =
 
           -- Algebraic datatypes
           | KVar String        -- only used temporarily during ADT construction
-
-          | KADT String                     -- Name
-                 [String]                   -- Params
-                 (Maybe [(String, [Kind])]) -- If Nothing: Use site. If Just: Constructors
+          | KADT String KADT
 
           -- Collections
           | KList Kind
@@ -125,8 +129,13 @@ instance Show Kind where
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
   show (KUserSort s _)    = s
-  show (KADT s [] _)      = s
-  show (KADT s ps _)      = '(' : unwords (s : ps) ++ ")"
+  show (KADT s typ)       = let args = case typ of
+                                         KADTDefn ps _ -> ps
+                                         KADTRec       -> []
+                                         KADTUse  ks   -> map (kindParen . showBaseKind) ks
+                            in case args of
+                                [] -> s
+                                as -> unwords (s : as)
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
   show (KFP eb sb)        = "SFloatingPoint " ++ show eb ++ " " ++ show sb
@@ -196,8 +205,13 @@ smtType KChar           = "String"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
 smtType (KUserSort s _) = s
-smtType (KADT s [] _)   = s
-smtType (KADT s ps _)   = '(' : unwords (s : ps) ++ ")"
+smtType (KADT s typ)    = let args = case typ of
+                                      KADTDefn ps _ -> ps
+                                      KADTRec       -> []
+                                      KADTUse  ks   -> map smtType ks
+                         in case args of
+                             [] -> s
+                             as -> '(' : unwords (s : as) ++ ")"
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 smtType KRational       = "SBVRational"
@@ -307,7 +321,7 @@ class HasKind a where
                   KFP i j       -> i + j
                   KRational     -> error "SBV.HasKind.intSizeOf((S)Rational)"
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
-                  KADT s _ _    -> error $ "SBV.HasKind.intSizeOf: Algebraic data type: " ++ s
+                  KADT s _      -> error $ "SBV.HasKind.intSizeOf: Algebraic data type: " ++ s
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
                   KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)"   ++ show ek
