@@ -874,7 +874,7 @@ defaultKindedValue k = CV k $ cvt k
         cvt KUnbounded       = CInteger 0
         cvt KReal            = CAlgReal 0
         cvt (KUserSort s ui) = uninterp s ui
-        cvt (KADT s _)       = error ("defaultKindedValue not supported for ADT: " ++ s) -- tough luck
+        cvt (KADT s _ _)     = error ("defaultKindedValue not supported for ADT: " ++ s) -- tough luck
         cvt KFloat           = CFloat 0
         cvt KDouble          = CDouble 0
         cvt KRational        = CRational 0
@@ -1132,7 +1132,7 @@ recoverKindedValue k e = case k of
                          cvt _ vs   = tbd $ "Unexpected function-like-value as array index" ++ show vs
 
         interpretADT :: Kind -> SExpr -> (String, [CVal])
-        interpretADT adtK@(KADT topADTName (KADTUse _ _ cks)) expr
+        interpretADT adtK@(KADT topADTName _ (KADTUse _ cks)) expr
            | Just ks <- cstr `lookup` cks
            = if length fs == length ks
              then (cstr, zipWith convert (zip [1..] ks) fs)
@@ -1156,8 +1156,8 @@ recoverKindedValue k e = case k of
                                       Nothing       -> bad ["Couldn't convert field " ++ show i ++ ": " ++ show (fk, f)]
 
                 -- If we have a recursive case, we can have a cyclic reference. Let's fix that here.
-                fixRef (KADT curADTName KADTRec) | topADTName == curADTName = adtK
-                fixRef fk                                                   = fk
+                fixRef (KADT curADTName _ KADTRec) | topADTName == curADTName = adtK
+                fixRef fk                                                     = fk
 
         interpretADT someK expr = error $ unlines [ "Data.SBV.interpretADT: Expected an ADT kind, but got something else."
                                                   , "   Expr: " ++ show expr

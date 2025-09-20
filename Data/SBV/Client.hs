@@ -317,9 +317,9 @@ mkADT typeName params cstrs = do
                     pure $ TH.FunD fromCVFunName (clss ++ [catchAll])
 
     getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
-                        fixRef kRef (KADT curName KADTRec) | curName == unmod typeName = kRef
-                        fixRef _    k                                                  = k
-                    in \case CV kTop@(KADT _ (KADTUse _ _ fks)) (CADT (c, vs)) ->
+                        fixRef kRef (KADT curName _ KADTRec) | curName == unmod typeName = kRef
+                        fixRef _    k                                                    = k
+                    in \case CV kTop@(KADT _ _ (KADTUse _ fks)) (CADT (c, vs)) ->
                                  case c `lookup` fks of
                                    Nothing  -> unexpected $ "Cannot find constructor in kind: " ++ show (c, fks)
                                    Just ks
@@ -346,12 +346,12 @@ mkADT typeName params cstrs = do
 
     let kindDef = foldl1 TH.AppE [ TH.ConE 'KADT
                                  , TH.LitE (TH.StringL (unmod typeName))
+                                 , TH.ListE (map (TH.LitE . TH.StringL . TH.nameBase) params)
                                  , foldl1 TH.AppE [ TH.ConE 'KADTUse
                                                   , TH.ListE [TH.AppE (TH.VarE 'kindOf)
                                                                       (TH.AppTypeE (TH.ConE 'Proxy) (TH.VarT p))
                                                              | p <- params
                                                              ]
-                                                  , TH.ListE (map (TH.LitE . TH.StringL . TH.nameBase) params)
                                                   , defCstrs
                                                   ]
                                  ]
@@ -610,7 +610,7 @@ toSBV typeName args constructorName = go
         -- Is this our own type, possibly applied to some parameters?
         go t | Just ps <- getSelf t
              = if ps == args
-                  then pure $ KADT tName KADTRec -- recursive ref
+                  then pure $ KADT tName (map TH.nameBase args) KADTRec -- recursive ref
                   else bad "Unsupported type permutation"
                            [ "Datatype  : " ++ show typeName
                            , "Parameters: " ++ show args
@@ -749,8 +749,8 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
          | True
          = do as <- mapM (const (TH.newName "a")) flds
               let isRecursive (_, _, k) = case k of
-                                            KADT t KADTRec -> t == btype
-                                            _              -> False
+                                            KADT t _ KADTRec -> t == btype
+                                            _                -> False
                   recFields = [a | (a, f) <- zip as flds, isRecursive f]
               TH.appE (TH.varE 'quantifiedBool)
                       (mkLam as (mkImp recFields (foldl TH.appE

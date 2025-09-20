@@ -1439,10 +1439,10 @@ registerKind :: State -> Kind -> IO ()
 registerKind st k
   | KUserSort sortName _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
-  | KADT  sortName _ <- k, isReserved sortName
+  | KADT  sortName _ _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   -- Nothing to register in a recursive use site for ADT
-  | KADT _ KADTRec   <- k
+  | KADT _ _ KADTRec <- k
   = pure ()
   | True
   = do -- Adding a kind to the incState is tricky; we only need to add it
@@ -1459,7 +1459,7 @@ registerKind st k
                           -- want to re-add because double-declaration would be wrong. See 'cvtInc' for details.
                           let needsAdding = case k of
                                               KUserSort{} -> k `notElem` existingKinds
-                                              KADT s _    -> all (s /=) [s' | KADT s' _ <- Set.toList existingKinds]
+                                              KADT s _ _  -> all (s /=) [s' | KADT s' _ _ <- Set.toList existingKinds]
                                               KList{}     -> k `notElem` existingKinds
                                               KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
                                               KMaybe{}    -> k `notElem` existingKinds
@@ -1484,11 +1484,11 @@ registerKind st k
          KString   {}    -> return ()
 
          -- Register subkinds in an ADT. Remember that a 'Nothing' is a use site, so nothing further to do.
-         KADT _ ak -> case ak of
-                       KADTUse ks _ fks  -> mapM_ (registerKind st) (ks ++ concatMap snd fks)
-                       -- The following match is redundan as we already handled them above
-                       -- And GHC is smart enough to know this, so if we give these cases, it complains! Kudos!
-                       -- KADTRec           -> pure ()
+         KADT _ _ ak -> case ak of
+                         KADTUse ks fks  -> mapM_ (registerKind st) (ks ++ concatMap snd fks)
+                         -- The following match is redundan as we already handled them above
+                         -- And GHC is smart enough to know this, so if we give these cases, it complains! Kudos!
+                         -- KADTRec         -> pure ()
 
          KList     ek        -> registerKind st ek
          KSet      ek        -> registerKind st ek

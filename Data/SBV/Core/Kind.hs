@@ -63,8 +63,7 @@ import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
 -- | ADT kinds appear in a few different formats
 data KADTDef = KADTRec                    -- A recursive field reference, used during the definition itself
-             | KADTUse [Kind]             -- A use site, applied to these parameters
-                       [String]           -- Parameters
+             | KADTUse [Kind]             -- A use site
                        [(String, [Kind])] -- Constructors, and their fields
           deriving (Eq, Ord, G.Data, NFData, Generic)
 
@@ -98,8 +97,10 @@ data Kind =
           | KUserSort String (Maybe [String])
 
           -- Algebraic datatypes
-          | KVar String        -- only used temporarily during ADT construction
-          | KADT String KADTDef
+          | KVar String    -- only used temporarily during ADT construction
+          | KADT String
+                 [String]  -- Parameters
+                 KADTDef   -- Actual defn
 
           -- Collections
           | KList Kind
@@ -129,14 +130,9 @@ instance Show Kind where
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
   show (KUserSort s _)    = s
-  show (KADT s typ)       = case typ of
-                              KADTRec        -> error $ unlines [ "*** Data.SBV.show.Kind: Unexpected KADT reference:"
-                                                                , "***"
-                                                                , "***  Type: " ++ s
-                                                                , "***"
-                                                                , "*** Please report this as a bug!"
-                                                                ]
-                              KADTUse ks _ _ -> unwords (s : map (kindParen . showBaseKind) ks)
+  show (KADT s ps typ)    = case typ of
+                              KADTRec      -> unwords (s :                                ps)
+                              KADTUse ks _ -> unwords (s : map (kindParen . showBaseKind) ks)
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
   show (KFP eb sb)        = "SFloatingPoint " ++ show eb ++ " " ++ show sb
@@ -206,9 +202,9 @@ smtType KChar           = "String"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
 smtType (KUserSort s _) = s
-smtType (KADT s typ)    = case typ of
-                            KADTRec        -> '(' : unwords (s : ["what", "is", "this"]) ++ ")"
-                            KADTUse ks _ _ -> '(' : unwords (s : map smtType ks) ++ ")"
+smtType (KADT s ps typ) = case typ of
+                            KADTRec      -> '(' : unwords (s :             ps) ++ ")"
+                            KADTUse ks _ -> '(' : unwords (s : map smtType ks) ++ ")"
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 smtType KRational       = "SBVRational"
@@ -318,7 +314,7 @@ class HasKind a where
                   KFP i j       -> i + j
                   KRational     -> error "SBV.HasKind.intSizeOf((S)Rational)"
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
-                  KADT s _      -> error $ "SBV.HasKind.intSizeOf: Algebraic data type: " ++ s
+                  KADT s _ _    -> error $ "SBV.HasKind.intSizeOf: Algebraic data type: " ++ s
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
                   KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)"   ++ show ek
