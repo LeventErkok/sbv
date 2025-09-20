@@ -903,7 +903,7 @@ sexprToVal e = fromCV <$> recoverKindedValue (kindOf (Proxy @a)) e
 -- | Recover a given solver-printed value with a possible interpretation
 recoverKindedValue :: Kind -> SExpr -> Maybe CV
 recoverKindedValue k e = case k of
-                           KVar{}      -> error $ "Data.SBV.recoverKindedValue: Unexpected kind: " ++ show k
+                           KVar{}      -> error $ "Data.SBV.recoverKindedValue: Unexpected var kind: " ++ show k
 
                            KBool       | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
                                        | True                  -> Nothing
