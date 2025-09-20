@@ -142,8 +142,8 @@ mkSymbolic typeName = do
          names     = [undefine n | TH.FunD n _ <- ds]
          body      = foldl TH.AppE (TH.VarE 'undefined)
                                    (names ++ [TH.SigE (TH.VarE 'undefined) 
-                                                      (saturate (TH.ConT (TH.mkName ('S' : TH.nameBase typeName)))
-                                                                params)])
+                                                      (foldl TH.AppT (TH.ConT (TH.mkName ('S' : TH.nameBase typeName)))
+                                                                     (map (const (TH.ConT ''Integer)) params))])
          undefSig  = TH.SigD nm (TH.VarT (TH.mkName "a"))
          undefBody = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
 
@@ -317,9 +317,9 @@ mkADT typeName params cstrs = do
                     pure $ TH.FunD fromCVFunName (clss ++ [catchAll])
 
     getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
-                        fixRef kRef (KADT curName _ Nothing) | curName == unmod typeName = kRef
-                        fixRef _    k                                                    = k
-                    in \case CV kTop@(KADT _ _ (Just fks)) (CADT (c, vs)) ->
+                        fixRef kRef (KADT curName KADTRec) | curName == unmod typeName = kRef
+                        fixRef _    k                                                  = k
+                    in \case CV kTop@(KADT _ (KADTDefn _ fks)) (CADT (c, vs)) ->
                                  case c `lookup` fks of
                                    Nothing  -> unexpected $ "Cannot find constructor in kind: " ++ show (c, fks)
                                    Just ks
