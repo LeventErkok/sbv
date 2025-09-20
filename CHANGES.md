@@ -5,11 +5,10 @@
 
   * SBV now supports algebraic data-types. A new function 'mkSymbolic' is introduced, which takes an ADT name
     and turns it into a data-type that you can symbolically process. Clearly, Haskell ADTs are extremely rich:
-    We do not support all variants. In particular, we do not support data-types with parameters, nor data-types
-    that have fields that refer to other data-types. Self reference is OK; i.e., data-types can have fields
-    referring to themselves, but not others. GADTs are also not supported. This should cover most use cases, but
-    clearly not everything. Depending on SMTLib developments, we might add other features as feasible. Please
-    get in touch if you have a use case that is currently not supported.
+    We do not support all variants. Parameterized types and self-referential fields are supported.
+    GADTs are not supported. This should cover most use cases, but clearly not everything. Depending on
+    SMTLib developments, we might add other features as feasible. Please get in touch if you have a use
+    case that is currently not supported.
 
   * Introduced a new quasiquoter, named sCase, which allows writing case-expressions over symbolic ADTs. It supports
     wildcards, and guards. It does not support pattern guards, nor complex patterns. (Each pattern is either a
