@@ -28,3 +28,6 @@ data Expr nm a = Var nm
 
 -- | Create a symbolic version of expressions.
 mkSymbolic ''Expr
+
+t :: IO SatResult
+t = satWith cvc5{verbose=True} $ \(x :: SExpr String Integer) (y :: SExpr Integer Float) -> isLet x .&& isMul y
