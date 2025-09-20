@@ -1139,10 +1139,15 @@ recoverKindedValue k e = case k of
              else bad ["Mismatching field count: " ++ show (fs, ks)]
            | True
            = bad ["Cannot find constructor in the kind: " ++ show (cstr, adtK)]
-          where (cstr, fs) = case expr of
+          where (cstr, fs) = case removeAS expr of
                                ECon c             -> (c, [])
                                EApp (ECon c : cs) -> (c, cs)
                                _                  -> bad ["Unexpected expression value; does not start with a constructor."]
+
+                removeAS :: SExpr -> SExpr
+                removeAS (EApp [ECon "as", i, _]) = removeAS i
+                removeAS (EApp xs)                = EApp $ map removeAS xs
+                removeAS ae                       = ae
 
                 bad :: [String] -> a
                 bad extras = error $ unlines $ [ "Data.SBV.interpretADT: Cannot recover ADT value from solver output."
