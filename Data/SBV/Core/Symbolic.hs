@@ -1452,50 +1452,56 @@ registerKind st k
 
        existingKinds <- readIORef (rUsedKinds st)
 
-       modifyState st rUsedKinds (Set.insert k) $ do
+       -- For ADTs we need to make sure we haven't added it before
+       let adtExists = case k of
+                         KADT s _ _  -> any (s ==) [s' | KADT s' _ _ <- Set.toList existingKinds]
+                         _           -> False
 
-                          -- Why do we discriminate here? Because the incremental context is sensitive to the
-                          -- order: In particular, if an uninterpreted kind is already in there, we don't
-                          -- want to re-add because double-declaration would be wrong. See 'cvtInc' for details.
-                          let needsAdding = case k of
-                                              KUserSort{} -> k `notElem` existingKinds
-                                              KADT s _ _  -> all (s /=) [s' | KADT s' _ _ <- Set.toList existingKinds]
-                                              KList{}     -> k `notElem` existingKinds
-                                              KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
-                                              KMaybe{}    -> k `notElem` existingKinds
-                                              KEither{}   -> k `notElem` existingKinds
-                                              _           -> False
+       unless adtExists $
+          modifyState st rUsedKinds (Set.insert k) $ do
 
-                          when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
+              -- Why do we discriminate here? Because the incremental context is sensitive to the
+              -- order: In particular, if an uninterpreted kind is already in there, we don't
+              -- want to re-add because double-declaration would be wrong. See 'cvtInc' for details.
+              let needsAdding = case k of
+                                  KUserSort{} -> k `notElem` existingKinds
+                                  KADT s _ _  -> all (s /=) [s' | KADT s' _ _ <- Set.toList existingKinds]
+                                  KList{}     -> k `notElem` existingKinds
+                                  KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
+                                  KMaybe{}    -> k `notElem` existingKinds
+                                  KEither{}   -> k `notElem` existingKinds
+                                  _           -> False
 
-       -- Don't forget to register subkinds!
-       case k of
-         KVar      {}    -> return ()
-         KBool     {}    -> return ()
-         KBounded  {}    -> return ()
-         KUnbounded{}    -> return ()
-         KReal     {}    -> return ()
-         KUserSort {}    -> return ()
-         KFloat    {}    -> return ()
-         KDouble   {}    -> return ()
-         KFP       {}    -> return ()
-         KRational {}    -> return ()
-         KChar     {}    -> return ()
-         KString   {}    -> return ()
+              when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
 
-         -- Register subkinds in an ADT. Remember that a 'Nothing' is a use site, so nothing further to do.
-         KADT _ _ ak -> case ak of
-                         KADTUse ks fks  -> mapM_ (registerKind st) (ks ++ concatMap snd fks)
-                         -- The following match is redundan as we already handled them above
-                         -- And GHC is smart enough to know this, so if we give these cases, it complains! Kudos!
-                         -- KADTRec         -> pure ()
+              -- Don't forget to register subkinds!
+              case k of
+                KVar      {}    -> return ()
+                KBool     {}    -> return ()
+                KBounded  {}    -> return ()
+                KUnbounded{}    -> return ()
+                KReal     {}    -> return ()
+                KUserSort {}    -> return ()
+                KFloat    {}    -> return ()
+                KDouble   {}    -> return ()
+                KFP       {}    -> return ()
+                KRational {}    -> return ()
+                KChar     {}    -> return ()
+                KString   {}    -> return ()
 
-         KList     ek        -> registerKind st ek
-         KSet      ek        -> registerKind st ek
-         KTuple    eks       -> mapM_ (registerKind st) eks
-         KMaybe    ke        -> registerKind st ke
-         KEither   k1 k2     -> mapM_ (registerKind st) [k1, k2]
-         KArray    k1 k2     -> mapM_ (registerKind st) [k1, k2]
+                -- Register subkinds in an ADT. Remember that a 'Nothing' is a use site, so nothing further to do.
+                KADT _ _ ak -> case ak of
+                                KADTUse ks fks  -> mapM_ (registerKind st) (ks ++ concatMap snd fks)
+                                -- The following match is redundan as we already handled them above
+                                -- And GHC is smart enough to know this, so if we give these cases, it complains! Kudos!
+                                -- KADTRec         -> pure ()
+
+                KList     ek        -> registerKind st ek
+                KSet      ek        -> registerKind st ek
+                KTuple    eks       -> mapM_ (registerKind st) eks
+                KMaybe    ke        -> registerKind st ke
+                KEither   k1 k2     -> mapM_ (registerKind st) [k1, k2]
+                KArray    k1 k2     -> mapM_ (registerKind st) [k1, k2]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()
