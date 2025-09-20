@@ -342,15 +342,16 @@ mkADT typeName params cstrs = do
                       , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV)          []]
                       ]
 
-    kindCtx <- TH.cxt [TH.appT (TH.conT ''HasKind) (TH.varT n) | n <- params]
+    let kindDef = TH.AppE (TH.AppE (TH.ConE 'KADT) (TH.LitE (TH.StringL (unmod typeName))))
+                          (TH.AppE (TH.ConE 'KADTUse)
+                                   (TH.ListE [TH.AppE (TH.VarE 'kindOf)
+                                                      (TH.AppTypeE (TH.ConE 'Proxy) (TH.VarT p))
+                                             | p <- params
+                                             ]))
 
-    kindDef <- [| KADT (unmod typeName) $(TH.lift (map TH.nameBase params))
-                       (Just [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs])
-               |]
-
-    let kindDecl = TH.InstanceD
+        kindDecl = TH.InstanceD
                         Nothing
-                        kindCtx
+                        [TH.AppT (TH.ConT ''HasKind) (TH.VarT p) | p <- params]
                         (TH.AppT (TH.ConT ''HasKind) typeCon)
                         [TH.FunD 'kindOf [TH.Clause [TH.WildP] (TH.NormalB kindDef) []]]
 
