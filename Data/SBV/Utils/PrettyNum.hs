@@ -35,7 +35,7 @@ import Numeric (showIntAtBase, showHex, readInt, floatToDigits)
 import qualified Numeric as N (showHFloat)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (smtType, smtRoundingMode, showBaseKind, KADT(..))
+import Data.SBV.Core.Kind (smtType, smtRoundingMode, showBaseKind, KADTDef(..))
 
 import Data.SBV.Core.AlgReals    (algRealToSMTLib2)
 import Data.SBV.Core.SizedFloats (fprToSMTLib2, bfToString)
@@ -516,7 +516,7 @@ cvToSMTLib rm x
 
         -- ADTs
         smtLibADT :: Kind -> (String,  [CVal]) -> String
-        smtLibADT (KADT _ (KADTDefn _ cks)) (c, fs)
+        smtLibADT (KADT _ (KADTUse _ _ cks)) (c, fs)
           | Just ks <- c `lookup` cks, length ks == length fs
           = case fs of
               [] -> c

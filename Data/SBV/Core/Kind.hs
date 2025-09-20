@@ -27,7 +27,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.Core.Kind (
-          Kind(..), KADT(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
+          Kind(..), KADTDef(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
         , BVIsNonZero, ValidFloat, intOfProxy
         , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
         , eqCheckIsObjectEq, containsFloats, isSomeKindOfFloat, expandKinds
@@ -62,10 +62,10 @@ import qualified Data.Generics.Uniplate.Data as G
 import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
 -- | ADT kinds appear in a few different formats
-data KADT = KADTDefn [String]           -- Parameters
-                     [(String, [Kind])] -- Constructors, and their fields
-          | KADTRec                     -- A recursive field reference, used during the definition itself
-          | KADTUse  [Kind]             -- A use site, applied to these parameters
+data KADTDef = KADTRec                    -- A recursive field reference, used during the definition itself
+             | KADTUse [Kind]             -- A use site, applied to these parameters
+                       [String]           -- Parameters
+                       [(String, [Kind])] -- Constructors, and their fields
           deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Kind of symbolic value
@@ -99,7 +99,7 @@ data Kind =
 
           -- Algebraic datatypes
           | KVar String        -- only used temporarily during ADT construction
-          | KADT String KADT
+          | KADT String KADTDef
 
           -- Collections
           | KList Kind
@@ -129,13 +129,14 @@ instance Show Kind where
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
   show (KUserSort s _)    = s
-  show (KADT s typ)       = let args = case typ of
-                                         KADTDefn ps _ -> ps
-                                         KADTRec       -> []
-                                         KADTUse  ks   -> map (kindParen . showBaseKind) ks
-                            in case args of
-                                [] -> s
-                                as -> unwords (s : as)
+  show (KADT s typ)       = case typ of
+                              KADTRec        -> error $ unlines [ "*** Data.SBV.show.Kind: Unexpected KADT reference:"
+                                                                , "***"
+                                                                , "***  Type: " ++ s
+                                                                , "***"
+                                                                , "*** Please report this as a bug!"
+                                                                ]
+                              KADTUse ks _ _ -> unwords (s : map (kindParen . showBaseKind) ks)
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
   show (KFP eb sb)        = "SFloatingPoint " ++ show eb ++ " " ++ show sb
@@ -205,13 +206,9 @@ smtType KChar           = "String"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
 smtType (KUserSort s _) = s
-smtType (KADT s typ)    = let args = case typ of
-                                      KADTDefn ps _ -> ps
-                                      KADTRec       -> []
-                                      KADTUse  ks   -> map smtType ks
-                         in case args of
-                             [] -> s
-                             as -> '(' : unwords (s : as) ++ ")"
+smtType (KADT s typ)    = case typ of
+                            KADTRec        -> '(' : unwords (s : ["what", "is", "this"]) ++ ")"
+                            KADTUse ks _ _ -> '(' : unwords (s : map smtType ks) ++ ")"
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 smtType KRational       = "SBVRational"

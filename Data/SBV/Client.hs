@@ -108,7 +108,7 @@ deriving instance TH.Lift TH.TyLit
 #endif
 
 -- A few other things we need to TH lift
-deriving instance TH.Lift KADT
+deriving instance TH.Lift KADTDef
 deriving instance TH.Lift Kind
 
 -- | What kind of type is this?
@@ -319,7 +319,7 @@ mkADT typeName params cstrs = do
     getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
                         fixRef kRef (KADT curName KADTRec) | curName == unmod typeName = kRef
                         fixRef _    k                                                  = k
-                    in \case CV kTop@(KADT _ (KADTDefn _ fks)) (CADT (c, vs)) ->
+                    in \case CV kTop@(KADT _ (KADTUse _ _ fks)) (CADT (c, vs)) ->
                                  case c `lookup` fks of
                                    Nothing  -> unexpected $ "Cannot find constructor in kind: " ++ show (c, fks)
                                    Just ks
@@ -342,12 +342,19 @@ mkADT typeName params cstrs = do
                       , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV)          []]
                       ]
 
-    let kindDef = TH.AppE (TH.AppE (TH.ConE 'KADT) (TH.LitE (TH.StringL (unmod typeName))))
-                          (TH.AppE (TH.ConE 'KADTUse)
-                                   (TH.ListE [TH.AppE (TH.VarE 'kindOf)
-                                                      (TH.AppTypeE (TH.ConE 'Proxy) (TH.VarT p))
-                                             | p <- params
-                                             ]))
+    defCstrs <- [| [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs] |]
+
+    let kindDef = foldl1 TH.AppE [ TH.ConE 'KADT
+                                 , TH.LitE (TH.StringL (unmod typeName))
+                                 , foldl1 TH.AppE [ TH.ConE 'KADTUse
+                                                  , TH.ListE [TH.AppE (TH.VarE 'kindOf)
+                                                                      (TH.AppTypeE (TH.ConE 'Proxy) (TH.VarT p))
+                                                             | p <- params
+                                                             ]
+                                                  , TH.ListE (map (TH.LitE . TH.StringL . TH.nameBase) params)
+                                                  , defCstrs
+                                                  ]
+                                 ]
 
         kindDecl = TH.InstanceD
                         Nothing

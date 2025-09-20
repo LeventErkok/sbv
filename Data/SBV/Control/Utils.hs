@@ -86,7 +86,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
 import Data.SBV.Core.SizedFloats (fpZero, fpFromInteger, fpFromFloat, fpFromDouble)
-import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts, expandKinds, isSomeKindOfFloat, KADT(..))
+import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts, expandKinds, isSomeKindOfFloat, KADTDef(..))
 import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr, svEqual)
 
 import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..))
@@ -1132,7 +1132,7 @@ recoverKindedValue k e = case k of
                          cvt _ vs   = tbd $ "Unexpected function-like-value as array index" ++ show vs
 
         interpretADT :: Kind -> SExpr -> (String, [CVal])
-        interpretADT adtK@(KADT topADTName (KADTDefn _ cks)) expr
+        interpretADT adtK@(KADT topADTName (KADTUse _ _ cks)) expr
            | Just ks <- cstr `lookup` cks
            = if length fs == length ks
              then (cstr, zipWith convert (zip [1..] ks) fs)

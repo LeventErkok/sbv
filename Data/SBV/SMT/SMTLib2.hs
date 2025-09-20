@@ -28,7 +28,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds, KADT(..))
+import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds, KADTDef(..))
 import Data.SBV.Control.Types
 
 import Data.SBV.SMT.Utils
@@ -320,10 +320,9 @@ declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
 -- | Declare ADTs
-declADT :: String -> KADT -> [String]
-declADT _     KADTRec             = []
-declADT _     (KADTUse _)         = []
-declADT tName (KADTDefn ps cstrs) = ("; User defined ADT: " ++ tName) : decl
+declADT :: String -> KADTDef -> [String]
+declADT _     KADTRec              = []
+declADT tName (KADTUse _ ps cstrs) = ("; User defined ADT: " ++ tName) : decl
   where decl =  ("(declare-datatype " ++ tName ++ parOpen ++ " (")
              :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
              ++ ["))" ++ parClose]

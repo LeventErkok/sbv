@@ -1441,10 +1441,8 @@ registerKind st k
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | KADT  sortName _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
-  -- Do not register "use/rec" sites for KADTs
-  | KADT _ KADTRec     <- k
-  = pure ()
-  | KADT _ (KADTUse _) <- k
+  -- Nothing to register in a recursive use site for ADT
+  | KADT _ KADTRec   <- k
   = pure ()
   | True
   = do -- Adding a kind to the incState is tricky; we only need to add it
@@ -1461,7 +1459,7 @@ registerKind st k
                           -- want to re-add because double-declaration would be wrong. See 'cvtInc' for details.
                           let needsAdding = case k of
                                               KUserSort{} -> k `notElem` existingKinds
-                                              KADT{}      -> k `notElem` existingKinds
+                                              KADT s _    -> all (s /=) [s' | KADT s' _ <- Set.toList existingKinds]
                                               KList{}     -> k `notElem` existingKinds
                                               KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
                                               KMaybe{}    -> k `notElem` existingKinds
@@ -1487,11 +1485,10 @@ registerKind st k
 
          -- Register subkinds in an ADT. Remember that a 'Nothing' is a use site, so nothing further to do.
          KADT _ ak -> case ak of
-                       KADTDefn _ ps -> mapM_ (registerKind st) (concatMap snd ps)
-                       -- The following two matches are redundan as we already handled them above
+                       KADTUse ks _ fks  -> mapM_ (registerKind st) (ks ++ concatMap snd fks)
+                       -- The following match is redundan as we already handled them above
                        -- And GHC is smart enough to know this, so if we give these cases, it complains! Kudos!
-                       -- KADTUse    ks -> mapM_ (registerKind st) ks
-                       -- KADTRec       -> pure ()
+                       -- KADTRec           -> pure ()
 
          KList     ek        -> registerKind st ek
          KSet      ek        -> registerKind st ek
