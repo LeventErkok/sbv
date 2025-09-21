@@ -8,6 +8,7 @@
 --
 -- A basic expression ADT example.
 -----------------------------------------------------------------------------
+
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedStrings   #-}
@@ -53,7 +54,7 @@ instance Num Expr where
   signum      = error "Num Expr: undefined signum"
   negate      = error "Num Expr: undefined negate"
 
--- | Num instaance for the symbolic version
+-- | Num instance for the symbolic version
 instance Num SExpr where
   fromInteger = sVal . literal
   (+)         = sAdd
@@ -124,8 +125,8 @@ evalSat = sat $ do e :: SExpr    <- free "e"
 --
 -- >>> genE
 -- Satisfiable. Model:
---   e1 = Let "p" (Val 5) (Let "p" (Val 7) (Let "k" (Val 9) (Val 3))) :: Expr
---   e2 =                                                    Val (-2) :: Expr
+--   e1 = Let "p" (Val 5) (Val 3) :: Expr
+--   e2 =                Val (-2) :: Expr
 genE :: IO SatResult
 genE = sat $ do e1 :: SExpr <- free "e1"
                 e2 :: SExpr <- free "e2"
@@ -141,7 +142,7 @@ genE = sat $ do e1 :: SExpr <- free "e1"
 -- | Query mode example.
 --
 -- >>> queryE
--- e1: (let p = 5 in (let p = 7 in (let k = 9 in 3)))
+-- e1: (let p = 5 in 3)
 -- e2: -2
 queryE :: IO ()
 queryE = runSMT $ do
