@@ -477,7 +477,7 @@ mkTesters sType inSymValContext cstrs = do
           where bnm  = TH.nameBase c
                 nm   = TH.mkName $ "is" ++ bnm
                 def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
-                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL ("(_ is " ++ bnm ++ ")")))
+                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL ("is-" ++ bnm)))
 
     let (testerNames, testerDecls) = unzip $ map declTester cstrs
 
