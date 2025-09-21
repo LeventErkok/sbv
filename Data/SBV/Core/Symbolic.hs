@@ -1474,34 +1474,34 @@ registerKind st k
 
               when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
 
-              -- Don't forget to register subkinds!
-              case k of
-                KVar      {}    -> return ()
-                KBool     {}    -> return ()
-                KBounded  {}    -> return ()
-                KUnbounded{}    -> return ()
-                KReal     {}    -> return ()
-                KUserSort {}    -> return ()
-                KFloat    {}    -> return ()
-                KDouble   {}    -> return ()
-                KFP       {}    -> return ()
-                KRational {}    -> return ()
-                KChar     {}    -> return ()
-                KString   {}    -> return ()
+       -- Don't forget to register subkinds!
+       case k of
+         KVar      {}    -> return ()
+         KBool     {}    -> return ()
+         KBounded  {}    -> return ()
+         KUnbounded{}    -> return ()
+         KReal     {}    -> return ()
+         KUserSort {}    -> return ()
+         KFloat    {}    -> return ()
+         KDouble   {}    -> return ()
+         KFP       {}    -> return ()
+         KRational {}    -> return ()
+         KChar     {}    -> return ()
+         KString   {}    -> return ()
 
-                -- Register subkinds in an ADT. Remember that a 'Nothing' is a use site, so nothing further to do.
-                KADT _ _ ak -> case ak of
-                                KADTUse ks fks  -> mapM_ (registerKind st) (ks ++ concatMap snd fks)
-                                -- The following match is redundan as we already handled them above
-                                -- And GHC is smart enough to know this, so if we give these cases, it complains! Kudos!
-                                -- KADTRec         -> pure ()
+         -- Register subkinds in an ADT.
+         KADT _ _ ak -> case ak of
+                         KADTUse ks fks  -> mapM_ (registerKind st) (ks ++ concatMap snd fks)
+                         -- The following match is redundant as we already handled them above
+                         -- And GHC is smart enough to know this, so if we give these cases, it complains! Kudos!
+                         -- KADTRec         -> pure ()
 
-                KList     ek        -> registerKind st ek
-                KSet      ek        -> registerKind st ek
-                KTuple    eks       -> mapM_ (registerKind st) eks
-                KMaybe    ke        -> registerKind st ke
-                KEither   k1 k2     -> mapM_ (registerKind st) [k1, k2]
-                KArray    k1 k2     -> mapM_ (registerKind st) [k1, k2]
+         KList     ek        -> registerKind st ek
+         KSet      ek        -> registerKind st ek
+         KTuple    eks       -> mapM_ (registerKind st) eks
+         KMaybe    ke        -> registerKind st ke
+         KEither   k1 k2     -> mapM_ (registerKind st) [k1, k2]
+         KArray    k1 k2     -> mapM_ (registerKind st) [k1, k2]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()

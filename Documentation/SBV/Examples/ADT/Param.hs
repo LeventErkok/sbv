@@ -151,25 +151,35 @@ genE = sat $ do e1 :: SExpr String Integer <- free "e1"
 -- | Query mode example.
 --
 -- >>> queryE
--- e1: (let s = 6 in 3)
--- e2: (let h = -1 in (h + h))
+-- e1: (let d = (-1 * 3) in (-1 * d))
+-- e2: -2
+-- e3: (let d = 219 % 220 in d)
 queryE :: IO ()
 queryE = runSMT $ do
            e1 :: SExpr String Integer <- free "e1"
            e2 :: SExpr String Integer <- free "e2"
 
+           e3 :: SExpr String Rational <- free "e3"
+
            constrain $ isValid isId e1
            constrain $ isValid isId e2
+           constrain $ isValid isId e3
 
            constrain $ e1 ./== e2
            constrain $ isLet e1
            constrain $ eval e1 .== 3
            constrain $ eval e1 .== eval e2 + 5
 
+           constrain $ isLet e3
+           constrain $ isMul (getLet_2 e1)
+           constrain $ isMul (getLet_3 e1)
+
            query $ do cs <- checkSat
                       case cs of
                         Sat -> do e1v <- getValue e1
                                   e2v <- getValue e2
+                                  e3v <- getValue e3
                                   io $ putStrLn $ "e1: " ++ show e1v
                                   io $ putStrLn $ "e2: " ++ show e2v
+                                  io $ putStrLn $ "e3: " ++ show e3v
                         _   -> error $ "Unexpected result: " ++ show cs
