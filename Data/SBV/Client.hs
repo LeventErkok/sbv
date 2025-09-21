@@ -611,10 +611,10 @@ toSBV typeName args constructorName = go
         go t | Just ps <- getSelf t
              = if ps == args
                   then pure $ KADT tName (map TH.nameBase args) KADTRec -- recursive ref
-                  else bad "Unsupported type permutation"
+                  else bad "Unsupported type insantiation:"
                            [ "Datatype  : " ++ show typeName
-                           , "Parameters: " ++ show args
-                           , "Used at   : " ++ show ps
+                           , "Parameters: " ++ unwords (map TH.nameBase args)
+                           , "Used at   : " ++ unwords (map TH.nameBase ps)
                            , ""
                            , "SBV only supports recursive uses at precisely the same parameterization"
                            , "as the definition itself."
