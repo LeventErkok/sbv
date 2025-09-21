@@ -30,4 +30,4 @@ data Expr nm a = Var nm
 mkSymbolic ''Expr
 
 t :: IO SatResult
-t = satWith cvc5{verbose=True} $ \(x :: SExpr String Integer) (y :: SExpr Integer Float) -> isLet x .&& isMul y
+t = sat $ \(x :: SExpr String Integer) (y :: SExpr Integer Float) -> isLet x .&& isLet y
