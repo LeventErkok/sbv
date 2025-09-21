@@ -38,6 +38,8 @@ module Data.SBV.Control.Utils (
      , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
      ) where
 
+import qualified Data.Generics.Uniplate.Data as G
+
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf, isSuffixOf)
 
 import Data.Char      (isPunctuation, isSpace, isDigit)
@@ -900,6 +902,17 @@ defaultKindedValue k = CV k $ cvt k
 sexprToVal :: forall a. SymVal a => SExpr -> Maybe a
 sexprToVal e = fromCV <$> recoverKindedValue (kindOf (Proxy @a)) e
 
+-- | For an ADT kind, substitute kinds for the variables
+substituteADTVars :: String -> [String] -> KADTDef -> Kind
+substituteADTVars nm ps KADTRec            = KADT nm ps KADTRec
+substituteADTVars nm ps (KADTUse ks cstrs) = KADT nm ps (KADTUse ks [(n, map (G.transform sub) fks) | (n, fks) <- cstrs])
+  where dict = zip ps ks
+        sub :: Kind -> Kind
+        sub (KVar v)
+          | Just k <- v `lookup` dict = k
+          | True                      = error $ "Data.SBV.ADT: Kind find variable in param subst: " ++ show (v, dict)
+        sub k = k
+
 -- | Recover a given solver-printed value with a possible interpretation
 recoverKindedValue :: Kind -> SExpr -> Maybe CV
 recoverKindedValue k e = case k of
@@ -921,7 +934,8 @@ recoverKindedValue k e = case k of
                            KUserSort{} | ECon s <- e           -> Just $ CV k $ CUserSort (getUIIndex k s, simplifyECon s)
                                        | True                  -> Nothing
 
-                           KADT{}                              -> Just $ CV k $ CADT $ interpretADT k e
+                           KADT nm ps def                      -> let k' = substituteADTVars nm ps def
+                                                                  in Just $ CV k' $ CADT $ interpretADT k' e
 
                            KFloat      | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
                                        | EFloat i       <- e   -> Just $ CV KFloat (CFloat i)

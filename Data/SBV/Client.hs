@@ -37,8 +37,6 @@ module Data.SBV.Client
 
 import Data.Generics
 
-import qualified Data.Generics.Uniplate.Data as G
-
 import Control.Monad (filterM)
 import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
@@ -273,17 +271,6 @@ mkSBV a = TH.ConT ''SBV `TH.AppT` a
 saturate :: TH.Type -> [TH.Name] -> TH.Type
 saturate t ps = foldr (\p b -> TH.AppT b (TH.VarT p)) t (reverse ps)
 
--- | Given a substitution from the def, get rid of all vars
-substituteADTVars :: String -> [String] -> KADTDef -> Kind
-substituteADTVars nm ps KADTRec            = KADT nm ps KADTRec
-substituteADTVars nm ps (KADTUse ks cstrs) = KADT nm ps (KADTUse ks [(n, map (G.transform sub) fks) | (n, fks) <- cstrs])
-  where dict = zip ps ks
-        sub :: Kind -> Kind
-        sub (KVar v)
-          | Just k <- v `lookup` dict = k
-          | True                      = error $ "Data.SBV.ADT: Kind find variable in param subst: " ++ show (v, dict)
-        sub k = k
-
 -- | Create a symbolic ADT
 mkADT :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
 mkADT typeName params cstrs = do
@@ -357,7 +344,7 @@ mkADT typeName params cstrs = do
 
     defCstrs <- [| [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs] |]
 
-    let kindDef = foldl1 TH.AppE [ TH.VarE 'substituteADTVars
+    let kindDef = foldl1 TH.AppE [ TH.ConE 'KADT
                                  , TH.LitE (TH.StringL (unmod typeName))
                                  , TH.ListE (map (TH.LitE . TH.StringL . TH.nameBase) params)
                                  , foldl1 TH.AppE [ TH.ConE 'KADTUse
