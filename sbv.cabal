@@ -345,6 +345,7 @@ Test-Suite SBVTest
   other-modules   : Utils.SBVTestFramework
                   , TestSuite.ADT.ADT
                   , TestSuite.ADT.Expr
+                  , TestSuite.ADT.PExpr
                   , TestSuite.Arrays.InitVals
                   , TestSuite.Arrays.Memory
                   , TestSuite.Arrays.Query
