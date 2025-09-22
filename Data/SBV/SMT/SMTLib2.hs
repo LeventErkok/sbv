@@ -321,7 +321,7 @@ declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (
 
 -- | Declare ADTs
 declADT :: (String, [String], KADTDef) -> [String]
-declADT (_    , _ , KADTRec)         = []
+declADT (_    , _ , KADTRef)         = []
 declADT (tName, ps, KADTUse _ cstrs) = ("; User defined ADT: " ++ tName) : decl
   where decl =  ("(declare-datatype " ++ tName ++ parOpen ++ " (")
              :  ["    (" ++ mkC c ++ ")" | c <- cstrs]

@@ -62,7 +62,7 @@ import qualified Data.Generics.Uniplate.Data as G
 import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
 -- | ADT kinds appear in a few different formats
-data KADTDef = KADTRec                    -- A recursive field reference, used during the definition itself
+data KADTDef = KADTRef                    -- A reference, used during definitions themselves
              | KADTUse [Kind]             -- A use site
                        [(String, [Kind])] -- Constructors, and their fields
           deriving (Eq, Ord, G.Data, NFData, Generic)
@@ -131,7 +131,7 @@ instance Show Kind where
   show KReal              = "SReal"
   show (KUserSort s _)    = s
   show (KADT s ps typ)    = case typ of
-                              KADTRec      -> unwords (s :                                ps)
+                              KADTRef      -> unwords (s :                                ps)
                               KADTUse ks _ -> unwords (s : map (kindParen . showBaseKind) ks)
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
@@ -203,7 +203,7 @@ smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
 smtType (KUserSort s _) = s
 smtType (KADT s ps typ) = kindParen $ case typ of
-                                        KADTRec      -> unwords (s :             ps)
+                                        KADTRef      -> unwords (s :             ps)
                                         KADTUse ks _ -> unwords (s : map smtType ks)
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"

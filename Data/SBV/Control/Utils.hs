@@ -904,7 +904,7 @@ sexprToVal e = fromCV <$> recoverKindedValue (kindOf (Proxy @a)) e
 
 -- | For an ADT kind, substitute kinds for the variables
 substituteADTVars :: String -> [String] -> KADTDef -> Kind
-substituteADTVars nm ps KADTRec            = KADT nm ps KADTRec
+substituteADTVars nm ps KADTRef            = KADT nm ps KADTRef
 substituteADTVars nm ps (KADTUse ks cstrs) = KADT nm ps (KADTUse ks [(n, map (G.transform sub) fks) | (n, fks) <- cstrs])
   where dict = zip ps ks
         sub :: Kind -> Kind
@@ -1175,7 +1175,7 @@ recoverKindedValue k e = case k of
                                       Nothing       -> bad ["Couldn't convert field " ++ show i ++ ": " ++ show (fk, f)]
 
                 -- If we have a recursive case, we can have a cyclic reference. Let's fix that here.
-                fixRef (KADT curADTName _ KADTRec) | topADTName == curADTName = adtK
+                fixRef (KADT curADTName _ KADTRef) | topADTName == curADTName = adtK
                 fixRef fk                                                     = fk
 
         interpretADT someK expr = error $ unlines [ "Data.SBV.interpretADT: Expected an ADT kind, but got something else."

@@ -1442,7 +1442,7 @@ registerKind st k
   | KADT  sortName _ _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   -- Nothing to register in a recursive use site for ADT
-  | KADT _ _ KADTRec <- k
+  | KADT _ _ KADTRef <- k
   = pure ()
   | True
   = do -- Adding a kind to the incState is tricky; we only need to add it
@@ -1494,7 +1494,7 @@ registerKind st k
                          KADTUse ks fks  -> mapM_ (registerKind st) (ks ++ concatMap snd fks)
                          -- The following match is redundant as we already handled them above
                          -- And GHC is smart enough to know this, so if we give these cases, it complains! Kudos!
-                         -- KADTRec         -> pure ()
+                         -- KADTRef         -> pure ()
 
          KList     ek        -> registerKind st ek
          KSet      ek        -> registerKind st ek

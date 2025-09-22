@@ -466,7 +466,7 @@ showCV shk w = sh (cvVal w) ++ kInfo
                 flds = case wk of
                          KADT topADTName _ ak ->
                              case ak of
-                               KADTRec -> error $ "Data.SBV.showCV: Unexpected ADT sub-kind KADTRec: " ++ show wk
+                               KADTRef -> error $ "Data.SBV.showCV: Unexpected ADT sub-kind KADTRef: " ++ show wk
                                KADTUse _ cks | Just ks <- c `lookup` cks
                                             -> if length fs == length ks
                                                then let -- fix references
