@@ -202,9 +202,9 @@ smtType KChar           = "String"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
 smtType (KUserSort s _) = s
-smtType (KADT s ps typ) = case typ of
-                            KADTRec      -> '(' : unwords (s :             ps) ++ ")"
-                            KADTUse ks _ -> '(' : unwords (s : map smtType ks) ++ ")"
+smtType (KADT s ps typ) = kindParen $ case typ of
+                                        KADTRec      -> unwords (s :             ps)
+                                        KADTUse ks _ -> unwords (s : map smtType ks)
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 smtType KRational       = "SBVRational"
