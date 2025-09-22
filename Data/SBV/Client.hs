@@ -663,10 +663,6 @@ toSBV typeName args constructorName = go
                                                   ]
 
         -- Extract application of a constructor to some type-variables
-        getSelf t = locate t []
-          where locate (TH.ConT c)             sofar | c == typeName = Just sofar
-                locate (TH.AppT l (TH.VarT v)) sofar                 = locate l (v : sofar)
-                locate _                       _                     = Nothing
         getSelf t = case getConApp t of
                       Just (c, ps) | c == typeName -> Just ps
                       _                            -> Nothing
