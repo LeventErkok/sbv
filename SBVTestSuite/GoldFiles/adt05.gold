@@ -72,11 +72,11 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s2 () Bool ((_ is AFloat) s0))
+[GOOD] (define-fun s2 () Bool (is-AFloat s0))
 [GOOD] (define-fun s3 () (_ FloatingPoint  8 24) (getAFloat_1 s0))
 [GOOD] (define-fun s5 () Bool (fp.eq s3 s4))
 [GOOD] (define-fun s6 () Bool (and s2 s5))
-[GOOD] (define-fun s7 () Bool ((_ is AFloat) s1))
+[GOOD] (define-fun s7 () Bool (is-AFloat s1))
 [GOOD] (define-fun s8 () (_ FloatingPoint  8 24) (getAFloat_1 s1))
 [GOOD] (define-fun s9 () Bool (fp.isNaN s8))
 [GOOD] (define-fun s10 () Bool (and s7 s9))

@@ -74,8 +74,8 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Bool ((_ is AList) s0))
-[GOOD] (define-fun s2 () Bool ((_ is AFP) s0))
+[GOOD] (define-fun s1 () Bool (is-AList s0))
+[GOOD] (define-fun s2 () Bool (is-AFP s0))
 [GOOD] (define-fun s3 () Bool (and s1 s2))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

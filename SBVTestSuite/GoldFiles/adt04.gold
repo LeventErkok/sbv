@@ -76,7 +76,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Bool ((_ is AInteger) s0))
+[GOOD] (define-fun s1 () Bool (is-AInteger s0))
 [GOOD] (define-fun s2 () Int (getAInteger_1 s0))
 [GOOD] (define-fun s4 () Bool (>= s2 s3))
 [GOOD] (define-fun s6 () Bool (<= s2 s5))

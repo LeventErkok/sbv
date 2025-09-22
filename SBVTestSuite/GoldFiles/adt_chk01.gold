@@ -27,15 +27,15 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |t @(SBV A -> SBV A)| :: A -> A [Recursive] [Refers to: (_ is A), (_ is B), A, B, C, getA_1, getB_1, getC_1, getC_2]
+[GOOD] ; |t @(SBV A -> SBV A)| :: A -> A [Recursive] [Refers to: A, B, C, getA_1, getB_1, getC_1, getC_2, is-A, is-B]
 [GOOD] (define-fun-rec |t @(SBV A -> SBV A)| ((l1_s0 A)) A
                                  (let ((l1_s3 1))
                                  (let ((l1_s8 #x02))
-                                 (let ((l1_s1 ((_ is A) l1_s0)))
+                                 (let ((l1_s1 (is-A l1_s0)))
                                  (let ((l1_s2 (getA_1 l1_s0)))
                                  (let ((l1_s4 (+ l1_s2 l1_s3)))
                                  (let ((l1_s5 (A l1_s4)))
-                                 (let ((l1_s6 ((_ is B) l1_s0)))
+                                 (let ((l1_s6 (is-B l1_s0)))
                                  (let ((l1_s7 (getB_1 l1_s0)))
                                  (let ((l1_s9 (bvadd l1_s7 l1_s8)))
                                  (let ((l1_s10 (B l1_s9)))

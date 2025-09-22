@@ -34,22 +34,22 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |valid @(SBV [[Char]] -> SBV Expr -> SBV Bool)| :: [SString] -> Expr -> SBool [Recursive] [Refers to: (_ is Add), (_ is Mul), (_ is Val), (_ is Var), getAdd_1, getAdd_2, getLet_1, getLet_2, getLet_3, getMul_1, getMul_2, getVar_1]
+[GOOD] ; |valid @(SBV [[Char]] -> SBV Expr -> SBV Bool)| :: [SString] -> Expr -> SBool [Recursive] [Refers to: getAdd_1, getAdd_2, getLet_1, getLet_2, getLet_3, getMul_1, getMul_2, getVar_1, is-Add, is-Mul, is-Val, is-Var]
 [GOOD] (define-fun-rec |valid @(SBV [[Char]] -> SBV Expr -> SBV Bool)| ((l1_s0 (Seq String)) (l1_s1 Expr)) Bool
-                                 (let ((l1_s2 ((_ is Val) l1_s1)))
-                                 (let ((l1_s3 ((_ is Var) l1_s1)))
+                                 (let ((l1_s2 (is-Val l1_s1)))
+                                 (let ((l1_s3 (is-Var l1_s1)))
                                  (let ((l1_s4 (getVar_1 l1_s1)))
                                  (let ((l1_s5 (str.in_re l1_s4 (re.++ (re.range "a" "z") (re.* (re.union (re.range "a" "z") (re.range "A" "Z") (re.range "0" "9")))))))
                                  (let ((l1_s6 (seq.unit l1_s4)))
                                  (let ((l1_s7 (seq.contains l1_s0 l1_s6)))
                                  (let ((l1_s8 (and l1_s5 l1_s7)))
-                                 (let ((l1_s9 ((_ is Add) l1_s1)))
+                                 (let ((l1_s9 (is-Add l1_s1)))
                                  (let ((l1_s10 (getAdd_1 l1_s1)))
                                  (let ((l1_s11 (|valid @(SBV [[Char]] -> SBV Expr -> SBV Bool)| l1_s0 l1_s10)))
                                  (let ((l1_s12 (getAdd_2 l1_s1)))
                                  (let ((l1_s13 (|valid @(SBV [[Char]] -> SBV Expr -> SBV Bool)| l1_s0 l1_s12)))
                                  (let ((l1_s14 (and l1_s11 l1_s13)))
-                                 (let ((l1_s15 ((_ is Mul) l1_s1)))
+                                 (let ((l1_s15 (is-Mul l1_s1)))
                                  (let ((l1_s16 (getMul_1 l1_s1)))
                                  (let ((l1_s17 (|valid @(SBV [[Char]] -> SBV Expr -> SBV Bool)| l1_s0 l1_s16)))
                                  (let ((l1_s18 (getMul_2 l1_s1)))
@@ -86,20 +86,20 @@
                                                  (let ((l2_s13 (ite l2_s7 l2_s8 l2_s12)))
                                                  (let ((l2_s14 (ite l2_s4 l2_s3 l2_s13)))
                                                  l2_s14))))))))))))))
-[GOOD] ; |eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)| :: [(SString, SInteger)] -> Expr -> SInteger [Recursive] [Refers to: (_ is Add), (_ is Mul), (_ is Val), (_ is Var), getAdd_1, getAdd_2, getLet_1, getLet_2, getLet_3, getMul_1, getMul_2, getVal_1, getVar_1, |get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)|]
+[GOOD] ; |eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)| :: [(SString, SInteger)] -> Expr -> SInteger [Recursive] [Refers to: getAdd_1, getAdd_2, getLet_1, getLet_2, getLet_3, getMul_1, getMul_2, getVal_1, getVar_1, is-Add, is-Mul, is-Val, is-Var, |get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)|]
 [GOOD] (define-fun-rec |eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)| ((l1_s0 (Seq (SBVTuple2 String Int))) (l1_s1 Expr)) Int
-                                 (let ((l1_s2 ((_ is Val) l1_s1)))
+                                 (let ((l1_s2 (is-Val l1_s1)))
                                  (let ((l1_s3 (getVal_1 l1_s1)))
-                                 (let ((l1_s4 ((_ is Var) l1_s1)))
+                                 (let ((l1_s4 (is-Var l1_s1)))
                                  (let ((l1_s5 (getVar_1 l1_s1)))
                                  (let ((l1_s6 (|get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)| l1_s0 l1_s5)))
-                                 (let ((l1_s7 ((_ is Add) l1_s1)))
+                                 (let ((l1_s7 (is-Add l1_s1)))
                                  (let ((l1_s8 (getAdd_1 l1_s1)))
                                  (let ((l1_s9 (|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)| l1_s0 l1_s8)))
                                  (let ((l1_s10 (getAdd_2 l1_s1)))
                                  (let ((l1_s11 (|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)| l1_s0 l1_s10)))
                                  (let ((l1_s12 (+ l1_s9 l1_s11)))
-                                 (let ((l1_s13 ((_ is Mul) l1_s1)))
+                                 (let ((l1_s13 (is-Mul l1_s1)))
                                  (let ((l1_s14 (getMul_1 l1_s1)))
                                  (let ((l1_s15 (|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)| l1_s0 l1_s14)))
                                  (let ((l1_s16 (getMul_2 l1_s1)))
@@ -122,11 +122,11 @@
 [GOOD] (define-fun s2 () Bool (|valid @(SBV [[Char]] -> SBV Expr -> SBV Bool)| s1 s0))
 [GOOD] (define-fun s4 () Int (|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)| s3 s0))
 [GOOD] (define-fun s6 () Bool (= s4 s5))
-[GOOD] (define-fun s7 () Bool ((_ is Let) s0))
+[GOOD] (define-fun s7 () Bool (is-Let s0))
 [GOOD] (define-fun s8 () Expr (getLet_3 s0))
-[GOOD] (define-fun s9 () Bool ((_ is Let) s8))
+[GOOD] (define-fun s9 () Bool (is-Let s8))
 [GOOD] (define-fun s10 () Expr (getLet_3 s8))
-[GOOD] (define-fun s11 () Bool ((_ is Add) s10))
+[GOOD] (define-fun s11 () Bool (is-Add s10))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s2)
@@ -137,9 +137,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Let "p" (Val 11) (Let "p" (Val 7) (Add (Val 5) (Var "p"))))))
+[RECV] ((s0 (Let "k" (Val 7) (Let "c" (Val 6) (Add (Var "c") (Var "c"))))))
 
-Got: (let p = 11 in (let p = 7 in (5 + p)))
+Got: (let k = 7 in (let c = 6 in (c + c)))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess

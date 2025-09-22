@@ -74,7 +74,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Bool ((_ is AMaybe) s0))
+[GOOD] (define-fun s1 () Bool (is-AMaybe s0))
 [GOOD] (define-fun s2 () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 SBVRational (Seq Bool)))) (getAMaybe_1 s0))
 [GOOD] (define-fun s3 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 SBVRational (Seq Bool)))))) s2))
 [GOOD] (define-fun s4 () Bool (ite s3 false true))
@@ -88,9 +88,9 @@
 [RECV] ((s0 (AMaybe (just_SBVMaybe (mkSBVTuple3 2.0
                                            (_ +zero 8 24)
                                            (mkSBVTuple2 (SBV.Rational 2 3)
-                                                        (seq.unit false)))))))
+                                                        (seq.unit true)))))))
 
-getValue: AMaybe (Just (2.0,0.0,(2 % 3,[False])))
+getValue: AMaybe (Just (2.0,0.0,(2 % 3,[True])))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess
