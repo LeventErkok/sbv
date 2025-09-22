@@ -667,6 +667,12 @@ toSBV typeName args constructorName = go
                       Just (c, ps) | c == typeName -> Just ps
                       _                            -> Nothing
 
+        -- Extract application of a constructor to some type-variables
+        getConApp t = locate t []
+          where locate (TH.ConT c)             sofar = Just (c, sofar)
+                locate (TH.AppT l (TH.VarT v)) sofar = locate l (v : sofar)
+                locate _                       _     = Nothing
+
         -- Extract an N-tuple
         getTuple = tup []
           where tup sofar (TH.TupleT _) = Just sofar
