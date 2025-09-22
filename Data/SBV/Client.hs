@@ -48,6 +48,8 @@ import Data.Word
 import Data.Int
 import Data.Ratio
 
+import Data.List (nubBy)
+
 import qualified "template-haskell" Language.Haskell.TH        as TH
 #if MIN_VERSION_template_haskell(2,18,0)
 import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
@@ -141,7 +143,7 @@ mkSymbolic typeName = do
 
          names     = [undefine n | TH.FunD n _ <- ds]
          body      = foldl TH.AppE (TH.VarE 'undefined)
-                                   (names ++ [TH.SigE (TH.VarE 'undefined) 
+                                   (names ++ [TH.SigE (TH.VarE 'undefined)
                                                       (foldl TH.AppT (TH.ConT (TH.mkName ('S' : TH.nameBase typeName)))
                                                                      (map (const (TH.ConT ''Integer)) params))])
          undefSig  = TH.SigD nm (TH.VarT (TH.mkName "a"))
@@ -238,7 +240,7 @@ mkEnum typeName cstrs = do
     -- Declare testers and case analyzer, if this is an enumeration
     testsAndCase <- if isEnum
                     then do ts <- mkTesters sType id (map (, []) cstrs)
-                            (caseSig, caseFun) <- mkCaseAnalyzer typeName [] (map (, []) cstrs)
+                            (caseSig, caseFun) <- mkCaseAnalyzer typeName [] [] (map (, []) cstrs)
                             pure $ caseSig : caseFun : ts
                     else pure []
 
@@ -278,7 +280,17 @@ mkADT typeName params cstrs = do
     let typeCon = saturate (TH.ConT typeName) params
         sType   = mkSBV typeCon
 
-    let inSymValContext = TH.ForallT tvars [TH.AppT (TH.ConT ''SymVal) (TH.VarT n) | n <- params]
+    let -- Any references to subADTs?
+        subKinds = nubBy (\(t, _) (t', _) -> t == t')
+                         [ ((nm, ps), t)                 -- Names and params
+                         | (_, fks)      <- cstrs        -- In all constructors
+                         , (_, t, k)     <- fks          -- And in each field they have
+                         , KADT nm ps _ <- expandKinds k -- All the subkinds that field has
+                         , nm /= TH.nameBase typeName    -- Which isn't what we're currently defining
+                         ]
+
+    let inSymValContext = TH.ForallT tvars $  [TH.AppT (TH.ConT ''SymVal) (TH.VarT n) | n <- params]
+                                           ++ [TH.AppT (TH.ConT ''SymVal) t           | t <- map snd subKinds]
            where tvars  = [TH.PlainTV n TH.SpecifiedSpec | n <- params]
 
     litFun <- do let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
@@ -412,7 +424,7 @@ mkADT typeName params cstrs = do
     testerDecls <- mkTesters sType inSymValContext cstrs
 
     -- Get the case analyzer
-    (caseSig, caseFun) <- mkCaseAnalyzer typeName params cstrs
+    (caseSig, caseFun) <- mkCaseAnalyzer typeName params subKinds cstrs
 
     -- Get the induction schema, upto 5 extra args
     indDecs <- mapM (mkInductionSchema typeName params cstrs) [0 .. 5]
@@ -427,8 +439,8 @@ mkADT typeName params cstrs = do
          ++ concat indDecs
 
 -- | Make a case analyzer for the type. Works for ADTs and enums. Returns sig and defn
-mkCaseAnalyzer :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
-mkCaseAnalyzer typeName params cstrs = do
+mkCaseAnalyzer :: TH.Name -> [TH.Name] -> [((String, [String]), TH.Type)] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
+mkCaseAnalyzer typeName params subKinds cstrs = do
         let typeCon = saturate (TH.ConT typeName) params
             sType   = mkSBV typeCon
 
@@ -462,7 +474,9 @@ mkCaseAnalyzer typeName params cstrs = do
             fTypes = [mkFun (map (mkSBV . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
             sig    = TH.SigD cnm (TH.ForallT [TH.PlainTV p TH.SpecifiedSpec | p <- res : params]
                                              (TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)
-                                             : [TH.AppT (TH.ConT ''SymVal) (TH.VarT p) | p <- params])
+                                             :  [TH.AppT (TH.ConT ''SymVal) (TH.VarT p) | p <- params]
+                                             ++ [TH.AppT (TH.ConT ''SymVal) t           | t <- map snd subKinds]
+                                             )
                                              (mkFun (sType : fTypes)))
 
         addDoc ("Case analyzer for the type " ++ bnm ++ ".") cnm
