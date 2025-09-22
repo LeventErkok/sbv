@@ -651,8 +651,8 @@ toSBV typeName args constructorName = go
             | nm == ''Ratio && p == ''Integer = pure KRational
 
         -- giving up
-        go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ show typeName
-                                                  , "Constructor: " ++ show constructorName
+        go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ TH.nameBase typeName
+                                                  , "Constructor: " ++ TH.nameBase constructorName
                                                   , "Kind       : " ++ show t
                                                   , ""
                                                   , report
