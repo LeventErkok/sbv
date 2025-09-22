@@ -317,7 +317,7 @@ mkADT typeName params cstrs = do
                     pure $ TH.FunD fromCVFunName (clss ++ [catchAll])
 
     getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
-                        fixRef kRef (KADT curName _ KADTRec) | curName == unmod typeName = kRef
+                        fixRef kRef (KADT curName _ KADTRef) | curName == unmod typeName = kRef
                         fixRef _    k                                                    = k
                     in \case CV kTop@(KADT _ _ (KADTUse _ fks)) (CADT (c, vs)) ->
                                  case c `lookup` fks of
@@ -610,7 +610,7 @@ toSBV typeName args constructorName = go
         -- Is this our own type, possibly applied to some parameters?
         go t | Just ps <- getSelf t
              = if ps == args
-                  then pure $ KADT tName (map TH.nameBase args) KADTRec -- recursive ref
+                  then pure $ KADT tName (map TH.nameBase args) KADTRef -- recursive ref
                   else bad "Unsupported type insantiation:"
                            [ "Datatype  : " ++ show typeName
                            , "Parameters: " ++ unwords (map TH.nameBase args)
@@ -619,6 +619,10 @@ toSBV typeName args constructorName = go
                            , "SBV only supports recursive uses at precisely the same parameterization"
                            , "as the definition itself."
                            ]
+
+        -- Is this another symbolic value? We'll simply construct the kind
+        go t | Just (c, ps) <- getConApp t
+             = pure $ KADT (TH.nameBase c) (map TH.nameBase ps) KADTRef
 
         go (TH.ConT c) = extract c
 
@@ -663,6 +667,9 @@ toSBV typeName args constructorName = go
           where locate (TH.ConT c)             sofar | c == typeName = Just sofar
                 locate (TH.AppT l (TH.VarT v)) sofar                 = locate l (v : sofar)
                 locate _                       _                     = Nothing
+        getSelf t = case getConApp t of
+                      Just (c, ps) | c == typeName -> Just ps
+                      _                            -> Nothing
 
         -- Extract an N-tuple
         getTuple = tup []
@@ -749,7 +756,7 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
          | True
          = do as <- mapM (const (TH.newName "a")) flds
               let isRecursive (_, _, k) = case k of
-                                            KADT t _ KADTRec -> t == btype
+                                            KADT t _ KADTRef -> t == btype
                                             _                -> False
                   recFields = [a | (a, f) <- zip as flds, isRecursive f]
               TH.appE (TH.varE 'quantifiedBool)
