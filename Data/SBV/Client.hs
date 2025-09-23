@@ -64,6 +64,8 @@ import Data.SBV.Core.SizedFloats
 import Data.SBV.Provers.Prover
 import qualified Data.SBV.List as SL
 
+import qualified Data.Generics.Uniplate.Data as G
+
 import Data.SBV.TP.Kernel
 
 -- | Check whether the given solver is installed and is ready to go. This call does a
@@ -148,8 +150,14 @@ mkSymbolic typeName = do
                                    (names ++ [TH.SigE (TH.VarE 'undefined)
                                                       (foldl TH.AppT (TH.ConT (TH.mkName ('S' : TH.nameBase typeName)))
                                                                      (map (const (TH.ConT ''Integer)) params))])
+         -- Put int's everywhere to specialize
+         substInt :: TH.Type -> TH.Type
+         substInt = G.transform go
+            where go (TH.VarT _) = TH.ConT ''Integer
+                  go t           = t
+
          undefSig  = TH.SigD nm (TH.ForallT []
-                                            [TH.AppT (TH.ConT ''SymVal) t | t <- map snd subKinds]
+                                            [TH.AppT (TH.ConT ''SymVal) (substInt t) | t <- map snd subKinds]
                                             (TH.VarT aVar))
          undefBody = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
 
