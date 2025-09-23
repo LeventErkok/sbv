@@ -368,6 +368,9 @@ mkADT typeName params cstrs = do
 
     defCstrs <- [| [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs] |]
 
+    kindCtx <- TH.cxt $  [TH.appT (TH.conT ''HasKind) (TH.varT p) | p <- params]
+                      ++ [TH.appT (TH.conT ''HasKind) (pure t)    | t <- map snd others]
+
     let kindDef = foldl1 TH.AppE [ TH.ConE 'KADT
                                  , TH.LitE (TH.StringL (unmod typeName))
                                  , TH.ListE (map (TH.LitE . TH.StringL . TH.nameBase) params)
@@ -382,7 +385,7 @@ mkADT typeName params cstrs = do
 
         kindDecl = TH.InstanceD
                         Nothing
-                        [TH.AppT (TH.ConT ''HasKind) (TH.VarT p) | p <- params]
+                        kindCtx
                         (TH.AppT (TH.ConT ''HasKind) typeCon)
                         [TH.FunD 'kindOf [TH.Clause [TH.WildP] (TH.NormalB kindDef) []]]
 
