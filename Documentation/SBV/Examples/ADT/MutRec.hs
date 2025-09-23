@@ -30,14 +30,19 @@ data Expr var val = Con val
                   | Add (Expr var val) (Expr var val)
                   | Mul (Expr var val) (Expr var val)
                   | Let (Stmt var val) (Expr var val)
+                  deriving Show
 
 -- | Statement layer
 data Stmt var val = Assign var (Expr var val)
                   | Seq        (Stmt var val) (Stmt var val)
+                  deriving Show
 
 mkSymbolic ''Expr
 mkSymbolic ''Stmt
 
+-- | Example program.
+--
+-- >>> exPgm
 exPgm :: IO (Stmt String Integer)
 exPgm = runSMT $ do p :: SStmt String Integer <- free "p"
 
