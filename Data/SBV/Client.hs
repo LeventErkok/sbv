@@ -279,7 +279,7 @@ saturate t ps = foldr (\p b -> TH.AppT b (TH.VarT p)) t (reverse ps)
 -- | Create a symbolic ADT
 mkADT ::  TH.Name                                         -- type name
        -> [TH.Name]                                       -- parameters
-       -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])]   -- constructurs
+       -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])]   -- constructors
        -> TH.Q ( [((String, [String]), TH.Type)]          -- subKinds of the kind we're creating
                , [TH.Dec]                                 -- declarations
                )
@@ -350,8 +350,12 @@ mkADT typeName params cstrs = do
                              CV k _ -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k
                  |]
 
-    let symValParams = [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params]
-    symCtx <- TH.cxt symValParams
+    -- When constructing the context, we need to ignore the self here as
+    -- we're just defining it:
+    let others = [k | k@(_, t) <- subKinds, t /= typeCon]
+
+    symCtx <- TH.cxt $  [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params]
+                     ++ [TH.appT (TH.conT ''SymVal) (pure t)    | t <- map snd others]
 
     let symVal = TH.InstanceD
                       Nothing
@@ -435,7 +439,7 @@ mkADT typeName params cstrs = do
     (caseSig, caseFun) <- mkCaseAnalyzer typeName params subKinds cstrs
 
     -- Get the induction schema, upto 5 extra args
-    indDecs <- mapM (mkInductionSchema typeName params cstrs) [0 .. 5]
+    indDecs <- mapM (mkInductionSchema typeName params cstrs subKinds) [0 .. 5]
 
     let allDecls =  [tdecl, symVal, kindDecl]
                  ++ arbDecl
@@ -741,8 +745,8 @@ toSBV typeName args constructorName = go
           | True            = Nothing
 
 -- | Make an induction schema for the type, with n extra arguments.
-mkInductionSchema :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> Int -> TH.Q [TH.Dec]
-mkInductionSchema typeName params cstrs extraArgCnt = do
+mkInductionSchema :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> [((String, [String]), TH.Type)] -> Int -> TH.Q [TH.Dec]
+mkInductionSchema typeName params cstrs subKinds extraArgCnt = do
    let btype = TH.nameBase typeName
        nm    = "induct" ++ btype ++ if extraArgCnt == 0 then "" else show extraArgCnt
 
@@ -812,6 +816,8 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
                                    []
                         ]
 
-   context <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params ++ extraTypes]
+   context <- TH.cxt $  [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params ++ extraTypes]
+                     ++ [TH.appT (TH.conT ''SymVal) (pure t)    | t <- map snd subKinds]
+
 
    pure [TH.InstanceD Nothing context instHead [method]]
