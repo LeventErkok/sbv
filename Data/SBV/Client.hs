@@ -46,7 +46,6 @@ import Data.Maybe (fromMaybe)
 
 import Data.Word
 import Data.Int
-import Data.Ratio
 
 import Data.List (nubBy)
 
@@ -621,25 +620,6 @@ toSBV typeName args constructorName = go
         -- Handle type variables (parameters)
         go (TH.VarT v) = pure $ KVar (TH.nameBase v)
 
-        -- Is this our own type, possibly applied to some parameters?
-        go t | Just ps <- getSelf t
-             = if ps == args
-                  then pure $ KADT tName (map TH.nameBase args) KADTRef -- recursive ref
-                  else bad "Unsupported type insantiation:"
-                           [ "Datatype  : " ++ show typeName
-                           , "Parameters: " ++ unwords (map TH.nameBase args)
-                           , "Used at   : " ++ unwords (map TH.nameBase ps)
-                           , ""
-                           , "SBV only supports recursive uses at precisely the same parameterization"
-                           , "as the definition itself."
-                           ]
-
-        -- Is this another symbolic value? We'll simply construct the kind
-        go t | Just (c, ps) <- getConApp t
-             = pure $ KADT (TH.nameBase c) (map TH.nameBase ps) KADTRef
-
-        go (TH.ConT c) = extract c
-
         -- tuples
         go t | Just ps <- getTuple t = KTuple <$> mapM go ps
 
@@ -664,9 +644,32 @@ toSBV typeName args constructorName = go
         go (TH.AppT (TH.AppT (TH.ConT nm) (TH.LitT (TH.NumTyLit eb))) (TH.LitT (TH.NumTyLit sb)))
             | nm == ''FloatingPoint = pure $ KFP (fromIntegral eb) (fromIntegral sb)
 
-        -- rational
-        go (TH.AppT (TH.ConT nm) (TH.ConT p))
-            | nm == ''Ratio && p == ''Integer = pure KRational
+        -- deal with base types
+        go t@(TH.ConT constr)
+            | Just base <- getBase constr
+            = case base of
+                Left (w, r) -> bad w $ [ "Datatype   : " ++ show typeName
+                                       , "Constructor: " ++ show constructorName
+                                       , "Kind       : " ++ show t
+                                       , ""
+                                       ] ++ r
+                Right k     -> pure k
+
+        -- deal with constructors
+        go t
+           | Just (c, ps) <- getConApp t
+           = if c == typeName
+                then if all (`elem` args) ps
+                        then pure $ KADT tName (map TH.nameBase args) KADTRef -- recursive ref
+                        else bad "Unsupported type insantiation:"
+                                 [ "Datatype  : " ++ show typeName
+                                 , "Parameters: " ++ unwords (map TH.nameBase args)
+                                 , "Used at   : " ++ unwords (map TH.nameBase (filter (`notElem` args) ps))
+                                 , ""
+                                 , "SBV only supports recursive uses using the same set of type variables"
+                                 , "as the definition itself."
+                                 ]
+                else pure $ KADT (TH.nameBase c) (map TH.nameBase ps) KADTRef
 
         -- giving up
         go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ TH.nameBase typeName
@@ -675,11 +678,6 @@ toSBV typeName args constructorName = go
                                                   , ""
                                                   , report
                                                   ]
-
-        -- Extract application of a constructor to some type-variables
-        getSelf t = case getConApp t of
-                      Just (c, ps) | c == typeName -> Just ps
-                      _                            -> Nothing
 
         -- Extract application of a constructor to some type-variables
         getConApp t = locate t []
@@ -693,63 +691,43 @@ toSBV typeName args constructorName = go
                 tup sofar (TH.AppT t p) = tup (p : sofar) t
                 tup _     _             = Nothing
 
-        -- Given the name of a type, what's the equivalent in the SBV domain?
-        extract :: TH.Name -> TH.Q Kind
-        extract t
-          | t == ''Bool     = pure KBool
-          | t == ''Integer  = pure KUnbounded
-          | t == ''Float    = pure KFloat
-          | t == ''Double   = pure KDouble
+        -- Given the name of a base type, what's the equivalent in the SBV domain (if we have it)
+        getBase :: TH.Name -> Maybe (Either (String, [String]) Kind)
+        getBase t
+          | t == ''Bool     = Just $ Right KBool
+          | t == ''Integer  = Just $ Right KUnbounded
+          | t == ''Float    = Just $ Right KFloat
+          | t == ''Double   = Just $ Right KDouble
+          | t == ''String   = Just $ Right KString
+          | t == ''AlgReal  = Just $ Right KReal
+          | t == ''Word8    = Just $ Right $ KBounded False  8
+          | t == ''Word16   = Just $ Right $ KBounded False 16
+          | t == ''Word32   = Just $ Right $ KBounded False 32
+          | t == ''Word64   = Just $ Right $ KBounded False 64
+          | t == ''Int8     = Just $ Right $ KBounded True   8
+          | t == ''Int16    = Just $ Right $ KBounded True  16
+          | t == ''Int32    = Just $ Right $ KBounded True  32
+          | t == ''Int64    = Just $ Right $ KBounded True  64
+
+          -- Platform specific, flag:
+          |    t == ''Int
+            || t == ''Word  = Just $ Left ( "Platform specific type: " ++ show t
+                                          , [ "Please pick a more specific type, such as"
+                                            , "Integer, Word8, WordN 32, IntN 16 etc."
+                                            ])
 
           -- Punt on char and rational. Because SMTLib's string translation requires us to put extra constraints.
           -- We'll do that when we get there.
-          -- | t == ''Char     = pure KChar
-          -- | t == ''Rational = pure KRational
-          | t == ''Char || t == ''Rational
-          = bad "Unsupported type: Char"
-                [ "Datatype   : " ++ show typeName
-                , "Constructor: " ++ show constructorName
-                , "Kind       : " ++ show t
-                , ""
-                , "While SBV supports SChar, ADT fields with characters are not yet supported."
-                , report
-                ]
+          |    t == ''Char
+            || t == ''Rational = Just $ Left ( "Unsupported base type for ADTs: " ++ show t
+                                             , [ "While SBV supports SChar, and SRational natively,"
+                                               , "they are not yet supported as ADT fields as they need extra constraints."
+                                               , ""
+                                               , "Please report this as a feature request."
+                                               ])
 
-          | t == ''String   = pure KString
-          | t == ''AlgReal  = pure KReal
-          | t == ''Word8    = pure $ KBounded False  8
-          | t == ''Word16   = pure $ KBounded False 16
-          | t == ''Word32   = pure $ KBounded False 32
-          | t == ''Word64   = pure $ KBounded False 64
-          | t == ''Int8     = pure $ KBounded True   8
-          | t == ''Int16    = pure $ KBounded True  16
-          | t == ''Int32    = pure $ KBounded True  32
-          | t == ''Int64    = pure $ KBounded True  64
-
-          -- Platform specific: Complain
-          | t == ''Int || t == ''Word
-          = bad ("Unsupported platform specific type: " ++ show t)
-                [ "    Datatype   : " ++ show typeName
-                , "    Constructor: " ++ show constructorName
-                , "    Field type : " ++ show t
-                , ""
-                , "Please pick a more specific type, such as Integer, Word8, WordN 32, IntN 16 etc."
-                ]
-          {-
-           - TODO: how do we map to these?
-            | KUserSort String (Maybe [String])
-            | KADT      String [String]
-            | KSet      Kind
-            | KArray    Kind Kind
-          -}
-          | True
-          = bad "Unsupported field type"
-                [ "    Datatype   : " ++ show typeName
-                , "    Constructor: " ++ show constructorName
-                , "    Field type : " ++ show t
-                , ""
-                , report
-                ]
+          -- Otherwise, can't translate
+          | True            = Nothing
 
 -- | Make an induction schema for the type, with n extra arguments.
 mkInductionSchema :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> Int -> TH.Q [TH.Dec]
