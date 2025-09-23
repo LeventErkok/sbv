@@ -22,16 +22,6 @@ module Documentation.SBV.Examples.ADT.MutRec where
 
 import Data.SBV
 
-data A = A1
-       | A2 B
-
-data B = B1
-       | B2 A
-
-mkSymbolic ''A
-mkSymbolic ''B
-
-{-
 data Expr var val = Con val
                   | Var var
                   | Add (Expr var val) (Expr var val)
@@ -39,8 +29,7 @@ data Expr var val = Con val
                   | Let (Decl var val) (Expr var val)
 
 data Decl var val = Assign var (Expr var val)
-                  | Seq    (Decl var val) (Decl var val)
+                  | Seq        (Decl var val) (Decl var val)
 
 mkSymbolic ''Decl
 mkSymbolic ''Expr
--}
