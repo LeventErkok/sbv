@@ -349,7 +349,7 @@ module Data.SBV (
 
   -- * Symbolic data types
   -- $symbolicADT
-  , mkSymbolic
+  , mkSymbolic, mkSymbolics
 
   -- * Stopping unrolling: Defined functions
   , SMTDefinable(..), smtHOFunction, Closure(..), registerType
