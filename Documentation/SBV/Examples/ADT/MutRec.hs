@@ -9,13 +9,10 @@
 -- Examples of symbolic ADTs referring to each other.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE MonoLocalBinds       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -37,8 +34,7 @@ data Stmt var val = Assign var (Expr var val)
                   | Seq        (Stmt var val) (Stmt var val)
                   deriving Show
 
-mkSymbolic ''Expr
-mkSymbolic ''Stmt
+mkSymbolics [''Expr, ''Stmt]
 
 -- | Example program.
 --
