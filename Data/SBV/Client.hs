@@ -306,9 +306,8 @@ mkADT typeName params cstrs = do
                          , nm /= TH.nameBase typeName    -- Which isn't what we're currently defining
                          ]
 
-    let inSymValContext = TH.ForallT tvars $  [TH.AppT (TH.ConT ''SymVal) (TH.VarT n) | n <- params]
-                                           ++ [TH.AppT (TH.ConT ''SymVal) t           | t <- map snd subKinds]
-           where tvars  = [TH.PlainTV n TH.SpecifiedSpec | n <- params]
+    let inSymValContext = TH.ForallT [] $  [TH.AppT (TH.ConT ''SymVal) (TH.VarT n) | n <- params]
+                                        ++ [TH.AppT (TH.ConT ''SymVal) t           | t <- map snd subKinds]
 
     litFun <- do let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
                                               let cn      = TH.mkName $ 's' : TH.nameBase n
@@ -322,8 +321,8 @@ mkADT typeName params cstrs = do
     addDoc ("Conversion from SMT values to " ++ TH.nameBase typeName ++ " values.") fromCVFunName
 
     let fromCVSig = TH.SigD fromCVFunName
-                           (inSymValContext (foldr (TH.AppT . TH.AppT TH.ArrowT) typeCon
-                                                   [TH.ConT ''String, TH.AppT TH.ListT (TH.ConT ''CV)]))
+                            (inSymValContext (foldr (TH.AppT . TH.AppT TH.ArrowT) typeCon
+                                                    [TH.ConT ''String, TH.AppT TH.ListT (TH.ConT ''CV)]))
 
         fromCVCls :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Clause
         fromCVCls (nm, args) = do
@@ -498,7 +497,7 @@ mkCaseAnalyzer typeName params subKinds cstrs = do
             rvar   = TH.VarT res
             mkFun  = foldr (TH.AppT . TH.AppT TH.ArrowT) rvar
             fTypes = [mkFun (map (mkSBV . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
-            sig    = TH.SigD cnm (TH.ForallT [TH.PlainTV p TH.SpecifiedSpec | p <- res : params]
+            sig    = TH.SigD cnm (TH.ForallT []
                                              (TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)
                                              :  [TH.AppT (TH.ConT ''SymVal) (TH.VarT p) | p <- params]
                                              ++ [TH.AppT (TH.ConT ''SymVal) t           | t <- map snd subKinds]
