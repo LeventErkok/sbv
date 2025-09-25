@@ -129,7 +129,7 @@ mkSymbolicADT typeName = do
      (params, ds)
         <- case tKind of
              ADTEnum        cstrs -> ([],)     <$> mkEnum typeName cstrs
-             ADTFull params cstrs -> (params,) <$> mkADT typeName params cstrs
+             ADTFull params cstrs -> (params,) <$> mkADT  typeName params cstrs
 
      -- declare an "undefiner" so we don't have stray names
      nm <- TH.newName $ "_undefiner_" ++ TH.nameBase typeName
