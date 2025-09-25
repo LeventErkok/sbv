@@ -341,9 +341,6 @@ mkADT typeName params cstrs = do
                              CV k _ -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k
                  |]
 
-    -- When constructing the context, we need to ignore the self here as
-    -- we're just defining it:
-
     symCtx <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params]
     let symVal = TH.InstanceD
                       Nothing
