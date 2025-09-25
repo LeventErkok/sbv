@@ -1187,6 +1187,10 @@ eval = go SL.nil
 
 which defines an interpreter for this data-type. Such definitions also come with an induction principle
 to perform TP based proofs on. These can be accessed using the 'Data.SBV.TP.inductiveLemma' function.
+
+The argument to @mkSymbolic@ is typically a list of types. The requirement is that if the types you pass on
+are mutually recursively defined, you should give them as a list. Otherwise, you can give them all together,
+or one at a time.
 -}
 
 {- $cardIntro
