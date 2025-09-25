@@ -47,8 +47,8 @@ data ADT  = AEmpty
           | AString  String
           | AList    [Integer]
           | ATuple   (Double, [(WordN 5, [Float])])
-          | AMaybe   (Maybe (AlgReal, Float, (Rational, [Bool])))
-          | AEither  (Either (Maybe Integer, Bool) [Rational])
+          | AMaybe   (Maybe (AlgReal, Float, (Either Integer Float, [Bool])))
+          | AEither  (Either (Maybe Integer, Bool) [Integer])
           | APair    ADT ADT
           {-
           | KUserSort String (Maybe [String])
@@ -89,7 +89,7 @@ t00 = do a :: SADT <- free "e"
 
 t01 :: Symbolic ()
 t01 = do a :: SADT <- free "e"
-         constrain $ a .=== literal (APair (AInt64 4) (AMaybe (Just (0, 12, (3, [False, True])))))
+         constrain $ a .=== literal (APair (AInt64 4) (AMaybe (Just (0, 12, (Left 3, [False, True])))))
 
 t02 :: Symbolic ()
 t02 = do a :: SADT <- free "e"

@@ -644,6 +644,16 @@ toSBV typeName args constructorName = go
         go (TH.AppT (TH.AppT (TH.ConT nm) (TH.LitT (TH.NumTyLit eb))) (TH.LitT (TH.NumTyLit sb)))
             | nm == ''FloatingPoint = pure $ KFP (fromIntegral eb) (fromIntegral sb)
 
+        -- Ratio requires extra attention, so ignore
+        go (TH.AppT (TH.ConT nm) (TH.ConT i))
+            | nm == ''Ratio && i == ''Integer
+            = bad "Unsupported Rational type."
+                  [ "While SBV supports SRational natively, this type is not yet supported"
+                  , "as ADT fields as it needs extra constraints."
+                  , ""
+                  , "Please report this as a feature request."
+                  ]
+
         -- deal with base types
         go t@(TH.ConT constr)
             | Just base <- getBase constr
