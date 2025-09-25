@@ -26,9 +26,9 @@ data Bitstring
 data B
 data Thing
 
-mkSymbolic ''Bitstring
-mkSymbolic ''B
-mkSymbolic ''Thing
+mkSymbolic [''Bitstring]
+mkSymbolic [''B]
+mkSymbolic [''Thing]
 
 tests :: TestTree
 tests =

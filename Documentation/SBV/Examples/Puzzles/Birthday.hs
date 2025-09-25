@@ -60,8 +60,8 @@ data Month = May | Jun | Jul | Aug
 data Day = D14 | D15 | D16 | D17 | D18 | D19
          deriving (Enum, Bounded)
 
-mkSymbolic ''Month
-mkSymbolic ''Day
+mkSymbolic [''Month]
+mkSymbolic [''Day]
 
 -- | Represent the birthday as a record
 data Birthday = BD SMonth SDay

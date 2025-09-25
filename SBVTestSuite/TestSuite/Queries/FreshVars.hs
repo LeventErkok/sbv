@@ -28,11 +28,7 @@ import Data.SBV.Control
 import Utils.SBVTestFramework
 
 data BinOp  = Plus | Minus | Times deriving (Enum, Bounded)
-mkSymbolic ''BinOp
-
-_unused :: a
-_unused = error "stop GHC from complaining unused names"
-                sPlus sMinus sTimes isPlus isMinus isTimes (sCaseBinOp @SInteger)
+mkSymbolic [''BinOp]
 
 -- Test suite
 tests :: TestTree

@@ -35,7 +35,7 @@ data Expr = Val Integer
           | Let String Expr Expr
 
 -- | Create a symbolic version of expressions.
-mkSymbolic ''Expr
+mkSymbolic [''Expr]
 
 -- | Show instance for 'Expr'.
 instance Show Expr where

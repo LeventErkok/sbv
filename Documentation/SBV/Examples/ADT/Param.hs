@@ -36,7 +36,7 @@ data Expr nm val = Val val
                  | Let nm (Expr nm val) (Expr nm val)
 
 -- | Create a symbolic version of expressions.
-mkSymbolic ''Expr
+mkSymbolic [''Expr]
 
 -- | Show instance for 'Expr'.
 instance (Show nm, Show val) => Show (Expr nm val) where

@@ -33,7 +33,7 @@ data L
 
 -- | Make 'L' into an uninterpreted sort, automatically introducing 'SL'
 -- as a synonym for 'SBV' 'L'.
-mkSymbolic ''L
+mkSymbolic [''L]
 
 -- | An uninterpreted "classify" function. Really, we only care about
 -- the fact that such a function exists, not what it does.

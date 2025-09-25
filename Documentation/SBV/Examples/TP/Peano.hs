@@ -40,7 +40,7 @@ data Nat = Zero
          deriving (Eq, Ord)
 
 -- | Create a symbolic version of naturals.
-mkSymbolic ''Nat
+mkSymbolic [''Nat]
 
 -- | Numeric instance. Choices: We clamp everything at 'Zero'. Negation is identity.
 instance Num Nat where

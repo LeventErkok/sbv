@@ -33,7 +33,7 @@ data State = Idle     -- ^ Regular work
            deriving (Enum, Bounded)
 
 -- | Make 'State' a symbolic enumeration
-mkSymbolic ''State
+mkSymbolic [''State]
 
 -- | The mutex property holds for two sequences of state transitions, if they are not in
 -- their critical section at the same time.

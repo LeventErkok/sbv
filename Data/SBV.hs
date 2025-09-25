@@ -349,7 +349,7 @@ module Data.SBV (
 
   -- * Symbolic data types
   -- $symbolicADT
-  , mkSymbolic, mkSymbolics
+  , mkSymbolic
 
   -- * Stopping unrolling: Defined functions
   , SMTDefinable(..), smtHOFunction, Closure(..), registerType
@@ -1121,7 +1121,7 @@ following example demonstrates:
 
   @
      data B
-     mkSymbolic ''B
+     mkSymbolic [''B]
   @
 
 This is all it takes to introduce @B@ as an uninterpreted sort in SBV, which makes the type @SBV B@ automagically become available as the type
@@ -1133,10 +1133,10 @@ it will turn into an enumeration in SMTLib.  A simple example is:
 
 @
     data X = A | B | C deriving (Enum, Bounded)
-    mkSymbolic ''X
+    mkSymbolic [''X]
 @
 
-Note the magic incantation @mkSymbolic ''X@, requires certain extensions to be turned on. Follow GHC's advice,
+Note the magic incantation @mkSymbolic [''X]@, requires certain extensions to be turned on. Follow GHC's advice,
 but in general you need some subset of:
 
 > LANGUAGE DataKinds
@@ -1160,7 +1160,7 @@ data Expr = Num Integer
           | Let String Expr Expr
 
 -- | Create a symbolic version of expressions.
-mkSymbolic ''Expr
+mkSymbolic [''Expr]
 @
 
 These types can also be parameterized, per usual Haskell usage.

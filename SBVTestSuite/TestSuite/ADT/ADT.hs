@@ -59,7 +59,7 @@ data ADT  = AEmpty
           -}
           deriving Show
 
-mkSymbolic ''ADT
+mkSymbolic [''ADT]
 
 tests :: TestTree
 tests =

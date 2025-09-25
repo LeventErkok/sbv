@@ -101,7 +101,7 @@ instance Show BooleanAlgebraProof where
 
 -- | The abstract type for the domain.
 data Stroke
-mkSymbolic ''Stroke
+mkSymbolic [''Stroke]
 
 -- | The sheffer stroke operator.
 (⏐) :: SStroke -> SStroke -> SStroke

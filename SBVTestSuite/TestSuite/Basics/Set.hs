@@ -31,7 +31,7 @@ import Data.SBV.Tuple
 import Utils.SBVTestFramework hiding (complement)
 
 data E = A | B | C deriving (Bounded, Enum, Ord, Eq)
-mkSymbolic ''E
+mkSymbolic [''E]
 
 __unused :: SE
 __unused = error "stop GHC from complaining unused names" sA sB sC isA isB isC (sCaseE @SInteger)

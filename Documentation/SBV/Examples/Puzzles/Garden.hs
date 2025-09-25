@@ -47,7 +47,7 @@ data Color = Red | Yellow | Blue
           deriving (Enum, Bounded)
 
 -- | Make 'Color' a symbolic value.
-mkSymbolic ''Color
+mkSymbolic [''Color]
 
 -- | Represent flowers by symbolic integers
 type Flower = SInteger

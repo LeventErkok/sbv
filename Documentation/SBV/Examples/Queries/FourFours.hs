@@ -44,7 +44,7 @@ data BinOp = Plus | Minus | Times | Divide | Expt
            deriving (Eq, Enum, Bounded)
 
 -- | Make 'BinOp' a symbolic value.
-mkSymbolic ''BinOp
+mkSymbolic [''BinOp]
 
 -- | Supported unary operators. Similar to 'BinOp' case, we will restrict square-root and factorial to
 -- be only applied to the value @4.
@@ -52,7 +52,7 @@ data UnOp  = Negate | Sqrt | Factorial
            deriving (Eq, Enum, Bounded)
 
 -- | Make 'UnOp' a symbolic value.
-mkSymbolic ''UnOp
+mkSymbolic [''UnOp]
 
 -- | The shape of a tree, either a binary node, or a unary node, or the number @4@, represented hear by
 -- the constructor @F@. We parameterize by the operator type: When doing symbolic computations, we'll fill

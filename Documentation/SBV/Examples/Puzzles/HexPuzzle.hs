@@ -58,7 +58,7 @@ data Color = Black | Blue | Green | Red
           deriving (Enum, Bounded)
 
 -- | Make 'Color' a symbolic value.
-mkSymbolic ''Color
+mkSymbolic [''Color]
 
 -- | Use 8-bit words for button numbers, even though we only have 1 to 19.
 type Button  = Word8

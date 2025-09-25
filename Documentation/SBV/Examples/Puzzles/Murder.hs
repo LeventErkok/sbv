@@ -50,9 +50,9 @@ data Sex  = Male | Female
 data Role = Victim | Killer | Bystander
           deriving (Enum, Bounded)
 
-mkSymbolic ''Location
-mkSymbolic ''Sex
-mkSymbolic ''Role
+mkSymbolic [''Location]
+mkSymbolic [''Sex]
+mkSymbolic [''Role]
 
 -- | A person has a name, age, together with location and sex.
 -- We parameterize over a function so we can use this struct

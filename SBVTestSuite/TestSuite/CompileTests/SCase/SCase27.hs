@@ -11,4 +11,4 @@ data A = A1 { u :: Integer }
        | B1 { u :: Integer, s :: String}
        | C1
 
-mkSymbolic ''A
+mkSymbolic [''A]

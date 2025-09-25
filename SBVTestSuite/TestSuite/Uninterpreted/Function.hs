@@ -24,40 +24,40 @@ import Documentation.SBV.Examples.Uninterpreted.Function
 import Utils.SBVTestFramework
 
 data A1
-mkSymbolic ''A1
+mkSymbolic [''A1]
 
 data A2
-mkSymbolic ''A2
+mkSymbolic [''A2]
 
 data A3
-mkSymbolic ''A3
+mkSymbolic [''A3]
 
 data A4
-mkSymbolic ''A4
+mkSymbolic [''A4]
 
 data A5
-mkSymbolic ''A5
+mkSymbolic [''A5]
 
 data A6
-mkSymbolic ''A6
+mkSymbolic [''A6]
 
 data A7
-mkSymbolic ''A7
+mkSymbolic [''A7]
 
 data A8
-mkSymbolic ''A8
+mkSymbolic [''A8]
 
 data A9
-mkSymbolic ''A9
+mkSymbolic [''A9]
 
 data A10
-mkSymbolic ''A10
+mkSymbolic [''A10]
 
 data A11
-mkSymbolic ''A11
+mkSymbolic [''A11]
 
 data A12
-mkSymbolic ''A12
+mkSymbolic [''A12]
 
 
 f1 :: SA1 -> SBool

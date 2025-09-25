@@ -36,8 +36,8 @@ data T = TInt                        -- ^ Integers
        | TArr { dom :: T, rng :: T } -- ^ Functions: @t -> t@
 
 -- | Make terms and types symbolic
-mkSymbolic ''M
-mkSymbolic ''T
+mkSymbolic [''M]
+mkSymbolic [''T]
 
 -- | Instead of modeling environments for mapping variables to their
 -- types, we'll simply use an uninterpreted function. Note that

@@ -166,7 +166,7 @@ sCase = QuasiQuoter
                 Nothing -> fail Unknown $ unlines [ "sCase: Unknown symbolic ADT: " <> typ
                                                   , ""
                                                   , "        To use a symbolic case expression, declare your ADT, and then:"
-                                                  , "             mkSymbolic ''" <> typ
+                                                  , "             mkSymbolic [''" <> typ <> "]"
                                                   , "        In a template-haskell context."
                                                   ]
               cases <- zipWithM matchToPair (offsets ++ repeat Unknown) matches >>= checkCase scrut typ . concat

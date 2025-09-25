@@ -25,7 +25,7 @@ import Data.SBV.Control
 import Utils.SBVTestFramework
 
 data L = A | B deriving (Enum, Bounded)
-mkSymbolic ''L
+mkSymbolic [''L]
 
 -- Test suite
 tests :: TestTree

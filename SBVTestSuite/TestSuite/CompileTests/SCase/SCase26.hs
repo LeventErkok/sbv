@@ -12,4 +12,4 @@ data A = A1 { u :: Integer }
        | B1 { s :: String, k :: Float }
        | C1
 
-mkSymbolic ''A
+mkSymbolic [''A]

@@ -27,7 +27,7 @@ import Data.List (sortOn)
 import qualified Control.Exception as C
 
 data Q
-mkSymbolic ''Q
+mkSymbolic [''Q]
 
 tests :: TestTree
 tests =

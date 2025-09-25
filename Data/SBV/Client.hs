@@ -32,7 +32,6 @@ module Data.SBV.Client
   , defaultSolverConfig
   , getAvailableSolvers
   , mkSymbolic
-  , mkSymbolics
   , getConstructors
   ) where
 
@@ -47,6 +46,7 @@ import Data.Maybe (fromMaybe)
 
 import Data.Word
 import Data.Int
+import Data.Ratio
 
 import qualified "template-haskell" Language.Haskell.TH        as TH
 #if MIN_VERSION_template_haskell(2,18,0)
@@ -117,12 +117,12 @@ data ADT = ADTEnum [TH.Name]                                     -- Enumeration.
                    [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -- Constructors and fields. Maybe is the accessor if given.
 
 -- | Create a mutually recursive group of ADTs.
-mkSymbolics :: [TH.Name] -> TH.Q [TH.Dec]
-mkSymbolics ts = concat <$> mapM mkSymbolic ts
+mkSymbolic :: [TH.Name] -> TH.Q [TH.Dec]
+mkSymbolic ts = concat <$> mapM mkSymbolicADT ts
 
 -- | Create a symbolic ADT.
-mkSymbolic :: TH.Name -> TH.Q [TH.Dec]
-mkSymbolic typeName = do
+mkSymbolicADT :: TH.Name -> TH.Q [TH.Dec]
+mkSymbolicADT typeName = do
 
      tKind <- dissect typeName
 

@@ -29,7 +29,7 @@ data Day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday
          deriving (Eq, Ord, Bounded, Enum)
 
 -- | Make 'Day' a symbolic value.
-mkSymbolic ''Day
+mkSymbolic [''Day]
 
 -- | A trivial query to find three consecutive days that's all before 'Thursday'. The point
 -- here is that we can perform queries on such enumerated values and use 'getValue' on them

@@ -14,7 +14,7 @@ data A = A Integer
        | B Float
        | C A A
 
-mkSymbolic ''A
+mkSymbolic [''A]
 
 t :: SA -> SA
 t a = [sCase|A a of

@@ -31,7 +31,7 @@ data A = A Integer
        | C A A
        deriving Show
 
-mkSymbolic ''A
+mkSymbolic [''A]
 
 tests :: TestTree
 tests =

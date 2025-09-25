@@ -19,7 +19,7 @@ module TestSuite.Uninterpreted.Uninterpreted(tests) where
 import Utils.SBVTestFramework
 
 data Q
-mkSymbolic ''Q
+mkSymbolic [''Q]
 
 -- Test suite
 tests :: TestTree

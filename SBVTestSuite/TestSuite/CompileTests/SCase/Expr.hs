@@ -15,4 +15,4 @@ data Expr = Zero
           | Let String Expr Expr
           deriving Show
 
-mkSymbolic ''Expr
+mkSymbolic [''Expr]

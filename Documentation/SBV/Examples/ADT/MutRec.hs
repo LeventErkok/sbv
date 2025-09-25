@@ -34,7 +34,7 @@ data Stmt var val = Assign var (Expr var val)
                   | Seq        (Stmt var val) (Stmt var val)
                   deriving Show
 
-mkSymbolics [''Expr, ''Stmt]
+mkSymbolic [''Expr, ''Stmt]
 
 -- | Example program.
 --

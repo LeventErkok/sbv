@@ -6,6 +6,6 @@ SCase27.hs:14:1: error: [GHC-39584]
       Please use each accessor only once.
 
    |
-14 | mkSymbolic ''A
-   | ^^^^^^^^^^^^^^
+14 | mkSymbolic [''A]
+   | ^^^^^^^^^^^^^^^^
 

@@ -39,7 +39,7 @@ data U2Member = Bono | Edge | Adam | Larry
               deriving (Enum, Bounded, Eq, Ord)
 
 -- | Make 'U2Member' a symbolic value.
-mkSymbolic ''U2Member
+mkSymbolic [''U2Member]
 
 -- | Model time using 32 bits
 type Time  = Word32
@@ -66,7 +66,7 @@ data Location = Here | There
               deriving (Enum, Bounded)
 
 -- | Make 'Location' a symbolic value.
-mkSymbolic ''Location
+mkSymbolic [''Location]
 
 -- | The status of the puzzle after each move
 --

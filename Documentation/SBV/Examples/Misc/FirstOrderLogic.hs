@@ -38,17 +38,17 @@ import Data.SBV
 
 -- | An uninterpreted sort for demo purposes, named 'U'
 data U
-mkSymbolic ''U
+mkSymbolic [''U]
 
 -- | An uninterpreted sort for demo purposes, named 'V'
 data V
-mkSymbolic ''V
+mkSymbolic [''V]
 
 -- | An enumerated type for demo purposes, named 'E'
 data E = A | B | C
        deriving (Enum, Bounded, Ord, Eq)
 
-mkSymbolic ''E
+mkSymbolic [''E]
 
 -- | Helper to turn quantified formula to a regular boolean. We
 -- can think of this as quantifier elimination, hence the name 'qe'.
