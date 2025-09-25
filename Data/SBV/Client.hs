@@ -326,9 +326,11 @@ mkADT typeName params cstrs = do
                     pure $ TH.FunD fromCVFunName (clss ++ [catchAll])
 
     getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
-                        fixRef kRef (KADT curName _ KADTRef) | curName == unmod typeName = kRef
-                        fixRef _    k                                                    = k
-                    in \case CV kTop@(KADT _ _ (KADTUse _ fks)) (CADT (c, vs)) ->
+                        fixRef kRef (KADT curName _ KADTRef)
+                           | curName == unmod typeName = kRef
+                           | True                      = error $ "fromCV TBD: Recursive subfield for: " ++ curName
+                        fixRef _ k = k
+                    in \case CV kTop@(KADT n _ (KADTUse _ fks)) (CADT (c, vs)) | n == unmod typeName ->
                                  case c `lookup` fks of
                                    Nothing  -> unexpected $ "Cannot find constructor in kind: " ++ show (c, fks)
                                    Just ks
