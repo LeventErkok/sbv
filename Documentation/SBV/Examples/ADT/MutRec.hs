@@ -21,6 +21,8 @@ module Documentation.SBV.Examples.ADT.MutRec where
 import Data.SBV
 import Data.SBV.Control
 
+import Data.Proxy
+
 -- | Expression layer
 data Expr var val = Con val
                   | Var var
@@ -41,6 +43,9 @@ mkSymbolic [''Expr, ''Stmt]
 -- >>> exPgm
 exPgm :: IO (Stmt String Integer)
 exPgm = runSMT $ do p :: SStmt String Integer <- free "p"
+
+                    registerType (Proxy @(Stmt Integer Integer))
+                    registerType (Proxy @(Expr Integer Integer))
 
                     -- Make sure there are at least three statements
                     constrain $ isSeq p
