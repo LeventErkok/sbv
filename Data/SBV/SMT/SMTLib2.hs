@@ -65,7 +65,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = not (null [() | KBounded{} <- allKinds])
         usorts         = [(s, dt) | KUserSort s dt <- allKinds]
-        adts           = [(s, ps, k)  | KADT s ps k <- allKinds]
+        adts           = [((s, ps), k)  | KADT s ps k <- allKinds]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi allTopOps]
@@ -228,7 +228,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ (if containsMaybe     kindInfo then declMaybe     else [])
              ++ (if containsRationals kindInfo then declRationals else [])
              ++ [ "; --- ADTs  --- " | not (null adts)]
-             ++ concatMap declADT adts
+             ++ declADT adts
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
              ++ [ "; --- top level inputs ---"]
@@ -320,20 +320,36 @@ declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
 -- | Declare ADTs
-declADT :: (String, [String], KADTDef) -> [String]
-declADT (_    , _ , KADTRef)         = []
-declADT (tName, ps, KADTUse _ cstrs) = ("; User defined ADT: " ++ tName) : decl
-  where decl =  ("(declare-datatype " ++ tName ++ parOpen ++ " (")
-             :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
-             ++ ["))" ++ parClose]
+declADT :: [((String, [String]), KADTDef)] -> [String]
+declADT allADTs = go [(p, adtDeps cur (allDeps ks fs), fs) | (p@(cur, _), KADTUse ks fs) <- allADTs]
+  where allDeps ks  fs = concatMap expandKinds (ks ++ concatMap snd fs)
+        adtDeps cur ks = nub [s | KADT s _ _ <- ks, s /= cur]
 
-        mkC (nm, []) = nm
-        mkC (nm, ts) = nm ++ " " ++ unwords ['(' : mkF (nm ++ "_" ++ show i) t ++ ")" | (i, t) <- zip [(1::Int)..] ts]
-        mkF a t      = "get" ++ a ++ " " ++ smtType t
+        go adtDecls = concatMap declGroup sorted
+         where mkNode ((nps@(n, _), ns, cstrs)) = ((nps, cstrs), n, ns)
+               sorted = DG.stronglyConnComp (map mkNode adtDecls)
 
-        (parOpen, parClose) = case ps of
-                                [] -> ("", "")
-                                _  -> (" (par (" ++ unwords ps ++ ")", ")")
+        declGroup (DG.AcyclicSCC d )  = singleADT d
+        declGroup (DG.CyclicSCC  ds)
+            = case ds of
+                []  -> error "Data.SBV.declADT: Impossible happened: an empty cyclic group was returned!"
+                [d] -> singleADT d
+                _   -> error "Don't know how to declare this!"
+
+
+        singleADT :: ((String, [String]), [(String, [Kind])]) -> [String]
+        singleADT ((tName, ps), cstrs) = ("; User defined ADT: " ++ tName) : decl
+          where decl =  ("(declare-datatype " ++ tName ++ parOpen ++ " (")
+                     :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
+                     ++ ["))" ++ parClose]
+
+                mkC (nm, []) = nm
+                mkC (nm, ts) = nm ++ " " ++ unwords ['(' : mkF (nm ++ "_" ++ show i) t ++ ")" | (i, t) <- zip [(1::Int)..] ts]
+                mkF a t      = "get" ++ a ++ " " ++ smtType t
+
+                (parOpen, parClose) = case ps of
+                                        [] -> ("", "")
+                                        _  -> (" (par (" ++ unwords ps ++ ")", ")")
 
 -- | Declare tuple datatypes
 --
@@ -422,7 +438,7 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
                settings
             -- sorts
             ++ concatMap declSort [(s,     dt) | KUserSort s    dt <- newKinds]
-            ++ concat [declADT (s, ps, a) | KADT s ps a <- newKinds]
+            ++ declADT [((s, ps), a) | KADT s ps a <- newKinds]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- sums
