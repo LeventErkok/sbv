@@ -334,8 +334,14 @@ declADT allADTs = go [(p, adtDeps cur (allDeps ks fs), fs) | (p@(cur, _), KADTUs
             = case ds of
                 []  -> error "Data.SBV.declADT: Impossible happened: an empty cyclic group was returned!"
                 [d] -> singleADT d
-                _   -> error "Don't know how to declare this!"
+                _   -> multiADT ds
 
+        parParens [] = ("", "")
+        parParens ps = (" (par (" ++ unwords ps ++ ")", ")")
+
+        mkC (nm, []) = nm
+        mkC (nm, ts) = nm ++ " " ++ unwords ['(' : mkF (nm ++ "_" ++ show i) t ++ ")" | (i, t) <- zip [(1::Int)..] ts]
+          where mkF a t  = "get" ++ a ++ " " ++ smtType t
 
         singleADT :: ((String, [String]), [(String, [Kind])]) -> [String]
         singleADT ((tName, ps), cstrs) = ("; User defined ADT: " ++ tName) : decl
@@ -343,13 +349,21 @@ declADT allADTs = go [(p, adtDeps cur (allDeps ks fs), fs) | (p@(cur, _), KADTUs
                      :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
                      ++ ["))" ++ parClose]
 
-                mkC (nm, []) = nm
-                mkC (nm, ts) = nm ++ " " ++ unwords ['(' : mkF (nm ++ "_" ++ show i) t ++ ")" | (i, t) <- zip [(1::Int)..] ts]
-                mkF a t      = "get" ++ a ++ " " ++ smtType t
+                (parOpen, parClose) = parParens ps
 
-                (parOpen, parClose) = case ps of
-                                        [] -> ("", "")
-                                        _  -> (" (par (" ++ unwords ps ++ ")", ")")
+        multiADT :: [((String, [String]), [(String, [Kind])])] -> [String]
+        multiADT adts = ("; User defined mutually-recursive ADTs: " ++ intercalate ", " (map (fst . fst) adts)) : decl
+          where decl = ("(declare-datatypes (" ++ typeDecls ++ ") (")
+                     : concatMap adtBody adts
+                    ++ ["))"]
+
+                typeDecls = unwords ['(' : name ++ " " ++ show (length ps) ++ ")" | ((name, ps), _) <- adts]
+
+                adtBody ((_, ps), cstrs) = body
+                  where (parOpen, parClose) = parParens ps
+                        body =  ("    " ++ parOpen ++ " (")
+                             :  ["        (" ++ mkC c ++ ")" | c <- cstrs]
+                             ++ ["     )" ++ parClose]
 
 -- | Declare tuple datatypes
 --
