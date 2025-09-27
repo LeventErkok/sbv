@@ -56,7 +56,6 @@ import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 import Language.Haskell.TH.ExpandSyns as TH
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Core.SizedFloats
@@ -108,7 +107,6 @@ deriving instance TH.Lift TH.TyLit
 #endif
 
 -- A few other things we need to TH lift
-deriving instance TH.Lift KADTDef
 deriving instance TH.Lift Kind
 
 -- | What kind of type is this?
@@ -326,18 +324,14 @@ mkADT typeName params cstrs = do
                     pure $ TH.FunD fromCVFunName (clss ++ [catchAll])
 
     getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
-                        fixRef kRef (KADT curName _ KADTRef)
-                           | curName == unmod typeName = kRef
-                           | True                      = error $ "fromCV TBD: Recursive subfield for: " ++ curName
-                        fixRef _ k = k
-                    in \case CV kTop@(KADT n _ (KADTUse _ fks)) (CADT (c, vs)) | n == unmod typeName ->
-                                 case c `lookup` fks of
-                                   Nothing  -> unexpected $ "Cannot find constructor in kind: " ++ show (c, fks)
+                    in \case CV (KADT n _ cks) (CADT (c, vs)) | n == unmod typeName ->
+                                 case c `lookup` cks of
+                                   Nothing  -> unexpected $ "Cannot find constructor in kind: " ++ show (c, cks)
                                    Just ks
                                      | length ks /= length vs
                                      -> unexpected $ "Mismatching arity for " ++ show typeName ++ " " ++ show (c, length ks, length vs)
                                      | True
-                                     -> $(TH.varE fromCVFunName) c (zipWith CV (map (fixRef kTop) ks) vs)
+                                     -> $(TH.varE fromCVFunName) c (zipWith CV ks vs)
                              CV k _ -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k
                  |]
 
@@ -355,16 +349,14 @@ mkADT typeName params cstrs = do
 
     kindCtx <- TH.cxt [TH.appT (TH.conT ''HasKind) (TH.varT p) | p <- params]
 
-    let kindDef = foldl1 TH.AppE [ TH.ConE 'KADT
+    let mkPair a b = TH.TupE [Just a, Just b]
+        kindDef = foldl1 TH.AppE [ TH.ConE 'KADT
                                  , TH.LitE (TH.StringL (unmod typeName))
-                                 , TH.ListE (map (TH.LitE . TH.StringL . TH.nameBase) params)
-                                 , foldl1 TH.AppE [ TH.ConE 'KADTUse
-                                                  , TH.ListE [TH.AppE (TH.VarE 'kindOf)
-                                                                      (TH.AppTypeE (TH.ConE 'Proxy) (TH.VarT p))
-                                                             | p <- params
-                                                             ]
-                                                  , defCstrs
-                                                  ]
+                                 , TH.ListE [ mkPair (TH.LitE (TH.StringL (TH.nameBase p)))
+                                                     (TH.AppE (TH.VarE 'kindOf) (TH.AppTypeE (TH.ConE 'Proxy) (TH.VarT p)))
+                                            | p <- params
+                                            ]
+                                 , defCstrs
                                  ]
 
         kindDecl = TH.InstanceD
@@ -507,7 +499,7 @@ dissect :: TH.Name -> TH.Q ADT
 dissect typeName = do
         (args, tcs) <- getConstructors typeName
 
-        let mk n (mbfn, t) = do k <- expandSyns t >>= toSBV typeName args n
+        let mk n (mbfn, t) = do k <- expandSyns t >>= toSBV typeName n
                                 pure (mbfn, t, k)
 
         cs  <- mapM (\(n, ts) -> (n,) <$> mapM (mk n) ts) tcs
@@ -612,11 +604,9 @@ getConstructors typeName = do res@(_, cstrs) <- getConstructorsFromType (TH.ConT
                 goPred p               = p
 
 -- | Find the SBV kind for this type
-toSBV :: TH.Name -> [TH.Name] -> TH.Name -> TH.Type -> TH.Q Kind
-toSBV typeName args constructorName = go
-  where tName = unmod typeName
-
-        -- Handle type variables (parameters)
+toSBV :: TH.Name -> TH.Name -> TH.Type -> TH.Q Kind
+toSBV typeName constructorName = go
+  where -- Handle type variables (parameters)
         go (TH.VarT v) = pure $ KVar (TH.nameBase v)
 
         -- tuples
@@ -667,18 +657,7 @@ toSBV typeName args constructorName = go
         -- deal with constructors
         go t
            | Just (c, ps) <- getConApp t
-           = if c == typeName
-                then if all (`elem` args) ps
-                        then pure $ KADT tName (map TH.nameBase args) KADTRef -- recursive ref
-                        else bad "Unsupported type insantiation:"
-                                 [ "Datatype  : " ++ show typeName
-                                 , "Parameters: " ++ unwords (map TH.nameBase args)
-                                 , "Used at   : " ++ unwords (map TH.nameBase (filter (`notElem` args) ps))
-                                 , ""
-                                 , "SBV only supports recursive uses using the same set of type variables"
-                                 , "as the definition itself."
-                                 ]
-                else pure $ KADT (TH.nameBase c) (map TH.nameBase ps) KADTRef
+           = KApp (TH.nameBase c) <$> mapM go ps
 
         -- giving up
         go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ TH.nameBase typeName
@@ -690,9 +669,9 @@ toSBV typeName args constructorName = go
 
         -- Extract application of a constructor to some type-variables
         getConApp t = locate t []
-          where locate (TH.ConT c)             sofar = Just (c, sofar)
-                locate (TH.AppT l (TH.VarT v)) sofar = locate l (v : sofar)
-                locate _                       _     = Nothing
+          where locate (TH.ConT c)     sofar = Just (c, sofar)
+                locate (TH.AppT l arg) sofar = locate l (arg : sofar)
+                locate _               _     = Nothing
 
         -- Extract an N-tuple
         getTuple = tup []
@@ -759,8 +738,8 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
          | True
          = do as <- mapM (const (TH.newName "a")) flds
               let isRecursive (_, _, k) = case k of
-                                            KADT t _ KADTRef -> t == btype
-                                            _                -> False
+                                            KADT t _ _ -> t == btype
+                                            _          -> False
                   recFields = [a | (a, f) <- zip as flds, isRecursive f]
               TH.appE (TH.varE 'quantifiedBool)
                       (mkLam as (mkImp recFields (foldl TH.appE

@@ -1078,6 +1078,7 @@ smtComparable op x y
       KUnbounded {} -> True
       KReal      {} -> True
       KUserSort  {} -> nope
+      KApp       {} -> True
       KADT       {} -> True
       KFloat        -> True
       KDouble       -> True
@@ -1561,6 +1562,7 @@ instance (Ord a, Num (SBV a), SymVal a, Fractional a) => Fractional (SBV a) wher
                       k@KList{}     -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KSet{}      -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUserSort{} -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KApp{}      -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KADT{}      -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KTuple{}    -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KMaybe{}    -> error $ "Unexpected Fractional case for: " ++ show k

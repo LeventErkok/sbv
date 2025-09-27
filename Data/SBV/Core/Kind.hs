@@ -27,7 +27,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.Core.Kind (
-          Kind(..), KADTDef(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
+          Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
         , BVIsNonZero, ValidFloat, intOfProxy
         , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
         , eqCheckIsObjectEq, containsFloats, isSomeKindOfFloat, expandKinds
@@ -61,12 +61,6 @@ import qualified Data.Generics.Uniplate.Data as G
 
 import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
--- | ADT kinds appear in a few different formats
-data KADTDef = KADTRef                    -- A reference, used during definitions themselves
-             | KADTUse [Kind]             -- A use site
-                       [(String, [Kind])] -- Constructors, and their fields
-          deriving (Eq, Ord, G.Data, NFData, Generic)
-
 -- | Kind of symbolic value
 data Kind =
           -- Base types
@@ -97,10 +91,11 @@ data Kind =
           | KUserSort String (Maybe [String])
 
           -- Algebraic datatypes
-          | KVar String    -- only used temporarily during ADT construction
+          | KVar String         -- only used temporarily during ADT construction
+          | KApp String [Kind]  -- Application of a constructor to a bunch of types
           | KADT String
-                 [String]  -- Parameters
-                 KADTDef   -- Actual defn
+                 [(String, Kind)]   -- Parameters, applied to these args
+                 [(String, [Kind])] -- Constructors, and their fields
 
           -- Collections
           | KList Kind
@@ -130,9 +125,8 @@ instance Show Kind where
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
   show (KUserSort s _)    = s
-  show (KADT s ps typ)    = case typ of
-                              KADTRef      -> unwords (s :                                ps)
-                              KADTUse ks _ -> unwords (s : map (kindParen . showBaseKind) ks)
+  show (KApp c ks)        = unwords (c : map (kindParen . showBaseKind      )  ks)
+  show (KADT s pks _)     = unwords (s : map (kindParen . showBaseKind . snd) pks)
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
   show (KFP eb sb)        = "SFloatingPoint " ++ show eb ++ " " ++ show sb
@@ -146,13 +140,14 @@ instance Show Kind where
   show (KEither k1 k2)    = "SEither " ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
   show (KArray k1 k2)     = "SArray "  ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
 
--- | A version of show for kinds that says Bool instead of SBool
+-- | A version of show for kinds that says Bool instead of SBool, Float instead of SFloat, etc.
 showBaseKind :: Kind -> String
 showBaseKind = sh
   where sh (KVar s)           = s
         sh k@KBool            = noS (show k)
         sh (KBounded False n) = pickType n "Word" "WordN " ++ show n
         sh (KBounded True n)  = pickType n "Int"  "IntN "  ++ show n
+        sh (KApp s ks)        = unwords (s : map (kindParen . sh) ks)
         sh k@KUnbounded       = noS (show k)
         sh k@KReal            = noS (show k)
         sh k@KUserSort{}      = show k     -- Leave user-sorts untouched!
@@ -202,9 +197,8 @@ smtType KChar           = "String"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
 smtType (KUserSort s _) = s
-smtType (KADT s ps typ) = kindParen $ case typ of
-                                        KADTRef      -> unwords (s :             ps)
-                                        KADTUse ks _ -> unwords (s : map smtType ks)
+smtType (KApp s ks)     = kindParen $ unwords (s : map smtType          ks)
+smtType (KADT s pks _)  = kindParen $ unwords (s : map (smtType . snd) pks)
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 smtType KRational       = "SBVRational"
@@ -230,6 +224,7 @@ kindHasSign = \case KVar _       -> False
                     KFP{}        -> True
                     KRational    -> True
                     KUserSort{}  -> False
+                    KApp{}       -> False
                     KADT{}       -> False
                     KString      -> False
                     KChar        -> False
@@ -313,7 +308,8 @@ class HasKind a where
                   KDouble       -> 64
                   KFP i j       -> i + j
                   KRational     -> error "SBV.HasKind.intSizeOf((S)Rational)"
-                  KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
+                  KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: "  ++ s
+                  KApp s _      -> error $ "SBV.HasKind.intSizeOf: Type application: "    ++ s
                   KADT s _ _    -> error $ "SBV.HasKind.intSizeOf: Algebraic data type: " ++ s
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
@@ -498,6 +494,7 @@ needsFlattening = any check . expandKinds
         check KMaybe{}    = True
         check KEither{}   = True
         check KArray{}    = True
+        check KApp{}      = True
         check KADT{}      = True
 
         -- no need to expand bases

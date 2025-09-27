@@ -464,24 +464,19 @@ showCV shk w = sh (cvVal w) ++ kInfo
                  | True                             = v
 
                 flds = case wk of
-                         KADT topADTName _ ak ->
-                             case ak of
-                               KADTRef -> error $ "Data.SBV.showCV: Unexpected ADT sub-kind KADTRef: " ++ show wk
-                               KADTUse _ cks | Just ks <- c `lookup` cks
-                                            -> if length fs == length ks
-                                               then let -- fix references
-                                                        fixRef (KADT curADTName _ _) | topADTName == curADTName = wk
-                                                        fixRef fk                                               = fk
-                                                    in zipWith (\k f -> showCV False (CV (fixRef k) f)) ks fs
-                                               else error $ unlines [ "Data.SBV.showCV: Impossible happened."
-                                                                    , "   Mismatching field count for constructor."
-                                                                    , "   Constructor: " ++ show c
-                                                                    , "   Kinds      : " ++ show ks
-                                                                    , "   Received   : " ++ show (length fs) ++ " fields."
-                                                                    , "   Expecting  : " ++ show (length ks)
-                                                                    ]
-                                            | True
-                                            -> error $ "Data.SBV.showCV: ADT: Impossible happened, can't find constructor: " ++ show (c, cks)
+                         KADT _ _ cks
+                           | Just ks <- c `lookup` cks
+                           -> if length fs == length ks
+                                 then zipWith (\k f -> showCV False (CV k f)) ks fs
+                                 else error $ unlines [ "Data.SBV.showCV: Impossible happened."
+                                                      , "   Mismatching field count for constructor."
+                                                      , "   Constructor: " ++ show c
+                                                      , "   Kinds      : " ++ show ks
+                                                      , "   Received   : " ++ show (length fs) ++ " fields."
+                                                      , "   Expecting  : " ++ show (length ks)
+                                                      ]
+                           | True
+                           -> error $ "Data.SBV.showCV: ADT: Impossible happened, can't find constructor: " ++ show (c, cks)
 
                          _ -> error $ "Data.SBV.showCV: Impossible happened, expected ADT got: " ++ show (c, wk)
 
@@ -499,7 +494,8 @@ mkConstCV KRational       a = normCV $ CV KRational  (CRational (fromInteger (to
 mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: "   ++ show (toInteger a)
 mkConstCV KString         a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
 mkConstCV (KUserSort s _) a = error $ "Unexpected call to mkConstCV with user kind: " ++ s ++ " with value: " ++ show (toInteger a)
-mkConstCV (KADT s _ _)    a = error $ "Unexpected call to mkConstCV with user kind: " ++ s ++ " with value: " ++ show (toInteger a)
+mkConstCV (KApp s _)      a = error $ "Unexpected call to mkConstCV with kind: " ++ s ++ " with value: " ++ show (toInteger a)
+mkConstCV (KADT s _ _)    a = error $ "Unexpected call to mkConstCV with ADT: "  ++ s ++ " with value: " ++ show (toInteger a)
 mkConstCV k@KList{}       a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KSet{}        a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KTuple{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
@@ -538,7 +534,8 @@ randomCVal k =
                             _             -> error $ "randomCVal: Not supported for completely uninterpreted type: " ++ s
 
     -- TODO: Can we do something here?
-    KADT s _ _         -> error $ "randomCVal: Not supported for ADT: " ++ s
+    KApp s _           -> error $ "randomCVal: Not supported for KApp: " ++ s
+    KADT s _ _         -> error $ "randomCVal: Not supported for ADT:  " ++ s
 
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)

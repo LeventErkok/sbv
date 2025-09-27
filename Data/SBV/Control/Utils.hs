@@ -88,7 +88,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
 import Data.SBV.Core.SizedFloats (fpZero, fpFromInteger, fpFromFloat, fpFromDouble)
-import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts, expandKinds, isSomeKindOfFloat, KADTDef(..))
+import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts, expandKinds, isSomeKindOfFloat)
 import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr, svEqual)
 
 import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..))
@@ -876,7 +876,8 @@ defaultKindedValue k = CV k $ cvt k
         cvt KUnbounded       = CInteger 0
         cvt KReal            = CAlgReal 0
         cvt (KUserSort s ui) = uninterp s ui
-        cvt (KADT s _ _)     = error ("defaultKindedValue not supported for ADT: " ++ s) -- tough luck
+        cvt (KApp s _)       = error ("defaultKindedValue not supported for ADT app: " ++ s) -- tough luck
+        cvt (KADT s _ _)     = error ("defaultKindedValue not supported for ADT: "     ++ s) -- tough luck
         cvt KFloat           = CFloat 0
         cvt KDouble          = CDouble 0
         cvt KRational        = CRational 0
@@ -903,11 +904,9 @@ sexprToVal :: forall a. SymVal a => SExpr -> Maybe a
 sexprToVal e = fromCV <$> recoverKindedValue (kindOf (Proxy @a)) e
 
 -- | For an ADT kind, substitute kinds for the variables
-substituteADTVars :: String -> [String] -> KADTDef -> Kind
-substituteADTVars nm ps KADTRef            = KADT nm ps KADTRef
-substituteADTVars nm ps (KADTUse ks cstrs) = KADT nm ps (KADTUse ks [(n, map (G.transform sub) fks) | (n, fks) <- cstrs])
-  where dict = zip ps ks
-        sub :: Kind -> Kind
+substituteADTVars :: [(String, Kind)] -> Kind -> Kind
+substituteADTVars dict = G.transform sub
+  where sub :: Kind -> Kind
         sub (KVar v)
           | Just k <- v `lookup` dict = k
           | True                      = error $ "Data.SBV.ADT: Kind find variable in param subst: " ++ show (v, dict)
@@ -917,6 +916,7 @@ substituteADTVars nm ps (KADTUse ks cstrs) = KADT nm ps (KADTUse ks [(n, map (G.
 recoverKindedValue :: Kind -> SExpr -> Maybe CV
 recoverKindedValue k e = case k of
                            KVar{}      -> error $ "Data.SBV.recoverKindedValue: Unexpected var kind: " ++ show k
+                           KApp{}      -> error $ "Data.SBV.recoverKindedValue: Unexpected kind app: " ++ show k
 
                            KBool       | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
                                        | True                  -> Nothing
@@ -934,7 +934,7 @@ recoverKindedValue k e = case k of
                            KUserSort{} | ECon s <- e           -> Just $ CV k $ CUserSort (getUIIndex k s, simplifyECon s)
                                        | True                  -> Nothing
 
-                           KADT nm ps def                      -> let k' = substituteADTVars nm ps def
+                           KADT nm dict def                    -> let k' = KADT nm dict [(c, map (substituteADTVars dict) ks) | (c, ks) <- def]
                                                                   in Just $ CV k' $ CADT $ interpretADT k' e
 
                            KFloat      | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
@@ -1146,7 +1146,7 @@ recoverKindedValue k e = case k of
                          cvt _ vs   = tbd $ "Unexpected function-like-value as array index" ++ show vs
 
         interpretADT :: Kind -> SExpr -> (String, [CVal])
-        interpretADT adtK@(KADT topADTName _ (KADTUse _ cks)) expr
+        interpretADT adtK@(KADT _ _ cks) expr
            | Just ks <- cstr `lookup` cks
            = if length fs == length ks
              then (cstr, zipWith convert (zip [1..] ks) fs)
@@ -1170,13 +1170,9 @@ recoverKindedValue k e = case k of
                                                ] ++ extras
 
                 convert :: (Int, Kind) -> SExpr -> CVal
-                convert (i, fk) f = case recoverKindedValue (fixRef fk) f of
+                convert (i, fk) f = case recoverKindedValue fk f of
                                       Just (CV _ v) -> v
                                       Nothing       -> bad ["Couldn't convert field " ++ show i ++ ": " ++ show (fk, f)]
-
-                -- If we have a recursive case, we can have a cyclic reference. Let's fix that here.
-                fixRef (KADT curADTName _ KADTRef) | topADTName == curADTName = adtK
-                fixRef fk                                                     = fk
 
         interpretADT someK expr = error $ unlines [ "Data.SBV.interpretADT: Expected an ADT kind, but got something else."
                                                   , "   Expr: " ++ show expr

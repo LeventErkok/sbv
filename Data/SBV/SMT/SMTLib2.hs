@@ -28,7 +28,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds, KADTDef(..))
+import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds)
 import Data.SBV.Control.Types
 
 import Data.SBV.SMT.Utils
@@ -65,7 +65,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = not (null [() | KBounded{} <- allKinds])
         usorts         = [(s, dt) | KUserSort s dt <- allKinds]
-        adts           = [((s, ps), k)  | KADT s ps k <- allKinds]
+        adts           = [(s, ps, k)  | KADT s ps k <- allKinds]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi allTopOps]
@@ -320,14 +320,9 @@ declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
 
 -- | Declare ADTs
-declADT :: [((String, [String]), KADTDef)] -> [String]
-declADT allADTs = go [(p, adtDeps cur (allDeps ks fs), fs) | (p@(cur, _), KADTUse ks fs) <- allADTs]
-  where allDeps ks  fs = concatMap expandKinds (ks ++ concatMap snd fs)
-        adtDeps cur ks = nub [s | KADT s _ _ <- ks, s /= cur]
-
-        go adtDecls = concatMap declGroup sorted
-         where mkNode ((nps@(n, _), ns, cstrs)) = ((nps, cstrs), n, ns)
-               sorted = DG.stronglyConnComp (map mkNode adtDecls)
+declADT :: [(String, [(String, Kind)], [(String, [Kind])])] -> [String]
+declADT = concatMap declGroup . DG.stronglyConnComp . map mkNode
+  where mkNode adt@(n, pks, cstrs) = (adt, n, [s | KApp s _ <- concatMap expandKinds (map snd pks ++ concatMap snd cstrs)])
 
         declGroup (DG.AcyclicSCC d )  = singleADT d
         declGroup (DG.CyclicSCC  ds)
@@ -336,31 +331,32 @@ declADT allADTs = go [(p, adtDeps cur (allDeps ks fs), fs) | (p@(cur, _), KADTUs
                 [d] -> singleADT d
                 _   -> multiADT ds
 
+        parParens :: [(String, Kind)] -> (String, String)
         parParens [] = ("", "")
-        parParens ps = (" (par (" ++ unwords ps ++ ")", ")")
+        parParens ps = (" (par (" ++ unwords (map fst ps) ++ ")", ")")
 
         mkC (nm, []) = nm
         mkC (nm, ts) = nm ++ " " ++ unwords ['(' : mkF (nm ++ "_" ++ show i) t ++ ")" | (i, t) <- zip [(1::Int)..] ts]
           where mkF a t  = "get" ++ a ++ " " ++ smtType t
 
-        singleADT :: ((String, [String]), [(String, [Kind])]) -> [String]
-        singleADT ((tName, ps), cstrs) = ("; User defined ADT: " ++ tName) : decl
+        singleADT :: (String, [(String, Kind)], [(String, [Kind])]) -> [String]
+        singleADT (tName, pks, cstrs) = ("; User defined ADT: " ++ tName) : decl
           where decl =  ("(declare-datatype " ++ tName ++ parOpen ++ " (")
                      :  ["    (" ++ mkC c ++ ")" | c <- cstrs]
                      ++ ["))" ++ parClose]
 
-                (parOpen, parClose) = parParens ps
+                (parOpen, parClose) = parParens pks
 
-        multiADT :: [((String, [String]), [(String, [Kind])])] -> [String]
-        multiADT adts = ("; User defined mutually-recursive ADTs: " ++ intercalate ", " (map (fst . fst) adts)) : decl
+        multiADT :: [(String, [(String, Kind)], [(String, [Kind])])] -> [String]
+        multiADT adts = ("; User defined mutually-recursive ADTs: " ++ intercalate ", " (map (\(a, _, _) -> a) adts)) : decl
           where decl = ("(declare-datatypes (" ++ typeDecls ++ ") (")
                      : concatMap adtBody adts
                     ++ ["))"]
 
-                typeDecls = unwords ['(' : name ++ " " ++ show (length ps) ++ ")" | ((name, ps), _) <- adts]
+                typeDecls = unwords ['(' : name ++ " " ++ show (length pks) ++ ")" | (name, pks, _) <- adts]
 
-                adtBody ((_, ps), cstrs) = body
-                  where (parOpen, parClose) = parParens ps
+                adtBody (_, pks, cstrs) = body
+                  where (parOpen, parClose) = parParens pks
                         body =  ("    " ++ parOpen ++ " (")
                              :  ["        (" ++ mkC c ++ ")" | c <- cstrs]
                              ++ ["     )" ++ parClose]
@@ -451,8 +447,8 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
-            ++ concatMap declSort [(s,     dt) | KUserSort s    dt <- newKinds]
-            ++ declADT [((s, ps), a) | KADT s ps a <- newKinds]
+            ++ concatMap declSort [(s, dt) | KUserSort s dt <- newKinds]
+            ++ declADT [(s, pks, cs) | KADT s pks cs <- newKinds]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- sums
@@ -824,6 +820,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                               KBounded _ n  -> (2::Integer)^n > fromIntegral l
                               KUnbounded    -> True
                               KUserSort _ _ -> unexpected
+                              KApp _ _      -> unexpected
                               KADT _ _ _    -> unexpected
                               KReal         -> unexpected
                               KFloat        -> unexpected
@@ -858,6 +855,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                 KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                                KApp  s _     -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT applied index: " ++ s
                                 KADT  s _ _   -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT valued index: " ++ s
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
                                 KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
@@ -1198,6 +1196,7 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         walk _d nm f k@KUnbounded{}         = f k nm
         walk _d nm f k@KReal     {}         = f k nm
         walk _d nm f k@KUserSort {}         = f k nm
+        walk _d nm f k@KApp      {}         = f k nm
         walk _d nm f k@KADT      {}         = f k nm
         walk _d nm f k@KFloat    {}         = f k nm
         walk _d nm f k@KDouble   {}         = f k nm

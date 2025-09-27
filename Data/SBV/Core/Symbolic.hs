@@ -1441,9 +1441,6 @@ registerKind st k
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | KADT  sortName _ _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
-  -- Nothing to register in a recursive use site for ADT
-  | KADT _ _ KADTRef <- k
-  = pure ()
   | True
   = do -- Adding a kind to the incState is tricky; we only need to add it
        --     *    If it's an uninterpreted sort that's not already in the general state
@@ -1489,19 +1486,14 @@ registerKind st k
          KChar     {}    -> return ()
          KString   {}    -> return ()
 
-         -- Register subkinds in an ADT.
-         KADT _ _ ak -> case ak of
-                         KADTUse ks fks  -> mapM_ (registerKind st) (ks ++ concatMap snd fks)
-                         -- The following match is redundant as we already handled them above
-                         -- And GHC is smart enough to know this, so if we give these cases, it complains! Kudos!
-                         -- KADTRef         -> pure ()
-
-         KList     ek        -> registerKind st ek
-         KSet      ek        -> registerKind st ek
-         KTuple    eks       -> mapM_ (registerKind st) eks
-         KMaybe    ke        -> registerKind st ke
-         KEither   k1 k2     -> mapM_ (registerKind st) [k1, k2]
-         KArray    k1 k2     -> mapM_ (registerKind st) [k1, k2]
+         KApp _ ks       -> mapM_ (registerKind st) ks
+         KADT _ pks cks  -> mapM_ (registerKind st) (map snd pks ++ concatMap snd cks)
+         KList     ek    -> registerKind st ek
+         KSet      ek    -> registerKind st ek
+         KTuple    eks   -> mapM_ (registerKind st) eks
+         KMaybe    ke    -> registerKind st ke
+         KEither   k1 k2 -> mapM_ (registerKind st) [k1, k2]
+         KArray    k1 k2 -> mapM_ (registerKind st) [k1, k2]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()
