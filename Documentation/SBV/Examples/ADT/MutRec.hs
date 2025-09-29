@@ -21,7 +21,7 @@ module Documentation.SBV.Examples.ADT.MutRec where
 import Data.SBV
 import Data.SBV.Control
 
-import Data.Proxy
+-- import Data.Proxy
 
 -- | Expression layer
 data Expr var val = Con val
@@ -62,10 +62,11 @@ instance {-# OVERLAPPING #-} Show val => Show (Stmt String val) where
 -- !2! := 4;
 -- !0! := 2
 exPgm :: IO (Stmt String Integer)
-exPgm = runSMT $ do p :: SStmt String Integer <- free "p"
+exPgm = runSMTWith z3{verbose=True} $ do
+                    p :: SStmt String Integer <- free "p"
 
-                    registerType (Proxy @(Stmt Integer Integer))
-                    registerType (Proxy @(Expr Integer Integer))
+                    -- registerType (Proxy @(Stmt Integer Integer))
+                    -- registerType (Proxy @(Expr Integer Integer))
 
                     -- Make sure there are at least three statements
                     constrain $ isSeq p
