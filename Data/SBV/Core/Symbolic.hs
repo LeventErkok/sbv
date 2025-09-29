@@ -1679,6 +1679,8 @@ sIntN_ w = symbolicEnv >>= liftIO . svMkSymVar (NonQueryVar Nothing) (KBounded T
 -- when used for @quickCheck@ or 'Data.SBV.Tools.GenTest.genTest' purposes.
 svMkSymVarGen :: Bool -> VarContext -> Kind -> Maybe String -> State -> IO SVal
 svMkSymVarGen isTracker varContext k mbNm st = do
+        registerKind st k
+
         rm <- readIORef (runMode st)
 
         let varInfo = case mbNm of
@@ -1704,8 +1706,7 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                        let nm = fromMaybe (T.unpack internalName) mbNm
                        introduceUserName st (isQueryVar, isTracker) nm k q sv
 
-            mkC cv = do registerKind st k
-                        modifyState st rCInfo ((fromMaybe "_" mbNm, cv):) (return ())
+            mkC cv = do modifyState st rCInfo ((fromMaybe "_" mbNm, cv):) (return ())
                         return $ SVal k (Left cv)
 
         case (mbQ, rm) of
