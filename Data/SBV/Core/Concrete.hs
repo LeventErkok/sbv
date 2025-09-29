@@ -100,22 +100,22 @@ instance (HasKind a, HasKind b) => HasKind (ArrayModel a b) where
 -- | A constant value.
 -- Note: If you add a new constructor here, make sure you add the
 -- corresponding equality in the instance "Eq CVal" and "Ord CVal"!
-data CVal = CAlgReal  !AlgReal                -- ^ Algebraic real
-          | CInteger  !Integer                -- ^ Bit-vector/unbounded integer
-          | CFloat    !Float                  -- ^ Float
-          | CDouble   !Double                 -- ^ Double
-          | CFP       !FP                     -- ^ Arbitrary float
-          | CRational Rational                -- ^ Rational
-          | CChar     !Char                   -- ^ Character
-          | CString   !String                 -- ^ String
-          | CList     ![CVal]                 -- ^ List
-          | CSet      !(RCSet CVal)           -- ^ Set. Can be regular or complemented.
-          | CUserSort !(Maybe Int, String)    -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
-          | CADT      (String, [CVal])        -- ^ ADT: Constructor, and fields
-          | CTuple    ![CVal]                 -- ^ Tuple
-          | CMaybe    !(Maybe CVal)           -- ^ Maybe
-          | CEither   !(Either CVal CVal)     -- ^ Disjoint union
-          | CArray    !(ArrayModel CVal CVal) -- ^ Arrays are backed by look-up tables concretely
+data CVal = CAlgReal  !AlgReal                 -- ^ Algebraic real
+          | CInteger  !Integer                 -- ^ Bit-vector/unbounded integer
+          | CFloat    !Float                   -- ^ Float
+          | CDouble   !Double                  -- ^ Double
+          | CFP       !FP                      -- ^ Arbitrary float
+          | CRational Rational                 -- ^ Rational
+          | CChar     !Char                    -- ^ Character
+          | CString   !String                  -- ^ String
+          | CList     ![CVal]                  -- ^ List
+          | CSet      !(RCSet CVal)            -- ^ Set. Can be regular or complemented.
+          | CUserSort !(Maybe Int, String)     -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
+          | CADT      (String, [(Kind, CVal)]) -- ^ ADT: Constructor, and fields
+          | CTuple    ![CVal]                  -- ^ Tuple
+          | CMaybe    !(Maybe CVal)            -- ^ Maybe
+          | CEither   !(Either CVal CVal)      -- ^ Disjoint union
+          | CArray    !(ArrayModel CVal CVal)  -- ^ Arrays are backed by look-up tables concretely
           deriving (G.Data, Generic, NFData)
 
 -- | Assign a rank to constant values, this is structural and helps with ordering
@@ -456,29 +456,14 @@ showCV shk w = sh (cvVal w) ++ kInfo
                                []         -> False
                                rest@(x:_) -> x == '-' || (any isSpace rest && x `notElem` "{[(")
 
-        shADT (c, fs)
+        shADT (c, kvs)
           | null @[] flds = c
           | True          = unwords (c : map wrap flds)
           where wrap v
                  | any isSpace v || take 1 v == "-" = '(' : v ++ ")"
                  | True                             = v
 
-                flds = case wk of
-                         KADT _ _ cks
-                           | Just ks <- c `lookup` cks
-                           -> if length fs == length ks
-                                 then zipWith (\k f -> showCV False (CV k f)) ks fs
-                                 else error $ unlines [ "Data.SBV.showCV: Impossible happened."
-                                                      , "   Mismatching field count for constructor."
-                                                      , "   Constructor: " ++ show c
-                                                      , "   Kinds      : " ++ show ks
-                                                      , "   Received   : " ++ show (length fs) ++ " fields."
-                                                      , "   Expecting  : " ++ show (length ks)
-                                                      ]
-                           | True
-                           -> error $ "Data.SBV.showCV: ADT: Impossible happened, can't find constructor: " ++ show (c, cks)
-
-                         _ -> error $ "Data.SBV.showCV: Impossible happened, expected ADT got: " ++ show (c, wk)
+                flds = map (\(k, v) -> showCV False (CV k v)) kvs
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV

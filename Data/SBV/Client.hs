@@ -325,14 +325,11 @@ mkADT typeName params cstrs = do
                     pure $ TH.FunD fromCVFunName (clss ++ [catchAll])
 
     getFromCV <- [| let unexpected w = error $ "fromCV: " ++ show typeName ++ ": " ++ w
-                    in \case CV (KADT n _ cks) (CADT (c, vs)) | n == unmod typeName ->
-                                 case c `lookup` cks of
-                                   Nothing  -> unexpected $ "Cannot find constructor in kind: " ++ show (c, cks)
-                                   Just ks
-                                     | length ks /= length vs
-                                     -> unexpected $ "Mismatching arity for " ++ show typeName ++ " " ++ show (c, length ks, length vs)
-                                     | True
-                                     -> $(TH.varE fromCVFunName) c (zipWith CV ks vs)
+                        kindName (KADT n _ _) = n
+                        kindName (KApp n _)   = n
+                        kindName k            = unexpected $ "An ADT kind was expected, but got: " ++ show k
+                    in \case CV k (CADT (c, kvs)) | kindName k == unmod typeName
+                                                 -> $(TH.varE fromCVFunName) c (map (uncurry CV) kvs)
                              CV k e -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k ++ " (rank: " ++ show (cvRank e) ++ ")"
                  |]
 

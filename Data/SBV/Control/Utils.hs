@@ -1174,7 +1174,7 @@ recoverKindedValue si k e =
                                          _             -> tbd $ "Cannot convert value: " ++ show v
                          cvt _ vs   = tbd $ "Unexpected function-like-value as array index" ++ show vs
 
-        interpretADT :: Kind -> SExpr -> (String, [CVal])
+        interpretADT :: Kind -> SExpr -> (String, [(Kind, CVal)])
         interpretADT adtK@(KADT _ _ cks) expr
            | Just ks <- cstr `lookup` cks
            = if length fs == length ks
@@ -1198,10 +1198,10 @@ recoverKindedValue si k e =
                                                , "   Expr: " ++ show expr
                                                ] ++ extras
 
-                convert :: (Int, Kind) -> SExpr -> CVal
+                convert :: (Int, Kind) -> SExpr -> (Kind, CVal)
                 convert (i, fk) f = case recoverKindedValue si fk f of
-                                      Just (CV _ v) -> v
-                                      Nothing       -> bad ["Couldn't convert field " ++ show i ++ ": " ++ show (fk, f)]
+                                      Just (CV kv v) -> (kv, v)
+                                      Nothing        -> bad ["Couldn't convert field " ++ show i ++ ": " ++ show (fk, f)]
 
         interpretADT someK expr = error $ unlines [ "Data.SBV.interpretADT: Expected an ADT kind, but got something else."
                                                   , "   Expr: " ++ show expr
