@@ -57,6 +57,10 @@ instance {-# OVERLAPPING #-} Show val => Show (Stmt String val) where
 -- | Example program.
 --
 -- >>> exPgm
+-- !1! := 3;
+-- !3! := 5;
+-- !2! := 4;
+-- !0! := 2
 exPgm :: IO (Stmt String Integer)
 exPgm = runSMT $ do p :: SStmt String Integer <- free "p"
 
