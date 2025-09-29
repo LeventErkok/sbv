@@ -55,6 +55,7 @@ import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 
 import Language.Haskell.TH.ExpandSyns as TH
 
+import Data.SBV.Core.Concrete (cvRank)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
@@ -332,7 +333,7 @@ mkADT typeName params cstrs = do
                                      -> unexpected $ "Mismatching arity for " ++ show typeName ++ " " ++ show (c, length ks, length vs)
                                      | True
                                      -> $(TH.varE fromCVFunName) c (zipWith CV ks vs)
-                             CV k _ -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k
+                             CV k e -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k ++ " (rank: " ++ show (cvRank e) ++ ")"
                  |]
 
     symCtx <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params]
