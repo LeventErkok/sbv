@@ -50,7 +50,7 @@ module Data.SBV.Core.Data
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, HasKind(..)
  , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExOp(..), SeqOp(..), RegExp(..), NamedSymVar(..), OvOp(..), getTableIndex
- , SBVPgm(..), Symbolic, runSymbolic, State, getPathCondition, extendPathCondition
+ , SBVPgm(..), Symbolic, runSymbolic, State, SInfo(..), getSInfo, getPathCondition, extendPathCondition
  , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , SolverContext(..), internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted
@@ -78,6 +78,9 @@ import Data.List              (elemIndex)
 import Data.Kind (Type)
 import Data.Proxy
 import Data.Typeable          (Typeable)
+
+import Data.IORef
+import qualified Data.Set as Set (toList)
 
 import GHC.Generics (Generic, U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
 import qualified GHC.Generics  as G
@@ -555,6 +558,14 @@ class SolverContext m where
 registerType :: forall a m. (MonadIO m, SolverContext m, HasKind a) => Proxy a -> m ()
 registerType _ = do st <- contextState
                     liftIO $ registerKind st (kindOf (Proxy @a))
+
+-- | Various info we use in recoverKinded value
+data SInfo = SInfo { sInfoKinds :: [Kind] }
+
+-- | Turn state into SInfo
+getSInfo :: MonadIO m => State -> m SInfo
+getSInfo st = do rk <- liftIO $ readIORef (rUsedKinds st)
+                 pure $ SInfo { sInfoKinds = Set.toList rk }
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where

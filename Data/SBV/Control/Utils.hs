@@ -73,7 +73,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
-                              , RCSet(..), QuantifiedBool(..), ArrayModel(..)
+                              , RCSet(..), QuantifiedBool(..), ArrayModel(..), SInfo(..), getSInfo
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -425,16 +425,16 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
                             _                                           -> cantFind uiMap
 
   sexprToFun f (s, e) = do nm    <- fst . fst <$> smtFunName f
-                           st    <- contextState
+                           si    <- contextState >>= getSInfo
                            mbRes <- case parseSExprFunction e of
                                       Just (Left nm') -> case (nm == nm', smtFunDefault f) of
                                                            (True, Just v)  -> return $ Just ([], v)
                                                            _               -> bailOut nm
-                                      Just (Right v)  -> convert st v
+                                      Just (Right v)  -> convert si v
                                       Nothing         -> do mbPVS <- pointWiseExtract nm (smtFunType f)
                                                             case mbPVS of
                                                               Nothing  -> pure Nothing
-                                                              Just pts -> convert st pts
+                                                              Just pts -> convert si pts
                            pure $ maybe (Left s) Right mbRes
     where convert st (vs, d) = do ps <- mapM (sexprPoint st) vs
                                   pure $ (,) <$> traverse id ps <*> sexprToVal st d
@@ -508,7 +508,7 @@ instance ( SymVal a, HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV r) a r
          where
-  sexprToArg _ [a0] = contextState >>= \st -> pure $ sexprToVal st a0
+  sexprToArg _ [a0] = contextState >>= getSInfo >>= \si -> pure $ sexprToVal si a0
   sexprToArg _ _    = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @r)]
@@ -521,7 +521,7 @@ instance ( SymVal a,  HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV r) (a, b) r
          where
-  sexprToArg _ [a0, a1] = contextState >>= \st -> pure $ (,) <$> sexprToVal st a0 <*> sexprToVal st a1
+  sexprToArg _ [a0, a1] = contextState >>= getSInfo >>= \si -> pure $ (,) <$> sexprToVal si a0 <*> sexprToVal si a1
   sexprToArg _ _        = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @r)]
@@ -536,7 +536,7 @@ instance ( SymVal a,   HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV r) (a, b, c) r
          where
-  sexprToArg _ [a0, a1, a2] = contextState >>= \st -> pure $ (,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2
+  sexprToArg _ [a0, a1, a2] = contextState >>= getSInfo >>= \si -> pure $ (,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2
   sexprToArg _ _            = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @r)]
@@ -553,7 +553,7 @@ instance ( SymVal a,   HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV r) (a, b, c, d) r
          where
-  sexprToArg _ [a0, a1, a2, a3] = contextState >>= \st -> pure $ (,,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2 <*> sexprToVal st a3
+  sexprToArg _ [a0, a1, a2, a3] = contextState >>= getSInfo >>= \si -> pure $ (,,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2 <*> sexprToVal si a3
   sexprToArg _ _                = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @r)]
@@ -572,7 +572,7 @@ instance ( SymVal a,   HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV r) (a, b, c, d, e) r
          where
-  sexprToArg _ [a0, a1, a2, a3, a4] = contextState >>= \st -> pure $ (,,,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2 <*> sexprToVal st a3 <*> sexprToVal st a4
+  sexprToArg _ [a0, a1, a2, a3, a4] = contextState >>= getSInfo >>= \si -> pure $ (,,,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2 <*> sexprToVal si a3 <*> sexprToVal si a4
   sexprToArg _ _                    = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @r)]
@@ -593,7 +593,7 @@ instance ( SymVal a,   HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV r) (a, b, c, d, e, f) r
          where
-  sexprToArg _ [a0, a1, a2, a3, a4, a5] = contextState >>= \st -> pure $ (,,,,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2 <*> sexprToVal st a3 <*> sexprToVal st a4 <*> sexprToVal st a5
+  sexprToArg _ [a0, a1, a2, a3, a4, a5] = contextState >>= getSInfo >>= \si -> pure $ (,,,,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2 <*> sexprToVal si a3 <*> sexprToVal si a4 <*> sexprToVal si a5
   sexprToArg _ _                        = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @r)]
@@ -616,7 +616,7 @@ instance ( SymVal a,   HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> SBV r) (a, b, c, d, e, f, g) r
          where
-  sexprToArg _ [a0, a1, a2, a3, a4, a5, a6] = contextState >>= \st -> pure $ (,,,,,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2 <*> sexprToVal st a3 <*> sexprToVal st a4 <*> sexprToVal st a5 <*> sexprToVal st a6
+  sexprToArg _ [a0, a1, a2, a3, a4, a5, a6] = contextState >>= getSInfo >>= \si -> pure $ (,,,,,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2 <*> sexprToVal si a3 <*> sexprToVal si a4 <*> sexprToVal si a5 <*> sexprToVal si a6
   sexprToArg _ _                            = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @r)]
@@ -641,7 +641,7 @@ instance ( SymVal a,   HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> SBV h -> SBV r) (a, b, c, d, e, f, g, h) r
          where
-  sexprToArg _ [a0, a1, a2, a3, a4, a5, a6, a7] = contextState >>= \st -> pure $ (,,,,,,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2 <*> sexprToVal st a3 <*> sexprToVal st a4 <*> sexprToVal st a5 <*> sexprToVal st a6 <*> sexprToVal st a7
+  sexprToArg _ [a0, a1, a2, a3, a4, a5, a6, a7] = contextState >>= getSInfo >>= \si -> pure $ (,,,,,,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2 <*> sexprToVal si a3 <*> sexprToVal si a4 <*> sexprToVal si a5 <*> sexprToVal si a6 <*> sexprToVal si a7
   sexprToArg _ _                                = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h), kindOf (Proxy @r)]
@@ -661,7 +661,7 @@ instance ( SymVal a,  HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction ((SBV a, SBV b) -> SBV r) (a, b) r
          where
-  sexprToArg _ [a0, a1] = contextState >>= \st -> pure $ (,) <$> sexprToVal st a0 <*> sexprToVal st a1
+  sexprToArg _ [a0, a1] = contextState >>= getSInfo >>= \si -> pure $ (,) <$> sexprToVal si a0 <*> sexprToVal si a1
   sexprToArg _ _        = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @r)]
@@ -677,7 +677,7 @@ instance ( SymVal a,  HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction ((SBV a, SBV b, SBV c) -> SBV r) (a, b, c) r
          where
-  sexprToArg _ [a0, a1, a2] = contextState >>= \st -> pure $ (,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2
+  sexprToArg _ [a0, a1, a2] = contextState >>= getSInfo >>= \si -> pure $ (,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2
   sexprToArg _ _            = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @r)]
@@ -695,7 +695,7 @@ instance ( SymVal a,  HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction ((SBV a, SBV b, SBV c, SBV d) -> SBV r) (a, b, c, d) r
          where
-  sexprToArg _ [a0, a1, a2, a3] = contextState >>= \st -> pure $ (,,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2 <*> sexprToVal st a3
+  sexprToArg _ [a0, a1, a2, a3] = contextState >>= getSInfo >>= \si -> pure $ (,,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2 <*> sexprToVal si a3
   sexprToArg _ _                = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @r)]
@@ -715,7 +715,7 @@ instance ( SymVal a,  HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction ((SBV a, SBV b, SBV c, SBV d, SBV e) -> SBV r) (a, b, c, d, e) r
          where
-  sexprToArg _ [a0, a1, a2, a3, a4] = contextState >>= \st -> pure $ (,,,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2 <*> sexprToVal st a3 <*> sexprToVal st a4
+  sexprToArg _ [a0, a1, a2, a3, a4] = contextState >>= getSInfo >>= \si -> pure $ (,,,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2 <*> sexprToVal si a3 <*> sexprToVal si a4
   sexprToArg _ _                    = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @r)]
@@ -737,7 +737,7 @@ instance ( SymVal a,  HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> SBV r) (a, b, c, d, e, f) r
          where
-  sexprToArg _ [a0, a1, a2, a3, a4, a5] = contextState >>= \st -> pure $ (,,,,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2 <*> sexprToVal st a3 <*> sexprToVal st a4 <*> sexprToVal st a5
+  sexprToArg _ [a0, a1, a2, a3, a4, a5] = contextState >>= getSInfo >>= \si -> pure $ (,,,,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2 <*> sexprToVal si a3 <*> sexprToVal si a4 <*> sexprToVal si a5
   sexprToArg _ _                        = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @r)]
@@ -761,7 +761,7 @@ instance ( SymVal a,  HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> SBV r) (a, b, c, d, e, f, g) r
          where
-  sexprToArg _ [a0, a1, a2, a3, a4, a5, a6] = contextState >>= \st -> pure $ (,,,,,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2 <*> sexprToVal st a3 <*> sexprToVal st a4 <*> sexprToVal st a5 <*> sexprToVal st a6
+  sexprToArg _ [a0, a1, a2, a3, a4, a5, a6] = contextState >>= getSInfo >>= \si -> pure $ (,,,,,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2 <*> sexprToVal si a3 <*> sexprToVal si a4 <*> sexprToVal si a5 <*> sexprToVal si a6
   sexprToArg _ _                            = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @r)]
@@ -787,7 +787,7 @@ instance ( SymVal a,  HasKind a
          , SatModel r, HasKind r
          ) => SMTFunction ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) -> SBV r) (a, b, c, d, e, f, g, h) r
          where
-  sexprToArg _ [a0, a1, a2, a3, a4, a5, a6, a7] = contextState >>= \st -> pure $ (,,,,,,,) <$> sexprToVal st a0 <*> sexprToVal st a1 <*> sexprToVal st a2 <*> sexprToVal st a3 <*> sexprToVal st a4 <*> sexprToVal st a5 <*> sexprToVal st a6 <*> sexprToVal st a7
+  sexprToArg _ [a0, a1, a2, a3, a4, a5, a6, a7] = contextState >>= getSInfo >>= \si -> pure $ (,,,,,,,) <$> sexprToVal si a0 <*> sexprToVal si a1 <*> sexprToVal si a2 <*> sexprToVal si a3 <*> sexprToVal si a4 <*> sexprToVal si a5 <*> sexprToVal si a6 <*> sexprToVal si a7
   sexprToArg _ _                                = pure Nothing
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h), kindOf (Proxy @r)]
@@ -827,7 +827,7 @@ getFunction f = do ((nm, args), isCurried) <- smtFunName f
 
                    r <- ask cmd
 
-                   st <- contextState
+                   si <- contextState >>= getSInfo
 
                    parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> do
                                           mbAssocs <- sexprToFun f (trimFunctionResponse r nm isCurried args, e)
@@ -837,17 +837,17 @@ getFunction f = do ((nm, args), isCurried) <- smtFunName f
                                                let rawRes = Left (raw, (isCurried, args, e))
                                                mbPVS <- pointWiseExtract nm (smtFunType f)
                                                case mbPVS of
-                                                 Just ps -> do rs <- convert st ps
+                                                 Just ps -> do rs <- convert si ps
                                                                case rs of
                                                                   Just x  -> return $ Right x
                                                                   Nothing -> return rawRes
                                                  Nothing -> return rawRes
                                        _ -> bad r Nothing
-    where convert st (vs, d) = do ps <- mapM (sexprPoint st) vs
-                                  pure $ (,) <$> traverse id ps <*> sexprToVal st d
+    where convert si (vs, d) = do ps <- mapM (sexprPoint si) vs
+                                  pure $ (,) <$> traverse id ps <*> sexprToVal si d
 
-          sexprPoint st (as, v) = do mbA <- sexprToArg f as
-                                     pure $ (,) <$> mbA <*> sexprToVal st v
+          sexprPoint si (as, v) = do mbA <- sexprToArg f as
+                                     pure $ (,) <$> mbA <*> sexprToVal si v
 
 -- | Generalization of 'Data.SBV.Control.getUninterpretedValue'
 getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
@@ -915,10 +915,9 @@ defaultKindedValue k = CV k $ cvt k
         -- A completely uninterpreted sort, i.e., no elements. Return the witness element for it.
         uninterp s Nothing      = CUserSort (Nothing, witnessName s)
 
-
 -- | Go from an SExpr directly to a value
-sexprToVal :: forall a. SymVal a => State -> SExpr -> Maybe a
-sexprToVal st e = fromCV <$> recoverKindedValue st (kindOf (Proxy @a)) e
+sexprToVal :: forall a. SymVal a => SInfo -> SExpr -> Maybe a
+sexprToVal si e = fromCV <$> recoverKindedValue si (kindOf (Proxy @a)) e
 
 -- | For an ADT kind, substitute kinds for the variables
 substituteADTVars :: [(String, Kind)] -> Kind -> Kind
@@ -930,11 +929,23 @@ substituteADTVars dict = G.transform sub
         sub k = k
 
 -- | Recover a given solver-printed value with a possible interpretation
-recoverKindedValue :: State -> Kind -> SExpr -> Maybe CV
-recoverKindedValue st k e =
+recoverKindedValue :: SInfo -> Kind -> SExpr -> Maybe CV
+recoverKindedValue si k e =
     case k of
       KVar{}      -> error $ "Data.SBV.recoverKindedValue: Unexpected var kind: " ++ show k
-      KApp{}      -> error $ "Data.SBV.recoverKindedValue: Unexpected kind app: " ++ show k
+
+      KApp n ks   -> case [(s, ps, cstrs) | KADT s ps cstrs <- sInfoKinds si, s == n] of
+                       [(s, ps, cstr)]
+                         | length ks == length ps -> recoverKindedValue si (KADT s (zip (map fst ps) ks) cstr) e
+                       xs -> error $ unlines [ "Data.SBV.recoverKindedValue: Can't uniquely locate reference to ADT: "
+                                             , "***"
+                                             , "*** ADT    : " ++ show n
+                                             , "*** Params : " ++ show ks
+                                             , "*** Matched: " ++ show xs
+                                             , "*** Expr   : " ++ show e
+                                             , "***"
+                                             , "*** Please report this as a bug."
+                                             ]
 
       KBool       | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
                   | True                  -> Nothing
@@ -1000,15 +1011,15 @@ recoverKindedValue st k e =
                              _   -> error $ "Expected a singleton char constant, received: <" ++ xs ++ ">"
 
         interpretRational (EApp [ECon "SBV.Rational", v1, v2])
-           | Just (CV _ (CInteger n)) <- recoverKindedValue st KUnbounded v1
-           , Just (CV _ (CInteger d)) <- recoverKindedValue st KUnbounded v2
+           | Just (CV _ (CInteger n)) <- recoverKindedValue si KUnbounded v1
+           , Just (CV _ (CInteger d)) <- recoverKindedValue si KUnbounded v2
            = n % d
         interpretRational xs = error $ "Expected a rational constant, received: <" ++ show xs ++ ">"
 
         interpretList ek topExpr = walk topExpr
           where walk (EApp [ECon "as", v, _])      = walk v
                 walk (ECon "seq.empty")            = []
-                walk (EApp [ECon "seq.unit", v])   = case recoverKindedValue st ek v of
+                walk (EApp [ECon "seq.unit", v])   = case recoverKindedValue si ek v of
                                                        Just w -> [cvVal w]
                                                        Nothing -> error $ "Cannot parse a sequence item of kind " ++ show ek ++ " from: " ++ show v ++ extra v
                 walk (EApp (ECon "seq.++" : rest)) = concatMap walk rest
@@ -1057,17 +1068,17 @@ recoverKindedValue st k e =
                  contents _   bad      = tbd $ "Multi-valued set member seen: " ++ show bad
 
                  element cvt x = case (cvt, ke) of
-                                   (True, KChar) -> case recoverKindedValue st KString x of
+                                   (True, KChar) -> case recoverKindedValue si KString x of
                                                       Just v  -> case cvVal v of
                                                                   CString [c] -> [CChar c]
                                                                   CString _   -> []
                                                                   _           -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
                                                       Nothing -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
-                                   _             -> case recoverKindedValue st ke x of
+                                   _             -> case recoverKindedValue si ke x of
                                                       Just v  -> [cvVal v]
                                                       Nothing -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
 
-        interpretTuple te = walk (1 :: Int) (zipWith (recoverKindedValue st) ks args) []
+        interpretTuple te = walk (1 :: Int) (zipWith (recoverKindedValue si) ks args) []
                 where (ks, n) = case k of
                                   KTuple eks -> (eks, length eks)
                                   _          -> error $ unlines [ "Impossible: Expected a tuple kind, but got: " ++ show k
@@ -1095,7 +1106,7 @@ recoverKindedValue st k e =
 
         -- SMaybe
         interpretMaybe (KMaybe _)  (ECon "nothing_SBVMaybe")        = Nothing
-        interpretMaybe (KMaybe ek) (EApp [ECon "just_SBVMaybe", a]) = case recoverKindedValue st ek a of
+        interpretMaybe (KMaybe ek) (EApp [ECon "just_SBVMaybe", a]) = case recoverKindedValue si ek a of
                                                                         Just (CV _ v) -> Just v
                                                                         Nothing       -> error $ unlines [ "Couldn't parse a maybe just value"
                                                                                                          , "Kind: " ++ show ek
@@ -1108,13 +1119,13 @@ recoverKindedValue st k e =
         interpretMaybe _  other = error $ "Expected an SMaybe sexpr, but received: " ++ show (k, other)
 
         -- SEither
-        interpretEither (KEither k1 _) (EApp [ECon "left_SBVEither",  a]) = case recoverKindedValue st k1 a of
+        interpretEither (KEither k1 _) (EApp [ECon "left_SBVEither",  a]) = case recoverKindedValue si k1 a of
                                                                               Just (CV _ v) -> Left v
                                                                               Nothing       -> error $ unlines [ "Couldn't parse an either value on the left"
                                                                                                                , "Kind: " ++ show k1
                                                                                                                , "Expr: " ++ show a
                                                                                                                ]
-        interpretEither (KEither _ k2) (EApp [ECon "right_SBVEither", b]) = case recoverKindedValue st k2 b of
+        interpretEither (KEither _ k2) (EApp [ECon "right_SBVEither", b]) = case recoverKindedValue si k2 b of
                                                                               Just (CV _ v) -> Right v
                                                                               Nothing       -> error $ unlines [ "Couldn't parse an either value on the right"
                                                                                                                , "Kind: " ++ show k2
@@ -1133,8 +1144,8 @@ recoverKindedValue st k e =
                                                                         vhi <- getBorder hi
                                                                         pure $ CV KReal (CAlgReal (AlgInterval vlo vhi))
                                    _                              -> Nothing
-          where getBorder (EApp [ECon "open",   v]) = recoverKindedValue st KReal v >>= border OpenPoint
-                getBorder (EApp [ECon "closed", v]) = recoverKindedValue st KReal v >>= border ClosedPoint
+          where getBorder (EApp [ECon "open",   v]) = recoverKindedValue si KReal v >>= border OpenPoint
+                getBorder (EApp [ECon "closed", v]) = recoverKindedValue si KReal v >>= border ClosedPoint
                 getBorder _                         = Nothing
 
                 border b (CV KReal (CAlgReal (AlgRational True v))) = pure $ b v
@@ -1158,7 +1169,7 @@ recoverKindedValue st k e =
                                          ]
 
                  decode (args, d) = ArrayModel [(cvt k1 l, cvt k2 [r]) | (l, r) <- args] (cvt k2 [d])
-                   where cvt ek [v] = case recoverKindedValue st ek v of
+                   where cvt ek [v] = case recoverKindedValue si ek v of
                                          Just (CV _ x) -> x
                                          _             -> tbd $ "Cannot convert value: " ++ show v
                          cvt _ vs   = tbd $ "Unexpected function-like-value as array index" ++ show vs
@@ -1188,7 +1199,7 @@ recoverKindedValue st k e =
                                                ] ++ extras
 
                 convert :: (Int, Kind) -> SExpr -> CVal
-                convert (i, fk) f = case recoverKindedValue st fk f of
+                convert (i, fk) f = case recoverKindedValue si fk f of
                                       Just (CV _ v) -> v
                                       Nothing       -> bad ["Couldn't convert field " ++ show i ++ ": " ++ show (fk, f)]
 
@@ -1231,9 +1242,9 @@ extractValue mbi nm k = do
 
        r <- ask cmd
 
-       st <- queryState
+       si <- queryState >>= getSInfo
 
-       let recover val = case recoverKindedValue st k val of
+       let recover val = case recoverKindedValue si k val of
                            Just cv -> return cv
                            Nothing -> bad r Nothing
 
@@ -1259,7 +1270,7 @@ getUIFunCVAssoc mbi (nm, (isCurried, mbArgs, typ)) = do
 
   r <- ask cmd
 
-  st <- queryState
+  si <- queryState >>= getSInfo
 
   let (ats, rt) = case typ of
                     SBVType as | length as > 1 -> (init as, last as)
@@ -1267,11 +1278,11 @@ getUIFunCVAssoc mbi (nm, (isCurried, mbArgs, typ)) = do
 
   let convert (vs, d) = (,) <$> mapM toPoint vs <*> toRes d
       toPoint (as, v)
-         | length as == length ats = (,) <$> zipWithM (recoverKindedValue st) ats as <*> toRes v
+         | length as == length ats = (,) <$> zipWithM (recoverKindedValue si) ats as <*> toRes v
          | True                    = error $ "Data.SBV.getUIFunCVAssoc: Mismatching type/value arity, got: " ++ show (as, ats)
 
       toRes :: SExpr -> Maybe CV
-      toRes = recoverKindedValue st rt
+      toRes = recoverKindedValue si rt
 
       -- if we fail to parse, we'll return this answer as the string
       fallBack = trimFunctionResponse r nm isCurried mbArgs

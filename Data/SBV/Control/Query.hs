@@ -368,16 +368,16 @@ getObjectiveValues = do let cmd = "(get-objectives)"
 
                         r <- ask cmd
 
-                        st <- queryState
+                        si <- queryState >>= getSInfo
 
                         inputs <- F.toList <$> getTopLevelInputs
 
-                        parse r bad $ \case EApp (ECon "objectives" : es) -> catMaybes <$> mapM (getObjValue st (bad r) inputs) es
+                        parse r bad $ \case EApp (ECon "objectives" : es) -> catMaybes <$> mapM (getObjValue si (bad r) inputs) es
                                             _                             -> bad r Nothing
 
   where -- | Parse an objective value out.
-        getObjValue :: State -> (forall a. Maybe [String] -> m a) -> [NamedSymVar] -> SExpr -> m (Maybe (String, GeneralizedCV))
-        getObjValue st bailOut inputs expr =
+        getObjValue :: SInfo -> (forall a. Maybe [String] -> m a) -> [NamedSymVar] -> SExpr -> m (Maybe (String, GeneralizedCV))
+        getObjValue si bailOut inputs expr =
                 case expr of
                   EApp [_]          -> return Nothing            -- Happens when a soft-assertion has no associated group.
                   EApp [ECon nm, v] -> locate nm v               -- Regular case
@@ -393,7 +393,7 @@ getObjectiveValues = do let cmd = "(get-objectives)"
 
                 grab :: SV -> SExpr -> m GeneralizedCV
                 grab s topExpr
-                  | Just v <- recoverKindedValue st k topExpr = return $ RegularCV v
+                  | Just v <- recoverKindedValue si k topExpr = return $ RegularCV v
                   | True                                      = ExtendedCV <$> cvt (simplify topExpr)
                   where k = kindOf s
 
