@@ -368,7 +368,7 @@ getValue s = do
 
 -- | A class which allows for sexpr-conversion to functions
 class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
-  sexprToArg     :: SolverContext m => fun -> [SExpr] -> m (Maybe a)
+  sexprToArg     :: (MonadIO m, SolverContext m) => fun -> [SExpr] -> m (Maybe a)
   smtFunName     :: (MonadIO m, SolverContext m) => fun -> m ((String, Maybe [String]), Bool)
   smtFunSaturate :: fun -> SBV r
   smtFunType     :: fun -> SBVType
@@ -430,12 +430,17 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
                                       Just (Left nm') -> case (nm == nm', smtFunDefault f) of
                                                            (True, Just v)  -> return $ Just ([], v)
                                                            _               -> bailOut nm
-                                      Just (Right v)  -> return $ convert st v
+                                      Just (Right v)  -> convert st v
                                       Nothing         -> do mbPVS <- pointWiseExtract nm (smtFunType f)
-                                                            return $ mbPVS >>= convert st
+                                                            case mbPVS of
+                                                              Nothing  -> pure Nothing
+                                                              Just pts -> convert st pts
                            pure $ maybe (Left s) Right mbRes
-    where convert    st (vs, d) = (,) <$> mapM (sexprPoint st) vs <*> sexprToVal st d
-          sexprPoint st (as, v) = (,) <$> sexprToArg f as         <*> sexprToVal st v
+    where convert st (vs, d) = do ps <- mapM (sexprPoint st) vs
+                                  pure $ (,) <$> traverse id ps <*> sexprToVal st d
+
+          sexprPoint st (as, v) = do mbA <- sexprToArg f as
+                                     pure $ (,) <$> mbA <*> sexprToVal st v
 
           bailOut nm = error $ unlines [ ""
                                        , "*** Data.SBV.getFunction: Unable to extract an interpretation for function " ++ show nm
@@ -828,13 +833,21 @@ getFunction f = do ((nm, args), isCurried) <- smtFunName f
                                           mbAssocs <- sexprToFun f (trimFunctionResponse r nm isCurried args, e)
                                           case mbAssocs of
                                             Right assocs -> return $ Right assocs
-                                            Left  raw    -> do mbPVS <- pointWiseExtract nm (smtFunType f)
-                                                               case mbPVS >>= convert st of
-                                                                 Just x  -> return $ Right x
-                                                                 Nothing -> return $ Left (raw, (isCurried, args, e))
-                                            _            -> bad r Nothing
-    where convert    st (vs, d) = (,) <$> mapM (sexprPoint st) vs <*> sexprToVal st d
-          sexprPoint st (as, v) = (,) <$> sexprToArg f as         <*> sexprToVal st v
+                                            Left  raw    -> do
+                                               let rawRes = Left (raw, (isCurried, args, e))
+                                               mbPVS <- pointWiseExtract nm (smtFunType f)
+                                               case mbPVS of
+                                                 Just ps -> do rs <- convert st ps
+                                                               case rs of
+                                                                  Just x  -> return $ Right x
+                                                                  Nothing -> return rawRes
+                                                 Nothing -> return rawRes
+                                       _ -> bad r Nothing
+    where convert st (vs, d) = do ps <- mapM (sexprPoint st) vs
+                                  pure $ (,) <$> traverse id ps <*> sexprToVal st d
+
+          sexprPoint st (as, v) = do mbA <- sexprToArg f as
+                                     pure $ (,) <$> mbA <*> sexprToVal st v
 
 -- | Generalization of 'Data.SBV.Control.getUninterpretedValue'
 getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
@@ -1218,7 +1231,7 @@ extractValue mbi nm k = do
 
        r <- ask cmd
 
-       st <- contextState
+       st <- queryState
 
        let recover val = case recoverKindedValue st k val of
                            Just cv -> return cv
@@ -1246,7 +1259,7 @@ getUIFunCVAssoc mbi (nm, (isCurried, mbArgs, typ)) = do
 
   r <- ask cmd
 
-  st <- contextState
+  st <- queryState
 
   let (ats, rt) = case typ of
                     SBVType as | length as > 1 -> (init as, last as)
