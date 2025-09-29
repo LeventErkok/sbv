@@ -29,14 +29,30 @@ data Expr var val = Con val
                   | Add (Expr var val) (Expr var val)
                   | Mul (Expr var val) (Expr var val)
                   | Let (Stmt var val) (Expr var val)
-                  deriving Show
 
 -- | Statement layer
 data Stmt var val = Assign var (Expr var val)
                   | Seq        (Stmt var val) (Stmt var val)
-                  deriving Show
 
 mkSymbolic [''Expr, ''Stmt]
+
+-- | Show instance for 'Expr'.
+instance (Show var, Show val) => Show (Expr var val) where
+  show (Con i)   = show i
+  show (Var a)   = show a
+  show (Add l r) = "(" ++ show l ++ " + " ++ show r ++ ")"
+  show (Mul l r) = "(" ++ show l ++ " * " ++ show r ++ ")"
+  show (Let a b) = show a ++ "\n" ++ show b
+
+-- | Show instance for 'Stmt'.
+instance (Show var, Show val) => Show (Stmt var val) where
+  show (Assign v e) = show v ++ " := " ++ show e
+  show (Seq a b)    = show a ++ ";\n" ++ show b
+
+-- | Show instance for 'Stmt' specialized when var is string.
+instance {-# OVERLAPPING #-} Show val => Show (Stmt String val) where
+  show (Assign v e) =      v ++ " := " ++ show e
+  show (Seq a b)    = show a ++ ";\n" ++ show b
 
 -- | Example program.
 --
