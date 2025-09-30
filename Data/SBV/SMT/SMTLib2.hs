@@ -43,9 +43,52 @@ import qualified Data.Generics.Uniplate.Data as G
 
 import qualified Data.Graph as DG
 
+
+-- Check that all ADT subkinds are registered. If not, tell the user to do so
+checkKinds :: [Kind] -> Maybe String
+checkKinds ks = case [m | m@(n, _) <- apps, n `notElem` defs] of
+                  []       -> Nothing
+                  xs@(f:_) -> let (h, cnt) = case [p | p@(_, i) <- xs, i > 0] of
+                                               (p:_) -> p
+                                               _     -> f
+                                  plu | length xs > 1 = "s are"
+                                      | True          = " is"
+                              in Just $ unlines $ [
+                                    "Data.SBV.mkSymbolic: Unregistered subkinds."
+                                  , "***"
+                                  , "*** The following kind" ++ plu ++ " not registered: " ++ unwords (map fst xs)
+                                  , "***"
+                                  , "*** You should register each ADT subfield, using: "
+                                  , "***"
+                                  , "***    {-# LANGUAGE TypeApplications #-}"
+                                  , "***"
+                                  , "***    import Data.Proxy"
+                                  , "***    registerType (Proxy @" ++ mkProxy h cnt ++ ")"
+                                  ]
+                               ++ extras cnt
+                               ++ [ "***"
+                                  , "*** Please get in touch if this is not feasible for your application."
+                                  ]
+
+
+  where apps = nub [(n, length as) | KApp n as <- concatMap expandKinds ks]
+        defs = nub [n | KADT n _ _ <- ks]
+        mkProxy h 0 = h
+        mkProxy h n = '(' : unwords (h : replicate n "Integer") ++ ")"
+
+        extras 0 = []
+        extras _ = [ "***"
+                   , "*** NB. You can use any base type as arguments, not just 'Integer'."
+                   , "*** It does not need to match the actual use cases, just one instance"
+                   , "*** at some base type is sufficent."
+                   ]
+
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter ([String], [String])
-cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs (SBVPgm asgnsSeq) cstrs out cfg = (pgm, exportedDefs)
+cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs (SBVPgm asgnsSeq) cstrs out cfg
+   = case checkKinds allKinds of
+        Just s  -> error s
+        Nothing -> (pgm, exportedDefs)
   where allKinds       = Set.toList kindInfo
 
         -- Below can simply be defined as: nub (sort (G.universeBi asgnsSeq))

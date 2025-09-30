@@ -64,7 +64,6 @@ instance {-# OVERLAPPING #-} Show val => Show (Stmt String val) where
 exPgm :: IO (Stmt String Integer)
 exPgm = runSMT $ do p :: SStmt String Integer <- free "p"
 
-                    registerType (Proxy @(Stmt Integer Integer))
                     registerType (Proxy @(Expr Integer Integer))
 
                     -- Make sure there are at least three statements
