@@ -25,16 +25,6 @@
 [GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
                                            ((nothing_SBVMaybe)
                                             (just_SBVMaybe (get_just_SBVMaybe T))))))
-[GOOD] (declare-datatype SBVRational ((SBV.Rational (sbv.rat.numerator Int) (sbv.rat.denominator Int))))
-
-[GOOD] (define-fun sbv.rat.eq ((x SBVRational) (y SBVRational)) Bool
-          (= (* (sbv.rat.numerator   x) (sbv.rat.denominator y))
-             (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))
-       )
-
-[GOOD] (define-fun sbv.rat.notEq ((x SBVRational) (y SBVRational)) Bool
-          (not (sbv.rat.eq x y))
-       )
 [GOOD] ; --- ADTs  --- 
 [GOOD] ; User defined ADT: ADT
 [GOOD] (declare-datatype ADT (
@@ -62,8 +52,8 @@
            (AString (getAString_1 String))
            (AList (getAList_1 (Seq Int)))
            (ATuple (getATuple_1 (SBVTuple2 (_ FloatingPoint 11 53) (Seq (SBVTuple2 (_ BitVec 5) (Seq (_ FloatingPoint  8 24)))))))
-           (AMaybe (getAMaybe_1 (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 SBVRational (Seq Bool))))))
-           (AEither (getAEither_1 (SBVEither (SBVTuple2 (SBVMaybe Int) Bool) (Seq SBVRational))))
+           (AMaybe (getAMaybe_1 (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool))))))
+           (AEither (getAEither_1 (SBVEither (SBVTuple2 (SBVMaybe Int) Bool) (Seq Int))))
            (APair (getAPair_1 ADT) (getAPair_2 ADT))
        ))
 [GOOD] ; --- literal constants ---
@@ -75,8 +65,8 @@
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Bool (is-AMaybe s0))
-[GOOD] (define-fun s2 () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 SBVRational (Seq Bool)))) (getAMaybe_1 s0))
-[GOOD] (define-fun s3 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 SBVRational (Seq Bool)))))) s2))
+[GOOD] (define-fun s2 () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool)))) (getAMaybe_1 s0))
+[GOOD] (define-fun s3 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool)))))) s2))
 [GOOD] (define-fun s4 () Bool (ite s3 false true))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
@@ -87,10 +77,10 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 (AMaybe (just_SBVMaybe (mkSBVTuple3 2.0
                                            (_ +zero 8 24)
-                                           (mkSBVTuple2 (SBV.Rational 2 3)
-                                                        (seq.unit true)))))))
+                                           (mkSBVTuple2 (left_SBVEither 2)
+                                                        (seq.unit false)))))))
 
-getValue: AMaybe (Just (2.0,0.0,(2 % 3,[True])))
+getValue: AMaybe (Just (2.0,0.0,(Left 2,[False])))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess
