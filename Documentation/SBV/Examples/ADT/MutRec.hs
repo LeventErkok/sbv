@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -20,6 +21,10 @@ module Documentation.SBV.Examples.ADT.MutRec where
 
 import Data.SBV
 import Data.SBV.Control
+import Data.SBV.RegExp
+
+import Data.SBV.Tuple as ST
+import qualified Data.SBV.List as SL
 
 import Data.Proxy
 
@@ -28,7 +33,6 @@ data Expr var val = Con val
                   | Var var
                   | Add (Expr var val) (Expr var val)
                   | Mul (Expr var val) (Expr var val)
-                  | Let (Stmt var val) (Expr var val)
 
 -- | Statement layer
 data Stmt var val = Assign var (Expr var val)
@@ -42,34 +46,71 @@ instance (Show var, Show val) => Show (Expr var val) where
   show (Var a)   = show a
   show (Add l r) = "(" ++ show l ++ " + " ++ show r ++ ")"
   show (Mul l r) = "(" ++ show l ++ " * " ++ show r ++ ")"
-  show (Let a b) = show a ++ "\n" ++ show b
 
 -- | Show instance for 'Stmt'.
 instance (Show var, Show val) => Show (Stmt var val) where
   show (Assign v e) = show v ++ " := " ++ show e
   show (Seq a b)    = show a ++ ";\n" ++ show b
 
+-- | Show instance for 'Expr' specialized when var is string.
+instance {-# OVERLAPPING #-} Show val => Show (Expr String val) where
+  show (Con i)   = show i
+  show (Var a)   = a
+  show (Add l r) = "(" ++ show l ++ " + " ++ show r ++ ")"
+  show (Mul l r) = "(" ++ show l ++ " * " ++ show r ++ ")"
+
 -- | Show instance for 'Stmt' specialized when var is string.
 instance {-# OVERLAPPING #-} Show val => Show (Stmt String val) where
   show (Assign v e) =      v ++ " := " ++ show e
   show (Seq a b)    = show a ++ ";\n" ++ show b
 
--- | Example program.
+-- | Validity: We require each variable appearing to be an identifier (lowercase letter followed by
+-- any number of upper-lower case letters and digits), and all expressions are closed; i.e., any
+-- variable referenced is assigned by a prior assignment expression.
+isValid :: forall val. SymVal val => SStmt String val -> SBool
+isValid = ST.fst . goS SL.nil
+  where isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
+
+        goE :: SList String -> SExpr String val -> SBool
+        goE = smtFunction "validE" $ \env expr -> [sCase|Expr expr of
+                                                     Con _   -> sTrue
+                                                     Var s   -> isId s .&& s `SL.elem` env
+                                                     Add l r -> goE env l .&& goE env r
+                                                     Mul l r -> goE env l .&& goE env r
+                                                  |]
+
+        goS :: SList String -> SStmt String val -> STuple Bool [String]
+        goS = smtFunction "validS" $ \env stmt -> [sCase|Stmt stmt of
+                                                     Assign v e -> tuple (isId v .&& goE env e, v SL..: env)
+                                                     Seq    a b -> let (lv, env')  = untuple $ goS env  a
+                                                                       (rv, env'') = untuple $ goS env' b
+                                                                   in tuple (lv .&& rv, env'')
+                                                  |]
+
+-- | Example program. Note that we do not put the 'isValid' constraint
+-- on this example since neither z3 nor cvc5 converges with that constraint in.
+-- Hence the bizarre variable names below.
 --
 -- >>> exPgm
--- !1! := 3;
--- !3! := 5;
--- !2! := 4;
--- !0! := 2
+-- !2! := 3;
+-- !4! := 5;
+-- !3! := 4;
+-- !0! := (!1! + 2)
 exPgm :: IO (Stmt String Integer)
 exPgm = runSMT $ do p :: SStmt String Integer <- free "p"
 
                     registerType (Proxy @(Expr Integer Integer))
 
-                    -- Make sure there are at least three statements
-                    constrain $ isSeq p
-                    constrain $ isSeq (getSeq_2 p)
-                    constrain $ isSeq (getSeq_2 (getSeq_2 p))
+                    -- Make sure there's some structure to the program:
+                    constrain $ isSeq    p
+                    constrain $ isSeq    (getSeq_2 p)
+                    constrain $ isSeq    (getSeq_2 (getSeq_2 p))
+                    constrain $ isAssign (getSeq_2 (getSeq_2 (getSeq_2 p)))
+                    constrain $ isAdd    (getAssign_2 (getSeq_2 (getSeq_2 (getSeq_2 p))))
+                    constrain $ isVar    (getAdd_1    (getAssign_2 (getSeq_2 (getSeq_2 (getSeq_2 p)))))
+
+                    -- Would love to have the following. But it creates too big of a problem.
+                    -- constrain $ isValid p
 
                     query $ do cs <- checkSat
                                case cs of
