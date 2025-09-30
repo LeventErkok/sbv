@@ -31,6 +31,7 @@ module Data.SBV.Core.Kind (
         , BVIsNonZero, ValidFloat, intOfProxy
         , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
         , eqCheckIsObjectEq, containsFloats, isSomeKindOfFloat, expandKinds
+        , substituteADTVars
         ) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
@@ -113,6 +114,15 @@ data Kind =
 -- Expand such that the resulting list has all the kinds we touch
 expandKinds :: Kind -> [Kind]
 expandKinds = sort . nubOrd . G.universe
+
+-- | For an ADT kind, substitute kinds for the variables
+substituteADTVars :: [(String, Kind)] -> Kind -> Kind
+substituteADTVars dict = G.transform sub
+  where sub :: Kind -> Kind
+        sub (KVar v)
+          | Just k <- v `lookup` dict = k
+          | True                      = error $ "Data.SBV.ADT: Kind find variable in param subst: " ++ show (v, dict)
+        sub k = k
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
 -- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of

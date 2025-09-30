@@ -38,8 +38,6 @@ module Data.SBV.Control.Utils (
      , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
      ) where
 
-import qualified Data.Generics.Uniplate.Data as G
-
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf, isSuffixOf)
 
 import Data.Char      (isPunctuation, isSpace, isDigit)
@@ -88,7 +86,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
 import Data.SBV.Core.SizedFloats (fpZero, fpFromInteger, fpFromFloat, fpFromDouble)
-import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts, expandKinds, isSomeKindOfFloat)
+import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts, expandKinds, isSomeKindOfFloat, substituteADTVars)
 import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr, svEqual)
 
 import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..))
@@ -918,15 +916,6 @@ defaultKindedValue k = CV k $ cvt k
 -- | Go from an SExpr directly to a value
 sexprToVal :: forall a. SymVal a => SInfo -> SExpr -> Maybe a
 sexprToVal si e = fromCV <$> recoverKindedValue si (kindOf (Proxy @a)) e
-
--- | For an ADT kind, substitute kinds for the variables
-substituteADTVars :: [(String, Kind)] -> Kind -> Kind
-substituteADTVars dict = G.transform sub
-  where sub :: Kind -> Kind
-        sub (KVar v)
-          | Just k <- v `lookup` dict = k
-          | True                      = error $ "Data.SBV.ADT: Kind find variable in param subst: " ++ show (v, dict)
-        sub k = k
 
 -- | Recover a given solver-printed value with a possible interpretation
 recoverKindedValue :: SInfo -> Kind -> SExpr -> Maybe CV
