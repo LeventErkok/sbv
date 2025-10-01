@@ -736,6 +736,7 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
          | True
          = do as <- mapM (const (TH.newName "a")) flds
               let isRecursive (_, _, k) = case k of
+                                            KApp t _   -> t == btype
                                             KADT t _ _ -> t == btype
                                             _          -> False
                   recFields = [a | (a, f) <- zip as flds, isRecursive f]
