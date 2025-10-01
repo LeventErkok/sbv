@@ -1451,7 +1451,7 @@ registerKind st k
 
        -- For ADTs we need to make sure we haven't added it before
        let adtExists = case k of
-                         KADT s _ _  -> any (s ==) [s' | KADT s' _ _ <- Set.toList existingKinds]
+                         KADT s _ _  -> s `elem` [s' | KADT s' _ _ <- Set.toList existingKinds]
                          _           -> False
 
        unless adtExists $
@@ -1462,7 +1462,7 @@ registerKind st k
               -- want to re-add because double-declaration would be wrong. See 'cvtInc' for details.
               let needsAdding = case k of
                                   KUserSort{} -> k `notElem` existingKinds
-                                  KADT s _ _  -> all (s /=) [s' | KADT s' _ _ <- Set.toList existingKinds]
+                                  KADT s _ _  -> s `notElem` [s' | KADT s' _ _ <- Set.toList existingKinds]
                                   KList{}     -> k `notElem` existingKinds
                                   KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
                                   KMaybe{}    -> k `notElem` existingKinds

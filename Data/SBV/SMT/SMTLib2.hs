@@ -86,9 +86,10 @@ checkKinds ks = case [m | m@(n, _) <- apps, n `notElem` defs] of
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter ([String], [String])
 cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs (SBVPgm asgnsSeq) cstrs out cfg
-   = case checkKinds allKinds of
-        Just s  -> error s
-        Nothing -> (pgm, exportedDefs)
+   | Just s <- checkKinds allKinds
+   = error s
+   | True
+   = (pgm, exportedDefs)
   where allKinds       = Set.toList kindInfo
 
         -- Below can simply be defined as: nub (sort (G.universeBi asgnsSeq))
@@ -1441,3 +1442,5 @@ setSMTOption cfg = set
         smtBool :: Bool -> String
         smtBool True  = "true"
         smtBool False = "false"
+
+{- HLint ignore module "Use record patterns" -}

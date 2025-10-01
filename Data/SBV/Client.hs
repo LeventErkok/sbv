@@ -727,7 +727,7 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
    extraSyms  <- mapM (const (TH.newName "extraS")) [0 .. extraArgCnt-1]
    extraTypes <- mapM (const (TH.newName "extraT")) [0 .. extraArgCnt-1]
 
-   let mkLam as body = TH.lamE (map (\a -> TH.conP 'Forall [TH.varP a]) (as ++ extraNames)) body
+   let mkLam as = TH.lamE (map (\a -> TH.conP 'Forall [TH.varP a]) (as ++ extraNames))
 
    let mkIndCase :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Exp
        mkIndCase (cstr, flds)

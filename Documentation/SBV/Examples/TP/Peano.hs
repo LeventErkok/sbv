@@ -612,7 +612,7 @@ ltTrans = do
                =: o .== (m + sSucc k1) + sSucc k2
                ?? aa `at` (Inst @"m" m, Inst @"n" (sSucc k1), Inst @"o" (sSucc k2))
                =: o .== m + (sSucc k1 + sSucc k2)
-               =: o .== m + (sSucc (k1 + sSucc k2))
+               =: o .== m + sSucc (k1 + sSucc k2)
                =: m .< o
                =: sTrue
                =: qed
@@ -699,7 +699,7 @@ lteEquiv = do
                                         =: n2i (n + sSucc k) .>= n2i n
                                         ?? n2ia `at` (Inst @"m" n, Inst @"n" (sSucc k))
                                         =: n2i n + n2i (sSucc k) .>= n2i n
-                                        ?? nn `at` (Inst @"n" (sSucc k))
+                                        ?? nn `at` Inst @"n" (sSucc k)
                                         =: sTrue
                                         =: qed
                              ]
@@ -710,7 +710,7 @@ lteEquiv = do
                      |-> let k = n2i m - n2i n
                      in k .>= 0
                      =: n2i m .== n2i n + k
-                     ?? i2n2iId `at` (Inst @"i" k)
+                     ?? i2n2iId `at` Inst @"i" k
                      =: n2i m .== n2i n + n2i (i2n k)
                      ?? n2ia `at` (Inst @"m" n, Inst @"n" (i2n k))
                      =: n2i m .== n2i (n + i2n k)

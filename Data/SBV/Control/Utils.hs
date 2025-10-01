@@ -435,7 +435,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
                                                               Just pts -> convert si pts
                            pure $ maybe (Left s) Right mbRes
     where convert st (vs, d) = do ps <- mapM (sexprPoint st) vs
-                                  pure $ (,) <$> traverse id ps <*> sexprToVal st d
+                                  pure $ (,) <$> sequenceA ps <*> sexprToVal st d
 
           sexprPoint st (as, v) = do mbA <- sexprToArg f as
                                      pure $ (,) <$> mbA <*> sexprToVal st v
@@ -842,7 +842,7 @@ getFunction f = do ((nm, args), isCurried) <- smtFunName f
                                                  Nothing -> return rawRes
                                        _ -> bad r Nothing
     where convert si (vs, d) = do ps <- mapM (sexprPoint si) vs
-                                  pure $ (,) <$> traverse id ps <*> sexprToVal si d
+                                  pure $ (,) <$> sequenceA ps <*> sexprToVal si d
 
           sexprPoint si (as, v) = do mbA <- sexprToArg f as
                                      pure $ (,) <$> mbA <*> sexprToVal si v

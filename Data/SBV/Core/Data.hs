@@ -560,7 +560,7 @@ registerType _ = do st <- contextState
                     liftIO $ registerKind st (kindOf (Proxy @a))
 
 -- | Various info we use in recoverKinded value
-data SInfo = SInfo { sInfoKinds :: [Kind] }
+newtype SInfo = SInfo { sInfoKinds :: [Kind] }
 
 -- | Turn state into SInfo
 getSInfo :: MonadIO m => State -> m SInfo
