@@ -150,7 +150,6 @@ Library
                   , Data.SBV.Trans
                   , Data.SBV.Trans.Control
                   , Documentation.SBV.Examples.ADT.Expr
-                  , Documentation.SBV.Examples.ADT.MutRec
                   , Documentation.SBV.Examples.ADT.Param
                   , Documentation.SBV.Examples.ADT.Types
                   , Documentation.SBV.Examples.BitPrecise.BitTricks
@@ -346,6 +345,7 @@ Test-Suite SBVTest
   other-modules   : Utils.SBVTestFramework
                   , TestSuite.ADT.ADT
                   , TestSuite.ADT.Expr
+                  , TestSuite.ADT.MutRec
                   , TestSuite.ADT.PExpr
                   , TestSuite.Arrays.InitVals
                   , TestSuite.Arrays.Memory
