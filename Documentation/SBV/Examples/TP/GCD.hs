@@ -129,6 +129,7 @@ gcdZero = do
 --   Result:                               Q.E.D.
 -- Lemma: commutative
 --   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] commutative :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 commutative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -148,7 +149,8 @@ commutative = do
     calc "commutative"
           (\(Forall a) (Forall b) -> gcd a b .== gcd b a) $
           \a b -> [] |- gcd a b
-                     ?? nGCDComm
+                     =: nGCD (abs a) (abs b)
+                     ?? nGCDComm `at` (Inst @"a" (abs a), Inst @"b" (abs b))
                      =: gcd b a
                      =: qed
 
@@ -447,6 +449,7 @@ gcdDivides = do
 -- ==== __Proof__
 -- >>> runTP gcdMaximal
 -- Lemma: dvdAbs                           Q.E.D.
+-- Lemma: gcdComm                          Q.E.D.
 -- Lemma: eDiv                             Q.E.D.
 -- Lemma: helper
 --   Step: 1 (x `dvd` a && x `dvd` b)      Q.E.D.
@@ -467,13 +470,16 @@ gcdDivides = do
 --     Step: 1.1.2                         Q.E.D.
 --     Step: 1.2.1                         Q.E.D.
 --     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] gcdMaximal :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐx ∷ Integer → Bool
 gcdMaximal :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
 gcdMaximal = do
 
-   dAbs  <- recall "dvdAbs" dvdAbs
+   dAbs <- recall "dvdAbs" dvdAbs
+   comm <- recall "gcdComm" commutative
 
    eDiv <- lemma "eDiv"
                  (\(Forall @"x" x) (Forall @"y" y) -> y ./= 0 .=> x .== (x `sEDiv` y) * y + x `sEMod` y)
@@ -524,7 +530,10 @@ gcdMaximal = do
                                            ?? dAbs     `at` (Inst @"a" x, Inst @"b" b)
                                            =: sTrue
                                            =: qed
-                        , abs a .<  abs b ==> x `dvd` nGCD (abs b) (abs a)
+                        , abs a .<  abs b ==> x `dvd` gcd a b
+                                           ?? comm `at` (Inst @"a" a, Inst @"b" b)
+                                           =: x `dvd` gcd b a
+                                           =: x `dvd` nGCD (abs b) (abs a)
                                            ?? mNGCD    `at` (Inst @"a" (abs b), Inst @"b" (abs a), Inst @"x" x)
                                            ?? dAbs     `at` (Inst @"a" x, Inst @"b" a)
                                            ?? dAbs     `at` (Inst @"a" x, Inst @"b" b)

@@ -137,9 +137,10 @@ modSubRight = do
    mAddMul <- modAddMultiple
    calc "modSubRight"
       (\(Forall a) (Forall b) (Forall m) -> m .> 0 .=>  (a-b) `sEMod` m .== (a - b `sEMod` m) `sEMod` m) $
-      \a b m -> [m .> 0] |- (a-b) `sEMod` m
+      \a b m -> [m .> 0] |- (a - b) `sEMod` m
+                         ?? b .== b `sEMod` m + m * b `sEDiv` m
                          =: (a - (b `sEMod` m + m * b `sEDiv` m)) `sEMod` m
-                         =: ((a - b `sEMod` m) + m*(- (b `sEDiv` m))) `sEMod` m
+                         =: ((a - b `sEMod` m) + m * (- (b `sEDiv` m))) `sEMod` m
                          ?? mAddMul `at` (Inst @"k" (- (b `sEDiv` m)), Inst @"n" (a - b `sEMod` m), Inst @"m" m)
                          =: (a - b `sEMod` m) `sEMod` m
                          =: qed
