@@ -137,7 +137,8 @@ test:
 	@$(TIME) cabal run ${CABAL_OPTS} SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE} --quickcheck-tests ${QCCOUNT}
 
 checkLinks:
-	@brok --no-cache --only-failures $(ALLSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
+	@buildUtils/validate_links.py
+# @brok --no-cache --only-failures $(ALLSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
 
 mkDistro:
 	$(TIME) cabal sdist
