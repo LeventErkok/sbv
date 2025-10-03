@@ -90,37 +90,33 @@ isValid = ST.fst . goS SL.nil
                                                                    in tuple (lv .&& rv, env'')
                                                   |]
 
--- | Example program. Note that we do not put the 'isValid' constraint
--- on this example since neither z3 nor cvc5 converges with that constraint in.
--- Hence the bizarre variable names below.
---
--- >>> exPgm
--- !2! := 3;
--- !4! := 5;
--- !3! := 4;
--- !0! := (!1! + 2)
-exPgm :: IO (Stmt String Integer)
-exPgm = runSMT $ do p :: SStmt String Integer <- free "p"
+exPgm :: FilePath -> Symbolic ()
+exPgm rf = do p :: SStmt String Integer <- free "p"
 
-                    registerType (Proxy @(Expr Integer Integer))
+              registerType (Proxy @(Expr Integer Integer))
 
-                    -- Make sure there's some structure to the program:
-                    constrain $ isSeq    p
-                    constrain $ isSeq    (getSeq_2 p)
-                    constrain $ isSeq    (getSeq_2 (getSeq_2 p))
-                    constrain $ isAssign (getSeq_2 (getSeq_2 (getSeq_2 p)))
-                    constrain $ isAdd    (getAssign_2 (getSeq_2 (getSeq_2 (getSeq_2 p))))
-                    constrain $ isVar    (getAdd_1    (getAssign_2 (getSeq_2 (getSeq_2 (getSeq_2 p)))))
+              -- Make sure there's some structure to the program:
+              constrain $ isSeq    p
+              constrain $ isSeq    (getSeq_2 p)
+              constrain $ isSeq    (getSeq_2 (getSeq_2 p))
+              constrain $ isAssign (getSeq_2 (getSeq_2 (getSeq_2 p)))
+              constrain $ isAdd    (getAssign_2 (getSeq_2 (getSeq_2 (getSeq_2 p))))
+              constrain $ isVar    (getAdd_1    (getAssign_2 (getSeq_2 (getSeq_2 (getSeq_2 p)))))
 
-                    -- Would love to have the following. But it creates too big of a problem.
-                    -- constrain $ isValid p
+              -- Would love to have the following. But it creates too big of a problem.
+              -- constrain $ isValid p
+              constrain $ isValid (sAssign (literal "a") (sCon (literal 1)) :: SStmt String Float)
 
-                    query $ do cs <- checkSat
-                               case cs of
-                                 Sat -> getValue p
-                                 _   -> error $ "Unexpected result: " ++ show cs
+              query $ do cs <- checkSat
+                         case cs of
+                           Sat -> do r <- getValue p
+                                     io $ do appendFile rf $ "\nGot:\n" ++ show r
+                                             appendFile rf   "\nDONE\n"
+                           _   -> error $ "Unexpected result: " ++ show cs
 
 tests :: TestTree
 tests =
   testGroup "ADT_MR" [
+      goldenCapturedIO "adt_mr00" $ r exPgm
     ]
+  where r p rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} (p rf)

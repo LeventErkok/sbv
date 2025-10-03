@@ -19,6 +19,7 @@ import Test.Tasty
 
 import qualified TestSuite.ADT.ADT
 import qualified TestSuite.ADT.Expr
+import qualified TestSuite.ADT.MutRec
 import qualified TestSuite.ADT.PExpr
 import qualified TestSuite.Arrays.InitVals
 import qualified TestSuite.Arrays.Memory
@@ -136,6 +137,7 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
           defaultMain $ testGroup "SBV" [
                         TestSuite.ADT.ADT.tests
                       , TestSuite.ADT.Expr.tests
+                      , TestSuite.ADT.MutRec.tests
                       , TestSuite.ADT.PExpr.tests
                       , TestSuite.Arrays.InitVals.tests
                       , TestSuite.Arrays.Memory.tests
