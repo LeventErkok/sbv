@@ -133,7 +133,7 @@ seqExamples7 = do
   constrain $ sNot $ c `L.isInfixOf` b
   constrain $ sNot $ b `L.isInfixOf` c
 
--- Any string is equal to the prefix and suffix that add up to a its length.
+-- Any string is equal to the prefix and suffix that add up to its length.
 seqExamples8 :: Symbolic ()
 seqExamples8 = do
   [a, b, c :: SList Integer] <- sLists ["a", "b", "c"]

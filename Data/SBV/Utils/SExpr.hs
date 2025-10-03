@@ -322,7 +322,7 @@ parseSExprFunction e
 --              (= x!1 "l")
 --              (= x!1 "e")
 --              (= x!1 "h")))
---   For this, we do a little bit of an interpretative dance to see if we can "construct" the necesary expression.
+--   For this, we do a little bit of an interpretative dance to see if we can "construct" the necessary expression.
 --
 --   In parsed form:
 --      EApp [ECon "lambda",EApp [EApp [ECon "x!1",ECon "String"]],EApp [ECon "not",EApp [ECon "or",EApp [ECon "=",ECon "x!1",ECon "\"e\""],EApp [ECon "=",ECon "x!1",ECon "\"l\""]]]]

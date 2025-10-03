@@ -167,11 +167,11 @@ data Logic
   | AUFLIRA            -- ^ Linear formulas with free sort and function symbols over one- and two-dimentional arrays of integer index and real value.
   | AUFNIRA            -- ^ Formulas with free function and predicate symbols over a theory of arrays of arrays of integer index and real value.
   | LRA                -- ^ Linear formulas in linear real arithmetic.
-  | QF_ABV             -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays.
-  | QF_AUFBV           -- ^ Quantifier-free formulas over the theory of bitvectors and bitvector arrays extended with free sort and function symbols.
+  | QF_ABV             -- ^ Quantifier-free formulas over the theory of bit-vectors and bit-vector arrays.
+  | QF_AUFBV           -- ^ Quantifier-free formulas over the theory of bit-vectors and bit-vector arrays extended with free sort and function symbols.
   | QF_AUFLIA          -- ^ Quantifier-free linear formulas over the theory of integer arrays extended with free sort and function symbols.
   | QF_AX              -- ^ Quantifier-free formulas over the theory of arrays with extensionality.
-  | QF_BV              -- ^ Quantifier-free formulas over the theory of fixed-size bitvectors.
+  | QF_BV              -- ^ Quantifier-free formulas over the theory of fixed-size bit-vectors.
   | QF_IDL             -- ^ Difference Logic over the integers. Boolean combinations of inequations of the form x - y < b where x and y are integer variables and b is an integer constant.
   | QF_LIA             -- ^ Unquantified linear integer arithmetic. In essence, Boolean combinations of inequations between linear polynomials over integer variables.
   | QF_LRA             -- ^ Unquantified linear real arithmetic. In essence, Boolean combinations of inequations between linear polynomials over real variables.
@@ -179,7 +179,7 @@ data Logic
   | QF_NRA             -- ^ Quantifier-free real arithmetic.
   | QF_RDL             -- ^ Difference Logic over the reals. In essence, Boolean combinations of inequations of the form x - y < b where x and y are real variables and b is a rational constant.
   | QF_UF              -- ^ Unquantified formulas built over a signature of uninterpreted (i.e., free) sort and function symbols.
-  | QF_UFBV            -- ^ Unquantified formulas over bitvectors with uninterpreted sort function and symbols.
+  | QF_UFBV            -- ^ Unquantified formulas over bit-vectors with uninterpreted sort function and symbols.
   | QF_UFIDL           -- ^ Difference Logic over the integers (in essence) but with uninterpreted sort and function symbols.
   | QF_UFLIA           -- ^ Unquantified linear integer arithmetic with uninterpreted sort and function symbols.
   | QF_UFLRA           -- ^ Unquantified linear real arithmetic with uninterpreted sort and function symbols.

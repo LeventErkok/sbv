@@ -77,7 +77,7 @@ timeIf measureTime act = do mbStart <- getTimeStampIf measureTime
                             r `seq` do mbElapsed <- getElapsedTime mbStart
                                        pure (mbElapsed, r)
 
--- | Same as 'timeIf', except we fully evaluate the result, via its the NFData instance.
+-- | Same as 'timeIf', except we fully evaluate the result, via its NFData instance.
 timeIfRNF :: (NFData a, MonadIO m) => Bool -> m a -> m (Maybe NominalDiffTime, a)
 timeIfRNF measureTime act = timeIf measureTime (act >>= \r -> rnf r `seq` pure r)
 

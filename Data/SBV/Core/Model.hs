@@ -1766,7 +1766,7 @@ sFromIntegral x
         y st   = do xsv <- sbvToSV st x
                     newExpr st kTo (SBVApp (KindCast kFrom kTo) [xsv])
 
--- | Lift a binary operation thru it's dynamic counterpart. Note that
+-- | Lift a binary operation thru its dynamic counterpart. Note that
 -- we still want the actual functions here as differ in their type
 -- compared to their dynamic counterparts, but the implementations
 -- are the same.
@@ -1810,7 +1810,7 @@ sRotateLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sRotateLeft = liftViaSVal svRotateLeft
 
 -- | An implementation of rotate-left, using a barrel shifter like design. Only works when both
--- arguments are finite bitvectors, and furthermore when the second argument is unsigned.
+-- arguments are finite bit-vectors, and furthermore when the second argument is unsigned.
 -- The first condition is enforced by the type, but the second is dynamically checked.
 -- We provide this implementation as an alternative to `sRotateLeft` since SMTLib logic
 -- does not support variable argument rotates (as opposed to shifts), and thus this
@@ -2685,7 +2685,7 @@ class SMTDefinable a where
   --
   -- __Known issues__
   --
-  -- Usually using an uninterpret function will register itself to the solver, but sometimes the lazyness
+  -- Usually using an uninterpret function will register itself to the solver, but sometimes the laziness
   -- of the evaluation might render this unreliable.
   --
   -- For example, when working with quantifiers and uninterpreted functions with the following code:

@@ -97,7 +97,7 @@ minBVWith = minMaxBV False
 minMaxBV :: SFiniteBits a => Bool -> SMTConfig -> Bool -> SBV a -> Symbolic SatResult
 minMaxBV isMax cfg getUC v
  | hasSign v
- = error $ "minMaxBV works on unsigned bitvectors, received: " ++ show (kindOf v)
+ = error $ "minMaxBV works on unsigned bit-vectors, received: " ++ show (kindOf v)
  | True
  = do when getUC $ setOption $ ProduceUnsatCores True
       query $ go (blastBE v)

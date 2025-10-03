@@ -1312,7 +1312,7 @@ svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
                        mapM_ forceSVArg sws
                        newExpr st k $ SBVApp (Uninterpreted nm') sws
 
--- | Generate a unique name for the fiven function based on the object's stable name
+-- | Generate a unique name for the given function based on the object's stable name
 prefixNameToUnique :: State -> String -> IO String
 prefixNameToUnique st pre = do
    uiMap <- readIORef (rUIMap st)

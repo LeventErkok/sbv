@@ -135,7 +135,7 @@ strExamples7 = do
   constrain $ sNot $ c `S.isInfixOf` b
   constrain $ sNot $ b `S.isInfixOf` c
 
--- Any string is equal to the prefix and suffix that add up to a its length.
+-- Any string is equal to the prefix and suffix that add up to its length.
 strExamples8 :: Symbolic ()
 strExamples8 = do
   [a, b, c] <- sStrings ["a", "b", "c"]

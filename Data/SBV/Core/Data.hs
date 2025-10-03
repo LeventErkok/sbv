@@ -438,7 +438,7 @@ newtype Forall (nm :: Symbol) a = Forall (SBV a)
 -- will be prefixed in front of @_1@, @_2@, ..., @_n@ to form the names of the variables.
 newtype ExistsN (n :: Nat) (nm :: Symbol) a = ExistsN [SBV a]
 
--- | Exactly @n@ universal symbolic variables, used in in building quantified constraints. The name attached
+-- | Exactly @n@ universal symbolic variables, used in building quantified constraints. The name attached
 -- will be prefixed in front of @_1@, @_2@, ..., @_n@ to form the names of the variables.
 newtype ForallN (n :: Nat) (nm :: Symbol) a = ForallN [SBV a]
 
@@ -864,7 +864,7 @@ bvExtract start end = SBV . svExtract i j . unSBV
    where i  = fromIntegral (natVal start)
          j  = fromIntegral (natVal end)
 
--- | Join two bitvectors.
+-- | Join two bit-vectors.
 (#) :: ( KnownNat n, BVIsNonZero n, SymVal (bv n)
        , KnownNat m, BVIsNonZero m, SymVal (bv m)
        ) => SBV (bv n)                     -- ^ First input, of size @n@, becomes the left side
@@ -1006,7 +1006,7 @@ instance QNot r => QNot (ExistsN nm n a -> r) where
   type NegatesTo (ExistsN nm n a -> r) = ForallN nm n a -> NegatesTo r
   qNot f (ForallN xs) = qNot (f (ExistsN xs))
 
--- | Negate over an unique existential quantifier
+-- | Negate over a unique existential quantifier
 instance (QNot r, QuantifiedBool r, EqSymbolic (SBV a)) => QNot (ExistsUnique nm a -> r) where
   type NegatesTo (ExistsUnique nm a -> r) =  Forall nm a
                                           -> Exists (AppendSymbol nm "_eu1") a

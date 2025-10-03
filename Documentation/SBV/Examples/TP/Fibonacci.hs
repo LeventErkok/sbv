@@ -40,7 +40,7 @@ fibTail = fib 1 1
 
 -- * Correctness
 
--- | Proving the the tail version of fibonacci is equivalent to the textbook version.
+-- | Proving the tail recursive version of fibonacci is equivalent to the textbook version.
 --
 -- We have:
 --

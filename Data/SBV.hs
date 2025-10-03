@@ -158,7 +158,7 @@
 -- solvers are not good at proofs that require induction, or those that require complex chains of reasoning. Induction is necessary to reason about
 -- any recursive algorithm, and most such proofs require carefully constructed equational steps.
 --
--- SBV allows for a style of semi-automated theorem proving, called TP. which can be used to construct such proofs.
+-- SBV allows for a style of semi-automated theorem proving, called TP, which can be used to construct such proofs.
 -- The documentation includes example proofs for many list functions, and even inductive proofs for
 -- the familiar insertion, merge, quick-sort algorithms, along with a proof that the square-root of 2 is irrational.
 -- While a proper theorem prover (such as Lean, Isabelle etc.) is a more appropriate choice for such proofs, with some
@@ -213,7 +213,7 @@ module Data.SBV (
   , SWord8, SWord16, SWord32, SWord64, SWord, WordN
   -- *** Signed bit-vectors
   , SInt8, SInt16, SInt32, SInt64, SInt, IntN
-  -- *** Converting between fixed-size and arbitrary bitvectors
+  -- *** Converting between fixed-size and arbitrary bit-vectors
   , BVIsNonZero, FromSized, ToSized, fromSized, toSized
   -- ** Unbounded integers
   -- $unboundedLimitations
@@ -1405,7 +1405,7 @@ In this case the numerator is off by 148.
 -}
 
 -- | An implementation of rotate-left, using a barrel shifter like design. Only works when both
--- arguments are finite bitvectors, and furthermore when the second argument is unsigned.
+-- arguments are finite bit-vectors, and furthermore when the second argument is unsigned.
 -- The first condition is enforced by the type, but the second is dynamically checked.
 -- We provide this implementation as an alternative to `sRotateLeft` since SMTLib logic
 -- does not support variable argument rotates (as opposed to shifts), and thus this
@@ -1440,7 +1440,7 @@ bvExtract :: forall i j n bv proxy. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
                                       -> SBV (bv (i - j + 1))   -- ^ Output is of size @i - j + 1@
 bvExtract = CD.bvExtract
 
--- | Join two bitvectors.
+-- | Join two bit-vectors.
 --
 -- >>> prove $ \x y -> x .== bvExtract (Proxy @79) (Proxy @71) ((x :: SWord 9) # (y :: SWord 71))
 -- Q.E.D.
