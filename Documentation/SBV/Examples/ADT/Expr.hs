@@ -106,7 +106,7 @@ evalPlus5 = prove $ do e :: SExpr <- free "e"
 --
 -- >>> evalSat
 -- Satisfiable. Model:
---   e = Let "t" (Val 1) (Var "t") :: Expr
+--   e = Let "k" (Val 1) (Var "k") :: Expr
 --   a =                         9 :: Integer
 --   b =                        10 :: Integer
 evalSat :: IO SatResult
