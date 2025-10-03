@@ -2543,10 +2543,6 @@ uninterpreted.
 
 ### Version 3.1, 2014-07-12
 
- NB: GHC 7.8.1 and 7.8.2 has a serious bug <https://gitlab.haskell.org/ghc/ghc/-/issues/9078>
-     that causes SBV to crash under heavy/repeated calls. The bug is addressed
-     in GHC 7.8.3; so upgrading to GHC 7.8.3 is essential for using SBV!
-
  New features/bug-fixes in v3.1:
 
  * Using multiple-SMT solvers in parallel:
