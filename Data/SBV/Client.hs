@@ -57,7 +57,6 @@ import Language.Haskell.TH.ExpandSyns as TH
 
 import Data.SBV.Core.Concrete (cvRank)
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Core.SizedFloats
@@ -416,23 +415,8 @@ mkADT typeName params cstrs = do
     -- Get the case analyzer
     (caseSig, caseFun) <- mkCaseAnalyzer typeName params cstrs
 
-    -- Get the induction schema, upto 5 extra args. We'll only do this if the type is regular, i.e., if all recursive calls in
-    -- it are at the exact same parameterization.
-    let irregulars = let pars = map (KVar . TH.nameBase) params
-                     in [kapp | (_, flds) <- cstrs, (_, _, fk)  <- flds, kapp@(KApp n ps) <- expandKinds fk, n == TH.nameBase typeName, ps /= pars]
-
-    indDecs <- case irregulars of
-                []     -> mapM (mkInductionSchema typeName params cstrs) [0 .. 5]
-                (_i:_) -> do {-
-                              -- I'd like to keep the following warning but looks like there's no way for the user to "turn it off"
-                              -- so, let's just silently not generate it. This is very rare anyhow.
-                               TH.reportWarning $ unlines [ "The type `" ++ TH.nameBase typeName ++ "' has irregular recursion at \"" ++ show i ++ "\""
-                                                        , "    SBV will not generate any induction schemas for it."
-                                                        , ""
-                                                        , "    Induction schemas are only available for regular data-types."
-                                                        ]
-                             -}
-                             pure []
+    -- Get the induction schema, upto 5 extra args.
+    indDecs <- mapM (mkInductionSchema typeName params cstrs) [0 .. 5]
 
     pure $  [tdecl, symVal, kindDecl]
          ++ arbDecl
@@ -751,9 +735,12 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
          = [| $(TH.varE pf) $(scstr) |]
          | True
          = do as <- mapM (const (TH.newName "a")) flds
-              let isRecursive (_, _, k) = case k of
-                                            KApp t _   -> t == btype
-                                            _          -> False
+              let -- When can we have the inductive hypothesis?
+                  --  (1) same type
+                  --  (2) applied at exactly the same types
+                  isRecursive (_, _, k) = case k of
+                                            KApp t ps -> t == btype && ps == map (KVar . TH.nameBase) params
+                                            _         -> False
                   recFields = [a | (a, f) <- zip as flds, isRecursive f]
               TH.appE (TH.varE 'quantifiedBool)
                       (mkLam as (mkImp recFields (foldl TH.appE
