@@ -44,6 +44,15 @@ data Stmt var val = Assign {lhs  :: var,          rhs  :: Expr var val }
 
 mkSymbolic [''Expr, ''Stmt]
 
+data A a b = Aa   { aa :: a }
+           | Ab   { ab :: b }
+           | Aab  { aba :: a, abb :: b }
+           | A2   { a2 :: A b String }
+           | A3   { a3 :: A b a }
+           deriving Show
+
+mkSymbolic [''A]
+
 -- | Show instance for 'Expr'.
 instance (Show var, Show val) => Show (Expr var val) where
   show (Con i)   = show i
@@ -96,6 +105,9 @@ tests =
   testGroup "ADT_MR" [
       goldenCapturedIO "adt_mr00" $ r t00
     , goldenCapturedIO "adt_mr01" $ r t01
+    , goldenCapturedIO "adt_mr02" $ r t02
+    , goldenCapturedIO "adt_mr03" $ r t03
+    , goldenCapturedIO "adt_mr04" $ r t04
     ]
   where r p rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} (p rf)
 
@@ -132,6 +144,47 @@ t01 rf = do p :: SStmt String (Maybe (Either Integer Bool)) <- free "p"
             constrain $ isCon     (sadd2 (srhs p))
             constrain $ isNothing (scon (sadd1 (srhs p)))
             constrain $ isJust    (scon (sadd2 (srhs p)))
+
+            query $ do cs <- checkSat
+                       case cs of
+                         Sat -> do r <- getValue p
+                                   io $ do appendFile rf $ "\nGot:\n" ++ show r
+                                           appendFile rf   "\nDONE\n"
+                         _   -> error $ "Unexpected result: " ++ show cs
+
+t02 :: FilePath -> Symbolic ()
+t02 rf = do p :: SA Integer Bool <- free "p"
+
+            constrain $ isA2 p
+            constrain $ isA2 (sa2 p)
+            constrain $ isAa (sa2 (sa2 p))
+
+            query $ do cs <- checkSat
+                       case cs of
+                         Sat -> do r <- getValue p
+                                   io $ do appendFile rf $ "\nGot:\n" ++ show r
+                                           appendFile rf   "\nDONE\n"
+                         _   -> error $ "Unexpected result: " ++ show cs
+
+t03 :: FilePath -> Symbolic ()
+t03 rf = do p :: SA Integer Bool <- free "p"
+
+            constrain $ isA3 p
+            constrain $ isAb (sa3 p)
+
+            query $ do cs <- checkSat
+                       case cs of
+                         Sat -> do r <- getValue p
+                                   io $ do appendFile rf $ "\nGot:\n" ++ show r
+                                           appendFile rf   "\nDONE\n"
+                         _   -> error $ "Unexpected result: " ++ show cs
+
+t04 :: FilePath -> Symbolic ()
+t04 rf = do p :: SA Integer (A Float Bool) <- free "p"
+
+            constrain $ isA2 p
+            constrain $ isA3 (sa2 p)
+            constrain $ isAab (sa3 (sa2 p))
 
             query $ do cs <- checkSat
                        case cs of
