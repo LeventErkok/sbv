@@ -27,8 +27,7 @@ mkSymbolic [''L]
 tests :: TestTree
 tests =
   testGroup "Uninterpreted.Sort"
-    [ testCase "unint-sort"
-        (assert . (==4) . length . (extractModels :: AllSatResult -> [L]) =<< allSat p0)
+    [ goldenVsStringShow "unint-sort01" $ allSat p0
     ]
 
 len :: SL -> SInteger

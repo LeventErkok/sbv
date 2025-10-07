@@ -1,0 +1,37 @@
+Solution #1:
+  l  = L_1 :: L
+  l0 = L_0 :: L
+  l1 = L_1 :: L
+  x  =   1 :: Integer
+
+  len :: L -> Integer
+  len L_1 = 1
+  len _   = 0
+Solution #2:
+  l  = L_0 :: L
+  l0 = L_0 :: L
+  l1 = L_1 :: L
+  x  =   0 :: Integer
+
+  len :: L -> Integer
+  len L_1 = 1
+  len _   = 0
+Solution #3:
+  l  = L_1 :: L
+  l0 = L_0 :: L
+  l1 = L_1 :: L
+  x  =   0 :: Integer
+
+  len :: L -> Integer
+  len L_1 = 1
+  len _   = 0
+Solution #4:
+  l  = L_0 :: L
+  l0 = L_0 :: L
+  l1 = L_1 :: L
+  x  =   1 :: Integer
+
+  len :: L -> Integer
+  len L_1 = 1
+  len _   = 0
+Found 4 different solutions.
