@@ -9,7 +9,6 @@
 -- Abstraction of SMT solvers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DefaultSignatures          #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}

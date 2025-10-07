@@ -11,7 +11,6 @@
 
 {-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE DefaultSignatures    #-}
 {-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DeriveGeneric        #-}
