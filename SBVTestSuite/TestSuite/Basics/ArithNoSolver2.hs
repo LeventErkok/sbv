@@ -42,7 +42,7 @@ import qualified Data.Char       as C
 import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.List   as SL
 
-data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving (Bounded, Enum, Eq)
+data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun deriving (Show, Bounded, Enum, Eq)
 mkSymbolic  [''Day]
 
 -- Test suite
