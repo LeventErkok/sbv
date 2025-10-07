@@ -51,7 +51,6 @@ data ADT  = AEmpty
           | AEither  (Either (Maybe Integer, Bool) [Integer])
           | APair    ADT ADT
           {-
-          | KUserSort String (Maybe [String])
           | KADT      String (Maybe [(String, [Kind])])
           | KChar
           | KSet  Kind

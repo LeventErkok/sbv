@@ -110,10 +110,9 @@ deriving instance TH.Lift TH.TyLit
 -- A few other things we need to TH lift
 deriving instance TH.Lift Kind
 
--- | What kind of type is this?
-data ADT = ADTEnum [TH.Name]                                     -- Enumeration. If the list is empty, then an uninterpreted
-         | ADTFull [TH.Name]                                     -- Parameters
-                   [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -- Constructors and fields. Maybe is the accessor if given.
+data ADTKind = ADTUninterpreted -- Completely uninterpreted
+             | ADTEnum          -- Enumeration
+             | ADTFull          -- A full datatype
 
 -- | Create a mutually recursive group of ADTs.
 mkSymbolic :: [TH.Name] -> TH.Q [TH.Dec]
@@ -123,12 +122,8 @@ mkSymbolic ts = concat <$> mapM mkSymbolicADT ts
 mkSymbolicADT :: TH.Name -> TH.Q [TH.Dec]
 mkSymbolicADT typeName = do
 
-     tKind <- dissect typeName
-
-     (params, ds)
-        <- case tKind of
-             ADTEnum        cstrs -> ([],)     <$> mkEnum typeName cstrs
-             ADTFull params cstrs -> (params,) <$> mkADT  typeName params cstrs
+     (tKind, params, cstrs) <- dissect typeName
+     ds <- mkADT tKind typeName params cstrs
 
      -- declare an "undefiner" so we don't have stray names
      nm <- TH.newName $ "_undefiner_" ++ TH.nameBase typeName
@@ -153,102 +148,6 @@ mkSymbolicADT typeName = do
          undefBody = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
 
      pure $ ds ++ [undefSig, undefBody]
-
--- | Make an uninterpreted or enumeration type
-mkEnum :: TH.Name -> [TH.Name] -> TH.Q [TH.Dec]
-mkEnum typeName cstrs = do
-    let typeCon  = TH.conT typeName
-        sTypeCon = TH.conT ''SBV `TH.appT` typeCon
-
-        -- Is this an enum?
-        isEnum = not (null cstrs)
-
-    derives <- [d| deriving instance Show     $typeCon
-                   deriving instance Read     $typeCon
-                   deriving instance Data     $typeCon
-                   deriving instance HasKind  $typeCon
-                   deriving instance SatModel $typeCon
-               |]
-
-    symVals <- if isEnum
-                  then [d| instance SymVal $typeCon where
-                             minMaxBound = Just (minBound, maxBound)
-
-                           instance Arbitrary $typeCon where
-                             arbitrary = arbitraryBoundedEnum
-                       |]
-                  else [d| instance SymVal $typeCon where
-                             minMaxBound = Nothing
-
-                           -- It's unfortunate we have to give this instance to make things
-                           -- simple; but uninterpreted types don't really fit with the testing strategy.
-                           instance {-# OVERLAPPABLE #-} Arbitrary $typeCon where
-                             arbitrary = error $ unlines [ ""
-                                                         , "*** Data.SBV: Cannot quickcheck the given property."
-                                                         , "***"
-                                                         , "*** Default arbitrary instance for " ++ TH.nameBase typeName ++ " is too limited."
-                                                         , "***"
-                                                         , "*** You can overcome this by giving your own Arbitrary instance."
-                                                         , "*** Please get in touch if this workaround is not suitable for your case."
-                                                         ]
-                       |]
-
-    symEnum <- if isEnum
-                  then [d| instance SL.EnumSymbolic $typeCon where
-                              succ     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts (drop 1 elts))
-                              pred     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip (drop 1 elts) elts)
-
-                              toEnum   x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip [0..] elts)
-                              fromEnum x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts [0..])
-
-                              enumFrom n = SL.map SL.toEnum (SL.enumFromTo (SL.fromEnum n) (SL.fromEnum (literal (maxBound :: $typeCon))))
-
-                              enumFromThen = smtFunction ("EnumSymbolic." ++ TH.nameBase typeName ++ ".enumFromThen") $ \n1 n2 ->
-                                                         let i_n1, i_n2 :: SInteger
-                                                             i_n1 = SL.fromEnum n1
-                                                             i_n2 = SL.fromEnum n2
-                                                         in SL.map SL.toEnum (ite (i_n2 .>= i_n1)
-                                                                                  (SL.enumFromThenTo i_n1 i_n2 (SL.fromEnum (literal (maxBound :: $typeCon))))
-                                                                                  (SL.enumFromThenTo i_n1 i_n2 (SL.fromEnum (literal (minBound :: $typeCon)))))
-
-                              enumFromTo     n m   = SL.map SL.toEnum (SL.enumFromTo     (SL.fromEnum n) (SL.fromEnum m))
-
-                              enumFromThenTo n m t = SL.map SL.toEnum (SL.enumFromThenTo (SL.fromEnum n) (SL.fromEnum m) (SL.fromEnum t))
-
-                           instance OrdSymbolic $sTypeCon where
-                             SBV a .<  SBV b = SBV (a `svLessThan`    b)
-                             SBV a .<= SBV b = SBV (a `svLessEq`      b)
-                             SBV a .>  SBV b = SBV (a `svGreaterThan` b)
-                             SBV a .>= SBV b = SBV (a `svGreaterEq`   b)
-                       |]
-                  else pure []
-
-    sType <- sTypeCon
-
-    let declConstructor c = ((nm, bnm), [sig, def])
-          where bnm  = TH.nameBase c
-                nm   = TH.mkName $ 's' : bnm
-                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
-                body = TH.AppE (TH.VarE 'literal) (TH.ConE c)
-                sig  = TH.SigD nm sType
-
-        (constrNames, cdecls) = unzip (map declConstructor cstrs)
-
-    let btname = TH.nameBase typeName
-        tname  = TH.mkName ('S' : btname)
-        tdecl  = TH.TySynD tname [] sType
-
-    addDeclDocs (tname, btname) constrNames
-
-    -- Declare testers and case analyzer, if this is an enumeration
-    testsAndCase <- if isEnum
-                    then do let fCstrs = map (, []) cstrs  -- Add empty fields to reuse the test maker and case-analyzer
-                            ts <- mkTesters sType id fCstrs
-                            (caseSig, caseFun) <- mkCaseAnalyzer typeName [] fCstrs
-                            pure $ caseSig : caseFun : ts
-                    else pure []
-
-    pure $ derives ++ symVals ++ symEnum ++ [tdecl] ++ concat cdecls ++ testsAndCase
 
 -- | Add document to a generated declaration for the declaration
 addDeclDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
@@ -278,16 +177,22 @@ saturate :: TH.Type -> [TH.Name] -> TH.Type
 saturate t ps = foldr (\p b -> TH.AppT b (TH.VarT p)) t (reverse ps)
 
 -- | Create a symbolic ADT
-mkADT ::  TH.Name                                       -- type name
+mkADT ::  ADTKind                                       -- What kind of ADT are we generating?
+       -> TH.Name                                       -- type name
        -> [TH.Name]                                     -- parameters
        -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -- constructors
        -> TH.Q [TH.Dec]                                 -- declarations
-mkADT typeName params cstrs = do
+mkADT adtKind typeName params cstrs = do
 
     let typeCon = saturate (TH.ConT typeName) params
         sType   = mkSBV typeCon
 
-    let inSymValContext = TH.ForallT [] [TH.AppT (TH.ConT ''SymVal) (TH.VarT n) | n <- params]
+        inSymValContext = TH.ForallT [] [TH.AppT (TH.ConT ''SymVal) (TH.VarT n) | n <- params]
+
+        isEnum = case adtKind of
+                  ADTUninterpreted -> False
+                  ADTEnum          -> True
+                  ADTFull          -> False
 
     litFun <- do let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
                                               let cn      = TH.mkName $ 's' : TH.nameBase n
@@ -295,7 +200,20 @@ mkADT typeName params cstrs = do
                                               pure $ TH.Clause [TH.ConP n [] (map TH.VarP as)]
                                                                (TH.NormalB (foldl app (TH.VarE cn) (map TH.VarE as)))
                                                                []
-                 TH.FunD 'literal <$> mapM mkLitClause cstrs
+
+                     withCstrs = TH.FunD 'literal <$> mapM mkLitClause cstrs
+
+                 case adtKind of
+                   ADTUninterpreted -> do noLit <- [| error $ unlines [ "Data.SBV: unexpected call to derived literal implementation"
+                                                                      , "***"
+                                                                      , "*** Type: " ++ show typeName
+                                                                      , ""
+                                                                      , "***Please report this as a bug!"
+                                                                      ]
+                                                   |]
+                                          pure $ TH.FunD 'literal [TH.Clause [TH.WildP] (TH.NormalB noLit) []]
+                   ADTEnum          -> withCstrs
+                   ADTFull          -> withCstrs
 
     fromCVFunName <- TH.newName ("cv2" ++ TH.nameBase typeName)
     addDoc ("Conversion from SMT values to " ++ TH.nameBase typeName ++ " values.") fromCVFunName
@@ -333,15 +251,20 @@ mkADT typeName params cstrs = do
                              CV k e -> unexpected $ "Was expecting a CADT value, but got kind: " ++ show k ++ " (rank: " ++ show (cvRank e) ++ ")"
                  |]
 
-    symCtx <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params]
+    symCtx  <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params]
+
+    mmBound <- if isEnum
+                  then [| Just (minBound, maxBound) |]
+                  else [| Nothing |]
+
     let symVal = TH.InstanceD
                       Nothing
                       symCtx
                       (TH.AppT (TH.ConT ''SymVal) typeCon)
                       [ litFun
-                      , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB (TH.ConE 'Nothing)) []]
-                      , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV)          []]
-                      ]
+                      , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB mmBound)   []]
+                      , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV) []]
+                       ]
 
     defCstrs <- [| [(unmod n, map (\(_, _, t) -> t) ntks) | (n, ntks) <- cstrs] |]
 
@@ -363,16 +286,20 @@ mkADT typeName params cstrs = do
                         (TH.AppT (TH.ConT ''HasKind) typeCon)
                         [TH.FunD 'kindOf [TH.Clause [TH.WildP] (TH.NormalB kindDef) []]]
 
-    arbDecl <- [d|instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
-                     arbitrary = error $ unlines [ ""
-                                                 , "*** Data.SBV: Cannot quickcheck the given property."
-                                                 , "***"
-                                                 , "*** Default arbitrary instance for " ++ TH.nameBase typeName ++ " is too limited."
-                                                 , "***"
-                                                 , "*** You can overcome this by giving your own Arbitrary instance."
-                                                 , "*** Please get in touch if this workaround is not suitable for your case."
-                                                 ]
-               |]
+    arbDecl <- if isEnum
+                  then [d|instance Arbitrary $(pure typeCon) where
+                            arbitrary = arbitraryBoundedEnum
+                       |]
+                  else [d|instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
+                            arbitrary = error $ unlines [ ""
+                                                        , "*** Data.SBV: Cannot quickcheck the given property."
+                                                        , "***"
+                                                        , "*** Default arbitrary instance for " ++ TH.nameBase typeName ++ " is too limited."
+                                                        , "***"
+                                                        , "*** You can overcome this by giving your own Arbitrary instance."
+                                                        , "*** Please get in touch if this workaround is not suitable for your case."
+                                                        ]
+                      |]
 
     -- Declare constructors
     let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
@@ -413,62 +340,108 @@ mkADT typeName params cstrs = do
     testerDecls <- mkTesters sType inSymValContext cstrs
 
     -- Get the case analyzer
-    (caseSig, caseFun) <- mkCaseAnalyzer typeName params cstrs
+    caseSigFuns <- mkCaseAnalyzer adtKind typeName params cstrs
 
-    -- Get the induction schema, upto 5 extra args.
-    indDecs <- mapM (mkInductionSchema typeName params cstrs) [0 .. 5]
+    -- Get the induction schema, upto 5 extra args. Only for enums and adts
+    indDecs <- do let schemas = mapM (mkInductionSchema typeName params cstrs) [0 .. 5]
+                  case adtKind of
+                    ADTUninterpreted -> pure []
+                    ADTEnum          -> schemas
+                    ADTFull          -> schemas
+
+    -- If this is an enumeration get EnumSymbolic and OrSymbolic instances
+    symEnum <- case adtKind of
+                ADTUninterpreted -> pure []
+                ADTFull          -> pure []
+                ADTEnum          -> [d| instance SatModel $(TH.conT typeName) where
+                                          parseCVs (CV _ (CADT (s, [])) : r)
+                                            | Just v <- s `lookup` [(show m, m) | m <- [minBound .. maxBound]]
+                                            = Just (v, r)
+                                          parseCVs _                         = Nothing
+
+                                        instance SL.EnumSymbolic $(TH.conT typeName) where
+                                          succ     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts (drop 1 elts))
+                                          pred     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip (drop 1 elts) elts)
+
+                                          toEnum   x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip [0..] elts)
+                                          fromEnum x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts [0..])
+
+                                          enumFrom n = SL.map SL.toEnum (SL.enumFromTo (SL.fromEnum n) (SL.fromEnum (literal (maxBound :: $(TH.conT typeName)))))
+
+                                          enumFromThen = smtFunction ("EnumSymbolic." ++ TH.nameBase typeName ++ ".enumFromThen") $ \n1 n2 ->
+                                                                     let i_n1, i_n2 :: SInteger
+                                                                         i_n1 = SL.fromEnum n1
+                                                                         i_n2 = SL.fromEnum n2
+                                                                     in SL.map SL.toEnum (ite (i_n2 .>= i_n1)
+                                                                                              (SL.enumFromThenTo i_n1 i_n2 (SL.fromEnum (literal (maxBound :: $(TH.conT typeName)))))
+                                                                                              (SL.enumFromThenTo i_n1 i_n2 (SL.fromEnum (literal (minBound :: $(TH.conT typeName))))))
+
+                                          enumFromTo     n m   = SL.map SL.toEnum (SL.enumFromTo     (SL.fromEnum n) (SL.fromEnum m))
+
+                                          enumFromThenTo n m t = SL.map SL.toEnum (SL.enumFromThenTo (SL.fromEnum n) (SL.fromEnum m) (SL.fromEnum t))
+
+                                        instance OrdSymbolic (SBV $(TH.conT typeName)) where
+                                          SBV a .<  SBV b = SBV (a `svLessThan`    b)
+                                          SBV a .<= SBV b = SBV (a `svLessEq`      b)
+                                          SBV a .>  SBV b = SBV (a `svGreaterThan` b)
+                                          SBV a .>= SBV b = SBV (a `svGreaterEq`   b)
+                                    |]
 
     pure $  [tdecl, symVal, kindDecl]
          ++ arbDecl
          ++ concat cdecls
          ++ testerDecls
          ++ concat accessorDecls
+         ++ symEnum
          ++ [fromCVSig, fromCVFun]
-         ++ [caseSig, caseFun]
+         ++ caseSigFuns
          ++ concat indDecs
 
 -- | Make a case analyzer for the type. Works for ADTs and enums. Returns sig and defn
-mkCaseAnalyzer :: TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q (TH.Dec, TH.Dec)
-mkCaseAnalyzer typeName params cstrs = do
-        let typeCon = saturate (TH.ConT typeName) params
-            sType   = mkSBV typeCon
+mkCaseAnalyzer :: ADTKind -> TH.Name -> [TH.Name] -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
+mkCaseAnalyzer kind typeName params cstrs = case kind of
+                                              ADTUninterpreted -> pure [] -- no case analyzer for fully uninterpreted types
+                                              ADTEnum          -> mk
+                                              ADTFull          -> mk
+  where mk = do let typeCon = saturate (TH.ConT typeName) params
+                    sType   = mkSBV typeCon
 
-            bnm = TH.nameBase typeName
-            cnm = TH.mkName $ "sCase" ++ bnm
+                    bnm = TH.nameBase typeName
+                    cnm = TH.mkName $ "sCase" ++ bnm
 
-        se   <- TH.newName ('s' : bnm)
-        fs   <- mapM (\(nm, _) -> TH.newName ('f' : TH.nameBase nm)) cstrs
-        res  <- TH.newName "result"
+                se   <- TH.newName ('s' : bnm)
+                fs   <- mapM (\(nm, _) -> TH.newName ('f' : TH.nameBase nm)) cstrs
+                res  <- TH.newName "result"
 
-        let def = TH.FunD cnm [TH.Clause (map TH.VarP (se : fs)) (TH.NormalB (iteChain (zipWith (mkCase se) fs cstrs))) []]
+                let def = TH.FunD cnm [TH.Clause (map TH.VarP (se : fs)) (TH.NormalB (iteChain (zipWith (mkCase se) fs cstrs))) []]
 
-            iteChain :: [(TH.Exp, TH.Exp)] -> TH.Exp
-            iteChain []       = error $ unlines [ "Data.SBV.mkADT: Impossible happened!"
-                                                , ""
-                                                , "   Received an empty list for: " ++ show typeName
-                                                , ""
-                                                , "While building the case-analyzer."
-                                                , "Please report this as a bug."
-                                                ]
-            iteChain [(_, l)]        = l
-            iteChain ((t, e) : rest) = foldl TH.AppE (TH.VarE 'ite) [TH.AppE t (TH.VarE se), e, iteChain rest]
+                    iteChain :: [(TH.Exp, TH.Exp)] -> TH.Exp
+                    iteChain []       = error $ unlines [ "Data.SBV.mkADT: Impossible happened!"
+                                                        , ""
+                                                        , "   Received an empty list for: " ++ show typeName
+                                                        , ""
+                                                        , "While building the case-analyzer."
+                                                        , "Please report this as a bug."
+                                                        ]
+                    iteChain [(_, l)]        = l
+                    iteChain ((t, e) : rest) = foldl TH.AppE (TH.VarE 'ite) [TH.AppE t (TH.VarE se), e, iteChain rest]
 
-            mkCase :: TH.Name -> TH.Name -> (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> (TH.Exp, TH.Exp)
-            mkCase cexpr func (c, fields) = (TH.VarE (TH.mkName ("is" ++ TH.nameBase c)), foldl TH.AppE (TH.VarE func) args)
-               where getters = [TH.mkName ("get" ++ TH.nameBase c ++ "_" ++ show i) | (i, _) <- zip [(1 :: Int) ..] fields]
-                     args    = map (\g -> TH.AppE (TH.VarE g) (TH.VarE cexpr)) getters
+                    mkCase :: TH.Name -> TH.Name -> (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> (TH.Exp, TH.Exp)
+                    mkCase cexpr func (c, fields) = (TH.VarE (TH.mkName ("is" ++ TH.nameBase c)), foldl TH.AppE (TH.VarE func) args)
+                       where getters = [TH.mkName ("get" ++ TH.nameBase c ++ "_" ++ show i) | (i, _) <- zip [(1 :: Int) ..] fields]
+                             args    = map (\g -> TH.AppE (TH.VarE g) (TH.VarE cexpr)) getters
 
-            rvar   = TH.VarT res
-            mkFun  = foldr (TH.AppT . TH.AppT TH.ArrowT) rvar
-            fTypes = [mkFun (map (mkSBV . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
-            sig    = TH.SigD cnm (TH.ForallT []
-                                             (TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)
-                                             : [TH.AppT (TH.ConT ''SymVal) (TH.VarT p) | p <- params]
-                                             )
-                                             (mkFun (sType : fTypes)))
+                    rvar   = TH.VarT res
+                    mkFun  = foldr (TH.AppT . TH.AppT TH.ArrowT) rvar
+                    fTypes = [mkFun (map (mkSBV . (\(_, t, _) -> t)) ftks) | (_, ftks) <- cstrs]
+                    sig    = TH.SigD cnm (TH.ForallT []
+                                                     (TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)
+                                                     : [TH.AppT (TH.ConT ''SymVal) (TH.VarT p) | p <- params]
+                                                     )
+                                                     (mkFun (sType : fTypes)))
 
-        addDoc ("Case analyzer for the type " ++ bnm ++ ".") cnm
-        pure (sig, def)
+                addDoc ("Case analyzer for the type " ++ bnm ++ ".") cnm
+                pure [sig, def]
 
 -- | Declare testers
 mkTesters :: TH.Type -> (TH.Type -> TH.Type) -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
@@ -493,18 +466,20 @@ unmod :: TH.Name -> String
 unmod = reverse . takeWhile (/= '.') . reverse . show
 
 -- | Given a type name, determine what kind of a data-type it is.
-dissect :: TH.Name -> TH.Q ADT
+dissect :: TH.Name -> TH.Q (ADTKind, [TH.Name], [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])])
 dissect typeName = do
         (args, tcs) <- getConstructors typeName
 
         let mk n (mbfn, t) = do k <- expandSyns t >>= toSBV typeName n
                                 pure (mbfn, t, k)
 
-        cs  <- mapM (\(n, ts) -> (n,) <$> mapM (mk n) ts) tcs
+        cs <- mapM (\(n, ts) -> (n,) <$> mapM (mk n) ts) tcs
 
-        pure $ if null args && all (null . snd) cs
-               then ADTEnum (map fst cs)
-               else ADTFull args cs
+        let k | null cs             = ADTUninterpreted
+              | all (null . snd) cs = ADTEnum
+              | True                = ADTFull
+
+        pure (k, args, cs)
 
 bad :: MonadFail m => String -> [String] -> m a
 bad what extras = fail $ unlines $ ("mkSymbolic: " ++ what) : map ("      " ++) extras

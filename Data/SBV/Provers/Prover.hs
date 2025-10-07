@@ -29,7 +29,7 @@ module Data.SBV.Provers.Prover (
        , SExecutable(..), isSafe
        , runSMT, runSMTWith
        , SatModel(..), Modelable(..), displayModels, extractModels
-       , getModelDictionaries, getModelValues, getModelUninterpretedValues
+       , getModelDictionaries, getModelValues
        , abc, boolector, bitwuzla, cvc4, cvc5, dReal, mathSAT, yices, z3, openSMT, defaultSMTCfg, defaultDeltaSMTCfg
        , proveWithAny, proveWithAll, proveConcurrentWithAny, proveConcurrentWithAll
        , satWithAny,   satWithAll,   satConcurrentWithAny,   satConcurrentWithAll

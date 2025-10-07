@@ -36,7 +36,7 @@ import Data.SBV
 
 -- | U2 band members.
 data U2Member = Bono | Edge | Adam | Larry
-              deriving (Enum, Bounded, Eq, Ord)
+              deriving (Show, Enum, Bounded, Eq, Ord)
 
 -- | Make 'U2Member' a symbolic value.
 mkSymbolic [''U2Member]
@@ -63,7 +63,7 @@ sCrossTime m =   ite (m .== sBono) (literal (crossTime Bono))
 
 -- | Location of the flash
 data Location = Here | There
-              deriving (Enum, Bounded)
+              deriving (Show, Enum, Bounded)
 
 -- | Make 'Location' a symbolic value.
 mkSymbolic [''Location]
@@ -197,9 +197,12 @@ run = mapM step
 -- | Check if a given sequence of actions is valid, i.e., they must all
 -- cross the bridge according to the rules and in less than 17 seconds
 isValid :: Actions -> SBool
-isValid as = time end .<= 17 .&& sAll check as .&& zigZag (cycle [sThere, sHere]) (map flash states) .&& sAll (.== sThere) [lBono end, lEdge end, lAdam end, lLarry end]
-  where check (s, p1, p2) =   (sNot s .=> p1 .> p2)       -- for two person moves, ensure first person is "larger"
-                          .&& (s      .=> p2 .== sBono)   -- for one person moves, ensure second person is always "bono"
+isValid as =   time end .<= 17
+           .&& sAll check as
+           .&& zigZag (cycle [sThere, sHere]) (map flash states)
+           .&& sAll (.== sThere) [lBono end, lEdge end, lAdam end, lLarry end]
+  where check (s, p1, p2) =   (sNot s .=> p1 .>  p2)    -- for two person moves, ensure first person is "larger"
+                          .&& (s      .=> p2 .== sBono) -- for one person moves, ensure second person is always "bono"
         states = evalState (run as) start
         end = last states
         zigZag reqs locs = sAnd $ zipWith (.==) locs reqs

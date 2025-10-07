@@ -134,7 +134,7 @@ module Data.SBV.Trans (
 
   -- ** Programmable model extraction
   , SatModel(..), Modelable(..), displayModels, extractModels
-  , getModelDictionaries, getModelValues, getModelUninterpretedValues
+  , getModelDictionaries, getModelValues
 
   -- * SMT Interface
   , SMTConfig(..), Timing(..), SMTLibVersion(..), Solver(..), SMTSolver(..)

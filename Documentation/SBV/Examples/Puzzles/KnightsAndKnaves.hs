@@ -32,13 +32,13 @@ mkSymbolic [''Inhabitant]
 
 -- | Each inhabitant is either a knave or a knight
 data Identity = Knave | Knight
-              deriving (Enum, Bounded)
+              deriving (Show, Enum, Bounded)
 
 mkSymbolic [''Identity]
 
 -- | Statements are utterances which are either true or false
 data Statement = Truth | Falsity
-               deriving (Enum, Bounded)
+               deriving (Show, Enum, Bounded)
 
 mkSymbolic [''Statement]
 

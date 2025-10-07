@@ -22,7 +22,7 @@ module Data.SBV.Trans.Control (
 
      -- * Querying the solver
      -- ** Extracting values
-     , getValue, getFunction, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
+     , getValue, getFunction, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
 
      -- ** Extracting the unsat core
      , getUnsatCore

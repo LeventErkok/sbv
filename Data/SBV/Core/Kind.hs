@@ -32,6 +32,7 @@ module Data.SBV.Core.Kind (
         , showBaseKind, needsFlattening
         , eqCheckIsObjectEq, containsFloats, isSomeKindOfFloat, expandKinds
         , substituteADTVars
+        , kRoundingMode
         ) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, tyconUQname)
@@ -124,9 +125,7 @@ substituteADTVars dict = G.transform sub
           | True                      = error $ "Data.SBV.ADT: Kind find variable in param subst: " ++ show (v, dict)
         sub k = k
 
--- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
--- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
--- the reserved names; see 'constructUKind' for details.
+-- | The interesting about the show instance is that it can tell apart two kinds nicely. Otherwise the string produced isn't parsed back.
 instance Show Kind where
   show (KVar s)           = s
   show KBool              = "SBool"

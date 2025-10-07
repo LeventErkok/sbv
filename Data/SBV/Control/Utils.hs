@@ -28,7 +28,7 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getFunction, getUninterpretedValue
+     , ask, send, getValue, getFunction
      , getValueCV, getUICVal, getUIFunCVAssoc, getUnsatAssumptions
      , SMTFunction(..), getQueryState, modifyQueryState, getConfig, getObjectives, getUIs
      , getSBVAssertions, getSBVPgm, getObservables
@@ -38,7 +38,7 @@ module Data.SBV.Control.Utils (
      , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
      ) where
 
-import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf, isSuffixOf)
+import Data.List  (sortBy, sortOn, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf, isSuffixOf)
 
 import Data.Char      (isPunctuation, isSpace, isDigit)
 import Data.Function  (on)
@@ -94,7 +94,6 @@ import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.SMTLib2 (setSMTOption)
 import Data.SBV.SMT.Utils   ( showTimeoutValue, addAnnotations, alignPlain, debug
                             , mergeSExpr, SBVException(..), recordTranscript, TranscriptMsg(..)
-                            , witnessName
                             )
 
 import Data.SBV.Utils.ExtractIO
@@ -847,30 +846,6 @@ getFunction f = do ((nm, args), isCurried) <- smtFunName f
           sexprPoint si (as, v) = do mbA <- sexprToArg f as
                                      pure $ (,) <$> mbA <*> sexprToVal si v
 
--- | Generalization of 'Data.SBV.Control.getUninterpretedValue'
-getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
-getUninterpretedValue s =
-        case kindOf s of
-          KUserSort _ Nothing -> do sv <- inNewContext (`sbvToSV` s)
-
-                                    let nm  = show sv
-                                        cmd = "(get-value (" ++ nm ++ "))"
-                                        bad = unexpected "getValue" cmd "a model value" Nothing
-
-                                    r <- ask cmd
-
-                                    parse r bad $ \case EApp [EApp [ECon o,  ECon v]] | o == show sv -> return v
-                                                        _                                            -> bad r Nothing
-
-          k                   -> error $ unlines [""
-                                                 , "*** SBV.getUninterpretedValue: Called on an 'interpreted' kind"
-                                                 , "*** "
-                                                 , "***    Kind: " ++ show k
-                                                 , "***    Hint: Use 'getValue' to extract value for interpreted kinds."
-                                                 , "*** "
-                                                 , "*** Only truly uninterpreted sorts should be used with 'getUninterpretedValue.'"
-                                                 ]
-
 -- | Get the value of a term, but in CV form. Used internally. The model-index, in particular is extremely Z3 specific!
 getValueCVHelper :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV
 getValueCVHelper mbi s
@@ -890,9 +865,6 @@ defaultKindedValue k = CV k $ cvt k
         cvt KBounded{}       = CInteger 0
         cvt KUnbounded       = CInteger 0
         cvt KReal            = CAlgReal 0
-        cvt (KUserSort s ui) = uninterp s ui
-        cvt (KApp s _)       = error ("defaultKindedValue not supported for ADT app: " ++ s) -- tough luck
-        cvt (KADT s _ _)     = error ("defaultKindedValue not supported for ADT: "     ++ s) -- tough luck
         cvt KFloat           = CFloat 0
         cvt KDouble          = CDouble 0
         cvt KRational        = CRational 0
@@ -906,12 +878,12 @@ defaultKindedValue k = CV k $ cvt k
         cvt (KEither k1 _)   = CEither . Left $ cvt k1     -- why not?
         cvt (KArray  _  k2)  = CArray $ ArrayModel [] (cvt k2)
 
-        -- Tricky case of uninterpreted
-        uninterp _ (Just (c:_)) = CUserSort (Just 0, c)
-        uninterp _ (Just [])    = error "defaultKindedValue: enumerated kind with no constructors!"
+        cvt (KApp s _)       = error ("defaultKindedValue not supported for ADT app: " ++ s) -- tough luck
 
-        -- A completely uninterpreted sort, i.e., no elements. Return the witness element for it.
-        uninterp s Nothing      = CUserSort (Nothing, witnessName s)
+        -- For ADTs, just return the first element if there's any
+        cvt (KADT s _ cstrs) = case cstrs of
+                                 []            -> error ("defaultKindedValue not supported for ADT: "     ++ s) -- tough luck
+                                 ((c, ks) : _) -> CADT (c, [(k, cvt fk) | fk <- ks])
 
 -- | Go from an SExpr directly to a value
 sexprToVal :: forall a. SymVal a => SInfo -> SExpr -> Maybe a
@@ -949,9 +921,6 @@ recoverKindedValue si k e =
                   | EReal i        <- e   -> Just $ CV KReal (CAlgReal i)
                   | True                  -> interpretInterval e
 
-      KUserSort{} | ECon s <- e           -> Just $ CV k $ CUserSort (getUIIndex k s, simplifyECon s)
-                  | True                  -> Nothing
-
       KADT nm dict def                    -> let k' = KADT nm dict [(c, map (substituteADTVars dict) ks) | (c, ks) <- def]
                                              in Just $ CV k' $ CADT $ interpretADT k' e
 
@@ -983,10 +952,7 @@ recoverKindedValue si k e =
       KEither{}                           -> Just $ CV k $ CEither   $ interpretEither   k     e
       KArray k1 k2                        -> Just $ CV k $ CArray    $ interpretArray    k1 k2 e
 
-  where getUIIndex (KUserSort  _ (Just xs)) i = i `elemIndex` xs
-        getUIIndex _                        _ = Nothing
-
-        stringLike xs = length xs >= 2 && "\"" `isPrefixOf` xs && "\"" `isSuffixOf` xs
+  where stringLike xs = length xs >= 2 && "\"" `isPrefixOf` xs && "\"" `isSuffixOf` xs
 
         -- Make sure strings are really strings
         interpretString xs
@@ -1410,7 +1376,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                              Nothing   -> return ()
                              Just cmds -> mapM_ (send True) cmds
 
-                     let usorts = [s | us@(KUserSort s _) <- Set.toAscList ki, isFree us]
+                     let usorts = [s | us@(KADT s _ _) <- Set.toAscList ki, isUninterpreted us]
 
                      unless (null usorts) $ queryDebug [ "*** SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
                                                        , "***             SBV will use equivalence classes to generate all-satisfying instances."
@@ -1472,10 +1438,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                 fastAllSat                                        allModelInputs (uiVars S.>< extractVars) (uiVars S.>< vars) cfg start
                         else    loop       topState (allUiFuns, uiFuns) allUiRegs allModelInputs                                        vars  cfg start
 
-   where isFree (KUserSort _ Nothing) = True
-         isFree _                     = False
-
-         finalize cnt cfg sofar extra
+   where finalize cnt cfg sofar extra
                 = when (allSatPrintAlong cfg && not (null (allSatResults sofar))) $ do
                            let msg 0 = "No solutions found."
                                msg 1 = "This is the only solution."
@@ -1665,9 +1628,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                             }
                                            m = Satisfiable cfg model
 
-                                           (interpreteds, uninterpreteds) = S.partition (not . isFree . kindOf . fst) (fmap (snd . snd) assocs)
+                                           (interpreteds, uninterpreteds) = S.partition (not . isUninterpreted . kindOf . fst) (fmap (snd . snd) assocs)
 
-                                           interpretedRegUis = filter (not . isFree . kindOf . snd) uiRegVals
+                                           interpretedRegUis = filter (not . isUninterpreted . kindOf . snd) uiRegVals
 
                                            interpretedRegUiSVs = [(cvt n (kindOf cv), cv) | (n, cv) <- interpretedRegUis]
                                              where cvt :: String -> Kind -> SVal

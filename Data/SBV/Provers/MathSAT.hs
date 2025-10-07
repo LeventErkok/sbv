@@ -31,26 +31,26 @@ mathSAT = SMTSolver {
          , options      = modConfig ["-input=smt2", "-theory.fp.minmax_zero_mode=4"]
          , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS"
          , capabilities = SolverCapabilities {
-                                supportsQuantifiers        = True
-                              , supportsDefineFun          = True
-                              , supportsDistinct           = True
-                              , supportsBitVectors         = True
-                              , supportsUninterpretedSorts = True
-                              , supportsUnboundedInts      = True
-                              , supportsReals              = True
-                              , supportsApproxReals        = False
-                              , supportsDeltaSat           = Nothing
-                              , supportsIEEE754            = True
-                              , supportsSets               = False
-                              , supportsOptimization       = False
-                              , supportsPseudoBooleans     = False
-                              , supportsCustomQueries      = True
-                              , supportsGlobalDecls        = True
-                              , supportsDataTypes          = True
-                              , supportsLambdas            = False
-                              , supportsSpecialRels        = False
-                              , supportsDirectAccessors    = True
-                              , supportsFlattenedModels    = Nothing
+                                supportsQuantifiers     = True
+                              , supportsDefineFun       = True
+                              , supportsDistinct        = True
+                              , supportsBitVectors      = True
+                              , supportsADTs            = True
+                              , supportsUnboundedInts   = True
+                              , supportsReals           = True
+                              , supportsApproxReals     = False
+                              , supportsDeltaSat        = Nothing
+                              , supportsIEEE754         = True
+                              , supportsSets            = False
+                              , supportsOptimization    = False
+                              , supportsPseudoBooleans  = False
+                              , supportsCustomQueries   = True
+                              , supportsGlobalDecls     = True
+                              , supportsDataTypes       = True
+                              , supportsLambdas         = False
+                              , supportsSpecialRels     = False
+                              , supportsDirectAccessors = True
+                              , supportsFlattenedModels = Nothing
                               }
          }
 

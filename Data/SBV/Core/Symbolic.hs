@@ -2163,26 +2163,26 @@ instance NFData SMTScript where
 
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {
-         supportsQuantifiers        :: Bool           -- ^ Supports SMT-Lib2 style quantifiers?
-       , supportsDefineFun          :: Bool           -- ^ Supports define-fun construct?
-       , supportsDistinct           :: Bool           -- ^ Supports calls to distinct?
-       , supportsBitVectors         :: Bool           -- ^ Supports bit-vectors?
-       , supportsUninterpretedSorts :: Bool           -- ^ Supports SMT-Lib2 style uninterpreted-sorts
-       , supportsUnboundedInts      :: Bool           -- ^ Supports unbounded integers?
-       , supportsReals              :: Bool           -- ^ Supports reals?
-       , supportsApproxReals        :: Bool           -- ^ Supports printing of approximations of reals?
-       , supportsDeltaSat           :: Maybe String   -- ^ Supports delta-satisfiability? (With given precision query)
-       , supportsIEEE754            :: Bool           -- ^ Supports floating point numbers?
-       , supportsSets               :: Bool           -- ^ Supports set operations?
-       , supportsOptimization       :: Bool           -- ^ Supports optimization routines?
-       , supportsPseudoBooleans     :: Bool           -- ^ Supports pseudo-boolean operations?
-       , supportsCustomQueries      :: Bool           -- ^ Supports interactive queries per SMT-Lib?
-       , supportsGlobalDecls        :: Bool           -- ^ Supports global declarations? (Needed for push-pop.)
-       , supportsDataTypes          :: Bool           -- ^ Supports datatypes?
-       , supportsLambdas            :: Bool           -- ^ Does it support lambdas?
-       , supportsSpecialRels        :: Bool           -- ^ Does it support special relations (orders, transitive closure etc.)
-       , supportsDirectAccessors    :: Bool           -- ^ Supports data-type accessors without full ascription?
-       , supportsFlattenedModels    :: Maybe [String] -- ^ Supports flattened model output? (With given config lines.)
+         supportsQuantifiers     :: Bool           -- ^ Supports SMT-Lib2 style quantifiers?
+       , supportsDefineFun       :: Bool           -- ^ Supports define-fun construct?
+       , supportsDistinct        :: Bool           -- ^ Supports calls to distinct?
+       , supportsBitVectors      :: Bool           -- ^ Supports bit-vectors?
+       , supportsADTs            :: Bool           -- ^ Supports SMT-Lib2 style uninterpreted-sorts and ADTs
+       , supportsUnboundedInts   :: Bool           -- ^ Supports unbounded integers?
+       , supportsReals           :: Bool           -- ^ Supports reals?
+       , supportsApproxReals     :: Bool           -- ^ Supports printing of approximations of reals?
+       , supportsDeltaSat        :: Maybe String   -- ^ Supports delta-satisfiability? (With given precision query)
+       , supportsIEEE754         :: Bool           -- ^ Supports floating point numbers?
+       , supportsSets            :: Bool           -- ^ Supports set operations?
+       , supportsOptimization    :: Bool           -- ^ Supports optimization routines?
+       , supportsPseudoBooleans  :: Bool           -- ^ Supports pseudo-boolean operations?
+       , supportsCustomQueries   :: Bool           -- ^ Supports interactive queries per SMT-Lib?
+       , supportsGlobalDecls     :: Bool           -- ^ Supports global declarations? (Needed for push-pop.)
+       , supportsDataTypes       :: Bool           -- ^ Supports datatypes?
+       , supportsLambdas         :: Bool           -- ^ Does it support lambdas?
+       , supportsSpecialRels     :: Bool           -- ^ Does it support special relations (orders, transitive closure etc.)
+       , supportsDirectAccessors :: Bool           -- ^ Supports data-type accessors without full ascription?
+       , supportsFlattenedModels :: Maybe [String] -- ^ Supports flattened model output? (With given config lines.)
        }
 
 -- | Solver configuration. See also 'Data.SBV.z3', 'Data.SBV.yices', 'Data.SBV.cvc4', 'Data.SBV.boolector', 'Data.SBV.mathSAT', etc.

@@ -110,7 +110,6 @@ data CVal = CAlgReal  !AlgReal                 -- ^ Algebraic real
           | CString   !String                  -- ^ String
           | CList     ![CVal]                  -- ^ List
           | CSet      !(RCSet CVal)            -- ^ Set. Can be regular or complemented.
-          | CUserSort !(Maybe Int, String)     -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
           | CADT      (String, [(Kind, CVal)]) -- ^ ADT: Constructor, and fields
           | CTuple    ![CVal]                  -- ^ Tuple
           | CMaybe    !(Maybe CVal)            -- ^ Maybe
@@ -130,12 +129,11 @@ cvRank CChar     {} =  6
 cvRank CString   {} =  7
 cvRank CList     {} =  8
 cvRank CSet      {} =  9
-cvRank CUserSort {} = 10
-cvRank CADT      {} = 11
-cvRank CTuple    {} = 12
-cvRank CMaybe    {} = 13
-cvRank CEither   {} = 14
-cvRank CArray    {} = 15
+cvRank CADT      {} = 10
+cvRank CTuple    {} = 11
+cvRank CMaybe    {} = 12
+cvRank CEither   {} = 13
+cvRank CArray    {} = 14
 
 -- | Eq instance for CVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
@@ -151,7 +149,6 @@ instance Eq CVal where
   CString   a == CString   b = a == b
   CList     a == CList     b = a == b
   CSet      a == CSet      b = a `eqRCSet` b
-  CUserSort a == CUserSort b = a == b
   CTuple    a == CTuple    b = a == b
   CMaybe    a == CMaybe    b = a == b
   CEither   a == CEither   b = a == b
@@ -182,7 +179,6 @@ instance Ord CVal where
   CString   a `compare` CString   b = a `compare`                  b
   CList     a `compare` CList     b = a `compare`                  b
   CSet      a `compare` CSet      b = a `compareRCSet`             b
-  CUserSort a `compare` CUserSort b = a `compare`                  b
   CTuple    a `compare` CTuple    b = a `compare`                  b
   CMaybe    a `compare` CMaybe    b = a `compare`                  b
   CEither   a `compare` CEither   b = a `compare`                  b
@@ -336,7 +332,6 @@ mapCV r i f d af ra x  = normCV $ CV (kindOf x) $ case cvVal x of
                                                     CRational a -> CRational (ra a)
                                                     CChar{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with chars!"
                                                     CString{}   -> error "Data.SBV.mapCV: Unexpected call through mapCV with strings!"
-                                                    CUserSort{} -> error "Data.SBV.mapCV: Unexpected call through mapCV with uninterpreted sorts!"
                                                     CADT{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with ADTs!"
                                                     CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
                                                     CSet{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sets!"
@@ -362,7 +357,6 @@ mapCV2 r i f d af ra x y = case (cvSameType x y, cvVal x, cvVal y) of
                             (True, CRational a, CRational b) -> normCV $ CV (kindOf x) (CRational (ra a b))
                             (True, CChar{},     CChar{})     -> unexpected "chars!"
                             (True, CString{},   CString{})   -> unexpected "strings!"
-                            (True, CUserSort{}, CUserSort{}) -> unexpected "uninterpreted constants!"
                             (True, CList{},     CList{})     -> unexpected "lists!"
                             (True, CTuple{},    CTuple{})    -> unexpected "tuples!"
                             (True, CMaybe{},    CMaybe{})    -> unexpected "maybes!"
@@ -399,7 +393,6 @@ showCV shk w = sh (cvVal w) ++ kInfo
         sh (CRational v) = show  v
         sh (CChar     v) = show  v
         sh (CString   v) = show  v
-        sh (CUserSort v) = snd   v
         sh (CADT      c) = shADT c
         sh (CList     v) = shL   v
         sh (CSet      v) = shS   v

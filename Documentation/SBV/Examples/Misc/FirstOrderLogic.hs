@@ -46,7 +46,7 @@ mkSymbolic [''V]
 
 -- | An enumerated type for demo purposes, named 'E'
 data E = A | B | C
-       deriving (Enum, Bounded, Ord, Eq)
+       deriving (Show, Enum, Bounded, Ord, Eq)
 
 mkSymbolic [''E]
 

@@ -108,9 +108,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasChar        = KChar      `Set.member` kindInfo
         hasRounding    = any isRoundingMode allKinds
         hasBVs         = not (null [() | KBounded{} <- allKinds])
-        usorts         = [(s, dt) | KUserSort s dt <- allKinds]
         adts           = [(s, ps, k) | KADT s ps k <- allKinds]
-        trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi allTopOps]
         hasQuantBools  = (not . null) [() | QuantifiedBool{} <- G.universeBi allTopOps]
@@ -138,7 +136,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                           , ("unbounded integers",     supportsUnboundedInts,      hasInteger)
                           , ("algebraic reals",        supportsReals,              hasReal)
                           , ("floating-point numbers", supportsIEEE754,            hasFP)
-                          , ("uninterpreted sorts",    supportsUninterpretedSorts, not (null trueUSorts))
+                          , ("has data-types/sorts",   supportsADTs,               not (null adts))
                           ]
 
                  nope w = [ "***     Given problem requires support for " ++ w
@@ -192,7 +190,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
            | hasInteger            = setAll "has unbounded values"
            | hasRational           = setAll "has rational values"
            | hasReal               = setAll "has algebraic reals"
-           | not (null trueUSorts) = setAll "has user-defined sorts"
            | hasADTs               = setAll "has user-defined data-types"
            | hasNonBVArrays        = setAll "has non-bitvector arrays"
            | hasTuples             = setAll "has tuples"
@@ -475,7 +472,6 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
-            ++ concatMap declSort [(s, dt) | KUserSort s dt <- newKinds]
             ++ declADT [(s, pks, cs) | KADT s pks cs <- newKinds]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
@@ -790,11 +786,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         lift2Cmp o fo | fpOp = lift2 fo
                       | True = lift2 o
 
-        unintComp o [a, b]
-          | KUserSort s (Just _) <- kindOf (hd "unintComp" arguments)
-          = let idx v = "(" ++ s ++ "_constrIndex " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
-        unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs, map kindOf arguments)
-
         stringOrChar KString = True
         stringOrChar KChar   = True
         stringOrChar _       = False
@@ -847,7 +838,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                               KBool         -> (2::Integer) > fromIntegral l
                               KBounded _ n  -> (2::Integer)^n > fromIntegral l
                               KUnbounded    -> True
-                              KUserSort _ _ -> unexpected
                               KApp _ _      -> unexpected
                               KADT _ _ _    -> unexpected
                               KReal         -> unexpected
@@ -882,7 +872,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                 KFP{}         -> ("fp.lt", "fp.leq")
                                 KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                                KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                                 KApp  s _     -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT applied index: " ++ s
                                 KADT  s _ _   -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected ADT valued index: " ++ s
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
@@ -1049,25 +1038,16 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
           | Just f <- lookup op uninterpretedTable
           = f (map cvtSV args)
           | True
-          = if not (null args) && isUserSort (hd "isUserSort" args)
-            then error $ unlines [ ""
-                                 , "*** Cannot translate operator        : " ++ show op
-                                 , "*** When applied to arguments of kind: " ++ intercalate ", " (nub (map (show . kindOf) args))
-                                 , "*** Found as part of the expression  : " ++ show inp
-                                 , "***"
-                                 , "*** Note that uninterpreted kinds only support equality."
-                                 , "*** If you believe this is in error, please report!"
-                                 ]
-            else error $ unlines [ ""
-                                 , "*** SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
-                                 , "***"
-                                 , "*** Applied to arguments of type: " ++ intercalate ", " (nub (map (show . kindOf) args))
-                                 , "***"
-                                 , "*** This can happen if the Num instance isn't properly defined for a lifted kind."
-                                 , "*** (See https://github.com/LeventErkok/sbv/issues/698 for a discussion.)"
-                                 , "***"
-                                 , "*** If you believe this is in error, please report!"
-                                 ]
+          = error $ unlines [ ""
+                            , "*** SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
+                            , "***"
+                            , "*** Applied to arguments of type: " ++ intercalate ", " (nub (map (show . kindOf) args))
+                            , "***"
+                            , "*** This can happen if the Num instance isn't properly defined for a lifted kind."
+                            , "*** (See https://github.com/LeventErkok/sbv/issues/698 for a discussion.)"
+                            , "***"
+                            , "*** If you believe this is in error, please report!"
+                            ]
           where smtOpBVTable  = [ (Plus,          lift2   "bvadd")
                                 , (Minus,         lift2   "bvsub")
                                 , (Times,         lift2   "bvmul")
@@ -1134,10 +1114,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                 uninterpretedTable = [ (Equal True,  lift2S "="        "="        True)
                                      , (Equal False, lift2S "="        "="        True)
                                      , (NotEqual,    liftNS "distinct" "distinct" True)
-                                     , (LessThan,    unintComp "<")
-                                     , (GreaterThan, unintComp ">")
-                                     , (LessEq,      unintComp "<=")
-                                     , (GreaterEq,   unintComp ">=")
                                      ]
 
                 -- For strings, equality and comparisons are the only operators
@@ -1223,7 +1199,6 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         walk _d nm f k@KBounded  {}         = f k nm
         walk _d nm f k@KUnbounded{}         = f k nm
         walk _d nm f k@KReal     {}         = f k nm
-        walk _d nm f k@KUserSort {}         = f k nm
         walk _d nm f k@KApp      {}         = f k nm
         walk _d nm f k@KADT      {}         = f k nm
         walk _d nm f k@KFloat    {}         = f k nm

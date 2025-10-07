@@ -54,11 +54,11 @@ import Data.SBV
 
 -- | Months. We only put in the months involved in the puzzle for simplicity
 data Month = May | Jun | Jul | Aug
-           deriving (Enum, Bounded)
+           deriving (Show, Enum, Bounded)
 
 -- | Days. Again, only the ones mentioned in the puzzle.
 data Day = D14 | D15 | D16 | D17 | D18 | D19
-         deriving (Enum, Bounded)
+         deriving (Show, Enum, Bounded)
 
 mkSymbolic [''Month]
 mkSymbolic [''Day]

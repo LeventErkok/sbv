@@ -510,11 +510,6 @@ cCompare k op x y =
                                             (Left av,  Left  bv) -> cCompare kl op av bv
                                             (Right av, Right bv) -> cCompare kr op av bv
 
-      -- Uninterpreted sorts use the index
-      (CUserSort    a, CUserSort b) -> case (a, b) of
-                                         ((Just i, _), (Just j, _)) -> Just $ i `compare` j
-                                         _                          -> error $ "cCompare: Impossible happened while trying to compare: " ++ show (op, a, b)
-
       -- Lists and tuples use lexicographic ordering
       (CList        a, CList b) -> case k of
                                      KList ke -> lexCmp (map (ke,) a) (map (ke,) b)

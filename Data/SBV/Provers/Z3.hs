@@ -29,29 +29,29 @@ z3 = SMTSolver {
          , options      = modConfig ["-nw", "-in", "-smt2"]
          , engine       = standardEngine "SBV_Z3" "SBV_Z3_OPTIONS"
          , capabilities = SolverCapabilities {
-                                supportsQuantifiers        = True
-                              , supportsDefineFun          = True
-                              , supportsDistinct           = True
-                              , supportsBitVectors         = True
-                              , supportsUninterpretedSorts = True
-                              , supportsUnboundedInts      = True
-                              , supportsReals              = True
-                              , supportsApproxReals        = True
-                              , supportsDeltaSat           = Nothing
-                              , supportsIEEE754            = True
-                              , supportsSets               = True
-                              , supportsOptimization       = True
-                              , supportsPseudoBooleans     = True
-                              , supportsCustomQueries      = True
-                              , supportsGlobalDecls        = True
-                              , supportsDataTypes          = True
-                              , supportsLambdas            = True
-                              , supportsSpecialRels        = True
-                              , supportsDirectAccessors    = False -- Needs ascriptions. (See the CVC4 version of this)
-                              , supportsFlattenedModels    = Just [ "(set-option :pp.max_depth      4294967295)"
-                                                                  , "(set-option :pp.min_alias_size 4294967295)"
-                                                                  , "(set-option :model.inline_def  true      )"
-                                                                  ]
+                                supportsQuantifiers     = True
+                              , supportsDefineFun       = True
+                              , supportsDistinct        = True
+                              , supportsBitVectors      = True
+                              , supportsADTs            = True
+                              , supportsUnboundedInts   = True
+                              , supportsReals           = True
+                              , supportsApproxReals     = True
+                              , supportsDeltaSat        = Nothing
+                              , supportsIEEE754         = True
+                              , supportsSets            = True
+                              , supportsOptimization    = True
+                              , supportsPseudoBooleans  = True
+                              , supportsCustomQueries   = True
+                              , supportsGlobalDecls     = True
+                              , supportsDataTypes       = True
+                              , supportsLambdas         = True
+                              , supportsSpecialRels     = True
+                              , supportsDirectAccessors = False -- Needs ascriptions. (See the CVC4 version of this)
+                              , supportsFlattenedModels = Just [ "(set-option :pp.max_depth      4294967295)"
+                                                               , "(set-option :pp.min_alias_size 4294967295)"
+                                                               , "(set-option :model.inline_def  true      )"
+                                                               ]
                               }
          }
 

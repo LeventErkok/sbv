@@ -27,7 +27,7 @@ module Data.SBV.SMT.SMT (
          Modelable(..)
        , SatModel(..), genParse
        , extractModels, getModelValues
-       , getModelDictionaries, getModelUninterpretedValues
+       , getModelDictionaries
        , displayModels, showModel, shCV, showModelDictionary
 
        -- * Standard prover engine
@@ -408,14 +408,6 @@ class Modelable a where
   getModelValue :: SymVal b => String -> a -> Maybe b
   getModelValue v r = fromCV `fmap` (v `M.lookup` getModelDictionary r)
 
-  -- | Extract a representative name for the model value of an uninterpreted kind.
-  -- This is supposed to correspond to the value as computed internally by the
-  -- SMT solver; and is unportable from solver to solver. Also see `getModelUninterpretedValues`.
-  getModelUninterpretedValue :: String -> a -> Maybe String
-  getModelUninterpretedValue v r = case v `M.lookup` getModelDictionary r of
-                                     Just (CV _ (CUserSort (_, s))) -> Just s
-                                     _                              -> Nothing
-
   -- | A simpler variant of 'getModelAssignment' to get a model out without the fuss.
   extractModel :: SatModel b => a -> Maybe b
   extractModel a = case getModelAssignment a of
@@ -448,10 +440,6 @@ getModelDictionaries AllSatResult{allSatResults = xs} = map getModelDictionary x
 -- | Extract value of a variable from an all-sat call. Similar to `getModelValue`.
 getModelValues :: SymVal b => String -> AllSatResult -> [Maybe b]
 getModelValues s AllSatResult{allSatResults = xs} =  map (s `getModelValue`) xs
-
--- | Extract value of an uninterpreted variable from an all-sat call. Similar to `getModelUninterpretedValue`.
-getModelUninterpretedValues :: String -> AllSatResult -> [Maybe String]
-getModelUninterpretedValues s AllSatResult{allSatResults = xs} =  map (s `getModelUninterpretedValue`) xs
 
 -- | t'ThmResult' as a generic model provider
 instance Modelable ThmResult where

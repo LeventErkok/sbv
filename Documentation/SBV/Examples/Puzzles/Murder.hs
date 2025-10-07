@@ -40,15 +40,15 @@ import Data.SBV.Control
 
 -- | Locations
 data Location = Bar | Beach | Alone
-              deriving (Enum, Bounded)
+              deriving (Show, Enum, Bounded)
 
 -- | Sexes
 data Sex  = Male | Female
-          deriving (Enum, Bounded)
+          deriving (Show, Enum, Bounded)
 
 -- | Roles
 data Role = Victim | Killer | Bystander
-          deriving (Enum, Bounded)
+          deriving (Show, Enum, Bounded)
 
 mkSymbolic [''Location]
 mkSymbolic [''Sex]

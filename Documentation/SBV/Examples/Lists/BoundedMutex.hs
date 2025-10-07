@@ -30,7 +30,7 @@ import Data.SBV.Control
 data State = Idle     -- ^ Regular work
            | Ready    -- ^ Intention to enter critical state
            | Critical -- ^ In the critical state
-           deriving (Enum, Bounded)
+           deriving (Show, Enum, Bounded)
 
 -- | Make 'State' a symbolic enumeration
 mkSymbolic [''State]

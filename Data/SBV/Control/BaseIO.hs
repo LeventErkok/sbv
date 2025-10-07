@@ -20,7 +20,7 @@ module Data.SBV.Control.BaseIO where
 import Data.SBV.Control.Query (Assignment)
 import Data.SBV.Control.Types (CheckSatResult, SMTInfoFlag, SMTInfoResponse, SMTOption, SMTReasonUnknown)
 import Data.SBV.Core.Concrete (CV)
-import Data.SBV.Core.Data     (HasKind, Symbolic, SymVal, SBool, SBV, SBVType)
+import Data.SBV.Core.Data     (Symbolic, SymVal, SBool, SBV, SBVType)
 import Data.SBV.Core.Symbolic (Query, QueryContext, QueryState, State, SMTModel, SMTResult, SV, Name)
 
 import qualified Data.SBV.Control.Query as Trans
@@ -435,12 +435,6 @@ retrieveResponse = Trans.retrieveResponse
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getValue'
 getValue :: SymVal a => SBV a -> Query a
 getValue = Trans.getValue
-
--- | Get the value of an uninterpreted sort, as a String
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getUninterpretedValue'
-getUninterpretedValue :: HasKind a => SBV a -> Query String
-getUninterpretedValue = Trans.getUninterpretedValue
 
 -- | Get the value of an uninterpreted function, as a list of domain, value pairs.
 -- The final value is the "else" clause, i.e., what the function maps values outside
