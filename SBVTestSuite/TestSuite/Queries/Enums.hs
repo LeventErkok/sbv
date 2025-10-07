@@ -25,7 +25,7 @@ import Data.SBV.Control
 
 import Utils.SBVTestFramework
 
-data BinOp  = Plus | Minus | Times deriving (Enum, Bounded, Ord, Eq)
+data BinOp  = Plus | Minus | Times deriving (Show, Enum, Bounded, Ord, Eq)
 mkSymbolic [''BinOp]
 
 -- Test suite
