@@ -1131,6 +1131,10 @@ recoverKindedValue si k e =
 
         interpretADT :: Kind -> SExpr -> (String, [(Kind, CVal)])
         interpretADT adtK@(KADT _ _ cks) expr
+           | isUninterpreted adtK
+           = case expr of
+               ECon s -> (simplifyECon s, [])
+               _      -> bad ["Unexpected expression value for uninterpreted kind."]
            | Just ks <- cstr `lookup` cks
            = if length fs == length ks
              then (cstr, zipWith convert (zip [1..] ks) fs)
