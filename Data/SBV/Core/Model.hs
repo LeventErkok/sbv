@@ -41,6 +41,8 @@ module Data.SBV.Core.Model (
   , sWord, sWord_, sWords, sInt, sInt_, sInts
   , sFPHalf, sFPHalf_, sFPHalfs, sFPBFloat, sFPBFloat_, sFPBFloats, sFPSingle, sFPSingle_, sFPSingles, sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads, sArray, sArray_, sArrays
   , sFloatingPoint, sFloatingPoint_, sFloatingPoints
+  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
+  , sRNE, sRNA, sRTP, sRTN, sRTZ
   , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
   , sRational, sRational_, sRationals
   , SymTuple, sTuple, sTuple_, sTuples
@@ -111,7 +113,7 @@ import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 import Data.SBV.Core.Kind
 import Data.SBV.Lambda
-import Data.SBV.Utils.ExtractIO(ExtractIO)
+import Data.SBV.Utils.ExtractIO (ExtractIO)
 
 import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), defs2smt, prove)
 import Data.SBV.SMT.SMT        (ThmResult, showModel)
@@ -245,6 +247,55 @@ instance SymVal Double where
   -- this function is used for optimizations when only one of the argument is concrete,
   -- and in the presence of NaN's it would be incorrect to do any optimization
   isConcretely _ _ = False
+
+instance SymVal RoundingMode where
+  literal s = SBV $ SVal kRoundingMode $ Left $ CV kRoundingMode $ CADT (show s, [])
+  fromCV (CV k (CADT (s, [])))
+    | k == kRoundingMode
+    , Just mode <- s `lookup` [(show m, m) | m <- [minBound .. maxBound :: RoundingMode]]
+    = mode
+  fromCV c = error $ "SymVal.RoundingMode: Unexpected non-rounding mode value: " ++ show c
+
+-- | Symbolic variant of 'RoundNearestTiesToEven'
+sRoundNearestTiesToEven :: SRoundingMode
+sRoundNearestTiesToEven = literal RoundNearestTiesToEven
+
+-- | Symbolic variant of 'RoundNearestTiesToAway'
+sRoundNearestTiesToAway :: SRoundingMode
+sRoundNearestTiesToAway = literal RoundNearestTiesToAway
+
+-- | Symbolic variant of 'RoundTowardPositive'
+sRoundTowardPositive :: SRoundingMode
+sRoundTowardPositive = literal RoundTowardPositive
+
+-- | Symbolic variant of 'RoundTowardNegative'
+sRoundTowardNegative :: SRoundingMode
+sRoundTowardNegative = literal RoundTowardNegative
+
+-- | Symbolic variant of 'RoundTowardZero'
+sRoundTowardZero :: SRoundingMode
+sRoundTowardZero = literal RoundTowardZero
+
+-- | Alias for 'sRoundNearestTiesToEven'
+sRNE :: SRoundingMode
+sRNE = sRoundNearestTiesToEven
+
+-- | Alias for 'sRoundNearestTiesToAway'
+sRNA :: SRoundingMode
+sRNA = sRoundNearestTiesToAway
+
+-- | Alias for 'sRoundTowardPositive'
+sRTP :: SRoundingMode
+sRTP = sRoundTowardPositive
+
+-- | Alias for 'sRoundTowardNegative'
+sRTN :: SRoundingMode
+sRTN = sRoundTowardNegative
+
+-- | Alias for 'sRoundTowardZero'
+sRTZ :: SRoundingMode
+sRTZ = sRoundTowardZero
+
 
 instance SymVal Char where
   mkSymVal                = genMkSymVar KChar

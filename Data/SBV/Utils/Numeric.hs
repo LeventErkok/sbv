@@ -16,12 +16,15 @@
 module Data.SBV.Utils.Numeric (
            fpMaxH, fpMinH, fp2fp, fpRemH, fpRoundToIntegralH, fpIsEqualObjectH, fpCompareObjectH, fpIsNormalizedH
          , floatToWord, wordToFloat, doubleToWord, wordToDouble
+         , RoundingMode(..), smtRoundingMode
          ) where
 
 import Data.Word
 import Data.Array.ST     (newArray, readArray, MArray, STUArray)
 import Data.Array.Unsafe (castSTUArray)
 import GHC.ST            (runST, ST)
+
+import Test.QuickCheck  (Arbitrary(..), elements)
 
 -- | The SMT-Lib (in particular Z3) implementation for min/max for floats does not agree with
 -- Haskell's; and also it does not agree with what the hardware does. Sigh.. See:
@@ -152,3 +155,30 @@ wordToDouble x = runST (cast x)
 {-# INLINE cast #-}
 cast :: (MArray (STUArray s) a (ST s), MArray (STUArray s) b (ST s)) => a -> ST s b
 cast x = newArray (0 :: Int, 0) x >>= castSTUArray >>= flip readArray 0
+
+-- | Rounding mode to be used for the IEEE floating-point operations.
+-- Note that Haskell's default is 'RoundNearestTiesToEven'. If you use
+-- a different rounding mode, then the counter-examples you get may not
+-- match what you observe in Haskell.
+data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable floating point value.
+                                            -- If precisely at half-way, pick the even number.
+                                            -- (In this context, /even/ means the lowest-order bit is zero.)
+                  | RoundNearestTiesToAway  -- ^ Round to nearest representable floating point value.
+                                            -- If precisely at half-way, pick the number further away from 0.
+                                            -- (That is, for positive values, pick the greater; for negative values, pick the smaller.)
+                  | RoundTowardPositive     -- ^ Round towards positive infinity. (Also known as rounding-up or ceiling.)
+                  | RoundTowardNegative     -- ^ Round towards negative infinity. (Also known as rounding-down or floor.)
+                  | RoundTowardZero         -- ^ Round towards zero. (Also known as truncation.)
+                  deriving (Show, Enum, Bounded)
+
+-- | Arbitrary instance for 'RoundingMode'
+instance Arbitrary RoundingMode where
+  arbitrary = elements [minBound .. maxBound]
+
+-- | Convert a rounding mode to the format SMT-Lib2 understands.
+smtRoundingMode :: RoundingMode -> String
+smtRoundingMode RoundNearestTiesToEven = "roundNearestTiesToEven"
+smtRoundingMode RoundNearestTiesToAway = "roundNearestTiesToAway"
+smtRoundingMode RoundTowardPositive    = "roundTowardPositive"
+smtRoundingMode RoundTowardNegative    = "roundTowardNegative"
+smtRoundingMode RoundTowardZero        = "roundTowardZero"

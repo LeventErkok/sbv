@@ -37,8 +37,6 @@ module Data.SBV.Core.Data
  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
  , RCSet(..), SSet
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
- , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
- , sRNE, sRNA, sRTP, sRTN, sRTZ
  , SymVal(..)
  , CV(..), CVal(..), AlgReal(..), AlgRealPoly(..), ExtCV(..), GeneralizedCV(..), isRegularCV, cvSameType, cvToBool
  , mkConstCV , mapCV, mapCV2
@@ -73,7 +71,6 @@ import Control.Monad          (void, replicateM)
 import Control.Monad.Trans    (liftIO, MonadIO)
 import Data.Int               (Int8, Int16, Int32, Int64)
 import Data.Word              (Word8, Word16, Word32, Word64)
-import Data.List              (elemIndex)
 
 import Data.Kind (Type)
 import Data.Proxy
@@ -98,6 +95,7 @@ import Data.SBV.Core.Operations
 import Data.SBV.Control.Types
 
 import Data.SBV.Utils.Lib
+import Data.SBV.Utils.Numeric (RoundingMode(..))
 
 import Test.QuickCheck (Arbitrary(..))
 
@@ -338,51 +336,8 @@ sAny f = sOr  . map f
 sAll :: (a -> SBool) -> [a] -> SBool
 sAll f = sAnd . map f
 
--- | 'RoundingMode' can be used symbolically
-instance SymVal RoundingMode
-
 -- | The symbolic variant of 'RoundingMode'
 type SRoundingMode = SBV RoundingMode
-
--- | Symbolic variant of 'RoundNearestTiesToEven'
-sRoundNearestTiesToEven :: SRoundingMode
-sRoundNearestTiesToEven = literal RoundNearestTiesToEven
-
--- | Symbolic variant of 'RoundNearestTiesToAway'
-sRoundNearestTiesToAway :: SRoundingMode
-sRoundNearestTiesToAway = literal RoundNearestTiesToAway
-
--- | Symbolic variant of 'RoundTowardPositive'
-sRoundTowardPositive :: SRoundingMode
-sRoundTowardPositive = literal RoundTowardPositive
-
--- | Symbolic variant of 'RoundTowardNegative'
-sRoundTowardNegative :: SRoundingMode
-sRoundTowardNegative = literal RoundTowardNegative
-
--- | Symbolic variant of 'RoundTowardZero'
-sRoundTowardZero :: SRoundingMode
-sRoundTowardZero = literal RoundTowardZero
-
--- | Alias for 'sRoundNearestTiesToEven'
-sRNE :: SRoundingMode
-sRNE = sRoundNearestTiesToEven
-
--- | Alias for 'sRoundNearestTiesToAway'
-sRNA :: SRoundingMode
-sRNA = sRoundNearestTiesToAway
-
--- | Alias for 'sRoundTowardPositive'
-sRTP :: SRoundingMode
-sRTP = sRoundTowardPositive
-
--- | Alias for 'sRoundTowardNegative'
-sRTN :: SRoundingMode
-sRTN = sRoundTowardNegative
-
--- | Alias for 'sRoundTowardZero'
-sRTZ :: SRoundingMode
-sRTZ = sRoundTowardZero
 
 -- | A 'Show' instance is not particularly "desirable," when the value is symbolic,
 -- but we do need this instance as otherwise we cannot simply evaluate Haskell functions
@@ -625,27 +580,10 @@ class (HasKind a, Typeable a, Arbitrary a) => SymVal a where
   -- If the underlying type is bounded, we have a default below. Otherwise it's nothing.
   minMaxBound :: Maybe (a, a)
 
-  -- minimal complete definition: Nothing.
-  -- Giving no instances is okay when defining an uninterpreted/enumerated sort, but otherwise you really
-  -- want to define: literal, fromCV, mkSymVal
+  {-# MINIMAL literal, fromCV #-}
 
   default mkSymVal :: MonadSymbolic m => VarContext -> Maybe String -> m (SBV a)
   mkSymVal vc mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar vc (kindOf (undefined :: a)) mbNm)
-
-  default literal :: Show a => a -> SBV a
-  literal x = let k  = kindOf x
-                  sx = show x
-                  conts = case k of
-                           KUserSort _ cts -> cts
-                           _               -> Nothing
-                  mbIdx = case conts of
-                            Just xs -> sx `elemIndex` xs
-                            Nothing -> Nothing
-              in SBV $ SVal k (Left (CV k (CUserSort (mbIdx, sx))))
-
-  default fromCV :: Read a => CV -> a
-  fromCV (CV _ (CUserSort (_, s))) = read s
-  fromCV cv                        = error $ "Cannot convert CV " ++ show cv ++ " to kind " ++ show (kindOf (Proxy @a))
 
   default minMaxBound :: Bounded a => Maybe (a, a)
   minMaxBound = Just (minBound, maxBound)

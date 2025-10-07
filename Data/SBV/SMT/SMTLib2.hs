@@ -106,7 +106,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasString      = KString     `Set.member` kindInfo
         hasRegExp      = (not . null) [() | (_ :: RegExOp) <- G.universeBi allTopOps]
         hasChar        = KChar      `Set.member` kindInfo
-        hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
+        hasRounding    = any isRoundingMode allKinds
         hasBVs         = not (null [() | KBounded{} <- allKinds])
         usorts         = [(s, dt) | KUserSort s dt <- allKinds]
         adts           = [(s, ps, k) | KADT s ps k <- allKinds]
@@ -263,8 +263,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
 
         pgm  =  map ("; " ++) comments
              ++ settings
-             ++ [ "; --- uninterpreted sorts ---" ]
-             ++ concatMap declSort usorts
              ++ [ "; --- tuples ---" ]
              ++ concatMap declTuple tupleArities
              ++ [ "; --- sums ---" ]
@@ -348,21 +346,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                         Just u  | show s /= u -> Just $ "tracks user variable " ++ show u
                         _                     -> Nothing
 
--- | Declare new sorts
-declSort :: (String, Maybe [String]) -> [String]
-declSort (s, _)
-  | s == "RoundingMode" -- built-in-sort; so don't declare.
-  = []
-declSort (s, Nothing) = [ "(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted sort."
-                        , "(declare-fun " ++ witnessName s ++ " () " ++ s ++ ")"
-                        ]
-declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
-                        , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
-                        ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
-        where body []     _ = ""
-              body [_]    i = show i
-              body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
-
 -- | Declare ADTs
 declADT :: [(String, [(String, Kind)], [(String, [Kind])])] -> [String]
 declADT = concatMap declGroup . DG.stronglyConnComp . map mkNode
@@ -384,6 +367,7 @@ declADT = concatMap declGroup . DG.stronglyConnComp . map mkNode
           where mkF a t  = "get" ++ a ++ " " ++ smtType t
 
         singleADT :: (String, [(String, Kind)], [(String, [Kind])]) -> [String]
+        singleADT (tName, [], []) = ["(declare-sort " ++ tName ++ " 0) ; N.B. Uninterpreted sort."]
         singleADT (tName, pks, cstrs) = ("; User defined ADT: " ++ tName) : decl
           where decl =  ("(declare-datatype " ++ tName ++ parOpen ++ " (")
                      :  ["    (" ++ mkC c ++ ")" | c <- cstrs]

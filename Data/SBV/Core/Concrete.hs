@@ -478,7 +478,6 @@ mkConstCV k@(KFP eb sb)   a = normCV $ CV k          (CFP       (fpFromInteger e
 mkConstCV KRational       a = normCV $ CV KRational  (CRational (fromInteger (toInteger a)))
 mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: "   ++ show (toInteger a)
 mkConstCV KString         a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
-mkConstCV (KUserSort s _) a = error $ "Unexpected call to mkConstCV with user kind: " ++ s ++ " with value: " ++ show (toInteger a)
 mkConstCV (KApp s _)      a = error $ "Unexpected call to mkConstCV with kind: " ++ s ++ " with value: " ++ show (toInteger a)
 mkConstCV (KADT s _ _)    a = error $ "Unexpected call to mkConstCV with ADT: "  ++ s ++ " with value: " ++ show (toInteger a)
 mkConstCV k@KList{}       a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
@@ -513,13 +512,14 @@ randomCVal k =
                              CString <$> replicateM l (chr <$> randomRIO (0, 255))
     KChar              -> CChar . chr <$> randomRIO (0, 255)
 
-    KUserSort s es     -> case es of
-                            Just vs@(_:_) -> do i <- randomRIO (0, length vs - 1)
-                                                pure $ CUserSort (Just i, vs !! i)
-                            _             -> error $ "randomCVal: Not supported for completely uninterpreted type: " ++ s
-
     -- TODO: Can we do something here?
     KApp s _           -> error $ "randomCVal: Not supported for KApp: " ++ s
+
+    -- The following only handles enums. Can we do something better?
+    KADT _ [] cstrs@(_:_) | all (null . snd) cstrs
+                       -> do i <- randomRIO (0, length cstrs - 1)
+                             pure $ CADT (fst (cstrs !! i), [])
+
     KADT s _ _         -> error $ "randomCVal: Not supported for ADT:  " ++ s
 
     KList ek           -> do l <- randomRIO (0, 100)

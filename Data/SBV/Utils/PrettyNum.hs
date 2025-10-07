@@ -35,12 +35,13 @@ import Numeric (showIntAtBase, showHex, readInt, floatToDigits)
 import qualified Numeric as N (showHFloat)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (smtType, smtRoundingMode, showBaseKind)
+import Data.SBV.Core.Kind (smtType, showBaseKind)
 
 import Data.SBV.Core.AlgReals    (algRealToSMTLib2)
 import Data.SBV.Core.SizedFloats (fprToSMTLib2, bfToString)
 
-import Data.SBV.Utils.Lib (stringToQFS)
+import Data.SBV.Utils.Lib     (stringToQFS)
+import Data.SBV.Utils.Numeric (smtRoundingMode)
 
 -- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
 class PrettyNum a where
@@ -168,7 +169,7 @@ shBKind :: HasKind a => a -> String
 shBKind a = " :: " ++ showBaseKind (kindOf a)
 
 instance PrettyNum CV where
-  hexS cv | isUserSort      cv = shows cv                                               $  shBKind cv
+  hexS cv | isADT           cv = shows cv                                               $  shBKind cv
           | isBoolean       cv = hexS (cvToBool cv)                                     ++ shBKind cv
           | isFloat         cv = let CFloat   f = cvVal cv in N.showHFloat f            $  shBKind cv
           | isDouble        cv = let CDouble  d = cvVal cv in N.showHFloat d            $  shBKind cv
@@ -178,7 +179,7 @@ instance PrettyNum CV where
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI True True i
           | True               = let CInteger i = cvVal cv in shex  True True (hasSign cv, intSizeOf cv) i
 
-  binS cv | isUserSort      cv = shows cv                                              $  shBKind cv
+  binS cv | isADT           cv = shows cv                                              $  shBKind cv
           | isBoolean       cv = binS (cvToBool cv)                                    ++ shBKind cv
           | isFloat         cv = let CFloat   f = cvVal cv in showBFloat f             $  shBKind cv
           | isDouble        cv = let CDouble  d = cvVal cv in showBFloat d             $  shBKind cv
@@ -188,7 +189,7 @@ instance PrettyNum CV where
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI True True i
           | True               = let CInteger i = cvVal cv in sbin  True True (hasSign cv, intSizeOf cv) i
 
-  hexP cv | isUserSort      cv = show cv
+  hexP cv | isADT           cv = show cv
           | isBoolean       cv = hexS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
@@ -198,7 +199,7 @@ instance PrettyNum CV where
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI False True i
           | True               = let CInteger i = cvVal cv in shex  False True (hasSign cv, intSizeOf cv) i
 
-  binP cv | isUserSort      cv = show cv
+  binP cv | isADT           cv = show cv
           | isBoolean       cv = binS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
@@ -208,7 +209,7 @@ instance PrettyNum CV where
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False True i
           | True               = let CInteger i = cvVal cv in sbin  False True (hasSign cv, intSizeOf cv) i
 
-  hex cv  | isUserSort      cv = show cv
+  hex cv  | isADT           cv = show cv
           | isBoolean       cv = hexS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
@@ -218,7 +219,7 @@ instance PrettyNum CV where
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI False False i
           | True               = let CInteger i = cvVal cv in shex  False False (hasSign cv, intSizeOf cv) i
 
-  bin cv  | isUserSort      cv = show cv
+  bin cv  | isADT           cv = show cv
           | isBoolean       cv = binS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
@@ -415,7 +416,7 @@ toSMTLibRational r
 cvToSMTLib :: RoundingMode -> CV -> String
 cvToSMTLib rm x
   | isBoolean       x, CInteger  w      <- cvVal x = if w == 0 then "false" else "true"
-  | isUserSort      x, CUserSort (_, s) <- cvVal x = roundModeConvert s
+  | isRoundingMode  x, CADT (s, [])     <- cvVal x = roundModeConvert s
   | isReal          x, CAlgReal  r      <- cvVal x = algRealToSMTLib2 r
   | isFloat         x, CFloat    f      <- cvVal x = showSMTFloat  rm f
   | isDouble        x, CDouble   d      <- cvVal x = showSMTDouble rm d

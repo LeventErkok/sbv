@@ -40,7 +40,6 @@ module Data.SBV.Core.Symbolic
   , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..)
   , RegExp(..), regExpToSMTString, SMTLambda(..)
   , Quantifier(..), needsExistentials, SBVContext(..), checkCompatibleContext, VarContext(..)
-  , RoundingMode(..)
   , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted, prefixNameToUnique
   , SVal(..)
   , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
@@ -108,8 +107,9 @@ import System.Random
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.SMT.SMTLibNames
-import Data.SBV.Utils.TDiff (Timing)
-import Data.SBV.Utils.Lib   (stringToQFS, checkObservableName, barify)
+import Data.SBV.Utils.TDiff   (Timing)
+import Data.SBV.Utils.Lib     (stringToQFS, checkObservableName, barify)
+import Data.SBV.Utils.Numeric (RoundingMode)
 
 import Data.Containers.ListUtils (nubOrd)
 
@@ -905,9 +905,7 @@ instance Show Result where
     where sh2 :: Show a => [a] -> [String]
           sh2 = map (("  "++) . show)
 
-          usorts = [sh s t | KUserSort s t <- Set.toList kinds]
-                   where sh s Nothing   = s
-                         sh s (Just es) = s ++ " (" ++ intercalate ", " es ++ ")"
+          usorts = [s | KADT s _ _ <- filter isUninterpreted (Set.toList kinds)]
 
           shs sv = show sv ++ " :: " ++ show (swKind sv)
 
@@ -1437,9 +1435,7 @@ newSV st k = do ctr <- incrementInternalCounter st
 -- allow for this.
 registerKind :: State -> Kind -> IO ()
 registerKind st k
-  | KUserSort sortName _ <- k, isReserved sortName
-  = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
-  | KADT  sortName _ _ <- k, isReserved sortName
+  | KADT sortName _ _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = do -- Adding a kind to the incState is tricky; we only need to add it
@@ -1461,7 +1457,6 @@ registerKind st k
               -- order: In particular, if an uninterpreted kind is already in there, we don't
               -- want to re-add because double-declaration would be wrong. See 'cvtInc' for details.
               let needsAdding = case k of
-                                  KUserSort{} -> k `notElem` existingKinds
                                   KADT s _ _  -> s `notElem` [s' | KADT s' _ _ <- Set.toList existingKinds]
                                   KList{}     -> k `notElem` existingKinds
                                   KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
@@ -1478,7 +1473,6 @@ registerKind st k
          KBounded  {}    -> return ()
          KUnbounded{}    -> return ()
          KReal     {}    -> return ()
-         KUserSort {}    -> return ()
          KFloat    {}    -> return ()
          KDouble   {}    -> return ()
          KFP       {}    -> return ()
@@ -1694,10 +1688,6 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                                              , "*** In mode: " ++ show rm
                                              ]
 
-            noUI cont
-              | isUserSort k  = disallow "User defined sorts"
-              | True          = cont
-
             (isQueryVar, mbQ) = case varContext of
                                   NonQueryVar mq -> (False, mq)
                                   QueryVar       -> (True,  Just EX)
@@ -1714,13 +1704,13 @@ svMkSymVarGen isTracker varContext k mbNm st = do
           (Nothing, SMTMode _ _ isSAT _) -> mkS (if isSAT then EX else ALL)
 
           (Just EX, CodeGen{})           -> disallow "Existentially quantified variables"
-          (_      , CodeGen)             -> noUI $ mkS ALL  -- code generation, pick universal
+          (_      , CodeGen)             -> mkS ALL  -- code generation, pick universal
 
           (Just EX, Concrete Nothing)    -> disallow "Existentially quantified variables"
-          (_      , Concrete Nothing)    -> noUI (randomCV k >>= mkC)
+          (_      , Concrete Nothing)    -> randomCV k >>= mkC
 
           (Just EX, LambdaGen{})         -> disallow "Existentially quantified variables"
-          (_,       LambdaGen{})         -> noUI $ mkS ALL
+          (_,       LambdaGen{})         -> mkS ALL
 
           -- Model validation:
           (_      , Concrete (Just (_isSat, env))) -> do
@@ -1732,36 +1722,32 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                                                            , "*** " ++ conc
                                                            ]
 
-                            cant   = "Validation engine is not capable of handling this case. Failed to validate."
                             report = "Please report this as a bug in SBV!"
 
-                        case () of
-                          () | isUserSort k -> bad ("Cannot validate models in the presence of user defined kinds, saw: "             ++ show k) cant
+                        (NamedSymVar sv internalName) <- newSV st k
 
-                          _  -> do (NamedSymVar sv internalName) <- newSV st k
+                        let nm = fromMaybe (T.unpack internalName) mbNm
+                            nsv = toNamedSV' sv nm
 
-                                   let nm = fromMaybe (T.unpack internalName) mbNm
-                                       nsv = toNamedSV' sv nm
+                            -- Ignore the context equivalence check here. When validating, we are in a different
+                            -- context; so they won't match
+                            same (NamedSymVar (SV _ (NodeId (_, ll1, li1))) _)
+                                 (NamedSymVar (SV _ (NodeId (_, ll2, li2))) _) = (ll1, li1) == (ll2, li2)
 
-                                       -- Ignore the context equivalence check here. When validating, we are in a different
-                                       -- context; so they won't match
-                                       same (NamedSymVar (SV _ (NodeId (_, ll1, li1))) _)
-                                            (NamedSymVar (SV _ (NodeId (_, ll2, li2))) _) = (ll1, li1) == (ll2, li2)
+                            cv = case [v | (nsv', v) <- env, nsv `same` nsv'] of
+                                   []    -> if isTracker
+                                            then  -- The sole purpose of a tracker variable is to send the optimization
+                                                  -- directive to the solver, so we can name "expressions" that are minimized
+                                                  -- or maximized. There will be no constraints on these when we are doing
+                                                  -- the validation; in fact they will not even be used anywhere during a
+                                                  -- validation run. So, simply push a zero value that inhabits all metrics.
+                                                  mkConstCV k (0::Integer)
+                                            else bad ("Cannot locate variable: " ++ show (nsv, k)) report
+                                   [c]  -> c
+                                   r    -> bad (   "Found multiple matching values for variable: " ++ show nsv
+                                                ++ "\n*** " ++ show r) report
 
-                                       cv = case [v | (nsv', v) <- env, nsv `same` nsv'] of
-                                              []    -> if isTracker
-                                                       then  -- The sole purpose of a tracker variable is to send the optimization
-                                                             -- directive to the solver, so we can name "expressions" that are minimized
-                                                             -- or maximized. There will be no constraints on these when we are doing
-                                                             -- the validation; in fact they will not even be used anywhere during a
-                                                             -- validation run. So, simply push a zero value that inhabits all metrics.
-                                                             mkConstCV k (0::Integer)
-                                                       else bad ("Cannot locate variable: " ++ show (nsv, k)) report
-                                              [c]  -> c
-                                              r    -> bad (   "Found multiple matching values for variable: " ++ show nsv
-                                                           ++ "\n*** " ++ show r) report
-
-                                   mkC cv
+                        mkC cv
 
 -- | Introduce a new user name. We simply append a suffix if we have seen this variable before.
 introduceUserName :: State -> (Bool, Bool) -> String -> Kind -> Quantifier -> SV -> IO SVal

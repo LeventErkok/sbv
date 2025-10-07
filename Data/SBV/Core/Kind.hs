@@ -27,14 +27,14 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.Core.Kind (
-          Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
+          Kind(..), HasKind(..), smtType, hasUninterpretedSorts
         , BVIsNonZero, ValidFloat, intOfProxy
-        , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
+        , showBaseKind, needsFlattening
         , eqCheckIsObjectEq, containsFloats, isSomeKindOfFloat, expandKinds
         , substituteADTVars
         ) where
 
-import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
+import qualified Data.Generics as G (Data(..), DataType, dataTypeName, tyconUQname)
 
 import Data.Char (isSpace)
 import Data.Int
@@ -44,7 +44,7 @@ import Data.SBV.Core.AlgReals
 import Data.Proxy
 import Data.Kind
 
-import Data.List (isPrefixOf, intercalate, sort)
+import Data.List (intercalate, sort)
 import Control.DeepSeq (NFData)
 
 import Data.Containers.ListUtils (nubOrd)
@@ -55,12 +55,11 @@ import Data.Type.Equality
 
 import GHC.TypeLits
 
-import Data.SBV.Utils.Lib (isKString)
+import Data.SBV.Utils.Lib     (isKString)
+import Data.SBV.Utils.Numeric (RoundingMode)
 
 import GHC.Generics
 import qualified Data.Generics.Uniplate.Data as G
-
-import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
 
 -- | Kind of symbolic value
 data Kind =
@@ -88,9 +87,6 @@ data Kind =
           | KChar
           | KString
 
-          -- Uninterpreted, or enumeration constants.
-          | KUserSort String (Maybe [String])
-
           -- Algebraic datatypes
           | KVar String         -- only used temporarily during ADT construction
           | KApp String [Kind]  -- Application of a constructor to a bunch of types
@@ -111,7 +107,11 @@ data Kind =
           | KArray  Kind Kind
           deriving (Eq, Ord, G.Data, NFData, Generic)
 
--- Expand such that the resulting list has all the kinds we touch
+-- | Built in kind for rounding mode
+kRoundingMode :: Kind
+kRoundingMode = KADT "RoundingMode" [] (map (\r -> (show r, [])) [minBound .. maxBound :: RoundingMode])
+
+-- | Expand such that the resulting list has all the kinds we touch
 expandKinds :: Kind -> [Kind]
 expandKinds = sort . nubOrd . G.universe
 
@@ -134,7 +134,6 @@ instance Show Kind where
   show (KBounded True n)  = pickType n "SInt"  "SInt "  ++ show n
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
-  show (KUserSort s _)    = s
   show (KApp c ks)        = unwords (c : map (kindParen . showBaseKind      )  ks)
   show (KADT s pks _)     = unwords (s : map (kindParen . showBaseKind . snd) pks)
   show KFloat             = "SFloat"
@@ -160,7 +159,6 @@ showBaseKind = sh
         sh (KApp s ks)        = unwords (s : map (kindParen . sh) ks)
         sh k@KUnbounded       = noS (show k)
         sh k@KReal            = noS (show k)
-        sh k@KUserSort{}      = show k     -- Leave user-sorts untouched!
         sh k@KADT{}           = show k     -- Leave user-sorts untouched!
         sh k@KFloat           = noS (show k)
         sh k@KDouble          = noS (show k)
@@ -206,7 +204,6 @@ smtType KString         = "String"
 smtType KChar           = "String"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
-smtType (KUserSort s _) = s
 smtType (KApp s ks)     = kindParen $ unwords (s : map smtType          ks)
 smtType (KADT s pks _)  = kindParen $ unwords (s : map (smtType . snd) pks)
 smtType (KTuple [])     = "SBVTuple0"
@@ -233,7 +230,6 @@ kindHasSign = \case KVar _       -> False
                     KDouble      -> True
                     KFP{}        -> True
                     KRational    -> True
-                    KUserSort{}  -> False
                     KApp{}       -> False
                     KADT{}       -> False
                     KString      -> False
@@ -245,66 +241,37 @@ kindHasSign = \case KVar _       -> False
                     KEither{}    -> False
                     KArray{}     -> False
 
--- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
--- are mapped to proper SMT-Lib2 data-types; while others go completely uninterpreted
-constructUKind :: forall a. (Read a, G.Data a) => a -> Kind
-constructUKind a
-  | any (`isPrefixOf` sortName) badPrefixes
-  = error $ unlines [ "*** Data.SBV: Cannot construct user-sort with name: " ++ show sortName
-                    , "***"
-                    , "***  Must not start with any of: " ++ intercalate ", " badPrefixes
-                    ]
-  | True
-  = case (constrs, concatMap G.constrFields constrs) of
-      ([], _)  -> KUserSort sortName   Nothing
-      (cs, []) -> KUserSort sortName $ Just (map show cs)
-      _        -> error $ unlines [ "*** Data.SBV: " ++ sortName ++ " is not an enumeration."
-                                  , "***"
-                                  , "*** To declare an enumeration, constructors should not have any fields."
-                                  , "*** To declare an uninterpreted sort, use a datatype with no constructors."
-                                  ]
-
-  where -- make sure we don't step on ourselves:
-        -- NB. The sort "RoundingMode" is special. It's treated by SBV as a user-defined
-        -- sort, even though it's internally handled differently. So, that name doesn't appear
-        -- below.
-        badPrefixes = [ "SBool",   "SWord", "SInt", "SInteger", "SReal",  "SFloat", "SDouble"
-                      , "SString", "SChar", "[",    "SSet",     "STuple", "SMaybe", "SEither"
-                      , "SRational"
-                      ]
-
-        dataType    = G.dataTypeOf a
-        sortName    = G.tyconUQname . G.dataTypeName $ dataType
-        constrs     = G.dataTypeConstrs dataType
-
 -- | A class for capturing values that have a sign and a size (finite or infinite)
 -- minimal complete definition: kindOf, unless you can take advantage of the default
 -- signature: This class can be automatically derived for data-types that have
 -- a 'G.Data' instance; this is useful for creating uninterpreted sorts. So, in
 -- reality, end users should almost never need to define any methods.
 class HasKind a where
-  kindOf      :: a -> Kind
-  hasSign     :: a -> Bool
-  intSizeOf   :: a -> Int
-  isBoolean   :: a -> Bool
-  isBounded   :: a -> Bool   -- NB. This really means word/int; i.e., Real/Float will test False
-  isReal      :: a -> Bool
-  isFloat     :: a -> Bool
-  isDouble    :: a -> Bool
-  isRational  :: a -> Bool
-  isFP        :: a -> Bool
-  isUnbounded :: a -> Bool
-  isUserSort  :: a -> Bool
-  isADT       :: a -> Bool
-  isChar      :: a -> Bool
-  isString    :: a -> Bool
-  isList      :: a -> Bool
-  isSet       :: a -> Bool
-  isTuple     :: a -> Bool
-  isMaybe     :: a -> Bool
-  isEither    :: a -> Bool
-  isArray     :: a -> Bool
-  showType    :: a -> String
+  kindOf          :: a -> Kind
+  hasSign         :: a -> Bool
+  intSizeOf       :: a -> Int
+  isBoolean       :: a -> Bool
+  isBounded       :: a -> Bool   -- NB. This really means word/int; i.e., Real/Float will test False
+  isReal          :: a -> Bool
+  isFloat         :: a -> Bool
+  isDouble        :: a -> Bool
+  isRational      :: a -> Bool
+  isFP            :: a -> Bool
+  isUnbounded     :: a -> Bool
+  isADT           :: a -> Bool
+  isChar          :: a -> Bool
+  isString        :: a -> Bool
+  isList          :: a -> Bool
+  isSet           :: a -> Bool
+  isTuple         :: a -> Bool
+  isMaybe         :: a -> Bool
+  isEither        :: a -> Bool
+  isArray         :: a -> Bool
+  isRoundingMode  :: a -> Bool
+  isUninterpreted :: a -> Bool
+
+  showType        :: a -> String
+
   -- defaults
   hasSign x = kindHasSign (kindOf x)
 
@@ -318,7 +285,6 @@ class HasKind a where
                   KDouble       -> 64
                   KFP i j       -> i + j
                   KRational     -> error "SBV.HasKind.intSizeOf((S)Rational)"
-                  KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: "  ++ s
                   KApp s _      -> error $ "SBV.HasKind.intSizeOf: Type application: "    ++ s
                   KADT s _ _    -> error $ "SBV.HasKind.intSizeOf: Algebraic data type: " ++ s
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
@@ -354,9 +320,6 @@ class HasKind a where
   isUnbounded     (kindOf -> KUnbounded{}) = True
   isUnbounded     _                        = False
 
-  isUserSort      (kindOf -> KUserSort{})  = True
-  isUserSort      _                        = False
-
   isADT           (kindOf -> KADT{})       = True
   isADT           _                        = False
 
@@ -384,32 +347,37 @@ class HasKind a where
   isArray         (kindOf -> KArray{})     = True
   isArray         _                        = False
 
+  -- Derived kinds
+  isRoundingMode  (kindOf -> k)            = k == kRoundingMode
+  isUninterpreted (kindOf -> k)            = case k of
+                                               KADT _ [] [] -> True
+                                               _            -> False
+
   showType = show . kindOf
 
-  -- default signature for uninterpreted/enumerated kinds
-  default kindOf :: (Read a, G.Data a) => a -> Kind
-  kindOf = constructUKind
+  {-# MINIMAL kindOf #-}
 
 -- | This instance allows us to use the `kindOf (Proxy @a)` idiom instead of
 -- the `kindOf (undefined :: a)`, which is safer and looks more idiomatic.
 instance HasKind a => HasKind (Proxy a) where
   kindOf _ = kindOf (undefined :: a)
 
-instance HasKind Bool     where kindOf _ = KBool
-instance HasKind Int8     where kindOf _ = KBounded True  8
-instance HasKind Word8    where kindOf _ = KBounded False 8
-instance HasKind Int16    where kindOf _ = KBounded True  16
-instance HasKind Word16   where kindOf _ = KBounded False 16
-instance HasKind Int32    where kindOf _ = KBounded True  32
-instance HasKind Word32   where kindOf _ = KBounded False 32
-instance HasKind Int64    where kindOf _ = KBounded True  64
-instance HasKind Word64   where kindOf _ = KBounded False 64
-instance HasKind Integer  where kindOf _ = KUnbounded
-instance HasKind AlgReal  where kindOf _ = KReal
-instance HasKind Rational where kindOf _ = KRational
-instance HasKind Float    where kindOf _ = KFloat
-instance HasKind Double   where kindOf _ = KDouble
-instance HasKind Char     where kindOf _ = KChar
+instance HasKind Bool         where kindOf _ = KBool
+instance HasKind Int8         where kindOf _ = KBounded True  8
+instance HasKind Word8        where kindOf _ = KBounded False 8
+instance HasKind Int16        where kindOf _ = KBounded True  16
+instance HasKind Word16       where kindOf _ = KBounded False 16
+instance HasKind Int32        where kindOf _ = KBounded True  32
+instance HasKind Word32       where kindOf _ = KBounded False 32
+instance HasKind Int64        where kindOf _ = KBounded True  64
+instance HasKind Word64       where kindOf _ = KBounded False 64
+instance HasKind Integer      where kindOf _ = KUnbounded
+instance HasKind AlgReal      where kindOf _ = KReal
+instance HasKind Rational     where kindOf _ = KRational
+instance HasKind Float        where kindOf _ = KFloat
+instance HasKind Double       where kindOf _ = KDouble
+instance HasKind Char         where kindOf _ = KChar
+instance HasKind RoundingMode where kindOf _ = kRoundingMode
 
 -- | Grab the bit-size from the proxy. If the nat is too large to fit in an int,
 -- we throw an error. (This would mean too big of a bit-size, that we can't
@@ -448,10 +416,7 @@ isSomeKindOfFloat k = isFloat k || isDouble k || isFP k
 
 -- | Do we have a completely uninterpreted sort lying around anywhere?
 hasUninterpretedSorts :: Kind -> Bool
-hasUninterpretedSorts = any check . expandKinds
-  where check (KUserSort _ Nothing)  = True   -- These are the completely uninterpreted sorts, which we are looking for here
-        check (KUserSort _ (Just{})) = False  -- These are the enumerated sorts, and they are perfectly fine
-        check _                      = False
+hasUninterpretedSorts = any isUninterpreted . expandKinds
 
 instance (Typeable a, HasKind a) => HasKind [a] where
    kindOf x | isKString @[a] x = KString
@@ -513,7 +478,6 @@ needsFlattening = any check . expandKinds
         check KBounded{}  = False
         check KUnbounded  = False
         check KReal       = False
-        check KUserSort{} = False
         check KFloat      = False
         check KDouble     = False
         check KFP{}       = False
@@ -583,33 +547,3 @@ type family ValidFloat (eb :: Nat) (sb :: Nat) :: Constraint where
                                             (() :: Constraint)
                                             (TypeError (InvalidFloat eb sb))
                                        )
-
--- | Rounding mode to be used for the IEEE floating-point operations.
--- Note that Haskell's default is 'RoundNearestTiesToEven'. If you use
--- a different rounding mode, then the counter-examples you get may not
--- match what you observe in Haskell.
-data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable floating point value.
-                                            -- If precisely at half-way, pick the even number.
-                                            -- (In this context, /even/ means the lowest-order bit is zero.)
-                  | RoundNearestTiesToAway  -- ^ Round to nearest representable floating point value.
-                                            -- If precisely at half-way, pick the number further away from 0.
-                                            -- (That is, for positive values, pick the greater; for negative values, pick the smaller.)
-                  | RoundTowardPositive     -- ^ Round towards positive infinity. (Also known as rounding-up or ceiling.)
-                  | RoundTowardNegative     -- ^ Round towards negative infinity. (Also known as rounding-down or floor.)
-                  | RoundTowardZero         -- ^ Round towards zero. (Also known as truncation.)
-                  deriving (Eq, Ord, Show, Read, G.Data, Bounded, Enum)
-
--- | 'RoundingMode' kind
-instance HasKind RoundingMode
-
--- | An arbitrary rounding mode
-instance Arbitrary RoundingMode where
-  arbitrary = arbitraryBoundedEnum
-
--- | Convert a rounding mode to the format SMT-Lib2 understands.
-smtRoundingMode :: RoundingMode -> String
-smtRoundingMode RoundNearestTiesToEven = "roundNearestTiesToEven"
-smtRoundingMode RoundNearestTiesToAway = "roundNearestTiesToAway"
-smtRoundingMode RoundTowardPositive    = "roundTowardPositive"
-smtRoundingMode RoundTowardNegative    = "roundTowardNegative"
-smtRoundingMode RoundTowardZero        = "roundTowardZero"
