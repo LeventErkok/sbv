@@ -51,7 +51,9 @@ module Data.SBV.Core.Operations
 
 import Prelude hiding (Foldable(..))
 import Data.Bits (Bits(..))
-import Data.List (genericIndex, genericLength, genericTake, foldr, length, foldl', elem, nub, sort)
+import Data.List (genericIndex, genericLength, genericTake, foldr, length, foldl', elem, nub, sort, null, elemIndex)
+
+import Data.Maybe (isNothing)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
@@ -544,10 +546,48 @@ cCompare k op x y =
                            | True
                            -> error $ "cCompare: Received unexpected array comparison: " ++ show (op, k)
 
+
+      -- ADTs. Only equal/inequal
+      (CADT (s, fks), CADT (s', fks'))
+         -> case k of
+              -- Enumerations. We do a straight comparison on the constructor index
+              KADT _ _ cstrs | all null (map snd cstrs)
+                             -> let cnms = map fst cstrs
+                                in case (s `elemIndex` cnms, s' `elemIndex` cnms) of
+                                     (Just i, Just j) -> Just (i `compare` j)
+                                     r                -> error $ "cCompare: Unable to locate indexes for CADT: " ++ show (k, s, s', r)
+
+              -- Arbitrary ADTs. Only allow equality/inequality
+              _ | op `notElem` [Equal True, Equal False, NotEqual]
+                -> error $ "cCompare: Received unexpected ADT comparison: " ++ show (op, k)
+
+                -- Different constructor
+                | s /= s'
+                -> Just $ if op `elem` [Equal True, Equal False]
+                          then GT -- Pick GT, So equality test fails
+                          else EQ -- Pick EQ, So in-equality test fails
+
+                -- Same constructor
+                | map fst fks /= map fst fks'
+                -> error $ "cCompare: Mismatching ADT field kinds in comparison: " ++ show (op, k, map fst fks, map fst fks')
+                | True
+                -> let fmatch    = zipWith (\(fk, v1) (_, v2) -> cCompare fk op v1 v2) fks fks'
+                       undecided = any isNothing fmatch   -- Field comparison undecive
+                       allEq     = all (== Just EQ) fmatch -- All fields Equal
+                   in if undecided
+                      then Nothing
+                      else if allEq
+                           then Just EQ
+                           else -- all compared fine, but not all equal
+                                Just $ if op `elem` [Equal True, Equal False]
+                                       then GT -- Pick GT, So equality    test will fail
+                                       else EQ -- Pick EQ, So in-equality test will fail
+
+      -- Shouldn't happen:
       _ -> error $ unlines [ ""
                            , "*** Data.SBV.cCompare: Bug in SBV: Unhandled rank in comparison fallthru"
                            , "***"
-                           , "***   Ranks Received: " ++ show (cvRank x, cvRank y)
+                           , "***   Ranks Received: " ++ show (cvRank x, cvRank y, op)
                            , "***"
                            , "*** Please report this as a bug!"
                            ]
