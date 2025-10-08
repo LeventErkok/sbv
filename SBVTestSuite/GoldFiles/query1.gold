@@ -15,7 +15,6 @@
 [GOOD] (set-info :bad what)
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
-[GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
