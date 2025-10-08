@@ -2787,11 +2787,11 @@ class SMTDefinable a where
   {-# MINIMAL sbvDefineValue, sbv2smt #-}
 
   -- defaults:
-  uninterpret         nm         = sbvDefineValue (UIGiven nm) Nothing   $ UIFree True
-  mkConstructor       nm         = sbvDefineValue (UICstr  nm) Nothing   $ UIFree True
-  uninterpretWithArgs nm  as     = sbvDefineValue (UIGiven nm) (Just as) $ UIFree True
-  cgUninterpret       nm  code v = sbvDefineValue (UIGiven nm) Nothing   $ UICodeC (v, code)
-  sym                            = uninterpret
+  uninterpret         nm        = sbvDefineValue (UIGiven nm) Nothing   $ UIFree True
+  mkConstructor       nm        = sbvDefineValue (UICstr  nm) Nothing   $ UIFree True
+  uninterpretWithArgs nm as     = sbvDefineValue (UIGiven nm) (Just as) $ UIFree True
+  cgUninterpret       nm code v = sbvDefineValue (UIGiven nm) Nothing   $ UICodeC (v, code)
+  sym                           = uninterpret
 
   smtFunction nm v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing $ UIFun (v, \st fk -> lambda st TopLevel fk v)
 
