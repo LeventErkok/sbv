@@ -27,7 +27,7 @@ import Data.SBV
 
 -- | A simple enumeration
 data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun
-         deriving (Show, Enum, Bounded)
+         deriving (Show, Eq, Enum, Bounded)
 
 -- | Make 'Day' a symbolic value.
 mkSymbolic [''Day]

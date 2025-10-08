@@ -55,7 +55,7 @@ import Data.Proxy
 
 -- | Colors we're allowed
 data Color = Black | Blue | Green | Red
-          deriving (Show, Enum, Bounded)
+          deriving (Eq, Show, Enum, Bounded)
 
 -- | Make 'Color' a symbolic value.
 mkSymbolic [''Color]

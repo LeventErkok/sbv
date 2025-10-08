@@ -31,7 +31,7 @@ import Data.SBV.Tools.BMC
 
 -- | Possible actions
 data Action = Initial | FillBig | FillSmall | EmptyBig | EmptySmall | BigToSmall | SmallToBig
-            deriving (Show, Enum, Bounded)
+            deriving (Eq, Show, Enum, Bounded)
 
 mkSymbolic [''Action]
 

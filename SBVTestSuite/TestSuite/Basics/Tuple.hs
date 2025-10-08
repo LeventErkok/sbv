@@ -32,7 +32,7 @@ import qualified Data.SBV.List as L
 
 import Utils.SBVTestFramework
 
-data E = A | B | C deriving (Show, Bounded, Enum)
+data E = A | B | C deriving (Eq, Show, Bounded, Enum)
 mkSymbolic [''E]
 
 -- Test suite

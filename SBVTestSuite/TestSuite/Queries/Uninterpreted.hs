@@ -24,7 +24,7 @@ module TestSuite.Queries.Uninterpreted where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
-data L = A | B deriving (Show, Enum, Bounded)
+data L = A | B deriving (Eq, Show, Enum, Bounded)
 mkSymbolic [''L]
 
 -- Test suite

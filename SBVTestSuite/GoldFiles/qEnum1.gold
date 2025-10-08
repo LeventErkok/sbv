@@ -5,15 +5,25 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic ALL) ; has user-defined sorts, using catch-all.
-[GOOD] ; --- uninterpreted sorts ---
-[GOOD] (declare-datatypes ((BinOp 0)) (((Plus) (Minus) (Times))))
-[GOOD] (define-fun BinOp_constrIndex ((x BinOp)) Int
-          (ite (= x Plus) 0 (ite (= x Minus) 1 2))
-       )
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: BinOp
+[GOOD] (declare-datatype BinOp (
+           (Plus)
+           (Minus)
+           (Times)
+       ))
 [GOOD] ; --- literal constants ---
+[GOOD] (define-fun s3 () BinOp Plus)
+[GOOD] (define-fun s5 () Int 0)
+[GOOD] (define-fun s6 () BinOp Minus)
+[GOOD] (define-fun s8 () Int 1)
+[GOOD] (define-fun s9 () Int 2)
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () BinOp) ; tracks user variable "p"
 [GOOD] (declare-fun s1 () BinOp) ; tracks user variable "m"
@@ -23,14 +33,26 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s3 () Bool (<= (BinOp_constrIndex s0) (BinOp_constrIndex s1)))
-[GOOD] (define-fun s4 () Bool (<= (BinOp_constrIndex s1) (BinOp_constrIndex s2)))
-[GOOD] (define-fun s5 () Bool (distinct s0 s1 s2))
+[GOOD] (define-fun s4 () Bool (= s0 s3))
+[GOOD] (define-fun s7 () Bool (= s0 s6))
+[GOOD] (define-fun s10 () Int (ite s7 s8 s9))
+[GOOD] (define-fun s11 () Int (ite s4 s5 s10))
+[GOOD] (define-fun s12 () Bool (= s1 s3))
+[GOOD] (define-fun s13 () Bool (= s1 s6))
+[GOOD] (define-fun s14 () Int (ite s13 s8 s9))
+[GOOD] (define-fun s15 () Int (ite s12 s5 s14))
+[GOOD] (define-fun s16 () Bool (<= s11 s15))
+[GOOD] (define-fun s17 () Bool (= s2 s3))
+[GOOD] (define-fun s18 () Bool (= s2 s6))
+[GOOD] (define-fun s19 () Int (ite s18 s8 s9))
+[GOOD] (define-fun s20 () Int (ite s17 s5 s19))
+[GOOD] (define-fun s21 () Bool (<= s15 s20))
+[GOOD] (define-fun s22 () Bool (distinct s0 s1 s2))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s3)
-[GOOD] (assert s4)
-[GOOD] (assert s5)
+[GOOD] (assert s16)
+[GOOD] (assert s21)
+[GOOD] (assert s22)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))

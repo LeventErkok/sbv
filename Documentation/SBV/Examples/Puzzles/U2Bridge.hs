@@ -63,7 +63,7 @@ sCrossTime m =   ite (m .== sBono) (literal (crossTime Bono))
 
 -- | Location of the flash
 data Location = Here | There
-              deriving (Show, Enum, Bounded)
+              deriving (Eq, Show, Enum, Bounded)
 
 -- | Make 'Location' a symbolic value.
 mkSymbolic [''Location]

@@ -58,7 +58,6 @@ import Language.Haskell.TH.ExpandSyns as TH
 import Data.SBV.Core.Concrete (cvRank)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
-import Data.SBV.Core.Operations
 import Data.SBV.Core.SizedFloats
 import Data.SBV.Provers.Prover
 import qualified Data.SBV.List as SL
@@ -364,7 +363,14 @@ mkADT adtKind typeName params cstrs = do
                                           pred     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip (drop 1 elts) elts)
 
                                           toEnum   x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip [0..] elts)
-                                          fromEnum x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts [0..])
+
+                                          -- Make fromEnum a bit simpler, since it cannot fail. The following definition,
+                                          -- while correct, generates too complicated a code.
+                                          -- fromEnum x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts [0..])
+                                          fromEnum x = go 0 minBound
+                                            where go i c
+                                                   | c == maxBound = i
+                                                   | True          = ite (x .== literal c) i (go (i+1) (succ c))
 
                                           enumFrom n = SL.map SL.toEnum (SL.enumFromTo (SL.fromEnum n) (SL.fromEnum (literal (maxBound :: $(TH.conT typeName)))))
 
@@ -381,10 +387,10 @@ mkADT adtKind typeName params cstrs = do
                                           enumFromThenTo n m t = SL.map SL.toEnum (SL.enumFromThenTo (SL.fromEnum n) (SL.fromEnum m) (SL.fromEnum t))
 
                                         instance OrdSymbolic (SBV $(TH.conT typeName)) where
-                                          SBV a .<  SBV b = SBV (a `svLessThan`    b)
-                                          SBV a .<= SBV b = SBV (a `svLessEq`      b)
-                                          SBV a .>  SBV b = SBV (a `svGreaterThan` b)
-                                          SBV a .>= SBV b = SBV (a `svGreaterEq`   b)
+                                          a .<  b = SL.fromEnum a .<  SL.fromEnum b
+                                          a .<= b = SL.fromEnum a .<= SL.fromEnum b
+                                          a .>  b = SL.fromEnum a .>  SL.fromEnum b
+                                          a .>= b = SL.fromEnum a .>= SL.fromEnum b
                                     |]
 
     pure $  [tdecl, symVal, kindDecl]
