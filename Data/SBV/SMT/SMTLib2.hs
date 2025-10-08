@@ -108,7 +108,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasChar        = KChar      `Set.member` kindInfo
         hasRounding    = any isRoundingMode allKinds
         hasBVs         = not (null [() | KBounded{} <- allKinds])
-        adts           = [(s, ps, k) | KADT s ps k <- allKinds]
+        adtsNoRM       = [(s, ps, cs) | k@(KADT s ps cs) <- allKinds, not (isRoundingMode k)]
         tupleArities   = findTupleArities kindInfo
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi allTopOps]
         hasQuantBools  = (not . null) [() | QuantifiedBool{} <- G.universeBi allTopOps]
@@ -118,7 +118,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasEither      = any isEither kindInfo
         hasMaybe       = any isMaybe  kindInfo
         hasRational    = any isRational kindInfo
-        hasADTs        = not . null $ adts
+        hasADTs        = not . null $ adtsNoRM
         rm             = roundingMode cfg
         solverCaps     = capabilities (solver cfg)
 
@@ -136,7 +136,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                           , ("unbounded integers",     supportsUnboundedInts,      hasInteger)
                           , ("algebraic reals",        supportsReals,              hasReal)
                           , ("floating-point numbers", supportsIEEE754,            hasFP)
-                          , ("has data-types/sorts",   supportsADTs,               not (null adts))
+                          , ("has data-types/sorts",   supportsADTs,               not (null adtsNoRM))
                           ]
 
                  nope w = [ "***     Given problem requires support for " ++ w
@@ -266,8 +266,8 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ (if containsSum       kindInfo then declSum       else [])
              ++ (if containsMaybe     kindInfo then declMaybe     else [])
              ++ (if containsRationals kindInfo then declRationals else [])
-             ++ [ "; --- ADTs  --- " | not (null adts)]
-             ++ declADT adts
+             ++ [ "; --- ADTs  --- " | not (null adtsNoRM)]
+             ++ declADT adtsNoRM
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
              ++ [ "; --- top level inputs ---"]
@@ -472,7 +472,7 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
-            ++ declADT [(s, pks, cs) | KADT s pks cs <- newKinds]
+            ++ declADT [(s, pks, cs) | k@(KADT s pks cs) <- newKinds, not (isRoundingMode k)]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- sums
