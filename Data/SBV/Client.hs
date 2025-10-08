@@ -194,26 +194,26 @@ mkADT adtKind typeName params cstrs = do
                   ADTEnum          -> True
                   ADTFull          -> False
 
-    litFun <- do let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
-                                              let cn      = TH.mkName $ 's' : TH.nameBase n
-                                                  app a b = TH.AppE a (TH.AppE (TH.VarE 'literal) b)
-                                              pure $ TH.Clause [TH.ConP n [] (map TH.VarP as)]
-                                                               (TH.NormalB (foldl app (TH.VarE cn) (map TH.VarE as)))
-                                                               []
+    litFun <- case adtKind of
+                ADTUninterpreted -> do noLit <- [| error $ unlines [ "Data.SBV: unexpected call to derived literal implementation"
+                                                                   , "***"
+                                                                   , "*** Type: " ++ show typeName
+                                                                   , ""
+                                                                   , "***Please report this as a bug!"
+                                                                   ]
+                                                |]
+                                       pure $ TH.FunD 'literal [TH.Clause [TH.WildP] (TH.NormalB noLit) []]
 
-                     withCstrs = TH.FunD 'literal <$> mapM mkLitClause cstrs
+                ADTEnum          -> do lit <- [| \n -> let k = kindOf n in SBV $ SVal k (Left (CV k (CADT (show n, [])))) |]
+                                       pure $ TH.FunD 'literal [TH.Clause [] (TH.NormalB lit) []] 
 
-                 case adtKind of
-                   ADTUninterpreted -> do noLit <- [| error $ unlines [ "Data.SBV: unexpected call to derived literal implementation"
-                                                                      , "***"
-                                                                      , "*** Type: " ++ show typeName
-                                                                      , ""
-                                                                      , "***Please report this as a bug!"
-                                                                      ]
-                                                   |]
-                                          pure $ TH.FunD 'literal [TH.Clause [TH.WildP] (TH.NormalB noLit) []]
-                   ADTEnum          -> withCstrs
-                   ADTFull          -> withCstrs
+                ADTFull          -> let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
+                                                                 let cn      = TH.mkName $ 's' : TH.nameBase n
+                                                                     app a b = TH.AppE a (TH.AppE (TH.VarE 'literal) b)
+                                                                 pure $ TH.Clause [TH.ConP n [] (map TH.VarP as)]
+                                                                                  (TH.NormalB (foldl app (TH.VarE cn) (map TH.VarE as)))
+                                                                                  []
+                                    in TH.FunD 'literal <$> mapM mkLitClause cstrs
 
     fromCVFunName <- TH.newName ("cv2" ++ TH.nameBase typeName)
     addDoc ("Conversion from SMT values to " ++ TH.nameBase typeName ++ " values.") fromCVFunName
