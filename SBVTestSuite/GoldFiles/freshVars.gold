@@ -8,7 +8,6 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
-[GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
@@ -37,10 +36,15 @@
 [GOOD] (declare-fun s13 () (_ FloatingPoint 11 53))
 [GOOD] (declare-fun s14 () Real)
 [GOOD] (declare-fun s15 () Int)
-[GOOD] (declare-datatypes ((BinOp 0)) (((Plus) (Minus) (Times))))
-[GOOD] (define-fun BinOp_constrIndex ((x BinOp)) Int
-          (ite (= x Plus) 0 (ite (= x Minus) 1 2))
-       )
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
+[GOOD] ; User defined ADT: BinOp
+[GOOD] (declare-datatype BinOp (
+           (Plus)
+           (Minus)
+           (Times)
+       ))
 [GOOD] (declare-fun s16 () BinOp)
 [GOOD] (declare-fun s17 () (_ FloatingPoint 15 113))
 [GOOD] (declare-fun s18 () (_ FloatingPoint 15 113))
