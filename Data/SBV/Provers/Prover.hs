@@ -513,12 +513,13 @@ validate reducer isSAT cfg p res =
                                       why s = case s `lookup` S.toList (pgmAssignments (resAsgns result)) of
                                                 Nothing            -> Nothing
                                                 Just (SBVApp o as) -> case o of
-                                                                        _ | any isADT as -> Just "Models containing ADTs are currently only partially supported."
-                                                                        Uninterpreted v  -> Just $ "The value depends on the uninterpreted constant " ++ show v ++ "."
                                                                         QuantifiedBool{} -> Just "The value depends on a quantified variable."
                                                                         IEEEFP FP_FMA    -> Just "Floating point FMA operation is not supported concretely."
                                                                         IEEEFP _         -> Just "Not all floating point operations are supported concretely."
                                                                         OverflowOp _     -> Just "Overflow-checking is not done concretely."
+                                                                        Uninterpreted v
+                                                                          | any isADT as -> Just "Models containing ADTs are currently only partially supported."
+                                                                          | True         -> Just $ "The value depends on the uninterpreted constant " ++ show v ++ "."
                                                                         _                -> listToMaybe $ mapMaybe why as
 
                            cstrs = S.toList $ resConstraints result
