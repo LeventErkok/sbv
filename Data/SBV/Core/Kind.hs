@@ -468,7 +468,7 @@ needsFlattening = any check . expandKinds
         check KEither{}   = True
         check KArray{}    = True
         check KApp{}      = True
-        check KADT{}      = True
+        check k@KADT{}    = not (isUninterpreted k || isRoundingMode k)
 
         -- no need to expand bases
         check KVar{}      = False
