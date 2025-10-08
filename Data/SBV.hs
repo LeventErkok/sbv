@@ -1132,21 +1132,12 @@ If the uninterpreted sort definition takes the form of an enumeration (i.e., a s
 it will turn into an enumeration in SMTLib.  A simple example is:
 
 @
-    data X = A | B | C deriving (Enum, Bounded)
+    data X = A | B | C deriving (Show, Enum, Bounded)
     mkSymbolic [''X]
 @
 
-Note the magic incantation @mkSymbolic [''X]@, requires certain extensions to be turned on. Follow GHC's advice,
-but in general you need some subset of:
-
-> LANGUAGE DataKinds
-> LANGUAGE DeriveAnyClass
-> LANGUAGE DeriveDataTypeable
-> LANGUAGE FlexibleInstances
-> LANGUAGE StandaloneDeriving
-> LANGUAGE TemplateHaskell
-> LANGUAGE TypeAbstractions
-> LANGUAGE TypeApplications
+Note the magic incantation @mkSymbolic [''X]@, requires certain extensions to be turned on. Simply follow GHC's advice. Your enumeration
+should use the deriving instances of @Show@, @Enum@ and @Bounded@, as SBV relies on these defaults to derive the symbolic variants.
 
 SBV also supports good old ADT's as well, with fields. The support for this is similar, where SBV will create the
 corresponding datatype in a symbolic manner:

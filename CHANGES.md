@@ -21,7 +21,7 @@
     of modeling type-checking constraints.
 
   * [BACKWARDS COMPATIBILITY] The old functions 'mkSymbolicEnumeration' and 'mkUninterpretedSort' are now removed,
-    since their functionality is subsumed by 'mkSymbolic' describred above.
+    since their functionality is subsumed by 'mkSymbolic'.
 
 ### Version 12.2, 2025-08-15
 
