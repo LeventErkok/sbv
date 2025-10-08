@@ -6,7 +6,6 @@
 [ISSUE] (set-option :diagnostic-output-channel "stdout")
 [ISSUE] (set-option :produce-models true)
 [ISSUE] (set-logic QF_BV)
-[ISSUE] ; --- uninterpreted sorts ---
 [ISSUE] ; --- tuples ---
 [ISSUE] ; --- sums ---
 [ISSUE] ; --- literal constants ---

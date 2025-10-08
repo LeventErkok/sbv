@@ -4,7 +4,6 @@
 [GOOD] (set-option :global-declarations true)
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-logic ALL) ; external query, using all logics.
-[GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---

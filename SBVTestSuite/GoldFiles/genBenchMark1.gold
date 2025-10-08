@@ -2,7 +2,6 @@
 (set-option :diagnostic-output-channel "stdout")
 (set-option :produce-models true)
 (set-logic QF_BV)
-; --- uninterpreted sorts ---
 ; --- tuples ---
 ; --- sums ---
 ; --- literal constants ---

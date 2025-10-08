@@ -6,7 +6,6 @@
 [ISSUE] (set-option :smtlib2_compliant true)
 [ISSUE] (set-option :produce-models true)
 [ISSUE] (set-logic ALL) ; has unbounded values, using catch-all.
-[ISSUE] ; --- uninterpreted sorts ---
 [ISSUE] ; --- tuples ---
 [ISSUE] ; --- sums ---
 [ISSUE] ; --- literal constants ---

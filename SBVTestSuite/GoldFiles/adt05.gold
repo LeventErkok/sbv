@@ -5,7 +5,6 @@
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-logic HO_ALL) ; has unbounded values, using catch-all.
-[GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
                                            ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
