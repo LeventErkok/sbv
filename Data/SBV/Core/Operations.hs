@@ -551,7 +551,7 @@ cCompare k op x y =
       (CADT (s, fks), CADT (s', fks'))
          -> case k of
               -- Enumerations. We do a straight comparison on the constructor index
-              KADT _ _ cstrs | all null (map snd cstrs)
+              KADT _ _ cstrs | all (null . snd) cstrs
                              -> let cnms = map fst cstrs
                                 in case (s `elemIndex` cnms, s' `elemIndex` cnms) of
                                      (Just i, Just j) -> Just (i `compare` j)
