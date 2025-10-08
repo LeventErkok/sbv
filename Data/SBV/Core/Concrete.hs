@@ -508,11 +508,10 @@ randomCVal k =
     -- TODO: Can we do something here?
     KApp s _           -> error $ "randomCVal: Not supported for KApp: " ++ s
 
-    -- The following only handles enums. Can we do something better?
-    KADT _ [] cstrs@(_:_) | all (null . snd) cstrs
-                       -> do i <- randomRIO (0, length cstrs - 1)
-                             pure $ CADT (fst (cstrs !! i), [])
-
+    KADT _ _ cstrs@(_:_) -> do i <- randomRIO (0, length cstrs - 1)
+                               let (c, fks) = cstrs !! i
+                               vs <- mapM randomCVal fks
+                               pure $ CADT (c, zip fks vs)
     KADT s _ _         -> error $ "randomCVal: Not supported for ADT:  " ++ s
 
     KList ek           -> do l <- randomRIO (0, 100)
