@@ -8,14 +8,16 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has user-defined sorts, using catch-all.
-[GOOD] ; --- uninterpreted sorts ---
-[GOOD] (declare-datatypes ((E 0)) (((A) (B) (C))))
-[GOOD] (define-fun E_constrIndex ((x E)) Int
-          (ite (= x A) 0 (ite (= x B) 1 2))
-       )
+[GOOD] (set-logic ALL) ; has user-defined data-types, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: E
+[GOOD] (declare-datatype E (
+           (A)
+           (B)
+           (C)
+       ))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Array E Bool))
@@ -40,63 +42,63 @@ Fast allSat, Looking for solution 2
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store ((as const (Array E Bool)) false) B true)))
+[RECV] ((s0 ((as const (Array E Bool)) true)))
 [GOOD] (push 1)
-[GOOD] (define-fun s3 () (Array E Bool) (store ((as const (Array E Bool)) false) B true))
+[GOOD] (define-fun s3 () (Array E Bool) ((as const (Array E Bool)) true))
 [GOOD] (define-fun s4 () Bool (distinct s0 s3))
 [GOOD] (assert s4)
 Fast allSat, Looking for solution 3
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store ((as const (Array E Bool)) false) A true)))
+[RECV] ((s0 (store ((as const (Array E Bool)) true) A false)))
 [GOOD] (push 1)
-[GOOD] (define-fun s5 () (Array E Bool) (store ((as const (Array E Bool)) false) A true))
+[GOOD] (define-fun s5 () (Array E Bool) (store ((as const (Array E Bool)) true) A false))
 [GOOD] (define-fun s6 () Bool (distinct s0 s5))
 [GOOD] (assert s6)
 Fast allSat, Looking for solution 4
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store ((as const (Array E Bool)) false) C true) A true)))
+[RECV] ((s0 (store ((as const (Array E Bool)) false) A true)))
 [GOOD] (push 1)
-[GOOD] (define-fun s7 () (Array E Bool) (store (store ((as const (Array E Bool)) false) C true) A true))
+[GOOD] (define-fun s7 () (Array E Bool) (store ((as const (Array E Bool)) false) A true))
 [GOOD] (define-fun s8 () Bool (distinct s0 s7))
 [GOOD] (assert s8)
 Fast allSat, Looking for solution 5
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 ((as const (Array E Bool)) true)))
+[RECV] ((s0 (store (store ((as const (Array E Bool)) false) C true) A true)))
 [GOOD] (push 1)
-[GOOD] (define-fun s9 () (Array E Bool) ((as const (Array E Bool)) true))
+[GOOD] (define-fun s9 () (Array E Bool) (store (store ((as const (Array E Bool)) false) C true) A true))
 [GOOD] (define-fun s10 () Bool (distinct s0 s9))
 [GOOD] (assert s10)
 Fast allSat, Looking for solution 6
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store ((as const (Array E Bool)) false) B true) A true)))
+[RECV] ((s0 (store ((as const (Array E Bool)) false) C true)))
 [GOOD] (push 1)
-[GOOD] (define-fun s11 () (Array E Bool) (store (store ((as const (Array E Bool)) false) B true) A true))
+[GOOD] (define-fun s11 () (Array E Bool) (store ((as const (Array E Bool)) false) C true))
 [GOOD] (define-fun s12 () Bool (distinct s0 s11))
 [GOOD] (assert s12)
 Fast allSat, Looking for solution 7
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store ((as const (Array E Bool)) false) C true) B true)))
+[RECV] ((s0 (store (store ((as const (Array E Bool)) true) C false) A false)))
 [GOOD] (push 1)
-[GOOD] (define-fun s13 () (Array E Bool) (store (store ((as const (Array E Bool)) false) C true) B true))
+[GOOD] (define-fun s13 () (Array E Bool) (store (store ((as const (Array E Bool)) true) C false) A false))
 [GOOD] (define-fun s14 () Bool (distinct s0 s13))
 [GOOD] (assert s14)
 Fast allSat, Looking for solution 8
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store ((as const (Array E Bool)) false) C true)))
+[RECV] ((s0 (store ((as const (Array E Bool)) true) C false)))
 [GOOD] (push 1)
-[GOOD] (define-fun s15 () (Array E Bool) (store ((as const (Array E Bool)) false) C true))
+[GOOD] (define-fun s15 () (Array E Bool) (store ((as const (Array E Bool)) true) C false))
 [GOOD] (define-fun s16 () Bool (distinct s0 s15))
 [GOOD] (assert s16)
 Fast allSat, Looking for solution 9
@@ -115,19 +117,19 @@ Fast allSat, Looking for solution 9
 
 FINAL:
 Solution #1:
-  s0 = {C} :: {E}
+  s0 = U - {C} :: {E}
 Solution #2:
-  s0 = {B,C} :: {E}
+  s0 = U - {A,C} :: {E}
 Solution #3:
-  s0 = {A,B} :: {E}
+  s0 = {C} :: {E}
 Solution #4:
-  s0 = U :: {E}
-Solution #5:
   s0 = {A,C} :: {E}
-Solution #6:
+Solution #5:
   s0 = {A} :: {E}
+Solution #6:
+  s0 = U - {A} :: {E}
 Solution #7:
-  s0 = {B} :: {E}
+  s0 = U :: {E}
 Solution #8:
   s0 = {} :: {E}
 Found 8 different solutions.

@@ -5,14 +5,18 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic ALL) ; has user-defined sorts, using catch-all.
-[GOOD] ; --- uninterpreted sorts ---
-[GOOD] (declare-datatypes ((L 0)) (((A) (B))))
-[GOOD] (define-fun L_constrIndex ((x L)) Int
-          (ite (= x A) 0 1)
-       )
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
+[GOOD] (set-logic ALL) ; has user-defined data-types, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: L
+[GOOD] (declare-datatype L (
+           (A)
+           (B)
+       ))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () L)

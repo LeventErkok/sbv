@@ -5,12 +5,11 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic ALL) ; has user-defined sorts, using catch-all.
-[GOOD] ; --- uninterpreted sorts ---
-[GOOD] (declare-sort Thing 0)  ; N.B. Uninterpreted sort.
-[GOOD] (declare-fun Thing_witness () Thing)
+[GOOD] (set-logic ALL) ; has user-defined data-types, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
+[GOOD] ; --- ADTs  --- 
+[GOOD] (declare-sort Thing 0) ; N.B. Uninterpreted sort.
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s2 () Thing) ; tracks user variable "__internal_sbv_s2"

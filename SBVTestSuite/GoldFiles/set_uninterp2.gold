@@ -8,14 +8,16 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has user-defined sorts, using catch-all.
-[GOOD] ; --- uninterpreted sorts ---
-[GOOD] (declare-datatypes ((E 0)) (((A) (B) (C))))
-[GOOD] (define-fun E_constrIndex ((x E)) Int
-          (ite (= x A) 0 (ite (= x B) 1 2))
-       )
+[GOOD] (set-logic ALL) ; has user-defined data-types, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: E
+[GOOD] (declare-datatype E (
+           (A)
+           (B)
+           (C)
+       ))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Array E Bool)) ; tracks user variable "a"
