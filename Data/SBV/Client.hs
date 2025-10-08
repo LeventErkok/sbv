@@ -204,7 +204,7 @@ mkADT adtKind typeName params cstrs = do
                                        pure $ TH.FunD 'literal [TH.Clause [TH.WildP] (TH.NormalB noLit) []]
 
                 ADTEnum          -> do lit <- [| \n -> let k = kindOf n in SBV $ SVal k (Left (CV k (CADT (show n, [])))) |]
-                                       pure $ TH.FunD 'literal [TH.Clause [] (TH.NormalB lit) []] 
+                                       pure $ TH.FunD 'literal [TH.Clause [] (TH.NormalB lit) []]
 
                 ADTFull          -> let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
                                                                  let cn      = TH.mkName $ 's' : TH.nameBase n
