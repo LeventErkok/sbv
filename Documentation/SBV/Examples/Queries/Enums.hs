@@ -23,6 +23,7 @@ import Data.SBV.Control
 
 -- | Days of the week. We make it symbolic using the 'mkSymbolic' splice.
 data Day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday
+         deriving Show
 
 -- | Make 'Day' a symbolic value.
 mkSymbolic [''Day]
