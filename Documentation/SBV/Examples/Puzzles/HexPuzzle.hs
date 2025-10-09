@@ -40,7 +40,6 @@
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -55,7 +54,6 @@ import Data.Proxy
 
 -- | Colors we're allowed
 data Color = Black | Blue | Green | Red
-          deriving (Eq, Show, Enum, Bounded)
 
 -- | Make 'Color' a symbolic value.
 mkSymbolic [''Color]

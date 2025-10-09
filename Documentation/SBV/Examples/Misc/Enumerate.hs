@@ -12,11 +12,8 @@
 -- example involving enumerations.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -29,12 +26,7 @@ import Data.SBV
 -- | A simple enumerated type, that we'd like to translate to SMT-Lib intact;
 -- i.e., this type will not be uninterpreted but rather preserved and will
 -- be just like any other symbolic type SBV provides.
---
--- Also note that we need to have the following @LANGUAGE@ options defined:
--- @TemplateHaskell@, @StandaloneDeriving@, @DeriveDataTypeable@, @DeriveAnyClass@ for
--- this to work.
 data E = A | B | C
-       deriving (Show, Enum, Bounded, Eq, Ord)
 
 -- | Make 'E' a symbolic value.
 mkSymbolic [''E]

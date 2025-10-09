@@ -12,12 +12,9 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE DeriveDataTypeable   #-}
-{-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeAbstractions     #-}
 

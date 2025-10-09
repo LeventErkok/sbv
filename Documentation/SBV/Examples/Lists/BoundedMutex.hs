@@ -9,13 +9,8 @@
 -- Proves a simple mutex algorithm correct up to a given bound.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -30,7 +25,7 @@ import Data.SBV.Control
 data State = Idle     -- ^ Regular work
            | Ready    -- ^ Intention to enter critical state
            | Critical -- ^ In the critical state
-           deriving (Eq, Show, Enum, Bounded)
+           deriving Show
 
 -- | Make 'State' a symbolic enumeration
 mkSymbolic [''State]

@@ -8,11 +8,9 @@
 --
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# OPTIONS_GHC -Wall -Werror   #-}
+{-# LANGUAGE TemplateHaskell #-}
+
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Uninterpreted.Uninterpreted(tests) where
 

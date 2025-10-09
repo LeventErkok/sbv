@@ -16,7 +16,6 @@
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -46,7 +45,6 @@ mkSymbolic [''V]
 
 -- | An enumerated type for demo purposes, named 'E'
 data E = A | B | C
-       deriving (Show, Enum, Bounded, Ord, Eq)
 
 mkSymbolic [''E]
 

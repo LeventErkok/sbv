@@ -9,10 +9,7 @@
 -- Test suite for basic axioms and uninterpreted functions
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

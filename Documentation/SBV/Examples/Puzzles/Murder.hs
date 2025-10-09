@@ -24,7 +24,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
 
@@ -40,15 +39,15 @@ import Data.SBV.Control
 
 -- | Locations
 data Location = Bar | Beach | Alone
-              deriving (Eq, Show, Enum, Bounded)
+              deriving Show
 
 -- | Sexes
-data Sex  = Male | Female
-          deriving (Eq, Show, Enum, Bounded)
+data Sex = Male | Female
+         deriving Show
 
 -- | Roles
 data Role = Victim | Killer | Bystander
-          deriving (Eq, Show, Enum, Bounded)
+          deriving Show
 
 mkSymbolic [''Location]
 mkSymbolic [''Sex]

@@ -16,7 +16,6 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
@@ -31,7 +30,7 @@ import Data.SBV.Tools.BMC
 
 -- | Possible actions
 data Action = Initial | FillBig | FillSmall | EmptyBig | EmptySmall | BigToSmall | SmallToBig
-            deriving (Eq, Show, Enum, Bounded)
+             deriving Show
 
 mkSymbolic [''Action]
 

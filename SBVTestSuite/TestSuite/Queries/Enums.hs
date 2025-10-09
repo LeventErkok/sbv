@@ -9,11 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.Uninterpreted.AUF
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -25,7 +22,7 @@ import Data.SBV.Control
 
 import Utils.SBVTestFramework
 
-data BinOp  = Plus | Minus | Times deriving (Show, Enum, Bounded, Ord, Eq)
+data BinOp  = Plus | Minus | Times
 mkSymbolic [''BinOp]
 
 -- Test suite

@@ -15,10 +15,8 @@
 -- What's implicit here is that there is a rabbit that must be not-greedy;
 -- which we add to our constraints.
 -----------------------------------------------------------------------------
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
+
+{-# LANGUAGE TemplateHaskell #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

@@ -9,13 +9,10 @@
 -- Testing fresh-vars in query mode
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -27,7 +24,7 @@ import Data.SBV.Control
 
 import Utils.SBVTestFramework
 
-data BinOp  = Plus | Minus | Times deriving (Eq, Show, Enum, Bounded)
+data BinOp  = Plus | Minus | Times
 mkSymbolic [''BinOp]
 
 -- Test suite

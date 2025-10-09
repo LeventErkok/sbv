@@ -9,10 +9,7 @@
 -- Test suite for basic allsat calls
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}

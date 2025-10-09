@@ -15,7 +15,6 @@
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE OverloadedRecordDot #-}
@@ -34,15 +33,13 @@ import GHC.Generics (Generic)
 
 -- | Orangutans in the puzzle.
 data Orangutan = Merah | Ofallo | Quirrel | Shamir
-               deriving (Eq, Show, Enum, Bounded)
+               deriving (Show, Enum, Bounded)
 
 -- | Handlers for each orangutan.
 data Handler = Dolly | Eva | Francine | Gracie
-             deriving (Eq, Show, Enum, Bounded)
 
 -- | Location for each orangutan.
 data Location = Ambalat | Basahan | Kendisi | Tarakan
-             deriving (Eq, Show, Enum, Bounded)
 
 mkSymbolic [''Orangutan]
 mkSymbolic [''Handler]

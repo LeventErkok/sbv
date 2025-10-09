@@ -35,12 +35,9 @@
 -- NB. Thanks to Amit Goel for suggesting the formalization strategy used in here.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -54,11 +51,9 @@ import Data.SBV
 
 -- | Months. We only put in the months involved in the puzzle for simplicity
 data Month = May | Jun | Jul | Aug
-           deriving (Eq, Show, Enum, Bounded)
 
 -- | Days. Again, only the ones mentioned in the puzzle.
 data Day = D14 | D15 | D16 | D17 | D18 | D19
-         deriving (Eq, Show, Enum, Bounded)
 
 mkSymbolic [''Month]
 mkSymbolic [''Day]

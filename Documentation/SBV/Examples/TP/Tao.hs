@@ -18,12 +18,9 @@
 
 
 {-# LANGUAGE CPP                 #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}

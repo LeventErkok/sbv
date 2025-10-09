@@ -9,12 +9,9 @@
 -- Test tuples.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -32,7 +29,7 @@ import qualified Data.SBV.List as L
 
 import Utils.SBVTestFramework
 
-data E = A | B | C deriving (Eq, Show, Bounded, Enum)
+data E = A | B | C deriving Show
 mkSymbolic [''E]
 
 -- Test suite

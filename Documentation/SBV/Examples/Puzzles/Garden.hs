@@ -28,13 +28,9 @@
 -- case, the second student would be right.
 ------------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TypeApplications   #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -44,7 +40,6 @@ import Data.SBV
 
 -- | Colors of the flowers
 data Color = Red | Yellow | Blue
-          deriving (Eq, Show, Enum, Bounded)
 
 -- | Make 'Color' a symbolic value.
 mkSymbolic [''Color]

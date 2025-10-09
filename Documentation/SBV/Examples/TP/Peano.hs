@@ -37,7 +37,6 @@ import Data.SBV.TP
 -- the testers and accessors.)
 data Nat = Zero
          | Succ { prev :: Nat }
-         deriving (Eq, Ord)
 
 -- | Create a symbolic version of naturals.
 mkSymbolic [''Nat]

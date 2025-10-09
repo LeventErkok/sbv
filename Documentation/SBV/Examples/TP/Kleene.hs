@@ -11,14 +11,11 @@
 -- Based on <http://www.philipzucker.com/bryzzowski_kat/>
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE DeriveAnyClass       #-}
-{-# LANGUAGE DeriveDataTypeable   #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE StandaloneDeriving   #-}
-{-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE TypeAbstractions     #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeAbstractions    #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-unused-matches #-}
 

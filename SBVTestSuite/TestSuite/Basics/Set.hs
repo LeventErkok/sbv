@@ -9,11 +9,8 @@
 -- Test sets.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -30,7 +27,7 @@ import Data.SBV.Tuple
 
 import Utils.SBVTestFramework hiding (complement)
 
-data E = A | B | C deriving (Show, Bounded, Enum, Ord, Eq)
+data E = A | B | C deriving (Show, Eq, Ord)
 mkSymbolic [''E]
 
 type SC = SSet  Integer

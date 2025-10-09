@@ -9,10 +9,7 @@
 -- Testsuite for Documentation.SBV.Examples.Uninterpreted.Function
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}

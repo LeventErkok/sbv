@@ -38,7 +38,7 @@ module Data.SBV.Client
 import Data.Generics
 
 import Control.Monad (filterM)
-import Test.QuickCheck (Arbitrary(..), arbitraryBoundedEnum)
+import Test.QuickCheck (Arbitrary(..), elements)
 
 import qualified Control.Exception as C
 
@@ -61,6 +61,8 @@ import Data.SBV.Core.Model
 import Data.SBV.Core.SizedFloats
 import Data.SBV.Provers.Prover
 import qualified Data.SBV.List as SL
+
+import Data.List (genericLength)
 
 import Data.SBV.TP.Kernel
 
@@ -203,8 +205,12 @@ mkADT adtKind typeName params cstrs = do
                                                 |]
                                        pure $ TH.FunD 'literal [TH.Clause [TH.WildP] (TH.NormalB noLit) []]
 
-                ADTEnum          -> do lit <- [| \n -> let k = kindOf n in SBV $ SVal k (Left (CV k (CADT (show n, [])))) |]
-                                       pure $ TH.FunD 'literal [TH.Clause [] (TH.NormalB lit) []]
+                ADTEnum          -> let mkLitClause n = TH.clause [TH.conP n []]
+                                                                  (TH.normalB [| let k = kindOf $(TH.conE n)
+                                                                                 in SBV $ SVal k (Left (CV k (CADT (TH.nameBase n, []))))
+                                                                              |])
+                                                                  []
+                                    in TH.FunD 'literal <$> mapM (mkLitClause . fst) cstrs
 
                 ADTFull          -> let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
                                                                  let cn      = TH.mkName $ 's' : TH.nameBase n
@@ -253,7 +259,11 @@ mkADT adtKind typeName params cstrs = do
     symCtx  <- TH.cxt [TH.appT (TH.conT ''SymVal) (TH.varT n) | n <- params]
 
     mmBound <- if isEnum
-                  then [| Just (minBound, maxBound) |]
+                  then let universe     = [TH.conE con | (con, _) <- cstrs]
+                           (minb, maxb) = case (universe, reverse universe) of
+                                             (x:_, y:_) -> (x, y)
+                                             _          -> error $ "Impossible: Ran out of elements in determining bounds: " ++ show cstrs
+                       in [| Just ($minb, $maxb) |]
                   else [| Nothing |]
 
     let symVal = TH.InstanceD
@@ -286,9 +296,10 @@ mkADT adtKind typeName params cstrs = do
                         [TH.FunD 'kindOf [TH.Clause [TH.WildP] (TH.NormalB kindDef) []]]
 
     arbDecl <- if isEnum
-                  then [d|instance Arbitrary $(pure typeCon) where
-                            arbitrary = arbitraryBoundedEnum
-                       |]
+                  then let universe  = TH.listE [TH.conE con | (con, _) <- cstrs]
+                       in [d|instance Arbitrary $(pure typeCon) where
+                              arbitrary = elements $universe
+                          |]
                   else [d|instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
                             arbitrary = error $ unlines [ ""
                                                         , "*** Data.SBV: Cannot quickcheck the given property."
@@ -352,46 +363,53 @@ mkADT adtKind typeName params cstrs = do
     symEnum <- case adtKind of
                 ADTUninterpreted -> pure []
                 ADTFull          -> pure []
-                ADTEnum          -> [d| instance SatModel $(TH.conT typeName) where
-                                          parseCVs (CV _ (CADT (s, [])) : r)
-                                            | Just v <- s `lookup` [(show m, m) | m <- [minBound .. maxBound]]
-                                            = Just (v, r)
-                                          parseCVs _                         = Nothing
+                ADTEnum          ->
+                  let universe  = TH.listE [TH.conE                          con   | (con, _) <- cstrs]
+                      universeS = TH.listE [TH.litE (TH.stringL (TH.nameBase con)) | (con, _) <- cstrs]
+                  in [d| instance SatModel $(TH.conT typeName) where
+                           parseCVs (CV _ (CADT (s, [])) : r)
+                             | Just v <- s `lookup` zip $universeS $universe
+                             = Just (v, r)
+                           parseCVs _ = Nothing
 
-                                        instance SL.EnumSymbolic $(TH.conT typeName) where
-                                          succ     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts (drop 1 elts))
-                                          pred     x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip (drop 1 elts) elts)
+                         instance SL.EnumSymbolic $(TH.conT typeName) where
+                           succ x = go (zip $universe (drop 1 $universe))
+                             where go []              = some ("succ_" ++ show typeName ++ "_maximal") (const sTrue)
+                                   go ((c, s) : rest) = ite (x .== literal c) (literal s) (go rest)
 
-                                          toEnum   x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip [0..] elts)
+                           pred x = go (zip (drop 1 $universe) $universe)
+                             where go []              = some ("pred_" ++ show typeName ++ "_minimal") (const sTrue)
+                                   go ((c, s) : rest) = ite (x .== literal c) (literal s) (go rest)
 
-                                          -- Make fromEnum a bit simpler, since it cannot fail. The following definition,
-                                          -- while correct, generates too complicated a code.
-                                          -- fromEnum x = let elts = [minBound .. maxBound] in x `SL.lookup` literal (zip elts [0..])
-                                          fromEnum x = go 0 minBound
-                                            where go i c
-                                                   | c == maxBound = i
-                                                   | True          = ite (x .== literal c) i (go (i+1) (succ c))
+                           toEnum x = go (zip $universe [0..])
+                             where go []              = some ("toEnum_" ++ show typeName ++ "_out_of_range") (const sTrue)
+                                   go ((c, i) : rest) = ite (x .== literal i) (literal c) (go rest)
 
-                                          enumFrom n = SL.map SL.toEnum (SL.enumFromTo (SL.fromEnum n) (SL.fromEnum (literal (maxBound :: $(TH.conT typeName)))))
+                           fromEnum x = go 0 $universe
+                             where go _ []     = error "fromEnum: Impossible happened, ran out of elements."
+                                   go i [_]    = i
+                                   go i (c:cs) = ite (x .== literal c) i (go (i+1) cs)
 
-                                          enumFromThen = smtFunction ("EnumSymbolic." ++ TH.nameBase typeName ++ ".enumFromThen") $ \n1 n2 ->
-                                                                     let i_n1, i_n2 :: SInteger
-                                                                         i_n1 = SL.fromEnum n1
-                                                                         i_n2 = SL.fromEnum n2
-                                                                     in SL.map SL.toEnum (ite (i_n2 .>= i_n1)
-                                                                                              (SL.enumFromThenTo i_n1 i_n2 (SL.fromEnum (literal (maxBound :: $(TH.conT typeName)))))
-                                                                                              (SL.enumFromThenTo i_n1 i_n2 (SL.fromEnum (literal (minBound :: $(TH.conT typeName))))))
+                           enumFrom n = SL.map SL.toEnum (SL.enumFromTo (SL.fromEnum n) (genericLength $universe - 1))
 
-                                          enumFromTo     n m   = SL.map SL.toEnum (SL.enumFromTo     (SL.fromEnum n) (SL.fromEnum m))
+                           enumFromThen = smtFunction ("EnumSymbolic." ++ TH.nameBase typeName ++ ".enumFromThen") $ \n1 n2 ->
+                                                      let i_n1, i_n2 :: SInteger
+                                                          i_n1 = SL.fromEnum n1
+                                                          i_n2 = SL.fromEnum n2
+                                                      in SL.map SL.toEnum (ite (i_n2 .>= i_n1)
+                                                                               (SL.enumFromThenTo i_n1 i_n2 (genericLength $universe - 1))
+                                                                               (SL.enumFromThenTo i_n1 i_n2 0))
 
-                                          enumFromThenTo n m t = SL.map SL.toEnum (SL.enumFromThenTo (SL.fromEnum n) (SL.fromEnum m) (SL.fromEnum t))
+                           enumFromTo     n m   = SL.map SL.toEnum (SL.enumFromTo     (SL.fromEnum n) (SL.fromEnum m))
 
-                                        instance OrdSymbolic (SBV $(TH.conT typeName)) where
-                                          a .<  b = SL.fromEnum a .<  SL.fromEnum b
-                                          a .<= b = SL.fromEnum a .<= SL.fromEnum b
-                                          a .>  b = SL.fromEnum a .>  SL.fromEnum b
-                                          a .>= b = SL.fromEnum a .>= SL.fromEnum b
-                                    |]
+                           enumFromThenTo n m t = SL.map SL.toEnum (SL.enumFromThenTo (SL.fromEnum n) (SL.fromEnum m) (SL.fromEnum t))
+
+                         instance OrdSymbolic (SBV $(TH.conT typeName)) where
+                           a .<  b = SL.fromEnum a .<  SL.fromEnum b
+                           a .<= b = SL.fromEnum a .<= SL.fromEnum b
+                           a .>  b = SL.fromEnum a .>  SL.fromEnum b
+                           a .>= b = SL.fromEnum a .>= SL.fromEnum b
+                     |]
 
     pure $  [tdecl, symVal, kindDecl]
          ++ arbDecl

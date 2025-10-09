@@ -9,11 +9,8 @@
 -- Demonstrates the use of enumeration values during queries.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -26,7 +23,6 @@ import Data.SBV.Control
 
 -- | Days of the week. We make it symbolic using the 'mkSymbolic' splice.
 data Day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday
-         deriving (Show, Eq, Ord, Bounded, Enum)
 
 -- | Make 'Day' a symbolic value.
 mkSymbolic [''Day]

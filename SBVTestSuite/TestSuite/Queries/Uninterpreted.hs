@@ -9,11 +9,8 @@
 -- Testing uninterpreted value extraction
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -24,7 +21,7 @@ module TestSuite.Queries.Uninterpreted where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
-data L = A | B deriving (Eq, Show, Enum, Bounded)
+data L = A | B deriving Show
 mkSymbolic [''L]
 
 -- Test suite

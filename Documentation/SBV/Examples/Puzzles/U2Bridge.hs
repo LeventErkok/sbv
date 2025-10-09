@@ -13,7 +13,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeApplications   #-}
 
@@ -36,7 +35,7 @@ import Data.SBV
 
 -- | U2 band members.
 data U2Member = Bono | Edge | Adam | Larry
-              deriving (Show, Enum, Bounded, Eq, Ord)
+              deriving Show
 
 -- | Make 'U2Member' a symbolic value.
 mkSymbolic [''U2Member]

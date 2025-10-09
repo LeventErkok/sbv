@@ -10,11 +10,8 @@
 -- by properly defining your metric values.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -27,7 +24,6 @@ import Data.SBV
 
 -- | A simple enumeration
 data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun
-         deriving (Show, Eq, Enum, Bounded)
 
 -- | Make 'Day' a symbolic value.
 mkSymbolic [''Day]

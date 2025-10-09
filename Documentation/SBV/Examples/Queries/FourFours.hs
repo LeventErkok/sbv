@@ -19,11 +19,8 @@
 -- and ask the SMT solver to find the appropriate fillings.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -41,7 +38,7 @@ import Data.Maybe
 -- and exponentiation will only be to the power @0@. This does restrict the search space, but is sufficient to
 -- solve all the instances.
 data BinOp = Plus | Minus | Times | Divide | Expt
-           deriving (Show, Eq, Enum, Bounded)
+           deriving (Eq, Show)
 
 -- | Make 'BinOp' a symbolic value.
 mkSymbolic [''BinOp]
@@ -49,7 +46,7 @@ mkSymbolic [''BinOp]
 -- | Supported unary operators. Similar to 'BinOp' case, we will restrict square-root and factorial to
 -- be only applied to the value @4.
 data UnOp  = Negate | Sqrt | Factorial
-           deriving (Show, Eq, Enum, Bounded)
+           deriving Eq
 
 -- | Make 'UnOp' a symbolic value.
 mkSymbolic [''UnOp]

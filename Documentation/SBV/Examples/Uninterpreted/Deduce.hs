@@ -9,9 +9,6 @@
 -- Demonstrates uninterpreted sorts and how they can be used for deduction.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
