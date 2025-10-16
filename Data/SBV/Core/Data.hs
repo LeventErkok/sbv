@@ -617,6 +617,11 @@ class (HasKind a, Typeable a, Arbitrary a) => SymVal a where
   unliteral (SBV (SVal _ (Left c))) = Just $ fromCV c
   unliteral _                       = Nothing
 
+  -- | Get the underlying CV, if available
+  unlitCV :: SBV a -> Maybe (Kind, CVal)
+  unlitCV (SBV (SVal _ (Left (CV k v)))) = Just (k, v)
+  unlitCV _                              = Nothing
+
   -- | Is the symbolic word concrete?
   isConcrete :: SBV a -> Bool
   isConcrete (SBV (SVal _ (Left _))) = True
