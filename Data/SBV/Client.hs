@@ -13,7 +13,6 @@
 {-# LANGUAGE DeriveLift          #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE PackageImports      #-}
-{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}

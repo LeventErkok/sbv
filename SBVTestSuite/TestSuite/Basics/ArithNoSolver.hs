@@ -10,11 +10,9 @@
 -- the constant folding based arithmetic implementation in SBV
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP              #-}
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE Rank2Types       #-}
-{-# LANGUAGE TupleSections    #-}
+{-# LANGUAGE CPP           #-}
+{-# LANGUAGE Rank2Types    #-}
+{-# LANGUAGE TupleSections #-}
 
 #if MIN_VERSION_base(4,19,0)
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns -Wno-x-partial #-}

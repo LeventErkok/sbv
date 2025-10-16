@@ -10,11 +10,10 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE Rank2Types          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

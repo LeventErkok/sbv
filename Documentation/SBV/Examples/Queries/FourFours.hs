@@ -19,10 +19,9 @@
 -- and ask the SMT solver to find the appropriate fillings.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

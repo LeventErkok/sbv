@@ -9,7 +9,6 @@
 -- Provable abstraction and the connection to SMT solvers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -17,7 +16,6 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

@@ -9,8 +9,6 @@
 -- The connection to the dReal SMT solver
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Provers.DReal(dReal) where

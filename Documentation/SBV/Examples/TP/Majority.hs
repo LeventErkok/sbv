@@ -10,7 +10,6 @@
 -- closely, which you can find at <https://github.com/acl2/acl2/blob/master/books/demos/majority-vote.lisp>.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}

@@ -9,11 +9,11 @@
 -- Test case for https://github.com/LeventErkok/sbv/issues/539
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass                #-}
-{-# LANGUAGE DeriveGeneric                 #-}
-{-# LANGUAGE FlexibleContexts              #-}
-{-# LANGUAGE Rank2Types                    #-}
-{-# LANGUAGE QuantifiedConstraints         #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE Rank2Types            #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 

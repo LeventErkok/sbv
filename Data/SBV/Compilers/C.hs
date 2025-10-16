@@ -9,8 +9,6 @@
 -- Compilation of symbolic programs to C
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP           #-}
-{-# LANGUAGE PatternGuards #-}
 {-# LANGUAGE TupleSections #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}

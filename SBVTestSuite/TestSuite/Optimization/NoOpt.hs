@@ -9,9 +9,9 @@
 -- Check that if optimization is done, there must be goals and vice versa
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror #-}
-
 {-# LANGUAGE ScopedTypeVariables #-}
+
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Optimization.NoOpt(tests) where
 

@@ -9,8 +9,6 @@
 -- The connection to the CVC4 SMT solver
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Provers.CVC4(cvc4) where

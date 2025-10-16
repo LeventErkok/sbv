@@ -11,7 +11,7 @@
 -- for recursive definitions.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE OverloadedLists  #-}
+{-# LANGUAGE OverloadedLists #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

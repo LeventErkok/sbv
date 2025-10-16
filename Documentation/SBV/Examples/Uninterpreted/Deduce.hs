@@ -9,7 +9,7 @@
 -- Demonstrates uninterpreted sorts and how they can be used for deduction.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

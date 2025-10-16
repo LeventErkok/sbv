@@ -9,7 +9,6 @@
 -- Test tuples.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}

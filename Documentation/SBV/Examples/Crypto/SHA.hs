@@ -17,7 +17,6 @@
 
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 

@@ -9,9 +9,8 @@
 -- Type-level sized floats.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}

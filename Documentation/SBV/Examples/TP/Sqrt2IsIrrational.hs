@@ -9,9 +9,8 @@
 -- Prove that square-root of 2 is irrational.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeAbstractions    #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE TypeAbstractions #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

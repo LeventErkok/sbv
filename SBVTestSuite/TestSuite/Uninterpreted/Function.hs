@@ -9,8 +9,7 @@
 -- Testsuite for Documentation.SBV.Examples.Uninterpreted.Function
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

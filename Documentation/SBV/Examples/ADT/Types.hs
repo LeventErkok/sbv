@@ -11,7 +11,6 @@
 -----------------------------------------------------------------------------
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE TemplateHaskell   #-}

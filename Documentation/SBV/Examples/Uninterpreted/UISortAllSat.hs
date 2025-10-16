@@ -10,8 +10,8 @@
 -- Thanks to Eric Seidel for the idea.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE CPP             #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

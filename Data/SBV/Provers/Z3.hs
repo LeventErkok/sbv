@@ -9,8 +9,6 @@
 -- The connection to the Z3 SMT solver
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Provers.Z3(z3) where

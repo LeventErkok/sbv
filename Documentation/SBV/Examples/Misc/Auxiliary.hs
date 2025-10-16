@@ -15,8 +15,6 @@
 -- considering them explicitly in model construction.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE OverloadedStrings #-}
-
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Misc.Auxiliary where

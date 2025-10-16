@@ -11,15 +11,13 @@
 -- We use a bounded-model-checking style search to find a solution.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveDataTypeable    #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedRecordDot   #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE OverloadedRecordDot   #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

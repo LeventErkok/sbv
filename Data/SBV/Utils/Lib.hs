@@ -9,7 +9,6 @@
 -- Misc helpers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 

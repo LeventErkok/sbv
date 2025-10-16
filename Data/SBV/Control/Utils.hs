@@ -10,19 +10,16 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE BangPatterns           #-}
-{-# LANGUAGE InstanceSigs           #-}
-{-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE InstanceSigs           #-}
 {-# LANGUAGE LambdaCase             #-}
 {-# LANGUAGE NamedFieldPuns         #-}
 {-# LANGUAGE OverloadedStrings      #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TupleSections          #-}
 {-# LANGUAGE TypeApplications       #-}
-{-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE ViewPatterns           #-}
-{-# LANGUAGE UndecidableInstances   #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 

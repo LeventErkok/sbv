@@ -27,8 +27,7 @@
 -- The function @read@ and @write@ are usual array operations.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

@@ -9,7 +9,7 @@
 -- Demonstrates uninterpreted sorts, together with axioms.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

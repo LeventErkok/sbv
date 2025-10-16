@@ -9,8 +9,7 @@
 -- Use TP to prove @2n^2 + n + 1@ is never divisible by @3@.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE TypeAbstractions #-}
+{-# LANGUAGE DataKinds #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

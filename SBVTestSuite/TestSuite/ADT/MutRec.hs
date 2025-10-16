@@ -9,7 +9,6 @@
 -- Testing ADTs, mutual-recursion and other parameterization checks
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}

@@ -9,8 +9,6 @@
 -- Main entry point to the test suite
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Main(main) where
