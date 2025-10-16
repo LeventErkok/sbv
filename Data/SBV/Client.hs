@@ -212,12 +212,28 @@ mkADT adtKind typeName params cstrs = do
                                                                   []
                                     in TH.FunD 'literal <$> mapM (mkLitClause . fst) cstrs
 
-                ADTFull          -> let mkLitClause (n, fs) = do as <- mapM (const (TH.newName "a")) fs
-                                                                 let cn      = TH.mkName $ 's' : TH.nameBase n
-                                                                     app a b = TH.AppE a (TH.AppE (TH.VarE 'literal) b)
-                                                                 pure $ TH.Clause [TH.ConP n [] (map TH.VarP as)]
-                                                                                  (TH.NormalB (foldl app (TH.VarE cn) (map TH.VarE as)))
-                                                                                  []
+                ADTFull          -> let mkLitClause (n, fs) = do
+                                           as <- mapM (const (TH.newName "a")) fs
+                                           c  <- TH.newName "c"
+
+                                           asName <- TH.newName "inp"
+
+                                           let pat     = TH.ConP 'Just [] [TH.VarP c]
+                                               cn      = TH.mkName $ 's' : TH.nameBase n
+                                               app a b = TH.AppE a (TH.AppE (TH.VarE 'literal) b)
+
+                                           cval <- TH.normalB [| let k = kindOf $(TH.varE asName)
+                                                                 in SBV $ SVal k (Left (CV k (CADT (TH.nameBase n, $(TH.varE c)))))
+                                                              |]
+
+                                           pure $ TH.Clause [TH.AsP asName (TH.ConP n [] (map TH.VarP as))]
+                                                            (TH.NormalB
+                                                                  (TH.CaseE (TH.AppE (TH.VarE 'sequenceA)
+                                                                                     (TH.ListE [TH.AppE (TH.VarE 'unlitCV) (TH.AppE (TH.VarE 'literal) (TH.VarE a)) | a <- as]))
+                                                                             [ TH.Match pat                      cval []
+                                                                             , TH.Match (TH.ConP 'Nothing [] []) (TH.NormalB (foldl app (TH.VarE cn) (map TH.VarE as))) []
+                                                                             ]))
+                                                            []
                                     in TH.FunD 'literal <$> mapM mkLitClause cstrs
 
     fromCVFunName <- TH.newName ("cv2" ++ TH.nameBase typeName)
