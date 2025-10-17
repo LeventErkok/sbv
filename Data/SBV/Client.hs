@@ -618,7 +618,11 @@ getConstructors typeName = do res@(_, cstrs) <- getConstructorsFromType (TH.ConT
 -- | Find the SBV kind for this type
 toSBV :: TH.Name -> TH.Name -> TH.Type -> TH.Q Kind
 toSBV typeName constructorName = go
-  where -- Handle type variables (parameters)
+  where hasArrows (TH.AppT TH.ArrowT _)   = True
+        hasArrows (TH.AppT lhs       rhs) = hasArrows lhs || hasArrows rhs
+        hasArrows _                       = False
+
+        -- Handle type variables (parameters)
         go (TH.VarT v) = pure $ KVar (TH.nameBase v)
 
         -- tuples
@@ -661,7 +665,7 @@ toSBV typeName constructorName = go
             = case base of
                 Left (w, r) -> bad w $ [ "Datatype   : " ++ show typeName
                                        , "Constructor: " ++ show constructorName
-                                       , "Kind       : " ++ show t
+                                       , "Kind       : " ++ TH.pprint t
                                        , ""
                                        ] ++ r
                 Right k     -> pure k
@@ -674,9 +678,11 @@ toSBV typeName constructorName = go
         -- giving up
         go t = bad "Unsupported constructor kind" [ "Datatype   : " ++ TH.nameBase typeName
                                                   , "Constructor: " ++ TH.nameBase constructorName
-                                                  , "Kind       : " ++ show t
+                                                  , "Kind       : " ++ TH.pprint t
                                                   , ""
-                                                  , report
+                                                  , if hasArrows t
+                                                    then "Higher order fields (i.e., function values) are not supported."
+                                                    else report
                                                   ]
 
         -- Extract application of a constructor to some type-variables
