@@ -194,6 +194,34 @@ mkADT adtKind typeName params cstrs = do
                   ADTEnum          -> True
                   ADTFull          -> False
 
+
+        -- Given Cstr f1 f2 f3, generate the clause:
+        --     inp@(Cstr [f1, f2, f3]) = case sequenceA [unlitCV (literal f1), unlitCV (literal f2), unlitCV (literal f3)] of
+        --                                 Just c  -> let k = kindOf inp
+        --                                            in SBV $ SVal k (Left (CV k (CADT (Cstr, c))))
+        --                                 Nothing -> sCstr (literal f1)
+        --
+        mkLitClause (n, fs) = do
+           as  <- mapM (const (TH.newName "a")) fs
+           inp <- TH.newName "inp"
+           c   <- TH.newName "c"
+
+           let app a b = [| $a (literal $b) |]
+
+           TH.clause [TH.asP inp (TH.conP n (map TH.varP as))]
+                     (TH.normalB
+                           (TH.caseE [| sequenceA $(TH.listE [ [| unlitCV (literal $(TH.varE a)) |] | a <- as ]) |]
+                                     [ TH.match [p|Just $(TH.varP c)|]
+                                                (TH.normalB [| let k = kindOf $(TH.varE inp)
+                                                               in SBV $ SVal k (Left (CV k (CADT (TH.nameBase n, $(TH.varE c)))))
+                                                            |])
+                                                []
+                                     , TH.match [p|Nothing|]
+                                                (TH.normalB (foldl app (TH.varE (TH.mkName ('s' : TH.nameBase n))) (map TH.varE as)))
+                                                []
+                                     ]))
+                     []
+
     litFun <- case adtKind of
                 ADTUninterpreted -> do noLit <- [| error $ unlines [ "Data.SBV: unexpected call to derived literal implementation"
                                                                    , "***"
@@ -204,36 +232,8 @@ mkADT adtKind typeName params cstrs = do
                                                 |]
                                        pure $ TH.FunD 'literal [TH.Clause [TH.WildP] (TH.NormalB noLit) []]
 
-                ADTEnum          -> let mkLitClause n = TH.clause [TH.conP n []]
-                                                                  (TH.normalB [| let k = kindOf $(TH.conE n)
-                                                                                 in SBV $ SVal k (Left (CV k (CADT (TH.nameBase n, []))))
-                                                                              |])
-                                                                  []
-                                    in TH.FunD 'literal <$> mapM (mkLitClause . fst) cstrs
-
-                ADTFull          -> let mkLitClause (n, fs) = do
-                                           as <- mapM (const (TH.newName "a")) fs
-                                           c  <- TH.newName "c"
-
-                                           asName <- TH.newName "inp"
-
-                                           let pat     = TH.ConP 'Just [] [TH.VarP c]
-                                               cn      = TH.mkName $ 's' : TH.nameBase n
-                                               app a b = TH.AppE a (TH.AppE (TH.VarE 'literal) b)
-
-                                           cval <- TH.normalB [| let k = kindOf $(TH.varE asName)
-                                                                 in SBV $ SVal k (Left (CV k (CADT (TH.nameBase n, $(TH.varE c)))))
-                                                              |]
-
-                                           pure $ TH.Clause [TH.AsP asName (TH.ConP n [] (map TH.VarP as))]
-                                                            (TH.NormalB
-                                                                  (TH.CaseE (TH.AppE (TH.VarE 'sequenceA)
-                                                                                     (TH.ListE [TH.AppE (TH.VarE 'unlitCV) (TH.AppE (TH.VarE 'literal) (TH.VarE a)) | a <- as]))
-                                                                             [ TH.Match pat                      cval []
-                                                                             , TH.Match (TH.ConP 'Nothing [] []) (TH.NormalB (foldl app (TH.VarE cn) (map TH.VarE as))) []
-                                                                             ]))
-                                                            []
-                                    in TH.FunD 'literal <$> mapM mkLitClause cstrs
+                ADTEnum          -> TH.FunD 'literal <$> mapM mkLitClause cstrs
+                ADTFull          -> TH.FunD 'literal <$> mapM mkLitClause cstrs
 
     fromCVFunName <- TH.newName ("cv2" ++ TH.nameBase typeName)
     addDoc ("Conversion from SMT values to " ++ TH.nameBase typeName ++ " values.") fromCVFunName
@@ -327,16 +327,16 @@ mkADT adtKind typeName params cstrs = do
                       |]
 
     -- Declare constructors
-    let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
-        declConstructor (c, ntks) = let ats = map (mkSBV . (\(_, t, _) -> t)) ntks
-                                        ty  = inSymValContext $ foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
-                                    in ((nm, bnm), [TH.SigD nm ty, def])
-          where bnm  = TH.nameBase c
-                nm   = TH.mkName $ 's' : bnm
-                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
-                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL bnm))
+    let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q ((TH.Name, String), [TH.Dec])
+        declConstructor (c, ntks) = do
+            let ats = map (mkSBV . (\(_, t, _) -> t)) ntks
+                ty  = inSymValContext $ foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
+                bnm = TH.nameBase c
+                nm  = TH.mkName $ 's' : bnm
+            def <- TH.funD nm [TH.clause [] (TH.normalB [| mkConstructor bnm |]) []]
+            pure ((nm, bnm), [TH.SigD nm ty, def])
 
-    let (constrNames, cdecls) = unzip $ map declConstructor cstrs
+    (constrNames, cdecls) <- unzip <$> mapM declConstructor cstrs
 
     let btname = TH.nameBase typeName
         tname  = TH.mkName ('S' : btname)
