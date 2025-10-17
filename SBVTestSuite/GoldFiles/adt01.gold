@@ -56,8 +56,7 @@
            (APair (getAPair_1 ADT) (getAPair_2 ADT))
        ))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () (_ BitVec 64) #x0000000000000004)
-[GOOD] (define-fun s3 () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool)))) ((as just_SBVMaybe (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool))))) (mkSBVTuple3 0.0 ((_ to_fp 8 24) roundNearestTiesToEven (/ 12.0 1.0)) (mkSBVTuple2 ((as left_SBVEither (SBVEither Int (_ FloatingPoint  8 24))) 3) (seq.++ (seq.unit false) (seq.unit true))))))
+[GOOD] (define-fun s1 () ADT (APair (AInt64 #x0000000000000004) (AMaybe ((as just_SBVMaybe (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool))))) (mkSBVTuple3 0.0 ((_ to_fp 8 24) roundNearestTiesToEven (/ 12.0 1.0)) (mkSBVTuple2 ((as left_SBVEither (SBVEither Int (_ FloatingPoint  8 24))) 3) (seq.++ (seq.unit false) (seq.unit true))))))))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () ADT) ; tracks user variable "e"
 [GOOD] ; --- constant tables ---
@@ -65,13 +64,10 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s2 () ADT (AInt64 s1))
-[GOOD] (define-fun s4 () ADT (AMaybe s3))
-[GOOD] (define-fun s5 () ADT (APair s2 s4))
-[GOOD] (define-fun s6 () Bool (= s0 s5))
+[GOOD] (define-fun s2 () Bool (= s0 s1))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s6)
+[GOOD] (assert s2)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
