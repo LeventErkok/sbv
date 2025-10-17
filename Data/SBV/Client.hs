@@ -329,10 +329,10 @@ mkADT adtKind typeName params cstrs = do
     -- Declare constructors
     let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q ((TH.Name, String), [TH.Dec])
         declConstructor (n, ntks) = do
-            let ats   = map (mkSBV . (\(_, t, _) -> t)) ntks
-                ty    = inSymValContext $ foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
-                bnm   = TH.nameBase n
-                nm    = TH.mkName $ 's' : bnm
+            let ats = map (mkSBV . (\(_, t, _) -> t)) ntks
+                ty  = inSymValContext $ foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
+                bnm = TH.nameBase n
+                nm  = TH.mkName $ 's' : bnm
 
             as    <- mapM (const (TH.newName "a")) ntks
             c     <- TH.newName "c"
