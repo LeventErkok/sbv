@@ -328,13 +328,31 @@ mkADT adtKind typeName params cstrs = do
 
     -- Declare constructors
     let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q ((TH.Name, String), [TH.Dec])
-        declConstructor (c, ntks) = do
-            let ats = map (mkSBV . (\(_, t, _) -> t)) ntks
-                ty  = inSymValContext $ foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
-                bnm = TH.nameBase c
-                nm  = TH.mkName $ 's' : bnm
-            def <- TH.funD nm [TH.clause [] (TH.normalB [| mkConstructor bnm |]) []]
-            pure ((nm, bnm), [TH.SigD nm ty, def])
+        declConstructor (n, ntks) = do
+            let ats   = map (mkSBV . (\(_, t, _) -> t)) ntks
+                ty    = inSymValContext $ foldr (TH.AppT . TH.AppT TH.ArrowT) sType ats
+                bnm   = TH.nameBase n
+                nm    = TH.mkName $ 's' : bnm
+
+            as    <- mapM (const (TH.newName "a")) ntks
+            c     <- TH.newName "c"
+
+            cls <- TH.clause (map TH.varP as)
+                             (TH.normalB
+                                   (TH.caseE [| sequenceA $(TH.listE [ [| unlitCV $(TH.varE a) |] | a <- as ]) |]
+                                             [ TH.match [p|Just $(TH.varP c)|]
+                                                        (TH.normalB [| let k   = kindOf (undefined `asTypeOf` res)
+                                                                           res = SBV $ SVal k (Left (CV k (CADT (bnm, $(TH.varE c)))))
+                                                                       in res
+                                                                    |])
+                                                        []
+                                             , TH.match [p|Nothing|]
+                                                        (TH.normalB (foldl (\a b -> [| $a $b |]) [| mkConstructor bnm |] (map TH.varE as)))
+                                                        []
+                                             ]))
+                             []
+
+            pure ((nm, bnm), [TH.SigD nm ty, TH.FunD nm [cls]])
 
     (constrNames, cdecls) <- unzip <$> mapM declConstructor cstrs
 
