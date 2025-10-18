@@ -19,8 +19,7 @@
            (C (getC_1 A) (getC_2 A))
        ))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () A ((as A A) 12))
-[GOOD] (define-fun s3 () Int 1)
+[GOOD] (define-fun s1 () A ((as A A) 13))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () A) ; tracks user variable "res"
 [GOOD] ; --- constant tables ---
@@ -28,13 +27,10 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s2 () Int (getA_1 s1))
-[GOOD] (define-fun s4 () Int (+ s2 s3))
-[GOOD] (define-fun s5 () A ((as A A) s4))
-[GOOD] (define-fun s6 () Bool (= s0 s5))
+[GOOD] (define-fun s2 () Bool (= s0 s1))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s6)
+[GOOD] (assert s2)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
