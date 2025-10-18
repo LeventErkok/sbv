@@ -439,7 +439,7 @@ showCV shk w = sh (cvVal w) ++ kInfo
           | null @[] flds = c
           | True          = unwords (c : map wrap flds)
           where wrap v
-                 | take 1 v == "("                  = v
+                 | take 1 v `elem` ["(", "[", "{"]  = v
                  | any isSpace v || take 1 v == "-" = '(' : v ++ ")"
                  | True                             = v
 
