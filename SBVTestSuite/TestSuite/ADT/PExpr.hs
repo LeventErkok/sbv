@@ -36,29 +36,61 @@ mkSymbolic [''A]
 
 tests :: TestTree
 tests =
-  testGroup "ADT_P" [
-      goldenCapturedIO "adt_pexpr00" $ evalCheck (eval e00,  3)
-    , goldenCapturedIO "adt_pexpr01" $ evalCheck (eval e01,  7)
-    , goldenCapturedIO "adt_pexpr02" $ evalCheck (eval e02, 21)
-    , goldenCapturedIO "adt_pexpr03" $ evalCheck (eval e03, 28)
+  testGroup "ADT" [
+      goldenCapturedIO "adt_pexpr00c" $ evalCheck  (eval e00,  3)
+    , goldenCapturedIO "adt_pexpr00"  $ evalCheckS eval (e00,  3)
+
+    , goldenCapturedIO "adt_pexpr01c" $ evalCheck  (eval e01,  7)
+    , goldenCapturedIO "adt_pexpr01"  $ evalCheckS eval (e01,  7)
+
+    , goldenCapturedIO "adt_pexpr02c" $ evalCheck  (eval e02, 21)
+    , goldenCapturedIO "adt_pexpr02"  $ evalCheckS eval (e02, 21)
+
+    , goldenCapturedIO "adt_pexpr03c" $ evalCheck  (eval e03, 28)
+    , goldenCapturedIO "adt_pexpr03"  $ evalCheckS eval (e03, 28)
+
     , goldenCapturedIO "adt_pexpr04" $ evalTest  (eval e04)
     , goldenCapturedIO "adt_pexpr05" $ evalTest  (eval e05)
-    , goldenCapturedIO "adt_pexpr06" $ evalCheck (f (sVar (literal "a")), 0)
-    , goldenCapturedIO "adt_pexpr07" $ evalCheck (f (sVar (literal "b")), 1)
-    , goldenCapturedIO "adt_pexpr08" $ evalCheck (f (sVar (literal "c")), 1)
-    , goldenCapturedIO "adt_pexpr09" $ evalCheck (f (sVar (literal "d")), 2)
-    , goldenCapturedIO "adt_pexpr10" $ evalCheck (sum (map (f . sVal . literal) [-5 .. 9]),  45)
-    , goldenCapturedIO "adt_pexpr11" $ evalCheck (sum (map (f . sVal . literal) [10, 10]),    8)
-    , goldenCapturedIO "adt_pexpr12" $ evalCheck (sum (map (f . sVal . literal) [11 .. 20]), 50)
-    , goldenCapturedIO "adt_pexpr13" $ evalCheck (f e00, 3)
-    , goldenCapturedIO "adt_pexpr14" $ evalCheck (f e01, 6)
-    , goldenCapturedIO "adt_pexpr15" $ evalCheck (f e02, 6)
-    , goldenCapturedIO "adt_pexpr16" $ evalCheck (f e03, 6)
-    , goldenCapturedIO "adt_pexpr17" $ evalCheck (f e04, 6)
-    , goldenCapturedIO "adt_pexpr18" $ evalCheck (f e05, 6)
-    , goldenCapturedIO "adt_pexpr19" $ satCheck (\(x :: SExpr Integer Word8)    -> isLet x)
-    , goldenCapturedIO "adt_pexpr20" $ satCheck (\(x :: SExpr Word8   Rational) -> isMul x)
-    , goldenCapturedIO "adt_pexpr21" $ satCheck (\(x :: SExpr (Maybe (Integer, String)) (Either Word8 Int16)) -> isLet x)
+
+    , goldenCapturedIO "adt_pexpr06c" $ evalCheck  (f (sVar (literal "a")), 0)
+    , goldenCapturedIO "adt_pexpr06"  $ evalCheckS f  (sVar (literal "a") , 0)
+
+    , goldenCapturedIO "adt_pexpr07c" $ evalCheck  (f (sVar (literal "b")), 1)
+    , goldenCapturedIO "adt_pexpr07"  $ evalCheckS f  (sVar (literal "b") , 1)
+
+    , goldenCapturedIO "adt_pexpr08c" $ evalCheck  (f (sVar (literal "c")), 1)
+    , goldenCapturedIO "adt_pexpr08"  $ evalCheckS f  (sVar (literal "c") , 1)
+
+    , goldenCapturedIO "adt_pexpr09c" $ evalCheck  (f (sVar (literal "d")), 2)
+    , goldenCapturedIO "adt_pexpr09"  $ evalCheckS f  (sVar (literal "d") , 2)
+
+    , goldenCapturedIO "adt_pexpr10c" $ evalCheck   (sum (map (f . sVal . literal) [-5 .. 9]),  45)
+    , goldenCapturedIO "adt_pexpr10"  $ evalCheckSL (sum . map f) ((map (sVal . literal) [-5 .. 9]),  45)
+
+    , goldenCapturedIO "adt_pexpr11c" $ evalCheck   (sum (map (f . sVal . literal) [10, 10]),    8)
+    , goldenCapturedIO "adt_pexpr11"  $ evalCheckSL (sum . map f) ((map (sVal . literal) [10, 10]),    8)
+
+    , goldenCapturedIO "adt_pexpr12c" $ evalCheck   (sum (map (f . sVal . literal) [11 .. 20]), 50)
+    , goldenCapturedIO "adt_pexpr12"  $ evalCheckSL (sum . map f) ((map (sVal . literal) [11 .. 20]), 50)
+
+    , goldenCapturedIO "adt_pexpr13c" $ evalCheck  (f e00, 3)
+    , goldenCapturedIO "adt_pexpr13"  $ evalCheckS f (e00, 3)
+
+    , goldenCapturedIO "adt_pexpr14c" $ evalCheck  (f e01, 6)
+    , goldenCapturedIO "adt_pexpr14"  $ evalCheckS f (e01, 6)
+
+    , goldenCapturedIO "adt_pexpr15c" $ evalCheck  (f e02, 6)
+    , goldenCapturedIO "adt_pexpr15"  $ evalCheckS f (e02, 6)
+
+    , goldenCapturedIO "adt_pexpr16c" $ evalCheck  (f e03, 6)
+    , goldenCapturedIO "adt_pexpr16"  $ evalCheckS f (e03, 6)
+
+    , goldenCapturedIO "adt_pexpr17c" $ evalCheck  (f e04, 6)
+    , goldenCapturedIO "adt_pexpr17"  $ evalCheckS f (e04, 6)
+
+    , goldenCapturedIO "adt_pexpr18c" $ evalCheck  (f e05, 6)
+    , goldenCapturedIO "adt_pexpr18"  $ evalCheckS f (e05, 6)
+
     , goldenCapturedIO "adt_pgen00"  t00
     , goldenCapturedIO "adt_pgen01"  $ tSat (-1)
     , goldenCapturedIO "adt_pgen02"  $ tSat 0
@@ -93,16 +125,25 @@ evalCheck (sv, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ 
                                      Unsat{} -> io $ appendFile rf "All good.\n"
                                      _       -> error $ "Unexpected: " ++ show cs
 
-satCheck :: (Show a, SymVal a, QuantifiedBool b) => (SBV a -> b) -> FilePath -> IO ()
-satCheck tst rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
-                    x <- free "x"
-                    constrain $ tst x
-                    query $ do cs <- checkSat
-                               case cs of
-                                 Unsat{} -> io $ appendFile rf "Got unsat\n"
-                                 Sat{}   -> do xv <- getValue x
-                                               io $ appendFile rf ("Result: " ++ show xv ++ "\n")
-                                 _       -> error $ "Unexpected: " ++ show cs
+evalCheckS :: (SExpr String Integer -> SInteger) -> (SExpr String Integer , Integer) -> FilePath -> IO ()
+evalCheckS fun (e, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+                        se :: SExpr String Integer <- free_
+                        constrain $ se .== e
+                        constrain $ fun se ./= literal v
+                        query $ do cs <- checkSat
+                                   case cs of
+                                     Unsat{} -> io $ appendFile rf "All good.\n"
+                                     _       -> error $ "Unexpected: " ++ show cs
+
+evalCheckSL :: ([SExpr String Integer] -> SInteger) -> ([SExpr String Integer], Integer) -> FilePath -> IO ()
+evalCheckSL fun (e, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+                        ses :: [SExpr String Integer] <- mapM (const free_) e
+                        constrain $ ses .== e
+                        constrain $ fun ses ./= literal v
+                        query $ do cs <- checkSat
+                                   case cs of
+                                     Unsat{} -> io $ appendFile rf "All good.\n"
+                                     _       -> error $ "Unexpected: " ++ show cs
 
 evalTest :: (Show a, SymVal a) => SBV a -> FilePath -> IO ()
 evalTest sv rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do

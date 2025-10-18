@@ -24,11 +24,10 @@
            (Let (getLet_1 nm) (getLet_2 (Expr nm val)) (getLet_3 (Expr nm val)))
        )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () (Expr String Int) ((as Val (Expr String Int)) 3))
-[GOOD] (define-fun s3 () (Seq (SBVTuple2 String Int)) (as seq.empty (Seq (SBVTuple2 String Int))))
-[GOOD] (define-fun s5 () Int 3)
+[GOOD] (define-fun s0 () (Expr String Int) ((as Let (Expr String Int)) "a" ((as Mul (Expr String Int)) ((as Val (Expr String Int)) 3) ((as Add (Expr String Int)) ((as Val (Expr String Int)) 3) ((as Val (Expr String Int)) 4))) ((as Add (Expr String Int)) ((as Var (Expr String Int)) "a") ((as Add (Expr String Int)) ((as Val (Expr String Int)) 3) ((as Val (Expr String Int)) 4)))))
+[GOOD] (define-fun s2 () (Seq (SBVTuple2 String Int)) (as seq.empty (Seq (SBVTuple2 String Int))))
+[GOOD] (define-fun s9 () Int 28)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (Expr String Int))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
@@ -82,13 +81,17 @@
                                  (let ((l1_s30 (ite l1_s2 l1_s3 l1_s29)))
                                  l1_s30))))))))))))))))))))))))))))))
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s2 () Bool (= s0 s1))
-[GOOD] (define-fun s4 () Int (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| s3 s0))
-[GOOD] (define-fun s6 () Bool (distinct s4 s5))
+[GOOD] (define-fun s1 () String (getLet_1 s0))
+[GOOD] (define-fun s3 () (Expr String Int) (getLet_2 s0))
+[GOOD] (define-fun s4 () Int (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| s2 s3))
+[GOOD] (define-fun s5 () (SBVTuple2 String Int) ((as mkSBVTuple2 (SBVTuple2 String Int)) s1 s4))
+[GOOD] (define-fun s6 () (Seq (SBVTuple2 String Int)) (seq.unit s5))
+[GOOD] (define-fun s7 () (Expr String Int) (getLet_3 s0))
+[GOOD] (define-fun s8 () Int (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| s6 s7))
+[GOOD] (define-fun s10 () Bool (distinct s8 s9))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s2)
-[GOOD] (assert s6)
+[GOOD] (assert s10)
 [SEND] (check-sat)
 [RECV] unsat
 All good.

@@ -24,11 +24,10 @@
            (Let (getLet_1 nm) (getLet_2 (Expr nm val)) (getLet_3 (Expr nm val)))
        )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () (Expr String Int) ((as Val (Expr String Int)) 3))
-[GOOD] (define-fun s3 () (Seq (SBVTuple2 String Int)) (as seq.empty (Seq (SBVTuple2 String Int))))
-[GOOD] (define-fun s5 () Int 3)
+[GOOD] (define-fun s0 () (Seq (SBVTuple2 String Int)) (as seq.empty (Seq (SBVTuple2 String Int))))
+[GOOD] (define-fun s1 () (Expr String Int) ((as Mul (Expr String Int)) ((as Val (Expr String Int)) 3) ((as Add (Expr String Int)) ((as Val (Expr String Int)) 3) ((as Val (Expr String Int)) 4))))
+[GOOD] (define-fun s7 () Int 21)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (Expr String Int))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
@@ -82,13 +81,15 @@
                                  (let ((l1_s30 (ite l1_s2 l1_s3 l1_s29)))
                                  l1_s30))))))))))))))))))))))))))))))
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s2 () Bool (= s0 s1))
-[GOOD] (define-fun s4 () Int (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| s3 s0))
-[GOOD] (define-fun s6 () Bool (distinct s4 s5))
+[GOOD] (define-fun s2 () (Expr String Int) (getMul_1 s1))
+[GOOD] (define-fun s3 () Int (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| s0 s2))
+[GOOD] (define-fun s4 () (Expr String Int) (getMul_2 s1))
+[GOOD] (define-fun s5 () Int (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| s0 s4))
+[GOOD] (define-fun s6 () Int (* s3 s5))
+[GOOD] (define-fun s8 () Bool (distinct s6 s7))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s2)
-[GOOD] (assert s6)
+[GOOD] (assert s8)
 [SEND] (check-sat)
 [RECV] unsat
 All good.
