@@ -12,33 +12,40 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- ADTs  --- 
-[GOOD] ; User defined ADT: A
-[GOOD] (declare-datatype A (
-           (A (getA_1 Int))
-           (B (getB_1 (_ BitVec 8)))
-           (C (getC_1 A) (getC_2 A))
+[GOOD] ; User defined ADT: Expr
+[GOOD] (declare-datatype Expr (
+           (Val (getVal_1 Int))
+           (Var (getVar_1 String))
+           (Add (getAdd_1 Expr) (getAdd_2 Expr))
+           (Mul (getMul_1 Expr) (getMul_2 Expr))
+           (Let (getLet_1 String) (getLet_2 Expr) (getLet_3 Expr))
        ))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () A ((as A A) 12))
-[GOOD] (define-fun s3 () Int 1)
+[GOOD] (define-fun s0 () Expr ((as Val Expr) 3))
+[GOOD] (define-fun s2 () Int 10)
+[GOOD] (define-fun s4 () Int 3)
+[GOOD] (define-fun s6 () Int 4)
+[GOOD] (define-fun s8 () Int 5)
+[GOOD] (define-fun s9 () Int 6)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () A) ; tracks user variable "res"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s2 () Int (getA_1 s1))
-[GOOD] (define-fun s4 () Int (+ s2 s3))
-[GOOD] (define-fun s5 () A ((as A A) s4))
-[GOOD] (define-fun s6 () Bool (= s0 s5))
+[GOOD] (define-fun s1 () Int (getVal_1 s0))
+[GOOD] (define-fun s3 () Bool (< s1 s2))
+[GOOD] (define-fun s5 () Bool (= s1 s2))
+[GOOD] (define-fun s7 () Bool (> s1 s2))
+[GOOD] (define-fun s10 () Int (ite s7 s8 s9))
+[GOOD] (define-fun s11 () Int (ite s5 s6 s10))
+[GOOD] (define-fun s12 () Int (ite s3 s4 s11))
+[GOOD] (define-fun s13 () Bool (distinct s4 s12))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s6)
+[GOOD] (assert s13)
 [SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 (A 13)))
-Result: A 13
+[RECV] unsat
+All good.
 *** Solver   : Z3
 *** Exit code: ExitSuccess
