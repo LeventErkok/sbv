@@ -34,7 +34,6 @@ tests =
     , goldenCapturedIO "charConstr04" $ \rf -> checkWith rf t04
     , goldenCapturedIO "charConstr05" $ \rf -> checkWith rf t05
     , goldenCapturedIO "charConstr06" $ \rf -> checkWith rf t06
-    , goldenCapturedIO "charConstr07" $ \rf -> checkWith rf t07
     , goldenCapturedIO "charConstr08" $ \rf -> checkWith rf t08
     , goldenCapturedIO "charConstr09" $ \rf -> checkWith rf t09
     , goldenCapturedIO "charConstr10" $ \rf -> checkWith rf t10
@@ -82,10 +81,6 @@ t05 = do x::SEither Char Integer <- free "x"
 t06 :: Symbolic ()
 t06 = do x::SEither Char (Either Char Integer) <- free "x"
          constrain $ x ./= E.sLeft (literal 'A')
-
-t07 :: Symbolic ()
-t07 = do x::M.SMaybe Char <- free "x"
-         constrain $ M.isJust x .&& x ./= M.sJust (literal 'A')
 
 t08 :: Symbolic ()
 t08 = do x :: SSet Char <- free "x"

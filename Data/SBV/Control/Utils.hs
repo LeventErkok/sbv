@@ -917,7 +917,7 @@ recoverKindedValue si k e =
                   | EReal i        <- e   -> Just $ CV KReal (CAlgReal i)
                   | True                  -> interpretInterval e
 
-      KADT nm dict def                    -> let k' = KADT nm dict [(c, map (substituteADTVars dict) ks) | (c, ks) <- def]
+      KADT nm dict def                    -> let k' = KADT nm dict [(c, map (substituteADTVars nm dict) ks) | (c, ks) <- def]
                                              in Just $ CV k' $ CADT $ interpretADT k' e
 
       KFloat      | ENum (i, _, _) <- e   -> Just $ mkConstCV k i

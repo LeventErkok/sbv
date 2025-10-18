@@ -114,12 +114,26 @@ kRoundingMode = KADT "RoundingMode" [] (map (\r -> (show r, [])) [minBound .. ma
 expandKinds :: Kind -> [Kind]
 expandKinds = sort . nubOrd . G.universe
 
--- | For an ADT kind, substitute kinds for the variables
-substituteADTVars :: [(String, Kind)] -> Kind -> Kind
-substituteADTVars dict = G.transform sub
+-- | For an ADT kind, substitute kinds for the variables.
+-- We unceremanously fail here if the map is to a Char or Rational
+-- since we can't guarantee their field constraints.
+substituteADTVars :: String -> [(String, Kind)] -> Kind -> Kind
+substituteADTVars t dict = G.transform sub
   where sub :: Kind -> Kind
         sub (KVar v)
-          | Just k <- v `lookup` dict = k
+          | Just k <- v `lookup` dict = if any (\sk -> isChar sk || isRational sk) (expandKinds k)
+                                        then error $ unlines [ ""
+                                                             , "*** Data.SBV.SDT: Unsupported parameterization for ADT: " ++ t
+                                                             , "***"
+                                                             , "***"
+                                                             , "***   Parameterized at: " ++ show dict
+                                                             , "***"
+                                                             , "*** While SBV supports SChar and SRational natively, they are not"
+                                                             , "*** yet supported as ADT fiels as they need extra constraints."
+                                                             , "***"
+                                                             , "*** Please report this as a feature request."
+                                                             ]
+                                        else k
           | True                      = error $ "Data.SBV.ADT: Kind find variable in param subst: " ++ show (v, dict)
         sub k = k
 
