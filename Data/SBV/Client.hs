@@ -347,7 +347,7 @@ mkADT adtKind typeName params cstrs = do
                                                                     |])
                                                         []
                                              , TH.match [p|Nothing|]
-                                                        (TH.normalB (foldl (\a b -> [| $a $b |]) [| mkConstructor bnm |] (map TH.varE as)))
+                                                        (TH.normalB (foldl (\a b -> [| $a $b |]) [| mkADTConstructor bnm |] (map TH.varE as)))
                                                         []
                                              ]))
                              []
@@ -374,7 +374,7 @@ mkADT adtKind typeName params cstrs = do
           where bnm  = TH.nameBase c
                 anm  = "get" ++ bnm ++ "_" ++ show i
                 nm   = TH.mkName anm
-                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL anm))
+                body = TH.AppE (TH.VarE 'mkADTAccessor) (TH.LitE (TH.StringL anm))
 
     let (accessorNames, accessorDecls) = unzip $ concat (concat [zipWith (declAccessor c) fs [(1::Int) ..] | (c, fs) <- cstrs])
 
@@ -517,7 +517,7 @@ mkTesters sType inSymValContext cstrs = do
                                                          (TH.normalB [| literal (got == bnm) |])
                                                          []
                                               , TH.match [p|Nothing|]
-                                                         (TH.normalB [| mkConstructor ("is-" ++ bnm) $(TH.varE inp) |])
+                                                         (TH.normalB [| mkADTTester ("is-" ++ bnm) $(TH.varE inp) |])
                                                          []
                                               ]))
                               []

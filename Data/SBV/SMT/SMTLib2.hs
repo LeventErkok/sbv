@@ -33,7 +33,7 @@ import Data.SBV.Control.Types
 import Data.SBV.SMT.Utils
 
 import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName', getSV, regExpToSMTString, NROp(..)
-                              , SMTDef(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..)
+                              , SMTDef(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..), ADTOp(..)
                               )
 
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cvToSMTLib)
@@ -893,6 +893,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map cvtSV args) ++ ")"
 
+        sh (SBVApp (ADTOp aop) args) = handleADT aop args
+
         sh (SBVApp (QuantifiedBool i) [])   = i
         sh (SBVApp (QuantifiedBool i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
 
@@ -1300,6 +1302,16 @@ rot o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ cvtSV x ++ ")"
 shft :: String -> String -> SV -> SV -> String
 shft oW oS x c = "(" ++ o ++ " " ++ cvtSV x ++ " " ++ cvtSV c ++ ")"
    where o = if hasSign x then oS else oW
+
+-- ADT operations
+handleADT :: ADTOp -> [SV] -> String
+handleADT op args = case args of
+                      [] -> f
+                      _  -> "(" ++ f ++ " " ++ unwords (map cvtSV args) ++ ")"
+  where f = case op of
+              ADTConstructor nm -> nm
+              ADTTester      nm -> nm
+              ADTAccessor    nm -> nm
 
 -- Various casts
 handleKindCast :: Kind -> Kind -> String -> String

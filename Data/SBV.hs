@@ -1751,7 +1751,11 @@ checkSpecialRelation op rel = SBV $ SVal KBool $ Right $ cache result
                        unless (op `elem` curSpecialRels) $ do
 
                           registerKind st ka
-                          nm' <- newUninterpreted st (UIGiven nm) Nothing (SBVType [ka, ka, KBool]) (UINone True)
+                          uop <- newUninterpreted st (UIGiven nm) Nothing (SBVType [ka, ka, KBool]) (UINone True)
+
+                          let nm' = case uop of
+                                      Uninterpreted s -> s
+                                      _               -> error "Data.SBV: Impossible happened: checkSpecialRelation received: " ++ show op
 
                           -- Add to the end so if we get incremental ones the order doesn't change for old ones!
                           modifyIORef' (rProgInfo st) (\u -> u{progSpecialRels = curSpecialRels ++ [iop]})

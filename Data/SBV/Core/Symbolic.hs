@@ -34,7 +34,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV, contextOfSV
-  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..)
+  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..), ADTOp(..)
   , RegExp(..), regExpToSMTString, SMTLambda(..)
   , Quantifier(..), needsExistentials, SBVContext(..), checkCompatibleContext, VarContext(..)
   , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted, prefixNameToUnique
@@ -251,10 +251,17 @@ data Op = Plus
         | MaybeConstructor Kind Bool            -- Construct a maybe value; False: Nothing, True: Just
         | MaybeIs Kind Bool                     -- Maybe tester; False: nothing, True: just
         | MaybeAccess                           -- Maybe branch access; grab the contents of the just
+        | ADTOp ADTOp                           -- ADT access/construction/testing
         | ArrayLambda SMTLambda                 -- An array value, created from a lambda
         | ReadArray                             -- Reading an array value
         | WriteArray                            -- Writing to an array
         deriving (Eq, Ord, Generic, G.Data, NFData)
+
+-- | ADT operations
+data ADTOp = ADTConstructor String         -- Construct an ADT
+           | ADTTester      String         -- Check if top-level constructor matches
+           | ADTAccessor    String         -- Extract a field from an ADT value
+           deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | Special relations supported by z3
 data SpecialRelOp = IsPartialOrder         String
@@ -1284,7 +1291,7 @@ data UICodeKind = UINone Bool     -- no code. If bool is true, then curried.
 
 -- | A newtype wrapper for uninterpreted function names. We distinguish between user names and those of constructors
 data UIName = UIGiven String -- ^ Full name
-            | UICstr  String -- ^ The name of a constructor
+            | UIADT   ADTOp  -- ^ The name of an ADT operation based on the constructor
 
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
@@ -1302,10 +1309,10 @@ svUninterpretedNamedArgs k nm code args = svUninterpretedGen k nm code (map fst 
 svUninterpretedGen :: Kind -> UIName -> UICodeKind -> [SVal] -> Maybe [String] -> SVal
 svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
   where result st = do let ty = SBVType (map kindOf args ++ [k])
-                       nm' <- newUninterpreted st nm mbArgNames ty code
+                       op <- newUninterpreted st nm mbArgNames ty code
                        sws <- mapM (svToSV st) args
                        mapM_ forceSVArg sws
-                       newExpr st k $ SBVApp (Uninterpreted nm') sws
+                       newExpr st k $ SBVApp op sws
 
 -- | Generate a unique name for the given function based on the object's stable name
 prefixNameToUnique :: State -> String -> IO String
@@ -1319,20 +1326,23 @@ prefixNameToUnique st pre = do
       (n:_) -> pure n
       []    -> error $ "genUniqueName: Can't generate a unique name for prefix: " ++ pre   -- can't happen
 
--- | Create a new uninterpreted symbol, possibly with user given code. This function might change
+-- | Create a new value, possibly with user given code. This function might change
 -- the name given, putting bars around it if needed. That's the name returned.
-newUninterpreted :: State -> UIName -> Maybe [String] -> SBVType -> UICodeKind -> IO String
+newUninterpreted :: State -> UIName -> Maybe [String] -> SBVType -> UICodeKind -> IO Op
 newUninterpreted st uiName mbArgNames t uiCode = do
 
-  let (isConstructor, candName) = case uiName of
-                                    UIGiven n -> (False, n)
-                                    UICstr  n -> (True,  n)
+  let (adtOp, candName) = case uiName of
+                            UIGiven n -> (False, n)
+                            UIADT   o -> case o of
+                                           ADTConstructor n -> (True, n)
+                                           ADTTester      n -> (True, n)
+                                           ADTAccessor    n -> (True, n)
 
   -- determine the final name. We leave constructors alone.
   let nm = case () of
-             () | "__internal_sbv_" `isPrefixOf` candName -> candName                -- internal names go thru
-                | isConstructor                           -> candName                -- constructors (and testers) go thru
-                | True                                    -> barify candName         -- surround with bars if not legitimate in SMTLib
+             () | "__internal_sbv_" `isPrefixOf` candName -> candName        -- internal names go thru
+                | adtOp                                   -> candName        -- ADT names go thru
+                | True                                    -> barify candName -- surround with bars if not legitimate in SMTLib
 
       extraComment = case uiName of
                       UIGiven  n | nm /= n -> " (Given: " ++ n ++ ")"
@@ -1369,7 +1379,7 @@ newUninterpreted st uiName mbArgNames t uiCode = do
         | True    = cont
 
   -- If we're not a constructor, register it:
-  unless isConstructor $ do
+  unless adtOp $ do
     uiMap <- readIORef (rUIMap st)
     case nm `Map.lookup` uiMap of
       Just (_, _, t') -> checkType t' (return ())
@@ -1379,7 +1389,11 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                                                             Just (_, _, t') -> checkType t' newUIs
                                                             Nothing         -> Map.insert nm (isCurried, mbArgNames, t) newUIs)
 
-  pure nm
+  pure $ case uiName of
+          UIGiven{}                -> Uninterpreted nm
+          UIADT (ADTConstructor{}) -> ADTOp (ADTConstructor nm)
+          UIADT (ADTTester     {}) -> ADTOp (ADTTester      nm)
+          UIADT (ADTAccessor   {}) -> ADTOp (ADTAccessor    nm)
 
 -- | Add a new sAssert based constraint
 addAssertion :: State -> Maybe CallStack -> String -> SV -> IO ()
