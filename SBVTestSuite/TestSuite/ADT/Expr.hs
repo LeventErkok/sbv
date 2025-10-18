@@ -63,14 +63,14 @@ tests =
     , goldenCapturedIO "adt_expr09c" $ evalCheck  (f (sVar (literal "d")), 2)
     , goldenCapturedIO "adt_expr09"  $ evalCheckS f  (sVar (literal "d") , 2)
 
-    , goldenCapturedIO "adt_expr10c" $ evalCheck   (sum (map (f . sVal . literal) [-5 .. 9]),  45)
-    , goldenCapturedIO "adt_expr10"  $ evalCheckSL (sum . map f) ((map (sVal . literal) [-5 .. 9]),  45)
+    , goldenCapturedIO "adt_expr10c" $ evalCheck   (sum (map (f . sVal . literal)      [-5 .. 9]),  45)
+    , goldenCapturedIO "adt_expr10"  $ evalCheckSL (sum . map f) (map (sVal . literal) [-5 .. 9],   45)
 
-    , goldenCapturedIO "adt_expr11c" $ evalCheck   (sum (map (f . sVal . literal) [10, 10]),    8)
-    , goldenCapturedIO "adt_expr11"  $ evalCheckSL (sum . map f) ((map (sVal . literal) [10, 10]),    8)
+    , goldenCapturedIO "adt_expr11c" $ evalCheck   (sum (map (f . sVal . literal)      [10, 10]),    8)
+    , goldenCapturedIO "adt_expr11"  $ evalCheckSL (sum . map f) (map (sVal . literal) [10, 10],     8)
 
-    , goldenCapturedIO "adt_expr12c" $ evalCheck   (sum (map (f . sVal . literal) [11 .. 20]), 50)
-    , goldenCapturedIO "adt_expr12"  $ evalCheckSL (sum . map f) ((map (sVal . literal) [11 .. 20]), 50)
+    , goldenCapturedIO "adt_expr12c" $ evalCheck   (sum (map (f . sVal . literal)      [11 .. 20]), 50)
+    , goldenCapturedIO "adt_expr12"  $ evalCheckSL (sum . map f) (map (sVal . literal) [11 .. 20],  50)
 
     , goldenCapturedIO "adt_expr13c" $ evalCheck  (f e00, 3)
     , goldenCapturedIO "adt_expr13"  $ evalCheckS f (e00, 3)
