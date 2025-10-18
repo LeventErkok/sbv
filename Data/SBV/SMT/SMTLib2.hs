@@ -893,7 +893,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map cvtSV args) ++ ")"
 
-        sh (SBVApp (ADTOp aop) args) = handleADT aop args
+        sh (SBVApp (ADTOp aop) args) = handleADT caps aop args
 
         sh (SBVApp (QuantifiedBool i) [])   = i
         sh (SBVApp (QuantifiedBool i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
@@ -1304,14 +1304,16 @@ shft oW oS x c = "(" ++ o ++ " " ++ cvtSV x ++ " " ++ cvtSV c ++ ")"
    where o = if hasSign x then oS else oW
 
 -- ADT operations
-handleADT :: ADTOp -> [SV] -> String
-handleADT op args = case args of
-                      [] -> f
-                      _  -> "(" ++ f ++ " " ++ unwords (map cvtSV args) ++ ")"
+handleADT :: SolverCapabilities -> ADTOp -> [SV] -> String
+handleADT caps op args = case args of
+                          [] -> f
+                          _  -> "(" ++ f ++ " " ++ unwords (map cvtSV args) ++ ")"
   where f = case op of
               ADTConstructor nm k -> ascribe nm k
-              ADTTester      nm k -> ascribe nm k
-              ADTAccessor    nm k -> ascribe nm k
+              ADTTester      nm k -> if supportsDirectAccessors caps
+                                     then nm
+                                     else ascribe nm k
+              ADTAccessor    nm _ -> nm
 
         ascribe nm k = "(as " ++ nm ++ " " ++ smtType k ++ ")"
 

@@ -44,7 +44,7 @@
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Bool ((as is-Var Bool) s0))
-[GOOD] (define-fun s2 () String ((as getVar_1 String) s0))
+[GOOD] (define-fun s2 () String (getVar_1 s0))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
 [GOOD] (define-fun s5 () Bool (and s1 s4))
 [GOOD] (define-fun s8 () Bool (= s2 s7))
@@ -52,7 +52,7 @@
 [GOOD] (define-fun s11 () Bool (or s8 s10))
 [GOOD] (define-fun s12 () Bool (and s1 s11))
 [GOOD] (define-fun s15 () Bool ((as is-Val Bool) s0))
-[GOOD] (define-fun s16 () Int ((as getVal_1 Int) s0))
+[GOOD] (define-fun s16 () Int (getVal_1 s0))
 [GOOD] (define-fun s18 () Bool (< s16 s17))
 [GOOD] (define-fun s19 () Bool (and s15 s18))
 [GOOD] (define-fun s21 () Bool (= s16 s17))

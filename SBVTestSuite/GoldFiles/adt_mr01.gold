@@ -39,16 +39,16 @@
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Bool ((as is-Assign Bool) s0))
-[GOOD] (define-fun s2 () (Expr String (SBVMaybe (SBVEither Int Bool))) ((as getAssign_2 (Expr String (SBVMaybe (SBVEither Int Bool)))) s0))
+[GOOD] (define-fun s2 () (Expr String (SBVMaybe (SBVEither Int Bool))) (getAssign_2 s0))
 [GOOD] (define-fun s3 () Bool ((as is-Add Bool) s2))
-[GOOD] (define-fun s4 () (Expr String (SBVMaybe (SBVEither Int Bool))) ((as getAdd_1 (Expr String (SBVMaybe (SBVEither Int Bool)))) s2))
+[GOOD] (define-fun s4 () (Expr String (SBVMaybe (SBVEither Int Bool))) (getAdd_1 s2))
 [GOOD] (define-fun s5 () Bool ((as is-Con Bool) s4))
-[GOOD] (define-fun s6 () (Expr String (SBVMaybe (SBVEither Int Bool))) ((as getAdd_2 (Expr String (SBVMaybe (SBVEither Int Bool)))) s2))
+[GOOD] (define-fun s6 () (Expr String (SBVMaybe (SBVEither Int Bool))) (getAdd_2 s2))
 [GOOD] (define-fun s7 () Bool ((as is-Con Bool) s6))
-[GOOD] (define-fun s8 () (SBVMaybe (SBVEither Int Bool)) ((as getCon_1 (SBVMaybe (SBVEither Int Bool))) s4))
+[GOOD] (define-fun s8 () (SBVMaybe (SBVEither Int Bool)) (getCon_1 s4))
 [GOOD] (define-fun s9 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe (SBVEither Int Bool)))) s8))
 [GOOD] (define-fun s10 () Bool (ite s9 true false))
-[GOOD] (define-fun s11 () (SBVMaybe (SBVEither Int Bool)) ((as getCon_1 (SBVMaybe (SBVEither Int Bool))) s6))
+[GOOD] (define-fun s11 () (SBVMaybe (SBVEither Int Bool)) (getCon_1 s6))
 [GOOD] (define-fun s12 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe (SBVEither Int Bool)))) s11))
 [GOOD] (define-fun s13 () Bool (ite s12 false true))
 [GOOD] ; --- delayedEqualities ---

@@ -29,9 +29,9 @@
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Bool ((as is-A2 Bool) s0))
-[GOOD] (define-fun s2 () (A (A (_ FloatingPoint  8 24) Bool) String) ((as getA2_1 (A (A (_ FloatingPoint  8 24) Bool) String)) s0))
+[GOOD] (define-fun s2 () (A (A (_ FloatingPoint  8 24) Bool) String) (getA2_1 s0))
 [GOOD] (define-fun s3 () Bool ((as is-A3 Bool) s2))
-[GOOD] (define-fun s4 () (A String (A (_ FloatingPoint  8 24) Bool)) ((as getA3_1 (A String (A (_ FloatingPoint  8 24) Bool))) s2))
+[GOOD] (define-fun s4 () (A String (A (_ FloatingPoint  8 24) Bool)) (getA3_1 s2))
 [GOOD] (define-fun s5 () Bool ((as is-Aab Bool) s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
