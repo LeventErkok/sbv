@@ -27,7 +27,9 @@ import Utils.SBVTestFramework
 
 import Data.Maybe (fromJust, fromMaybe)
 
-import qualified Data.Char     as C
+import qualified Data.Char as C
+
+import qualified Data.SBV.Maybe as SM
 
 import qualified Data.SBV.Char () -- instances only
 
@@ -456,7 +458,7 @@ ssl = map literal sl
 sm :: [Maybe Integer]
 sm = [Nothing, Just (-5), Just 0, Just 5]
 
-ssm :: [SMaybe Integer]
+ssm :: [SM.SMaybe Integer]
 ssm = map literal sm
 
 se :: [Either Integer Integer]

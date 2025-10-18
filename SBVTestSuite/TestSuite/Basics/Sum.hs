@@ -86,7 +86,7 @@ sumLiftEither = do
 -- Test 'sMaybe', 'map', 'isNothing', 'isJust', and 'maybe'
 sumMaybe :: Symbolic ()
 sumMaybe = do
-  x <- sMaybe @Integer "x"
+  x :: SMaybe Integer <- free "x"
   let x' = M.map (+1) x
   constrain $ isNothing x .== isNothing x'
   constrain $ isJust x    .== isJust x'
@@ -105,23 +105,23 @@ sumLiftMaybe = do
 sumMaybeBoth :: Symbolic ()
 sumMaybeBoth = do
    (x :: SEither Integer Integer) <- sEither_
-   (y :: SMaybe Integer)          <- sMaybe_
+   (y :: SMaybe Integer)          <- free_
 
    constrain $ isLeft x
    constrain $ isJust y
 
 sumMergeMaybe1 :: Symbolic ()
 sumMergeMaybe1 = do
-   (x :: SMaybe Integer) <- sMaybe_
-   (y :: SMaybe Integer) <- sMaybe_
+   (x :: SMaybe Integer) <- free_
+   (y :: SMaybe Integer) <- free_
    b  <- sBool_
 
    constrain $ isNothing $ ite b x y
 
 sumMergeMaybe2 :: Symbolic ()
 sumMergeMaybe2 = do
-   (x :: SMaybe Integer) <- sMaybe_
-   (y :: SMaybe Integer) <- sMaybe_
+   (x :: SMaybe Integer) <- free_
+   (y :: SMaybe Integer) <- free_
    b  <- sBool_
 
    constrain $ isJust $ ite b x y

@@ -248,9 +248,6 @@ data Op = Plus
         | EitherIs Kind Kind Bool               -- Either branch tester; False: left, True: right
         | EitherAccess Bool                     -- Either branch access; False: left, True: right
         | RationalConstructor                   -- Construct a rational. Note that there's no access to numerator or denumerator, since we cannot store rationals in canonical form
-        | MaybeConstructor Kind Bool            -- Construct a maybe value; False: Nothing, True: Just
-        | MaybeIs Kind Bool                     -- Maybe tester; False: nothing, True: just
-        | MaybeAccess                           -- Maybe branch access; grab the contents of the just
         | ADTOp ADTOp                           -- ADT access/construction/testing
         | ArrayLambda SMTLambda                 -- An array value, created from a lambda
         | ReadArray                             -- Reading an array value
@@ -619,11 +616,6 @@ instance Show Op where
   show (EitherAccess             False) = "get_left_SBVEither"
   show (EitherAccess             True ) = "get_right_SBVEither"
   show RationalConstructor              = "SBV.Rational"
-  show (MaybeConstructor k False)       = "(_ nothing_SBVMaybe " ++ show (KMaybe k) ++ ")"
-  show (MaybeConstructor k True)        = "(_ just_SBVMaybe "    ++ show (KMaybe k) ++ ")"
-  show (MaybeIs          k False)       = "(_ is (nothing_SBVMaybe () "              ++ show (KMaybe k) ++ "))"
-  show (MaybeIs          k True )       = "(_ is (just_SBVMaybe (" ++ show k ++ ") " ++ show (KMaybe k) ++ "))"
-  show MaybeAccess                      = "get_just_SBVMaybe"
   show (ArrayLambda s)                  = show s
   show ReadArray                        = "select"
   show WriteArray                       = "store"
@@ -1471,7 +1463,6 @@ registerKind st k
                                   KADT s _ _  -> s `notElem` [s' | KADT s' _ _ <- Set.toList existingKinds]
                                   KList{}     -> k `notElem` existingKinds
                                   KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
-                                  KMaybe{}    -> k `notElem` existingKinds
                                   KEither{}   -> k `notElem` existingKinds
                                   _           -> False
 
@@ -1496,7 +1487,6 @@ registerKind st k
          KList     ek    -> registerKind st ek
          KSet      ek    -> registerKind st ek
          KTuple    eks   -> mapM_ (registerKind st) eks
-         KMaybe    ke    -> registerKind st ke
          KEither   k1 k2 -> mapM_ (registerKind st) [k1, k2]
          KArray    k1 k2 -> mapM_ (registerKind st) [k1, k2]
 

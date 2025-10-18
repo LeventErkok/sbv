@@ -111,7 +111,6 @@ data CVal = CAlgReal  !AlgReal                 -- ^ Algebraic real
           | CSet      !(RCSet CVal)            -- ^ Set. Can be regular or complemented.
           | CADT      (String, [(Kind, CVal)]) -- ^ ADT: Constructor, and fields
           | CTuple    ![CVal]                  -- ^ Tuple
-          | CMaybe    !(Maybe CVal)            -- ^ Maybe
           | CEither   !(Either CVal CVal)      -- ^ Disjoint union
           | CArray    !(ArrayModel CVal CVal)  -- ^ Arrays are backed by look-up tables concretely
           deriving (G.Data, Generic, NFData)
@@ -130,9 +129,8 @@ cvRank CList     {} =  8
 cvRank CSet      {} =  9
 cvRank CADT      {} = 10
 cvRank CTuple    {} = 11
-cvRank CMaybe    {} = 12
-cvRank CEither   {} = 13
-cvRank CArray    {} = 14
+cvRank CEither   {} = 12
+cvRank CArray    {} = 13
 
 -- | Eq instance for CVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
@@ -149,7 +147,6 @@ instance Eq CVal where
   CList     a == CList     b = a == b
   CSet      a == CSet      b = a `eqRCSet` b
   CTuple    a == CTuple    b = a == b
-  CMaybe    a == CMaybe    b = a == b
   CEither   a == CEither   b = a == b
   CADT      a == CADT      b = a == b
 
@@ -179,7 +176,6 @@ instance Ord CVal where
   CList     a `compare` CList     b = a `compare`                  b
   CSet      a `compare` CSet      b = a `compareRCSet`             b
   CTuple    a `compare` CTuple    b = a `compare`                  b
-  CMaybe    a `compare` CMaybe    b = a `compare`                  b
   CEither   a `compare` CEither   b = a `compare`                  b
   CADT      a `compare` CADT      b = a `compare`                  b
 
@@ -335,7 +331,6 @@ mapCV r i f d af ra x  = normCV $ CV (kindOf x) $ case cvVal x of
                                                     CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
                                                     CSet{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sets!"
                                                     CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
-                                                    CMaybe{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with maybe!"
                                                     CEither{}   -> error "Data.SBV.mapCV: Unexpected call through mapCV with either!"
                                                     CArray{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with arrays!"
 
@@ -358,7 +353,6 @@ mapCV2 r i f d af ra x y = case (cvSameType x y, cvVal x, cvVal y) of
                             (True, CString{},   CString{})   -> unexpected "strings!"
                             (True, CList{},     CList{})     -> unexpected "lists!"
                             (True, CTuple{},    CTuple{})    -> unexpected "tuples!"
-                            (True, CMaybe{},    CMaybe{})    -> unexpected "maybes!"
                             (True, CEither{},   CEither{})   -> unexpected "eithers!"
                             _                                -> unexpected $ "incompatible args: " ++ show (x, y)
    where unexpected w = error $ unlines [ ""
@@ -396,7 +390,6 @@ showCV shk w = sh (cvVal w) ++ kInfo
         sh (CList     v) = shL   v
         sh (CSet      v) = shS   v
         sh (CTuple    v) = shT   v
-        sh (CMaybe    v) = shM   v
         sh (CEither   v) = shE   v
         sh (CArray    v) = shA   v
 
@@ -421,12 +414,6 @@ showCV shk w = sh (cvVal w) ++ kInfo
           where xs' = case wk of
                         KTuple ks | length ks == length xs -> zipWith (\k x -> showCV False (CV k x)) ks xs
                         _   -> error $ "Data.SBV.showCV: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show wk
-
-        shM :: Maybe CVal -> String
-        shM c = case (c, wk) of
-                  (Nothing, KMaybe{}) -> "Nothing"
-                  (Just x,  KMaybe k) -> "Just " ++ paren (showCV False (CV k x))
-                  _                   -> error $ "Data.SBV.showCV: Impossible happened, expected maybe, got: " ++ show wk
 
         shE :: Either CVal CVal -> String
         shE val
@@ -475,7 +462,6 @@ mkConstCV (KADT s _ _)    a = error $ "Unexpected call to mkConstCV with ADT: " 
 mkConstCV k@KList{}       a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KSet{}        a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KTuple{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
-mkConstCV k@KMaybe{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KEither{}     a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KArray{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 
@@ -522,11 +508,6 @@ randomCVal k =
                              return $ CSet $ if i then RegularSet vals else ComplementSet vals
 
     KTuple ks          -> CTuple <$> traverse randomCVal ks
-
-    KMaybe ke          -> do i <- randomIO
-                             if i
-                                then return $ CMaybe Nothing
-                                else CMaybe . Just <$> randomCVal ke
 
     KEither k1 k2      -> do i <- randomIO
                              if i

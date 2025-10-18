@@ -23,7 +23,7 @@ import Data.SBV.Core.Data      (Kind, Outputtable, Penalty,
                                 SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad, SFloatingPoint,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
-                                SWord64, SEither, SRational, SMaybe, SSet, SArray, constrain, (.==))
+                                SWord64, SEither, SRational, SSet, SArray, constrain, (.==))
 import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext, Symbolic, SBVRunMode, SMTConfig,
@@ -760,24 +760,6 @@ sRational_ = Trans.sRational_
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sRationals'
 sRationals :: [String] -> Symbolic [SRational]
 sRationals = Trans.sRationals
-
--- | Declare a named 'Data.SBV.SMaybe'.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sMaybe'
-sMaybe :: SymVal a => String -> Symbolic (SMaybe a)
-sMaybe = Trans.sMaybe
-
--- | Declare an unnamed 'Data.SBV.SMaybe'.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sMaybe_'
-sMaybe_ :: SymVal a => Symbolic (SMaybe a)
-sMaybe_ = Trans.sMaybe_
-
--- | Declare a list of 'Data.SBV.SMaybe' values.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sMaybes'
-sMaybes :: SymVal a => [String] -> Symbolic [SMaybe a]
-sMaybes = Trans.sMaybes
 
 -- | Declare a named 'Data.SBV.SSet'.
 --

@@ -84,7 +84,7 @@ t06 = do x::SEither Char (Either Char Integer) <- free "x"
          constrain $ x ./= E.sLeft (literal 'A')
 
 t07 :: Symbolic ()
-t07 = do x::SMaybe Char <- free "x"
+t07 = do x::M.SMaybe Char <- free "x"
          constrain $ M.isJust x .&& x ./= M.sJust (literal 'A')
 
 t08 :: Symbolic ()

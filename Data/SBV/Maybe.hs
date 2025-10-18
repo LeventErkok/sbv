@@ -13,14 +13,16 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.Maybe (
   -- * Constructing optional values
-    sJust, sNothing, liftMaybe
+    sJust, sNothing, liftMaybe, SMaybe
   -- * Destructing optionals
   , maybe
   -- * Mapping functions
@@ -32,10 +34,9 @@ module Data.SBV.Maybe (
 import           Prelude hiding (maybe, map)
 import qualified Prelude
 
-import Data.Proxy (Proxy(Proxy))
-
+import Data.SBV.Client
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model (ite)
+import Data.SBV.Core.Model (ite, OrdSymbolic(..))
 
 #ifdef DOCTEST
 -- $setup
@@ -43,56 +44,31 @@ import Data.SBV.Core.Model (ite)
 -- >>> import Data.SBV
 #endif
 
--- | The symbolic 'Nothing'.
+-- | Make 'Maybe' synmbolic.
 --
 -- >>> sNothing :: SMaybe Integer
--- Nothing :: SMaybe Integer
-sNothing :: forall a. SymVal a => SMaybe a
-sNothing = SBV $ SVal k $ Left $ CV k $ CMaybe Nothing
-  where k = kindOf (Proxy @(Maybe a))
-
--- | Check if the symbolic value is nothing.
---
+-- Nothing :: Maybe Integer
 -- >>> isNothing (sNothing :: SMaybe Integer)
 -- True
 -- >>> isNothing (sJust (literal "nope"))
 -- False
-isNothing :: SymVal a => SMaybe a -> SBool
-isNothing = maybe sTrue (const sFalse)
-
--- | Construct an @SMaybe a@ from an @SBV a@.
---
 -- >>> sJust (3 :: SInteger)
--- Just 3 :: SMaybe Integer
-sJust :: forall a. SymVal a => SBV a -> SMaybe a
-sJust sa
-  | Just a <- unliteral sa
-  = literal (Just a)
-  | True
-  = SBV $ SVal kMaybe $ Right $ cache res
-  where ka     = kindOf (Proxy @a)
-        kMaybe = KMaybe ka
-
-        res st = do asv <- sbvToSV st sa
-                    newExpr st kMaybe $ SBVApp (MaybeConstructor ka True) [asv]
-
--- | Check if the symbolic value is not nothing.
---
+-- Just 3 :: Maybe Integer
 -- >>> isJust (sNothing :: SMaybe Integer)
 -- False
 -- >>> isJust (sJust (literal "yep"))
 -- True
 -- >>> prove $ \x -> isJust (sJust (x :: SInteger))
 -- Q.E.D.
-isJust :: SymVal a => SMaybe a -> SBool
-isJust = maybe sFalse (const sTrue)
+mkSymbolic [''Maybe]
 
 -- | Return the value of an optional value. The default is returned if Nothing. Compare to 'fromJust'.
 --
 -- >>> fromMaybe 2 (sNothing :: SMaybe Integer)
 -- 2 :: SInteger
--- >>> fromMaybe 2 (sJust 5 :: SMaybe Integer)
--- 5 :: SInteger
+-- >>> sat $ \x -> fromMaybe 2 (sJust 5 :: SMaybe Integer) .== x
+-- Satisfiable. Model:
+--   s0 = 5 :: Integer
 -- >>> prove $ \x -> fromMaybe x (sNothing :: SMaybe Integer) .== x
 -- Q.E.D.
 -- >>> prove $ \x -> fromMaybe (x+1) (sJust x :: SMaybe Integer) .== x
@@ -103,33 +79,28 @@ fromMaybe def = maybe def id
 -- | Return the value of an optional value. The behavior is undefined if
 -- passed Nothing, i.e., it can return any value. Compare to 'fromMaybe'.
 --
--- >>> fromJust (sJust (literal 'a'))
--- 'a' :: SChar
+-- >>> sat $ \x -> fromJust (sJust (literal 'a')) .== x
+-- Satisfiable. Model:
+--   s0 = 'a' :: Char
 -- >>> prove $ \x -> fromJust (sJust x) .== (x :: SChar)
 -- Q.E.D.
 -- >>> sat $ \x -> x .== (fromJust sNothing :: SChar)
 -- Satisfiable. Model:
---   s0 = 'A' :: Char
+--   fromJust_Nothing @Char = 'A' :: Char
+--   s0                     = 'A' :: Char
 --
 -- Note how we get a satisfying assignment in the last case: The behavior
 -- is unspecified, thus the SMT solver picks whatever satisfies the
 -- constraints, if there is one.
 fromJust :: forall a. SymVal a => SMaybe a -> SBV a
-fromJust ma
-  | Just (Just x) <- unliteral ma
-  = literal x
-  | True
-  = SBV $ SVal ka $ Right $ cache res
-  where ka     = kindOf (Proxy @a)
-        res st = do ms <- sbvToSV st ma
-                    newExpr st ka (SBVApp MaybeAccess [ms])
+fromJust = getJust_1
 
 -- | Construct an @SMaybe a@ from a @Maybe (SBV a)@.
 --
 -- >>> liftMaybe (Just (3 :: SInteger))
--- Just 3 :: SMaybe Integer
+-- Just 3 :: Maybe Integer
 -- >>> liftMaybe (Nothing :: Maybe SInteger)
--- Nothing :: SMaybe Integer
+-- Nothing :: Maybe Integer
 liftMaybe :: SymVal a => Maybe (SBV a) -> SMaybe a
 liftMaybe = Prelude.maybe (literal Nothing) sJust
 
@@ -157,10 +128,12 @@ map2 op mx my = ite (isJust mx .&& isJust my)
 -- | Case analysis for symbolic 'Maybe's. If the value 'isNothing', return the
 -- default value; if it 'isJust', apply the function.
 --
--- >>> maybe 0 (`sMod` 2) (sJust (3 :: SInteger))
--- 1 :: SInteger
--- >>> maybe 0 (`sMod` 2) (sNothing :: SMaybe Integer)
--- 0 :: SInteger
+-- >>> sat $ \x -> x .== maybe 0 (`sMod` 2) (sJust (3 :: SInteger))
+-- Satisfiable. Model:
+--   s0 = 1 :: Integer
+-- >>> sat $ \x -> x .== maybe 0 (`sMod` 2) (sNothing :: SMaybe Integer)
+-- Satisfiable. Model:
+--   s0 = 0 :: Integer
 -- >>> let f = uninterpret "f" :: SInteger -> SBool
 -- >>> prove $ \x d -> maybe d f (sJust x) .== f x
 -- Q.E.D.
@@ -171,28 +144,7 @@ maybe :: forall a b.  (SymVal a, SymVal b)
       -> (SBV a -> SBV b)
       -> SMaybe a
       -> SBV b
-maybe brNothing brJust ma
-  | Just (Just a) <- unliteral ma
-  = brJust (literal a)
-  | Just Nothing  <- unliteral ma
-  = brNothing
-  | True
-  = SBV $ SVal kb $ Right $ cache res
-  where ka = kindOf (Proxy @a)
-        kb = kindOf (Proxy @b)
-
-        res st = do mav <- sbvToSV st ma
-
-                    let justVal = SBV $ SVal ka $ Right $ cache $ \_ -> newExpr st ka $ SBVApp MaybeAccess [mav]
-
-                        justRes = brJust justVal
-
-                    br1 <- sbvToSV st brNothing
-                    br2 <- sbvToSV st justRes
-
-                    -- Do we have a value?
-                    noVal <- newExpr st KBool $ SBVApp (MaybeIs ka False) [mav]
-                    newExpr st kb $ SBVApp Ite [noVal, br1, br2]
+maybe brNothing brJust ma = ite (isNothing ma) brNothing (brJust (fromJust ma))
 
 -- | Custom 'Num' instance over 'SMaybe'
 instance (Ord a, SymVal a, Num a, Num (SBV a)) => Num (SBV (Maybe a)) where
@@ -202,3 +154,7 @@ instance (Ord a, SymVal a, Num a, Num (SBV a)) => Num (SBV (Maybe a)) where
   abs         = map  abs
   signum      = map  signum
   fromInteger = sJust . fromInteger
+
+-- | Custom 'OrdSymbolic' instance over 'SMaybe'.
+instance (OrdSymbolic (SBV a), SymVal a) => OrdSymbolic (SBV (Maybe a)) where
+  ma .< mb = maybe sFalse (\b -> maybe sFalse (\a -> a .< b) ma) mb

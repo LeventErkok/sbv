@@ -435,7 +435,6 @@ cvToSMTLib rm x
   | isList x         , CList xs         <- cvVal x = smtLibSeq (kindOf x) xs
   | isSet x          , CSet s           <- cvVal x = smtLibSet (kindOf x) s
   | isTuple x        , CTuple xs        <- cvVal x = smtLibTup (kindOf x) xs
-  | isMaybe x        , CMaybe mc        <- cvVal x = smtLibMaybe  (kindOf x) mc
   | isEither x       , CEither ec       <- cvVal x = smtLibEither (kindOf x) ec
 
   -- Arrays become sequence of stores
@@ -486,11 +485,6 @@ cvToSMTLib rm x
 
         dtConstructor fld []   res =  "(as " ++ fld ++ " " ++ smtType res ++ ")"
         dtConstructor fld args res = "((as " ++ fld ++ " " ++ smtType res ++ ") " ++ unwords args ++ ")"
-
-        smtLibMaybe :: Kind -> Maybe CVal -> String
-        smtLibMaybe km@KMaybe{}   Nothing   = dtConstructor "nothing_SBVMaybe" []                       km
-        smtLibMaybe km@(KMaybe k) (Just  c) = dtConstructor "just_SBVMaybe"    [cvToSMTLib rm (CV k c)] km
-        smtLibMaybe k             _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibMaybe), received kind: " ++ show k
 
         smtLibEither :: Kind -> Either CVal CVal -> String
         smtLibEither ke@(KEither  k _) (Left c)  = dtConstructor "left_SBVEither"  [cvToSMTLib rm (CV k c)] ke

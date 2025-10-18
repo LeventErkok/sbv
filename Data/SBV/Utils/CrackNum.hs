@@ -53,7 +53,6 @@ instance CrackNum CV where
                                KList      {}  -> Nothing
                                KSet       {}  -> Nothing
                                KTuple     {}  -> Nothing
-                               KMaybe     {}  -> Nothing
                                KEither    {}  -> Nothing
                                KRational  {}  -> Nothing
                                KArray     {}  -> Nothing

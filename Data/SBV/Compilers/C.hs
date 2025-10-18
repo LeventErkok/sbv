@@ -213,7 +213,6 @@ specifier cfg sv = case kindOf sv of
                      KApp s _      -> die $ "ADT app: "     ++ s
                      KADT s _ _    -> die $ "ADT: "         ++ s
                      KTuple k      -> die $ "tuple sort: "  ++ show k
-                     KMaybe  k     -> die $ "maybe sort: "  ++ show k
                      KEither k1 k2 -> die $ "either sort: " ++ show (k1, k2)
                      KArray  k1 k2 -> die $ "array sort: "  ++ show (k1, k2)
   where u8InHex = cgShowU8InHex cfg
@@ -464,8 +463,6 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
   = notyet "Lists (SList)"
   | any isTuple kindInfo
   = notyet "Tuples (STupleN)"
-  | any isMaybe kindInfo
-  = notyet "Optional (SMaybe) values"
   | any isEither kindInfo
   = notyet "Either (SEither) values"
   | isNothing (cgReal cfg) && KReal `Set.member` kindInfo
@@ -549,7 +546,6 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                       len (KList s)          = die $ "List sort: "   ++ show s
                       len (KSet  s)          = die $ "Set sort: "    ++ show s
                       len (KTuple s)         = die $ "Tuple sort: "  ++ show s
-                      len (KMaybe k)         = die $ "Maybe sort: "  ++ show k
                       len (KEither k1 k2)    = die $ "Either sort: " ++ show (k1, k2)
                       len (KArray  k1 k2)    = die $ "Array sort:  " ++ show (k1, k2)
                       len (KApp s _)         = die $ "Uninterpreted ADT app: " ++ s
@@ -819,7 +815,6 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                KList     s     -> die $ "List sort "   ++ show s
                                                KSet      s     -> die $ "Set sort "    ++ show s
                                                KTuple    s     -> die $ "Tuple sort "  ++ show s
-                                               KMaybe    ek    -> die $ "Maybe sort "  ++ show ek
                                                KEither   k1 k2 -> die $ "Either sort " ++ show (k1, k2)
                                                KArray    k1 k2 -> die $ "Array  sort " ++ show (k1, k2)
                                                KApp      s _   -> die $ "ADT app: " ++ s

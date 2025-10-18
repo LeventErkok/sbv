@@ -77,7 +77,7 @@ queryListOfSum = do
 
 queryMaybe :: Symbolic (Maybe Integer)
 queryMaybe = do
-  a <- sMaybe @Integer "a"
+  a :: M.SMaybe Integer <- free "a"
 
   constrain $ M.maybe sFalse (.== 1) a
 

@@ -871,7 +871,6 @@ defaultKindedValue k = CV k $ cvt k
         cvt (KList  _)       = CList []
         cvt (KSet  _)        = CSet $ RegularSet Set.empty -- why not? Arguably, could be the universal set
         cvt (KTuple ks)      = CTuple $ map cvt ks
-        cvt (KMaybe _)       = CMaybe Nothing
         cvt (KEither k1 _)   = CEither . Left $ cvt k1     -- why not?
         cvt (KArray  _  k2)  = CArray $ ArrayModel [] (cvt k2)
 
@@ -945,7 +944,6 @@ recoverKindedValue si k e =
       KList ek                            -> Just $ CV k $ CList     $ interpretList ek        e
       KSet ek                             -> Just $ CV k $ CSet      $ interpretSet ek         e
       KTuple{}                            -> Just $ CV k $ CTuple    $ interpretTuple          e
-      KMaybe{}                            -> Just $ CV k $ CMaybe    $ interpretMaybe    k     e
       KEither{}                           -> Just $ CV k $ CEither   $ interpretEither   k     e
       KArray k1 k2                        -> Just $ CV k $ CArray    $ interpretArray    k1 k2 e
 
@@ -1055,20 +1053,6 @@ recoverKindedValue si k e =
                                                                   , "Kind: " ++ show k
                                                                   , "Expr: " ++ show te
                                                                   ]
-
-        -- SMaybe
-        interpretMaybe (KMaybe _)  (ECon "nothing_SBVMaybe")        = Nothing
-        interpretMaybe (KMaybe ek) (EApp [ECon "just_SBVMaybe", a]) = case recoverKindedValue si ek a of
-                                                                        Just (CV _ v) -> Just v
-                                                                        Nothing       -> error $ unlines [ "Couldn't parse a maybe just value"
-                                                                                                         , "Kind: " ++ show ek
-                                                                                                         , "Expr: " ++ show a
-                                                                                                         ]
-        -- CVC4 puts in full ascriptions, handle those:
-        interpretMaybe _  (      EApp [ECon "as", ECon "nothing_SBVMaybe", _])     = Nothing
-        interpretMaybe mk (EApp [EApp [ECon "as", ECon "just_SBVMaybe",    _], a]) = interpretMaybe mk (EApp [ECon "just_SBVMaybe", a])
-
-        interpretMaybe _  other = error $ "Expected an SMaybe sexpr, but received: " ++ show (k, other)
 
         -- SEither
         interpretEither (KEither k1 _) (EApp [ECon "left_SBVEither",  a]) = case recoverKindedValue si k1 a of

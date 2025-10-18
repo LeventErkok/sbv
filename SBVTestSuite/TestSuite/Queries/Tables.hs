@@ -165,7 +165,7 @@ sUnless b = ite b (return ())
 sWhen :: (Monad m, Mergeable (m ())) => SBool -> m () -> m ()
 sWhen b act = ite b act (return ())
 
-sFindIndex :: (a -> SBool) -> [a] -> SMaybe Int16
+sFindIndex :: (a -> SBool) -> [a] -> SBV.SMaybe Int16
 sFindIndex p = go 0
   where
     go _ [] = SBV.sNothing

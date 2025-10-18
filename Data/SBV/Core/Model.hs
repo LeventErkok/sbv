@@ -44,7 +44,7 @@ module Data.SBV.Core.Model (
   , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
   , sRational, sRational_, sRationals
   , SymTuple, sTuple, sTuple_, sTuples
-  , sEither, sEither_, sEithers, sMaybe, sMaybe_, sMaybes
+  , sEither, sEither_, sEithers
   , sSet, sSet_, sSets
   , sEDivMod, sEDiv, sEMod
   , sDivides
@@ -382,22 +382,6 @@ instance (SymVal a, SymVal b) => SymVal (Either a b) where
   fromCV (CV (KEither k1 _ ) (CEither (Left c)))  = Left  $ fromCV $ CV k1 c
   fromCV (CV (KEither _  k2) (CEither (Right c))) = Right $ fromCV $ CV k2 c
   fromCV bad                                      = error $ "SymVal.fromCV (Either): Malformed either received: " ++ show bad
-
-  minMaxBound = Nothing
-
-instance SymVal a => SymVal (Maybe a) where
-  mkSymVal = genMkSymVar (kindOf (Proxy @(Maybe a)))
-
-  literal s
-    | Nothing <- s = mk Nothing
-    | Just  a <- s = mk $ Just (toCV a)
-    where k = kindOf (Proxy @(Maybe a))
-
-          mk = SBV . SVal k . Left . CV k . CMaybe
-
-  fromCV (CV (KMaybe _) (CMaybe Nothing))  = Nothing
-  fromCV (CV (KMaybe k) (CMaybe (Just x))) = Just $ fromCV $ CV k x
-  fromCV bad                               = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
 
   minMaxBound = Nothing
 
@@ -855,18 +839,6 @@ sEither_ = free_
 sEithers :: (SymVal a, SymVal b, MonadSymbolic m) => [String] -> m [SEither a b]
 sEithers = symbolics
 
--- | Generalization of 'Data.SBV.sMaybe'
-sMaybe :: (SymVal a, MonadSymbolic m) => String -> m (SMaybe a)
-sMaybe = symbolic
-
--- | Generalization of 'Data.SBV.sMaybe_'
-sMaybe_ :: (SymVal a, MonadSymbolic m) => m (SMaybe a)
-sMaybe_ = free_
-
--- | Generalization of 'Data.SBV.sMaybes'
-sMaybes :: (SymVal a, MonadSymbolic m) => [String] -> m [SMaybe a]
-sMaybes = symbolics
-
 -- | Generalization of 'Data.SBV.sSet'
 sSet :: (Ord a, SymVal a, MonadSymbolic m) => String -> m (SSet a)
 sSet = symbolic
@@ -1094,7 +1066,6 @@ MKSORD((),                          SInt32)
 MKSORD((),                          SInt64)
 MKSORD((),                          SFloat)
 MKSORD((),                          SChar)
-MKSORD((SymVal a),                  (SMaybe  a))
 MKSORD((SymVal a),                  (SList   a))
 MKSORD((SymVal a, SymVal b),        (SEither a b))
 MKSORD((),                          SDouble)
@@ -1137,7 +1108,6 @@ smtComparable op x y
       KList      {} -> nope     -- Unfortunately, no way for us to desugar this
       KSet       {} -> nope     -- Ditto here..
       KTuple     {} -> False
-      KMaybe     {} -> False
       KEither    {} -> False
       KArray     {} -> True
  where k    = kindOf x
@@ -1612,7 +1582,6 @@ instance (Ord a, Num (SBV a), SymVal a, Fractional a) => Fractional (SBV a) wher
                       k@KApp{}      -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KADT{}      -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KTuple{}    -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KMaybe{}    -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KEither{}   -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KArray{}    -> error $ "Unexpected Fractional case for: " ++ show k
 

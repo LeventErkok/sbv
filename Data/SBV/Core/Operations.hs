@@ -494,15 +494,6 @@ cCompare k op x y =
       (CAlgReal     a, CAlgReal  b) | isExactRational a && isExactRational b -> Just $ a `compare` b
                                     | True                                   -> Nothing
 
-      -- Structural cases
-      (CMaybe       a, CMaybe    b) -> case (a, b) of
-                                         (Nothing, Nothing) -> Just EQ
-                                         (Nothing, Just{})  -> Just LT
-                                         (Just{},  Nothing) -> Just GT
-                                         (Just av, Just bv) -> case k of
-                                                                 KMaybe ke -> cCompare ke op av bv
-                                                                 _         -> error $ "Unexpected kind in cCompare for maybe's: " ++ show k
-
       (CEither      a, CEither   b) -> let (kl, kr) = case k of
                                                         KEither l r -> (l, r)
                                                         _           -> error $ "Unexpected kind in cCompare for either's: " ++ show k
@@ -1506,8 +1497,6 @@ svStructuralLessThan x y
    = x `svLessThan` y
    | KTuple{} <- kx
    = tupleLT x y
-   | KMaybe{}  <- kx
-   = maybeLT x y
    | KEither{} <- kx
    = eitherLT x y
    | True
@@ -1537,28 +1526,6 @@ tupleLT x y = SVal KBool $ Right $ cache res
                         walk ((lti, eqi) : rest) = lti `svOr` (eqi `svAnd` walk rest)
 
                     svToSV st $ walk $ zipWith chkElt [1..] ks
-
--- | Structural less-than for maybes
-maybeLT :: SVal -> SVal -> SVal
-maybeLT x y = sMaybeCase (       sMaybeCase svFalse (const svTrue)    y)
-                         (\jx -> sMaybeCase svFalse (jx `svStructuralLessThan`) y)
-                         x
-  where ka = case kindOf x of
-               KMaybe k' -> k'
-               k         -> error $ "Data.SBV: Impossible happened, maybeLT called with: " ++ show (k, x, y)
-
-        sMaybeCase brNothing brJust s = SVal KBool $ Right $ cache res
-           where res st = do sv <- svToSV st s
-
-                             let justVal = SVal ka $ Right $ cache $ \_ -> newExpr st ka $ SBVApp MaybeAccess [sv]
-                                 justRes = brJust justVal
-
-                             br1 <- svToSV st brNothing
-                             br2 <- svToSV st justRes
-
-                             -- Do we have a value?
-                             noVal <- newExpr st KBool $ SBVApp (MaybeIs ka False) [sv]
-                             newExpr st KBool $ SBVApp Ite [noVal, br1, br2]
 
 -- | Structural less-than for either
 eitherLT :: SVal -> SVal -> SVal

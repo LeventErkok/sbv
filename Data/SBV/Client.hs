@@ -688,9 +688,6 @@ toSBV typeName constructorName = go
         -- lists
         go (TH.AppT TH.ListT t) = KList <$> go t
 
-        -- maybe
-        go (TH.AppT (TH.ConT nm) t) | nm == ''Maybe = KMaybe <$> go t
-
         -- either
         go (TH.AppT (TH.AppT (TH.ConT nm) t1) t2) | nm == ''Either = KEither <$> go t1 <*> go t2
 

@@ -115,7 +115,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasSets        = any isSet kindInfo
         hasTuples      = not . null $ tupleArities
         hasEither      = any isEither kindInfo
-        hasMaybe       = any isMaybe  kindInfo
         hasRational    = any isRational kindInfo
         hasADTs        = not . null $ adtsNoRM
         rm             = roundingMode cfg
@@ -127,7 +126,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
         doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not (have solverCaps)]
-           where checks = [ ("data types",             supportsDataTypes,          hasTuples || hasEither || hasMaybe || hasADTs)
+           where checks = [ ("data types",             supportsDataTypes,          hasTuples || hasEither || hasADTs)
                           , ("set operations",         supportsSets,               hasSets)
                           , ("bit vectors",            supportsBitVectors,         hasBVs)
                           , ("special relations",      supportsSpecialRels,        needsSpecialRels)
@@ -193,7 +192,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
            | hasNonBVArrays        = setAll "has non-bitvector arrays"
            | hasTuples             = setAll "has tuples"
            | hasEither             = setAll "has either type"
-           | hasMaybe              = setAll "has maybe type"
            | hasSets               = setAll "has sets"
            | hasList               = setAll "has lists"
            | hasChar               = setAll "has chars"
@@ -263,7 +261,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ concatMap declTuple tupleArities
              ++ [ "; --- sums ---" ]
              ++ (if containsSum       kindInfo then declSum       else [])
-             ++ (if containsMaybe     kindInfo then declMaybe     else [])
              ++ (if containsRationals kindInfo then declRationals else [])
              ++ [ "; --- ADTs  --- " | not (null adtsNoRM)]
              ++ declADT adtsNoRM
@@ -426,10 +423,6 @@ findTupleArities ks = Set.toAscList
 containsSum :: Set Kind -> Bool
 containsSum = not . Set.null . Set.filter isEither
 
--- | Is @Maybe@ being used?
-containsMaybe :: Set Kind -> Bool
-containsMaybe = not . Set.null . Set.filter isMaybe
-
 -- | Is @Rational@ being used?
 containsRationals :: Set Kind -> Bool
 containsRationals = not . Set.null . Set.filter isRational
@@ -439,12 +432,6 @@ declSum = [ "(declare-datatypes ((SBVEither 2)) ((par (T1 T2)"
           , "                                    ((left_SBVEither  (get_left_SBVEither  T1))"
           , "                                     (right_SBVEither (get_right_SBVEither T2))))))"
           ]
-
-declMaybe :: [String]
-declMaybe = [ "(declare-datatypes ((SBVMaybe 1)) ((par (T)"
-            , "                                    ((nothing_SBVMaybe)"
-            , "                                     (just_SBVMaybe (get_just_SBVMaybe T))))))"
-            ]
 
 -- Internally, we do *not* keep the rationals in reduced form! So, the boolean operators explicitly do the math
 -- to make sure equivalent values are treated correctly.
@@ -476,7 +463,6 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             ++ concatMap declTuple (findTupleArities newKs)
             -- sums
             ++ (if containsSum   newKs then declSum   else [])
-            ++ (if containsMaybe newKs then declMaybe else [])
             -- constants
             ++ concatMap (declConst cfg) consts
             -- inputs
@@ -849,7 +835,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                               KList _       -> unexpected
                               KSet  _       -> unexpected
                               KTuple _      -> unexpected
-                              KMaybe _      -> unexpected
                               KEither _ _   -> unexpected
                               KArray  _ _   -> unexpected
 
@@ -876,7 +861,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
                                 KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
                                 KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
-                                KMaybe k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued index: " ++ show k
                                 KEither k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)
                                 KArray  k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected array valued index: " ++ show (k1, k2)
 
@@ -1010,12 +994,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (EitherAccess            True ) [arg]) = "(get_right_SBVEither " ++ cvtSV arg ++ ")"
 
         sh (SBVApp  RationalConstructor    [t, b]) = "(SBV.Rational " ++ cvtSV t ++ " " ++ cvtSV b ++ ")"
-
-        sh (SBVApp (MaybeConstructor k False) [])    =       dtConstructor "nothing_SBVMaybe" []    (KMaybe k)
-        sh (SBVApp (MaybeConstructor k True)  [arg]) =       dtConstructor "just_SBVMaybe"    [arg] (KMaybe k)
-        sh (SBVApp (MaybeIs          k False) [arg]) = '(' : dtAccessor    "nothing_SBVMaybe" []    (KMaybe k) ++ " " ++ cvtSV arg ++ ")"
-        sh (SBVApp (MaybeIs          k True ) [arg]) = '(' : dtAccessor    "just_SBVMaybe"    [k]   (KMaybe k) ++ " " ++ cvtSV arg ++ ")"
-        sh (SBVApp MaybeAccess                [arg]) = "(get_just_SBVMaybe " ++ cvtSV arg ++ ")"
 
         sh (SBVApp Implies [a, b]) = "(=> " ++ cvtSV a ++ " " ++ cvtSV b ++ ")"
 
@@ -1222,8 +1200,6 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                                                 project i = "(proj_" ++ show i ++ "_" ++ tt ++ " " ++ nm ++ ")"
                                                 nmks      = [(project i, k) | (i, k) <- zip [1::Int ..] ks]
                                             in concatMap (\(n, k) -> walk (d+1) n f k) nmks
-        walk  d  nm  f km@(KMaybe k)      = let n = "(get_just_SBVMaybe " ++ nm ++ ")"
-                                            in  ["(=> " ++ "((_ is (just_SBVMaybe (" ++ smtType k ++ ") " ++ smtType km ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n f k]
         walk  d  nm  f ke@(KEither k1 k2) = let n1 = "(get_left_SBVEither "  ++ nm ++ ")"
                                                 n2 = "(get_right_SBVEither " ++ nm ++ ")"
                                                 c1 = ["(=> " ++ "((_ is (left_SBVEither ("  ++ smtType k1 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n1 f k1]

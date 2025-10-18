@@ -99,8 +99,7 @@ data Kind =
           | KSet  Kind
           | KTuple [Kind]
 
-          -- Maybe and Either
-          | KMaybe  Kind
+          -- Either
           | KEither Kind Kind
 
           -- Arrays
@@ -143,7 +142,6 @@ instance Show Kind where
   show (KSet  e)          = "{" ++ show e ++ "}"
   show (KTuple m)         = "(" ++ intercalate ", " (show <$> m) ++ ")"
   show KRational          = "SRational"
-  show (KMaybe k)         = "SMaybe "  ++ kindParen (showBaseKind k)
   show (KEither k1 k2)    = "SEither " ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
   show (KArray k1 k2)     = "SArray "  ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
 
@@ -167,7 +165,6 @@ showBaseKind = sh
         sh (KList k)          = "[" ++ sh k ++ "]"
         sh (KSet k)           = "{" ++ sh k ++ "}"
         sh (KTuple ks)        = "(" ++ intercalate ", " (map sh ks) ++ ")"
-        sh (KMaybe k)         = "Maybe "  ++ kindParen (sh k)
         sh (KEither k1 k2)    = "Either " ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
         sh (KArray  k1 k2)    = "Array "  ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
 
@@ -207,7 +204,6 @@ smtType (KADT s pks _)  = kindParen $ unwords (s : map (smtType . snd) pks)
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 smtType KRational       = "SBVRational"
-smtType (KMaybe k)      = "(SBVMaybe " ++ smtType k ++ ")"
 smtType (KEither k1 k2) = "(SBVEither "  ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
 smtType (KArray  k1 k2) = "(Array "      ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
 
@@ -235,7 +231,6 @@ kindHasSign = \case KVar _       -> False
                     KList{}      -> False
                     KSet{}       -> False
                     KTuple{}     -> False
-                    KMaybe{}     -> False
                     KEither{}    -> False
                     KArray{}     -> False
 
@@ -262,7 +257,6 @@ class HasKind a where
   isList          :: a -> Bool
   isSet           :: a -> Bool
   isTuple         :: a -> Bool
-  isMaybe         :: a -> Bool
   isEither        :: a -> Bool
   isArray         :: a -> Bool
   isRoundingMode  :: a -> Bool
@@ -290,7 +284,6 @@ class HasKind a where
                   KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)"   ++ show ek
                   KSet  ek      -> error $ "SBV.HasKind.intSizeOf((S)Set)"    ++ show ek
                   KTuple tys    -> error $ "SBV.HasKind.intSizeOf((S)Tuple)"  ++ show tys
-                  KMaybe k      -> error $ "SBV.HasKind.intSizeOf((S)Maybe)"  ++ show k
                   KEither k1 k2 -> error $ "SBV.HasKind.intSizeOf((S)Either)" ++ show (k1, k2)
                   KArray  k1 k2 -> error $ "SBV.HasKind.intSizeOf((S)Array)"  ++ show (k1, k2)
 
@@ -335,9 +328,6 @@ class HasKind a where
 
   isTuple         (kindOf -> KTuple{})     = True
   isTuple         _                        = False
-
-  isMaybe         (kindOf -> KMaybe{})     = True
-  isMaybe         _                        = False
 
   isEither        (kindOf -> KEither{})    = True
   isEither        _                        = False
@@ -450,9 +440,6 @@ instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f, HasK
 instance (HasKind a, HasKind b) => HasKind (Either a b) where
   kindOf _ = KEither (kindOf (Proxy @a)) (kindOf (Proxy @b))
 
-instance HasKind a => HasKind (Maybe a) where
-  kindOf _ = KMaybe (kindOf (Proxy @a))
-
 instance (HasKind a, HasKind b) => HasKind (a -> b) where
   kindOf _ = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
 
@@ -464,7 +451,6 @@ needsFlattening = any check . expandKinds
   where check KList{}     = True
         check KSet{}      = True
         check KTuple{}    = True
-        check KMaybe{}    = True
         check KEither{}   = True
         check KArray{}    = True
         check KApp{}      = True
