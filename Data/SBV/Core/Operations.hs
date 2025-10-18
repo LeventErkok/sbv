@@ -531,9 +531,7 @@ cCompare k op x y =
                            -> case svArrEqual k1 k2 a b of
                                 Nothing    -> Nothing  -- We don't know
                                 Just True  -> Just EQ  -- They're equal
-                                Just False -> Just $ if op `elem` [Equal True, Equal False]
-                                                        then GT  -- Pick GT, So equality    test will fail
-                                                        else EQ  -- Pick EQ, So in-equality test will fail
+                                Just False -> Just GT  -- Just pick GT
                            | True
                            -> error $ "cCompare: Received unexpected array comparison: " ++ show (op, k)
 
@@ -554,9 +552,7 @@ cCompare k op x y =
 
                 -- Different constructor
                 | s /= s'
-                -> Just $ if op `elem` [Equal True, Equal False]
-                          then GT -- Pick GT, So equality test fails
-                          else EQ -- Pick EQ, So in-equality test fails
+                -> Just GT -- Just pick GT; remember that the check is only for eq/not-eq so this is safe
 
                 -- Same constructor
                 | map fst fks /= map fst fks'
