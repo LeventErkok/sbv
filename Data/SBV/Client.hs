@@ -503,15 +503,27 @@ mkCaseAnalyzer kind typeName params cstrs = case kind of
 -- | Declare testers
 mkTesters :: TH.Type -> (TH.Type -> TH.Type) -> [(TH.Name, [(Maybe TH.Name, TH.Type, Kind)])] -> TH.Q [TH.Dec]
 mkTesters sType inSymValContext cstrs = do
-    let declTester :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> ((TH.Name, String), [TH.Dec])
-        declTester (c, _) = let ty = inSymValContext $ TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
-                            in ((nm, bnm), [TH.SigD nm ty, def])
-          where bnm  = TH.nameBase c
-                nm   = TH.mkName $ "is" ++ bnm
-                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
-                body = TH.AppE (TH.VarE 'mkConstructor) (TH.LitE (TH.StringL ("is-" ++ bnm)))
+    let declTester :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q ((TH.Name, String), [TH.Dec])
+        declTester (c, _) = do
+             let ty  = inSymValContext $ TH.AppT (TH.AppT TH.ArrowT sType) (TH.ConT ''SBool)
+                 bnm = TH.nameBase c
+                 nm  = TH.mkName $ "is" ++ bnm
 
-    let (testerNames, testerDecls) = unzip $ map declTester cstrs
+             inp <- TH.newName "inp"
+             cls <- TH.clause [TH.varP inp]
+                              (TH.normalB
+                                    (TH.caseE [| unlitCV $(TH.varE inp) |]
+                                              [ TH.match [p|Just (_, CADT (got, _))|]
+                                                         (TH.normalB [| literal (got == bnm) |])
+                                                         []
+                                              , TH.match [p|Nothing|]
+                                                         (TH.normalB [| mkConstructor ("is-" ++ bnm) $(TH.varE inp) |])
+                                                         []
+                                              ]))
+                              []
+             pure ((nm, bnm), [TH.SigD nm ty, TH.FunD nm [cls]])
+
+    (testerNames, testerDecls) <- unzip <$> mapM declTester cstrs
 
     mapM_ (addDoc "Field recognizer predicate." . fst) testerNames
 
