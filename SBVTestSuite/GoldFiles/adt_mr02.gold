@@ -28,11 +28,11 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Bool (is-A2 s0))
-[GOOD] (define-fun s2 () (A Bool String) (getA2_1 s0))
-[GOOD] (define-fun s3 () Bool (is-A2 s2))
-[GOOD] (define-fun s4 () (A String String) (getA2_1 s2))
-[GOOD] (define-fun s5 () Bool (is-Aa s4))
+[GOOD] (define-fun s1 () Bool ((as is-A2 Bool) s0))
+[GOOD] (define-fun s2 () (A Bool String) ((as getA2_1 (A Bool String)) s0))
+[GOOD] (define-fun s3 () Bool ((as is-A2 Bool) s2))
+[GOOD] (define-fun s4 () (A String String) ((as getA2_1 (A String String)) s2))
+[GOOD] (define-fun s5 () Bool ((as is-Aa Bool) s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s1)
