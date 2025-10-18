@@ -36,7 +36,9 @@ mkSymbolic [''A]
 tests :: TestTree
 tests =
   testGroup "ADT" [
-      goldenCapturedIO "adt_expr00" $ evalCheck (eval e00,  3)
+      goldenCapturedIO "adt_expr00"  $ evalCheck  (eval e00,  3)
+    , goldenCapturedIO "adt_expr00c" $ evalCheckC (     e00,  3)
+
     , goldenCapturedIO "adt_expr01" $ evalCheck (eval e01,  7)
     , goldenCapturedIO "adt_expr02" $ evalCheck (eval e02, 21)
     , goldenCapturedIO "adt_expr03" $ evalCheck (eval e03, 28)
@@ -83,6 +85,16 @@ tests =
 evalCheck :: SymVal a => (SBV a, a) -> FilePath -> IO ()
 evalCheck (sv, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                         constrain $ sv ./= literal v
+                        query $ do cs <- checkSat
+                                   case cs of
+                                     Unsat{} -> io $ appendFile rf "All good.\n"
+                                     _       -> error $ "Unexpected: " ++ show cs
+
+evalCheckC :: (SExpr, Integer) -> FilePath -> IO ()
+evalCheckC (e, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+                        se :: SExpr <- free_
+                        constrain $ se .== e
+                        constrain $ eval se ./= literal v
                         query $ do cs <- checkSat
                                    case cs of
                                      Unsat{} -> io $ appendFile rf "All good.\n"
