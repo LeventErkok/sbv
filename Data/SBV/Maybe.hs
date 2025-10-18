@@ -157,4 +157,4 @@ instance (Ord a, SymVal a, Num a, Num (SBV a)) => Num (SBV (Maybe a)) where
 
 -- | Custom 'OrdSymbolic' instance over 'SMaybe'.
 instance (OrdSymbolic (SBV a), SymVal a) => OrdSymbolic (SBV (Maybe a)) where
-  ma .< mb = maybe sFalse (\b -> maybe sFalse (.< b) ma) mb
+  ma .< mb = maybe sFalse (\b -> maybe sTrue (.< b) ma) mb
