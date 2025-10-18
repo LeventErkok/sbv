@@ -36,7 +36,7 @@ module Data.SBV.Client
 
 import Data.Generics
 
-import Control.Monad (filterM)
+import Control.Monad (filterM, mapAndUnzipM)
 import Test.QuickCheck (Arbitrary(..), elements)
 
 import qualified Control.Exception as C
@@ -354,7 +354,7 @@ mkADT adtKind typeName params cstrs = do
 
             pure ((nm, bnm), [TH.SigD nm ty, TH.FunD nm [cls]])
 
-    (constrNames, cdecls) <- unzip <$> mapM declConstructor cstrs
+    (constrNames, cdecls) <- mapAndUnzipM declConstructor cstrs
 
     let btname = TH.nameBase typeName
         tname  = TH.mkName ('S' : btname)
@@ -523,7 +523,7 @@ mkTesters sType inSymValContext cstrs = do
                               []
              pure ((nm, bnm), [TH.SigD nm ty, TH.FunD nm [cls]])
 
-    (testerNames, testerDecls) <- unzip <$> mapM declTester cstrs
+    (testerNames, testerDecls) <- mapAndUnzipM declTester cstrs
 
     mapM_ (addDoc "Field recognizer predicate." . fst) testerNames
 
