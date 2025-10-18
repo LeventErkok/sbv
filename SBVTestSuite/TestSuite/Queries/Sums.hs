@@ -90,9 +90,9 @@ queryMaybe = do
        then return av
        else error $ "Didn't expect this: " ++ show av
 
-queryListOfMaybe :: Symbolic [Maybe String]
+queryListOfMaybe :: Symbolic [Maybe Char]
 queryListOfMaybe = do
-  lst <- sList @(Maybe String) "lst"
+  lst <- sList @(Maybe Char) "lst"
   constrain $ L.length lst .== 2
   constrain $ isJust $ L.head lst
   constrain $ isNothing $ L.head $ L.tail lst
