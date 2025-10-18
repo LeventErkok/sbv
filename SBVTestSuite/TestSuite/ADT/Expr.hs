@@ -37,33 +37,59 @@ tests :: TestTree
 tests =
   testGroup "ADT" [
       goldenCapturedIO "adt_expr00c" $ evalCheck  (eval e00,  3)
-    , goldenCapturedIO "adt_expr00"  $ evalCheckS (     e00,  3)
+    , goldenCapturedIO "adt_expr00"  $ evalCheckS eval (e00,  3)
 
     , goldenCapturedIO "adt_expr01c" $ evalCheck  (eval e01,  7)
-    , goldenCapturedIO "adt_expr01"  $ evalCheckS (     e01,  7)
+    , goldenCapturedIO "adt_expr01"  $ evalCheckS eval (e01,  7)
 
     , goldenCapturedIO "adt_expr02c" $ evalCheck  (eval e02, 21)
-    , goldenCapturedIO "adt_expr02"  $ evalCheckS (     e02, 21)
+    , goldenCapturedIO "adt_expr02"  $ evalCheckS eval (e02, 21)
 
     , goldenCapturedIO "adt_expr03c" $ evalCheck  (eval e03, 28)
-    , goldenCapturedIO "adt_expr03"  $ evalCheckS (     e03, 28)
+    , goldenCapturedIO "adt_expr03"  $ evalCheckS eval (e03, 28)
 
     , goldenCapturedIO "adt_expr04" $ evalTest  (eval e04)
     , goldenCapturedIO "adt_expr05" $ evalTest  (eval e05)
 
-    , goldenCapturedIO "adt_expr06" $ evalCheck (f (sVar (literal "a")), 0)
-    , goldenCapturedIO "adt_expr07" $ evalCheck (f (sVar (literal "b")), 1)
-    , goldenCapturedIO "adt_expr08" $ evalCheck (f (sVar (literal "c")), 1)
-    , goldenCapturedIO "adt_expr09" $ evalCheck (f (sVar (literal "d")), 2)
-    , goldenCapturedIO "adt_expr10" $ evalCheck (sum (map (f . sVal . literal) [-5 .. 9]),  45)
-    , goldenCapturedIO "adt_expr11" $ evalCheck (sum (map (f . sVal . literal) [10, 10]),    8)
-    , goldenCapturedIO "adt_expr12" $ evalCheck (sum (map (f . sVal . literal) [11 .. 20]), 50)
-    , goldenCapturedIO "adt_expr13" $ evalCheck (f e00, 3)
-    , goldenCapturedIO "adt_expr14" $ evalCheck (f e01, 6)
-    , goldenCapturedIO "adt_expr15" $ evalCheck (f e02, 6)
-    , goldenCapturedIO "adt_expr16" $ evalCheck (f e03, 6)
-    , goldenCapturedIO "adt_expr17" $ evalCheck (f e04, 6)
-    , goldenCapturedIO "adt_expr18" $ evalCheck (f e05, 6)
+    , goldenCapturedIO "adt_expr06c" $ evalCheck  (f (sVar (literal "a")), 0)
+    , goldenCapturedIO "adt_expr06"  $ evalCheckS f  (sVar (literal "a") , 0)
+
+    , goldenCapturedIO "adt_expr07c" $ evalCheck  (f (sVar (literal "b")), 1)
+    , goldenCapturedIO "adt_expr07"  $ evalCheckS f  (sVar (literal "b") , 1)
+
+    , goldenCapturedIO "adt_expr08c" $ evalCheck  (f (sVar (literal "c")), 1)
+    , goldenCapturedIO "adt_expr08"  $ evalCheckS f  (sVar (literal "c") , 1)
+
+    , goldenCapturedIO "adt_expr09c" $ evalCheck  (f (sVar (literal "d")), 2)
+    , goldenCapturedIO "adt_expr09"  $ evalCheckS f  (sVar (literal "d") , 2)
+
+    , goldenCapturedIO "adt_expr10c" $ evalCheck   (sum (map (f . sVal . literal) [-5 .. 9]),  45)
+    , goldenCapturedIO "adt_expr10"  $ evalCheckSL (sum . map f) ((map (sVal . literal) [-5 .. 9]),  45)
+
+    , goldenCapturedIO "adt_expr11c" $ evalCheck   (sum (map (f . sVal . literal) [10, 10]),    8)
+    , goldenCapturedIO "adt_expr11"  $ evalCheckSL (sum . map f) ((map (sVal . literal) [10, 10]),    8)
+
+    , goldenCapturedIO "adt_expr12c" $ evalCheck   (sum (map (f . sVal . literal) [11 .. 20]), 50)
+    , goldenCapturedIO "adt_expr12"  $ evalCheckSL (sum . map f) ((map (sVal . literal) [11 .. 20]), 50)
+
+    , goldenCapturedIO "adt_expr13c" $ evalCheck  (f e00, 3)
+    , goldenCapturedIO "adt_expr13"  $ evalCheckS f (e00, 3)
+
+    , goldenCapturedIO "adt_expr14c" $ evalCheck  (f e01, 6)
+    , goldenCapturedIO "adt_expr14"  $ evalCheckS f (e01, 6)
+
+    , goldenCapturedIO "adt_expr15c" $ evalCheck  (f e02, 6)
+    , goldenCapturedIO "adt_expr15"  $ evalCheckS f (e02, 6)
+
+    , goldenCapturedIO "adt_expr16c" $ evalCheck  (f e03, 6)
+    , goldenCapturedIO "adt_expr16"  $ evalCheckS f (e03, 6)
+
+    , goldenCapturedIO "adt_expr17c" $ evalCheck  (f e04, 6)
+    , goldenCapturedIO "adt_expr17"  $ evalCheckS f (e04, 6)
+
+    , goldenCapturedIO "adt_expr18c" $ evalCheck  (f e05, 6)
+    , goldenCapturedIO "adt_expr18"  $ evalCheckS f (e05, 6)
+
     , goldenCapturedIO "adt_gen00"  t00
     , goldenCapturedIO "adt_gen01"  $ tSat (-1)
     , goldenCapturedIO "adt_gen02"  $ tSat 0
@@ -97,11 +123,21 @@ evalCheck (sv, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ 
                                      Unsat{} -> io $ appendFile rf "All good.\n"
                                      _       -> error $ "Unexpected: " ++ show cs
 
-evalCheckS :: (SExpr, Integer) -> FilePath -> IO ()
-evalCheckS (e, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+evalCheckS :: (SExpr -> SInteger) -> (SExpr, Integer) -> FilePath -> IO ()
+evalCheckS fun (e, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                         se :: SExpr <- free_
                         constrain $ se .== e
-                        constrain $ eval se ./= literal v
+                        constrain $ fun se ./= literal v
+                        query $ do cs <- checkSat
+                                   case cs of
+                                     Unsat{} -> io $ appendFile rf "All good.\n"
+                                     _       -> error $ "Unexpected: " ++ show cs
+
+evalCheckSL :: ([SExpr] -> SInteger) -> ([SExpr], Integer) -> FilePath -> IO ()
+evalCheckSL fun (e, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+                        ses :: [SExpr] <- mapM (const free_) e
+                        constrain $ ses .== e
+                        constrain $ fun ses ./= literal v
                         query $ do cs <- checkSat
                                    case cs of
                                      Unsat{} -> io $ appendFile rf "All good.\n"
