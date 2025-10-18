@@ -19,9 +19,9 @@
            (Times)
        ))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s3 () BinOp Plus)
+[GOOD] (define-fun s3 () BinOp (as Plus BinOp))
 [GOOD] (define-fun s5 () Int 0)
-[GOOD] (define-fun s6 () BinOp Minus)
+[GOOD] (define-fun s6 () BinOp (as Minus BinOp))
 [GOOD] (define-fun s8 () Int 1)
 [GOOD] (define-fun s9 () Int 2)
 [GOOD] ; --- top level inputs ---

@@ -85,7 +85,7 @@
 [GOOD] (define-fun s41 () Int 12)
 [GOOD] (define-fun s42 () Bool (= s15 s41))
 [GOOD] (assert s42)
-[GOOD] (define-fun s43 () BinOp Plus)
+[GOOD] (define-fun s43 () BinOp (as Plus BinOp))
 [GOOD] (define-fun s44 () Bool (= s16 s43))
 [GOOD] (assert s44)
 [GOOD] (define-fun s45 () Bool (fp.eq s17 s18))
