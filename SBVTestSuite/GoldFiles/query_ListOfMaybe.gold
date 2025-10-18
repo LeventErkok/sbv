@@ -11,16 +11,18 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
-                                           ((nothing_SBVMaybe)
-                                            (just_SBVMaybe (get_just_SBVMaybe T))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Maybe
+[GOOD] (declare-datatype Maybe (par (a) (
+           (Nothing)
+           (Just (getJust_1 a))
+       )))
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () Int 2)
 [GOOD] (define-fun s4 () Int 0)
-[GOOD] (define-fun s8 () Int 1)
+[GOOD] (define-fun s7 () Int 1)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (Seq (SBVMaybe String))) ; tracks user variable "lst"
-[GOOD] (assert (forall ((seq0 Int)) (=> (and (>= seq0 0) (< seq0 (seq.len s0))) (=> ((_ is (just_SBVMaybe (String) (SBVMaybe String))) (seq.nth s0 seq0)) (= 1 (str.len (get_just_SBVMaybe (seq.nth s0 seq0))))))))
+[GOOD] (declare-fun s0 () (Seq (Maybe String))) ; tracks user variable "lst"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
@@ -28,25 +30,23 @@
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Int (seq.len s0))
 [GOOD] (define-fun s3 () Bool (= s1 s2))
-[GOOD] (define-fun s5 () (SBVMaybe String) (seq.nth s0 s4))
-[GOOD] (define-fun s6 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe String))) s5))
-[GOOD] (define-fun s7 () Bool (ite s6 false true))
-[GOOD] (define-fun s9 () Int (- s1 s8))
-[GOOD] (define-fun s10 () (Seq (SBVMaybe String)) (seq.extract s0 s8 s9))
-[GOOD] (define-fun s11 () (SBVMaybe String) (seq.nth s10 s4))
-[GOOD] (define-fun s12 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe String))) s11))
-[GOOD] (define-fun s13 () Bool (ite s12 true false))
+[GOOD] (define-fun s5 () (Maybe String) (seq.nth s0 s4))
+[GOOD] (define-fun s6 () Bool ((as is-Just Bool) s5))
+[GOOD] (define-fun s8 () Int (- s1 s7))
+[GOOD] (define-fun s9 () (Seq (Maybe String)) (seq.extract s0 s7 s8))
+[GOOD] (define-fun s10 () (Maybe String) (seq.nth s9 s4))
+[GOOD] (define-fun s11 () Bool ((as is-Nothing Bool) s10))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)
-[GOOD] (assert s7)
-[GOOD] (assert s13)
+[GOOD] (assert s6)
+[GOOD] (assert s11)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (seq.++ (seq.unit (just_SBVMaybe "A")) (seq.unit nothing_SBVMaybe))))
+[RECV] ((s0 (seq.++ (seq.unit (Just "!0!")) (seq.unit Nothing))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-[Just 'A',Nothing]
+[Just "!0!",Nothing]
