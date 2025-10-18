@@ -200,8 +200,8 @@ instance Ord CVal where
 
 -- | A t'CV' represents a concrete word of a fixed size:
 -- For signed words, the most significant digit is considered to be the sign.
-data CV = CV { _cvKind  :: !Kind
-             , cvVal    :: !CVal
+data CV = CV { cvKind  :: !Kind
+             , cvVal   :: !CVal
              }
              deriving (Eq, Ord, G.Data, NFData, Generic)
 

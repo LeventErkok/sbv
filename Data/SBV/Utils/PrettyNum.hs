@@ -442,7 +442,7 @@ cvToSMTLib rm x
   | isArray x        , CArray ac       <- cvVal x  = smtLibArray (kindOf x) ac
 
   -- ADTs
-  | isADT x          , CADT c          <- cvVal x = smtLibADT c
+  | isADT x          , CADT c          <- cvVal x = smtLibADT (cvKind x) c
 
   | True = error $ "SBV.cvtCV: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
@@ -516,9 +516,10 @@ cvToSMTLib rm x
         mkMinBound i = "#b1" ++ replicate (i-1) '0'
 
         -- ADTs
-        smtLibADT :: (String,  [(Kind, CVal)]) -> String
-        smtLibADT (c, [])  = c
-        smtLibADT (c, kvs) = '(' : unwords (c : map (\(k, v) -> cvToSMTLib rm (CV  k v)) kvs) ++ ")"
+        smtLibADT :: Kind -> (String,  [(Kind, CVal)]) -> String
+        smtLibADT knd (c, [])  = ascribe c knd
+        smtLibADT knd (c, kvs) = '(' : ascribe c knd ++ " " ++ unwords (map (\(k, v) -> cvToSMTLib rm (CV  k v)) kvs) ++ ")"
+        ascribe nm k = "(as " ++ nm ++ " " ++ smtType k ++ ")"
 
 -- | Show a float as a binary
 showBFloat :: (Show a, RealFloat a) => a -> ShowS

@@ -28,7 +28,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Bool (is-Let s0))
+[GOOD] (define-fun s1 () Bool ((as is-Let Bool) s0))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s1)

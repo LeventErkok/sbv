@@ -2666,6 +2666,11 @@ some inpName cond = mk f
                   internalConstraint st False [] (unSBV (ifExists .=> cond (mk (pure (pure chosen)))))
                   pure chosen
 
+-- | Find the final part of a kind that looks like an array
+resKind :: Kind -> Kind
+resKind (KArray _ k) = resKind k
+resKind k            = k
+
 -- | SMT definable constants and functions, which can also be uninterpeted.
 -- This class captures functions that we can generate standalone-code for
 -- in the SMT solver. Note that we also allow uninterpreted constants and
@@ -2780,20 +2785,21 @@ class SMTDefinable a where
   sbv2smt :: ExtractIO m => a -> m String
 
   -- | Make this name a constructor, coming from an ADT. Only used internally
-  mkADTConstructor :: String -> a
-  mkADTTester      :: String -> a
-  mkADTAccessor    :: String -> a
+  mkADTConstructor :: HasKind a => String -> a
+  mkADTTester      :: HasKind a => String -> a
+  mkADTAccessor    :: HasKind a => String -> a
 
   {-# MINIMAL sbvDefineValue, sbv2smt #-}
 
   -- defaults:
-  uninterpret         nm        = sbvDefineValue (UIGiven nm)                  Nothing   $ UIFree True
-  uninterpretWithArgs nm as     = sbvDefineValue (UIGiven nm)                  (Just as) $ UIFree True
-  mkADTConstructor    nm        = sbvDefineValue (UIADT   (ADTConstructor nm)) Nothing   $ UIFree True
-  mkADTTester         nm        = sbvDefineValue (UIADT   (ADTTester      nm)) Nothing   $ UIFree True
-  mkADTAccessor       nm        = sbvDefineValue (UIADT   (ADTAccessor    nm)) Nothing   $ UIFree True
-  cgUninterpret       nm code v = sbvDefineValue (UIGiven nm)                  Nothing   $ UICodeC (v, code)
+  uninterpret         nm        = sbvDefineValue (UIGiven nm) Nothing   $ UIFree True
+  uninterpretWithArgs nm as     = sbvDefineValue (UIGiven nm) (Just as) $ UIFree True
+  cgUninterpret       nm code v = sbvDefineValue (UIGiven nm) Nothing   $ UICodeC (v, code)
   sym                           = uninterpret
+
+  mkADTConstructor nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTConstructor nm k)) Nothing $ UIFree True in v
+  mkADTTester      nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTTester      nm k)) Nothing $ UIFree True in v
+  mkADTAccessor    nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTAccessor    nm k)) Nothing $ UIFree True in v
 
   smtFunction nm v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing $ UIFun (v, \st fk -> lambda st TopLevel fk v)
 

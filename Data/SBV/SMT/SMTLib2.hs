@@ -808,7 +808,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         -- We fully qualify the constructor with their types to work around type checking issues
         -- Note that this is rather bizarre, as we're tagging the constructor with its *result* type,
-        -- not its full function type as one would expect. But this is per the spec: Pg. 27 of SMTLib 2.6 spec
+        -- not its full function type as one would expect. But this is per the spec: Pg. 28 of SMTLib 3.6 spec
         -- says:
         --
         --    To simplify sort checking, a function symbol in a term can be annotated with one of its result sorts sigma.
@@ -1309,9 +1309,11 @@ handleADT op args = case args of
                       [] -> f
                       _  -> "(" ++ f ++ " " ++ unwords (map cvtSV args) ++ ")"
   where f = case op of
-              ADTConstructor nm -> nm
-              ADTTester      nm -> nm
-              ADTAccessor    nm -> nm
+              ADTConstructor nm k -> ascribe nm k
+              ADTTester      nm k -> ascribe nm k
+              ADTAccessor    nm k -> ascribe nm k
+
+        ascribe nm k = "(as " ++ nm ++ " " ++ smtType k ++ ")"
 
 -- Various casts
 handleKindCast :: Kind -> Kind -> String -> String

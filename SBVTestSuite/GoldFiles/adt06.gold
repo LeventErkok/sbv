@@ -63,8 +63,8 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Bool (is-AMaybe s0))
-[GOOD] (define-fun s2 () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool)))) (getAMaybe_1 s0))
+[GOOD] (define-fun s1 () Bool ((as is-AMaybe Bool) s0))
+[GOOD] (define-fun s2 () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool)))) ((as getAMaybe_1 (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool))))) s0))
 [GOOD] (define-fun s3 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool)))))) s2))
 [GOOD] (define-fun s4 () Bool (ite s3 false true))
 [GOOD] ; --- delayedEqualities ---

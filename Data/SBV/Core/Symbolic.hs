@@ -258,9 +258,9 @@ data Op = Plus
         deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | ADT operations
-data ADTOp = ADTConstructor String         -- Construct an ADT
-           | ADTTester      String         -- Check if top-level constructor matches
-           | ADTAccessor    String         -- Extract a field from an ADT value
+data ADTOp = ADTConstructor String Kind    -- Construct an ADT. Kind is the kind of the resulting ADT
+           | ADTTester      String Kind    -- Check if top-level constructor matches. Kind is the kind of the argument
+           | ADTAccessor    String Kind    -- Extract a field from an ADT value. Kind is the kind of the argument
            deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | Special relations supported by z3
@@ -1334,9 +1334,9 @@ newUninterpreted st uiName mbArgNames t uiCode = do
   let (adtOp, candName) = case uiName of
                             UIGiven n -> (False, n)
                             UIADT   o -> case o of
-                                           ADTConstructor n -> (True, n)
-                                           ADTTester      n -> (True, n)
-                                           ADTAccessor    n -> (True, n)
+                                           ADTConstructor n _ -> (True, n)
+                                           ADTTester      n _ -> (True, n)
+                                           ADTAccessor    n _ -> (True, n)
 
   -- determine the final name. We leave constructors alone.
   let nm = case () of
@@ -1390,10 +1390,10 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                                                             Nothing         -> Map.insert nm (isCurried, mbArgNames, t) newUIs)
 
   pure $ case uiName of
-          UIGiven{}                -> Uninterpreted nm
-          UIADT (ADTConstructor{}) -> ADTOp (ADTConstructor nm)
-          UIADT (ADTTester     {}) -> ADTOp (ADTTester      nm)
-          UIADT (ADTAccessor   {}) -> ADTOp (ADTAccessor    nm)
+          UIGiven{}                  -> Uninterpreted nm
+          UIADT (ADTConstructor _ k) -> ADTOp (ADTConstructor nm k)
+          UIADT (ADTTester      _ k) -> ADTOp (ADTTester      nm k)
+          UIADT (ADTAccessor    _ k) -> ADTOp (ADTAccessor    nm k)
 
 -- | Add a new sAssert based constraint
 addAssertion :: State -> Maybe CallStack -> String -> SV -> IO ()
