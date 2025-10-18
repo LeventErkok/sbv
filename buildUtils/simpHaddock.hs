@@ -91,6 +91,7 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
                    , "Core.Symbolic.ResultInp"
                    , "Core.Symbolic.Name"
                    , "Core.Symbolic.SetOp"
+                   , "Core.Symbolic.ADTOp"
                    , "Core.Symbolic.SMTLambda"
                    , "Core.Symbolic.NROp"
                    , "Core.Symbolic.SpecialRelOp"
