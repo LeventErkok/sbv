@@ -39,11 +39,18 @@ tests =
       goldenCapturedIO "adt_expr00c" $ evalCheck  (eval e00,  3)
     , goldenCapturedIO "adt_expr00"  $ evalCheckS (     e00,  3)
 
-    , goldenCapturedIO "adt_expr01" $ evalCheck (eval e01,  7)
-    , goldenCapturedIO "adt_expr02" $ evalCheck (eval e02, 21)
-    , goldenCapturedIO "adt_expr03" $ evalCheck (eval e03, 28)
+    , goldenCapturedIO "adt_expr01c" $ evalCheck  (eval e01,  7)
+    , goldenCapturedIO "adt_expr01"  $ evalCheckS (     e01,  7)
+
+    , goldenCapturedIO "adt_expr02c" $ evalCheck  (eval e02, 21)
+    , goldenCapturedIO "adt_expr02"  $ evalCheckS (     e02, 21)
+
+    , goldenCapturedIO "adt_expr03c" $ evalCheck  (eval e03, 28)
+    , goldenCapturedIO "adt_expr03"  $ evalCheckS (     e03, 28)
+
     , goldenCapturedIO "adt_expr04" $ evalTest  (eval e04)
     , goldenCapturedIO "adt_expr05" $ evalTest  (eval e05)
+
     , goldenCapturedIO "adt_expr06" $ evalCheck (f (sVar (literal "a")), 0)
     , goldenCapturedIO "adt_expr07" $ evalCheck (f (sVar (literal "b")), 1)
     , goldenCapturedIO "adt_expr08" $ evalCheck (f (sVar (literal "c")), 1)
