@@ -45,7 +45,7 @@ boolector = SMTSolver {
                               , supportsDataTypes       = False
                               , supportsLambdas         = False
                               , supportsSpecialRels     = False
-                              , supportsDirectAccessors = False
+                              , supportsDirectTesters   = False
                               , supportsFlattenedModels = Nothing
                               }
          }

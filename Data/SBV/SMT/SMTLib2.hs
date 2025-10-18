@@ -820,8 +820,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         -- Similarly, we fully qualify the accessors with their types to work around type checking issues
         -- Unfortunately, z3 and CVC4 are behaving differently, so we tie this ascription to a solver capability.
         dtAccessor fld params res
-           | supportsDirectAccessors caps = dResult
-           | True                         = aResult
+           | supportsDirectTesters caps = dResult
+           | True                       = aResult
           where dResult = "(_ is " ++ fld ++ ")"
                 ps      = " (" ++ unwords (map smtType params) ++ ") "
                 aResult = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
@@ -1310,7 +1310,7 @@ handleADT caps op args = case args of
                           _  -> "(" ++ f ++ " " ++ unwords (map cvtSV args) ++ ")"
   where f = case op of
               ADTConstructor nm k -> ascribe nm k
-              ADTTester      nm k -> if supportsDirectAccessors caps
+              ADTTester      nm k -> if supportsDirectTesters caps
                                      then nm
                                      else ascribe nm k
               ADTAccessor    nm _ -> nm

@@ -2192,7 +2192,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsDataTypes       :: Bool           -- ^ Supports datatypes?
        , supportsLambdas         :: Bool           -- ^ Does it support lambdas?
        , supportsSpecialRels     :: Bool           -- ^ Does it support special relations (orders, transitive closure etc.)
-       , supportsDirectAccessors :: Bool           -- ^ Supports data-type accessors without full ascription?
+       , supportsDirectTesters   :: Bool           -- ^ Supports data-type testers without full ascription?
        , supportsFlattenedModels :: Maybe [String] -- ^ Supports flattened model output? (With given config lines.)
        }
 

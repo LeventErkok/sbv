@@ -47,7 +47,7 @@ mathSAT = SMTSolver {
                               , supportsDataTypes       = True
                               , supportsLambdas         = False
                               , supportsSpecialRels     = False
-                              , supportsDirectAccessors = True
+                              , supportsDirectTesters   = True
                               , supportsFlattenedModels = Nothing
                               }
          }
