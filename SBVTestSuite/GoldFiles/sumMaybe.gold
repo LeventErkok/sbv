@@ -11,46 +11,47 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
-                                           ((nothing_SBVMaybe)
-                                            (just_SBVMaybe (get_just_SBVMaybe T))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Maybe
+[GOOD] (declare-datatype Maybe (par (a) (
+           (Nothing)
+           (Just (getJust_1 a))
+       )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s3 () (SBVMaybe Int) (as nothing_SBVMaybe (SBVMaybe Int)))
-[GOOD] (define-fun s5 () Int 1)
-[GOOD] (define-fun s15 () Int 0)
+[GOOD] (define-fun s2 () (Maybe Int) (as Nothing (Maybe Int)))
+[GOOD] (define-fun s4 () Int 1)
+[GOOD] (define-fun s13 () Int 0)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (SBVMaybe Int)) ; tracks user variable "x"
+[GOOD] (declare-fun s0 () (Maybe Int)) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe Int))) s0))
-[GOOD] (define-fun s2 () Bool (ite s1 true false))
-[GOOD] (define-fun s4 () Int (get_just_SBVMaybe s0))
-[GOOD] (define-fun s6 () Int (+ s4 s5))
-[GOOD] (define-fun s7 () (SBVMaybe Int) ((as just_SBVMaybe (SBVMaybe Int)) s6))
-[GOOD] (define-fun s8 () (SBVMaybe Int) (ite s1 s3 s7))
-[GOOD] (define-fun s9 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe Int))) s8))
-[GOOD] (define-fun s10 () Bool (ite s9 true false))
-[GOOD] (define-fun s11 () Bool (= s2 s10))
-[GOOD] (define-fun s12 () Bool (ite s1 false true))
-[GOOD] (define-fun s13 () Bool (ite s9 false true))
-[GOOD] (define-fun s14 () Bool (= s12 s13))
-[GOOD] (define-fun s16 () Int (ite s1 s15 s4))
-[GOOD] (define-fun s17 () Int (get_just_SBVMaybe s8))
-[GOOD] (define-fun s18 () Int (ite s9 s15 s17))
-[GOOD] (define-fun s19 () Int (- s18 s5))
-[GOOD] (define-fun s20 () Bool (= s16 s19))
+[GOOD] (define-fun s1 () Bool ((as is-Nothing Bool) s0))
+[GOOD] (define-fun s3 () Int (getJust_1 s0))
+[GOOD] (define-fun s5 () Int (+ s3 s4))
+[GOOD] (define-fun s6 () (Maybe Int) ((as Just (Maybe Int)) s5))
+[GOOD] (define-fun s7 () (Maybe Int) (ite s1 s2 s6))
+[GOOD] (define-fun s8 () Bool ((as is-Nothing Bool) s7))
+[GOOD] (define-fun s9 () Bool (= s1 s8))
+[GOOD] (define-fun s10 () Bool ((as is-Just Bool) s0))
+[GOOD] (define-fun s11 () Bool ((as is-Just Bool) s7))
+[GOOD] (define-fun s12 () Bool (= s10 s11))
+[GOOD] (define-fun s14 () Int (ite s1 s13 s3))
+[GOOD] (define-fun s15 () Int (getJust_1 s7))
+[GOOD] (define-fun s16 () Int (ite s8 s13 s15))
+[GOOD] (define-fun s17 () Int (- s16 s4))
+[GOOD] (define-fun s18 () Bool (= s14 s17))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s11)
-[GOOD] (assert s14)
-[GOOD] (assert s20)
+[GOOD] (assert s9)
+[GOOD] (assert s12)
+[GOOD] (assert s18)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (just_SBVMaybe 0)))
+[RECV] ((s0 (Just 0)))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Just 0 :: Maybe Integer)], modelUIFuns = []}
 DONE.*** Solver   : Z3
