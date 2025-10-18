@@ -11,31 +11,33 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
-                                           ((nothing_SBVMaybe)
-                                            (just_SBVMaybe (get_just_SBVMaybe T))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Maybe
+[GOOD] (declare-datatype Maybe (par (a) (
+           (Nothing)
+           (Just (getJust_1 a))
+       )))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (SBVMaybe Int))
-[GOOD] (declare-fun s1 () (SBVMaybe Int))
+[GOOD] (declare-fun s0 () (Maybe Int))
+[GOOD] (declare-fun s1 () (Maybe Int))
 [GOOD] (declare-fun s2 () Bool)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s3 () (SBVMaybe Int) (ite s2 s0 s1))
-[GOOD] (define-fun s4 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe Int))) s3))
-[GOOD] (define-fun s5 () Bool (ite s4 false true))
+[GOOD] (define-fun s3 () (Maybe Int) (ite s2 s0 s1))
+[GOOD] (define-fun s4 () Bool ((as is-Just Bool) s3))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s5)
+[GOOD] (assert s4)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (just_SBVMaybe 2)))
+[RECV] ((s0 (Just 2)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (just_SBVMaybe 2)))
+[RECV] ((s1 (Just 2)))
 [SEND] (get-value (s2))
 [RECV] ((s2 false))
 

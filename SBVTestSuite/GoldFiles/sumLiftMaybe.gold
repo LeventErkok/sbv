@@ -11,11 +11,14 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
-                                           ((nothing_SBVMaybe)
-                                            (just_SBVMaybe (get_just_SBVMaybe T))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Maybe
+[GOOD] (declare-datatype Maybe (par (a) (
+           (Nothing)
+           (Just (getJust_1 a))
+       )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () (SBVMaybe Int) (as nothing_SBVMaybe (SBVMaybe Int)))
+[GOOD] (define-fun s2 () (Maybe Int) (as Nothing (Maybe Int)))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "i"
 [GOOD] ; --- constant tables ---
@@ -23,7 +26,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () (SBVMaybe Int) ((as just_SBVMaybe (SBVMaybe Int)) s0))
+[GOOD] (define-fun s1 () (Maybe Int) ((as Just (Maybe Int)) s0))
 [GOOD] (define-fun s3 () Bool (distinct s1 s2))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
