@@ -27,22 +27,23 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
-                                           ((nothing_SBVMaybe)
-                                            (just_SBVMaybe (get_just_SBVMaybe T))))))
-[GOOD] (declare-fun s1 () (SBVMaybe Int))
+[GOOD] ; User defined ADT: Maybe
+[GOOD] (declare-datatype Maybe (par (a) (
+           (Nothing)
+           (Just (getJust_1 a))
+       )))
+[GOOD] (declare-fun s1 () (Maybe Int))
 [GOOD] (define-fun s2 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Int))) s0))
 [GOOD] (define-fun s3 () Bool (ite s2 true false))
 [GOOD] (assert s3)
-[GOOD] (define-fun s4 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe Int))) s1))
-[GOOD] (define-fun s5 () Bool (ite s4 false true))
-[GOOD] (assert s5)
+[GOOD] (define-fun s4 () Bool ((as is-Just Bool) s1))
+[GOOD] (assert s4)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 (left_SBVEither 2)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (just_SBVMaybe 3)))
+[RECV] ((s1 (Just 3)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
