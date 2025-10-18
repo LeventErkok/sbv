@@ -36,7 +36,7 @@ module Data.SBV.Client
 
 import Data.Generics
 
-import Control.Monad (filterM, mapAndUnzipM)
+import Control.Monad (filterM, mapAndUnzipM, zipWithM)
 import Test.QuickCheck (Arbitrary(..), elements)
 
 import qualified Control.Exception as C
@@ -310,21 +310,23 @@ mkADT adtKind typeName params cstrs = do
                         (TH.AppT (TH.ConT ''HasKind) typeCon)
                         [TH.FunD 'kindOf [TH.Clause [TH.WildP] (TH.NormalB kindDef) []]]
 
-    arbDecl <- if isEnum
-                  then let universe  = TH.listE [TH.conE con | (con, _) <- cstrs]
-                       in [d|instance Arbitrary $(pure typeCon) where
-                              arbitrary = elements $universe
-                          |]
-                  else [d|instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
-                            arbitrary = error $ unlines [ ""
-                                                        , "*** Data.SBV: Cannot quickcheck the given property."
-                                                        , "***"
-                                                        , "*** Default arbitrary instance for " ++ TH.nameBase typeName ++ " is too limited."
-                                                        , "***"
-                                                        , "*** You can overcome this by giving your own Arbitrary instance."
-                                                        , "*** Please get in touch if this workaround is not suitable for your case."
-                                                        ]
-                      |]
+    hasArbitrary <- TH.isInstance ''Arbitrary [typeCon]
+    arbDecl <- case () of
+                () | hasArbitrary -> pure []
+                   | isEnum       -> let universe  = TH.listE [TH.conE con | (con, _) <- cstrs]
+                                     in [d|instance Arbitrary $(pure typeCon) where
+                                             arbitrary = elements $universe
+                                        |]
+                   | True         -> [d|instance {-# OVERLAPPABLE #-} Arbitrary $(pure typeCon) where
+                                          arbitrary = error $ unlines [ ""
+                                                                      , "*** Data.SBV: Cannot quickcheck the given property."
+                                                                      , "***"
+                                                                      , "*** Default arbitrary instance for " ++ TH.nameBase typeName ++ " is too limited."
+                                                                      , "***"
+                                                                      , "*** You can overcome this by giving your own Arbitrary instance."
+                                                                      , "*** Please get in touch if this workaround is not suitable for your case."
+                                                                      ]
+                                    |]
 
     -- Declare constructors
     let declConstructor :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q ((TH.Name, String), [TH.Dec])
@@ -363,20 +365,42 @@ mkADT adtKind typeName params cstrs = do
     addDeclDocs (tname, btname) constrNames
 
     -- Declare accessors
-    let declAccessor :: TH.Name -> (Maybe TH.Name, TH.Type, Kind) -> Int -> [((TH.Name, String), [TH.Dec])]
-        declAccessor c (mbUN, ft, _) i = let ty    = inSymValContext $ TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
-                                             def n = TH.FunD n [TH.Clause [] (TH.NormalB body) []]
-                                         in ((nm, bnm), [TH.SigD nm ty, def nm])
-                                          : case mbUN of
-                                             Nothing -> []
-                                             Just un -> let sun = TH.mkName $ 's' : TH.nameBase un
-                                                        in [((sun, bnm), [TH.SigD sun ty, def sun])]
-          where bnm  = TH.nameBase c
-                anm  = "get" ++ bnm ++ "_" ++ show i
-                nm   = TH.mkName anm
-                body = TH.AppE (TH.VarE 'mkADTAccessor) (TH.LitE (TH.StringL anm))
+    let -- NB. field count starts at 1!
+        declAccessor :: TH.Name -> (Maybe TH.Name, TH.Type, Kind) -> Int -> TH.Q [((TH.Name, String), [TH.Dec])]
+        declAccessor c (mbUN, ft, _) i = do
+                let bnm  = TH.nameBase c
+                    anm  = "get" ++ bnm ++ "_" ++ show i
+                    nm   = TH.mkName anm
+                    ty    = inSymValContext $ TH.AppT (TH.AppT TH.ArrowT sType) (mkSBV ft)
 
-    let (accessorNames, accessorDecls) = unzip $ concat (concat [zipWith (declAccessor c) fs [(1::Int) ..] | (c, fs) <- cstrs])
+                cls <- do inp <- TH.newName "inp"
+                          TH.clause [TH.varP inp]
+                                    (TH.normalB
+                                          (TH.caseE [| unlitCV $(TH.varE inp) |]
+                                                    [ TH.match [p|Just (_, CADT (got, kv))|]
+                                                               (TH.guardedB [do g <- TH.normalG [| got == bnm |]
+                                                                                e <- [| let (k, v) = (kv !! (i-1))
+                                                                                        in SBV $ SVal k (Left (CV k v))
+                                                                                     |]
+                                                                                pure (g, e)
+                                                                            ])
+                                                               []
+                                                    , TH.match [p|_|]
+                                                               (TH.normalB [| mkADTAccessor anm $(TH.varE inp) |])
+                                                               []
+                                                    ]))
+                                    []
+
+                -- If there's a custom accessor given, declare that here too
+                extras <- case mbUN of
+                            Nothing -> pure []
+                            Just un -> do let sun = TH.mkName $ 's' : TH.nameBase un
+                                          pure [((sun, bnm), [TH.SigD sun ty, TH.FunD sun [cls]])]
+
+                pure $ ((nm, bnm), [TH.SigD nm ty, TH.FunD nm [cls]]) : extras
+
+    allDefs <- sequence [zipWithM (declAccessor c) fs [(1::Int) ..] | (c, fs) <- cstrs]
+    let (accessorNames, accessorDecls) = unzip $ concat (concat allDefs)
 
     mapM_ (addDoc "Field accessor function." . fst) accessorNames
 
