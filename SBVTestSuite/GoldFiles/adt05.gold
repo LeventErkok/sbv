@@ -82,7 +82,7 @@ Fast allSat, Looking for solution 1
 [SEND] (get-value (s1))
 [RECV] ((s1 (AFloat (fp #b0 #b11111111 #b10000000000000000000000))))
 [GOOD] (push 1)
-[GOOD] (define-fun s11 () ADT (AFloat ((_ to_fp 8 24) roundNearestTiesToEven (/ 4.0 1.0))))
+[GOOD] (define-fun s11 () ADT ((as AFloat ADT) ((_ to_fp 8 24) roundNearestTiesToEven (/ 4.0 1.0))))
 [GOOD] (define-fun s12 () Bool (= s0 s11))
 [GOOD] (define-fun s13 () Bool (not s12))
 [GOOD] (assert s13)
@@ -91,7 +91,7 @@ Fast allSat, Looking for solution 2
 [RECV] unsat
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (define-fun s14 () ADT (AFloat (_ NaN 8 24)))
+[GOOD] (define-fun s14 () ADT ((as AFloat ADT) (_ NaN 8 24)))
 [GOOD] (define-fun s15 () Bool (= s1 s14))
 [GOOD] (define-fun s16 () Bool (not s15))
 [GOOD] (assert s16)
