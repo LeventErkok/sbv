@@ -21,10 +21,12 @@
 [GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
                                            ((left_SBVEither  (get_left_SBVEither  T1))
                                             (right_SBVEither (get_right_SBVEither T2))))))
-[GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
-                                           ((nothing_SBVMaybe)
-                                            (just_SBVMaybe (get_just_SBVMaybe T))))))
 [GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Maybe
+[GOOD] (declare-datatype Maybe (par (a) (
+           (Nothing)
+           (Just (getJust_1 a))
+       )))
 [GOOD] ; User defined ADT: ADT
 [GOOD] (declare-datatype ADT (
            (AEmpty)
@@ -51,8 +53,8 @@
            (AString (getAString_1 String))
            (AList (getAList_1 (Seq Int)))
            (ATuple (getATuple_1 (SBVTuple2 (_ FloatingPoint 11 53) (Seq (SBVTuple2 (_ BitVec 5) (Seq (_ FloatingPoint  8 24)))))))
-           (AMaybe (getAMaybe_1 (SBVMaybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool))))))
-           (AEither (getAEither_1 (SBVEither (SBVTuple2 (SBVMaybe Int) Bool) (Seq Int))))
+           (AMaybe (getAMaybe_1 (Maybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool))))))
+           (AEither (getAEither_1 (SBVEither (SBVTuple2 (Maybe Int) Bool) (Seq Int))))
            (APair (getAPair_1 ADT) (getAPair_2 ADT))
        ))
 [GOOD] ; --- literal constants ---
