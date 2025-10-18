@@ -10,9 +10,6 @@
 [GOOD] (set-option :model.inline_def  true      )
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
-[GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
-                                           ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
-                                                         (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- sums ---
 [GOOD] ; --- ADTs  --- 
 [GOOD] ; User defined ADT: Expr
@@ -28,38 +25,12 @@
            (Seq (getSeq_1 (Stmt var val)) (getSeq_2 (Stmt var val)))
        )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s12 () (Stmt String (_ FloatingPoint  8 24)) ((as Assign (Stmt String (_ FloatingPoint  8 24))) "a" ((as Con (Expr String (_ FloatingPoint  8 24))) ((_ to_fp 8 24) roundNearestTiesToEven (/ 1.0 1.0)))))
-[GOOD] (define-fun s15 () (Seq String) (as seq.empty (Seq String)))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Stmt String Int)) ; tracks user variable "p"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |validE @(SBV [[Char]] -> SBV (Expr [Char] Float) -> SBV Bool)| :: [SString] -> Expr String Float -> SBool [Recursive]
-[GOOD] (define-fun-rec |validE @(SBV [[Char]] -> SBV (Expr [Char] Float) -> SBV Bool)| ((l1_s0 (Seq String)) (l1_s1 (Expr String (_ FloatingPoint  8 24)))) Bool
-                                 (let ((l1_s2 ((as is-Con Bool) l1_s1)))
-                                 (let ((l1_s3 ((as is-Var Bool) l1_s1)))
-                                 (let ((l1_s4 (getVar_1 l1_s1)))
-                                 (let ((l1_s5 (str.in_re l1_s4 (re.++ (re.range "a" "z") (re.* (re.union (re.range "a" "z") (re.range "A" "Z") (re.range "0" "9")))))))
-                                 (let ((l1_s6 (seq.unit l1_s4)))
-                                 (let ((l1_s7 (seq.contains l1_s0 l1_s6)))
-                                 (let ((l1_s8 (and l1_s5 l1_s7)))
-                                 (let ((l1_s9 ((as is-Add Bool) l1_s1)))
-                                 (let ((l1_s10 (getAdd_1 l1_s1)))
-                                 (let ((l1_s11 (|validE @(SBV [[Char]] -> SBV (Expr [Char] Float) -> SBV Bool)| l1_s0 l1_s10)))
-                                 (let ((l1_s12 (getAdd_2 l1_s1)))
-                                 (let ((l1_s13 (|validE @(SBV [[Char]] -> SBV (Expr [Char] Float) -> SBV Bool)| l1_s0 l1_s12)))
-                                 (let ((l1_s14 (and l1_s11 l1_s13)))
-                                 (let ((l1_s15 (getMul_1 l1_s1)))
-                                 (let ((l1_s16 (|validE @(SBV [[Char]] -> SBV (Expr [Char] Float) -> SBV Bool)| l1_s0 l1_s15)))
-                                 (let ((l1_s17 (getMul_2 l1_s1)))
-                                 (let ((l1_s18 (|validE @(SBV [[Char]] -> SBV (Expr [Char] Float) -> SBV Bool)| l1_s0 l1_s17)))
-                                 (let ((l1_s19 (and l1_s16 l1_s18)))
-                                 (let ((l1_s20 (ite l1_s9 l1_s14 l1_s19)))
-                                 (let ((l1_s21 (ite l1_s3 l1_s8 l1_s20)))
-                                 (let ((l1_s22 (or l1_s2 l1_s21)))
-                                 l1_s22))))))))))))))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Bool ((as is-Seq Bool) s0))
 [GOOD] (define-fun s2 () (Stmt String Int) (getSeq_2 s0))
@@ -72,14 +43,6 @@
 [GOOD] (define-fun s9 () Bool ((as is-Add Bool) s8))
 [GOOD] (define-fun s10 () (Expr String Int) (getAdd_1 s8))
 [GOOD] (define-fun s11 () Bool ((as is-Var Bool) s10))
-[GOOD] (define-fun s13 () String (getAssign_1 s12))
-[GOOD] (define-fun s14 () Bool (str.in_re s13 (re.++ (re.range "a" "z") (re.* (re.union (re.range "a" "z") (re.range "A" "Z") (re.range "0" "9"))))))
-[GOOD] (define-fun s16 () (Expr String (_ FloatingPoint  8 24)) (getAssign_2 s12))
-[GOOD] (define-fun s17 () Bool (|validE @(SBV [[Char]] -> SBV (Expr [Char] Float) -> SBV Bool)| s15 s16))
-[GOOD] (define-fun s18 () Bool (and s14 s17))
-[GOOD] (define-fun s19 () (Seq String) (seq.unit s13))
-[GOOD] (define-fun s20 () (SBVTuple2 Bool (Seq String)) ((as mkSBVTuple2 (SBVTuple2 Bool (Seq String))) s18 s19))
-[GOOD] (define-fun s21 () Bool (proj_1_SBVTuple2 s20))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s1)
@@ -88,20 +51,18 @@
 [GOOD] (assert s7)
 [GOOD] (assert s9)
 [GOOD] (assert s11)
-[GOOD] (assert s21)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Seq (Assign "!0!" (Con 5))
-            (Seq (Assign "!0!" (Con 3))
-                 (Seq (Assign "!0!" (Con 4))
-                      (Assign "!0!" (Add ((as Var (Expr String Int)) "!0!") (Con 2))))))))
+[RECV] ((s0 (Seq (Assign "!2!" (Con 3))
+            (Seq (Assign "!4!" (Con 5))
+                 (Seq (Assign "!3!" (Con 4)) (Assign "!0!" (Add (Var "!1!") (Con 2))))))))
 
 Got:
-!0! := 5;
-!0! := 3;
-!0! := 4;
-!0! := (!0! + 2)
+!2! := 3;
+!4! := 5;
+!3! := 4;
+!0! := (!1! + 2)
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess
