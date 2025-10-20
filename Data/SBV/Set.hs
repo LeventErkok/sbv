@@ -62,6 +62,7 @@ import Data.SBV.Core.Kind
 -- >>> -- For doctest purposes only:
 -- >>> import Prelude hiding(null)
 -- >>> import Data.SBV hiding(complement)
+-- >>> import Data.SBV.Maybe
 -- >>> :set -XScopedTypeVariables
 #endif
 

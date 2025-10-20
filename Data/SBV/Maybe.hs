@@ -86,8 +86,7 @@ fromMaybe def = maybe def id
 -- Q.E.D.
 -- >>> sat $ \x -> x .== (fromJust sNothing :: SChar)
 -- Satisfiable. Model:
---   fromJust_Nothing @Char = 'A' :: Char
---   s0                     = 'A' :: Char
+--   s0 = 'A' :: Char
 --
 -- Note how we get a satisfying assignment in the last case: The behavior
 -- is unspecified, thus the SMT solver picks whatever satisfies the
