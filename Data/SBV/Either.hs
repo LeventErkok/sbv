@@ -171,8 +171,8 @@ fromRight = getRight_1
 
 -- | Custom 'OrdSymbolic' instance over 'SEither'.
 instance (OrdSymbolic (SBV a), OrdSymbolic (SBV b), SymVal a, SymVal b) => OrdSymbolic (SBV (Either a b)) where
-  eab .< ecd = either (\a -> either (\c -> a .< c) (\_ -> sTrue ) ecd)
-                      (\b -> either (\_ -> sFalse) (\d -> b .< d) ecd)
+  eab .< ecd = either (\a -> either (a .<)         (const sTrue) ecd)
+                      (\b -> either (const sFalse) (b .<)        ecd)
                       eab
 
 {- HLint ignore module "Reduce duplication" -}
