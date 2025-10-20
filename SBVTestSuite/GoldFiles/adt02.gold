@@ -21,6 +21,16 @@
 [GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
                                            ((left_SBVEither  (get_left_SBVEither  T1))
                                             (right_SBVEither (get_right_SBVEither T2))))))
+[GOOD] (declare-datatype SBVRational ((SBV.Rational (sbv.rat.numerator Int) (sbv.rat.denominator Int))))
+
+[GOOD] (define-fun sbv.rat.eq ((x SBVRational) (y SBVRational)) Bool
+          (= (* (sbv.rat.numerator   x) (sbv.rat.denominator y))
+             (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))
+       )
+
+[GOOD] (define-fun sbv.rat.notEq ((x SBVRational) (y SBVRational)) Bool
+          (not (sbv.rat.eq x y))
+       )
 [GOOD] ; --- ADTs  --- 
 [GOOD] ; User defined ADT: Maybe
 [GOOD] (declare-datatype Maybe (par (a) (
@@ -56,10 +66,15 @@
            (AMaybe (getAMaybe_1 (Maybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool))))))
            (AEither (getAEither_1 (SBVEither (SBVTuple2 (Maybe Int) Bool) (Seq Int))))
            (APair (getAPair_1 ADT) (getAPair_2 ADT))
+           (KChar (getKChar_1 String))
+           (KRational (getKRational_1 SBVRational))
        ))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () ADT) ; tracks user variable "e"
+[GOOD] (assert (and (= 1 (str.len (getKChar_1 s0)))
+                    (< 0 (sbv.rat.denominator (getKRational_1 s0)))
+               ))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
