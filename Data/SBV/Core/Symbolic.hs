@@ -389,7 +389,7 @@ instance Show OvOp where
 -- | String operations.
 data StrOp = StrStrToNat     -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
            | StrNatToStr     -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
-           | StrToCode       -- ^ Equivalent to Haskell's ord
+           | CharToInt       -- ^ Equivalent to Haskell's ord
            | StrFromCode     -- ^ Equivalent to Haskell's chr
            | StrInRe RegExp  -- ^ Check if string is in the regular expression
            deriving (Eq, Ord, G.Data, NFData, Generic)
@@ -492,7 +492,7 @@ regExpToString fs (Union xs)        = "(re.union " ++ unwords (map (regExpToStri
 instance Show StrOp where
   show StrStrToNat = "str.to.int"    -- NB. SMTLib uses "int" here though only nats are supported
   show StrNatToStr = "int.to.str"    -- NB. SMTLib uses "int" here though only nats are supported
-  show StrToCode   = "str.to_code"
+  show CharToInt   = "char.to_int"
   show StrFromCode = "str.from_code"
   -- Note the breakage here with respect to argument order. We fix this explicitly later.
   show (StrInRe s) = "str.in_re " ++ regExpToSMTString s
