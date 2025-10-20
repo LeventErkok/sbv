@@ -703,7 +703,7 @@ toSBV typeName constructorName = go
         -- Rational
         go (TH.AppT (TH.ConT nm) (TH.ConT i))
             | nm == ''Ratio && i == ''Integer
-            = pure $ KRational
+            = pure KRational
 
         -- deal with base types
         go t@(TH.ConT constr)
