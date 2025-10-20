@@ -1881,12 +1881,11 @@ runSymbolic cfg currentRunMode comp = do
    runSymbolicInState st comp
 
 -- | Catch the catastrophic case of context mismatch
+-- NB. We're not printing _ctx1/_ctx2 here (hence the underscored variables).
+-- The reason is that they can get different values; causing test-suite failures with no helpful info.
 contextMismatchError :: SBVContext -> SBVContext -> a
-contextMismatchError ctx1 ctx2 = error $ unlines [
+contextMismatchError _ctx1 _ctx2 = error $ unlines [
                                "Data.SBV: Mismatched contexts detected."
-                             , "***"
-                             , "***   Current context: " ++ show ctx1
-                             , "***   Mixed with     : " ++ show ctx2
                              , "***"
                              , "*** This happens if you call a proof-function (prove/sat/runSMT/isSatisfiable) etc."
                              , "*** while another one is in execution, or use results from one such call in another."

@@ -24,9 +24,6 @@ CAUGHT EXCEPTION
 
 Data.SBV: Mismatched contexts detected.
 ***
-***   Current context: SBVContext (-7749304166575005736)
-***   Mixed with     : SBVContext (-531973508589804280)
-***
 *** This happens if you call a proof-function (prove/sat/runSMT/isSatisfiable) etc.
 *** while another one is in execution, or use results from one such call in another.
 *** Please avoid such nested calls, all interactions should be from the same context.
