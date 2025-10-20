@@ -95,7 +95,7 @@ ord c
  | True
  = SBV $ SVal KUnbounded $ Right $ cache r
  where r st = do csv <- sbvToSV st c
-                 newExpr st KUnbounded (SBVApp (StrOp CharToInt) [csv])
+                 newExpr st KUnbounded (SBVApp (StrOp StrToCode) [csv])
 
 -- | Conversion from an integer to a character.
 --
