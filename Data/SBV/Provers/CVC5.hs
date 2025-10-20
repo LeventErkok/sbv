@@ -39,6 +39,7 @@ cvc5 = SMTSolver {
                               , supportsApproxReals     = False
                               , supportsDeltaSat        = Nothing
                               , supportsIEEE754         = True
+                              , supportsChars           = False
                               , supportsSets            = False
                               , supportsOptimization    = False
                               , supportsPseudoBooleans  = False

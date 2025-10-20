@@ -51,9 +51,9 @@ data ADT  = AEmpty
           | AMaybe   (Maybe (AlgReal, Float, (Either Integer Float, [Bool])))
           | AEither  (Either (Maybe Integer, Bool) [Integer])
           | APair    ADT ADT
+          | KChar    Char
           {-
           | KADT      String (Maybe [(String, [Kind])])
-          | KChar
           | KSet  Kind
           | KArray  Kind Kind
           -}

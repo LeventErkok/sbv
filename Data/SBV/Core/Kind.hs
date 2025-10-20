@@ -121,14 +121,14 @@ substituteADTVars :: String -> [(String, Kind)] -> Kind -> Kind
 substituteADTVars t dict = G.transform sub
   where sub :: Kind -> Kind
         sub (KVar v)
-          | Just k <- v `lookup` dict = if any (\sk -> isChar sk || isRational sk) (expandKinds k)
+          | Just k <- v `lookup` dict = if any isRational (expandKinds k)
                                         then error $ unlines [ ""
                                                              , "*** Data.SBV.SDT: Unsupported parameterization for ADT: " ++ t
                                                              , "***"
                                                              , "***"
                                                              , "***   Parameterized at: " ++ show dict
                                                              , "***"
-                                                             , "*** While SBV supports SChar and SRational natively, they are not"
+                                                             , "*** While SBV supports SRational natively, they are not"
                                                              , "*** yet supported as ADT fiels as they need extra constraints."
                                                              , "***"
                                                              , "*** Please report this as a feature request."
@@ -210,7 +210,7 @@ smtType KFloat          = "(_ FloatingPoint  8 24)"
 smtType KDouble         = "(_ FloatingPoint 11 53)"
 smtType (KFP eb sb)     = "(_ FloatingPoint " ++ show eb ++ " " ++ show sb ++ ")"
 smtType KString         = "String"
-smtType KChar           = "String"
+smtType KChar           = "Unicode"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
 smtType (KApp s ks)     = kindParen $ unwords (s : map smtType          ks)
