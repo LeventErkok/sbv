@@ -520,9 +520,7 @@ cCompare k op x y =
                            -> case svSetEqual ke a b of
                                  Nothing    -> Nothing  -- We don't know
                                  Just True  -> Just EQ  -- They're equal
-                                 Just False -> Just $ if op `elem` [Equal True, Equal False]
-                                                         then GT  -- Pick GT, So equality    test will fail
-                                                         else EQ  -- Pick EQ, So in-equality test will fail
+                                 Just False -> Just GT  -- Pick GT; so equality test will fail, inequality will pass
                            | True
                            -> error $ "cCompare: Received unexpected set comparison: " ++ show (op, k)
 
@@ -531,12 +529,12 @@ cCompare k op x y =
                            -> case svArrEqual k1 k2 a b of
                                 Nothing    -> Nothing  -- We don't know
                                 Just True  -> Just EQ  -- They're equal
-                                Just False -> Just GT  -- Just pick GT
+                                Just False -> Just GT  -- Pick GT; so equality test will fail, inequality will pass
                            | True
                            -> error $ "cCompare: Received unexpected array comparison: " ++ show (op, k)
 
 
-      -- ADTs. Only equal/inequal
+      -- ADTs. Only equal/inequal on full ADTs. Compares on enumerations.
       (CADT (s, fks), CADT (s', fks'))
          -> case k of
               -- Enumerations. We do a straight comparison on the constructor index
@@ -552,7 +550,7 @@ cCompare k op x y =
 
                 -- Different constructor
                 | s /= s'
-                -> Just GT -- Just pick GT; remember that the check is only for eq/not-eq so this is safe
+                -> Just GT -- Pick GT; so equality test will fail, inequality will pass
 
                 -- Same constructor
                 | map fst fks /= map fst fks'
@@ -566,7 +564,7 @@ cCompare k op x y =
                       else if allEq
                            then Just EQ
                            else -- all compared fine, but not all equal
-                                Just GT -- Just pick GT; remember that the check is only for eq/not-eq so this is safe
+                                Just GT -- Pick GT; so equality test will fail, inequality will pass
 
       -- Shouldn't happen:
       _ -> error $ unlines [ ""
