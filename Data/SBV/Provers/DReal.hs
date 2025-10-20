@@ -39,7 +39,6 @@ dReal = SMTSolver {
                               , supportsApproxReals     = False
                               , supportsDeltaSat        = Just "(get-option :precision)"
                               , supportsIEEE754         = False
-                              , supportsChars           = False
                               , supportsSets            = False
                               , supportsOptimization    = False
                               , supportsPseudoBooleans  = False

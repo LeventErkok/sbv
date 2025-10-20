@@ -56,7 +56,6 @@
            (AMaybe (getAMaybe_1 (Maybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool))))))
            (AEither (getAEither_1 (SBVEither (SBVTuple2 (Maybe Int) Bool) (Seq Int))))
            (APair (getAPair_1 ADT) (getAPair_2 ADT))
-           (KChar (getKChar_1 Unicode))
        ))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---

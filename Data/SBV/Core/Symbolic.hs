@@ -2174,7 +2174,6 @@ data SolverCapabilities = SolverCapabilities {
        , supportsApproxReals     :: Bool           -- ^ Supports printing of approximations of reals?
        , supportsDeltaSat        :: Maybe String   -- ^ Supports delta-satisfiability? (With given precision query)
        , supportsIEEE754         :: Bool           -- ^ Supports floating point numbers?
-       , supportsChars           :: Bool           -- ^ Supports characters (separate from strings)
        , supportsSets            :: Bool           -- ^ Supports set operations?
        , supportsOptimization    :: Bool           -- ^ Supports optimization routines?
        , supportsPseudoBooleans  :: Bool           -- ^ Supports pseudo-boolean operations?

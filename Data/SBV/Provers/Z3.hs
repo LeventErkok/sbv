@@ -37,7 +37,6 @@ z3 = SMTSolver {
                               , supportsApproxReals     = True
                               , supportsDeltaSat        = Nothing
                               , supportsIEEE754         = True
-                              , supportsChars           = True
                               , supportsSets            = True
                               , supportsOptimization    = True
                               , supportsPseudoBooleans  = True

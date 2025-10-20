@@ -757,7 +757,6 @@ toSBV typeName constructorName = go
           | t == ''Double   = Just $ Right KDouble
           | t == ''String   = Just $ Right KString
           | t == ''AlgReal  = Just $ Right KReal
-          | t == ''Char     = Just $ Right KChar
           | t == ''Word8    = Just $ Right $ KBounded False  8
           | t == ''Word16   = Just $ Right $ KBounded False 16
           | t == ''Word32   = Just $ Right $ KBounded False 32
@@ -774,14 +773,15 @@ toSBV typeName constructorName = go
                                             , "Integer, Word8, WordN 32, IntN 16 etc."
                                             ])
 
-          -- Punt on rational. We need to put constraints on the denominator; let's skip that for now
+          -- Punt on char and rational. Because SMTLib's string translation requires us to put extra constraints.
           -- We'll do that when we get there.
-          |  t == ''Rational = Just $ Left ( "Unsupported base type for ADTs: " ++ show t
-                                           , [ "While SBV supports SChar, and SRational natively,"
-                                             , "they are not yet supported as ADT fields as they need extra constraints."
-                                             , ""
-                                             , "Please report this as a feature request."
-                                             ])
+          |    t == ''Char
+            || t == ''Rational = Just $ Left ( "Unsupported base type for ADTs: " ++ show t
+                                             , [ "While SBV supports SChar, and SRational natively,"
+                                               , "they are not yet supported as ADT fields as they need extra constraints."
+                                               , ""
+                                               , "Please report this as a feature request."
+                                               ])
 
           -- Otherwise, can't translate
           | True            = Nothing

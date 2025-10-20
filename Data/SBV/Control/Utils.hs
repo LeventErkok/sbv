@@ -37,7 +37,7 @@ module Data.SBV.Control.Utils (
 
 import Data.List  (sortBy, sortOn, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf, isSuffixOf)
 
-import Data.Char      (isPunctuation, isSpace, isDigit, chr)
+import Data.Char      (isPunctuation, isSpace, isDigit)
 import Data.Function  (on)
 import Data.Bifunctor (first)
 
@@ -934,10 +934,12 @@ recoverKindedValue si k e =
                   | EFloatingPoint c <- e -> Just $ CV k $ CFP c
                   | True                  -> Nothing
 
+      KChar       | ECon s      <- e      -> Just $ CV KChar $ CChar $ interpretChar s
+                  | True                  -> Nothing
+
       KString     | ECon s      <- e      -> Just $ CV KString $ CString $ interpretString s
                   | True                  -> Nothing
 
-      KChar                               -> Just $ CV k $ CChar     $ interpretChar           e
       KRational                           -> Just $ CV k $ CRational $ interpretRational       e
       KList ek                            -> Just $ CV k $ CList     $ interpretList ek        e
       KSet ek                             -> Just $ CV k $ CSet      $ interpretSet ek         e
@@ -954,8 +956,9 @@ recoverKindedValue si k e =
           | True
           = qfsToString $ drop 1 (init xs)
 
-        interpretChar (EApp [ECon "_", ECon "Char", ENum (v, _, _)]) = chr (fromIntegral v)
-        interpretChar xs                                             = error $ "Expected a singleton char constant, received: <" ++ show xs ++ ">"
+        interpretChar xs = case interpretString xs of
+                             [c] -> c
+                             _   -> error $ "Expected a singleton char constant, received: <" ++ xs ++ ">"
 
         interpretRational (EApp [ECon "SBV.Rational", v1, v2])
            | Just (CV _ (CInteger n)) <- recoverKindedValue si KUnbounded v1
@@ -1008,15 +1011,22 @@ recoverKindedValue si k e =
 
                  mbAssocs = parseSExprFunction setExpr
 
-                 decode (args, r) | isTrue r = ComplementSet $ Set.fromList [x | (x, False) <- concatMap contents args]  -- deletions from universal
-                                  | True     = RegularSet    $ Set.fromList [x | (x, True)  <- concatMap contents args]  -- additions to empty
+                 decode (args, r) | isTrue r = ComplementSet $ Set.fromList [x | (x, False) <- concatMap (contents True)  args]  -- deletions from universal
+                                  | True     = RegularSet    $ Set.fromList [x | (x, True)  <- concatMap (contents False) args]  -- additions to empty
 
-                 contents ([v], r) = let t = isTrue r in map (, t) (element v)
-                 contents bad      = tbd $ "Multi-valued set member seen: " ++ show bad
+                 contents cvt ([v], r) = let t = isTrue r in map (, t) (element cvt v)
+                 contents _   bad      = tbd $ "Multi-valued set member seen: " ++ show bad
 
-                 element x = case recoverKindedValue si ke x of
-                               Just v  -> [cvVal v]
-                               Nothing -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
+                 element cvt x = case (cvt, ke) of
+                                   (True, KChar) -> case recoverKindedValue si KString x of
+                                                      Just v  -> case cvVal v of
+                                                                  CString [c] -> [CChar c]
+                                                                  CString _   -> []
+                                                                  _           -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
+                                                      Nothing -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
+                                   _             -> case recoverKindedValue si ke x of
+                                                      Just v  -> [cvVal v]
+                                                      Nothing -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
 
         interpretTuple te = walk (1 :: Int) (zipWith (recoverKindedValue si) ks args) []
                 where (ks, n) = case k of

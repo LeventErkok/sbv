@@ -39,7 +39,6 @@ abc = SMTSolver {
                               , supportsApproxReals     = False
                               , supportsDeltaSat        = Nothing
                               , supportsIEEE754         = False
-                              , supportsChars           = False
                               , supportsSets            = False
                               , supportsOptimization    = False
                               , supportsPseudoBooleans  = False

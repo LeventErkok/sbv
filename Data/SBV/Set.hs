@@ -116,6 +116,16 @@ fromList = literal . RegularSet . Set.fromList
 -- Q.E.D.
 complement :: forall a. (Ord a, SymVal a) => SSet a -> SSet a
 complement ss
+  | KChar `elem` expandKinds k
+  = error $ unlines [ "*** Data.SBV: Set.complement is not available for the type " ++ show k
+                    , "***"
+                    , "*** See: https://github.com/LeventErkok/sbv/issues/601 for a discussion"
+                    , "*** on why SBV does not support this operation at this type."
+                    , "***"
+                    , "*** Alternative: Use sets of strings instead, though the match isn't perfect."
+                    , "*** If you run into this issue, please comment on the above ticket for"
+                    , "*** possible improvements."
+                    ]
   | eqCheckIsObjectEq ek, Just (RegularSet rs)    <- unliteral ss = literal $ ComplementSet rs
   | eqCheckIsObjectEq ek, Just (ComplementSet cs) <- unliteral ss = literal $ RegularSet cs
   | True                                                          = SBV $ SVal k $ Right $ cache r
