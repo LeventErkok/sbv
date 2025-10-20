@@ -23,7 +23,8 @@
        )
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (Array SBVRational Unicode)) ; tracks user variable "x"
+[GOOD] (declare-fun s0 () (Array SBVRational String)) ; tracks user variable "x"
+[GOOD] (assert (forall ((array0 SBVRational)) (= 1 (str.len (select s0 array0)))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
@@ -32,8 +33,8 @@
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (define-fun s1 () SBVRational (SBV.Rational 5 3))
-[GOOD] (define-fun s3 () Unicode (_ Char #x7a))
-[GOOD] (define-fun s2 () Unicode (select s0 s1))
+[GOOD] (define-fun s3 () String (_ char #x7a))
+[GOOD] (define-fun s2 () String (select s0 s1))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
 [GOOD] (assert s4)
 [SEND] (check-sat)
