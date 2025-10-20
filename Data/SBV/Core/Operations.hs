@@ -566,9 +566,7 @@ cCompare k op x y =
                       else if allEq
                            then Just EQ
                            else -- all compared fine, but not all equal
-                                Just $ if op `elem` [Equal True, Equal False]
-                                       then GT -- Pick GT, So equality    test will fail
-                                       else EQ -- Pick EQ, So in-equality test will fail
+                                Just GT -- Just pick GT; remember that the check is only for eq/not-eq so this is safe
 
       -- Shouldn't happen:
       _ -> error $ unlines [ ""
