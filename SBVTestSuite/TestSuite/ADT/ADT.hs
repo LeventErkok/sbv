@@ -25,35 +25,36 @@ import Data.SBV.Maybe
 import Data.Proxy
 
 data ADT  = AEmpty
-          | ABool    Bool
-          | AInteger Integer
-          | AWord8   Word8
-          | AWord16  Word16
-          | AWord32  Word32
-          | AWord64  Word64
-          | AInt8    Int8
-          | AInt16   Int16
-          | AInt32   Int32
-          | AInt64   Int64
-          | AWord1   (WordN  1)
-          | AWord5   (WordN  5)
-          | AWord30  (WordN 30)
-          | AInt1    (IntN   1)
-          | AInt5    (IntN   5)
-          | AInt30   (IntN  30)
-          | AReal    AlgReal
-          | AFloat   Float
-          | ADouble  Double
-          | AFP      (FloatingPoint 5 12)
-          | AString  String
-          | AList    [Integer]
-          | ATuple   (Double, [(WordN 5, [Float])])
-          | AMaybe   (Maybe (AlgReal, Float, (Either Integer Float, [Bool])))
-          | AEither  (Either (Maybe Integer, Bool) [Integer])
-          | APair    ADT ADT
+          | ABool     Bool
+          | AInteger  Integer
+          | AWord8    Word8
+          | AWord16   Word16
+          | AWord32   Word32
+          | AWord64   Word64
+          | AInt8     Int8
+          | AInt16    Int16
+          | AInt32    Int32
+          | AInt64    Int64
+          | AWord1    (WordN  1)
+          | AWord5    (WordN  5)
+          | AWord30   (WordN 30)
+          | AInt1     (IntN   1)
+          | AInt5     (IntN   5)
+          | AInt30    (IntN  30)
+          | AReal     AlgReal
+          | AFloat    Float
+          | ADouble   Double
+          | AFP       (FloatingPoint 5 12)
+          | AString   String
+          | AList     [Integer]
+          | ATuple    (Double, [(WordN 5, [Float])])
+          | AMaybe    (Maybe (AlgReal, Float, (Either Integer Float, [Bool])))
+          | AEither   (Either (Maybe Integer, Bool) [Integer])
+          | APair     ADT ADT
+          | KChar     Char
+          | KRational Rational
           {-
           | KADT      String (Maybe [(String, [Kind])])
-          | KChar
           | KSet  Kind
           | KArray  Kind Kind
           -}

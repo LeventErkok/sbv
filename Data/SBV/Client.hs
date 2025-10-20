@@ -700,15 +700,10 @@ toSBV typeName constructorName = go
         go (TH.AppT (TH.AppT (TH.ConT nm) (TH.LitT (TH.NumTyLit eb))) (TH.LitT (TH.NumTyLit sb)))
             | nm == ''FloatingPoint = pure $ KFP (fromIntegral eb) (fromIntegral sb)
 
-        -- Ratio requires extra attention, so ignore
+        -- Rational
         go (TH.AppT (TH.ConT nm) (TH.ConT i))
             | nm == ''Ratio && i == ''Integer
-            = bad "Unsupported Rational type."
-                  [ "While SBV supports SRational natively, this type is not yet supported"
-                  , "as ADT fields as it needs extra constraints."
-                  , ""
-                  , "Please report this as a feature request."
-                  ]
+            = pure $ KRational
 
         -- deal with base types
         go t@(TH.ConT constr)
@@ -755,8 +750,10 @@ toSBV typeName constructorName = go
           | t == ''Integer  = Just $ Right KUnbounded
           | t == ''Float    = Just $ Right KFloat
           | t == ''Double   = Just $ Right KDouble
+          | t == ''Char     = Just $ Right KChar
           | t == ''String   = Just $ Right KString
           | t == ''AlgReal  = Just $ Right KReal
+          | t == ''Rational = Just $ Right KRational
           | t == ''Word8    = Just $ Right $ KBounded False  8
           | t == ''Word16   = Just $ Right $ KBounded False 16
           | t == ''Word32   = Just $ Right $ KBounded False 32
@@ -772,16 +769,6 @@ toSBV typeName constructorName = go
                                           , [ "Please pick a more specific type, such as"
                                             , "Integer, Word8, WordN 32, IntN 16 etc."
                                             ])
-
-          -- Punt on char and rational. Because SMTLib's string translation requires us to put extra constraints.
-          -- We'll do that when we get there.
-          |    t == ''Char
-            || t == ''Rational = Just $ Left ( "Unsupported base type for ADTs: " ++ show t
-                                             , [ "While SBV supports SChar, and SRational natively,"
-                                               , "they are not yet supported as ADT fields as they need extra constraints."
-                                               , ""
-                                               , "Please report this as a feature request."
-                                               ])
 
           -- Otherwise, can't translate
           | True            = Nothing

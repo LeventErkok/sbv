@@ -27,7 +27,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds)
+import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds, substituteADTVars)
 import Data.SBV.Control.Types
 
 import Data.SBV.SMT.Utils
@@ -1123,7 +1123,7 @@ declareFun = declareName . show
 -- Otherwise, we just declare the name
 declareName :: String -> SBVType -> Maybe String -> [String]
 declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
-  where decl        = "(declare-fun " ++ s ++ " " ++ cvtType t ++ ")" ++ maybe "" (" ; " ++) mbCmnt
+  where decl = "(declare-fun " ++ s ++ " " ++ cvtType t ++ ")" ++ maybe "" (" ; " ++) mbCmnt
 
         (args, result) = case inputKS of
                           [] -> error $ "SBV.declareName: Unexpected empty type for: " ++ show s
@@ -1179,7 +1179,6 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         walk _d nm f k@KUnbounded{}         = f k nm
         walk _d nm f k@KReal     {}         = f k nm
         walk _d nm f k@KApp      {}         = f k nm
-        walk _d nm f k@KADT      {}         = f k nm
         walk _d nm f k@KFloat    {}         = f k nm
         walk _d nm f k@KDouble   {}         = f k nm
         walk _d nm f k@KRational {}         = f k nm
@@ -1210,6 +1209,9 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
           | True                          = let fnm   = "array" ++ show d
                                                 cstrs = walk (d+1) ("(select " ++ nm ++ " " ++ fnm ++ ")") f k2
                                             in mkAnd cstrs $ \hole -> ["(forall ((" ++ fnm ++ " " ++ smtType k1 ++ ")) " ++ hole ++ ")"]
+        walk d nm f (KADT ty dict pureFS) = let fs = [(c, map (substituteADTVars ty dict) ks) | (c, ks) <- pureFS]
+                                                nmks  = [("(get" ++ c ++ "_" ++ show i ++ " " ++ nm ++ ")", k) | (c, ks) <- fs, (i, k) <- zip [(1::Int)..] ks]
+                                            in concatMap (\(n, k) -> walk (d+1) n f k) nmks
 
 -----------------------------------------------------------------------------------------------
 -- Casts supported by SMTLib. (From: <https://smt-lib.org/theories-FloatingPoint.shtml>)

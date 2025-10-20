@@ -8,33 +8,35 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has maybe type, using catch-all.
+[GOOD] (set-logic ALL) ; has user-defined data-types, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
-                                           ((nothing_SBVMaybe)
-                                            (just_SBVMaybe (get_just_SBVMaybe T))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Maybe
+[GOOD] (declare-datatype Maybe (par (a) (
+           (Nothing)
+           (Just (getJust_1 a))
+       )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s3 () (SBVMaybe String) ((as just_SBVMaybe (SBVMaybe String)) (_ char #x41)))
+[GOOD] (define-fun s2 () (Maybe String) ((as Just (Maybe String)) (_ char #x41)))
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (SBVMaybe String)) ; tracks user variable "x"
-[GOOD] (assert (=> ((_ is (just_SBVMaybe (String) (SBVMaybe String))) s0) (= 1 (str.len (get_just_SBVMaybe s0)))))
+[GOOD] (declare-fun s0 () (Maybe String)) ; tracks user variable "x"
+[GOOD] (assert (= 1 (str.len (getJust_1 s0))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe String))) s0))
-[GOOD] (define-fun s2 () Bool (ite s1 false true))
-[GOOD] (define-fun s4 () Bool (distinct s0 s3))
-[GOOD] (define-fun s5 () Bool (and s2 s4))
+[GOOD] (define-fun s1 () Bool ((as is-Just Bool) s0))
+[GOOD] (define-fun s3 () Bool (distinct s0 s2))
+[GOOD] (define-fun s4 () Bool (and s1 s3))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s5)
+[GOOD] (assert s4)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (just_SBVMaybe "B")))
+[RECV] ((s0 (Just "B")))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Just 'B' :: Maybe Char)], modelUIFuns = []}
 DONE.*** Solver   : Z3
