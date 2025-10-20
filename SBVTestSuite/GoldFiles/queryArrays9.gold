@@ -13,7 +13,7 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (Array String Int)) ; tracks user variable "x"
+[GOOD] (declare-fun s0 () (Array Unicode Int)) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
@@ -21,7 +21,7 @@
 [GOOD] ; --- assignments ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () String (_ char #x61))
+[GOOD] (define-fun s1 () Unicode (_ Char #x61))
 [GOOD] (define-fun s3 () Int 5)
 [GOOD] (define-fun s2 () Int (select s0 s1))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
