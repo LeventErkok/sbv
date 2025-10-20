@@ -99,9 +99,6 @@ data Kind =
           | KSet  Kind
           | KTuple [Kind]
 
-          -- Either
-          | KEither Kind Kind
-
           -- Arrays
           | KArray  Kind Kind
           deriving (Eq, Ord, G.Data, NFData, Generic)
@@ -142,7 +139,6 @@ instance Show Kind where
   show (KSet  e)          = "{" ++ show e ++ "}"
   show (KTuple m)         = "(" ++ intercalate ", " (show <$> m) ++ ")"
   show KRational          = "SRational"
-  show (KEither k1 k2)    = "SEither " ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
   show (KArray k1 k2)     = "SArray "  ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
 
 -- | A version of show for kinds that says Bool instead of SBool, Float instead of SFloat, etc.
@@ -165,7 +161,6 @@ showBaseKind = sh
         sh (KList k)          = "[" ++ sh k ++ "]"
         sh (KSet k)           = "{" ++ sh k ++ "}"
         sh (KTuple ks)        = "(" ++ intercalate ", " (map sh ks) ++ ")"
-        sh (KEither k1 k2)    = "Either " ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
         sh (KArray  k1 k2)    = "Array "  ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
 
         -- Drop the initial S if it's there
@@ -204,7 +199,6 @@ smtType (KADT s pks _)  = kindParen $ unwords (s : map (smtType . snd) pks)
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 smtType KRational       = "SBVRational"
-smtType (KEither k1 k2) = "(SBVEither "  ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
 smtType (KArray  k1 k2) = "(Array "      ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
 
 instance Eq  G.DataType where
@@ -231,7 +225,6 @@ kindHasSign = \case KVar _       -> False
                     KList{}      -> False
                     KSet{}       -> False
                     KTuple{}     -> False
-                    KEither{}    -> False
                     KArray{}     -> False
 
 -- | A class for capturing values that have a sign and a size (finite or infinite)
@@ -257,7 +250,6 @@ class HasKind a where
   isList          :: a -> Bool
   isSet           :: a -> Bool
   isTuple         :: a -> Bool
-  isEither        :: a -> Bool
   isArray         :: a -> Bool
   isRoundingMode  :: a -> Bool
   isUninterpreted :: a -> Bool
@@ -284,7 +276,6 @@ class HasKind a where
                   KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)"   ++ show ek
                   KSet  ek      -> error $ "SBV.HasKind.intSizeOf((S)Set)"    ++ show ek
                   KTuple tys    -> error $ "SBV.HasKind.intSizeOf((S)Tuple)"  ++ show tys
-                  KEither k1 k2 -> error $ "SBV.HasKind.intSizeOf((S)Either)" ++ show (k1, k2)
                   KArray  k1 k2 -> error $ "SBV.HasKind.intSizeOf((S)Array)"  ++ show (k1, k2)
 
   isBoolean       (kindOf -> KBool{})      = True
@@ -328,9 +319,6 @@ class HasKind a where
 
   isTuple         (kindOf -> KTuple{})     = True
   isTuple         _                        = False
-
-  isEither        (kindOf -> KEither{})    = True
-  isEither        _                        = False
 
   isArray         (kindOf -> KArray{})     = True
   isArray         _                        = False
@@ -437,9 +425,6 @@ instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f, HasK
 instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f, HasKind g, HasKind h) => HasKind (a, b, c, d, e, f, g, h) where
   kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h)]
 
-instance (HasKind a, HasKind b) => HasKind (Either a b) where
-  kindOf _ = KEither (kindOf (Proxy @a)) (kindOf (Proxy @b))
-
 instance (HasKind a, HasKind b) => HasKind (a -> b) where
   kindOf _ = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
 
@@ -451,7 +436,6 @@ needsFlattening = any check . expandKinds
   where check KList{}     = True
         check KSet{}      = True
         check KTuple{}    = True
-        check KEither{}   = True
         check KArray{}    = True
         check KApp{}      = True
         check k@KADT{}    = not (isUninterpreted k || isRoundingMode k)

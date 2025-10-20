@@ -23,7 +23,7 @@ import Data.SBV.Core.Data      (Kind, Outputtable, Penalty,
                                 SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad, SFloatingPoint,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
-                                SWord64, SEither, SRational, SSet, SArray, constrain, (.==))
+                                SWord64, SRational, SSet, SArray, constrain, (.==))
 import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext, Symbolic, SBVRunMode, SMTConfig,
@@ -724,24 +724,6 @@ sTuple_ = Trans.sTuple_
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sTuples'
 sTuples :: (SymTuple tup, SymVal tup) => [String] -> Symbolic [SBV tup]
 sTuples = Trans.sTuples
-
--- | Declare a named 'Data.SBV.SEither'.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sEither'
-sEither :: (SymVal a, SymVal b) => String -> Symbolic (SEither a b)
-sEither = Trans.sEither
-
--- | Declare an unnamed 'Data.SBV.SEither'.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sEither_'
-sEither_ :: (SymVal a, SymVal b) => Symbolic (SEither a b)
-sEither_ = Trans.sEither_
-
--- | Declare a list of 'Data.SBV.SEither' values.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sEithers'
-sEithers :: (SymVal a, SymVal b) => [String] -> Symbolic [SEither a b]
-sEithers = Trans.sEithers
 
 -- | Declare a named 'Data.SBV.SRational'.
 --

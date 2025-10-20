@@ -44,7 +44,6 @@ module Data.SBV.Core.Model (
   , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
   , sRational, sRational_, sRationals
   , SymTuple, sTuple, sTuple_, sTuples
-  , sEither, sEither_, sEithers
   , sSet, sSet_, sSets
   , sEDivMod, sEDiv, sEMod
   , sDivides
@@ -368,22 +367,6 @@ fromCVTup i inp@(CV (KTuple ks) (CTuple cs))
    where lks = length ks
          lcs = length cs
 fromCVTup i inp = error $ "SymVal.fromCVTup: Impossible happened. Non-tuple received: " ++ show (i, inp)
-
-instance (SymVal a, SymVal b) => SymVal (Either a b) where
-  mkSymVal = genMkSymVar (kindOf (Proxy @(Either a b)))
-
-  literal s
-    | Left  a <- s = mk $ Left  (toCV a)
-    | Right b <- s = mk $ Right (toCV b)
-    where k  = kindOf (Proxy @(Either a b))
-
-          mk = SBV . SVal k . Left . CV k . CEither
-
-  fromCV (CV (KEither k1 _ ) (CEither (Left c)))  = Left  $ fromCV $ CV k1 c
-  fromCV (CV (KEither _  k2) (CEither (Right c))) = Right $ fromCV $ CV k2 c
-  fromCV bad                                      = error $ "SymVal.fromCV (Either): Malformed either received: " ++ show bad
-
-  minMaxBound = Nothing
 
 instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (ArrayModel a b) where
   mkSymVal = genMkSymVar (KArray (kindOf (Proxy @a)) (kindOf (Proxy @b)))
@@ -827,18 +810,6 @@ sRational_ = free_
 sRationals :: MonadSymbolic m => [String] -> m [SRational]
 sRationals = symbolics
 
--- | Generalization of 'Data.SBV.sEither'
-sEither :: (SymVal a, SymVal b, MonadSymbolic m) => String -> m (SEither a b)
-sEither = symbolic
-
--- | Generalization of 'Data.SBV.sEither_'
-sEither_ :: (SymVal a, SymVal b, MonadSymbolic m) => m (SEither a b)
-sEither_ = free_
-
--- | Generalization of 'Data.SBV.sEithers'
-sEithers :: (SymVal a, SymVal b, MonadSymbolic m) => [String] -> m [SEither a b]
-sEithers = symbolics
-
 -- | Generalization of 'Data.SBV.sSet'
 sSet :: (Ord a, SymVal a, MonadSymbolic m) => String -> m (SSet a)
 sSet = symbolic
@@ -1066,8 +1037,7 @@ MKSORD((),                          SInt32)
 MKSORD((),                          SInt64)
 MKSORD((),                          SFloat)
 MKSORD((),                          SChar)
-MKSORD((SymVal a),                  (SList   a))
-MKSORD((SymVal a, SymVal b),        (SEither a b))
+MKSORD((SymVal a),                  (SList a))
 MKSORD((),                          SDouble)
 MKSORD((),                          SReal)
 MKSORD((KnownNat n, BVIsNonZero n), (SWord n))
@@ -1108,7 +1078,6 @@ smtComparable op x y
       KList      {} -> nope     -- Unfortunately, no way for us to desugar this
       KSet       {} -> nope     -- Ditto here..
       KTuple     {} -> False
-      KEither    {} -> False
       KArray     {} -> True
  where k    = kindOf x
        nope = error $ "Data.SBV.OrdSymbolic: SMTLib does not support " ++ op ++ " for " ++ show k
@@ -1582,7 +1551,6 @@ instance (Ord a, Num (SBV a), SymVal a, Fractional a) => Fractional (SBV a) wher
                       k@KApp{}      -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KADT{}      -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KTuple{}    -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KEither{}   -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KArray{}    -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., 'SFloat', 'SDouble', and 'SReal'.

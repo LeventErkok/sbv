@@ -244,9 +244,6 @@ data Op = Plus
         | SetOp SetOp                           -- Set operations, categorized separately
         | TupleConstructor Int                  -- Construct an n-tuple
         | TupleAccess Int Int                   -- Access element i of an n-tuple; second argument is n
-        | EitherConstructor Kind Kind Bool      -- Construct a sum; False: left, True: right
-        | EitherIs Kind Kind Bool               -- Either branch tester; False: left, True: right
-        | EitherAccess Bool                     -- Either branch access; False: left, True: right
         | RationalConstructor                   -- Construct a rational. Note that there's no access to numerator or denumerator, since we cannot store rationals in canonical form
         | ADTOp ADTOp                           -- ADT access/construction/testing
         | ArrayLambda SMTLambda                 -- An array value, created from a lambda
@@ -606,19 +603,10 @@ instance Show Op where
   show (TupleConstructor   n) = "mkSBVTuple" ++ show n
   show (TupleAccess      i n) = "proj_" ++ show i ++ "_SBVTuple" ++ show n
 
-  -- Remember, while we try to maintain SMTLib compabitibility here, these output
-  -- is merely for debugging purposes. For how we actually render these in SMTLib,
-  -- look at the file SBV/SMT/SMTLib2.hs for these constructors.
-  show (EitherConstructor k1 k2  False) = "(_ left_SBVEither "  ++ show (KEither k1 k2) ++ ")"
-  show (EitherConstructor k1 k2  True ) = "(_ right_SBVEither " ++ show (KEither k1 k2) ++ ")"
-  show (EitherIs          k1 k2  False) = "(_ is (left_SBVEither ("  ++ show k1 ++ ") " ++ show (KEither k1 k2) ++ "))"
-  show (EitherIs          k1 k2  True ) = "(_ is (right_SBVEither (" ++ show k2 ++ ") " ++ show (KEither k1 k2) ++ "))"
-  show (EitherAccess             False) = "get_left_SBVEither"
-  show (EitherAccess             True ) = "get_right_SBVEither"
-  show RationalConstructor              = "SBV.Rational"
-  show (ArrayLambda s)                  = show s
-  show ReadArray                        = "select"
-  show WriteArray                       = "store"
+  show RationalConstructor    = "SBV.Rational"
+  show (ArrayLambda s)        = show s
+  show ReadArray              = "select"
+  show WriteArray             = "store"
 
   show op
     | Just s <- op `lookup` syms = s
@@ -1463,7 +1451,6 @@ registerKind st k
                                   KADT s _ _  -> s `notElem` [s' | KADT s' _ _ <- Set.toList existingKinds]
                                   KList{}     -> k `notElem` existingKinds
                                   KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
-                                  KEither{}   -> k `notElem` existingKinds
                                   _           -> False
 
               when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
@@ -1487,7 +1474,6 @@ registerKind st k
          KList     ek    -> registerKind st ek
          KSet      ek    -> registerKind st ek
          KTuple    eks   -> mapM_ (registerKind st) eks
-         KEither   k1 k2 -> mapM_ (registerKind st) [k1, k2]
          KArray    k1 k2 -> mapM_ (registerKind st) [k1, k2]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them

@@ -871,7 +871,6 @@ defaultKindedValue k = CV k $ cvt k
         cvt (KList  _)       = CList []
         cvt (KSet  _)        = CSet $ RegularSet Set.empty -- why not? Arguably, could be the universal set
         cvt (KTuple ks)      = CTuple $ map cvt ks
-        cvt (KEither k1 _)   = CEither . Left $ cvt k1     -- why not?
         cvt (KArray  _  k2)  = CArray $ ArrayModel [] (cvt k2)
 
         cvt (KApp s _)       = error ("defaultKindedValue not supported for ADT app: " ++ s) -- tough luck
@@ -944,7 +943,6 @@ recoverKindedValue si k e =
       KList ek                            -> Just $ CV k $ CList     $ interpretList ek        e
       KSet ek                             -> Just $ CV k $ CSet      $ interpretSet ek         e
       KTuple{}                            -> Just $ CV k $ CTuple    $ interpretTuple          e
-      KEither{}                           -> Just $ CV k $ CEither   $ interpretEither   k     e
       KArray k1 k2                        -> Just $ CV k $ CArray    $ interpretArray    k1 k2 e
 
   where stringLike xs = length xs >= 2 && "\"" `isPrefixOf` xs && "\"" `isSuffixOf` xs
@@ -1053,26 +1051,6 @@ recoverKindedValue si k e =
                                                                   , "Kind: " ++ show k
                                                                   , "Expr: " ++ show te
                                                                   ]
-
-        -- SEither
-        interpretEither (KEither k1 _) (EApp [ECon "left_SBVEither",  a]) = case recoverKindedValue si k1 a of
-                                                                              Just (CV _ v) -> Left v
-                                                                              Nothing       -> error $ unlines [ "Couldn't parse an either value on the left"
-                                                                                                               , "Kind: " ++ show k1
-                                                                                                               , "Expr: " ++ show a
-                                                                                                               ]
-        interpretEither (KEither _ k2) (EApp [ECon "right_SBVEither", b]) = case recoverKindedValue si k2 b of
-                                                                              Just (CV _ v) -> Right v
-                                                                              Nothing       -> error $ unlines [ "Couldn't parse an either value on the right"
-                                                                                                               , "Kind: " ++ show k2
-                                                                                                               , "Expr: " ++ show b
-                                                                                                               ]
-
-        -- CVC4 puts full ascriptions:
-        interpretEither ek (EApp [EApp [ECon "as", ECon "left_SBVEither",  _], a]) = interpretEither ek (EApp [ECon "left_SBVEither", a])
-        interpretEither ek (EApp [EApp [ECon "as", ECon "right_SBVEither", _], b]) = interpretEither ek (EApp [ECon "right_SBVEither", b])
-
-        interpretEither _ other = error $ "Expected an SEither sexpr, but received: " ++ show (k, other)
 
         -- Intervals, for dReal
         interpretInterval expr = case expr of

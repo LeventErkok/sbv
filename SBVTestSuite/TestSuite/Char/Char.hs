@@ -18,10 +18,10 @@ module TestSuite.Char.Char(tests) where
 import Utils.SBVTestFramework
 import Data.SBV.Control
 
-import qualified Data.SBV.List   as L
-import qualified Data.SBV.Set    as S
-import qualified Data.SBV.Maybe  as M
 import qualified Data.SBV.Either as E
+import qualified Data.SBV.List   as L
+import qualified Data.SBV.Maybe  as M
+import qualified Data.SBV.Set    as S
 import Data.SBV.Tuple
 
 tests :: TestTree
@@ -84,7 +84,7 @@ t06 = do x::SEither Char (Either Char Integer) <- free "x"
          constrain $ x ./= E.sLeft (literal 'A')
 
 t07 :: Symbolic ()
-t07 = do x::M.SMaybe Char <- free "x"
+t07 = do x::SMaybe Char <- free "x"
          constrain $ M.isJust x .&& x ./= M.sJust (literal 'A')
 
 t08 :: Symbolic ()

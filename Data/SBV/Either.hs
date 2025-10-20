@@ -11,14 +11,17 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.Either (
     -- * Constructing sums
-      sLeft, sRight, liftEither
+      sLeft, sRight, liftEither, SEither, sEither, sEither_, sEithers
     -- * Destructing sums
     , either
     -- * Mapping functions
@@ -30,10 +33,9 @@ module Data.SBV.Either (
 import           Prelude hiding (either)
 import qualified Prelude
 
-import Data.Proxy (Proxy(Proxy))
-
+import Data.SBV.Client
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model () -- instances only
+import Data.SBV.Core.Model (ite, OrdSymbolic(..))
 
 #ifdef DOCTEST
 -- $setup
@@ -41,57 +43,33 @@ import Data.SBV.Core.Model () -- instances only
 -- >>> import Data.SBV
 #endif
 
--- | Construct an @SEither a b@ from an @SBV a@
+-- | Make 'Either' symbolic.
 --
 -- >>> sLeft 3 :: SEither Integer Bool
 -- Left 3 :: SEither Integer Bool
-sLeft :: forall a b. (SymVal a, SymVal b) => SBV a -> SEither a b
-sLeft sa
-  | Just a <- unliteral sa
-  = literal (Left a)
-  | True
-  = SBV $ SVal k $ Right $ cache res
-  where k1 = kindOf (Proxy @a)
-        k2 = kindOf (Proxy @b)
-        k  = KEither k1 k2
-
-        res st = do asv <- sbvToSV st sa
-                    newExpr st k $ SBVApp (EitherConstructor k1 k2 False) [asv]
-
--- | Return 'sTrue' if the given symbolic value is 'Left', 'sFalse' otherwise
---
 -- >>> isLeft (sLeft 3 :: SEither Integer Bool)
 -- True
 -- >>> isLeft (sRight sTrue :: SEither Integer Bool)
 -- False
-isLeft :: (SymVal a, SymVal b) => SEither a b -> SBV Bool
-isLeft = either (const sTrue) (const sFalse)
-
--- | Construct an @SEither a b@ from an @SBV b@
---
 -- >>> sRight sFalse :: SEither Integer Bool
 -- Right False :: SEither Integer Bool
-sRight :: forall a b. (SymVal a, SymVal b) => SBV b -> SEither a b
-sRight sb
-  | Just b <- unliteral sb
-  = literal (Right b)
-  | True
-  = SBV $ SVal k $ Right $ cache res
-  where k1 = kindOf (Proxy @a)
-        k2 = kindOf (Proxy @b)
-        k  = KEither k1 k2
-
-        res st = do bsv <- sbvToSV st sb
-                    newExpr st k $ SBVApp (EitherConstructor k1 k2 True) [bsv]
-
--- | Return 'sTrue' if the given symbolic value is 'Right', 'sFalse' otherwise
---
 -- >>> isRight (sLeft 3 :: SEither Integer Bool)
 -- False
 -- >>> isRight (sRight sTrue :: SEither Integer Bool)
 -- True
-isRight :: (SymVal a, SymVal b) => SEither a b -> SBV Bool
-isRight = either (const sFalse) (const sTrue)
+mkSymbolic [''Either]
+
+-- | Declare a symbolic maybe.
+sEither :: (SymVal a, SymVal b) => String -> Symbolic (SEither a b)
+sEither = free
+
+-- | Declare a symbolic maybe, unnamed.
+sEither_ :: (SymVal a, SymVal b) => Symbolic (SEither a b)
+sEither_ = free_
+
+-- | Declare a list of symbolic maybes.
+sEithers :: (SymVal a, SymVal b) => [String] -> Symbolic [SEither a b]
+sEithers = symbolics
 
 -- | Construct an @SEither a b@ from an @Either (SBV a) (SBV b)@
 --
@@ -120,31 +98,7 @@ either :: forall a b c. (SymVal a, SymVal b, SymVal c)
        -> (SBV b -> SBV c)
        -> SEither a b
        -> SBV c
-either brA brB sab
-  | Just (Left  a) <- unliteral sab
-  = brA $ literal a
-  | Just (Right b) <- unliteral sab
-  = brB $ literal b
-  | True
-  = SBV $ SVal kc $ Right $ cache res
-  where ka = kindOf (Proxy @a)
-        kb = kindOf (Proxy @b)
-        kc = kindOf (Proxy @c)
-
-        res st = do abv <- sbvToSV st sab
-
-                    let leftVal  = SBV $ SVal ka $ Right $ cache $ \_ -> newExpr st ka $ SBVApp (EitherAccess False) [abv]
-                        rightVal = SBV $ SVal kb $ Right $ cache $ \_ -> newExpr st kb $ SBVApp (EitherAccess True)  [abv]
-
-                        leftRes  = brA leftVal
-                        rightRes = brB rightVal
-
-                    br1 <- sbvToSV st leftRes
-                    br2 <- sbvToSV st rightRes
-
-                    --  Which branch are we in? Return the appropriate value:
-                    onLeft <- newExpr st KBool $ SBVApp (EitherIs ka kb False) [abv]
-                    newExpr st kc $ SBVApp Ite [onLeft, br1, br2]
+either brA brB sab = ite (isLeft sab) (brA (fromLeft sab)) (brB (fromRight sab))
 
 -- | Map over both sides of a symbolic 'Either' at the same time
 --
@@ -196,14 +150,7 @@ second = bimap id
 -- is unspecified, thus the SMT solver picks whatever satisfies the
 -- constraints, if there is one.
 fromLeft :: forall a b. (SymVal a, SymVal b) => SEither a b -> SBV a
-fromLeft sab
-  | Just (Left a) <- unliteral sab
-  = literal a
-  | True
-  = SBV $ SVal ka $ Right $ cache res
-  where ka      = kindOf (Proxy @a)
-        res st = do ms <- sbvToSV st sab
-                    newExpr st ka (SBVApp (EitherAccess False) [ms])
+fromLeft = getLeft_1
 
 -- | Return the value from the right component. The behavior is undefined if
 -- passed a left value, i.e., it can return any value.
@@ -220,13 +167,12 @@ fromLeft sab
 -- is unspecified, thus the SMT solver picks whatever satisfies the
 -- constraints, if there is one.
 fromRight :: forall a b. (SymVal a, SymVal b) => SEither a b -> SBV b
-fromRight sab
-  | Just (Right b) <- unliteral sab
-  = literal b
-  | True
-  = SBV $ SVal kb $ Right $ cache res
-  where kb      = kindOf (Proxy @b)
-        res st = do ms <- sbvToSV st sab
-                    newExpr st kb (SBVApp (EitherAccess True) [ms])
+fromRight = getRight_1
+
+-- | Custom 'OrdSymbolic' instance over 'SEither'.
+instance (OrdSymbolic (SBV a), OrdSymbolic (SBV b), SymVal a, SymVal b) => OrdSymbolic (SBV (Either a b)) where
+  eab .< ecd = either (\a -> either (\c -> a .< c) (\_ -> sTrue ) ecd)
+                      (\b -> either (\_ -> sFalse) (\d -> b .< d) ecd)
+                      eab
 
 {- HLint ignore module "Reduce duplication" -}

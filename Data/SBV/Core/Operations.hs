@@ -494,15 +494,6 @@ cCompare k op x y =
       (CAlgReal     a, CAlgReal  b) | isExactRational a && isExactRational b -> Just $ a `compare` b
                                     | True                                   -> Nothing
 
-      (CEither      a, CEither   b) -> let (kl, kr) = case k of
-                                                        KEither l r -> (l, r)
-                                                        _           -> error $ "Unexpected kind in cCompare for either's: " ++ show k
-                                       in case (a, b) of
-                                            (Left{},   Right{})  -> Just LT
-                                            (Right{},  Left{})   -> Just GT
-                                            (Left av,  Left  bv) -> cCompare kl op av bv
-                                            (Right av, Right bv) -> cCompare kr op av bv
-
       -- Lists and tuples use lexicographic ordering
       (CList        a, CList b) -> case k of
                                      KList ke -> lexCmp (map (ke,) a) (map (ke,) b)
@@ -1489,8 +1480,6 @@ svStructuralLessThan x y
    = x `svLessThan` y
    | KTuple{} <- kx
    = tupleLT x y
-   | KEither{} <- kx
-   = eitherLT x y
    | True
    = x `svLessThan` y
    where kx = kindOf x
@@ -1518,31 +1507,6 @@ tupleLT x y = SVal KBool $ Right $ cache res
                         walk ((lti, eqi) : rest) = lti `svOr` (eqi `svAnd` walk rest)
 
                     svToSV st $ walk $ zipWith chkElt [1..] ks
-
--- | Structural less-than for either
-eitherLT :: SVal -> SVal -> SVal
-eitherLT x y = sEitherCase (\lx -> sEitherCase (lx `svStructuralLessThan`) (const svTrue)              y)
-                           (\rx -> sEitherCase (const svFalse)             (rx `svStructuralLessThan`) y)
-                           x
-  where (ka, kb) = case kindOf x of
-                     KEither k1 k2 -> (k1, k2)
-                     k             -> error $ "Data.SBV: Impossible happened, eitherLT called with: " ++ show (k, x, y)
-
-        sEitherCase brA brB sab = SVal KBool $ Right $ cache res
-          where res st = do abv <- svToSV st sab
-
-                            let leftVal  = SVal ka $ Right $ cache $ \_ -> newExpr st ka $ SBVApp (EitherAccess False) [abv]
-                                rightVal = SVal kb $ Right $ cache $ \_ -> newExpr st kb $ SBVApp (EitherAccess True)  [abv]
-
-                                leftRes  = brA leftVal
-                                rightRes = brB rightVal
-
-                            br1 <- svToSV st leftRes
-                            br2 <- svToSV st rightRes
-
-                            --  Which branch are we in? Return the appropriate value:
-                            onLeft <- newExpr st KBool $ SBVApp (EitherIs ka kb False) [abv]
-                            newExpr st KBool $ SBVApp Ite [onLeft, br1, br2]
 
 -- | Convert an 'Data.SBV.SFloat' to an 'Data.SBV.SWord32', preserving the bit-correspondence. Note that since the
 -- representation for @NaN@s are not unique, this function will return a symbolic value when given a

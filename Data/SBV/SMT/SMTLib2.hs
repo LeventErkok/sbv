@@ -114,7 +114,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasList        = any isList kindInfo
         hasSets        = any isSet kindInfo
         hasTuples      = not . null $ tupleArities
-        hasEither      = any isEither kindInfo
         hasRational    = any isRational kindInfo
         hasADTs        = not . null $ adtsNoRM
         rm             = roundingMode cfg
@@ -126,7 +125,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
         doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not (have solverCaps)]
-           where checks = [ ("data types",             supportsDataTypes,          hasTuples || hasEither || hasADTs)
+           where checks = [ ("data types",             supportsDataTypes,          hasTuples || hasADTs)
                           , ("set operations",         supportsSets,               hasSets)
                           , ("bit vectors",            supportsBitVectors,         hasBVs)
                           , ("special relations",      supportsSpecialRels,        needsSpecialRels)
@@ -191,7 +190,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
            | hasADTs               = setAll "has user-defined data-types"
            | hasNonBVArrays        = setAll "has non-bitvector arrays"
            | hasTuples             = setAll "has tuples"
-           | hasEither             = setAll "has either type"
            | hasSets               = setAll "has sets"
            | hasList               = setAll "has lists"
            | hasChar               = setAll "has chars"
@@ -260,7 +258,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- tuples ---" ]
              ++ concatMap declTuple tupleArities
              ++ [ "; --- sums ---" ]
-             ++ (if containsSum       kindInfo then declSum       else [])
              ++ (if containsRationals kindInfo then declRationals else [])
              ++ [ "; --- ADTs  --- " | not (null adtsNoRM)]
              ++ declADT adtsNoRM
@@ -419,19 +416,9 @@ findTupleArities ks = Set.toAscList
                     $ Set.map length
                     $ Set.fromList [ tupKs | KTuple tupKs <- Set.toList ks ]
 
--- | Is @Either@ being used?
-containsSum :: Set Kind -> Bool
-containsSum = not . Set.null . Set.filter isEither
-
 -- | Is @Rational@ being used?
 containsRationals :: Set Kind -> Bool
 containsRationals = not . Set.null . Set.filter isRational
-
-declSum :: [String]
-declSum = [ "(declare-datatypes ((SBVEither 2)) ((par (T1 T2)"
-          , "                                    ((left_SBVEither  (get_left_SBVEither  T1))"
-          , "                                     (right_SBVEither (get_right_SBVEither T2))))))"
-          ]
 
 -- Internally, we do *not* keep the rationals in reduced form! So, the boolean operators explicitly do the math
 -- to make sure equivalent values are treated correctly.
@@ -461,8 +448,6 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             ++ declADT [(s, pks, cs) | k@(KADT s pks cs) <- newKinds, not (isRoundingMode k)]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
-            -- sums
-            ++ (if containsSum   newKs then declSum   else [])
             -- constants
             ++ concatMap (declConst cfg) consts
             -- inputs
@@ -792,26 +777,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
 
-        -- We fully qualify the constructor with their types to work around type checking issues
-        -- Note that this is rather bizarre, as we're tagging the constructor with its *result* type,
-        -- not its full function type as one would expect. But this is per the spec: Pg. 28 of SMTLib 3.6 spec
-        -- says:
-        --
-        --    To simplify sort checking, a function symbol in a term can be annotated with one of its result sorts sigma.
-        --
-        -- I wish it was the full type here not just the result, but we go with the spec. Also see: <http://github.com/Z3Prover/z3/issues/2135>
-        -- and in particular <http://github.com/Z3Prover/z3/issues/2135#issuecomment-477636435>
-        dtConstructor fld args res = "((as " ++ fld ++ " " ++ smtType res ++ ") " ++ unwords (map cvtSV args) ++ ")"
-
-        -- Similarly, we fully qualify the accessors with their types to work around type checking issues
-        -- Unfortunately, z3 and CVC4 are behaving differently, so we tie this ascription to a solver capability.
-        dtAccessor fld params res
-           | supportsDirectTesters caps = dResult
-           | True                       = aResult
-          where dResult = "(_ is " ++ fld ++ ")"
-                ps      = " (" ++ unwords (map smtType params) ++ ") "
-                aResult = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
-
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ cvtSV a ++ " " ++ cvtSV b ++ " " ++ cvtSV c ++ ")"
 
         sh (SBVApp (LkUp (t, aKnd, _, l) i e) [])
@@ -835,7 +800,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                               KList _       -> unexpected
                               KSet  _       -> unexpected
                               KTuple _      -> unexpected
-                              KEither _ _   -> unexpected
                               KArray  _ _   -> unexpected
 
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ cvtSV i ++ ")"
@@ -861,7 +825,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
                                 KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
                                 KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
-                                KEither k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)
                                 KArray  k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected array valued index: " ++ show (k1, k2)
 
                 mkCnst = cvtCV rm . mkConstCV (kindOf i)
@@ -985,13 +948,6 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (TupleConstructor 0)   [])    = "mkSBVTuple0"
         sh (SBVApp (TupleConstructor n)   args)  = "((as mkSBVTuple" ++ show n ++ " " ++ smtType (KTuple (map kindOf args)) ++ ") " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" ++ show i ++ "_SBVTuple" ++ show n ++ " " ++ cvtSV tup ++ ")"
-
-        sh (SBVApp (EitherConstructor k1 k2 False) [arg]) =       dtConstructor "left_SBVEither"  [arg] (KEither k1 k2)
-        sh (SBVApp (EitherConstructor k1 k2 True ) [arg]) =       dtConstructor "right_SBVEither" [arg] (KEither k1 k2)
-        sh (SBVApp (EitherIs          k1 k2 False) [arg]) = '(' : dtAccessor    "left_SBVEither"  [k1]  (KEither k1 k2) ++ " " ++ cvtSV arg ++ ")"
-        sh (SBVApp (EitherIs          k1 k2 True ) [arg]) = '(' : dtAccessor    "right_SBVEither" [k2]  (KEither k1 k2) ++ " " ++ cvtSV arg ++ ")"
-        sh (SBVApp (EitherAccess            False) [arg]) = "(get_left_SBVEither "  ++ cvtSV arg ++ ")"
-        sh (SBVApp (EitherAccess            True ) [arg]) = "(get_right_SBVEither " ++ cvtSV arg ++ ")"
 
         sh (SBVApp  RationalConstructor    [t, b]) = "(SBV.Rational " ++ cvtSV t ++ " " ++ cvtSV b ++ ")"
 
@@ -1199,11 +1155,6 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                                                 project i = "(proj_" ++ show i ++ "_" ++ tt ++ " " ++ nm ++ ")"
                                                 nmks      = [(project i, k) | (i, k) <- zip [1::Int ..] ks]
                                             in concatMap (\(n, k) -> walk (d+1) n f k) nmks
-        walk  d  nm  f ke@(KEither k1 k2) = let n1 = "(get_left_SBVEither "  ++ nm ++ ")"
-                                                n2 = "(get_right_SBVEither " ++ nm ++ ")"
-                                                c1 = ["(=> " ++ "((_ is (left_SBVEither ("  ++ smtType k1 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n1 f k1]
-                                                c2 = ["(=> " ++ "((_ is (right_SBVEither (" ++ smtType k2 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n2 f k2]
-                                            in c1 ++ c2
         walk d  nm f  (KArray k1 k2)
           | all charRatFree [k1, k2]      = []
           | True                          = let fnm   = "array" ++ show d

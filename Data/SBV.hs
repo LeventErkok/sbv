@@ -68,7 +68,7 @@
 --
 --   * 'SEither': Symbolic sums
 --
---   * 'Data.SBV.Maybe.SMaybe': Symbolic optional values.
+--   * 'SMaybe': Symbolic optional values.
 --
 --   * 'SSet': Symbolic sets.
 --
@@ -246,8 +246,6 @@ module Data.SBV (
   -- ** Tuples
   -- $tuples
   , SymTuple, STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
-  -- ** Sum types
-  , SEither
   -- ** Sets
   , RCSet(..), SSet
   -- * Arrays of symbolic values
@@ -274,8 +272,13 @@ module Data.SBV (
   , sString, sString_
   , sList, sList_
   , sTuple, sTuple_
-  , sEither, sEither_
   , sSet, sSet_
+
+  -- * Symbolic 'Maybe'
+  , SMaybe, sMaybe, sMaybe_, sMaybes
+
+  -- * Symbolic 'Either'
+  , SEither, sEither, sEither_, sEithers
 
   -- ** List of values
   -- $createSyms
@@ -297,7 +300,6 @@ module Data.SBV (
   , sStrings
   , sLists
   , sTuples
-  , sEithers
   , sSets
 
   -- * Symbolic Equality and Comparisons
@@ -495,7 +497,7 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sRational, sRational_, sRationals,
                                         sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s,
                                         sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s,
-                                        sEither, sEither_, sEithers, sSet, sSet_, sSets,
+                                        sSet, sSet_, sSets,
                                         sArray, sArray_, sArrays,
                                         sBarrelRotateLeft, sBarrelRotateRight, zeroExtend, signExtend, sObserve)
 
@@ -505,6 +507,9 @@ import qualified Data.SBV.Core.Data  as CD (bvExtract, (#), bvDrop, bvTake)
 import Data.SBV.Core.Kind
 
 import Data.SBV.Core.SizedFloats
+
+import Data.SBV.Maybe hiding (map)
+import Data.SBV.Either
 
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Symbolic   ( MonadSymbolic(..), SymbolicT, registerKind

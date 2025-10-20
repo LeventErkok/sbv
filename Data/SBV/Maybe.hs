@@ -22,7 +22,7 @@
 
 module Data.SBV.Maybe (
   -- * Constructing optional values
-    sJust, sNothing, liftMaybe, SMaybe
+    sJust, sNothing, liftMaybe, SMaybe, sMaybe, sMaybe_, sMaybes
   -- * Destructing optionals
   , maybe
   -- * Mapping functions
@@ -44,7 +44,7 @@ import Data.SBV.Core.Model (ite, OrdSymbolic(..))
 -- >>> import Data.SBV
 #endif
 
--- | Make 'Maybe' synmbolic.
+-- | Make 'Maybe' symbolic.
 --
 -- >>> sNothing :: SMaybe Integer
 -- Nothing :: Maybe Integer
@@ -61,6 +61,18 @@ import Data.SBV.Core.Model (ite, OrdSymbolic(..))
 -- >>> prove $ \x -> isJust (sJust (x :: SInteger))
 -- Q.E.D.
 mkSymbolic [''Maybe]
+
+-- | Declare a symbolic maybe.
+sMaybe :: SymVal a => String -> Symbolic (SMaybe a)
+sMaybe = free
+
+-- | Declare a symbolic maybe, unnamed.
+sMaybe_ :: SymVal a => Symbolic (SMaybe a)
+sMaybe_ = free_
+
+-- | Declare a list of symbolic maybes.
+sMaybes :: SymVal a => [String] -> Symbolic [SMaybe a]
+sMaybes = symbolics
 
 -- | Return the value of an optional value. The default is returned if Nothing. Compare to 'fromJust'.
 --

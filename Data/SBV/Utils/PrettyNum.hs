@@ -435,7 +435,6 @@ cvToSMTLib rm x
   | isList x         , CList xs         <- cvVal x = smtLibSeq (kindOf x) xs
   | isSet x          , CSet s           <- cvVal x = smtLibSet (kindOf x) s
   | isTuple x        , CTuple xs        <- cvVal x = smtLibTup (kindOf x) xs
-  | isEither x       , CEither ec       <- cvVal x = smtLibEither (kindOf x) ec
 
   -- Arrays become sequence of stores
   | isArray x        , CArray ac       <- cvVal x  = smtLibArray (kindOf x) ac
@@ -482,14 +481,6 @@ cvToSMTLib rm x
         smtLibTup (KTuple []) _  = "mkSBVTuple0"
         smtLibTup (KTuple ks) xs = "(mkSBVTuple" ++ show (length ks) ++ " " ++ unwords (zipWith (\ek e -> cvToSMTLib rm (CV ek e)) ks xs) ++ ")"
         smtLibTup k           _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
-
-        dtConstructor fld []   res =  "(as " ++ fld ++ " " ++ smtType res ++ ")"
-        dtConstructor fld args res = "((as " ++ fld ++ " " ++ smtType res ++ ") " ++ unwords args ++ ")"
-
-        smtLibEither :: Kind -> Either CVal CVal -> String
-        smtLibEither ke@(KEither  k _) (Left c)  = dtConstructor "left_SBVEither"  [cvToSMTLib rm (CV k c)] ke
-        smtLibEither ke@(KEither  _ k) (Right c) = dtConstructor "right_SBVEither" [cvToSMTLib rm (CV k c)] ke
-        smtLibEither k                 _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibEither), received kind: " ++ show k
 
         -- Remember that in an ArrayModel we keep a history; i.e., the earlier elements are written later. So, we reverse the assocs
         smtLibArray :: Kind -> ArrayModel CVal CVal -> String

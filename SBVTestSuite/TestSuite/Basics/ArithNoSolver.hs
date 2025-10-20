@@ -29,10 +29,6 @@ import Data.Maybe (fromJust, fromMaybe)
 
 import qualified Data.Char as C
 
-import qualified Data.SBV.Maybe as SM
-
-import qualified Data.SBV.Char () -- instances only
-
 -- Test suite
 tests :: TestTree
 tests = testGroup "Arith.NoSolver" $
@@ -458,7 +454,7 @@ ssl = map literal sl
 sm :: [Maybe Integer]
 sm = [Nothing, Just (-5), Just 0, Just 5]
 
-ssm :: [SM.SMaybe Integer]
+ssm :: [SMaybe Integer]
 ssm = map literal sm
 
 se :: [Either Integer Integer]

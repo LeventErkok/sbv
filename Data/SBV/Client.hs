@@ -688,9 +688,6 @@ toSBV typeName constructorName = go
         -- lists
         go (TH.AppT TH.ListT t) = KList <$> go t
 
-        -- either
-        go (TH.AppT (TH.AppT (TH.ConT nm) t1) t2) | nm == ''Either = KEither <$> go t1 <*> go t2
-
         -- arbitrary words/ints
         go (TH.AppT (TH.ConT nm) (TH.LitT (TH.NumTyLit n)))
             | nm == ''WordN = pure $ KBounded False (fromIntegral n)

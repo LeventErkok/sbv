@@ -32,7 +32,7 @@ module Data.SBV.Core.Data
  , SWord, SInt, WordN, IntN
  , SRational
  , SChar, SString, SList
- , SEither, SArray, ArrayModel(..)
+ , SArray, ArrayModel(..)
  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
  , RCSet(..), SSet
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
@@ -194,9 +194,6 @@ type SRational = SBV Rational
 -- length, and internally processed as one unit as opposed to a fixed-length list of items.
 -- Note that lists can be nested, i.e., we do allow lists of lists of ... items.
 type SList a = SBV [a]
-
--- | Symbolic 'Either'
-type SEither a b = SBV (Either a b)
 
 -- | Symbolic arrays. A symbolic array is more akin to a function in SMTLib (and thus in SBV),
 -- as opposed to contagious-storage with a finite range as found in many programming languages.
