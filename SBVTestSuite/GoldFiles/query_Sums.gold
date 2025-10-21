@@ -11,30 +11,33 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
-                                           ((left_SBVEither  (get_left_SBVEither  T1))
-                                            (right_SBVEither (get_right_SBVEither T2))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Either
+[GOOD] (declare-datatype Either (par (a b) (
+           (Left (getLeft_1 a))
+           (Right (getRight_1 b))
+       )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () Int 1)
+[GOOD] (define-fun s3 () Int 1)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (SBVEither Int String)) ; tracks user variable "a"
-[GOOD] (assert (=> ((_ is (right_SBVEither (String) (SBVEither Int String))) s0) (= 1 (str.len (get_right_SBVEither s0)))))
+[GOOD] (declare-fun s0 () (Either Int String)) ; tracks user variable "a"
+[GOOD] (assert (= 1 (str.len (getRight_1 s0))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Int (get_left_SBVEither s0))
-[GOOD] (define-fun s3 () Bool (= s1 s2))
-[GOOD] (define-fun s4 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int String))) s0))
-[GOOD] (define-fun s5 () Bool (ite s4 s3 false))
+[GOOD] (define-fun s1 () Bool ((as is-Left Bool) s0))
+[GOOD] (define-fun s2 () Int (getLeft_1 s0))
+[GOOD] (define-fun s4 () Bool (= s2 s3))
+[GOOD] (define-fun s5 () Bool (and s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s5)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (left_SBVEither 1)))
+[RECV] ((s0 (Left 1)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
