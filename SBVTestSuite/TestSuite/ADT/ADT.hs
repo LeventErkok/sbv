@@ -107,6 +107,7 @@ t04 rf = do AllSatResult _ _ _ ms <- allSatWith z3{verbose=True, redirectVerbose
             let sh m = appendFile rf $ "\nMODEL:" ++ show (SatResult m)
             mapM_ sh ms
   where t = do registerType (Proxy @(Maybe Integer))
+               registerType (Proxy @(Either Integer Integer))
                a :: SADT <- free "a"
                constrain $ isAInteger a
                constrain $ getAInteger_1 a .>= 0
@@ -118,6 +119,7 @@ t05 rf = do AllSatResult _ _ _ ms <- allSatWith cvc5{verbose=True, redirectVerbo
             let sh m = appendFile rf $ "\nMODEL:" ++ show (SatResult m)
             mapM_ sh ms
   where t = do registerType (Proxy @(Maybe Integer))
+               registerType (Proxy @(Either Integer Integer))
                a :: SADT <- free "a"
                b :: SADT <- free "b"
                constrain $ isAFloat a .&& getAFloat_1 a .== 4
