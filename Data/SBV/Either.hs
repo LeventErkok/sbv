@@ -46,13 +46,13 @@ import Data.SBV.Core.Model (ite, OrdSymbolic(..))
 -- | Make 'Either' symbolic.
 --
 -- >>> sLeft 3 :: SEither Integer Bool
--- Left 3 :: SEither Integer Bool
+-- Left 3 :: Either Integer Bool
 -- >>> isLeft (sLeft 3 :: SEither Integer Bool)
 -- True
 -- >>> isLeft (sRight sTrue :: SEither Integer Bool)
 -- False
 -- >>> sRight sFalse :: SEither Integer Bool
--- Right False :: SEither Integer Bool
+-- Right False :: Either Integer Bool
 -- >>> isRight (sLeft 3 :: SEither Integer Bool)
 -- False
 -- >>> isRight (sRight sTrue :: SEither Integer Bool)
@@ -74,9 +74,9 @@ sEithers = symbolics
 -- | Construct an @SEither a b@ from an @Either (SBV a) (SBV b)@
 --
 -- >>> liftEither (Left 3 :: Either SInteger SBool)
--- Left 3 :: SEither Integer Bool
+-- Left 3 :: Either Integer Bool
 -- >>> liftEither (Right sTrue :: Either SInteger SBool)
--- Right True :: SEither Integer Bool
+-- Right True :: Either Integer Bool
 liftEither :: (SymVal a, SymVal b) => Either (SBV a) (SBV b) -> SEither a b
 liftEither = Prelude.either sLeft sRight
 
