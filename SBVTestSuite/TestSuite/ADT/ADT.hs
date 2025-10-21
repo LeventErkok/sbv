@@ -76,7 +76,8 @@ tests =
 
 checkWith :: Symbolic () -> FilePath -> IO ()
 checkWith props rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
-        registerType (Proxy @(Maybe Integer))
+        registerType (Proxy @(Maybe  Integer))
+        registerType (Proxy @(Either Integer Integer))
         _ <- props
         query $ do cs <- checkSat
                    case cs of

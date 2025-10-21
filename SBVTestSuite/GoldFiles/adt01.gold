@@ -18,9 +18,6 @@
                                                          (proj_2_SBVTuple3 T2)
                                                          (proj_3_SBVTuple3 T3))))))
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
-                                           ((left_SBVEither  (get_left_SBVEither  T1))
-                                            (right_SBVEither (get_right_SBVEither T2))))))
 [GOOD] (declare-datatype SBVRational ((SBV.Rational (sbv.rat.numerator Int) (sbv.rat.denominator Int))))
 
 [GOOD] (define-fun sbv.rat.eq ((x SBVRational) (y SBVRational)) Bool
@@ -36,6 +33,11 @@
 [GOOD] (declare-datatype Maybe (par (a) (
            (Nothing)
            (Just (getJust_1 a))
+       )))
+[GOOD] ; User defined ADT: Either
+[GOOD] (declare-datatype Either (par (a b) (
+           (Left (getLeft_1 a))
+           (Right (getRight_1 b))
        )))
 [GOOD] ; User defined ADT: ADT
 [GOOD] (declare-datatype ADT (
@@ -63,14 +65,14 @@
            (AString (getAString_1 String))
            (AList (getAList_1 (Seq Int)))
            (ATuple (getATuple_1 (SBVTuple2 (_ FloatingPoint 11 53) (Seq (SBVTuple2 (_ BitVec 5) (Seq (_ FloatingPoint  8 24)))))))
-           (AMaybe (getAMaybe_1 (Maybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool))))))
-           (AEither (getAEither_1 (SBVEither (SBVTuple2 (Maybe Int) Bool) (Seq Int))))
+           (AMaybe (getAMaybe_1 (Maybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (Either Int (_ FloatingPoint  8 24)) (Seq Bool))))))
+           (AEither (getAEither_1 (Either (SBVTuple2 (Maybe Int) Bool) (Seq Int))))
            (APair (getAPair_1 ADT) (getAPair_2 ADT))
            (KChar (getKChar_1 String))
            (KRational (getKRational_1 SBVRational))
        ))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () ADT ((as APair ADT) ((as AInt64 ADT) #x0000000000000004) ((as AMaybe ADT) ((as Just (Maybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (SBVEither Int (_ FloatingPoint  8 24)) (Seq Bool))))) (mkSBVTuple3 0.0 ((_ to_fp 8 24) roundNearestTiesToEven (/ 12.0 1.0)) (mkSBVTuple2 ((as left_SBVEither (SBVEither Int (_ FloatingPoint  8 24))) 3) (seq.++ (seq.unit false) (seq.unit true))))))))
+[GOOD] (define-fun s1 () ADT ((as APair ADT) ((as AInt64 ADT) #x0000000000000004) ((as AMaybe ADT) ((as Just (Maybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (Either Int (_ FloatingPoint  8 24)) (Seq Bool))))) (mkSBVTuple3 0.0 ((_ to_fp 8 24) roundNearestTiesToEven (/ 12.0 1.0)) (mkSBVTuple2 ((as Left (Either Int (_ FloatingPoint  8 24))) 3) (seq.++ (seq.unit false) (seq.unit true))))))))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () ADT) ; tracks user variable "e"
 [GOOD] (assert (and (= 1 (str.len (getKChar_1 s0)))
@@ -91,7 +93,7 @@
 [RECV] ((s0 (APair (AInt64 #x0000000000000004)
               (AMaybe (Just (mkSBVTuple3 0.0
                                          (fp #b0 #x82 #b10000000000000000000000)
-                                         (mkSBVTuple2 (left_SBVEither 3)
+                                         (mkSBVTuple2 (Left 3)
                                                       (seq.++ (seq.unit false)
                                                               (seq.unit true)))))))))
 

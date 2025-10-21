@@ -11,9 +11,6 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
-                                           ((left_SBVEither  (get_left_SBVEither  T1))
-                                            (right_SBVEither (get_right_SBVEither T2))))))
 [GOOD] ; --- ADTs  --- 
 [GOOD] ; User defined ADT: Maybe
 [GOOD] (declare-datatype Maybe (par (a) (
@@ -32,24 +29,29 @@
            (Assign (getAssign_1 var) (getAssign_2 (Expr var val)))
            (Seq (getSeq_1 (Stmt var val)) (getSeq_2 (Stmt var val)))
        )))
+[GOOD] ; User defined ADT: Either
+[GOOD] (declare-datatype Either (par (a b) (
+           (Left (getLeft_1 a))
+           (Right (getRight_1 b))
+       )))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (Stmt String (Maybe (SBVEither Int Bool)))) ; tracks user variable "p"
+[GOOD] (declare-fun s0 () (Stmt String (Maybe (Either Int Bool)))) ; tracks user variable "p"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Bool ((as is-Assign Bool) s0))
-[GOOD] (define-fun s2 () (Expr String (Maybe (SBVEither Int Bool))) (getAssign_2 s0))
+[GOOD] (define-fun s2 () (Expr String (Maybe (Either Int Bool))) (getAssign_2 s0))
 [GOOD] (define-fun s3 () Bool ((as is-Add Bool) s2))
-[GOOD] (define-fun s4 () (Expr String (Maybe (SBVEither Int Bool))) (getAdd_1 s2))
+[GOOD] (define-fun s4 () (Expr String (Maybe (Either Int Bool))) (getAdd_1 s2))
 [GOOD] (define-fun s5 () Bool ((as is-Con Bool) s4))
-[GOOD] (define-fun s6 () (Expr String (Maybe (SBVEither Int Bool))) (getAdd_2 s2))
+[GOOD] (define-fun s6 () (Expr String (Maybe (Either Int Bool))) (getAdd_2 s2))
 [GOOD] (define-fun s7 () Bool ((as is-Con Bool) s6))
-[GOOD] (define-fun s8 () (Maybe (SBVEither Int Bool)) (getCon_1 s4))
+[GOOD] (define-fun s8 () (Maybe (Either Int Bool)) (getCon_1 s4))
 [GOOD] (define-fun s9 () Bool ((as is-Nothing Bool) s8))
-[GOOD] (define-fun s10 () (Maybe (SBVEither Int Bool)) (getCon_1 s6))
+[GOOD] (define-fun s10 () (Maybe (Either Int Bool)) (getCon_1 s6))
 [GOOD] (define-fun s11 () Bool ((as is-Just Bool) s10))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
@@ -62,7 +64,7 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Assign "!0!" (Add (Con Nothing) (Con (Just (left_SBVEither 2)))))))
+[RECV] ((s0 (Assign "!0!" (Add (Con Nothing) (Con (Just (Left 2)))))))
 
 Got:
 !0! := (Nothing + Just (Left 2))
