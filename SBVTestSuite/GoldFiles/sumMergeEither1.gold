@@ -11,31 +11,33 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
-                                           ((left_SBVEither  (get_left_SBVEither  T1))
-                                            (right_SBVEither (get_right_SBVEither T2))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Either
+[GOOD] (declare-datatype Either (par (a b) (
+           (Left (getLeft_1 a))
+           (Right (getRight_1 b))
+       )))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (SBVEither Int Bool))
-[GOOD] (declare-fun s1 () (SBVEither Int Bool))
+[GOOD] (declare-fun s0 () (Either Int Bool))
+[GOOD] (declare-fun s1 () (Either Int Bool))
 [GOOD] (declare-fun s2 () Bool)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s3 () (SBVEither Int Bool) (ite s2 s0 s1))
-[GOOD] (define-fun s4 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Bool))) s3))
-[GOOD] (define-fun s5 () Bool (ite s4 true false))
+[GOOD] (define-fun s3 () (Either Int Bool) (ite s2 s0 s1))
+[GOOD] (define-fun s4 () Bool ((as is-Left Bool) s3))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s5)
+[GOOD] (assert s4)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (left_SBVEither 2)))
+[RECV] ((s0 (Left 2)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (left_SBVEither 2)))
+[RECV] ((s1 (Left 2)))
 [SEND] (get-value (s2))
 [RECV] ((s2 false))
 

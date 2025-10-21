@@ -11,32 +11,35 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
-                                           ((left_SBVEither  (get_left_SBVEither  T1))
-                                            (right_SBVEither (get_right_SBVEither T2))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Either
+[GOOD] (declare-datatype Either (par (a b) (
+           (Left (getLeft_1 a))
+           (Right (getRight_1 b))
+       )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () Int 1)
+[GOOD] (define-fun s3 () Int 1)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (SBVEither Int Int)) ; tracks user variable "x"
+[GOOD] (declare-fun s0 () (Either Int Int)) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Int (get_left_SBVEither s0))
-[GOOD] (define-fun s3 () Int (+ s1 s2))
-[GOOD] (define-fun s4 () (SBVEither Int Int) ((as left_SBVEither (SBVEither Int Int)) s3))
-[GOOD] (define-fun s5 () Int (get_right_SBVEither s0))
-[GOOD] (define-fun s6 () Int (+ s2 s5))
-[GOOD] (define-fun s7 () (SBVEither Int Int) ((as right_SBVEither (SBVEither Int Int)) s6))
-[GOOD] (define-fun s8 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Int))) s0))
-[GOOD] (define-fun s9 () (SBVEither Int Int) (ite s8 s4 s7))
-[GOOD] (define-fun s10 () Int (get_left_SBVEither s9))
-[GOOD] (define-fun s11 () Int (get_right_SBVEither s9))
-[GOOD] (define-fun s12 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Int))) s9))
-[GOOD] (define-fun s13 () Int (ite s12 s10 s11))
-[GOOD] (define-fun s14 () Int (ite s8 s1 s5))
-[GOOD] (define-fun s15 () Int (+ s2 s14))
+[GOOD] (define-fun s1 () Bool ((as is-Left Bool) s0))
+[GOOD] (define-fun s2 () Int (getLeft_1 s0))
+[GOOD] (define-fun s4 () Int (+ s2 s3))
+[GOOD] (define-fun s5 () (Either Int Int) ((as Left (Either Int Int)) s4))
+[GOOD] (define-fun s6 () Int (getRight_1 s0))
+[GOOD] (define-fun s7 () Int (+ s3 s6))
+[GOOD] (define-fun s8 () (Either Int Int) ((as Right (Either Int Int)) s7))
+[GOOD] (define-fun s9 () (Either Int Int) (ite s1 s5 s8))
+[GOOD] (define-fun s10 () Bool ((as is-Left Bool) s9))
+[GOOD] (define-fun s11 () Int (getLeft_1 s9))
+[GOOD] (define-fun s12 () Int (getRight_1 s9))
+[GOOD] (define-fun s13 () Int (ite s10 s11 s12))
+[GOOD] (define-fun s14 () Int (ite s1 s2 s6))
+[GOOD] (define-fun s15 () Int (+ s3 s14))
 [GOOD] (define-fun s16 () Bool (= s13 s15))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
@@ -44,8 +47,8 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (left_SBVEither 0)))
+[RECV] ((s0 (Left (- 1))))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Left 0 :: Either Integer Integer)], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Left (-1) :: Either Integer Integer)], modelUIFuns = []}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess
