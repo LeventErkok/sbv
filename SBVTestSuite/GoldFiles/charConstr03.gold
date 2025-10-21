@@ -8,18 +8,21 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has either type, using catch-all.
+[GOOD] (set-logic ALL) ; has user-defined data-types, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
-                                           ((left_SBVEither  (get_left_SBVEither  T1))
-                                            (right_SBVEither (get_right_SBVEither T2))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Either
+[GOOD] (declare-datatype Either (par (a b) (
+           (Left (getLeft_1 a))
+           (Right (getRight_1 b))
+       )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () (SBVEither String String) ((as left_SBVEither (SBVEither String String)) (_ char #x41)))
+[GOOD] (define-fun s1 () (Either String String) ((as Left (Either String String)) (_ char #x41)))
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (SBVEither String String)) ; tracks user variable "x"
-[GOOD] (assert (and (=> ((_ is (left_SBVEither (String) (SBVEither String String))) s0) (= 1 (str.len (get_left_SBVEither s0))))
-                    (=> ((_ is (right_SBVEither (String) (SBVEither String String))) s0) (= 1 (str.len (get_right_SBVEither s0))))
+[GOOD] (declare-fun s0 () (Either String String)) ; tracks user variable "x"
+[GOOD] (assert (and (= 1 (str.len (getLeft_1 s0)))
+                    (= 1 (str.len (getRight_1 s0)))
                ))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
@@ -33,7 +36,7 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (left_SBVEither "B")))
+[RECV] ((s0 (Left "B")))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Left 'B' :: Either Char Char)], modelUIFuns = []}
 DONE.*** Solver   : Z3

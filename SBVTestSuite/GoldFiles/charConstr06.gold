@@ -11,15 +11,18 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
-                                           ((left_SBVEither  (get_left_SBVEither  T1))
-                                            (right_SBVEither (get_right_SBVEither T2))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Either
+[GOOD] (declare-datatype Either (par (a b) (
+           (Left (getLeft_1 a))
+           (Right (getRight_1 b))
+       )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () (SBVEither String (SBVEither String Int)) ((as left_SBVEither (SBVEither String (SBVEither String Int))) (_ char #x41)))
+[GOOD] (define-fun s1 () (Either String (Either String Int)) ((as Left (Either String (Either String Int))) (_ char #x41)))
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (SBVEither String (SBVEither String Int))) ; tracks user variable "x"
-[GOOD] (assert (and (=> ((_ is (left_SBVEither (String) (SBVEither String (SBVEither String Int)))) s0) (= 1 (str.len (get_left_SBVEither s0))))
-                    (=> ((_ is (right_SBVEither ((SBVEither String Int)) (SBVEither String (SBVEither String Int)))) s0) (=> ((_ is (left_SBVEither (String) (SBVEither String Int))) (get_right_SBVEither s0)) (= 1 (str.len (get_left_SBVEither (get_right_SBVEither s0))))))
+[GOOD] (declare-fun s0 () (Either String (Either String Int))) ; tracks user variable "x"
+[GOOD] (assert (and (= 1 (str.len (getLeft_1 s0)))
+                    (= 1 (str.len (getLeft_1 (getRight_1 s0))))
                ))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
@@ -33,7 +36,7 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 ((as left_SBVEither (SBVEither String (SBVEither String Int))) "B")))
+[RECV] ((s0 ((as Left (Either String (Either String Int))) "B")))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Left 'B' :: Either Char (Either Char Integer))], modelUIFuns = []}
 DONE.*** Solver   : Z3

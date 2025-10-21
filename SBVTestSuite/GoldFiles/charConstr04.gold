@@ -11,14 +11,17 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
-                                           ((left_SBVEither  (get_left_SBVEither  T1))
-                                            (right_SBVEither (get_right_SBVEither T2))))))
+[GOOD] ; --- ADTs  --- 
+[GOOD] ; User defined ADT: Either
+[GOOD] (declare-datatype Either (par (a b) (
+           (Left (getLeft_1 a))
+           (Right (getRight_1 b))
+       )))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () (SBVEither Int String) ((as right_SBVEither (SBVEither Int String)) (_ char #x41)))
+[GOOD] (define-fun s1 () (Either Int String) ((as Right (Either Int String)) (_ char #x41)))
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (SBVEither Int String)) ; tracks user variable "x"
-[GOOD] (assert (=> ((_ is (right_SBVEither (String) (SBVEither Int String))) s0) (= 1 (str.len (get_right_SBVEither s0)))))
+[GOOD] (declare-fun s0 () (Either Int String)) ; tracks user variable "x"
+[GOOD] (assert (= 1 (str.len (getRight_1 s0))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
@@ -31,7 +34,7 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (left_SBVEither 2)))
+[RECV] ((s0 (Left 2)))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Left 2 :: Either Integer Char)], modelUIFuns = []}
 DONE.*** Solver   : Z3
