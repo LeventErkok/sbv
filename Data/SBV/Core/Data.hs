@@ -566,9 +566,6 @@ class (HasKind a, Typeable a, Arbitrary a) => SymVal a where
   -- | Extract a literal, from a CV representation
   fromCV :: CV -> a
 
-  -- | Does it concretely satisfy the given predicate?
-  isConcretely :: SBV a -> (a -> Bool) -> Bool
-
   -- | If bounded, what's the min/max value for this type?
   -- If the underlying type is bounded, we have a default below. Otherwise it's nothing.
   minMaxBound :: Maybe (a, a)
@@ -576,11 +573,19 @@ class (HasKind a, Typeable a, Arbitrary a) => SymVal a where
   {-# MINIMAL literal, fromCV #-}
 
   default mkSymVal :: MonadSymbolic m => VarContext -> Maybe String -> m (SBV a)
-  mkSymVal vc mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar vc (kindOf (undefined :: a)) mbNm)
+  mkSymVal vc mbNm = do env <- symbolicEnv
+                        sval <- liftIO  $ svMkSymVar vc (kindOf (undefined :: a)) mbNm env
+                        symValInit (SBV sval)
 
   default minMaxBound :: Bounded a => Maybe (a, a)
   minMaxBound = Just (minBound, maxBound)
 
+  -- | Extra initialization for this type. Typically nothing.
+  symValInit :: MonadSymbolic m => SBV a -> m (SBV a)
+  symValInit = pure
+
+  -- | Does it concretely satisfy the given predicate?
+  isConcretely :: SBV a -> (a -> Bool) -> Bool
   isConcretely s p
     | Just i <- unliteral s = p i
     | True                  = False
