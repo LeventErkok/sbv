@@ -22,7 +22,6 @@ module TestSuite.ADT.ADT(tests) where
 import Utils.SBVTestFramework
 import Data.SBV.Control
 import Data.SBV.Maybe
-import Data.Proxy
 
 data ADT  = AEmpty
           | ABool     Bool

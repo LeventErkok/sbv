@@ -23,8 +23,6 @@ import Data.SBV
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
-import Data.Proxy
-
 import Data.SBV.RegExp
 import Data.SBV.Tuple
 import Data.SBV.Maybe
