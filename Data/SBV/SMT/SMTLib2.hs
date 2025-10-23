@@ -44,6 +44,8 @@ import qualified Data.Graph as DG
 
 
 -- Check that all ADT subkinds are registered. If not, tell the user to do so
+-- NB. This should not be the case as we "automatically" register the subkinds
+-- as we encounter them. But this is mostly a if-something-goes-wrong check.
 checkKinds :: [Kind] -> Maybe String
 checkKinds ks = case [m | m@(n, _) <- apps, n `notElem` defs] of
                   []       -> Nothing
@@ -53,11 +55,13 @@ checkKinds ks = case [m | m@(n, _) <- apps, n `notElem` defs] of
                                   plu | length xs > 1 = "s are"
                                       | True          = " is"
                               in Just $ unlines $ [
-                                    "Data.SBV.mkSymbolic: Unregistered subkinds."
+                                    "Data.SBV.mkSymbolic: Impossible happened! Unregistered subkinds."
                                   , "***"
                                   , "*** The following kind" ++ plu ++ " not registered: " ++ unwords (map fst xs)
                                   , "***"
-                                  , "*** You should register each ADT subfield, using: "
+                                  , "*** Please report this as a bug."
+                                  , "***"
+                                  , "*** As a workaround, you can try registering each ADT subfield, using: "
                                   , "***"
                                   , "***    {-# LANGUAGE TypeApplications #-}"
                                   , "***"
@@ -66,7 +70,8 @@ checkKinds ks = case [m | m@(n, _) <- apps, n `notElem` defs] of
                                   ]
                                ++ extras cnt
                                ++ [ "***"
-                                  , "*** Please get in touch if this is not feasible for your application."
+                                  , "*** Even if the workaround does the trick for you, it should not"
+                                  , "*** be needed. Please report this as a bug!"
                                   ]
 
 

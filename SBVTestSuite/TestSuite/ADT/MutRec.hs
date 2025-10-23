@@ -113,8 +113,6 @@ tests =
 t00 :: FilePath -> Symbolic ()
 t00 rf = do p :: SStmt String Integer <- free "p"
 
-            registerType (Proxy @(Expr Integer Integer))
-
             -- Make sure there's some structure to the program:
             constrain $ isSeq    p
             constrain $ isSeq    (getSeq_2 p)

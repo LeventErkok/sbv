@@ -560,6 +560,10 @@ class (HasKind a, Typeable a, Arbitrary a) => SymVal a where
   -- | Generalization of 'Data.SBV.mkSymVal'
   mkSymVal :: MonadSymbolic m => VarContext -> Maybe String -> m (SBV a)
 
+  -- | Certain types (ADTs) might need to do further initialization.
+  mkSymValInit :: State -> SBV a -> IO ()
+  mkSymValInit _ _ = pure ()
+
   -- | Turn a literal constant to symbolic
   literal :: a -> SBV a
 
@@ -576,7 +580,10 @@ class (HasKind a, Typeable a, Arbitrary a) => SymVal a where
   {-# MINIMAL literal, fromCV #-}
 
   default mkSymVal :: MonadSymbolic m => VarContext -> Maybe String -> m (SBV a)
-  mkSymVal vc mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar vc (kindOf (undefined :: a)) mbNm)
+  mkSymVal vc mbNm = do st <- symbolicEnv
+                        liftIO $ do v <- SBV <$> svMkSymVar vc (kindOf (undefined :: a)) mbNm st
+                                    mkSymValInit st v
+                                    pure v
 
   default minMaxBound :: Bounded a => Maybe (a, a)
   minMaxBound = Just (minBound, maxBound)

@@ -58,6 +58,8 @@ import Data.SBV.Core.Concrete (cvRank)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.SizedFloats
+import Data.SBV.Core.Symbolic (registerKind)
+
 import Data.SBV.Provers.Prover
 import qualified Data.SBV.List as SL
 
@@ -194,7 +196,6 @@ mkADT adtKind typeName params cstrs = do
                   ADTEnum          -> True
                   ADTFull          -> False
 
-
         -- Given Cstr f1 f2 f3, generate the clause:
         --     inp@(Cstr [f1, f2, f3]) = case sequenceA [unlitCV (literal f1), unlitCV (literal f2), unlitCV (literal f3)] of
         --                                 Just c  -> let k = kindOf inp
@@ -281,11 +282,28 @@ mkADT adtKind typeName params cstrs = do
                        in [| Just ($minb, $maxb) |]
                   else [| Nothing |]
 
+    -- make the initializer to get the subtypes registered
+    st <- TH.newName "_st"  -- Get an underscored name here, since st might go unused if there're no subtypes
+    register <- do let concretize b@TH.ConT{}     = b
+                       concretize TH.VarT{}       = TH.ConT ''Integer
+                       concretize (TH.AppT l arg) = TH.AppT (concretize l) (concretize arg)
+                       concretize r               = r
+
+                   end <- TH.noBindS [| return () |]
+                   pure $ TH.DoE Nothing $ [TH.NoBindS (TH.AppE (TH.AppE (TH.VarE 'registerKind) (TH.VarE st))
+                                                                (TH.AppE (TH.VarE 'kindOf)
+                                                                         (TH.AppTypeE (TH.ConE 'Proxy) (concretize t))))
+                                           | (_, fts) <- cstrs, (_, t, KApp n _) <- fts, n /= TH.nameBase typeName
+                                           ] ++ [end]
+
+    let regFun = TH.FunD 'mkSymValInit [TH.Clause [TH.VarP st, TH.WildP] (TH.NormalB register) []]
+
     let symVal = TH.InstanceD
                       Nothing
                       symCtx
                       (TH.AppT (TH.ConT ''SymVal) typeCon)
                       [ litFun
+                      , regFun
                       , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB mmBound)   []]
                       , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV) []]
                        ]

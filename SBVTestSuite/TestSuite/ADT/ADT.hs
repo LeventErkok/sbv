@@ -76,8 +76,6 @@ tests =
 
 checkWith :: Symbolic () -> FilePath -> IO ()
 checkWith props rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
-        registerType (Proxy @(Maybe  Integer))
-        registerType (Proxy @(Either Integer Integer))
         _ <- props
         query $ do cs <- checkSat
                    case cs of
@@ -106,9 +104,7 @@ t04 :: FilePath -> IO ()
 t04 rf = do AllSatResult _ _ _ ms <- allSatWith z3{verbose=True, redirectVerbose = Just rf} t
             let sh m = appendFile rf $ "\nMODEL:" ++ show (SatResult m)
             mapM_ sh ms
-  where t = do registerType (Proxy @(Maybe Integer))
-               registerType (Proxy @(Either Integer Integer))
-               a :: SADT <- free "a"
+  where t = do a :: SADT <- free "a"
                constrain $ isAInteger a
                constrain $ getAInteger_1 a .>= 0
                constrain $ getAInteger_1 a .<= 5
@@ -118,16 +114,13 @@ t05 :: FilePath -> IO ()
 t05 rf = do AllSatResult _ _ _ ms <- allSatWith cvc5{verbose=True, redirectVerbose = Just rf, allSatMaxModelCount=Just 10} t
             let sh m = appendFile rf $ "\nMODEL:" ++ show (SatResult m)
             mapM_ sh ms
-  where t = do registerType (Proxy @(Maybe Integer))
-               registerType (Proxy @(Either Integer Integer))
-               a :: SADT <- free "a"
+  where t = do a :: SADT <- free "a"
                b :: SADT <- free "b"
                constrain $ isAFloat a .&& getAFloat_1 a .== 4
                constrain $ isAFloat b .&& fpIsNaN (getAFloat_1 b)
 
 t06 :: FilePath -> IO ()
 t06 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
-             registerType (Proxy @(Maybe Integer))
              a :: SADT <- free "a"
              constrain $ isAMaybe a
              constrain $ isJust (getAMaybe_1 a)
