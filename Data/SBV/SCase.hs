@@ -20,7 +20,7 @@
 
 module Data.SBV.SCase (sCase) where
 
-import Language.Haskell.TH
+import Language.Haskell.TH       hiding (nameBase)
 import Language.Haskell.TH.Quote
 import qualified Language.Haskell.Meta.Parse as Meta
 
@@ -31,6 +31,7 @@ import Control.Monad (unless, when, zipWithM)
 import Data.SBV.Client (getConstructors)
 import Data.SBV.Core.Model (ite, sym)
 import Data.SBV.Core.Data  (sTrue, (.&&))
+import Data.SBV.SMT.SMTLibNames(thNameToSBV)
 
 import Data.Char  (isSpace, isDigit)
 import Data.List  (intercalate)
@@ -88,8 +89,8 @@ showCase = showCaseGen Nothing
 -- | Show a case nicely, with location
 showCaseGen :: Maybe Loc -> Case -> String
 showCaseGen mbLoc sc = case sc of
-                         CMatch _ c (Just ps) mbG _ _ -> loc ++ unwords (nameBase c : map pprint ps ++ shGuard mbG)
-                         CMatch _ c Nothing   mbG _ _ -> loc ++ unwords (nameBase c : "{}"           : shGuard mbG)
+                         CMatch _ c (Just ps) mbG _ _ -> loc ++ unwords (thNameToSBV c : map pprint ps ++ shGuard mbG)
+                         CMatch _ c Nothing   mbG _ _ -> loc ++ unwords (thNameToSBV c : "{}"           : shGuard mbG)
                          CWild  _             mbG _   -> loc ++ unwords ("_"                         : shGuard mbG)
  where shGuard Nothing  = []
        shGuard (Just e) = ["|", pprint e]
@@ -196,7 +197,7 @@ sCase = QuasiQuoter
 
             -- Is this literally sTrue? This is a bit dangerous since
             -- we just look at the base-name, but good enough
-            isSTrue (VarE nm) = nameBase nm == nameBase 'sTrue
+            isSTrue (VarE nm) = thNameToSBV nm == thNameToSBV 'sTrue
             isSTrue _         = False
 
     -- Turn where clause into simple let
@@ -206,7 +207,7 @@ sCase = QuasiQuoter
 
     -- Given an occurrence of a name, find what it refers to
     getReference :: Offset -> Name -> Q Name
-    getReference off refName = do mbN <- lookupValueName (nameBase refName)
+    getReference off refName = do mbN <- lookupValueName (thNameToSBV refName)
                                   case mbN of
                                     Nothing -> fail off $ "sCase: Not in scope: data constructor: " <> pprint refName
                                     Just n  -> pure n
@@ -272,7 +273,7 @@ sCase = QuasiQuoter
                            Just cnt -> unless (length ts == cnt)
                                             $ fail o $ unlines [ "sCase: Arity mismatch."
                                                                , "        Type       : " ++ typ
-                                                               , "        Constructor: " ++ nameBase nm
+                                                               , "        Constructor: " ++ thNameToSBV nm
                                                                , "        Expected   : " ++ show (length ts)
                                                                , "        Given      : " ++ show cnt
                                                                ]
@@ -300,9 +301,9 @@ sCase = QuasiQuoter
              | True        = problem "Non-exhaustive match" []                                x
 
             nonExhaustive o cstr = fail o $ unlines [ "sCase: Pattern match(es) are non-exhaustive."
-                                                    , "        Not matched     : " ++ nameBase cstr
+                                                    , "        Not matched     : " ++ thNameToSBV cstr
                                                     , "        Patterns of type: " ++ typ
-                                                    , "        Must match each : " ++ intercalate ", " (map (nameBase . fst) cstrs)
+                                                    , "        Must match each : " ++ intercalate ", " (map (thNameToSBV . fst) cstrs)
                                                     , ""
                                                     , "      You can use a '_' to match multiple cases."
                                                     ]
@@ -425,9 +426,9 @@ sCase = QuasiQuoter
                                                          , "        Unable to determine params for: " <> pprint nm
                                                          ]
                              Just ts -> do let pats = fromMaybe (map (const WildP) ts) mbp
-                                               args = [ AppE (VarE (mkName ("get" ++ nameBase nm ++ "_" ++ show i))) scrut
+                                               args = [ AppE (VarE (mkName ("get" ++ thNameToSBV nm ++ "_" ++ show i))) scrut
                                                       | (i, _) <- zip [(1 :: Int) ..] ts]
-                                               rec  = VarE $ mkName $ "is" ++ nameBase nm
+                                               rec  = VarE $ mkName $ "is" ++ thNameToSBV nm
 
                                                -- What are the free variables in the guard and the rhs that we bind?
                                                used    = Set.fromList [n | VarP n <- pats] `Set.intersection` allUsed

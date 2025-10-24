@@ -11,9 +11,11 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.SMT.SMTLibNames (isReserved) where
+module Data.SBV.SMT.SMTLibNames (isReserved, thNameToSBV) where
 
 import Data.Char (toLower)
+
+import Language.Haskell.TH as TH
 
 -- | Names reserved by SMTLib, all lower-case. This list is current as of Dec 6 2015; but of course
 -- there's no guarantee it'll stay that way.
@@ -32,3 +34,7 @@ smtLibReservedNames = map (map toLower)
 -- | Is this name reserved? Note that we'll ignore case in checking here. This is probably over-cautious.
 isReserved :: String -> Bool
 isReserved = (`elem` smtLibReservedNames)
+
+-- | Turn a TH name to an SBV acceptable name
+thNameToSBV :: TH.Name -> String
+thNameToSBV = TH.nameBase
