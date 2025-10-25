@@ -37,4 +37,12 @@ isReserved = (`elem` smtLibReservedNames)
 
 -- | Turn a TH name to an SBV acceptable name
 thNameToSBV :: TH.Name -> String
-thNameToSBV = TH.nameBase
+thNameToSBV = concatMap sanitize . TH.nameBase
+ where sanitize '(' = "_lp_"
+       sanitize ')' = "_rp_"
+       sanitize '[' = "_ls_"
+       sanitize ']' = "_rs_"
+       sanitize '{' = "_lc_"
+       sanitize '}' = "_rc_"
+       sanitize ',' = "_c_"
+       sanitize c = [c]
