@@ -20,6 +20,9 @@
   * Added examples under Documentation.SBV.Examples.ADT, demonstrating the use of basic ADTs and a case study 
     of modeling type-checking constraints.
 
+  * Added Documentation.SBV.Examples.TP.VM demonstrating the correctness of a simple interpreter over an expression
+    language with respect to a version that compiles the expression and runs the insturctions over a virtual machine.
+
   * [BACKWARDS COMPATIBILITY] The old functions 'mkSymbolicEnumeration' and 'mkUninterpretedSort' are now removed,
     since their functionality is subsumed by 'mkSymbolic'.
 
