@@ -262,6 +262,7 @@ Library
                   , Documentation.SBV.Examples.TP.StrongInduction
                   , Documentation.SBV.Examples.TP.SumReverse
                   , Documentation.SBV.Examples.TP.Tao
+                  , Documentation.SBV.Examples.TP.VM
                   , Documentation.SBV.Examples.Transformers.SymbolicEval
                   , Documentation.SBV.Examples.Uninterpreted.AUF
                   , Documentation.SBV.Examples.Uninterpreted.Deduce
