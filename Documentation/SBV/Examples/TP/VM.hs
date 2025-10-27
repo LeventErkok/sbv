@@ -154,6 +154,11 @@ correctness = runTP $ do
                                             =: run (run es (x .: xs)) ys
                                             =: qed
 
+   -- Running one instruction is equal to just executing it
+   runOne <- lemma "runOne"
+                   (\(Forall @"es" (es :: EnvStack nm val)) (Forall @"i" i) -> run es [i] .== execute es i)
+                   []
+
    -- A more general version of the theorem, starting with an arbitrary env and stack.
    -- We prove this using the induction principle for expressions.
    helper <- do
@@ -192,17 +197,77 @@ correctness = runTP $ do
                                  =: tuple (env, push (interpInEnv env (sInc e)) stk)
                                  =: qed
 
-      caseAdd <- lemma "caseAdd"
-                       (\(Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk) -> mkCase (sAdd a b) env stk)
-                       [sorry]
+      -- Not sure why, but z3 can't prove this one, but proves the multiply case just fine
+      caseAdd <- calcWith cvc5 "caseAdd"
+                      (\(Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk) ->
+                                mkCase a env stk
+                            .&& quantifiedBool (\(Forall stk') -> mkCase b env stk')
+                            .=> mkCase (sAdd a b) env stk) $
+                      \a b env stk -> [ mkCase a env stk
+                                      , quantifiedBool (\(Forall stk') -> mkCase b env stk')
+                                      ]
+                                   |- run (tuple (env, stk)) (compile (sAdd a b))
+                                   =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIAdd])
+                                   ?? runSeq
+                                   =: run (run (tuple (env, stk)) (compile a)) (compile b SL.++ [sIAdd])
+                                   =: run (tuple (env, push (interpInEnv env a) stk)) (compile b SL.++ [sIAdd])
+                                   ?? runSeq
+                                   =: run (run (tuple (env, push (interpInEnv env a) stk)) (compile b)) [sIAdd]
+                                   =: run (tuple (env, push (interpInEnv env b) (push (interpInEnv env a) stk))) [sIAdd]
+                                   =: execute (tuple (env, push (interpInEnv env b) (push (interpInEnv env a) stk))) sIAdd
+                                   =: tuple (env, push (interpInEnv env b + interpInEnv env a) stk)
+                                   =: tuple (env, push (interpInEnv env a + interpInEnv env b) stk)
+                                   =: tuple (env, push (interpInEnv env (sAdd a b)) stk)
+                                   =: qed
 
-      caseMul <- lemma "caseMul"
-                       (\(Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk) -> mkCase (sMul a b) env stk)
-                       [sorry]
+      caseMul <- calc "caseMul"
+                      (\(Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk) ->
+                                mkCase a env stk
+                            .&& quantifiedBool (\(Forall stk') -> mkCase b env stk')
+                            .=> mkCase (sMul a b) env stk) $
+                      \a b env stk -> [ mkCase a env stk
+                                      , quantifiedBool (\(Forall stk') -> mkCase b env stk')
+                                      ]
+                                   |- run (tuple (env, stk)) (compile (sMul a b))
+                                   =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIMul])
+                                   ?? runSeq
+                                   =: run (run (tuple (env, stk)) (compile a)) (compile b SL.++ [sIMul])
+                                   =: run (tuple (env, push (interpInEnv env a) stk)) (compile b SL.++ [sIMul])
+                                   ?? runSeq
+                                   =: run (run (tuple (env, push (interpInEnv env a) stk)) (compile b)) [sIMul]
+                                   =: run (tuple (env, push (interpInEnv env b) (push (interpInEnv env a) stk))) [sIMul]
+                                   =: execute (tuple (env, push (interpInEnv env b) (push (interpInEnv env a) stk))) sIMul
+                                   =: tuple (env, push (interpInEnv env b * interpInEnv env a) stk)
+                                   =: tuple (env, push (interpInEnv env a * interpInEnv env b) stk)
+                                   =: tuple (env, push (interpInEnv env (sMul a b)) stk)
+                                   =: qed
 
-      caseLet <- lemma "caseLet"
-                       (\(Forall @"nm" nm) (Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk) -> mkCase (sLet nm a b) env stk)
-                       [sorry]
+      caseLet <- calc "caseLet"
+                      (\(Forall @"nm" nm) (Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk)
+                           ->  mkCase a env stk
+                           .&& quantifiedBool (\(Forall env') (Forall stk') -> mkCase b env' stk')
+                           .=> mkCase (sLet nm a b) env stk) $
+                      \nm a b env stk
+                       -> [   mkCase a env stk
+                          .&& quantifiedBool (\(Forall env') (Forall stk') -> mkCase b env' stk')
+                          ]
+                       |- run (tuple (env, stk)) (compile (sLet nm a b))
+                       =: run (tuple (env, stk)) (compile a SL.++ [sIBind nm] SL.++ compile b SL.++ [sIForget])
+                       ?? runSeq
+                       =: run (run (tuple (env, stk)) (compile a)) ([sIBind nm] SL.++ compile b SL.++ [sIForget])
+                       =: run (tuple (env, push (interpInEnv env a) stk)) ([sIBind nm] SL.++ compile b SL.++ [sIForget])
+                       ?? runSeq
+                       =: run (run (tuple (env, push (interpInEnv env a) stk)) [sIBind nm]) (compile b SL.++ [sIForget])
+                       ?? runOne
+                       =: run (execute (tuple (env, push (interpInEnv env a) stk)) (sIBind nm)) (compile b SL.++ [sIForget])
+                       =: run (tuple (push (tuple (nm, interpInEnv env a)) env, stk)) (compile b SL.++ [sIForget])
+                       ?? runSeq
+                       =: run (run (tuple (push (tuple (nm, interpInEnv env a)) env, stk)) (compile b)) [sIForget]
+                       =: run (tuple (push (tuple (nm, interpInEnv env a)) env,
+                                      push (interpInEnv (push (tuple (nm, interpInEnv env a)) env) b) stk))
+                              [sIForget]
+                       =: tuple (env, push (interpInEnv env (sLet nm a b)) stk)
+                       =: qed
 
       inductiveLemma "helper"
                      (\(Forall @"e" e) (Forall @"env" (env :: Env nm val)) (Forall @"stk" stk)
