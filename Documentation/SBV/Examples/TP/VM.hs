@@ -270,8 +270,7 @@ correctness = runTP $ do
                        =: qed
 
       inductiveLemma "helper"
-                     (\(Forall @"e" e) (Forall @"env" (env :: Env nm val)) (Forall @"stk" stk)
-                          -> tuple (env, push (interpInEnv env e) stk) .== run (tuple (env, stk)) (compile e))
+                     (\(Forall @"e" e) (Forall @"env" (env :: Env nm val)) (Forall @"stk" stk) -> mkCase e env stk)
                      [ proofOf caseVar
                      , proofOf caseCon
                      , proofOf caseSqr
