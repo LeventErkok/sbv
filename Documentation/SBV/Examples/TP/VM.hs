@@ -180,7 +180,9 @@ correctness = runTP $ do
 
       -- The following cases are required so the induction principle can complete the proof
       caseSqr <- calc "caseSqr"
-                       (\(Forall @"e" e) (Forall @"env" env) (Forall @"stk" stk) -> mkCase e env stk .=> mkCase (sSqr e) env stk) $
+                       (\(Forall @"e" e) (Forall @"env" env) (Forall @"stk" stk) ->
+                                    quantifiedBool (\(Forall env') (Forall stk') -> mkCase e env' stk')
+                                .=> mkCase (sSqr e) env stk) $
                        \e env stk -> [mkCase e env stk]
                                   |- run (tuple (env, stk)) (compile (sSqr e))
                                   =: run (tuple (env, stk)) (compile e SL.++ [sIDup, sIMul])
@@ -189,7 +191,9 @@ correctness = runTP $ do
                                   =: qed
 
       caseInc <- calc "caseInc"
-                      (\(Forall @"e" e) (Forall @"env" env) (Forall @"stk" stk) -> mkCase e env stk .=> mkCase (sInc e) env stk) $
+                      (\(Forall @"e" e) (Forall @"env" env) (Forall @"stk" stk) ->
+                                   quantifiedBool (\(Forall env') (Forall stk') -> mkCase e env' stk')
+                               .=> mkCase (sInc e) env stk) $
                       \e env stk -> [mkCase e env stk]
                                  |- run (tuple (env, stk)) (compile (sInc e))
                                  =: run (tuple (env, stk)) (compile e SL.++ [sIPushV 1, sIAdd])
@@ -200,8 +204,8 @@ correctness = runTP $ do
       -- Not sure why, but z3 can't prove this one, but proves the multiply case just fine
       caseAdd <- calcWith cvc5 "caseAdd"
                       (\(Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk) ->
-                                mkCase a env stk
-                            .&& quantifiedBool (\(Forall stk') -> mkCase b env stk')
+                                quantifiedBool (\(Forall env') (Forall stk') -> mkCase a env' stk')
+                            .&& quantifiedBool (\(Forall env') (Forall stk') -> mkCase b env' stk')
                             .=> mkCase (sAdd a b) env stk) $
                       \a b env stk -> [ mkCase a env stk
                                       , quantifiedBool (\(Forall stk') -> mkCase b env stk')
@@ -222,8 +226,8 @@ correctness = runTP $ do
 
       caseMul <- calc "caseMul"
                       (\(Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk) ->
-                                mkCase a env stk
-                            .&& quantifiedBool (\(Forall stk') -> mkCase b env stk')
+                                quantifiedBool (\(Forall env') (Forall stk') -> mkCase a env' stk')
+                            .&& quantifiedBool (\(Forall env') (Forall stk') -> mkCase b env' stk')
                             .=> mkCase (sMul a b) env stk) $
                       \a b env stk -> [ mkCase a env stk
                                       , quantifiedBool (\(Forall stk') -> mkCase b env stk')
@@ -244,7 +248,7 @@ correctness = runTP $ do
 
       caseLet <- calc "caseLet"
                       (\(Forall @"nm" nm) (Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk)
-                           ->  mkCase a env stk
+                           ->  quantifiedBool (\(Forall env') (Forall stk') -> mkCase a env' stk')
                            .&& quantifiedBool (\(Forall env') (Forall stk') -> mkCase b env' stk')
                            .=> mkCase (sLet nm a b) env stk) $
                       \nm a b env stk

@@ -43,6 +43,7 @@ import qualified Control.Exception as C
 
 import Data.Maybe (fromMaybe)
 
+import Data.Char
 import Data.Word
 import Data.Int
 import Data.Ratio
@@ -800,7 +801,7 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
    extraSyms  <- mapM (const (TH.newName "extraS")) [0 .. extraArgCnt-1]
    extraTypes <- mapM (const (TH.newName "extraT")) [0 .. extraArgCnt-1]
 
-   let mkLam as = TH.lamE (map (\a -> TH.conP 'Forall [TH.varP a]) (as ++ extraNames))
+   let mkLam = TH.lamE . map (\a -> TH.conP 'Forall [TH.varP a])
 
    let mkIndCase :: (TH.Name, [(Maybe TH.Name, TH.Type, Kind)]) -> TH.Q TH.Exp
        mkIndCase (cstr, flds)
@@ -815,11 +816,14 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
                                             KApp t ps -> t == btype && ps == map (KVar . TH.nameBase) params
                                             _         -> False
                   recFields = [a | (a, f) <- zip as flds, isRecursive f]
+
               TH.appE (TH.varE 'quantifiedBool)
-                      (mkLam as (mkImp recFields (foldl TH.appE
-                                                        (TH.appE (TH.varE pf) (foldl TH.appE scstr (map TH.varE as)))
-                                                        (map TH.varE extraNames))))
+                      (mkLam (as ++ extraNames)
+                             (mkImp recFields (foldl TH.appE
+                                                     (TH.appE (TH.varE pf) (foldl TH.appE scstr (map TH.varE as)))
+                                                     (map TH.varE extraNames))))
          where cnm   = TH.nameBase cstr
+               lcnm  = map toLower cnm
                scstr = TH.varE (TH.mkName ('s' : cnm))
 
                mkImp []  e = e
@@ -827,12 +831,14 @@ mkInductionSchema typeName params cstrs extraArgCnt = do
                mkImp is  e = foldl1 TH.appE [TH.varE '(.=>), foldl1 TH.appE [TH.varE 'sAnd, TH.listE (map assume is)], e]
 
                assume :: TH.Name -> TH.Q TH.Exp
-               assume n = foldl TH.appE (TH.varE pf) (map TH.varE (n : extraNames))
+               assume n = do en <- mapM (const (TH.newName (lcnm ++ "_extraN"))) [0 .. extraArgCnt-1]
+                             TH.appE (TH.varE 'quantifiedBool)
+                                     (mkLam en (foldl TH.appE (TH.varE pf) (map TH.varE (n : en))))
 
    cases <- mapM mkIndCase cstrs
    post  <- do a <- TH.newName "recVal"
                TH.appE (TH.varE 'quantifiedBool)
-                       (mkLam [a] $ foldl TH.appE (TH.varE pf) (map TH.varE (a : extraNames)))
+                       (mkLam (a : extraNames) $ foldl TH.appE (TH.varE pf) (map TH.varE (a : extraNames)))
 
    propName <- TH.newName "prop"
    argName  <- TH.newName "a"
