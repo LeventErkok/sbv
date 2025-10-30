@@ -9,6 +9,7 @@
 -- Correctness of a simple interpreter vs virtual-machine interpretation of a language.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
@@ -27,6 +28,12 @@ import Data.SBV.Tuple as ST
 import Data.SBV.List  as SL
 
 import Data.SBV.TP
+
+#ifdef DOCTEST
+-- $setup
+-- >>> import Data.SBV.TP
+-- >>> :set -XTypeApplications
+#endif
 
 -- * Language
 
@@ -152,6 +159,79 @@ compileAndRun = top . ST.snd . run (tuple ([], [])) . compile
 -- first compiling it to virtual-machine instructions, and then running them.
 --
 -- >>> runTP (correctness @String @Integer)
+-- Inductive lemma: runSeq
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: runOne                           Q.E.D.
+-- Lemma: runTwo
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: runMul                           Q.E.D.
+-- Lemma: measureNonNeg                    Q.E.D.
+-- Inductive lemma (strong): helper
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (7 way case split)
+--     Step: 1.1.1 (case Var)              Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1 (case Con)              Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.3.1 (case Sqr)              Q.E.D.
+--     Step: 1.3.2                         Q.E.D.
+--     Step: 1.3.3                         Q.E.D.
+--     Step: 1.3.4                         Q.E.D.
+--     Step: 1.3.5                         Q.E.D.
+--     Step: 1.3.6                         Q.E.D.
+--     Step: 1.3.7                         Q.E.D.
+--     Step: 1.4.1 (case Inc)              Q.E.D.
+--     Step: 1.4.2                         Q.E.D.
+--     Step: 1.4.3                         Q.E.D.
+--     Step: 1.4.4                         Q.E.D.
+--     Step: 1.4.5                         Q.E.D.
+--     Step: 1.4.6                         Q.E.D.
+--     Step: 1.4.7                         Q.E.D.
+--     Step: 1.5.1 (case sAdd)             Q.E.D.
+--     Step: 1.5.2                         Q.E.D.
+--     Step: 1.5.3                         Q.E.D.
+--     Step: 1.5.4                         Q.E.D.
+--     Step: 1.5.5                         Q.E.D.
+--     Step: 1.5.6                         Q.E.D.
+--     Step: 1.5.7                         Q.E.D.
+--     Step: 1.5.8                         Q.E.D.
+--     Step: 1.5.9                         Q.E.D.
+--     Step: 1.6.1 (case sMul)             Q.E.D.
+--     Step: 1.6.2                         Q.E.D.
+--     Step: 1.6.3                         Q.E.D.
+--     Step: 1.6.4                         Q.E.D.
+--     Step: 1.6.5                         Q.E.D.
+--     Step: 1.6.6                         Q.E.D.
+--     Step: 1.6.7                         Q.E.D.
+--     Step: 1.6.8                         Q.E.D.
+--     Step: 1.6.9                         Q.E.D.
+--     Step: 1.7.1 (case Let)              Q.E.D.
+--     Step: 1.7.2                         Q.E.D.
+--     Step: 1.7.3                         Q.E.D.
+--     Step: 1.7.4                         Q.E.D.
+--     Step: 1.7.5                         Q.E.D.
+--     Step: 1.7.6                         Q.E.D.
+--     Step: 1.7.7                         Q.E.D.
+--     Step: 1.7.8                         Q.E.D.
+--     Step: 1.7.9                         Q.E.D.
+--     Step: 1.7.10                        Q.E.D.
+--     Step: 1.7.11                        Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: correctness
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] correctness :: Ɐexpr ∷ (Expr [Char] Integer) → Bool
 correctness :: forall nm val. (SymVal nm, SymVal val, Num (SBV val)) => TP (Proof (Forall "expr" (Expr nm val) -> SBool))
 correctness = do
 
@@ -203,8 +283,9 @@ correctness = do
                (\(Forall @"e" e) (Forall @"env" (env :: Env nm val)) (Forall @"stk" stk) ->
                              run (tuple (env, stk)) (compile e)
                          .== tuple (env, push (interpInEnv env e) stk))
-               (\e _ _  -> size e) $
-               \ih e env stk -> [assumptionFromProof measureNonNeg]
+               (\e _ _  -> size e)
+               [proofOf measureNonNeg] $
+               \ih e env stk -> []
                  |- cases [ isVar e ==> let nm = getVar_1 e
                                      in run (tuple (env, stk)) (compile (sVar nm))
                                      ?? "case Var"

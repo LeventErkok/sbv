@@ -71,7 +71,7 @@ gcdNonNegative = do
      -- We first prove over nGCD, using strong induction with the measure @a+b@.
      nn <- sInduct "nonNegativeNGCD"
                    (\(Forall a) (Forall b) -> a .>= 0 .&& b .>= 0 .=> nGCD a b .>= 0)
-                   (\_a b -> b) $
+                   (\_a b -> b) [] $
                    \ih a b -> [a .>= 0, b .>= 0]
                            |- cases [ b .== 0 ==> trivial
                                     , b ./= 0 ==> nGCD a b .>= 0
@@ -106,7 +106,7 @@ gcdZero = do
   nGCDZero <-
     sInduct "nGCDZero"
             (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .&& nGCD a b .== 0 .=> a .== 0 .&& b .== 0)
-            (\_a b -> b) $
+            (\_a b -> b) [] $
             \ih a b -> [a .>= 0, b .>= 0]
                     |- (nGCD a b .== 0 .=> a .== 0 .&& b .== 0)
                     =: cases [ b .== 0 ==> trivial
@@ -424,7 +424,7 @@ gcdDivides = do
    -- Use strong induction to prove divisibility over non-negative numbers.
    dNGCD <- sInduct "dvdNGCD"
                      (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD a b `dvd` a .&& nGCD a b `dvd` b)
-                     (\_a b -> b) $
+                     (\_a b -> b) [] $
                      \ih a b -> [a .>= 0, b .>= 0]
                              |- let g = nGCD a b
                              in g `dvd` a .&& g `dvd` b
@@ -507,7 +507,7 @@ gcdMaximal = do
    mNGCD <- sInduct "mNGCD"
                     (\(Forall @"a" a) (Forall @"b" b) (Forall @"x" x) ->
                           a .>= 0 .&& b .>= 0 .&& x `dvd` a .&& x `dvd` b .=> x `dvd` nGCD a b)
-                    (\_a b _x -> b) $
+                    (\_a b _x -> b) [] $
                     \ih a b x -> let g = nGCD a b
                               in [a .>= 0, b .>= 0, x `dvd` a .&& x `dvd` b]
                               |- x `dvd` g
@@ -703,7 +703,7 @@ gcdEvenEven = do
 
    nGCDEvenEven <- sInduct "nGCDEvenEven"
                            (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD (2*a) (2*b) .== 2 * nGCD a b)
-                           (\_a b -> b) $
+                           (\_a b -> b) [] $
                            \ih a b -> [a .>= 0, b .>= 0]
                                    |- nGCD (2*a) (2*b)
                                    =: cases [ b .== 0 ==> trivial
@@ -850,7 +850,7 @@ gcdSubEquiv = do
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDSubEquiv"
                   (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCDSub a b .== nGCD a b)
-                  (\a b -> a + b) $
+                  (\a b -> a + b) [] $
                   \ih a b -> [a .>= 0, b .>= 0]
                           |- nGCDSub a b
                           =: cases [ a .== b             ==> nGCD a b =: qed
@@ -951,7 +951,7 @@ gcdBinEquiv = do
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDBinEquiv"
                   (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCDBin a b .== nGCD a b)
-                  (\a b -> tuple (a, b)) $
+                  (\a b -> tuple (a, b)) [] $
                   \ih a b -> [a .>= 0, b .>= 0]
                           |- nGCDBin a b
                           =: cases [ a .== 0               ==> trivial

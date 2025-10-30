@@ -499,7 +499,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 
 -- | Captures the schema for an inductive proof. Base case might be nothing, to cover strong induction.
 data InductionStrategy = InductionStrategy { inductionIntros     :: SBool
-                                           , inductionMeasure    :: Maybe SBool
+                                           , inductionMeasure    :: Maybe (SBool, [ProofObj])
                                            , inductionBaseCase   :: Maybe SBool
                                            , inductionProofTree  :: TPProof
                                            , inductiveStep       :: SBool
@@ -516,7 +516,15 @@ getInductionStrategySaturatables (InductionStrategy inductionIntros
                                                     inductionProofSteps
                                                     inductiveStep
                                                     _inductiveQCInstance)
-  = inductionIntros : inductiveStep : proofTreeSaturatables inductionProofSteps ++ maybeToList inductionBaseCase ++ maybeToList inductionMeasure
+  = inductionIntros
+  : inductiveStep
+  : proofTreeSaturatables inductionProofSteps
+  ++ measureDs
+  ++ maybeToList inductionBaseCase
+  where objDeps p = getObjProof p : concatMap objDeps (dependencies p)
+        measureDs = case inductionMeasure of
+                      Nothing      -> []
+                      Just (a, ps) -> a : concatMap objDeps ps
 
 -- | A class for doing regular inductive proofs.
 class Inductive a where
@@ -568,19 +576,19 @@ class SInductive a where
    -- | Inductively prove a lemma, using measure based induction, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInduct :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => String -> a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> TP (Proof a)
+   sInduct :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => String -> a -> MeasureArgs a m -> [ProofObj] -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
    -- | Same as 'sInduct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductWith :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => SMTConfig -> String -> a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> TP (Proof a)
+   sInductWith :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => SMTConfig -> String -> a -> MeasureArgs a m -> [ProofObj] -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
-   sInduct         nm p m steps = getTPConfig >>= \cfg  -> sInductWith                            cfg                   nm p m steps
-   sInductWith cfg nm p m steps = getTPConfig >>= \cfg' -> inductionEngine GeneralInduction False (tpMergeCfg cfg cfg') nm p (sInductionStrategy p m steps)
+   sInduct         nm p m hs steps = getTPConfig >>= \cfg  -> sInductWith                            cfg                   nm p m hs steps
+   sInductWith cfg nm p m hs steps = getTPConfig >>= \cfg' -> inductionEngine GeneralInduction False (tpMergeCfg cfg cfg') nm p (sInductionStrategy p m hs steps)
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL sInductionStrategy #-}
-   sInductionStrategy :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => a -> MeasureArgs a m -> (Proof a -> StepArgs a t) -> Symbolic InductionStrategy
+   sInductionStrategy :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => a -> MeasureArgs a m -> [ProofObj] -> (Proof a -> StepArgs a t) -> Symbolic InductionStrategy
 
 -- | Do an inductive proof, based on the given strategy
 inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> TP (Proof a)
@@ -611,14 +619,14 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
       query $ do
 
        case inductionMeasure of
-          Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no custom measure to show non-negativeness."]
-          Just ms -> do queryDebug [nm ++ ": Induction, proving measure is always non-negative:"]
-                        smtProofStep cfg tpSt "Step" 1
-                                              (TPProofStep False nm [] ["Measure is non-negative"])
-                                              (Just inductionIntros)
-                                              ms
-                                              []
-                                              (\d -> finishTP cfg "Q.E.D." d [])
+          Nothing      -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no custom measure to show non-negativeness."]
+          Just (m, hs) -> do queryDebug [nm ++ ": Induction, proving measure is always non-negative:"]
+                             smtProofStep cfg tpSt "Step" 1
+                                                   (TPProofStep False nm [] ["Measure is non-negative"])
+                                                   (Just (sAnd (inductionIntros : map getObjProof hs)))
+                                                   m
+                                                   []
+                                                   (\d -> finishTP cfg "Q.E.D." d [])
        case inductionBaseCase of
           Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no base case to prove."]
           Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
@@ -632,7 +640,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
        proveProofTree cfg tpSt nm (result, inductiveStep) inductionIntros inductionProofTree u inductiveQCInstance
 
 -- Induction strategy helper
-mkIndStrategy :: (SymVal a, EqSymbolic (SBV a)) => Maybe SBool -> Maybe SBool -> (SBool, TPProofRaw (SBV a)) -> SBool -> ([Int] -> Symbolic SBool) -> Symbolic InductionStrategy
+mkIndStrategy :: (SymVal a, EqSymbolic (SBV a)) => Maybe (SBool, [ProofObj]) -> Maybe SBool -> (SBool, TPProofRaw (SBV a)) -> SBool -> ([Int] -> Symbolic SBool) -> Symbolic InductionStrategy
 mkIndStrategy mbMeasure mbBaseCase indSteps step indQCInstance = do
         CalcStrategy { calcIntros, calcProofTree, calcQCInstance } <- mkCalcSteps indSteps indQCInstance
         pure $ InductionStrategy { inductionIntros     = calcIntros
@@ -1029,13 +1037,13 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
 
 -- | Generalized induction with one parameter
 instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
-  sInductionStrategy result measure steps = do
+  sInductionStrategy result measure helpers steps = do
       (a, na) <- mkVar (Proxy @na)
 
       let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) -> measure a' .< measure a .=> result (Forall a'))
           conc = result (Forall a)
 
-      mkIndStrategy (Just (measure a .>= zero))
+      mkIndStrategy (Just (measure a .>= zero, helpers))
                     Nothing
                     (steps ih a)
                     (indResult [na] conc)
@@ -1043,14 +1051,14 @@ instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
 
 -- | Generalized induction with two parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (Forall na a -> Forall nb b -> SBool) where
-  sInductionStrategy result measure steps = do
+  sInductionStrategy result measure helpers steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
 
       let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .< measure a b .=> result (Forall a') (Forall b'))
           conc = result (Forall a) (Forall b)
 
-      mkIndStrategy (Just (measure a b .>= zero))
+      mkIndStrategy (Just (measure a b .>= zero, helpers))
                     Nothing
                     (steps ih a b)
                     (indResult [na, nb] conc)
@@ -1058,7 +1066,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (For
 
 -- | Generalized induction with three parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) where
-  sInductionStrategy result measure steps = do
+  sInductionStrategy result measure helpers steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
@@ -1066,7 +1074,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .< measure a b c .=> result (Forall a') (Forall b') (Forall c'))
           conc = result (Forall a) (Forall b) (Forall c)
 
-      mkIndStrategy (Just (measure a b c .>= zero))
+      mkIndStrategy (Just (measure a b c .>= zero, helpers))
                     Nothing
                     (steps ih a b c)
                     (indResult [na, nb, nc] conc)
@@ -1074,7 +1082,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 
 -- | Generalized induction with four parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) where
-  sInductionStrategy result measure steps = do
+  sInductionStrategy result measure helpers steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
@@ -1083,7 +1091,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .< measure a b c d .=> result (Forall a') (Forall b') (Forall c') (Forall d'))
           conc = result (Forall a) (Forall b) (Forall c) (Forall d)
 
-      mkIndStrategy (Just (measure a b c d .>= zero))
+      mkIndStrategy (Just (measure a b c d .>= zero, helpers))
                     Nothing
                     (steps ih a b c d)
                     (indResult [na, nb, nc, nd] conc)
@@ -1091,7 +1099,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 
 -- | Generalized induction with five parameters
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) where
-  sInductionStrategy result measure steps = do
+  sInductionStrategy result measure helpers steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
@@ -1101,7 +1109,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .< measure a b c d e .=> result (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
           conc = result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
 
-      mkIndStrategy (Just (measure a b c d e .>= zero))
+      mkIndStrategy (Just (measure a b c d e .>= zero, helpers))
                     Nothing
                     (steps ih a b c d e)
                     (indResult [na, nb, nc, nd, ne] conc)
