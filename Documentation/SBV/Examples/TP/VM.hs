@@ -21,7 +21,27 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.TP.VM where
+module Documentation.SBV.Examples.TP.VM
+#ifndef DOCTEST
+ (   -- * Language
+     Expr(..), SExpr, size
+
+     -- * Environment and the stack
+   , Env, Stack
+
+     -- * Interpretation
+   , interpInEnv, interp
+
+     -- * Virtual machine
+   , Instr(..), SInstr
+
+     -- * Compilation
+   , compile, compileAndRun
+
+     -- * Correctness of the compiler
+   , correctness)
+#endif
+where
 
 import Data.SBV
 import Data.SBV.Tuple as ST
