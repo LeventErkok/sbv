@@ -151,9 +151,9 @@ compileAndRun = top . ST.snd . run (tuple ([], [])) . compile
 -- | The property we're after is that interpreting an expression is the same as
 -- first compiling it to virtual-machine instructions, and then running them.
 --
--- >>> correctness @String @Integer
-correctness :: forall nm val. (SymVal nm, SymVal val, Num (SBV val)) => IO (Proof (Forall "expr" (Expr nm val) -> SBool))
-correctness = runTP $ do
+-- >>> runTP (correctness @String @Integer)
+correctness :: forall nm val. (SymVal nm, SymVal val, Num (SBV val)) => TP (Proof (Forall "expr" (Expr nm val) -> SBool))
+correctness = do
 
    -- Running a sequence of instructions that are appended is equivalent to running them in sequence:
    runSeq <- induct "runSeq"
@@ -166,9 +166,29 @@ correctness = runTP $ do
                                             =: run (run es (x .: xs)) ys
                                             =: qed
 
+   -- The following few lemmas make the proof go thru faster, even though they're really easy to prove themselves.
+
    -- Running one instruction is equal to just executing it
    runOne <- lemma "runOne"
                    (\(Forall @"es" (es :: EnvStack nm val)) (Forall @"i" i) -> run es [i] .== execute es i)
+                   []
+
+   -- Same for two
+   runTwo <- calc "runTwo"
+                   (\(Forall @"es" (es :: EnvStack nm val)) (Forall @"i" i) (Forall @"j" j)
+                             -> run es [i, j] .== execute (execute es i) j) $
+                   \es i j -> [] |- run es [i, j]
+                                 =: run (execute es i) [j]
+                                 =: execute (execute es i) j
+                                 =: qed
+
+   -- Provers struggle with multiplication, so help them a bit here even though this is really
+   -- a trivial proof. What's hard is the correct instantiation of it, so abstracting it away helps
+   -- us speed up the solver.
+   runMul <- lemma "runMul"
+                    (\(Forall @"a" a) (Forall @"b" b) (Forall  @"env" (env :: Env nm val)) (Forall @"stk" stk)
+                                 ->   execute (tuple (env, push a (push b stk))) sIMul
+                                 .==  tuple (env, push (a * b) stk))
                    []
 
    -- We will use the size of the expression as the measure. We need to show that it is
@@ -209,7 +229,7 @@ correctness = runTP $ do
                                      ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
                                      =: let stk' = push (interpInEnv env a) stk
                                      in run (tuple (env, stk')) [sIDup, sIMul]
-                                     ?? runSeq
+                                     ?? runTwo `at` (Inst @"es" (tuple (env, stk')), Inst @"i" sIDup, Inst @"j" sIMul)
                                      =: execute (execute (tuple (env, stk')) sIDup) sIMul
                                      =: let stk'' = push (interpInEnv env a) stk'
                                      in execute (tuple (env, stk'')) sIMul
@@ -224,7 +244,13 @@ correctness = runTP $ do
                                      ?? runSeq
                                      =: run (run (tuple (env, stk)) (compile a)) [sIPushV 1, sIAdd]
                                      ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
-                                     =: run (tuple (env, push (interpInEnv env a) stk)) [sIPushV 1, sIAdd]
+                                     =: let stk' = push (interpInEnv env a) stk
+                                     in run (tuple (env, stk')) [sIPushV 1, sIAdd]
+                                     ?? runTwo `at` (Inst @"es" (tuple (env, stk')), Inst @"i" (sIPushV 1), Inst @"j" sIAdd)
+                                     =: execute (execute (tuple (env, stk')) (sIPushV 1)) sIAdd
+                                     =: let stk'' = push 1 stk'
+                                     in execute (tuple (env, stk'')) sIAdd
+                                     =: tuple (env, push (1 + interpInEnv env a) stk)
                                      =: tuple (env, push (interpInEnv env (sInc a)) stk)
                                      =: qed
 
@@ -243,6 +269,7 @@ correctness = runTP $ do
                                      ?? ih `at` (Inst @"e" b, Inst @"env" env, Inst @"stk" stk')
                                      =: let stk'' = push (interpInEnv env b) stk'
                                      in run (tuple (env, stk'')) [sIAdd]
+                                     ?? runOne `at` (Inst @"es" (tuple (env, stk'')), Inst @"i" sIAdd)
                                      =: execute (tuple (env, stk'')) sIAdd
                                      =: tuple (env, push (interpInEnv env b + interpInEnv env a) stk)
                                      =: tuple (env, push (interpInEnv env a + interpInEnv env b) stk)
@@ -266,6 +293,10 @@ correctness = runTP $ do
                                      in run (tuple (env, stk'')) [sIMul]
                                      ?? runOne `at` (Inst @"es" (tuple (env, stk'')), Inst @"i" sIMul)
                                      =: execute (tuple (env, stk'')) sIMul
+                                     ?? runMul `at` ( Inst @"a"   (interpInEnv env b)
+                                                    , Inst @"b"   (interpInEnv env a)
+                                                    , Inst @"env" env
+                                                    , Inst @"stk" stk)
                                      =: tuple (env, push (interpInEnv env b * interpInEnv env a) stk)
                                      =: tuple (env, push (interpInEnv env a * interpInEnv env b) stk)
                                      =: tuple (env, push (interpInEnv env (sMul a b)) stk)
@@ -293,6 +324,9 @@ correctness = runTP $ do
                                      ?? ih `at` (Inst @"e" b, Inst @"env" env', Inst @"stk" stk)
                                      =: let stk'' = push (interpInEnv env' b) stk
                                      in run (tuple (env', stk'')) [sIForget]
+                                     ?? runOne
+                                     =: execute (tuple (env', stk'')) sIForget
+                                     =: tuple (env, stk'')
                                      =: tuple (env, push (interpInEnv env (sLet nm a b)) stk)
                                      =: qed
                           ]
