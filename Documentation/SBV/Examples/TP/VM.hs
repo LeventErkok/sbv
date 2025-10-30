@@ -42,6 +42,18 @@ data Expr nm val = Var nm                             -- ^ Variables
 -- | Create symbolic version of expressions
 mkSymbolic [''Expr]
 
+-- | Size of an expression. Used in strong induction.
+size :: (SymVal nm, SymVal val) => SExpr nm val -> SInteger
+size = smtFunction "exprSize" $ \expr -> [sCase|Expr expr of
+                                            Var _     -> 0
+                                            Con _     -> 0
+                                            Sqr a     -> 1 + size a
+                                            Inc a     -> 1 + size a
+                                            Add a b   -> 1 + size a `smax` size b
+                                            Mul a b   -> 1 + size a `smax` size b
+                                            Let _ a b -> 1 + size a `smax` size b
+                                         |]
+
 -- | Environment, binding names to values
 type Env nm val = SList (nm, val)
 
@@ -159,130 +171,131 @@ correctness = runTP $ do
                    (\(Forall @"es" (es :: EnvStack nm val)) (Forall @"i" i) -> run es [i] .== execute es i)
                    []
 
+   -- We will use the size of the expression as the measure. We need to show that it is
+   -- always positive for the inductive proof to go thru.
+   measureNonNeg <- inductiveLemma "measureNonNeg"
+                                   (\(Forall @"e" (e :: SExpr nm val)) -> size e .>= 0)
+                                   []
+
    -- A more general version of the theorem, starting with an arbitrary env and stack.
    -- We prove this using the induction principle for expressions.
-   helper <- do
+   helper <- sInductWith cvc5 "helper"
+               (\(Forall @"e" e) (Forall @"env" (env :: Env nm val)) (Forall @"stk" stk) ->
+                             run (tuple (env, stk)) (compile e)
+                         .== tuple (env, push (interpInEnv env e) stk))
+               (\e _ _  -> size e) $
+               \ih e env stk -> [assumptionFromProof measureNonNeg]
+                 |- cases [ isVar e ==> let nm = getVar_1 e
+                                     in run (tuple (env, stk)) (compile (sVar nm))
+                                     ?? "case Var"
+                                     =: run (tuple (env, stk)) [sIPushN nm]
+                                     =: tuple (env, push (interpInEnv env (sVar nm)) stk)
+                                     =: qed
 
-      let mkCase :: SExpr nm val -> Env nm val -> Stack val -> SBool
-          mkCase e env stk =   run (tuple (env, stk)) (compile e)
-                           .== tuple (env, push (interpInEnv env e) stk)
+                          , isCon e ==> let v = getCon_1 e
+                                     in run (tuple (env, stk)) (compile (sCon v))
+                                     ?? "case Con"
+                                     =: run (tuple (env, stk)) [sIPushV v]
+                                     =: tuple (env, push v stk)
+                                     =: tuple (env, push (interpInEnv env (sCon v)) stk)
+                                     =: qed
 
-      -- The first two cases (non-recursive ones) are actually not needed as SBV/z3 can determine correctness
-      -- without their help. But it's good for documentation
-      caseVar <- lemma "caseVar"
-                       (\(Forall @"nm" nm) (Forall @"env" env) (Forall @"stk" stk) -> mkCase (sVar nm) env stk)
-                       []
+                          , isSqr e ==> let a = getSqr_1 e
+                                     in run (tuple (env, stk)) (compile (sSqr a))
+                                     ?? "case Sqr"
+                                     =: run (tuple (env, stk)) (compile a SL.++ [sIDup, sIMul])
+                                     ?? runSeq
+                                     =: run (run (tuple (env, stk)) (compile a)) [sIDup, sIMul]
+                                     ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
+                                     =: let stk' = push (interpInEnv env a) stk
+                                     in run (tuple (env, stk')) [sIDup, sIMul]
+                                     ?? runSeq
+                                     =: execute (execute (tuple (env, stk')) sIDup) sIMul
+                                     =: let stk'' = push (interpInEnv env a) stk'
+                                     in execute (tuple (env, stk'')) sIMul
+                                     =: tuple (env, push (interpInEnv env a * interpInEnv env a) stk)
+                                     =: tuple (env, push (interpInEnv env (sSqr a)) stk)
+                                     =: qed
 
-      -- See above comment
-      caseCon <- lemma "caseCon"
-                       (\(Forall @"val" val) (Forall @"env" env) (Forall @"stk" stk) -> mkCase (sCon val) env stk)
-                       []
+                          , isInc e ==> let a = getInc_1 e
+                                     in run (tuple (env, stk)) (compile (sInc a))
+                                     ?? "case Inc"
+                                     =: run (tuple (env, stk)) (compile a SL.++ [sIPushV 1, sIAdd])
+                                     ?? runSeq
+                                     =: run (run (tuple (env, stk)) (compile a)) [sIPushV 1, sIAdd]
+                                     ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
+                                     =: run (tuple (env, push (interpInEnv env a) stk)) [sIPushV 1, sIAdd]
+                                     =: tuple (env, push (interpInEnv env (sInc a)) stk)
+                                     =: qed
 
-      -- The following cases are required so the induction principle can complete the proof
-      caseSqr <- calc "caseSqr"
-                       (\(Forall @"e" e) (Forall @"env" env) (Forall @"stk" stk) ->
-                                    quantifiedBool (\(Forall env') (Forall stk') -> mkCase e env' stk')
-                                .=> mkCase (sSqr e) env stk) $
-                       \e env stk -> [mkCase e env stk]
-                                  |- run (tuple (env, stk)) (compile (sSqr e))
-                                  =: run (tuple (env, stk)) (compile e SL.++ [sIDup, sIMul])
-                                  ?? runSeq
-                                  =: tuple (env, push (interpInEnv env (sSqr e)) stk)
-                                  =: qed
+                          , isAdd e ==> let a = getAdd_1 e
+                                            b = getAdd_2 e
+                                     in run (tuple (env, stk)) (compile (sAdd a b))
+                                     ?? "case sAdd"
+                                     =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIAdd])
+                                     ?? runSeq
+                                     =: run (run (tuple (env, stk)) (compile a)) (compile b SL.++ [sIAdd])
+                                     ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
+                                     =: let stk' = push (interpInEnv env a) stk
+                                     in run (tuple (env, stk')) (compile b SL.++ [sIAdd])
+                                     ?? runSeq
+                                     =: run (run (tuple (env, stk')) (compile b)) [sIAdd]
+                                     ?? ih `at` (Inst @"e" b, Inst @"env" env, Inst @"stk" stk')
+                                     =: let stk'' = push (interpInEnv env b) stk'
+                                     in run (tuple (env, stk'')) [sIAdd]
+                                     =: execute (tuple (env, stk'')) sIAdd
+                                     =: tuple (env, push (interpInEnv env b + interpInEnv env a) stk)
+                                     =: tuple (env, push (interpInEnv env a + interpInEnv env b) stk)
+                                     =: tuple (env, push (interpInEnv env (sAdd a b)) stk)
+                                     =: qed
 
-      caseInc <- calc "caseInc"
-                      (\(Forall @"e" e) (Forall @"env" env) (Forall @"stk" stk) ->
-                                   quantifiedBool (\(Forall env') (Forall stk') -> mkCase e env' stk')
-                               .=> mkCase (sInc e) env stk) $
-                      \e env stk -> [mkCase e env stk]
-                                 |- run (tuple (env, stk)) (compile (sInc e))
-                                 =: run (tuple (env, stk)) (compile e SL.++ [sIPushV 1, sIAdd])
-                                 ?? runSeq
-                                 =: tuple (env, push (interpInEnv env (sInc e)) stk)
-                                 =: qed
+                          , isMul e ==> let a = getMul_1 e
+                                            b = getMul_2 e
+                                     in run (tuple (env, stk)) (compile (sMul a b))
+                                     ?? "case sMul"
+                                     =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIMul])
+                                     ?? runSeq
+                                     =: run (run (tuple (env, stk)) (compile a)) (compile b SL.++ [sIMul])
+                                     ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
+                                     =: let stk' = push (interpInEnv env a) stk
+                                     in run (tuple (env, stk')) (compile b SL.++ [sIMul])
+                                     ?? runSeq
+                                     =: run (run (tuple (env, stk')) (compile b)) [sIMul]
+                                     ?? ih `at` (Inst @"e" b, Inst @"env" env, Inst @"stk" stk')
+                                     =: let stk'' = push (interpInEnv env b) stk'
+                                     in run (tuple (env, stk'')) [sIMul]
+                                     ?? runOne `at` (Inst @"es" (tuple (env, stk'')), Inst @"i" sIMul)
+                                     =: execute (tuple (env, stk'')) sIMul
+                                     =: tuple (env, push (interpInEnv env b * interpInEnv env a) stk)
+                                     =: tuple (env, push (interpInEnv env a * interpInEnv env b) stk)
+                                     =: tuple (env, push (interpInEnv env (sMul a b)) stk)
+                                     =: qed
 
-      -- Not sure why, but z3 can't prove this one, but proves the multiply case just fine
-      caseAdd <- calcWith cvc5 "caseAdd"
-                      (\(Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk) ->
-                                quantifiedBool (\(Forall env') (Forall stk') -> mkCase a env' stk')
-                            .&& quantifiedBool (\(Forall env') (Forall stk') -> mkCase b env' stk')
-                            .=> mkCase (sAdd a b) env stk) $
-                      \a b env stk -> [ mkCase a env stk
-                                      , quantifiedBool (\(Forall stk') -> mkCase b env stk')
-                                      ]
-                                   |- run (tuple (env, stk)) (compile (sAdd a b))
-                                   =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIAdd])
-                                   ?? runSeq
-                                   =: run (run (tuple (env, stk)) (compile a)) (compile b SL.++ [sIAdd])
-                                   =: run (tuple (env, push (interpInEnv env a) stk)) (compile b SL.++ [sIAdd])
-                                   ?? runSeq
-                                   =: run (run (tuple (env, push (interpInEnv env a) stk)) (compile b)) [sIAdd]
-                                   =: run (tuple (env, push (interpInEnv env b) (push (interpInEnv env a) stk))) [sIAdd]
-                                   =: execute (tuple (env, push (interpInEnv env b) (push (interpInEnv env a) stk))) sIAdd
-                                   =: tuple (env, push (interpInEnv env b + interpInEnv env a) stk)
-                                   =: tuple (env, push (interpInEnv env a + interpInEnv env b) stk)
-                                   =: tuple (env, push (interpInEnv env (sAdd a b)) stk)
-                                   =: qed
-
-      caseMul <- calc "caseMul"
-                      (\(Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk) ->
-                                quantifiedBool (\(Forall env') (Forall stk') -> mkCase a env' stk')
-                            .&& quantifiedBool (\(Forall env') (Forall stk') -> mkCase b env' stk')
-                            .=> mkCase (sMul a b) env stk) $
-                      \a b env stk -> [ mkCase a env stk
-                                      , quantifiedBool (\(Forall stk') -> mkCase b env stk')
-                                      ]
-                                   |- run (tuple (env, stk)) (compile (sMul a b))
-                                   =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIMul])
-                                   ?? runSeq
-                                   =: run (run (tuple (env, stk)) (compile a)) (compile b SL.++ [sIMul])
-                                   =: run (tuple (env, push (interpInEnv env a) stk)) (compile b SL.++ [sIMul])
-                                   ?? runSeq
-                                   =: run (run (tuple (env, push (interpInEnv env a) stk)) (compile b)) [sIMul]
-                                   =: run (tuple (env, push (interpInEnv env b) (push (interpInEnv env a) stk))) [sIMul]
-                                   =: execute (tuple (env, push (interpInEnv env b) (push (interpInEnv env a) stk))) sIMul
-                                   =: tuple (env, push (interpInEnv env b * interpInEnv env a) stk)
-                                   =: tuple (env, push (interpInEnv env a * interpInEnv env b) stk)
-                                   =: tuple (env, push (interpInEnv env (sMul a b)) stk)
-                                   =: qed
-
-      caseLet <- calc "caseLet"
-                      (\(Forall @"nm" nm) (Forall @"a" a) (Forall @"b" b) (Forall @"env" env) (Forall @"stk" stk)
-                           ->  quantifiedBool (\(Forall env') (Forall stk') -> mkCase a env' stk')
-                           .&& quantifiedBool (\(Forall env') (Forall stk') -> mkCase b env' stk')
-                           .=> mkCase (sLet nm a b) env stk) $
-                      \nm a b env stk
-                       -> [   mkCase a env stk
-                          .&& quantifiedBool (\(Forall env') (Forall stk') -> mkCase b env' stk')
+                          , isLet e ==> let nm = getLet_1 e
+                                            a  = getLet_2 e
+                                            b  = getLet_3 e
+                                     in run (tuple (env, stk)) (compile (sLet nm a b))
+                                     ?? "case Let"
+                                     =: run (tuple (env, stk)) (compile a SL.++ [sIBind nm] SL.++ compile b SL.++ [sIForget])
+                                     ?? runSeq
+                                     =: run (run (tuple (env, stk)) (compile a)) ([sIBind nm] SL.++ compile b SL.++ [sIForget])
+                                     ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
+                                     =: let stk' = push (interpInEnv env a) stk
+                                     in run (tuple (env, stk')) ([sIBind nm] SL.++ compile b SL.++ [sIForget])
+                                     ?? runSeq
+                                     =: run (run (tuple (env, stk')) [sIBind nm]) (compile b SL.++ [sIForget])
+                                     ?? runOne
+                                     =: run (execute (tuple (env, stk')) (sIBind nm)) (compile b SL.++ [sIForget])
+                                     =: let env' = push (tuple (nm, interpInEnv env a)) env
+                                     in run (tuple (env', stk)) (compile b SL.++ [sIForget])
+                                     ?? runSeq
+                                     =: run (run (tuple (env', stk)) (compile b)) [sIForget]
+                                     ?? ih `at` (Inst @"e" b, Inst @"env" env', Inst @"stk" stk)
+                                     =: let stk'' = push (interpInEnv env' b) stk
+                                     in run (tuple (env', stk'')) [sIForget]
+                                     =: tuple (env, push (interpInEnv env (sLet nm a b)) stk)
+                                     =: qed
                           ]
-                       |- run (tuple (env, stk)) (compile (sLet nm a b))
-                       =: run (tuple (env, stk)) (compile a SL.++ [sIBind nm] SL.++ compile b SL.++ [sIForget])
-                       ?? runSeq
-                       =: run (run (tuple (env, stk)) (compile a)) ([sIBind nm] SL.++ compile b SL.++ [sIForget])
-                       =: run (tuple (env, push (interpInEnv env a) stk)) ([sIBind nm] SL.++ compile b SL.++ [sIForget])
-                       ?? runSeq
-                       =: run (run (tuple (env, push (interpInEnv env a) stk)) [sIBind nm]) (compile b SL.++ [sIForget])
-                       ?? runOne
-                       =: run (execute (tuple (env, push (interpInEnv env a) stk)) (sIBind nm)) (compile b SL.++ [sIForget])
-                       =: run (tuple (push (tuple (nm, interpInEnv env a)) env, stk)) (compile b SL.++ [sIForget])
-                       ?? runSeq
-                       =: run (run (tuple (push (tuple (nm, interpInEnv env a)) env, stk)) (compile b)) [sIForget]
-                       =: run (tuple (push (tuple (nm, interpInEnv env a)) env,
-                                      push (interpInEnv (push (tuple (nm, interpInEnv env a)) env) b) stk))
-                              [sIForget]
-                       =: tuple (env, push (interpInEnv env (sLet nm a b)) stk)
-                       =: qed
-
-      inductiveLemma "helper"
-                     (\(Forall @"e" e) (Forall @"env" (env :: Env nm val)) (Forall @"stk" stk) -> mkCase e env stk)
-                     [ proofOf caseVar
-                     , proofOf caseCon
-                     , proofOf caseSqr
-                     , proofOf caseInc
-                     , proofOf caseAdd
-                     , proofOf caseMul
-                     , proofOf caseLet
-                     ]
 
    -- We can now prove the final correctness theorem, based on the helper.
    calc "correctness"
