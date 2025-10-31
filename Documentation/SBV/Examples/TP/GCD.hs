@@ -295,7 +295,7 @@ dvdEvenWhenOdd :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> SBool))
 dvdEvenWhenOdd = calc "dvdEvenWhenOdd"
                       (\(Forall d) (Forall a) -> isOdd d .&& d `dvd` (2*a) .=> d `dvd` a) $
                       \d a ->  [isOdd d, d `dvd` (2*a)]
-                           |-> let t = (d - 1) `sEDiv` 2
+                           |-  let t = (d - 1) `sEDiv` 2
                                    m = (2*a)   `sEDiv` d
                             in sTrue
 
