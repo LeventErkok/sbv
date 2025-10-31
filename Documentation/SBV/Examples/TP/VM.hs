@@ -139,15 +139,15 @@ type EnvStack nm val = SBV ([(nm, val)], [val])
 -- We produce the new environment, and the new stack.
 execute :: (SymVal nm, SymVal val, Num (SBV val)) => EnvStack nm val -> SInstr nm val -> EnvStack nm val
 execute envStk instr = let (env, stk) = untuple envStk
-                       in tuple $ [sCase|Instr instr of
-                                     IPushN nm   -> (env, push (nm `SL.lookup` env) stk)
-                                     IPushV val  -> (env, push val stk)
-                                     IDup        -> (env, push (top stk) stk)
-                                     IAdd        -> (env, let a = top stk; b = top (pop stk) in push (a + b) (pop (pop stk)))
-                                     IMul        -> (env, let a = top stk; b = top (pop stk) in push (a * b) (pop (pop stk)))
-                                     IBind nm    -> (push (tuple (nm, top stk)) env, pop stk)
-                                     IForget     -> (pop env, stk)
-                                  |]
+                       in tuple [sCase|Instr instr of
+                                   IPushN nm   -> (env, push (nm `SL.lookup` env) stk)
+                                   IPushV val  -> (env, push val stk)
+                                   IDup        -> (env, push (top stk) stk)
+                                   IAdd        -> (env, let a = top stk; b = top (pop stk) in push (a + b) (pop (pop stk)))
+                                   IMul        -> (env, let a = top stk; b = top (pop stk) in push (a * b) (pop (pop stk)))
+                                   IBind nm    -> (push (tuple (nm, top stk)) env, pop stk)
+                                   IForget     -> (pop env, stk)
+                                |]
 
 -- | Execute a sequence of instructions, in a given stack and env. Returnsg the final environment and the stack. This is a
 -- simple fold-left.
