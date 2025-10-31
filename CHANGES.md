@@ -1,24 +1,23 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 12.2.5: New development version
+### Version 13.0, 2025-10-31
 
   * SBV now supports algebraic data-types. A new function 'mkSymbolic' is introduced, which take a list of types
     and turns them into types that you can symbolically process. Clearly, Haskell ADTs are extremely rich:
     Parameterized, self-referential, and mutually-recursive datatypes are supported. GADTs and more complicated
-    forms of data-types (with higher-order fields, for instance) are not supported. This should cover most
-    use cases, but clearly not everything. Depending on SMTLib developments, we might add other features as
-    feasible. Please get in touch if you have a use case that is currently not supported.
+    forms of data-types (with higher-order fields, for instance) are not supported. What SBV covers should handle
+    most use cases, please get in touch if you have a use case that is currently not supported.
 
   * Introduced a new quasiquoter, named sCase, which allows writing case-expressions over symbolic ADTs. It supports
-    wildcards, and guards. It does not support pattern guards, nor complex patterns. (Each pattern is either a
-    variable or an underscore.) Symbolic-boolean guards allow for concise expressions. These expressions are
-    subject to all regular quasi-quotation limitations; i.e., they do not nest and type-errors post splicing can
-    be hard to detect due to expanded form not matching what the user wrote in a 1:1 fashion. However, it should
-    still make reasoning with ADTs much simpler.
+    wildcards and guards. It does not support pattern guards, nor complex patterns. (Each pattern is either a
+    variable or an underscore.) Symbolic-boolean guards allow for concise expressions. This construct makes
+    symbolic programming with ADTs easier.
 
   * Added examples under Documentation.SBV.Examples.ADT, demonstrating the use of basic ADTs and a case study 
     of modeling type-checking constraints.
+
+  * Added Documentation.SBV.Examples.TP.Peano, modeling peano numbers using an ADT and demonstrating many proofs.
 
   * Added Documentation.SBV.Examples.TP.VM demonstrating the correctness of a simple interpreter over an expression
     language with respect to a version that compiles the expression and runs the insturctions over a virtual machine.
