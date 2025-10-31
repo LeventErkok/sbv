@@ -140,7 +140,7 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
   bsearchAbsent <- sInduct "bsearchAbsent"
         (\(Forall arr) (Forall lo) (Forall hi) (Forall x) ->
             nonDecreasing arr (lo, hi) .&& sNot (inArray arr (lo, hi) x) .=> isNothing (bsearch arr (lo, hi) x))
-        (\_arr lo hi _x -> abs (hi - lo + 1)) [] $
+        (\_arr lo hi _x -> abs (hi - lo + 1), []) $
         \ih arr lo hi x ->
               [nonDecreasing arr (lo, hi), sNot (inArray arr (lo, hi) x)]
            |- isNothing (bsearch arr (lo, hi) x)
@@ -193,7 +193,7 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
   bsearchPresent <- sInduct "bsearchPresent"
         (\(Forall arr) (Forall lo) (Forall hi) (Forall x) ->
             nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .=> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x)
-        (\_arr lo hi _x -> abs (hi - lo + 1)) [] $
+        (\_arr lo hi _x -> abs (hi - lo + 1), []) $
         \ih arr lo hi x ->
              [nonDecreasing arr (lo, hi), inArray arr (lo, hi) x]
           |- x .== arr `readArray` fromJust (bsearch arr (lo, hi) x)

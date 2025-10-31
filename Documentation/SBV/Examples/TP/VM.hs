@@ -303,8 +303,7 @@ correctness = do
                (\(Forall @"e" e) (Forall @"env" (env :: Env nm val)) (Forall @"stk" stk) ->
                              run (tuple (env, stk)) (compile e)
                          .== tuple (env, push (interpInEnv env e) stk))
-               (\e _ _  -> size e)
-               [proofOf measureNonNeg] $
+               (\e _ _  -> size e, [proofOf measureNonNeg]) $
                \ih e env stk -> []
                  |- cases [ isVar e ==> let nm = getVar_1 e
                                      in run (tuple (env, stk)) (compile (sVar nm))

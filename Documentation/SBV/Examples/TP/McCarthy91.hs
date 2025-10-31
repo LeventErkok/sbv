@@ -64,7 +64,7 @@ correctness = runTP $ do
    -- Case 3. When @n < 90@. The crucial point here is the measure, which makes sure 101 < 100 < 99 < ...
    case3 <- sInduct "case3"
                     (\(Forall n) -> n .< 90 .=> mcCarthy91 n .== spec91 n)
-                    (\n -> abs (101 - n)) [] $
+                    (\n -> abs (101 - n), []) $
                     \ih n -> [n .< 90] |- mcCarthy91 n
                                        ?? "unfold"
                                        =: mcCarthy91 (mcCarthy91 (n + 11))

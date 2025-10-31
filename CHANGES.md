@@ -26,6 +26,11 @@
   * [BACKWARDS COMPATIBILITY] The old functions 'mkSymbolicEnumeration' and 'mkUninterpretedSort' are now removed,
     since their functionality is subsumed by 'mkSymbolic'.
 
+  * [BACKWARDS COMPATIBILITY] Strong-induction now takes extra proof objects that can be used to establish that
+    the measure provided is non-negative. This is usually not needed, so simply pass []. However, in case of strong
+    induction over ADTs in particular, it can come in handy to aid the solver in establishing the given measure
+    is valid.
+
 ### Version 12.2, 2025-08-15
 
   * Fix floating-point constant-folding code, which inadvertently constant-folded for symbolic rounding modes.
