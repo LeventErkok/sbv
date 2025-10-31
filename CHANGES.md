@@ -68,7 +68,7 @@
     implications and ask them to use custom-functions instead.
 
 ### Version 12.0, 2025-07-04
-  
+
   * [BACKWARDS COMPATIBILITY] Renamed KnuckleDragger to TP, for theorem-proving. The original name was confusing, and
     the design has diverged from Phil's tool in significant ways and goals.
 
