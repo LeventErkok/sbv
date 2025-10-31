@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 13.1, 2025-10-31
+
+  * Tweaks to make sure SBV compiles with GHC 9.8.4. No other changes on top of 13.0 below.
+
 ### Version 13.0, 2025-10-31
 
   * SBV now supports algebraic data-types. A new function 'mkSymbolic' is introduced, which take a list of types
