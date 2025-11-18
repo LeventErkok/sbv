@@ -16,6 +16,7 @@
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
+{-# LANGUAGE GADTs                 #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -683,6 +684,23 @@ instance (SymVal a, SatisfiableM m p) => SatisfiableM m (SBV a -> p) where
 
 instance (SymVal a, ProvableM m p) => ProvableM m (SBV a -> p) where
   proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ fn a
+
+-- Multi-arity Functions
+instance (SymVals as, SatisfiableM m p) => SatisfiableM m (SBVs as -> p) where
+  satArgReduce = helper symValInsts where
+    helper :: SatisfiableM m c => SymValInsts bs -> (SBVs bs -> c) ->
+              SymbolicT m SBool
+    helper SymValsNil fn = satArgReduce $ fn SBVsNil
+    helper (SymValsCons insts) fn =
+      mkArg >>= \a -> helper insts $ \args -> fn (SBVsCons a args)
+
+instance (SymVals as, ProvableM m p) => ProvableM m (SBVs as -> p) where
+  proofArgReduce = helper symValInsts where
+    helper :: ProvableM m c => SymValInsts bs -> (SBVs bs -> c) ->
+              SymbolicT m SBool
+    helper SymValsNil fn = proofArgReduce $ fn SBVsNil
+    helper (SymValsCons insts) fn =
+      mkArg >>= \a -> helper insts $ \args -> fn (SBVsCons a args)
 
 -- 2 Tuple
 instance (SymVal a, SymVal b, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b) -> p) where

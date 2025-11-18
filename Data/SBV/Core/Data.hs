@@ -10,7 +10,9 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                   #-}
+{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
@@ -36,7 +38,7 @@ module Data.SBV.Core.Data
  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
  , RCSet(..), SSet
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
- , SymVal(..)
+ , SymVal(..), SymValInsts(..), symValKinds, SymVals(..)
  , CV(..), CVal(..), AlgReal(..), AlgRealPoly(..), ExtCV(..), GeneralizedCV(..), isRegularCV, cvSameType, cvToBool
  , mkConstCV , mapCV, mapCV2
  , SV(..), trueSV, falseSV, trueCV, falseCV, normCV
@@ -44,6 +46,7 @@ module Data.SBV.Core.Data
  , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), sAnd, sOr, sAny, sAll, fromBool
  , SBV(..), NodeId(..), mkSymSBV
  , sbvToSV, sbvToSymSV, forceSVArg
+ , SBVs(..), foldrSBVs, mapMSBVs, foldrSymSBVs, mapSymSBVs, mapMSymSBVs, mkSBVsM
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, HasKind(..)
  , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExOp(..), SeqOp(..), RegExp(..), NamedSymVar(..), OvOp(..), getTableIndex
@@ -345,6 +348,51 @@ instance HasKind a => HasKind (SBV a) where
 sbvToSV :: State -> SBV a -> IO SV
 sbvToSV st (SBV s) = svToSV st s
 
+-- | A sequence of elements of types @'SBV' a1,...,'SBV' an@ given the list
+-- @[a1,...,an]@ of Haskell types
+data SBVs as where
+  SBVsNil :: SBVs '[]
+  SBVsCons :: SBV a -> SBVs as -> SBVs (a ': as)
+
+-- | Fold a function over each 'SBV' value in an 'SBVs' sequence in a manner
+-- similar to 'foldr' for lists
+foldrSBVs :: (forall a. SBV a -> r -> r) -> r -> SBVs as -> r
+foldrSBVs _ r SBVsNil = r
+foldrSBVs f r (SBVsCons arg args) = f arg $ foldrSBVs f r args
+
+-- | Map a monadic function over the 'SBV' values in an 'SBVs' sequence in a
+-- manner similar to 'mapM' for lists
+mapMSBVs :: Monad m => (forall a. SBV a -> m r) -> SBVs as -> m [r]
+mapMSBVs f = foldrSBVs (\arg m -> (:) <$> f arg <*> m) (return [])
+
+-- | Fold a function over each 'SBV' value in an 'SBVs' sequence in a manner
+-- similar to 'foldr' for lists, using 'SymVal' instances for each value
+foldrSymSBVs :: (forall a. SymVal a => SBV a -> r -> r) -> r ->
+                SymValInsts as -> SBVs as -> r
+foldrSymSBVs _ r _ SBVsNil = r
+foldrSymSBVs f r (SymValsCons symvs) (SBVsCons arg args) =
+  f arg $ foldrSymSBVs f r symvs args
+
+-- | Map a function over the 'SBV' values in an 'SBVs' sequence in a manner
+-- similar to 'map' for lists
+mapSymSBVs :: (forall a. SymVal a => SBV a -> r) ->
+              SymValInsts as -> SBVs as -> [r]
+mapSymSBVs f symvs = foldrSymSBVs (\arg r -> f arg : r) [] symvs
+
+-- | Map a monadic function over the 'SBV' values in an 'SBVs' sequence in a
+-- manner similar to 'mapM' for lists
+mapMSymSBVs :: Monad m => (forall a. SymVal a => SBV a -> m r) ->
+            SymValInsts as -> SBVs as -> m [r]
+mapMSymSBVs f symvs =
+  foldrSymSBVs (\arg m -> (:) <$> f arg <*> m) (return []) symvs
+
+-- | Build an 'SBVs' sequence of @'SBV' a@ values for each type type @a@ in a
+-- 'SymValInsts' sequence using the supplied monadic function
+mkSBVsM :: Monad m => SymValInsts as ->
+           (forall a. SymVal a => Proxy a -> m (SBV a)) -> m (SBVs as)
+mkSBVsM SymValsNil _ = return SBVsNil
+mkSBVsM (SymValsCons as) f = SBVsCons <$> f Proxy <*> mkSBVsM as f
+
 -------------------------------------------------------------------------
 -- * Symbolic Computations
 -------------------------------------------------------------------------
@@ -630,6 +678,30 @@ class (HasKind a, Typeable a, Arbitrary a) => SymVal a where
   -- | Is the symbolic word really symbolic?
   isSymbolic :: SBV a -> Bool
   isSymbolic = not . isConcrete
+
+-- | A sequence of instance dictionaries for each type @ai@ in the type list
+-- @[a1,...,an]@
+data SymValInsts as where
+  SymValsNil :: SymValInsts '[]
+  SymValsCons :: SymVal a => SymValInsts as -> SymValInsts (a ': as)
+
+-- | Get the 'Kind' of each type in the type list of a 'SymValInsts' sequence
+symValKinds :: SymValInsts as -> [Kind]
+symValKinds SymValsNil = []
+symValKinds insts@(SymValsCons insts') =
+  kindOf (headPrx insts) : symValKinds insts'
+  where headPrx :: SymValInsts (b ': bs) -> Proxy b
+        headPrx _ = Proxy
+
+-- | A 'SymVals' is a list of types that all satisfy 'SymVal'
+class SymVals as where
+  symValInsts :: SymValInsts as
+
+instance SymVals '[] where
+  symValInsts = SymValsNil
+
+instance (SymVal a, SymVals as) => SymVals (a ': as) where
+  symValInsts = SymValsCons symValInsts
 
 instance (Random a, SymVal a) => Random (SBV a) where
   randomR (l, h) g = case (unliteral l, unliteral h) of
