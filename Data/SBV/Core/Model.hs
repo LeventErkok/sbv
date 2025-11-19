@@ -2838,7 +2838,7 @@ uncurrySBVs2 fn (SBVsCons (SBVsCons as c) b) = fn as (c,b)
 
 -- Uncurried functions of two arguments
 instance (SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV c, SBV b) -> SBV a) where
-  sbvFun2smt = sbvFun2smt . uncurrySBVs2 where
+  sbvFun2smt = sbvFun2smt . uncurrySBVs2
 
   registerFunction = registerFunction . curry2
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry2 <$> sbvDefineValueFun nm mbArgs insts (fmap curry2 <$> mkUncurried uiKind)
