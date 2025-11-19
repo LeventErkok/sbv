@@ -361,10 +361,10 @@ rlist2listRev (as :> a) = a : rlist2listRev as
 rlist2list :: RList a -> [a]
 rlist2list = reverse . rlist2listRev
 
--- | Helper for writing types containing 'RNil'
+-- | Helper for writing types containing @RNil@
 type RNil = 'RNil
 
--- | Helper for writing types containing ':>'
+-- | Helper for writing types containing @:>@
 type (:>) = '(:>)
 
 -- | A sequence of elements of types @SBV a1,...,SBV an@ given the list
