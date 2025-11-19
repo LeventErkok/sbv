@@ -46,7 +46,8 @@ module Data.SBV.Core.Data
  , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), sAnd, sOr, sAny, sAll, fromBool
  , SBV(..), NodeId(..), mkSymSBV
  , sbvToSV, sbvToSymSV, forceSVArg
- , SBVs(..), foldrSBVs, mapMSBVs, foldrSymSBVs, mapSymSBVs, mapMSymSBVs, mkSBVsM
+ , RList(..), RNil, (:>), rlist2list
+ , SBVs(..), foldlSBVs, mapMSBVs, foldlSymSBVs
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, HasKind(..)
  , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExOp(..), SeqOp(..), RegExp(..), NamedSymVar(..), OvOp(..), getTableIndex
@@ -348,44 +349,50 @@ instance HasKind a => HasKind (SBV a) where
 sbvToSV :: State -> SBV a -> IO SV
 sbvToSV st (SBV s) = svToSV st s
 
+-- | A datakind for lists with cons on the right
+data RList a = RNil | (RList a) :> a
+
+-- | Convert an 'RList' into a reversed standard list
+rlist2listRev :: RList a -> [a]
+rlist2listRev RNil = []
+rlist2listRev (as :> a) = a : rlist2listRev as
+
+-- | Convert an 'RList' into a standard list
+rlist2list :: RList a -> [a]
+rlist2list = reverse . rlist2listRev
+
+-- | Helper for writing types containing 'RNil'
+type RNil = 'RNil
+
+-- | Helper for writing types containing ':>'
+type (:>) = '(:>)
+
 -- | A sequence of elements of types @SBV a1,...,SBV an@ given the list
 -- @[a1,...,an]@ of Haskell types
 data SBVs as where
-  SBVsNil  :: SBVs '[]
-  SBVsCons :: SBV a -> SBVs as -> SBVs (a ': as)
+  SBVsNil  :: SBVs RNil
+  SBVsCons :: SBVs as -> SBV a -> SBVs (as :> a)
 
--- | Fold a function over each SBV value in an SBVs sequence in a manner
--- similar to 'foldr' for lists
-foldrSBVs :: (forall a. SBV a -> r -> r) -> r -> SBVs as -> r
-foldrSBVs _ r SBVsNil             = r
-foldrSBVs f r (SBVsCons arg args) = f arg $ foldrSBVs f r args
-
--- | Map a monadic function over the SBV values in an SBVs sequence in a
--- manner similar to 'mapM' for lists
-mapMSBVs :: Monad m => (forall a. SBV a -> m r) -> SBVs as -> m [r]
-mapMSBVs f = foldrSBVs (\arg m -> (:) <$> f arg <*> m) (return [])
-
--- | Fold a function over each SBV value in an SBVs sequence in a manner
--- similar to 'foldr' for lists, using 'SymVal' instances for each value
-foldrSymSBVs :: (forall a. SymVal a => SBV a -> r -> r) -> r -> SymValInsts as -> SBVs as -> r
-foldrSymSBVs _ r _                   SBVsNil             = r
-foldrSymSBVs f r (SymValsCons symvs) (SBVsCons arg args) = f arg $ foldrSymSBVs f r symvs args
-
--- | Map a function over the SBV values in an SBVs sequence in a manner
--- similar to 'map' for lists
-mapSymSBVs :: (forall a. SymVal a => SBV a -> r) -> SymValInsts as -> SBVs as -> [r]
-mapSymSBVs f = foldrSymSBVs (\arg r -> f arg : r) []
+-- | Fold a function over each SBV value in an SBVs sequence in a manner similar
+-- to 'foldr' for lists, except backwards because the lists are stored in
+-- reverse order
+foldlSBVs :: (forall a. r -> SBV a -> r) -> r -> SBVs as -> r
+foldlSBVs _ r SBVsNil             = r
+foldlSBVs f r (SBVsCons args arg) = f (foldlSBVs f r args) arg
 
 -- | Map a monadic function over the SBV values in an SBVs sequence in a
 -- manner similar to 'mapM' for lists
-mapMSymSBVs :: Monad m => (forall a. SymVal a => SBV a -> m r) -> SymValInsts as -> SBVs as -> m [r]
-mapMSymSBVs f = foldrSymSBVs (\arg m -> (:) <$> f arg <*> m) (return [])
+mapMSBVs :: Monad m => (forall a. SBV a -> m r) -> SBVs as -> m (RList r)
+mapMSBVs f = foldlSBVs (\m arg -> (:>) <$> m <*> f arg) (return RNil)
 
--- | Build an SBVs sequence of @SBV a@ values for each type type @a@ in a
--- 'SymValInsts' sequence using the supplied monadic function
-mkSBVsM :: Monad m => SymValInsts as -> (forall a. SymVal a => Proxy a -> m (SBV a)) -> m (SBVs as)
-mkSBVsM SymValsNil       _ = return SBVsNil
-mkSBVsM (SymValsCons as) f = SBVsCons <$> f Proxy <*> mkSBVsM as f
+-- | Fold a function over each SBV value in an SBVs sequence in a manner similar
+-- to 'foldr' for lists (but backwards because SBVs have cons on the right),
+-- using 'SymVal' instances for each value
+foldlSymSBVs :: (forall a. SymVal a => r -> SBV a -> r) -> r ->
+                SymValInsts as -> SBVs as -> r
+foldlSymSBVs _ r _                   SBVsNil             = r
+foldlSymSBVs f r (SymValsCons symvs) (SBVsCons args arg) =
+  f (foldlSymSBVs f r symvs args) arg
 
 -------------------------------------------------------------------------
 -- * Symbolic Computations
@@ -676,25 +683,26 @@ class (HasKind a, Typeable a, Arbitrary a) => SymVal a where
 -- | A sequence of instance dictionaries for each type @ai@ in the type list
 -- @[a1,...,an]@
 data SymValInsts as where
-  SymValsNil :: SymValInsts '[]
-  SymValsCons :: SymVal a => SymValInsts as -> SymValInsts (a ': as)
+  SymValsNil :: SymValInsts RNil
+  SymValsCons :: SymVal a => SymValInsts as -> SymValInsts (as :> a)
 
 -- | Get the 'Kind' of each type in the type list of a 'SymValInsts' sequence
 symValKinds :: SymValInsts as -> [Kind]
-symValKinds SymValsNil = []
-symValKinds insts@(SymValsCons insts') =
-  kindOf (headPrx insts) : symValKinds insts'
-  where headPrx :: SymValInsts (b ': bs) -> Proxy b
-        headPrx _ = Proxy
+symValKinds = rlist2list . helper where
+  helper :: SymValInsts as -> RList Kind
+  helper SymValsNil = RNil
+  helper insts@(SymValsCons insts') = helper insts' :> kindOf (headPrx insts)
+  headPrx :: SymValInsts (bs :> b) -> Proxy b
+  headPrx _ = Proxy
 
 -- | A 'SymVals' is a list of types that all satisfy 'SymVal'
 class SymVals as where
   symValInsts :: SymValInsts as
 
-instance SymVals '[] where
+instance SymVals RNil where
   symValInsts = SymValsNil
 
-instance (SymVal a, SymVals as) => SymVals (a ': as) where
+instance (SymVal a, SymVals as) => SymVals (as :> a) where
   symValInsts = SymValsCons symValInsts
 
 instance (Random a, SymVal a) => Random (SBV a) where

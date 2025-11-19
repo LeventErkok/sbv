@@ -685,22 +685,17 @@ instance (SymVal a, SatisfiableM m p) => SatisfiableM m (SBV a -> p) where
 instance (SymVal a, ProvableM m p) => ProvableM m (SBV a -> p) where
   proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ fn a
 
+-- | Create an 'SBVs' sequence of arguments
+mkArgs :: MonadSymbolic m => SymValInsts as -> m (SBVs as)
+mkArgs SymValsNil = return SBVsNil
+mkArgs (SymValsCons insts) = SBVsCons <$> mkArgs insts <*> mkArg
+
 -- Multi-arity Functions
 instance (SymVals as, SatisfiableM m p) => SatisfiableM m (SBVs as -> p) where
-  satArgReduce = helper symValInsts where
-    helper :: SatisfiableM m c => SymValInsts bs -> (SBVs bs -> c) ->
-              SymbolicT m SBool
-    helper SymValsNil fn = satArgReduce $ fn SBVsNil
-    helper (SymValsCons insts) fn =
-      mkArg >>= \a -> helper insts $ \args -> fn (SBVsCons a args)
+  satArgReduce fn = mkArgs symValInsts >>= \args -> satArgReduce $ fn args
 
 instance (SymVals as, ProvableM m p) => ProvableM m (SBVs as -> p) where
-  proofArgReduce = helper symValInsts where
-    helper :: ProvableM m c => SymValInsts bs -> (SBVs bs -> c) ->
-              SymbolicT m SBool
-    helper SymValsNil fn = proofArgReduce $ fn SBVsNil
-    helper (SymValsCons insts) fn =
-      mkArg >>= \a -> helper insts $ \args -> fn (SBVsCons a args)
+  proofArgReduce fn = mkArgs symValInsts >>= \args -> proofArgReduce $ fn args
 
 -- 2 Tuple
 instance (SymVal a, SymVal b, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b) -> p) where
