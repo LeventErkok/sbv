@@ -25,6 +25,7 @@ tests =
   testGroup "Uninterpreted.Uninterpreted"
     [ testCase         "uninterpreted-0"  $ assertIsThm   p0
     , testCase         "uninterpreted-1"  $ assertIsThm   p1
+    , goldenCapturedIO "uninterpreted-1a" $ t p1_unc satWith
     , testCase         "uninterpreted-2"  $ assertIsntThm p2
     , goldenCapturedIO "uninterpreted-3"  $ t p3 satWith
     , goldenCapturedIO "uninterpreted-3a" $ t p3 allSatWith
@@ -48,6 +49,14 @@ p1 x y z = y .== z .=> g x y .== g x z  -- OK
 
 p2 :: SInt8 -> SWord16 -> SWord16 -> SBool
 p2 x y z = y .== z .=> g x y .== f x    -- Not true
+
+-- | Uncurried version of 'g'
+g_unc :: (SInt8, SWord16) -> SWord32
+g_unc = uninterpret "g"
+
+-- | Same as 'p1' but using the uncurried version 'g_unc' of 'g'
+p1_unc :: SInt8 -> SWord16 -> SWord16 -> SBool
+p1_unc x y z = y .== z .=> g_unc (x, y) .== g_unc (x, z)  -- OK
 
 
 a, b :: SBool
