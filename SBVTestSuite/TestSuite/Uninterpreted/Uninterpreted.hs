@@ -72,3 +72,5 @@ d = sym "d"
 
 p4 :: SBool
 p4 = c ./= d
+
+{- HLint ignore type g_unc "Use camelCase" -}
