@@ -266,12 +266,12 @@ Library
                   , Documentation.SBV.Examples.Transformers.SymbolicEval
                   , Documentation.SBV.Examples.Uninterpreted.AUF
                   , Documentation.SBV.Examples.Uninterpreted.Deduce
+                  , Documentation.SBV.Examples.Uninterpreted.EUFLogic
                   , Documentation.SBV.Examples.Uninterpreted.Function
                   , Documentation.SBV.Examples.Uninterpreted.Multiply
                   , Documentation.SBV.Examples.Uninterpreted.Shannon
                   , Documentation.SBV.Examples.Uninterpreted.Sort
                   , Documentation.SBV.Examples.Uninterpreted.UISortAllSat
-                  , Documentation.SBV.Examples.Uninterpreted.EUFLogic
   other-modules   : Data.SBV.Client
                   , Data.SBV.Client.BaseIO
                   , Data.SBV.Core.AlgReals
