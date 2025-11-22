@@ -271,6 +271,7 @@ Library
                   , Documentation.SBV.Examples.Uninterpreted.Shannon
                   , Documentation.SBV.Examples.Uninterpreted.Sort
                   , Documentation.SBV.Examples.Uninterpreted.UISortAllSat
+                  , Documentation.SBV.Examples.Uninterpreted.EUFLogic
   other-modules   : Data.SBV.Client
                   , Data.SBV.Client.BaseIO
                   , Data.SBV.Core.AlgReals
@@ -456,6 +457,7 @@ Test-Suite SBVTest
                   , TestSuite.Uninterpreted.Function
                   , TestSuite.Uninterpreted.Sort
                   , TestSuite.Uninterpreted.Uninterpreted
+                  , TestSuite.Uninterpreted.EUFLogic
                   , TestSuite.CantTypeCheck.Misc
 
 Test-Suite SBVConnections
