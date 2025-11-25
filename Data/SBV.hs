@@ -1139,7 +1139,9 @@ it will turn into an enumeration in SMTLib.  A simple example is:
     mkSymbolic [''X]
 @
 
-Note the magic incantation @mkSymbolic [''X]@, requires certain extensions to be turned on. Simply follow GHC's advice.
+Note the magic incantation @mkSymbolic [''X]@, requires the following extensions:
+@TemplateHaskell@, @TypeApplications@, and @FlexibleInstances@.
+Parametric data-types also require @ScopedTypeVariables@.
 
 SBV also supports good old ADT's as well, with fields. The support for this is similar, where SBV will create the
 corresponding datatype in a symbolic manner:
