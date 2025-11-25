@@ -126,6 +126,7 @@ import qualified TestSuite.CompileTests.SCase
 import qualified TestSuite.Transformers.SymbolicEval
 import qualified TestSuite.Uninterpreted.AUF
 import qualified TestSuite.Uninterpreted.Axioms
+import qualified TestSuite.Uninterpreted.EUFLogic
 import qualified TestSuite.Uninterpreted.Function
 import qualified TestSuite.Uninterpreted.Sort
 import qualified TestSuite.Uninterpreted.Uninterpreted
@@ -248,5 +249,6 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.Uninterpreted.Function.tests
                       , TestSuite.Uninterpreted.Sort.tests
                       , TestSuite.Uninterpreted.Uninterpreted.tests
+                      , TestSuite.Uninterpreted.EUFLogic.tests
                       , sCaseTests
                       ]
