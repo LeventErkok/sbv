@@ -12,6 +12,7 @@
 -- SMT queries in the logic.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
@@ -33,6 +34,11 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 
 import GHC.TypeLits
+
+#ifdef DOCTEST
+-- $setup
+-- >>> import Data.SBV
+#endif
 
 ----------------------------------------------------------------------
 -- * Types of the EUF Logic
@@ -292,23 +298,26 @@ interpEUF = runInterpM . interpEUFExpr
 
 -- | Example EUF problem
 --
--- > f (f (a) − f (b)) == f (c), b >= a, c >= b + c, c >= 0
+-- > f (f (a) - f (b)) /= f (c), b >= a, a >= b + c, c >= 0
 --
 -- from <https://goto.ucsd.edu/~rjhala/classes/sp13/cse291/slides/lec-smt.markdown.pdf>
 -- noting that @x >= y@ is the same as @not (x < y)@. We have:
 --
 -- >>> sat $ interpEUF example
 -- Satisfiable. Model:
---   a = 1141247457 :: Word32
---   b = 3153719838 :: Word32
---   c = 2052686858 :: Word32
--- <BLANK_LINE>
+--   a =  996506182 :: Word32
+--   b = 3298461113 :: Word32
+--   c = 1445036292 :: Word32
+-- <BLANKLINE>
 --   f :: Word32 -> Word32
---   f 0          = 2295185375
---   f 2052686858 = 1981022264
---   f 3153719838 = 1997537280
---   f 1141247457 = 1997537280
+--   f 0          = 4188219399
+--   f 1445036292 = 285239361
+--   f 3298461113 = 4054018119
+--   f 996506182  = 4054018119
 --   f _          = 0
+--
+--  Note that the original example is unsatisfiable over integers. It is however satisfiable
+--  over 32-bit words, hence the model above.
 example :: EUFExpr Tp_Bool
 example =
   applyOp Op_And (applyOp Op_Not (applyOp (Op_BVEq knownBVWidth)
@@ -316,7 +325,7 @@ example =
                                           (applyOp f c)))
                  (applyOp Op_And (applyOp Op_Not (applyOp (Op_BVLt knownBVWidth) b a))
                                  (applyOp Op_And
-                                          (applyOp Op_Not (applyOp (Op_BVLt knownBVWidth) b (b + c)))
+                                          (applyOp Op_Not (applyOp (Op_BVLt knownBVWidth) a (b + c)))
                                           (applyOp Op_Not (applyOp (Op_BVLt knownBVWidth) c 0))))
   where
     f :: Op '[Tp_BV 32] (Tp_BV 32)
