@@ -2843,164 +2843,84 @@ instance (SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV c, SBV 
   registerFunction = registerFunction . curry2
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry2 <$> sbvDefineValueFun nm mbArgs insts (fmap curry2 <$> mkUncurried uiKind)
 
-uncurrySBVs3 :: (SBVs as -> (SBV d, SBV c, SBV b) -> SBV a) ->
-                (SBVs (as :> d :> c :> b) -> SBV a)
-uncurrySBVs3 fn (SBVsCons (SBVsCons (SBVsCons as d) c) b) =
-  fn as (d,c,b)
-
 -- Uncurried functions of three arguments
 instance (SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV d, SBV c, SBV b) -> SBV a) where
   sbvFun2smt = sbvFun2smt . uncurrySBVs3
+    where uncurrySBVs3 :: (SBVs as -> (SBV d, SBV c, SBV b) -> SBV a) -> (SBVs (as :> d :> c :> b) -> SBV a)
+          uncurrySBVs3 fn (SBVsCons (SBVsCons (SBVsCons as d) c) b) = fn as (d,c,b)
   registerFunction = registerFunction . curry3
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry3 <$> sbvDefineValueFun nm mbArgs insts (fmap curry3 <$> mkUncurried uiKind)
-
-uncurrySBVs4 :: (SBVs as -> (SBV e, SBV d, SBV c, SBV b) -> SBV a) ->
-                (SBVs (as :> e :> d :> c :> b) -> SBV a)
-uncurrySBVs4 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons as e) d) c) b) =
-  fn as (e,d,c,b)
 
 -- Uncurried functions of four arguments
 instance (SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvFun2smt = sbvFun2smt . uncurrySBVs4
+   where uncurrySBVs4 :: (SBVs as -> (SBV e, SBV d, SBV c, SBV b) -> SBV a) -> (SBVs (as :> e :> d :> c :> b) -> SBV a)
+         uncurrySBVs4 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons as e) d) c) b) = fn as (e,d,c,b)
   registerFunction = registerFunction . curry4
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry4 <$> sbvDefineValueFun nm mbArgs insts (fmap curry4 <$> mkUncurried uiKind)
-
-uncurrySBVs5 :: (SBVs as -> (SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) ->
-                (SBVs (as :> f :> e :> d :> c :> b) -> SBV a)
-uncurrySBVs5 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons as f) e) d) c) b) =
-  fn as (f,e,d,c,b)
 
 -- Uncurried functions of five arguments
 instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvFun2smt = sbvFun2smt . uncurrySBVs5
+   where uncurrySBVs5 :: (SBVs as -> (SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) -> (SBVs (as :> f :> e :> d :> c :> b) -> SBV a)
+         uncurrySBVs5 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons as f) e) d) c) b) = fn as (f,e,d,c,b)
   registerFunction = registerFunction . curry5
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry5 <$> sbvDefineValueFun nm mbArgs insts (fmap curry5 <$> mkUncurried uiKind)
-
-uncurrySBVs6 :: (SBVs as -> (SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) ->
-                (SBVs (as :> g :> f :> e :> d :> c :> b) -> SBV a)
-uncurrySBVs6 fn (SBVsCons
-                 (SBVsCons
-                  (SBVsCons (SBVsCons (SBVsCons (SBVsCons as g) f) e) d) c) b) =
-  fn as (g,f,e,d,c,b)
 
 -- Uncurried functions of six arguments
 instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvFun2smt = sbvFun2smt . uncurrySBVs6
+   where uncurrySBVs6 :: (SBVs as -> (SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) -> (SBVs (as :> g :> f :> e :> d :> c :> b) -> SBV a)
+         uncurrySBVs6 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons as g) f) e) d) c) b) = fn as (g,f,e,d,c,b)
+
   registerFunction = registerFunction . curry6
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry6 <$> sbvDefineValueFun nm mbArgs insts (fmap curry6 <$> mkUncurried uiKind)
-
-uncurrySBVs7 :: (SBVs as -> (SBV h, SBV g, SBV f,
-                             SBV e, SBV d, SBV c, SBV b) -> SBV a) ->
-                (SBVs (as :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
-uncurrySBVs7 fn (SBVsCons
-                 (SBVsCons
-                  (SBVsCons
-                   (SBVsCons
-                    (SBVsCons (SBVsCons (SBVsCons as h) g) f) e) d) c) b) =
-  fn as (h,g,f,e,d,c,b)
 
 -- Uncurried functions of seven arguments
 instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvFun2smt = sbvFun2smt . uncurrySBVs7
+   where uncurrySBVs7 :: (SBVs as -> (SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) -> (SBVs (as :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
+         uncurrySBVs7 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons as h) g) f) e) d) c) b) = fn as (h,g,f,e,d,c,b)
   registerFunction = registerFunction . curry7
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry7 <$> sbvDefineValueFun nm mbArgs insts (fmap curry7 <$> mkUncurried uiKind)
-
-uncurrySBVs8 :: (SBVs as -> (SBV i, SBV h, SBV g, SBV f,
-                             SBV e, SBV d, SBV c, SBV b) -> SBV a) ->
-                (SBVs (as :> i :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
-uncurrySBVs8 fn (SBVsCons
-                 (SBVsCons
-                  (SBVsCons
-                   (SBVsCons
-                    (SBVsCons
-                     (SBVsCons (SBVsCons (SBVsCons as i) h) g) f) e) d) c) b) =
-  fn as (i,h,g,f,e,d,c,b)
 
 -- Uncurried functions of eight arguments
 instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvFun2smt = sbvFun2smt . uncurrySBVs8
+   where uncurrySBVs8 :: (SBVs as -> (SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) -> (SBVs (as :> i :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
+         uncurrySBVs8 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons as i) h) g) f) e) d) c) b) = fn as (i,h,g,f,e,d,c,b)
   registerFunction = registerFunction . curry8
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry8 <$> sbvDefineValueFun nm mbArgs insts (fmap curry8 <$> mkUncurried uiKind)
-
-uncurrySBVs9 :: (SBVs as -> (SBV j, SBV i, SBV h, SBV g, SBV f,
-                             SBV e, SBV d, SBV c, SBV b) -> SBV a) ->
-                (SBVs (as :> j :> i :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
-uncurrySBVs9 fn (SBVsCons
-                 (SBVsCons
-                  (SBVsCons
-                   (SBVsCons
-                    (SBVsCons
-                     (SBVsCons
-                      (SBVsCons (SBVsCons (SBVsCons as j) i) h) g) f) e) d) c) b) =
-  fn as (j,i,h,g,f,e,d,c,b)
 
 -- Uncurried functions of nine arguments
 instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvFun2smt = sbvFun2smt . uncurrySBVs9
+   where uncurrySBVs9 :: (SBVs as -> (SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) -> (SBVs (as :> j :> i :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
+         uncurrySBVs9 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons as j) i) h) g) f) e) d) c) b) = fn as (j,i,h,g,f,e,d,c,b)
   registerFunction = registerFunction . curry9
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry9 <$> sbvDefineValueFun nm mbArgs insts (fmap curry9 <$> mkUncurried uiKind)
-
-uncurrySBVs10 :: (SBVs as -> (SBV k, SBV j, SBV i, SBV h, SBV g, SBV f,
-                              SBV e, SBV d, SBV c, SBV b) -> SBV a) ->
-                 (SBVs (as :> k :> j :> i :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
-uncurrySBVs10 fn (SBVsCons
-                  (SBVsCons
-                   (SBVsCons
-                    (SBVsCons
-                     (SBVsCons
-                      (SBVsCons
-                       (SBVsCons
-                        (SBVsCons
-                         (SBVsCons (SBVsCons as k) j) i) h) g) f) e) d) c) b) =
-  fn as (k,j,i,h,g,f,e,d,c,b)
 
 -- Uncurried functions of ten arguments
 instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvFun2smt = sbvFun2smt . uncurrySBVs10
+   where uncurrySBVs10 :: (SBVs as -> (SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) -> (SBVs (as :> k :> j :> i :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
+         uncurrySBVs10 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons as k) j) i) h) g) f) e) d) c) b) = fn as (k,j,i,h,g,f,e,d,c,b)
   registerFunction = registerFunction . curry10
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry10 <$> sbvDefineValueFun nm mbArgs insts (fmap curry10 <$> mkUncurried uiKind)
-
-uncurrySBVs11 :: (SBVs as -> (SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f,
-                              SBV e, SBV d, SBV c, SBV b) -> SBV a) ->
-                 (SBVs (as :> l :> k :> j :> i :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
-uncurrySBVs11 fn (SBVsCons
-                  (SBVsCons
-                   (SBVsCons
-                    (SBVsCons
-                     (SBVsCons
-                      (SBVsCons
-                       (SBVsCons
-                        (SBVsCons
-                         (SBVsCons
-                          (SBVsCons (SBVsCons as l) k) j) i) h) g) f) e) d) c) b) =
-  fn as (l,k,j,i,h,g,f,e,d,c,b)
 
 -- Uncurried functions of eleven arguments
 instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvFun2smt = sbvFun2smt . uncurrySBVs11
+   where uncurrySBVs11 :: (SBVs as -> (SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) -> (SBVs (as :> l :> k :> j :> i :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
+         uncurrySBVs11 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons as l) k) j) i) h) g) f) e) d) c) b) = fn as (l,k,j,i,h,g,f,e,d,c,b)
   registerFunction = registerFunction . curry11
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry11 <$> sbvDefineValueFun nm mbArgs insts (fmap curry11 <$> mkUncurried uiKind)
-
-uncurrySBVs12 :: (SBVs as -> (SBV m, SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f,
-                              SBV e, SBV d, SBV c, SBV b) -> SBV a) ->
-                 (SBVs (as :> m :> l :> k :> j :> i :>
-                        h :> g :> f :> e :> d :> c :> b) -> SBV a)
-uncurrySBVs12 fn (SBVsCons
-                  (SBVsCons
-                   (SBVsCons
-                    (SBVsCons
-                     (SBVsCons
-                      (SBVsCons
-                       (SBVsCons
-                        (SBVsCons
-                         (SBVsCons
-                          (SBVsCons
-                           (SBVsCons (SBVsCons as m) l) k) j) i) h) g) f) e) d) c) b) =
-  fn as (m,l,k,j,i,h,g,f,e,d,c,b)
 
 -- Uncurried functions of twelve arguments
 instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV m, SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvFun2smt = sbvFun2smt . uncurrySBVs12
+    where uncurrySBVs12 :: (SBVs as -> (SBV m, SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) -> (SBVs (as :> m :> l :> k :> j :> i :> h :> g :> f :> e :> d :> c :> b) -> SBV a)
+          uncurrySBVs12 fn (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons (SBVsCons as m) l) k) j) i) h) g) f) e) d) c) b) = fn as (m,l,k,j,i,h,g,f,e,d,c,b)
   registerFunction = registerFunction . curry12
   sbvDefineValueFun nm mbArgs insts uiKind = uncurry12 <$> sbvDefineValueFun nm mbArgs insts (fmap curry12 <$> mkUncurried uiKind)
 
