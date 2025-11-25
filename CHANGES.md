@@ -7,6 +7,9 @@
     Thanks to Eddy Westbrook for the patch. This should have no impact on existing code or usage,
     just allowing new use cases. Let us know if it breaks anything.
 
+  * SBV now supports uninterpreted functions of arbitrary arities. (Previously, we had support for upto
+    12 args; Eddy's work above generalized this to arbitrary arity.)
+
 ### Version 13.1, 2025-10-31
 
   * Tweaks to make sure SBV compiles with GHC 9.8.4. No other changes on top of 13.0 below.
