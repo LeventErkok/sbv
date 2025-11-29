@@ -330,16 +330,61 @@ primeNoDivisor = do
             =: sTrue
             =: qed
 
+-- | \n \geq k \geq 2 .=> (\textrm{leastDivisor}\,k\,(\textrm{leastDivisor}\,k\,n) = \textrm{leastDivisor}\,k\,n\)
+--
+-- === __Proof__
+-- runTP leastDivisorTwice
+-- Inductive lemma (strong): leastDivisorTwice
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D. [Modulo: sorry]
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D. [Modulo: sorry]
+-- [Modulo: sorry] leastDivisorTwice :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
+leastDivisorTwice :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
+leastDivisorTwice =
+  sInduct "leastDivisorTwice"
+          (\(Forall k) (Forall n) -> n .>= k .&& k .>= 2 .=> leastDivisor k (leastDivisor k n) .== leastDivisor k n)
+          (\k n -> n - k, []) $
+          \ih k n -> [n .>= k, k .>= 2]
+                  |- leastDivisor k (leastDivisor k n) .== leastDivisor k n
+                  =: cases [ n `sEMod` k.== 0 ==> leastDivisor k k .== k
+                                               =: sTrue
+                                               =: qed
+                           , n `sEMod` k./= 0 ==> leastDivisor k (leastDivisor (k+1) n) .== leastDivisor (k+1) n
+                                               ?? sorry
+                                               =: leastDivisor (k+1) (leastDivisor (k+1) n) .== leastDivisor (k+1) n
+                                               ?? ih `at` (Inst @"k" (k+1), Inst @"n" n)
+                                               =: sTrue
+                                               =: qed
+                           ]
+
 -- | \(n \geq 2 .=> textrm{isPrime}(\textrm{leastDivisor}\,2\,n)\)
 --
 -- === __Proof__
 -- >>> runTP leastDivisorIsPrime
--- Lemma: leastDivisorIsPrime              Q.E.D. [Modulo: sorry]
--- [Modulo: sorry] leastDivisorIsPrime :: Ɐn ∷ Integer → Bool
+-- Lemma: leastDivisorTwice                Q.E.D. [Modulo: sorry]
+-- Lemma: leastDivisorIsPrime
+--   Step: 1                               Q.E.D. [Modulo: sorry]
+--   Step: 2                               Q.E.D. [Modulo: sorry]
+--   Result:                               Q.E.D. [Modulo: sorry]
+-- [Modulo: leastDivisorTwice] leastDivisorIsPrime :: Ɐn ∷ Integer → Bool
 leastDivisorIsPrime :: TP (Proof (Forall "n" Integer -> SBool))
-leastDivisorIsPrime = lemma "leastDivisorIsPrime"
-                            (\(Forall n) -> n .>= 2 .=> isPrime (leastDivisor 2 n))
-                            [sorry]
+leastDivisorIsPrime = do
+   ldt <- recall "leastDivisorTwice" leastDivisorTwice
+
+   calc "leastDivisorIsPrime"
+        (\(Forall n) -> n .>= 2 .=> isPrime (leastDivisor 2 n)) $
+        \n -> [n .>= 2] |- isPrime (leastDivisor 2 n)
+                        ?? sorry
+                        =: n .>= 2 .&& leastDivisor 2 (leastDivisor 2 n) .== leastDivisor 2 n
+                        ?? ldt `at` (Inst @"k" 2, Inst @"n" n)
+                        =: sTrue
+                        =: qed
 
 -- | By the 'leastDivisorIsPrime' theorem, the least prime divisor is the least divisor starting from @2@.
 leastPrimeDivisor :: SInteger -> SInteger
