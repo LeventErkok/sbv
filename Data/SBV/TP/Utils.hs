@@ -26,7 +26,7 @@ module Data.SBV.TP.Utils (
          TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof
        , startTP, finishTP, getTPState, getTPConfig, setTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
-       , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML, shortProofName
+       , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML
        , withProofCache
        , tpQuiet, tpRibbon, tpAsms, tpStats, tpCache
        ) where
@@ -219,9 +219,19 @@ data ProofObj = ProofObj { dependencies :: [ProofObj]     -- ^ Immediate depende
 
 -- | Drop the instantiation part
 shortProofName :: ProofObj -> String
-shortProofName p | " @ " `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
+shortProofName p | " @ " `isInfixOf` s = (reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s)
                  | True                = s
    where s = proofName p
+
+-- | Nicely format a bunch of proof-names, shortened and uniquified. Note that if we get a dependency
+-- via multiple routes, they can get different uniqid's; so we do a bit of compression here.
+shortProofNames :: [ProofObj] -> String
+shortProofNames = intercalate ", " . map merge . compress . sort . map shortProofName . nubBy (\a b -> uniqId a == uniqId b)
+ where compress []     = []
+       compress (a:as) = case span (a ==) as of
+                           (same, other) -> (a, length same + 1) : compress other
+       merge (n, 1) = n
+       merge (n, x) = n ++ " (x" ++ show x ++ ")"
 
 -- | Keeping track of where the sorry originates from. Used in displaying dependencies.
 newtype RootOfTrust = RootOfTrust (Maybe [ProofObj])
@@ -230,7 +240,7 @@ newtype RootOfTrust = RootOfTrust (Maybe [ProofObj])
 instance Show RootOfTrust where
   show (RootOfTrust mbp) = case mbp of
                              Nothing -> "Nothing"
-                             Just ps -> "Just [" ++ intercalate ", " (map shortProofName ps) ++ "]"
+                             Just ps -> "Just [" ++ shortProofNames ps ++ "]"
 
 -- | Trust forms a semigroup
 instance Semigroup RootOfTrust where
@@ -317,14 +327,12 @@ showProofTreeHTML compress mbCSS p = htmlTree mbCSS $ snd $ depsToTree compress 
 -- | Show instance for t'Proof'
 instance Typeable a => Show (Proof a) where
   show p@(Proof po@ProofObj{proofName = nm}) = '[' : sh (rootOfTrust p) ++ "] " ++ nm ++ " :: " ++ pretty (show (typeOf p))
-    where sh (RootOfTrust Nothing)   = "Proven" ++ cacheInfo
-          sh (RootOfTrust (Just ps)) = "Modulo: " ++ join ps ++ cacheInfo
-
-          join = intercalate ", " . sort . map shortProofName
+    where sh (RootOfTrust Nothing)   = "Proven"   ++ cacheInfo
+          sh (RootOfTrust (Just ps)) = "Modulo: " ++ shortProofNames ps ++ cacheInfo
 
           cacheInfo = case cachedProofs po of
                         [] -> ""
-                        cs -> ". Cached: " ++ join (nubBy (\p1 p2 -> uniqId p1 == uniqId p2) cs)
+                        cs -> ". Cached: " ++ shortProofNames (nubBy (\p1 p2 -> uniqId p1 == uniqId p2) cs)
 
           cachedProofs prf@ProofObj{isCached} = if isCached then prf : rest else rest
             where rest = concatMap cachedProofs (dependencies prf)
@@ -434,7 +442,7 @@ rootOfTrust = rot True . proofOf
 concludeModulo :: [ProofObj] -> String
 concludeModulo by = case foldMap (rootOfTrust . Proof) by of
                       RootOfTrust Nothing   -> ""
-                      RootOfTrust (Just ps) -> " [Modulo: " ++ intercalate ", " (map shortProofName ps) ++ "]"
+                      RootOfTrust (Just ps) -> " [Modulo: " ++ shortProofNames ps ++ "]"
 
 -- | Make TP proofs quiet. Note that this setting will be effective with the
 -- call to 'runTP'\/'runTPWith', i.e., if you change the solver in a call to 'Data.SBV.TP.lemmaWith'\/'Data.SBV.TP.theoremWith', we
