@@ -10,6 +10,9 @@
   * SBV now supports uninterpreted functions of arbitrary arities. (Previously, we had support for upto
     12 args; Eddy's work above generalized this to arbitrary arity.)
 
+  * Added Documentation.SBV.Examples.TP.Primes, which formalized primality and proves that there are
+    an infinite number of primes.
+
 ### Version 13.1, 2025-10-31
 
   * Tweaks to make sure SBV compiles with GHC 9.8.4. No other changes on top of 13.0 below.
