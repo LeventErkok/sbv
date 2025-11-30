@@ -229,12 +229,10 @@ dividesMod0 = lemma "dividesMod0"
 -- | The definition of primality will depend on the notion of least divisor. Given @k@ and @n@, the least-divisor of
 -- @n@ that is at least @k@ is the number that is at least @k@ and divides @n@ evenly. The idea is that a number is
 -- prime if the least divisor of a number between @2@ and itself is the number itself, then it must be prime.
-leastDivisor :: SInteger -> SInteger -> SInteger
-leastDivisor = smtFunction "leastDivisor" $ \k n -> ite (n `sEMod` k .== 0) k (leastDivisor (k+1) n)
+ld :: SInteger -> SInteger -> SInteger
+ld = smtFunction "ld" $ \k n -> ite (n `sEMod` k .== 0) k (ld (k+1) n)
 
--- | \(1 < k \leq n \implies \textrm{ld}_{k\,n} \mid n \land \textrm{ld}_{k\,n} \geq k \land \textrm{ld}_{k\,n} \leq n\)
---
--- where \(textrm{\ld}_{k\,n} = \textrm{\leastDivisor}\,k\,\n\).
+-- | \(1 < k \leq n \implies \textrm{ld}\,k\,n \mid n \land \textrm{ld}\,k\,n \geq k \land \textrm{ld}\,k\,n \leq n\)
 --
 -- === __Proof__
 -- >>> runTP leastDivisorDivides
@@ -249,16 +247,16 @@ leastDivisor = smtFunction "leastDivisor" $ \k n -> ite (n `sEMod` k .== 0) k (l
 leastDivisorDivides :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
 leastDivisorDivides =
    sInduct "leastDivisorDivides"
-           (\(Forall k) (Forall n) -> 1 .< k .&& k .<= n .=> let ld = leastDivisor k n in ld `dvd` n .&& k .<= ld .&& ld .<= n)
+           (\(Forall k) (Forall n) -> 1 .< k .&& k .<= n .=> let d = ld k n in d `dvd` n .&& k .<= d .&& d .<= n)
            (\k n -> n - k, []) $
            \ih k n -> [1 .< k, k .<= n]
-                  |- let ld = leastDivisor k n
-                  in cases [ n `sEMod` k .== 0 ==> ld `dvd` n .&& k .<= ld .&& ld .<= n
-                                                ?? ld .== k
+                  |- let d = ld k n
+                  in cases [ n `sEMod` k .== 0 ==> d `dvd` n .&& k .<= d .&& d .<= n
+                                                ?? d .== k
                                                 =: sTrue
                                                 =: qed
-                           , n `sEMod` k ./= 0 ==> ld `dvd` n .&& k .<= ld .&& ld .<= n
-                                                ?? ld .== leastDivisor (k+1) n
+                           , n `sEMod` k ./= 0 ==> d `dvd` n .&& k .<= d .&& d .<= n
+                                                ?? d .== ld (k+1) n
                                                 ?? ih
                                                 =: sTrue
                                                 =: qed
@@ -279,13 +277,13 @@ leastDivisorDivides =
 leastDivisorIsLeast :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> Forall "d" Integer -> SBool))
 leastDivisorIsLeast =
   sInduct "leastDivisorisLeast"
-          (\(Forall k) (Forall n) (Forall d) -> 1 .< k .&& k .<= n .&& d `dvd` n .&& k .<= d .=> leastDivisor k n .<= d)
+          (\(Forall k) (Forall n) (Forall d) -> 1 .< k .&& k .<= n .&& d `dvd` n .&& k .<= d .=> ld k n .<= d)
           (\k n _d -> n - k, []) $
           \ih k n d -> [1 .< k, k .<= n, d `dvd` n, k .<= d]
-                    |- cases [ n `sEMod` k .== 0 ==> leastDivisor k n .<= d
+                    |- cases [ n `sEMod` k .== 0 ==> ld k n .<= d
                                                   =: k .<= d
                                                   =: qed
-                             , n `sEMod` k ./= 0 ==> leastDivisor k n .<= d
+                             , n `sEMod` k ./= 0 ==> ld k n .<= d
                                                   ?? ih
                                                   =: sTrue
                                                   =: qed
@@ -295,7 +293,7 @@ leastDivisorIsLeast =
 
 -- | A number is prime if its least divisor greater than or equal to @2@ is itself.
 isPrime :: SInteger -> SBool
-isPrime n = n .>= 2 .&& leastDivisor 2 n .== n
+isPrime n = n .>= 2 .&& ld 2 n .== n
 
 -- | \(\textrm{isPrime}\,p \implies p \geq 2\)
 --
@@ -323,45 +321,32 @@ primeNoDivisor = do
   calc "primeNoDivisor"
        (\(Forall p) (Forall d) -> isPrime p .&& d `dvd` p .&& d .> 1 .=> d .== p) $
        \p d -> [isPrime p, d `dvd` p, d .> 1]
-            |-> p .>= 2 .&& leastDivisor 2 p .== p
+            |-> p .>= 2 .&& ld 2 p .== p
             ?? ldil
             =: p .<= d
             ?? d `dvd` p
             =: sTrue
             =: qed
 
--- | \n \geq k \geq 2 .=> (\textrm{leastDivisor}\,k\,(\textrm{leastDivisor}\,k\,n) = \textrm{leastDivisor}\,k\,n\)
+-- | \(\n \geq k \geq 2 .=> \textrm{leastDivisor}\,k\,(\textrm{leastDivisor}\,k\,n) = \textrm{leastDivisor}\,k\,n\)
 --
 -- === __Proof__
--- runTP leastDivisorTwice
--- Inductive lemma (strong): leastDivisorTwice
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D. [Modulo: sorry]
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D. [Modulo: sorry]
--- [Modulo: sorry] leastDivisorTwice :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
+-- >>> runTP leastDivisorTwice
 leastDivisorTwice :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
-leastDivisorTwice =
-  sInduct "leastDivisorTwice"
-          (\(Forall k) (Forall n) -> n .>= k .&& k .>= 2 .=> leastDivisor k (leastDivisor k n) .== leastDivisor k n)
-          (\k n -> n - k, []) $
-          \ih k n -> [n .>= k, k .>= 2]
-                  |- leastDivisor k (leastDivisor k n) .== leastDivisor k n
-                  =: cases [ n `sEMod` k.== 0 ==> leastDivisor k k .== k
-                                               =: sTrue
-                                               =: qed
-                           , n `sEMod` k./= 0 ==> leastDivisor k (leastDivisor (k+1) n) .== leastDivisor (k+1) n
-                                               ?? sorry
-                                               =: leastDivisor (k+1) (leastDivisor (k+1) n) .== leastDivisor (k+1) n
-                                               ?? ih `at` (Inst @"k" (k+1), Inst @"n" n)
-                                               =: sTrue
-                                               =: qed
-                           ]
+leastDivisorTwice = do
+  ldd <- recall "leastDivisorDivides" leastDivisorDivides
+
+  h1 <- lemma "helper1"
+              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) .<= ld k n)
+              [proofOf ldd]
+
+  h2 <- lemma "helper2"
+              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k n .<= ld k (ld k n))
+              [proofOf ldd]
+
+  lemma "leastDivisorTwice"
+        (\(Forall k) (Forall n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) .== ld k n)
+        [proofOf h1, proofOf h2]
 
 -- | \(n \geq 2 .=> textrm{isPrime}(\textrm{leastDivisor}\,2\,n)\)
 --
@@ -378,17 +363,17 @@ leastDivisorIsPrime = do
    ldt <- recall "leastDivisorTwice" leastDivisorTwice
 
    calc "leastDivisorIsPrime"
-        (\(Forall n) -> n .>= 2 .=> isPrime (leastDivisor 2 n)) $
-        \n -> [n .>= 2] |- isPrime (leastDivisor 2 n)
+        (\(Forall n) -> n .>= 2 .=> isPrime (ld 2 n)) $
+        \n -> [n .>= 2] |- isPrime (ld 2 n)
                         ?? sorry
-                        =: n .>= 2 .&& leastDivisor 2 (leastDivisor 2 n) .== leastDivisor 2 n
+                        =: n .>= 2 .&& ld 2 (ld 2 n) .== ld 2 n
                         ?? ldt `at` (Inst @"k" 2, Inst @"n" n)
                         =: sTrue
                         =: qed
 
 -- | By the 'leastDivisorIsPrime' theorem, the least prime divisor is the least divisor starting from @2@.
 leastPrimeDivisor :: SInteger -> SInteger
-leastPrimeDivisor n = leastDivisor 2 n
+leastPrimeDivisor n = ld 2 n
 
 -- * Infinitude of primes
 
@@ -446,7 +431,7 @@ greaterPrimeDivides = do
         (\(Forall n) -> greaterPrime n `dvd` (1 + fact n)) $
         \n -> [] |- greaterPrime n `dvd` (1 + fact n)
                  =: leastPrimeDivisor (1 + fact n) `dvd` (1 + fact n)
-                 =: leastDivisor 2 (1 + fact n) `dvd` (1 + fact n)
+                 =: ld 2 (1 + fact n) `dvd` (1 + fact n)
                  ?? ldd  `at` (Inst @"k" 2, Inst @"n" (1 + fact n))
                  ?? fal1 `at` (Inst @"n" n)
                  =: sTrue
@@ -548,9 +533,9 @@ greaterPrimeGreater = do
                    =: (1 .>= greaterPrime n .|| greaterPrime n .> n)
                    =: (1 .>= leastPrimeDivisor (1 + fact n) .|| greaterPrime n .> n)
                    =: (1 .>= leastPrimeDivisor (1 + fact n) .|| greaterPrime n .> n)
-                   =: (1 .>= leastDivisor 2 (1 + fact n) .|| greaterPrime n .> n)
+                   =: (1 .>= ld 2 (1 + fact n) .|| greaterPrime n .> n)
                    ?? ldp  `at` (Inst @"n" (1 + fact n))
-                   ?? pal2 `at` (Inst @"p" (leastDivisor 2 (1 + fact n)))
+                   ?? pal2 `at` (Inst @"p" (ld 2 (1 + fact n)))
                    ?? fal1 `at` (Inst @"n" n)
                    =: greaterPrime n .> n
                    =: qed
@@ -582,7 +567,7 @@ infinitudeOfPrimes = do
          \n -> [] |- let p = greaterPrime n
                   in p .> n .&& isPrime (greaterPrime n)
                   =: p .> n .&& isPrime (leastPrimeDivisor (1 + fact n))
-                  =: p .> n .&& isPrime (leastDivisor 2 (1 + fact n))
+                  =: p .> n .&& isPrime (ld 2 (1 + fact n))
                   ?? ldp `at` Inst @"n" (1 + fact n)
                   ?? fa1 `at` Inst @"n" n
                   ?? gpg `at` Inst @"n" n
