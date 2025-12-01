@@ -34,7 +34,7 @@ import Data.SBV.TP
 dvd :: SInteger -> SInteger -> SBool
 x `dvd` y = ite (x .== 0) (y .== 0) (y `sEMod` x .== 0)
 
--- | \(x > 0 \land y > 0 x \mid y \implies x \leq y\)
+-- | \(x > 0 \land y > 0 \land x \mid y \implies x \leq y\)
 --
 -- === __Proof__
 -- >>> runTP dividesLeq
@@ -45,7 +45,7 @@ dividesLeq = lemma "dividesLeq"
                     (\(Forall @"x" x) (Forall @"y" y) -> x .> 0 .&& y .> 0 .&& x `dvd` y .=> x .<= y)
                     []
 
--- | \(x \mid y .=> x `mid` -y\)
+-- | \(x \mid y \implies x \mid -y\)
 --
 -- === __Proof__
 -- >>> runTP dividesMinus
@@ -70,7 +70,7 @@ dividesMinus = calc "dividesMinus"
                                               =: qed
                                    ]
 
--- | \(x \mid y \land y \mid z \implies x \mid (y + z)\)
+-- | \(x \mid y \land x \mid z \implies x \mid (y + z)\)
 --
 -- ==== __Proof__
 -- >>> runTP dividesSum
@@ -164,7 +164,7 @@ dividesSelf = lemma "dividesSelf" (\(Forall x) -> x `dvd` x) []
 divides0 :: TP (Proof (Forall "x" Integer -> SBool))
 divides0 = lemma "divides0" (\(Forall x) -> x `dvd` 0) []
 
--- | \(n \neq 0 \implies n `mid` a-b \equiv a \mod n = b \mod n\)
+-- | \(n \neq 0 \implies (n \mid a-b) \equiv (a \equiv b \pmod{n})\)
 --
 -- === __Proof__
 -- >>> runTP dividesModEqual
@@ -213,7 +213,7 @@ dividesModEqual =
                                               ]
                         ]
 
--- | \(n \neq 0 \implies n \mid a == (a \mod n == 0)\)
+-- | \(n \neq 0 \implies n \mid a == (a \equiv 0 \pmod{n})\)
 --
 -- === __Proof__
 -- >>> runTP dividesMod0
@@ -228,11 +228,11 @@ dividesMod0 = lemma "dividesMod0"
 
 -- | The definition of primality will depend on the notion of least divisor. Given @k@ and @n@, the least-divisor of
 -- @n@ that is at least @k@ is the number that is at least @k@ and divides @n@ evenly. The idea is that a number is
--- prime if the least divisor of a number between @2@ and itself is the number itself, then it must be prime.
+-- prime if the least divisor starting from @2@ is itself.
 ld :: SInteger -> SInteger -> SInteger
 ld = smtFunction "ld" $ \k n -> ite (n `sEMod` k .== 0) k (ld (k+1) n)
 
--- | \(1 < k \leq n \implies \textrm{ld}\,k\,n \mid n \land \textrm{ld}\,k\,n \geq k \land \textrm{ld}\,k\,n \leq n\)
+-- | \(1 < k \leq n \implies \textrm{ld}\,k\,n \mid n \land k \leq \textrm{ld}\,k\,n \leq n\)
 --
 -- === __Proof__
 -- >>> runTP leastDivisorDivides
@@ -262,7 +262,7 @@ leastDivisorDivides =
                                                 =: qed
                            ]
 
--- | \(1 < k \leq n \land d \mid n \land k \leq d \implies \textrm{leastDivisor}\,k\,n \leq d\)
+-- | \(1 < k \leq n \land d \mid n \land k \leq d \implies \textrm{ld}\,k\,n \leq d\)
 --
 -- === __Proof__
 -- >>> runTP leastDivisorIsLeast
@@ -304,7 +304,7 @@ isPrime n = n .>= 2 .&& ld 2 n .== n
 primeAtLeast2 :: TP (Proof (Forall "p" Integer -> SBool))
 primeAtLeast2 = lemma "primeAtLeast2" (\(Forall p) -> isPrime p .=> p .>= 2) []
 
--- | \(textrm{isPrime}\,p \land d \mid p \land d > 1 \implies d = p\)
+-- | \(\textrm{isPrime}\,p \land d \mid p \land d > 1 \implies d = p\)
 --
 -- === __Proof__
 -- >>> runTP primeNoDivisor
@@ -328,7 +328,7 @@ primeNoDivisor = do
             =: sTrue
             =: qed
 
--- | \(\n \geq k \geq 2 .=> \textrm{leastDivisor}\,k\,(\textrm{leastDivisor}\,k\,n) = \textrm{leastDivisor}\,k\,n\)
+-- | \(n \geq k \geq 2 \implies \textrm{ld}\,k\,(\textrm{ld}\,k\,n) = \textrm{ld}\,k\,n\)
 --
 -- === __Proof__
 -- >>> runTP leastDivisorTwice
@@ -380,7 +380,7 @@ leastDivisorTwice = do
         (\(Forall k) (Forall n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) .== ld k n)
         [proofOf h1, proofOf h5]
 
--- | \(n \geq 2 .=> textrm{isPrime}(\textrm{leastDivisor}\,2\,n)\)
+-- | \(n \geq 2 \implies \textrm{isPrime}\,(\textrm{ld}\,2\,n)\)
 --
 -- === __Proof__
 -- >>> runTP leastDivisorIsPrime
@@ -403,7 +403,8 @@ leastDivisorIsPrime = do
                         =: sTrue
                         =: qed
 
--- | By the 'leastDivisorIsPrime' theorem, the least prime divisor is the least divisor starting from @2@.
+-- | The least prime divisor is the least divisor of it starting from @2@. By 'leastDivisorIsPrime', this number
+-- is guaranteed to be prime.
 leastPrimeDivisor :: SInteger -> SInteger
 leastPrimeDivisor n = ld 2 n
 
@@ -469,7 +470,7 @@ greaterPrimeDivides = do
                  =: sTrue
                  =: qed
 
--- | \(1 \leq k \land k \leq n \implies k `dvd` n!\)
+-- | \(1 \leq k \land k \leq n \implies k \mid n!\)
 --
 -- === __Proof__
 -- >>> runTP dividesFact
@@ -505,7 +506,7 @@ dividesFact = do
                                           =: qed
                            ]
 
--- | \(1 \leq k \land k \leq n \implies \neg (k `dvd` n! + 1)\)
+-- | \(1 \leq k \land k \leq n \implies \neg (k \mid n! + 1)\)
 --
 -- === __Proof__
 -- >>> runTP notDividesFactP1
