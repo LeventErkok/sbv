@@ -332,6 +332,19 @@ primeNoDivisor = do
 --
 -- === __Proof__
 -- >>> runTP leastDivisorTwice
+-- Lemma: dividesTransitive                Q.E.D.
+-- Lemma: leastDivisorDivides              Q.E.D.
+-- Lemma: leastDivisorIsLeast              Q.E.D.
+-- Lemma: helper2                          Q.E.D.
+-- Lemma: helper1                          Q.E.D.
+-- Lemma: helper3                          Q.E.D.
+-- Lemma: helper4                          Q.E.D.
+-- Lemma: helper5                          Q.E.D.
+-- Lemma: helper6
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: leastDivisorTwice                Q.E.D.
+-- [Proven] leastDivisorTwice :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 leastDivisorTwice :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
 leastDivisorTwice = do
   dt  <- recall "dividesTransitive"   dividesTransitive
@@ -378,12 +391,12 @@ leastDivisorTwice = do
 --
 -- === __Proof__
 -- >>> runTP leastDivisorIsPrime
--- Lemma: leastDivisorTwice                Q.E.D. [Modulo: sorry]
+-- Lemma: leastDivisorTwice                Q.E.D.
 -- Lemma: leastDivisorIsPrime
 --   Step: 1                               Q.E.D. [Modulo: sorry]
---   Step: 2                               Q.E.D. [Modulo: sorry]
+--   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D. [Modulo: sorry]
--- [Modulo: leastDivisorTwice] leastDivisorIsPrime :: Ɐn ∷ Integer → Bool
+-- [Modulo: sorry] leastDivisorIsPrime :: Ɐn ∷ Integer → Bool
 leastDivisorIsPrime :: TP (Proof (Forall "n" Integer -> SBool))
 leastDivisorIsPrime = do
    ldt <- recall "leastDivisorTwice" leastDivisorTwice
@@ -579,9 +592,9 @@ greaterPrimeGreater = do
 -- Lemma: infinitudeOfPrimes
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D. [Modulo: sorry, leastDivisorIsPrime]
---   Result:                               Q.E.D. [Modulo: sorry, leastDivisorIsPrime]
--- [Modulo: leastDivisorIsPrime, leastDivisorIsPrime] infinitudeOfPrimes :: Ɐn ∷ Integer → Bool
+--   Step: 3                               Q.E.D. [Modulo: leastDivisorIsPrime, sorry]
+--   Result:                               Q.E.D. [Modulo: leastDivisorIsPrime, sorry]
+-- [Modulo: leastDivisorIsPrime (x2)] infinitudeOfPrimes :: Ɐn ∷ Integer → Bool
 infinitudeOfPrimes :: TP (Proof (Forall "n" Integer -> SBool))
 infinitudeOfPrimes = do
    ldp <- recall "leastDivisorIsPrime" leastDivisorIsPrime
@@ -607,11 +620,11 @@ infinitudeOfPrimes = do
 --
 -- === __Proof__
 -- >>> runTP noLargestPrime
--- Lemma: infinitudeOfPrimes               Q.E.D. [Modulo: sorry, leastDivisorIsPrime]
+-- Lemma: infinitudeOfPrimes               Q.E.D. [Modulo: leastDivisorIsPrime, sorry]
 -- Lemma: noLargestPrime
---   Step: 1                               Q.E.D. [Modulo: leastDivisorIsPrime, leastDivisorIsPrime]
---   Result:                               Q.E.D. [Modulo: leastDivisorIsPrime, leastDivisorIsPrime]
--- [Modulo: leastDivisorIsPrime, leastDivisorIsPrime] noLargestPrime :: Ɐn ∷ Integer → Bool
+--   Step: 1                               Q.E.D. [Modulo: leastDivisorIsPrime (x2)]
+--   Result:                               Q.E.D. [Modulo: leastDivisorIsPrime (x2)]
+-- [Modulo: leastDivisorIsPrime (x2)] noLargestPrime :: Ɐn ∷ Integer → Bool
 noLargestPrime :: TP (Proof (Forall "n" Integer -> SBool))
 noLargestPrime = do
    iop <- recall "infinitudeOfPrimes" infinitudeOfPrimes
