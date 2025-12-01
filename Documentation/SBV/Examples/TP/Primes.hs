@@ -335,12 +335,11 @@ primeNoDivisor = do
 -- Lemma: dividesTransitive                Q.E.D.
 -- Lemma: leastDivisorDivides              Q.E.D.
 -- Lemma: leastDivisorIsLeast              Q.E.D.
--- Lemma: helper2                          Q.E.D.
 -- Lemma: helper1                          Q.E.D.
+-- Lemma: helper2                          Q.E.D.
 -- Lemma: helper3                          Q.E.D.
 -- Lemma: helper4                          Q.E.D.
--- Lemma: helper5                          Q.E.D.
--- Lemma: helper6
+-- Lemma: helper5
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: leastDivisorTwice                Q.E.D.
@@ -351,11 +350,11 @@ leastDivisorTwice = do
   ldd <- recall "leastDivisorDivides" leastDivisorDivides
   ldl <- recall "leastDivisorIsLeast" leastDivisorIsLeast
 
-  h1 <- lemma "helper2"
-              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) `dvd` ld k n)
+  h1 <- lemma "helper1"
+              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) `dvd` ld k n .&& ld k (ld k n) .<= ld k n)
               [proofOf ldd]
 
-  h2 <- lemma "helper1"
+  h2 <- lemma "helper2"
               (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k n `dvd` n)
               [proofOf ldd]
 
@@ -364,28 +363,22 @@ leastDivisorTwice = do
               [proofOf h1, proofOf h2, proofOf dt]
 
   h4 <- lemma "helper4"
-              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) .<= ld k n)
-              [proofOf ldd]
-
-  h5 <- lemma "helper5"
               (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> k .<= ld k (ld k n))
               [proofOf ldd]
 
-  h6 <- calc "helper6"
+  h5 <- calc "helper5"
               (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k n .<= ld k (ld k n)) $
               \k n -> [n .>= k, k .>= 2]
                    |- ld k n .<= ld k (ld k n)
-                   ?? h2  `at` (Inst @"k" k, Inst @"n" n)
                    ?? h3  `at` (Inst @"k" k, Inst @"n" n)
                    ?? h4  `at` (Inst @"k" k, Inst @"n" n)
-                   ?? h5  `at` (Inst @"k" k, Inst @"n" n)
                    ?? ldl `at` (Inst @"k" k, Inst @"n" n, Inst @"d" (ld k (ld k n)))
                    =: sTrue
                    =: qed
 
   lemma "leastDivisorTwice"
         (\(Forall k) (Forall n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) .== ld k n)
-        [proofOf h4, proofOf h6]
+        [proofOf h1, proofOf h5]
 
 -- | \(n \geq 2 .=> textrm{isPrime}(\textrm{leastDivisor}\,2\,n)\)
 --
