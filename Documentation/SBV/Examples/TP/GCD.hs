@@ -184,7 +184,7 @@ isOdd  = sNot . isEven
 
 -- * Divisibility
 
--- | Divides relation. By definition we @0@ only divides @0@. (But every number divides @0@).
+-- | Divides relation. By definition @0@ only divides @0@. (But every number divides @0@).
 dvd :: SInteger -> SInteger -> SBool
 a `dvd` b = ite (a .== 0) (b .== 0) (b `sEMod` a .== 0)
 

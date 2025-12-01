@@ -30,7 +30,7 @@ import Data.SBV.TP
 
 -- * Divisibility
 
--- | Divides relation. By definition we @0@ only divides @0@. (But every number divides @0@).
+-- | Divides relation. By definition @0@ only divides @0@. (But every number divides @0@).
 dvd :: SInteger -> SInteger -> SBool
 x `dvd` y = ite (x .== 0) (y .== 0) (y `sEMod` x .== 0)
 
