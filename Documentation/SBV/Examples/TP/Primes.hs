@@ -334,19 +334,46 @@ primeNoDivisor = do
 -- >>> runTP leastDivisorTwice
 leastDivisorTwice :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
 leastDivisorTwice = do
+  dt  <- recall "dividesTransitive"   dividesTransitive
   ldd <- recall "leastDivisorDivides" leastDivisorDivides
+  ldl <- recall "leastDivisorIsLeast" leastDivisorIsLeast
 
-  h1 <- lemma "helper1"
+  h1 <- lemma "helper2"
+              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) `dvd` ld k n)
+              [proofOf ldd]
+
+  h2 <- lemma "helper1"
+              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k n `dvd` n)
+              [proofOf ldd]
+
+  h3 <- lemma "helper3"
+              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) `dvd` n)
+              [proofOf h1, proofOf h2, proofOf dt]
+
+  h4 <- lemma "helper4"
               (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) .<= ld k n)
               [proofOf ldd]
 
-  h2 <- lemma "helper2"
-              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k n .<= ld k (ld k n))
-              [proofOf ldd]
+  h5 <- lemma "helper5"
+              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> k .<= ld k n)
+              [sorry]
+
+  h6 <- calc "helper6"
+              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k n .<= ld k (ld k n)) $
+              \k n -> [n .>= k, k .>= 2]
+                   |-  ld k n .<= ld k (ld k n)
+                   ?? h2  `at` (Inst @"k" k, Inst @"n" n)
+                   ?? h3  `at` (Inst @"k" k, Inst @"n" n)
+                   ?? h4  `at` (Inst @"k" k, Inst @"n" n)
+                   ?? h5  `at` (Inst @"k" k, Inst @"n" n)
+                   ?? ldl `at` (Inst @"k" k, Inst @"n" n, Inst @"d" (ld k (ld k n)))
+                   ?? sorry
+                   =: sTrue
+                   =: qed
 
   lemma "leastDivisorTwice"
         (\(Forall k) (Forall n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) .== ld k n)
-        [proofOf h1, proofOf h2]
+        [proofOf h4, proofOf h6]
 
 -- | \(n \geq 2 .=> textrm{isPrime}(\textrm{leastDivisor}\,2\,n)\)
 --
