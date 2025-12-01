@@ -66,7 +66,7 @@ dividesMinus = calc "dividesMinus"
                                               =: qed
                                    , x ./= 0 ==> x `dvd` (-y)
                                               ?? y .== x * y `sEDiv` x
-                                              =: x `dvd` -(1 * x * y `sEDiv` x)
+                                              =: x `dvd` (-(1 * x * y `sEDiv` x))
                                               =: qed
                                    ]
 
