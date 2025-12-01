@@ -77,9 +77,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Mul (Val 3) (Val 2))))
+[RECV] ((s0 (Mul (Var "!0!") (Var "!0!"))))
 
-Got: (3 * 2)
+Got: (!0! * !0!)
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess

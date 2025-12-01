@@ -54,15 +54,16 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Seq (Assign "!2!" (Con 3))
-            (Seq (Assign "!4!" (Con 5))
-                 (Seq (Assign "!3!" (Con 4)) (Assign "!0!" (Add (Var "!1!") (Con 2))))))))
+[RECV] ((s0 (Seq (Assign "!3!" (Var "!6!"))
+            (Seq (Assign "!5!" (Var "!8!"))
+                 (Seq (Assign "!4!" (Var "!7!"))
+                      (Assign "!0!" (Add (Var "!1!") (Var "!2!"))))))))
 
 Got:
-!2! := 3;
-!4! := 5;
-!3! := 4;
-!0! := (!1! + 2)
+!3! := !6!;
+!5! := !8!;
+!4! := !7!;
+!0! := (!1! + !2!)
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess

@@ -95,9 +95,9 @@
 [RECV] ((s0 (AMaybe (Just (mkSBVTuple3 2.0
                                   (fp #b0 #x00 #b00000000000000000000001)
                                   (mkSBVTuple2 (Right (fp #b0 #x01 #b00000000000010000000000))
-                                               (seq.unit true)))))))
+                                               (seq.unit false)))))))
 
-getValue: AMaybe (Just (2.0,1.0e-45,(Right 1.1756378e-38,[True])))
+getValue: AMaybe (Just (2.0,1.0e-45,(Right 1.1756378e-38,[False])))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess

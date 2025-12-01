@@ -60,18 +60,18 @@ Fast allSat, Looking for solution 4
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store ((as const (Array E Bool)) false) A true)))
+[RECV] ((s0 (store ((as const (Array E Bool)) true) C false)))
 [GOOD] (push 1)
-[GOOD] (define-fun s7 () (Array E Bool) (store ((as const (Array E Bool)) false) (as A E) true))
+[GOOD] (define-fun s7 () (Array E Bool) (store ((as const (Array E Bool)) true) (as C E) false))
 [GOOD] (define-fun s8 () Bool (distinct s0 s7))
 [GOOD] (assert s8)
 Fast allSat, Looking for solution 5
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store ((as const (Array E Bool)) false) C true) A true)))
+[RECV] ((s0 (store (store ((as const (Array E Bool)) true) C false) B false)))
 [GOOD] (push 1)
-[GOOD] (define-fun s9 () (Array E Bool) (store (store ((as const (Array E Bool)) false) (as C E) true) (as A E) true))
+[GOOD] (define-fun s9 () (Array E Bool) (store (store ((as const (Array E Bool)) true) (as C E) false) (as B E) false))
 [GOOD] (define-fun s10 () Bool (distinct s0 s9))
 [GOOD] (assert s10)
 Fast allSat, Looking for solution 6
@@ -87,18 +87,18 @@ Fast allSat, Looking for solution 7
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store ((as const (Array E Bool)) true) C false) A false)))
+[RECV] ((s0 (store (store ((as const (Array E Bool)) false) C true) A true)))
 [GOOD] (push 1)
-[GOOD] (define-fun s13 () (Array E Bool) (store (store ((as const (Array E Bool)) true) (as C E) false) (as A E) false))
+[GOOD] (define-fun s13 () (Array E Bool) (store (store ((as const (Array E Bool)) false) (as C E) true) (as A E) true))
 [GOOD] (define-fun s14 () Bool (distinct s0 s13))
 [GOOD] (assert s14)
 Fast allSat, Looking for solution 8
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store ((as const (Array E Bool)) true) C false)))
+[RECV] ((s0 (store ((as const (Array E Bool)) false) B true)))
 [GOOD] (push 1)
-[GOOD] (define-fun s15 () (Array E Bool) (store ((as const (Array E Bool)) true) (as C E) false))
+[GOOD] (define-fun s15 () (Array E Bool) (store ((as const (Array E Bool)) false) (as B E) true))
 [GOOD] (define-fun s16 () Bool (distinct s0 s15))
 [GOOD] (assert s16)
 Fast allSat, Looking for solution 9
@@ -117,15 +117,15 @@ Fast allSat, Looking for solution 9
 
 FINAL:
 Solution #1:
-  s0 = U - {C} :: {E}
+  s0 = {B} :: {E}
 Solution #2:
-  s0 = U - {A,C} :: {E}
+  s0 = {A,C} :: {E}
 Solution #3:
   s0 = {C} :: {E}
 Solution #4:
-  s0 = {A,C} :: {E}
+  s0 = U - {B,C} :: {E}
 Solution #5:
-  s0 = {A} :: {E}
+  s0 = U - {C} :: {E}
 Solution #6:
   s0 = U - {A} :: {E}
 Solution #7:

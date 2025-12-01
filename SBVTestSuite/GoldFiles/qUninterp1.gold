@@ -30,9 +30,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 B))
+[RECV] ((s0 A))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
- FINAL:B
+ FINAL:A
 DONE!
