@@ -355,19 +355,18 @@ leastDivisorTwice = do
               [proofOf ldd]
 
   h5 <- lemma "helper5"
-              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> k .<= ld k n)
-              [sorry]
+              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> k .<= ld k (ld k n))
+              [proofOf ldd]
 
   h6 <- calc "helper6"
               (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k n .<= ld k (ld k n)) $
               \k n -> [n .>= k, k .>= 2]
-                   |-  ld k n .<= ld k (ld k n)
+                   |- ld k n .<= ld k (ld k n)
                    ?? h2  `at` (Inst @"k" k, Inst @"n" n)
                    ?? h3  `at` (Inst @"k" k, Inst @"n" n)
                    ?? h4  `at` (Inst @"k" k, Inst @"n" n)
                    ?? h5  `at` (Inst @"k" k, Inst @"n" n)
                    ?? ldl `at` (Inst @"k" k, Inst @"n" n, Inst @"d" (ld k (ld k n)))
-                   ?? sorry
                    =: sTrue
                    =: qed
 
