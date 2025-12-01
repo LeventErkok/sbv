@@ -66,7 +66,7 @@ dividesMinus = calc "dividesMinus"
                                               =: qed
                                    , x ./= 0 ==> x `dvd` (-y)
                                               ?? y .== x * y `sEDiv` x
-                                              =: x `dvd` (-1 * x * y `sEDiv` x)
+                                              =: x `dvd` -(1 * x * y `sEDiv` x)
                                               =: qed
                                    ]
 
@@ -411,7 +411,7 @@ leastPrimeDivisor n = ld 2 n
 
 -- | The factorial function.
 fact :: SInteger -> SInteger
-fact = smtFunction "fact" $ \n -> ite (n .<= 0) 1 (n * (fact (n - 1)))
+fact = smtFunction "fact" $ \n -> ite (n .<= 0) 1 (n * fact (n - 1))
 
 -- | \(n! \geq 1\)
 --
@@ -465,7 +465,7 @@ greaterPrimeDivides = do
                  =: leastPrimeDivisor (1 + fact n) `dvd` (1 + fact n)
                  =: ld 2 (1 + fact n) `dvd` (1 + fact n)
                  ?? ldd  `at` (Inst @"k" 2, Inst @"n" (1 + fact n))
-                 ?? fal1 `at` (Inst @"n" n)
+                 ?? fal1 `at` Inst @"n" n
                  =: sTrue
                  =: qed
 
@@ -560,15 +560,15 @@ greaterPrimeGreater = do
          (\(Forall n) -> greaterPrime n .> n) $
          \n -> [] |-> sTrue
                    ?? ndfp1 `at` (Inst @"n" n, Inst @"k" (greaterPrime n))
-                   ?? gpd   `at` (Inst @"n" n)
+                   ?? gpd   `at` Inst @"n" n
                    =: sNot (1 .< greaterPrime n .&& greaterPrime n .<= n)
                    =: (1 .>= greaterPrime n .|| greaterPrime n .> n)
                    =: (1 .>= leastPrimeDivisor (1 + fact n) .|| greaterPrime n .> n)
                    =: (1 .>= leastPrimeDivisor (1 + fact n) .|| greaterPrime n .> n)
                    =: (1 .>= ld 2 (1 + fact n) .|| greaterPrime n .> n)
-                   ?? ldp  `at` (Inst @"n" (1 + fact n))
-                   ?? pal2 `at` (Inst @"p" (ld 2 (1 + fact n)))
-                   ?? fal1 `at` (Inst @"n" n)
+                   ?? ldp  `at` Inst @"n" (1 + fact n)
+                   ?? pal2 `at` Inst @"p" (ld 2 (1 + fact n))
+                   ?? fal1 `at` Inst @"n" n
                    =: greaterPrime n .> n
                    =: qed
 
@@ -628,3 +628,6 @@ noLargestPrime = do
                  ?? iop `at` Inst @"n" n
                  =: sTrue
                  =: qed
+
+{- HLint ignore module "Avoid lambda" -}
+{- HLint ignore module "Eta reduce"   -}

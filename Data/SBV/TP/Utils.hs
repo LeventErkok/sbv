@@ -219,7 +219,7 @@ data ProofObj = ProofObj { dependencies :: [ProofObj]     -- ^ Immediate depende
 
 -- | Drop the instantiation part
 shortProofName :: ProofObj -> String
-shortProofName p | " @ " `isInfixOf` s = (reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s)
+shortProofName p | " @ " `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
                  | True                = s
    where s = proofName p
 
