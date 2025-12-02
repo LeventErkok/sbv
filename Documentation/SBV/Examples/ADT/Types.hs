@@ -88,13 +88,13 @@ wellTyped m = tc m (typeOf m)
 -- >>> idWF
 -- Satisfiable. Model:
 --   env :: String -> T
---   env _ = TStr
+--   env _ = TInt
 -- <BLANKLINE>
 --   typeOf :: M -> T
---   typeOf _ = TArr TStr TStr
+--   typeOf _ = TArr TInt TInt
 --
--- The model is rather uninteresting, but it shows that identity can have the type String to String, where
--- all variables are mapped to Strings.
+-- The model is rather uninteresting, but it shows that identity can have the type Integer to Integer, where
+-- all variables are mapped to Integers.
 idWF :: IO SatResult
 idWF = sat $ wellTyped $ sLam x vx
   where x  = literal "x"

@@ -123,7 +123,7 @@ evalSat = sat $ do e :: SExpr    <- free "e"
 --
 -- >>> genE
 -- Satisfiable. Model:
---   e1 = Let "p" (Val 5) (Val 3) :: Expr
+--   e1 = Let "h" (Val 4) (Val 3) :: Expr
 --   e2 =                Val (-2) :: Expr
 genE :: IO SatResult
 genE = sat $ do e1 :: SExpr <- free "e1"
@@ -140,7 +140,7 @@ genE = sat $ do e1 :: SExpr <- free "e1"
 -- | Query mode example.
 --
 -- >>> queryE
--- e1: (let p = 5 in 3)
+-- e1: (let h = 4 in 3)
 -- e2: -2
 queryE :: IO ()
 queryE = runSMT $ do

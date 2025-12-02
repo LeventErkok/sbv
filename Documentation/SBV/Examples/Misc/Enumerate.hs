@@ -35,11 +35,11 @@ mkSymbolic [''E]
 --
 -- >>> elts
 -- Solution #1:
---   s0 = C :: E
+--   s0 = B :: E
 -- Solution #2:
 --   s0 = A :: E
 -- Solution #3:
---   s0 = B :: E
+--   s0 = C :: E
 -- Found 3 different solutions.
 elts :: IO AllSatResult
 elts = allSat $ \(x::SE) -> x .== x

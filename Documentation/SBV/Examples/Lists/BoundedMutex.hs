@@ -110,7 +110,7 @@ checkMutex b = runSMT $ do
 --
 -- >>> notFair 10
 -- Fairness is violated at bound: 10
--- P1: [Idle,Idle,Ready,Critical,Idle,Ready,Critical,Critical,Idle,Ready]
+-- P1: [Idle,Idle,Idle,Idle,Ready,Critical,Critical,Critical,Idle,Ready]
 -- P2: [Idle,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready]
 -- Ts: [1,1,1,1,1,1,1,1,1,1]
 --

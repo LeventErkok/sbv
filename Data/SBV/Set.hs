@@ -147,8 +147,8 @@ complement ss
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `delete` (x `insert` s) .== s
 -- Falsifiable. Counter-example:
---   s0 = 2 :: Integer
---   s1 = U :: {Integer}
+--   s0 =   2 :: Integer
+--   s1 = {2} :: {Integer}
 --
 -- But the above is true if the element isn't in the set to start with:
 --
@@ -190,8 +190,8 @@ insert se ss
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `insert` (x `delete` s) .== s
 -- Falsifiable. Counter-example:
---   s0 =       2 :: Integer
---   s1 = U - {2} :: {Integer}
+--   s0 =  2 :: Integer
+--   s1 = {} :: {Integer}
 --
 -- But the above is true if the element is in the set to start with:
 --
@@ -515,7 +515,7 @@ True
 False
 >>> sat $ \(x::SSet (Maybe Integer)) y z -> distinct [x, y, z]
 Satisfiable. Model:
-  s0 = {Just 3} :: {Maybe Integer}
+  s0 = {Just 2} :: {Maybe Integer}
   s1 =       {} :: {Maybe Integer}
   s2 =        U :: {Maybe Integer}
 
