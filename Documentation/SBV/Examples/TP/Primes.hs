@@ -7,8 +7,8 @@
 -- Stability : experimental
 --
 -- Prove that there are an infinite number of primes. Along the way we formalize
--- and prove a number of properties about divisibility as well. Our proof
--- follows closely the ACL2 proof in <https://github.com/acl2/acl2/blob/master/books/projects/numbers/euclid.lisp>.
+-- and prove a number of properties about divisibility as well. Our proof is inspired by
+-- the ACL2 proof in <https://github.com/acl2/acl2/blob/master/books/projects/numbers/euclid.lisp>.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP              #-}
@@ -34,68 +34,6 @@ import Data.SBV.TP
 dvd :: SInteger -> SInteger -> SBool
 x `dvd` y = ite (x .== 0) (y .== 0) (y `sEMod` x .== 0)
 
--- | \(x > 0 \land y > 0 \land x \mid y \implies x \leq y\)
---
--- === __Proof__
--- >>> runTP dividesLeq
--- Lemma: dividesLeq                       Q.E.D.
--- [Proven] dividesLeq :: Ɐx ∷ Integer → Ɐy ∷ Integer → Bool
-dividesLeq :: TP (Proof (Forall "x" Integer -> Forall "y" Integer -> SBool))
-dividesLeq = lemma "dividesLeq"
-                    (\(Forall @"x" x) (Forall @"y" y) -> x .> 0 .&& y .> 0 .&& x `dvd` y .=> x .<= y)
-                    []
-
--- | \(x \mid y \implies x \mid -y\)
---
--- === __Proof__
--- >>> runTP dividesMinus
--- Lemma: dividesMinus
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] dividesMinus :: Ɐx ∷ Integer → Ɐy ∷ Integer → Bool
-dividesMinus :: TP (Proof (Forall "x" Integer -> Forall "y" Integer -> SBool))
-dividesMinus = calc "dividesMinus"
-                     (\(Forall @"x" x) (Forall @"y" y) -> x `dvd` y .=> x `dvd` (-y)) $
-                     \x y -> [x `dvd` y]
-                          |- cases [ x .== 0 ==> x `dvd` (-y)
-                                              ?? x .== 0
-                                              =: sTrue
-                                              =: qed
-                                   , x ./= 0 ==> x `dvd` (-y)
-                                              ?? y .== x * y `sEDiv` x
-                                              =: x `dvd` (-(1 * x * y `sEDiv` x))
-                                              =: qed
-                                   ]
-
--- | \(x \mid y \land x \mid z \implies x \mid (y + z)\)
---
--- ==== __Proof__
--- >>> runTP dividesSum
--- Lemma: dividesSum
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] dividesSum :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
-dividesSum :: TP (Proof (Forall "x" Integer -> Forall "y" Integer -> Forall "z" Integer -> SBool))
-dividesSum =
-  calc "dividesSum"
-       (\(Forall x) (Forall y) (Forall z) -> x `dvd` y .&& x `dvd` z .=> x `dvd` (y + z)) $
-       \x y z -> [x `dvd` y .&& x `dvd` z]
-              |- cases [ y .== 0 .|| z .== 0 ==> trivial
-                       , y ./= 0 .&& z ./= 0 ==> x `dvd` (y + z)
-                                              =: x `dvd` (y `sEDiv` x * x + z `sEDiv` x * x)
-                                              =: x `dvd` (x * (y `sEDiv` x + z `sEDiv` x))
-                                              =: sTrue
-                                              =: qed
-                       ]
-
 -- | \(x \mid y \implies x \mid y * z\)
 --
 -- === __Proof__
@@ -105,6 +43,7 @@ dividesSum =
 --     Step: 1.1                           Q.E.D.
 --     Step: 1.2.1                         Q.E.D.
 --     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] dividesProduct :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
@@ -120,109 +59,44 @@ dividesProduct = calc "dividesProduct"
                                                  ?? y .== x * y `sEDiv` x
                                                  =: x `dvd` ((x * y `sEDiv` x) * z)
                                                  =: x `dvd` (x * ((y `sEDiv` x) * z))
+                                                 =: sTrue
                                                  =: qed
                                       ]
 -- | \(x \mid y \land y \mid z \implies x \mid z\)
 --
 -- === __Proof__
 -- >>> runTP dividesTransitive
+-- Lemma: dividesProduct                   Q.E.D.
 -- Lemma: dividesTransitive
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3 (hard)                  Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] dividesTransitive :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
 dividesTransitive :: TP (Proof (Forall "x" Integer -> Forall "y" Integer -> Forall "z" Integer -> SBool))
-dividesTransitive = calc "dividesTransitive"
-                          (\(Forall x) (Forall y) (Forall z) -> x `dvd` y .&& y `dvd` z .=> x `dvd` z) $
-                          \x y z -> [x `dvd` y, y `dvd` z]
-                                 |- x `dvd` z
-                                 ?? z .== z `sEDiv` y * y
-                                 =: x `dvd` (z `sEDiv` y * y)
-                                 ?? y .== y `sEDiv` x * x
-                                 =: x `dvd` ((z `sEDiv` y) * (y `sEDiv` x * x))
-                                 =: x `dvd` (((z `sEDiv` y) * (y `sEDiv` x)) * x)
-                                 =: sTrue
-                                 =: qed
+dividesTransitive = do
+    dp <- recall "dividesProduct" dividesProduct
 
--- | \(x \mid x\)
---
--- === __Proof__
--- >>> runTP dividesSelf
--- Lemma: dividesSelf                      Q.E.D.
--- [Proven] dividesSelf :: Ɐx ∷ Integer → Bool
-dividesSelf :: TP (Proof (Forall "x" Integer -> SBool))
-dividesSelf = lemma "dividesSelf" (\(Forall x) -> x `dvd` x) []
-
--- | \(x \mid 0\)
---
--- === __Proof__
--- >>> runTP divides0
--- Lemma: divides0                         Q.E.D.
--- [Proven] divides0 :: Ɐx ∷ Integer → Bool
-divides0 :: TP (Proof (Forall "x" Integer -> SBool))
-divides0 = lemma "divides0" (\(Forall x) -> x `dvd` 0) []
-
--- | \(n \neq 0 \implies (n \mid a-b) \equiv (a \equiv b \pmod{n})\)
---
--- === __Proof__
--- >>> runTP dividesModEqual
--- Lemma: dividesModEqual
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4 (2 way case split)
---     Step: 4.1.1                         Q.E.D.
---     Step: 4.1.2                         Q.E.D.
---     Step: 4.2.1                         Q.E.D.
---     Step: 4.2.2 (2 way case split)
---       Step: 4.2.2.1                     Q.E.D.
---       Step: 4.2.2.2.1                   Q.E.D.
---       Step: 4.2.2.2.2                   Q.E.D.
---       Step: 4.2.2.2.3                   Q.E.D.
---       Step: 4.2.2.2.4                   Q.E.D.
---       Step: 4.2.2.2.5                   Q.E.D.
---       Step: 4.2.2.Completeness          Q.E.D.
---     Step: 4.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] dividesModEqual :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐn ∷ Integer → Bool
-dividesModEqual :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "n" Integer -> SBool))
-dividesModEqual =
-  calc "dividesModEqual"
-        (\(Forall a) (Forall b) (Forall n) -> n ./= 0 .=> (n `dvd` (a-b) .== (a `sEMod` n .== b `sEMod` n))) $
-        \a b n -> [n ./= 0]
-               |- let an = a `sEMod` n
-                      bn = b `sEMod` n
-               in n `dvd` (a - b)
-               =: n `dvd` ((a `sEDiv` n * n + an) - (b `sEDiv` n * n + bn))
-               =: n `dvd` ((a `sEDiv` n - b `sEDiv` n) * n + an - bn)
-               =: let k = a `sEDiv` n - b `sEDiv` n
-               in n `dvd` (k * n + an - bn)
-               =: cases [ an .== bn ==> n `dvd` (k * n)
-                                     =: sTrue
-                                     =: qed
-                        , an ./= bn ==> n `dvd` (k * n + an - bn)
-                                     =: cases [ n .== 0 ==> trivial
-                                              , n ./= 0 ==> (k * n + an - bn) `sEMod` n .== 0
-                                                         =: (((k * n) `sEMod` n) + ((an - bn) `sEMod` n)) `sEMod` n .== 0
-                                                         =: ((an - bn) `sEMod` n) `sEMod` n .== 0
-                                                         =: (an - bn) `sEMod` n .== 0
-                                                         =: sFalse
-                                                         =: qed
-                                              ]
-                        ]
-
--- | \(n \neq 0 \implies n \mid a == (a \equiv 0 \pmod{n})\)
---
--- === __Proof__
--- >>> runTP dividesMod0
--- Lemma: dividesMod0                      Q.E.D.
--- [Proven] dividesMod0 :: Ɐn ∷ Integer → Ɐa ∷ Integer → Bool
-dividesMod0 :: TP (Proof (Forall "n" Integer -> Forall "a" Integer -> SBool))
-dividesMod0 = lemma "dividesMod0"
-                    (\(Forall n) (Forall a) -> n ./= 0 .=> n `dvd` a .== ((a `sEMod` n) .== 0))
-                    []
+    calc "dividesTransitive"
+         (\(Forall x) (Forall y) (Forall z) -> x `dvd` y .&& y `dvd` z .=> x `dvd` z) $
+         \x y z -> [x `dvd` y, y `dvd` z]
+                |- cases [ x .== 0 .|| y .== 0 .|| z .== 0 ==> trivial
+                         , x ./= 0 .&& y ./= 0 .&& z ./= 0
+                            ==> x `dvd` z
+                             ?? z .== z `sEDiv` y * y
+                             =: x `dvd` (z `sEDiv` y * y)
+                             ?? y .== y `sEDiv` x * x
+                             =: x `dvd` ((z `sEDiv` y) * (y `sEDiv` x * x))
+                             ?? "hard"
+                             =: x `dvd` (x * ((z `sEDiv` y) * (y `sEDiv` x)))
+                             ?? dp `at` (Inst @"x" x, Inst @"y" x, Inst @"z" ((z `sEDiv` y) * (y `sEDiv` x)))
+                             =: sTrue
+                             =: qed
+                         ]
 
 -- * The least divisor
 
@@ -232,7 +106,7 @@ dividesMod0 = lemma "dividesMod0"
 ld :: SInteger -> SInteger -> SInteger
 ld = smtFunction "ld" $ \k n -> ite (n `sEMod` k .== 0) k (ld (k+1) n)
 
--- | \(1 < k \leq n \implies \textrm{ld}\,k\,n \mid n \land k \leq \textrm{ld}\,k\,n \leq n\)
+-- | \(1 < k \leq n \implies \mathit{ld}\,k\,n \mid n \land k \leq \mathit{ld}\,k\,n \leq n\)
 --
 -- === __Proof__
 -- >>> runTP leastDivisorDivides
@@ -262,7 +136,7 @@ leastDivisorDivides =
                                                 =: qed
                            ]
 
--- | \(1 < k \leq n \land d \mid n \land k \leq d \implies \textrm{ld}\,k\,n \leq d\)
+-- | \(1 < k \leq n \land d \mid n \land k \leq d \implies \mathit{ld}\,k\,n \leq d\)
 --
 -- === __Proof__
 -- >>> runTP leastDivisorIsLeast
@@ -289,46 +163,7 @@ leastDivisorIsLeast =
                                                   =: qed
                              ]
 
--- * Primality
-
--- | A number is prime if its least divisor greater than or equal to @2@ is itself.
-isPrime :: SInteger -> SBool
-isPrime n = n .>= 2 .&& ld 2 n .== n
-
--- | \(\textrm{isPrime}\,p \implies p \geq 2\)
---
--- === __Proof__
--- >>> runTP primeAtLeast2
--- Lemma: primeAtLeast2                    Q.E.D.
--- [Proven] primeAtLeast2 :: Ɐp ∷ Integer → Bool
-primeAtLeast2 :: TP (Proof (Forall "p" Integer -> SBool))
-primeAtLeast2 = lemma "primeAtLeast2" (\(Forall p) -> isPrime p .=> p .>= 2) []
-
--- | \(\textrm{isPrime}\,p \land d \mid p \land d > 1 \implies d = p\)
---
--- === __Proof__
--- >>> runTP primeNoDivisor
--- Lemma: leastDivisorIsLeast              Q.E.D.
--- Lemma: primeNoDivisor
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] primeNoDivisor :: Ɐp ∷ Integer → Ɐd ∷ Integer → Bool
-primeNoDivisor :: TP (Proof (Forall "p" Integer -> Forall "d" Integer -> SBool))
-primeNoDivisor = do
-  ldil <- recall "leastDivisorIsLeast" leastDivisorIsLeast
-
-  calc "primeNoDivisor"
-       (\(Forall p) (Forall d) -> isPrime p .&& d `dvd` p .&& d .> 1 .=> d .== p) $
-       \p d -> [isPrime p, d `dvd` p, d .> 1]
-            |-> p .>= 2 .&& ld 2 p .== p
-            ?? ldil
-            =: p .<= d
-            ?? d `dvd` p
-            =: sTrue
-            =: qed
-
--- | \(n \geq k \geq 2 \implies \textrm{ld}\,k\,(\textrm{ld}\,k\,n) = \textrm{ld}\,k\,n\)
+-- | \(n \geq k \geq 2 \implies \mathit{ld}\,k\,(\mathit{ld}\,k\,n) = \mathit{ld}\,k\,n\)
 --
 -- === __Proof__
 -- >>> runTP leastDivisorTwice
@@ -380,7 +215,22 @@ leastDivisorTwice = do
         (\(Forall k) (Forall n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) .== ld k n)
         [proofOf h1, proofOf h5]
 
--- | \(n \geq 2 \implies \textrm{isPrime}\,(\textrm{ld}\,2\,n)\)
+-- * Primality
+
+-- | A number is prime if its least divisor greater than or equal to @2@ is itself.
+isPrime :: SInteger -> SBool
+isPrime n = n .>= 2 .&& ld 2 n .== n
+
+-- | \(\mathit{isPrime}\,p \implies p \geq 2\)
+--
+-- === __Proof__
+-- >>> runTP primeAtLeast2
+-- Lemma: primeAtLeast2                    Q.E.D.
+-- [Proven] primeAtLeast2 :: Ɐp ∷ Integer → Bool
+primeAtLeast2 :: TP (Proof (Forall "p" Integer -> SBool))
+primeAtLeast2 = lemma "primeAtLeast2" (\(Forall p) -> isPrime p .=> p .>= 2) []
+
+-- | \(n \geq 2 \implies \mathit{isPrime}\,(\mathit{ld}\,2\,n)\)
 --
 -- === __Proof__
 -- >>> runTP leastDivisorIsPrime
@@ -408,7 +258,7 @@ leastDivisorIsPrime = do
 leastPrimeDivisor :: SInteger -> SInteger
 leastPrimeDivisor n = ld 2 n
 
--- * Infinitude of primes
+-- * Formalizing factorial
 
 -- | The factorial function.
 fact :: SInteger -> SInteger
@@ -437,38 +287,6 @@ factAtLeast1 = inductWith cvc5 "factAtLeast1"
                                                         =: sTrue
                                                         =: qed
                                            ]
-
--- | Given a number, return another number which is both prime and is larger than the input. Note that
--- we don't claim to return the closest prime to the input. Just some prime that is larger, as we shall prove.
-greaterPrime :: SInteger -> SInteger
-greaterPrime n = leastPrimeDivisor (1 + fact n)
-
--- | \(\textrm{greaterPrime}\, n \mid n! + 1\)
---
--- === __Proof__
--- >>> runTP greaterPrimeDivides
--- Lemma: leastDivisorDivides              Q.E.D.
--- Lemma: factAtLeast1                     Q.E.D.
--- Lemma: greaterPrimeDivides
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] greaterPrimeDivides :: Ɐn ∷ Integer → Bool
-greaterPrimeDivides :: TP (Proof (Forall "n" Integer -> SBool))
-greaterPrimeDivides = do
-   ldd  <- recall "leastDivisorDivides" leastDivisorDivides
-   fal1 <- recall "factAtLeast1"        factAtLeast1
-
-   calc "greaterPrimeDivides"
-        (\(Forall n) -> greaterPrime n `dvd` (1 + fact n)) $
-        \n -> [] |- greaterPrime n `dvd` (1 + fact n)
-                 =: leastPrimeDivisor (1 + fact n) `dvd` (1 + fact n)
-                 =: ld 2 (1 + fact n) `dvd` (1 + fact n)
-                 ?? ldd  `at` (Inst @"k" 2, Inst @"n" (1 + fact n))
-                 ?? fal1 `at` Inst @"n" n
-                 =: sTrue
-                 =: qed
 
 -- | \(1 \leq k \land k \leq n \implies k \mid n!\)
 --
@@ -510,28 +328,61 @@ dividesFact = do
 --
 -- === __Proof__
 -- >>> runTP notDividesFactP1
--- Lemma: dividesSum                       Q.E.D.
 -- Lemma: dividesFact                      Q.E.D.
 -- Lemma: notDividesFactP1
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] notDividesFactP1 :: Ɐn ∷ Integer → Ɐk ∷ Integer → Bool
 notDividesFactP1 :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))
 notDividesFactP1 = do
-   ds <- recall "dividesSum"  dividesSum
-   df <- recall "dividesFact" dividesFact
+   df    <- recall "dividesFact"  dividesFact
 
    calc "notDividesFactP1"
          (\(Forall n) (Forall k) -> 1 .< k .&& k .<= n .=> sNot (k `dvd` (fact n + 1))) $
          \n k -> [1 .< k, k .<= n]
               |- k `dvd` (fact n + 1)
               ?? df `at` (Inst @"n" n, Inst @"k" k)
-              ?? ds `at` (Inst @"x" k, Inst @"y" (fact n), Inst @"z" 1)
+              =: k `dvd` (k * fact n `sEDiv` k + 1)
               =: k `dvd` 1
               =: contradiction
 
--- | \(\textrm{greaterPrime}\, n > n\)
+-- * Finding a greater prime
+
+-- | Given a number, return another number which is both prime and is larger than the input. Note that
+-- we don't claim to return the closest prime to the input. Just some prime that is larger, as we shall prove.
+greaterPrime :: SInteger -> SInteger
+greaterPrime n = leastPrimeDivisor (1 + fact n)
+
+-- | \(\mathit{greaterPrime}\, n \mid n! + 1\)
+--
+-- === __Proof__
+-- >>> runTP greaterPrimeDivides
+-- Lemma: leastDivisorDivides              Q.E.D.
+-- Lemma: factAtLeast1                     Q.E.D.
+-- Lemma: greaterPrimeDivides
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] greaterPrimeDivides :: Ɐn ∷ Integer → Bool
+greaterPrimeDivides :: TP (Proof (Forall "n" Integer -> SBool))
+greaterPrimeDivides = do
+   ldd  <- recall "leastDivisorDivides" leastDivisorDivides
+   fal1 <- recall "factAtLeast1"        factAtLeast1
+
+   calc "greaterPrimeDivides"
+        (\(Forall n) -> greaterPrime n `dvd` (1 + fact n)) $
+        \n -> [] |- greaterPrime n `dvd` (1 + fact n)
+                 =: leastPrimeDivisor (1 + fact n) `dvd` (1 + fact n)
+                 =: ld 2 (1 + fact n) `dvd` (1 + fact n)
+                 ?? ldd  `at` (Inst @"k" 2, Inst @"n" (1 + fact n))
+                 ?? fal1 `at` Inst @"n" n
+                 =: sTrue
+                 =: qed
+
+-- | \(\mathit{greaterPrime}\, n > n\)
 --
 -- === __Proof__
 -- >>> runTP greaterPrimeGreater
@@ -573,7 +424,9 @@ greaterPrimeGreater = do
                    =: greaterPrime n .> n
                    =: qed
 
--- | \(\textrm{isPrime}\,(\textrm{greaterPrime}\,n) \land \text{greaterPrime}\,n > n\)
+-- * Infinitude of primes
+
+-- | \(\mathit{isPrime}\,(\mathit{greaterPrime}\,n) \land \mathit{greaterPrime}\,n > n\)
 --
 -- We can finally prove our goal: For each given number, there is a larger number that is prime. This
 -- establishes that we have an infinite number of primes.
@@ -607,7 +460,7 @@ infinitudeOfPrimes = do
                   =: sTrue
                   =: qed
 
--- | \(\forall n. \exists p. \textrm{isPrime}\,p \land p > n\)
+-- | \(\forall n. \exists p. \mathit{isPrime}\,p \land p > n\)
 --
 -- Another expression of the fact that there are infinitely many primes. One might prefer this
 -- version as it only refers to the 'isPrime' predicate only.
