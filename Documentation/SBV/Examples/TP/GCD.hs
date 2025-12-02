@@ -321,6 +321,7 @@ dvdEvenWhenOdd = calc "dvdEvenWhenOdd"
                             =: a .== d * n
 
                             -- Thus we can deduce d must divide a
+                            ?? d `dvd` (d * n)
                             =: d `dvd` a
 
                             -- Done!
