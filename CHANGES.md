@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 13.1.5, Not yet released
+### Version 13.2, 2025-12-01
 
   * Improve support for SMTDefinable class, allowing support for on-the-fly generated functions.
     Thanks to Eddy Westbrook for the patch. This should have no impact on existing code or usage,
