@@ -468,20 +468,25 @@ infinitudeOfPrimes = do
 -- === __Proof__
 -- >>> runTP noLargestPrime
 -- Lemma: infinitudeOfPrimes               Q.E.D.
--- Lemma: noLargestPrime
+-- Lemma: helper
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] noLargestPrime :: Ɐn ∷ Integer → Bool
-noLargestPrime :: TP (Proof (Forall "n" Integer -> SBool))
+-- Lemma: noLargestPrime                   Q.E.D.
+-- [Proven] noLargestPrime :: Ɐn ∷ Integer → ∃p ∷ Integer → Bool
+noLargestPrime :: TP (Proof (Forall "n" Integer -> Exists "p" Integer -> SBool))
 noLargestPrime = do
    iop <- recall "infinitudeOfPrimes" infinitudeOfPrimes
 
-   calc "noLargestPrime"
-        (\(Forall n) -> quantifiedBool (\(Exists p) -> isPrime p .&& p .> n)) $
-        \n -> [] |- quantifiedBool (\(Exists p) -> isPrime p .&& p .> n)
-                 ?? iop `at` Inst @"n" n
-                 =: sTrue
-                 =: qed
+   h <- calc "helper"
+             (\(Forall @"n" n) -> quantifiedBool (\(Exists p) -> isPrime p .&& p .> n)) $
+             \n -> [] |- quantifiedBool (\(Exists p) -> isPrime p .&& p .> n)
+                      ?? iop `at` Inst @"n" n
+                      =: sTrue
+                      =: qed
+
+   lemmaWith cvc5 "noLargestPrime"
+       (\(Forall n) (Exists p) -> isPrime p .&& p .> n)
+       [proofOf h]
 
 {- HLint ignore module "Avoid lambda" -}
 {- HLint ignore module "Eta reduce"   -}
