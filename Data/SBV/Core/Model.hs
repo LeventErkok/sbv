@@ -3251,10 +3251,16 @@ writeArray array key value
                    val    <- sbvToSV st value
                    newExpr st k (SBVApp WriteArray [arr, keyVal, val])
 
--- | Create a constant array. This is a special case of 'lambdaArray', which provides
--- a more general interface for creating arrays from functions.
-constArray :: (SymVal a, HasKind b) => SBV b -> SArray a b
-constArray = lambdaArray . const
+-- | Create a constant array. This is a special case of 'lambdaArray', but it creates a
+-- simpler expression in the case of constants.
+constArray :: forall a b. (SymVal a, HasKind b) => SBV b -> SArray a b
+constArray v = SBV . SVal k . Right $ cache g
+  where ka = kindOf (Proxy @a)
+        kb = kindOf (Proxy @b)
+        k  = KArray ka kb
+
+        g st = do sv <- sbvToSV st v
+                  newExpr st k (SBVApp (ArrayInit (Left (ka, kb))) [sv])
 
 -- | Using a lambda as an array. We can turn a function into an array, relating indexes
 -- to their values. (That is, passing @f@ would create an array where entry @i@
@@ -3265,7 +3271,7 @@ lambdaArray f = SBV . SVal k . Right $ cache g
   where k = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
 
         g st = do def <- lambdaStr st TopLevel (kindOf (Proxy @b)) f
-                  newExpr st k (SBVApp (ArrayLambda def) [])
+                  newExpr st k (SBVApp (ArrayInit (Right def)) [])
 
 -- | Turn a constant association-list and a default into a symbolic array.
 listArray :: (SymVal a, SymVal b) => [(a, b)] -> b -> SArray a b

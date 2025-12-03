@@ -246,9 +246,11 @@ data Op = Plus
         | TupleAccess Int Int                   -- Access element i of an n-tuple; second argument is n
         | RationalConstructor                   -- Construct a rational. Note that there's no access to numerator or denumerator, since we cannot store rationals in canonical form
         | ADTOp ADTOp                           -- ADT access/construction/testing
-        | ArrayLambda SMTLambda                 -- An array value, created from a lambda
-        | ReadArray                             -- Reading an array value
-        | WriteArray                            -- Writing to an array
+
+        -- Arrays
+        | ArrayInit (Either (Kind, Kind) SMTLambda) -- An array value, created either from a lambda or a symbolic value. Kind is the
+        | ReadArray                                 -- Reading an array value
+        | WriteArray                                -- Writing to an array
         deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | ADT operations
@@ -604,7 +606,9 @@ instance Show Op where
   show (TupleAccess      i n) = "proj_" ++ show i ++ "_SBVTuple" ++ show n
 
   show RationalConstructor    = "SBV.Rational"
-  show (ArrayLambda s)        = show s
+  show (ArrayInit k)          = case k of
+                                  Left (a, b) -> "const-array[" ++ show a ++ " -> " ++ show b ++ "]"
+                                  Right s     -> show s
   show ReadArray              = "select"
   show WriteArray             = "store"
 

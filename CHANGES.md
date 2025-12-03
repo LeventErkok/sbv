@@ -4,8 +4,9 @@
 ### Version 13.2.5, Not yet released
 
   * Added 'constArray', which allows creation of constant valued symbolic arrays. The definition
-    is literally 'lambdaArray . const'. But it is easier to find in the library and the naming is more suggestive.
-    For the general case of initializing an array with arbitrary functions, continue using 'lambdaArray'.
+    is semantically equivalent to 'lambdaArray . const', but we generate simpler SMTLib code
+    for it. For the general case of initializing an array with arbitrary functions, continue
+    using 'lambdaArray'.
 
 ### Version 13.2, 2025-12-02
 
