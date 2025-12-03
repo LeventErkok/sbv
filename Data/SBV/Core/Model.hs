@@ -57,7 +57,7 @@ module Data.SBV.Core.Model (
   , genLiteral, genFromCV, genMkSymVar
   , zeroExtend, signExtend
   , sbvQuickCheck
-  , readArray, writeArray, lambdaArray, listArray
+  , readArray, writeArray, constArray, lambdaArray, listArray
   , FromSized, ToSized, FromSizedBV(..), ToSizedBV(..)
   , smtHOFunction, Closure(..)
   )
@@ -982,7 +982,7 @@ instance (HasKind a, SymVal a) => EqSymbolic (SBV a) where
           r st = do let incr x table = ite (x `sElem` ignored) (0 :: SInteger) (1 + readArrayNoEq table x)
 
                         initArray :: SArray a Integer
-                        initArray = lambdaArray (const 0)
+                        initArray = constArray 0
 
                         finalArray = foldl (\table x -> writeArrayNoKnd table x (incr x table)) initArray es
 
@@ -3251,7 +3251,15 @@ writeArray array key value
                    val    <- sbvToSV st value
                    newExpr st k (SBVApp WriteArray [arr, keyVal, val])
 
--- | Using a lambda as an array.
+-- | Create a constant array. This is a special case of 'lambdaArray', which provides
+-- a more general interface for creating arrays from functions.
+constArray :: (SymVal a, HasKind b) => SBV b -> SArray a b
+constArray = lambdaArray . const
+
+-- | Using a lambda as an array. We can turn a function into an array, relating indexes
+-- to their values. (That is, passing @f@ would create an array where entry @i@
+-- is initialized to value @f i@.) For the special case of initializing with a constant
+-- value, either pass @const val@, or use 'constArray'.
 lambdaArray :: forall a b. (SymVal a, HasKind b) => (SBV a -> SBV b) -> SArray a b
 lambdaArray f = SBV . SVal k . Right $ cache g
   where k = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))

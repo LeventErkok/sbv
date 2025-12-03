@@ -29,7 +29,7 @@ tests = testGroup "Arrays.Caching" [
 test :: Bool -> Symbolic SBool
 test swap = do
     let arr :: SArray Integer Integer
-        arr = lambdaArray (const 0)
+        arr = constArray 0
 
     x   <- sInteger "x"
 

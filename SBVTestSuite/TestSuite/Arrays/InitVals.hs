@@ -24,7 +24,7 @@ readDef :: Predicate
 readDef = do c :: SInteger <- free "c"
              i :: SInteger <- free "i"
              j <- free "j"
-             let a = lambdaArray (const c)
+             let a = constArray c
 
              let a' = writeArray a j 32
 

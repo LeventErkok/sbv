@@ -88,7 +88,7 @@ fv = do a <- sInteger "a"
                    constrain $ readArray vSArray vi1 .== 2
 
                    let viSArray  :: SArray Integer Integer
-                       viSArray = lambdaArray (const 42)
+                       viSArray = constArray 42
                    mustBe42                              <- freshVar "mustBe42"
 
                    constrain $ readArray viSArray 96     .== mustBe42

@@ -84,7 +84,7 @@ next b g = ite (readArray g b .== sBlack) g
 -- transform from the initial board position to a final board position.
 search :: [Color] -> [Color] -> IO ()
 search initial final = runSMT $ do registerType (Proxy @SColor)
-                                   let emptyGrid = lambdaArray (const sBlack)
+                                   let emptyGrid = constArray sBlack
                                        initGrid  = foldr (\(i, c) a -> writeArray a (literal i) (literal c)) emptyGrid (zip [1..] initial)
                                    query $ loop (0 :: Int) initGrid []
 
