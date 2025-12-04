@@ -3253,10 +3253,14 @@ writeArray array key value
 
 -- | Create a constant array. This is a special case of 'lambdaArray', but it creates a
 -- simpler expression in the case of constants.
-constArray :: forall a b. (SymVal a, HasKind b) => SBV b -> SArray a b
-constArray v = SBV . SVal k . Right $ cache g
-  where ka = kindOf (Proxy @a)
-        kb = kindOf (Proxy @b)
+constArray :: forall key val. (SymVal key, SymVal val) => SBV val -> SArray key val
+constArray v
+  | Just v' <- unliteral v
+  = literal $ ArrayModel [] v'
+  | True
+  = SBV . SVal k . Right $ cache g
+  where ka = kindOf (Proxy @key)
+        kb = kindOf (Proxy @val)
         k  = KArray ka kb
 
         g st = do sv <- sbvToSV st v
