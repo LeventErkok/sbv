@@ -13,8 +13,8 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s1 () Int 0)
-[GOOD] (define-fun s4 () Int 2)
-[GOOD] (define-fun s6 () Int 1)
+[GOOD] (define-fun s3 () (Array Int Int) (store ((as const (Array Int Int)) 0) 0 2))
+[GOOD] (define-fun s4 () Int 1)
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
@@ -23,20 +23,17 @@
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s2 () Bool (= s0 s1))
-[GOOD] (define-fun s3 () (Array Int Int) (lambda ((l1_s0 Int))
-         0))
-[GOOD] (define-fun s5 () (Array Int Int) (store s3 s1 s4))
-[GOOD] (define-fun s7 () Int (+ s0 s6))
-[GOOD] (define-fun s8 () Int (select s5 s7))
-[GOOD] (define-fun s9 () (Array Int Int) (store s5 s1 s8))
+[GOOD] (define-fun s5 () Int (+ s0 s4))
+[GOOD] (define-fun s6 () Int (select s3 s5))
+[GOOD] (define-fun s7 () (Array Int Int) (store s3 s1 s6))
+[GOOD] (define-fun s8 () Int (select s7 s1))
+[GOOD] (define-fun s9 () (Array Int Int) (store s3 s5 s4))
 [GOOD] (define-fun s10 () Int (select s9 s1))
-[GOOD] (define-fun s11 () (Array Int Int) (store s5 s7 s6))
-[GOOD] (define-fun s12 () Int (select s11 s1))
-[GOOD] (define-fun s13 () Int (ite s2 s10 s12))
-[GOOD] (define-fun s14 () Bool (= s6 s13))
+[GOOD] (define-fun s11 () Int (ite s2 s8 s10))
+[GOOD] (define-fun s12 () Bool (= s4 s11))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s14)
+[GOOD] (assert s12)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
