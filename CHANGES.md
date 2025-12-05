@@ -1,12 +1,14 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 13.2.5, Not yet released
+### Version 13.3, 2025-12-05
 
   * Added 'constArray', which allows creation of constant valued symbolic arrays. The definition
     is semantically equivalent to 'lambdaArray . const', but we generate simpler SMTLib code
     for it. For the general case of initializing an array with arbitrary functions, continue
-    using 'lambdaArray'.
+    using 'lambdaArray'. Thanks to Robin Webbers for the patch.
+
+  * Improved the infinite-number-of-primes theorem statement slightly.
 
 ### Version 13.2, 2025-12-02
 
