@@ -57,7 +57,7 @@ module Data.SBV.Core.Model (
   , genLiteral, genFromCV, genMkSymVar
   , zeroExtend, signExtend
   , sbvQuickCheck
-  , readArray, writeArray, constArray, lambdaArray, listArray
+  , readArray, writeArray, constArray, freeArray, lambdaArray, listArray
   , FromSized, ToSized, FromSizedBV(..), ToSizedBV(..)
   , smtHOFunction, Closure(..)
   )
@@ -3274,6 +3274,16 @@ constArray v
 
         g st = do sv <- sbvToSV st v
                   newExpr st k (SBVApp (ArrayInit (Left (ka, kb))) [sv])
+
+-- | Create a completely free array, with no constraints on it, as an expression.
+-- Note that you can create an array in the symbolic context with the regular 'free'
+-- calls. (Or 'sArray' if you prefer.) This variant creates it as an expression, i.e.,
+-- without having to be in the monadic context. We take a name identifier here as an
+-- argument which uniquely identifies this array. Note that this is necessary, as otherwise
+-- there would be no way to distinguish two different calls in the pure context. If you
+-- use the same name, then you'll get the same array, much like uninterpreted functions.
+freeArray :: forall key val. (SymVal key, SymVal val) => String -> SArray key val
+freeArray = lambdaArray . uninterpret
 
 -- | Using a lambda as an array. We can turn a function into an array, relating indexes
 -- to their values. (That is, passing @f@ would create an array where entry @i@

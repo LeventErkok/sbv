@@ -2,8 +2,12 @@
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
 ### Version 13.3.5, Not yet released
-  
+
   * Remove Eq constraint on readArray, generalizing it to arbitrary types for array-reads.
+
+  * Addded 'freeArray', which creates an array with no constraints at all. (Compare to 'constArray'.)
+    Note that this is useful for expression contexts. If you're in a symbolic context (i.e., in
+    the Symbolic monad), you can just use 'free' or 'sArray' as usual.)
 
 ### Version 13.3, 2025-12-05
 
