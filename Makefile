@@ -92,7 +92,7 @@ ghcid:
 ifdef TGT
 	ghcid --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}"
 else
-	ghcid --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}"
+	ghcid --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages"
 endif
 
 bench:
