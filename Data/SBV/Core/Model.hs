@@ -3224,10 +3224,10 @@ instance {-# OVERLAPPABLE #-} (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e,
   k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
 
 -- | Reading a value from an array.
-readArray :: forall key val. (Eq key, SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val
+readArray :: forall key val. (SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val
 readArray array key
-   | eqCheckIsObjectEq ka, Just (ArrayModel tbl def) <- unliteral array, Just k <- unliteral key
-   = literal $ fromMaybe def (k `lookup` tbl) -- return the first value, since we don't bother deleting previous writes
+   | eqCheckIsObjectEq ka, Just (ArrayModel tbl def) <- unliteral array, Just _ <- unliteral key, Just r <- locate (unSBV key) def tbl
+   = r
    | True
    = symRes
    where symRes = SBV . SVal kb . Right $ cache g
@@ -3236,6 +3236,15 @@ readArray array key
          g st = do f <- sbvToSV st array
                    k <- sbvToSV st key
                    newExpr st kb (SBVApp ReadArray [f, k])
+
+         -- return the first value, since we don't bother deleting previous writes. Note that this might
+         -- fail if we don't have equality; but that's OK; in that case we'll go symbolic.
+         locate skey def vals = go vals
+            where go []              = Just $ literal def
+                  go ((k, v) : rest) = case unliteral (SBV (svStrongEqual skey (unSBV (literal k)))) of
+                                          Nothing    -> Nothing
+                                          Just True  -> Just $ literal v
+                                          Just False -> go rest
 
 -- | Writing a value to an array. For the concrete case, we don't bother deleting earlier entries, we keep a history. The earlier a value is in the list, the "later" it happened; in a stack fashion.
 writeArray :: forall key val. (HasKind key, SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val -> SArray key val

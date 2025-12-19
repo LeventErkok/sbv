@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 13.3.5, Not yet released
+  
+  * Remove Eq constraint on readArray, generalizing it to arbitrary types for array-reads.
+
 ### Version 13.3, 2025-12-05
 
   * Added 'constArray', which allows creation of constant valued symbolic arrays. The definition
