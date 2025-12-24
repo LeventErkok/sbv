@@ -425,7 +425,7 @@ showCV shk w = sh (cvVal w) ++ kInfo
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
-mkConstCV k@(KVar{})      _ = error $ "mkConstCV: Unexpected kind: " ++ show k
+mkConstCV k@KVar{}        _ = error $ "mkConstCV: Unexpected kind: " ++ show k
 mkConstCV KBool           a = normCV $ CV KBool      (CInteger  (toInteger a))
 mkConstCV k@KBounded{}    a = normCV $ CV k          (CInteger  (toInteger a))
 mkConstCV KUnbounded      a = normCV $ CV KUnbounded (CInteger  (toInteger a))

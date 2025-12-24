@@ -327,7 +327,7 @@ instance (SatModel k, SatModel v) => SatModel (ArrayModel k v) where
             (k', _) <- parseCVs @k [CV kk k]
             (v', _) <- parseCVs @v [CV kv v]
             pure (k', v')
-    , Just tbl' <- sequenceA $ fmap convert tbl
+    , Just tbl' <- traverse convert tbl
     = Just (ArrayModel tbl' def', r)
   parseCVs _ = Nothing
 
