@@ -319,6 +319,18 @@ instance (KnownNat n, BVIsNonZero n) => SatModel (WordN n) where
 instance (KnownNat n, BVIsNonZero n) => SatModel (IntN n) where
   parseCVs = genParse (kindOf (undefined :: IntN n))
 
+-- | Constructing models for 'ArrayModel'
+instance (SatModel k, SatModel v) => SatModel (ArrayModel k v) where
+  parseCVs (CV (KArray kk kv) (CArray (ArrayModel tbl def)) : r)
+    | Just (def', _) <- parseCVs @v [CV kv def]
+    , let convert (k, v) = do
+            (k', _) <- parseCVs @k [CV kk k]
+            (v', _) <- parseCVs @v [CV kv v]
+            pure (k', v')
+    , Just tbl' <- sequenceA $ fmap convert tbl
+    = Just (ArrayModel tbl' def', r)
+  parseCVs _ = Nothing
+
 -- | @CV@ as extracted from a model; trivial definition
 instance SatModel CV where
   parseCVs (cv : r) = Just (cv, r)
