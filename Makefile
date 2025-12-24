@@ -54,13 +54,13 @@ CABAL_OPTS=--allow-newer
 
 all: quick
 
-quick: tags
-	@$(TIME) cabal install --lib ${CABAL_OPTS} --force-reinstalls
-	
-install: tags
+configure:
 	@$(TIME) cabal configure --enable-tests ${CABAL_OPTS} --ghc-options=$(CONFIGOPTS)
-	@$(TIME) cabal install --lib ${CABAL_OPTS} --force-reinstalls
 
+quick: tags
+	@$(TIME) cabal build ${CABAL_OPTS}
+	
+install: configure quick
 
 HADDOCK_OPTS=${CABAL_OPTS} --enable-documentation
 
