@@ -11,6 +11,8 @@
 
   * Add missing instance of SatModel for Arrays. Thanks to Robin Webbers for the patch.
 
+  * Export ArrayModel, so it can be programmatically processed after a call.
+
 ### Version 13.3, 2025-12-05
 
   * Added 'constArray', which allows creation of constant valued symbolic arrays. The definition

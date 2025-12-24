@@ -90,7 +90,7 @@ instance HasKind a => HasKind (RCSet a) where
 -- That is, we store the history of the writes. The earlier a pair is in the list, the "later" it
 -- is done, i.e., it takes precedence over the latter entries.
 data ArrayModel a b = ArrayModel [(a, b)] b
-                     deriving (G.Data, Generic, NFData)
+                     deriving (G.Data, Generic, NFData, Show)
 
 -- | The kind of an ArrayModel
 instance (HasKind a, HasKind b) => HasKind (ArrayModel a b) where
