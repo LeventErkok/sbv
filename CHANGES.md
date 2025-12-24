@@ -9,6 +9,8 @@
     Note that this is useful for expression contexts. If you're in a symbolic context (i.e., in
     the Symbolic monad), you can just use 'free' or 'sArray' as usual.)
 
+  * Add missing instance of SatModel for Arrays. Thanks to Robin Webbers for the patch.
+
 ### Version 13.3, 2025-12-05
 
   * Added 'constArray', which allows creation of constant valued symbolic arrays. The definition
