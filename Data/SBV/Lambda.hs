@@ -437,4 +437,3 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                            ++ chain (i+1) xs
                                            ++ ")"
 
-{- HLint ignore module "Use second" -}
