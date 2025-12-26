@@ -35,3 +35,4 @@ benchmarks = rGroup
                  .== (not p `and` not q) `or` (not p `and` not r)
 
 {- HLint ignore module "Redundant lambda" -}
+{- HLint ignore module "Redundant not"    -}
