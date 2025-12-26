@@ -129,3 +129,5 @@ benchmarks =  rGroup $ fmap (`using` _prove)
         relCompFull    = \(a :: SI) -> a \\ full .== empty
         distSubset1    = \(a :: SI) b c -> a `isSubsetOf` (b `union` c) .=> a `isSubsetOf` b .&& a `isSubsetOf` c
         distSubset2    = \(a :: SI) b c -> (b `intersection` c) `isSubsetOf` a .=> b `isSubsetOf` a .&& c `isSubsetOf` a
+
+{- HLint ignore module "Redundant lambda" -}

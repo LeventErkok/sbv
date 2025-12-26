@@ -33,3 +33,5 @@ benchmarks = rGroup
   , runIO   "CodeGen.AES128Lib" cgAES128Library
   ]
   where inverseGFPrf = \x -> x ./= 0 .=> x `gf28Mult` gf28Inverse x .== 1
+
+{- HLint ignore module "Redundant lambda" -}

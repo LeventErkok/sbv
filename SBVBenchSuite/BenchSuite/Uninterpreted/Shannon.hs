@@ -41,3 +41,5 @@ f', f'', f''' :: Binary
 f'   = derivative f
 f''  = universal f
 f''' = existential f
+
+{- HLint ignore module "Redundant lambda" -}

@@ -36,3 +36,5 @@ benchmarks = rGroup
                            sFalse
 
     correct = \a1 a0 b1 b0 -> mul22_hi a1 a0 b1 b0 .== (a1 .&& b0) .<+> (a0 .&& b1)
+
+{- HLint ignore module "Redundant lambda" -}

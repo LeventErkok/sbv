@@ -26,3 +26,5 @@ benchmarks = rGroup
   , runIO "CodeGen" genCCode
   ]
   where testLeft = \x y -> tstShiftLeft x y 0 .== x + y
+
+{- HLint ignore module "Redundant lambda" -}

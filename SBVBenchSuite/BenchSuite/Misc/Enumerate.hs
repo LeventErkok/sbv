@@ -35,3 +35,5 @@ benchmarks = rGroup
                    constrain $ \(Forall e) -> mx .>= (e::SE)
         _minE = do mx <- free "minE"
                    constrain $ \(Forall e) -> mx .<= (e::SE)
+
+{- HLint ignore module "Redundant lambda" -}
