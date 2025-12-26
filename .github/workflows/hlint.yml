@@ -1,12 +1,22 @@
-name: HLint
-on: [push, pull_request]
+name: lint
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - 'releases/*'
 
 jobs:
   hlint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: haskell-actions/setup@v2
-        with:
-          ghc-version: "9.8.2"
-      - run: cabal exec -- hlint .
+    - uses: actions/checkout@v4
+
+    - name: 'Set up HLint'
+      uses: haskell-actions/hlint-setup@v2
+
+    - name: 'Run HLint'
+      uses: haskell-actions/hlint-run@v2
+      with:
+        path: src/
+        fail-on: warning
