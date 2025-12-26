@@ -263,3 +263,5 @@ correctness = runTPWith (tpRibbon 50 cvc5) $ do
                                    =: sTrue
                                    =: qed
                               ]
+
+{- HLint ignore module "Reduce duplication" -}

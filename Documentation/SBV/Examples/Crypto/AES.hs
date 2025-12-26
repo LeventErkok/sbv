@@ -908,6 +908,7 @@ chop4 :: [a] -> [[a]]
 chop4 [] = []
 chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
 
-{- HLint ignore aesRound             "Use head" -}
-{- HLint ignore aesInvRound          "Use head" -}
-{- HLint ignore aesDecryptUnwoundKey "Use head" -}
+{- HLint ignore aesRound             "Use head"           -}
+{- HLint ignore aesInvRound          "Use head"           -}
+{- HLint ignore aesDecryptUnwoundKey "Use head"           -}
+{- HLint ignore module               "Reduce duplication" -}

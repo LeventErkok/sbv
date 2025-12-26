@@ -27,4 +27,4 @@ tests =
 checkPuzzle :: Puzzle -> IO Bool
 checkPuzzle p = do final <- fillBoard p
                    let vld = valid (map (map literal) final)
-                   pure $ fromMaybe False (unliteral vld)
+                   pure $ Just True == unliteral vld

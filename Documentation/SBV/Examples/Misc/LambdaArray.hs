@@ -66,3 +66,5 @@ outOfInit = sat $ do
 
    -- Let read produce non-zero
    constrain $ observe "Read" (readArray (memset mem lo hi zero) idx) ./= zero
+
+{- HLint ignore module "Reduce duplication" -}

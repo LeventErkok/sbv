@@ -71,7 +71,7 @@ haddockBug input
 
 -- These are things that SBV doesn't export so Haddock can't really link to
 sbvIgnore :: String -> Bool
-sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
+sbvIgnore input = any ((`isPrefixOf` s) . fmt) patterns
   where s     = dropWhile isSpace input
         fmt p = "- Data.SBV." ++ p
 

@@ -1536,4 +1536,5 @@ recall nm prf = do
              liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo dependencies) (tab, Nothing) []
              pure r
 
-{- HLint ignore module "Eta reduce" -}
+{- HLint ignore module "Eta reduce"         -}
+{- HLint ignore module "Reduce duplication" -}

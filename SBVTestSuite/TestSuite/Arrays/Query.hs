@@ -217,3 +217,5 @@ q17 = do x :: SArray (Char, Rational) (Rational, Char) <- sArray "x"
 
          query $ do constrain $ readArray x (literal ('z', 5 % 3)) .== literal (5 % 3, 'z')
                     checkSat
+
+{- HLint ignore module "Reduce duplication" -}

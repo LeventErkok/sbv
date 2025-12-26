@@ -181,3 +181,5 @@ queryE = runSMT $ do
                                   io $ putStrLn $ "e2: " ++ show e2v
                                   io $ putStrLn $ "e3: " ++ show e3v
                         _   -> error $ "Unexpected result: " ++ show cs
+
+{- HLint ignore module "Reduce duplication" -}

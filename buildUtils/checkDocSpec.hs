@@ -35,7 +35,7 @@ check accept gold = do
    case ec of
      ExitSuccess   -> do putStrLn "*** Doctest output matches."
      ExitFailure{} -> do putStrLn "*** Doctest have different results."
-                         case accept of
-                           False -> exitWith ec
-                           True  -> do putStrLn "*** ACCEPTING the new file."
-                                       writeFile gold curOutput
+                         if accept
+                            then do putStrLn "*** ACCEPTING the new file."
+                                    writeFile gold curOutput
+                            else exitWith ec
