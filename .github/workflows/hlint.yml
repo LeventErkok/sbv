@@ -19,3 +19,4 @@ jobs:
       uses: haskell-actions/hlint-run@v2
       with:
         path: .
+        fail-on: status
