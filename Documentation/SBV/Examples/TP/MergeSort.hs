@@ -26,8 +26,8 @@ import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tuple
 import Data.SBV.TP
-import qualified Data.SBV.TP.List as TP
 
+import qualified Documentation.SBV.Examples.TP.Lists       as TP
 import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 #ifdef DOCTEST

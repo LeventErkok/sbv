@@ -25,7 +25,7 @@ import Prelude hiding (null, tail, elem, head, (++), take, drop)
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.TP
-import Data.SBV.TP.List
+import Documentation.SBV.Examples.TP.Lists
 
 #ifdef DOCTEST
 -- $setup

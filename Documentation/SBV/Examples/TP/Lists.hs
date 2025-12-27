@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.TP.List
+-- Module    : Documentation.SBV.Examples.TP.Lists
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -21,7 +21,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.TP.List (
+module Documentation.SBV.Examples.TP.Lists (
      -- * Append
      appendNull, consApp, appendAssoc, initsLength, tailsLength, tailsAppend
 

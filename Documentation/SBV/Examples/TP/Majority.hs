@@ -25,7 +25,7 @@ import Data.SBV
 import Data.SBV.List
 
 import Data.SBV.TP
-import qualified Data.SBV.TP.List as TP
+import qualified Documentation.SBV.Examples.TP.Lists as TP
 
 -- * Calculating majority
 

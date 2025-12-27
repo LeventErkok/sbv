@@ -13,6 +13,9 @@
 
   * Export ArrayModel, so it can be programmatically processed after a call.
 
+  * Moved Data/SBV/TP/List.hs to Documentation/SBV/Examples/TP/Lists.hs, which aligns better with the
+    haddock documentation.
+
 ### Version 13.3, 2025-12-05
 
   * Added 'constArray', which allows creation of constant valued symbolic arrays. The definition
