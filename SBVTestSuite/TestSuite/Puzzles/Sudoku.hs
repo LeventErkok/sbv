@@ -15,7 +15,6 @@ module TestSuite.Puzzles.Sudoku(tests) where
 
 import Documentation.SBV.Examples.Puzzles.Sudoku
 
-import Data.Maybe (fromMaybe)
 import Utils.SBVTestFramework
 
 tests :: TestTree

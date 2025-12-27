@@ -19,9 +19,6 @@ import Documentation.SBV.Examples.Puzzles.Sudoku
 import Utils.SBVBenchFramework
 import BenchSuite.Bench.Bench as S
 
-import Data.Maybe (fromMaybe)
-
-
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
