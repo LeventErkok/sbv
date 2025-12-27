@@ -21,8 +21,6 @@ Data-Files         : SBVTestSuite/GoldFiles/*.gold
                      SBVTestSuite/TestSuite/CompileTests/SCase/*.stderr
 Extra-Doc-Files    : INSTALL, README.md, COPYRIGHT, CHANGES.md
 
-Tested-With        : GHC==9.10.1
-
 flag doctest_is_running
   description: Define this flag during doctest run
   default    : False
