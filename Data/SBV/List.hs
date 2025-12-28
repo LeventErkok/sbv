@@ -1046,7 +1046,10 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
                     $ \envxs -> let (cEnv, xs) = untuple envxs
                                     (h, t)     = uncons xs
                                     r          = sbvFilter (tuple (cEnv, t))
-                                in ite (closureFun cEnv h) (h .: r) r
+                                in ite (null xs) []
+                                 $ ite (closureFun cEnv h)
+                                       (h .: r)
+                                       r
 
   partition cls@Closure{closureEnv, closureFun} l
     | Just concResult <- concretePartition cls (closureFun closureEnv) l
@@ -1057,7 +1060,8 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
                        $ \envxs -> let (cEnv, xs) = untuple envxs
                                        (h,    t)  = uncons xs
                                        (as,   bs) = untuple $ sbvPartition (tuple (cEnv, t))
-                                   in ite (closureFun cEnv h)
+                                   in ite (null xs) (tuple ([], []))
+                                    $ ite (closureFun cEnv h)
                                           (tuple (h .: as, bs))
                                           (tuple (as, h .: bs))
 
@@ -1069,7 +1073,10 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
     where sbvTakeWhile = smtHOFunction "sbv.closureTakeWhile" closureFun
                        $ \envxs -> let (cEnv, xs) = untuple envxs
                                        (h, t)     = uncons xs
-                                in ite (closureFun cEnv h) (h .: sbvTakeWhile (tuple (cEnv, t))) []
+                                in ite (null xs) []
+                                 $ ite (closureFun cEnv h)
+                                       (h .: sbvTakeWhile (tuple (cEnv, t)))
+                                       []
 
   dropWhile cls@Closure{closureEnv, closureFun} l
     | Just concResult <- concreteDropWhile cls (closureFun closureEnv) l
@@ -1079,7 +1086,10 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
     where sbvDropWhile = smtHOFunction "sbv.closureDropWhile" closureFun
                        $ \envxs -> let (cEnv, xs) = untuple envxs
                                        (h, t)     = uncons xs
-                                in ite (closureFun cEnv h) (sbvDropWhile (tuple (cEnv, t))) xs
+                                in ite (null xs) []
+                                 $ ite (closureFun cEnv h)
+                                       (sbvDropWhile (tuple (cEnv, t)))
+                                       xs
 
 -- | @`sum` s@. Sum the given sequence.
 --
