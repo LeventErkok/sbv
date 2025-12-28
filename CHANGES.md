@@ -17,7 +17,7 @@
     haddock documentation.
 
   * Fixed closure-version implementations of list functions filter, partition, takeWhile, and dropWhile.
-    Thanks to apfelmus on github for the bug report.
+    Thanks to amigalemming on github for the bug report.
 
 ### Version 13.3, 2025-12-05
 
