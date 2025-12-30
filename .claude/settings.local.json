@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(cabal build)"
-    ],
-    "deny": [],
-    "ask": []
-  }
-}
