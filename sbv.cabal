@@ -223,6 +223,7 @@ Library
                   , Documentation.SBV.Examples.Puzzles.Orangutans
                   , Documentation.SBV.Examples.Puzzles.Rabbits
                   , Documentation.SBV.Examples.Puzzles.SendMoreMoney
+                  , Documentation.SBV.Examples.Puzzles.SquareBirthday
                   , Documentation.SBV.Examples.Puzzles.Sudoku
                   , Documentation.SBV.Examples.Puzzles.Tower
                   , Documentation.SBV.Examples.Puzzles.U2Bridge
