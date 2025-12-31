@@ -16,7 +16,7 @@ jobs:
       uses: haskell-actions/hlint-setup@v2
 
     - name: 'Run HLint'
-      uses: haskell-actions/hlint-run@v2
+      uses: haskell-actions/hlint-run@v1
       with:
         path: .
         fail-on: status
