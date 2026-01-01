@@ -35,4 +35,4 @@ jobs:
         run: cabal update
 
       - name: Build
-        run: cabal build all
+        run: cabal build --allow-newer all
