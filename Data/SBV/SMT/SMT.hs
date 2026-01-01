@@ -231,11 +231,11 @@ class SatModel a where
   -- | Given a sequence of constant-words, extract one instance of the type @a@, returning
   -- the remaining elements untouched. If the next element is not what's expected for this
   -- type you should return 'Nothing'
-  parseCVs  :: [CV] -> Maybe (a, [CV])
+  parseCVs :: [CV] -> Maybe (a, [CV])
 
   -- | Given a parsed model instance, transform it using @f@, and return the result.
   -- The default definition for this method should be sufficient in most use cases.
-  cvtModel  :: (a -> Maybe b) -> Maybe (a, [CV]) -> Maybe (b, [CV])
+  cvtModel :: (a -> Maybe b) -> Maybe (a, [CV]) -> Maybe (b, [CV])
   cvtModel f x = x >>= \(a, r) -> f a >>= \b -> return (b, r)
 
   {-# MINIMAL parseCVs #-}
