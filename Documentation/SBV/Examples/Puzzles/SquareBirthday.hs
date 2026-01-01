@@ -52,14 +52,14 @@ mkSymbolic [''Month, ''Date]
 instance Show Date where
   show (Date d m y) = show m ++ " " ++ show d ++ ", " ++ show y
 
-newDate :: String -> Symbolic SDate
-newDate nm = do dt <- free nm
+symDate :: String -> Symbolic SDate
+symDate nm = do dt <- free nm
 
-                constrain $ [sCase|Date dt of
-                                Date d _ y -> sAnd [ 1 .<= d, d .<= 31
-                                                   , 0 .<= y
-                                                   ]
-                            |]
+                constrain [sCase|Date dt of
+                              Date d _ y -> sAnd [ 1 .<= d, d .<= 31
+                                                 , 0 .<= y
+                                                 ]
+                          |]
 
                 pure dt
 
@@ -125,7 +125,7 @@ instance Metric Date where
 puzzle :: ConstraintSet
 puzzle = do
 
-       myBirthday <- newDate "My Birthday"
+       myBirthday <- symDate "My Birthday"
 
        -- I was born in the last millenium
        constrain $ syear myBirthday .< 2000 .&& syear myBirthday .>= 1900
@@ -144,7 +144,7 @@ puzzle = do
        let ageOnJun1 = age myBirthday
        constrain $ sqrSum next .== ageOnJun1
 
-       momBirthday <- newDate "Mom's Birthday"
+       momBirthday <- symDate "Mom's Birthday"
 
        -- Mom has a square birth-date, except for the month:
        constrain [sCase|Date momBirthday of
