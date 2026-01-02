@@ -50,7 +50,9 @@ data Date  = Date { day   :: Integer
 mkSymbolic [''Month, ''Date]
 
 instance Show Date where
-  show (Date d m y) = show m ++ " " ++ show d ++ ", " ++ show y
+  show (Date d m y) = show m ++ " " ++ pad ++ show d ++ ", " ++ show y
+   where pad | d < 10 = " "
+             | True   = ""
 
 symDate :: String -> Symbolic SDate
 symDate nm = do dt <- free nm
@@ -119,9 +121,7 @@ instance Metric Date where
                       in sDate d (toEnum m) y
   annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
--- | Solve the puzzle:
---
--- >>> optimizeWith z3{isNonModelVar = (\v -> any (`elem` v) "@(") } Lexicographic puzzle
+-- | Formalizing the puzzle
 puzzle :: ConstraintSet
 puzzle = do
 
@@ -157,3 +157,19 @@ puzzle = do
                                        , m `sElem` [sJan, sAug]
                                        ]
                  |]
+
+-- | Solve the puzzle. We have:
+--
+-- >>> answer
+-- Me : Sep 25, 1971
+-- Mom: Aug  1, 1936
+answer :: IO ()
+answer = do res@(LexicographicResult m) <- optimize Lexicographic puzzle
+            case m of
+              Satisfiable{} -> do let grab :: String -> Date
+                                      grab s = case getModelValue s m  of
+                                                 Nothing -> error $ "Cannot extract value for " ++ show s
+                                                 Just v  -> v
+                                  putStrLn $ "Me : " ++ show (grab "My Birthday")
+                                  putStrLn $ "Mom: " ++ show (grab "Mom's Birthday")
+              _ -> error $ "Unexpected result: " ++ show res
