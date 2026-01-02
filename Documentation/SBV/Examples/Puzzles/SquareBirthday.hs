@@ -164,7 +164,7 @@ puzzle = do
 -- Me : Sep 25, 1971
 -- Mom: Aug  1, 1936
 answer :: IO ()
-answer = do res@(LexicographicResult m) <- optimize Lexicographic puzzle
+answer = do m <- optLexicographic puzzle
             case m of
               Satisfiable{} -> do let grab :: String -> Date
                                       grab s = case getModelValue s m  of
@@ -172,4 +172,4 @@ answer = do res@(LexicographicResult m) <- optimize Lexicographic puzzle
                                                  Just v  -> v
                                   putStrLn $ "Me : " ++ show (grab "My Birthday")
                                   putStrLn $ "Mom: " ++ show (grab "Mom's Birthday")
-              _ -> error $ "Unexpected result: " ++ show res
+              _ -> error "Not satisfiable!"
