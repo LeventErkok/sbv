@@ -59,6 +59,7 @@ configure:
 
 quick: tags
 	@$(TIME) cabal build ${CABAL_OPTS}
+	@$(TIME) cabal install --lib ${CABAL_OPTS} --force-reinstalls
 	
 install: configure quick
 
