@@ -35,7 +35,7 @@ module Data.SBV.Provers.Prover (
        ) where
 
 
-import Control.Monad          (when, unless)
+import Control.Monad          (unless)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.DeepSeq        (rnf, NFData(..))
 
@@ -263,57 +263,20 @@ class ExtractIO m => SatisfiableM m a where
                                                          in IndependentResult <$> w xs []
                                 ParetoResult (b, rs)  -> ParetoResult . (b, ) <$> mapM v rs
 
-    where opt = do objectives <- Control.getObjectives
+    where opt = do mbDirs <- Control.startOptimizer config style
 
-                   when (null objectives) $
-                          error $ unlines [ ""
-                                          , "*** Data.SBV: Unsupported call to optimize when no objectives are present."
-                                          , "*** Use \"sat\" for plain satisfaction"
-                                          ]
+                   case mbDirs of
+                     Nothing   -> error $ unlines [ ""
+                                                  , "*** Data.SBV: Unsupported call to optimize when no objectives are present."
+                                                  , "*** Use \"sat\" for plain satisfaction"
+                                                  ]
+                     Just (objectives, optimizerDirectives) -> do
+                       mapM_ (Control.send True) optimizerDirectives
 
-                   unless (supportsOptimization (capabilities (solver config))) $
-                          error $ unlines [ ""
-                                          , "*** Data.SBV: The backend solver " ++ show (name (solver config)) ++ "does not support optimization goals."
-                                          , "*** Please use a solver that has support, such as z3"
-                                          ]
-
-                   when (validateModel config && not (optimizeValidateConstraints config)) $
-                          error $ unlines [ ""
-                                          , "*** Data.SBV: Model validation is not supported in optimization calls."
-                                          , "***"
-                                          , "*** Instead, use `cfg{optimizeValidateConstraints = True}`"
-                                          , "***"
-                                          , "*** which checks that the results satisfy the constraints but does"
-                                          , "*** NOT ensure that they are optimal."
-                                          ]
-
-
-                   let optimizerDirectives = concatMap minmax objectives ++ priority style
-                         where mkEq (x, y) = "(assert (= " ++ show x ++ " " ++ show y ++ "))"
-
-                               minmax (Minimize          _  xy@(_, v))     = [mkEq xy, "(minimize "    ++ show v                 ++ ")"]
-                               minmax (Maximize          _  xy@(_, v))     = [mkEq xy, "(maximize "    ++ show v                 ++ ")"]
-                               minmax (AssertWithPenalty nm xy@(_, v) mbp) = [mkEq xy, "(assert-soft " ++ show v ++ penalize mbp ++ ")"]
-                                 where penalize DefaultPenalty    = ""
-                                       penalize (Penalty w mbGrp)
-                                          | w <= 0         = error $ unlines [ "SBV.AssertWithPenalty: Goal " ++ show nm ++ " is assigned a non-positive penalty: " ++ shw
-                                                                             , "All soft goals must have > 0 penalties associated."
-                                                                             ]
-                                          | True           = " :weight " ++ shw ++ maybe "" group mbGrp
-                                          where shw = show (fromRational w :: Double)
-
-                                       group g = " :id " ++ g
-
-                               priority Lexicographic = [] -- default, no option needed
-                               priority Independent   = ["(set-option :opt.priority box)"]
-                               priority (Pareto _)    = ["(set-option :opt.priority pareto)"]
-
-                   mapM_ (Control.send True) optimizerDirectives
-
-                   case style of
-                     Lexicographic -> LexicographicResult <$> Control.getLexicographicOptResults
-                     Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
-                     Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
+                       case style of
+                         Lexicographic -> LexicographicResult <$> Control.getLexicographicOptResults
+                         Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
+                         Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
 
 -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
 -- results will be returned in the order produced.

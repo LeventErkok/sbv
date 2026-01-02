@@ -33,6 +33,7 @@ module Data.SBV.Control.Utils (
      , inNewContext, freshVar, freshVar_
      , getTopLevelInputs, parse, unexpected
      , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
+     , startOptimizer
      ) where
 
 import Data.List  (sortBy, sortOn, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf, isSuffixOf)
@@ -69,6 +70,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
                               , RCSet(..), QuantifiedBool(..), ArrayModel(..), SInfo(..), getSInfo
+                              , OptimizeStyle(..)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -78,7 +80,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , extractSymbolicSimulationState, MonadSymbolic(..)
                               , UserInputs, getSV, NamedSymVar(..), lookupInput, getUserName'
                               , Name, CnstMap, Inputs(..), ProgInfo(..)
-                              , mustIgnoreVar, newInternalVariable
+                              , mustIgnoreVar, newInternalVariable, Penalty(..)
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -1965,6 +1967,52 @@ executeQuery queryContext (QueryT userQuery) = do
                                           , "*** Query calls are only valid within runSMT/runSMTWith calls,"
                                           , "*** and each call to runSMT should have only one query call inside."
                                           ]
+
+-- | Preparing for optimization. If we have objectives, returns the directives for the solver. If not, it returns nothing.
+startOptimizer :: (MonadIO m, MonadQuery m) => SMTConfig -> OptimizeStyle -> m (Maybe ([Objective (SV, SV)], [String]))
+startOptimizer config style = do
+  objectives <- getObjectives
+
+  if null objectives
+     then return Nothing
+     else do unless (supportsOptimization (capabilities (solver config))) $
+                    error $ unlines [ ""
+                                    , "*** Data.SBV: The backend solver " ++ show (name (solver config)) ++ "does not support optimization goals."
+                                    , "*** Please use a solver that has support, such as z3"
+                                    ]
+
+             when (validateModel config && not (optimizeValidateConstraints config)) $
+                    error $ unlines [ ""
+                                    , "*** Data.SBV: Model validation is not supported in optimization calls."
+                                    , "***"
+                                    , "*** Instead, use `cfg{optimizeValidateConstraints = True}`"
+                                    , "***"
+                                    , "*** which checks that the results satisfy the constraints but does"
+                                    , "*** NOT ensure that they are optimal."
+                                    ]
+
+
+             let optimizerDirectives = concatMap minmax objectives ++ priority style
+                   where mkEq (x, y) = "(assert (= " ++ show x ++ " " ++ show y ++ "))"
+
+                         minmax (Minimize          _  xy@(_, v))     = [mkEq xy, "(minimize "    ++ show v                 ++ ")"]
+                         minmax (Maximize          _  xy@(_, v))     = [mkEq xy, "(maximize "    ++ show v                 ++ ")"]
+                         minmax (AssertWithPenalty nm xy@(_, v) mbp) = [mkEq xy, "(assert-soft " ++ show v ++ penalize mbp ++ ")"]
+                           where penalize DefaultPenalty    = ""
+                                 penalize (Penalty w mbGrp)
+                                    | w <= 0 = error $ unlines [ "SBV.AssertWithPenalty: Goal " ++ show nm ++ " is assigned a non-positive penalty: " ++ shw
+                                                               , "All soft goals must have > 0 penalties associated."
+                                                               ]
+                                    | True   = " :weight " ++ shw ++ maybe "" group mbGrp
+                                    where shw = show (fromRational w :: Double)
+
+                                 group g = " :id " ++ g
+
+                         priority Lexicographic = [] -- default, no option needed
+                         priority Independent   = ["(set-option :opt.priority box)"]
+                         priority (Pareto _)    = ["(set-option :opt.priority pareto)"]
+
+             pure $ Just (objectives, optimizerDirectives)
 
 {- HLint ignore module          "Reduce duplication" -}
 {- HLint ignore getAllSatResult "Use forM_"          -}
