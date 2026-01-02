@@ -1903,13 +1903,15 @@ executeQuery queryContext originalQuery = do
                            Nothing                         -> return ()
                            Just QueryState{queryTerminate} -> queryTerminate maybeForwardedException
 
-                  -- If there are objectives, let's add those to the list before we run
+                  -- If this is an extrnal query and there are objectives, let's add those to the list before we run
                   -- Here we only allow Lexicographic; we might want to make that configurable later.
-                  let userQuery = do mbDirs <- startOptimizer cfg Lexicographic
-                                     case mbDirs of
-                                       Nothing        -> pure ()
-                                       Just (_, cmds) -> mapM_ (send True) cmds
-                                     originalQuery
+                  let userQuery = case queryContext of
+                                    QueryInternal -> originalQuery
+                                    QueryExternal -> do mbDirs <- startOptimizer cfg Lexicographic
+                                                        case mbDirs of
+                                                          Nothing        -> pure ()
+                                                          Just (_, cmds) -> mapM_ (send True) cmds
+                                                        originalQuery
 
                   lift $ join $ liftIO $ C.mask $ \restore -> do
                     r <- restore (extractIO $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT (runQueryT userQuery))
