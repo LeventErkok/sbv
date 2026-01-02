@@ -36,24 +36,35 @@ module Documentation.SBV.Examples.Puzzles.SquareBirthday where
 import Prelude hiding (fromEnum, toEnum)
 
 import Data.SBV
+import Data.SBV.Control
 import qualified Data.SBV.List as SL
 
+-- | Months in a year.
 data Month = Jan | Feb | Mar | Apr | May | Jun
            | Jul | Aug | Sep | Oct | Nov | Dec
            deriving Show
 
+-- | A date. We use unbounded integers for day and year, which simplifies coding,
+-- though one can also enumerate the possible values from the problem itself.
 data Date  = Date { day   :: Integer
                   , month :: Month
                   , year  :: Integer
                   }
 
+-- | Get 'Month' and 'Date' to be symbolic values.
 mkSymbolic [''Month, ''Date]
 
+-- | Show instance for date, for pretty-printing.
 instance Show Date where
   show (Date d m y) = show m ++ " " ++ pad ++ show d ++ ", " ++ show y
    where pad | d < 10 = " "
              | True   = ""
 
+-- | Get a symbolic date with the given name. Since we used
+-- integers for the day and year fields, we constrain them
+-- appropriately. Note that one can further constrain days
+-- based on the year and month; but that level detail isn't
+-- necessary for the current problem.
 symDate :: String -> Symbolic SDate
 symDate nm = do dt <- free nm
 
@@ -65,38 +76,53 @@ symDate nm = do dt <- free nm
 
                 pure dt
 
+-- | Encode today as a symbolic value. The puzzle says today is June 1st, 2025.
 today :: SDate
 today = literal $ Date { day   =    1
                        , month =  Jun
                        , year  = 2025
                        }
 
-after, onOrAfter :: SDate -> SDate -> SBool
+-- | A date is on or after another, if the month-day combo is
+-- lexicographically later. Note that we ignore the year for this
+-- comparison, as we're interested if the anniversary of a date is after or not.
+onOrAfter :: SDate -> SDate -> SBool
 d1 `onOrAfter` d2 = (smonth d1, sday d1) .>= (smonth d2, sday d2)
-d1 `after`     d2 = (smonth d1, sday d1) .>  (smonth d2, sday d2)
 
+-- | Similar to 'onOrAfter', except we require strictly later.
+after :: SDate -> SDate -> SBool
+d1 `after` d2 = (smonth d1, sday d1) .>  (smonth d2, sday d2)
+
+-- | The age based on a given date is the difference between years less than one.
+-- We have to adjust by 1 if today happens to be after the given date.
 age :: SDate -> SInteger
 age d = syear today - syear d - 1 + oneIf (today `after` d)
 
-squareDay :: SInteger -> SBool
-squareDay d = d `sElem` [1, 4, 9, 16, 25]
-
-squareMonth :: SMonth -> SBool
-squareMonth m = m `sElem` [sJan, sApr, sSep]
-
+-- | We can let years to range over arbitrary integers. But that complicates the
+-- job of the solver. So, based on what we know from the problem, we restrict
+-- our attention to years betweek 1900 and 2100. Note that there are only
+-- two years that satisfy this in that range: 1936 and 2025. (Any other square
+-- year makes no sense for the setting of the problem.) To simplify the square-root
+-- computation, we also store the square root in this list as the second component:
+--
+-- >>> squareYears
+-- [(1936,44),(2025,45)]
 squareYears :: [(Integer, Integer)]
 squareYears = takeWhile (\(y, _) -> y < 2100)
             $ dropWhile (\(y, _) -> y < 1900)
             $ [(i * i, i) | i <- [1::Integer ..]]
 
-squareYear :: SInteger -> SBool
-squareYear y = y `sElem` map (literal . fst) squareYears
-
+-- | A date is square if all its components are.
 squareDate :: SDate -> SBool
 squareDate dt = [sCase|Date dt of
                    Date d m y -> squareDay d .&& squareMonth m .&& squareYear y
                 |]
+  where squareDay   d = d `sElem` [1, 4, 9, 16, 25]
+        squareMonth m = m `sElem` [sJan, sApr, sSep]
+        squareYear  y = y `sElem` map (literal . fst) squareYears
 
+
+-- | Summing the square-roots of the components of a date.
 sqrSum :: SDate -> SInteger
 sqrSum dt = [sCase|Date dt of
                Date d m y -> r d + mr m + r y
@@ -111,6 +137,9 @@ sqrSum dt = [sCase|Date dt of
                   _   -> some "Non-Square Month" (const sTrue)
               |]
 
+-- | Since the puzzle involves finding the "last square date," we have an optimization
+-- problem. To optimize, we need to define a metric. We simply turn the date into a
+-- unique integer, with later years giving as bigger numbers.
 instance Metric Date where
   type MetricSpace Date = Integer
   toMetricSpace dt  = [sCase|Date dt of
@@ -121,55 +150,62 @@ instance Metric Date where
                       in sDate d (toEnum m) y
   annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
--- | Formalizing the puzzle
-puzzle :: ConstraintSet
-puzzle = do
-
-       myBirthday <- symDate "My Birthday"
-
-       -- I was born in the last millenium
-       constrain $ syear myBirthday .< 2000 .&& syear myBirthday .>= 1900
-
-       -- My next birthday will be a square
-       let next = [sCase|Date myBirthday of
-                     Date d m _ -> sDate d m (syear today + oneIf (today `onOrAfter` myBirthday))
-                  |]
-
-       constrain $ squareDate next
-
-       -- And it'll be the last square day of my life:
-       maximize "@Next Birthday" next
-
-       -- If you square the components of my next birthday, it gives me my current age on Jun 1, 2025
-       let ageOnJun1 = age myBirthday
-       constrain $ sqrSum next .== ageOnJun1
-
-       momBirthday <- symDate "Mom's Birthday"
-
-       -- Mom has a square birth-date, except for the month:
-       constrain [sCase|Date momBirthday of
-                    Date d _ y -> squareDate (sDate d sJan y)
-                 |]
-
-       -- Mom's day and month are perfect cubes
-       constrain [sCase|Date momBirthday of
-                    Date d m _ -> sAnd [ d `sElem` [1, 8, 27]
-                                       , m `sElem` [sJan, sAug]
-                                       ]
-                 |]
-
--- | Solve the puzzle. We have:
+-- | Formalizing the puzzle. We literally write down the description in
+-- SBV notation. As with any formalization, this step is subjective; there
+-- could be many different ways to express the same problem. The description
+-- below is quite faithful to the problem description given. We have:
 --
--- >>> answer
+-- >>> puzzle
 -- Me : Sep 25, 1971
 -- Mom: Aug  1, 1936
-answer :: IO ()
-answer = do m <- optLexicographic puzzle
-            case m of
-              Satisfiable{} -> do let grab :: String -> Date
-                                      grab s = case getModelValue s m  of
-                                                 Nothing -> error $ "Cannot extract value for " ++ show s
-                                                 Just v  -> v
-                                  putStrLn $ "Me : " ++ show (grab "My Birthday")
-                                  putStrLn $ "Mom: " ++ show (grab "Mom's Birthday")
-              _ -> error "Not satisfiable!"
+puzzle :: IO ()
+puzzle = runSMT $ do
+
+    -----------------------------------
+    -- Constraints about my birthday
+    -----------------------------------
+    myBirthday <- symDate "My Birthday"
+
+    -- I was born in the last millenium
+    constrain $ syear myBirthday .< 2000 .&& syear myBirthday .>= 1900
+
+    -- My next birthday will be a square
+    let next = [sCase|Date myBirthday of
+                  Date d m _ -> sDate d m (syear today + oneIf (today `onOrAfter` myBirthday))
+               |]
+
+    constrain $ squareDate next
+
+    -- And it'll be the last square day of my life:
+    maximize "Next Birthday" next
+
+    -- If you square the components of my next birthday, it gives me my current age on Jun 1, 2025
+    constrain $ sqrSum next .== age myBirthday
+
+    -----------------------------------
+    -- Constraints about mom's birthday
+    -----------------------------------
+    momBirthday <- symDate "Mom's Birthday"
+
+    -- Mom has a square birth-date, except for the month:
+    constrain [sCase|Date momBirthday of
+                 Date d _ y -> squareDate (sDate d sJan y)
+              |]
+
+    -- Mom's day and month are perfect cubes
+    constrain [sCase|Date momBirthday of
+                 Date d m _ -> sAnd [ d `sElem` [1, 8, 27]
+                                    , m `sElem` [sJan, sAug]
+                                    ]
+              |]
+
+    -- Extract the results:
+    query $ do cs <- checkSat
+               case cs of
+                 Sat -> do me  <- getValue myBirthday
+                           mom <- getValue momBirthday
+
+                           io $ do putStrLn $ "Me : " ++ show me
+                                   putStrLn $ "Mom: " ++ show mom
+
+                 _   -> error $ "Unexpected result: " ++ show cs
