@@ -75,25 +75,10 @@ hackage-docs:
 	@echo "*** If the above fails for some reason, use the workaround in: https://github.com/haskell/cabal/issues/10252#issuecomment-2422130252"
 
 ghci:
-ifdef TGT
-	cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}
-else
-	cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages
-endif
+	cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv SBVTest SBVConnections SBVHLint SBVBench SBVDocTest
 
-# Use to load in ghcid. Possibilities:
-#     make ghcid
-#     make ghcid TGT=SBVTest
-#     make ghcid TGT=SBVConnections
-#     make ghcid TGT=SBVHLint
-#     make ghcid TGT=SBVBench
-#     make ghcid TGT=SBVDocTest
 ghcid:
-ifdef TGT
-	ghcid --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}"
-else
-	ghcid --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages"
-endif
+	ghcid --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv SBVTest SBVConnections SBVHLint SBVBench SBVDocTest"
 
 bench:
 	cabal bench
