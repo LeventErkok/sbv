@@ -2,7 +2,7 @@ SCase32.hs:13:1: error: [GHC-39584]
     mkSymbolic: Unsupported constructor kind
       Datatype   : A
       Constructor: F
-      Kind       : T.A -> GHC.Types.Bool
+      Kind       : T.A -> GHC.Internal.Types.Bool
       
       Higher order fields (i.e., function values) are not supported.
 
