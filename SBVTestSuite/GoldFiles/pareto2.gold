@@ -96,34 +96,34 @@ Pareto front #16: Optimal model:
   max_x_plus_y = -26 :: Integer
 Pareto front #17: Optimal model:
   x            =   0 :: Integer
-  y            = -27 :: Integer
-  min_x        =   0 :: Integer
-  max_y        = -27 :: Integer
-  max_x_plus_y = -27 :: Integer
-Pareto front #18: Optimal model:
-  x            =   0 :: Integer
   y            = -28 :: Integer
   min_x        =   0 :: Integer
   max_y        = -28 :: Integer
   max_x_plus_y = -28 :: Integer
-Pareto front #19: Optimal model:
+Pareto front #18: Optimal model:
   x            =   0 :: Integer
-  y            = -30 :: Integer
+  y            = -29 :: Integer
   min_x        =   0 :: Integer
-  max_y        = -30 :: Integer
-  max_x_plus_y = -30 :: Integer
-Pareto front #20: Optimal model:
+  max_y        = -29 :: Integer
+  max_x_plus_y = -29 :: Integer
+Pareto front #19: Optimal model:
   x            =   0 :: Integer
   y            = -31 :: Integer
   min_x        =   0 :: Integer
   max_y        = -31 :: Integer
   max_x_plus_y = -31 :: Integer
+Pareto front #20: Optimal model:
+  x            =   0 :: Integer
+  y            = -32 :: Integer
+  min_x        =   0 :: Integer
+  max_y        = -32 :: Integer
+  max_x_plus_y = -32 :: Integer
 Pareto front #21: Optimal model:
   x            =   0 :: Integer
-  y            = -33 :: Integer
+  y            = -34 :: Integer
   min_x        =   0 :: Integer
-  max_y        = -33 :: Integer
-  max_x_plus_y = -33 :: Integer
+  max_y        = -34 :: Integer
+  max_x_plus_y = -34 :: Integer
 Pareto front #22: Optimal model:
   x            =   0 :: Integer
   y            = -35 :: Integer
