@@ -19,6 +19,8 @@
   * Fixed closure-version implementations of list functions filter, partition, takeWhile, and dropWhile.
     Thanks to amigalemming on github for the bug report.
 
+  * Query mode now works with optimization directives.
+
   * Added new puzzle example: Documentation.SBV.Examples.Puzzles.SquareBirthday
 
 ### Version 13.3, 2025-12-05
