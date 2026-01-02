@@ -20,8 +20,6 @@
 [GOOD] ; --- assignments ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert (= s0 s1))
-[GOOD] (maximize s1)
 *** Solver   : Z3
 *** Exit code: ExitFailure (-15)
 
