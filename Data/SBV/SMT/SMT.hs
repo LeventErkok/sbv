@@ -319,7 +319,7 @@ instance (KnownNat n, BVIsNonZero n) => SatModel (WordN n) where
 instance (KnownNat n, BVIsNonZero n) => SatModel (IntN n) where
   parseCVs = genParse (kindOf (undefined :: IntN n))
 
--- | Constructing models for 'ArrayModel'
+-- | Constructing models for t'ArrayModel'
 instance (SatModel k, SatModel v) => SatModel (ArrayModel k v) where
   parseCVs (CV (KArray kk kv) (CArray (ArrayModel tbl def)) : r)
     | Just (def', _) <- parseCVs @v [CV kv def]

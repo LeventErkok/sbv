@@ -46,17 +46,17 @@ data Month = Jan | Feb | Mar | Apr | May | Jun
 
 -- | A date. We use unbounded integers for day and year, which simplifies coding,
 -- though one can also enumerate the possible values from the problem itself.
-data Date  = Date { day   :: Integer
-                  , month :: Month
-                  , year  :: Integer
-                  }
+data Date = MkDate { day   :: Integer
+                   , month :: Month
+                   , year  :: Integer
+                   }
 
--- | Get 'Month' and 'Date' to be symbolic values.
+-- | Make 'Month' and 'Date' usable in symbolic contexts.
 mkSymbolic [''Month, ''Date]
 
 -- | Show instance for date, for pretty-printing.
 instance Show Date where
-  show (Date d m y) = show m ++ " " ++ pad ++ show d ++ ", " ++ show y
+  show (MkDate d m y) = show m ++ " " ++ pad ++ show d ++ ", " ++ show y
    where pad | d < 10 = " "
              | True   = ""
 
@@ -69,19 +69,19 @@ symDate :: String -> Symbolic SDate
 symDate nm = do dt <- free nm
 
                 constrain [sCase|Date dt of
-                              Date d _ y -> sAnd [ 1 .<= d, d .<= 31
-                                                 , 0 .<= y
-                                                 ]
+                              MkDate d _ y -> sAnd [ 1 .<= d, d .<= 31
+                                                   , 0 .<= y
+                                                   ]
                           |]
 
                 pure dt
 
 -- | Encode today as a symbolic value. The puzzle says today is June 1st, 2025.
 today :: SDate
-today = literal $ Date { day   =    1
-                       , month =  Jun
-                       , year  = 2025
-                       }
+today = literal $ MkDate { day   =    1
+                         , month =  Jun
+                         , year  = 2025
+                         }
 
 -- | A date is on or after another, if the month-day combo is
 -- lexicographically later. Note that we ignore the year for this
@@ -115,7 +115,7 @@ squareYears = takeWhile (\(y, _) -> y < 2100)
 -- | A date is square if all its components are.
 squareDate :: SDate -> SBool
 squareDate dt = [sCase|Date dt of
-                   Date d m y -> squareDay d .&& squareMonth m .&& squareYear y
+                   MkDate d m y -> squareDay d .&& squareMonth m .&& squareYear y
                 |]
   where squareDay   d = d `sElem` [1, 4, 9, 16, 25]
         squareMonth m = m `sElem` [sJan, sApr, sSep]
@@ -125,7 +125,7 @@ squareDate dt = [sCase|Date dt of
 -- | Summing the square-roots of the components of a date.
 sqrSum :: SDate -> SInteger
 sqrSum dt = [sCase|Date dt of
-               Date d m y -> r d + mr m + r y
+               MkDate d m y -> r d + mr m + r y
             |]
  where r v  = v `SL.lookup` literal ([(i * i, i) | i <- [1, 2, 3, 4, 5]] ++ squareYears)
 
@@ -143,11 +143,11 @@ sqrSum dt = [sCase|Date dt of
 instance Metric Date where
   type MetricSpace Date = Integer
   toMetricSpace dt  = [sCase|Date dt of
-                         Date d m y -> y*10000 +  fromEnum m*100 + d
+                         MkDate d m y -> y*10000 +  fromEnum m*100 + d
                       |]
   fromMetricSpace t = let (y, r) = t `sDivMod` 10000
                           (m, d) = r `sDivMod`   100
-                      in sDate d (toEnum m) y
+                      in sMkDate d (toEnum m) y
   annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
 -- | Formalizing the puzzle. We literally write down the description in
@@ -171,7 +171,7 @@ puzzle = runSMT $ do
 
     -- My next birthday will be a square
     let next = [sCase|Date myBirthday of
-                  Date d m _ -> sDate d m (syear today + oneIf (today `onOrAfter` myBirthday))
+                  MkDate d m _ -> sMkDate d m (syear today + oneIf (today `onOrAfter` myBirthday))
                |]
 
     constrain $ squareDate next
@@ -189,14 +189,14 @@ puzzle = runSMT $ do
 
     -- Mom has a square birth-date, except for the month:
     constrain [sCase|Date momBirthday of
-                 Date d _ y -> squareDate (sDate d sJan y)
+                 MkDate d _ y -> squareDate (sMkDate d sJan y)
               |]
 
     -- Mom's day and month are perfect cubes
     constrain [sCase|Date momBirthday of
-                 Date d m _ -> sAnd [ d `sElem` [1, 8, 27]
-                                    , m `sElem` [sJan, sAug]
-                                    ]
+                 MkDate d m _ -> sAnd [ d `sElem` [1, 8, 27]
+                                      , m `sElem` [sJan, sAug]
+                                      ]
               |]
 
     -- Extract the results:
