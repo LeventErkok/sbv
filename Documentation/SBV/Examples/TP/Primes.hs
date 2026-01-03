@@ -72,7 +72,7 @@ dividesProduct = calc "dividesProduct"
 --     Step: 1.1                           Q.E.D.
 --     Step: 1.2.1                         Q.E.D.
 --     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3 (hard)                  Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
 --     Step: 1.2.4                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
@@ -91,7 +91,6 @@ dividesTransitive = do
                              =: x `dvd` (z `sEDiv` y * y)
                              ?? y .== y `sEDiv` x * x
                              =: x `dvd` ((z `sEDiv` y) * (y `sEDiv` x * x))
-                             ?? "hard"
                              =: x `dvd` (x * ((z `sEDiv` y) * (y `sEDiv` x)))
                              ?? dp `at` (Inst @"x" x, Inst @"y" x, Inst @"z" ((z `sEDiv` y) * (y `sEDiv` x)))
                              =: sTrue
