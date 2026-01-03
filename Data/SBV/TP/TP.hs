@@ -34,7 +34,7 @@ module Data.SBV.TP.TP (
        , (|-), (|->), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        , qc, qcWith
        , disp
-       , recall
+       , recall, recallWith
        ) where
 
 import Data.SBV
@@ -1525,16 +1525,26 @@ infix 0 ⟹
 -- | Recalling a proof. This essentially sets the verbose output off during this proof. Note that
 -- if we're doing stats, we ignore this as the whole point of doing stats is to see steps in detail.
 recall :: String -> TP (Proof a) -> TP (Proof a)
-recall nm prf = do
-  cfg <- getTPConfig
-  if printStats (tpOptions cfg)
-     then prf
+recall nm prf = getTPConfig >>= \cfg -> recallWith cfg nm prf
+
+-- | Recalling a proof, using a given config. We keep the stat field as the or of the current and the context
+-- configuration.
+recallWith :: SMTConfig -> String -> TP (Proof a) -> TP (Proof a)
+recallWith cfg nm prf = do
+  cfgOrig <- getTPConfig
+  let stats = printStats (tpOptions cfg) || printStats (tpOptions cfgOrig)
+  if stats
+     then do restoring cfg cfgOrig prf
      else do tab <- liftIO $ startTP cfg (verbose cfg) "Lemma" 0 (TPProofOneShot nm [])
-             setTPConfig cfg{tpOptions = (tpOptions cfg) {quiet = True}}
-             r@Proof{proofOf = ProofObj{dependencies}} <- prf
-             setTPConfig cfg
-             liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo dependencies) (tab, Nothing) []
-             pure r
+             let new = cfg{tpOptions = (tpOptions cfg) {quiet = True}}
+             restoring new cfgOrig $ do
+                 r@Proof{proofOf = ProofObj{dependencies}} <- prf
+                 liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo dependencies) (tab, Nothing) []
+                 pure r
+ where restoring new old act = do setTPConfig new
+                                  res <- act
+                                  setTPConfig old
+                                  pure res
 
 {- HLint ignore module "Eta reduce"         -}
 {- HLint ignore module "Reduce duplication" -}

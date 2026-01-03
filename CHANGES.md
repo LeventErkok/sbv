@@ -23,6 +23,8 @@
 
   * Added new puzzle example: Documentation.SBV.Examples.Puzzles.SquareBirthday
 
+  * Add recallWith to Data.SBV.TP, which allows you to change the solver in a recalled proof.
+
 ### Version 13.3, 2025-12-05
 
   * Added 'constArray', which allows creation of constant valued symbolic arrays. The definition
