@@ -184,7 +184,8 @@ leastDivisorTwice = do
   ldd <- recall "leastDivisorDivides" leastDivisorDivides
   ldl <- recall "leastDivisorIsLeast" leastDivisorIsLeast
 
-  h1 <- lemma "helper1"
+  h1 <- lemmaWith cvc5
+              "helper1"
               (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) `dvd` ld k n .&& ld k (ld k n) .<= ld k n)
               [proofOf ldd]
 
