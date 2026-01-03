@@ -130,7 +130,7 @@ leastDivisorDivides =
                                                 =: qed
                            , n `sEMod` k ./= 0 ==> d `dvd` n .&& k .<= d .&& d .<= n
                                                 ?? d .== ld (k+1) n
-                                                ?? ih
+                                                ?? ih `at` (Inst @"k" (k+1), Inst @"n" n)
                                                 =: sTrue
                                                 =: qed
                            ]
