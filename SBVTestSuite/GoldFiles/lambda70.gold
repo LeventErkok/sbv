@@ -46,16 +46,18 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (x_eu1))
-[RECV] ((x_eu1 ((as const (Array Int Int)) 0)))
+[RECV] ((x_eu1 (store ((as const (Array Int Int)) 1) 1 0)))
 [SEND] (get-value (x_eu2))
-[RECV] ((x_eu2 ((as const (Array Int Int)) 1)))
+[RECV] ((x_eu2 (store ((as const (Array Int Int)) 0) 1 1)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 RESULT:
 Satisfiable. Model:
   x_eu1 :: Integer -> Integer
-  x_eu1 _ = 0
+  x_eu1 1 = 0
+  x_eu1 _ = 1
 
   x_eu2 :: Integer -> Integer
-  x_eu2 _ = 1
+  x_eu2 1 = 1
+  x_eu2 _ = 0

@@ -207,6 +207,17 @@ tests =
       , goldenCapturedIO "lambda69" $ runS $ \(Forall x) (Forall y) -> uninterpret "F" x y .== 2*x+(3-y::SInteger)
 
       -- Most skolems are tested inline, here's a fancy one!
+      -- This is satisfiable. A model for this will present two functions, x_eu1 and x_eu2
+      -- If these functions differ on all mappings i.e. forall x. x_eu1 x /= x_eu2 x, then
+      -- it would be a valid model for this problem. Note that these functions can
+      -- be constant functions mapping to different values; or functions that distinguish
+      -- some subset of inputs, so long as they map it to different values. Examples:
+      --    x_eu1 _ = 0      x_eu2 _ = 0
+      -- OR
+      --    x_eu1 1 = 0      x_eu2 1 = 1
+      --    x_eu1 _ = 1      x_eu2 _ = 0
+      --
+      -- are all good.
       , goldenCapturedIO "lambda70" $
                 let phi :: ExistsUnique "x" Integer -> SBool
                     phi (ExistsUnique  x) = x .== 0 .|| x .== 1
