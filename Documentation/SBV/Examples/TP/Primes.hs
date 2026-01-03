@@ -171,7 +171,9 @@ leastDivisorIsLeast =
 -- Lemma: leastDivisorIsLeast              Q.E.D.
 -- Lemma: helper1                          Q.E.D.
 -- Lemma: helper2                          Q.E.D.
--- Lemma: helper3                          Q.E.D.
+-- Lemma: helper3
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
 -- Lemma: helper4                          Q.E.D.
 -- Lemma: helper5
 --   Step: 1                               Q.E.D.
@@ -193,9 +195,15 @@ leastDivisorTwice = do
               (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k n `dvd` n)
               [proofOf ldd]
 
-  h3 <- lemma "helper3"
-              (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) `dvd` n)
-              [proofOf h1, proofOf h2, proofOf dt]
+  h3 <- calc "helper3"
+             (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> ld k (ld k n) `dvd` n) $
+             \k n -> [n .>= k, k .>= 2]
+                  |- ld k (ld k n) `dvd` n
+                  ?? h1
+                  ?? h2
+                  ?? dt `at` (Inst @"x" (ld k (ld k n)), Inst @"y" (ld k n), Inst @"z" n)
+                  =: sTrue
+                  =: qed
 
   h4 <- lemma "helper4"
               (\(Forall @"k" k) (Forall @"n" n) -> n .>= k .&& k .>= 2 .=> k .<= ld k (ld k n))
