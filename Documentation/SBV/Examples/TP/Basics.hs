@@ -115,18 +115,18 @@ existsDisjunction p q = runTP $ do
 -- *** Failed to prove forallConjunctionNot.
 -- Falsifiable. Counter-example:
 --   p :: Integer -> Bool
---   p 2 = True
---   p 1 = False
+--   p 4 = True
+--   p 3 = False
 --   p _ = True
 -- <BLANKLINE>
 --   q :: Integer -> Bool
---   q 2 = False
---   q 1 = True
+--   q 4 = False
+--   q 3 = True
 --   q _ = True
 --
--- Note how @p@ assigns two selected values to @True@ and everything else to @False@, while @q@ does the exact opposite.
--- So, there is no common value that satisfies both, providing a counter-example. (It's not clear why the solver finds
--- a model with two distinct values, as one would have sufficed. But it is still a valud model.)
+-- Note how @p@ and @q@ differ in their treatment of the inputs 3 and 4, but agree everywhere else. So, for each
+-- input, at least one of @p@ or @q@ is @True@, making the disjunction @True@ for all inputs. But the predicates
+-- @p@ and @q@ are not universally true themselves, constituting a counter-example.
 forallDisjunctionNot :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO ()
 forallDisjunctionNot p q = runTP $ do
     let qb = quantifiedBool
@@ -148,14 +148,15 @@ forallDisjunctionNot p q = runTP $ do
 -- *** Failed to prove existsConjunctionNot.
 -- Falsifiable. Counter-example:
 --   p :: Integer -> Bool
---   p 1 = False
+--   p 3 = False
 --   p _ = True
 -- <BLANKLINE>
 --   q :: Integer -> Bool
---   q 1 = True
+--   q 3 = True
 --   q _ = False
 --
--- In this case, we again have a predicate That disagree at every point, providing a counter-example.
+-- In this case, both @p@ and @q@ have a satisfying input (for @p@ everything but 3, for @q@, only 3), but
+-- there is no single value that satisfies both, thus giving us our counter-example.
 existsConjunctionNot :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO ()
 existsConjunctionNot p q = runTP $ do
     let qb = quantifiedBool
