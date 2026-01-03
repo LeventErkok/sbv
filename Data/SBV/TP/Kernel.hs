@@ -186,27 +186,33 @@ internalAxiom nm p = Proof $ ProofObj { dependencies = []
                                       , isCached     = False
                                       }
 
+-- | Merge TP configs, picking the TP specific settings from top
+mergeTPConfig :: SMTConfig -> SMTConfig -> SMTConfig
+mergeTPConfig cur top = cur{tpOptions = tpOptions top}
+
 -- | Prove a lemma, using the given configuration
 lemmaWith :: Proposition a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
-lemmaWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} nm inputProp by = withProofCache nm $ do
+lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
+                 topCfg <- getTPConfig
+                 let cfg@SMTConfig{tpOptions = TPOptions{printStats}} = cfgIn `mergeTPConfig` topCfg
                  tpSt <- getTPState
                  u    <- tpGetNextUnique
-                 liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt u
-  where go tpSt u mbStartTime = do qSaturateSavingObservables inputProp
-                                   mapM_ (constrain . getObjProof) by
-                                   query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp [] (good mbStartTime u)
+                 liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt cfg u
+  where go tpSt cfg u mbStartTime = do qSaturateSavingObservables inputProp
+                                       mapM_ (constrain . getObjProof) by
+                                       query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp [] (good cfg mbStartTime u)
 
         -- What to do if all goes well
-        good mbStart u d = do mbElapsed <- getElapsedTime mbStart
-                              liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo by) d $ catMaybes [mbElapsed]
-                              pure $ Proof $ ProofObj { dependencies = by
-                                                      , isUserAxiom  = False
-                                                      , getObjProof  = label nm (quantifiedBool inputProp)
-                                                      , getProp      = toDyn inputProp
-                                                      , proofName    = nm
-                                                      , uniqId       = u
-                                                      , isCached     = False
-                                                      }
+        good cfg mbStart u d = do mbElapsed <- getElapsedTime mbStart
+                                  liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo by) d $ catMaybes [mbElapsed]
+                                  pure $ Proof $ ProofObj { dependencies = by
+                                                          , isUserAxiom  = False
+                                                          , getObjProof  = label nm (quantifiedBool inputProp)
+                                                          , getProp      = toDyn inputProp
+                                                          , proofName    = nm
+                                                          , uniqId       = u
+                                                          , isCached     = False
+                                                          }
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: Proposition a => String -> a -> [ProofObj] -> TP (Proof a)
