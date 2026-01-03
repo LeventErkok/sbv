@@ -241,7 +241,7 @@ primeAtLeast2 = lemma "primeAtLeast2" (\(Forall p) -> isPrime p .=> p .>= 2) []
 -- [Proven] leastDivisorIsPrime :: Ɐn ∷ Integer → Bool
 leastDivisorIsPrime :: TP (Proof (Forall "n" Integer -> SBool))
 leastDivisorIsPrime = do
-   ldt <- recall "leastDivisorTwice" leastDivisorTwice
+   ldt <- recall "leastDivisorTwice"   leastDivisorTwice
    ldd <- recall "leastDivisorDivides" leastDivisorDivides
 
    calc "leastDivisorIsPrime"
