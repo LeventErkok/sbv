@@ -31,6 +31,7 @@ import Data.SBV.Tuple
 
 #ifdef DOCTEST
 -- $setup
+-- >>> import Data.SBV
 -- >>> import Data.SBV.TP
 #endif
 
@@ -676,7 +677,7 @@ gcdAdd = do
 -- | \(\gcd\, (2a)\, (2b) = 2 (\gcd\,a\, b)\)
 --
 -- ==== __Proof__
--- >>> runTP gcdEvenEven
+-- >>> runTPWith cvc5 gcdEvenEven
 -- Lemma: modEE                            Q.E.D.
 -- Inductive lemma (strong): nGCDEvenEven
 --   Step: Measure is non-negative         Q.E.D.
@@ -944,10 +945,10 @@ gcdBin a b = nGCDBin (abs a) (abs b)
 -- [Proven] gcdBinEquiv :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdBinEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdBinEquiv = do
-   gEvenEven <- recall "gcdEvenEven" gcdEvenEven
-   gOddEven  <- recall "gcdOddEven"  gcdOddEven
-   gAdd      <- recall "gcdAdd"      gcdAdd
-   comm      <- recall "commutative" commutative
+   gEvenEven <- recallWith cvc5 "gcdEvenEven" gcdEvenEven
+   gOddEven  <- recall          "gcdOddEven"  gcdOddEven
+   gAdd      <- recall          "gcdAdd"      gcdAdd
+   comm      <- recall          "commutative" commutative
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDBinEquiv"
