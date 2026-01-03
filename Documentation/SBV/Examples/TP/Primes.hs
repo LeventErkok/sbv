@@ -90,6 +90,7 @@ dividesTransitive = do
                              ?? z .== z `sEDiv` y * y
                              =: x `dvd` (z `sEDiv` y * y)
                              ?? y .== y `sEDiv` x * x
+                             ?? x `dvd` y
                              =: x `dvd` ((z `sEDiv` y) * (y `sEDiv` x * x))
                              =: x `dvd` (x * ((z `sEDiv` y) * (y `sEDiv` x)))
                              ?? dp `at` (Inst @"x" x, Inst @"y" x, Inst @"z" ((z `sEDiv` y) * (y `sEDiv` x)))
