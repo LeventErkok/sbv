@@ -72,7 +72,7 @@ module Data.SBV.TP (
        , disp
 
        -- * Recall an old proof, quietly proving it
-       , recall
+       , recall, recallWith
        ) where
 
 import Data.SBV.TP.TP
