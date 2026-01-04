@@ -1525,14 +1525,14 @@ recall nm prf = getTPConfig >>= \cfg -> recallWith cfg nm prf
 -- | Recalling a proof, using a given config. We keep the stat field as the or of the current and the context
 -- configuration.
 recallWith :: SMTConfig -> String -> TP (Proof a) -> TP (Proof a)
-recallWith cfg nm prf = do
-  cfgOrig <- getTPConfig
-  let stats = printStats (tpOptions cfg) || printStats (tpOptions cfgOrig)
-  if stats
-     then do restoring cfg cfgOrig prf
+recallWith cfgIn nm prf = do
+  topCfg <- getTPConfig
+  let cfg@SMTConfig{tpOptions = TPOptions{printStats}} = cfgIn `tpMergeCfg` topCfg
+  if printStats
+     then do restoring cfg topCfg prf
      else do tab <- liftIO $ startTP cfg (verbose cfg) "Lemma" 0 (TPProofOneShot nm [])
              let new = cfg{tpOptions = (tpOptions cfg) {quiet = True}}
-             restoring new cfgOrig $ do
+             restoring new topCfg $ do
                  r@Proof{proofOf = ProofObj{dependencies}} <- prf
                  liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo dependencies) (tab, Nothing) []
                  pure r
