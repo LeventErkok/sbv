@@ -252,6 +252,7 @@ dvdMul = calc "dvdMul"
                                          =: qed
                               , d ./= 0 ==> d `dvd` (k*a)
                                          ?? a .== d * a `sEDiv` d
+                                         ?? d `dvd` a
                                          =: d `dvd` (k * d * a `sEDiv` d)
                                          =: qed
                               ]
