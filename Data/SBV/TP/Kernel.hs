@@ -192,7 +192,12 @@ internalAxiom nm p = Proof $ ProofObj { dependencies = []
 tpMergeCfg :: SMTConfig -> SMTConfig -> SMTConfig
 tpMergeCfg cur top = cur{tpOptions = tpOptions top}
 
--- | Prove a lemma, using the given configuration
+-- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
+lemma :: Proposition a => String -> a -> [ProofObj] -> TP (Proof a)
+lemma nm f by = do cfg <- getTPConfig
+                   lemmaWith cfg nm f by
+
+-- | Prove a lemma, using the given configuration.
 lemmaWith :: Proposition a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
 lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
                  topCfg <- getTPConfig
@@ -215,11 +220,6 @@ lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
                                                           , uniqId       = u
                                                           , isCached     = False
                                                           }
-
--- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
-lemma :: Proposition a => String -> a -> [ProofObj] -> TP (Proof a)
-lemma nm f by = do cfg <- getTPConfig
-                   lemmaWith cfg nm f by
 
 -- | Prove a given statement, using the induction schema for the proposition. Using the default solver.
 inductiveLemma :: Inductive a => String -> a -> [ProofObj] -> TP (Proof a)
