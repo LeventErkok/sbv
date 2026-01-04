@@ -313,7 +313,7 @@ dvdEvenWhenOdd = calc "dvdEvenWhenOdd"
                             -- Arithmetic gives us
                             =: 2*a .== 2*t*m + m .&& 2*(a-t*m) .== m
 
-                            -- So, we now now m is even
+                            -- So, we now know m is even
                             =: 2 `sDivides` m
 
                             -- Give that divisor a name:
