@@ -25,6 +25,7 @@ module Data.SBV.TP.Kernel (
        , inductiveLemma, inductiveLemmaWith
        , internalAxiom
        , TPProofContext (..), smtProofStep, HasInductionSchema(..)
+       , tpMergeCfg
        ) where
 
 import Control.Monad.Trans  (liftIO, MonadIO)
@@ -186,15 +187,16 @@ internalAxiom nm p = Proof $ ProofObj { dependencies = []
                                       , isCached     = False
                                       }
 
--- | Merge TP configs, picking the TP specific settings from top
-mergeTPConfig :: SMTConfig -> SMTConfig -> SMTConfig
-mergeTPConfig cur top = cur{tpOptions = tpOptions top}
+-- | Propagate the settings for ribbon/timing from top to current. Because in any subsequent configuration
+-- in a lemmaWith, inductWith etc., we just want to change the solver, not the actual settings for TP.
+tpMergeCfg :: SMTConfig -> SMTConfig -> SMTConfig
+tpMergeCfg cur top = cur{tpOptions = tpOptions top}
 
 -- | Prove a lemma, using the given configuration
 lemmaWith :: Proposition a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
 lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
                  topCfg <- getTPConfig
-                 let cfg@SMTConfig{tpOptions = TPOptions{printStats}} = cfgIn `mergeTPConfig` topCfg
+                 let cfg@SMTConfig{tpOptions = TPOptions{printStats}} = cfgIn `tpMergeCfg` topCfg
                  tpSt <- getTPState
                  u    <- tpGetNextUnique
                  liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt cfg u

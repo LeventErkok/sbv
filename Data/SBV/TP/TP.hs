@@ -91,11 +91,6 @@ proofTreeSaturatables = go
 getCalcStrategySaturatables :: CalcStrategy -> [SBool]
 getCalcStrategySaturatables (CalcStrategy calcIntros calcProofTree _calcQCInstance) = calcIntros : proofTreeSaturatables calcProofTree
 
--- | Propagate the settings for ribbon/timing from top to current. Because in any subsequent configuration
--- in a lemmaWith, inductWith etc., we just want to change the solver, not the actual settings for TP.
-tpMergeCfg :: SMTConfig -> SMTConfig -> SMTConfig
-tpMergeCfg cur top = cur{tpOptions = tpOptions top}
-
 -- | Use an injective type family to allow for curried use of calc and strong induction steps.
 type family StepArgs a t = result | result -> t where
   StepArgs                                                                             SBool  t =                                               (SBool, TPProofRaw (SBV t))
