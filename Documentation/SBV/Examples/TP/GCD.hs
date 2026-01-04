@@ -682,7 +682,13 @@ gcdAdd = do
 --
 -- ==== __Proof__
 -- >>> runTPWith cvc5 gcdEvenEven
--- Lemma: modEE                            Q.E.D.
+-- Lemma: red2                             Q.E.D.
+-- Lemma: modEE
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma (strong): nGCDEvenEven
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way case split)
@@ -703,9 +709,20 @@ gcdAdd = do
 gcdEvenEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdEvenEven = do
 
-   modEE <- lemma "modEE"
-                  (\(Forall @"a" a) (Forall @"b" b) -> b ./= 0 .=> (2 * a) `sEMod` (2 * b) .== 2 * (a `sEMod` b))
+   red2  <- lemma "red2"
+                  (\(Forall @"a" a) (Forall @"b" b) -> b ./= 0 .=> (2*a) `sEDiv` (2*b) .== a `sEDiv` b)
                   []
+
+   modEE <- calc "modEE"
+                 (\(Forall @"a" a) (Forall @"b" b) -> b ./= 0 .=> (2*a) `sEMod` (2*b) .== 2 * (a `sEMod` b)) $
+                 \a b -> [b ./= 0]
+                      |- (2*a) `sEMod` (2*b)
+                      =: 2*a - 2*b * ((2*a) `sEDiv` (2*b))
+                      ?? red2 `at` (Inst @"a" a, Inst @"b" b)
+                      =: 2*a - 2*b * (a `sEDiv` b)
+                      =: 2 * (a - b * (a `sEDiv` b))
+                      =: 2 * (a `sEMod` b)
+                      =: qed
 
    nGCDEvenEven <- sInduct "nGCDEvenEven"
                            (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCD (2*a) (2*b) .== 2 * nGCD a b)
