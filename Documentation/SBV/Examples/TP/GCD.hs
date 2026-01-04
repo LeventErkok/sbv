@@ -238,7 +238,9 @@ dvdAbs = do
 -- Lemma: dvdMul
 --   Step: 1 (2 way case split)
 --     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] dvdMul :: Ɐd ∷ Integer → Ɐa ∷ Integer → Ɐk ∷ Integer → Bool
@@ -252,8 +254,9 @@ dvdMul = calc "dvdMul"
                                          =: qed
                               , d ./= 0 ==> d `dvd` (k*a)
                                          ?? a .== d * a `sEDiv` d
-                                         ?? d `dvd` a
-                                         =: d `dvd` (k * d * a `sEDiv` d)
+                                         =: d `dvd` ((d * a `sEDiv` d) * k)
+                                         =: d `dvd` (d * ((a `sEDiv` d) * k))
+                                         =: sTrue
                                          =: qed
                               ]
 
