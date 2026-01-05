@@ -9,12 +9,9 @@
 -- Querying a solver interactively.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections       #-}
-{-# LANGUAGE ViewPatterns        #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
@@ -701,5 +698,3 @@ mkSMTResult asgns = do
                               }
 
              return $ Satisfiable queryConfig m
-
-{- HLint ignore getModelAtIndex "Use forM_" -}

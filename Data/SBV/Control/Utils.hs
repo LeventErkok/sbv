@@ -2183,3 +2183,4 @@ unBarModel SMTModel {modelObjectives, modelBindings, modelAssocs, modelUIFuns}
 
 {- HLint ignore module          "Reduce duplication" -}
 {- HLint ignore getAllSatResult "Use forM_"          -}
+{- HLint ignore getModelAtIndex "Use forM_"          -}
