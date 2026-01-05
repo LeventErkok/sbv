@@ -37,7 +37,9 @@ import Prelude hiding (fromEnum, toEnum)
 
 import Data.SBV
 import Data.SBV.Control
-import qualified Data.SBV.List as SL
+
+import qualified Data.SBV.List  as SL
+import qualified Data.SBV.Tuple as ST
 
 -- | Months in a year.
 data Month = Jan | Feb | Mar | Apr | May | Jun
@@ -137,19 +139,6 @@ sqrSum dt = [sCase|Date dt of
                   _   -> some "Non-Square Month" (const sTrue)
               |]
 
--- | Since the puzzle involves finding the "last square date," we have an optimization
--- problem. To optimize, we need to define a metric. We simply turn the date into a
--- unique integer, with later years giving as bigger numbers.
-instance Metric Date where
-  type MetricSpace Date = Integer
-  toMetricSpace dt  = [sCase|Date dt of
-                         MkDate d m y -> y*10000 +  fromEnum m*100 + d
-                      |]
-  fromMetricSpace t = let (y, r) = t `sDivMod` 10000
-                          (m, d) = r `sDivMod`   100
-                      in sMkDate d (toEnum m) y
-  annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
-
 -- | Formalizing the puzzle. We literally write down the description in
 -- SBV notation. As with any formalization, this step is subjective; there
 -- could be many different ways to express the same problem. The description
@@ -176,8 +165,10 @@ puzzle = runSMT $ do
 
     constrain $ squareDate next
 
-    -- And it'll be the last square day of my life:
-    maximize "Next Birthday" next
+    -- And it'll be the last square day of my life, so we maximize the metric corresponding to the
+    -- date. We turn it into a 3-tuple of year, month, date over integers, which preserves the
+    -- order of the dates.
+    maximize "Next Birthday Latest" $ ST.tuple (syear next, fromEnum (smonth next), sday next)
 
     -- If you square the components of my next birthday, it gives me my current age on Jun 1, 2025
     constrain $ sqrSum next .== age myBirthday
