@@ -19,7 +19,12 @@
   * Fixed closure-version implementations of list functions filter, partition, takeWhile, and dropWhile.
     Thanks to amigalemming on github for the bug report.
 
-  * Query mode now works with optimization directives.
+  * Query mode now works with optimization directives. In this case, we perform lexicographic
+    optimization. (Let me know if you need other methods.) The advantage of this is that calls
+    to getValue works in this mode, so it is easier to access optimized model values. In case
+    the optimal value is in an extension field (i.e., involves epsilon or infinity values),
+    then calls to  getValue  will throw an error and alert the user. In this latter case, you
+    should resort back to using the regular optimize calls.
 
   * Added new puzzle example: Documentation.SBV.Examples.Puzzles.SquareBirthday
 

@@ -16,6 +16,7 @@
 {-# LANGUAGE LambdaCase             #-}
 {-# LANGUAGE NamedFieldPuns         #-}
 {-# LANGUAGE OverloadedStrings      #-}
+{-# LANGUAGE Rank2Types             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TupleSections          #-}
 {-# LANGUAGE TypeApplications       #-}
@@ -33,7 +34,7 @@ module Data.SBV.Control.Utils (
      , inNewContext, freshVar, freshVar_
      , getTopLevelInputs, parse, unexpected
      , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
-     , startOptimizer
+     , startOptimizer, getObjectiveValues, getModel, getModelAtIndex
      ) where
 
 import Data.List  (sortBy, sortOn, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf, isSuffixOf)
@@ -54,7 +55,7 @@ import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
 
-import Data.Maybe (isNothing, isJust)
+import Data.Maybe (isNothing, isJust, catMaybes, listToMaybe)
 
 import Data.IORef (readIORef, writeIORef, IORef, newIORef, modifyIORef')
 
@@ -70,7 +71,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
                               , RCSet(..), QuantifiedBool(..), ArrayModel(..), SInfo(..), getSInfo
-                              , OptimizeStyle(..)
+                              , OptimizeStyle(..), GeneralizedCV(..), ExtCV(..)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -88,7 +89,7 @@ import Data.SBV.Core.SizedFloats (fpZero, fpFromInteger, fpFromFloat, fpFromDoub
 import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts, expandKinds, isSomeKindOfFloat, substituteADTVars)
 import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr, svEqual)
 
-import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..))
+import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..), OptimizeResult(..))
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.SMTLib2 (setSMTOption)
 import Data.SBV.SMT.Utils   ( showTimeoutValue, addAnnotations, alignPlain, debug
@@ -96,7 +97,7 @@ import Data.SBV.SMT.Utils   ( showTimeoutValue, addAnnotations, alignPlain, debu
                             )
 
 import Data.SBV.Utils.ExtractIO
-import Data.SBV.Utils.Lib       (qfsToString)
+import Data.SBV.Utils.Lib       (qfsToString, unBar)
 import Data.SBV.Utils.SExpr
 import Data.SBV.Utils.PrettyNum (cvToSMTLib)
 
@@ -358,6 +359,32 @@ getValue s = do
           DSat{} -> pure ()
           Unk    -> bad
           Unsat  -> bad
+
+      -- Are we in an optimization context? If so, we must ensure that the model is not in an extended field
+      objs <- getObjectives
+      unless (null objs) $ do
+         ovs <- getObjectiveValues
+         case [() | (_, ExtendedCV _) <- ovs] of
+           [] -> pure ()    -- We're good, all objectives are within the domain
+           _  -> do cfg <- getConfig
+                    m   <- getModel
+                    ov  <- getObjectiveValues
+
+                    let mdl = LexicographicResult (SatExtField cfg m{modelObjectives = ov})
+
+                        align "" = "***"
+                        align l  = "*** " ++ l
+
+                    error $ unlines $ "" : map align ([
+                                "Data.SBV.getValue: The current solver state is satisfiable in an extension field."
+                              , "That is, the optimized values assume epsilon/infinity values."
+                              , ""
+                              , "Calls to getValue is not supported in this context. Instead, use the 'optimize' method"
+                              , "directly and inspect the objective values explicitly."
+                              , ""
+                              , "The current model is:"
+                              , ""
+                              ] ++ map ("    " ++) (lines (show mdl)))
 
       cv <- getValueCV Nothing sv
       return $ fromCV cv
@@ -2023,6 +2050,136 @@ startOptimizer config style = do
                          priority (Pareto _)    = ["(set-option :opt.priority pareto)"]
 
              pure $ Just (objectives, optimizerDirectives)
+
+-- | Just after a check-sat is issued, collect objective values. Used
+-- internally only, not exposed to the user.
+getObjectiveValues :: forall m. (MonadIO m, MonadQuery m) => m [(String, GeneralizedCV)]
+getObjectiveValues = do let cmd = "(get-objectives)"
+
+                            bad = unexpected "getObjectiveValues" cmd "a list of objective values" Nothing
+
+                        r <- ask cmd
+
+                        si <- queryState >>= getSInfo
+
+                        inputs <- F.toList <$> getTopLevelInputs
+
+                        parse r bad $ \case EApp (ECon "objectives" : es) -> catMaybes <$> mapM (getObjValue si (bad r) inputs) es
+                                            _                             -> bad r Nothing
+
+  where -- | Parse an objective value out.
+        getObjValue :: SInfo -> (forall a. Maybe [String] -> m a) -> [NamedSymVar] -> SExpr -> m (Maybe (String, GeneralizedCV))
+        getObjValue si bailOut inputs expr =
+                case expr of
+                  EApp [_]          -> return Nothing            -- Happens when a soft-assertion has no associated group.
+                  EApp [ECon nm, v] -> locate nm v               -- Regular case
+                  _                 -> dontUnderstand (show expr)
+
+          where locate nm v = case listToMaybe [p | p@(NamedSymVar sv _) <- inputs, show sv == nm] of
+                                Nothing                          -> return Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
+                                Just (NamedSymVar sv actualName) -> grab sv v >>= \val -> return $ Just (T.unpack actualName, val)
+
+                dontUnderstand s = bailOut $ Just [ "Unable to understand solver output."
+                                                  , "While trying to process: " ++ s
+                                                  ]
+
+                grab :: SV -> SExpr -> m GeneralizedCV
+                grab s topExpr
+                  | Just v <- recoverKindedValue si k topExpr = return $ RegularCV v
+                  | True                                      = ExtendedCV <$> cvt (simplify topExpr)
+                  where k = kindOf s
+
+                        -- Convert to an extended expression. Hopefully complete!
+                        cvt :: SExpr -> m ExtCV
+                        cvt (ECon "oo")                    = return $ Infinite  k
+                        cvt (ECon "epsilon")               = return $ Epsilon   k
+                        cvt (EApp [ECon "interval", x, y]) =          Interval  <$> cvt x <*> cvt y
+                        cvt (ENum    (i, _, _))            = return $ BoundedCV $ mkConstCV k i
+                        cvt (EReal   r)                    = return $ BoundedCV $ CV k $ CAlgReal r
+                        cvt (EFloat  f)                    = return $ BoundedCV $ CV k $ CFloat   f
+                        cvt (EDouble d)                    = return $ BoundedCV $ CV k $ CDouble  d
+                        cvt (EApp [ECon "+", x, y])        =          AddExtCV <$> cvt x <*> cvt y
+                        cvt (EApp [ECon "*", x, y])        =          MulExtCV <$> cvt x <*> cvt y
+                        -- Nothing else should show up, hopefully!
+                        cvt e = dontUnderstand (show e)
+
+                        -- drop the pesky to_real's that Z3 produces.. Cool but useless.
+                        simplify :: SExpr -> SExpr
+                        simplify (EApp [ECon "to_real", n]) = n
+                        simplify (EApp xs)                  = EApp (map simplify xs)
+                        simplify e                          = e
+
+-- | Generalization of 'Data.SBV.Control.getModel'
+getModel :: (MonadIO m, MonadQuery m) => m SMTModel
+getModel = getModelAtIndex Nothing
+
+-- | Get a model stored at an index. This is likely very Z3 specific!
+getModelAtIndex :: (MonadIO m, MonadQuery m) => Maybe Int -> m SMTModel
+getModelAtIndex mbi = do
+    State{runMode} <- queryState
+    rm <- io $ readIORef runMode
+    case rm of
+      m@CodeGen     -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      m@LambdaGen{} -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      m@Concrete{}  -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      SMTMode{}     -> do
+          cfg <- getConfig
+          uis <- getUIs
+
+          allModelInputs <- getTopLevelInputs
+          obsvs          <- getObservables
+
+          inputAssocs <- let grab (NamedSymVar sv nm) = let wrap !c = (sv, (nm, c)) in wrap <$> getValueCV mbi sv
+                         in mapM grab allModelInputs
+
+          let name     = fst . snd
+              removeSV = snd
+              prepare  = S.unstableSort . S.filter (not . mustIgnoreVar cfg . T.unpack . name)
+              assocs   = fmap removeSV (prepare inputAssocs) <> S.fromList (sortOn fst obsvs)
+
+          -- collect UIs, and UI functions if requested
+          let uiFuns = [ui | ui@(nm, (_, _, SBVType as)) <- uis, length as >  1, allSatTrackUFs cfg, not (mustIgnoreVar cfg nm)] -- functions have at least two things in their type!
+              uiRegs = [ui | ui@(nm, (_, _, SBVType as)) <- uis, length as == 1,                     not (mustIgnoreVar cfg nm)]
+
+          -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
+          -- as cex's tend to get larger
+          unless (null uiFuns) $
+             let solverCaps = capabilities (solver cfg)
+             in case supportsFlattenedModels solverCaps of
+                  Nothing   -> return ()
+                  Just cmds -> mapM_ (send True) cmds
+
+          bindings <- let get i@(getSV -> sv) = case lookupInput fst sv inputAssocs of
+                                                  Just (_, (_, cv)) -> return (i, cv)
+                                                  Nothing           -> do cv <- getValueCV mbi sv
+                                                                          return (i, cv)
+
+                      in if validationRequested cfg
+                         then Just <$> mapM get allModelInputs
+                         else return Nothing
+
+          uiFunVals <- mapM (\ui@(nm, (c, _, t)) -> (\a -> (nm, (c, t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
+
+          uiVals    <- mapM (\ui@(nm, (_, _, _)) -> (nm,) <$> getUICVal mbi ui) uiRegs
+
+          return $ unBarModel $ SMTModel { modelObjectives = []
+                                         , modelBindings   = F.toList <$> bindings
+                                         , modelAssocs     = uiVals ++ F.toList (first T.unpack <$> assocs)
+                                         , modelUIFuns     = uiFunVals
+                                         }
+
+-- | Remove the bars from model names; these are (mostly!) automatically inserted
+unBarModel :: SMTModel -> SMTModel
+unBarModel SMTModel {modelObjectives, modelBindings, modelAssocs, modelUIFuns}
+   = SMTModel { modelObjectives = ubf       <$> modelObjectives
+              , modelBindings   = (ubn <$>) <$> modelBindings
+              , modelAssocs     = ubf       <$> modelAssocs
+              , modelUIFuns     = ubf       <$> modelUIFuns
+              }
+   where ubf (n, a) = (unBar n, a)
+         ubn (NamedSymVar sv nm, a) = (NamedSymVar sv (T.pack (unBar (T.unpack nm))), a)
+
+
 
 {- HLint ignore module          "Reduce duplication" -}
 {- HLint ignore getAllSatResult "Use forM_"          -}
