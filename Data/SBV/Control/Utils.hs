@@ -2179,8 +2179,6 @@ unBarModel SMTModel {modelObjectives, modelBindings, modelAssocs, modelUIFuns}
    where ubf (n, a) = (unBar n, a)
          ubn (NamedSymVar sv nm, a) = (NamedSymVar sv (T.pack (unBar (T.unpack nm))), a)
 
-
-
 {- HLint ignore module          "Reduce duplication" -}
 {- HLint ignore getAllSatResult "Use forM_"          -}
 {- HLint ignore getModelAtIndex "Use forM_"          -}
