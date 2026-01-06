@@ -9,11 +9,17 @@
 -- Test suite for optimization routines
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Optimization.Basics(tests) where
 
 import Utils.SBVTestFramework
+import Data.SBV.Control
+
+import Control.Monad
+
+import qualified Control.Exception as C
 
 -- Test suite
 tests :: TestTree
@@ -21,6 +27,8 @@ tests =
   testGroup "Optimization.Basics" $
        [ goldenVsStringShow "optBasics1" (optimize Lexicographic optBasics1)
        , goldenVsStringShow "optBasics2" (optimize Lexicographic optBasics2)
+       , goldenCapturedIO   "qOpt_1"     (qOpt False)
+       , goldenCapturedIO   "qOpt_2"     (qOpt True)
        ]
     ++ [ goldenVsStringShow ("optBasicsRange_" ++ n) (optimize Lexicographic f)
        | (n, f) <- [ ("08_unsigned_max", sWord8  "x" >>= maximize "m")
@@ -60,3 +68,18 @@ optBasics2 = do x <- sInteger "x"
                 constrain $ y .> 1
 
                 minimize "x_plus_y" $ x+y
+
+qOpt :: Bool -> FilePath -> IO ()
+qOpt mb rf = testQuery $ do
+                vs <- forM [1 .. 5] $ \i -> do x <- sInteger ("x" <> show (i::Int))
+                                               constrain $ 1 .<= x
+                                               when mb $ constrain $ x .< 10
+                                               maximize ("goal" <> show i) x
+                                               pure x
+                query $ do cs <- checkSat
+                           case cs of
+                             Sat -> forM vs getValue
+                             _   -> pure []
+ where testQuery fv = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} fv
+                         appendFile rf ("\n FINAL:" ++ show r ++ "\nDONE!\n")
+                      `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" ++ show e ++ "\n"))
