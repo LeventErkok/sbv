@@ -261,6 +261,7 @@ Library
                   , Documentation.SBV.Examples.TP.Sqrt2IsIrrational
                   , Documentation.SBV.Examples.TP.StrongInduction
                   , Documentation.SBV.Examples.TP.SumReverse
+                  , Documentation.SBV.Examples.TP.TacticStyle
                   , Documentation.SBV.Examples.TP.Tao
                   , Documentation.SBV.Examples.TP.VM
                   , Documentation.SBV.Examples.Transformers.SymbolicEval
@@ -317,6 +318,7 @@ Library
                   , Data.SBV.Utils.PrettyNum
                   , Data.SBV.Utils.SExpr
                   , Data.SBV.TP.Kernel
+                  , Data.SBV.TP.Tactics
                   , Data.SBV.TP.TP
                   , Data.SBV.TP.Utils
 
