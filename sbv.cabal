@@ -243,7 +243,9 @@ Library
                   , Documentation.SBV.Examples.TP.CaseSplit
                   , Documentation.SBV.Examples.TP.Fibonacci
                   , Documentation.SBV.Examples.TP.GCD
+                  , Documentation.SBV.Examples.TP.GoalManipulation
                   , Documentation.SBV.Examples.TP.InsertionSort
+                  , Documentation.SBV.Examples.TP.InsertionSortTactic
                   , Documentation.SBV.Examples.TP.Kleene
                   , Documentation.SBV.Examples.TP.Lists
                   , Documentation.SBV.Examples.TP.McCarthy91

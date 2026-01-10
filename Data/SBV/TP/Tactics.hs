@@ -264,9 +264,12 @@ rotate n st@ProofState{psGoals}
 -- * Case analysis
 
 -- | Split on user-provided cases. Each case becomes a separate goal.
+-- Also adds an exhaustiveness goal to ensure the cases cover all possibilities.
 splitOn :: [(String, SBool)] -> Tactic
 splitOn _ ProofState{psGoals = []} =
   pure $ Left "splitOn: no goal to split"
+splitOn [] _ =
+  pure $ Left "splitOn: empty case list"
 splitOn caseList st@ProofState{psGoals = Goal{..} : rest, ..} =
   -- Create a goal for each case
   let makeGoal idx (caseName, condition) =
@@ -277,14 +280,24 @@ splitOn caseList st@ProofState{psGoals = Goal{..} : rest, ..} =
              }
       caseGoals = [makeGoal i c | (i, c) <- zip [0..] caseList]
 
-  in pure $ Right st { psGoals = caseGoals ++ rest
-                     , psNextId = psNextId + length caseList
+      -- Exhaustiveness check: at least one case must hold
+      exhaustivenessGoal = Goal
+        { goalId = psNextId + length caseList
+        , goalName = goalName ++ "_exhaustive"
+        , goalClaim = sOr [cond | (_, cond) <- caseList]
+        , goalContext = goalContext
+        }
+
+  in pure $ Right st { psGoals = caseGoals ++ [exhaustivenessGoal] ++ rest
+                     , psNextId = psNextId + length caseList + 1
                      }
 
 -- | Split into cases with individual tactics for each
+-- Automatically proves the exhaustiveness goal using auto.
 considerCases :: [(String, SBool, Tactic)] -> Tactic
+considerCases [] _ = pure $ Left "considerCases: empty case list"
 considerCases caseList st = do
-  -- First split on the conditions
+  -- First split on the conditions (this creates case goals + exhaustiveness goal)
   let conditions = [(name, cond) | (name, cond, _) <- caseList]
   result <- splitOn conditions st
 
@@ -293,7 +306,12 @@ considerCases caseList st = do
     Right st' -> do
       -- Now apply each tactic to its corresponding goal
       let tactics = [tac | (_, _, tac) <- caseList]
-      applyTacticsToGoals tactics st'
+      st'' <- applyTacticsToGoals tactics st'
+      case st'' of
+        Left err -> pure $ Left err
+        Right st''' ->
+          -- Finally, prove the exhaustiveness goal with auto
+          auto st'''
   where
     applyTacticsToGoals :: [Tactic] -> Tactic
     applyTacticsToGoals [] st' = pure $ Right st'

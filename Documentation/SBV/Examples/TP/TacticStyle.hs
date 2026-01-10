@@ -51,6 +51,10 @@ simpleTacticProof = runTP $
 -- Compare this to Documentation.SBV.Examples.TP.CaseSplit which uses
 -- the calculational style. The tactic version makes the case analysis
 -- more explicit.
+--
+-- Note: splitOn automatically adds an exhaustiveness goal to ensure
+-- the cases cover all possibilities. In this case, it proves that
+-- (n mod 3 == 0) ∨ (n mod 3 == 1) ∨ (n mod 3 == 2) is always true.
 notDiv3Tactics :: IO (Proof (Forall "n" Integer -> SBool))
 notDiv3Tactics = runTP $ do
 
