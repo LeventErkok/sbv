@@ -96,7 +96,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
    | Just s <- checkKinds allKinds
    = error s
    | True
-   = (T.unlines pgm, T.unlines exportedDefs)
+   = (T.intercalate "\n" pgm, T.intercalate "\n" exportedDefs)
   where allKinds       = Set.toList kindInfo
 
         -- Below can simply be defined as: nub (sort (G.universeBi asgnsSeq))
