@@ -9,7 +9,8 @@
 -- A few internally used types/routines
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -53,6 +54,9 @@ import Data.List  (intercalate)
 import qualified Data.Set      as Set (Set)
 import qualified Data.Sequence as S   (Seq)
 
+import qualified Data.Text as T
+import           Data.Text (Text)
+
 import System.Directory (findExecutable)
 import System.Exit      (ExitCode(..))
 
@@ -86,9 +90,9 @@ type SMTLibIncConverter a =  ProgInfo                                    -- ^ Va
                           -> a
 
 -- | Create an annotated term
-addAnnotations :: [(String, String)] -> String -> String
+addAnnotations :: [(String, String)] -> Text -> Text
 addAnnotations []   x = x
-addAnnotations atts x = "(! " ++ x ++ " " ++ unwords (map mkAttr atts) ++ ")"
+addAnnotations atts x = "(! " <> x <> " " <> T.unwords (map (T.pack . mkAttr) atts) <> ")"
   where mkAttr (a, v) = a ++ " |" ++ concatMap sanitize v ++ "|"
         sanitize '|'  = "_bar_"
         sanitize '\\' = "_backslash_"

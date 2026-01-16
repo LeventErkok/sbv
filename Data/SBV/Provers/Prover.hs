@@ -550,7 +550,7 @@ validate reducer isSAT cfg p res =
 -- | Given a satisfiability problem, extract the function definitions in it
 defs2smt :: SatisfiableM m a => a -> m String
 defs2smt = generateSMTBenchMarkGen True satArgReduce defs
-  where defs (SMTLibPgm _ _ ds) = intercalate "\n" ds
+  where defs (SMTLibPgm _ _ ds) = T.unpack ds
 
 -- | Create an SMT-Lib2 benchmark, for a SAT query.
 generateSMTBenchmarkSat :: SatisfiableM m a => a -> m String

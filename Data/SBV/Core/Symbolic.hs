@@ -97,6 +97,7 @@ import qualified Data.Set                    as Set  (Set, empty, toList, insert
 import qualified Data.Foldable               as F    (toList)
 import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), lookup, elemIndexL)
 import qualified Data.Text                   as T
+import           Data.Text                   (Text)
 
 import System.Mem.StableName
 import System.Random
@@ -2098,15 +2099,15 @@ data SMTLibVersion = SMTLib2
 smtLibVersionExtension :: SMTLibVersion -> String
 smtLibVersionExtension SMTLib2 = "smt2"
 
--- | Representation of an SMT-Lib program. The second [String] are the function definitions,
+-- | Representation of an SMT-Lib program. The second Text are the function definitions,
 -- which is *replicated* in the first one. There are cases where that we need the second part on its own.
-data SMTLibPgm = SMTLibPgm SMTLibVersion [String] [String]
+data SMTLibPgm = SMTLibPgm SMTLibVersion Text Text
 
 instance NFData SMTLibVersion where rnf a                 = a `seq` ()
 instance NFData SMTLibPgm     where rnf (SMTLibPgm v p d) = rnf v `seq` rnf p `seq` rnf d
 
 instance Show SMTLibPgm where
-  show (SMTLibPgm _ pgm _) = intercalate "\n" pgm
+  show (SMTLibPgm _ pgm _) = T.unpack pgm
 
 -- Other Technicalities..
 instance NFData GeneralizedCV where

@@ -27,6 +27,8 @@ module Data.SBV.Lambda (
 import Control.Monad       (join)
 import Control.Monad.Trans (liftIO, MonadIO)
 
+import qualified Data.Text as T
+
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
 import Data.SBV.SMT.SMTLib2
@@ -392,8 +394,8 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
 
                svBindings :: [((SV, String), Maybe String)]
                svBindings = map mkAsgn assignments
-                 where mkAsgn (sv, e@(SBVApp (Label l) _)) = ((sv, converter e), Just l)
-                       mkAsgn (sv, e)                      = ((sv, converter e), Nothing)
+                 where mkAsgn (sv, e@(SBVApp (Label l) _)) = ((sv, T.unpack $ converter e), Just l)
+                       mkAsgn (sv, e)                      = ((sv, T.unpack $ converter e), Nothing)
 
                        converter = cvtExp cfg curProgInfo (capabilities (solver cfg)) rm tableMap
 
@@ -418,7 +420,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
 
                lambdaTable :: String -> Kind -> Kind -> [SV] -> String
                lambdaTable extraSpace ak rk elts = "(lambda ((" ++ lv ++ " " ++ smtType ak ++ "))" ++ space ++ chain 0 elts ++ ")"
-                 where cnst k i = cvtCV rm (mkConstCV k (i::Integer))
+                 where cnst k i = T.unpack $ cvtCV rm (mkConstCV k (i::Integer))
 
                        lv = "idx"
 

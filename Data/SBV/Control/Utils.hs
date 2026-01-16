@@ -129,7 +129,7 @@ instance MonadIO m => SolverContext (QueryT m) where
                                              , "*** Hint: Move the call to 'setOption' before the query."
                                              ]
      | True                = do State{stCfg} <- contextState
-                                send True $ setSMTOption stCfg o
+                                send True $ T.unpack $ setSMTOption stCfg o
 
 -- | Adding a constraint, possibly with attributes and possibly soft. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.
@@ -138,7 +138,7 @@ addQueryConstraint isSoft atts b = do sv <- inNewContext (\st -> liftIO $ do map
                                                                              sbvToSV st b)
 
                                       unless (null atts && sv == trueSV) $
-                                             send True $ "(" ++ asrt ++ " " ++ addAnnotations atts (show sv)  ++ ")"
+                                             send True $ "(" ++ asrt ++ " " ++ T.unpack (addAnnotations atts (T.pack (show sv)))  ++ ")"
    where asrt | isSoft = "assert-soft"
               | True   = "assert"
 
@@ -189,7 +189,7 @@ syncUpSolver progInfo rGlobalConsts is = do
 
                        let cnsts = sortBy cmp . map swap . Map.toList $ newConsts
 
-                       return $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis as constraints cfg
+                       return $ map T.unpack $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis as constraints cfg
 
         mapM_ (send True) $ mergeSExpr ls
 
