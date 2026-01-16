@@ -1,6 +1,13 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 13.4.5, Not yet released
+
+  * Replace internal SMT-lib program representation from plain String to Text. This
+    should improve performance and memory behavior in certain cases. Since solver time
+    dominates for most cases, this is not going to be noticable by end-users, except
+    for very large programs. In any case, it should improve performance in general.
+
 ### Version 13.4, 2026-01-09
 
   * Remove Eq constraint on readArray, generalizing it to arbitrary types for array-reads.
