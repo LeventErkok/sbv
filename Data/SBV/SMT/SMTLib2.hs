@@ -57,31 +57,32 @@ checkKinds ks = case [m | m@(n, _) <- apps, n `notElem` defs] of
                                                _     -> f
                                   plu | length xs > 1 = "s are"
                                       | True          = " is"
-                              in Just $ unlines $ [
-                                    "Data.SBV.mkSymbolic: Impossible happened! Unregistered subkinds."
-                                  , "***"
-                                  , "*** The following kind" ++ plu ++ " not registered: " ++ unwords (map fst xs)
-                                  , "***"
-                                  , "*** Please report this as a bug."
-                                  , "***"
-                                  , "*** As a workaround, you can try registering each ADT subfield, using: "
-                                  , "***"
-                                  , "***    {-# LANGUAGE TypeApplications #-}"
-                                  , "***"
-                                  , "***    import Data.Proxy"
-                                  , "***    registerType (Proxy @" ++ mkProxy h cnt ++ ")"
-                                  ]
-                               ++ extras cnt
-                               ++ [ "***"
-                                  , "*** Even if the workaround does the trick for you, it should not"
-                                  , "*** be needed. Please report this as a bug!"
-                                  ]
+                                  msg = T.unlines $ [
+                                      "Data.SBV.mkSymbolic: Impossible happened! Unregistered subkinds."
+                                    , "***"
+                                    , "*** The following kind" <> plu <> " not registered: " <> T.unwords (map (T.pack . fst) xs)
+                                    , "***"
+                                    , "*** Please report this as a bug."
+                                    , "***"
+                                    , "*** As a workaround, you can try registering each ADT subfield, using: "
+                                    , "***"
+                                    , "***    {-# LANGUAGE TypeApplications #-}"
+                                    , "***"
+                                    , "***    import Data.Proxy"
+                                    , "***    registerType (Proxy @" <> mkProxy h cnt <> ")"
+                                    ]
+                                    ++ extras cnt
+                                    ++ [ "***"
+                                       , "*** Even if the workaround does the trick for you, it should not"
+                                       , "*** be needed. Please report this as a bug!"
+                                       ]
+                              in Just $ T.unpack msg
 
 
   where apps = nub [(n, length as) | KApp n as <- concatMap expandKinds ks]
         defs = nub [n | KADT n _ _ <- ks]
-        mkProxy h 0 = h
-        mkProxy h n = '(' : unwords (h : replicate n "Integer") ++ ")"
+        mkProxy h 0 = T.pack h
+        mkProxy h n = "(" <> T.unwords (T.pack h : replicate n "Integer") <> ")"
 
         extras 0 = []
         extras _ = [ "***"
@@ -144,8 +145,8 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                           , ("has data-types/sorts",   supportsADTs,               not (null adtsNoRM))
                           ]
 
-                 nope w = [ "***     Given problem requires support for " ++ w
-                          , "***     But the chosen solver (" ++ show (name (solver cfg)) ++ ") doesn't support this feature."
+                 nope w = [ "***     Given problem requires support for " <> T.pack w
+                          , "***     But the chosen solver (" <> T.pack (show (name (solver cfg))) <> ") doesn't support this feature."
                           ]
 
         -- Some cases require all, some require none.
@@ -166,24 +167,26 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
            | Just l <- case [l | SetLogic l <- solverSetOptions cfg] of
                          []  -> Nothing
                          [l] -> Just l
-                         ls  -> error $ unlines [ ""
-                                                , "*** Only one setOption call to 'setLogic' is allowed, found: " ++ show (length ls)
-                                                , "***  " ++ unwords (map show ls)
+                         ls  -> let msg = T.unlines [ ""
+                                                , "*** Only one setOption call to 'setLogic' is allowed, found: " <> T.pack (show (length ls))
+                                                , "***  " <> T.unwords (map (T.pack . show) ls)
                                                 ]
+                                in error $ T.unpack msg
            = case l of
                Logic_NONE -> ["; NB. Not setting the logic per user request of Logic_NONE"]
                _          -> ["(set-logic " <> T.pack (showLogic l) <> ") ; NB. User specified."]
 
            -- There's a reason why we can't handle this problem:
            | Just cantDo <- doesntHandle
-           = error $ unlines $   [ ""
+           = let msg = T.unlines $   [ ""
                                  , "*** SBV is unable to choose a proper solver configuration:"
                                  , "***"
                                  ]
-                             ++ cantDo
-                             ++ [ "***"
+                             <> cantDo
+                             <> [ "***"
                                 , "*** Please report this as a feature request, either for SBV or the backend solver."
                                 ]
+             in error $ T.unpack msg
 
            -- Otherwise, we try to determine the most suitable logic.
            -- NB. This isn't really fool proof!
@@ -221,7 +224,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
            = case ctx of
                QueryExternal -> ["(set-logic ALL) ; external query, using all logics."]
                QueryInternal -> if supportsBitVectors solverCaps
-                                then ["(set-logic " <> T.pack (qs ++ as ++ ufs) <> "BV)"]
+                                then ["(set-logic " <> T.pack (T.unpack qs <> T.unpack as <> T.unpack ufs) <> "BV)"]
                                 else ["(set-logic ALL)"] -- fall-thru
           where qs  | not needsQuantifiers  = "QF_"
                     | True                  = ""
@@ -263,7 +266,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                                                       , "*** Saw: " ++ show ps
                                                       ]
 
-        pgm  =  map (T.pack . ("; " ++)) comments
+        pgm  =  map (T.pack . ("; " <>)) comments
              <> settings
              <> [ "; --- tuples ---" ]
              <> concatMap declTuple tupleArities
@@ -343,7 +346,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
 
         userNameMap = M.fromList $ map (\nSymVar -> (getSV nSymVar, getUserName' nSymVar)) inputs
         userName s = case M.lookup s userNameMap of
-                        Just u  | show s /= u -> Just $ T.pack ("tracks user variable " ++ show u)
+                        Just u  | show s /= u -> Just $ "tracks user variable " <> T.pack (show u)
                         _                     -> Nothing
 
 -- | Declare ADTs
@@ -363,7 +366,7 @@ declADT = concatMap declGroup . DG.stronglyConnComp . map mkNode
         parParens ps = (" (par (" <> T.unwords (map (T.pack . fst) ps) <> ")", ")")
 
         mkC (nm, []) = T.pack nm
-        mkC (nm, ts) = T.pack nm <> " " <> T.unwords ['(' `T.cons` mkF (nm ++ "_" ++ show i) t <> ")" | (i, t) <- zip [(1::Int)..] ts]
+        mkC (nm, ts) = T.pack nm <> " " <> T.unwords ['(' `T.cons` mkF (nm <> "_" <> show i) t <> ")" | (i, t) <- zip [(1::Int)..] ts]
           where mkF a t  = "get" <> T.pack a <> " " <> T.pack (smtType t)
 
         singleADT :: (String, [(String, Kind)], [(String, [Kind])]) -> [Text]
@@ -536,18 +539,18 @@ declUI ProgInfo{progTransClosures} (i, (_, _, t)) = declareName (T.pack i) t Not
                     = []
 
         argKind (SBVType [ka, _, KBool]) = ka
-        argKind _                        = error $ "declUI: Unexpected type for name: " ++ show (i, t)
+        argKind _                        = error $ "declUI: Unexpected type for name: " <> show (i, t)
 
 -- Note that even though we get all user defined-functions here (i.e., lambda and axiom), we can only have defined-functions
 -- and axioms. We spit axioms as is; and topologically sort the definitions.
 declUserFuns :: [(String, (SMTDef, SBVType))] -> [Text]
-declUserFuns ds = map (T.pack . declGroup) sorted
+declUserFuns ds = map declGroup sorted
   where mkNode d = (d, fst d, getDeps d)
 
         getDeps (_, (SMTDef _ d _ _, _)) = d
 
-        mkDecl Nothing  rt = "() "    ++ rt
-        mkDecl (Just p) rt = p ++ " " ++ rt
+        mkDecl Nothing  rt = "() " <> rt
+        mkDecl (Just p) rt = T.pack p <> " " <> rt
 
         sorted = DG.stronglyConnComp (map mkNode ds)
 
@@ -557,36 +560,37 @@ declUserFuns ds = map (T.pack . declGroup) sorted
                                          [x] -> declUserDef True x
                                          xs  -> declUserDefMulti xs
 
-        declUserDef isRec (nm, (SMTDef fk deps param body, ty)) = ("; " ++ nm ++ " :: " ++ show ty ++ recursive ++ frees ++ "\n") ++ s
+        declUserDef isRec (nm, (SMTDef fk deps param body, ty)) =
+          "; " <> T.pack nm <> " :: " <> T.pack (show ty) <> recursive <> frees <> "\n" <> s
            where (recursive, definer) | isRec = (" [Recursive]", "define-fun-rec")
                                       | True  = ("",             "define-fun")
 
                  otherDeps = filter (/= nm) deps
                  frees | null otherDeps = ""
-                       | True           = " [Refers to: " ++ intercalate ", " otherDeps ++ "]"
+                       | True           = " [Refers to: " <> T.intercalate ", " (map T.pack otherDeps) <> "]"
 
-                 decl = mkDecl param (smtType fk)
+                 decl = mkDecl param (T.pack $ smtType fk)
 
-                 s = "(" ++ definer ++ " " ++ nm ++ " " ++ decl ++ "\n" ++ body 2 ++ ")"
+                 s = "(" <> definer <> " " <> T.pack nm <> " " <> decl <> "\n" <> T.pack (body 2) <> ")"
 
         -- declare a bunch of mutually-recursive functions
         declUserDefMulti bs = render $ map collect bs
-          where collect (nm, (SMTDef fk deps param body, ty)) = (deps, nm, ty, '(' : nm ++ " " ++  decl ++ ")", body 3)
-                  where decl = mkDecl param (smtType fk)
+          where collect (nm, (SMTDef fk deps param body, ty)) = (deps, nm, ty, "(" <> T.pack nm <> " " <> decl <> ")", body 3)
+                  where decl = mkDecl param (T.pack $ smtType fk)
 
-                render defs = intercalate "\n" $
-                                  [ "; " ++ intercalate ", " [n ++ " :: " ++ show ty | (_, n, ty, _, _) <- defs]
+                render defs = T.intercalate "\n" $
+                                  [ "; " <> T.intercalate ", " [T.pack n <> " :: " <> T.pack (show ty) | (_, n, ty, _, _) <- defs]
                                   , "(define-funs-rec"
                                   ]
-                               ++ [ open i ++ param d ++ close1 i | (i, d) <- zip [1..] defs]
-                               ++ [ open i ++ dump  d ++ close2 i | (i, d) <- zip [1..] defs]
+                               <> [ open i <> param d <> close1 i | (i, d) <- zip [1..] defs]
+                               <> [ open i <> dump  d <> close2 i | (i, d) <- zip [1..] defs]
                      where open 1 = "  ("
                            open _ = "   "
 
                            param (_deps, _nm, _ty, p, _body) = p
 
-                           dump (deps, nm, ty, _, body) = "; Definition of: " ++ nm ++ " :: " ++ show ty ++ ". [Refers to: " ++ intercalate ", " deps ++ "]"
-                                                        ++ "\n" ++ body
+                           dump (deps, nm, ty, _, body) = "; Definition of: " <> T.pack nm <> " :: " <> T.pack (show ty) <> ". [Refers to: " <> T.intercalate ", " (map T.pack deps) <> "]"
+                                                        <> "\n" <> T.pack body
 
                            ld = length defs
 
@@ -712,7 +716,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         -- lift a binary op
         lift2  o _ [x, y] = "(" <> o <> " " <> x <> " " <> y <> ")"
-        lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: "   ++ show (o, sbvs)
+        lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: " ++ show (o, sbvs)
 
         -- lift an arbitrary arity operator
         liftN o _ xs = "(" <> o <> " " <> T.unwords xs <> ")"
@@ -786,7 +790,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         seqCmp _ o sbvs = error $ "SBV.SMT.SMTLib2.sh.seqCmp: Unexpected arguments: " ++ show (o, sbvs)
 
         lift1  o _ [x]    = "(" <> o <> " " <> x <> ")"
-        lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
+        lift1  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift1: Unexpected arguments: " ++ show (o, sbvs)
 
         sh (SBVApp Ite [a, b, c]) = "(ite " <> cvtSV a <> " " <> cvtSV b <> " " <> cvtSV c <> ")"
 
@@ -1055,7 +1059,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                              , (NotEqual,    lift2Rat "sbv.rat.notEq")
                              ]
                         where lift2Rat o [x, y] = "(" <> o <> " " <> x <> " " <> y <> ")"
-                              lift2Rat o sbvs   = error $ "SBV.SMTLib2.sh.lift2Rat: Unexpected arguments: "   ++ show (o, sbvs)
+                              lift2Rat o sbvs   = error $ "SBV.SMTLib2.sh.lift2Rat: Unexpected arguments: " ++ show (o, sbvs)
 
                 -- equality and comparisons are the only thing that works on uninterpreted sorts and pretty much everything else
                 uninterpretedTable = [ (Equal True,  lift2S "="        "="        True)
@@ -1109,7 +1113,7 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         resultVar | needsQuant = "result"
                   | True       = s
 
-        argList   = [T.pack ("a" ++ show i) | (i, _) <- zip [1::Int ..] args]
+        argList   = ["a" <> T.pack (show i) | (i, _) <- zip [1::Int ..] args]
         argTList  = ["(" <> a <> " " <> T.pack (smtType k) <> ")" | (a, k) <- zip argList args]
         resultExp = "(" <> s <> " " <> T.unwords argList <> ")"
 
@@ -1155,21 +1159,21 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         walk _d nm f k@KString   {}         = f k nm
         walk  d nm f  (KList k)
           | charRatFree k                 = []
-          | True                          = let fnm   = T.pack ("seq" ++ show d)
+          | True                          = let fnm   = "seq" <> T.pack (show d)
                                                 cstrs = walk (d+1) ("(seq.nth " <> nm <> " " <> fnm <> ")") f k
                                             in mkAnd cstrs $ \hole -> ["(forall ((" <> fnm <> " " <> T.pack (smtType KUnbounded) <> ")) (=> (and (>= " <> fnm <> " 0) (< " <> fnm <> " (seq.len " <> nm <> "))) " <> hole <> "))"]
         walk  d  nm f (KSet k)
           | charRatFree k                 = []
-          | True                          = let fnm    = T.pack ("set" ++ show d)
+          | True                          = let fnm    = "set" <> T.pack (show d)
                                                 cstrs  = walk (d+1) nm (\sk snm -> ["(=> (select " <> snm <> " " <> fnm <> ") " <> c <> ")" | c <- f sk fnm]) k
                                             in mkAnd cstrs $ \hole -> ["(forall ((" <> fnm <> " " <> T.pack (smtType k) <> ")) " <> hole <> ")"]
-        walk  d  nm  f (KTuple ks)        = let tt        = T.pack ("SBVTuple" ++ show (length ks))
+        walk  d  nm  f (KTuple ks)        = let tt        = "SBVTuple" <> T.pack (show (length ks))
                                                 project i = "(proj_" <> T.pack (show i) <> "_" <> tt <> " " <> nm <> ")"
                                                 nmks      = [(project i, k) | (i, k) <- zip [1::Int ..] ks]
                                             in concatMap (\(n, k) -> walk (d+1) n f k) nmks
         walk d  nm f  (KArray k1 k2)
           | all charRatFree [k1, k2]      = []
-          | True                          = let fnm   = T.pack ("array" ++ show d)
+          | True                          = let fnm   = "array" <> T.pack (show d)
                                                 cstrs = walk (d+1) ("(select " <> nm <> " " <> fnm <> ")") f k2
                                             in mkAnd cstrs $ \hole -> ["(forall ((" <> fnm <> " " <> T.pack (smtType k1) <> ")) " <> hole <> ")"]
         walk d nm f (KADT ty dict pureFS) = let fs = [(c, map (substituteADTVars ty dict) ks) | (c, ks) <- pureFS]

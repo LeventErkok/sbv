@@ -40,6 +40,8 @@ import Data.Char (isSpace)
 import Data.Int
 import Data.Word
 import Data.SBV.Core.AlgReals
+import Data.Text (Text)
+import qualified Data.Text as T
 
 import Data.Proxy
 import Data.Kind
@@ -128,8 +130,8 @@ instance Show Kind where
   show (KBounded True n)  = pickType n "SInt"  "SInt "  ++ show n
   show KUnbounded         = "SInteger"
   show KReal              = "SReal"
-  show (KApp c ks)        = unwords (c : map (kindParen . showBaseKind      )  ks)
-  show (KADT s pks _)     = unwords (s : map (kindParen . showBaseKind . snd) pks)
+  show (KApp c ks)        = unwords (c : map (T.unpack . kindParen . showBaseKind      )  ks)
+  show (KADT s pks _)     = unwords (s : map (T.unpack . kindParen . showBaseKind . snd) pks)
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
   show (KFP eb sb)        = "SFloatingPoint " ++ show eb ++ " " ++ show sb
@@ -139,33 +141,34 @@ instance Show Kind where
   show (KSet  e)          = "{" ++ show e ++ "}"
   show (KTuple m)         = "(" ++ intercalate ", " (show <$> m) ++ ")"
   show KRational          = "SRational"
-  show (KArray k1 k2)     = "SArray "  ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
+  show (KArray k1 k2)     = "SArray "  ++ T.unpack (kindParen (showBaseKind k1)) ++ " " ++ T.unpack (kindParen (showBaseKind k2))
 
 -- | A version of show for kinds that says Bool instead of SBool, Float instead of SFloat, etc.
-showBaseKind :: Kind -> String
+showBaseKind :: Kind -> Text
 showBaseKind = sh
-  where sh (KVar s)           = s
-        sh k@KBool            = noS (show k)
-        sh (KBounded False n) = pickType n "Word" "WordN " ++ show n
-        sh (KBounded True n)  = pickType n "Int"  "IntN "  ++ show n
-        sh (KApp s ks)        = unwords (s : map (kindParen . sh) ks)
-        sh k@KUnbounded       = noS (show k)
-        sh k@KReal            = noS (show k)
-        sh k@KADT{}           = show k     -- Leave user-sorts untouched!
-        sh k@KFloat           = noS (show k)
-        sh k@KDouble          = noS (show k)
-        sh k@KFP{}            = noS (show k)
-        sh k@KChar            = noS (show k)
-        sh k@KString          = noS (show k)
-        sh KRational          = "Rational"
-        sh (KList k)          = "[" ++ sh k ++ "]"
-        sh (KSet k)           = "{" ++ sh k ++ "}"
-        sh (KTuple ks)        = "(" ++ intercalate ", " (map sh ks) ++ ")"
-        sh (KArray  k1 k2)    = "Array "  ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
+  where sh (KVar s)           = T.pack s
+        sh k@KBool            = noS (T.pack $ show k)
+        sh (KBounded False n) = T.pack (pickType n "Word" "WordN ") <> T.pack (show n)
+        sh (KBounded True n)  = T.pack (pickType n "Int"  "IntN ")  <> T.pack (show n)
+        sh (KApp s ks)        = T.pack $ unwords (s : map (T.unpack . kindParen . sh) ks)
+        sh k@KUnbounded       = noS (T.pack $ show k)
+        sh k@KReal            = noS (T.pack $ show k)
+        sh k@KADT{}           = T.pack $ show k     -- Leave user-sorts untouched!
+        sh k@KFloat           = noS (T.pack $ show k)
+        sh k@KDouble          = noS (T.pack $ show k)
+        sh k@KFP{}            = noS (T.pack $ show k)
+        sh k@KChar            = noS (T.pack $ show k)
+        sh k@KString          = noS (T.pack $ show k)
+        sh KRational          = T.pack "Rational"
+        sh (KList k)          = T.pack "[" <> sh k <> T.pack "]"
+        sh (KSet k)           = T.pack "{" <> sh k <> T.pack "}"
+        sh (KTuple ks)        = T.pack "(" <> T.pack (intercalate ", " (map (T.unpack . sh) ks)) <> T.pack ")"
+        sh (KArray  k1 k2)    = T.pack "Array "  <> kindParen (sh k1) <> T.pack " " <> kindParen (sh k2)
 
         -- Drop the initial S if it's there
-        noS ('S':s) = s
-        noS s       = s
+        noS s = case T.uncons s of
+                  Just ('S', rest) -> rest
+                  _                -> s
 
 -- For historical reasons, we show 8-16-32-64 bit values with no space; others with a space.
 pickType :: Int -> String -> String -> String
@@ -174,11 +177,20 @@ pickType i standard other
   | True                     = other
 
 -- | Put parens if necessary. This test is rather crummy, but seems to work ok
-kindParen :: String -> String
-kindParen s@('[':_) = s
-kindParen s@('(':_) = s
-kindParen s | any isSpace s = '(' : s ++ ")"
-            | True          = s
+kindParen :: Text -> Text
+kindParen s = case T.uncons s of
+                Just ('[', _) -> s
+                Just ('(', _) -> s
+                _             -> if T.any isSpace s
+                                 then T.singleton '(' <> s <> T.singleton ')'
+                                 else s
+
+-- | String version of kindParen for backward compatibility
+kindParenStr :: String -> String
+kindParenStr s@('[':_) = s
+kindParenStr s@('(':_) = s
+kindParenStr s | any isSpace s = '(' : s ++ ")"
+               | True          = s
 
 -- | How the type maps to SMT land
 smtType :: Kind -> String
@@ -194,8 +206,8 @@ smtType KString         = "String"
 smtType KChar           = "String"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
 smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
-smtType (KApp s ks)     = kindParen $ unwords (s : map smtType          ks)
-smtType (KADT s pks _)  = kindParen $ unwords (s : map (smtType . snd) pks)
+smtType (KApp s ks)     = kindParenStr $ unwords (s : map smtType          ks)
+smtType (KADT s pks _)  = kindParenStr $ unwords (s : map (smtType . snd) pks)
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 smtType KRational       = "SBVRational"

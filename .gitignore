@@ -13,3 +13,4 @@ dist-newstyle/
 .brokdb
 *.o
 *.hi
+.claude

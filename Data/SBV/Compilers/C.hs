@@ -21,6 +21,7 @@ import Data.List                      (nub, intercalate, intersperse)
 import Data.Maybe                     (isJust, isNothing, fromJust)
 import qualified Data.Foldable as F   (toList)
 import qualified Data.Set      as Set (member, union, unions, empty, toList, singleton, fromList)
+import qualified Data.Text     as T
 import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
 
@@ -255,15 +256,15 @@ mkConst _   cv                                 = die $ "mkConst: " ++ show cv
 showSizedConst :: Bool -> Integer -> (Bool, Int) -> Doc
 showSizedConst _   i   (False,  1) = text (if i == 0 then "false" else "true")
 showSizedConst u8h i t@(False,  8)
-  | u8h                            = text (chex False True t i)
+  | u8h                            = text $ T.unpack (chex False True t i)
   | True                           = integer i
 showSizedConst _   i   (True,   8) = integer i
-showSizedConst _   i t@(False, 16) = text $ chex False True t i
-showSizedConst _   i t@(True,  16) = text $ chex False True t i
-showSizedConst _   i t@(False, 32) = text $ chex False True t i
-showSizedConst _   i t@(True,  32) = text $ chex False True t i
-showSizedConst _   i t@(False, 64) = text $ chex False True t i
-showSizedConst _   i t@(True,  64) = text $ chex False True t i
+showSizedConst _   i t@(False, 16) = text $ T.unpack $ chex False True t i
+showSizedConst _   i t@(True,  16) = text $ T.unpack $ chex False True t i
+showSizedConst _   i t@(False, 32) = text $ T.unpack $ chex False True t i
+showSizedConst _   i t@(True,  32) = text $ T.unpack $ chex False True t i
+showSizedConst _   i t@(False, 64) = text $ T.unpack $ chex False True t i
+showSizedConst _   i t@(True,  64) = text $ T.unpack $ chex False True t i
 showSizedConst _   i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
 -- | Generate a makefile. The first argument is True if we have a driver.

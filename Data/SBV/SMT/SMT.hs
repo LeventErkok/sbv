@@ -601,7 +601,7 @@ showModelUI cfg (nm, (isCurried, SBVType ts, interp))
 
         trim = reverse . dropWhile isSpace . reverse
 
-        (ats, rt) = case map showBaseKind ts of
+        (ats, rt) = case map (T.unpack . showBaseKind) ts of
                      []  -> error $ "showModelUI: Unexpected type: " ++ show (SBVType ts)
                      tss -> (init tss, last tss)
 
@@ -638,9 +638,9 @@ showModelUI cfg (nm, (isCurried, SBVType ts, interp))
         -- NB. We'll ignore crackNum here. Seems to be overkill while displaying an
         -- uninterpreted function.
         scv = sh (printBase cfg)
-          where sh 2  = binP
+          where sh 2  = T.unpack . binP
                 sh 10 = showCV False
-                sh 16 = hexP
+                sh 16 = T.unpack . hexP
                 sh _  = show
 
         -- NB. If we have a float NaN/Infinity/+0/-0 etc. these will
@@ -660,9 +660,9 @@ showModelUI cfg (nm, (isCurried, SBVType ts, interp))
 -- | Show a constant value, in the user-specified base
 shCV :: SMTConfig -> String -> CV -> String
 shCV SMTConfig{printBase, crackNum, verbose, crackNumSurfaceVals} nm cv = cracked (sh printBase cv)
-  where sh 2  = binS
+  where sh 2  = T.unpack . binS
         sh 10 = show
-        sh 16 = hexS
+        sh 16 = T.unpack . hexS
         sh n  = \w -> show w ++ " -- Ignoring unsupported printBase " ++ show n ++ ", use 2, 10, or 16."
 
         cracked def

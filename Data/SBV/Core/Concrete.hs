@@ -28,6 +28,7 @@ import System.Random (randomIO, randomRIO)
 
 import Data.Char (chr, isSpace)
 import Data.List (intercalate)
+import qualified Data.Text as T
 
 import Data.SBV.Core.Kind
 import Data.SBV.Core.AlgReals
@@ -242,8 +243,8 @@ showExtCV = go False
            where par v | parens = '(' : v ++ ")"
                        | True   = v
                  withKind isInterval v | not shk    = v
-                                       | isInterval = v ++ " :: [" ++ showBaseKind (kindOf extCV) ++ "]"
-                                       | True       = v ++ " :: "  ++ showBaseKind (kindOf extCV)
+                                       | isInterval = v ++ " :: [" ++ T.unpack (showBaseKind (kindOf extCV)) ++ "]"
+                                       | True       = v ++ " :: "  ++ T.unpack (showBaseKind (kindOf extCV))
 
                  add :: String -> String -> String
                  add n ('-':v) = n ++ " - " ++ v
@@ -367,7 +368,7 @@ instance Show GeneralizedCV where
 showCV :: Bool -> CV -> String
 showCV shk w | isBoolean w = show (cvToBool w) ++ (if shk then " :: Bool" else "")
 showCV shk w = sh (cvVal w) ++ kInfo
-  where kInfo | shk  = " :: " ++ showBaseKind wk
+  where kInfo | shk  = " :: " ++ T.unpack (showBaseKind wk)
               | True = ""
 
         wk = kindOf w
