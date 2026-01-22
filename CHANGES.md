@@ -6,7 +6,11 @@
   * Replace internal SMT-lib program representation from plain String to Text. This
     should improve performance and memory behavior in certain cases. Since solver time
     dominates for most cases, this is not going to be noticable by end-users, except
-    for very large programs. In any case, it should improve performance in general.
+    for very large programs. In any case, it should at least improve memory usage.
+    NB. Historical note: Most of these transformations were done by Claude code; the
+    era of AI coding had its first contributions to SBV. I' duly impressed by Claude's
+    ability to understand and manipulate Haskell. (I also tried Gemini, which was less
+    successful, compared to Claude.) I, for one, welcome our new computer overlords.
 
 ### Version 13.4, 2026-01-09
 
