@@ -79,7 +79,6 @@ down = smtFunction "down" $ \n -> [sCase|Nat n of
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.2.3                         Q.E.D.
 --     Step: 1.2.4                         Q.E.D.
---     Step: 1.2.5                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: upDown                           Q.E.D.
@@ -98,9 +97,8 @@ upDown = do
                                                in reverse (down (sSucc p)) ++ xs
                                                =: reverse (n2i n .: down p) ++ xs
                                                ?? rc
-                                               =: reverse (down p) ++ [n2i n] ++ xs
-                                               ?? ih `at` (Inst @"n" p, Inst @"xs" ([n2i n] ++ xs))
-                                               =: upAcc p ([n2i n] ++ xs)
+                                               =: reverse (down p) ++ (n2i n .: xs)
+                                               ?? ih `at` (Inst @"n" p, Inst @"xs" (n2i n .: xs))
                                                =: upAcc p (n2i n .: xs)
                                                =: upAcc n xs
                                                =: qed
