@@ -23,7 +23,6 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.Overflow (
-
          -- * Arithmetic overflows
          ArithOverflow(..), CheckedArithmetic(..)
 
@@ -31,8 +30,7 @@ module Data.SBV.Tools.Overflow (
          , signedMulOverflow
 
          -- * Cast overflows
-       , sFromIntegralO, sFromIntegralChecked
-
+         , sFromIntegralO, sFromIntegralChecked
     ) where
 
 import Data.SBV.Core.Data
@@ -100,11 +98,11 @@ instance (KnownNat n, BVIsNonZero n) => ArithOverflow (SWord n) where {bvAddO = 
 instance (KnownNat n, BVIsNonZero n) => ArithOverflow (SInt  n) where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
 
 instance ArithOverflow SVal where
-  bvAddO     = signPick2 (svMkOverflow2 (PlusOv False)) (svMkOverflow2 (PlusOv True))
-  bvSubO     = signPick2 (svMkOverflow2 (SubOv  False)) (svMkOverflow2 (SubOv  True))
-  bvMulO     = signPick2 (svMkOverflow2 (MulOv  False)) (svMkOverflow2 (MulOv  True))
-  bvDivO     = signPick2 (const (const svFalse))        (svMkOverflow2 DivOv)           -- unsigned division doesn't overflow
-  bvNegO     = signPick1 (const svFalse)                (svMkOverflow1 NegOv)           -- unsigned unary negation doesn't overflow
+  bvAddO = signPick2 (svMkOverflow2 (PlusOv False)) (svMkOverflow2 (PlusOv True))
+  bvSubO = signPick2 (svMkOverflow2 (SubOv  False)) (svMkOverflow2 (SubOv  True))
+  bvMulO = signPick2 (svMkOverflow2 (MulOv  False)) (svMkOverflow2 (MulOv  True))
+  bvDivO = signPick2 (const (const svFalse))        (svMkOverflow2 DivOv)           -- unsigned division doesn't overflow
+  bvNegO = signPick1 (const svFalse)                (svMkOverflow1 NegOv)           -- unsigned unary negation doesn't overflow
 
 -- | A class of checked-arithmetic operations. These follow the usual arithmetic,
 -- except make calls to 'Data.SBV.sAssert' to ensure no overflow/underflow can occur.
