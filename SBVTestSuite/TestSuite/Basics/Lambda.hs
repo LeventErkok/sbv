@@ -444,7 +444,7 @@ noFreeVars2 cfg = proveWith cfg $ do
 
    xs <- free_
    ys <- free_
-   pure $ map (ae xs) ys .== nil
+   pure $ map (ae xs) ys .== []
 
 -- This one is ok, because we're using the global xs. (i.e., no free vars)
 filterHead :: Symbolic String

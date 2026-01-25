@@ -1164,7 +1164,7 @@ We also support a symbolic case-expression quasi-quoter, allowing us to write:
 
 @
 eval :: SExpr -> SInteger
-eval = go SL.nil
+eval = go []
  where go :: SList (String, Integer) -> SExpr -> SInteger
        go = smtFunction "eval" $ \env expr -> [sCase|Expr expr of
                                                  Num i     -> i

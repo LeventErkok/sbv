@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -78,7 +79,7 @@ instance {-# OVERLAPPING #-} Show val => Show (Stmt String val) where
 -- any number of upper-lower case letters and digits), and all expressions are closed; i.e., any
 -- variable referenced is assigned by a prior assignment expression.
 isValid :: forall val. SymVal val => SStmt String val -> SBool
-isValid = ST.fst . goS SL.nil
+isValid = ST.fst . goS []
   where isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
 
         goE :: SList String -> SExpr String val -> SBool

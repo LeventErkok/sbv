@@ -99,7 +99,7 @@ import Data.SBV.TP
 -- [Proven] appendNull :: Ɐxs ∷ [Integer] → Bool
 appendNull :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 appendNull = lemma "appendNull"
-                   (\(Forall xs) -> xs ++ nil .== xs)
+                   (\(Forall xs) -> xs ++ [] .== xs)
                    []
 
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
@@ -1527,14 +1527,14 @@ take_all = lemma "take_all"
                  (\(Forall n) (Forall xs) -> length xs .<= n .=> take n xs .== xs)
                  []
 
--- | @length xs \<= n ==\> drop n xs == nil@
+-- | @length xs \<= n ==\> drop n xs == []@
 --
 -- >>> runTP $ drop_all @Integer
 -- Lemma: drop_all                         Q.E.D.
 -- [Proven] drop_all :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_all :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_all = lemma "drop_all"
-                 (\(Forall n) (Forall xs) -> length xs .<= n .=> drop n xs .== nil)
+                 (\(Forall n) (Forall xs) -> length xs .<= n .=> drop n xs .== [])
                  []
 
 -- | @take n (xs ++ ys) == (take n xs ++ take (n - length xs) ys)@
@@ -1705,7 +1705,7 @@ interleaveLen = sInduct "interleaveLen"
 
 -- | Uninterleave the elements of two lists. We roughly split it into two, of alternating elements.
 uninterleave :: SymVal a => SList a -> STuple [a] [a]
-uninterleave lst = uninterleaveGen lst (tuple (nil, nil))
+uninterleave lst = uninterleaveGen lst (tuple ([], []))
 
 -- | Generalized form of uninterleave with the auxilary lists made explicit.
 uninterleaveGen :: SymVal a => SList a -> STuple [a] [a] -> STuple [a] [a]
@@ -1778,9 +1778,9 @@ interleaveRoundTrip = do
            (\(Forall xs) (Forall ys) -> length xs .== length ys .=> uninterleave (interleave xs ys) .== tuple (xs, ys)) $
            \xs ys -> [length xs .== length ys]
                   |- uninterleave (interleave xs ys)
-                  =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
-                  ?? roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil, nil)))
-                  =: tuple (reverse nil ++ xs, reverse nil ++ ys)
+                  =: uninterleaveGen (interleave xs ys) (tuple ([], []))
+                  ?? roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple ([], [])))
+                  =: tuple (reverse [] ++ xs, reverse [] ++ ys)
                   =: qed
 
 -- | @count e (xs ++ ys) == count e xs + count e ys@

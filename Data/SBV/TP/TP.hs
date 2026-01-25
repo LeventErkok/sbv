@@ -12,6 +12,7 @@
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE NamedFieldPuns         #-}
+{-# LANGUAGE OverloadedLists        #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TupleSections          #-}
 {-# LANGUAGE TypeApplications       #-}
@@ -798,7 +799,7 @@ instance (KnownSymbol nxs, SymVal x) => Inductive (Forall nxs [x] -> SBool) wher
   inductionStrategy result steps = do
        (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
 
-       let bc = result (Forall SL.nil)
+       let bc = result (Forall [])
            ih = internalAxiom "IH" (result (Forall xs))
 
        mkIndStrategy Nothing
@@ -816,7 +817,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a) => Inductive (For
        (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)                <- mkVar  (Proxy @na)
 
-       let bc = result (Forall SL.nil) (Forall a)
+       let bc = result (Forall []) (Forall a)
            ih = internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs) (Forall a'))
 
        mkIndStrategy Nothing
@@ -835,7 +836,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (a, na)                <- mkVar  (Proxy @na)
        (b, nb)                <- mkVar  (Proxy @nb)
 
-       let bc = result (Forall SL.nil) (Forall a) (Forall b)
+       let bc = result (Forall []) (Forall a) (Forall b)
            ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs) (Forall a') (Forall b'))
 
        mkIndStrategy Nothing
@@ -855,7 +856,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (b, nb)                <- mkVar  (Proxy @nb)
        (c, nc)                <- mkVar  (Proxy @nc)
 
-       let bc = result (Forall SL.nil) (Forall a) (Forall b) (Forall c)
+       let bc = result (Forall []) (Forall a) (Forall b) (Forall c)
            ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs) (Forall a') (Forall b') (Forall c'))
 
        mkIndStrategy Nothing
@@ -876,7 +877,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (c, nc)                <- mkVar  (Proxy @nc)
        (d, nd)                <- mkVar  (Proxy @nd)
 
-       let bc = result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)
+       let bc = result (Forall []) (Forall a) (Forall b) (Forall c) (Forall d)
            ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d'))
 
        mkIndStrategy Nothing
@@ -898,7 +899,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (d, nd)                <- mkVar  (Proxy @nd)
        (e, ne)                <- mkVar  (Proxy @ne)
 
-       let bc = result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+       let bc = result (Forall []) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
            ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
 
        mkIndStrategy Nothing
@@ -916,7 +917,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y) => Inductive ((F
        (x, xs, nx, nxs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, ny, nys, nyys) <- mkLVar (Proxy @nys)
 
-       let bc = result (Forall SL.nil, Forall SL.nil) .&& result (Forall SL.nil, Forall (y SL..: ys)) .&& result (Forall (x SL..: xs), Forall SL.nil)
+       let bc = result (Forall [], Forall []) .&& result (Forall [], Forall (y SL..: ys)) .&& result (Forall (x SL..: xs), Forall [])
            ih = internalAxiom "IH" (result (Forall xs, Forall ys))
 
        mkIndStrategy Nothing
@@ -935,7 +936,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (y, ys, ny, nys, nyys) <- mkLVar (Proxy @nys)
        (a, na)                <- mkVar  (Proxy @na)
 
-       let bc = result (Forall SL.nil, Forall SL.nil) (Forall a) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a)
+       let bc = result (Forall [], Forall []) (Forall a) .&& result (Forall [], Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall []) (Forall a)
            ih = internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs, Forall ys) (Forall a'))
 
        mkIndStrategy Nothing
@@ -955,7 +956,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (a, na)                <- mkVar  (Proxy @na)
        (b, nb)                <- mkVar  (Proxy @nb)
 
-       let bc = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b)
+       let bc = result (Forall [], Forall []) (Forall a) (Forall b) .&& result (Forall [], Forall (y SL..: ys)) (Forall a) (Forall b) .&& result (Forall (x SL..: xs), Forall []) (Forall a) (Forall b)
            ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs, Forall ys) (Forall a') (Forall b'))
 
        mkIndStrategy Nothing
@@ -976,7 +977,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (b, nb)                <- mkVar  (Proxy @nb)
        (c, nc)                <- mkVar  (Proxy @nc)
 
-       let bc = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c)
+       let bc = result (Forall [], Forall []) (Forall a) (Forall b) (Forall c) .&& result (Forall [], Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall []) (Forall a) (Forall b) (Forall c)
            ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c'))
 
        mkIndStrategy Nothing
@@ -998,7 +999,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (c, nc)                <- mkVar  (Proxy @nc)
        (d, nd)                <- mkVar  (Proxy @nd)
 
-       let bc = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)
+       let bc = result (Forall [], Forall []) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall [], Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall []) (Forall a) (Forall b) (Forall c) (Forall d)
            ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d'))
 
        mkIndStrategy Nothing
@@ -1021,7 +1022,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (d, nd)                <- mkVar  (Proxy @nd)
        (e, ne)                <- mkVar  (Proxy @ne)
 
-       let bc = result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+       let bc = result (Forall [], Forall []) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall [], Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall (x SL..: xs), Forall []) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
            ih = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
 
        mkIndStrategy Nothing

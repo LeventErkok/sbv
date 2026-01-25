@@ -11,6 +11,7 @@
 
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -74,7 +75,7 @@ instance (SymVal nm, SymVal val, Integral val) => Num (SExpr nm val) where
 -- any number of upper-lower case letters and digits), and all expressions are closed; i.e., any
 -- variable referenced is introduced by an enclosing let expression.
 isValid :: (SymVal nm, Eq nm, SymVal val) => (SBV nm -> SBool) -> SExpr nm val -> SBool
-isValid nmChk = go SL.nil
+isValid nmChk = go []
   where go = smtFunction "valid" $ \env expr -> [sCase|Expr expr of
                                                    Var s     -> nmChk s  .&& s `SL.elem` env
                                                    Val _     -> sTrue
@@ -85,7 +86,7 @@ isValid nmChk = go SL.nil
 
 -- | Evaluate an expression.
 eval :: (SymVal nm, SymVal val, Num (SBV val)) => SExpr nm val -> SBV val
-eval = go SL.nil
+eval = go []
  where go = smtFunction "eval" $ \env expr -> [sCase|Expr expr of
                                                  Val i     -> i
                                                  Var s     -> get env s

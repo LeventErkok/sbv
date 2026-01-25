@@ -44,7 +44,7 @@ insert = smtFunction "insert" $ \e l -> ite (null l) [e]
 
 -- | Insertion sort, using 'insert' above to successively insert the elements.
 insertionSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
-insertionSort = smtFunction "insertionSort" $ \l -> ite (null l) nil
+insertionSort = smtFunction "insertionSort" $ \l -> ite (null l) []
                                                   $ let (x, xs) = uncons l
                                                     in insert x (insertionSort xs)
 
@@ -52,7 +52,7 @@ insertionSort = smtFunction "insertionSort" $ \l -> ite (null l) nil
 -- | Remove the first occurrence of an number from a list, if any.
 removeFirst :: (Eq a, SymVal a) => SBV a -> SList a -> SList a
 removeFirst = smtFunction "removeFirst" $ \e l -> ite (null l)
-                                                      nil
+                                                      []
                                                       (let (x, xs) = uncons l
                                                        in ite (e .== x) xs (x .: removeFirst e xs))
 

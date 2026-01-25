@@ -62,7 +62,7 @@ upAcc = smtFunction "up" $ \n lst -> [sCase|Nat n of
 -- [5,4,3,2,1] :: [SInteger]
 down :: SNat -> SList Integer
 down = smtFunction "down" $ \n -> [sCase|Nat n of
-                                     Zero   -> nil
+                                     Zero   -> []
                                      Succ p -> n2i n .: down p
                                   |]
 

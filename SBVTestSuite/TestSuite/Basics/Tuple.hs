@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -97,7 +98,7 @@ enum = do
    vTup1 :: SList (E, [Bool]) <- sList "v1"
    q <- sBool "q"
    constrain $ sNot q
-   constrain $ (vTup1 !! 1)^._2 .== sTrue .: q .: L.nil
+   constrain $ (vTup1 !! 1)^._2 .== sTrue .: q .: []
    constrain $ L.length vTup1 .== 3
 
    case untuple (vTup1 !! 2)  of

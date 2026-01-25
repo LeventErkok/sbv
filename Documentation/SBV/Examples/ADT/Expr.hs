@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -65,7 +66,7 @@ instance Num SExpr where
 -- any number of upper-lower case letters and digits), and all expressions are closed; i.e., any
 -- variable referenced is introduced by an enclosing let expression.
 isValid :: SExpr -> SBool
-isValid = go SL.nil
+isValid = go []
   where isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
         go :: SList String -> SExpr -> SBool
         go = smtFunction "valid" $ \env expr -> [sCase|Expr expr of
@@ -78,7 +79,7 @@ isValid = go SL.nil
 
 -- | Evaluate an expression.
 eval :: SExpr -> SInteger
-eval = go SL.nil
+eval = go []
  where go :: SList (String, Integer) -> SExpr -> SInteger
        go = smtFunction "eval" $ \env expr -> [sCase|Expr expr of
                                                  Val i     -> i

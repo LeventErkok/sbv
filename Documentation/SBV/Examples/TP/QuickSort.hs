@@ -45,7 +45,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 -- | Quick-sort, using the first element as pivot.
 quickSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
 quickSort = smtFunction "quickSort" $ \l -> ite (null l)
-                                                nil
+                                                []
                                                 (let (x,  xs) = uncons l
                                                      (lo, hi) = untuple (partition x xs)
                                                  in  quickSort lo ++ [x] ++ quickSort hi)
@@ -55,7 +55,7 @@ quickSort = smtFunction "quickSort" $ \l -> ite (null l)
 -- with a free-variable captured, which isn't supported due to higher-order limitations in SMTLib.
 partition :: (OrdSymbolic (SBV a), SymVal a) => SBV a -> SList a -> STuple [a] [a]
 partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
-                                                       (tuple (nil, nil))
+                                                       (tuple ([], []))
                                                        (let (a,  as) = uncons xs
                                                             (lo, hi) = untuple (partition pivot as)
                                                         in ite (a .< pivot)
