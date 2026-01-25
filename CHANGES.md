@@ -12,6 +12,11 @@
     ability to understand and manipulate Haskell. (I also tried Gemini, which was less
     successful, compared to Claude.) I, for one, welcome our new computer overlords.
 
+  * Added Documentation.SBV.Examples.TP.UpDown.hs, demonstrating proof of a a couple of
+    list-processing functions together with naturals using TP. The problem itself is inspired
+    by a midterm exam question for an ACL2-class taught by J Moore at UT Austin back in 2011;
+    a minor tribute to J's amazing legacy.
+
 ### Version 13.4, 2026-01-09
 
   * Remove Eq constraint on readArray, generalizing it to arbitrary types for array-reads.
