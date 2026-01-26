@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 13.4.5, Not yet released
+### Version 13.5, 2026-01-26
 
   * Replace internal SMT-lib program representation from plain String to Text. This
     should improve performance and memory behavior in certain cases. Since solver time
