@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 13.5.5, New development version, not released yet
+  
+  * No changes yet
+
 ### Version 13.5, 2026-01-26
 
   * Replace internal SMT-lib program representation from plain String to Text. This
