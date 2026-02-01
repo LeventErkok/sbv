@@ -2,9 +2,12 @@
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
 ### Version 13.5.5, New development version, not released yet
-  
+
   * Add minimum and maximum to Data.SBV.List. If they receive empty list as argument,
     then the result is underspecified, i.e., can be any value of the element type.
+
+  * Add mapConcat to Documentation.SBV.Examples.TP.Lists, which proves the theorem
+    `map f . concat = concat . map (map f)`.
 
 ### Version 13.5, 2026-01-26
 

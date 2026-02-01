@@ -17,20 +17,23 @@
 -- these algorithms are equivalent.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP          #-}
-{-# LANGUAGE DataKinds    #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE CPP              #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE ViewPatterns     #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.TP.MaximumSegmentSum where
 
-import Prelude hiding (map, sum, concatMap, maximum, foldl, fst)
+import Prelude hiding (map, sum, concat, concatMap, maximum, foldl, fst)
 
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tuple
 import Data.SBV.TP
+
+import Documentation.SBV.Examples.TP.Lists
 
 #ifdef DOCTEST
 -- $setup
@@ -69,4 +72,15 @@ mss = fst . foldl comb (tuple (0, 0))
 --
 -- >>> runTP correctness
 correctness :: TP (Proof (Forall "xs" [Integer] -> SBool))
-correctness = lemma "mssIsCorrect" (\(Forall xs) -> mssSlow xs .== mss xs) []
+correctness = do
+   mc <- recall "mapConcat" (mapConcat (sum @Integer))
+
+   calc "mssIsCorrect"
+        (\(Forall xs) -> mssSlow xs .== mss xs) $
+        \xs -> [] |- mssSlow xs
+                  ?? sorry
+                  =: (maximum . map sum . concatMap tails . inits)          xs
+                  ?? mc
+                  =: (maximum . concat . map (map sum) . map tails . inits) xs
+                  =: mss xs
+                  =: qed

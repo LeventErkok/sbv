@@ -38,7 +38,7 @@ module Documentation.SBV.Examples.TP.Lists (
    , allAny
 
      -- * Map
-   , mapEquiv, mapAppend, mapReverse, mapCompose
+   , mapEquiv, mapAppend, mapReverse, mapCompose, mapConcat
 
      -- * Foldr and foldl
    , foldrMapFusion, foldrFusion, foldrOverAppend, foldlOverAppend, foldrFoldlDuality, foldrFoldlDualityGeneralized, foldrFoldl
@@ -627,6 +627,35 @@ mapCompose f g =
                            =: (g . f) x .: map (g . f) xs
                            =: map (g . f) (x .: xs)
                            =: qed
+
+-- | @map f . concat = concat . map (map f)@
+--
+-- >>> runTP $ mapConcat @Integer @Bool (uninterpret "f")
+-- Lemma: mapAppend                        Q.E.D.
+-- Inductive lemma: mapConcat
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] mapConcat :: Ɐxs ∷ [[Integer]] → Bool
+mapConcat :: (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [[a]] -> SBool))
+mapConcat f = do
+   ma <- recall "mapAppend" (mapAppend f)
+
+   induct "mapConcat"
+          (\(Forall xs) -> map f (concat xs) .== concat (map (map f) xs)) $
+          \ih (x, xs) -> [] |- map f (concat (x .: xs))
+                            =: map f (x ++ concat xs)
+                            ?? ma
+                            =: map f x ++ map f (concat xs)
+                            ?? ih
+                            =: map f x ++ concat (map (map f) xs)
+                            =: concat (map f x .: map (map f) xs)
+                            =: concat (map (map f) (x .: xs))
+                            =: qed
 
 -- | @foldr f a . map g == foldr (f . g) a@
 --
