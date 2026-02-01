@@ -75,6 +75,9 @@ module Data.SBV.List (
         -- * Sum and product
         , sum, product
 
+        -- * Minimum and maximum of a list
+        , minimum, maximum
+
         -- * Conversion between strings and naturals
         , strToNat, natToStr
 
@@ -85,7 +88,7 @@ module Data.SBV.List (
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
                        all, any, and, or, replicate, fst, snd, sum, product, Enum(..), lookup,
-                       takeWhile, dropWhile)
+                       takeWhile, dropWhile, minimum, maximum)
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
@@ -108,7 +111,7 @@ import GHC.Exts (IsList(..))
 
 #ifdef DOCTEST
 -- $setup
--- >>> import Prelude hiding (head, tail, init, last, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any, replicate, lookup, splitAt, concatMap, and, or, sum, product, takeWhile, dropWhile)
+-- >>> import Prelude hiding (head, tail, init, last, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any, replicate, lookup, splitAt, concatMap, and, or, sum, product, takeWhile, dropWhile, minimum, maximum)
 -- >>> import qualified Prelude as P(map)
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds
@@ -891,6 +894,36 @@ tails xs
  | True
  = def xs
  where def = smtFunction "sbv.tails" $ \l -> ite (null l) [[]] (l .: def (tail l))
+
+-- | Minimum of a list that has symbolic-ordering. If the list is empty, then
+-- the result is underspecified, i.e., it is an arbitrary element of the element type.
+--
+-- >>> minimum ([1,2,3] :: SList Integer)
+-- 1 :: SInteger
+-- >>> sat $ 512 .== minimum (literal [] :: SList Integer)
+-- Satisfiable. Model:
+--   SList.minimum @Integer = 512 :: Integer
+minimum :: forall a. (SymVal a, Ord a, OrdSymbolic (SBV a)) => SList a -> SBV a
+minimum xs
+  | Just lxs@(_:_) <- unliteral xs
+  = literal (P.minimum lxs)
+  | True
+  = foldr (smin @(SBV a)) (some "SList.minimum" (const sTrue)) xs
+
+-- | Maximum of a list that has symbolic-ordering. If the list is empty, then
+-- the result is underspecified, i.e., it is an arbitrary element of the element type.
+--
+-- >>> maximum ([1,2,3] :: SList Integer)
+-- 3 :: SInteger
+-- >>> sat $ 512 .== maximum (literal [] :: SList Integer)
+-- Satisfiable. Model:
+--   SList.maximum @Integer = 512 :: Integer
+maximum :: forall a. (SymVal a, Ord a, OrdSymbolic (SBV a)) => SList a -> SBV a
+maximum xs
+  | Just lxs@(_:_) <- unliteral xs
+  = literal (P.maximum lxs)
+  | True
+  = foldr (smax @(SBV a)) (some "SList.maximum" (const sTrue)) xs
 
 -- | Difference.
 --
