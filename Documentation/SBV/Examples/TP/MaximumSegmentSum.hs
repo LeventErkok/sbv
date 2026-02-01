@@ -18,6 +18,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP          #-}
+{-# LANGUAGE DataKinds    #-}
 {-# LANGUAGE ViewPatterns #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -29,6 +30,7 @@ import Prelude hiding (map, sum, concatMap, maximum, foldl, fst)
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tuple
+import Data.SBV.TP
 
 #ifdef DOCTEST
 -- $setup
@@ -62,3 +64,9 @@ mss = fst . foldl comb (tuple (0, 0))
  where comb :: STuple Integer Integer -> SInteger -> STuple Integer Integer
        comb (untuple -> (u, v)) x = tuple (u `smax` w, w)
          where w = (v + x) `smax` (0 :: SInteger)
+
+-- | Prove that the fast version of maximum-segment-sum is equivalent to the textbook version.
+--
+-- >>> runTP correctness
+correctness :: TP (Proof (Forall "xs" [Integer] -> SBool))
+correctness = lemma "mssIsCorrect" (\(Forall xs) -> mssSlow xs .== mss xs) []
