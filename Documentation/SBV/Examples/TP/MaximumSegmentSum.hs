@@ -24,7 +24,7 @@
 
 module Documentation.SBV.Examples.TP.MaximumSegmentSum where
 
-import Prelude hiding (map, sum, concat, maximum, foldl, fst)
+import Prelude hiding (map, sum, concatMap, maximum, foldl, fst)
 
 import Data.SBV
 import Data.SBV.List
@@ -47,7 +47,7 @@ import Data.SBV.Tuple
 -- 0 :: SInteger
 mssSlow :: SList Integer -> SInteger
 mssSlow = maximum . map sum . segs
- where segs = concat . map tails . inits
+ where segs = concatMap tails . inits
 
 -- | Faster version, running in linear time.
 --
