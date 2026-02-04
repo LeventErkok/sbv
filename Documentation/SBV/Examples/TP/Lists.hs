@@ -1974,4 +1974,5 @@ elemCount =
 {- HLint ignore tailsAppend    "Avoid lambda"      -}
 {- HLint ignore tailsAppend    "Use :"             -}
 {- HLint ignore mapReverse     "Evaluate"          -}
+{- HLint ignore mapConcat      "Use concatMap"     -}
 {- HLint ignore takeDropWhile  "Evaluate"          -}
