@@ -244,6 +244,7 @@ Library
                   , Documentation.SBV.Examples.TP.Fibonacci
                   , Documentation.SBV.Examples.TP.GCD
                   , Documentation.SBV.Examples.TP.InsertionSort
+                  , Documentation.SBV.Examples.TP.Kadane
                   , Documentation.SBV.Examples.TP.Kleene
                   , Documentation.SBV.Examples.TP.Lists
                   , Documentation.SBV.Examples.TP.McCarthy91
