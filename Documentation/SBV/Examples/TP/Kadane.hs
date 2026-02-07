@@ -7,12 +7,12 @@
 -- Stability : experimental
 --
 -- Proving the correctness of Kadane's algorithm for computing the maximum
--- sum of any contiguous subarray (maximum segment sum problem).
+-- sum of any contiguous list (maximum segment sum problem).
 --
 -- Kadane's algorithm is a classic dynamic programming algorithm that solves
 -- the maximum segment sum problem in O(n) time. Given a list of integers,
--- it finds the maximum sum of any contiguous subarray, where the empty
--- subarray has sum 0.
+-- it finds the maximum sum of any contiguous list, where the empty
+-- list has sum 0.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
@@ -34,38 +34,37 @@ import Data.SBV.TP
 
 -- | The maximum segment sum problem: Find the maximum sum of any contiguous
 -- subarray. We include the empty subarray (with sum 0) as a valid segment.
+-- This is the obvious definition: Empty list maps to 0. Otherwise, we take the
+-- value of the segment starting at the current position, and take the maximum
+-- of that value with the recursive result of the tail. This is obviously
+-- correct, but has the runtime of O(n^2).
 --
--- For example:
---   mss [1, -2, 3, 4, -1, 2] = 8  (the segment [3, 4, -1, 2])
---   mss [-2, -3, -1]         = 0  (the empty segment)
---   mss [1, 2, 3]            = 6  (the whole list)
-
--- | Maximum of two integers.
-maxOf :: SInteger -> SInteger -> SInteger
-maxOf x y = ite (x .>= y) x y
-
--- | Maximum segment sum (specification). This is what we want to compute.
--- We define it as the maximum sum over all segments, including the empty segment.
+-- We have:
+--
+-- >>> mss [1, -2, 3, 4, -1, 2]  -- the segment: [3, 4, -1, 2]
+-- 8 :: SInteger
+-- >>> mss [-2, -3, -1]          -- empty segment
+-- 0 :: SInteger
+-- >>> mss [1, 2, 3]             -- the whole list
+-- 6 :: SInteger
 mss :: SList Integer -> SInteger
-mss = smtFunction "mss" $ \xs ->
-    ite (null xs)
-        0  -- empty list: best segment is empty with sum 0
-        (let tailMss = mss (tail xs)
-             -- Best segment either doesn't include the head, or starts at the head
-             maxStartingHere = maxSumStartingAt xs
-         in maxOf tailMss maxStartingHere)
+mss = smtFunction "mss" $ \xs -> ite (null xs) 0 (mssBegin xs `smax` mss (tail xs))
 
--- | Maximum sum of segments starting at the beginning of the list.
--- This is 0 if the empty segment is best, or positive if a non-empty prefix is best.
-maxSumStartingAt :: SList Integer -> SInteger
-maxSumStartingAt = smtFunction "maxSumStartingAt" $ \xs ->
-    ite (null xs)
-        0
-        (let h = head xs
-             t = tail xs
-             -- Either take just the head (if positive), or extend with tail
-             restSum = maxSumStartingAt t
-         in maxOf 0 (maxOf h (h + restSum)))
+-- | Maximum sum of segments starting at the beginning of the given list.
+-- This is 0 if the empty segment is best, or positive if a non-empty prefix exists.
+--
+-- We have:
+--
+-- >>> mssBegin [1, -2, 3, 4, -1, 2]  -- the segment: [1, -2, 3, 4, -1, 2]
+-- 7 :: SInteger
+-- >>> mssBegin [-2, -3, -1]          -- empty segment
+-- 0 :: SInteger
+-- >>> mssBegin [1, 2, 3]             -- the whole list
+-- 6 :: SInteger
+mssBegin :: SList Integer -> SInteger
+mssBegin = smtFunction "mssBegin" $ \xs -> ite (null xs) 0
+                                               (let (h, t) = uncons xs
+                                                in 0 `smax` (h `smax` (h + mssBegin t)))
 
 -- * Kadane's algorithm implementation
 
@@ -75,7 +74,7 @@ maxEndingAt :: SList Integer -> SInteger
 maxEndingAt = smtFunction "maxEndingAt" $ \xs ->
     ite (null xs)
         0
-        (maxOf 0 (head xs + maxEndingAt (tail xs)))
+        (0 `smax` (head xs + maxEndingAt (tail xs)))
 
 -- | Kadane's algorithm: compute maximum segment sum recursively.
 -- At each step, the result is the maximum of:
@@ -87,7 +86,7 @@ kadane = smtFunction "kadane" $ \xs ->
         0
         (let tailResult = kadane (tail xs)
              endingHere = maxEndingAt xs
-         in maxOf tailResult endingHere)
+         in tailResult `smax` endingHere)
 
 -- * Helper lemmas
 
@@ -106,7 +105,7 @@ maxEndingAtLeqMss =
     induct "maxEndingAtLeqMss"
            (\(Forall xs) -> maxEndingAt xs .<= mss xs) $
            \ih (x, xs) -> [] |- maxEndingAt (x .: xs) .<= mss (x .: xs)
-                             =: maxOf 0 (x + maxEndingAt xs) .<= mss xs
+                             =: 0 `smax` (x + maxEndingAt xs) .<= mss xs
                              ?? ih
                              =: sTrue
                              =: qed
@@ -137,9 +136,9 @@ correctness = runTP $ do
     induct "kadaneCorrect"
            (\(Forall xs) -> kadane xs .== mss xs) $
            \ih (x, xs) -> [] |- kadane (x .: xs)
-                             =: maxOf (kadane xs) (maxEndingAt (x .: xs))
+                             =: kadane xs `smax` maxEndingAt (x .: xs)
                              ?? ih
-                             =: maxOf (mss xs) (maxEndingAt (x .: xs))
+                             =: mss xs `smax` maxEndingAt (x .: xs)
                              ?? leqLemma
                              ?? mssNN
                              ?? nonNeg
