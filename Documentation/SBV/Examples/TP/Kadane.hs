@@ -29,8 +29,8 @@ import Prelude hiding (length, maximum, null, head, tail, (++))
 
 import Data.SBV
 import Data.SBV.List
--- import Data.SBV.TP
---
+import Data.SBV.TP
+
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XOverloadedLists
@@ -96,3 +96,22 @@ kadaneHelper = smtFunction "kadaneHelper" $ \xs maxEndingHere maxSoFar ->
                             newMaxEndingHere = 0 `smax` (h + maxEndingHere)     -- We can add head to the so far, or restart
                             newMaxSofar      = maxSoFar `smax` newMaxEndingHere -- Maximum of result so far, and the new
                         in kadaneHelper t newMaxEndingHere newMaxSofar
+
+-- * Correctness proof
+--
+-- >>> runTPWith cvc5 correctness
+correctness :: TP (Proof (Forall "xs" [Integer] -> SBool))
+correctness =
+   induct "correctness"
+         (\(Forall xs) -> mss xs .== kadane xs) $
+         \ih (x, xs) -> [] |- mss (x .: xs)
+                           =: mssBegin (x .: xs) `smax` mss xs
+                           ?? ih
+                           =: mssBegin (x .: xs) `smax` kadane xs
+                           =: (0 `smax` (x `smax` (x + mssBegin xs))) `smax` kadane xs
+                           ?? sorry
+                           =: kadaneHelper xs (0 `smax` x) (0 `smax` x)
+                           =: kadaneHelper xs (0 `smax` (x + 0)) (0 `smax` (0 `smax` (x + 0)))
+                           =: kadaneHelper (x .: xs) 0 0
+                           =: kadane (x .: xs)
+                           =: qed
