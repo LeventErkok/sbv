@@ -15,6 +15,7 @@
 -- list has sum 0.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -28,7 +29,12 @@ import Prelude hiding (length, maximum, null, head, tail, (++))
 
 import Data.SBV
 import Data.SBV.List
-import Data.SBV.TP
+-- import Data.SBV.TP
+--
+#ifdef DOCTEST
+-- $setup
+-- >>> :set -XOverloadedLists
+#endif
 
 -- * Problem specification
 
@@ -63,86 +69,30 @@ mss = smtFunction "mss" $ \xs -> ite (null xs) 0 (mssBegin xs `smax` mss (tail x
 -- 6 :: SInteger
 mssBegin :: SList Integer -> SInteger
 mssBegin = smtFunction "mssBegin" $ \xs -> ite (null xs) 0
-                                               (let (h, t) = uncons xs
-                                                in 0 `smax` (h `smax` (h + mssBegin t)))
+                                             $ let (h, t) = uncons xs
+                                               in 0 `smax` (h `smax` (h + mssBegin t))
 
 -- * Kadane's algorithm implementation
 
--- | Helper: maximum sum ending at the end of the list.
--- This represents the maximum sum of any segment that ends at the last position.
-maxEndingAt :: SList Integer -> SInteger
-maxEndingAt = smtFunction "maxEndingAt" $ \xs ->
-    ite (null xs)
-        0
-        (0 `smax` (head xs + maxEndingAt (tail xs)))
-
--- | Kadane's algorithm: compute maximum segment sum recursively.
--- At each step, the result is the maximum of:
---   1. The best from the tail (doesn't include current element)
---   2. The best ending at current position (maxEndingAt)
+-- | Kadane algorithm: We call the helper with the values of maximum value ending
+-- at the beginning and the list, and recurse.
+--
+-- >>> kadane [1, -2, 3, 4, -1, 2]  -- the segment: [3, 4, -1, 2]
+-- 8 :: SInteger
+-- >>> kadane [-2, -3, -1]          -- empty segment
+-- 0 :: SInteger
+-- >>> kadane [1, 2, 3]             -- the whole list
+-- 6 :: SInteger
 kadane :: SList Integer -> SInteger
-kadane = smtFunction "kadane" $ \xs ->
-    ite (null xs)
-        0
-        (let tailResult = kadane (tail xs)
-             endingHere = maxEndingAt xs
-         in tailResult `smax` endingHere)
+kadane xs = kadaneHelper xs 0 0
 
--- * Helper lemmas
-
--- | The maximum sum ending at any position is always non-negative.
-maxEndingAtNonNeg :: TP (Proof (Forall "xs" [Integer] -> SBool))
-maxEndingAtNonNeg = lemmaWith cvc5 "maxEndingAtNonNeg" (\(Forall xs) -> maxEndingAt xs .>= 0) []
-
--- | The maximum segment sum is always non-negative (empty segment has sum 0).
-mssNonNeg :: TP (Proof (Forall "xs" [Integer] -> SBool))
-mssNonNeg = lemmaWith cvc5 "mssNonNeg" (\(Forall xs) -> mss xs .>= 0) []
-
--- | Relationship between maxEndingAt and mss:
--- The max ending at the end is at most the overall max.
-maxEndingAtLeqMss :: TP (Proof (Forall "xs" [Integer] -> SBool))
-maxEndingAtLeqMss =
-    induct "maxEndingAtLeqMss"
-           (\(Forall xs) -> maxEndingAt xs .<= mss xs) $
-           \ih (x, xs) -> [] |- maxEndingAt (x .: xs) .<= mss (x .: xs)
-                             =: 0 `smax` (x + maxEndingAt xs) .<= mss xs
-                             ?? ih
-                             =: sTrue
-                             =: qed
-
--- * Main correctness theorem
-
--- | Correctness of Kadane's algorithm: it computes the maximum segment sum.
---
--- We prove that for all lists xs, kadane xs = mss xs.
---
--- The proof proceeds by induction on the list structure, using the key
--- lemmas about maxEndingAt.
---
--- We have:
---
--- >>> correctness
--- Inductive lemma: maxEndingAtNonNeg
--- ...
-correctness :: IO (Proof (Forall "xs" [Integer] -> SBool))
-correctness = runTP $ do
-
-    -- First prove helper lemmas
-    nonNeg   <- maxEndingAtNonNeg
-    mssNN    <- mssNonNeg
-    leqLemma <- maxEndingAtLeqMss
-
-    -- Main correctness proof by induction
-    induct "kadaneCorrect"
-           (\(Forall xs) -> kadane xs .== mss xs) $
-           \ih (x, xs) -> [] |- kadane (x .: xs)
-                             =: kadane xs `smax` maxEndingAt (x .: xs)
-                             ?? ih
-                             =: mss xs `smax` maxEndingAt (x .: xs)
-                             ?? leqLemma
-                             ?? mssNN
-                             ?? nonNeg
-                             =: mss (x .: xs)
-                             =: qed
-
-{- HLint ignore module "Eta reduce" -}
+-- | Helper for Kadane's algorithm. Along with the list, we keep track of the maximum-value
+-- ending at the beginning of the list argument, and the maximum value sofar.
+kadaneHelper :: SList Integer -> SInteger -> SInteger -> SInteger
+kadaneHelper = smtFunction "kadaneHelper" $ \xs maxEndingHere maxSoFar ->
+                    ite (null xs)
+                        maxSoFar   -- end of the list, take the max-value calculated
+                      $ let (h, t)           = uncons xs
+                            newMaxEndingHere = 0 `smax` (h + maxEndingHere)     -- We can add head to the so far, or restart
+                            newMaxSofar      = maxSoFar `smax` newMaxEndingHere -- Maximum of result so far, and the new
+                        in kadaneHelper t newMaxEndingHere newMaxSofar
