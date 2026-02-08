@@ -109,6 +109,7 @@ correctness =
                            ?? ih
                            =: mssBegin (x .: xs) `smax` kadane xs
                            =: (0 `smax` (x `smax` (x + mssBegin xs))) `smax` kadane xs
+                           =: (0 `smax` (x `smax` (x + mssBegin xs))) `smax` kadaneHelper xs 0 0
                            ?? sorry
                            =: kadaneHelper xs (0 `smax` x) (0 `smax` x)
                            =: kadaneHelper xs (0 `smax` (x + 0)) (0 `smax` (0 `smax` (x + 0)))
