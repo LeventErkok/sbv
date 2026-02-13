@@ -59,14 +59,16 @@ mkChange = smtFunction "mkChange" $ \n ->
   $ ite (n .== 8) (sJust (sPocket 1 1))
   $ ite (n .== 9) (sJust (sPocket 3 0))
   $ ite (n .== 10) (sJust (sPocket 0 2))
-  -- n > 10: use change for (n-3) and add a 3-cent coin
-  $ [sCase|Pocket fromJust (mkChange (n - 3)) of
+    -- n > 10: use change for (n-3) and add a 3-cent coin
+    [sCase|Pocket fromJust (mkChange (n - 3)) of
        Pocket n3 n5 -> sJust (sPocket (n3 + 1) n5)
     |]
 
 -- | Evaluate the value of a pocket (total cents).
 evalPocket :: SMaybe Pocket -> SInteger
-evalPocket mp = SM.maybe 0 (\p -> 3 * snum3s p + 5 * snum5s p) mp
+evalPocket = SM.maybe 0 $ \p -> [sCase|Pocket p of
+                                  Pocket n3 n5 -> 3 * n3 + 5 * n5
+                                |]
 
 -- * Correctness
 
@@ -92,7 +94,7 @@ correctness :: TP (Proof (Forall "n" Integer -> SBool))
 correctness = do
     sInduct "mkChangeCorrect"
             (\(Forall n) -> n .>= 8 .=> evalPocket (mkChange n) .== n)
-            (\n -> n, []) $
+            (id, []) $
             \ih n -> [n .>= 8]
                   |- evalPocket (mkChange n) .== n
                   =: cases [ n .== 8  ==> trivial
