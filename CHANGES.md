@@ -10,10 +10,10 @@
     `map f . concat = concat . map (map f)`.
 
   * Add Documentation.SBV.Examples.TP.Kadane, proving the correctness of Kadane's algorithm
-    for computing the maximum segment sum. The proof uses a generalized invariant lemma
-    with strong induction to relate the accumulator-based implementation to the specification.
-    This proof was completed with assistance from Claude, in particular the part where we
-    had to come up with the invariant about the helper function.
+    for computing the maximum segment sum. The proof uses a generalized invariant lemma to relate
+    the accumulator-based implementation to the specification. (This proof was completed with
+    assistance from Claude, in particular the part where we had to come up with the invariant
+    about the helper function.)
 
 ### Version 13.5, 2026-01-26
 

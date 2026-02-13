@@ -121,14 +121,10 @@ kadaneHelper = smtFunction "kadaneHelper" $ \xs maxEndingHere maxSoFar ->
 --   * @meh + mssBegin xs@ - the best segment crossing the boundary
 --
 -- >>> runTPWith cvc5 correctness
--- Inductive lemma (strong): kadaneHelperInvariant
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way full case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
+-- Inductive lemma: kadaneHelperInvariant
+--   Step: Base                            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: correctness
 --   Step: 1                               Q.E.D.
@@ -140,31 +136,19 @@ kadaneHelper = smtFunction "kadaneHelper" $ \xs maxEndingHere maxSoFar ->
 correctness :: TP (Proof (Forall "xs" [Integer] -> SBool))
 correctness = do
 
-  -- First, prove the generalized invariant using strong induction on list length.
-  -- This is the heart of the proof: it relates kadaneHelper with arbitrary
+  -- First, prove the generalized invariant. This is the heart of the proof: it relates kadaneHelper with arbitrary
   -- accumulators to the specification functions mss and mssBegin.
-  invariant <- sInduct "kadaneHelperInvariant"
+  invariant <- induct "kadaneHelperInvariant"
       (\(Forall xs) (Forall meh) (Forall msf) ->
-         (meh .>= 0 .&& msf .>= meh) .=> kadaneHelper xs meh msf .== (msf `smax` mss xs `smax` (meh + mssBegin xs)))
-      (\xs _ _ -> length xs, []) $
-      \ih xs meh msf ->
-        [meh .>= 0, msf .>= meh] |- split xs
-                                          trivial   -- Base case: empty list, solver handles this by itself
-                                          (\a as -> -- Inductive case: non-empty list (a : as)
-                                             let newMeh = 0 `smax` (a + meh)
-                                                 newMsf = msf `smax` newMeh
-                                             in kadaneHelper (a .: as) meh msf
-                                             =: kadaneHelper as newMeh newMsf
-                                             -- Apply IH: need newMeh >= 0 and newMsf >= newMeh (both hold by construction)
-                                             ?? ih `at` (Inst @"xs" as, Inst @"meh" newMeh, Inst @"msf" newMsf)
-                                             =: newMsf `smax` mss as `smax` (newMeh + mssBegin as)
-                                             -- Expand definitions and simplify
-                                             =: (msf `smax` (0 `smax` (a + meh))) `smax` mss as `smax` ((0 `smax` (a + meh)) + mssBegin as)
-                                             -- The key algebraic step: this equals the RHS for (a:as)
-                                             -- mss (a:as) = mssBegin (a:as) `smax` mss as
-                                             -- mssBegin (a:as) = 0 `smax` (a `smax` (a + mssBegin as))
-                                             =: msf `smax` mss (a .: as) `smax` (meh + mssBegin (a .: as))
-                                             =: qed)
+         (meh .>= 0 .&& msf .>= meh) .=> kadaneHelper xs meh msf .== (msf `smax` mss xs `smax` (meh + mssBegin xs))) $
+      \ih (a, as) meh msf ->
+         [meh .>= 0, msf .>= meh] |- let newMeh = 0 `smax` (a + meh)
+                                         newMsf = msf `smax` newMeh
+                                     in kadaneHelper (a .: as) meh msf
+                                     =: kadaneHelper as newMeh newMsf
+                                     ?? ih `at` (Inst @"meh" newMeh, Inst @"msf" newMsf)
+                                     =: newMsf `smax` mss as `smax` (newMeh + mssBegin as)
+                                     =: qed
 
   -- Now the main theorem follows easily: kadane xs = kadaneHelper xs 0 0
   -- and with meh=0, msf=0, the invariant gives us:
