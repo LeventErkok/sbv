@@ -33,6 +33,8 @@ import Data.SBV.TP
 
 #ifdef DOCTEST
 -- $setup
+-- >>> import Data.SBV
+-- >>> import Data.SBV.TP
 -- >>> :set -XOverloadedLists
 #endif
 
@@ -99,20 +101,91 @@ kadaneHelper = smtFunction "kadaneHelper" $ \xs maxEndingHere maxSoFar ->
 
 -- * Correctness proof
 --
+-- The key insight is that we need a generalized invariant that characterizes
+-- @kadaneHelper@ for arbitrary accumulator values, not just the initial @(0, 0)@.
+--
+-- The invariant states: for @kadaneHelper xs meh msf@ where:
+--
+--   * @meh@ (max-ending-here) is the maximum sum of a segment ending at the boundary
+--   * @msf@ (max-so-far) is the best segment sum seen in the already-processed prefix
+--   * Preconditions: @meh >= 0@ and @msf >= meh@
+--
+-- @
+--   kadaneHelper xs meh msf == msf `smax` mss xs `smax` (meh + mssBegin xs)
+-- @
+--
+-- This captures that the result is the maximum of:
+--
+--   * @msf@ - the best segment entirely in the already-processed prefix
+--   * @mss xs@ - the best segment entirely in the remaining suffix
+--   * @meh + mssBegin xs@ - the best segment crossing the boundary
+--
 -- >>> runTPWith cvc5 correctness
+-- Inductive lemma (strong): kadaneHelperInvariant
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way full case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.1.3                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: correctness
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] correctness :: Ɐxs ∷ [Integer] → Bool
 correctness :: TP (Proof (Forall "xs" [Integer] -> SBool))
-correctness =
-   induct "correctness"
-         (\(Forall xs) -> mss xs .== kadane xs) $
-         \ih (x, xs) -> [] |- mss (x .: xs)
-                           =: mssBegin (x .: xs) `smax` mss xs
-                           ?? ih
-                           =: mssBegin (x .: xs) `smax` kadane xs
-                           =: (0 `smax` (x `smax` (x + mssBegin xs))) `smax` kadane xs
-                           =: (0 `smax` (x `smax` (x + mssBegin xs))) `smax` kadaneHelper xs 0 0
-                           ?? sorry
-                           =: kadaneHelper xs (0 `smax` x) (0 `smax` x)
-                           =: kadaneHelper xs (0 `smax` (x + 0)) (0 `smax` (0 `smax` (x + 0)))
-                           =: kadaneHelper (x .: xs) 0 0
-                           =: kadane (x .: xs)
-                           =: qed
+correctness = do
+
+  -- First, prove the generalized invariant using strong induction on list length.
+  -- This is the heart of the proof: it relates kadaneHelper with arbitrary
+  -- accumulators to the specification functions mss and mssBegin.
+  invariant <- sInduct "kadaneHelperInvariant"
+      (\(Forall xs) (Forall meh) (Forall msf) ->
+         (meh .>= 0 .&& msf .>= meh) .=> kadaneHelper xs meh msf .== (msf `smax` mss xs `smax` (meh + mssBegin xs)))
+      (\xs _ _ -> length xs, []) $
+      \ih xs meh msf ->
+        [meh .>= 0, msf .>= meh] |- split xs
+                                          -- Base case: empty list
+                                          (kadaneHelper [] meh msf
+                                             =: msf
+                                             =: msf `smax` 0 `smax` (meh + 0)
+                                             =: msf `smax` mss [] `smax` (meh + mssBegin [])
+                                             =: qed)
+                                          -- Inductive case: non-empty list (a : as)
+                                          (\a as ->
+                                             let newMeh = 0 `smax` (a + meh)
+                                                 newMsf = msf `smax` newMeh
+                                             in kadaneHelper (a .: as) meh msf
+                                             =: kadaneHelper as newMeh newMsf
+                                             -- Apply IH: need newMeh >= 0 and newMsf >= newMeh (both hold by construction)
+                                             ?? ih `at` (Inst @"xs" as, Inst @"meh" newMeh, Inst @"msf" newMsf)
+                                             =: newMsf `smax` mss as `smax` (newMeh + mssBegin as)
+                                             -- Expand definitions and simplify
+                                             =: (msf `smax` (0 `smax` (a + meh))) `smax` mss as `smax` ((0 `smax` (a + meh)) + mssBegin as)
+                                             -- The key algebraic step: this equals the RHS for (a:as)
+                                             -- mss (a:as) = mssBegin (a:as) `smax` mss as
+                                             -- mssBegin (a:as) = 0 `smax` (a `smax` (a + mssBegin as))
+                                             =: msf `smax` mss (a .: as) `smax` (meh + mssBegin (a .: as))
+                                             =: qed)
+
+  -- Now the main theorem follows easily: kadane xs = kadaneHelper xs 0 0
+  -- and with meh=0, msf=0, the invariant gives us:
+  --   kadaneHelper xs 0 0 = 0 `smax` mss xs `smax` (0 + mssBegin xs)
+  --                       = mss xs `smax` mssBegin xs
+  --                       = mss xs  (since mss xs >= mssBegin xs by definition)
+  calc "correctness"
+       (\(Forall xs) -> mss xs .== kadane xs) $
+       \xs -> [] |- kadane xs
+                 =: kadaneHelper xs 0 0
+                 ?? invariant `at` (Inst @"xs" xs, Inst @"meh" (0 :: SInteger), Inst @"msf" (0 :: SInteger))
+                 =: 0 `smax` mss xs `smax` (0 + mssBegin xs)
+                 =: mss xs `smax` mssBegin xs
+                 -- mss xs >= mssBegin xs by definition (mss considers all segments)
+                 =: mss xs
+                 =: qed
