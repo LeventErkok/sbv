@@ -241,6 +241,7 @@ Library
                   , Documentation.SBV.Examples.TP.Basics
                   , Documentation.SBV.Examples.TP.BinarySearch
                   , Documentation.SBV.Examples.TP.CaseSplit
+                  , Documentation.SBV.Examples.TP.Coins
                   , Documentation.SBV.Examples.TP.Fibonacci
                   , Documentation.SBV.Examples.TP.GCD
                   , Documentation.SBV.Examples.TP.InsertionSort

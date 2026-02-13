@@ -15,6 +15,10 @@
     assistance from Claude, in particular the part where we had to come up with the invariant
     about the helper function.)
 
+  * Add Documentation.SBV.Examples.TP.Coins, proving the classic coin change theorem: for any
+    amount n >= 8, you can make exact change using only 3-cent and 5-cent coins. Inspired by
+    an Imandra example at <https://github.com/imandra-ai/imandrax-examples/blob/main/src/coins.iml>.
+
 ### Version 13.5, 2026-01-26
 
   * Replace internal SMT-lib program representation from plain String to Text. This
