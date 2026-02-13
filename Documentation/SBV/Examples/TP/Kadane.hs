@@ -124,9 +124,7 @@ kadaneHelper = smtFunction "kadaneHelper" $ \xs maxEndingHere maxSoFar ->
 -- Inductive lemma (strong): kadaneHelperInvariant
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way full case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.1.3                         Q.E.D.
+--     Step: 1.1                           Q.E.D.
 --     Step: 1.2.1                         Q.E.D.
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.2.3                         Q.E.D.
@@ -151,14 +149,8 @@ correctness = do
       (\xs _ _ -> length xs, []) $
       \ih xs meh msf ->
         [meh .>= 0, msf .>= meh] |- split xs
-                                          -- Base case: empty list
-                                          (kadaneHelper [] meh msf
-                                             =: msf
-                                             =: msf `smax` 0 `smax` (meh + 0)
-                                             =: msf `smax` mss [] `smax` (meh + mssBegin [])
-                                             =: qed)
-                                          -- Inductive case: non-empty list (a : as)
-                                          (\a as ->
+                                          trivial   -- Base case: empty list, solver handles this by itself
+                                          (\a as -> -- Inductive case: non-empty list (a : as)
                                              let newMeh = 0 `smax` (a + meh)
                                                  newMsf = msf `smax` newMeh
                                              in kadaneHelper (a .: as) meh msf
