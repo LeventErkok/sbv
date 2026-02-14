@@ -279,7 +279,7 @@ petAck = do
                                      =: qed
                                 ]
 
-{- HLint ignore module    "Curry tuple"   -}
+{- HLint ignore module    "Use curry"     -}
 {- HLint ignore ack_psd   "Use camelCase" -}
 {- HLint ignore pet_psd   "Use camelCase" -}
 {- HLint ignore ack_2_2_4 "Use camelCase" -}
