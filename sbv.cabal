@@ -254,6 +254,7 @@ Library
                   , Documentation.SBV.Examples.TP.MergeSort
                   , Documentation.SBV.Examples.TP.Numeric
                   , Documentation.SBV.Examples.TP.Peano
+                  , Documentation.SBV.Examples.TP.PigeonHole
                   , Documentation.SBV.Examples.TP.PowerMod
                   , Documentation.SBV.Examples.TP.Primes
                   , Documentation.SBV.Examples.TP.QuickSort

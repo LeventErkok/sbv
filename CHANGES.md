@@ -24,6 +24,10 @@
     <https://github.com/imandra-ai/imandrax-examples/blob/main/src/ackermann.iml>. This proof
     was developed by Claude with minimal user prompting and guidance.
 
+  * Add Documentation.SBV.Examples.TP.PigeonHole, proving the pigeonhole principle: If a list
+    of numbers sum up to more than the length of the list, then some cell must have a value
+    greater than one.
+
 ### Version 13.5, 2026-01-26
 
   * Replace internal SMT-lib program representation from plain String to Text. This
