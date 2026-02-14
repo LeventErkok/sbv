@@ -62,7 +62,7 @@ pet :: SInteger -> SInteger -> SInteger
 pet = smtFunction "pet" $ \m n ->
     ite (m .<= 0) (n + 1)
   $ ite (n .<= 0) (pet (m - 1) 1)
-  $ pet (m - 1) (pet m (n - 1))
+  $ pet (m - 1)   (pet m (n - 1))
 
 -- * Correctness
 
@@ -170,22 +170,7 @@ pet_psd = do
                                         =: qed
                                    ]
 
--- | The main theorem: relating Ackermann and Peter functions.
---
--- We prove:
---
---   1. @pet 0 n = n + 1@
---   2. @0 < m && 0 <= n ==> pet m n + 3 = ack (m-1) (n+3) 2@
---
--- >>> runTP ackPet
--- Lemma: ackPet                           Q.E.D.
--- [Proven] ackPet :: Ɐn ∷ Integer → Bool
-ackPet :: TP (Proof (Forall "n" Integer -> SBool))
-ackPet = lemma "ackPet"
-               (\(Forall n) -> pet 0 n .== n + 1)
-               []
-
--- | Relating @pet@ and @ack@: @pet m n + 3 = ack (m-1) (n+3) 2@ for @m > 0@ and @n >= 0@.
+-- | The main theorem, relating @pet@ and @ack@: @pet m n + 3 = ack (m-1) (n+3) 2@ for @m > 0@ and @n >= 0@.
 --
 -- >>> runTPWith cvc5 petAck
 -- Inductive lemma (strong): ack_2_2_4
