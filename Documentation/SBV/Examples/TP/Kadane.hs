@@ -100,8 +100,8 @@ kadaneHelper = smtFunction "kadaneHelper" $ \xs maxEndingHere maxSoFar ->
                         in kadaneHelper t newMaxEndingHere newMaxSofar
 
 -- * Correctness proof
---
--- The key insight is that we need a generalized invariant that characterizes
+
+-- | The key insight is that we need a generalized invariant that characterizes
 -- @kadaneHelper@ for arbitrary accumulator values, not just the initial @(0, 0)@.
 --
 -- The invariant states: for @kadaneHelper xs meh msf@ where:
