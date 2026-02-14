@@ -19,6 +19,11 @@
     amount n >= 8, you can make exact change using only 3-cent and 5-cent coins. Inspired by
     an Imandra example at <https://github.com/imandra-ai/imandrax-examples/blob/main/src/coins.iml>.
 
+  * Add Documentation.SBV.Examples.TP.Ackermann, proving the relationship between Ackermann's
+    original function and R. Peter's version (1935). Inspired by an Imandra example at
+    <https://github.com/imandra-ai/imandrax-examples/blob/main/src/ackermann.iml>. This proof
+    was developed by Claude with minimal user prompting and guidance.
+
 ### Version 13.5, 2026-01-26
 
   * Replace internal SMT-lib program representation from plain String to Text. This

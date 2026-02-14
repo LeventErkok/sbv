@@ -238,6 +238,7 @@ Library
                   , Documentation.SBV.Examples.Queries.Concurrency
                   , Documentation.SBV.Examples.Strings.RegexCrossword
                   , Documentation.SBV.Examples.Strings.SQLInjection
+                  , Documentation.SBV.Examples.TP.Ackermann
                   , Documentation.SBV.Examples.TP.Basics
                   , Documentation.SBV.Examples.TP.BinarySearch
                   , Documentation.SBV.Examples.TP.CaseSplit
