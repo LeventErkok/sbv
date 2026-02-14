@@ -83,7 +83,7 @@ pet = smtFunction "pet" $ \m n ->
 ack_2_2_4 :: TP (Proof (Forall "m" Integer -> SBool))
 ack_2_2_4 = sInduct "ack_2_2_4"
                     (\(Forall m) -> m .>= 0 .=> ack m 2 2 .== 4)
-                    (\m -> m, []) $
+                    (id, []) $
                     \ih m -> [m .>= 0]
                           |- ack m 2 2
                           =: cases [ m .== 0 ==> trivial
@@ -278,3 +278,8 @@ petAck = do
                                      =: sTrue
                                      =: qed
                                 ]
+
+{- HLint ignore module    "Curry tuple"   -}
+{- HLint ignore ack_psd   "Use camelCase" -}
+{- HLint ignore pet_psd   "Use camelCase" -}
+{- HLint ignore ack_2_2_4 "Use camelCase" -}
