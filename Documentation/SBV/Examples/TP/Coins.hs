@@ -36,9 +36,9 @@ import Data.SBV.TP
 -- * Types
 
 -- | A pocket contains a count of 3-cent and 5-cent coins.
-data Pocket = Pocket { num3s :: Integer
-                     , num5s :: Integer
-                     }
+data Pocket = MkPocket { num3s :: Integer
+                       , num5s :: Integer
+                       }
 
 -- | Create a symbolic version of Pocket.
 mkSymbolic [''Pocket]
@@ -56,18 +56,18 @@ mkSymbolic [''Pocket]
 mkChange :: SInteger -> SMaybe Pocket
 mkChange = smtFunction "mkChange" $ \n ->
     ite (n .< 8)  sNothing
-  $ ite (n .== 8) (sJust (sPocket 1 1))
-  $ ite (n .== 9) (sJust (sPocket 3 0))
-  $ ite (n .== 10) (sJust (sPocket 0 2))
+  $ ite (n .== 8) (sJust (sMkPocket 1 1))
+  $ ite (n .== 9) (sJust (sMkPocket 3 0))
+  $ ite (n .== 10) (sJust (sMkPocket 0 2))
     -- n > 10: use change for (n-3) and add a 3-cent coin
     [sCase|Pocket fromJust (mkChange (n - 3)) of
-       Pocket n3 n5 -> sJust (sPocket (n3 + 1) n5)
+       MkPocket n3 n5 -> sJust (sMkPocket (n3 + 1) n5)
     |]
 
 -- | Evaluate the value of a pocket (total cents).
 evalPocket :: SMaybe Pocket -> SInteger
 evalPocket = SM.maybe 0 $ \p -> [sCase|Pocket p of
-                                  Pocket n3 n5 -> 3 * n3 + 5 * n5
+                                  MkPocket n3 n5 -> 3 * n3 + 5 * n5
                                 |]
 
 -- * Correctness
@@ -103,7 +103,7 @@ correctness = do
                            , n .< 8   ==> trivial   -- Vacuously true: contradicts n >= 8
                            , n .> 10  ==> evalPocket (mkChange n) .== n
                                        =: [sCase|Pocket fromJust (mkChange (n - 3)) of
-                                            Pocket n3 n5 -> evalPocket (sJust (sPocket (n3 + 1) n5)) .== n
+                                            MkPocket n3 n5 -> evalPocket (sJust (sMkPocket (n3 + 1) n5)) .== n
                                          |]
                                        ?? ih `at` Inst @"n" (n - 3)
                                        =: sTrue
