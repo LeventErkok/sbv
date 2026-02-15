@@ -48,8 +48,8 @@ mkSymbolic [''Pocket]
 -- | Make change for a given amount. Returns 'Nothing' if the amount is less than 8.
 -- Base cases:
 --
---   * 8 = 3 + 5
---   * 9 = 3 + 3 + 3
+--   *  8 = 3 + 5
+--   *  9 = 3 + 3 + 3
 --   * 10 = 5 + 5
 --
 -- For @n > 10@, we use change for @n-3@ and add one more 3-cent coin.
