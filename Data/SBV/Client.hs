@@ -157,8 +157,8 @@ addDeclDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
 #if MIN_VERSION_template_haskell(2,18,0)
 addDeclDocs (tnm, ts) cnms = do add True (tnm, ts)
                                 mapM_  (add False) cnms
-   where add True  (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the type '"        ++ cs ++ "'."
-         add False (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the constructor '" ++ cs ++ "'."
+   where add True  (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the type t'"        ++ cs ++ "'."
+         add False (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the constructor v'" ++ cs ++ "'."
 #else
 addDeclDocs _ _ = pure ()
 #endif
