@@ -55,9 +55,9 @@ mkSymbolic [''Pocket]
 -- For @n > 10@, we use change for @n-3@ and add one more 3-cent coin.
 mkChange :: SInteger -> SMaybe Pocket
 mkChange = smtFunction "mkChange" $ \n ->
-    ite (n .< 8)  sNothing
-  $ ite (n .== 8) (sJust (sPocket 1 1))
-  $ ite (n .== 9) (sJust (sPocket 3 0))
+    ite (n .<   8)  sNothing
+  $ ite (n .==  8) (sJust (sPocket 1 1))
+  $ ite (n .==  9) (sJust (sPocket 3 0))
   $ ite (n .== 10) (sJust (sPocket 0 2))
     -- n > 10: use change for (n-3) and add a 3-cent coin
     [sCase|Pocket fromJust (mkChange (n - 3)) of
