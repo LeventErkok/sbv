@@ -17,7 +17,7 @@
 
 module Documentation.SBV.Examples.TP.PigeonHole where
 
-import Prelude hiding (sum, length, elem, null)
+import Prelude hiding (sum, length, elem, null, any)
 
 import Data.SBV
 import Data.SBV.List
@@ -30,9 +30,7 @@ import Data.SBV.TP
 
 -- | Overflow: Some value is greater than 1.
 overflow :: SList Integer -> SBool
-overflow = smtFunction "overflow" $ \xs -> ite (null xs) sFalse
-                                             $ let (a, as) = uncons xs
-                                               in a .> 1 .|| overflow as
+overflow = any (.> 1)
 
 -- | \(\sum xs > \lvert xs \rvert \Rightarrow \textrm{overflow}\, xs\)
 --
