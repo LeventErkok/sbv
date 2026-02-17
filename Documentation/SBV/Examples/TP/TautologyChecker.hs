@@ -556,7 +556,7 @@ tautologyImpliesEval = do
                                                                           ?? lus `at` (Inst @"a" b, Inst @"x" n, Inst @"b" a)
                                                                           =: eval l (sBinding n (lookUp n a) .: (b ++ a))
                                                                           =: eval l (sBinding n sTrue .: (b ++ a))
-                                                                          =: eval l ((assumeTrue n b) ++ a)
+                                                                          =: eval l (assumeTrue n b ++ a)
                                                                           ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                                           ?? ih  `at` (Inst @"f" l, Inst @"a" a, Inst @"b" (assumeTrue n b))
                                                                           =: sTrue
@@ -572,7 +572,7 @@ tautologyImpliesEval = do
                                                                           ?? lus `at` (Inst @"a" b, Inst @"x" n, Inst @"b" a)
                                                                           =: eval r (sBinding n (lookUp n a) .: (b ++ a))
                                                                           =: eval r (sBinding n sFalse .: (b ++ a))
-                                                                          =: eval r ((assumeFalse n b) ++ a)
+                                                                          =: eval r (assumeFalse n b ++ a)
                                                                           ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                                           ?? ih  `at` (Inst @"f" r, Inst @"a" a, Inst @"b" (assumeFalse n b))
                                                                           =: sTrue
@@ -684,7 +684,7 @@ normalizeSame = do
 
   sInduct "normalizeSame"
           (\(Forall f) -> isNormal f .=> normalize f .== f)
-          (\f -> ifComplexity f, [proofOf icp]) $
+          (ifComplexity, [proofOf icp]) $
           \ih f -> [isNormal f]
                 |- cases [ isFTrue  f ==> trivial
                          , isFFalse f ==> trivial
@@ -1110,5 +1110,3 @@ completenessTheorem = do
   lemma "completenessTheorem"
         (\(Forall f) -> sNot (isTautology f) .=> sNot (eval f (getFalsifyResult_2 (falsify f))))
         [proofOf ch, proofOf nrt]
-
-{- HLint ignore module "Use camelCase" -}
