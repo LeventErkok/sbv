@@ -126,11 +126,15 @@ ifDepthSmaller = do
 -- \(\text{ifComplexity}(\text{If}(p, \text{If}(q, l, r), \text{If}(s, l, r))) = \text{ifComplexity}(\text{If}(\text{If}(p, q, s), l, r))\)
 --
 -- >>> runTP normalizePreservesComplexity
+-- Lemma: helper                           Q.E.D.
 -- Lemma: normalizePreservesComplexity
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Step: 7                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] normalizePreservesComplexity :: Ɐp ∷ Formula → Ɐq ∷ Formula → Ɐs ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
 normalizePreservesComplexity :: TP (Proof (Forall "p" Formula -> Forall "q" Formula -> Forall "s" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
@@ -344,7 +348,7 @@ trueIsAssigned =
 --
 -- >>> runTPWith cvc5 evalStable
 -- Lemma: ifComplexityPos                  Q.E.D.
--- Lemma: ifComplexitySmaller                Q.E.D.
+-- Lemma: ifComplexitySmaller              Q.E.D.
 -- Inductive lemma (strong): evalStable
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (4 way case split)
@@ -399,7 +403,7 @@ evalStable = do
 --
 -- >>> runTPWith (tpRibbon 50 cvc5) tautologyImpliesEval
 -- Lemma: ifComplexityPos                            Q.E.D.
--- Lemma: ifBranchesSmaller                          Q.E.D.
+-- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Lemma: lookUpStable                               Q.E.D.
 -- Lemma: trueIsAssigned                             Q.E.D.
 -- Lemma: evalStable                                 Q.E.D.
@@ -549,7 +553,6 @@ tautologyImpliesEval = do
 -- Normalization produces normalized formulas.
 --
 -- >>> runTPWith (tpRibbon 50 z3) normalizeCorrect
--- runTPWith (tpRibbon 50 z3) normalizeCorrect
 -- Lemma: ifComplexityPos                            Q.E.D.
 -- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Lemma: normalizePreservesComplexity               Q.E.D.
