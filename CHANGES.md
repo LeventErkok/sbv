@@ -28,6 +28,14 @@
     of numbers sum up to more than the length of the list, then some cell must have a value
     greater than one.
 
+  * Add Documentation.SBV.Examples.TP.TautologyChecker, a verified tautology checker for
+    propositional formulas using an unordered BDD-style SAT solver approach. The proof establishes
+    both soundness (if the checker says a formula is a tautology, it evaluates to true under all
+    bindings) and completeness (if the checker says a formula is not a tautology, falsify returns
+    a counterexample binding). Inspired by an Imandra example at
+    <https://github.com/imandra-ai/imandrax-examples/blob/main/src/tautology.iml>, originally
+    based on Boyer-Moore '79. This proof was developed with Claude's assistance.
+
 ### Version 13.5, 2026-01-26
 
   * Replace internal SMT-lib program representation from plain String to Text. This
