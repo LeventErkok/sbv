@@ -340,8 +340,8 @@ lookUpStable =
   induct "lookUpStable"
          (\(Forall a) (Forall x) (Forall b) -> lookUp x (a ++ b) .== ite (isAssigned x a) (lookUp x a) (lookUp x b)) $
          \ih (binding, a) x b ->
-           let vid = getBinding_1 binding
-               val = getBinding_2 binding
+           let vid = svarId binding
+               val = svalue binding
            in [] |- lookUp x ((binding .: a) ++ b)
                  =: cases [ vid .== x ==> ite (isAssigned x (binding .: a)) (lookUp x (binding .: a)) (lookUp x b)
                                        =: val
@@ -835,7 +835,7 @@ falsify' = smtFunction "falsify'" $ \f bs ->
                               (falsify' l bs)
                               (falsify' r bs))
                          (let resL = falsify' l (assumeTrue i bs)
-                          in ite (sNot (getFalsifyResult_1 resL))
+                          in ite (sNot (sfalsified resL))
                                  (falsify' r (assumeFalse i bs))
                                  resL)
            FTrue  -> falsify' l bs
@@ -870,7 +870,7 @@ nonTautIsFalsified = do
   ibs <- recall "ifComplexitySmaller" ifComplexitySmaller
 
   sInduct "nonTautIsFalsified"
-          (\(Forall f) (Forall bs) -> isNormal f .&& sNot (isTautology' f bs) .=> getFalsifyResult_1 (falsify' f bs))
+          (\(Forall f) (Forall bs) -> isNormal f .&& sNot (isTautology' f bs) .=> sfalsified (falsify' f bs))
           (\f _ -> ifComplexity f, [proofOf icp]) $
           \ih f bs -> [isNormal f, sNot (isTautology' f bs)]
                    |- cases [ isFTrue  f ==> trivial
@@ -879,7 +879,7 @@ nonTautIsFalsified = do
                             , isIf     f ==> let c = getIf_1 f
                                                  l = getIf_2 f
                                                  r = getIf_3 f
-                                             in getFalsifyResult_1 (falsify' f bs)
+                                             in sfalsified (falsify' f bs)
                                              ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                              ?? ih  `at` (Inst @"f" l, Inst @"bs" bs)
                                              ?? ih  `at` (Inst @"f" r, Inst @"bs" bs)
@@ -916,14 +916,14 @@ falsifyExtendsBindings = do
 
   sInduct "falsifyExtendsBindings"
           (\(Forall f) (Forall bs) (Forall i) ->
-             isAssigned i bs .&& getFalsifyResult_1 (falsify' f bs) .=>
-             lookUp i (getFalsifyResult_2 (falsify' f bs)) .== lookUp i bs)
+             isAssigned i bs .&& sfalsified (falsify' f bs) .=>
+             lookUp i (scex (falsify' f bs)) .== lookUp i bs)
           (\f _ _ -> ifComplexity f, [proofOf icp]) $
-          \ih f bs i -> [isAssigned i bs, getFalsifyResult_1 (falsify' f bs)]
+          \ih f bs i -> [isAssigned i bs, sfalsified (falsify' f bs)]
                      |- cases [ isFTrue  f ==> trivial
                               , isFFalse f ==> trivial
                               , isVar    f ==> let n = getVar_1 f
-                                               in lookUp i (getFalsifyResult_2 (falsify' f bs)) .== lookUp i bs
+                                               in lookUp i (scex (falsify' f bs)) .== lookUp i bs
                                                ?? lue `at` (Inst @"i" i, Inst @"n" n, Inst @"v" sFalse, Inst @"bs" bs)
                                                =: sTrue
                                                =: qed
@@ -931,7 +931,7 @@ falsifyExtendsBindings = do
                                                    l = getIf_2 f
                                                    r = getIf_3 f
                                                    n = getVar_1 c
-                                               in lookUp i (getFalsifyResult_2 (falsify' f bs)) .== lookUp i bs
+                                               in lookUp i (scex (falsify' f bs)) .== lookUp i bs
                                                ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                ?? iae `at` (Inst @"i" i, Inst @"n" n, Inst @"v" sTrue,  Inst @"bs" bs)
                                                ?? iae `at` (Inst @"i" i, Inst @"n" n, Inst @"v" sFalse, Inst @"bs" bs)
@@ -993,34 +993,34 @@ falsifyFalsifies = do
   ias <- recall "isAssignedSame"         isAssignedSame
 
   sInduct "falsifyFalsifies"
-          (\(Forall f) (Forall bs) -> isNormal f .&& getFalsifyResult_1 (falsify' f bs) .=> sNot (eval f (getFalsifyResult_2 (falsify' f bs))))
+          (\(Forall f) (Forall bs) -> isNormal f .&& sfalsified (falsify' f bs) .=> sNot (eval f (scex (falsify' f bs))))
           (\f _ -> ifComplexity f, [proofOf icp]) $
-          \ih f bs -> [isNormal f, getFalsifyResult_1 (falsify' f bs)]
-                   |- cases [ isFTrue  f ==> sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
-                                          =: sNot (eval sFTrue (getFalsifyResult_2 (falsify' sFTrue bs)))
+          \ih f bs -> [isNormal f, sfalsified (falsify' f bs)]
+                   |- cases [ isFTrue  f ==> sNot (eval f (scex (falsify' f bs)))
+                                          =: sNot (eval sFTrue (scex (falsify' sFTrue bs)))
                                           =: sNot sTrue
                                           =: sFalse
                                           =: qed
-                            , isFFalse f ==> sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                            , isFFalse f ==> sNot (eval f (scex (falsify' f bs)))
                                           =: sNot (eval sFFalse bs)
                                           =: sNot sFalse
                                           =: sTrue
                                           =: qed
                             , isVar    f ==> let n = getVar_1 f
-                                             in sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
-                                             =: sNot (eval (sVar n) (getFalsifyResult_2 (falsify' (sVar n) bs)))
-                                             =: sNot (lookUp n (getFalsifyResult_2 (falsify' (sVar n) bs)))
+                                             in sNot (eval f (scex (falsify' f bs)))
+                                             =: sNot (eval (sVar n) (scex (falsify' (sVar n) bs)))
+                                             =: sNot (lookUp n (scex (falsify' (sVar n) bs)))
                                              =: sTrue
                                              =: qed
                             , isIf     f ==> let c = getIf_1 f
                                                  l = getIf_2 f
                                                  r = getIf_3 f
-                                             in cases [ isFTrue  c ==> sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                             in cases [ isFTrue  c ==> sNot (eval f (scex (falsify' f bs)))
                                                                     ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                                     ?? ih  `at` (Inst @"f" l, Inst @"bs" bs)
                                                                     =: sTrue
                                                                     =: qed
-                                                      , isFFalse c ==> sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                      , isFFalse c ==> sNot (eval f (scex (falsify' f bs)))
                                                                     ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                                     ?? ih  `at` (Inst @"f" r, Inst @"bs" bs)
                                                                     =: sTrue
@@ -1028,14 +1028,14 @@ falsifyFalsifies = do
                                                       , isVar    c ==> let n = getVar_1 c
                                                                        in cases [ isAssigned n bs ==>
                                                                                       cases [ lookUp n bs ==>
-                                                                                                  sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                                                  sNot (eval f (scex (falsify' f bs)))
                                                                                                ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                                                                ?? feb `at` (Inst @"f" l, Inst @"bs" bs, Inst @"i" n)
                                                                                                ?? ih  `at` (Inst @"f" l, Inst @"bs" bs)
                                                                                                =: sTrue
                                                                                                =: qed
                                                                                             , sNot (lookUp n bs) ==>
-                                                                                                  sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                                                  sNot (eval f (scex (falsify' f bs)))
                                                                                                ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                                                                ?? feb `at` (Inst @"f" r, Inst @"bs" bs, Inst @"i" n)
                                                                                                ?? ih  `at` (Inst @"f" r, Inst @"bs" bs)
@@ -1044,8 +1044,8 @@ falsifyFalsifies = do
                                                                                             ]
                                                                                 , sNot (isAssigned n bs) ==>
                                                                                       let resL = falsify' l (assumeTrue n bs)
-                                                                                      in cases [ getFalsifyResult_1 resL ==>
-                                                                                                     sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                                      in cases [ sfalsified resL ==>
+                                                                                                     sNot (eval f (scex (falsify' f bs)))
                                                                                                   ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                                                                   ?? ias `at` (Inst @"n" n, Inst @"v" sTrue, Inst @"bs" bs)
                                                                                                   ?? lus `at` (Inst @"n" n, Inst @"v" sTrue, Inst @"bs" bs)
@@ -1053,8 +1053,8 @@ falsifyFalsifies = do
                                                                                                   ?? ih  `at` (Inst @"f" l, Inst @"bs" (assumeTrue n bs))
                                                                                                   =: sTrue
                                                                                                   =: qed
-                                                                                               , sNot (getFalsifyResult_1 resL) ==>
-                                                                                                     sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                                               , sNot (sfalsified resL) ==>
+                                                                                                     sNot (eval f (scex (falsify' f bs)))
                                                                                                   ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                                                                   ?? ias `at` (Inst @"n" n, Inst @"v" sFalse, Inst @"bs" bs)
                                                                                                   ?? lus `at` (Inst @"n" n, Inst @"v" sFalse, Inst @"bs" bs)
@@ -1064,7 +1064,7 @@ falsifyFalsifies = do
                                                                                                   =: qed
                                                                                                ]
                                                                                 ]
-                                                      , isIf     c ==> sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                      , isIf     c ==> sNot (eval f (scex (falsify' f bs)))
                                                                     =: sTrue  -- Contradicts isNormal
                                                                     =: qed
                                                       ]
@@ -1086,7 +1086,7 @@ completenessHelper = do
   nc  <- recallWith z3 "normalizeCorrect"   normalizeCorrect
 
   lemma "completenessHelper"
-        (\(Forall f) -> sNot (isTautology f) .=> sNot (eval (normalize f) (getFalsifyResult_2 (falsify f))))
+        (\(Forall f) -> sNot (isTautology f) .=> sNot (eval (normalize f) (scex (falsify f))))
         [proofOf ff, proofOf nti, proofOf nc]
 
 -- * Main completeness theorem
@@ -1108,5 +1108,5 @@ completenessTheorem = do
   nrt <- recallWith z3 "normalizeRespectsTruth" normalizeRespectsTruth
 
   lemma "completenessTheorem"
-        (\(Forall f) -> sNot (isTautology f) .=> sNot (eval f (getFalsifyResult_2 (falsify f))))
+        (\(Forall f) -> sNot (isTautology f) .=> sNot (eval f (scex (falsify f))))
         [proofOf ch, proofOf nrt]
