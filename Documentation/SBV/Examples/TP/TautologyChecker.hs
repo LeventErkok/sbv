@@ -238,6 +238,43 @@ assumeTrue vid bs = sBinding vid sTrue .: bs
 assumeFalse :: SInteger -> SList Binding -> SList Binding
 assumeFalse vid bs = sBinding vid sFalse .: bs
 
+-- | Adding a binding preserves existing assignments.
+--
+-- >>> runTP isAssignedExtends
+-- Lemma: isAssignedExtends                Q.E.D.
+-- [Proven] isAssignedExtends :: Ɐi ∷ Integer → Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
+isAssignedExtends :: TP (Proof (Forall "i" Integer -> Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
+isAssignedExtends = lemma "isAssignedExtends"
+                          (\(Forall i) (Forall n) (Forall v) (Forall bs) -> isAssigned i bs .=> isAssigned i (sBinding n v .: bs))
+                          []
+
+-- | Looking up a variable in extended bindings: if already assigned, value is preserved.
+--
+-- >>> runTP lookUpExtends
+-- Lemma: lookUpExtends                    Q.E.D.
+-- [Proven] lookUpExtends :: Ɐi ∷ Integer → Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
+lookUpExtends :: TP (Proof (Forall "i" Integer -> Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
+lookUpExtends = lemma "lookUpExtends"
+                      (\(Forall i) (Forall n) (Forall v) (Forall bs) ->
+                                isAssigned i bs .&& i ./= n .=> lookUp i (sBinding n v .: bs) .== lookUp i bs)
+                      []
+
+-- | Looking up a variable that was just added returns the added value.
+--
+-- >>> runTP lookUpSame
+-- Lemma: lookUpSame                       Q.E.D.
+-- [Proven] lookUpSame :: Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
+lookUpSame :: TP (Proof (Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
+lookUpSame = lemma "lookUpSame" (\(Forall n) (Forall v) (Forall bs) -> lookUp n (sBinding n v .: bs) .== v) []
+
+-- | Adding a binding for a variable makes it assigned.
+--
+-- >>> runTP isAssignedSame
+-- Lemma: isAssignedSame                   Q.E.D.
+-- [Proven] isAssignedSame :: Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
+isAssignedSame :: TP (Proof (Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
+isAssignedSame = lemma "isAssignedSame" (\(Forall n) (Forall v) (Forall bs) -> isAssigned n (sBinding n v .: bs)) []
+
 -- * Formula evaluation
 
 -- | Evaluate a formula under a binding environment.
@@ -280,7 +317,7 @@ isTautology' = smtFunction "isTautology'" $ \f bs ->
 isTautology :: SFormula -> SBool
 isTautology f = isTautology' (normalize f) []
 
--- * Soundness proofs
+-- * Soundness
 
 -- | \(\text{lookUp}(x, a \mathbin{+\!\!+} b) = \text{if } \text{isAssigned}(x, a) \text{ then } \text{lookUp}(x, a) \text{ else } \text{lookUp}(x, b)\)
 --
@@ -765,5 +802,313 @@ tautologyTheorem = do
                    ?? tie `at` (Inst @"f" (normalize f), Inst @"a" bindings, Inst @"b" [])
                    =: sTrue
                    =: qed
+
+-- * Completeness
+
+-- | Result of attempting to falsify a formula.
+data FalsifyResult = FalsifyResult { falsified :: Bool
+                                   , cex       :: [Binding]
+                                   }
+
+-- | Make FalsifyResult symbolic.
+mkSymbolic [''FalsifyResult]
+
+-- | Attempt to falsify a normalized formula under given bindings.
+-- Returns whether falsification succeeded and the counterexample bindings.
+falsify' :: SFormula -> SList Binding -> SFalsifyResult
+falsify' = smtFunction "falsify'" $ \f bs ->
+  [sCase|Formula f of
+    FTrue  -> sFalsifyResult sFalse []
+    FFalse -> sFalsifyResult sTrue bs
+    Var i  -> ite (isAssigned i bs)
+                  (ite (eval (sVar i) bs)
+                       (sFalsifyResult sFalse [])
+                       (sFalsifyResult sTrue bs))
+                  (sFalsifyResult sTrue (sBinding i sFalse .: bs))
+    If c l r -> falsify'If c l r bs
+  |]
+ where falsify'If :: SFormula -> SFormula -> SFormula -> SList Binding -> SFalsifyResult
+       falsify'If = smtFunction "falsify'If" $ \c l r bs ->
+         [sCase|Formula c of
+           Var i  -> ite (isAssigned i bs)
+                         (ite (eval (sVar i) bs)
+                              (falsify' l bs)
+                              (falsify' r bs))
+                         (let resL = falsify' l (assumeTrue i bs)
+                          in ite (sNot (getFalsifyResult_1 resL))
+                                 (falsify' r (assumeFalse i bs))
+                                 resL)
+           FTrue  -> falsify' l bs
+           FFalse -> falsify' r bs
+           _      -> sFalsifyResult sFalse []  -- Shouldn't happen for normal formulas
+         |]
+
+-- | Falsify a formula by first normalizing it.
+falsify :: SFormula -> SFalsifyResult
+falsify f = falsify' (normalize f) []
+
+-- * Completeness lemmas
+
+-- | If a normalized formula is not a tautology, then falsify' returns falsified = true.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) nonTautIsFalsified
+-- Lemma: ifComplexityPos                            Q.E.D.
+-- Lemma: ifComplexitySmaller                        Q.E.D.
+-- Inductive lemma (strong): nonTautIsFalsified
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (4 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2                                     Q.E.D.
+--     Step: 1.3                                     Q.E.D.
+--     Step: 1.4                                     Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- [Proven] nonTautIsFalsified :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
+nonTautIsFalsified :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
+nonTautIsFalsified = do
+  icp <- recall "ifComplexityPos"     ifComplexityPos
+  ibs <- recall "ifComplexitySmaller" ifComplexitySmaller
+
+  sInduct "nonTautIsFalsified"
+          (\(Forall f) (Forall bs) -> isNormal f .&& sNot (isTautology' f bs) .=> getFalsifyResult_1 (falsify' f bs))
+          (\f _ -> ifComplexity f, [proofOf icp]) $
+          \ih f bs -> [isNormal f, sNot (isTautology' f bs)]
+                   |- cases [ isFTrue  f ==> trivial
+                            , isFFalse f ==> trivial
+                            , isVar    f ==> trivial
+                            , isIf     f ==> let c = getIf_1 f
+                                                 l = getIf_2 f
+                                                 r = getIf_3 f
+                                             in getFalsifyResult_1 (falsify' f bs)
+                                             ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                             ?? ih  `at` (Inst @"f" l, Inst @"bs" bs)
+                                             ?? ih  `at` (Inst @"f" r, Inst @"bs" bs)
+                                             ?? ih  `at` (Inst @"f" l, Inst @"bs" (assumeTrue (getVar_1 c) bs))
+                                             ?? ih  `at` (Inst @"f" r, Inst @"bs" (assumeFalse (getVar_1 c) bs))
+                                             =: sTrue
+                                             =: qed
+                            ]
+
+-- | If a variable is assigned in the input bindings and falsify' succeeds,
+-- the lookup value is preserved in the output bindings.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) falsifyExtendsBindings
+-- Lemma: ifComplexityPos                            Q.E.D.
+-- Lemma: ifComplexitySmaller                        Q.E.D.
+-- Lemma: isAssignedExtends                          Q.E.D.
+-- Lemma: lookUpExtends                              Q.E.D.
+-- Inductive lemma (strong): falsifyExtendsBindings
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (4 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2                                     Q.E.D.
+--     Step: 1.3                                     Q.E.D.
+--     Step: 1.4                                     Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- [Proven] falsifyExtendsBindings :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Ɐi ∷ Integer → Bool
+falsifyExtendsBindings :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> Forall "i" Integer -> SBool))
+falsifyExtendsBindings = do
+  icp <- recall "ifComplexityPos"     ifComplexityPos
+  ibs <- recall "ifComplexitySmaller" ifComplexitySmaller
+  iae <- recall "isAssignedExtends"   isAssignedExtends
+  lue <- recall "lookUpExtends"       lookUpExtends
+
+  sInduct "falsifyExtendsBindings"
+          (\(Forall f) (Forall bs) (Forall i) ->
+             isAssigned i bs .&& getFalsifyResult_1 (falsify' f bs) .=>
+             lookUp i (getFalsifyResult_2 (falsify' f bs)) .== lookUp i bs)
+          (\f _ _ -> ifComplexity f, [proofOf icp]) $
+          \ih f bs i -> [isAssigned i bs, getFalsifyResult_1 (falsify' f bs)]
+                     |- cases [ isFTrue  f ==> trivial
+                              , isFFalse f ==> trivial
+                              , isVar    f ==> let n = getVar_1 f
+                                               in lookUp i (getFalsifyResult_2 (falsify' f bs)) .== lookUp i bs
+                                               ?? lue `at` (Inst @"i" i, Inst @"n" n, Inst @"v" sFalse, Inst @"bs" bs)
+                                               =: sTrue
+                                               =: qed
+                              , isIf     f ==> let c = getIf_1 f
+                                                   l = getIf_2 f
+                                                   r = getIf_3 f
+                                                   n = getVar_1 c
+                                               in lookUp i (getFalsifyResult_2 (falsify' f bs)) .== lookUp i bs
+                                               ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                               ?? iae `at` (Inst @"i" i, Inst @"n" n, Inst @"v" sTrue,  Inst @"bs" bs)
+                                               ?? iae `at` (Inst @"i" i, Inst @"n" n, Inst @"v" sFalse, Inst @"bs" bs)
+                                               ?? lue `at` (Inst @"i" i, Inst @"n" n, Inst @"v" sTrue,  Inst @"bs" bs)
+                                               ?? lue `at` (Inst @"i" i, Inst @"n" n, Inst @"v" sFalse, Inst @"bs" bs)
+                                               ?? ih  `at` (Inst @"f" l, Inst @"bs" bs, Inst @"i" i)
+                                               ?? ih  `at` (Inst @"f" r, Inst @"bs" bs, Inst @"i" i)
+                                               ?? ih  `at` (Inst @"f" l, Inst @"bs" (assumeTrue n bs), Inst @"i" i)
+                                               ?? ih  `at` (Inst @"f" r, Inst @"bs" (assumeFalse n bs), Inst @"i" i)
+                                               =: sTrue
+                                               =: qed
+                              ]
+
+-- | If falsify' returns falsified = true, then evaluating the formula
+-- with the returned bindings gives false.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) falsifyFalsifies
+-- Lemma: ifComplexityPos                            Q.E.D.
+-- Lemma: ifComplexitySmaller                        Q.E.D.
+-- Lemma: falsifyExtendsBindings                     Q.E.D.
+-- Lemma: lookUpSame                                 Q.E.D.
+-- Lemma: isAssignedSame                             Q.E.D.
+-- Inductive lemma (strong): falsifyFalsifies
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (4 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.1.3                                   Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.2.3                                   Q.E.D.
+--     Step: 1.3.1                                   Q.E.D.
+--     Step: 1.3.2                                   Q.E.D.
+--     Step: 1.3.3                                   Q.E.D.
+--     Step: 1.4 (4 way case split)
+--       Step: 1.4.1                                 Q.E.D.
+--       Step: 1.4.2                                 Q.E.D.
+--       Step: 1.4.3 (2 way case split)
+--         Step: 1.4.3.1 (2 way case split)
+--           Step: 1.4.3.1.1                         Q.E.D.
+--           Step: 1.4.3.1.2                         Q.E.D.
+--           Step: 1.4.3.1.Completeness              Q.E.D.
+--         Step: 1.4.3.2 (2 way case split)
+--           Step: 1.4.3.2.1                         Q.E.D.
+--           Step: 1.4.3.2.2                         Q.E.D.
+--           Step: 1.4.3.2.Completeness              Q.E.D.
+--         Step: 1.4.3.Completeness                  Q.E.D.
+--       Step: 1.4.4                                 Q.E.D.
+--       Step: 1.4.Completeness                      Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- [Proven] falsifyFalsifies :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
+falsifyFalsifies :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
+falsifyFalsifies = do
+  icp <- recall "ifComplexityPos"        ifComplexityPos
+  ibs <- recall "ifComplexitySmaller"    ifComplexitySmaller
+  feb <- recall "falsifyExtendsBindings" falsifyExtendsBindings
+  lus <- recall "lookUpSame"             lookUpSame
+  ias <- recall "isAssignedSame"         isAssignedSame
+
+  sInduct "falsifyFalsifies"
+          (\(Forall f) (Forall bs) -> isNormal f .&& getFalsifyResult_1 (falsify' f bs) .=> sNot (eval f (getFalsifyResult_2 (falsify' f bs))))
+          (\f _ -> ifComplexity f, [proofOf icp]) $
+          \ih f bs -> [isNormal f, getFalsifyResult_1 (falsify' f bs)]
+                   |- cases [ isFTrue  f ==> sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                          =: sNot (eval sFTrue (getFalsifyResult_2 (falsify' sFTrue bs)))
+                                          =: sNot sTrue
+                                          =: sFalse
+                                          =: qed
+                            , isFFalse f ==> sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                          =: sNot (eval sFFalse bs)
+                                          =: sNot sFalse
+                                          =: sTrue
+                                          =: qed
+                            , isVar    f ==> let n = getVar_1 f
+                                             in sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                             =: sNot (eval (sVar n) (getFalsifyResult_2 (falsify' (sVar n) bs)))
+                                             =: sNot (lookUp n (getFalsifyResult_2 (falsify' (sVar n) bs)))
+                                             =: sTrue
+                                             =: qed
+                            , isIf     f ==> let c = getIf_1 f
+                                                 l = getIf_2 f
+                                                 r = getIf_3 f
+                                             in cases [ isFTrue  c ==> sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                    ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                                                    ?? ih  `at` (Inst @"f" l, Inst @"bs" bs)
+                                                                    =: sTrue
+                                                                    =: qed
+                                                      , isFFalse c ==> sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                    ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                                                    ?? ih  `at` (Inst @"f" r, Inst @"bs" bs)
+                                                                    =: sTrue
+                                                                    =: qed
+                                                      , isVar    c ==> let n = getVar_1 c
+                                                                       in cases [ isAssigned n bs ==>
+                                                                                      cases [ lookUp n bs ==>
+                                                                                                  sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                                               ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                                                                               ?? feb `at` (Inst @"f" l, Inst @"bs" bs, Inst @"i" n)
+                                                                                               ?? ih  `at` (Inst @"f" l, Inst @"bs" bs)
+                                                                                               =: sTrue
+                                                                                               =: qed
+                                                                                            , sNot (lookUp n bs) ==>
+                                                                                                  sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                                               ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                                                                               ?? feb `at` (Inst @"f" r, Inst @"bs" bs, Inst @"i" n)
+                                                                                               ?? ih  `at` (Inst @"f" r, Inst @"bs" bs)
+                                                                                               =: sTrue
+                                                                                               =: qed
+                                                                                            ]
+                                                                                , sNot (isAssigned n bs) ==>
+                                                                                      let resL = falsify' l (assumeTrue n bs)
+                                                                                      in cases [ getFalsifyResult_1 resL ==>
+                                                                                                     sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                                                  ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                                                                                  ?? ias `at` (Inst @"n" n, Inst @"v" sTrue, Inst @"bs" bs)
+                                                                                                  ?? lus `at` (Inst @"n" n, Inst @"v" sTrue, Inst @"bs" bs)
+                                                                                                  ?? feb `at` (Inst @"f" l, Inst @"bs" (assumeTrue n bs), Inst @"i" n)
+                                                                                                  ?? ih  `at` (Inst @"f" l, Inst @"bs" (assumeTrue n bs))
+                                                                                                  =: sTrue
+                                                                                                  =: qed
+                                                                                               , sNot (getFalsifyResult_1 resL) ==>
+                                                                                                     sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                                                  ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                                                                                  ?? ias `at` (Inst @"n" n, Inst @"v" sFalse, Inst @"bs" bs)
+                                                                                                  ?? lus `at` (Inst @"n" n, Inst @"v" sFalse, Inst @"bs" bs)
+                                                                                                  ?? feb `at` (Inst @"f" r, Inst @"bs" (assumeFalse n bs), Inst @"i" n)
+                                                                                                  ?? ih  `at` (Inst @"f" r, Inst @"bs" (assumeFalse n bs))
+                                                                                                  =: sTrue
+                                                                                                  =: qed
+                                                                                               ]
+                                                                                ]
+                                                      , isIf     c ==> sNot (eval f (getFalsifyResult_2 (falsify' f bs)))
+                                                                    =: sTrue  -- Contradicts isNormal
+                                                                    =: qed
+                                                      ]
+                            ]
+
+-- | Helper lemma for completeness: If a formula is not a tautology,
+-- evaluating its normalization with falsify's bindings gives false.
+--
+-- >>> runTPWith cvc5 completenessHelper
+-- Lemma: falsifyFalsifies                 Q.E.D.
+-- Lemma: nonTautIsFalsified               Q.E.D.
+-- Lemma: normalizeCorrect                 Q.E.D.
+-- Lemma: completenessHelper               Q.E.D.
+-- [Proven] completenessHelper :: Ɐf ∷ Formula → Bool
+completenessHelper :: TP (Proof (Forall "f" Formula -> SBool))
+completenessHelper = do
+  ff  <- recall        "falsifyFalsifies"   falsifyFalsifies
+  nti <- recall        "nonTautIsFalsified" nonTautIsFalsified
+  nc  <- recallWith z3 "normalizeCorrect"   normalizeCorrect
+
+  lemma "completenessHelper"
+        (\(Forall f) -> sNot (isTautology f) .=> sNot (eval (normalize f) (getFalsifyResult_2 (falsify f))))
+        [proofOf ff, proofOf nti, proofOf nc]
+
+-- * Main completeness theorem
+
+-- | \(\lnot\text{isTautology}(f) \implies \lnot\text{eval}(f, \text{falsify}(f).\text{bindings})\)
+--
+-- If the tautology checker says a formula is not a tautology, then there exists
+-- a binding environment (provided by falsify) under which it evaluates to false.
+-- This is the completeness theorem.
+--
+-- >>> runTPWith cvc5 completenessTheorem
+-- Lemma: completenessHelper               Q.E.D.
+-- Lemma: normalizeRespectsTruth           Q.E.D.
+-- Lemma: completenessTheorem              Q.E.D.
+-- [Proven] completenessTheorem :: Ɐf ∷ Formula → Bool
+completenessTheorem :: TP (Proof (Forall "f" Formula -> SBool))
+completenessTheorem = do
+  ch  <- recall        "completenessHelper"     completenessHelper
+  nrt <- recallWith z3 "normalizeRespectsTruth" normalizeRespectsTruth
+
+  lemma "completenessTheorem"
+        (\(Forall f) -> sNot (isTautology f) .=> sNot (eval f (getFalsifyResult_2 (falsify f))))
+        [proofOf ch, proofOf nrt]
 
 {- HLint ignore module "Use camelCase" -}
