@@ -11,18 +11,16 @@
 -- inspired by Boyer-Moore '79.
 -- See <https://raw.githubusercontent.com/imandra-ai/imandrax-examples/refs/heads/main/src/tautology.iml>
 --
--- We define a simple formula type with If-then-else, normalize formulas
--- into a canonical form, and prove both soundness and completeness of
--- the tautology checker.
+-- We define a simple formula type with If-then-else, normalize formulas into a canonical form, and prove
+-- both soundness and completeness of the tautology checker. The canonical form is essentially an
+-- unordered-BDD, making it easy to evaluate it.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE QuasiQuotes         #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -40,8 +38,6 @@ import Data.SBV.Tuple
 
 #ifdef DOCTEST
 -- $setup
--- >>> :set -XScopedTypeVariables
--- >>> :set -XTypeApplications
 -- >>> import Data.SBV
 -- >>> import Data.SBV.TP
 #endif
@@ -60,7 +56,7 @@ mkSymbolic [''Formula]
 -- * Measuring formulas
 
 -- | Depth of nested If constructors in the condition position.
-ifDepth :: SBV Formula -> SInteger
+ifDepth :: SFormula -> SInteger
 ifDepth = smtFunction "ifDepth" $ \f -> [sCase|Formula f of
                                            If c _ _ -> 1 + ifDepth c
                                            _        -> 0
@@ -75,7 +71,7 @@ ifDepthNonNeg :: TP (Proof (Forall "f" Formula -> SBool))
 ifDepthNonNeg = inductiveLemma "ifDepthNonNeg" (\(Forall f) -> ifDepth f .>= 0) []
 
 -- | Complexity of a formula (for termination measure).
-ifComplexity :: SBV Formula -> SInteger
+ifComplexity :: SFormula -> SInteger
 ifComplexity = smtFunction "ifComplexity" $ \f ->
   [sCase|Formula f of
     If c l r -> ifComplexity c * (ifComplexity l + ifComplexity r)
@@ -125,10 +121,50 @@ ifDepthSmaller = do
            ifDepth (sIf c l r) .== 1 + ifDepth c)
         [proofOf idn]
 
+-- | The normalization transformation preserves complexity.
+--
+-- \(\text{ifComplexity}(\text{If}(p, \text{If}(q, l, r), \text{If}(s, l, r))) = \text{ifComplexity}(\text{If}(\text{If}(p, q, s), l, r))\)
+--
+-- >>> runTP normalizePreservesComplexity
+-- Lemma: normalizePreservesComplexity
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] normalizePreservesComplexity :: Ɐp ∷ Formula → Ɐq ∷ Formula → Ɐs ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
+normalizePreservesComplexity :: TP (Proof (Forall "p" Formula -> Forall "q" Formula -> Forall "s" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
+normalizePreservesComplexity = do
+
+  -- This trivial lemma, unfortunately is needed below. I'm not sure why.
+  helper <- lemma "helper"
+                  (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a .== b .=> a * c .== b * (c :: SInteger))
+                  []
+
+  calc "normalizePreservesComplexity"
+       (\(Forall p) (Forall q) (Forall s) (Forall l) (Forall r) ->
+          ifComplexity (sIf p (sIf q l r) (sIf s l r)) .== ifComplexity (sIf (sIf p q s) l r)) $
+       \p q s l r ->
+         let cp = ifComplexity p
+             cq = ifComplexity q
+             cs = ifComplexity s
+             cl = ifComplexity l
+             cr = ifComplexity r
+         in [] |- ifComplexity (sIf p (sIf q l r) (sIf s l r))
+               =: cp * (ifComplexity (sIf q l r) + ifComplexity (sIf s l r))
+               =: cp * (cq * (cl + cr) + cs * (cl + cr))
+               =: cp * ((cq + cs) * (cl + cr))
+               =: (cp * (cq + cs)) * (cl + cr)
+               ?? helper `at` (Inst @"a" (ifComplexity (sIf p q s)), Inst @"b" (cp * (cq + cs)), Inst @"c" (cl + cr))
+               =: ifComplexity (sIf p q s) * (cl + cr)
+               =: ifComplexity (sIf p q s) * (ifComplexity l + ifComplexity r)
+               =: ifComplexity (sIf (sIf p q s) l r)
+               =: qed
+
 -- * Normalization
 
 -- | Check if a formula is in normal form (no nested If in condition position).
-isNormal :: SBV Formula -> SBool
+isNormal :: SFormula -> SBool
 isNormal = smtFunction "isNormal" $ \f ->
   [sCase|Formula f of
     If c p q  -> sNot (isIf c) .&& isNormal p .&& isNormal q
@@ -144,15 +180,15 @@ isNormal = smtFunction "isNormal" $ \f ->
 --     =
 --   If (p, If (q, left, right), If (r, left, right))
 -- @
-
--- | Helper to check if condition needs normalization.
-normalize :: SBV Formula -> SBV Formula
+--
+-- Note that this transformation increases the size of the formula, but reduces its complexity.
+normalize :: SFormula -> SFormula
 normalize = smtFunction "normalize" $ \f ->
   [sCase|Formula f of
     If c l r -> normalizeIf c l r
     _        -> f
   |]
- where normalizeIf :: SBV Formula -> SBV Formula -> SBV Formula -> SBV Formula
+ where normalizeIf :: SFormula -> SFormula -> SFormula -> SFormula
        normalizeIf = smtFunction "normalizeIf" $ \c thn els ->
           [sCase|Formula c of
             If p q r -> normalize (sIf p (sIf q thn els) (sIf r thn els))
@@ -201,7 +237,7 @@ assumeFalse vid bs = sBinding vid sFalse .: bs
 -- * Formula evaluation
 
 -- | Evaluate a formula under a binding environment.
-eval :: SBV Formula -> SList Binding -> SBool
+eval :: SFormula -> SList Binding -> SBool
 eval = smtFunction "eval" $ \f bs ->
   [sCase|Formula f of
     Var n    -> lookUp n bs
@@ -213,24 +249,7 @@ eval = smtFunction "eval" $ \f bs ->
 -- * Tautology checking
 
 -- | Check if a normalized formula is a tautology.
-
--- Helper for handling If cases in tautology checking.
-isTautology'If :: SBV Formula -> SBV Formula -> SBV Formula -> SList Binding -> SBool
-isTautology'If = smtFunction "isTautology'If" $ \c l r bs ->
-  [sCase|Formula c of
-    Var n -> ite (isAssigned n bs)
-                 (ite (eval (sVar n) bs)
-                      (isTautology' l bs)
-                      (isTautology' r bs))
-                 (ite (isTautology' l (assumeTrue  n bs))
-                      (isTautology' r (assumeFalse n bs))
-                      sFalse)
-    FTrue  -> isTautology' l bs
-    FFalse -> isTautology' r bs
-    _      -> sFalse  -- Contradicts isNormal assumption
-  |]
-
-isTautology' :: SBV Formula -> SList Binding -> SBool
+isTautology' :: SFormula -> SList Binding -> SBool
 isTautology' = smtFunction "isTautology'" $ \f bs ->
   [sCase|Formula f of
     FTrue    -> sTrue
@@ -238,9 +257,23 @@ isTautology' = smtFunction "isTautology'" $ \f bs ->
     Var _    -> eval f bs
     If c l r -> isTautology'If c l r bs
   |]
+ where isTautology'If :: SFormula -> SFormula -> SFormula -> SList Binding -> SBool
+       isTautology'If = smtFunction "isTautology'If" $ \c l r bs ->
+           [sCase|Formula c of
+             Var n -> ite (isAssigned n bs)
+                          (ite (eval (sVar n) bs)
+                               (isTautology' l bs)
+                               (isTautology' r bs))
+                          (ite (isTautology' l (assumeTrue  n bs))
+                               (isTautology' r (assumeFalse n bs))
+                               sFalse)
+             FTrue  -> isTautology' l bs
+             FFalse -> isTautology' r bs
+             _      -> sFalse  -- Contradicts isNormal assumption
+           |]
 
 -- | Main tautology checker.
-isTautology :: SBV Formula -> SBool
+isTautology :: SFormula -> SBool
 isTautology f = isTautology' (normalize f) []
 
 -- * Soundness proofs
@@ -517,30 +550,42 @@ tautologyImpliesEval = do
 --
 -- Normalization produces normalized formulas.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) normalizeCorrect
--- Lemma: ifDepthNonNeg                    Q.E.D.
--- Lemma: ifComplexityPos                  Q.E.D.
+-- >>> runTPWith (tpRibbon 50 z3) normalizeCorrect
+-- runTPWith (tpRibbon 50 z3) normalizeCorrect
+-- Lemma: ifComplexityPos                            Q.E.D.
+-- Lemma: ifComplexitySmaller                        Q.E.D.
+-- Lemma: normalizePreservesComplexity               Q.E.D.
+-- Lemma: ifDepthNonNeg                              Q.E.D.
+-- Lemma: ifDepthSmaller                             Q.E.D.
 -- Inductive lemma (strong): normalizeCorrect
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (4 way full case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3                           Q.E.D.
---     Step: 1.4.1                         Q.E.D.
---     Step: 1.4.2                         Q.E.D.
---     Step: 1.4.3                         Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (4 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2                                     Q.E.D.
+--     Step: 1.3                                     Q.E.D.
+--     Step: 1.4 (2 way case split)
+--       Step: 1.4.1.1                               Q.E.D.
+--       Step: 1.4.1.2                               Q.E.D.
+--       Step: 1.4.2.1                               Q.E.D.
+--       Step: 1.4.2.2                               Q.E.D.
+--       Step: 1.4.2.3                               Q.E.D.
+--       Step: 1.4.2.4                               Q.E.D.
+--       Step: 1.4.2.5                               Q.E.D.
+--       Step: 1.4.Completeness                      Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
 -- [Proven] normalizeCorrect :: Ɐf ∷ Formula → Bool
 normalizeCorrect :: TP (Proof (Forall "f" Formula -> SBool))
 normalizeCorrect = do
-  idn <- recall "ifDepthNonNeg"       ifDepthNonNeg
-  icp <- recall "ifComplexityPos"     ifComplexityPos
-  ibs <- recall "ifComplexitySmaller" ifComplexitySmaller
-  ids <- recall "ifDepthSmaller"      ifDepthSmaller
+  icp <- recall "ifComplexityPos"              ifComplexityPos
+  ibs <- recall "ifComplexitySmaller"          ifComplexitySmaller
+  npc <- recall "normalizePreservesComplexity" normalizePreservesComplexity
+  idn <- recall "ifDepthNonNeg"                ifDepthNonNeg
+  ids <- recall "ifDepthSmaller"               ifDepthSmaller
 
   sInductWith cvc5 "normalizeCorrect"
               (\(Forall f) -> isNormal (normalize f))
-              (\f -> tuple (ifDepth f, ifComplexity f), [proofOf idn, proofOf icp]) $
+              (\f -> tuple (ifComplexity f, ifDepth f), [proofOf icp, proofOf idn]) $
               \ih f -> []
                     |- isNormal (normalize f)
                     =: cases [ isFTrue  f ==> trivial
@@ -555,6 +600,7 @@ normalizeCorrect = do
                                                                rc = getIf_3 c
                                                                transformed = sIf p (sIf q l r) (sIf rc l r)
                                                            in isNormal (normalize transformed)
+                                                           ?? npc `at` (Inst @"p" p, Inst @"q" q, Inst @"s" rc, Inst @"l" l, Inst @"r" r)
                                                            ?? ids `at` (Inst @"c" p, Inst @"l" (sIf q l r), Inst @"r" (sIf rc l r))
                                                            ?? ids `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                            ?? ids `at` (Inst @"c" p, Inst @"l" q, Inst @"r" rc)
@@ -565,7 +611,6 @@ normalizeCorrect = do
                                                               isNormal (sIf c (normalize l) (normalize r))
                                                            =: sNot (isIf c) .&& isNormal (normalize l) .&& isNormal (normalize r)
                                                            =: isNormal (normalize l) .&& isNormal (normalize r)
-                                                           ?? "stuck"
                                                            ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                            ?? ih  `at` Inst @"f" l
                                                            =: isNormal (normalize r)
@@ -592,10 +637,12 @@ normalizeCorrect = do
 --   Result:                               Q.E.D.
 -- [Proven] normalizeSame :: Ɐf ∷ Formula → Bool
 normalizeSame :: TP (Proof (Forall "f" Formula -> SBool))
-normalizeSame =
+normalizeSame = do
+  icp <- recall "ifComplexityPos"     ifComplexityPos
+
   sInductWith cvc5 "normalizeSame"
               (\(Forall f) -> isNormal f .=> normalize f .== f)
-              (\f -> ifComplexity f, []) $
+              (\f -> ifComplexity f, [proofOf icp]) $
               \ih f -> [isNormal f]
                     |- cases [ isFTrue  f ==> trivial
                              , isFFalse f ==> trivial
@@ -603,10 +650,11 @@ normalizeSame =
                              , isIf     f ==> let c = getIf_1 f
                                                   l = getIf_2 f
                                                   r = getIf_3 f
-                                              in sIf c (normalize l) (normalize r) .== sIf c l r
+                                              in sIf c (normalize l) (normalize r)
                                               ?? ih `at` Inst @"f" l
+                                              =: sIf c l (normalize r)
                                               ?? ih `at` Inst @"f" r
-                                              =: sTrue
+                                              =: sIf c l r
                                               =: qed
                              ]
 
