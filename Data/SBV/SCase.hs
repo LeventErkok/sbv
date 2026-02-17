@@ -22,7 +22,8 @@ module Data.SBV.SCase (sCase) where
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
-import qualified Language.Haskell.Meta.Parse as Meta
+import qualified Language.Haskell.Meta.Parse            as Meta
+import qualified Language.Haskell.Meta.Syntax.Translate as Meta
 
 import qualified Language.Haskell.Exts as E
 
@@ -145,6 +146,27 @@ sCase = QuasiQuoter
   where
     bad ctx _ = fail Unknown $ "sCase: not usable in " <> ctx <> " context"
 
+    metaParse = fmap Meta.toExp . Meta.parseResultToEither . E.parseExpWithMode pm
+      where pm = E.defaultParseMode { E.parseFilename = []
+                                    , E.baseLanguage  = E.Haskell2010
+                                    , E.extensions = map E.EnableExtension (exts ++ extras)
+                                    }
+            exts = [ E.PostfixOperators
+                   , E.QuasiQuotes
+                   , E.UnicodeSyntax
+                   , E.PatternSignatures
+                   , E.MagicHash
+                   , E.ForeignFunctionInterface
+                   , E.TemplateHaskell
+                   , E.RankNTypes
+                   , E.MultiParamTypeClasses
+                   , E.RecursiveDo
+                   , E.TypeApplications
+                   ]
+
+            -- The above just mimics the defaults. These our extras.
+            extras = [E.DataKinds]
+
     extract :: String -> ExpQ
     extract src =
       case parts src of
@@ -159,7 +181,7 @@ sCase = QuasiQuoter
           let fnTok    = "sCase" <> typ
               fullCase = "case " <> scrutStr <> " of " <> altsStr
               offsets  = findOffsets src
-          case Meta.parseExp fullCase of
+          case metaParse fullCase of
             Right (CaseE scrut matches) -> do
               fnName <- lookupValueName fnTok >>= \case
                 Just n  -> pure (VarE n)
