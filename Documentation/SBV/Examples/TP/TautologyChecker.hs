@@ -397,8 +397,6 @@ evalStable = do
 -- | Key soundness lemma: If a normalized formula is a tautology under bindings @b@,
 -- then it evaluates to true under @b ++ a@ for any @a@.
 --
--- This proof requires CVC5 and a timeout of 120 seconds.
---
 -- >>> runTPWith (tpRibbon 50 cvc5) tautologyImpliesEval
 -- Lemma: ifComplexityPos                            Q.E.D.
 -- Lemma: ifBranchesSmaller                          Q.E.D.
@@ -625,38 +623,44 @@ normalizeCorrect = do
 --
 -- Normalizing a normalized formula is the identity.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) normalizeSame
+-- >>> runTPWith (tpRibbon 50 z3) normalizeSame
+-- Lemma: ifComplexityPos                            Q.E.D.
+-- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Inductive lemma (strong): normalizeSame
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (4 way full case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3                           Q.E.D.
---     Step: 1.4.1                         Q.E.D.
---     Step: 1.4.2                         Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (4 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2                                     Q.E.D.
+--     Step: 1.3                                     Q.E.D.
+--     Step: 1.4.1                                   Q.E.D.
+--     Step: 1.4.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
 -- [Proven] normalizeSame :: Ɐf ∷ Formula → Bool
 normalizeSame :: TP (Proof (Forall "f" Formula -> SBool))
 normalizeSame = do
   icp <- recall "ifComplexityPos"     ifComplexityPos
+  ibs <- recall "ifComplexitySmaller" ifComplexitySmaller
 
-  sInductWith cvc5 "normalizeSame"
-              (\(Forall f) -> isNormal f .=> normalize f .== f)
-              (\f -> ifComplexity f, [proofOf icp]) $
-              \ih f -> [isNormal f]
-                    |- cases [ isFTrue  f ==> trivial
-                             , isFFalse f ==> trivial
-                             , isVar    f ==> trivial
-                             , isIf     f ==> let c = getIf_1 f
-                                                  l = getIf_2 f
-                                                  r = getIf_3 f
-                                              in sIf c (normalize l) (normalize r)
-                                              ?? ih `at` Inst @"f" l
-                                              =: sIf c l (normalize r)
-                                              ?? ih `at` Inst @"f" r
-                                              =: sIf c l r
-                                              =: qed
-                             ]
+  sInduct "normalizeSame"
+          (\(Forall f) -> isNormal f .=> normalize f .== f)
+          (\f -> ifComplexity f, [proofOf icp]) $
+          \ih f -> [isNormal f]
+                |- cases [ isFTrue  f ==> trivial
+                         , isFFalse f ==> trivial
+                         , isVar    f ==> trivial
+                         , isIf     f ==> let c = getIf_1 f
+                                              l = getIf_2 f
+                                              r = getIf_3 f
+                                          in sIf c (normalize l) (normalize r)
+                                          ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                          ?? ih `at` Inst @"f" l
+                                          =: sIf c l (normalize r)
+                                          ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                          ?? ih `at` Inst @"f" r
+                                          =: sIf c l r
+                                          =: qed
+                         ]
 
 -- | \(\text{eval}(\text{normalize}(f), bs) = \text{eval}(f, bs)\)
 --
@@ -701,7 +705,7 @@ normalizeRespectsTruth =
 -- If the tautology checker says a formula is a tautology, then it evaluates
 -- to true under any binding environment. This is the soundness theorem.
 --
--- >>> runTPWith (tpRibbon 50 cvc5{extraArgs = ["-t:120000"]}) tautologyTheorem
+-- >>> runTP tautologyTheorem
 -- Lemma: tautologyImpliesEval             Q.E.D.
 -- Lemma: tautologyTheorem
 --   Step: 1                               Q.E.D.
