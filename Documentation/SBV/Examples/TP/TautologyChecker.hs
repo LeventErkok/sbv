@@ -669,23 +669,38 @@ normalizeSame = do
 --
 -- Normalization preserves semantics.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) normalizeRespectsTruth
+-- >>> runTPWith (tpRibbon 50 z3) normalizeRespectsTruth
+-- Lemma: ifComplexityPos                            Q.E.D.
+-- Lemma: ifComplexitySmaller                        Q.E.D.
+-- Lemma: normalizePreservesComplexity               Q.E.D.
+-- Lemma: ifDepthNonNeg                              Q.E.D.
+-- Lemma: ifDepthSmaller                             Q.E.D.
 -- Inductive lemma (strong): normalizeRespectsTruth
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (4 way full case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3                           Q.E.D.
---     Step: 1.4.1                         Q.E.D.
---     Step: 1.4.2                         Q.E.D.
---     Step: 1.4.3                         Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (4 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2                                     Q.E.D.
+--     Step: 1.3                                     Q.E.D.
+--     Step: 1.4 (2 way case split)
+--       Step: 1.4.1                                 Q.E.D.
+--       Step: 1.4.2.1                               Q.E.D.
+--       Step: 1.4.2.2                               Q.E.D.
+--       Step: 1.4.2.3                               Q.E.D.
+--       Step: 1.4.Completeness                      Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
 -- [Proven] normalizeRespectsTruth :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
 normalizeRespectsTruth :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
-normalizeRespectsTruth =
+normalizeRespectsTruth = do
+  icp <- recall "ifComplexityPos"              ifComplexityPos
+  ibs <- recall "ifComplexitySmaller"          ifComplexitySmaller
+  npc <- recall "normalizePreservesComplexity" normalizePreservesComplexity
+  idn <- recall "ifDepthNonNeg"                ifDepthNonNeg
+  ids <- recall "ifDepthSmaller"               ifDepthSmaller
+
   sInductWith cvc5 "normalizeRespectsTruth"
               (\(Forall f) (Forall bs) -> eval (normalize f) bs .== eval f bs)
-              (\f _ -> tuple (ifComplexity f, ifDepth f), []) $
+              (\f _ -> tuple (ifComplexity f, ifDepth f), [proofOf icp, proofOf idn]) $
               \ih f bs -> []
                        |- cases [ isFTrue  f ==> trivial
                                 , isFFalse f ==> trivial
@@ -693,12 +708,29 @@ normalizeRespectsTruth =
                                 , isIf     f ==> let c = getIf_1 f
                                                      l = getIf_2 f
                                                      r = getIf_3 f
-                                                 in eval (normalize (sIf c l r)) bs .== eval (sIf c l r) bs
-                                                 ?? ih `at` (Inst @"f" c, Inst @"bs" bs)
-                                                 ?? ih `at` (Inst @"f" l, Inst @"bs" bs)
-                                                 ?? ih `at` (Inst @"f" r, Inst @"bs" bs)
-                                                 =: sTrue
-                                                 =: qed
+                                                 in cases [ isIf c ==>
+                                                              let p  = getIf_1 c
+                                                                  q  = getIf_2 c
+                                                                  rc = getIf_3 c
+                                                                  transformed = sIf p (sIf q l r) (sIf rc l r)
+                                                              in eval (normalize (sIf c l r)) bs .== eval (sIf c l r) bs
+                                                              ?? npc `at` (Inst @"p" p, Inst @"q" q, Inst @"s" rc, Inst @"l" l, Inst @"r" r)
+                                                              ?? ids `at` (Inst @"c" p, Inst @"l" (sIf q l r), Inst @"r" (sIf rc l r))
+                                                              ?? ids `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                                              ?? ids `at` (Inst @"c" p, Inst @"l" q, Inst @"r" rc)
+                                                              ?? ih  `at` (Inst @"f" transformed, Inst @"bs" bs)
+                                                              =: sTrue
+                                                              =: qed
+                                                          , sNot (isIf c) ==>
+                                                                 eval (normalize (sIf c l r)) bs .== eval (sIf c l r) bs
+                                                              =: eval (sIf c (normalize l) (normalize r)) bs .== eval (sIf c l r) bs
+                                                              =: ite (eval c bs) (eval (normalize l) bs) (eval (normalize r) bs) .== ite (eval c bs) (eval l bs) (eval r bs)
+                                                              ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
+                                                              ?? ih  `at` (Inst @"f" l, Inst @"bs" bs)
+                                                              ?? ih  `at` (Inst @"f" r, Inst @"bs" bs)
+                                                              =: sTrue
+                                                              =: qed
+                                                          ]
                                 ]
 
 -- * Main soundness theorem
@@ -710,6 +742,8 @@ normalizeRespectsTruth =
 --
 -- >>> runTP tautologyTheorem
 -- Lemma: tautologyImpliesEval             Q.E.D.
+-- Lemma: normalizeRespectsTruth           Q.E.D.
+-- Lemma: normalizeCorrect                 Q.E.D.
 -- Lemma: tautologyTheorem
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -717,13 +751,17 @@ normalizeRespectsTruth =
 -- [Proven] tautologyTheorem :: Ɐf ∷ Formula → Ɐbindings ∷ [Binding] → Bool
 tautologyTheorem :: TP (Proof (Forall "f" Formula -> Forall "bindings" [Binding] -> SBool))
 tautologyTheorem = do
-  tie <- recall "tautologyImpliesEval" tautologyImpliesEval
+  tie <- recallWith cvc5 "tautologyImpliesEval"   tautologyImpliesEval
+  nrt <- recall          "normalizeRespectsTruth" normalizeRespectsTruth
+  nc  <- recall          "normalizeCorrect"       normalizeCorrect
 
   calc "tautologyTheorem"
        (\(Forall f) (Forall bindings) -> isTautology f .=> eval f bindings) $
        \f bindings -> [isTautology f]
                    |- eval f bindings
+                   ?? nrt `at` (Inst @"f" f, Inst @"bs" bindings)
                    =: eval (normalize f) bindings
+                   ?? nc  `at` Inst @"f" f
                    ?? tie `at` (Inst @"f" (normalize f), Inst @"a" bindings, Inst @"b" [])
                    =: sTrue
                    =: qed
