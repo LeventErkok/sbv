@@ -62,7 +62,7 @@ ifDepth = smtFunction "ifDepth" $ \f -> [sCase|Formula f of
                                            _        -> 0
                                         |]
 
--- | \(\text{ifDepth}(f) \geq 0\)
+-- | \(\mathit{ifDepth}(f) \geq 0\)
 --
 -- >>> runTP ifDepthNonNeg
 -- Lemma: ifDepthNonNeg                    Q.E.D.
@@ -78,7 +78,7 @@ ifComplexity = smtFunction "ifComplexity" $ \f ->
     _        -> 1
   |]
 
--- | \(\text{ifComplexity}(f) > 0\)
+-- | \(\mathit{ifComplexity}(f) > 0\)
 --
 -- >>> runTP ifComplexityPos
 -- Lemma: ifComplexityPos                  Q.E.D.
@@ -88,7 +88,7 @@ ifComplexityPos = inductiveLemma "ifComplexityPos" (\(Forall f) -> ifComplexity 
 
 -- | The branches of an If have smaller complexity than the whole.
 --
--- \(\text{ifComplexity}(c) < \text{ifComplexity}(\text{If}(c, l, r)) \land \text{ifComplexity}(l) < \text{ifComplexity}(\text{If}(c, l, r)) \land \text{ifComplexity}(r) < \text{ifComplexity}(\text{If}(c, l, r))\)
+-- \(\mathit{ifComplexity}(c) < \mathit{ifComplexity}(\mathit{If}(c, l, r)) \land \mathit{ifComplexity}(l) < \mathit{ifComplexity}(\mathit{If}(c, l, r)) \land \mathit{ifComplexity}(r) < \mathit{ifComplexity}(\mathit{If}(c, l, r))\)
 --
 -- >>> runTP ifComplexitySmaller
 -- Lemma: ifComplexityPos                  Q.E.D.
@@ -106,7 +106,7 @@ ifComplexitySmaller = do
 
 -- | The condition depth increases when wrapped in If.
 --
--- \(\text{ifDepth}(\text{If}(c, l, r)) = 1 + \text{ifDepth}(c)\)
+-- \(\mathit{ifDepth}(\mathit{If}(c, l, r)) = 1 + \mathit{ifDepth}(c)\)
 --
 -- >>> runTP ifDepthSmaller
 -- Lemma: ifDepthNonNeg                    Q.E.D.
@@ -123,7 +123,7 @@ ifDepthSmaller = do
 
 -- | The normalization transformation preserves complexity.
 --
--- \(\text{ifComplexity}(\text{If}(p, \text{If}(q, l, r), \text{If}(s, l, r))) = \text{ifComplexity}(\text{If}(\text{If}(p, q, s), l, r))\)
+-- \(\mathit{ifComplexity}(\mathit{If}(p, \mathit{If}(q, l, r), \mathit{If}(s, l, r))) = \mathit{ifComplexity}(\mathit{If}(\mathit{If}(p, q, s), l, r))\)
 --
 -- >>> runTP normalizePreservesComplexity
 -- Lemma: helper                           Q.E.D.
@@ -319,7 +319,7 @@ isTautology f = isTautology' (normalize f) []
 
 -- * Soundness
 
--- | \(\text{lookUp}(x, a \mathbin{+\!\!+} b) = \text{if } \text{isAssigned}(x, a) \text{ then } \text{lookUp}(x, a) \text{ else } \text{lookUp}(x, b)\)
+-- | \(\mathit{lookUp}(x, a \mathbin{+\!\!+} b) = \mathit{if } \mathit{isAssigned}(x, a) \mathit{ then } \mathit{lookUp}(x, a) \mathit{ else } \mathit{lookUp}(x, b)\)
 --
 -- If we look up a variable in a concatenated binding list, we first check
 -- the first list, and only if not found there, check the second.
@@ -352,7 +352,7 @@ lookUpStable =
                                        =: qed
                           ]
 
--- | \(\text{lookUp}(x, a) \implies \text{isAssigned}(x, a)\)
+-- | \(\mathit{lookUp}(x, a) \implies \mathit{isAssigned}(x, a)\)
 --
 -- >>> runTP trueIsAssigned
 -- Inductive lemma: trueIsAssigned
@@ -379,7 +379,7 @@ trueIsAssigned =
                                  =: qed
                     ]
 
--- | \(\text{value} = \text{lookUp}(x, bs) \implies \text{eval}(f, \{x \mapsto \text{value}\} :: bs) = \text{eval}(f, bs)\)
+-- | \(\mathit{value} = \mathit{lookUp}(x, bs) \implies \mathit{eval}(f, \{x \mapsto \mathit{value}\} :: bs) = \mathit{eval}(f, bs)\)
 --
 -- If we add a redundant binding (same id and value) to the front, evaluation doesn't change.
 --
@@ -585,7 +585,7 @@ tautologyImpliesEval = do
 
 -- * Normalization correctness
 
--- | \(\text{isNormal}(\text{normalize}(f))\)
+-- | \(\mathit{isNormal}(\mathit{normalize}(f))\)
 --
 -- Normalization produces normalized formulas.
 --
@@ -659,7 +659,7 @@ normalizeCorrect = do
                                                        ]
                              ]
 
--- | \(\text{isNormal}(f) \implies \text{normalize}(f) = f\)
+-- | \(\mathit{isNormal}(f) \implies \mathit{normalize}(f) = f\)
 --
 -- Normalizing a normalized formula is the identity.
 --
@@ -702,7 +702,7 @@ normalizeSame = do
                                           =: qed
                          ]
 
--- | \(\text{eval}(\text{normalize}(f), bs) = \text{eval}(f, bs)\)
+-- | \(\mathit{eval}(\mathit{normalize}(f), bs) = \mathit{eval}(f, bs)\)
 --
 -- Normalization preserves semantics.
 --
@@ -772,7 +772,7 @@ normalizeRespectsTruth = do
 
 -- * Main soundness theorem
 
--- | \(\text{isTautology}(f) \implies \text{eval}(f, \text{bindings})\)
+-- | \(\mathit{isTautology}(f) \implies \mathit{eval}(f, \mathit{bindings})\)
 --
 -- If the tautology checker says a formula is a tautology, then it evaluates
 -- to true under any binding environment. This is the soundness theorem.
@@ -1091,7 +1091,7 @@ completenessHelper = do
 
 -- * Main completeness theorem
 
--- | \(\lnot\text{isTautology}(f) \implies \lnot\text{eval}(f, \text{falsify}(f).\text{bindings})\)
+-- | \(\lnot\mathit{isTautology}(f) \implies \lnot\mathit{eval}(f, \mathit{falsify}(f).\mathit{bindings})\)
 --
 -- If the tautology checker says a formula is not a tautology, then there exists
 -- a binding environment (provided by falsify) under which it evaluates to false.

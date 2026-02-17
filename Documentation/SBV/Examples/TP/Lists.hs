@@ -352,7 +352,7 @@ revRev = do
                             =: x .: xs
                             =: qed
 
--- | \(\text{length } [n \dots m] = \max(0,\; m - n + 1)\)
+-- | \(\mathit{length } [n \dots m] = \max(0,\; m - n + 1)\)
 --
 -- The proof uses the metric @|m-n|@.
 --
