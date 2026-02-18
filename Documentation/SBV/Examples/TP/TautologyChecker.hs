@@ -16,20 +16,20 @@
 -- unordered-BDD, making it easy to evaluate it.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE OverloadedLists     #-}
-{-# LANGUAGE QuasiQuotes         #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeAbstractions    #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE CPP               #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedLists   #-}
+{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeAbstractions  #-}
+{-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.TP.TautologyChecker where
 
-import Prelude hiding (null, head, tail, (++))
+import Prelude hiding (null, tail, head, (++))
 
 import Data.SBV
 import Data.SBV.List
@@ -47,8 +47,11 @@ import Data.SBV.Tuple
 -- | A propositional formula with variables and if-then-else.
 data Formula = FTrue
              | FFalse
-             | Var Integer
-             | If  Formula Formula Formula
+             | Var { fVar   :: Integer }
+             | If  { ifCond :: Formula
+                   , ifThen :: Formula
+                   , ifElse :: Formula
+                   }
 
 -- | Make formulas symbolic.
 mkSymbolic [''Formula]
@@ -104,67 +107,6 @@ ifComplexitySmaller = do
            in ifComplexity c .< ic .&& ifComplexity l .< ic .&& ifComplexity r .< ic)
         [proofOf icp]
 
--- | The condition depth increases when wrapped in If.
---
--- \(\mathit{ifDepth}(\mathit{If}(c, l, r)) = 1 + \mathit{ifDepth}(c)\)
---
--- >>> runTP ifDepthSmaller
--- Lemma: ifDepthNonNeg                    Q.E.D.
--- Lemma: ifDepthSmaller                   Q.E.D.
--- [Proven] ifDepthSmaller :: Ɐc ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
-ifDepthSmaller :: TP (Proof (Forall "c" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
-ifDepthSmaller = do
-  idn <- recall "ifDepthNonNeg" ifDepthNonNeg
-
-  lemma "ifDepthSmaller"
-        (\(Forall c) (Forall l) (Forall r) ->
-           ifDepth (sIf c l r) .== 1 + ifDepth c)
-        [proofOf idn]
-
--- | The normalization transformation preserves complexity.
---
--- \(\mathit{ifComplexity}(\mathit{If}(p, \mathit{If}(q, l, r), \mathit{If}(s, l, r))) = \mathit{ifComplexity}(\mathit{If}(\mathit{If}(p, q, s), l, r))\)
---
--- >>> runTP normalizePreservesComplexity
--- Lemma: helper                           Q.E.D.
--- Lemma: normalizePreservesComplexity
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Step: 7                               Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] normalizePreservesComplexity :: Ɐp ∷ Formula → Ɐq ∷ Formula → Ɐs ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
-normalizePreservesComplexity :: TP (Proof (Forall "p" Formula -> Forall "q" Formula -> Forall "s" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
-normalizePreservesComplexity = do
-
-  -- This trivial lemma, unfortunately is needed below. I'm not sure why.
-  helper <- lemma "helper"
-                  (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a .== b .=> a * c .== b * (c :: SInteger))
-                  []
-
-  calc "normalizePreservesComplexity"
-       (\(Forall p) (Forall q) (Forall s) (Forall l) (Forall r) ->
-          ifComplexity (sIf p (sIf q l r) (sIf s l r)) .== ifComplexity (sIf (sIf p q s) l r)) $
-       \p q s l r ->
-         let cp = ifComplexity p
-             cq = ifComplexity q
-             cs = ifComplexity s
-             cl = ifComplexity l
-             cr = ifComplexity r
-         in [] |- ifComplexity (sIf p (sIf q l r) (sIf s l r))
-               =: cp * (ifComplexity (sIf q l r) + ifComplexity (sIf s l r))
-               =: cp * (cq * (cl + cr) + cs * (cl + cr))
-               =: cp * ((cq + cs) * (cl + cr))
-               =: (cp * (cq + cs)) * (cl + cr)
-               ?? helper `at` (Inst @"a" (ifComplexity (sIf p q s)), Inst @"b" (cp * (cq + cs)), Inst @"c" (cl + cr))
-               =: ifComplexity (sIf p q s) * (cl + cr)
-               =: ifComplexity (sIf p q s) * (ifComplexity l + ifComplexity r)
-               =: ifComplexity (sIf (sIf p q s) l r)
-               =: qed
-
 -- * Normalization
 
 -- | Check if a formula is in normal form (no nested If in condition position).
@@ -199,6 +141,50 @@ normalize = smtFunction "normalize" $ \f ->
             _        -> sIf c (normalize thn) (normalize els)
           |]
 
+-- | The normalization transformation preserves complexity.
+--
+-- \(\mathit{ifComplexity}(\mathit{If}(p, \mathit{If}(q, l, r), \mathit{If}(s, l, r))) = \mathit{ifComplexity}(\mathit{If}(\mathit{If}(p, q, s), l, r))\)
+--
+-- >>> runTP normalizePreservesComplexity
+-- Lemma: helper                           Q.E.D.
+-- Lemma: normalizePreservesComplexity
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Step: 7                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] normalizePreservesComplexity :: Ɐp ∷ Formula → Ɐq ∷ Formula → Ɐs ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
+normalizePreservesComplexity :: TP (Proof (Forall "p" Formula -> Forall "q" Formula -> Forall "s" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
+normalizePreservesComplexity = do
+
+  -- The following is a trivial lemma, but without it the solver don't seem to be able to make progress since
+  -- it needs to instantiate it properly. So we help the solver out explicitly.
+  helper <- lemma "helper"
+                  (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a .== b .=> a * c .== b * (c :: SInteger))
+                  []
+
+  calc "normalizePreservesComplexity"
+       (\(Forall p) (Forall q) (Forall s) (Forall l) (Forall r) ->
+          ifComplexity (sIf p (sIf q l r) (sIf s l r)) .== ifComplexity (sIf (sIf p q s) l r)) $
+       \p q s l r ->
+         let cp = ifComplexity p
+             cq = ifComplexity q
+             cs = ifComplexity s
+             cl = ifComplexity l
+             cr = ifComplexity r
+         in [] |- ifComplexity (sIf p (sIf q l r) (sIf s l r))
+               =: cp * (ifComplexity (sIf q l r) + ifComplexity (sIf s l r))
+               =: cp * (cq * (cl + cr) + cs * (cl + cr))
+               =: cp * ((cq + cs) * (cl + cr))
+               =: (cp * (cq + cs)) * (cl + cr)
+               ?? helper `at` (Inst @"a" (ifComplexity (sIf p q s)), Inst @"b" (cp * (cq + cs)), Inst @"c" (cl + cr))
+               =: ifComplexity (sIf p q s) * (cl + cr)
+               =: ifComplexity (sIf p q s) * (ifComplexity l + ifComplexity r)
+               =: ifComplexity (sIf (sIf p q s) l r)
+               =: qed
 
 -- * Variable bindings
 
@@ -416,9 +402,9 @@ evalStable = do
                         , isFFalse f ==> trivial
                         , isVar    f ==> trivial
                         , isIf     f ==>
-                            let c = getIf_1 f
-                                l = getIf_2 f
-                                r = getIf_3 f
+                            let c = sifCond f
+                                l = sifThen f
+                                r = sifElse f
                             in eval f (b .: bs)
                             =: eval (sIf c l r) (b .: bs)
                             =: ite (eval c (b .: bs)) (eval l (b .: bs)) (eval r (b .: bs))
@@ -505,7 +491,7 @@ tautologyImpliesEval = do
                 [isNormal f, isTautology' f b]
              |- cases [ isFTrue  f ==> trivial
                       , isFFalse f ==> trivial
-                      , isVar    f ==> let n = getVar_1 f
+                      , isVar    f ==> let n = sfVar f
                                        in eval f (b ++ a)
                                        =: eval (sVar n) (b ++ a)
                                        =: lookUp n (b ++ a)
@@ -516,9 +502,9 @@ tautologyImpliesEval = do
                                        =: sTrue
                                        =: qed
                       , isIf f     ==>
-                          let c = getIf_1 f
-                              l = getIf_2 f
-                              r = getIf_3 f
+                          let c = sifCond f
+                              l = sifThen f
+                              r = sifElse f
                           in cases [ isFTrue  c ==> eval (sIf c l r) (b ++ a)
                                                  =: ite (eval c (b ++ a)) (eval l (b ++ a)) (eval r (b ++ a))
                                                  ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
@@ -532,7 +518,7 @@ tautologyImpliesEval = do
                                                  ?? ih  `at` (Inst @"f" r, Inst @"a" a, Inst @"b" b)
                                                  =: sTrue
                                                  =: qed
-                                   , isVar    c ==> let n = getVar_1 c
+                                   , isVar    c ==> let n = sfVar c
                                                     in cases [ isAssigned n b ==>
                                                                     eval (sIf (sVar n) l r) (b ++ a)
                                                                  =: ite (eval (sVar n) (b ++ a)) (eval l (b ++ a)) (eval r (b ++ a))
@@ -594,7 +580,6 @@ tautologyImpliesEval = do
 -- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Lemma: normalizePreservesComplexity               Q.E.D.
 -- Lemma: ifDepthNonNeg                              Q.E.D.
--- Lemma: ifDepthSmaller                             Q.E.D.
 -- Inductive lemma (strong): normalizeCorrect
 --   Step: Measure is non-negative                   Q.E.D.
 --   Step: 1 (4 way case split)
@@ -619,7 +604,6 @@ normalizeCorrect = do
   ibs <- recall "ifComplexitySmaller"          ifComplexitySmaller
   npc <- recall "normalizePreservesComplexity" normalizePreservesComplexity
   idn <- recall "ifDepthNonNeg"                ifDepthNonNeg
-  ids <- recall "ifDepthSmaller"               ifDepthSmaller
 
   sInductWith cvc5 "normalizeCorrect"
               (\(Forall f) -> isNormal (normalize f))
@@ -629,19 +613,16 @@ normalizeCorrect = do
                     =: cases [ isFTrue  f ==> trivial
                              , isFFalse f ==> trivial
                              , isVar    f ==> trivial
-                             , isIf     f ==> let c = getIf_1 f
-                                                  l = getIf_2 f
-                                                  r = getIf_3 f
+                             , isIf     f ==> let c = sifCond f
+                                                  l = sifThen f
+                                                  r = sifElse f
                                               in cases [ isIf c ==>
-                                                           let p  = getIf_1 c
-                                                               q  = getIf_2 c
-                                                               rc = getIf_3 c
+                                                           let p  = sifCond c
+                                                               q  = sifThen c
+                                                               rc = sifElse c
                                                                transformed = sIf p (sIf q l r) (sIf rc l r)
                                                            in isNormal (normalize transformed)
                                                            ?? npc `at` (Inst @"p" p, Inst @"q" q, Inst @"s" rc, Inst @"l" l, Inst @"r" r)
-                                                           ?? ids `at` (Inst @"c" p, Inst @"l" (sIf q l r), Inst @"r" (sIf rc l r))
-                                                           ?? ids `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
-                                                           ?? ids `at` (Inst @"c" p, Inst @"l" q, Inst @"r" rc)
                                                            ?? ih `at` Inst @"f" transformed
                                                            =: sTrue
                                                            =: qed
@@ -689,9 +670,9 @@ normalizeSame = do
                 |- cases [ isFTrue  f ==> trivial
                          , isFFalse f ==> trivial
                          , isVar    f ==> trivial
-                         , isIf     f ==> let c = getIf_1 f
-                                              l = getIf_2 f
-                                              r = getIf_3 f
+                         , isIf     f ==> let c = sifCond f
+                                              l = sifThen f
+                                              r = sifElse f
                                           in sIf c (normalize l) (normalize r)
                                           ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                           ?? ih `at` Inst @"f" l
@@ -711,7 +692,6 @@ normalizeSame = do
 -- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Lemma: normalizePreservesComplexity               Q.E.D.
 -- Lemma: ifDepthNonNeg                              Q.E.D.
--- Lemma: ifDepthSmaller                             Q.E.D.
 -- Inductive lemma (strong): normalizeRespectsTruth
 --   Step: Measure is non-negative                   Q.E.D.
 --   Step: 1 (4 way case split)
@@ -733,7 +713,6 @@ normalizeRespectsTruth = do
   ibs <- recall "ifComplexitySmaller"          ifComplexitySmaller
   npc <- recall "normalizePreservesComplexity" normalizePreservesComplexity
   idn <- recall "ifDepthNonNeg"                ifDepthNonNeg
-  ids <- recall "ifDepthSmaller"               ifDepthSmaller
 
   sInductWith cvc5 "normalizeRespectsTruth"
               (\(Forall f) (Forall bs) -> eval (normalize f) bs .== eval f bs)
@@ -742,19 +721,16 @@ normalizeRespectsTruth = do
                        |- cases [ isFTrue  f ==> trivial
                                 , isFFalse f ==> trivial
                                 , isVar    f ==> trivial
-                                , isIf     f ==> let c = getIf_1 f
-                                                     l = getIf_2 f
-                                                     r = getIf_3 f
+                                , isIf     f ==> let c = sifCond f
+                                                     l = sifThen f
+                                                     r = sifElse f
                                                  in cases [ isIf c ==>
-                                                              let p  = getIf_1 c
-                                                                  q  = getIf_2 c
-                                                                  rc = getIf_3 c
+                                                              let p  = sifCond c
+                                                                  q  = sifThen c
+                                                                  rc = sifElse c
                                                                   transformed = sIf p (sIf q l r) (sIf rc l r)
                                                               in eval (normalize (sIf c l r)) bs .== eval (sIf c l r) bs
                                                               ?? npc `at` (Inst @"p" p, Inst @"q" q, Inst @"s" rc, Inst @"l" l, Inst @"r" r)
-                                                              ?? ids `at` (Inst @"c" p, Inst @"l" (sIf q l r), Inst @"r" (sIf rc l r))
-                                                              ?? ids `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
-                                                              ?? ids `at` (Inst @"c" p, Inst @"l" q, Inst @"r" rc)
                                                               ?? ih  `at` (Inst @"f" transformed, Inst @"bs" bs)
                                                               =: sTrue
                                                               =: qed
@@ -777,22 +753,22 @@ normalizeRespectsTruth = do
 -- If the tautology checker says a formula is a tautology, then it evaluates
 -- to true under any binding environment. This is the soundness theorem.
 --
--- >>> runTP tautologyTheorem
+-- >>> runTP soundness
 -- Lemma: tautologyImpliesEval             Q.E.D.
 -- Lemma: normalizeRespectsTruth           Q.E.D.
 -- Lemma: normalizeCorrect                 Q.E.D.
--- Lemma: tautologyTheorem
+-- Lemma: soundness
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] tautologyTheorem :: Ɐf ∷ Formula → Ɐbindings ∷ [Binding] → Bool
-tautologyTheorem :: TP (Proof (Forall "f" Formula -> Forall "bindings" [Binding] -> SBool))
-tautologyTheorem = do
+-- [Proven] soundness :: Ɐf ∷ Formula → Ɐbindings ∷ [Binding] → Bool
+soundness :: TP (Proof (Forall "f" Formula -> Forall "bindings" [Binding] -> SBool))
+soundness = do
   tie <- recallWith cvc5 "tautologyImpliesEval"   tautologyImpliesEval
   nrt <- recall          "normalizeRespectsTruth" normalizeRespectsTruth
   nc  <- recall          "normalizeCorrect"       normalizeCorrect
 
-  calc "tautologyTheorem"
+  calc "soundness"
        (\(Forall f) (Forall bindings) -> isTautology f .=> eval f bindings) $
        \f bindings -> [isTautology f]
                    |- eval f bindings
@@ -876,15 +852,15 @@ nonTautIsFalsified = do
                    |- cases [ isFTrue  f ==> trivial
                             , isFFalse f ==> trivial
                             , isVar    f ==> trivial
-                            , isIf     f ==> let c = getIf_1 f
-                                                 l = getIf_2 f
-                                                 r = getIf_3 f
+                            , isIf     f ==> let c = sifCond f
+                                                 l = sifThen f
+                                                 r = sifElse f
                                              in sfalsified (falsify' f bs)
                                              ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                              ?? ih  `at` (Inst @"f" l, Inst @"bs" bs)
                                              ?? ih  `at` (Inst @"f" r, Inst @"bs" bs)
-                                             ?? ih  `at` (Inst @"f" l, Inst @"bs" (assumeTrue (getVar_1 c) bs))
-                                             ?? ih  `at` (Inst @"f" r, Inst @"bs" (assumeFalse (getVar_1 c) bs))
+                                             ?? ih  `at` (Inst @"f" l, Inst @"bs" (assumeTrue (sfVar c) bs))
+                                             ?? ih  `at` (Inst @"f" r, Inst @"bs" (assumeFalse (sfVar c) bs))
                                              =: sTrue
                                              =: qed
                             ]
@@ -922,15 +898,15 @@ falsifyExtendsBindings = do
           \ih f bs i -> [isAssigned i bs, sfalsified (falsify' f bs)]
                      |- cases [ isFTrue  f ==> trivial
                               , isFFalse f ==> trivial
-                              , isVar    f ==> let n = getVar_1 f
+                              , isVar    f ==> let n = sfVar f
                                                in lookUp i (scex (falsify' f bs)) .== lookUp i bs
                                                ?? lue `at` (Inst @"i" i, Inst @"n" n, Inst @"v" sFalse, Inst @"bs" bs)
                                                =: sTrue
                                                =: qed
-                              , isIf     f ==> let c = getIf_1 f
-                                                   l = getIf_2 f
-                                                   r = getIf_3 f
-                                                   n = getVar_1 c
+                              , isIf     f ==> let c = sifCond f
+                                                   l = sifThen f
+                                                   r = sifElse f
+                                                   n = sfVar c
                                                in lookUp i (scex (falsify' f bs)) .== lookUp i bs
                                                ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                ?? iae `at` (Inst @"i" i, Inst @"n" n, Inst @"v" sTrue,  Inst @"bs" bs)
@@ -1006,15 +982,15 @@ falsifyFalsifies = do
                                           =: sNot sFalse
                                           =: sTrue
                                           =: qed
-                            , isVar    f ==> let n = getVar_1 f
+                            , isVar    f ==> let n = sfVar f
                                              in sNot (eval f (scex (falsify' f bs)))
                                              =: sNot (eval (sVar n) (scex (falsify' (sVar n) bs)))
                                              =: sNot (lookUp n (scex (falsify' (sVar n) bs)))
                                              =: sTrue
                                              =: qed
-                            , isIf     f ==> let c = getIf_1 f
-                                                 l = getIf_2 f
-                                                 r = getIf_3 f
+                            , isIf     f ==> let c = sifCond f
+                                                 l = sifThen f
+                                                 r = sifElse f
                                              in cases [ isFTrue  c ==> sNot (eval f (scex (falsify' f bs)))
                                                                     ?? ibs `at` (Inst @"c" c, Inst @"l" l, Inst @"r" r)
                                                                     ?? ih  `at` (Inst @"f" l, Inst @"bs" bs)
@@ -1025,7 +1001,7 @@ falsifyFalsifies = do
                                                                     ?? ih  `at` (Inst @"f" r, Inst @"bs" bs)
                                                                     =: sTrue
                                                                     =: qed
-                                                      , isVar    c ==> let n = getVar_1 c
+                                                      , isVar    c ==> let n = sfVar c
                                                                        in cases [ isAssigned n bs ==>
                                                                                       cases [ lookUp n bs ==>
                                                                                                   sNot (eval f (scex (falsify' f bs)))
@@ -1097,16 +1073,16 @@ completenessHelper = do
 -- a binding environment (provided by falsify) under which it evaluates to false.
 -- This is the completeness theorem.
 --
--- >>> runTPWith cvc5 completenessTheorem
+-- >>> runTPWith cvc5 completeness
 -- Lemma: completenessHelper               Q.E.D.
 -- Lemma: normalizeRespectsTruth           Q.E.D.
--- Lemma: completenessTheorem              Q.E.D.
--- [Proven] completenessTheorem :: Ɐf ∷ Formula → Bool
-completenessTheorem :: TP (Proof (Forall "f" Formula -> SBool))
-completenessTheorem = do
+-- Lemma: completeness                     Q.E.D.
+-- [Proven] completeness :: Ɐf ∷ Formula → Bool
+completeness :: TP (Proof (Forall "f" Formula -> SBool))
+completeness = do
   ch  <- recall        "completenessHelper"     completenessHelper
   nrt <- recallWith z3 "normalizeRespectsTruth" normalizeRespectsTruth
 
-  lemma "completenessTheorem"
+  lemma "completeness"
         (\(Forall f) -> sNot (isTautology f) .=> sNot (eval f (scex (falsify f))))
         [proofOf ch, proofOf nrt]
