@@ -1,0 +1,15 @@
+SCase39.hs:12:14: error: [GHC-39584]
+    " SCase39.hs:16:16-29: sCase: Not in scope: data constructor: Numb
+    " In the quasi-quotation:
+        [sCase|Expr e of
+               Zero              -> 0
+               Num k             -> k
+               Var s             -> ite (s .== literal "a") 1 2
+               Add (Numb i) b    -> i + t b
+               Add a b           -> t a + t b
+               Let _   _a  b     -> t b
+      |]
+   |
+12 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
+

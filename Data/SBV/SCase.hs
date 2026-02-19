@@ -191,7 +191,7 @@ sCase = QuasiQuoter
                                                   , "             mkSymbolic [''" <> typ <> "]"
                                                   , "        In a template-haskell context."
                                                   ]
-              cases <- zipWithM matchToPair (offsets ++ repeat Unknown) matches >>= checkCase scrut typ . concat
+              cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ . concat
               buildCase typ fnName scrut cases
             Right _  -> fail Unknown "sCase: Parse error, cannot extract a case-expression."
             Left err -> case lines err of
@@ -200,10 +200,13 @@ sCase = QuasiQuoter
                           _  -> fail Unknown $ "sCase parse error: " <> err
 
     buildCase _    caseFunc  scrut (Left  cases) = pure $ foldl AppE (caseFunc `AppE` scrut) cases
-    buildCase typ _caseFunc _scrut (Right cases) = iteChain cases
-      where iteChain []              = pure $ AppE (VarE 'sym) (LitE (StringL ("unmatched_sCase|" ++ typ)))
+    buildCase typ _caseFunc _scrut (Right cases) = do
+        uniq <- newName "u"
+        let suffix = drop 2 (show uniq)
+            iteChain []              = pure $ AppE (VarE 'sym) (LitE (StringL ("unmatched_sCase_" ++ typ ++ "_" ++ suffix)))
             iteChain ((t, e) : rest) = do r <- iteChain rest
                                           pure $ foldl AppE (VarE 'ite) [t, e, r]
+        iteChain cases
 
     getGuards :: Body -> [Dec] -> Q [(Maybe Exp, Exp)]
     getGuards (NormalB  rhs)  locals = pure [(Nothing, addLocals locals rhs)]
@@ -213,13 +216,22 @@ sCase = QuasiQuoter
               = pure (Nothing, addLocals locals rhs)
               | True
               = pure (Just e, addLocals locals rhs)
-            get (PatG stmts, _)   = fail Unknown $ unlines $  "sCase: Pattern guards are not supported: "
-                                                           : ["        " ++ pprint s | s <- stmts]
+            get (PatG stmts, rhs)
+              | all isNoBindS stmts
+              = let guards = [e | NoBindS e <- stmts]
+                    conj   = foldr1 (\a b -> foldl1 AppE [VarE '(.&&), a, b]) guards
+                in pure (if isSTrue conj then Nothing else Just conj, addLocals locals rhs)
+              | True
+              = fail Unknown $ unlines $  "sCase: Pattern guards are not supported: "
+                                       : ["        " ++ pprint s | s <- stmts]
+              where isNoBindS (NoBindS _) = True
+                    isNoBindS _           = False
 
-            -- Is this literally sTrue? This is a bit dangerous since
+            -- Is this literally sTrue (or True)? This is a bit dangerous since
             -- we just look at the base-name, but good enough
-            isSTrue (VarE nm) = nameBase nm == nameBase 'sTrue
-            isSTrue _         = False
+            isSTrue (VarE  nm) = nameBase nm == nameBase 'sTrue
+            isSTrue (ConE  nm) = nameBase nm == "True"
+            isSTrue _          = False
 
     -- Turn where clause into simple let
     addLocals :: [Dec] -> Exp -> Exp
@@ -233,15 +245,39 @@ sCase = QuasiQuoter
                                     Nothing -> fail off $ "sCase: Not in scope: data constructor: " <> pprint refName
                                     Just n  -> pure n
 
-    matchToPair :: Offset -> Match -> Q [Case]
-    matchToPair off (Match pat grhs locals) = do
+    matchToPair :: Exp -> Offset -> Match -> Q [Case]
+    matchToPair scrut off (Match pat grhs locals) = do
       rhss <- getGuards grhs locals
       let allUsed = Set.unions (map (\(mbG, e) -> maybe Set.empty freeVars mbG `Set.union` freeVars e) rhss)
 
       case pat of
-        ConP conName _ subpats -> do ps  <- traverse (patToVar off) subpats
-                                     con <- getReference off conName
-                                     pure [CMatch off con (Just ps) mbG rhs allUsed | (mbG, rhs) <- rhss]
+        ConP conName _ subpats -> do
+          con <- getReference off conName
+          -- For each sub-pattern at position i, flatten it against the accessor expression
+          let accessor i = AppE (VarE (mkName ("get" ++ nameBase con ++ "_" ++ show i))) scrut
+          flatResults <- zipWithM (\i p -> flattenPat off (accessor i) p) [(1::Int)..] subpats
+          let ps      = map fstOf3 flatResults
+              subGrds = concatMap sndOf3 flatResults
+              subDecs = concatMap thdOf3 flatResults
+
+              andAll [g]    = g
+              andAll (g:gs) = foldl1 AppE [VarE '(.&&), g, andAll gs]
+              andAll []     = VarE 'sTrue
+
+              -- Merge synthetic nested-pattern guards and bindings into each (guard, rhs) pair
+              merge (mbG, rhs) =
+                let usedInRhs  = freeVars rhs
+                    usedInGrd  = maybe Set.empty freeVars mbG
+                    decsFor s  = [ d | d@(ValD (VarP v) _ _) <- subDecs, v `Set.member` s ]
+                    rhs' = addLocals (decsFor usedInRhs) rhs
+                    mbG' = case (subGrds, mbG) of
+                              ([], Nothing) -> Nothing
+                              ([], Just g ) -> Just (addLocals (decsFor usedInGrd) g)
+                              (gs, Nothing) -> Just (andAll gs)
+                              (gs, Just g ) -> Just (foldl1 AppE [VarE '(.&&), andAll gs, addLocals (decsFor usedInGrd) g])
+                in (mbG', rhs')
+
+          pure [CMatch off con (Just ps) mbG rhs allUsed | (mbG, rhs) <- map merge rhss]
 
         RecP conName []        -> do con <- getReference off conName
                                      pure [CMatch off con Nothing   mbG rhs allUsed | (mbG, rhs) <- rhss]
@@ -256,6 +292,40 @@ sCase = QuasiQuoter
                                     , "        And wildcards (i.e., _) for default"
                                     , "        are supported."
                                     ]
+
+    fstOf3 :: (a, b, c) -> a
+    fstOf3 (a, _, _) = a
+
+    sndOf3 :: (a, b, c) -> b
+    sndOf3 (_, b, _) = b
+
+    thdOf3 :: (a, b, c) -> c
+    thdOf3 (_, _, c) = c
+
+    -- | Flatten a sub-pattern against a given accessor expression.
+    -- Returns: a simple VarP/WildP for the flat pattern list, a list of
+    -- synthetic isCstr guard expressions, and let-bindings that bring
+    -- nested-pattern variables into scope.
+    flattenPat :: Offset -> Exp -> Pat -> Q (Pat, [Exp], [Dec])
+    flattenPat _   _   WildP                    = pure (WildP, [], [])
+    flattenPat _   _   p@(VarP _)               = pure (p,     [], [])
+    flattenPat off arg (ParensP p)              = flattenPat off arg p
+    flattenPat off arg (ConP conName _ subpats) = do
+      con   <- getReference off conName
+      let tester      = AppE (VarE (mkName ("is" ++ nameBase con))) arg
+          accessor i  = AppE (VarE (mkName ("get" ++ nameBase con ++ "_" ++ show i))) arg
+      subResults <- zipWithM (\i p -> flattenPat off (accessor i) p) [(1::Int)..] subpats
+      let subGrds = concatMap sndOf3 subResults
+          subDecs = concatMap thdOf3 subResults
+          subPats = map fstOf3 subResults
+          patDecs = [ ValD (VarP v) (NormalB (accessor i)) []
+                    | (i, VarP v) <- zip [(1::Int)..] subPats ]
+      pure (WildP, tester : subGrds, patDecs ++ subDecs)
+    flattenPat o _ p = fail o $ unlines [ "sCase: Unsupported complex pattern match."
+                                        , "        Saw: " <> pprint p
+                                        , ""
+                                        , "      Only variables, wildcards, and nested constructors are supported."
+                                        ]
 
     -- Make sure things are in good-shape and decide if we have guards
     checkCase :: Exp -> String -> [Case] -> Q (Either [Exp] [(Exp, Exp)])
@@ -468,14 +538,6 @@ sCase = QuasiQuoter
 
                    Right <$> mapM collect cases
 
-    patToVar :: Offset -> Pat -> Q Pat
-    patToVar _ p@VarP{} = pure p
-    patToVar _ p@WildP  = pure p
-    patToVar o p        = fail o $ unlines [ "sCase: Unsupported complex pattern match."
-                                           , "        Saw: " <> pprint p
-                                           , ""
-                                           , "      Only variables and wild-card are supported."
-                                           ]
     parts = go ""
       where go _     ""             = Nothing
             go sofar ('o':'f':rest) = Just (break isSpace (dropWhile isSpace (reverse sofar)), rest)

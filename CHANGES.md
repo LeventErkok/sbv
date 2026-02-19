@@ -3,6 +3,22 @@
 
 ### Version 13.5.5, New development version, not released yet
 
+  * The `sCase` quasi-quoter now supports nested constructor patterns. Sub-patterns
+    in a constructor match can themselves be constructors, including nullary ones. For example:
+
+    ```haskell
+    normalize f = smtFunction "normalize" $ \f ->
+      [sCase|Formula f of
+        If (If p q r) left right -> normalize (sIf p (sIf q left right) (sIf r left right))
+        If c          left right -> sIf c (normalize left) (normalize right)
+        _                        -> f
+      |]
+    ```
+
+    Nested patterns generate appropriate `isCstr`/`getCstr_i` guards and let-bindings
+    automatically. Pattern guards (`, e1, e2`) may also be used alongside nested patterns.
+    Additionally, `| True` is now accepted as a synonym for `| sTrue` in guards.
+
   * Add minimum and maximum to Data.SBV.List. If they receive empty list as argument,
     then the result is underspecified, i.e., can be any value of the element type.
 
