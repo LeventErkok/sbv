@@ -199,6 +199,22 @@ tests =
     , goldenCapturedIO "adt_nested28"  $ evalCheckS cfold (sMul (sVal 2) (sVal 3),   sMul (sVal 2) (sVal 3))
     -- Semantics preservation: eval (cfold e) == eval e for all e
     , goldenCapturedIO "adt_nested29"  cfoldPreservesEval
+
+    -- Pipeline tests: cfold (h e) — first simplify with h, then constant-fold with cfold
+    -- Neither h nor cfold fires: Add (Mul (Val 2) (Val 3)) (Mul (Val 4) (Val 5)) passes through h unchanged, cfold folds to Val 26
+    , goldenCapturedIO "adt_nested30c" $ evalCheck (cfold (h (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5)))),  sVal 26)
+    , goldenCapturedIO "adt_nested30"  $ evalCheckS (cfold . h) (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5)),  sVal 26)
+    -- h leaves outer Add unchanged; cfold still sees Add (Mul (Val 1) (Val 2)) (Mul (Val 0) (Val 4)) and folds to Val 2
+    , goldenCapturedIO "adt_nested31c" $ evalCheck (cfold (h (sAdd (sMul (sVal 1) (sVal 2)) (sMul (sVal 0) (sVal 4)))),  sVal 2)
+    , goldenCapturedIO "adt_nested31"  $ evalCheckS (cfold . h) (sAdd (sMul (sVal 1) (sVal 2)) (sMul (sVal 0) (sVal 4)),  sVal 2)
+    -- h fires (Mul (Val 1) r => r), exposing a cfold-able expression; cfold then folds to Val 26
+    , goldenCapturedIO "adt_nested32c" $ evalCheck (cfold (h (sMul (sVal 1) (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5))))),  sVal 26)
+    , goldenCapturedIO "adt_nested32"  $ evalCheckS (cfold . h) (sMul (sVal 1) (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5))),  sVal 26)
+    -- h fires (Add (Val 0) r => r), exposing a cfold-able expression; cfold then folds to Val 26
+    , goldenCapturedIO "adt_nested33c" $ evalCheck (cfold (h (sAdd (sVal 0) (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5))))),  sVal 26)
+    , goldenCapturedIO "adt_nested33"  $ evalCheckS (cfold . h) (sAdd (sVal 0) (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5))),  sVal 26)
+    -- Semantics preservation of the pipeline: eval (cfold (h e)) == eval e for all e
+    , goldenCapturedIO "adt_nested34"  cfoldAfterHPreservesEval
     ]
     where a = literal "a"
           b = literal "a"
@@ -370,3 +386,9 @@ cfoldPreservesEval :: FilePath -> IO ()
 cfoldPreservesEval rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
                           e :: SExpr <- free "e"
                           pure $ eval (cfold e) .== eval e
+
+-- | Prove that the cfold-after-h pipeline preserves evaluation semantics.
+cfoldAfterHPreservesEval :: FilePath -> IO ()
+cfoldAfterHPreservesEval rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
+                                e :: SExpr <- free "e"
+                                pure $ eval (cfold (h e)) .== eval e
