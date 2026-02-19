@@ -19,6 +19,8 @@
 
 module TestSuite.ADT.Expr(tests) where
 
+import Control.Monad (void)
+
 import Data.SBV
 import Data.SBV.Control
 import Utils.SBVTestFramework
@@ -142,6 +144,28 @@ tests =
     -- Non-Add/Mul constructor: Val falls through to _
     , goldenCapturedIO "adt_nested11c" $ evalCheck (h (sVal 42),  sVal 42)
     , goldenCapturedIO "adt_nested11"  $ evalCheckS h (sVal 42,   sVal 42)
+    -- Let falls through to _
+    , goldenCapturedIO "adt_nested12c" $ evalCheck (h (sLet (literal "x") (sVal 1) (sVar (literal "x"))),  sLet (literal "x") (sVal 1) (sVar (literal "x")))
+    , goldenCapturedIO "adt_nested12"  $ evalCheckS h (sLet (literal "x") (sVal 1) (sVar (literal "x")),   sLet (literal "x") (sVal 1) (sVar (literal "x")))
+    -- Mul (Val 0) with a non-Val right side (Var): result is Val 0, wildcard ignores it
+    , goldenCapturedIO "adt_nested13c" $ evalCheck (h (sMul (sVal 0) (sVar (literal "x"))),  sVal 0)
+    , goldenCapturedIO "adt_nested13"  $ evalCheckS h (sMul (sVal 0) (sVar (literal "x")),   sVal 0)
+    -- Add (Val 0) with a compound right side (Add)
+    , goldenCapturedIO "adt_nested14c" $ evalCheck (h (sAdd (sVal 0) (sMul (sVal 2) (sVal 3))),  sMul (sVal 2) (sVal 3))
+    , goldenCapturedIO "adt_nested14"  $ evalCheckS h (sAdd (sVal 0) (sMul (sVal 2) (sVal 3)),   sMul (sVal 2) (sVal 3))
+    -- Idempotency: h (h e) == h e (using a simplifiable input)
+    , goldenCapturedIO "adt_nested15c" $ evalCheck (h (h (sAdd (sVal 0) (sVal 5))),  sVal 5)
+    , goldenCapturedIO "adt_nested15"  $ evalCheckS (h . h) (sAdd (sVal 0) (sVal 5),  sVal 5)
+    -- Idempotency: h (h e) == h e (using a non-simplifiable input)
+    , goldenCapturedIO "adt_nested16c" $ evalCheck (h (h (sAdd (sVal 3) (sVal 4))),  sAdd (sVal 3) (sVal 4))
+    , goldenCapturedIO "adt_nested16"  $ evalCheckS (h . h) (sAdd (sVal 3) (sVal 4),  sAdd (sVal 3) (sVal 4))
+    -- Two-step simplification: h (h (Mul (Val 1) (Add (Val 0) (Val 5)))) => Val 5
+    -- First h: Mul (Val 1) (Add (Val 0) (Val 5)) => Add (Val 0) (Val 5)
+    -- Second h: Add (Val 0) (Val 5)              => Val 5
+    , goldenCapturedIO "adt_nested17c" $ evalCheck (h (h (sMul (sVal 1) (sAdd (sVal 0) (sVal 5)))),  sVal 5)
+    , goldenCapturedIO "adt_nested17"  $ evalCheckS (h . h) (sMul (sVal 1) (sAdd (sVal 0) (sVal 5)),  sVal 5)
+    -- Semantics preservation: eval (h e) == eval e for all closed e
+    , goldenCapturedIO "adt_nested18" hPreservesEval
     ]
     where a = literal "a"
           b = literal "a"
@@ -281,3 +305,9 @@ h e = [sCase|Expr e of
          Mul (Val i) _ | i .== 0 -> sVal 0
          _                        -> e
       |]
+
+-- | Prove that h preserves evaluation semantics: eval (h e) == eval e for all e.
+hPreservesEval :: FilePath -> IO ()
+hPreservesEval rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
+                      e :: SExpr <- free "e"
+                      pure $ eval (h e) .== eval e
