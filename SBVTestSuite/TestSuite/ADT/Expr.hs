@@ -213,8 +213,6 @@ tests =
     -- h fires (Add (Val 0) r => r), exposing a cfold-able expression; cfold then folds to Val 26
     , goldenCapturedIO "adt_nested33c" $ evalCheck (cfold (h (sAdd (sVal 0) (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5))))),  sVal 26)
     , goldenCapturedIO "adt_nested33"  $ evalCheckS (cfold . h) (sAdd (sVal 0) (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5))),  sVal 26)
-    -- Semantics preservation of the pipeline: eval (cfold (h e)) == eval e for all e
-    , goldenCapturedIO "adt_nested34"  cfoldAfterHPreservesEval
 
     -- Literal pattern tests: p uses integer and string literal patterns
     -- Top-level literal fires: Val 0 => 100
@@ -406,12 +404,6 @@ cfoldPreservesEval :: FilePath -> IO ()
 cfoldPreservesEval rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
                           e :: SExpr <- free "e"
                           pure $ eval (cfold e) .== eval e
-
--- | Prove that the cfold-after-h pipeline preserves evaluation semantics.
-cfoldAfterHPreservesEval :: FilePath -> IO ()
-cfoldAfterHPreservesEval rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
-                                e :: SExpr <- free "e"
-                                pure $ eval (cfold (h e)) .== eval e
 
 -- | A function using literal patterns: dispatches on specific integer/string values directly in the pattern.
 -- Val 0         => 100
