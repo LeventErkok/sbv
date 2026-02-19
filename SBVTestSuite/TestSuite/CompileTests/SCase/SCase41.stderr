@@ -1,0 +1,18 @@
+SCase41.hs:12:14: error: [GHC-39584]
+    " SCase41.hs:16:16-28: sCase: Non-exhaustive match:
+        Type       : Expr
+        Constructor: Add _ j | isNum (getAdd_1 e)
+      NB. Guarded match might fail.
+
+    " In the quasi-quotation:
+        [sCase|Expr e of
+               Zero          -> 0
+               Num k         -> k
+               Var s         -> ite (s .== literal "a") 1 2
+               Add (Num i) j -> i + t j
+               Let _   _a  b -> t b
+      |]
+   |
+12 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
+
