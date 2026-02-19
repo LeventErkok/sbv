@@ -312,6 +312,15 @@ sCase = QuasiQuoter
     flattenPat off arg (ParensP p)              = flattenPat off arg p
     flattenPat off arg (ConP conName _ subpats) = do
       con   <- getReference off conName
+      -- Arity check: reify the constructor to find its actual field count
+      DataConI _ conType _ <- reify con
+      let arity = countArgs conType
+      unless (arity == length subpats) $
+        fail off $ unlines [ "sCase: Arity mismatch in nested pattern."
+                           , "        Constructor: " ++ nameBase con
+                           , "        Expected   : " ++ show arity
+                           , "        Given      : " ++ show (length subpats)
+                           ]
       let tester      = AppE (VarE (mkName ("is" ++ nameBase con))) arg
           accessor i  = AppE (VarE (mkName ("get" ++ nameBase con ++ "_" ++ show i))) arg
       subResults <- zipWithM (\i p -> flattenPat off (accessor i) p) [(1::Int)..] subpats
@@ -558,3 +567,12 @@ freeVars e = usedVars e Set.\\ boundVars e
          where f :: Exp -> Set Name
                f (VarE n) = Set.singleton n
                f _        = Set.empty
+
+-- | Count the number of arguments in a constructor type by counting arrows.
+-- e.g., @Integer -> String -> Bool@ has 2 arguments.
+-- Handles both plain ArrowT and multiplicity-annotated arrows (MulArrowT).
+countArgs :: Type -> Int
+countArgs (AppT (AppT ArrowT _) rest)            = 1 + countArgs rest
+countArgs (AppT (AppT (AppT MulArrowT _) _) rest) = 1 + countArgs rest
+countArgs (ForallT _ _ t)                         = countArgs t
+countArgs _                                       = 0
