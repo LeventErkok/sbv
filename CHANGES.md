@@ -19,6 +19,22 @@
     automatically. Pattern guards (`, e1, e2`) may also be used alongside nested patterns.
     Additionally, `| True` is now accepted as a synonym for `| sTrue` in guards.
 
+  * The `sCase` quasi-quoter now supports integer and string literal patterns in nested
+    positions (and at the top level inside a constructor). For example:
+
+    ```haskell
+    p e = [sCase|Expr e of
+             Val 0         -> 100          -- fires when the Val field equals 0
+             Val 1         -> 200          -- fires when the Val field equals 1
+             Add (Val 0) r -> eval r       -- nested literal: fires when left child is Val 0
+             _             -> eval e
+          |]
+    ```
+
+    A literal sub-pattern desugars to a symbolic equality guard (`getC_i e .== lit`),
+    so the exhaustiveness checker correctly requires a fallback for any constructor
+    that only appears with literal sub-patterns.
+
   * Add minimum and maximum to Data.SBV.List. If they receive empty list as argument,
     then the result is underspecified, i.e., can be any value of the element type.
 

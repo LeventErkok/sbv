@@ -31,7 +31,7 @@ import Control.Monad (unless, when, zipWithM)
 
 import Data.SBV.Client (getConstructors)
 import Data.SBV.Core.Model (ite, sym)
-import Data.SBV.Core.Data  (sTrue, (.&&))
+import Data.SBV.Core.Data  (sTrue, (.&&), (.==), literal)
 
 import Data.Char  (isSpace, isDigit)
 import Data.List  (intercalate)
@@ -290,7 +290,8 @@ sCase = QuasiQuoter
                                     , "        Only constructors with variables (i.e., Cstr a b _ d)"
                                     , "        Empty record matches (i.e., Cstr{})"
                                     , "        And wildcards (i.e., _) for default"
-                                    , "        are supported."
+                                    , "        are supported at the top level."
+                                    , "        (Integer and string literals are supported in nested positions.)"
                                     ]
 
     fstOf3 :: (a, b, c) -> a
@@ -330,10 +331,13 @@ sCase = QuasiQuoter
           patDecs = [ ValD (VarP v) (NormalB (accessor i)) []
                     | (i, VarP v) <- zip [(1::Int)..] subPats ]
       pure (WildP, tester : subGrds, patDecs ++ subDecs)
+    flattenPat off arg (LitP lit) = do
+      eq <- litToEq off arg lit
+      pure (WildP, [eq], [])
     flattenPat o _ p = fail o $ unlines [ "sCase: Unsupported complex pattern match."
                                         , "        Saw: " <> pprint p
                                         , ""
-                                        , "      Only variables, wildcards, and nested constructors are supported."
+                                        , "      Only variables, wildcards, nested constructors, and integer/string literals are supported."
                                         ]
 
     -- Make sure things are in good-shape and decide if we have guards
@@ -576,3 +580,16 @@ countArgs (AppT (AppT ArrowT _) rest)            = 1 + countArgs rest
 countArgs (AppT (AppT (AppT MulArrowT _) _) rest) = 1 + countArgs rest
 countArgs (ForallT _ _ t)                         = countArgs t
 countArgs _                                       = 0
+
+-- | Generate a symbolic equality guard for a literal pattern.
+-- @litToEq off arg lit@ produces the expression @arg .== litVal@.
+-- For integers, the literal is used directly (relying on @fromInteger@).
+-- For strings, the literal is wrapped with @literal@ to convert @String@ to @SString@.
+-- Only integer and string literals are supported; others produce a compile error.
+litToEq :: Offset -> Exp -> Lit -> Q Exp
+litToEq _   arg (IntegerL n) = pure $ foldl1 AppE [VarE '(.==), arg, LitE (IntegerL n)]
+litToEq _   arg (StringL  s) = pure $ foldl1 AppE [VarE '(.==), arg, AppE (VarE 'literal) (LitE (StringL s))]
+litToEq off _   lit          = fail off $ unlines
+  [ "sCase: Unsupported literal in pattern: " ++ show lit
+  , "       Only integer and string literals are supported."
+  ]
