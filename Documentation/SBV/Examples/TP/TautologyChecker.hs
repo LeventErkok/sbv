@@ -131,15 +131,10 @@ isNormal = smtFunction "isNormal" $ \f ->
 normalize :: SFormula -> SFormula
 normalize = smtFunction "normalize" $ \f ->
   [sCase|Formula f of
-    If c l r -> normalizeIf c l r
-    _        -> f
+    If (If p q r) left right -> normalize (sIf p (sIf q left right) (sIf r left right))
+    If c          left right -> sIf c (normalize left) (normalize right)
+    _                        -> f
   |]
- where normalizeIf :: SFormula -> SFormula -> SFormula -> SFormula
-       normalizeIf = smtFunction "normalizeIf" $ \c thn els ->
-          [sCase|Formula c of
-            If p q r -> normalize (sIf p (sIf q thn els) (sIf r thn els))
-            _        -> sIf c (normalize thn) (normalize els)
-          |]
 
 -- | The normalization transformation preserves complexity.
 --
@@ -279,25 +274,29 @@ eval = smtFunction "eval" $ \f bs ->
 isTautology' :: SFormula -> SList Binding -> SBool
 isTautology' = smtFunction "isTautology'" $ \f bs ->
   [sCase|Formula f of
-    FTrue    -> sTrue
-    FFalse   -> sFalse
-    Var _    -> eval f bs
-    If c l r -> isTautology'If c l r bs
+    -- Trivial cases
+    FTrue          -> sTrue
+    FFalse         -> sFalse
+
+    -- Variable
+    Var _          -> eval f bs
+
+    -- Constant branches
+    If FTrue  l _  -> isTautology' l bs
+    If FFalse _ r  -> isTautology' r bs
+
+    -- Branching on a variable
+    If (Var n) l r
+      -- We have already this variable, so evaluate based on the current choice
+      | isAssigned n bs, eval (sVar n) bs -> isTautology' l bs
+      | isAssigned n bs                   -> isTautology' r bs
+
+      -- We haven't yet assigned this variable. Both branches should work out:
+      | True             ->     isTautology' l (assumeTrue  n bs)
+                            .&& isTautology' r (assumeFalse n bs)
+
+    If _ _ _ -> sFalse  -- Contradicts isNormal assumption
   |]
- where isTautology'If :: SFormula -> SFormula -> SFormula -> SList Binding -> SBool
-       isTautology'If = smtFunction "isTautology'If" $ \c l r bs ->
-           [sCase|Formula c of
-             Var n -> ite (isAssigned n bs)
-                          (ite (eval (sVar n) bs)
-                               (isTautology' l bs)
-                               (isTautology' r bs))
-                          (ite (isTautology' l (assumeTrue  n bs))
-                               (isTautology' r (assumeFalse n bs))
-                               sFalse)
-             FTrue  -> isTautology' l bs
-             FFalse -> isTautology' r bs
-             _      -> sFalse  -- Contradicts isNormal assumption
-           |]
 
 -- | Main tautology checker.
 isTautology :: SFormula -> SBool
@@ -794,30 +793,23 @@ mkSymbolic [''FalsifyResult]
 falsify' :: SFormula -> SList Binding -> SFalsifyResult
 falsify' = smtFunction "falsify'" $ \f bs ->
   [sCase|Formula f of
-    FTrue  -> sFalsifyResult sFalse []
-    FFalse -> sFalsifyResult sTrue bs
-    Var i  -> ite (isAssigned i bs)
-                  (ite (eval (sVar i) bs)
-                       (sFalsifyResult sFalse [])
-                       (sFalsifyResult sTrue bs))
-                  (sFalsifyResult sTrue (sBinding i sFalse .: bs))
-    If c l r -> falsify'If c l r bs
+    FTrue          -> sFalsifyResult sFalse []
+    FFalse         -> sFalsifyResult sTrue bs
+    Var i
+      | isAssigned i bs, eval (sVar i) bs -> sFalsifyResult sFalse []
+      | isAssigned i bs                   -> sFalsifyResult sTrue bs
+      | True                              -> sFalsifyResult sTrue (sBinding i sFalse .: bs)
+    If (Var i) l r
+      | isAssigned i bs, eval (sVar i) bs -> falsify' l bs
+      | isAssigned i bs                   -> falsify' r bs
+      | True                              -> let resL = falsify' l (assumeTrue i bs)
+                                             in ite (sNot (sfalsified resL))
+                                                    (falsify' r (assumeFalse i bs))
+                                                    resL
+    If FTrue  l _  -> falsify' l bs
+    If FFalse _ r  -> falsify' r bs
+    If _      _ _  -> sFalsifyResult sFalse []  -- Shouldn't happen for normal formulas
   |]
- where falsify'If :: SFormula -> SFormula -> SFormula -> SList Binding -> SFalsifyResult
-       falsify'If = smtFunction "falsify'If" $ \c l r bs ->
-         [sCase|Formula c of
-           Var i  -> ite (isAssigned i bs)
-                         (ite (eval (sVar i) bs)
-                              (falsify' l bs)
-                              (falsify' r bs))
-                         (let resL = falsify' l (assumeTrue i bs)
-                          in ite (sNot (sfalsified resL))
-                                 (falsify' r (assumeFalse i bs))
-                                 resL)
-           FTrue  -> falsify' l bs
-           FFalse -> falsify' r bs
-           _      -> sFalsifyResult sFalse []  -- Shouldn't happen for normal formulas
-         |]
 
 -- | Falsify a formula by first normalizing it.
 falsify :: SFormula -> SFalsifyResult
