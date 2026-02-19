@@ -165,7 +165,23 @@ tests =
     , goldenCapturedIO "adt_nested17c" $ evalCheck (h (h (sMul (sVal 1) (sAdd (sVal 0) (sVal 5)))),  sVal 5)
     , goldenCapturedIO "adt_nested17"  $ evalCheckS (h . h) (sMul (sVal 1) (sAdd (sVal 0) (sVal 5)),  sVal 5)
     -- Semantics preservation: eval (h e) == eval e for all closed e
-    , goldenCapturedIO "adt_nested18" hPreservesEval
+    , goldenCapturedIO "adt_nested18"  hPreservesEval
+    -- Mul rule ordering: Mul (Val 1) (Val 1) => Val 1 (first Mul rule fires, not second)
+    , goldenCapturedIO "adt_nested19c" $ evalCheck (h (sMul (sVal 1) (sVal 1)),  sVal 1)
+    , goldenCapturedIO "adt_nested19"  $ evalCheckS h (sMul (sVal 1) (sVal 1),   sVal 1)
+    -- Guard miss on both Mul rules: Mul (Val 2) (Val 3) falls through to _
+    , goldenCapturedIO "adt_nested20c" $ evalCheck (h (sMul (sVal 2) (sVal 3)),  sMul (sVal 2) (sVal 3))
+    , goldenCapturedIO "adt_nested20"  $ evalCheckS h (sMul (sVal 2) (sVal 3),   sMul (sVal 2) (sVal 3))
+    -- Mul (Val 1) (Var "x") => Var "x": Mul rule returns a non-Val expression
+    , goldenCapturedIO "adt_nested21c" $ evalCheck (h (sMul (sVal 1) (sVar (literal "x"))),  sVar (literal "x"))
+    , goldenCapturedIO "adt_nested21"  $ evalCheckS h (sMul (sVal 1) (sVar (literal "x")),   sVar (literal "x"))
+    -- Add (Val 0) (Var "x") => Var "x": Add rule returns a non-Val expression
+    , goldenCapturedIO "adt_nested22c" $ evalCheck (h (sAdd (sVal 0) (sVar (literal "x"))),  sVar (literal "x"))
+    , goldenCapturedIO "adt_nested22"  $ evalCheckS h (sAdd (sVal 0) (sVar (literal "x")),   sVar (literal "x"))
+    -- Focused proof: h preserves eval for Add expressions specifically
+    , goldenCapturedIO "adt_nested23"  hPreservesEvalAdd
+    -- Focused proof: h preserves eval for Mul expressions specifically
+    , goldenCapturedIO "adt_nested24"  hPreservesEvalMul
     ]
     where a = literal "a"
           b = literal "a"
@@ -311,3 +327,15 @@ hPreservesEval :: FilePath -> IO ()
 hPreservesEval rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
                       e :: SExpr <- free "e"
                       pure $ eval (h e) .== eval e
+
+-- | Focused proof: h preserves eval specifically when the top-level node is Add.
+hPreservesEvalAdd :: FilePath -> IO ()
+hPreservesEvalAdd rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
+                         e :: SExpr <- free "e"
+                         pure $ isAdd e .=> (eval (h e) .== eval e)
+
+-- | Focused proof: h preserves eval specifically when the top-level node is Mul.
+hPreservesEvalMul :: FilePath -> IO ()
+hPreservesEvalMul rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
+                         e :: SExpr <- free "e"
+                         pure $ isMul e .=> (eval (h e) .== eval e)
