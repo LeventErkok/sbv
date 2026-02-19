@@ -61,6 +61,7 @@ import Data.Either (rights)
 import System.Directory   (findExecutable)
 import System.Environment (getEnv)
 import System.Exit        (ExitCode(..))
+import System.FilePath    (takeBaseName)
 import System.IO          (hClose, hFlush, hPutStrLn, hGetContents, hGetLine, hReady, hGetChar)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
 
@@ -713,7 +714,7 @@ standardSolver :: SMTConfig       -- ^ The current configuration
 standardSolver config ctx pgm continuation = do
     let msg s    = debug config ["** " ++ s]
         smtSolver= solver config
-        exec     = executable smtSolver
+        exec     = takeBaseName (executable smtSolver)
         opts     = options smtSolver config ++ extraArgs config
     msg $ "Calling: "  ++ (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
     rnf pgm `seq` pipeProcess config ctx exec opts pgm continuation
