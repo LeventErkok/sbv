@@ -182,6 +182,23 @@ tests =
     , goldenCapturedIO "adt_nested23"  hPreservesEvalAdd
     -- Focused proof: h preserves eval for Mul expressions specifically
     , goldenCapturedIO "adt_nested24"  hPreservesEvalMul
+
+    -- Deep nesting: cfold constant-folds Add (Mul (Val a) (Val b)) (Mul (Val c) (Val d)) => Val (a*b + c*d)
+    -- 4-level deep nested pattern on all branches simultaneously
+    -- Fires: Add (Mul (Val 2) (Val 3)) (Mul (Val 4) (Val 5)) => Val 26
+    , goldenCapturedIO "adt_nested25c" $ evalCheck (cfold (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5))),  sVal 26)
+    , goldenCapturedIO "adt_nested25"  $ evalCheckS cfold (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5)),   sVal 26)
+    -- Fires: Add (Mul (Val 0) (Val 99)) (Mul (Val 1) (Val 1)) => Val 1
+    , goldenCapturedIO "adt_nested26c" $ evalCheck (cfold (sAdd (sMul (sVal 0) (sVal 99)) (sMul (sVal 1) (sVal 1))),  sVal 1)
+    , goldenCapturedIO "adt_nested26"  $ evalCheckS cfold (sAdd (sMul (sVal 0) (sVal 99)) (sMul (sVal 1) (sVal 1)),   sVal 1)
+    -- No match: right branch is Var, not Mul (Val _) (Val _)
+    , goldenCapturedIO "adt_nested27c" $ evalCheck (cfold (sAdd (sMul (sVal 2) (sVal 3)) (sVar (literal "x"))),  sAdd (sMul (sVal 2) (sVal 3)) (sVar (literal "x")))
+    , goldenCapturedIO "adt_nested27"  $ evalCheckS cfold (sAdd (sMul (sVal 2) (sVal 3)) (sVar (literal "x")),   sAdd (sMul (sVal 2) (sVal 3)) (sVar (literal "x")))
+    -- No match: outer constructor is Mul, not Add
+    , goldenCapturedIO "adt_nested28c" $ evalCheck (cfold (sMul (sVal 2) (sVal 3)),  sMul (sVal 2) (sVal 3))
+    , goldenCapturedIO "adt_nested28"  $ evalCheckS cfold (sMul (sVal 2) (sVal 3),   sMul (sVal 2) (sVal 3))
+    -- Semantics preservation: eval (cfold e) == eval e for all e
+    , goldenCapturedIO "adt_nested29"  cfoldPreservesEval
     ]
     where a = literal "a"
           b = literal "a"
@@ -339,3 +356,17 @@ hPreservesEvalMul :: FilePath -> IO ()
 hPreservesEvalMul rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
                          e :: SExpr <- free "e"
                          pure $ isMul e .=> (eval (h e) .== eval e)
+
+-- | A constant-folder using a deeply nested pattern: recognizes Add (Mul (Val a) (Val b)) (Mul (Val c) (Val d))
+-- and folds it to Val (a*b + c*d). All four leaf positions use nested Val patterns simultaneously.
+cfold :: SExpr -> SExpr
+cfold e = [sCase|Expr e of
+             Add (Mul (Val a) (Val b)) (Mul (Val c) (Val d)) -> sVal (a*b + c*d)
+             _                                               -> e
+          |]
+
+-- | Prove that cfold preserves evaluation semantics: eval (cfold e) == eval e for all e.
+cfoldPreservesEval :: FilePath -> IO ()
+cfoldPreservesEval rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
+                          e :: SExpr <- free "e"
+                          pure $ eval (cfold e) .== eval e
