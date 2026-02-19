@@ -1,0 +1,18 @@
+SCase48.hs:12:14: error: [GHC-39584]
+    " SCase48.hs:16:16-28: sCase: Non-exhaustive match:
+        Type       : Expr
+        Constructor: Add _ j | (Data.SBV.Core.Data..&&) (isNum (getAdd_1 e)) ((Data.SBV.Core.Data..==) (getNum_1 (getAdd_1 e)) 1)
+      NB. Guarded match might fail.
+
+    " In the quasi-quotation:
+        [sCase|Expr e of
+               Zero          -> 0
+               Num k         -> k
+               Var _         -> -1
+               Add (Num 1) j -> 100 + t j
+               Let _ _     b -> t b
+      |]
+   |
+12 | t e = [sCase|Expr e of
+   |              ^^^^^^^^^...
+
