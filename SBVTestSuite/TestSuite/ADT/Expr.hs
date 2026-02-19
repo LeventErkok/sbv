@@ -215,6 +215,26 @@ tests =
     , goldenCapturedIO "adt_nested33"  $ evalCheckS (cfold . h) (sAdd (sVal 0) (sAdd (sMul (sVal 2) (sVal 3)) (sMul (sVal 4) (sVal 5))),  sVal 26)
     -- Semantics preservation of the pipeline: eval (cfold (h e)) == eval e for all e
     , goldenCapturedIO "adt_nested34"  cfoldAfterHPreservesEval
+
+    -- Literal pattern tests: p uses integer and string literal patterns
+    -- Top-level literal fires: Val 0 => 100
+    , goldenCapturedIO "adt_lit00c" $ evalCheck (p (sVal 0),  100)
+    , goldenCapturedIO "adt_lit00"  $ evalCheckS p (sVal 0,   100)
+    -- Top-level literal fires: Val 1 => 200
+    , goldenCapturedIO "adt_lit01c" $ evalCheck (p (sVal 1),  200)
+    , goldenCapturedIO "adt_lit01"  $ evalCheckS p (sVal 1,   200)
+    -- Top-level literal misses: Val 2 falls through to eval e = 2
+    , goldenCapturedIO "adt_lit02c" $ evalCheck (p (sVal 2),  2)
+    , goldenCapturedIO "adt_lit02"  $ evalCheckS p (sVal 2,   2)
+    -- Nested literal fires: Add (Val 0) (Val 5) => eval (Val 5) = 5
+    , goldenCapturedIO "adt_lit03c" $ evalCheck (p (sAdd (sVal 0) (sVal 5)),  5)
+    , goldenCapturedIO "adt_lit03"  $ evalCheckS p (sAdd (sVal 0) (sVal 5),   5)
+    -- Nested literal misses: Add (Val 1) (Val 5) => eval e = 6
+    , goldenCapturedIO "adt_lit04c" $ evalCheck (p (sAdd (sVal 1) (sVal 5)),  6)
+    , goldenCapturedIO "adt_lit04"  $ evalCheckS p (sAdd (sVal 1) (sVal 5),   6)
+    -- Var falls through to eval e (= 0 for unbound var)
+    , goldenCapturedIO "adt_lit05c" $ evalCheck (p (sVar (literal "x")),  0)
+    , goldenCapturedIO "adt_lit05"  $ evalCheckS p (sVar (literal "x"),   0)
     ]
     where a = literal "a"
           b = literal "a"
@@ -392,3 +412,16 @@ cfoldAfterHPreservesEval :: FilePath -> IO ()
 cfoldAfterHPreservesEval rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf} $ do
                                 e :: SExpr <- free "e"
                                 pure $ eval (cfold (h e)) .== eval e
+
+-- | A function using literal patterns: dispatches on specific integer/string values directly in the pattern.
+-- Val 0         => 100
+-- Val 1         => 200
+-- Add (Val 0) r => eval r   (nested integer literal)
+-- _             => eval e   (fallthrough)
+p :: SExpr -> SInteger
+p e = [sCase|Expr e of
+         Val 0         -> 100
+         Val 1         -> 200
+         Add (Val 0) r -> eval r
+         _             -> eval e
+      |]
