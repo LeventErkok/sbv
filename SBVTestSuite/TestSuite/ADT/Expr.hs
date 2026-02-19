@@ -104,6 +104,44 @@ tests =
     , goldenCapturedIO "adt_gen11"  $ tSat 9
     , goldenCapturedIO "adt_gen12"  $ tSat 100
     , goldenCapturedIO "adt_chk01"  $ evalTest (t (sA 12))
+
+    -- Nested pattern tests: h is a simplifier using nested patterns
+    -- Add (Val 0) e => e
+    , goldenCapturedIO "adt_nested00c" $ evalCheck (h (sAdd (sVal 0) (sVal 5)),  sVal 5)
+    , goldenCapturedIO "adt_nested00"  $ evalCheckS h (sAdd (sVal 0) (sVal 5),   sVal 5)
+    -- Add e (Val 0) => e
+    , goldenCapturedIO "adt_nested01c" $ evalCheck (h (sAdd (sVal 7) (sVal 0)),  sVal 7)
+    , goldenCapturedIO "adt_nested01"  $ evalCheckS h (sAdd (sVal 7) (sVal 0),   sVal 7)
+    -- Mul (Val 1) e => e
+    , goldenCapturedIO "adt_nested02c" $ evalCheck (h (sMul (sVal 1) (sVal 9)),  sVal 9)
+    , goldenCapturedIO "adt_nested02"  $ evalCheckS h (sMul (sVal 1) (sVal 9),   sVal 9)
+    -- Mul e (Val 1) => e
+    , goldenCapturedIO "adt_nested03c" $ evalCheck (h (sMul (sVal 4) (sVal 1)),  sVal 4)
+    , goldenCapturedIO "adt_nested03"  $ evalCheckS h (sMul (sVal 4) (sVal 1),   sVal 4)
+    -- Mul (Val 0) _ => 0
+    , goldenCapturedIO "adt_nested04c" $ evalCheck (h (sMul (sVal 0) (sVal 99)), sVal 0)
+    , goldenCapturedIO "adt_nested04"  $ evalCheckS h (sMul (sVal 0) (sVal 99),  sVal 0)
+    -- No simplification applies: Add (Val 3) (Val 4) stays as-is
+    , goldenCapturedIO "adt_nested05c" $ evalCheck (h (sAdd (sVal 3) (sVal 4)),  sAdd (sVal 3) (sVal 4))
+    , goldenCapturedIO "adt_nested05"  $ evalCheckS h (sAdd (sVal 3) (sVal 4),   sAdd (sVal 3) (sVal 4))
+    -- Guard miss: Add (Val 1) e, i /= 0, falls through to _
+    , goldenCapturedIO "adt_nested06c" $ evalCheck (h (sAdd (sVal 1) (sVal 5)),  sAdd (sVal 1) (sVal 5))
+    , goldenCapturedIO "adt_nested06"  $ evalCheckS h (sAdd (sVal 1) (sVal 5),   sAdd (sVal 1) (sVal 5))
+    -- Pattern ordering: Add (Val 0) (Val 0) => Val 0 (first rule fires, not second)
+    , goldenCapturedIO "adt_nested07c" $ evalCheck (h (sAdd (sVal 0) (sVal 0)),  sVal 0)
+    , goldenCapturedIO "adt_nested07"  $ evalCheckS h (sAdd (sVal 0) (sVal 0),   sVal 0)
+    -- Mul (Val 1) e where e is compound: result is the compound expression
+    , goldenCapturedIO "adt_nested08c" $ evalCheck (h (sMul (sVal 1) (sAdd (sVal 3) (sVal 4))),  sAdd (sVal 3) (sVal 4))
+    , goldenCapturedIO "adt_nested08"  $ evalCheckS h (sMul (sVal 1) (sAdd (sVal 3) (sVal 4)),   sAdd (sVal 3) (sVal 4))
+    -- Mul (Val 0) e where e is compound: result is Val 0 regardless of right side
+    , goldenCapturedIO "adt_nested09c" $ evalCheck (h (sMul (sVal 0) (sAdd (sVal 3) (sVal 4))),  sVal 0)
+    , goldenCapturedIO "adt_nested09"  $ evalCheckS h (sMul (sVal 0) (sAdd (sVal 3) (sVal 4)),   sVal 0)
+    -- Non-Add/Mul constructor: Var falls through to _
+    , goldenCapturedIO "adt_nested10c" $ evalCheck (h (sVar (literal "x")),  sVar (literal "x"))
+    , goldenCapturedIO "adt_nested10"  $ evalCheckS h (sVar (literal "x"),   sVar (literal "x"))
+    -- Non-Add/Mul constructor: Val falls through to _
+    , goldenCapturedIO "adt_nested11c" $ evalCheck (h (sVal 42),  sVal 42)
+    , goldenCapturedIO "adt_nested11"  $ evalCheckS h (sVal 42,   sVal 42)
     ]
     where a = literal "a"
           b = literal "a"
@@ -115,19 +153,19 @@ tests =
           e04 = e03 + sLet a e03 (sVar a + e01)  -- 28 + 28 + 7 = 63
           e05 = sLet b e04 (sVar b * sVar b)     -- 63 * 63 = 3969
 
-evalCheck :: SymVal a => (SBV a, a) -> FilePath -> IO ()
+evalCheck :: SymVal a => (SBV a, SBV a) -> FilePath -> IO ()
 evalCheck (sv, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
-                        constrain $ sv ./= literal v
+                        constrain $ sv ./= v
                         query $ do cs <- checkSat
                                    case cs of
                                      Unsat{} -> io $ appendFile rf "All good.\n"
                                      _       -> error $ "Unexpected: " ++ show cs
 
-evalCheckS :: (SExpr -> SInteger) -> (SExpr, Integer) -> FilePath -> IO ()
+evalCheckS :: SymVal b => (SExpr -> SBV b) -> (SExpr, SBV b) -> FilePath -> IO ()
 evalCheckS fun (e, v) rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                         se :: SExpr <- free_
                         constrain $ se .== e
-                        constrain $ fun se ./= literal v
+                        constrain $ fun se ./= v
                         query $ do cs <- checkSat
                                    case cs of
                                      Unsat{} -> io $ appendFile rf "All good.\n"
@@ -225,4 +263,21 @@ t = smtFunction "t" $ \a ->
          A u     -> sA (u+1)
          B w     -> sB (w+2)
          C a1 a2 -> sC (t a1) (t a2)
+      |]
+
+-- | A simplifier that uses nested patterns to special-case identity/zero elements.
+-- Add (Val 0) e  => e
+-- Add e (Val 0)  => e
+-- Mul (Val 1) e  => e
+-- Mul e (Val 1)  => e
+-- Mul (Val 0) _  => 0
+-- otherwise      => identity
+h :: SExpr -> SExpr
+h e = [sCase|Expr e of
+         Add (Val i) r | i .== 0 -> r
+         Add l (Val i) | i .== 0 -> l
+         Mul (Val i) r | i .== 1 -> r
+         Mul l (Val i) | i .== 1 -> l
+         Mul (Val i) _ | i .== 0 -> sVal 0
+         _                        -> e
       |]
