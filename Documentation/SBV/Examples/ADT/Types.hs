@@ -60,8 +60,7 @@ tc = smtFunction "constraints" $ \m t ->
           Var s -> env s .== t
 
           -- Abstraction case. Type must be a function, whose domain matches the variable.
-          -- And body much match the range. Note that we can't do a nested scase
-          -- here, unfortunately, since custom quasi-quoters do not nest.
+          -- And body must match the range.
           Lam v b
             | isTArr t .&& env v .== sdom t
             -> tc b (srng t)
