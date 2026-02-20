@@ -27,6 +27,17 @@ module Documentation.SBV.Examples.TP.VM
  (   -- * Language
      Expr(..), SExpr, size
 
+
+     -- * Symbolic accessors
+   , sCaseExpr
+   , isVar, sVar, getVar_1,                     svar
+   , isCon, sCon, getCon_1,                     scon
+   , isSqr, sSqr, getSqr_1,                     ssqrVal
+   , isInc, sInc, getInc_1,                     sincVal
+   , isAdd, sAdd, getAdd_1, getAdd_2,           sadd1, sadd2
+   , isMul, sMul, getMul_1, getMul_2,           smul1, smul2
+   , isLet, sLet, getLet_1, getLet_2, getLet_3, slvar, slval, slbody
+
      -- * Environment and the stack
    , Env, Stack
 
@@ -59,13 +70,13 @@ import Data.SBV.TP
 -- * Language
 
 -- | Basic expression language.
-data Expr nm val = Var nm                             -- ^ Variables
-                 | Con val                            -- ^ Constants
-                 | Sqr (Expr nm val)                  -- ^ Squaring
-                 | Inc (Expr nm val)                  -- ^ Increment
-                 | Add (Expr nm val) (Expr nm val)    -- ^ Addition
-                 | Mul (Expr nm val) (Expr nm val)    -- ^ Multiplication
-                 | Let nm (Expr nm val) (Expr nm val) -- ^ Let expression
+data Expr nm val = Var {var    :: nm                                            } -- ^ Variables
+                 | Con {con    :: val                                           } -- ^ Constants
+                 | Sqr {sqrVal :: Expr nm val                                   } -- ^ Squaring
+                 | Inc {incVal :: Expr nm val                                   } -- ^ Increment
+                 | Add {add1   :: Expr nm val, add2 :: Expr nm val              } -- ^ Addition
+                 | Mul {mul1   :: Expr nm val, mul2 :: Expr nm val              } -- ^ Addition
+                 | Let {lvar   :: nm, lval ::  Expr nm val, lbody :: Expr nm val} -- ^ Let expression
 
 -- | Create symbolic version of expressions
 mkSymbolic [''Expr]
@@ -107,13 +118,13 @@ interp = interpInEnv []
 -- * Virtual machine
 
 -- | Instructions
-data Instr nm val = IPushN nm   -- ^ Push the value of nm from the environment on to the stack
-                  | IPushV val  -- ^ Push a value on to the stack
-                  | IDup        -- ^ Duplicate the top of the stack
-                  | IAdd        -- ^ Add      the top two elements and push back
-                  | IMul        -- ^ Multiply the top two elements and push back
-                  | IBind nm    -- ^ Bind the value on top of stack to name
-                  | IForget     -- ^ Pop and ignore the binding on the environment
+data Instr nm val = IPushN { ivar :: nm  } -- ^ Push the value of nm from the environment on to the stack
+                  | IPushV { ival :: val } -- ^ Push a value on to the stack
+                  | IDup                   -- ^ Duplicate the top of the stack
+                  | IAdd                   -- ^ Add      the top two elements and push back
+                  | IMul                   -- ^ Multiply the top two elements and push back
+                  | IBind nm               -- ^ Bind the value on top of stack to name
+                  | IForget                -- ^ Pop and ignore the binding on the environment
 
 -- | Create symbolic version of instructions
 mkSymbolic [''Instr]
@@ -142,7 +153,7 @@ execute :: (SymVal nm, SymVal val, Num (SBV val)) => EnvStack nm val -> SInstr n
 execute envStk instr = let (env, stk) = untuple envStk
                        in tuple [sCase|Instr instr of
                                    IPushN nm   -> (env, push (nm `SL.lookup` env) stk)
-                                   IPushV val  -> (env, push val stk)
+                                   IPushV v    -> (env, push v stk)
                                    IDup        -> (env, push (top stk) stk)
                                    IAdd        -> (env, let a = top stk; b = top (pop stk) in push (a + b) (pop (pop stk)))
                                    IMul        -> (env, let a = top stk; b = top (pop stk) in push (a * b) (pop (pop stk)))
@@ -306,14 +317,14 @@ correctness = do
                          .== tuple (env, push (interpInEnv env e) stk))
                (\e _ _  -> size e, [proofOf measureNonNeg]) $
                \ih e env stk -> []
-                 |- cases [ isVar e ==> let nm = getVar_1 e
+                 |- cases [ isVar e ==> let nm = svar e
                                      in run (tuple (env, stk)) (compile (sVar nm))
                                      ?? "case Var"
                                      =: run (tuple (env, stk)) [sIPushN nm]
                                      =: tuple (env, push (interpInEnv env (sVar nm)) stk)
                                      =: qed
 
-                          , isCon e ==> let v = getCon_1 e
+                          , isCon e ==> let v = scon e
                                      in run (tuple (env, stk)) (compile (sCon v))
                                      ?? "case Con"
                                      =: run (tuple (env, stk)) [sIPushV v]
@@ -321,7 +332,7 @@ correctness = do
                                      =: tuple (env, push (interpInEnv env (sCon v)) stk)
                                      =: qed
 
-                          , isSqr e ==> let a = getSqr_1 e
+                          , isSqr e ==> let a = ssqrVal e
                                      in run (tuple (env, stk)) (compile (sSqr a))
                                      ?? "case Sqr"
                                      =: run (tuple (env, stk)) (compile a SL.++ [sIDup, sIMul])
@@ -338,7 +349,7 @@ correctness = do
                                      =: tuple (env, push (interpInEnv env (sSqr a)) stk)
                                      =: qed
 
-                          , isInc e ==> let a = getInc_1 e
+                          , isInc e ==> let a = sincVal e
                                      in run (tuple (env, stk)) (compile (sInc a))
                                      ?? "case Inc"
                                      =: run (tuple (env, stk)) (compile a SL.++ [sIPushV 1, sIAdd])
@@ -355,8 +366,8 @@ correctness = do
                                      =: tuple (env, push (interpInEnv env (sInc a)) stk)
                                      =: qed
 
-                          , isAdd e ==> let a = getAdd_1 e
-                                            b = getAdd_2 e
+                          , isAdd e ==> let a = sadd1 e
+                                            b = sadd2 e
                                      in run (tuple (env, stk)) (compile (sAdd a b))
                                      ?? "case sAdd"
                                      =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIAdd])
@@ -377,8 +388,8 @@ correctness = do
                                      =: tuple (env, push (interpInEnv env (sAdd a b)) stk)
                                      =: qed
 
-                          , isMul e ==> let a = getMul_1 e
-                                            b = getMul_2 e
+                          , isMul e ==> let a = smul1 e
+                                            b = smul2 e
                                      in run (tuple (env, stk)) (compile (sMul a b))
                                      ?? "case sMul"
                                      =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIMul])
@@ -403,9 +414,9 @@ correctness = do
                                      =: tuple (env, push (interpInEnv env (sMul a b)) stk)
                                      =: qed
 
-                          , isLet e ==> let nm = getLet_1 e
-                                            a  = getLet_2 e
-                                            b  = getLet_3 e
+                          , isLet e ==> let nm = slvar  e
+                                            a  = slval  e
+                                            b  = slbody e
                                      in run (tuple (env, stk)) (compile (sLet nm a b))
                                      ?? "case Let"
                                      =: run (tuple (env, stk)) (compile a SL.++ [sIBind nm] SL.++ compile b SL.++ [sIForget])
