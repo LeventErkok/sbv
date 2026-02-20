@@ -177,12 +177,9 @@ substCorrect = do
                                ?? addHelper `at` (Inst @"env" env, Inst @"a" (subst nm v a), Inst @"b" (subst nm v b))
                                =: interpInEnv env (subst nm v a) + interpInEnv env (subst nm v b)
                                ?? ih `at` (Inst @"body" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
-                               ?? sorry
                                ?? "stuck"
                                =: interpInEnv env' a + interpInEnv env (subst nm v b)
                                ?? ih `at` (Inst @"body" b, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
-                               ?? sorry
-                               ?? "stuck"
                                =: interpInEnv env' a + interpInEnv env' b
                                ?? addHelper `at` (Inst @"env" env', Inst @"a" a, Inst @"b" b)
                                =: interpInEnv env' (sAdd a b)
@@ -198,12 +195,8 @@ substCorrect = do
                                ?? addHelper `at` (Inst @"env" env, Inst @"a" (subst nm v a), Inst @"b" (subst nm v b))
                                =: interpInEnv env (subst nm v a) * interpInEnv env (subst nm v b)
                                ?? ih `at` (Inst @"body" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
-                               ?? sorry
-                               ?? "stuck"
                                =: interpInEnv env' a * interpInEnv env (subst nm v b)
                                ?? ih `at` (Inst @"body" b, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
-                               ?? sorry
-                               ?? "stuck"
                                =: interpInEnv env' a * interpInEnv env' b
                                ?? addHelper `at` (Inst @"env" env', Inst @"a" a, Inst @"b" b)
                                =: interpInEnv env' (sMul a b)
