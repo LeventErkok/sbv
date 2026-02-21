@@ -20,6 +20,8 @@
 
 module Documentation.SBV.Examples.TP.ConstFold where
 
+import Prelude hiding ((++), snd)
+
 import Data.SBV
 import Data.SBV.List  as SL
 import Data.SBV.Tuple as ST
@@ -62,20 +64,60 @@ type E = Env String Integer
 --   * @Mul (Con 1) x       → x@
 --   * @Mul x (Con 1)       → x@
 --   * @Mul (Con a) (Con b) → Con (a*b)@
+--   * @Let nm (Con v) b    → subst nm v b@
 simplify :: SE -> SE
 simplify = smtFunction "simplify" $ \expr ->
   [sCase|Expr expr of
     Sqr (Con v)         -> sCon (v * v)
+
     Inc (Con v)         -> sCon (v + 1)
+
     Add (Con 0) r       -> r
     Add l       (Con 0) -> l
     Add (Con a) (Con b) -> sCon (a + b)
+
     Mul (Con 0) _       -> sCon 0
     Mul _       (Con 0) -> sCon 0
     Mul (Con 1) r       -> r
     Mul l       (Con 1) -> l
     Mul (Con a) (Con b) -> sCon (a * b)
+
+    Let nm (Con v) b    -> subst nm v b
+
+    -- fall-thru
     _                   -> expr
+  |]
+
+-- * Substitution
+
+-- | Substitute a variable with a value in an expression. Capture-avoiding:
+-- if a @Let@-bound variable shadows the target, we do not substitute in the body.
+--
+--   * @Var x         → if x == nm then Con v else Var x@
+--   * @Con c         → Con c@
+--   * @Sqr a         → Sqr (subst nm v a)@
+--   * @Inc a         → Inc (subst nm v a)@
+--   * @Add a b       → Add (subst nm v a) (subst nm v b)@
+--   * @Mul a b       → Mul (subst nm v a) (subst nm v b)@
+--   * @Let x a b     → Let x (subst nm v a) (if x == nm then b else subst nm v b)@
+subst :: SString -> SInteger -> SE -> SE
+subst = smtFunction "subst" $ \nm v expr ->
+  [sCase|Expr expr of
+
+    -- Substitute for vars if name matches
+    Var x | x .== nm -> sCon v
+          | True     -> sVar x
+
+    -- pass thru
+    Con c   -> sCon c
+    Sqr a   -> sSqr (subst nm v a)
+    Inc a   -> sInc (subst nm v a)
+    Add a b -> sAdd (subst nm v a) (subst nm v b)
+    Mul a b -> sMul (subst nm v a) (subst nm v b)
+
+    -- substitute in the definition, but only substitute in the body if the name is not shadowing
+    Let x a b | x .== nm -> sLet x (subst nm v a) b
+              | True     -> sLet x (subst nm v a) (subst nm v b)
   |]
 
 -- * Constant folding
@@ -175,6 +217,645 @@ letHelper = lemma "letHelper"
                   (\(Forall @"env" (env :: E)) (Forall @"nm" nm) (Forall @"a" a) (Forall @"b" b) ->
                         interpInEnv env (sLet nm a b) .== interpInEnv (ST.tuple (nm, interpInEnv env a) .: env) b) []
 
+-- * Environment lemmas
+
+-- | Swapping two adjacent bindings with distinct keys does not affect lookup.
+--
+-- >>> runTP lookupSwap
+-- Lemma: lookupSwap                       Q.E.D.
+-- [Proven] lookupSwap :: Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
+lookupSwap :: TP (Proof (Forall "k" String -> Forall "b1" (String, Integer)
+                      -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
+lookupSwap = lemma "lookupSwap"
+                   (\(Forall @"k" (k :: SString)) (Forall @"b1" (b1 :: STuple String Integer))
+                     (Forall @"b2" (b2 :: STuple String Integer)) (Forall @"env" (env :: E)) ->
+                       let (x, _) = ST.untuple b1
+                           (y, _) = ST.untuple b2
+                       in  x ./= y .=>    SL.lookup k (b1 .: b2 .: env)
+                                       .== SL.lookup k (b2 .: b1 .: env))
+                   []
+
+-- | Generalized swap: swapping two adjacent distinct-keyed bindings behind
+-- a prefix does not affect lookup.
+--
+-- >>> runTPWith cvc5 lookupSwapPfx
+-- Lemma: lookupSwap                       Q.E.D.
+-- Inductive lemma (strong): lookupSwapPfx
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1 (base)                    Q.E.D.
+--     Step: 1.2 (cons)                    Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] lookupSwapPfx :: Ɐpfx ∷ [([Char], Integer)] → Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
+lookupSwapPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1" (String, Integer)
+                         -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
+lookupSwapPfx = do
+   lkS <- recall "lookupSwap" lookupSwap
+   sInduct "lookupSwapPfx"
+     (\(Forall @"pfx" (pfx :: E)) (Forall @"k" (k :: SString)) (Forall @"b1" (b1 :: STuple String Integer))
+       (Forall @"b2" (b2 :: STuple String Integer)) (Forall @"env" (env :: E)) ->
+         let (x, _) = ST.untuple b1
+             (y, _) = ST.untuple b2
+         in  x ./= y .=>    SL.lookup k (pfx ++ b1 .: b2 .: env)
+                         .== SL.lookup k (pfx ++ b2 .: b1 .: env))
+     (\pfx _ _ _ _ -> SL.length pfx :: SInteger, []) $
+     \ih pfx k b1 b2 env ->
+       let (x, _) = ST.untuple b1
+           (y, _) = ST.untuple b2
+       in [x ./= y]
+       |- cases [ SL.null pfx
+                  ==> SL.lookup k (pfx ++ b1 .: b2 .: env)
+                   ?? "base"
+                   ?? lkS `at` (Inst @"k" k, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
+                   =: SL.lookup k (pfx ++ b2 .: b1 .: env)
+                   =: qed
+                , sNot (SL.null pfx)
+                  ==> let t  = SL.tail pfx
+                       in SL.lookup k (pfx ++ b1 .: b2 .: env)
+                       ?? "cons"
+                       ?? ih `at` (Inst @"pfx" t, Inst @"k" k, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
+                       =: SL.lookup k (pfx ++ b2 .: b1 .: env)
+                       =: qed
+                ]
+
+-- | A shadowed binding does not affect lookup: if the same key appears first, the second is irrelevant.
+--
+-- >>> runTP lookupShadow
+-- Lemma: lookupShadow                     Q.E.D.
+-- [Proven] lookupShadow :: Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
+lookupShadow :: TP (Proof (Forall "k" String -> Forall "b1" (String, Integer)
+                        -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
+lookupShadow = lemma "lookupShadow"
+                     (\(Forall @"k" (k :: SString)) (Forall @"b1" (b1 :: STuple String Integer))
+                       (Forall @"b2" (b2 :: STuple String Integer)) (Forall @"env" (env :: E)) ->
+                         let (x, _) = ST.untuple b1
+                             (y, _) = ST.untuple b2
+                         in  x .== y .=>    SL.lookup k (b1 .: b2 .: env)
+                                        .== SL.lookup k (b1 .: env))
+                     []
+
+-- | Generalized shadow: a shadowed binding behind a prefix does not affect lookup.
+--
+-- >>> runTPWith cvc5 lookupShadowPfx
+-- Lemma: lookupShadow                     Q.E.D.
+-- Inductive lemma (strong): lookupShadowPfx
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1 (base)                    Q.E.D.
+--     Step: 1.2 (cons)                    Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] lookupShadowPfx :: Ɐpfx ∷ [([Char], Integer)] → Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
+lookupShadowPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1" (String, Integer)
+                           -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
+lookupShadowPfx = do
+   lkSh <- recall "lookupShadow" lookupShadow
+   sInduct "lookupShadowPfx"
+     (\(Forall @"pfx" (pfx :: E)) (Forall @"k" (k :: SString)) (Forall @"b1" (b1 :: STuple String Integer))
+       (Forall @"b2" (b2 :: STuple String Integer)) (Forall @"env" (env :: E)) ->
+         let (x, _) = ST.untuple b1
+             (y, _) = ST.untuple b2
+         in  x .== y .=>    SL.lookup k (pfx ++ b1 .: b2 .: env)
+                         .== SL.lookup k (pfx ++ b1 .: env))
+     (\pfx _ _ _ _ -> SL.length pfx :: SInteger, []) $
+     \ih pfx k b1 b2 env ->
+       let (x, _) = ST.untuple b1
+           (y, _) = ST.untuple b2
+       in [x .== y]
+       |- cases [ SL.null pfx
+                  ==> SL.lookup k (pfx ++ b1 .: b2 .: env)
+                   ?? "base"
+                   ?? lkSh `at` (Inst @"k" k, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
+                   =: SL.lookup k (pfx ++ b1 .: env)
+                   =: qed
+                , sNot (SL.null pfx)
+                  ==> let h  = SL.head pfx
+                          t  = SL.tail pfx
+                       in SL.lookup k (pfx ++ b1 .: b2 .: env)
+                       ?? "cons"
+                       ?? pfx .== h .: t
+                       ?? ih `at` (Inst @"pfx" t, Inst @"k" k, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
+                       =: SL.lookup k (pfx ++ b1 .: env)
+                       =: qed
+                ]
+
+-- | Swapping two adjacent distinct-keyed bindings in the environment
+-- does not affect interpretation. The @pfx@ parameter allows the swap
+-- to happen at any depth in the environment.
+--
+-- >>> runTPWith cvc5 envSwap
+-- Lemma: measureNonNeg                    Q.E.D.
+-- Lemma: lookupSwapPfx                    Q.E.D.
+-- Lemma: sqrCong                          Q.E.D.
+-- Lemma: sqrHelper                        Q.E.D.
+-- Lemma: addHelper                        Q.E.D.
+-- Lemma: mulCongL                         Q.E.D.
+-- Lemma: mulCongR                         Q.E.D.
+-- Lemma: mulHelper                        Q.E.D.
+-- Lemma: letHelper                        Q.E.D.
+-- Inductive lemma (strong): envSwap
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (7 way case split)
+--     Step: 1.1 (Var)                     Q.E.D.
+--     Step: 1.2 (Con)                     Q.E.D.
+--     Step: 1.3.1 (Sqr)                   Q.E.D.
+--     Step: 1.3.2                         Q.E.D.
+--     Step: 1.3.3                         Q.E.D.
+--     Step: 1.4 (Inc)                     Q.E.D.
+--     Step: 1.5.1 (Add)                   Q.E.D.
+--     Step: 1.5.2                         Q.E.D.
+--     Step: 1.5.3                         Q.E.D.
+--     Step: 1.6.1 (Mul)                   Q.E.D.
+--     Step: 1.6.2                         Q.E.D.
+--     Step: 1.6.3                         Q.E.D.
+--     Step: 1.6.4                         Q.E.D.
+--     Step: 1.7.1 (Let)                   Q.E.D.
+--     Step: 1.7.2                         Q.E.D.
+--     Step: 1.7.3                         Q.E.D.
+--     Step: 1.7.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] envSwap :: Ɐe ∷ (Expr [Char] Integer) → Ɐpfx ∷ [([Char], Integer)] → Ɐenv ∷ [([Char], Integer)] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Bool
+envSwap :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
+                   -> Forall "b1" (String, Integer) -> Forall "b2" (String, Integer) -> SBool))
+envSwap = do
+   mnn  <- recall "measureNonNeg" measureNonNeg
+   lkSP <- recall "lookupSwapPfx" lookupSwapPfx
+   sqrC <- recall "sqrCong"      sqrCong
+   sqrH <- recall "sqrHelper"    sqrHelper
+   addH <- recall "addHelper"    addHelper
+   mulCL <- recall "mulCongL"    mulCongL
+   mulCR <- recall "mulCongR"    mulCongR
+   mulH <- recall "mulHelper"    mulHelper
+   letH <- recall "letHelper"    letHelper
+
+   sInduct "envSwap"
+     (\(Forall @"e" (e :: SE)) (Forall @"pfx" (pfx :: E)) (Forall @"env" (env :: E))
+       (Forall @"b1" (b1 :: STuple String Integer)) (Forall @"b2" (b2 :: STuple String Integer)) ->
+       let (x, _)  = ST.untuple b1
+           (y, _)  = ST.untuple b2
+       in x ./= y .=> interpInEnv (pfx ++ b1 .: b2 .: env) e .== interpInEnv (pfx ++ b2 .: b1 .: env) e)
+     (\e _ _ _ _ -> size e :: SInteger, [proofOf mnn]) $
+     \ih e pfx env b1 b2 ->
+       let (x, _) = ST.untuple b1
+           (y, _) = ST.untuple b2
+           env1 = pfx ++ b1 .: b2 .: env
+           env2 = pfx ++ b2 .: b1 .: env
+       in [x ./= y]
+       |- cases [ isVar e
+                  ==> let nm = svar e
+                    in interpInEnv env1 (sVar nm)
+                    ?? "Var"
+                    ?? lkSP `at` (Inst @"pfx" pfx, Inst @"k" nm, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
+                    =: interpInEnv env2 (sVar nm)
+                    =: qed
+
+                , isCon e
+                  ==> let v = scon e
+                    in interpInEnv env1 (sCon v)
+                    ?? "Con"
+                    =: interpInEnv env2 (sCon v)
+                    =: qed
+
+                , isSqr e
+                  ==> let a = ssqrVal e
+                    in interpInEnv env1 (sSqr a)
+                    ?? "Sqr"
+                    ?? sqrH `at` (Inst @"env" env1, Inst @"a" a)
+                    =: interpInEnv env1 a * interpInEnv env1 a
+                    ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? sqrC `at` (Inst @"a" (interpInEnv env1 a), Inst @"b" (interpInEnv env2 a))
+                    =: interpInEnv env2 a * interpInEnv env2 a
+                    ?? sqrH `at` (Inst @"env" env2, Inst @"a" a)
+                    =: interpInEnv env2 (sSqr a)
+                    =: qed
+
+                , isInc e
+                  ==> let a = sincVal e
+                    in interpInEnv env1 (sInc a)
+                    ?? "Inc"
+                    ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    =: interpInEnv env2 (sInc a)
+                    =: qed
+
+                , isAdd e
+                  ==> let a = sadd1 e
+                          b = sadd2 e
+                    in interpInEnv env1 (sAdd a b)
+                    ?? "Add"
+                    ?? addH `at` (Inst @"env" env1, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env1 a + interpInEnv env1 b
+                    ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? ih `at` (Inst @"e" b, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    =: interpInEnv env2 a + interpInEnv env2 b
+                    ?? addH `at` (Inst @"env" env2, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env2 (sAdd a b)
+                    =: qed
+
+                , isMul e
+                  ==> let a = smul1 e
+                          b = smul2 e
+                    in interpInEnv env1 (sMul a b)
+                    ?? "Mul"
+                    ?? mulH `at` (Inst @"env" env1, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env1 a * interpInEnv env1 b
+                    ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? mulCL `at` (Inst @"a" (interpInEnv env1 a), Inst @"b" (interpInEnv env2 a), Inst @"c" (interpInEnv env1 b))
+                    =: interpInEnv env2 a * interpInEnv env1 b
+                    ?? ih `at` (Inst @"e" b, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? mulCR `at` (Inst @"a" (interpInEnv env2 a), Inst @"b" (interpInEnv env1 b), Inst @"c" (interpInEnv env2 b))
+                    =: interpInEnv env2 a * interpInEnv env2 b
+                    ?? mulH `at` (Inst @"env" env2, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env2 (sMul a b)
+                    =: qed
+
+                , isLet e
+                  ==> let nm = slvar  e
+                          a  = slval  e
+                          b  = slbody e
+                          val1 = interpInEnv env1 a
+                          val2 = interpInEnv env2 a
+                    in interpInEnv env1 (sLet nm a b)
+                    ?? "Let"
+                    ?? letH `at` (Inst @"env" env1, Inst @"nm" nm, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv (ST.tuple (nm, val1) .: env1) b
+                    ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    =: interpInEnv (ST.tuple (nm, val2) .: env1) b
+                    ?? ih `at` (Inst @"e" b, Inst @"pfx" (ST.tuple (nm, val2) .: pfx), Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    =: interpInEnv (ST.tuple (nm, val2) .: env2) b
+                    ?? letH `at` (Inst @"env" env2, Inst @"nm" nm, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env2 (sLet nm a b)
+                    =: qed
+                ]
+
+-- | A shadowed binding in the environment does not affect interpretation.
+-- The @pfx@ parameter allows the shadow to occur at any depth.
+--
+-- >>> runTPWith cvc5 envShadow
+-- Lemma: measureNonNeg                    Q.E.D.
+-- Lemma: lookupShadowPfx                  Q.E.D.
+-- Lemma: sqrCong                          Q.E.D.
+-- Lemma: sqrHelper                        Q.E.D.
+-- Lemma: addHelper                        Q.E.D.
+-- Lemma: mulCongL                         Q.E.D.
+-- Lemma: mulCongR                         Q.E.D.
+-- Lemma: mulHelper                        Q.E.D.
+-- Lemma: letHelper                        Q.E.D.
+-- Inductive lemma (strong): envShadow
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (7 way case split)
+--     Step: 1.1 (Var)                     Q.E.D.
+--     Step: 1.2 (Con)                     Q.E.D.
+--     Step: 1.3.1 (Sqr)                   Q.E.D.
+--     Step: 1.3.2                         Q.E.D.
+--     Step: 1.3.3                         Q.E.D.
+--     Step: 1.4 (Inc)                     Q.E.D.
+--     Step: 1.5.1 (Add)                   Q.E.D.
+--     Step: 1.5.2                         Q.E.D.
+--     Step: 1.5.3                         Q.E.D.
+--     Step: 1.6.1 (Mul)                   Q.E.D.
+--     Step: 1.6.2                         Q.E.D.
+--     Step: 1.6.3                         Q.E.D.
+--     Step: 1.6.4                         Q.E.D.
+--     Step: 1.7.1 (Let)                   Q.E.D.
+--     Step: 1.7.2                         Q.E.D.
+--     Step: 1.7.3                         Q.E.D.
+--     Step: 1.7.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] envShadow :: Ɐe ∷ (Expr [Char] Integer) → Ɐpfx ∷ [([Char], Integer)] → Ɐenv ∷ [([Char], Integer)] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Bool
+envShadow :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
+                     -> Forall "b1" (String, Integer) -> Forall "b2" (String, Integer) -> SBool))
+envShadow = do
+   mnn   <- recall "measureNonNeg"    measureNonNeg
+   lkShP <- recall "lookupShadowPfx" lookupShadowPfx
+   sqrC  <- recall "sqrCong"         sqrCong
+   sqrH  <- recall "sqrHelper"       sqrHelper
+   addH  <- recall "addHelper"       addHelper
+   mulCL <- recall "mulCongL"        mulCongL
+   mulCR <- recall "mulCongR"        mulCongR
+   mulH  <- recall "mulHelper"       mulHelper
+   letH  <- recall "letHelper"       letHelper
+
+   sInduct "envShadow"
+     (\(Forall @"e" (e :: SE)) (Forall @"pfx" (pfx :: E)) (Forall @"env" (env :: E))
+       (Forall @"b1" (b1 :: STuple String Integer)) (Forall @"b2" (b2 :: STuple String Integer)) ->
+       let (x, _)  = ST.untuple b1
+           (y, _)  = ST.untuple b2
+       in x .== y .=> interpInEnv (pfx ++ b1 .: b2 .: env) e .== interpInEnv (pfx ++ b1 .: env) e)
+     (\e _ _ _ _ -> size e :: SInteger, [proofOf mnn]) $
+     \ih e pfx env b1 b2 ->
+       let (x, _) = ST.untuple b1
+           (y, _) = ST.untuple b2
+           env1 = pfx ++ b1 .: b2 .: env
+           env2 = pfx ++ b1 .: env
+       in [x .== y]
+       |- cases [ isVar e
+                  ==> let nm = svar e
+                    in interpInEnv env1 (sVar nm)
+                    ?? "Var"
+                    ?? lkShP `at` (Inst @"pfx" pfx, Inst @"k" nm, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
+                    =: interpInEnv env2 (sVar nm)
+                    =: qed
+
+                , isCon e
+                  ==> let v = scon e
+                    in interpInEnv env1 (sCon v)
+                    ?? "Con"
+                    =: interpInEnv env2 (sCon v)
+                    =: qed
+
+                , isSqr e
+                  ==> let a = ssqrVal e
+                    in interpInEnv env1 (sSqr a)
+                    ?? "Sqr"
+                    ?? sqrH `at` (Inst @"env" env1, Inst @"a" a)
+                    =: interpInEnv env1 a * interpInEnv env1 a
+                    ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? sqrC `at` (Inst @"a" (interpInEnv env1 a), Inst @"b" (interpInEnv env2 a))
+                    =: interpInEnv env2 a * interpInEnv env2 a
+                    ?? sqrH `at` (Inst @"env" env2, Inst @"a" a)
+                    =: interpInEnv env2 (sSqr a)
+                    =: qed
+
+                , isInc e
+                  ==> let a = sincVal e
+                    in interpInEnv env1 (sInc a)
+                    ?? "Inc"
+                    ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    =: interpInEnv env2 (sInc a)
+                    =: qed
+
+                , isAdd e
+                  ==> let a = sadd1 e
+                          b = sadd2 e
+                    in interpInEnv env1 (sAdd a b)
+                    ?? "Add"
+                    ?? addH `at` (Inst @"env" env1, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env1 a + interpInEnv env1 b
+                    ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? ih `at` (Inst @"e" b, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    =: interpInEnv env2 a + interpInEnv env2 b
+                    ?? addH `at` (Inst @"env" env2, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env2 (sAdd a b)
+                    =: qed
+
+                , isMul e
+                  ==> let a = smul1 e
+                          b = smul2 e
+                    in interpInEnv env1 (sMul a b)
+                    ?? "Mul"
+                    ?? mulH `at` (Inst @"env" env1, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env1 a * interpInEnv env1 b
+                    ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? mulCL `at` (Inst @"a" (interpInEnv env1 a), Inst @"b" (interpInEnv env2 a), Inst @"c" (interpInEnv env1 b))
+                    =: interpInEnv env2 a * interpInEnv env1 b
+                    ?? ih `at` (Inst @"e" b, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? mulCR `at` (Inst @"a" (interpInEnv env2 a), Inst @"b" (interpInEnv env1 b), Inst @"c" (interpInEnv env2 b))
+                    =: interpInEnv env2 a * interpInEnv env2 b
+                    ?? mulH `at` (Inst @"env" env2, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env2 (sMul a b)
+                    =: qed
+
+                , isLet e
+                  ==> let nm = slvar  e
+                          a  = slval  e
+                          b  = slbody e
+                          val1 = interpInEnv env1 a
+                          val2 = interpInEnv env2 a
+                    in interpInEnv env1 (sLet nm a b)
+                    ?? "Let"
+                    ?? letH `at` (Inst @"env" env1, Inst @"nm" nm, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv (ST.tuple (nm, val1) .: env1) b
+                    ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    =: interpInEnv (ST.tuple (nm, val2) .: env1) b
+                    ?? ih `at` (Inst @"e" b, Inst @"pfx" (ST.tuple (nm, val2) .: pfx), Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    =: interpInEnv (ST.tuple (nm, val2) .: env2) b
+                    ?? letH `at` (Inst @"env" env2, Inst @"nm" nm, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env2 (sLet nm a b)
+                    =: qed
+                ]
+
+-- * Substitution correctness
+
+-- | Unfolding @interpInEnv@ over @Var@.
+--
+-- >>> runTP varHelper
+-- Lemma: varHelper                        Q.E.D.
+-- [Proven] varHelper :: Ɐenv ∷ [([Char], Integer)] → Ɐnm ∷ [Char] → Bool
+varHelper :: TP (Proof (Forall "env" EL -> Forall "nm" String -> SBool))
+varHelper = lemma "varHelper"
+                  (\(Forall @"env" (env :: E)) (Forall @"nm" nm) ->
+                        interpInEnv env (sVar nm) .== SL.lookup nm env) []
+
+-- | Substitution preserves semantics: interpreting in an extended environment
+-- is the same as substituting and interpreting in the original environment.
+--
+-- >>> runTPWith cvc5 substCorrect
+-- Lemma: measureNonNeg                    Q.E.D.
+-- Lemma: sqrCong                          Q.E.D.
+-- Lemma: sqrHelper                        Q.E.D.
+-- Lemma: addHelper                        Q.E.D.
+-- Lemma: mulCongL                         Q.E.D.
+-- Lemma: mulCongR                         Q.E.D.
+-- Lemma: mulHelper                        Q.E.D.
+-- Lemma: letHelper                        Q.E.D.
+-- Lemma: varHelper                        Q.E.D.
+-- Lemma: envSwap                          Q.E.D.
+-- Lemma: envShadow                        Q.E.D.
+-- Inductive lemma (strong): substCorrect
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (7 way case split)
+--     Step: 1.1 (2 way case split)
+--       Step: 1.1.1.1 (Var)               Q.E.D.
+--       Step: 1.1.1.2                     Q.E.D.
+--       Step: 1.1.1.3                     Q.E.D.
+--       Step: 1.1.1.4                     Q.E.D.
+--       Step: 1.1.1.5                     Q.E.D.
+--       Step: 1.1.2.1 (Var)               Q.E.D.
+--       Step: 1.1.2.2                     Q.E.D.
+--       Step: 1.1.2.3                     Q.E.D.
+--       Step: 1.1.2.4                     Q.E.D.
+--       Step: 1.1.2.5                     Q.E.D.
+--       Step: 1.1.Completeness            Q.E.D.
+--     Step: 1.2 (Con)                     Q.E.D.
+--     Step: 1.3.1 (Sqr)                   Q.E.D.
+--     Step: 1.3.2                         Q.E.D.
+--     Step: 1.3.3                         Q.E.D.
+--     Step: 1.3.4                         Q.E.D.
+--     Step: 1.4 (Inc)                     Q.E.D.
+--     Step: 1.5.1 (Add)                   Q.E.D.
+--     Step: 1.5.2                         Q.E.D.
+--     Step: 1.5.3                         Q.E.D.
+--     Step: 1.5.4                         Q.E.D.
+--     Step: 1.6.1 (Mul)                   Q.E.D.
+--     Step: 1.6.2                         Q.E.D.
+--     Step: 1.6.3                         Q.E.D.
+--     Step: 1.6.4                         Q.E.D.
+--     Step: 1.6.5                         Q.E.D.
+--     Step: 1.7.1 (Let)                   Q.E.D.
+--     Step: 1.7.2 (2 way case split)
+--       Step: 1.7.2.1.1                   Q.E.D.
+--       Step: 1.7.2.1.2 (shadow)          Q.E.D.
+--       Step: 1.7.2.1.3                   Q.E.D.
+--       Step: 1.7.2.1.4                   Q.E.D.
+--       Step: 1.7.2.1.5                   Q.E.D.
+--       Step: 1.7.2.2.1                   Q.E.D.
+--       Step: 1.7.2.2.2 (swap)            Q.E.D.
+--       Step: 1.7.2.2.3                   Q.E.D.
+--       Step: 1.7.2.2.4                   Q.E.D.
+--       Step: 1.7.2.2.5                   Q.E.D.
+--       Step: 1.7.2.2.6                   Q.E.D.
+--       Step: 1.7.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] substCorrect :: Ɐe ∷ (Expr [Char] Integer) → Ɐnm ∷ [Char] → Ɐv ∷ Integer → Ɐenv ∷ [([Char], Integer)] → Bool
+substCorrect :: TP (Proof (Forall "e" Exp -> Forall "nm" String -> Forall "v" Integer -> Forall "env" EL -> SBool))
+substCorrect = do
+   mnn  <- recall "measureNonNeg"  measureNonNeg
+   sqrC <- recall "sqrCong"        sqrCong
+   sqrH <- recall "sqrHelper"      sqrHelper
+   addH <- recall "addHelper"      addHelper
+   mulCL <- recall "mulCongL"      mulCongL
+   mulCR <- recall "mulCongR"      mulCongR
+   mulH  <- recall "mulHelper"     mulHelper
+   letH  <- recall "letHelper"     letHelper
+   varH  <- recall "varHelper"     varHelper
+   eSwp  <- recall "envSwap"       envSwap
+   eShd  <- recall "envShadow"     envShadow
+
+   sInduct "substCorrect"
+     (\(Forall @"e" (e :: SE)) (Forall @"nm" (nm :: SString)) (Forall @"v" (v :: SInteger)) (Forall @"env" (env :: E)) ->
+         interpInEnv (ST.tuple (nm, v) .: env) e .== interpInEnv env (subst nm v e))
+     (\e _ _ _ -> size e :: SInteger, [proofOf mnn]) $
+     \ih e nm v env ->
+       let nmv  = ST.tuple (nm, v)
+           env1 = nmv .: env
+       in []
+       |- cases [ isVar e
+                  ==> let x = svar e
+                    in interpInEnv env1 (sVar x)
+                    ?? "Var"
+                    =: cases [ x .== nm
+                               ==> interpInEnv env1 (sVar nm)
+                                ?? varH `at` (Inst @"env" env1, Inst @"nm" nm)
+                                =: SL.lookup nm env1
+                                =: v
+                                =: interpInEnv env (sCon v)
+                                =: interpInEnv env (subst nm v (sVar nm))
+                                =: qed
+                             , x ./= nm
+                               ==> interpInEnv env1 (sVar x)
+                                ?? varH `at` (Inst @"env" env1, Inst @"nm" x)
+                                =: SL.lookup x env1
+                                =: SL.lookup x env
+                                ?? varH `at` (Inst @"env" env, Inst @"nm" x)
+                                =: interpInEnv env (sVar x)
+                                =: interpInEnv env (subst nm v (sVar x))
+                                =: qed
+                             ]
+
+                , isCon e
+                  ==> let c = scon e
+                    in interpInEnv env1 (sCon c)
+                    ?? "Con"
+                    =: interpInEnv env (subst nm v (sCon c))
+                    =: qed
+
+                , isSqr e
+                  ==> let a = ssqrVal e
+                    in interpInEnv env1 (sSqr a)
+                    ?? "Sqr"
+                    ?? sqrH `at` (Inst @"env" env1, Inst @"a" a)
+                    =: interpInEnv env1 a * interpInEnv env1 a
+                    ?? ih `at` (Inst @"e" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                    ?? sqrC `at` (Inst @"a" (interpInEnv env1 a), Inst @"b" (interpInEnv env (subst nm v a)))
+                    =: interpInEnv env (subst nm v a) * interpInEnv env (subst nm v a)
+                    ?? sqrH `at` (Inst @"env" env, Inst @"a" (subst nm v a))
+                    =: interpInEnv env (sSqr (subst nm v a))
+                    =: interpInEnv env (subst nm v (sSqr a))
+                    =: qed
+
+                , isInc e
+                  ==> let a = sincVal e
+                    in interpInEnv env1 (sInc a)
+                    ?? "Inc"
+                    ?? ih `at` (Inst @"e" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                    =: interpInEnv env (subst nm v (sInc a))
+                    =: qed
+
+                , isAdd e
+                  ==> let a = sadd1 e
+                          b = sadd2 e
+                    in interpInEnv env1 (sAdd a b)
+                    ?? "Add"
+                    ?? addH `at` (Inst @"env" env1, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env1 a + interpInEnv env1 b
+                    ?? ih `at` (Inst @"e" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                    ?? ih `at` (Inst @"e" b, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                    =: interpInEnv env (subst nm v a) + interpInEnv env (subst nm v b)
+                    ?? addH `at` (Inst @"env" env, Inst @"a" (subst nm v a), Inst @"b" (subst nm v b))
+                    =: interpInEnv env (sAdd (subst nm v a) (subst nm v b))
+                    =: interpInEnv env (subst nm v (sAdd a b))
+                    =: qed
+
+                , isMul e
+                  ==> let a = smul1 e
+                          b = smul2 e
+                    in interpInEnv env1 (sMul a b)
+                    ?? "Mul"
+                    ?? mulH `at` (Inst @"env" env1, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv env1 a * interpInEnv env1 b
+                    ?? ih `at` (Inst @"e" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                    ?? mulCL `at` (Inst @"a" (interpInEnv env1 a), Inst @"b" (interpInEnv env (subst nm v a)), Inst @"c" (interpInEnv env1 b))
+                    =: interpInEnv env (subst nm v a) * interpInEnv env1 b
+                    ?? ih `at` (Inst @"e" b, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                    ?? mulCR `at` (Inst @"a" (interpInEnv env (subst nm v a)), Inst @"b" (interpInEnv env1 b), Inst @"c" (interpInEnv env (subst nm v b)))
+                    =: interpInEnv env (subst nm v a) * interpInEnv env (subst nm v b)
+                    ?? mulH `at` (Inst @"env" env, Inst @"a" (subst nm v a), Inst @"b" (subst nm v b))
+                    =: interpInEnv env (sMul (subst nm v a) (subst nm v b))
+                    =: interpInEnv env (subst nm v (sMul a b))
+                    =: qed
+
+                , isLet e
+                  ==> let x   = slvar  e
+                          a   = slval  e
+                          b   = slbody e
+                          val = interpInEnv env1 a
+                    in interpInEnv env1 (sLet x a b)
+                    ?? "Let"
+                    ?? letH `at` (Inst @"env" env1, Inst @"nm" x, Inst @"a" a, Inst @"b" b)
+                    =: interpInEnv (ST.tuple (x, val) .: env1) b
+                    =: cases [ x .== nm
+                               ==> let xv = ST.tuple (x, val)
+                                 in interpInEnv (xv .: nmv .: env) b
+                                 ?? "shadow"
+                                 ?? eShd `at` (Inst @"e" b, Inst @"pfx" (SL.nil :: E), Inst @"env" env, Inst @"b1" xv, Inst @"b2" nmv)
+                                 =: interpInEnv (xv .: env) b
+                                 ?? ih `at` (Inst @"e" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                                 =: interpInEnv (ST.tuple (x, interpInEnv env (subst nm v a)) .: env) b
+                                 ?? letH `at` (Inst @"env" env, Inst @"nm" x, Inst @"a" (subst nm v a), Inst @"b" b)
+                                 =: interpInEnv env (sLet x (subst nm v a) b)
+                                 =: interpInEnv env (subst nm v (sLet x a b))
+                                 =: qed
+                             , x ./= nm
+                               ==> let xv = ST.tuple (x, val)
+                                 in interpInEnv (xv .: nmv .: env) b
+                                 ?? "swap"
+                                 ?? eSwp `at` (Inst @"e" b, Inst @"pfx" (SL.nil :: E), Inst @"env" env, Inst @"b1" xv, Inst @"b2" nmv)
+                                 =: interpInEnv (nmv .: xv .: env) b
+                                 ?? ih `at` (Inst @"e" b, Inst @"nm" nm, Inst @"v" v, Inst @"env" (xv .: env))
+                                 =: interpInEnv (xv .: env) (subst nm v b)
+                                 ?? ih `at` (Inst @"e" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                                 =: interpInEnv (ST.tuple (x, interpInEnv env (subst nm v a)) .: env) (subst nm v b)
+                                 ?? letH `at` (Inst @"env" env, Inst @"nm" x, Inst @"a" (subst nm v a), Inst @"b" (subst nm v b))
+                                 =: interpInEnv env (sLet x (subst nm v a) (subst nm v b))
+                                 =: interpInEnv env (subst nm v (sLet x a b))
+                                 =: qed
+                             ]
+                ]
+
 -- | Simplification preserves semantics.
 --
 -- >>> runTPWith cvc5 simpCorrect
@@ -184,6 +865,8 @@ letHelper = lemma "letHelper"
 -- Lemma: mulCongL                         Q.E.D.
 -- Lemma: mulCongR                         Q.E.D.
 -- Lemma: mulHelper                        Q.E.D.
+-- Lemma: letHelper                        Q.E.D.
+-- Lemma: substCorrect                     Q.E.D.
 -- Lemma: simpCorrect
 --   Step: 1 (7 way case split)
 --     Step: 1.1.1 (Var)                   Q.E.D.
@@ -290,19 +973,27 @@ letHelper = lemma "letHelper"
 --       Step: 1.6.2.8.2 (Mul _,_)         Q.E.D.
 --       Step: 1.6.2.Completeness          Q.E.D.
 --     Step: 1.7.1 (Let)                   Q.E.D.
---     Step: 1.7.2                         Q.E.D.
---     Step: 1.7.3                         Q.E.D.
+--     Step: 1.7.2 (2 way case split)
+--       Step: 1.7.2.1.1                   Q.E.D.
+--       Step: 1.7.2.1.2 (Let Con)         Q.E.D.
+--       Step: 1.7.2.1.3                   Q.E.D.
+--       Step: 1.7.2.1.4                   Q.E.D.
+--       Step: 1.7.2.2.1                   Q.E.D.
+--       Step: 1.7.2.2.2 (Let _)           Q.E.D.
+--       Step: 1.7.2.Completeness          Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] simpCorrect :: Ɐe ∷ (Expr [Char] Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
 simpCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))
 simpCorrect = do
-   sqrC <- recall "sqrCong"   sqrCong
-   sqrH <- recall "sqrHelper" sqrHelper
-   addH <- recall "addHelper" addHelper
-   mulCL <- recall "mulCongL" mulCongL
-   mulCR <- recall "mulCongR" mulCongR
-   mulH <- recall "mulHelper" mulHelper
+   sqrC <- recall "sqrCong"       sqrCong
+   sqrH <- recall "sqrHelper"     sqrHelper
+   addH <- recall "addHelper"     addHelper
+   mulCL <- recall "mulCongL"     mulCongL
+   mulCR <- recall "mulCongR"     mulCongR
+   mulH  <- recall "mulHelper"    mulHelper
+   letH  <- recall "letHelper"    letHelper
+   subC  <- recall "substCorrect" substCorrect
 
    calc "simpCorrect"
      (\(Forall @"e" (e :: SE)) (Forall @"env" (env :: E)) -> interpInEnv env (simplify e) .== interpInEnv env e) $
@@ -564,9 +1255,22 @@ simpCorrect = do
                         a  = slval e
                         b  = slbody e
                  in interpInEnv env (simplify (sLet nm a b))
-                 =: interpInEnv env (sLet nm a b)
-                 =: interpInEnv env e
-                 =: qed
+                 =: cases [ isCon a
+                             ==> let v = scon a
+                               in interpInEnv env (simplify (sLet nm (sCon v) b))
+                               ?? "Let Con"
+                               =: interpInEnv env (subst nm v b)
+                               ?? subC `at` (Inst @"e" b, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                               =: interpInEnv (ST.tuple (nm, v) .: env) b
+                               ?? letH `at` (Inst @"env" env, Inst @"nm" nm, Inst @"a" (sCon v), Inst @"b" b)
+                               =: interpInEnv env (sLet nm (sCon v) b)
+                               =: qed
+                           , sNot (isCon a)
+                             ==> interpInEnv env (simplify (sLet nm a b))
+                               ?? "Let _"
+                               =: interpInEnv env (sLet nm a b)
+                               =: qed
+                           ]
               ]
 
 -- | Constant folding preserves the semantics: interpreting an expression

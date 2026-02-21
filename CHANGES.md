@@ -68,6 +68,12 @@
     <https://github.com/imandra-ai/imandrax-examples/blob/main/src/tautology.iml>, originally
     based on Boyer-Moore '79. This proof was developed with Claude's assistance.
 
+  * Add Documentation.SBV.Examples.TP.ConstFold, proving the correctness of a constant-folding
+    optimizer for a simple expression language with variables, constants, arithmetic, and let-bindings.
+    The optimizer performs bottom-up simplification including arithmetic identities (e.g., addition/
+    multiplication by 0 or 1, constant propagation) and let-folding (inlining `Let x (Con v) b` via
+    capture-avoiding substitution).
+
 ### Version 13.5, 2026-01-26
 
   * Replace internal SMT-lib program representation from plain String to Text. This
