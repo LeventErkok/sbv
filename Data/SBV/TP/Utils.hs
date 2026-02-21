@@ -339,9 +339,14 @@ instance Typeable a => Show (Proof a) where
 
           -- More mathematical notation for types.
           pretty :: String -> String
-          pretty = unwords . walk . words . concatMap (\c -> if c == ',' then " , " else [c]) . clean
+          pretty = compress . unwords . walk . words . concatMap (\c -> if c == ',' then " , " else [c]) . clean
             where fa v = ['Ɐ' : unQuote v, "∷"]
                   ex v = ['∃' : unQuote v, "∷"]
+
+                  -- Remove spaces before commas: "foo , bar" -> "foo, bar"
+                  compress (' ' : ',' : rest) = compress (',' : rest)
+                  compress (c : rest)         = c : compress rest
+                  compress []                 = []
 
                   walk ("SBV"    : "Bool" : rest) = walk $ "Bool" :  rest
                   walk ("Forall" : xs     : rest) = walk $ fa xs  ++ rest
