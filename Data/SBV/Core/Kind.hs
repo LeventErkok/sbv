@@ -213,7 +213,7 @@ smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (
 smtType KRational       = "SBVRational"
 smtType (KArray  k1 k2) = "(Array "      ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
 
-instance Eq  G.DataType where
+instance Eq G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
 
 instance Ord G.DataType where
