@@ -132,9 +132,33 @@ substCorrect :: TP (Proof (Forall "body" (Expr String Integer) -> Forall "nm" St
 substCorrect = do
    mnn <- recall "measureNonNeg" measureNonNeg
 
+   -- Unfolding helpers for interpInEnv over compound expressions
+   sqrHelper <- lemma "sqrHelper"
+                      (\(Forall @"env" (env :: Env String Integer)) (Forall @"a" a) ->
+                            interpInEnv env (sSqr a) .== interpInEnv env a * interpInEnv env a) []
+
    addHelper <- lemma "addHelper"
                       (\(Forall @"env" (env :: Env String Integer)) (Forall @"a" a) (Forall @"b" b) ->
                             interpInEnv env (sAdd a b) .== interpInEnv env a + interpInEnv env b) []
+
+   mulHelper <- lemma "mulHelper"
+                      (\(Forall @"env" (env :: Env String Integer)) (Forall @"a" a) (Forall @"b" b) ->
+                            interpInEnv env (sMul a b) .== interpInEnv env a * interpInEnv env b) []
+
+   -- Congruence for squaring: if a == b then a*a == b*b
+   sqrCong <- lemma "sqrCong"
+                    (\(Forall @"a" (a :: SInteger)) (Forall @"b" b) ->
+                          a .== b .=> a * a .== b * b) []
+
+   -- Congruence for multiplication on the left: if a == b then a*c == b*c
+   mulCongL <- lemma "mulCongL"
+                     (\(Forall @"a" (a :: SInteger)) (Forall @"b" b) (Forall @"c" c) ->
+                           a .== b .=> a * c .== b * c) []
+
+   -- Congruence for multiplication on the right: if b == c then a*b == a*c
+   mulCongR <- lemma "mulCongR"
+                     (\(Forall @"a" (a :: SInteger)) (Forall @"b" b) (Forall @"c" c) ->
+                           b .== c .=> a * b .== a * c) []
 
    sInduct "substCorrect"
      (\(Forall @"body" (body :: SE)) (Forall @"nm" nm) (Forall @"v" v) (Forall @"env" (env :: E)) ->
@@ -153,10 +177,18 @@ substCorrect = do
                                =: interpInEnv (ST.tuple (nm, v) .: env) (sCon c)
                                =: qed
 
-                , isSqr body ==> let a = ssqrVal body
+                , isSqr body ==> let a    = ssqrVal body
+                                     env' = ST.tuple (nm, v) .: env
                                in interpInEnv env (subst nm v (sSqr a))
                                ?? "case Sqr"
-                               ?? ih `at` (Inst @"body" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                               =: interpInEnv env (sSqr (subst nm v a))
+                               ?? sqrHelper `at` (Inst @"env" env, Inst @"a" (subst nm v a))
+                               =: let av = interpInEnv env (subst nm v a) in av * av
+                               ?? ih      `at` (Inst @"body" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                               ?? sqrCong `at` (Inst @"a" (interpInEnv env (subst nm v a)), Inst @"b" (interpInEnv env' a))
+                               =: let av' = interpInEnv env' a in av' * av'
+                               ?? sqrHelper `at` (Inst @"env" env', Inst @"a" a)
+                               =: interpInEnv env' (sSqr a)
                                =: interpInEnv (ST.tuple (nm, v) .: env) (sSqr a)
                                =: qed
 
@@ -177,7 +209,6 @@ substCorrect = do
                                ?? addHelper `at` (Inst @"env" env, Inst @"a" (subst nm v a), Inst @"b" (subst nm v b))
                                =: interpInEnv env (subst nm v a) + interpInEnv env (subst nm v b)
                                ?? ih `at` (Inst @"body" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
-                               ?? "stuck"
                                =: interpInEnv env' a + interpInEnv env (subst nm v b)
                                ?? ih `at` (Inst @"body" b, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
                                =: interpInEnv env' a + interpInEnv env' b
@@ -190,15 +221,19 @@ substCorrect = do
                                      b    = smul2 body
                                      env' = ST.tuple (nm, v) .: env
                                in interpInEnv env (subst nm v (sMul a b))
-                               ?? "case Add"
+                               ?? "case Mul"
                                =: interpInEnv env (sMul (subst nm v a) (subst nm v b))
-                               ?? addHelper `at` (Inst @"env" env, Inst @"a" (subst nm v a), Inst @"b" (subst nm v b))
+                               ?? mulHelper `at` (Inst @"env" env, Inst @"a" (subst nm v a), Inst @"b" (subst nm v b))
                                =: interpInEnv env (subst nm v a) * interpInEnv env (subst nm v b)
                                ?? ih `at` (Inst @"body" a, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                               ?? mulCongL `at` (Inst @"a" (interpInEnv env (subst nm v a)), Inst @"b" (interpInEnv env' a),
+                                                 Inst @"c" (interpInEnv env (subst nm v b)))
                                =: interpInEnv env' a * interpInEnv env (subst nm v b)
                                ?? ih `at` (Inst @"body" b, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                               ?? mulCongR `at` (Inst @"a" (interpInEnv env' a),
+                                                 Inst @"b" (interpInEnv env (subst nm v b)), Inst @"c" (interpInEnv env' b))
                                =: interpInEnv env' a * interpInEnv env' b
-                               ?? addHelper `at` (Inst @"env" env', Inst @"a" a, Inst @"b" b)
+                               ?? mulHelper `at` (Inst @"env" env', Inst @"a" a, Inst @"b" b)
                                =: interpInEnv env' (sMul a b)
                                =: interpInEnv (ST.tuple (nm, v) .: env) (sMul a b)
                                =: qed
