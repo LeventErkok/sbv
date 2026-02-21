@@ -1442,3 +1442,5 @@ cfoldCorrect = do
                    =: interpInEnv env e
                    =: qed
                 ]
+
+{-# ANN simpCorrect ("HLint: ignore Evaluate" :: String) #-}
