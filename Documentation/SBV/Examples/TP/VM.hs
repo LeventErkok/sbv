@@ -317,131 +317,121 @@ correctness = do
                          .== tuple (env, push (interpInEnv env e) stk))
                (\e _ _  -> size e, [proofOf measureNonNeg]) $
                \ih e env stk -> []
-                 |- cases [ isVar e ==> let nm = svar e
-                                     in run (tuple (env, stk)) (compile (sVar nm))
-                                     ?? "case Var"
-                                     =: run (tuple (env, stk)) [sIPushN nm]
-                                     =: tuple (env, push (interpInEnv env (sVar nm)) stk)
-                                     =: qed
+                 |- [pCase|Expr e of
+                      Var nm     -> run (tuple (env, stk)) (compile (sVar nm))
+                                 ?? "case Var"
+                                 =: run (tuple (env, stk)) [sIPushN nm]
+                                 =: tuple (env, push (interpInEnv env (sVar nm)) stk)
+                                 =: qed
 
-                          , isCon e ==> let v = scon e
-                                     in run (tuple (env, stk)) (compile (sCon v))
-                                     ?? "case Con"
-                                     =: run (tuple (env, stk)) [sIPushV v]
-                                     =: tuple (env, push v stk)
-                                     =: tuple (env, push (interpInEnv env (sCon v)) stk)
-                                     =: qed
+                      Con v      -> run (tuple (env, stk)) (compile (sCon v))
+                                 ?? "case Con"
+                                 =: run (tuple (env, stk)) [sIPushV v]
+                                 =: tuple (env, push v stk)
+                                 =: tuple (env, push (interpInEnv env (sCon v)) stk)
+                                 =: qed
 
-                          , isSqr e ==> let a = ssqrVal e
-                                     in run (tuple (env, stk)) (compile (sSqr a))
-                                     ?? "case Sqr"
-                                     =: run (tuple (env, stk)) (compile a SL.++ [sIDup, sIMul])
-                                     ?? runSeq
-                                     =: run (run (tuple (env, stk)) (compile a)) [sIDup, sIMul]
-                                     ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
-                                     =: let stk' = push (interpInEnv env a) stk
-                                     in run (tuple (env, stk')) [sIDup, sIMul]
-                                     ?? runTwo `at` (Inst @"es" (tuple (env, stk')), Inst @"i" sIDup, Inst @"j" sIMul)
-                                     =: execute (execute (tuple (env, stk')) sIDup) sIMul
-                                     =: let stk'' = push (interpInEnv env a) stk'
-                                     in execute (tuple (env, stk'')) sIMul
-                                     =: tuple (env, push (interpInEnv env a * interpInEnv env a) stk)
-                                     =: tuple (env, push (interpInEnv env (sSqr a)) stk)
-                                     =: qed
+                      Sqr a      -> run (tuple (env, stk)) (compile (sSqr a))
+                                 ?? "case Sqr"
+                                 =: run (tuple (env, stk)) (compile a SL.++ [sIDup, sIMul])
+                                 ?? runSeq
+                                 =: run (run (tuple (env, stk)) (compile a)) [sIDup, sIMul]
+                                 ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
+                                 =: let stk' = push (interpInEnv env a) stk
+                                 in run (tuple (env, stk')) [sIDup, sIMul]
+                                 ?? runTwo `at` (Inst @"es" (tuple (env, stk')), Inst @"i" sIDup, Inst @"j" sIMul)
+                                 =: execute (execute (tuple (env, stk')) sIDup) sIMul
+                                 =: let stk'' = push (interpInEnv env a) stk'
+                                 in execute (tuple (env, stk'')) sIMul
+                                 =: tuple (env, push (interpInEnv env a * interpInEnv env a) stk)
+                                 =: tuple (env, push (interpInEnv env (sSqr a)) stk)
+                                 =: qed
 
-                          , isInc e ==> let a = sincVal e
-                                     in run (tuple (env, stk)) (compile (sInc a))
-                                     ?? "case Inc"
-                                     =: run (tuple (env, stk)) (compile a SL.++ [sIPushV 1, sIAdd])
-                                     ?? runSeq
-                                     =: run (run (tuple (env, stk)) (compile a)) [sIPushV 1, sIAdd]
-                                     ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
-                                     =: let stk' = push (interpInEnv env a) stk
-                                     in run (tuple (env, stk')) [sIPushV 1, sIAdd]
-                                     ?? runTwo `at` (Inst @"es" (tuple (env, stk')), Inst @"i" (sIPushV 1), Inst @"j" sIAdd)
-                                     =: execute (execute (tuple (env, stk')) (sIPushV 1)) sIAdd
-                                     =: let stk'' = push 1 stk'
-                                     in execute (tuple (env, stk'')) sIAdd
-                                     =: tuple (env, push (1 + interpInEnv env a) stk)
-                                     =: tuple (env, push (interpInEnv env (sInc a)) stk)
-                                     =: qed
+                      Inc a      -> run (tuple (env, stk)) (compile (sInc a))
+                                 ?? "case Inc"
+                                 =: run (tuple (env, stk)) (compile a SL.++ [sIPushV 1, sIAdd])
+                                 ?? runSeq
+                                 =: run (run (tuple (env, stk)) (compile a)) [sIPushV 1, sIAdd]
+                                 ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
+                                 =: let stk' = push (interpInEnv env a) stk
+                                 in run (tuple (env, stk')) [sIPushV 1, sIAdd]
+                                 ?? runTwo `at` (Inst @"es" (tuple (env, stk')), Inst @"i" (sIPushV 1), Inst @"j" sIAdd)
+                                 =: execute (execute (tuple (env, stk')) (sIPushV 1)) sIAdd
+                                 =: let stk'' = push 1 stk'
+                                 in execute (tuple (env, stk'')) sIAdd
+                                 =: tuple (env, push (1 + interpInEnv env a) stk)
+                                 =: tuple (env, push (interpInEnv env (sInc a)) stk)
+                                 =: qed
 
-                          , isAdd e ==> let a = sadd1 e
-                                            b = sadd2 e
-                                     in run (tuple (env, stk)) (compile (sAdd a b))
-                                     ?? "case sAdd"
-                                     =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIAdd])
-                                     ?? runSeq
-                                     =: run (run (tuple (env, stk)) (compile a)) (compile b SL.++ [sIAdd])
-                                     ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
-                                     =: let stk' = push (interpInEnv env a) stk
-                                     in run (tuple (env, stk')) (compile b SL.++ [sIAdd])
-                                     ?? runSeq
-                                     =: run (run (tuple (env, stk')) (compile b)) [sIAdd]
-                                     ?? ih `at` (Inst @"e" b, Inst @"env" env, Inst @"stk" stk')
-                                     =: let stk'' = push (interpInEnv env b) stk'
-                                     in run (tuple (env, stk'')) [sIAdd]
-                                     ?? runOne `at` (Inst @"es" (tuple (env, stk'')), Inst @"i" sIAdd)
-                                     =: execute (tuple (env, stk'')) sIAdd
-                                     =: tuple (env, push (interpInEnv env b + interpInEnv env a) stk)
-                                     =: tuple (env, push (interpInEnv env a + interpInEnv env b) stk)
-                                     =: tuple (env, push (interpInEnv env (sAdd a b)) stk)
-                                     =: qed
+                      Add a b    -> run (tuple (env, stk)) (compile (sAdd a b))
+                                 ?? "case sAdd"
+                                 =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIAdd])
+                                 ?? runSeq
+                                 =: run (run (tuple (env, stk)) (compile a)) (compile b SL.++ [sIAdd])
+                                 ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
+                                 =: let stk' = push (interpInEnv env a) stk
+                                 in run (tuple (env, stk')) (compile b SL.++ [sIAdd])
+                                 ?? runSeq
+                                 =: run (run (tuple (env, stk')) (compile b)) [sIAdd]
+                                 ?? ih `at` (Inst @"e" b, Inst @"env" env, Inst @"stk" stk')
+                                 =: let stk'' = push (interpInEnv env b) stk'
+                                 in run (tuple (env, stk'')) [sIAdd]
+                                 ?? runOne `at` (Inst @"es" (tuple (env, stk'')), Inst @"i" sIAdd)
+                                 =: execute (tuple (env, stk'')) sIAdd
+                                 =: tuple (env, push (interpInEnv env b + interpInEnv env a) stk)
+                                 =: tuple (env, push (interpInEnv env a + interpInEnv env b) stk)
+                                 =: tuple (env, push (interpInEnv env (sAdd a b)) stk)
+                                 =: qed
 
-                          , isMul e ==> let a = smul1 e
-                                            b = smul2 e
-                                     in run (tuple (env, stk)) (compile (sMul a b))
-                                     ?? "case sMul"
-                                     =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIMul])
-                                     ?? runSeq
-                                     =: run (run (tuple (env, stk)) (compile a)) (compile b SL.++ [sIMul])
-                                     ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
-                                     =: let stk' = push (interpInEnv env a) stk
-                                     in run (tuple (env, stk')) (compile b SL.++ [sIMul])
-                                     ?? runSeq
-                                     =: run (run (tuple (env, stk')) (compile b)) [sIMul]
-                                     ?? ih `at` (Inst @"e" b, Inst @"env" env, Inst @"stk" stk')
-                                     =: let stk'' = push (interpInEnv env b) stk'
-                                     in run (tuple (env, stk'')) [sIMul]
-                                     ?? runOne `at` (Inst @"es" (tuple (env, stk'')), Inst @"i" sIMul)
-                                     =: execute (tuple (env, stk'')) sIMul
-                                     ?? runMul `at` ( Inst @"a"   (interpInEnv env b)
-                                                    , Inst @"b"   (interpInEnv env a)
-                                                    , Inst @"env" env
-                                                    , Inst @"stk" stk)
-                                     =: tuple (env, push (interpInEnv env b * interpInEnv env a) stk)
-                                     =: tuple (env, push (interpInEnv env a * interpInEnv env b) stk)
-                                     =: tuple (env, push (interpInEnv env (sMul a b)) stk)
-                                     =: qed
+                      Mul a b    -> run (tuple (env, stk)) (compile (sMul a b))
+                                 ?? "case sMul"
+                                 =: run (tuple (env, stk)) (compile a SL.++ compile b SL.++ [sIMul])
+                                 ?? runSeq
+                                 =: run (run (tuple (env, stk)) (compile a)) (compile b SL.++ [sIMul])
+                                 ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
+                                 =: let stk' = push (interpInEnv env a) stk
+                                 in run (tuple (env, stk')) (compile b SL.++ [sIMul])
+                                 ?? runSeq
+                                 =: run (run (tuple (env, stk')) (compile b)) [sIMul]
+                                 ?? ih `at` (Inst @"e" b, Inst @"env" env, Inst @"stk" stk')
+                                 =: let stk'' = push (interpInEnv env b) stk'
+                                 in run (tuple (env, stk'')) [sIMul]
+                                 ?? runOne `at` (Inst @"es" (tuple (env, stk'')), Inst @"i" sIMul)
+                                 =: execute (tuple (env, stk'')) sIMul
+                                 ?? runMul `at` ( Inst @"a"   (interpInEnv env b)
+                                                , Inst @"b"   (interpInEnv env a)
+                                                , Inst @"env" env
+                                                , Inst @"stk" stk)
+                                 =: tuple (env, push (interpInEnv env b * interpInEnv env a) stk)
+                                 =: tuple (env, push (interpInEnv env a * interpInEnv env b) stk)
+                                 =: tuple (env, push (interpInEnv env (sMul a b)) stk)
+                                 =: qed
 
-                          , isLet e ==> let nm = slvar  e
-                                            a  = slval  e
-                                            b  = slbody e
-                                     in run (tuple (env, stk)) (compile (sLet nm a b))
-                                     ?? "case Let"
-                                     =: run (tuple (env, stk)) (compile a SL.++ [sIBind nm] SL.++ compile b SL.++ [sIForget])
-                                     ?? runSeq
-                                     =: run (run (tuple (env, stk)) (compile a)) ([sIBind nm] SL.++ compile b SL.++ [sIForget])
-                                     ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
-                                     =: let stk' = push (interpInEnv env a) stk
-                                     in run (tuple (env, stk')) ([sIBind nm] SL.++ compile b SL.++ [sIForget])
-                                     ?? runSeq
-                                     =: run (run (tuple (env, stk')) [sIBind nm]) (compile b SL.++ [sIForget])
-                                     ?? runOne
-                                     =: run (execute (tuple (env, stk')) (sIBind nm)) (compile b SL.++ [sIForget])
-                                     =: let env' = push (tuple (nm, interpInEnv env a)) env
-                                     in run (tuple (env', stk)) (compile b SL.++ [sIForget])
-                                     ?? runSeq
-                                     =: run (run (tuple (env', stk)) (compile b)) [sIForget]
-                                     ?? ih `at` (Inst @"e" b, Inst @"env" env', Inst @"stk" stk)
-                                     =: let stk'' = push (interpInEnv env' b) stk
-                                     in run (tuple (env', stk'')) [sIForget]
-                                     ?? runOne
-                                     =: execute (tuple (env', stk'')) sIForget
-                                     =: tuple (env, stk'')
-                                     =: tuple (env, push (interpInEnv env (sLet nm a b)) stk)
-                                     =: qed
-                          ]
+                      Let nm a b -> run (tuple (env, stk)) (compile (sLet nm a b))
+                                 ?? "case Let"
+                                 =: run (tuple (env, stk)) (compile a SL.++ [sIBind nm] SL.++ compile b SL.++ [sIForget])
+                                 ?? runSeq
+                                 =: run (run (tuple (env, stk)) (compile a)) ([sIBind nm] SL.++ compile b SL.++ [sIForget])
+                                 ?? ih `at` (Inst @"e" a, Inst @"env" env, Inst @"stk" stk)
+                                 =: let stk' = push (interpInEnv env a) stk
+                                 in run (tuple (env, stk')) ([sIBind nm] SL.++ compile b SL.++ [sIForget])
+                                 ?? runSeq
+                                 =: run (run (tuple (env, stk')) [sIBind nm]) (compile b SL.++ [sIForget])
+                                 ?? runOne
+                                 =: run (execute (tuple (env, stk')) (sIBind nm)) (compile b SL.++ [sIForget])
+                                 =: let env' = push (tuple (nm, interpInEnv env a)) env
+                                 in run (tuple (env', stk)) (compile b SL.++ [sIForget])
+                                 ?? runSeq
+                                 =: run (run (tuple (env', stk)) (compile b)) [sIForget]
+                                 ?? ih `at` (Inst @"e" b, Inst @"env" env', Inst @"stk" stk)
+                                 =: let stk'' = push (interpInEnv env' b) stk
+                                 in run (tuple (env', stk'')) [sIForget]
+                                 ?? runOne
+                                 =: execute (tuple (env', stk'')) sIForget
+                                 =: tuple (env, stk'')
+                                 =: tuple (env, push (interpInEnv env (sLet nm a b)) stk)
+                                 =: qed
+                    |]
 
    -- We can now prove the final correctness theorem, based on the helper.
    calc "correctness"
