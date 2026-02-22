@@ -986,9 +986,9 @@ substCorrect = do
 -- [Proven] simpCorrect :: Ɐe ∷ (Expr [Char] Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
 simpCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))
 simpCorrect = do
-   sqrC <- recall "sqrCong"       sqrCong
-   sqrH <- recall "sqrHelper"     sqrHelper
-   addH <- recall "addHelper"     addHelper
+   sqrC  <- recall "sqrCong"      sqrCong
+   sqrH  <- recall "sqrHelper"    sqrHelper
+   addH  <- recall "addHelper"    addHelper
    mulCL <- recall "mulCongL"     mulCongL
    mulCR <- recall "mulCongR"     mulCongR
    mulH  <- recall "mulHelper"    mulHelper
@@ -998,280 +998,263 @@ simpCorrect = do
    calc "simpCorrect"
      (\(Forall @"e" (e :: SE)) (Forall @"env" (env :: E)) -> interpInEnv env (simplify e) .== interpInEnv env e) $
      \e env -> []
-     |- cases [ isVar e
-                ==> interpInEnv env (simplify e)
-                 ?? "Var"
-                 =: let nm = svar e
-                 in interpInEnv env (simplify (sVar nm))
-                 =: interpInEnv env (sVar nm)
-                 =: interpInEnv env e
-                 =: qed
+     |- [pCase|Expr e of
+          Var nm     -> interpInEnv env (simplify e)
+                     ?? "Var"
+                     =: interpInEnv env (simplify (sVar nm))
+                     =: interpInEnv env (sVar nm)
+                     =: interpInEnv env e
+                     =: qed
 
-              , isCon e
-                ==> interpInEnv env (simplify e)
-                 ?? "Con"
-                 =: let c = scon e
-                 in interpInEnv env (simplify (sCon c))
-                 =: interpInEnv env (sCon c)
-                 =: interpInEnv env e
-                 =: qed
+          Con c      -> interpInEnv env (simplify e)
+                     ?? "Con"
+                     =: interpInEnv env (simplify (sCon c))
+                     =: interpInEnv env (sCon c)
+                     =: interpInEnv env e
+                     =: qed
 
-              , isSqr e
-                ==> interpInEnv env (simplify e)
-                 ?? "Sqr"
-                 =: let a = ssqrVal e
-                 in interpInEnv env (simplify (sSqr a))
-                 =: cases [ isCon a
-                             ==> let v = scon a
-                               in interpInEnv env (simplify (sSqr (sCon v)))
-                               ?? "Sqr Con"
-                               =: interpInEnv env (sCon (v * v))
-                               ?? interpInEnv env (sCon (v * v)) .== v * v
-                               =: v * v
-                               ?? sqrC `at` (Inst @"a" (interpInEnv env (sCon v)), Inst @"b" v)
-                               =: interpInEnv env (sCon v) * interpInEnv env (sCon v)
-                               ?? sqrH `at` (Inst @"env" env, Inst @"a" (sCon v))
-                               =: interpInEnv env (sSqr (sCon v))
-                               =: qed
-                           , sNot (isCon a)
-                             ==> interpInEnv env (simplify (sSqr a))
-                               ?? "Sqr _"
-                               =: interpInEnv env (sSqr a)
-                               =: qed
-                           ]
+          Sqr a      -> interpInEnv env (simplify e)
+                     ?? "Sqr"
+                     =: interpInEnv env (simplify (sSqr a))
+                     =: cases [ isCon a
+                                 ==> let v = scon a
+                                   in interpInEnv env (simplify (sSqr (sCon v)))
+                                   ?? "Sqr Con"
+                                   =: interpInEnv env (sCon (v * v))
+                                   ?? interpInEnv env (sCon (v * v)) .== v * v
+                                   =: v * v
+                                   ?? sqrC `at` (Inst @"a" (interpInEnv env (sCon v)), Inst @"b" v)
+                                   =: interpInEnv env (sCon v) * interpInEnv env (sCon v)
+                                   ?? sqrH `at` (Inst @"env" env, Inst @"a" (sCon v))
+                                   =: interpInEnv env (sSqr (sCon v))
+                                   =: qed
+                               , sNot (isCon a)
+                                 ==> interpInEnv env (simplify (sSqr a))
+                                   ?? "Sqr _"
+                                   =: interpInEnv env (sSqr a)
+                                   =: qed
+                               ]
 
-              , isInc e
-                ==> interpInEnv env (simplify e)
-                 ?? "Inc"
-                 =: let a = sincVal e
-                 in interpInEnv env (simplify (sInc a))
-                 =: cases [ isCon a
-                             ==> let v = scon a
-                               in interpInEnv env (simplify (sInc (sCon v)))
-                               ?? "Inc Con"
-                               =: interpInEnv env (sCon (v + 1))
-                               =: interpInEnv env (sInc (sCon v))
-                               =: qed
-                           , sNot (isCon a)
-                             ==> interpInEnv env (simplify (sInc a))
-                               ?? "Inc _"
-                               =: interpInEnv env (sInc a)
-                               =: qed
-                           ]
+          Inc a      -> interpInEnv env (simplify e)
+                     ?? "Inc"
+                     =: interpInEnv env (simplify (sInc a))
+                     =: cases [ isCon a
+                                 ==> let v = scon a
+                                   in interpInEnv env (simplify (sInc (sCon v)))
+                                   ?? "Inc Con"
+                                   =: interpInEnv env (sCon (v + 1))
+                                   =: interpInEnv env (sInc (sCon v))
+                                   =: qed
+                               , sNot (isCon a)
+                                 ==> interpInEnv env (simplify (sInc a))
+                                   ?? "Inc _"
+                                   =: interpInEnv env (sInc a)
+                                   =: qed
+                               ]
 
-              , isAdd e
-                ==> interpInEnv env (simplify e)
-                 ?? "Add"
-                 =: let a = sadd1 e
-                        b = sadd2 e
-                 in interpInEnv env (simplify (sAdd a b))
-                 =: cases [ isCon a .&& scon a .== 0
-                             ==> interpInEnv env (simplify (sAdd (sCon 0) b))
-                               ?? "Add 0+b"
-                               =: interpInEnv env b
-                               ?? addH `at` (Inst @"env" env, Inst @"a" (sCon 0), Inst @"b" b)
-                               =: interpInEnv env (sAdd (sCon 0) b)
-                               =: qed
+          Add a b    -> interpInEnv env (simplify e)
+                     ?? "Add"
+                     =: interpInEnv env (simplify (sAdd a b))
+                     =: cases [ isCon a .&& scon a .== 0
+                                 ==> interpInEnv env (simplify (sAdd (sCon 0) b))
+                                   ?? "Add 0+b"
+                                   =: interpInEnv env b
+                                   ?? addH `at` (Inst @"env" env, Inst @"a" (sCon 0), Inst @"b" b)
+                                   =: interpInEnv env (sAdd (sCon 0) b)
+                                   =: qed
 
-                           , isCon b .&& scon b .== 0
-                             ==> interpInEnv env (simplify (sAdd a (sCon 0)))
-                               ?? "Add a+0"
-                               =: interpInEnv env a
-                               ?? addH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 0))
-                               =: interpInEnv env (sAdd a (sCon 0))
-                               =: qed
+                               , isCon b .&& scon b .== 0
+                                 ==> interpInEnv env (simplify (sAdd a (sCon 0)))
+                                   ?? "Add a+0"
+                                   =: interpInEnv env a
+                                   ?? addH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 0))
+                                   =: interpInEnv env (sAdd a (sCon 0))
+                                   =: qed
 
-                           , isCon a .&& isCon b
-                             ==> let va = scon a; vb = scon b
-                               in interpInEnv env (simplify (sAdd (sCon va) (sCon vb)))
-                               ?? "Add Con"
-                               =: interpInEnv env (sCon (va + vb))
-                               ?? addH `at` (Inst @"env" env, Inst @"a" (sCon va), Inst @"b" (sCon vb))
-                               =: interpInEnv env (sAdd (sCon va) (sCon vb))
-                               =: qed
+                               , isCon a .&& isCon b
+                                 ==> let va = scon a; vb = scon b
+                                   in interpInEnv env (simplify (sAdd (sCon va) (sCon vb)))
+                                   ?? "Add Con"
+                                   =: interpInEnv env (sCon (va + vb))
+                                   ?? addH `at` (Inst @"env" env, Inst @"a" (sCon va), Inst @"b" (sCon vb))
+                                   =: interpInEnv env (sAdd (sCon va) (sCon vb))
+                                   =: qed
 
-                           , isCon a .&& sNot (isCon b)
-                             ==> let va = scon a
-                               in cases [ va .== 0
-                                          ==> interpInEnv env (simplify (sAdd (sCon 0) b))
-                                            ?? "Add 0,_"
-                                            =: interpInEnv env b
-                                            ?? addH `at` (Inst @"env" env, Inst @"a" (sCon 0), Inst @"b" b)
-                                            =: interpInEnv env (sAdd (sCon 0) b)
-                                            =: qed
-                                        , va ./= 0
-                                          ==> interpInEnv env (simplify (sAdd (sCon va) b))
-                                            ?? "Add C,_"
-                                            =: interpInEnv env (sAdd (sCon va) b)
-                                            =: qed
-                                        ]
+                               , isCon a .&& sNot (isCon b)
+                                 ==> let va = scon a
+                                   in cases [ va .== 0
+                                              ==> interpInEnv env (simplify (sAdd (sCon 0) b))
+                                                ?? "Add 0,_"
+                                                =: interpInEnv env b
+                                                ?? addH `at` (Inst @"env" env, Inst @"a" (sCon 0), Inst @"b" b)
+                                                =: interpInEnv env (sAdd (sCon 0) b)
+                                                =: qed
+                                            , va ./= 0
+                                              ==> interpInEnv env (simplify (sAdd (sCon va) b))
+                                                ?? "Add C,_"
+                                                =: interpInEnv env (sAdd (sCon va) b)
+                                                =: qed
+                                            ]
 
-                           , sNot (isCon a) .&& isCon b
-                             ==> let vb = scon b
-                               in cases [ vb .== 0
-                                          ==> interpInEnv env (simplify (sAdd a (sCon 0)))
-                                            ?? "Add _,0"
-                                            =: interpInEnv env a
-                                            ?? addH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 0))
-                                            =: interpInEnv env (sAdd a (sCon 0))
-                                            =: qed
-                                        , vb ./= 0
-                                          ==> interpInEnv env (simplify (sAdd a (sCon vb)))
-                                            ?? "Add _,C"
-                                            =: interpInEnv env (sAdd a (sCon vb))
-                                            =: qed
-                                        ]
+                               , sNot (isCon a) .&& isCon b
+                                 ==> let vb = scon b
+                                   in cases [ vb .== 0
+                                              ==> interpInEnv env (simplify (sAdd a (sCon 0)))
+                                                ?? "Add _,0"
+                                                =: interpInEnv env a
+                                                ?? addH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 0))
+                                                =: interpInEnv env (sAdd a (sCon 0))
+                                                =: qed
+                                            , vb ./= 0
+                                              ==> interpInEnv env (simplify (sAdd a (sCon vb)))
+                                                ?? "Add _,C"
+                                                =: interpInEnv env (sAdd a (sCon vb))
+                                                =: qed
+                                            ]
 
-                           , sNot (isCon a) .&& sNot (isCon b)
-                             ==> interpInEnv env (simplify (sAdd a b))
-                               ?? "Add _,_"
-                               =: interpInEnv env (sAdd a b)
-                               =: qed
-                           ]
+                               , sNot (isCon a) .&& sNot (isCon b)
+                                 ==> interpInEnv env (simplify (sAdd a b))
+                                   ?? "Add _,_"
+                                   =: interpInEnv env (sAdd a b)
+                                   =: qed
+                               ]
 
-              , isMul e
-                ==> interpInEnv env (simplify e)
-                 ?? "Mul"
-                 =: let a = smul1 e
-                        b = smul2 e
-                 in interpInEnv env (simplify (sMul a b))
-                 =: cases [ isCon a .&& scon a .== 0
-                             ==> interpInEnv env (simplify (sMul (sCon 0) b))
-                               ?? "Mul 0*b"
-                               =: interpInEnv env (sCon 0)
-                               ?? mulH `at` (Inst @"env" env, Inst @"a" (sCon 0), Inst @"b" b)
-                               =: interpInEnv env (sMul (sCon 0) b)
-                               =: qed
+          Mul a b    -> interpInEnv env (simplify e)
+                     ?? "Mul"
+                     =: interpInEnv env (simplify (sMul a b))
+                     =: cases [ isCon a .&& scon a .== 0
+                                 ==> interpInEnv env (simplify (sMul (sCon 0) b))
+                                   ?? "Mul 0*b"
+                                   =: interpInEnv env (sCon 0)
+                                   ?? mulH `at` (Inst @"env" env, Inst @"a" (sCon 0), Inst @"b" b)
+                                   =: interpInEnv env (sMul (sCon 0) b)
+                                   =: qed
 
-                           , isCon b .&& scon b .== 0
-                             ==> interpInEnv env (simplify (sMul a (sCon 0)))
-                               ?? "Mul a*0"
-                               =: interpInEnv env (sCon 0)
-                               ?? mulH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 0))
-                               =: interpInEnv env (sMul a (sCon 0))
-                               =: qed
+                               , isCon b .&& scon b .== 0
+                                 ==> interpInEnv env (simplify (sMul a (sCon 0)))
+                                   ?? "Mul a*0"
+                                   =: interpInEnv env (sCon 0)
+                                   ?? mulH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 0))
+                                   =: interpInEnv env (sMul a (sCon 0))
+                                   =: qed
 
-                           , isCon a .&& scon a .== 1
-                             ==> interpInEnv env (simplify (sMul (sCon 1) b))
-                               ?? "Mul 1*b"
-                               =: interpInEnv env b
-                               =: 1 * interpInEnv env b
-                               ?? interpInEnv env (sCon 1) .== 1
-                               =: interpInEnv env (sCon 1) * interpInEnv env b
-                               ?? mulH `at` (Inst @"env" env, Inst @"a" (sCon 1), Inst @"b" b)
-                               =: interpInEnv env (sMul (sCon 1) b)
-                               =: qed
+                               , isCon a .&& scon a .== 1
+                                 ==> interpInEnv env (simplify (sMul (sCon 1) b))
+                                   ?? "Mul 1*b"
+                                   =: interpInEnv env b
+                                   =: 1 * interpInEnv env b
+                                   ?? interpInEnv env (sCon 1) .== 1
+                                   =: interpInEnv env (sCon 1) * interpInEnv env b
+                                   ?? mulH `at` (Inst @"env" env, Inst @"a" (sCon 1), Inst @"b" b)
+                                   =: interpInEnv env (sMul (sCon 1) b)
+                                   =: qed
 
-                           , isCon b .&& scon b .== 1
-                             ==> interpInEnv env (simplify (sMul a (sCon 1)))
-                               ?? "Mul a*1"
-                               =: interpInEnv env a
-                               =: interpInEnv env a * 1
-                               ?? interpInEnv env (sCon 1) .== 1
-                               =: interpInEnv env a * interpInEnv env (sCon 1)
-                               ?? mulH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 1))
-                               =: interpInEnv env (sMul a (sCon 1))
-                               =: qed
+                               , isCon b .&& scon b .== 1
+                                 ==> interpInEnv env (simplify (sMul a (sCon 1)))
+                                   ?? "Mul a*1"
+                                   =: interpInEnv env a
+                                   =: interpInEnv env a * 1
+                                   ?? interpInEnv env (sCon 1) .== 1
+                                   =: interpInEnv env a * interpInEnv env (sCon 1)
+                                   ?? mulH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 1))
+                                   =: interpInEnv env (sMul a (sCon 1))
+                                   =: qed
 
-                           , isCon a .&& isCon b
-                             ==> let va = scon a; vb = scon b
-                               in interpInEnv env (simplify (sMul (sCon va) (sCon vb)))
-                               ?? "Mul Con"
-                               ?? simplify (sMul (sCon va) (sCon vb)) .== sCon (va * vb)
-                               =: interpInEnv env (sCon (va * vb))
-                               ?? interpInEnv env (sCon (va * vb)) .== va * vb
-                               =: va * vb
-                               ?? mulCL `at` (Inst @"a" (interpInEnv env (sCon va)), Inst @"b" va, Inst @"c" vb)
-                               =: interpInEnv env (sCon va) * vb
-                               ?? mulCR `at` (Inst @"a" (interpInEnv env (sCon va)), Inst @"b" (interpInEnv env (sCon vb)), Inst @"c" vb)
-                               =: interpInEnv env (sCon va) * interpInEnv env (sCon vb)
-                               ?? mulH `at` (Inst @"env" env, Inst @"a" (sCon va), Inst @"b" (sCon vb))
-                               =: interpInEnv env (sMul (sCon va) (sCon vb))
-                               =: qed
+                               , isCon a .&& isCon b
+                                 ==> let va = scon a; vb = scon b
+                                   in interpInEnv env (simplify (sMul (sCon va) (sCon vb)))
+                                   ?? "Mul Con"
+                                   ?? simplify (sMul (sCon va) (sCon vb)) .== sCon (va * vb)
+                                   =: interpInEnv env (sCon (va * vb))
+                                   ?? interpInEnv env (sCon (va * vb)) .== va * vb
+                                   =: va * vb
+                                   ?? mulCL `at` (Inst @"a" (interpInEnv env (sCon va)), Inst @"b" va, Inst @"c" vb)
+                                   =: interpInEnv env (sCon va) * vb
+                                   ?? mulCR `at` (Inst @"a" (interpInEnv env (sCon va)), Inst @"b" (interpInEnv env (sCon vb)), Inst @"c" vb)
+                                   =: interpInEnv env (sCon va) * interpInEnv env (sCon vb)
+                                   ?? mulH `at` (Inst @"env" env, Inst @"a" (sCon va), Inst @"b" (sCon vb))
+                                   =: interpInEnv env (sMul (sCon va) (sCon vb))
+                                   =: qed
 
-                           , isCon a .&& sNot (isCon b)
-                             ==> let va = scon a
-                               in cases [ va .== 0
-                                          ==> interpInEnv env (simplify (sMul (sCon 0) b))
-                                            ?? "Mul 0,_"
-                                            =: interpInEnv env (sCon 0)
-                                            ?? mulH `at` (Inst @"env" env, Inst @"a" (sCon 0), Inst @"b" b)
-                                            =: interpInEnv env (sMul (sCon 0) b)
-                                            =: qed
-                                        , va .== 1
-                                          ==> interpInEnv env (simplify (sMul (sCon 1) b))
-                                            ?? "Mul 1,_"
-                                            =: interpInEnv env b
-                                            =: 1 * interpInEnv env b
-                                            ?? interpInEnv env (sCon 1) .== 1
-                                            =: interpInEnv env (sCon 1) * interpInEnv env b
-                                            ?? mulH `at` (Inst @"env" env, Inst @"a" (sCon 1), Inst @"b" b)
-                                            =: interpInEnv env (sMul (sCon 1) b)
-                                            =: qed
-                                        , va ./= 0 .&& va ./= 1
-                                          ==> interpInEnv env (simplify (sMul (sCon va) b))
-                                            ?? "Mul C,_"
-                                            =: interpInEnv env (sMul (sCon va) b)
-                                            =: qed
-                                        ]
+                               , isCon a .&& sNot (isCon b)
+                                 ==> let va = scon a
+                                   in cases [ va .== 0
+                                              ==> interpInEnv env (simplify (sMul (sCon 0) b))
+                                                ?? "Mul 0,_"
+                                                =: interpInEnv env (sCon 0)
+                                                ?? mulH `at` (Inst @"env" env, Inst @"a" (sCon 0), Inst @"b" b)
+                                                =: interpInEnv env (sMul (sCon 0) b)
+                                                =: qed
+                                            , va .== 1
+                                              ==> interpInEnv env (simplify (sMul (sCon 1) b))
+                                                ?? "Mul 1,_"
+                                                =: interpInEnv env b
+                                                =: 1 * interpInEnv env b
+                                                ?? interpInEnv env (sCon 1) .== 1
+                                                =: interpInEnv env (sCon 1) * interpInEnv env b
+                                                ?? mulH `at` (Inst @"env" env, Inst @"a" (sCon 1), Inst @"b" b)
+                                                =: interpInEnv env (sMul (sCon 1) b)
+                                                =: qed
+                                            , va ./= 0 .&& va ./= 1
+                                              ==> interpInEnv env (simplify (sMul (sCon va) b))
+                                                ?? "Mul C,_"
+                                                =: interpInEnv env (sMul (sCon va) b)
+                                                =: qed
+                                            ]
 
-                           , sNot (isCon a) .&& isCon b
-                             ==> let vb = scon b
-                               in cases [ vb .== 0
-                                          ==> interpInEnv env (simplify (sMul a (sCon 0)))
-                                            ?? "Mul _,0"
-                                            =: interpInEnv env (sCon 0)
-                                            ?? mulH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 0))
-                                            =: interpInEnv env (sMul a (sCon 0))
-                                            =: qed
-                                        , vb .== 1
-                                          ==> interpInEnv env (simplify (sMul a (sCon 1)))
-                                            ?? "Mul _,1"
-                                            =: interpInEnv env a
-                                            =: interpInEnv env a * 1
-                                            ?? interpInEnv env (sCon 1) .== 1
-                                            =: interpInEnv env a * interpInEnv env (sCon 1)
-                                            ?? mulH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 1))
-                                            =: interpInEnv env (sMul a (sCon 1))
-                                            =: qed
-                                        , vb ./= 0 .&& vb ./= 1
-                                          ==> interpInEnv env (simplify (sMul a (sCon vb)))
-                                            ?? "Mul _,C"
-                                            =: interpInEnv env (sMul a (sCon vb))
-                                            =: qed
-                                        ]
+                               , sNot (isCon a) .&& isCon b
+                                 ==> let vb = scon b
+                                   in cases [ vb .== 0
+                                              ==> interpInEnv env (simplify (sMul a (sCon 0)))
+                                                ?? "Mul _,0"
+                                                =: interpInEnv env (sCon 0)
+                                                ?? mulH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 0))
+                                                =: interpInEnv env (sMul a (sCon 0))
+                                                =: qed
+                                            , vb .== 1
+                                              ==> interpInEnv env (simplify (sMul a (sCon 1)))
+                                                ?? "Mul _,1"
+                                                =: interpInEnv env a
+                                                =: interpInEnv env a * 1
+                                                ?? interpInEnv env (sCon 1) .== 1
+                                                =: interpInEnv env a * interpInEnv env (sCon 1)
+                                                ?? mulH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" (sCon 1))
+                                                =: interpInEnv env (sMul a (sCon 1))
+                                                =: qed
+                                            , vb ./= 0 .&& vb ./= 1
+                                              ==> interpInEnv env (simplify (sMul a (sCon vb)))
+                                                ?? "Mul _,C"
+                                                =: interpInEnv env (sMul a (sCon vb))
+                                                =: qed
+                                            ]
 
-                           , sNot (isCon a) .&& sNot (isCon b)
-                             ==> interpInEnv env (simplify (sMul a b))
-                               ?? "Mul _,_"
-                               =: interpInEnv env (sMul a b)
-                               =: qed
-                           ]
+                               , sNot (isCon a) .&& sNot (isCon b)
+                                 ==> interpInEnv env (simplify (sMul a b))
+                                   ?? "Mul _,_"
+                                   =: interpInEnv env (sMul a b)
+                                   =: qed
+                               ]
 
-              , isLet e
-                ==> interpInEnv env (simplify e)
-                 ?? "Let"
-                 =: let nm = slvar e
-                        a  = slval e
-                        b  = slbody e
-                 in interpInEnv env (simplify (sLet nm a b))
-                 =: cases [ isCon a
-                             ==> let v = scon a
-                               in interpInEnv env (simplify (sLet nm (sCon v) b))
-                               ?? "Let Con"
-                               =: interpInEnv env (subst nm v b)
-                               ?? subC `at` (Inst @"e" b, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
-                               =: interpInEnv (ST.tuple (nm, v) .: env) b
-                               ?? letH `at` (Inst @"env" env, Inst @"nm" nm, Inst @"a" (sCon v), Inst @"b" b)
-                               =: interpInEnv env (sLet nm (sCon v) b)
-                               =: qed
-                           , sNot (isCon a)
-                             ==> interpInEnv env (simplify (sLet nm a b))
-                               ?? "Let _"
-                               =: interpInEnv env (sLet nm a b)
-                               =: qed
-                           ]
-              ]
+          Let nm a b -> interpInEnv env (simplify e)
+                     ?? "Let"
+                     =: interpInEnv env (simplify (sLet nm a b))
+                     =: cases [ isCon a
+                                 ==> let v = scon a
+                                   in interpInEnv env (simplify (sLet nm (sCon v) b))
+                                   ?? "Let Con"
+                                   =: interpInEnv env (subst nm v b)
+                                   ?? subC `at` (Inst @"e" b, Inst @"nm" nm, Inst @"v" v, Inst @"env" env)
+                                   =: interpInEnv (ST.tuple (nm, v) .: env) b
+                                   ?? letH `at` (Inst @"env" env, Inst @"nm" nm, Inst @"a" (sCon v), Inst @"b" b)
+                                   =: interpInEnv env (sLet nm (sCon v) b)
+                                   =: qed
+                               , sNot (isCon a)
+                                 ==> interpInEnv env (simplify (sLet nm a b))
+                                   ?? "Let _"
+                                   =: interpInEnv env (sLet nm a b)
+                                   =: qed
+                               ]
+        |]
 
 -- | Constant folding preserves the semantics: interpreting an expression
 -- is the same as constant-folding it first and then interpreting the result.
@@ -1340,107 +1323,91 @@ cfoldCorrect = do
      (\(Forall @"e" (e :: SE)) (Forall @"env" (env :: E)) -> interpInEnv env (cfold e) .== interpInEnv env e)
      (\e _ -> size e, [proofOf mnn]) $
      \ih e env -> []
-       |- cases [ isVar e
-                  ==> interpInEnv env (cfold e)
-                   ?? "case Var"
-                   =: let nm = svar e
-                   in interpInEnv env (cfold (sVar nm))
-                   =: interpInEnv env (sVar nm)
-                   =: interpInEnv env e
-                   =: qed
+       |- [pCase|Expr e of
+            Var nm     -> interpInEnv env (cfold e)
+                       ?? "case Var"
+                       =: interpInEnv env (cfold (sVar nm))
+                       =: interpInEnv env (sVar nm)
+                       =: interpInEnv env e
+                       =: qed
 
-                , isCon e
-                  ==> interpInEnv env (cfold e)
-                   ?? "case Con"
-                   =: let v = scon e
-                   in interpInEnv env (cfold (sCon v))
-                   =: interpInEnv env (sCon v)
-                   =: interpInEnv env e
-                   =: qed
+            Con v      -> interpInEnv env (cfold e)
+                       ?? "case Con"
+                       =: interpInEnv env (cfold (sCon v))
+                       =: interpInEnv env (sCon v)
+                       =: interpInEnv env e
+                       =: qed
 
-                , isSqr e
-                  ==> interpInEnv env (cfold e)
-                   ?? "case Sqr"
-                   =: let a = ssqrVal e
-                   in interpInEnv env (cfold (sSqr a))
-                   =: interpInEnv env (simplify (sSqr (cfold a)))
-                   ?? sc `at` (Inst @"e" (sSqr (cfold a)), Inst @"env" env)
-                   =: interpInEnv env (sSqr (cfold a))
-                   ?? sqrH `at` (Inst @"env" env, Inst @"a" (cfold a))
-                   =: interpInEnv env (cfold a) * interpInEnv env (cfold a)
-                   ?? ih `at` (Inst @"e" a, Inst @"env" env)
-                   ?? sqrC `at` (Inst @"a" (interpInEnv env (cfold a)), Inst @"b" (interpInEnv env a))
-                   =: interpInEnv env a * interpInEnv env a
-                   ?? sqrH `at` (Inst @"env" env, Inst @"a" a)
-                   =: interpInEnv env (sSqr a)
-                   =: interpInEnv env e
-                   =: qed
+            Sqr a      -> interpInEnv env (cfold e)
+                       ?? "case Sqr"
+                       =: interpInEnv env (cfold (sSqr a))
+                       =: interpInEnv env (simplify (sSqr (cfold a)))
+                       ?? sc `at` (Inst @"e" (sSqr (cfold a)), Inst @"env" env)
+                       =: interpInEnv env (sSqr (cfold a))
+                       ?? sqrH `at` (Inst @"env" env, Inst @"a" (cfold a))
+                       =: interpInEnv env (cfold a) * interpInEnv env (cfold a)
+                       ?? ih `at` (Inst @"e" a, Inst @"env" env)
+                       ?? sqrC `at` (Inst @"a" (interpInEnv env (cfold a)), Inst @"b" (interpInEnv env a))
+                       =: interpInEnv env a * interpInEnv env a
+                       ?? sqrH `at` (Inst @"env" env, Inst @"a" a)
+                       =: interpInEnv env (sSqr a)
+                       =: interpInEnv env e
+                       =: qed
 
-                , isInc e
-                  ==> interpInEnv env (cfold e)
-                   ?? "case Inc"
-                   =: let a = sincVal e
-                   in interpInEnv env (cfold (sInc a))
-                   =: interpInEnv env (simplify (sInc (cfold a)))
-                   ?? sc `at` (Inst @"e" (sInc (cfold a)), Inst @"env" env)
-                   =: interpInEnv env (sInc (cfold a))
-                   ?? ih `at` (Inst @"e" a, Inst @"env" env)
-                   =: interpInEnv env (sInc a)
-                   =: interpInEnv env e
-                   =: qed
+            Inc a      -> interpInEnv env (cfold e)
+                       ?? "case Inc"
+                       =: interpInEnv env (cfold (sInc a))
+                       =: interpInEnv env (simplify (sInc (cfold a)))
+                       ?? sc `at` (Inst @"e" (sInc (cfold a)), Inst @"env" env)
+                       =: interpInEnv env (sInc (cfold a))
+                       ?? ih `at` (Inst @"e" a, Inst @"env" env)
+                       =: interpInEnv env (sInc a)
+                       =: interpInEnv env e
+                       =: qed
 
-                , isAdd e
-                  ==> interpInEnv env (cfold e)
-                   ?? "case Add"
-                   =: let a = sadd1 e
-                          b = sadd2 e
-                   in interpInEnv env (cfold (sAdd a b))
-                   =: interpInEnv env (simplify (sAdd (cfold a) (cfold b)))
-                   ?? sc `at` (Inst @"e" (sAdd (cfold a) (cfold b)), Inst @"env" env)
-                   =: interpInEnv env (sAdd (cfold a) (cfold b))
-                   ?? ih `at` (Inst @"e" a, Inst @"env" env)
-                   ?? ih `at` (Inst @"e" b, Inst @"env" env)
-                   =: interpInEnv env (sAdd a b)
-                   =: interpInEnv env e
-                   =: qed
+            Add a b    -> interpInEnv env (cfold e)
+                       ?? "case Add"
+                       =: interpInEnv env (cfold (sAdd a b))
+                       =: interpInEnv env (simplify (sAdd (cfold a) (cfold b)))
+                       ?? sc `at` (Inst @"e" (sAdd (cfold a) (cfold b)), Inst @"env" env)
+                       =: interpInEnv env (sAdd (cfold a) (cfold b))
+                       ?? ih `at` (Inst @"e" a, Inst @"env" env)
+                       ?? ih `at` (Inst @"e" b, Inst @"env" env)
+                       =: interpInEnv env (sAdd a b)
+                       =: interpInEnv env e
+                       =: qed
 
-                , isMul e
-                  ==> interpInEnv env (cfold e)
-                   ?? "case Mul"
-                   =: let a = smul1 e
-                          b = smul2 e
-                   in interpInEnv env (cfold (sMul a b))
-                   =: interpInEnv env (simplify (sMul (cfold a) (cfold b)))
-                   ?? sc `at` (Inst @"e" (sMul (cfold a) (cfold b)), Inst @"env" env)
-                   =: interpInEnv env (sMul (cfold a) (cfold b))
-                   ?? mulH `at` (Inst @"env" env, Inst @"a" (cfold a), Inst @"b" (cfold b))
-                   =: interpInEnv env (cfold a) * interpInEnv env (cfold b)
-                   ?? ih `at` (Inst @"e" a, Inst @"env" env)
-                   ?? mulCL `at` (Inst @"a" (interpInEnv env (cfold a)), Inst @"b" (interpInEnv env a), Inst @"c" (interpInEnv env (cfold b)))
-                   =: interpInEnv env a * interpInEnv env (cfold b)
-                   ?? ih `at` (Inst @"e" b, Inst @"env" env)
-                   ?? mulCR `at` (Inst @"a" (interpInEnv env a), Inst @"b" (interpInEnv env (cfold b)), Inst @"c" (interpInEnv env b))
-                   =: interpInEnv env a * interpInEnv env b
-                   ?? mulH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" b)
-                   =: interpInEnv env (sMul a b)
-                   =: interpInEnv env e
-                   =: qed
+            Mul a b    -> interpInEnv env (cfold e)
+                       ?? "case Mul"
+                       =: interpInEnv env (cfold (sMul a b))
+                       =: interpInEnv env (simplify (sMul (cfold a) (cfold b)))
+                       ?? sc `at` (Inst @"e" (sMul (cfold a) (cfold b)), Inst @"env" env)
+                       =: interpInEnv env (sMul (cfold a) (cfold b))
+                       ?? mulH `at` (Inst @"env" env, Inst @"a" (cfold a), Inst @"b" (cfold b))
+                       =: interpInEnv env (cfold a) * interpInEnv env (cfold b)
+                       ?? ih `at` (Inst @"e" a, Inst @"env" env)
+                       ?? mulCL `at` (Inst @"a" (interpInEnv env (cfold a)), Inst @"b" (interpInEnv env a), Inst @"c" (interpInEnv env (cfold b)))
+                       =: interpInEnv env a * interpInEnv env (cfold b)
+                       ?? ih `at` (Inst @"e" b, Inst @"env" env)
+                       ?? mulCR `at` (Inst @"a" (interpInEnv env a), Inst @"b" (interpInEnv env (cfold b)), Inst @"c" (interpInEnv env b))
+                       =: interpInEnv env a * interpInEnv env b
+                       ?? mulH `at` (Inst @"env" env, Inst @"a" a, Inst @"b" b)
+                       =: interpInEnv env (sMul a b)
+                       =: interpInEnv env e
+                       =: qed
 
-                , isLet e
-                  ==> interpInEnv env (cfold e)
-                   ?? "case Let"
-                   =: let nm = slvar  e
-                          a  = slval  e
-                          b  = slbody e
-                   in interpInEnv env (cfold (sLet nm a b))
-                   =: interpInEnv env (simplify (sLet nm (cfold a) (cfold b)))
-                   ?? sc `at` (Inst @"e" (sLet nm (cfold a) (cfold b)), Inst @"env" env)
-                   =: interpInEnv env (sLet nm (cfold a) (cfold b))
-                   ?? ih `at` (Inst @"e" a, Inst @"env" env)
-                   ?? ih `at` (Inst @"e" b, Inst @"env" (ST.tuple (nm, interpInEnv env a) .: env))
-                   =: interpInEnv env (sLet nm a b)
-                   =: interpInEnv env e
-                   =: qed
-                ]
+            Let nm a b -> interpInEnv env (cfold e)
+                       ?? "case Let"
+                       =: interpInEnv env (cfold (sLet nm a b))
+                       =: interpInEnv env (simplify (sLet nm (cfold a) (cfold b)))
+                       ?? sc `at` (Inst @"e" (sLet nm (cfold a) (cfold b)), Inst @"env" env)
+                       =: interpInEnv env (sLet nm (cfold a) (cfold b))
+                       ?? ih `at` (Inst @"e" a, Inst @"env" env)
+                       ?? ih `at` (Inst @"e" b, Inst @"env" (ST.tuple (nm, interpInEnv env a) .: env))
+                       =: interpInEnv env (sLet nm a b)
+                       =: interpInEnv env e
+                       =: qed
+          |]
 
-{-# ANN simpCorrect ("HLint: ignore Evaluate" :: String) #-}
+{-# ANN simpCorrect  ("HLint: ignore Evaluate" :: String) #-}
+{-# ANN cfoldCorrect ("HLint: ignore Evaluate" :: String) #-}
