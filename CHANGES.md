@@ -35,6 +35,9 @@
     so the exhaustiveness checker correctly requires a fallback for any constructor
     that only appears with literal sub-patterns.
 
+  * Add the `pCase` quasi-quoter for proof case-splits. Same syntax as `sCase`, but
+    generates `cases [cond ==> proof, ...]` instead of `ite` chains.
+
   * Add minimum and maximum to Data.SBV.List. If they receive empty list as argument,
     then the result is underspecified, i.e., can be any value of the element type.
 
