@@ -708,7 +708,7 @@ pCase = QuasiQuoter
                            | (i, acc) <- args, VarP v <- [pats !! (i - 1)] ]
 
                 -- Accumulated negations of prior guards
-                negPriors = map (\g -> AppE (VarE 'sNot) g) priorGuards
+                negPriors = map (AppE (VarE 'sNot)) priorGuards
 
                 -- Build the final guard
                 guardParts = [testerGuard] ++ negPriors ++ maybe [] pure mbG
