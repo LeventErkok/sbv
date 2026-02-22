@@ -45,7 +45,6 @@ import qualified Prelude as P(fail)
 import Data.Generics
 import qualified Data.Set as Set
 import Data.Set (Set)
-import qualified Data.Map.Strict as Map
 
 import System.FilePath
 
@@ -691,14 +690,14 @@ pCase = QuasiQuoter
 
     -- | Process a group of cases for the same constructor
     processGroup :: Exp -> (Name, [Type], [Case]) -> Q [(Exp, Exp)]
-    processGroup scrut (nm, ts, cs) = go Map.empty cs
+    processGroup scrut (nm, ts, cs) = go [] cs
       where
         testerGuard = AppE (VarE (mkName ("is" ++ nameBase nm))) scrut
 
-        go :: Map.Map Name [Exp] -> [Case] -> Q [(Exp, Exp)]
-        go _    []     = pure []
-        go seen (c:rest) = case c of
-          CWild{} -> go seen rest  -- guarded wildcards already rejected; skip
+        go :: [Exp] -> [Case] -> Q [(Exp, Exp)]
+        go _          []     = pure []
+        go priorGuards (c:rest) = case c of
+          CWild{} -> go priorGuards rest  -- guarded wildcards already rejected; skip
           CMatch _o _nm mbp mbG rhs _allUsed -> do
             let pats = fromMaybe (map (const WildP) ts) mbp
 
@@ -708,12 +707,8 @@ pCase = QuasiQuoter
                 bindings = [ ValD (VarP v) (NormalB acc) []
                            | (i, acc) <- args, VarP v <- [pats !! (i - 1)] ]
 
-                -- The tester for this constructor (including nested-pattern testers from flattenPat)
-                -- Note: nested-pattern guards are already folded into mbG by matchToPair/merge
-
-                -- Prior guards for this constructor (accumulated negations)
-                priorGuards = Map.findWithDefault [] nm seen
-                negPriors   = map (\g -> AppE (VarE 'sNot) g) priorGuards
+                -- Accumulated negations of prior guards
+                negPriors = map (\g -> AppE (VarE 'sNot) g) priorGuards
 
                 -- Build the final guard
                 guardParts = [testerGuard] ++ negPriors ++ maybe [] pure mbG
@@ -725,14 +720,12 @@ pCase = QuasiQuoter
                 -- Wrap RHS with let-bindings
                 rhs' = addLocals bindings rhs
 
-                -- Update seen: if there's a user guard, add it for future negation
-                -- If unguarded, we don't need to track (overlap check prevents duplicates)
-                seen' = case mbG of
-                          Just g  -> let rawG = addLocals bindings g
-                                     in Map.insertWith (++) nm [rawG] seen
-                          Nothing -> seen
+                -- Update: if there's a user guard, add it for future negation
+                priorGuards' = case mbG of
+                                 Just g  -> priorGuards ++ [addLocals bindings g]
+                                 Nothing -> priorGuards
 
-            rest' <- go seen' rest
+            rest' <- go priorGuards' rest
             pure $ (finalGuard, rhs') : rest'
 
 -- * Standalone helpers
