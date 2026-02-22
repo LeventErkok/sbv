@@ -1,5 +1,5 @@
 SCase07.hs:11:14: error: [GHC-39584]
-    " sCase: Pattern guards are not supported: 
+    " sCase/pCase: Pattern guards are not supported: 
         Just 1 <- Just i
 
     " In the quasi-quotation:

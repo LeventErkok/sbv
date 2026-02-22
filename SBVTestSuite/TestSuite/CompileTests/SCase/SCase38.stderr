@@ -1,5 +1,5 @@
 SCase38.hs:12:14: error: [GHC-39584]
-    " SCase38.hs:16:16-30: sCase: Arity mismatch in nested pattern.
+    " SCase38.hs:16:16-30: sCase/pCase: Arity mismatch in nested pattern.
         Constructor: Num
         Expected   : 1
         Given      : 2

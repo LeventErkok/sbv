@@ -1,5 +1,5 @@
 SCase09.hs:11:14: error: [GHC-39584]
-    " SCase09.hs:14:16-21: sCase: Not in scope: data constructor: Viar
+    " SCase09.hs:14:16-21: sCase/pCase: Not in scope: data constructor: Viar
     " In the quasi-quotation:
         [sCase|Expr e of
                Zero          -> 0

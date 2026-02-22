@@ -1,5 +1,5 @@
 SCase39.hs:12:14: error: [GHC-39584]
-    " SCase39.hs:16:16-29: sCase: Not in scope: data constructor: Numb
+    " SCase39.hs:16:16-29: sCase/pCase: Not in scope: data constructor: Numb
     " In the quasi-quotation:
         [sCase|Expr e of
                Zero              -> 0
