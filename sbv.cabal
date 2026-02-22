@@ -19,6 +19,8 @@ Build-Type         : Simple
 Data-Files         : SBVTestSuite/GoldFiles/*.gold
                      SBVTestSuite/TestSuite/CompileTests/SCase/*.hs
                      SBVTestSuite/TestSuite/CompileTests/SCase/*.stderr
+                     SBVTestSuite/TestSuite/CompileTests/PCase/*.hs
+                     SBVTestSuite/TestSuite/CompileTests/PCase/*.stderr
 Extra-Doc-Files    : INSTALL, README.md, COPYRIGHT, CHANGES.md
 
 flag doctest_is_running
@@ -410,6 +412,7 @@ Test-Suite SBVTest
                   , TestSuite.CodeGeneration.PopulationCount
                   , TestSuite.CodeGeneration.Uninterpreted
                   , TestSuite.CompileTests.SCase
+                  , TestSuite.CompileTests.PCase
                   , TestSuite.Crypto.AES
                   , TestSuite.Crypto.RC4
                   , TestSuite.Crypto.SHA

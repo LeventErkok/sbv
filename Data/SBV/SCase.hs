@@ -710,8 +710,8 @@ pCase = QuasiQuoter
                 -- Accumulated negations of prior guards
                 negPriors = map (AppE (VarE 'sNot)) priorGuards
 
-                -- Build the final guard
-                guardParts = [testerGuard] ++ negPriors ++ maybe [] pure mbG
+                -- Build the final guard (wrap user guard in bindings so pattern vars are in scope)
+                guardParts = [testerGuard] ++ negPriors ++ maybe [] (pure . addLocals bindings) mbG
                 finalGuard = case guardParts of
                                []  -> VarE 'sTrue
                                [g] -> g
