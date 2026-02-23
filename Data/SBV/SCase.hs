@@ -717,8 +717,9 @@ pCase = QuasiQuoter
                                [g] -> g
                                gs  -> foldl1 (\a b -> foldl1 AppE [VarE '(.&&), a, b]) gs
 
-                -- Wrap RHS with let-bindings
-                rhs' = addLocals bindings rhs
+                -- Wrap RHS with let-bindings (only those used in the RHS, to avoid unused-variable warnings)
+                rhsVars = freeVars rhs
+                rhs' = addLocals (filter (\d -> case d of { ValD (VarP v) _ _ -> v `Set.member` rhsVars; _ -> True }) bindings) rhs
 
                 -- Update: if there's a user guard, add it for future negation
                 priorGuards' = case mbG of
