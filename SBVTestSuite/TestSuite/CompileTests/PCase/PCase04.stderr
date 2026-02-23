@@ -1,0 +1,10 @@
+PCase04.hs:13:14: error: [GHC-24922]
+    " FExpr is not in scope at a reify
+    " In the quasi-quotation:
+        [pCase|FExpr e of
+        Num _ -> undefined
+      |]
+   |
+13 | t e = [pCase|FExpr e of
+   |              ^^^^^^^^^^...
+

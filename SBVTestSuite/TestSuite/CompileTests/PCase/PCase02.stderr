@@ -1,0 +1,13 @@
+PCase02.hs:13:14: error: [GHC-39584]
+    " pCase: Failed to parse a proof case-expression.
+
+           Instead of:   case      expr of alts
+           Write     : [pCase|Type expr of alts|]
+
+        where Type is the underlying concrete type of the expression.
+
+    " In the quasi-quotation: [pCase|Expr e + 1|]
+   |
+13 | t e = [pCase|Expr e + 1|]
+   |              ^^^^^^^^^^^^
+

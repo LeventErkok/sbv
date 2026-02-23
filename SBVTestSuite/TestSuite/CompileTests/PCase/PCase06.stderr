@@ -1,0 +1,14 @@
+PCase06.hs:13:14: error: [GHC-39584]
+    " sCase/pCase: Pattern guards are not supported: 
+        Just 1 <- Just i
+
+    " In the quasi-quotation:
+        [pCase|Expr e of
+        Zero        -> undefined
+        Num i | Just 1 <- Just i -> undefined
+        Var _       -> undefined
+      |]
+   |
+13 | t e = [pCase|Expr e of
+   |              ^^^^^^^^^...
+

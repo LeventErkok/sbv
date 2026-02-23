@@ -1,0 +1,19 @@
+PCase07.hs:13:14: error: [GHC-39584]
+    " PCase07.hs:15:9-15: pCase: Arity mismatch.
+        Type       : Expr
+        Constructor: Num
+        Expected   : 1
+        Given      : 2
+
+    " In the quasi-quotation:
+        [pCase|Expr e of
+        Zero     -> undefined
+        Num _ _  -> undefined
+        Var _    -> undefined
+        Add _ _  -> undefined
+        Let _ _ _ -> undefined
+      |]
+   |
+13 | t e = [pCase|Expr e of
+   |              ^^^^^^^^^...
+

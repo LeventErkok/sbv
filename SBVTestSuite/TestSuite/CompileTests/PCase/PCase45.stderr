@@ -1,0 +1,6 @@
+PCase45.hs:18:15: error: [GHC-40910] [-Wunused-local-binds, Werror=unused-local-binds]
+    Defined but not used: i
+   |
+18 |     |- [pCase|Expr e of
+   |               ^^^^^^^^^...
+

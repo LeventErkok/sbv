@@ -1,0 +1,8 @@
+PCase01.hs:13:15: error: [GHC-39584]
+    " PCase01.hs:13:14: Parse error: EOF
+
+    " In the quasi-quotation: [pCase|Expr _e of|]
+   |
+13 | t _e = [pCase|Expr _e of|]
+   |               ^^^^^^^^^^^^
+

@@ -1,0 +1,6 @@
+PCase03.hs:12:8: error: [GHC-39584]
+    pCase: not usable in declaration context
+   |
+12 | [pCase|Expr e of
+   |        ^^^^^^^^^...
+
