@@ -1,0 +1,12 @@
+SCase49.hs:(12,14)-(18,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      "Expr e of\n\
+      \               Zero          -> 0\n\
+      \               Num i         -> i\n\
+      \               Var _         -> 1\n\
+      \               Add _ _       -> 2\n\
+      \               Let _ _ _     -> 3\n\
+      \      "
+  ======>
+    sCaseExpr e 0 (\ i -> i) (\ _ -> 1) (\ _ _ -> 2) (\ _ _ _ -> 3)
