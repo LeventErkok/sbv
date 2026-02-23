@@ -1,0 +1,14 @@
+PCase52.hs:13:14: error: [GHC-39584]
+    " PCase52.hs:15:9: pCase: Wildcard makes the remaining matches redundant:
+        PCase52.hs:16:9-13: Num _
+
+    " In the quasi-quotation:
+        [pCase|Expr e of
+        Zero       -> undefined
+        _ | sTrue  -> undefined
+        Num _      -> undefined
+      |]
+   |
+13 | t e = [pCase|Expr e of
+   |              ^^^^^^^^^...
+
