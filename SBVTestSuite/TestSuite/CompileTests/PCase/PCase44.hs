@@ -1,4 +1,8 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE QuasiQuotes       #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeAbstractions  #-}
+{-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -8,15 +12,15 @@ import Expr
 import Data.SBV
 import Data.SBV.TP
 
--- Negative: wildcard catch-all after multi-arm guarded Var and Num
--- (sCase accepts this; pCase rejects the wildcard)
-t :: SExpr -> Proof SBool
-t e = [pCase|Expr e of
-        Var s | s .== literal "a"                       -> undefined
-              | s .== literal "b" .|| s .== literal "c" -> undefined
-              | sTrue                                    -> undefined
+-- Positive: wildcard catch-all after multi-arm guarded Var and Num
+t :: TP (Proof (Forall "e" Expr -> SBool))
+t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
+    |- [pCase|Expr e of
+         Var s | s .== literal "a"                       -> e .== e =: qed
+               | s .== literal "b" .|| s .== literal "c" -> e .== e =: qed
+               | sTrue                                    -> e .== e =: qed
 
-        Num _ | sTrue                                    -> undefined
+         Num _ | sTrue                                    -> e .== e =: qed
 
-        _                                                -> undefined
-      |]
+         _                                                -> e .== e =: qed
+       |]
