@@ -1,0 +1,18 @@
+PCase10.hs:13:14: error: [GHC-39584]
+    " PCase10.hs:17:9-23: sCase/pCase: Arity mismatch in nested pattern.
+        Constructor: Num
+        Expected   : 1
+        Given      : 2
+
+    " In the quasi-quotation:
+        [pCase|Expr e of
+        Zero            -> undefined
+        Num k           -> undefined
+        Var _           -> undefined
+        Add (Num i j) b -> undefined
+        Let _ _ _       -> undefined
+      |]
+   |
+13 | t e = [pCase|Expr e of
+   |              ^^^^^^^^^...
+

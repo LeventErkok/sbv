@@ -1,0 +1,14 @@
+PCase11.hs:13:14: error: [GHC-39584]
+    " PCase11.hs:17:9-22: sCase/pCase: Not in scope: data constructor: Numb
+    " In the quasi-quotation:
+        [pCase|Expr e of
+        Zero           -> undefined
+        Num k          -> undefined
+        Var _          -> undefined
+        Add (Numb i) b -> undefined
+        Let _ _ _      -> undefined
+      |]
+   |
+13 | t e = [pCase|Expr e of
+   |              ^^^^^^^^^...
+
