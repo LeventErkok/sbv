@@ -1,0 +1,127 @@
+PCase58.hs:(18,15)-(25,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      "Expr e of\n\
+      \         Let s (Num i) b | i .> 0   -> sLet s (sNum i) b .== sLet s (sNum i) b =: e .== e =: qed\n\
+      \                          | i .> -5  -> sLet s (sNum i) b .== sLet s (sNum i) b =: e .== e =: qed\n\
+      \                          | sTrue    -> sLet s (sNum i) b .== sLet s (sNum i) b =: e .== e =: qed\n\
+      \         Let s a b                   -> sLet s a b .== sLet s a b =: e .== e =: qed\n\
+      \         Add (Num i) (Num j)         -> sAdd (sNum i) (sNum j) .== sAdd (sNum i) (sNum j) =: e .== e =: qed\n\
+      \         _                           -> e .== e =: qed\n\
+      \       "
+  ======>
+    cases
+      [((.&&)
+          (isLet e)
+          ((.&&)
+             (isNum (getLet_2 e)) (let i = getNum_1 (getLet_2 e) in i .> 0))
+          ==>
+            (let
+               s = getLet_1 e
+               b = getLet_3 e in
+             let i = getNum_1 (getLet_2 e)
+             in (sLet s (sNum i) b) .== sLet s (sNum i) b =: e .== e =: qed)),
+       ((.&&)
+          ((.&&)
+             (isLet e)
+             (sNot
+                ((.&&)
+                   (isNum (getLet_2 e)) (let i = getNum_1 (getLet_2 e) in i .> 0))))
+          ((.&&)
+             (isNum (getLet_2 e))
+             (let i = getNum_1 (getLet_2 e) in i .> negate 5))
+          ==>
+            (let
+               s = getLet_1 e
+               b = getLet_3 e in
+             let i = getNum_1 (getLet_2 e)
+             in (sLet s (sNum i) b) .== sLet s (sNum i) b =: e .== e =: qed)),
+       ((.&&)
+          ((.&&)
+             ((.&&)
+                (isLet e)
+                (sNot
+                   ((.&&)
+                      (isNum (getLet_2 e)) (let i = getNum_1 (getLet_2 e) in i .> 0))))
+             (sNot
+                ((.&&)
+                   (isNum (getLet_2 e))
+                   (let i = getNum_1 (getLet_2 e) in i .> negate 5))))
+          (isNum (getLet_2 e))
+          ==>
+            (let
+               s = getLet_1 e
+               b = getLet_3 e in
+             let i = getNum_1 (getLet_2 e)
+             in (sLet s (sNum i) b) .== sLet s (sNum i) b =: e .== e =: qed)),
+       ((.&&)
+          ((.&&)
+             ((.&&)
+                (isLet e)
+                (sNot
+                   ((.&&)
+                      (isNum (getLet_2 e)) (let i = getNum_1 (getLet_2 e) in i .> 0))))
+             (sNot
+                ((.&&)
+                   (isNum (getLet_2 e))
+                   (let i = getNum_1 (getLet_2 e) in i .> negate 5))))
+          (sNot (isNum (getLet_2 e)))
+          ==>
+            (let
+               s = getLet_1 e
+               a = getLet_2 e
+               b = getLet_3 e
+             in (sLet s a b) .== sLet s a b =: e .== e =: qed)),
+       ((.&&) (isAdd e) ((.&&) (isNum (getAdd_1 e)) (isNum (getAdd_2 e)))
+          ==>
+            (let
+               i = getNum_1 (getAdd_1 e)
+               j = getNum_1 (getAdd_2 e)
+             in
+               (sAdd (sNum i) (sNum j)) .== sAdd (sNum i) (sNum j) =: e .== e
+                 =: qed)),
+       (sNot
+          ((.||)
+             ((.||)
+                ((.||)
+                   ((.||)
+                      ((.&&)
+                         (isLet e)
+                         ((.&&)
+                            (isNum (getLet_2 e)) (let i = getNum_1 (getLet_2 e) in i .> 0)))
+                      ((.&&)
+                         ((.&&)
+                            (isLet e)
+                            (sNot
+                               ((.&&)
+                                  (isNum (getLet_2 e)) (let i = getNum_1 (getLet_2 e) in i .> 0))))
+                         ((.&&)
+                            (isNum (getLet_2 e))
+                            (let i = getNum_1 (getLet_2 e) in i .> negate 5))))
+                   ((.&&)
+                      ((.&&)
+                         ((.&&)
+                            (isLet e)
+                            (sNot
+                               ((.&&)
+                                  (isNum (getLet_2 e)) (let i = getNum_1 (getLet_2 e) in i .> 0))))
+                         (sNot
+                            ((.&&)
+                               (isNum (getLet_2 e))
+                               (let i = getNum_1 (getLet_2 e) in i .> negate 5))))
+                      (isNum (getLet_2 e))))
+                ((.&&)
+                   ((.&&)
+                      ((.&&)
+                         (isLet e)
+                         (sNot
+                            ((.&&)
+                               (isNum (getLet_2 e)) (let i = getNum_1 (getLet_2 e) in i .> 0))))
+                      (sNot
+                         ((.&&)
+                            (isNum (getLet_2 e))
+                            (let i = getNum_1 (getLet_2 e) in i .> negate 5))))
+                   (sNot (isNum (getLet_2 e)))))
+             ((.&&)
+                (isAdd e) ((.&&) (isNum (getAdd_1 e)) (isNum (getAdd_2 e)))))
+          ==> (e .== e =: qed))]

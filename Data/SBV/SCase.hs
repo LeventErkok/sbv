@@ -36,7 +36,7 @@ import Data.SBV.Core.Model (ite, sym)
 import Data.SBV.Core.Data  (sTrue, sNot, (.&&), (.||), (.==), literal)
 
 import Data.Char  (isSpace, isDigit)
-import Data.List  (intercalate)
+import Data.List  (intercalate, nub)
 import Data.Maybe (isJust, fromMaybe)
 
 import Prelude hiding (fail)
@@ -690,10 +690,12 @@ pCase = QuasiQuoter
 
         -- No exhaustiveness check: the `cases` combinator checks completeness at proof time.
         -- Group cases by constructor for code generation; collect wildcards separately.
+        -- Preserve the user's ordering of constructors.
         let _ = scrut  -- scrut used in caller, silence warning
+            userOrder = nub [nm | Just nm <- map getCaseConstructor cases]
             cstrGroups = [ (cstr, ts, concatMap (matchesCstr cstr) cases)
-                         | (cstr, ts) <- cstrs
-                         , any (\c -> getCaseConstructor c == Just cstr) cases
+                         | cstr <- userOrder
+                         , Just ts <- [lookup cstr cstrs]
                          ]
             wilds = [c | c@CWild{} <- cases]
         pure (cstrGroups, wilds)
@@ -769,7 +771,11 @@ pCase = QuasiQuoter
                 negPriors = map (AppE (VarE 'sNot)) priorGuards
 
                 -- Build the final guard (wrap user guard in bindings so pattern vars are in scope)
-                guardParts = [testerGuard] ++ negPriors ++ maybe [] (pure . addLocals bindings) mbG
+                grdVars  = maybe Set.empty freeVars mbG
+                grdBindings = filter (\case
+                                         ValD (VarP v) _ _ -> v `Set.member` grdVars
+                                         _                 -> True) bindings
+                guardParts = [testerGuard] ++ negPriors ++ maybe [] (pure . addLocals grdBindings) mbG
                 finalGuard = case guardParts of
                                []  -> VarE 'sTrue
                                [g] -> g
@@ -784,7 +790,7 @@ pCase = QuasiQuoter
 
                 -- Update: if there's a user guard, add it for future negation
                 priorGuards' = case mbG of
-                                 Just g  -> priorGuards ++ [addLocals bindings g]
+                                 Just g  -> priorGuards ++ [addLocals grdBindings g]
                                  Nothing -> priorGuards
 
             rest' <- go gvs priorGuards' rest
