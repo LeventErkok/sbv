@@ -1,0 +1,31 @@
+SCase52.hs:(12,14)-(19,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      "Expr e of\n\
+      \               Add (Num 0) j -> t j\n\
+      \               Add a b       -> t a + t b\n\
+      \               Zero          -> 0\n\
+      \               Num i         -> i\n\
+      \               Var _         -> 1\n\
+      \               Let _ _ _     -> 3\n\
+      \      "
+  ======>
+    ite
+      ((.&&)
+         (isAdd e)
+         ((\ _ j
+             -> const
+                  ((.&&) (isNum (getAdd_1 e)) ((.==) (getNum_1 (getAdd_1 e)) 0)) j)
+            (getAdd_1 e) (getAdd_2 e)))
+      ((\ _ j -> t j) (getAdd_1 e) (getAdd_2 e))
+      (ite
+         (isAdd e) ((\ a b -> (t a) + t b) (getAdd_1 e) (getAdd_2 e))
+         (ite
+            (isZero e) 0
+            (ite
+               (isNum e) ((\ i -> i) (getNum_1 e))
+               (ite
+                  (isVar e) ((\ _ -> 1) (getVar_1 e))
+                  (ite
+                     (isLet e) ((\ _ _ _ -> 3) (getLet_1 e) (getLet_2 e) (getLet_3 e))
+                     (sym "unmatched_sCase_Expr_6989586621679081203"))))))
