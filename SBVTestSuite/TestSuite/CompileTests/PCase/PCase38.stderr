@@ -1,15 +1,17 @@
-PCase38.hs:15:14: error: [GHC-39584]
-    " PCase38.hs:21:9: pCase: Wildcard patterns are not allowed in proof case-splits.
-    " In the quasi-quotation:
-        [pCase|Expr e of
-        Zero      -> undefined
-        Num _     -> undefined
-        Var _     -> undefined
-        Add _ _   -> undefined
-        Let _ _ _ -> undefined
-        _         -> undefined
-      |]
+PCase38.hs:12:14: error: [GHC-83865]
+    " Couldn't match expected type: Proof SBool
+                  with actual type: sbv-13.5.5:Data.SBV.TP.TP.TPProofGen
+                                      a0 [sbv-13.5.5:Data.SBV.TP.TP.Helper] ()
+    " In the expression:
+        cases
+          [(isZero e ==> undefined), (isNum e ==> undefined),
+           (isVar e ==> undefined), ....]
+      In an equation for t:
+          t e
+            = (cases
+                 [(isZero e ==> undefined), (isNum e ==> undefined),
+                  (isVar e ==> undefined), ....])
    |
-15 | t e = [pCase|Expr e of
+12 | t e = [pCase|Expr e of
    |              ^^^^^^^^^...
 
