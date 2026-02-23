@@ -1,0 +1,15 @@
+PCase33.hs:15:14: error: [GHC-39584]
+    " PCase33.hs:18:9: pCase: Wildcard patterns are not allowed in proof case-splits.
+    " In the quasi-quotation:
+        [pCase|Expr e of
+        Zero  -> undefined
+        Num _ -> undefined
+        _     -> undefined
+        Var _ -> undefined
+        Add _ _ -> undefined
+        Let _ _ _ -> undefined
+      |]
+   |
+15 | t e = [pCase|Expr e of
+   |              ^^^^^^^^^...
+
