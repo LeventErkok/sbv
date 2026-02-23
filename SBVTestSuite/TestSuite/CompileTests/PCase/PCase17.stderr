@@ -1,0 +1,17 @@
+PCase17.hs:18:14: error: [GHC-83865]
+    " Couldn't match expected type: Proof SBool
+                  with actual type: sbv-13.5.5:Data.SBV.TP.TP.TPProofGen
+                                      (SBV Bool) [sbv-13.5.5:Data.SBV.TP.TP.Helper] ()
+    " In the expression:
+        cases
+          [(isZero e ==> (e .== e =: qed)), (isNum e ==> (e .== e =: qed)),
+           (isVar e ==> (e .== e =: qed)), ....]
+      In an equation for t:
+          t e
+            = (cases
+                 [(isZero e ==> (e .== e =: qed)), (isNum e ==> (e .== e =: qed)),
+                  (isVar e ==> (e .== e =: qed)), ....])
+   |
+18 | t e = [pCase|Expr e of
+   |              ^^^^^^^^^...
+
