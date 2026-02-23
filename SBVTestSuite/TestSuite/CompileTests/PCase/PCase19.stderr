@@ -1,0 +1,20 @@
+PCase19.hs:13:14: error: [GHC-39584]
+    " PCase19.hs:17:9-13: pCase: Overlapping case constructors:
+        Constructor: Num i | i .> 12
+      Overlaps with:
+        PCase19.hs:15:9-13: Num i
+
+    " In the quasi-quotation:
+        [pCase|Expr e of
+        Zero             -> undefined
+        Num i | i .> 3   -> undefined
+              | sTrue    -> undefined
+        Num i | i .> 12  -> undefined
+        Var _            -> undefined
+        Add _ _          -> undefined
+        Let _ _ _        -> undefined
+      |]
+   |
+13 | t e = [pCase|Expr e of
+   |              ^^^^^^^^^...
+

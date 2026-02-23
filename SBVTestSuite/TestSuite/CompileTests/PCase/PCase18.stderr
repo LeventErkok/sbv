@@ -1,0 +1,15 @@
+PCase18.hs:13:14: error: [GHC-39584]
+    " PCase18.hs:18:17: Parse error in pattern: _
+
+    " In the quasi-quotation:
+        [pCase|Expr e of
+        Zero    -> undefined
+        Num _   -> undefined
+        Var _   -> undefined
+        Add _ _ -> undefined
+        _ _     -> undefined
+      |]
+   |
+13 | t e = [pCase|Expr e of
+   |              ^^^^^^^^^...
+
