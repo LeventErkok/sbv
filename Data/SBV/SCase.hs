@@ -724,9 +724,9 @@ pCase = QuasiQuoter
                 -- Wrap RHS with let-bindings; omit bindings for variables used in any guard
                 -- but not the RHS (so GHC doesn't warn about guard-only vars being "unused")
                 rhsVars  = freeVars rhs
-                rhs' = addLocals (filter (\d -> case d of
-                                            ValD (VarP v) _ _ -> not (v `Set.member` gvs) || v `Set.member` rhsVars
-                                            _                  -> True) bindings) rhs
+                rhs' = addLocals (filter (\case
+                                             ValD (VarP v) _ _ -> not (v `Set.member` gvs) || v `Set.member` rhsVars
+                                             _                 -> True) bindings) rhs
 
                 -- Update: if there's a user guard, add it for future negation
                 priorGuards' = case mbG of
