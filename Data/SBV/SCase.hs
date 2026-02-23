@@ -677,6 +677,17 @@ pCase = QuasiQuoter
 
         chk2 cases
 
+        -- If every constructor has an unguarded match, any wildcard is redundant
+        let fullyCovered = [ cstr | (cstr, _) <- cstrs
+                                  , any (\c -> getCaseConstructor c == Just cstr && not (isGuarded c)) cases
+                                  ]
+        case [c | c@CWild{} <- cases] of
+          []    -> pure ()
+          (c:_) | length fullyCovered == length cstrs
+                -> fail (caseOffset c) "pCase: Wildcard match is redundant"
+                | True
+                -> pure ()
+
         -- No exhaustiveness check: the `cases` combinator checks completeness at proof time.
         -- Group cases by constructor for code generation; collect wildcards separately.
         let _ = scrut  -- scrut used in caller, silence warning
