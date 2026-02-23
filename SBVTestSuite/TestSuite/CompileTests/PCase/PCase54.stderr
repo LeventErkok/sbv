@@ -1,0 +1,27 @@
+PCase54.hs:(18,15)-(26,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      "Expr e of\n\
+      \         Zero              -> e .== e =: qed\n\
+      \         Num i | i .< 3    -> e .== e =: qed\n\
+      \               | i .< 10   -> e .== e =: qed\n\
+      \               | sTrue     -> e .== e =: qed\n\
+      \         Var _             -> e .== e =: qed\n\
+      \         Add _ _           -> e .== e =: qed\n\
+      \         Let _ _ _         -> e .== e =: qed\n\
+      \       "
+  ======>
+    cases
+      [(isZero e ==> (e .== e =: qed)),
+       ((.&&) (isNum e) (let i = getNum_1 e in i .< 3)
+          ==> (e .== e =: qed)),
+       ((.&&)
+          ((.&&) (isNum e) (sNot (let i = getNum_1 e in i .< 3)))
+          (let i = getNum_1 e in i .< 10)
+          ==> (e .== e =: qed)),
+       ((.&&)
+          ((.&&) (isNum e) (sNot (let i = getNum_1 e in i .< 3)))
+          (sNot (let i = getNum_1 e in i .< 10))
+          ==> (e .== e =: qed)),
+       (isVar e ==> (e .== e =: qed)), (isAdd e ==> (e .== e =: qed)),
+       (isLet e ==> (e .== e =: qed))]
