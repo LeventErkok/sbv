@@ -1,1 +1,12 @@
-There was no failure during compilation.
+PCase46.hs:18:15: error: [GHC-40910] [-Wunused-local-binds, Werror=unused-local-binds]
+    Defined but not used: b
+   |
+18 |     |- [pCase|Expr e of
+   |               ^^^^^^^^^...
+
+PCase46.hs:18:15: error: [GHC-40910] [-Wunused-local-binds, Werror=unused-local-binds]
+    Defined but not used: a
+   |
+18 |     |- [pCase|Expr e of
+   |               ^^^^^^^^^...
+

@@ -718,8 +718,11 @@ pCase = QuasiQuoter
                                gs  -> foldl1 (\a b -> foldl1 AppE [VarE '(.&&), a, b]) gs
 
                 -- Wrap RHS with let-bindings (only those used in the RHS, to avoid unused-variable warnings)
-                rhsVars = freeVars rhs
-                rhs' = addLocals (filter (\d -> case d of { ValD (VarP v) _ _ -> v `Set.member` rhsVars; _ -> True }) bindings) rhs
+                rhsVars  = freeVars rhs
+                grdVars  = maybe Set.empty freeVars mbG
+                -- Only omit a binding if the variable is used in the guard but not in the RHS;
+                -- variables unused everywhere should remain so GHC can warn about them
+                rhs' = addLocals (filter (\d -> case d of { ValD (VarP v) _ _ -> not (v `Set.member` grdVars) || v `Set.member` rhsVars; _ -> True }) bindings) rhs
 
                 -- Update: if there's a user guard, add it for future negation
                 priorGuards' = case mbG of
