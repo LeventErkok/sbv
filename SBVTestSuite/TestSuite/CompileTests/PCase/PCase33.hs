@@ -9,8 +9,7 @@ import Data.SBV
 import Data.SBV.TP
 
 -- Negative in pCase: wildcard mid-list (after two constructors, before more)
--- (sCase says "wildcard makes remaining matches redundant";
---  pCase says wildcards are not allowed at all)
+-- Wildcard makes the remaining matches redundant
 t :: SExpr -> Proof SBool
 t e = [pCase|Expr e of
         Zero  -> undefined
