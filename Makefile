@@ -95,6 +95,7 @@ updateForVersionChange:
 	@cabal run SBVTest -- -p noOpt2  --accept --quiet
 	@cabal run SBVTest -- -p SCase50 --accept --quiet
 	@cabal run SBVTest -- -p SCase52 --accept --quiet
+	@cabal run SBVTest -- -p SCase53 --accept --quiet
 
 testsuite: updateForVersionChange lintTest test testInterfaces benchBuild docTest mkDistro checkLinks
 
