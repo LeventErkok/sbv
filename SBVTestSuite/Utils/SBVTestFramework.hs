@@ -305,9 +305,21 @@ mkCompileTest file = goldenVsStringDiff nm diffCmd (testDir </> nm <.> "stderr")
                  ++ concat [" -package " ++ pkg | pkg <- packages]
 
         compile path = withSystemTempDirectory "SBVTempDir" $ \tmpDir -> do
-           (exitCode, _stdout, stderr) <- readProcessInDir testDir "ghc" (words (args tmpDir) ++ [path]) ""
+           (exitCode, sOut, sErr) <- readProcessInDir testDir "ghc" (words (args tmpDir) ++ [path]) ""
+           -- If the source uses -ddump-splices, include stdout (where GHC dumps splices)
+           -- Filter to only keep "Splicing expression" blocks, stripping temp paths and preamble
+           src <- readFile (testDir </> path)
+           let hasDump  = "-ddump-splices" `isInfixOf` src
+               splices  = unlines $ filter (not . skipLine) $ dropWhile (not . isSpliceLine) $ lines sOut
+               out      = if hasDump then splices ++ sErr else sErr
            case exitCode of
-             ExitSuccess   -> return $ LBC.pack "There was no failure during compilation."
-             ExitFailure _ -> return $ LBC.pack stderr
+             ExitSuccess   -> return $ LBC.pack $ if hasDump && not (null splices)
+                                                   then splices
+                                                   else "There was no failure during compilation."
+             ExitFailure _ -> return $ LBC.pack out
+
+        isSpliceLine l = "Splicing expression" `isInfixOf` l
+        skipLine     l = "Loaded package environment" `isInfixOf` l
+                      || "Compiling" `isInfixOf` l
 
 {- HLint ignore module "Reduce duplication" -}
