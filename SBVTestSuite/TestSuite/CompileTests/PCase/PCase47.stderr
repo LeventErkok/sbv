@@ -1,0 +1,19 @@
+PCase47.hs:18:15: error: [GHC-39584]
+    " PCase47.hs:22:10-16: pCase: Overlapping case constructors:
+        Constructor: Var _ | (Data.SBV.Core.Data..==) (getVar_1 e) (Data.SBV.Core.Data.literal "x")
+      Overlaps with:
+        PCase47.hs:21:10-14: Var s
+
+    " In the quasi-quotation:
+        [pCase|Expr e of
+         Zero      -> e .== e =: qed
+         Num k     -> sNum k .== sNum k =: e .== e =: qed
+         Var s     -> sVar s .== sVar s =: e .== e =: qed
+         Var "x"   -> sVar (literal "x") .== sVar (literal "x") =: e .== e =: qed
+         Add a b   -> sAdd a b .== sAdd a b =: e .== e =: qed
+         Let nm a b -> sLet nm a b .== sLet nm a b =: e .== e =: qed
+       |]
+   |
+18 |     |- [pCase|Expr e of
+   |               ^^^^^^^^^...
+
