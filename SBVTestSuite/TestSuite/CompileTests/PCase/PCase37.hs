@@ -12,8 +12,7 @@ import Expr
 import Data.SBV
 import Data.SBV.TP
 
--- Negative: all constructors covered + guarded wildcard at end
--- (sCase rejects: guarded wildcard might fail; pCase rejects: wildcards not allowed)
+-- Negative: all constructors covered + guarded wildcard with ambiguous type in guard (2 .>= 3)
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
     |- [pCase|Expr e of

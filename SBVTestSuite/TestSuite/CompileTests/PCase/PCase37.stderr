@@ -1,1 +1,15 @@
-There was no failure during compilation.
+PCase37.hs:18:15: error: [GHC-39584]
+    " PCase37.hs:24:8: pCase: Wildcard match is redundant
+    " In the quasi-quotation:
+        [pCase|Expr e of
+       Zero           -> e .== e =: qed
+       Num i          -> sNum i .== sNum i =: e .== e =: qed
+       Var _          -> e .== e =: qed
+       Add _ _        -> e .== e =: qed
+       Let _ _ _      -> e .== e =: qed
+       _ | 2 .>= 3   -> e .== e =: qed
+     |]
+   |
+18 |     |- [pCase|Expr e of
+   |               ^^^^^^^^^...
+
