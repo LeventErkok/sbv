@@ -690,14 +690,18 @@ pCase = QuasiQuoter
 
     -- | Process a group of cases for the same constructor
     processGroup :: Exp -> (Name, [Type], [Case]) -> Q [(Exp, Exp)]
-    processGroup scrut (nm, ts, cs) = go [] cs
+    processGroup scrut (nm, ts, cs) = go allGrdVars [] cs
       where
         testerGuard = AppE (VarE (mkName ("is" ++ nameBase nm))) scrut
 
-        go :: [Exp] -> [Case] -> Q [(Exp, Exp)]
-        go _          []     = pure []
-        go priorGuards (c:rest) = case c of
-          CWild{} -> go priorGuards rest  -- guarded wildcards already rejected; skip
+        -- Variables used in any guard across all arms of this constructor
+        allGrdVars = Set.unions [ maybe Set.empty freeVars mbG
+                                | CMatch _ _ _ mbG _ _ <- cs ]
+
+        go :: Set Name -> [Exp] -> [Case] -> Q [(Exp, Exp)]
+        go _    _          []     = pure []
+        go gvs priorGuards (c:rest) = case c of
+          CWild{} -> go gvs priorGuards rest  -- guarded wildcards already rejected; skip
           CMatch _o _nm mbp mbG rhs _allUsed -> do
             let pats = fromMaybe (map (const WildP) ts) mbp
 
@@ -717,19 +721,19 @@ pCase = QuasiQuoter
                                [g] -> g
                                gs  -> foldl1 (\a b -> foldl1 AppE [VarE '(.&&), a, b]) gs
 
-                -- Wrap RHS with let-bindings (only those used in the RHS, to avoid unused-variable warnings)
+                -- Wrap RHS with let-bindings; omit bindings for variables used in any guard
+                -- but not the RHS (so GHC doesn't warn about guard-only vars being "unused")
                 rhsVars  = freeVars rhs
-                grdVars  = maybe Set.empty freeVars mbG
-                -- Only omit a binding if the variable is used in the guard but not in the RHS;
-                -- variables unused everywhere should remain so GHC can warn about them
-                rhs' = addLocals (filter (\d -> case d of { ValD (VarP v) _ _ -> not (v `Set.member` grdVars) || v `Set.member` rhsVars; _ -> True }) bindings) rhs
+                rhs' = addLocals (filter (\d -> case d of
+                                            ValD (VarP v) _ _ -> not (v `Set.member` gvs) || v `Set.member` rhsVars
+                                            _                  -> True) bindings) rhs
 
                 -- Update: if there's a user guard, add it for future negation
                 priorGuards' = case mbG of
                                  Just g  -> priorGuards ++ [addLocals bindings g]
                                  Nothing -> priorGuards
 
-            rest' <- go priorGuards' rest
+            rest' <- go gvs priorGuards' rest
             pure $ (finalGuard, rhs') : rest'
 
 -- * Standalone helpers
