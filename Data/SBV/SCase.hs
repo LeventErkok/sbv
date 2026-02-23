@@ -33,7 +33,7 @@ import Control.Monad (unless, when, zipWithM)
 
 import Data.SBV.Client (getConstructors)
 import Data.SBV.Core.Model (ite, sym)
-import Data.SBV.Core.Data  (sTrue, sNot, (.&&), (.==), literal)
+import Data.SBV.Core.Data  (sTrue, sNot, (.&&), (.||), (.==), literal)
 
 import Data.Char  (isSpace, isDigit)
 import Data.List  (intercalate)
@@ -573,12 +573,13 @@ sCase = QuasiQuoter
 -- | Quasi-quoter for proof case-splits.
 --
 -- Like 'sCase', but generates @cases [cond ==> proof, ...]@ instead of
--- @ite@ chains. Wildcards are not allowed (all constructors must be handled
--- explicitly), and exhaustiveness is checked at proof time by the @cases@
--- combinator rather than at compile time.
+-- @ite@ chains. Wildcards are allowed as the last scrutinee (with or
+-- without guards), and exhaustiveness is checked at proof time by the
+-- @cases@ combinator rather than at compile time.
 --
 -- Guards within the same constructor accumulate negations: a second guard
--- implicitly assumes the first guard failed.
+-- implicitly assumes the first guard failed. A wildcard guard is the
+-- negation of the disjunction of all prior guards (De Morgan).
 pCase :: QuasiQuoter
 pCase = QuasiQuoter
   { quoteExp  = extractProof
@@ -614,17 +615,32 @@ pCase = QuasiQuoter
                           _  -> fail Unknown $ "pCase parse error: " <> err
 
     -- | Validate cases for proof context
-    checkProofCase :: Exp -> String -> [Case] -> Q [(Name, [Type], [Case])]
+    checkProofCase :: Exp -> String -> [Case] -> Q ([(Name, [Type], [Case])], [Case])
     checkProofCase scrut typ cases = do
         loc <- location
 
         cstrs <- let dropFieldNames (c, nts) = (c, map snd nts)
                  in map dropFieldNames . snd <$> getConstructors (mkName typ)
 
-        -- Reject wildcards
-        case [c | c@(CWild _ Nothing _) <- cases] of
-          []    -> pure ()
-          (c:_) -> fail (caseOffset c) "pCase: Wildcard patterns are not allowed in proof case-splits."
+        -- Validate wildcard placement: unguarded wildcard must be last, nothing after it
+        let checkWild []                         = pure ()
+            checkWild (CMatch{}          : rest) = checkWild rest
+            checkWild (CWild _ Just{}  _ : rest) = checkWild rest
+            checkWild (CWild o Nothing _ : rest) =
+                  case rest of
+                    []  -> pure ()
+                    red -> fail o $ unlines $ "pCase: Wildcard makes the remaining matches redundant:"
+                                            : ["        " ++ showCaseGen (Just loc) r | r <- red]
+        checkWild cases
+
+        -- Wildcards must come after all explicit constructor matches
+        let checkWildBeforeCstr [] = pure ()
+            checkWildBeforeCstr (CWild o _ _ : rest)
+              | any (\case CMatch{} -> True; _ -> False) rest
+              = fail o $ unlines $ "pCase: Wildcard must come after all constructor matches:"
+                                 : ["        " ++ showCaseGen (Just loc) r | r <- filter (\case CMatch{} -> True; _ -> False) rest]
+            checkWildBeforeCstr (_ : rest) = checkWildBeforeCstr rest
+        checkWildBeforeCstr cases
 
         -- Check arity and constructor validity
         let chk1 :: Case -> Q ()
@@ -662,12 +678,14 @@ pCase = QuasiQuoter
         chk2 cases
 
         -- No exhaustiveness check: the `cases` combinator checks completeness at proof time.
-        -- Group cases by constructor for code generation.
+        -- Group cases by constructor for code generation; collect wildcards separately.
         let _ = scrut  -- scrut used in caller, silence warning
-        pure [ (cstr, ts, concatMap (matchesCstr cstr) cases)
-             | (cstr, ts) <- cstrs
-             , any (\c -> getCaseConstructor c == Just cstr) cases
-             ]
+            cstrGroups = [ (cstr, ts, concatMap (matchesCstr cstr) cases)
+                         | (cstr, ts) <- cstrs
+                         , any (\c -> getCaseConstructor c == Just cstr) cases
+                         ]
+            wilds = [c | c@CWild{} <- cases]
+        pure (cstrGroups, wilds)
 
     overlap loc x xs = fail (caseOffset x) $ unlines $ [ "pCase: Overlapping case constructors:"
                                                         , "        Constructor: " ++ showCase x
@@ -679,14 +697,39 @@ pCase = QuasiQuoter
                        | True                                      = []
 
     -- | Build the proof case expression
-    buildProofCase :: Exp -> [(Name, [Type], [Case])] -> ExpQ
-    buildProofCase scrut groups = do
-        -- Process each group, accumulating guards within each constructor
-        allPairs <- concat <$> mapM (processGroup scrut) groups
-        let casesName   = mkName "cases"
+    buildProofCase :: Exp -> ([(Name, [Type], [Case])], [Case]) -> ExpQ
+    buildProofCase scrut (groups, wilds) = do
+        -- Process each constructor group, accumulating guards within each constructor
+        cstrPairs <- concat <$> mapM (processGroup scrut) groups
+        -- Process wildcard cases, using all constructor guards for negation
+        let priorGuards = map fst cstrPairs
+        wildPairs <- processWilds priorGuards wilds
+        let allPairs    = cstrPairs ++ wildPairs
+            casesName   = mkName "cases"
             impliesName = mkName "==>"
             mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
         pure $ AppE (VarE casesName) (ListE (map mkPair allPairs))
+
+    -- | Process wildcard cases
+    processWilds :: [Exp] -> [Case] -> Q [(Exp, Exp)]
+    processWilds priorGuards = go priorGuards
+      where
+        -- Negate the disjunction of all given guards using De Morgan: sNot (g1 .|| g2 .|| ...)
+        negateAll [] = VarE 'sTrue
+        negateAll gs = AppE (VarE 'sNot) (foldl1 (\a b -> foldl1 AppE [VarE '(.||), a, b]) gs)
+
+        go _      []     = pure []
+        go guards (c:rest) = case c of
+          CWild _ mbG rhs -> do
+            let baseGuard  = negateAll guards
+                finalGuard = case mbG of
+                               Nothing -> baseGuard
+                               Just g  -> foldl1 AppE [VarE '(.&&), baseGuard, g]
+                -- For future wildcard negation accumulation, add this wildcard's full guard
+                guards' = guards ++ [finalGuard]
+            rest' <- go guards' rest
+            pure $ (finalGuard, rhs) : rest'
+          _ -> go guards rest  -- skip non-wild (shouldn't happen, but be safe)
 
     -- | Process a group of cases for the same constructor
     processGroup :: Exp -> (Name, [Type], [Case]) -> Q [(Exp, Exp)]
@@ -701,7 +744,7 @@ pCase = QuasiQuoter
         go :: Set Name -> [Exp] -> [Case] -> Q [(Exp, Exp)]
         go _    _          []     = pure []
         go gvs priorGuards (c:rest) = case c of
-          CWild{} -> go gvs priorGuards rest  -- guarded wildcards already rejected; skip
+          CWild{} -> go gvs priorGuards rest  -- wildcards handled separately by processWilds
           CMatch _o _nm mbp mbG rhs _allUsed -> do
             let pats = fromMaybe (map (const WildP) ts) mbp
 
