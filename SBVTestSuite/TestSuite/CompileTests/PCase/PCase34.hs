@@ -8,9 +8,7 @@ import Expr
 import Data.SBV
 import Data.SBV.TP
 
--- Negative in pCase: two wildcards
--- (sCase says "wildcard makes remaining matches redundant";
---  pCase says wildcards are not allowed at all)
+-- Negative in pCase: two wildcards, second is redundant
 t :: SExpr -> Proof SBool
 t e = [pCase|Expr e of
         Zero  -> undefined

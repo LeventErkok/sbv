@@ -1,5 +1,7 @@
-PCase34.hs:15:14: error: [GHC-39584]
-    " PCase34.hs:18:9: pCase: Wildcard patterns are not allowed in proof case-splits.
+PCase34.hs:13:14: error: [GHC-39584]
+    " PCase34.hs:16:9: pCase: Wildcard makes the remaining matches redundant:
+        PCase34.hs:17:9: _
+
     " In the quasi-quotation:
         [pCase|Expr e of
         Zero  -> undefined
@@ -8,6 +10,6 @@ PCase34.hs:15:14: error: [GHC-39584]
         _     -> undefined
       |]
    |
-15 | t e = [pCase|Expr e of
+13 | t e = [pCase|Expr e of
    |              ^^^^^^^^^...
 
