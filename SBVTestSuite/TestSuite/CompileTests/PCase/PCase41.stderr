@@ -1,0 +1,13 @@
+PCase41.hs:13:14: error: [GHC-39584]
+    " PCase41.hs:15:44: Parse error: else
+
+    " In the quasi-quotation:
+        [pCase|Expr e of
+        Zero  -> undefined
+        Var s -> ite (s .== "a") undefined else undefined
+        Num _ -> undefined
+      |]
+   |
+13 | t e = [pCase|Expr e of
+   |              ^^^^^^^^^...
+
