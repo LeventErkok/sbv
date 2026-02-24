@@ -36,13 +36,15 @@ import Data.SBV.Core.Model (ite, sym)
 import Data.SBV.Core.Data  (sTrue, sNot, (.&&), (.||), (.==), literal)
 
 import Data.Char  (isSpace, isDigit)
-import Data.List  (intercalate, nub)
+import Data.List  (intercalate)
 import Data.Maybe (isJust, fromMaybe)
 
 import Prelude hiding (fail)
 import qualified Prelude as P(fail)
 
 import Data.Generics
+import qualified Data.Map as Map
+import Data.Map (Map)
 import qualified Data.Set as Set
 import Data.Set (Set)
 
@@ -606,8 +608,8 @@ pCase = QuasiQuoter
           case metaParse fullCase of
             Right (CaseE scrut matches) -> do
               cs <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
-              validated <- checkProofCase scrut typ (concat cs)
-              buildProofCase scrut validated
+              validated <- checkProofCase typ (concat cs)
+              buildProofCase scrut typ validated
             Right _  -> fail Unknown "pCase: Parse error, cannot extract a case-expression."
             Left err -> case lines err of
                           (_:loc:res) | ["SrcLoc", _, l, c] <- words loc, all isDigit l, all isDigit c
@@ -615,8 +617,8 @@ pCase = QuasiQuoter
                           _  -> fail Unknown $ "pCase parse error: " <> err
 
     -- | Validate cases for proof context
-    checkProofCase :: Exp -> String -> [Case] -> Q ([(Name, [Type], [Case])], [Case])
-    checkProofCase scrut typ cases = do
+    checkProofCase :: String -> [Case] -> Q [Case]
+    checkProofCase typ cases = do
         loc <- location
 
         cstrs <- let dropFieldNames (c, nts) = (c, map snd nts)
@@ -689,16 +691,7 @@ pCase = QuasiQuoter
                 -> pure ()
 
         -- No exhaustiveness check: the `cases` combinator checks completeness at proof time.
-        -- Group cases by constructor for code generation; collect wildcards separately.
-        -- Preserve the user's ordering of constructors.
-        let _ = scrut  -- scrut used in caller, silence warning
-            userOrder = nub [nm | Just nm <- map getCaseConstructor cases]
-            cstrGroups = [ (cstr, ts, concatMap (matchesCstr cstr) cases)
-                         | cstr <- userOrder
-                         , Just ts <- [lookup cstr cstrs]
-                         ]
-            wilds = [c | c@CWild{} <- cases]
-        pure (cstrGroups, wilds)
+        pure cases
 
     overlap loc x xs = fail (caseOffset x) $ unlines $ [ "pCase: Overlapping case constructors:"
                                                         , "        Constructor: " ++ showCase x
@@ -706,95 +699,93 @@ pCase = QuasiQuoter
                                                      ++ [ "      Overlaps with:" ]
                                                      ++ [ "        " ++ showCaseGen (Just loc) p | p <- xs]
 
-    matchesCstr cstr c | Just n <- getCaseConstructor c, n == cstr = [c]
-                       | True                                      = []
-
     -- | Build the proof case expression
-    buildProofCase :: Exp -> ([(Name, [Type], [Case])], [Case]) -> ExpQ
-    buildProofCase scrut (groups, wilds) = do
-        -- Process each constructor group, accumulating guards within each constructor
-        cstrPairs <- concat <$> mapM (processGroup scrut) groups
-        -- Process wildcard cases, using all constructor guards for negation
-        let priorGuards = map fst cstrPairs
-        wildPairs <- processWilds priorGuards wilds
-        let allPairs    = cstrPairs ++ wildPairs
-            casesName   = mkName "cases"
+    buildProofCase :: Exp -> String -> [Case] -> ExpQ
+    buildProofCase scrut typ cases = do
+        cstrs <- let dropFieldNames (c, nts) = (c, map snd nts)
+                 in map dropFieldNames . snd <$> getConstructors (mkName typ)
+        -- Collect guard variables for each constructor across all arms
+        -- (needed to suppress false "unused binding" warnings for guard-only variables)
+        let allGrdVars :: Map Name (Set Name)
+            allGrdVars = Map.fromListWith Set.union
+                           [ (nm, maybe Set.empty freeVars mbG)
+                           | CMatch _ nm _ mbG _ _ <- cases ]
+        allPairs <- processCases scrut cstrs allGrdVars [] cases
+        let casesName   = mkName "cases"
             impliesName = mkName "==>"
             mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
         pure $ AppE (VarE casesName) (ListE (map mkPair allPairs))
 
-    -- | Process wildcard cases
-    processWilds :: [Exp] -> [Case] -> Q [(Exp, Exp)]
-    processWilds priorGuards = go priorGuards
-      where
-        -- Negate the disjunction of all given guards using De Morgan: sNot (g1 .|| g2 .|| ...)
-        negateAll [] = VarE 'sTrue
-        negateAll gs = AppE (VarE 'sNot) (foldl1 (\a b -> foldl1 AppE [VarE '(.||), a, b]) gs)
+    -- | Process all cases linearly, accumulating prior guards.
+    -- Prior guards are tagged with their constructor name (Nothing for wildcards).
+    -- Each entry stores (constructor, fullGuard, userGuardOnly):
+    --   fullGuard    = the complete guard expression (used for wildcard De Morgan negation)
+    --   userGuardOnly = Just the user guard part (used for same-constructor negation)
+    --                   Nothing if unguarded (same-constructor arms don't negate unguarded matches)
+    processCases :: Exp -> [(Name, [Type])] -> Map Name (Set Name) -> [(Maybe Name, Exp, Maybe Exp)] -> [Case] -> Q [(Exp, Exp)]
+    processCases _     _     _          _           []         = pure []
+    processCases scrut cstrs allGrdVars priorGuards (c:rest) = case c of
+      CWild _ mbG rhs -> do
+        -- Wildcard: negate the disjunction of ALL prior full guards (De Morgan)
+        let allGuards  = [g | (_, g, _) <- priorGuards]
+            baseGuard  = negateAll allGuards
+            finalGuard = case mbG of
+                           Nothing -> baseGuard
+                           Just g  -> foldl1 AppE [VarE '(.&&), baseGuard, g]
+        rest' <- processCases scrut cstrs allGrdVars (priorGuards ++ [(Nothing, finalGuard, Nothing)]) rest
+        pure $ (finalGuard, rhs) : rest'
 
-        go _      []     = pure []
-        go guards (c:rest) = case c of
-          CWild _ mbG rhs -> do
-            let baseGuard  = negateAll guards
-                finalGuard = case mbG of
-                               Nothing -> baseGuard
-                               Just g  -> foldl1 AppE [VarE '(.&&), baseGuard, g]
-                -- For future wildcard negation accumulation, add this wildcard's full guard
-                guards' = guards ++ [finalGuard]
-            rest' <- go guards' rest
-            pure $ (finalGuard, rhs) : rest'
-          _ -> go guards rest  -- skip non-wild (shouldn't happen, but be safe)
+      CMatch _o nm mbp mbG rhs _allUsed -> do
+        let ts   = case lookup nm cstrs of
+                     Just t  -> t
+                     Nothing -> error $ "pCase: impossible: unknown constructor " ++ nameBase nm
+            pats = fromMaybe (map (const WildP) ts) mbp
 
-    -- | Process a group of cases for the same constructor
-    processGroup :: Exp -> (Name, [Type], [Case]) -> Q [(Exp, Exp)]
-    processGroup scrut (nm, ts, cs) = go allGrdVars [] cs
-      where
-        testerGuard = AppE (VarE (mkName ("is" ++ nameBase nm))) scrut
+            -- Build let-bindings for pattern variables
+            args    = [ (i, AppE (VarE (mkName ("get" ++ nameBase nm ++ "_" ++ show i))) scrut)
+                      | (i, _) <- zip [(1 :: Int) ..] ts ]
+            bindings = [ ValD (VarP v) (NormalB acc) []
+                       | (i, acc) <- args, VarP v <- [pats !! (i - 1)] ]
 
-        -- Variables used in any guard across all arms of this constructor
-        allGrdVars = Set.unions [ maybe Set.empty freeVars mbG
-                                | CMatch _ _ _ mbG _ _ <- cs ]
+            testerGuard = AppE (VarE (mkName ("is" ++ nameBase nm))) scrut
 
-        go :: Set Name -> [Exp] -> [Case] -> Q [(Exp, Exp)]
-        go _    _          []     = pure []
-        go gvs priorGuards (c:rest) = case c of
-          CWild{} -> go gvs priorGuards rest  -- wildcards handled separately by processWilds
-          CMatch _o _nm mbp mbG rhs _allUsed -> do
-            let pats = fromMaybe (map (const WildP) ts) mbp
+            -- Only negate prior USER guards for the SAME constructor (others are mutually exclusive)
+            sameUserGuards = [ ug | (Just cn, _, Just ug) <- priorGuards, cn == nm ]
+            negPriors      = map (AppE (VarE 'sNot)) sameUserGuards
 
-                -- Build let-bindings for pattern variables
-                args    = [ (i, AppE (VarE (mkName ("get" ++ nameBase nm ++ "_" ++ show i))) scrut)
-                          | (i, _) <- zip [(1 :: Int) ..] ts ]
-                bindings = [ ValD (VarP v) (NormalB acc) []
-                           | (i, acc) <- args, VarP v <- [pats !! (i - 1)] ]
+            -- Build the final guard (wrap user guard in bindings so pattern vars are in scope)
+            grdVars     = maybe Set.empty freeVars mbG
+            grdBindings = filter (\case
+                                     ValD (VarP v) _ _ -> v `Set.member` grdVars
+                                     _                 -> True) bindings
+            guardParts  = [testerGuard] ++ negPriors ++ maybe [] (pure . addLocals grdBindings) mbG
+            finalGuard  = case guardParts of
+                            []  -> VarE 'sTrue
+                            [g] -> g
+                            gs  -> foldl1 (\a b -> foldl1 AppE [VarE '(.&&), a, b]) gs
 
-                -- Accumulated negations of prior guards
-                negPriors = map (AppE (VarE 'sNot)) priorGuards
+            -- Wrap RHS with let-bindings; include all bindings except those
+            -- used in any guard of the same constructor but not in this RHS
+            -- (to avoid false "unused" warnings from GHC for guard-only variables)
+            cstrGrdVars = Map.findWithDefault Set.empty nm allGrdVars
+            rhsVars = freeVars rhs
+            rhs'    = addLocals (filter (\case
+                                            ValD (VarP v) _ _ -> not (v `Set.member` cstrGrdVars) || v `Set.member` rhsVars
+                                            _                 -> True) bindings) rhs
 
-                -- Build the final guard (wrap user guard in bindings so pattern vars are in scope)
-                grdVars  = maybe Set.empty freeVars mbG
-                grdBindings = filter (\case
-                                         ValD (VarP v) _ _ -> v `Set.member` grdVars
-                                         _                 -> True) bindings
-                guardParts = [testerGuard] ++ negPriors ++ maybe [] (pure . addLocals grdBindings) mbG
-                finalGuard = case guardParts of
-                               []  -> VarE 'sTrue
-                               [g] -> g
-                               gs  -> foldl1 (\a b -> foldl1 AppE [VarE '(.&&), a, b]) gs
+            -- Track: full guard for wildcard negation, user guard for same-constructor negation
+            userGuardOnly = case mbG of
+                              Just g  -> Just (addLocals grdBindings g)
+                              Nothing -> Nothing
+            priorGuards' = priorGuards ++ [(Just nm, finalGuard, userGuardOnly)]
 
-                -- Wrap RHS with let-bindings; omit bindings for variables used in any guard
-                -- but not the RHS (so GHC doesn't warn about guard-only vars being "unused")
-                rhsVars  = freeVars rhs
-                rhs' = addLocals (filter (\case
-                                             ValD (VarP v) _ _ -> not (v `Set.member` gvs) || v `Set.member` rhsVars
-                                             _                 -> True) bindings) rhs
+        rest' <- processCases scrut cstrs allGrdVars priorGuards' rest
+        pure $ (finalGuard, rhs') : rest'
 
-                -- Update: if there's a user guard, add it for future negation
-                priorGuards' = case mbG of
-                                 Just g  -> priorGuards ++ [addLocals grdBindings g]
-                                 Nothing -> priorGuards
-
-            rest' <- go gvs priorGuards' rest
-            pure $ (finalGuard, rhs') : rest'
+    -- | Negate the disjunction of all given guards using De Morgan: sNot (g1 .|| g2 .|| ...)
+    negateAll :: [Exp] -> Exp
+    negateAll [] = VarE 'sTrue
+    negateAll gs = AppE (VarE 'sNot) (foldl1 (\a b -> foldl1 AppE [VarE '(.||), a, b]) gs)
 
 -- * Standalone helpers
 
