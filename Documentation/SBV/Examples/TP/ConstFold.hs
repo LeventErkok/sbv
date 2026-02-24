@@ -238,7 +238,7 @@ lookupSwap = lemma "lookupSwap"
 -- | Generalized swap: swapping two adjacent distinct-keyed bindings behind
 -- a prefix does not affect lookup.
 --
--- >>> runTPWith cvc5 lookupSwapPfx
+-- >>> runTP lookupSwapPfx
 -- Lemma: lookupSwap                       Q.E.D.
 -- Inductive lemma (strong): lookupSwapPfx
 --   Step: Measure is non-negative         Q.E.D.
