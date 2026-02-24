@@ -244,7 +244,11 @@ lookupSwap = lemma "lookupSwap"
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1 (base)                    Q.E.D.
---     Step: 1.2 (cons)                    Q.E.D.
+--     Step: 1.2.1 (cons)                  Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.2.5                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] lookupSwapPfx :: Ɐpfx ∷ [([Char], Integer)] → Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
@@ -271,10 +275,17 @@ lookupSwapPfx = do
                    =: SL.lookup k (pfx ++ b2 .: b1 .: env)
                    =: qed
                 , sNot (SL.null pfx)
-                  ==> let t  = SL.tail pfx
+                  ==> let h      = SL.head pfx
+                          t      = SL.tail pfx
+                          (hk, hv) = ST.untuple h
                        in SL.lookup k (pfx ++ b1 .: b2 .: env)
                        ?? "cons"
+                       ?? pfx .== h .: t
+                       =: SL.lookup k (h .: (t ++ b1 .: b2 .: env))
+                       =: ite (k .== hk) hv (SL.lookup k (t ++ b1 .: b2 .: env))
                        ?? ih `at` (Inst @"pfx" t, Inst @"k" k, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
+                       =: ite (k .== hk) hv (SL.lookup k (t ++ b2 .: b1 .: env))
+                       =: SL.lookup k (h .: (t ++ b2 .: b1 .: env))
                        =: SL.lookup k (pfx ++ b2 .: b1 .: env)
                        =: qed
                 ]
@@ -713,10 +724,10 @@ varHelper = lemma "varHelper"
 -- [Proven] substCorrect :: Ɐe ∷ (Expr [Char] Integer) → Ɐnm ∷ [Char] → Ɐv ∷ Integer → Ɐenv ∷ [([Char], Integer)] → Bool
 substCorrect :: TP (Proof (Forall "e" Exp -> Forall "nm" String -> Forall "v" Integer -> Forall "env" EL -> SBool))
 substCorrect = do
-   mnn  <- recall "measureNonNeg"  measureNonNeg
-   sqrC <- recall "sqrCong"        sqrCong
-   sqrH <- recall "sqrHelper"      sqrHelper
-   addH <- recall "addHelper"      addHelper
+   mnn   <- recall "measureNonNeg" measureNonNeg
+   sqrC  <- recall "sqrCong"       sqrCong
+   sqrH  <- recall "sqrHelper"     sqrHelper
+   addH  <- recall "addHelper"     addHelper
    mulCL <- recall "mulCongL"      mulCongL
    mulCR <- recall "mulCongR"      mulCongR
    mulH  <- recall "mulHelper"     mulHelper
