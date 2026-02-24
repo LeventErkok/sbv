@@ -36,7 +36,9 @@
     that only appears with literal sub-patterns.
 
   * Add the `pCase` quasi-quoter for proof case-splits. Same syntax as `sCase`, but
-    generates `cases [cond ==> proof, ...]` instead of `ite` chains.
+    generates `cases [cond ==> proof, ...]` instead of `ite` chains. Wildcards are
+    allowed as the last arm (with or without guards), generating a negated disjunction
+    of all prior guards to do fall-thru proofs.
 
   * Add minimum and maximum to Data.SBV.List. If they receive empty list as argument,
     then the result is underspecified, i.e., can be any value of the element type.
