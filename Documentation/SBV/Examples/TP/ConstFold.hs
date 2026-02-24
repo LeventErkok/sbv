@@ -391,15 +391,15 @@ lookupShadowPfx = do
 envSwap :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
                    -> Forall "b1" (String, Integer) -> Forall "b2" (String, Integer) -> SBool))
 envSwap = do
-   mnn  <- recall "measureNonNeg" measureNonNeg
-   lkSP <- recall "lookupSwapPfx" lookupSwapPfx
-   sqrC <- recall "sqrCong"      sqrCong
-   sqrH <- recall "sqrHelper"    sqrHelper
-   addH <- recall "addHelper"    addHelper
-   mulCL <- recall "mulCongL"    mulCongL
-   mulCR <- recall "mulCongR"    mulCongR
-   mulH <- recall "mulHelper"    mulHelper
-   letH <- recall "letHelper"    letHelper
+   mnn   <- recallWith z3 "measureNonNeg" measureNonNeg
+   lkSP  <- recallWith z3 "lookupSwapPfx" lookupSwapPfx
+   sqrC  <- recallWith z3 "sqrCong"       sqrCong
+   sqrH  <- recallWith z3 "sqrHelper"     sqrHelper
+   addH  <- recallWith z3 "addHelper"     addHelper
+   mulCL <- recallWith z3 "mulCongL"      mulCongL
+   mulCR <- recallWith z3 "mulCongR"      mulCongR
+   mulH  <- recallWith z3 "mulHelper"     mulHelper
+   letH  <- recallWith z3 "letHelper"     letHelper
 
    sInduct "envSwap"
      (\(Forall @"e" (e :: SE)) (Forall @"pfx" (pfx :: E)) (Forall @"env" (env :: E))
