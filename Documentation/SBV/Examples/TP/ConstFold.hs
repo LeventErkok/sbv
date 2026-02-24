@@ -297,7 +297,7 @@ lookupShadow = lemma "lookupShadow"
 
 -- | Generalized shadow: a shadowed binding behind a prefix does not affect lookup.
 --
--- >>> runTPWith cvc5 lookupShadowPfx
+-- >>> runTP lookupShadowPfx
 -- Lemma: lookupShadow                     Q.E.D.
 -- Inductive lemma (strong): lookupShadowPfx
 --   Step: Measure is non-negative         Q.E.D.
@@ -528,15 +528,15 @@ envSwap = do
 envShadow :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
                      -> Forall "b1" (String, Integer) -> Forall "b2" (String, Integer) -> SBool))
 envShadow = do
-   mnn   <- recall "measureNonNeg"    measureNonNeg
-   lkShP <- recall "lookupShadowPfx" lookupShadowPfx
-   sqrC  <- recall "sqrCong"         sqrCong
-   sqrH  <- recall "sqrHelper"       sqrHelper
-   addH  <- recall "addHelper"       addHelper
-   mulCL <- recall "mulCongL"        mulCongL
-   mulCR <- recall "mulCongR"        mulCongR
-   mulH  <- recall "mulHelper"       mulHelper
-   letH  <- recall "letHelper"       letHelper
+   mnn   <- recallWith z3  "measureNonNeg"  measureNonNeg
+   lkShP <- recallWith z3 "lookupShadowPfx" lookupShadowPfx
+   sqrC  <- recallWith z3 "sqrCong"         sqrCong
+   sqrH  <- recallWith z3 "sqrHelper"       sqrHelper
+   addH  <- recallWith z3 "addHelper"       addHelper
+   mulCL <- recallWith z3 "mulCongL"        mulCongL
+   mulCR <- recallWith z3 "mulCongR"        mulCongR
+   mulH  <- recallWith z3 "mulHelper"       mulHelper
+   letH  <- recallWith z3 "letHelper"       letHelper
 
    sInduct "envShadow"
      (\(Forall @"e" (e :: SE)) (Forall @"pfx" (pfx :: E)) (Forall @"env" (env :: E))
