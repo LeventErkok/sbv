@@ -1,0 +1,120 @@
+PCase60.hs:(23,15)-(33,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      "Expr e of\n\
+      \         Add (Num i) b | i .> 0  -> sAdd (sNum i) b .== sAdd (sNum i) b =: e .== e =: qed\n\
+      \         Num i | i .> 0           -> sNum i .== sNum i =: e .== e =: qed\n\
+      \         Var s | s .== literal \"hey\" -> sVar s .== sVar s =: e .== e =: qed\n\
+      \         Add a b                  -> sAdd a b .== sAdd a b =: e .== e =: qed\n\
+      \         Num i                    -> sNum i .== sNum i =: e .== e =: qed\n\
+      \         Var s                    -> sVar s .== sVar s =: e .== e =: qed\n\
+      \         Zero                     -> e .== e =: qed\n\
+      \         _ | isLet e              -> e .== e =: qed\n\
+      \         _                        -> e .== e =: qed\n\
+      \       "
+  ======>
+    cases
+      [((.&&)
+          (isAdd e)
+          ((.&&)
+             (isNum (getAdd_1 e)) (let i = getNum_1 (getAdd_1 e) in i .> 0))
+          ==>
+            (let b = getAdd_2 e in
+             let i = getNum_1 (getAdd_1 e)
+             in (sAdd (sNum i) b) .== sAdd (sNum i) b =: e .== e =: qed)),
+       ((.&&) (isNum e) (let i = getNum_1 e in i .> 0)
+          ==> (let i = getNum_1 e in (sNum i) .== sNum i =: e .== e =: qed)),
+       ((.&&) (isVar e) (let s = getVar_1 e in s .== literal "hey")
+          ==> (let s = getVar_1 e in (sVar s) .== sVar s =: e .== e =: qed)),
+       ((.&&)
+          (isAdd e)
+          (sNot
+             ((.&&)
+                (isNum (getAdd_1 e)) (let i = getNum_1 (getAdd_1 e) in i .> 0)))
+          ==>
+            (let
+               a = getAdd_1 e
+               b = getAdd_2 e
+             in (sAdd a b) .== sAdd a b =: e .== e =: qed)),
+       ((.&&) (isNum e) (sNot (let i = getNum_1 e in i .> 0))
+          ==> (let i = getNum_1 e in (sNum i) .== sNum i =: e .== e =: qed)),
+       ((.&&) (isVar e) (sNot (let s = getVar_1 e in s .== literal "hey"))
+          ==> (let s = getVar_1 e in (sVar s) .== sVar s =: e .== e =: qed)),
+       (isZero e ==> (e .== e =: qed)),
+       ((.&&)
+          (sNot
+             ((.||)
+                ((.||)
+                   ((.||)
+                      ((.||)
+                         ((.||)
+                            ((.||)
+                               ((.&&)
+                                  (isAdd e)
+                                  ((.&&)
+                                     (isNum (getAdd_1 e))
+                                     (let i = getNum_1 (getAdd_1 e) in i .> 0)))
+                               ((.&&) (isNum e) (let i = getNum_1 e in i .> 0)))
+                            ((.&&) (isVar e) (let s = getVar_1 e in s .== literal "hey")))
+                         ((.&&)
+                            (isAdd e)
+                            (sNot
+                               ((.&&)
+                                  (isNum (getAdd_1 e)) (let i = getNum_1 (getAdd_1 e) in i .> 0)))))
+                      ((.&&) (isNum e) (sNot (let i = getNum_1 e in i .> 0))))
+                   ((.&&)
+                      (isVar e) (sNot (let s = getVar_1 e in s .== literal "hey"))))
+                (isZero e)))
+          (isLet e)
+          ==> (e .== e =: qed)),
+       (sNot
+          ((.||)
+             ((.||)
+                ((.||)
+                   ((.||)
+                      ((.||)
+                         ((.||)
+                            ((.||)
+                               ((.&&)
+                                  (isAdd e)
+                                  ((.&&)
+                                     (isNum (getAdd_1 e))
+                                     (let i = getNum_1 (getAdd_1 e) in i .> 0)))
+                               ((.&&) (isNum e) (let i = getNum_1 e in i .> 0)))
+                            ((.&&) (isVar e) (let s = getVar_1 e in s .== literal "hey")))
+                         ((.&&)
+                            (isAdd e)
+                            (sNot
+                               ((.&&)
+                                  (isNum (getAdd_1 e)) (let i = getNum_1 (getAdd_1 e) in i .> 0)))))
+                      ((.&&) (isNum e) (sNot (let i = getNum_1 e in i .> 0))))
+                   ((.&&)
+                      (isVar e) (sNot (let s = getVar_1 e in s .== literal "hey"))))
+                (isZero e))
+             ((.&&)
+                (sNot
+                   ((.||)
+                      ((.||)
+                         ((.||)
+                            ((.||)
+                               ((.||)
+                                  ((.||)
+                                     ((.&&)
+                                        (isAdd e)
+                                        ((.&&)
+                                           (isNum (getAdd_1 e))
+                                           (let i = getNum_1 (getAdd_1 e) in i .> 0)))
+                                     ((.&&) (isNum e) (let i = getNum_1 e in i .> 0)))
+                                  ((.&&) (isVar e) (let s = getVar_1 e in s .== literal "hey")))
+                               ((.&&)
+                                  (isAdd e)
+                                  (sNot
+                                     ((.&&)
+                                        (isNum (getAdd_1 e))
+                                        (let i = getNum_1 (getAdd_1 e) in i .> 0)))))
+                            ((.&&) (isNum e) (sNot (let i = getNum_1 e in i .> 0))))
+                         ((.&&)
+                            (isVar e) (sNot (let s = getVar_1 e in s .== literal "hey"))))
+                      (isZero e)))
+                (isLet e)))
+          ==> (e .== e =: qed))]
