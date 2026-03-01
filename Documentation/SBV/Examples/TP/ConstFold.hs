@@ -157,6 +157,26 @@ sqrCong = lemma "sqrCong"
                 (\(Forall @"a" (a :: SInteger)) (Forall @"b" b) ->
                       a .== b .=> a * a .== b * b) []
 
+-- | Congruence for addition on the left: if @a == b@ then @a+c == b+c@.
+--
+-- >>> runTP addCongL
+-- Lemma: addCongL                         Q.E.D.
+-- [Proven] addCongL :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐc ∷ Integer → Bool
+addCongL :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "c" Integer -> SBool))
+addCongL = lemma "addCongL"
+                 (\(Forall @"a" (a :: SInteger)) (Forall @"b" b) (Forall @"c" c) ->
+                       a .== b .=> a + c .== b + c) []
+
+-- | Congruence for addition on the right: if @b == c@ then @a+b == a+c@.
+--
+-- >>> runTP addCongR
+-- Lemma: addCongR                         Q.E.D.
+-- [Proven] addCongR :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐc ∷ Integer → Bool
+addCongR :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "c" Integer -> SBool))
+addCongR = lemma "addCongR"
+                 (\(Forall @"a" (a :: SInteger)) (Forall @"b" b) (Forall @"c" c) ->
+                       b .== c .=> a + b .== a + c) []
+
 -- | Congruence for multiplication on the left: if @a == b@ then @a*c == b*c@.
 --
 -- >>> runTP mulCongL
@@ -222,18 +242,36 @@ letHelper = lemma "letHelper"
 -- | Swapping two adjacent bindings with distinct keys does not affect lookup.
 --
 -- >>> runTP lookupSwap
--- Lemma: lookupSwap                       Q.E.D.
+-- Lemma: lookupSwap
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] lookupSwap :: Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
 lookupSwap :: TP (Proof (Forall "k" String -> Forall "b1" (String, Integer)
                       -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
-lookupSwap = lemma "lookupSwap"
-                   (\(Forall @"k" (k :: SString)) (Forall @"b1" (b1 :: STuple String Integer))
-                     (Forall @"b2" (b2 :: STuple String Integer)) (Forall @"env" (env :: E)) ->
-                       let (x, _) = ST.untuple b1
-                           (y, _) = ST.untuple b2
-                       in  x ./= y .=>    SL.lookup k (b1 .: b2 .: env)
-                                       .== SL.lookup k (b2 .: b1 .: env))
-                   []
+lookupSwap = calc "lookupSwap"
+                  (\(Forall @"k" (k :: SString)) (Forall @"b1" (b1 :: STuple String Integer))
+                    (Forall @"b2" (b2 :: STuple String Integer)) (Forall @"env" (env :: E)) ->
+                      let (x, _) = ST.untuple b1
+                          (y, _) = ST.untuple b2
+                      in  x ./= y .=> SL.lookup k (b1 .: b2 .: env) .== SL.lookup k (b2 .: b1 .: env)) $
+                  \k b1 b2 env ->
+                      let (x, _) = ST.untuple b1
+                          (y, _) = ST.untuple b2
+                      in [x ./= y]
+                      |- cases [ k .== x
+                                 ==> SL.lookup k (b1 .: b2 .: env)
+                                  =: SL.lookup k (b2 .: b1 .: env)
+                                  =: qed
+                               , k ./= x
+                                 ==> SL.lookup k (b1 .: b2 .: env)
+                                  =: SL.lookup k (b2 .: env)
+                                  =: SL.lookup k (b2 .: b1 .: env)
+                                  =: qed
+                               ]
 
 -- | Generalized swap: swapping two adjacent distinct-keyed bindings behind
 -- a prefix does not affect lookup.
@@ -314,7 +352,11 @@ lookupShadow = lemma "lookupShadow"
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1 (base)                    Q.E.D.
---     Step: 1.2 (cons)                    Q.E.D.
+--     Step: 1.2.1 (cons)                  Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.2.5                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] lookupShadowPfx :: Ɐpfx ∷ [([Char], Integer)] → Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
@@ -343,10 +385,15 @@ lookupShadowPfx = do
                 , sNot (SL.null pfx)
                   ==> let h  = SL.head pfx
                           t  = SL.tail pfx
+                          (hk, hv) = ST.untuple h
                        in SL.lookup k (pfx ++ b1 .: b2 .: env)
                        ?? "cons"
                        ?? pfx .== h .: t
+                       =: SL.lookup k (h .: (t ++ b1 .: b2 .: env))
+                       =: ite (k .== hk) hv (SL.lookup k (t ++ b1 .: b2 .: env))
                        ?? ih `at` (Inst @"pfx" t, Inst @"k" k, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
+                       =: ite (k .== hk) hv (SL.lookup k (t ++ b1 .: env))
+                       =: SL.lookup k (h .: (t ++ b1 .: env))
                        =: SL.lookup k (pfx ++ b1 .: env)
                        =: qed
                 ]
@@ -360,6 +407,8 @@ lookupShadowPfx = do
 -- Lemma: lookupSwapPfx                    Q.E.D.
 -- Lemma: sqrCong                          Q.E.D.
 -- Lemma: sqrHelper                        Q.E.D.
+-- Lemma: addCongL                         Q.E.D.
+-- Lemma: addCongR                         Q.E.D.
 -- Lemma: addHelper                        Q.E.D.
 -- Lemma: mulCongL                         Q.E.D.
 -- Lemma: mulCongR                         Q.E.D.
@@ -377,6 +426,7 @@ lookupShadowPfx = do
 --     Step: 1.5.1 (Add)                   Q.E.D.
 --     Step: 1.5.2                         Q.E.D.
 --     Step: 1.5.3                         Q.E.D.
+--     Step: 1.5.4                         Q.E.D.
 --     Step: 1.6.1 (Mul)                   Q.E.D.
 --     Step: 1.6.2                         Q.E.D.
 --     Step: 1.6.3                         Q.E.D.
@@ -391,15 +441,17 @@ lookupShadowPfx = do
 envSwap :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
                    -> Forall "b1" (String, Integer) -> Forall "b2" (String, Integer) -> SBool))
 envSwap = do
-   mnn   <- recallWith z3 "measureNonNeg" measureNonNeg
-   lkSP  <- recallWith z3 "lookupSwapPfx" lookupSwapPfx
-   sqrC  <- recallWith z3 "sqrCong"       sqrCong
-   sqrH  <- recallWith z3 "sqrHelper"     sqrHelper
-   addH  <- recallWith z3 "addHelper"     addHelper
-   mulCL <- recallWith z3 "mulCongL"      mulCongL
-   mulCR <- recallWith z3 "mulCongR"      mulCongR
-   mulH  <- recallWith z3 "mulHelper"     mulHelper
-   letH  <- recallWith z3 "letHelper"     letHelper
+   mnn   <- recall "measureNonNeg" measureNonNeg
+   lkSP  <- recall "lookupSwapPfx" lookupSwapPfx
+   sqrC  <- recall "sqrCong"       sqrCong
+   sqrH  <- recall "sqrHelper"     sqrHelper
+   addCL <- recall "addCongL"      addCongL
+   addCR <- recall "addCongR"      addCongR
+   addH  <- recall "addHelper"     addHelper
+   mulCL <- recall "mulCongL"      mulCongL
+   mulCR <- recall "mulCongR"      mulCongR
+   mulH  <- recall "mulHelper"     mulHelper
+   letH  <- recall "letHelper"     letHelper
 
    sInduct "envSwap"
      (\(Forall @"e" (e :: SE)) (Forall @"pfx" (pfx :: E)) (Forall @"env" (env :: E))
@@ -458,7 +510,10 @@ envSwap = do
                     ?? addH `at` (Inst @"env" env1, Inst @"a" a, Inst @"b" b)
                     =: interpInEnv env1 a + interpInEnv env1 b
                     ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? addCL `at` (Inst @"a" (interpInEnv env1 a), Inst @"b" (interpInEnv env2 a), Inst @"c" (interpInEnv env1 b))
+                    =: interpInEnv env2 a + interpInEnv env1 b
                     ?? ih `at` (Inst @"e" b, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? addCR `at` (Inst @"a" (interpInEnv env2 a), Inst @"b" (interpInEnv env1 b), Inst @"c" (interpInEnv env2 b))
                     =: interpInEnv env2 a + interpInEnv env2 b
                     ?? addH `at` (Inst @"env" env2, Inst @"a" a, Inst @"b" b)
                     =: interpInEnv env2 (sAdd a b)
@@ -508,6 +563,8 @@ envSwap = do
 -- Lemma: lookupShadowPfx                  Q.E.D.
 -- Lemma: sqrCong                          Q.E.D.
 -- Lemma: sqrHelper                        Q.E.D.
+-- Lemma: addCongL                         Q.E.D.
+-- Lemma: addCongR                         Q.E.D.
 -- Lemma: addHelper                        Q.E.D.
 -- Lemma: mulCongL                         Q.E.D.
 -- Lemma: mulCongR                         Q.E.D.
@@ -525,6 +582,7 @@ envSwap = do
 --     Step: 1.5.1 (Add)                   Q.E.D.
 --     Step: 1.5.2                         Q.E.D.
 --     Step: 1.5.3                         Q.E.D.
+--     Step: 1.5.4                         Q.E.D.
 --     Step: 1.6.1 (Mul)                   Q.E.D.
 --     Step: 1.6.2                         Q.E.D.
 --     Step: 1.6.3                         Q.E.D.
@@ -539,15 +597,17 @@ envSwap = do
 envShadow :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
                      -> Forall "b1" (String, Integer) -> Forall "b2" (String, Integer) -> SBool))
 envShadow = do
-   mnn   <- recallWith z3  "measureNonNeg"  measureNonNeg
-   lkShP <- recallWith z3 "lookupShadowPfx" lookupShadowPfx
-   sqrC  <- recallWith z3 "sqrCong"         sqrCong
-   sqrH  <- recallWith z3 "sqrHelper"       sqrHelper
-   addH  <- recallWith z3 "addHelper"       addHelper
-   mulCL <- recallWith z3 "mulCongL"        mulCongL
-   mulCR <- recallWith z3 "mulCongR"        mulCongR
-   mulH  <- recallWith z3 "mulHelper"       mulHelper
-   letH  <- recallWith z3 "letHelper"       letHelper
+   mnn   <- recall "measureNonNeg"   measureNonNeg
+   lkShP <- recall "lookupShadowPfx" lookupShadowPfx
+   sqrC  <- recall "sqrCong"         sqrCong
+   sqrH  <- recall "sqrHelper"       sqrHelper
+   addCL <- recall "addCongL"        addCongL
+   addCR <- recall "addCongR"        addCongR
+   addH  <- recall "addHelper"       addHelper
+   mulCL <- recall "mulCongL"        mulCongL
+   mulCR <- recall "mulCongR"        mulCongR
+   mulH  <- recall "mulHelper"       mulHelper
+   letH  <- recall "letHelper"       letHelper
 
    sInduct "envShadow"
      (\(Forall @"e" (e :: SE)) (Forall @"pfx" (pfx :: E)) (Forall @"env" (env :: E))
@@ -606,7 +666,10 @@ envShadow = do
                     ?? addH `at` (Inst @"env" env1, Inst @"a" a, Inst @"b" b)
                     =: interpInEnv env1 a + interpInEnv env1 b
                     ?? ih `at` (Inst @"e" a, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? addCL `at` (Inst @"a" (interpInEnv env1 a), Inst @"b" (interpInEnv env2 a), Inst @"c" (interpInEnv env1 b))
+                    =: interpInEnv env2 a + interpInEnv env1 b
                     ?? ih `at` (Inst @"e" b, Inst @"pfx" pfx, Inst @"env" env, Inst @"b1" b1, Inst @"b2" b2)
+                    ?? addCR `at` (Inst @"a" (interpInEnv env2 a), Inst @"b" (interpInEnv env1 b), Inst @"c" (interpInEnv env2 b))
                     =: interpInEnv env2 a + interpInEnv env2 b
                     ?? addH `at` (Inst @"env" env2, Inst @"a" a, Inst @"b" b)
                     =: interpInEnv env2 (sAdd a b)
