@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 13.5.5, New development version, not released yet
+### Version 13.6, 2026-03-02
 
   * The `sCase` quasi-quoter now supports nested constructor patterns. Sub-patterns
     in a constructor match can themselves be constructors, including nullary ones. For example:
