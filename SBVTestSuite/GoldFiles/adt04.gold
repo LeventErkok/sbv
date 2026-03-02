@@ -118,9 +118,9 @@ Fast allSat, Looking for solution 3
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (AInteger 5)))
+[RECV] ((s0 (AInteger 3)))
 [GOOD] (push 1)
-[GOOD] (define-fun s13 () ADT ((as AInteger ADT) 5))
+[GOOD] (define-fun s13 () ADT ((as AInteger ADT) 3))
 [GOOD] (define-fun s14 () Bool (= s0 s13))
 [GOOD] (define-fun s15 () Bool (not s14))
 [GOOD] (assert s15)
@@ -128,9 +128,9 @@ Fast allSat, Looking for solution 4
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (AInteger 2)))
+[RECV] ((s0 (AInteger 5)))
 [GOOD] (push 1)
-[GOOD] (define-fun s16 () ADT ((as AInteger ADT) 2))
+[GOOD] (define-fun s16 () ADT ((as AInteger ADT) 5))
 [GOOD] (define-fun s17 () Bool (= s0 s16))
 [GOOD] (define-fun s18 () Bool (not s17))
 [GOOD] (assert s18)
@@ -138,9 +138,9 @@ Fast allSat, Looking for solution 5
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (AInteger 3)))
+[RECV] ((s0 (AInteger 2)))
 [GOOD] (push 1)
-[GOOD] (define-fun s19 () ADT ((as AInteger ADT) 3))
+[GOOD] (define-fun s19 () ADT ((as AInteger ADT) 2))
 [GOOD] (define-fun s20 () Bool (= s0 s19))
 [GOOD] (define-fun s21 () Bool (not s20))
 [GOOD] (assert s21)
@@ -169,11 +169,11 @@ Fast allSat, Looking for solution 7
 MODEL:Satisfiable. Model:
   a = AInteger 1 :: ADT
 MODEL:Satisfiable. Model:
-  a = AInteger 3 :: ADT
-MODEL:Satisfiable. Model:
   a = AInteger 2 :: ADT
 MODEL:Satisfiable. Model:
   a = AInteger 5 :: ADT
+MODEL:Satisfiable. Model:
+  a = AInteger 3 :: ADT
 MODEL:Satisfiable. Model:
   a = AInteger 0 :: ADT
 MODEL:Satisfiable. Model:

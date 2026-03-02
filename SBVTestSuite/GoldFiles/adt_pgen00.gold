@@ -137,13 +137,13 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Let "j"
+[RECV] ((s0 (Let "b"
             (Val #x0000)
             (Let "a"
-                 (Add (Add (Add (Var "j") (Val #x0000)) (Var "j")) (Val #x0003))
+                 (Add (Add (Add (Var "b") (Val #x0800)) (Var "b")) (Val #xf7fc))
                  (Add (Mul (Var "a") (Var "a")) (Var "a"))))))
 
-Got: (let j = 0 in (let a = (((j + 0) + j) + 3) in ((a * a) + a)))
+Got: (let b = 0 in (let a = (((b + 2048) + b) + 63484) in ((a * a) + a)))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess

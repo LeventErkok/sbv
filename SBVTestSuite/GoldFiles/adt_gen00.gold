@@ -136,11 +136,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Let "h"
-            (Let "p" (Val 5) (Var "p"))
-            (Let "p" (Val 6) (Add (Var "p") (Var "p"))))))
+[RECV] ((s0 (Let "p" (Val 3) (Let "l" (Val 6) (Add (Var "l") (Var "l"))))))
 
-Got: (let h = (let p = 5 in p) in (let p = 6 in (p + p)))
+Got: (let p = 3 in (let l = 6 in (l + l)))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess
