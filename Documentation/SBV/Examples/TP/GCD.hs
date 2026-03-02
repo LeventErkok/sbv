@@ -313,13 +313,11 @@ dvdEvenWhenOdd = calc "dvdEvenWhenOdd"
                             -- Arithmetic gives us
                             =: 2*a .== 2*t*m + m .&& 2*(a-t*m) .== m
 
-                            -- So, we now know m is even
-                            =: 2 `sDivides` m
+                            -- So m = 2*(a-t*m), i.e., m is even
+                            =: m .== 2 * (a - t*m)
 
-                            -- Give that divisor a name:
-                            =: let n = m `sEDiv` 2
-
-                            -- It follows that 2a = d(2n) = 2(dn)
+                            -- Let n = a - t*m, so m = 2n. It follows that 2a = d(2n) = 2(dn)
+                            =: let n = a - t*m
                             in 2*a .== d * (2 * n) .&& 2 * a .== 2 * (d * n)
 
                             -- From which we can conclude a = dn
