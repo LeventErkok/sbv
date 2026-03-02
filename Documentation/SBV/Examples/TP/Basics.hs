@@ -278,7 +278,7 @@ badRevLen = runTP $
 -- Lemma: badLengthProof
 -- *** Failed to prove badLengthProof.
 -- Falsifiable. Counter-example:
---   xs   = [12,15,20,24,33,42] :: [Integer]
+--   xs   = [12,15,19,25,32,42] :: [Integer]
 --   imp  =                  42 :: Integer
 --   spec =                   6 :: Integer
 badLengthProof :: IO ()
