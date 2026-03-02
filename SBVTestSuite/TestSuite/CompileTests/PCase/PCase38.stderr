@@ -1,7 +1,7 @@
 PCase38.hs:12:14: error: [GHC-83865]
     " Couldn't match expected type: Proof SBool
-                  with actual type: sbv-13.5.5:Data.SBV.TP.TP.TPProofGen
-                                      a0 [sbv-13.5.5:Data.SBV.TP.TP.Helper] ()
+                  with actual type: sbv-13.6:Data.SBV.TP.TP.TPProofGen
+                                      a0 [sbv-13.6:Data.SBV.TP.TP.Helper] ()
     " In the expression:
         cases
           [(isZero e ==> undefined), (isNum e ==> undefined),
