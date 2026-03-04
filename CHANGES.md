@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 13.6.5, Not yet released
+
+  * New development version
+
 ### Version 13.6, 2026-03-02
 
   * The `sCase` quasi-quoter now supports nested constructor patterns. Sub-patterns
@@ -99,7 +103,7 @@
 
   * Remove Eq constraint on readArray, generalizing it to arbitrary types for array-reads.
 
-  * Addded 'freeArray', which creates an array with no constraints at all. (Compare to 'constArray'.)
+  * Added 'freeArray', which creates an array with no constraints at all. (Compare to 'constArray'.)
     Note that this is useful for expression contexts. If you're in a symbolic context (i.e., in
     the Symbolic monad), you can just use 'free' or 'sArray' as usual.)
 
