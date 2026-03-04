@@ -3,7 +3,9 @@
 
 ### Version 13.6.5, Not yet released
 
-  * New development version
+  * Improved documentation for `lambdaArray`, explaining the model-theoretic distinction
+    between the pure array theory (`select`/`store`/`const`) and the richer setting where
+    arrays are identified with function spaces.
 
 ### Version 13.6, 2026-03-02
 

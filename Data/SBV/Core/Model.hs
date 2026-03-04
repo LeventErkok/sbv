@@ -3289,6 +3289,22 @@ freeArray = lambdaArray . uninterpret
 -- to their values. (That is, passing @f@ would create an array where entry @i@
 -- is initialized to value @f i@.) For the special case of initializing with a constant
 -- value, either pass @const val@, or use 'constArray'.
+--
+-- __Arrays vs. uninterpreted functions:__ The basic array theory provides only
+-- @select@ ('readArray'), @store@ ('writeArray'), and @const@ ('constArray'). These operations
+-- can only construct arrays that differ from a constant in finitely many positions. For instance,
+-- the identity array (where @a[i] = i@ for every @i@) cannot be built from 'constArray' plus
+-- finitely many 'writeArray' calls. The @lambdaArray@ function goes beyond this: it uses the
+-- solver's ability to identify arrays with function spaces, allowing the creation of arrays like
+-- @lambdaArray id@ that correspond to arbitrary functions.
+--
+-- This identification has a model-theoretic consequence. The pure array theory (with only
+-- @select@\/@store@\/@const@) is a weaker theory: it admits models where the array sort does
+-- not contain all functions, only those reachable by finitely many stores on constants. This means
+-- certain formulas are satisfiable in the pure theory (because the solver has more freedom in choosing
+-- what arrays exist) that become unsatisfiable when arrays are identified with functions (because the
+-- richer array sort can provide counterexamples). In practice, modern solvers use the stronger
+-- identification, so @lambdaArray@, 'constArray', and 'writeArray' all operate in this richer setting.
 lambdaArray :: forall a b. (SymVal a, HasKind b) => (SBV a -> SBV b) -> SArray a b
 lambdaArray f = SBV . SVal k . Right $ cache g
   where k = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
