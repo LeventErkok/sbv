@@ -11,6 +11,7 @@
 
 {-# LANGUAGE BangPatterns            #-}
 {-# LANGUAGE CPP                     #-}
+{-# LANGUAGE AllowAmbiguousTypes     #-}
 {-# LANGUAGE DataKinds               #-}
 {-# LANGUAGE DefaultSignatures       #-}
 {-# LANGUAGE DeriveFunctor           #-}
@@ -29,7 +30,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), SMTDefinable(..), MeasureOf, QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , some
@@ -119,7 +120,7 @@ import Data.SBV.SMT.SMT        (ThmResult, showModel)
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
-import Data.IORef (readIORef, writeIORef)
+import Data.IORef (readIORef, writeIORef, modifyIORef')
 import Data.SBV.Utils.Lib
 
 import Data.Char
@@ -2623,6 +2624,46 @@ resKind k            = k
 -- Minimal complete definition: 'sbvDefineValue'. However, most instances in
 -- practice are already provided by SBV, so end-users should not need to define their
 -- own instances.
+
+-- | Type family that relates a function type to its measure type, used by 'smtRecFunction'.
+-- A measure has the same argument types as the function, but always returns 'SInteger'.
+type family MeasureOf a where
+  MeasureOf (SBV a)    = SInteger
+  MeasureOf (SBV a -> b) = SBV a -> MeasureOf b
+
+-- | Create fresh symbolic inputs and apply a function to them, returning the input SVs and the output SV.
+-- Used internally for constructing measure obligations.
+class GatherInputs a where
+  gatherInputsAndRun :: a -> Symbolic ([SV], SV)
+
+instance SymVal a => GatherInputs (SBV a) where
+  gatherInputsAndRun result = do
+    st <- symbolicEnv
+    sv <- liftIO $ svToSV st (unSBV result)
+    return ([], sv)
+
+instance (SymVal a, HasKind a, GatherInputs b) => GatherInputs (SBV a -> b) where
+  gatherInputsAndRun f = do
+    x <- genVar_ (NonQueryVar Nothing) (kindOf (Proxy @a))
+    st <- symbolicEnv
+    xSV <- liftIO $ svToSV st (unSBV x)
+    (restSVs, outSV) <- gatherInputsAndRun (f x)
+    return (xSV : restSVs, outSV)
+
+-- | Apply a measure function to a list of SVs by wrapping each SV as an SBV value.
+-- Used internally for constructing measure obligations.
+class UncurryMeasure a where
+  uncurryMeasure :: MeasureOf a -> [SV] -> SInteger
+
+instance SymVal a => UncurryMeasure (SBV a) where
+  uncurryMeasure m [] = m
+  uncurryMeasure _ _  = error "SBV.uncurryMeasure: too many arguments for measure"
+
+instance (SymVal a, HasKind a, UncurryMeasure b) => UncurryMeasure (SBV a -> b) where
+  uncurryMeasure m (sv:svs) = uncurryMeasure @b (m (svToSBV sv)) svs
+    where svToSBV s = SBV (SVal (kindOf s) (Right (cache (const (return s)))))
+  uncurryMeasure _ [] = error "SBV.uncurryMeasure: not enough arguments for measure"
+
 class SMTDefinable a where
   -- | Generate the code for this value as an SMTLib function, instead of
   -- the usual unrolling semantics. This is useful for generating sub-functions
@@ -2663,6 +2704,20 @@ class SMTDefinable a where
   -- can think of a solution (perhaps using some nifty GHC tricks?) to avoid this issue without making
   -- 'smtFunction' return a monadic result, please get in touch!
   smtFunction :: (Typeable a, Lambda Symbolic a) => String -> a -> a
+
+  -- | Define a recursive SMT function with a termination measure. Similar to 'smtFunction', but allows
+  -- recursion (including mutual recursion). The measure function must have the same argument types as the
+  -- defined function but return 'SInteger'. The measure must decrease on every recursive call and remain
+  -- non-negative; this will be checked by the solver at 'Data.SBV.prove'/'Data.SBV.sat' time.
+  --
+  -- Example: Sum from 0 to @n@:
+  --
+  -- @
+  --   sumToN :: SInteger -> SInteger
+  --   sumToN = smtRecFunction "sumToN" (\\x -> x) $ \\x ->
+  --     ite (x .<= 0) 0 (x + sumToN (x - 1))
+  -- @
+  smtRecFunction :: (Typeable a, Lambda Symbolic a, Lambda Symbolic (MeasureOf a), GatherInputs a, UncurryMeasure a) => String -> MeasureOf a -> a -> a
 
   -- | Register a function. This function is typically not needed as SBV will register functions used
   -- automatically upon first use. However, there are scenarios (in particular query contexts)
@@ -2753,14 +2808,60 @@ class SMTDefinable a where
   mkADTTester      nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTTester      nm k)) Nothing $ UIFree True in v
   mkADTAccessor    nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTAccessor    nm k)) Nothing $ UIFree True in v
 
-  smtFunction nm v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing $ UIFun (v, \st fk -> lambda st TopLevel fk v)
+  smtFunction nm v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing $ UIFun (v, \st fk -> do
+    def <- lambda st TopLevel fk v
+    pure (def, Nothing))
+
+  smtRecFunction nm measure v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing $ UIFun (v, \st fk -> do
+    (funcDef, _defn) <- lambdaRec st TopLevel fk v
+    measureDef <- lambda st TopLevel (KUnbounded :: Kind) measure
+    let smtName = barify (atProxy (Proxy @a) nm)
+
+    -- Build a Symbolic SBool action that checks the measure obligation.
+    -- This will be run via proveWith at execute-query time.
+    let checker :: Symbolic SVal
+        checker = do
+          -- Create fresh symbolic inputs and apply the body
+          (paramSVs, outSV) <- gatherInputsAndRun @a v
+
+          -- Get the assignments from the current state
+          st' <- symbolicEnv
+          SBVPgm asgns <- liftIO $ readIORef (spgm st')
+          let rawAsgns = F.toList asgns
+              recCalls = extractRecCalls [smtName] rawAsgns outSV
+
+          -- Current measure value (measure applied to original params)
+          let currentM = uncurryMeasure @a measure paramSVs
+
+          -- Build obligation: for each recursive call, measure must decrease
+          let mkPathCond [] = svTrue
+              mkPathCond lits = foldr1 svAnd [if pol then SVal KBool (Right (cache (const (return sv))))
+                                                     else svNot (SVal KBool (Right (cache (const (return sv)))))
+                                             | (pol, sv) <- lits]
+
+              mkObligation (RecCallInfo _ args pathCond) =
+                let callM      = uncurryMeasure @a measure args
+                    decrease   = unSBV callM `svLessThan` unSBV currentM
+                    nonNeg     = unSBV callM `svGreaterEq` svInteger KUnbounded 0
+                    body       = decrease `svAnd` nonNeg
+                    cond       = mkPathCond pathCond
+                in cond `svImplies` body
+
+          return $ case map mkObligation recCalls of
+                     []    -> svTrue
+                     [obl] -> obl
+                     obls  -> foldr1 svAnd obls
+
+    -- Store the checker for later use in executeQuery
+    liftIO $ modifyIORef' (rMeasureChecks st) ((nm, checker) :)
+
+    pure (funcDef, Just measureDef))
 
 
 -- | Kind of uninterpretation
-data UIKind a = UIFree  Bool                            -- ^ completely uninterpreted. If Bool is true, then this is curried.
-              | UIFun   (a, State -> Kind -> IO SMTDef) -- ^ has code for SMTLib, with final type of kind (note this is the result
-                                                        -- , not the arguments), which can be generated by calling the function on the state.
-              | UICodeC (a, [String])                   -- ^ has code for code-generation, i.e., C
+data UIKind a = UIFree  Bool                                                                -- ^ completely uninterpreted. If Bool is true, then this is curried.
+              | UIFun   (a, State -> Kind -> IO (SMTDef, Maybe SMTDef))                      -- ^ has code for SMTLib, with optional measure
+              | UICodeC (a, [String])                                                        -- ^ has code for code-generation, i.e., C
               deriving Functor
 
 -- Get the code associated with the UI, unless we've already did this once. (To support recursive defs.)
@@ -2771,7 +2872,7 @@ retrieveUICode (UIGiven nm) st fk (UIFun   (_, f)) = do userFuncs <- readIORef (
                                                         if nm `Set.member` userFuncs
                                                            then pure $ UINone True
                                                            else do modifyState st rUserFuncs (Set.insert nm) (pure ())
-                                                                   UISMT <$> f st fk
+                                                                   (\(d, m) -> UISMT d m) <$> f st fk
 retrieveUICode _            _  _  (UICodeC (_, c)) = pure $ UICgC c
 
 -- Get the constant value associated with the UI

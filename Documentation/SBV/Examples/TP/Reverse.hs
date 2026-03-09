@@ -44,7 +44,7 @@ import qualified Documentation.SBV.Examples.TP.Lists as TP
 -- head, tail, cons, and uncons to reverse a given list. Note that efficiency
 -- is not our concern here, we call 'rev' itself three times in the body.
 rev :: SymVal a => SList a -> SList a
-rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
+rev = smtRecFunction "rev" length $ \xs -> ite (null xs .|| null (tail xs)) xs
                                      (let (x, as)     = uncons xs
                                           (hras, tas) = uncons (rev as)
                                       in hras .: rev (x .: rev tas))

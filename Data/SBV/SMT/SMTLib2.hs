@@ -543,11 +543,11 @@ declUI ProgInfo{progTransClosures} (i, (_, _, t)) = declareName (T.pack i) t Not
 
 -- Note that even though we get all user defined-functions here (i.e., lambda and axiom), we can only have defined-functions
 -- and axioms. We spit axioms as is; and topologically sort the definitions.
-declUserFuns :: [(String, (SMTDef, SBVType))] -> [Text]
-declUserFuns ds = map declGroup sorted
+declUserFuns :: [(String, (SMTDef, SBVType, Maybe SMTDef))] -> [Text]
+declUserFuns ds = map declGroup sorted ++ measureDefs
   where mkNode d = (d, fst d, getDeps d)
 
-        getDeps (_, (SMTDef _ d _ _, _)) = d
+        getDeps (_, (SMTDef _ d _ _ _, _, _)) = d
 
         mkDecl Nothing  rt = "() " <> rt
         mkDecl (Just p) rt = T.pack p <> " " <> rt
@@ -560,7 +560,7 @@ declUserFuns ds = map declGroup sorted
                                          [x] -> declUserDef True x
                                          xs  -> declUserDefMulti xs
 
-        declUserDef isRec (nm, (SMTDef fk deps param body, ty)) =
+        declUserDef isRec (nm, (SMTDef fk deps param body _allowsRec, ty, _mbMeasure)) =
           "; " <> T.pack nm <> " :: " <> T.pack (show ty) <> recursive <> frees <> "\n" <> s
            where (recursive, definer) | isRec = (" [Recursive]", "define-fun-rec")
                                       | True  = ("",             "define-fun")
@@ -575,7 +575,7 @@ declUserFuns ds = map declGroup sorted
 
         -- declare a bunch of mutually-recursive functions
         declUserDefMulti bs = render $ map collect bs
-          where collect (nm, (SMTDef fk deps param body, ty)) = (deps, nm, ty, "(" <> T.pack nm <> " " <> decl <> ")", body 3)
+          where collect (nm, (SMTDef fk deps param body _allowsRec, ty, _mbMeasure)) = (deps, nm, ty, "(" <> T.pack nm <> " " <> decl <> ")", body 3)
                   where decl = mkDecl param (T.pack $ smtType fk)
 
                 render defs = T.intercalate "\n" $
@@ -596,6 +596,17 @@ declUserFuns ds = map declGroup sorted
 
                            close1 n = if n == ld then ")"  else ""
                            close2 n = if n == ld then "))" else ""
+
+        -- Measure function definitions for recursive functions
+        measureDefs = [ "; Measure for " <> T.pack nm <> "\n"
+                        <> "(define-fun " <> T.pack (addSuffix nm "_measure") <> " " <> mDecl <> "\n" <> T.pack (mBody 2) <> ")"
+                      | (nm, (_, _, Just (SMTDef mfk _ mParam mBody _))) <- ds
+                      , let mDecl = mkDecl mParam (T.pack $ smtType mfk)
+                      ]
+
+        -- Add a suffix to an SMTLib name, respecting |...| quoting
+        addSuffix ('|':rest) sfx | not (null rest) && last rest == '|' = '|' : init rest ++ sfx ++ "|"
+        addSuffix s          sfx = s ++ sfx
 
 mkTable :: (((Int, Kind, Kind), [SV]), [Text]) -> (Text, [Text])
 mkTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is <> setup)

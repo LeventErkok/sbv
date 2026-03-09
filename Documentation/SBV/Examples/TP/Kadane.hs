@@ -56,7 +56,7 @@ import Data.SBV.TP
 -- >>> mss [1, 2, 3]             -- the whole list
 -- 6 :: SInteger
 mss :: SList Integer -> SInteger
-mss = smtFunction "mss" $ \xs -> ite (null xs) 0 (mssBegin xs `smax` mss (tail xs))
+mss = smtRecFunction "mss" length $ \xs -> ite (null xs) 0 (mssBegin xs `smax` mss (tail xs))
 
 -- | Maximum sum of segments starting at the beginning of the given list.
 -- This is 0 if the empty segment is best, or positive if a non-empty prefix exists.
@@ -70,7 +70,7 @@ mss = smtFunction "mss" $ \xs -> ite (null xs) 0 (mssBegin xs `smax` mss (tail x
 -- >>> mssBegin [1, 2, 3]             -- the whole list
 -- 6 :: SInteger
 mssBegin :: SList Integer -> SInteger
-mssBegin = smtFunction "mssBegin" $ \xs -> ite (null xs) 0
+mssBegin = smtRecFunction "mssBegin" length $ \xs -> ite (null xs) 0
                                              $ let (h, t) = uncons xs
                                                in 0 `smax` (h `smax` (h + mssBegin t))
 
@@ -91,7 +91,7 @@ kadane xs = kadaneHelper xs 0 0
 -- | Helper for Kadane's algorithm. Along with the list, we keep track of the maximum-value
 -- ending at the beginning of the list argument, and the maximum value sofar.
 kadaneHelper :: SList Integer -> SInteger -> SInteger -> SInteger
-kadaneHelper = smtFunction "kadaneHelper" $ \xs maxEndingHere maxSoFar ->
+kadaneHelper = smtRecFunction "kadaneHelper" (\xs _ _ -> length xs) $ \xs maxEndingHere maxSoFar ->
                     ite (null xs)
                         maxSoFar   -- end of the list, take the max-value calculated
                       $ let (h, t)           = uncons xs

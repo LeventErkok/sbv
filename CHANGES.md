@@ -3,6 +3,19 @@
 
 ### Version 13.6.5, Not yet released
 
+  * Add `smtRecFunction`, a variant of `smtFunction` for recursive definitions that
+    requires a termination measure. The measure must map the function's arguments to
+    an `SInteger` that strictly decreases on every recursive call and remains non-negative.
+    The measure obligation is checked via a separate solver session before the main query,
+    producing a counterexample if the measure fails to decrease. This ensures soundness,
+    since all recursive definitions are guaranteed to terminate. Example:
+
+    ```haskell
+    sumToN :: SInteger -> SInteger
+    sumToN = smtRecFunction "sumToN" id $ \x ->
+      ite (x .<= 0) 0 (x + sumToN (x - 1))
+    ```
+
   * Improved documentation for `lambdaArray`, explaining the model-theoretic distinction
     between the pure array theory (`select`/`store`/`const`) and the richer setting where
     arrays are identified with function spaces.

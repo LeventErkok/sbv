@@ -44,7 +44,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 -- | Quick-sort, using the first element as pivot.
 quickSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
-quickSort = smtFunction "quickSort" $ \l -> ite (null l)
+quickSort = smtRecFunction "quickSort" length $ \l -> ite (null l)
                                                 []
                                                 (let (x,  xs) = uncons l
                                                      (lo, hi) = untuple (partition x xs)
@@ -54,7 +54,7 @@ quickSort = smtFunction "quickSort" $ \l -> ite (null l)
 -- with @\pivot xs -> Data.List.SBV.partition (.< pivot) xs@ because that would create a firstified version of partition
 -- with a free-variable captured, which isn't supported due to higher-order limitations in SMTLib.
 partition :: (OrdSymbolic (SBV a), SymVal a) => SBV a -> SList a -> STuple [a] [a]
-partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
+partition = smtRecFunction "partition" (\_ xs -> length xs) $ \pivot xs -> ite (null xs)
                                                        (tuple ([], []))
                                                        (let (a,  as) = uncons xs
                                                             (lo, hi) = untuple (partition pivot as)
@@ -284,8 +284,8 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- llt: list less-than:     all the elements are <  pivot
   -- lge: list greater-equal: all the elements are >= pivot
   let llt, lge :: SBV a -> SList a -> SBool
-      llt = smtFunction "llt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& llt pivot xs
-      lge = smtFunction "lge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& lge pivot xs
+      llt = smtRecFunction "llt" (\_ l -> length l) $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& llt pivot xs
+      lge = smtRecFunction "lge" (\_ l -> length l) $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& lge pivot xs
 
   -- llt correctness
   lltCorrect <-

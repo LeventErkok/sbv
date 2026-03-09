@@ -35,7 +35,7 @@ import Data.SBV.TP
 
 -- | Accummulating reverse.
 revAcc :: SymVal a => SList a -> SList a -> SList a
-revAcc = smtFunction "revAcc" $ \acc xs -> ite (null xs) acc (revAcc (head xs .: acc) (tail xs))
+revAcc = smtRecFunction "revAcc" (\_ xs -> Data.SBV.List.length xs) $ \acc xs -> ite (null xs) acc (revAcc (head xs .: acc) (tail xs))
 
 -- | Given 'revAcc', we can reverse a list by providing the empty list as the initial accumulator.
 rev :: SymVal a => SList a -> SList a

@@ -39,7 +39,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 -- | Merge two already sorted lists into another
 merge :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a -> SList a
-merge = smtFunction "merge" $ \l r -> ite (null l) r
+merge = smtRecFunction "merge" (\l r -> length l + length r) $ \l r -> ite (null l) r
                                     $ ite (null r) l
                                     $ let (a, as) = uncons l
                                           (b, bs) = uncons r
@@ -47,7 +47,7 @@ merge = smtFunction "merge" $ \l r -> ite (null l) r
 
 -- | Merge sort, using 'merge' above to successively sort halved input
 mergeSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
-mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
+mergeSort = smtRecFunction "mergeSort" length $ \l -> ite (length l .<= 1) l
                                               $ let (h1, h2) = splitAt (length l `sEDiv` 2) l
                                                 in merge (mergeSort h1) (mergeSort h2)
 

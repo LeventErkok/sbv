@@ -851,7 +851,7 @@ data Result = Result { progInfo       :: ProgInfo                               
                      , resConsts      :: (CnstMap, [(SV, CV)])                        -- ^ constants
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resUIConsts    :: [(String, (Bool, Maybe [String], SBVType))]  -- ^ uninterpreted constants
-                     , resDefinitions :: [(String, (SMTDef, SBVType))]                -- ^ definitions created via smtFunction
+                     , resDefinitions :: [(String, (SMTDef, SBVType, Maybe SMTDef))]                -- ^ definitions, with optional measure
                      , resAsgns       :: SBVPgm                                       -- ^ assignments
                      , resConstraints :: S.Seq (Bool, [(String, String)], SV)         -- ^ additional constraints (boolean)
                      , resAssertions  :: [(String, Maybe CallStack, SV)]              -- ^ assertions
@@ -1123,21 +1123,22 @@ data SMTDef = SMTDef Kind             -- ^ Final kind of the definition (resulti
                      [String]         -- ^ other definitions it refers to
                      (Maybe String)   -- ^ parameter string
                      (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
+                     Bool             -- ^ if 'True', this definition allows recursion (defined via 'smtRecFunction')
             deriving G.Data
 
 -- | For debug purposes
 instance Show SMTDef where
-  show (SMTDef fk frees p body) = unlines [ "-- User defined function:"
-                                          , "-- Final return type    : " ++ show fk
-                                          , "-- Refers to            : " ++ intercalate ", " frees
-                                          , "-- Parameters           : " ++ fromMaybe "NONE" p
-                                          , "-- Body                 : "
-                                          , body 2
-                                          ]
+  show (SMTDef fk frees p body _allowsRec) = unlines [ "-- User defined function:"
+                                                      , "-- Final return type    : " ++ show fk
+                                                      , "-- Refers to            : " ++ intercalate ", " frees
+                                                      , "-- Parameters           : " ++ fromMaybe "NONE" p
+                                                      , "-- Body                 : "
+                                                      , body 2
+                                                      ]
 
 -- | NFData instance for SMTDef
 instance NFData SMTDef where
-  rnf (SMTDef fk frees params body) = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
+  rnf (SMTDef fk frees params body allowsRec) = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body `seq` rnf allowsRec
 
 -- | The state of the symbolic interpreter
 data State  = State { sbvContext          :: SBVContext
@@ -1166,7 +1167,11 @@ data State  = State { sbvContext          :: SBVContext
                     , rUIMap              :: IORef UIMap
                     , rUserFuncs          :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
                     , rCgMap              :: IORef CgMap
-                    , rDefns              :: IORef [(String, (SMTDef, SBVType))]
+                    , rDefns              :: IORef [(String, (SMTDef, SBVType, Maybe SMTDef))]
+                                                        -- ^ definitions, with optional measure for recursive functions
+                    , rMeasureChecks      :: IORef [(String, Symbolic SVal)]
+                                                        -- ^ measure obligation checkers for recursive functions.
+                                                        -- Each entry is (user name, Symbolic action returning a Bool-kinded SVal for the obligation).
                     , rSMTOptions         :: IORef [SMTOption]
                     , rOptGoals           :: IORef [Objective (SV, SV)]
                     , rAsserts            :: IORef [(String, Maybe CallStack, SV)]
@@ -1270,9 +1275,9 @@ incrementFreshNameCounter st = do ctr <- readIORef (freshNameCtr st)
 {-# INLINE incrementFreshNameCounter #-}
 
 -- | Kind of code we have for uninterpretation
-data UICodeKind = UINone Bool     -- no code. If bool is true, then curried.
-                | UISMT  SMTDef   -- SMTLib, first argument are the free-variables in it
-                | UICgC  [String] -- Code-gen, currently only C
+data UICodeKind = UINone Bool                              -- no code. If bool is true, then curried.
+                | UISMT  SMTDef (Maybe SMTDef)             -- SMTLib definition, optional measure
+                | UICgC  [String]                           -- Code-gen, currently only C
 
 -- | A newtype wrapper for uninterpreted function names. We distinguish between user names and those of constructors
 data UIName = UIGiven String -- ^ Full name
@@ -1343,7 +1348,8 @@ newUninterpreted st uiName mbArgNames t uiCode = do
 
   isCurried <- case uiCode of
                  UINone c -> pure c
-                 UISMT d  -> do modifyState st rDefns (\defs -> (nm, (d, t)) : filter (\(onm, _) -> onm /= nm) defs)
+                 UISMT d mbMeasure
+                          -> do modifyState st rDefns (\defs -> (nm, (d, t, mbMeasure)) : filter (\(onm, _) -> onm /= nm) defs)
                                   $ noInteractive [ "Defined functions (smtFunction):"
                                                   , "  Name: " ++ nm ++ extraComment
                                                   , "  Type: " ++ show t
@@ -1817,6 +1823,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      uis                <- newIORef Map.empty
      cgs                <- newIORef Map.empty
      defns              <- newIORef []
+     measureChecks      <- newIORef []
      swCache            <- newIORef IMap.empty
      usedKinds          <- newIORef Set.empty
      usedLbls           <- newIORef Set.empty
@@ -1854,6 +1861,7 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rUIMap              = uis
                   , rCgMap              = cgs
                   , rDefns              = defns
+                  , rMeasureChecks      = measureChecks
                   , rSVCache            = swCache
                   , rConstraints        = cstrs
                   , rPartitionVars      = pvs

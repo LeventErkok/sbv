@@ -50,7 +50,7 @@ add1Example = sat $ do
 -- directly in SMTLib. Note how the function itself takes a "recursive version"
 -- of itself, and all recursive calls are made with this name.
 sumToN :: SInteger -> SInteger
-sumToN = smtFunction "sumToN" $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
+sumToN = smtRecFunction "sumToN" id $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
 
 -- | Prove that sumToN works as expected.
 --
@@ -63,9 +63,26 @@ sumToN = smtFunction "sumToN" $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
 sumToNExample :: IO SatResult
 sumToNExample = sat $ \a r -> a .== 5 .&& r .== sumToN a
 
+-- | A non-terminating recursive function. The recursive call uses @x + 1@ instead of
+-- @x - 1@, so there is no valid measure. Using 'smtRecFunction' with @id@ as the measure
+-- will correctly detect that the measure does not decrease.
+--
+-- We have:
+--
+-- >>> badSum
+-- Falsifiable
+badSum :: IO ThmResult
+badSum = proveWith z3{verbose=True} $ do
+        let bad :: SInteger -> SInteger
+            bad = smtRecFunction "bad" id $ \x -> ite (x .<= 0) 0 (x + bad (x + 1))
+        x <- sInteger "x"
+        pure $ bad x .>= 0
+
 -- | Coding list-length recursively. Again, we map directly to an SMTLib function.
+-- We use 'smtRecFunction' with 'L.length' as the measure, since the recursive
+-- call operates on the tail of the list.
 len :: SList Integer -> SInteger
-len = smtFunction "list_length" $ \xs -> ite (L.null xs) 0 (1 + len (L.tail xs))
+len = smtRecFunction "list_length" L.length $ \xs -> ite (L.null xs) 0 (1 + len (L.tail xs))
 
 -- | Calculate the length of a list, using recursive functions.
 --
@@ -106,10 +123,12 @@ evenOdd = satWith z3{verbose=True} $ \a r -> a .== 20 .&& r .== isE a
 
 -- | Another technique to handle mutually definitions is to define the functions together, and pull the results out individually.
 -- This usually works better than defining the functions separately, from a solver perspective.
+-- We use 'smtRecFunction' with a measure that handles the negative-to-positive reduction
+-- and the decrement in the non-negative case.
 isEvenOdd :: SInteger -> STuple Bool Bool
-isEvenOdd = smtFunction "isEvenOdd" $ \x -> ite (x .<  0) (isEvenOdd (-x))
-                                          $ ite (x .== 0) (tuple (sTrue, sFalse))
-                                                          (swap (isEvenOdd (x - 1)))
+isEvenOdd = smtRecFunction "isEvenOdd" (\x -> 2 * abs x + ite (x .< 0) 1 0) $ \x -> ite (x .<  0) (isEvenOdd (-x))
+                                                                                     $ ite (x .== 0) (tuple (sTrue, sFalse))
+                                                                                                      (swap (isEvenOdd (x - 1)))
 
 -- | Extract the isEven function for easier use.
 isEven :: SInteger -> SBool

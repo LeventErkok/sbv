@@ -271,7 +271,7 @@ leastPrimeDivisor n = ld 2 n
 
 -- | The factorial function.
 fact :: SInteger -> SInteger
-fact = smtFunction "fact" $ \n -> ite (n .<= 0) 1 (n * fact (n - 1))
+fact = smtRecFunction "fact" id $ \n -> ite (n .<= 0) 1 (n * fact (n - 1))
 
 -- | \(n! \geq 1\)
 --

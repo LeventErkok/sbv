@@ -62,6 +62,7 @@ import Data.IORef (readIORef, writeIORef, IORef, newIORef, modifyIORef')
 import Data.Time (getZonedTime)
 import Data.Ratio
 
+
 import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV, SBV, sbvToSV, kindOf, Kind(..)
                               , HasKind(..), mkConstCV, CVal(..), SMTResult(..)
                               , NamedSymVar, SMTConfig(..), SMTModel(..)
@@ -82,6 +83,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , UserInputs, getSV, NamedSymVar(..), lookupInput, getUserName'
                               , Name, CnstMap, Inputs(..), ProgInfo(..)
                               , mustIgnoreVar, newInternalVariable, Penalty(..)
+                              , runSymbolic, outputSVal
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -1930,8 +1932,47 @@ executeQuery queryContext originalQuery = do
                            Nothing                         -> return ()
                            Just QueryState{queryTerminate} -> queryTerminate maybeForwardedException
 
-                  -- If this is an extrnal query and there are objectives, let's add those to the list before we run
-                  -- Here we only allow Lexicographic; we might want to make that configurable later.
+                  -- Check measure obligations for recursive functions in a separate solver session.
+                  -- We must do this BEFORE the main solver starts, because the define-fun-rec for
+                  -- a non-terminating function would cause the solver to loop on any query.
+                  liftIO $ do
+                    measureChecks <- readIORef (rMeasureChecks st)
+
+                    let checkObligation (nm, oblAction) = do
+                            debug cfg' ["[MEASURE CHECK] Checking obligation for: " ++ show nm]
+
+                            -- Run a fresh prove session: isSAT=False means prove mode.
+                            -- The oblAction creates symbolic inputs and builds the obligation SVal.
+                            (result, _) <- runSymbolic cfg' (SMTMode QueryExternal ISetup False cfg') $ do
+                              oblSVal <- oblAction
+                              outputSVal oblSVal
+                              -- Clear any measure checks registered during oblAction (the recursive
+                              -- body re-triggers sbvDefineValue, which stores new checkers). If we
+                              -- don't clear them, the nested executeQuery would try to check them,
+                              -- causing infinite recursion.
+                              st' <- symbolicEnv
+                              liftIO $ writeIORef (rMeasureChecks st') []
+                              executeQuery QueryExternal $ do
+                                cs <- checkSat
+                                case cs of
+                                  Unsat   -> return Nothing
+                                  _       -> Just <$> getModel
+
+                            case result of
+                              Nothing ->
+                                debug cfg' ["[MEASURE CHECK] Obligation verified for: " ++ show nm]
+                              Just model ->
+                                error $ unlines [ ""
+                                                , "*** Data.SBV: Measure obligation failed for " ++ show nm ++ "."
+                                                , "***"
+                                                , "*** Cannot establish termination based on the given measure."
+                                                , "***"
+                                                , "*** Counter-example:"
+                                                , "***   " ++ showModel cfg' model
+                                                ]
+
+                    mapM_ checkObligation measureChecks
+
                   let userQuery = case queryContext of
                                     QueryInternal -> originalQuery
                                     QueryExternal -> do mbDirs <- startOptimizer cfg Lexicographic

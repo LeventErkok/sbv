@@ -20,8 +20,10 @@
 
 module Data.SBV.Lambda (
             lambda,      lambdaStr
+          , lambdaRec
           , constraint,  constraintStr
           , LambdaScope(..)
+          , Defn(..), RecCallInfo(..), extractRecCalls
         ) where
 
 import Control.Monad       (join)
@@ -42,6 +44,7 @@ import Data.List
 import Data.Maybe (fromMaybe)
 
 import qualified Data.Foldable as F
+import qualified Data.Map.Strict as Map
 import qualified Data.Set      as Set
 
 import qualified Data.Generics.Uniplate.Data as G
@@ -54,6 +57,10 @@ data Defn = Defn [String]                        -- The uninterpreted names refe
                  [String]                        -- Free variables (i.e., not uninterpreted nor bound in the definition itself)
                  (Maybe [(Quantifier, String)])  -- Param declaration groups, if any
                  (Int -> String)                 -- Body, given the tab amount.
+                 [(SV, SBVExpr)]                 -- Raw DAG assignments
+                 SV                              -- Output SV
+                 [SV]                            -- Parameter SVs
+                 [(SV, String)]                  -- Rendered let-bindings (SV name -> SMTLib expression)
 
 -- | Maka a new substate from the incoming state, sharing parts as necessary
 inSubState :: MonadIO m => LambdaScope -> State -> (State -> m b) -> m b
@@ -101,6 +108,7 @@ inSubState scope inState comp = do
                    , rUserFuncs          = share rUserFuncs
                    , rCgMap              = share rCgMap
                    , rDefns              = share rDefns
+                   , rMeasureChecks      = share rMeasureChecks
                    , rSMTOptions         = share rSMTOptions
                    , rOptGoals           = share rOptGoals
                    , rAsserts            = share rAsserts
@@ -144,7 +152,7 @@ extractAllUniversals other      = error $ unlines [ ""
 -- | Generic creator for anonymous lamdas.
 lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> (Defn -> b) -> State -> Kind -> a -> m b
 lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$> convert st fk (mkLambda st f)
-  where handle d@(Defn _ frees _ _)
+  where handle d@(Defn _ frees _ _ _ _ _ _)
             | null frees
             = trans d
             | True
@@ -179,8 +187,8 @@ lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$
                               , "*** touch for further possible enhancements."
                               ]
 
-        sh (Defn _unints _frees Nothing       body) = body 0
-        sh (Defn _unints _frees (Just params) body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
+        sh (Defn _unints _frees Nothing       body _ _ _ _) = body 0
+        sh (Defn _unints _frees (Just params) body _ _ _ _) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 
         shift []     = []
         shift (x:xs) = intercalate "\n" (x : map tab xs)
@@ -189,13 +197,19 @@ lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$
 -- | Create an SMTLib lambda, in the given state.
 lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTDef
 lambda inState scope fk = lambdaGen scope mkLam inState fk
-   where mkLam (Defn unints _frees params body) = SMTDef fk unints (extractAllUniversals <$> params) body
+   where mkLam (Defn unints _frees params body _ _ _ _) = SMTDef fk unints (extractAllUniversals <$> params) body True
+
+-- | Like 'lambda', but also returns the raw 'Defn' for further analysis (used by 'smtRecFunction').
+lambdaRec :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m (SMTDef, Defn)
+lambdaRec inState scope fk = lambdaGen scope mkLam inState fk
+   where mkLam defn@(Defn unints _frees params body _ _ _ _) =
+           (SMTDef fk unints (extractAllUniversals <$> params) body True, defn)
 
 -- | Create an anonymous lambda, rendered as n SMTLib string. The kind passed is the kind of the final result.
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTLambda
 lambdaStr st scope k a = SMTLambda <$> lambdaGen scope mkLam st k a
-   where mkLam (Defn _unints _frees Nothing       body) = body 0
-         mkLam (Defn _unints _frees (Just params) body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
+   where mkLam (Defn _unints _frees Nothing       body _ _ _ _) = body 0
+         mkLam (Defn _unints _frees (Just params) body _ _ _ _) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 
 -- | Generic constraint generator.
 constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => LambdaScope -> ([String] -> (Int -> String) -> b) -> State -> a -> m b
@@ -203,8 +217,8 @@ constraintGen scope trans inState@State{rProgInfo} f = do
    -- indicate we have quantifiers
    liftIO $ modifyIORef' rProgInfo (\u -> u{hasQuants = True})
 
-   let mkDef (Defn deps _frees Nothing       body) = trans deps body
-       mkDef (Defn deps _frees (Just params) body) = trans deps $ \i -> unwords (map mkGroup params) ++ "\n"
+   let mkDef (Defn deps _frees Nothing       body _ _ _ _) = trans deps body
+       mkDef (Defn deps _frees (Just params) body _ _ _ _) = trans deps $ \i -> unwords (map mkGroup params) ++ "\n"
                                                                      ++ body (i + 2)
                                                                      ++ replicate (length params) ')'
        mkGroup (ALL, s) = "(forall " ++ s
@@ -307,6 +321,10 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                           frees
                           mbParam
                           body
+                          assignments
+                          out
+                          (map snd params)
+                          (constBindings ++ map (\((sv, s), _) -> (sv, s)) svBindings)
 
                -- Below can simply be defined as: nub (sort (G.universeBi asgnsSeq))
                -- Alas, it turns out this is really expensive when we have nested lambdas, so we do an explicit walk
@@ -438,5 +456,69 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                            ++ show x ++ space
                                            ++ chain (i+1) xs
                                            ++ ")"
+
+-- | Information about a single recursive call site extracted from the DAG.
+data RecCallInfo = RecCallInfo
+  { rciCallee   :: String         -- ^ Name of the called function
+  , rciArgs     :: [SV]           -- ^ Arguments to the recursive call
+  , rciPathCond :: [(Bool, SV)]   -- ^ Path condition: @(True, sv)@ means @sv@ is true; @(False, sv)@ means @sv@ is false
+  } deriving Show
+
+-- | Extract recursive call information from the DAG.
+-- For each recursive call to any of the given function names, computes the path condition
+-- under which that call is reachable from the output.
+extractRecCalls :: [String]           -- ^ Function names to look for (self + mutual recursion partners)
+                -> [(SV, SBVExpr)]    -- ^ Assignment sequence (DAG)
+                -> SV                 -- ^ Output SV
+                -> [RecCallInfo]
+extractRecCalls funcNames asgns outSV = concatMap callInfoFor recCallSVs
+  where
+    -- Find all recursive call sites: SVs defined by (Uninterpreted nm) where nm is in funcNames
+    recCallSVs :: [(SV, String, [SV])]
+    recCallSVs = [ (sv, nm, args)
+                 | (sv, SBVApp (Uninterpreted nm) args) <- asgns
+                 , nm `elem` funcNames
+                 ]
+
+    -- For each SV, compute a map of which SVs use it
+    -- useMap: sv -> [(userSV, userExpr)]
+    useMap :: Map.Map SV [(SV, SBVExpr)]
+    useMap = foldl' addUses Map.empty asgns
+      where addUses m (userSV, expr@(SBVApp _ args)) =
+              foldl' (\m' argSV -> Map.insertWith (++) argSV [(userSV, expr)] m') m args
+
+    -- Compute path condition for a given SV by tracing forward to the output
+    -- Returns a list of (polarity, condSV) pairs representing a conjunction
+    -- For DAGs with sharing (multiple paths to output), returns the disjunction
+    -- of path conjunctions, but we simplify by taking the first path found.
+    callInfoFor :: (SV, String, [SV]) -> [RecCallInfo]
+    callInfoFor (sv, callee, args) =
+      case pathCondTo sv outSV of
+        [] -> []  -- unreachable (shouldn't happen for well-formed bodies)
+        pc -> [RecCallInfo callee args pc]
+
+    -- Trace from srcSV to dstSV, collecting Ite conditions
+    pathCondTo :: SV -> SV -> [(Bool, SV)]
+    pathCondTo src dst
+      | src == dst = []  -- already at the destination
+      | otherwise  = case Map.lookup src useMap of
+          Nothing   -> []  -- no users, shouldn't happen
+          Just uses -> case concatMap (traceUse src dst) uses of
+                         []  -> []
+                         x:_ -> x  -- take the first path (for tree-like DAGs, there's only one)
+
+    traceUse :: SV -> SV -> (SV, SBVExpr) -> [[(Bool, SV)]]
+    traceUse src dst (userSV, SBVApp Ite [cond, thenSV, elseSV])
+      | src == thenSV = map ((True,  cond) :) (pathCondToList userSV dst)
+      | src == elseSV = map ((False, cond) :) (pathCondToList userSV dst)
+      | src == cond   = pathCondToList userSV dst  -- condition is always evaluated
+    traceUse _src dst (userSV, _) = pathCondToList userSV dst
+
+    pathCondToList :: SV -> SV -> [[(Bool, SV)]]
+    pathCondToList src dst
+      | src == dst = [[]]
+      | otherwise  = case Map.lookup src useMap of
+          Nothing   -> []
+          Just uses -> concatMap (traceUse src dst) uses
 
 {- HLint ignore module "Use second" -}

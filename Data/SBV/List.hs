@@ -381,7 +381,7 @@ pre `isPrefixOf` l
 listEq :: forall a. SymVal a => SList a -> SList a -> SBool
 listEq
   | containsFloats (kindOf (Proxy @a))
-  = smtFunction "listEq" $ \xs ys -> ite (null xs) (null ys) (head xs .== head ys .&& listEq (tail xs) (tail ys))
+  = smtRecFunction "listEq" (\xs _ -> length xs) $ \xs ys -> ite (null xs) (null ys) (head xs .== head ys .&& listEq (tail xs) (tail ys))
   | True
   = (.==)
 
@@ -565,7 +565,7 @@ reverse l
   = literal (P.reverse l')
   | True
   = def l
-  where def = smtFunction "sbv.reverse" $ \xs -> ite (null xs) [] (let (h, t) = uncons xs in def t ++ [h])
+  where def = smtRecFunction "sbv.reverse" length $ \xs -> ite (null xs) [] (let (h, t) = uncons xs in def t ++ [h])
 
 -- | A class of mappable functions. In SBV, we make a distinction between closures and regular functions, and
 -- we instantiate this class appropriately so it can handle both cases.
@@ -756,7 +756,7 @@ zip xs ys
  = literal $ P.zip xs' ys'
  | True
  = def xs ys
- where def = smtFunction "sbv.zip" $ \as bs -> ite (null as .|| null bs) [] (tuple (head as, head bs) .: def (tail as) (tail bs))
+ where def = smtRecFunction "sbv.zip" (\as _ -> length as) $ \as bs -> ite (null as .|| null bs) [] (tuple (head as, head bs) .: def (tail as) (tail bs))
 
 -- | A class of function that we can zip-with. In SBV, we make a distinction between closures and regular
 -- functions, and we instantiate this class appropriately so it can handle both cases.
@@ -865,7 +865,7 @@ replicate c e
  = literal (genericReplicate c' e')
  | True
  = def c e
- where def = smtFunction "sbv.replicate" $ \count elt -> ite (count .<= 0) [] (elt .: def (count - 1) elt)
+ where def = smtRecFunction "sbv.replicate" (\count _ -> count) $ \count elt -> ite (count .<= 0) [] (elt .: def (count - 1) elt)
 
 -- | inits of a list.
 --
@@ -879,7 +879,7 @@ inits xs
  = literal (L.inits xs')
  | True
  = def xs
- where def = smtFunction "sbv.inits" $ \l -> ite (null l) [[]] (def (init l) ++ [l])
+ where def = smtRecFunction "sbv.inits" length $ \l -> ite (null l) [[]] (def (init l) ++ [l])
 
 -- | tails of a list.
 --
@@ -893,7 +893,7 @@ tails xs
  = literal (L.tails xs')
  | True
  = def xs
- where def = smtFunction "sbv.tails" $ \l -> ite (null l) [[]] (l .: def (tail l))
+ where def = smtRecFunction "sbv.tails" length $ \l -> ite (null l) [[]] (l .: def (tail l))
 
 -- | Minimum of a list that has symbolic-ordering. If the list is empty, then
 -- the result is underspecified, i.e., it is an arbitrary element of the element type.
@@ -937,7 +937,7 @@ xs \\ ys
  = literal (xs' L.\\ ys')
  | True
  = def xs ys
- where def = smtFunction "sbv.diff" $ \x y -> ite (null x)
+ where def = smtRecFunction "sbv.diff" (\x _ -> length x) $ \x y -> ite (null x)
                                                   []
                                                   (let (h, t) = uncons x
                                                        r      = def t y
@@ -1324,7 +1324,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
 --   Data.SBV.List.lookup_notFound @Integer = 0 :: Integer
 --   s0                                     = 1 :: Integer
 lookup :: (SymVal k, SymVal v) => SBV k -> SList (k, v) -> SBV v
-lookup = smtFunction "Data.SBV.List.lookup" $ \k lst -> ite (null lst)
+lookup = smtRecFunction "Data.SBV.List.lookup" (\_ lst -> length lst) $ \k lst -> ite (null lst)
                                                             (some "Data.SBV.List.lookup_notFound" (const sTrue))
                                                             (let (k', v) = untuple (head lst)
                                                              in ite (k .== k') v (lookup k (tail lst)))

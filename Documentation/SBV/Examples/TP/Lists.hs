@@ -1102,7 +1102,7 @@ takeDropWhile f =
                                      ]
 -- | Remove adjacent duplicates.
 destutter :: SymVal a => SList a -> SList a
-destutter = smtFunction "destutter" $ \xs -> ite (null xs .|| null (tail xs))
+destutter = smtRecFunction "destutter" length $ \xs -> ite (null xs .|| null (tail xs))
                                                  xs
                                                  (let (a, as) = uncons xs
                                                       r       = destutter as
@@ -1143,7 +1143,7 @@ destutterIdempotent :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool
 destutterIdempotent = do
 
    -- No adjacent duplicates
-   let noAdd = smtFunction "noAdd" $ \xs -> null xs .|| null (tail xs) .|| (head xs ./= head (tail xs) .&& noAdd (tail xs))
+   let noAdd = smtRecFunction "noAdd" length $ \xs -> null xs .|| null (tail xs) .|| (head xs ./= head (tail xs) .&& noAdd (tail xs))
 
    -- Helper: The head of a destuttered non-empty list does not change
    helper1 <- induct "helper1"
@@ -1297,7 +1297,7 @@ diffDiff = induct "diffDiff"
 
 -- | Are the two lists disjoint?
 disjoint :: (Eq a, SymVal a) => SList a -> SList a -> SBool
-disjoint = smtFunction "disjoint" $ \xs ys -> null xs .|| head xs `notElem` ys .&& disjoint (tail xs) ys
+disjoint = smtRecFunction "disjoint" (\xs _ -> length xs) $ \xs ys -> null xs .|| head xs `notElem` ys .&& disjoint (tail xs) ys
 
 -- | @disjoint as bs .=> as \\ bs == as@
 --
@@ -1694,7 +1694,7 @@ map_snd_zip_take = do
 
 -- | Count the number of occurrences of an element in a list
 count :: SymVal a => SBV a -> SList a -> SInteger
-count = smtFunction "count" $ \e l -> ite (null l)
+count = smtRecFunction "count" (\_ l -> length l) $ \e l -> ite (null l)
                                           0
                                           (let (x, xs) = uncons l
                                                cxs     = count e xs
@@ -1702,7 +1702,7 @@ count = smtFunction "count" $ \e l -> ite (null l)
 
 -- | Interleave the elements of two lists. If one ends, we take the rest from the other.
 interleave :: SymVal a => SList a -> SList a -> SList a
-interleave = smtFunction "interleave" (\xs ys -> ite (null  xs) ys (head xs .: interleave ys (tail xs)))
+interleave = smtRecFunction "interleave" (\xs ys -> length xs + length ys) (\xs ys -> ite (null  xs) ys (head xs .: interleave ys (tail xs)))
 
 -- | Prove that interleave preserves total length.
 --
@@ -1738,7 +1738,7 @@ uninterleave lst = uninterleaveGen lst (tuple ([], []))
 
 -- | Generalized form of uninterleave with the auxilary lists made explicit.
 uninterleaveGen :: SymVal a => SList a -> STuple [a] [a] -> STuple [a] [a]
-uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple alts
+uninterleaveGen = smtRecFunction "uninterleave" (\xs _ -> length xs) (\xs alts -> let (es, os) = untuple alts
                                                           in ite (null xs)
                                                                  (tuple (reverse es, reverse os))
                                                                  (uninterleaveGen (tail xs) (tuple (os, head xs .: es))))

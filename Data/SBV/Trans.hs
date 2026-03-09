@@ -86,7 +86,7 @@ module Data.SBV.Trans (
   , blastSFloatingPoint
 
   -- * Symbolic types
-  , mkSymbolic, SMTDefinable(..)
+  , mkSymbolic, SMTDefinable(..), MeasureOf
 
   -- * Properties, proofs, and satisfiability
   , Predicate, ConstraintSet, ProvableM(..), Provable, SatisfiableM(..), Satisfiable

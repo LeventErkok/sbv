@@ -33,7 +33,7 @@ import qualified Documentation.SBV.Examples.TP.Lists as TP
 -- Note that the algorithm returns the majority if it exists. If there is no
 -- majority element, then the result is irrelevant.
 majority :: SymVal a => SBV a -> SInteger -> SList a -> SBV a
-majority = smtFunction "majority"
+majority = smtRecFunction "majority" (\_ _ lst -> length lst)
                     $ \c i lst ->  ite (null lst) c
                                        (let (x, xs) = uncons lst
                                         in ite (i .== 0)
