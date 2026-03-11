@@ -1,14 +1,1 @@
-PCase51.hs:18:15: error: [GHC-39584]
-    " pCase: Cannot infer type from patterns.
-
-        All branches use wildcards. At least one constructor pattern is needed.
-
-    " In the quasi-quotation:
-        [pCase| e of
-         _ | isZero e  -> e .== e =: qed
-           | sTrue     -> e .== e =: qed
-       |]
-   |
-18 |     |- [pCase| e of
-   |               ^^^^^...
-
+There was no failure during compilation.

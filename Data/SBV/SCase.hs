@@ -131,15 +131,13 @@ recognizeBuiltinCon _         = Nothing
 -- | Infer the type from the constructor names used in the pattern matches.
 -- Examines top-level patterns to find the first informative one (i.e., not a wildcard),
 -- then resolves the constructor via TH to determine the parent type.
-inferType :: String -> [Match] -> Q (String, Maybe BuiltinType)
+-- Returns 'Nothing' if all branches use wildcards (wildcard-only mode).
+inferType :: String -> [Match] -> Q (Maybe (String, Maybe BuiltinType))
 inferType label matches = case firstInfo matches of
-    Just (Left n)     -> pure ("Tuple" ++ show n, Just (BTTuple n))
-    Just (Right Nothing)   -> pure ("List", Just BTList)
-    Just (Right (Just name)) -> resolveConType name
-    Nothing           -> fail Unknown $ unlines [ label ++ ": Cannot infer type from patterns."
-                                                , ""
-                                                , "        All branches use wildcards. At least one constructor pattern is needed."
-                                                ]
+    Just (Left n)            -> pure $ Just ("Tuple" ++ show n, Just (BTTuple n))
+    Just (Right Nothing)     -> pure $ Just ("List", Just BTList)
+    Just (Right (Just name)) -> Just <$> resolveConType name
+    Nothing                  -> pure Nothing
   where
     -- Left n = tuple of arity n, Right Nothing = list, Right (Just name) = constructor name
     firstInfo [] = Nothing
@@ -641,26 +639,36 @@ sCase = QuasiQuoter
           offsets  = findOffsets src
       case metaParse fullCase of
         Right (CaseE scrut matches) -> do
-          (typ, mbt) <- inferType "sCase" matches
-          mbFnName <- case mbt of
-            Just BTList      -> pure (Just (VarE 'SL.list))
-            Just BTMaybe     -> pure (Just (VarE 'SM.sCaseMaybe))
-            Just BTEither    -> pure (Just (VarE 'SE.sCaseEither))
-            Just (BTTuple _) -> pure Nothing
-            Nothing -> let fnTok = "sCase" <> typ
-                       in lookupValueName fnTok >>= \case
-                            Just n  -> pure (Just (VarE n))
-                            Nothing -> fail Unknown $ unlines [ "sCase: Unknown symbolic ADT: " <> typ
-                                                              , ""
-                                                              , "        To use a symbolic case expression, declare your ADT, and then:"
-                                                              , "             mkSymbolic [''" <> typ <> "]"
-                                                              , "        In a template-haskell context."
-                                                              ]
-          cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ mbt . concat
-          buildCase typ mbFnName scrut cases
+          mbTypeInfo <- inferType "sCase" matches
+          case mbTypeInfo of
+            Nothing -> do
+              -- Wildcard-only: no type needed, generate ite-chain directly
+              allCases <- concat <$> zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
+              loc <- location
+              checkWildcard "sCase" loc allCases
+              let pairs = [(fromMaybe (VarE 'sTrue) mbG, rhs) | CWild _ mbG rhs <- allCases]
+              buildCase "wildcard" Nothing scrut (Right pairs)
+            Just (typ, mbt) -> do
+              mbFnName <- case mbt of
+                Just BTList      -> pure (Just (VarE 'SL.list))
+                Just BTMaybe     -> pure (Just (VarE 'SM.sCaseMaybe))
+                Just BTEither    -> pure (Just (VarE 'SE.sCaseEither))
+                Just (BTTuple _) -> pure Nothing
+                Nothing -> let fnTok = "sCase" <> typ
+                           in lookupValueName fnTok >>= \case
+                                Just n  -> pure (Just (VarE n))
+                                Nothing -> fail Unknown $ unlines [ "sCase: Unknown symbolic ADT: " <> typ
+                                                                  , ""
+                                                                  , "        To use a symbolic case expression, declare your ADT, and then:"
+                                                                  , "             mkSymbolic [''" <> typ <> "]"
+                                                                  , "        In a template-haskell context."
+                                                                  ]
+              cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ mbt . concat
+              buildCase typ mbFnName scrut cases
         Right _  -> fail Unknown "sCase: Parse error, cannot extract a case-expression."
         Left err -> handleParseError "sCase" err
 
+    buildCase :: String -> Maybe Exp -> Exp -> Either [Exp] [(Exp, Exp)] -> ExpQ
     buildCase _    (Just caseFunc) scrut (Left  cases) = pure $ AppE (foldl AppE caseFunc cases) scrut
     buildCase _    Nothing         _     (Left  _)     = error "sCase: impossible: Strategy A without case function"
     buildCase typ  _               _scrut (Right cases) = do
@@ -879,10 +887,22 @@ pCase = QuasiQuoter
           offsets  = findOffsets src
       case metaParse fullCase of
         Right (CaseE scrut matches) -> do
-          (typ, mbt) <- inferType "pCase" matches
-          cs <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
-          validated <- checkProofCase typ mbt (concat cs)
-          buildProofCase scrut typ mbt validated
+          mbTypeInfo <- inferType "pCase" matches
+          case mbTypeInfo of
+            Nothing -> do
+              -- Wildcard-only: no type needed, build proof cases directly
+              allCases <- concat <$> zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
+              loc <- location
+              checkWildcard "pCase" loc allCases
+              allPairs <- processCases scrut [] Nothing Map.empty [] allCases
+              let casesName   = mkName "cases"
+                  impliesName = mkName "==>"
+                  mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
+              pure $ AppE (VarE casesName) (ListE (map mkPair allPairs))
+            Just (typ, mbt) -> do
+              cs <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
+              validated <- checkProofCase typ mbt (concat cs)
+              buildProofCase scrut typ mbt validated
         Right _  -> fail Unknown "pCase: Parse error, cannot extract a case-expression."
         Left err -> handleParseError "pCase" err
 
