@@ -10,4 +10,4 @@ import Data.SBV.TP
 
 -- Parse error: EOF
 t :: SExpr -> Proof SBool
-t _e = [pCase|Expr _e of|]
+t _e = [pCase| _e of|]

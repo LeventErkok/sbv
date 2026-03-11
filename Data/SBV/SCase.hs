@@ -353,6 +353,25 @@ metaParse = fmap Meta.toExp . Meta.parseResultToEither . E.parseExpWithMode pm
         -- The above just mimics the defaults. These our extras.
         extras = [E.DataKinds]
 
+-- | Handle a metaParse error by mapping the parse-error column back to the source file.
+-- metaParse operates on @"case " <> src@ (5 extra chars), so we subtract 5 from its column.
+-- For line 1 errors, we also add the quasi-quote content's starting column since the first
+-- line of src is offset from the start of the source line. For subsequent lines, the columns
+-- in the quasi-quote content already correspond to source file columns.
+handleParseError :: String -> String -> Q a
+handleParseError label err = do
+    loc <- location
+    let qqCol = snd (loc_start loc) -- 1-based column where quasi-quote content starts
+    case lines err of
+      (_:locLine:res) | ["SrcLoc", _, l, c] <- words locLine, all isDigit l, all isDigit c
+         -> let mc    = read c
+                line  = read l
+                -- Line 1: column is relative to "case " <> src, need to add quasi-quote offset
+                -- Lines 2+: column is already a source file column (verbatim from source)
+                col = if line == 1 then qqCol + mc - 7 else mc - 1
+            in fail (OffBy (line - 1) col 1) (unlines res)
+      _  -> fail Unknown $ label ++ " parse error: " <> err
+
 
 -- | Extract guards from a match body
 getGuards :: Body -> [Dec] -> Q [(Maybe Exp, Exp)]
@@ -640,10 +659,7 @@ sCase = QuasiQuoter
           cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ mbt . concat
           buildCase typ mbFnName scrut cases
         Right _  -> fail Unknown "sCase: Parse error, cannot extract a case-expression."
-        Left err -> case lines err of
-                      (_:loc:res) | ["SrcLoc", _, l, c] <- words loc, all isDigit l, all isDigit c
-                         -> fail (OffBy (read l - 1) (read c - 1) 1) (unlines res)
-                      _  -> fail Unknown $ "sCase parse error: " <> err
+        Left err -> handleParseError "sCase" err
 
     buildCase _    (Just caseFunc) scrut (Left  cases) = pure $ AppE (foldl AppE caseFunc cases) scrut
     buildCase _    Nothing         _     (Left  _)     = error "sCase: impossible: Strategy A without case function"
@@ -868,10 +884,7 @@ pCase = QuasiQuoter
           validated <- checkProofCase typ mbt (concat cs)
           buildProofCase scrut typ mbt validated
         Right _  -> fail Unknown "pCase: Parse error, cannot extract a case-expression."
-        Left err -> case lines err of
-                      (_:loc:res) | ["SrcLoc", _, l, c] <- words loc, all isDigit l, all isDigit c
-                         -> fail (OffBy (read l - 1) (read c - 1) 1) (unlines res)
-                      _  -> fail Unknown $ "pCase parse error: " <> err
+        Left err -> handleParseError "pCase" err
 
     -- | Validate cases for proof context
     checkProofCase :: String -> Maybe BuiltinType -> [Case] -> Q [Case]

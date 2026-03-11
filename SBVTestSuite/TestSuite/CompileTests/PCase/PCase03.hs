@@ -9,7 +9,7 @@ import Data.SBV
 import Data.SBV.TP
 
 -- Not usable in declaration context
-[pCase|Expr e of
+[pCase| e of
         Zero  -> undefined
         Num _ -> undefined
       |]

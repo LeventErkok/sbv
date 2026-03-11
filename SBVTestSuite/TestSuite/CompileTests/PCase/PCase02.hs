@@ -10,4 +10,4 @@ import Data.SBV.TP
 
 -- Bad syntax
 t :: SExpr -> Proof SBool
-t e = [pCase|Expr e + 1|]
+t e = [pCase| e + 1|]
