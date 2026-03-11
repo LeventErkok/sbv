@@ -13,6 +13,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -38,31 +39,39 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 -- | Insert an element into an already sorted list in the correct place.
 insert :: (OrdSymbolic (SBV a), SymVal a) => SBV a -> SList a -> SList a
-insert = smtFunction "insert" $ \e l -> ite (null l) [e]
-                                      $ let (x, xs) = uncons l
-                                        in ite (e .<= x) (e .: x .: xs) (x .: insert e xs)
+insert = smtFunction "insert"
+       $ \e l -> [sCase|List l of
+                     []               -> [e]
+                     x : xs | e .<= x -> e .: x .: xs
+                            | True    -> x .: insert e xs
+                 |]
 
 -- | Insertion sort, using 'insert' above to successively insert the elements.
 insertionSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
-insertionSort = smtFunction "insertionSort" $ \l -> ite (null l) []
-                                                  $ let (x, xs) = uncons l
-                                                    in insert x (insertionSort xs)
+insertionSort = smtFunction "insertionSort"
+              $ \l -> [sCase|List l of
+                          []     -> []
+                          x : xs -> insert x (insertionSort xs)
+                      |]
 
 
 -- | Remove the first occurrence of an number from a list, if any.
 removeFirst :: (Eq a, SymVal a) => SBV a -> SList a -> SList a
-removeFirst = smtFunction "removeFirst" $ \e l -> ite (null l)
-                                                      []
-                                                      (let (x, xs) = uncons l
-                                                       in ite (e .== x) xs (x .: removeFirst e xs))
+removeFirst = smtFunction "removeFirst"
+            $ \e l -> [sCase|List l of
+                          []               -> []
+                          x : xs | e .== x -> xs
+                                 | True    -> x .: removeFirst e xs
+                      |]
 
 -- | Are two lists permutations of each other? Note that we diverge from the counting
 -- based definition of permutation here, since this variant works better with insertion sort.
 isPermutation :: (Eq a, SymVal a) => SList a -> SList a -> SBool
-isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
-                                                          (null r)
-                                                          (let (x, xs) = uncons l
-                                                           in x `elem` r .&& isPermutation xs (removeFirst x r))
+isPermutation = smtFunction "isPermutation"
+              $ \l r -> [sCase|List l of
+                            []     -> null r
+                            x : xs -> x `elem` r .&& isPermutation xs (removeFirst x r)
+                        |]
 
 -- * Correctness proof
 

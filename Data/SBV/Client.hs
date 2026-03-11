@@ -513,7 +513,7 @@ mkCaseAnalyzer kind typeName params cstrs = case kind of
                 fs   <- mapM (\(nm, _) -> TH.newName ('f' : TH.nameBase nm)) cstrs
                 res  <- TH.newName "result"
 
-                let def = TH.FunD cnm [TH.Clause (map TH.VarP (se : fs)) (TH.NormalB (iteChain (zipWith (mkCase se) fs cstrs))) []]
+                let def = TH.FunD cnm [TH.Clause (map TH.VarP (fs ++ [se])) (TH.NormalB (iteChain (zipWith (mkCase se) fs cstrs))) []]
 
                     iteChain :: [(TH.Exp, TH.Exp)] -> TH.Exp
                     iteChain []       = error $ unlines [ "Data.SBV.mkADT: Impossible happened!"
@@ -538,7 +538,7 @@ mkCaseAnalyzer kind typeName params cstrs = case kind of
                                                      (TH.AppT (TH.ConT ''Mergeable) (TH.VarT res)
                                                      : [TH.AppT (TH.ConT ''SymVal) (TH.VarT p) | p <- params]
                                                      )
-                                                     (mkFun (sType : fTypes)))
+                                                     (mkFun (fTypes ++ [sType])))
 
                 addDoc ("Case analyzer for the type " ++ bnm ++ ".") cnm
                 pure [sig, def]

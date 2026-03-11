@@ -90,9 +90,11 @@ eval = go []
                                               |]
 
        get :: SList (String, Integer) -> SString -> SInteger
-       get = smtFunction "get" $ \env s -> ite (SL.null env) 0
-                                         $ let (k, v) = untuple (SL.head env)
-                                           in ite (s .== k) v (get (SL.tail env) s)
+       get = smtFunction "get"
+           $ \env s -> [sCase|List env of
+                          []          -> 0
+                          (k, v) : es -> ite (s .== k) v (get es s)
+                       |]
 
 -- | A basic theorem about 'eval'.
 -- >>> evalPlus5

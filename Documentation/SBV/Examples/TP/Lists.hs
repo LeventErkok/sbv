@@ -1102,11 +1102,13 @@ takeDropWhile f =
                                      ]
 -- | Remove adjacent duplicates.
 destutter :: SymVal a => SList a -> SList a
-destutter = smtFunction "destutter" $ \xs -> ite (null xs .|| null (tail xs))
-                                                 xs
-                                                 (let (a, as) = uncons xs
-                                                      r       = destutter as
-                                                  in ite (a .== head as) r (a .: r))
+destutter = smtFunction "destutter"
+          $ \xs -> [sCase|List xs of
+                      []     -> xs
+                      [_]    -> xs
+                      a : as -> let r = destutter as
+                                in ite (a .== head as) r (a .: r)
+                   |]
 
 -- | @destutter (destutter xs) == destutter xs@
 --
@@ -1125,17 +1127,17 @@ destutter = smtFunction "destutter" $ \xs -> ite (null xs .|| null (tail xs))
 --   Result:                               Q.E.D.
 -- Inductive lemma (strong): helper3
 --   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (3 way case split)
 --     Step: 1.1                           Q.E.D.
---     Step: 1.2 (2 way full case split)
---       Step: 1.2.1                       Q.E.D.
---       Step: 1.2.2.1                     Q.E.D.
---       Step: 1.2.2.2 (2 way case split)
---         Step: 1.2.2.2.1.1               Q.E.D.
---         Step: 1.2.2.2.1.2               Q.E.D.
---         Step: 1.2.2.2.2.1               Q.E.D.
---         Step: 1.2.2.2.2.2               Q.E.D.
---         Step: 1.2.2.2.Completeness      Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.3.1                         Q.E.D.
+--     Step: 1.3.2 (2 way case split)
+--       Step: 1.3.2.1.1                   Q.E.D.
+--       Step: 1.3.2.1.2                   Q.E.D.
+--       Step: 1.3.2.2.1                   Q.E.D.
+--       Step: 1.3.2.2.2                   Q.E.D.
+--       Step: 1.3.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: destutterIdempotent              Q.E.D.
 -- [Proven] destutterIdempotent :: Ɐxs ∷ [Integer] → Bool
@@ -1172,21 +1174,21 @@ destutterIdempotent = do
                   (length, []) $
                   \ih xs -> []
                          |- noAdd (destutter xs)
-                         =: split xs
-                                  trivial
-                                  (\a as -> split as
-                                                  trivial
-                                                  (\b bs -> noAdd (destutter (a .: b .: bs))
-                                                         =: cases [a .== b  ==> noAdd (destutter (b .: bs))
-                                                                             ?? ih
-                                                                             =: sTrue
-                                                                             =: qed
-                                                                  , a ./= b ==> noAdd (a .: destutter (b .: bs))
-                                                                             ?? helper1 `at` (Inst @"xs" bs, Inst @"h" b)
-                                                                             ?? ih
-                                                                             =: sTrue
-                                                                             =: qed
-                                                                  ]))
+                         =: [pCase|List xs of
+                              []         -> trivial
+                              [_]        -> trivial
+                              a : b : bs -> noAdd (destutter (a .: b .: bs))
+                                         =: cases [a .== b  ==> noAdd (destutter (b .: bs))
+                                                             ?? ih
+                                                             =: sTrue
+                                                             =: qed
+                                                  , a ./= b ==> noAdd (a .: destutter (b .: bs))
+                                                             ?? helper1 `at` (Inst @"xs" bs, Inst @"h" b)
+                                                             ?? ih
+                                                             =: sTrue
+                                                             =: qed
+                                                  ]
+                            |]
 
    -- Now we can prove idempotency easily:
    lemma "destutterIdempotent"
@@ -1694,11 +1696,12 @@ map_snd_zip_take = do
 
 -- | Count the number of occurrences of an element in a list
 count :: SymVal a => SBV a -> SList a -> SInteger
-count = smtFunction "count" $ \e l -> ite (null l)
-                                          0
-                                          (let (x, xs) = uncons l
-                                               cxs     = count e xs
-                                           in ite (e .== x) (1 + cxs) cxs)
+count = smtFunction "count"
+      $ \e l -> [sCase|List l of
+                   []               -> 0
+                   x : xs | e .== x -> 1 + count e xs
+                          | True    -> count e xs
+                |]
 
 -- | Interleave the elements of two lists. If one ends, we take the rest from the other.
 interleave :: SymVal a => SList a -> SList a -> SList a
@@ -1712,11 +1715,12 @@ interleave = smtFunction "interleave" (\xs ys -> ite (null  xs) ys (head xs .: i
 -- >>> runTP $ interleaveLen @Integer
 -- Inductive lemma (strong): interleaveLen
 --   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (2 way case split)
 --     Step: 1.1                           Q.E.D.
 --     Step: 1.2.1                         Q.E.D.
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] interleaveLen :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 interleaveLen :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -1724,13 +1728,14 @@ interleaveLen = sInduct "interleaveLen"
                         (\(Forall xs) (Forall ys) -> length xs + length ys .== length (interleave xs ys))
                         (\xs ys -> length xs + length ys, []) $
                         \ih xs ys -> [] |- length xs + length ys .== length (interleave xs ys)
-                                        =: split xs
-                                                 trivial
-                                                 (\a as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
-                                                        =: 1 + length as + length ys .== 1 + length (interleave ys as)
-                                                        ?? ih `at` (Inst @"xs" ys, Inst @"ys" as)
-                                                        =: sTrue
-                                                        =: qed)
+                                        =: [pCase|List xs of
+                                             []     -> trivial
+                                             a : as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
+                                                    =: 1 + length as + length ys .== 1 + length (interleave ys as)
+                                                    ?? ih `at` (Inst @"xs" ys, Inst @"ys" as)
+                                                    =: sTrue
+                                                    =: qed
+                                           |]
 
 -- | Uninterleave the elements of two lists. We roughly split it into two, of alternating elements.
 uninterleave :: SymVal a => SList a -> STuple [a] [a]
@@ -1738,10 +1743,12 @@ uninterleave lst = uninterleaveGen lst (tuple ([], []))
 
 -- | Generalized form of uninterleave with the auxilary lists made explicit.
 uninterleaveGen :: SymVal a => SList a -> STuple [a] [a] -> STuple [a] [a]
-uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple alts
-                                                          in ite (null xs)
-                                                                 (tuple (reverse es, reverse os))
-                                                                 (uninterleaveGen (tail xs) (tuple (os, head xs .: es))))
+uninterleaveGen = smtFunction "uninterleave"
+                $ \xs alts -> let (es, os) = untuple alts
+                              in [sCase|List xs of
+                                    []     -> tuple (reverse es, reverse os)
+                                    x : ys -> uninterleaveGen ys (tuple (os, x .: es))
+                                 |]
 
 -- | The functions 'uninterleave' and 'interleave' are inverses so long as the inputs are of the same length. (The equality
 -- would even hold if the first argument has one extra element, but we keep things simple here.)
@@ -1752,18 +1759,18 @@ uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple
 -- Lemma: revCons                          Q.E.D.
 -- Inductive lemma (strong): roundTripGen
 --   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (4 way full case split)
+--   Step: 1 (3 way case split)
 --     Step: 1.1                           Q.E.D.
 --     Step: 1.2                           Q.E.D.
---     Step: 1.3                           Q.E.D.
---     Step: 1.4.1                         Q.E.D.
---     Step: 1.4.2                         Q.E.D.
---     Step: 1.4.3                         Q.E.D.
---     Step: 1.4.4                         Q.E.D.
---     Step: 1.4.5                         Q.E.D.
---     Step: 1.4.6                         Q.E.D.
---     Step: 1.4.7                         Q.E.D.
---     Step: 1.4.8                         Q.E.D.
+--     Step: 1.3.1                         Q.E.D.
+--     Step: 1.3.2                         Q.E.D.
+--     Step: 1.3.3                         Q.E.D.
+--     Step: 1.3.4                         Q.E.D.
+--     Step: 1.3.5                         Q.E.D.
+--     Step: 1.3.6                         Q.E.D.
+--     Step: 1.3.7                         Q.E.D.
+--     Step: 1.3.8                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: interleaveRoundTrip
 --   Step: 1                               Q.E.D.
@@ -1785,22 +1792,22 @@ interleaveRoundTrip = do
          \ih xs ys alts -> [length xs .== length ys]
                         |- let (es, os) = untuple alts
                         in uninterleaveGen (interleave xs ys) alts
-                        =: split2 (xs, ys)
-                                  trivial
-                                  trivial
-                                  trivial
-                                  (\(a, as) (b, bs) -> uninterleaveGen (interleave (a .: as) (b .: bs)) alts
-                                                    =: uninterleaveGen (a .: interleave (b .: bs) as) alts
-                                                    =: uninterleaveGen (a .: b .: interleave as bs) alts
-                                                    =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
-                                                    ?? ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
-                                                    =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
-                                                    ?? revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as)
-                                                    =: tuple (reverse es ++ (a .: as), reverse (b .: os) ++ bs)
-                                                    ?? revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs)
-                                                    =: tuple (reverse es ++ (a .: as), reverse os ++ (b .: bs))
-                                                    =: tuple (reverse es ++ xs, reverse os ++ ys)
-                                                    =: qed)
+                        =: [pCase|Tuple2 tuple (xs, ys) of
+                              ([], _)          -> trivial
+                              (_, [])          -> trivial
+                              (a : as, b : bs) -> uninterleaveGen (interleave (a .: as) (b .: bs)) alts
+                                               =: uninterleaveGen (a .: interleave (b .: bs) as) alts
+                                               =: uninterleaveGen (a .: b .: interleave as bs) alts
+                                               =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
+                                               ?? ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
+                                               =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
+                                               ?? revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as)
+                                               =: tuple (reverse es ++ (a .: as), reverse (b .: os) ++ bs)
+                                               ?? revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs)
+                                               =: tuple (reverse es ++ (a .: as), reverse os ++ (b .: bs))
+                                               =: tuple (reverse es ++ xs, reverse os ++ ys)
+                                               =: qed
+                           |]
 
    -- Round-trip theorem:
    calc "interleaveRoundTrip"

@@ -13,6 +13,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -39,17 +40,24 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 -- | Merge two already sorted lists into another
 merge :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a -> SList a
-merge = smtFunction "merge" $ \l r -> ite (null l) r
-                                    $ ite (null r) l
-                                    $ let (a, as) = uncons l
-                                          (b, bs) = uncons r
-                                      in ite (a .<= b) (a .: merge as r) (b .: merge l bs)
+merge = smtFunction "merge"
+      $ \l r -> [sCase|Tuple2 tuple (l, r) of
+                   ([], _)          -> r
+                   (_, [])          -> l
+                   (a : as, b : bs) -> ite (a .<= b)
+                                           (a .: merge as (b .: bs))
+                                           (b .: merge (a .: as) bs)
+                |]
 
 -- | Merge sort, using 'merge' above to successively sort halved input
 mergeSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
-mergeSort = smtFunction "mergeSort" $ \l -> ite (length l .<= 1) l
-                                              $ let (h1, h2) = splitAt (length l `sEDiv` 2) l
-                                                in merge (mergeSort h1) (mergeSort h2)
+mergeSort = smtFunction "mergeSort"
+          $ \l -> [sCase|List l of
+                     []  -> l
+                     [_] -> l
+                     _   -> let (h1, h2) = splitAt (length l `sEDiv` 2) l
+                            in merge (mergeSort h1) (mergeSort h2)
+                  |]
 
 -- * Correctness proof
 
@@ -143,54 +151,55 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
            (\(Forall xs) (Forall ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys))
            (\xs ys -> tuple (length xs, length ys), []) $
            \ih xs ys -> [nonDecreasing xs, nonDecreasing ys]
-                     |- split2 (xs, ys)
-                               trivial           -- when both xs and ys are empty.  Trivial.
-                               trivial           -- when xs is empty, but ys isn't. Trivial.
-                               trivial           -- when ys is empty, but xs isn't. Trivial.
-                               (\(a, as) (b, bs) ->
-                                     nonDecreasing (merge (a .: as) (b .: bs))
-                                  ?? "unfold merge"
-                                  =: nonDecreasing (ite (a .<= b)
-                                                        (a .: merge as (b .: bs))
-                                                        (b .: merge (a .: as) bs))
-                                  ?? "case split"
-                                  =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
-                                                      ?? ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
-                                                      ?? nonDecrIns `at` (Inst @"x" a, Inst @"xs" (merge as (b .: bs)))
-                                                      =: sTrue
-                                                      =: qed
-                                           , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
-                                                      ?? ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
-                                                      ?? nonDecrIns `at` (Inst @"x" b, Inst @"xs" (merge (a .: as) bs))
-                                                      =: sTrue
-                                                      =: qed
-                                           ])
+                     |- [pCase|Tuple2 tuple (xs, ys) of
+                          ([], _)          -> trivial
+                          (_, [])          -> trivial
+                          (a : as, b : bs) ->
+                                nonDecreasing (merge (a .: as) (b .: bs))
+                             ?? "unfold merge"
+                             =: nonDecreasing (ite (a .<= b)
+                                                   (a .: merge as (b .: bs))
+                                                   (b .: merge (a .: as) bs))
+                             ?? "case split"
+                             =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
+                                                 ?? ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
+                                                 ?? nonDecrIns `at` (Inst @"x" a, Inst @"xs" (merge as (b .: bs)))
+                                                 =: sTrue
+                                                 =: qed
+                                      , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
+                                                 ?? ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
+                                                 ?? nonDecrIns `at` (Inst @"x" b, Inst @"xs" (merge (a .: as) bs))
+                                                 =: sTrue
+                                                 =: qed
+                                      ]
+                        |]
 
     sortNonDecreasing <-
         sInduct "sortNonDecreasing"
                 (\(Forall xs) -> nonDecreasing (mergeSort xs))
                 (length, []) $
-                \ih xs -> [] |- split xs
-                                      qed
-                                      (\e es -> nonDecreasing (mergeSort (e .: es))
-                                             ?? "unfold"
-                                             =: let (h1, h2) = splitAt (length (e .: es) `sEDiv` 2) (e .: es)
-                                                in nonDecreasing (ite (length (e .: es) .<= 1)
-                                                                      (e .: es)
-                                                                      (merge (mergeSort h1) (mergeSort h2)))
-                                             ?? "push nonDecreasing down"
-                                             =: ite (length (e .: es) .<= 1)
-                                                    (nonDecreasing (e .: es))
-                                                    (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
-                                             ?? ih `at` Inst @"xs" es
-                                             =: ite (length (e .: es) .<= 1)
-                                                    sTrue
-                                                    (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
-                                             ?? ih `at` Inst @"xs" h1
-                                             ?? ih `at` Inst @"xs" h2
-                                             ?? mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
-                                             =: sTrue
-                                             =: qed)
+                \ih xs -> [] |- [pCase|List xs of
+                                  []     -> qed
+                                  e : es -> nonDecreasing (mergeSort (e .: es))
+                                         ?? "unfold"
+                                         =: let (h1, h2) = splitAt (length (e .: es) `sEDiv` 2) (e .: es)
+                                            in nonDecreasing (ite (length (e .: es) .<= 1)
+                                                                  (e .: es)
+                                                                  (merge (mergeSort h1) (mergeSort h2)))
+                                         ?? "push nonDecreasing down"
+                                         =: ite (length (e .: es) .<= 1)
+                                                (nonDecreasing (e .: es))
+                                                (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
+                                         ?? ih `at` Inst @"xs" es
+                                         =: ite (length (e .: es) .<= 1)
+                                                sTrue
+                                                (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
+                                         ?? ih `at` Inst @"xs" h1
+                                         ?? ih `at` Inst @"xs" h2
+                                         ?? mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
+                                         =: sTrue
+                                         =: qed
+                                |]
 
     --------------------------------------------------------------------------------------------
     -- Part III. Prove that the output of merge sort is a permuation of its input
@@ -199,73 +208,74 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
         sInduct "mergeCount"
                 (\(Forall xs) (Forall ys) (Forall e) -> count e (merge xs ys) .== count e xs + count e ys)
                 (\xs ys _e -> tuple (length xs, length ys), []) $
-                \ih as bs e -> [] |- split2 (as, bs)
-                                            trivial
-                                            trivial
-                                            trivial
-                                            (\(x, xs) (y, ys) -> count e (merge (x .: xs) (y .: ys))
-                                                              ?? "unfold merge"
-                                                              =: count e (ite (x .<= y)
-                                                                              (x .: merge xs (y .: ys))
-                                                                              (y .: merge (x .: xs) ys))
-                                                              ?? "push count inside"
-                                                              =: ite (x .<= y)
-                                                                     (count e (x .: merge xs (y .: ys)))
-                                                                     (count e (y .: merge (x .: xs) ys))
-                                                              ?? "unfold count, twice"
-                                                              =: ite (x .<= y)
-                                                                     (let r = count e (merge xs (y .: ys)) in ite (e .== x) (1+r) r)
-                                                                     (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
-                                                              ?? ih `at` (Inst @"xs" xs, Inst @"ys" (y .: ys), Inst @"e" e)
-                                                              =: ite (x .<= y)
-                                                                     (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
-                                                                     (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
-                                                              ?? ih `at` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"e" e)
-                                                              =: ite (x .<= y)
-                                                                     (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
-                                                                     (let r = count e (x .: xs) + count e ys in ite (e .== y) (1+r) r)
-                                                              ?? "unfold count in reverse, twice"
-                                                              =: ite (x .<= y)
-                                                                     (count e (x .: xs) + count e (y .: ys))
-                                                                     (count e (x .: xs) + count e (y .: ys))
-                                                              ?? "simplify"
-                                                              =: count e (x .: xs) + count e (y .: ys)
-                                                              =: qed)
+                \ih as bs e -> [] |- [pCase|Tuple2 tuple (as, bs) of
+                                      ([], _)          -> trivial
+                                      (_, [])          -> trivial
+                                      (x : xs, y : ys) -> count e (merge (x .: xs) (y .: ys))
+                                                       ?? "unfold merge"
+                                                       =: count e (ite (x .<= y)
+                                                                       (x .: merge xs (y .: ys))
+                                                                       (y .: merge (x .: xs) ys))
+                                                       ?? "push count inside"
+                                                       =: ite (x .<= y)
+                                                              (count e (x .: merge xs (y .: ys)))
+                                                              (count e (y .: merge (x .: xs) ys))
+                                                       ?? "unfold count, twice"
+                                                       =: ite (x .<= y)
+                                                              (let r = count e (merge xs (y .: ys)) in ite (e .== x) (1+r) r)
+                                                              (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
+                                                       ?? ih `at` (Inst @"xs" xs, Inst @"ys" (y .: ys), Inst @"e" e)
+                                                       =: ite (x .<= y)
+                                                              (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
+                                                              (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
+                                                       ?? ih `at` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"e" e)
+                                                       =: ite (x .<= y)
+                                                              (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
+                                                              (let r = count e (x .: xs) + count e ys in ite (e .== y) (1+r) r)
+                                                       ?? "unfold count in reverse, twice"
+                                                       =: ite (x .<= y)
+                                                              (count e (x .: xs) + count e (y .: ys))
+                                                              (count e (x .: xs) + count e (y .: ys))
+                                                       ?? "simplify"
+                                                       =: count e (x .: xs) + count e (y .: ys)
+                                                       =: qed
+                                    |]
 
     sortIsPermutation <-
         sInductWith cvc5 "sortIsPermutation"
                 (\(Forall xs) (Forall e) -> count e xs .== count e (mergeSort xs))
                 (\xs _e -> length xs, []) $
-                \ih as e -> [] |- split as
-                                        trivial
-                                        (\x xs -> count e (mergeSort (x .: xs))
-                                               ?? "unfold mergeSort"
-                                               =: count e (ite (length (x .: xs) .<= 1)
-                                                               (x .: xs)
-                                                               (let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
-                                                                in merge (mergeSort h1) (mergeSort h2)))
-                                               ?? "push count down, simplify, rearrange"
-                                               =: let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
-                                               in ite (null xs)
-                                                      (count e [x])
-                                                      (count e (merge (mergeSort h1) (mergeSort h2)))
-                                               ?? mergeCount `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2), Inst @"e" e)
-                                               =: ite (null xs)
-                                                      (count e [x])
-                                                      (count e (mergeSort h1) + count e (mergeSort h2))
-                                               ?? ih `at` (Inst @"xs" h1, Inst @"e" e)
-                                               =: ite (null xs)
-                                                      (count e [x])
-                                                      (count e h1 + count e (mergeSort h2))
-                                               ?? ih `at` (Inst @"xs" h2, Inst @"e" e)
-                                               =: ite (null xs)
-                                                      (count e [x])
-                                                      (count e h1 + count e h2)
-                                               ?? takeDropCount `at` (Inst @"xs" (x .: xs), Inst @"n" (length (x .: xs) `sEDiv` 2), Inst @"e" e)
-                                               =: ite (null xs)
-                                                      (count e [x])
-                                                      (count e (x .: xs))
-                                               =: qed)
+                \ih as e -> [] |- [pCase|List as of
+                                    []     -> trivial
+                                    x : xs -> count e (mergeSort (x .: xs))
+                                           ?? "unfold mergeSort"
+                                           =: count e (ite (length (x .: xs) .<= 1)
+                                                           (x .: xs)
+                                                           (let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
+                                                            in merge (mergeSort h1) (mergeSort h2)))
+                                           ?? "push count down, simplify, rearrange"
+                                           =: let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
+                                           in ite (null xs)
+                                                  (count e [x])
+                                                  (count e (merge (mergeSort h1) (mergeSort h2)))
+                                           ?? mergeCount `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2), Inst @"e" e)
+                                           =: ite (null xs)
+                                                  (count e [x])
+                                                  (count e (mergeSort h1) + count e (mergeSort h2))
+                                           ?? ih `at` (Inst @"xs" h1, Inst @"e" e)
+                                           =: ite (null xs)
+                                                  (count e [x])
+                                                  (count e h1 + count e (mergeSort h2))
+                                           ?? ih `at` (Inst @"xs" h2, Inst @"e" e)
+                                           =: ite (null xs)
+                                                  (count e [x])
+                                                  (count e h1 + count e h2)
+                                           ?? takeDropCount `at` (Inst @"xs" (x .: xs), Inst @"n" (length (x .: xs) `sEDiv` 2), Inst @"e" e)
+                                           =: ite (null xs)
+                                                  (count e [x])
+                                                  (count e (x .: xs))
+                                           =: qed
+                                  |]
 
     --------------------------------------------------------------------------------------------
     -- Put the two parts together for the final proof

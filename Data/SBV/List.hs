@@ -36,6 +36,9 @@ module Data.SBV.List (
         -- * Deconstructing/Reconstructing
         , nil, (.:), snoc, head, tail, uncons, init, last, singleton, listToListAt, elemAt, (!!), implode, concat, (++)
 
+        -- * Case analysis (for sCase quasi-quoter)
+        , list
+
         -- * Containment
         , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
 
@@ -207,6 +210,18 @@ tail l
 -- Q.E.D.
 uncons :: SymVal a => SList a -> (SBV a, SList a)
 uncons l = (head l, tail l)
+
+-- | Case analysis on a symbolic list. If the list is empty, return the first argument.
+-- Otherwise, apply the second argument to the head and tail of the list.
+--
+-- >>> list (0 :: SInteger) (\h _ -> h) ([] :: SList Integer)
+-- 0 :: SInteger
+-- >>> list (0 :: SInteger) (\h _ -> h) ([3, 4, 5] :: SList Integer)
+-- 3 :: SInteger
+-- >>> prove $ \(l :: SList Integer) -> null l .|| list sFalse (\_ _ -> sTrue) l
+-- Q.E.D.
+list :: (SymVal a, SymVal b) => SBV b -> (SBV a -> SList a -> SBV b) -> SList a -> SBV b
+list nilCase consCase xs = ite (null xs) nilCase (consCase (head xs) (tail xs))
 
 -- | @`init`@ returns all but the last element of the list. Unspecified if the list is empty.
 --

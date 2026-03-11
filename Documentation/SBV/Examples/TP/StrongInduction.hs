@@ -11,6 +11,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -261,16 +262,16 @@ won'tProve4 = runTP $ do
 --   Result:                               Q.E.D.
 -- Inductive lemma (strong): sumHalves
 --   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (3 way case split)
 --     Step: 1.1                           Q.E.D.
---     Step: 1.2 (2 way full case split)
---       Step: 1.2.1                       Q.E.D.
---       Step: 1.2.2.1                     Q.E.D.
---       Step: 1.2.2.2                     Q.E.D.
---       Step: 1.2.2.3                     Q.E.D.
---       Step: 1.2.2.4                     Q.E.D.
---       Step: 1.2.2.5                     Q.E.D.
---       Step: 1.2.2.6 (simplify)          Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.3.1                         Q.E.D.
+--     Step: 1.3.2                         Q.E.D.
+--     Step: 1.3.3                         Q.E.D.
+--     Step: 1.3.4                         Q.E.D.
+--     Step: 1.3.5                         Q.E.D.
+--     Step: 1.3.6 (simplify)              Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumHalves :: Ɐxs ∷ [Integer] → Bool
 sumHalves :: IO (Proof (Forall "xs" [Integer] -> SBool))
@@ -296,17 +297,19 @@ sumHalves = runTP $ do
       (\(Forall xs) -> halvingSum xs .== sum xs)
       (length, []) $
       \ih xs -> [] |- halvingSum xs
-                   =: split xs qed
-                            (\a as -> split as qed
-                                            (\b bs -> halvingSum (a .: b .: bs)
-                                                   =: let (f, s) = splitAt (length (a .: b .: bs) `sDiv` 2) (a .: b .: bs)
-                                                   in halvingSum f + halvingSum s
-                                                   ?? ih `at` Inst @"xs" f
-                                                   =: sum f + halvingSum s
-                                                   ?? ih `at` Inst @"xs" s
-                                                   =: sum f + sum s
-                                                   ?? helper `at` (Inst @"xs" f, Inst @"ys" s)
-                                                   =: sum (f ++ s)
-                                                   ?? "simplify"
-                                                   =: sum (a .: b .: bs)
-                                                   =: qed))
+                   =: [pCase|List xs of
+                        []         -> qed
+                        [_]        -> qed
+                        a : b : bs -> halvingSum (a .: b .: bs)
+                                   =: let (f, s) = splitAt (length (a .: b .: bs) `sDiv` 2) (a .: b .: bs)
+                                   in halvingSum f + halvingSum s
+                                   ?? ih `at` Inst @"xs" f
+                                   =: sum f + halvingSum s
+                                   ?? ih `at` Inst @"xs" s
+                                   =: sum f + sum s
+                                   ?? helper `at` (Inst @"xs" f, Inst @"ys" s)
+                                   =: sum (f ++ s)
+                                   ?? "simplify"
+                                   =: sum (a .: b .: bs)
+                                   =: qed
+                      |]

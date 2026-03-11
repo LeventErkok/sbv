@@ -1385,13 +1385,13 @@ simpCorrect = do
 -- [Proven] cfoldCorrect :: Ɐe ∷ (Expr [Char] Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
 cfoldCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))
 cfoldCorrect = do
-   mnn  <- recall "measureNonNeg" measureNonNeg
-   sc   <- recall "simpCorrect"   simpCorrect
-   sqrC <- recall "sqrCong"       sqrCong
-   sqrH <- recall "sqrHelper"     sqrHelper
-   mulCL <- recall "mulCongL"     mulCongL
-   mulCR <- recall "mulCongR"     mulCongR
-   mulH <- recall "mulHelper"     mulHelper
+   mnn   <- recall "measureNonNeg" measureNonNeg
+   sc    <- recall "simpCorrect"   simpCorrect
+   sqrC  <- recall "sqrCong"       sqrCong
+   sqrH  <- recall "sqrHelper"     sqrHelper
+   mulCL <- recall "mulCongL"      mulCongL
+   mulCR <- recall "mulCongR"      mulCongR
+   mulH  <- recall "mulHelper"     mulHelper
 
    sInduct "cfoldCorrect"
      (\(Forall @"e" (e :: SE)) (Forall @"env" (env :: E)) -> interpInEnv env (cfold e) .== interpInEnv env e)

@@ -23,12 +23,18 @@
 module Data.SBV.Maybe (
   -- * Constructing optional values
     sJust, sNothing, liftMaybe, SMaybe, sMaybe, sMaybe_, sMaybes
+
   -- * Destructing optionals
   , maybe
+
   -- * Mapping functions
   , map, map2
+
   -- * Scrutinizing the branches of an option
   , isNothing, isJust, fromMaybe, fromJust
+
+  -- * Case analysis (for sCase quasi-quoter)
+  , sCaseMaybe, getJust_1
   ) where
 
 import           Prelude hiding (maybe, map)

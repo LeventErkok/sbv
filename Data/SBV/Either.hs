@@ -28,6 +28,8 @@ module Data.SBV.Either (
     , bimap, first, second
     -- * Scrutinizing branches of a sum
     , isLeft, isRight, fromLeft, fromRight
+    -- * Case analysis (for sCase quasi-quoter)
+    , sCaseEither, getLeft_1, getRight_1
   ) where
 
 import           Prelude hiding (either)

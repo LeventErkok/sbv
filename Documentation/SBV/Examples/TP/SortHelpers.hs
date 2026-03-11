@@ -12,6 +12,7 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -35,10 +36,12 @@ import Documentation.SBV.Examples.TP.Lists
 
 -- | A predicate testing whether a given list is non-decreasing.
 nonDecreasing :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SBool
-nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
-                                                 .|| let (x, l') = uncons l
-                                                         (y, _)  = uncons l'
-                                                     in x .<= y .&& nonDecreasing l'
+nonDecreasing = smtFunction "nonDecreasing"
+              $ \l -> [sCase|List l of
+                         []        -> sTrue
+                         [_]       -> sTrue
+                         x : y : _ -> x .<= y .&& nonDecreasing (tail l)
+                      |]
 
 -- | Are two lists permutations of each other?
 isPermutation :: SymVal a => SList a -> SList a -> SBool

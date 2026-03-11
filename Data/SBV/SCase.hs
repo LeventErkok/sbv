@@ -33,10 +33,15 @@ import Control.Monad (unless, when, zipWithM)
 
 import Data.SBV.Client (getConstructors)
 import Data.SBV.Core.Model (ite, sym)
-import Data.SBV.Core.Data  (sTrue, sNot, (.&&), (.||), (.==), literal)
+import Data.SBV.Core.Data  (sTrue, sNot, (.&&), (.||), (.==), (.===), literal)
+
+import qualified Data.SBV.List  as SL
+import qualified Data.SBV.Tuple as ST
+import qualified Data.SBV.Maybe as SM
+import qualified Data.SBV.Either as SE
 
 import Data.Char  (isSpace, isDigit)
-import Data.List  (intercalate)
+import Data.List  (intercalate, stripPrefix)
 import Data.Maybe (isJust, fromMaybe)
 
 import Prelude hiding (fail)
@@ -49,6 +54,17 @@ import qualified Data.Set as Set
 import Data.Set (Set)
 
 import System.FilePath
+
+-- | Conjoin a list of TH boolean expressions with (.&&), filtering out trivially true guards.
+sAndAll :: [Exp] -> Exp
+sAndAll = go . filter (not . isTriviallyTrue)
+  where go []  = VarE 'sTrue
+        go [g] = g
+        go gs  = foldr1 (\a b -> foldl1 AppE [VarE '(.&&), a, b]) gs
+
+        isTriviallyTrue (VarE nm) = nameBase nm == nameBase 'sTrue
+        isTriviallyTrue (ConE nm) = nameBase nm == "True"
+        isTriviallyTrue _         = False
 
 -- | TH parse trees don't have location. Let's have a simple mechanism to keep track of them for our use case
 data Offset = Unknown | OffBy Int Int Int
@@ -69,6 +85,122 @@ fmtLoc loc@Loc{loc_start = (sl, _)} off = takeFileName (loc_filename newLoc) ++ 
         newLoc = case off of
                    Unknown       -> loc
                    OffBy lo co w -> loc {loc_start = (sl + lo, co + 1), loc_end = (sl + lo, co + w)}
+
+-- | Built-in types recognized by sCase/pCase. Maybe and Either do have mkSymbolic-generated
+-- infrastructure, but we treat them as built-in so that the generated code uses TH-quoted names
+-- (which resolve at SCase.hs compile time) instead of mkName-based references (which would
+-- require the user to have the testers/accessors in scope at the splice site).
+data BuiltinType = BTMaybe | BTEither | BTList | BTTuple Int
+  deriving Show
+
+-- | Compare two Names by their base (unqualified) name. This is needed because
+-- built-in constructor names (created with mkName) won't match the fully-qualified
+-- names that GHC resolves patterns to (e.g., mkName "Nothing" vs GHC.Internal.Maybe.Nothing).
+-- Since constructor names are unique within a type, comparing by nameBase is safe.
+sameBase :: Name -> Name -> Bool
+sameBase a b = nameBase a == nameBase b
+
+-- | Lookup by nameBase instead of Name equality.
+lookupBase :: Name -> [(Name, a)] -> Maybe a
+lookupBase _  []          = Nothing
+lookupBase nm ((k,v):kvs)
+  | sameBase nm k = Just v
+  | otherwise     = lookupBase nm kvs
+
+-- | Recognize built-in type names.
+recognizeBuiltin :: String -> Maybe BuiltinType
+recognizeBuiltin "Maybe"  = Just BTMaybe
+recognizeBuiltin "Either" = Just BTEither
+recognizeBuiltin "List"   = Just BTList
+recognizeBuiltin s
+  | Just n <- stripPrefix "Tuple" s, not (null n), all isDigit n, let k = read n, k >= 2, k <= 8
+  = Just (BTTuple k)
+recognizeBuiltin _ = Nothing
+
+-- | Recognize a constructor name as belonging to a built-in type. Used in flattenPat
+-- to generate TH-quoted tester/accessor references for nested built-in constructors.
+recognizeBuiltinCon :: String -> Maybe BuiltinType
+recognizeBuiltinCon "Nothing" = Just BTMaybe
+recognizeBuiltinCon "Just"    = Just BTMaybe
+recognizeBuiltinCon "Left"    = Just BTEither
+recognizeBuiltinCon "Right"   = Just BTEither
+recognizeBuiltinCon _         = Nothing
+
+-- | Constructor info for a built-in type: (name, arity).
+builtinConstructors :: BuiltinType -> [(Name, Int)]
+builtinConstructors BTMaybe       = [(mkName "Nothing", 0), (mkName "Just", 1)]
+builtinConstructors BTEither      = [(mkName "Left", 1), (mkName "Right", 1)]
+builtinConstructors BTList        = [(mkName "[]", 0), (mkName ":", 2)]
+builtinConstructors (BTTuple n)   = [(tupleDataName n, n)]
+
+-- | Generate a tester expression for a built-in type constructor.
+builtinTester :: BuiltinType -> Name -> Exp -> Exp
+builtinTester BTMaybe nm scrut
+  | nameBase nm == "Nothing" = AppE (VarE 'SM.isNothing) scrut
+  | nameBase nm == "Just"    = AppE (VarE 'SM.isJust)    scrut
+builtinTester BTEither nm scrut
+  | nameBase nm == "Left"  = AppE (VarE 'SE.isLeft)  scrut
+  | nameBase nm == "Right" = AppE (VarE 'SE.isRight) scrut
+builtinTester BTList nm scrut
+  | nameBase nm == "[]" = AppE (VarE 'SL.null) scrut
+  | nameBase nm == ":"  = AppE (VarE 'sNot) (AppE (VarE 'SL.null) scrut)
+builtinTester (BTTuple _) _ _ = VarE 'sTrue
+builtinTester bt nm _ = error $ "sCase: builtinTester: unexpected constructor " ++ nameBase nm ++ " for " ++ show bt
+
+-- | Generate an accessor expression for a built-in type constructor field.
+builtinAccessor :: BuiltinType -> Name -> Int -> Exp -> Exp
+builtinAccessor BTMaybe nm i scrut
+  | nameBase nm == "Just", i == 1 = AppE (VarE 'SM.getJust_1) scrut
+builtinAccessor BTEither nm i scrut
+  | nameBase nm == "Left",  i == 1 = AppE (VarE 'SE.getLeft_1)  scrut
+  | nameBase nm == "Right", i == 1 = AppE (VarE 'SE.getRight_1) scrut
+builtinAccessor BTList nm i scrut
+  | nameBase nm == ":", i == 1 = AppE (VarE 'SL.head) scrut
+  | nameBase nm == ":", i == 2 = AppE (VarE 'SL.tail) scrut
+builtinAccessor (BTTuple _) _ i scrut
+  -- Simplify _i (tuple (a, b, ...)) to just the i-th component
+  | AppE (VarE f) (TupE components) <- scrut
+  , nameBase f == "tuple"
+  , let cs = [e | Just e <- components]
+  , i >= 1, i <= length cs
+  = cs !! (i - 1)
+  | otherwise
+  = AppE (VarE (tupleAccessorName i)) scrut
+  where tupleAccessorName 1 = 'ST._1
+        tupleAccessorName 2 = 'ST._2
+        tupleAccessorName 3 = 'ST._3
+        tupleAccessorName 4 = 'ST._4
+        tupleAccessorName 5 = 'ST._5
+        tupleAccessorName 6 = 'ST._6
+        tupleAccessorName 7 = 'ST._7
+        tupleAccessorName 8 = 'ST._8
+        tupleAccessorName n = error $ "sCase: tupleAccessorName: unsupported index " ++ show n
+builtinAccessor bt nm i _ = error $ "sCase: builtinAccessor: unexpected constructor " ++ nameBase nm ++ " field " ++ show i ++ " for " ++ show bt
+
+-- | Generate a tester expression for a constructor, dispatching to builtinTester for
+-- recognized built-in constructors or falling back to @is\<Con\>@ for user ADTs.
+mkTester :: Name -> Exp -> Exp
+mkTester nm scrut = case recognizeBuiltinCon (nameBase nm) of
+    Just bt -> builtinTester bt nm scrut
+    Nothing -> AppE (VarE (mkName ("is" ++ nameBase nm))) scrut
+
+-- | Generate an accessor expression for a constructor field, dispatching to builtinAccessor for
+-- recognized built-in constructors or falling back to @get\<Con\>_i@ for user ADTs.
+mkAccessor :: Name -> Int -> Exp -> Exp
+mkAccessor nm i scrut = case recognizeBuiltinCon (nameBase nm) of
+    Just bt -> builtinAccessor bt nm i scrut
+    Nothing -> AppE (VarE (mkName ("get" ++ nameBase nm ++ "_" ++ show i))) scrut
+
+-- | Like 'mkTester', but when the built-in type is already known from the scrutinee type.
+-- Used in top-level sCase/pCase code generation where 'mbt' is available.
+mkTesterFor :: Maybe BuiltinType -> Name -> Exp -> Exp
+mkTesterFor (Just bt) nm scrut = builtinTester bt nm scrut
+mkTesterFor Nothing   nm scrut = AppE (VarE (mkName ("is" ++ nameBase nm))) scrut
+
+-- | Like 'mkAccessor', but when the built-in type is already known from the scrutinee type.
+mkAccessorFor :: Maybe BuiltinType -> Name -> Int -> Exp -> Exp
+mkAccessorFor (Just bt) nm i scrut = builtinAccessor bt nm i scrut
+mkAccessorFor Nothing   nm i scrut = AppE (VarE (mkName ("get" ++ nameBase nm ++ "_" ++ show i))) scrut
 
 -- | What kind of case-match are we given. In each case, the last maybe exp is the possible guard.
 data Case = CMatch Offset          -- regular match
@@ -183,7 +315,7 @@ getGuards (GuardedB exps) locals = mapM get exps
         get (PatG stmts, rhs)
           | all isNoBindS stmts
           = let guards = [e | NoBindS e <- stmts]
-                conj   = foldr1 (\a b -> foldl1 AppE [VarE '(.&&), a, b]) guards
+                conj   = sAndAll guards
             in pure (if isSTrue conj then Nothing else Just conj, addLocals locals rhs)
           | True
           = fail Unknown $ unlines $  "sCase/pCase: Pattern guards are not supported: "
@@ -215,39 +347,57 @@ matchToPair scrut off (Match pat grhs locals) = do
   rhss <- getGuards grhs locals
   let allUsed = Set.unions (map (\(mbG, e) -> maybe Set.empty freeVars mbG `Set.union` freeVars e) rhss)
 
+      -- Common logic for constructor-like patterns: flatten sub-patterns, merge synthetic guards
+      flattenAndMerge :: Name -> (Int -> Exp) -> [Pat] -> Q [Case]
+      flattenAndMerge con accessor subpats = do
+          flatResults <- zipWithM (flattenPat off . accessor) [(1::Int)..] subpats
+          let ps      = map fstOf3 flatResults
+              subGrds = concatMap sndOf3 flatResults
+              subDecs = concatMap thdOf3 flatResults
+
+              merge (mbG, rhs) =
+                let usedInRhs  = freeVars rhs
+                    usedInGrd  = maybe Set.empty freeVars mbG
+                    decsFor s  = [ d | d@(ValD (VarP v) _ _) <- subDecs, v `Set.member` s ]
+                    rhs' = addLocals (decsFor usedInRhs) rhs
+                    mbG' = case (subGrds, mbG) of
+                              ([], Nothing) -> Nothing
+                              ([], Just g ) -> Just (addLocals (decsFor usedInGrd) g)
+                              (gs, Nothing) -> Just (sAndAll gs)
+                              (gs, Just g ) -> Just (sAndAll (gs ++ [addLocals (decsFor usedInGrd) g]))
+                in (mbG', rhs')
+
+          pure [CMatch off con (Just ps) mbG rhs allUsed | (mbG, rhs) <- map merge rhss]
+
   case pat of
     ConP conName _ subpats -> do
       con <- getReference off conName
-      -- For each sub-pattern at position i, flatten it against the accessor expression
-      let accessor i = AppE (VarE (mkName ("get" ++ nameBase con ++ "_" ++ show i))) scrut
-      flatResults <- zipWithM (flattenPat off . accessor) [(1::Int)..] subpats
-      let ps      = map fstOf3 flatResults
-          subGrds = concatMap sndOf3 flatResults
-          subDecs = concatMap thdOf3 flatResults
-
-          andAll [g]    = g
-          andAll (g:gs) = foldl1 AppE [VarE '(.&&), g, andAll gs]
-          andAll []     = VarE 'sTrue
-
-          -- Merge synthetic nested-pattern guards and bindings into each (guard, rhs) pair
-          merge (mbG, rhs) =
-            let usedInRhs  = freeVars rhs
-                usedInGrd  = maybe Set.empty freeVars mbG
-                decsFor s  = [ d | d@(ValD (VarP v) _ _) <- subDecs, v `Set.member` s ]
-                rhs' = addLocals (decsFor usedInRhs) rhs
-                mbG' = case (subGrds, mbG) of
-                          ([], Nothing) -> Nothing
-                          ([], Just g ) -> Just (addLocals (decsFor usedInGrd) g)
-                          (gs, Nothing) -> Just (andAll gs)
-                          (gs, Just g ) -> Just (foldl1 AppE [VarE '(.&&), andAll gs, addLocals (decsFor usedInGrd) g])
-            in (mbG', rhs')
-
-      pure [CMatch off con (Just ps) mbG rhs allUsed | (mbG, rhs) <- map merge rhss]
+      flattenAndMerge con (\i -> mkAccessor con i scrut) subpats
 
     RecP conName []        -> do con <- getReference off conName
                                  pure [CMatch off con Nothing   mbG rhs allUsed | (mbG, rhs) <- rhss]
 
     WildP                  ->    pure [CWild  off               mbG rhs         | (mbG, rhs) <- rhss]
+
+    -- List cons pattern: y : ys  (InfixP or UInfixP from the parser)
+    InfixP p1 conName p2
+      | nameBase conName == ":" -> let con = mkName ":" in flattenAndMerge con (\i -> mkAccessorFor (Just BTList) con i scrut) [p1, p2]
+    UInfixP p1 conName p2
+      | nameBase conName == ":" -> let con = mkName ":" in flattenAndMerge con (\i -> mkAccessorFor (Just BTList) con i scrut) [p1, p2]
+
+    -- Tuple pattern: (a, b, ...)
+    TupP subpats -> do
+          let n   = length subpats
+              con = tupleDataName n
+          flattenAndMerge con (\i -> mkAccessorFor (Just (BTTuple n)) con i scrut) subpats
+
+    -- List nil pattern: []
+    ListP [] ->        pure [CMatch off (mkName "[]") (Just []) mbG rhs allUsed | (mbG, rhs) <- rhss]
+
+    -- List pattern with elements: [a], [a, b], etc. Desugar to nested cons: a : (b : [])
+    ListP ps -> let desugar []     = ListP []
+                    desugar (p:rest) = InfixP p (mkName ":") (desugar rest)
+                in matchToPair scrut off (Match (desugar ps) grhs locals)
 
     _ -> fail Unknown $ unlines [ "sCase/pCase: Unsupported pattern:"
                                 , "            Saw: " <> pprint pat
@@ -270,7 +420,7 @@ flattenPat off arg (ParensP p)              = flattenPat off arg p
 flattenPat off arg (ConP conName _ subpats) = do
   con   <- getReference off conName
   -- Arity check: reify the constructor to find its actual field count
-  DataConI _ conType _ <- reify con
+  DataConI _ conType parentName <- reify con
   let arity = countArgs conType
   unless (arity == length subpats) $
     fail off $ unlines [ "sCase/pCase: Arity mismatch in nested pattern."
@@ -278,23 +428,77 @@ flattenPat off arg (ConP conName _ subpats) = do
                        , "        Expected   : " ++ show arity
                        , "        Given      : " ++ show (length subpats)
                        ]
-  let tester      = AppE (VarE (mkName ("is" ++ nameBase con))) arg
-      accessor i  = AppE (VarE (mkName ("get" ++ nameBase con ++ "_" ++ show i))) arg
+  -- Check if the parent type has only one constructor; if so, the tester is trivially true
+  singleCon <- isSingleConstructorType parentName
+  let tester      = mkTester con arg
+      accessor i  = mkAccessor con i arg
   subResults <- zipWithM (flattenPat off . accessor) [(1::Int)..] subpats
   let subGrds = concatMap sndOf3 subResults
       subDecs = concatMap thdOf3 subResults
       subPats = map fstOf3 subResults
       patDecs = [ ValD (VarP v) (NormalB (accessor i)) []
                 | (i, VarP v) <- zip [(1::Int)..] subPats ]
-  pure (WildP, tester : subGrds, patDecs ++ subDecs)
+      -- Skip the tester guard for single-constructor types (it's always true)
+      guards  = (if singleCon then id else (tester :)) (subGrds)
+  pure (WildP, guards, patDecs ++ subDecs)
 flattenPat off arg (LitP lit) = do
   eq <- litToEq off arg lit
   pure (WildP, [eq], [])
+-- Nested list cons pattern: x : xs (InfixP or UInfixP from the parser)
+flattenPat off arg (InfixP p1 conName p2)
+  | nameBase conName == ":" = flattenCons off arg p1 p2
+flattenPat off arg (UInfixP p1 conName p2)
+  | nameBase conName == ":" = flattenCons off arg p1 p2
+-- Nested empty list pattern: []
+flattenPat _   arg (ListP []) =
+  pure (WildP, [AppE (VarE 'SL.null) arg], [])
+-- Nested list pattern with elements: [a], [a, b], etc. Desugar to nested cons.
+flattenPat off arg (ListP (p:ps)) =
+  flattenPat off arg (InfixP p (mkName ":") (ListP ps))
+-- Nested tuple pattern: (a, b, ...)
+flattenPat off arg (TupP pats) = do
+  let n = length pats
+      accessor i = mkAccessorFor (Just (BTTuple n)) (tupleDataName n) i arg
+  subResults <- zipWithM (flattenPat off . accessor) [(1::Int)..] pats
+  let subGrds = concatMap sndOf3 subResults
+      subDecs = concatMap thdOf3 subResults
+      patDecs = [ ValD (VarP v) (NormalB (accessor i)) []
+                | (i, VarP v) <- zip [(1::Int)..] (map fstOf3 subResults) ]
+  pure (WildP, subGrds, patDecs ++ subDecs)
 flattenPat o _ p = fail o $ unlines [ "sCase/pCase: Unsupported complex pattern match."
                                     , "        Saw: " <> pprint p
                                     , ""
                                     , "      Only variables, wildcards, nested constructors, and integer/string literals are supported."
                                     ]
+
+-- | Flatten a nested list cons pattern (x : xs) against an accessor expression.
+-- We include a destructuring equality (arg .=== head arg .: tail arg) because lists use
+-- SMT Seq, not declare-datatypes, so the solver doesn't automatically know this relationship.
+-- This is critical for pCase proof progress; harmless for sCase (redundant guard in ite-chain).
+-- NB. For top-level list cons patterns in pCase, the same equality is added by 'processCases'.
+flattenCons :: Offset -> Exp -> Pat -> Pat -> Q (Pat, [Exp], [Dec])
+flattenCons off arg p1 p2 = do
+    let headExpr = mkAccessorFor (Just BTList) (mkName ":") 1 arg
+        tailExpr = mkAccessorFor (Just BTList) (mkName ":") 2 arg
+        tester   = mkTesterFor (Just BTList) (mkName ":") arg
+        destruct = foldl1 AppE [VarE '(.===), arg, InfixE (Just headExpr) (VarE '(SL..:)) (Just tailExpr)]
+    sub1 <- flattenPat off headExpr p1
+    sub2 <- flattenPat off tailExpr p2
+    let subGrds = sndOf3 sub1 ++ sndOf3 sub2
+        subDecs = thdOf3 sub1 ++ thdOf3 sub2
+        patDecs = [ ValD (VarP v) (NormalB headExpr) [] | VarP v <- [fstOf3 sub1] ]
+               ++ [ ValD (VarP v) (NormalB tailExpr) [] | VarP v <- [fstOf3 sub2] ]
+    pure (WildP, tester : destruct : subGrds, patDecs ++ subDecs)
+
+-- | Check if a type has only one constructor. Used to skip trivially-true tester guards
+-- in nested patterns (e.g., @Just (Pocket n3 n5)@ where @Pocket@ is the sole constructor).
+isSingleConstructorType :: Name -> Q Bool
+isSingleConstructorType tyName = do
+  info <- reify tyName
+  pure $ case info of
+    TyConI (DataD    _ _ _ _ [_] _) -> True
+    TyConI (NewtypeD {})            -> True
+    _                               -> False
 
 fstOf3 :: (a, b, c) -> a
 fstOf3 (a, _, _) = a
@@ -304,6 +508,49 @@ sndOf3 (_, b, _) = b
 
 thdOf3 :: (a, b, c) -> c
 thdOf3 (_, _, c) = c
+
+-- | Get the constructor list for a type. For built-in types, return synthetic entries;
+-- for user ADTs, reify via getConstructors.
+getCstrs :: Maybe BuiltinType -> String -> Q [(Name, [Type])]
+getCstrs (Just bt) _   = pure [(nm, replicate ar WildCardT) | (nm, ar) <- builtinConstructors bt]
+getCstrs Nothing   typ = let dropFieldNames (c, nts) = (c, map snd nts)
+                          in map dropFieldNames . snd <$> getConstructors (mkName typ)
+
+-- | Validate wildcard placement: unguarded wildcard must be last.
+checkWildcard :: String -> Loc -> [Case] -> Q ()
+checkWildcard label loc = go
+  where go []                         = pure ()
+        go (CMatch{}          : rest) = go rest
+        go (CWild _ Just{}  _ : rest) = go rest
+        go (CWild o Nothing _ : rest) =
+              case rest of
+                []  -> pure ()
+                red -> fail o $ unlines $ (label ++ ": Wildcard makes the remaining matches redundant:")
+                                         : ["        " ++ showCaseGen (Just loc) r | r <- red]
+
+-- | Validate that each constructor exists and has the right arity.
+checkArities :: String -> String -> [(Name, [Type])] -> [Case] -> Q ()
+checkArities label typ cstrs = mapM_ chk1
+  where chk1 c = case c of
+                    CMatch o nm ps _ _ _ -> isSafe o nm (length <$> ps)
+                    CWild  {}            -> pure ()
+        isSafe o nm mbLen
+          | Just ts <- lookupBase nm cstrs
+          = case mbLen of
+               Nothing  -> pure ()
+               Just cnt -> unless (length ts == cnt)
+                                $ fail o $ unlines [ label ++ ": Arity mismatch."
+                                                   , "        Type       : " ++ typ
+                                                   , "        Constructor: " ++ nameBase nm
+                                                   , "        Expected   : " ++ show (length ts)
+                                                   , "        Given      : " ++ show cnt
+                                                   ]
+          | True
+          = fail o $ unlines [ label ++ ": Unknown constructor:"
+                             , "        Type          : " ++ typ
+                             , "        Saw           : " ++ pprint nm
+                             , "        Must be one of: " ++ intercalate ", " (map (pprint . fst) cstrs)
+                             ]
 
 -- * sCase
 
@@ -332,82 +579,55 @@ sCase = QuasiQuoter
           let fnTok    = "sCase" <> typ
               fullCase = "case " <> scrutStr <> " of " <> altsStr
               offsets  = findOffsets src
+              mbt      = recognizeBuiltin typ
           case metaParse fullCase of
             Right (CaseE scrut matches) -> do
-              fnName <- lookupValueName fnTok >>= \case
-                Just n  -> pure (VarE n)
-                Nothing -> fail Unknown $ unlines [ "sCase: Unknown symbolic ADT: " <> typ
-                                                  , ""
-                                                  , "        To use a symbolic case expression, declare your ADT, and then:"
-                                                  , "             mkSymbolic [''" <> typ <> "]"
-                                                  , "        In a template-haskell context."
-                                                  ]
-              cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ . concat
-              buildCase typ fnName scrut cases
+              mbFnName <- case mbt of
+                Just BTList      -> pure (Just (VarE 'SL.list))
+                Just BTMaybe     -> pure (Just (VarE 'SM.sCaseMaybe))
+                Just BTEither    -> pure (Just (VarE 'SE.sCaseEither))
+                Just (BTTuple _) -> pure Nothing
+                Nothing -> lookupValueName fnTok >>= \case
+                  Just n  -> pure (Just (VarE n))
+                  Nothing -> fail Unknown $ unlines [ "sCase: Unknown symbolic ADT: " <> typ
+                                                    , ""
+                                                    , "        To use a symbolic case expression, declare your ADT, and then:"
+                                                    , "             mkSymbolic [''" <> typ <> "]"
+                                                    , "        In a template-haskell context."
+                                                    ]
+              cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ mbt . concat
+              buildCase typ mbFnName scrut cases
             Right _  -> fail Unknown "sCase: Parse error, cannot extract a case-expression."
             Left err -> case lines err of
                           (_:loc:res) | ["SrcLoc", _, l, c] <- words loc, all isDigit l, all isDigit c
                              -> fail (OffBy (read l - 1) (read c - 1) 1) (unlines res)
                           _  -> fail Unknown $ "sCase parse error: " <> err
 
-    buildCase _    caseFunc  scrut (Left  cases) = pure $ foldl AppE (caseFunc `AppE` scrut) cases
-    buildCase typ _caseFunc _scrut (Right cases) = do
+    buildCase _    (Just caseFunc) scrut (Left  cases) = pure $ AppE (foldl AppE caseFunc cases) scrut
+    buildCase _    Nothing         _     (Left  _)     = error "sCase: impossible: Strategy A without case function"
+    buildCase typ  _               _scrut (Right cases) = do
         uniq <- newName "u"
         let suffix = drop 2 (show uniq)
-            iteChain []              = pure $ AppE (VarE 'sym) (LitE (StringL ("unmatched_sCase_" ++ typ ++ "_" ++ suffix)))
+            fallback  = AppE (VarE 'sym) (LitE (StringL ("unmatched_sCase_" ++ typ ++ "_" ++ suffix)))
+            -- NB. Do NOT optimize the single-element case [(_, e)] to skip the guard.
+            -- The ite-chain may not cover all constructors (e.g., guarded matches with
+            -- a wildcard fallback), so the unmatched fallback must remain reachable.
+            iteChain []              = pure fallback
             iteChain ((t, e) : rest) = do r <- iteChain rest
                                           pure $ foldl AppE (VarE 'ite) [t, e, r]
         iteChain cases
 
     -- Make sure things are in good-shape and decide if we have guards
-    checkCase :: Exp -> String -> [Case] -> Q (Either [Exp] [(Exp, Exp)])
-    checkCase scrut typ cases = do
+    checkCase :: Exp -> String -> Maybe BuiltinType -> [Case] -> Q (Either [Exp] [(Exp, Exp)])
+    checkCase scrut typ mbt cases = do
         loc   <- location
-
-        cstrs <- -- We don't need the field names if user supplied them; so drop them here
-                 let dropFieldNames (c, nts) = (c, map snd nts)
-                 in map dropFieldNames . snd <$> getConstructors (mkName typ)
+        cstrs <- getCstrs mbt typ
 
         -- Is there a catch all clause?
         let hasCatchAll = or [True | CWild _ Nothing _ <- cases]
 
-        -- Step 0: If there's an unguarded wild-card, make sure nothing else follows it.
-        -- Note that this also handles wild-card being present twice.
-        let checkWild []                         = pure ()
-            checkWild (CMatch{}          : rest) = checkWild rest
-            checkWild (CWild _ Just{}  _ : rest) = checkWild rest
-            checkWild (CWild o Nothing _ : rest) =
-                  case rest of
-                    []  -> pure ()
-                    red  -> fail o $ unlines $ "sCase: Wildcard makes the remaining matches redundant:"
-                                             : ["        " ++ showCaseGen (Just loc) r | r <- red]
-        checkWild cases
-
-        -- Step 2: Make sure every constructor listed actually exists and matches in arity.
-        let chk1 :: Case -> Q ()
-            chk1 c = case c of
-                       CMatch o nm ps _ _ _ -> isSafe o nm (length <$> ps)
-                       CWild  {}            -> pure ()
-              where isSafe :: Offset -> Name -> Maybe Int -> Q ()
-                    isSafe o nm mbLen
-                      | Just ts <- nm `lookup` cstrs
-                      = case mbLen of
-                           Nothing  -> pure ()
-                           Just cnt -> unless (length ts == cnt)
-                                            $ fail o $ unlines [ "sCase: Arity mismatch."
-                                                               , "        Type       : " ++ typ
-                                                               , "        Constructor: " ++ nameBase nm
-                                                               , "        Expected   : " ++ show (length ts)
-                                                               , "        Given      : " ++ show cnt
-                                                               ]
-                      | True
-                      = fail o $ unlines [ "sCase: Unknown constructor:"
-                                         , "        Type          : " ++ typ
-                                         , "        Saw           : " ++ pprint nm
-                                         , "        Must be one of: " ++ intercalate ", " (map (pprint . fst) cstrs)
-                                         ]
-
-        mapM_ chk1 cases
+        checkWildcard "sCase" loc cases
+        checkArities  "sCase" typ cstrs cases
 
         -- Step 2: Make sure constructor matches are not overlapping
         let problem w extras x = fail (caseOffset x) $ unlines $ [ "sCase: " ++ w ++ ":"
@@ -431,41 +651,45 @@ sCase = QuasiQuoter
                                                     , "      You can use a '_' to match multiple cases."
                                                     ]
             -- We're done
-            chk2 [] = pure ()
+            chk2 _ [] = pure ()
 
             -- If we have a non-guarded match, then there must be no matches for this constructor later on. If so, they're redundant.
-            chk2 (c@(CMatch _ nm _ Nothing _ _) : rest)
-              = case filter (\oc -> getCaseConstructor oc == Just nm) rest of
-                  [] -> chk2 rest
+            chk2 seen (c@(CMatch _ nm _ Nothing _ _) : rest)
+              = case filter (\oc -> maybe False (sameBase nm) (getCaseConstructor oc)) rest of
+                  [] -> chk2 (Set.insert (nameBase nm) seen) rest
                   os -> overlap (last os) (c : init os)
 
             -- If we have a guarded match, then this guard can fail. So either there must be a match
-            -- for it later on, or there must be a catch-all. Note that if it exists later, we don't
-            -- care if that occurrence is guarded or not; because if it is guarded, we'll fail on the last one.
-            chk2 (c@(CMatch _ nm _ Just{} _ _) : rest)
-              | hasCatchAll || Just nm `elem` map getCaseConstructor rest
-              = chk2 rest
+            -- for it later on, or there must be a catch-all. We also accept it if the same constructor
+            -- was seen earlier (e.g., multiple nested-pattern alternatives like Left (x:_) / Left []).
+            chk2 seen (c@(CMatch _ nm _ Just{} _ _) : rest)
+              | hasCatchAll || any (\oc -> maybe False (sameBase nm) (getCaseConstructor oc)) rest || nameBase nm `Set.member` seen
+              = chk2 (Set.insert (nameBase nm) seen) rest
               | True
               = unmatched c
 
             -- If there's a guarded wildcard, must make sure there's a catch all afterwards
-            chk2 (c@(CWild _ Just{} _) : rest)
+            chk2 seen (c@(CWild _ Just{} _) : rest)
               | hasCatchAll
-              = chk2 rest
+              = chk2 seen rest
               | True
               = unmatched c
 
             -- No need to worry about anything following catch-all, since we already covered that before
-            chk2 (CWild _ Nothing _ : rest) = chk2 rest
+            chk2 seen (CWild _ Nothing _ : rest) = chk2 seen rest
 
-        chk2 cases
+        chk2 Set.empty cases
 
         -- At this point, we either have a simple case with no guards, in which case
         -- we translate this to an sCase for that type. So find all alternatives.
-        -- Otherwise, this will become an ite-chain
-        let hasGuards = any isGuarded cases
+        -- Otherwise, this will become an ite-chain.
+        -- Tuples don't have a case analyzer function, so we always use the ite-chain path for them.
+        -- Other built-in types (Maybe, Either, List) now have case analyzers and can use Strategy A.
+        let hasGuards    = any isGuarded cases
+            isTuple      = case mbt of { Just (BTTuple _) -> True; _ -> False }
+            useIteChain  = hasGuards || isTuple
 
-        if not hasGuards
+        if not useIteChain
            then do defaultCase <- case [((e, mbg), c) | c@(CWild _ mbg e) <- cases] of
                                     []                  -> pure Nothing
                                     [((e, Nothing), c)] -> pure $ Just (caseOffset c, e)
@@ -480,7 +704,7 @@ sCase = QuasiQuoter
                          | matches = Just c
                          | True    = find w cs
                          where matches = case c of
-                                           CMatch _ nm _ _ _ _ -> nm == w
+                                           CMatch _ nm _ _ _ _ -> sameBase nm w
                                            CWild  {}           -> False
 
                        case2rhs :: Case -> [Type] -> (Maybe Exp, Exp)
@@ -524,7 +748,7 @@ sCase = QuasiQuoter
                    -- Collect, for each constructor, the corresponding cases:
                    let cstrMatches :: [(Name, ([Type], [Case]))]
                        cstrMatches = map (\(cstr, ts) -> (cstr, (ts, concatMap (matches cstr) cases))) cstrs
-                         where matches cstr c | Just n <- getCaseConstructor c, n == cstr = [c]
+                         where matches cstr c | Just n <- getCaseConstructor c, sameBase n cstr = [c]
                                               | True                                      = []
 
                    -- Make sure we have a match for every constructor or a catch-all
@@ -544,14 +768,13 @@ sCase = QuasiQuoter
                    let collect :: Case -> Q (Exp, Exp)
                        collect (CWild  _        mbG rhs        ) = pure (fromMaybe (VarE 'sTrue) mbG, rhs)
                        collect (CMatch o nm mbp mbG rhs allUsed) = do
-                           case nm `lookup` cstrs of
+                           case lookupBase nm cstrs of
                              Nothing -> fail o $ unlines [ "sCase: Impossible happened."
                                                          , "        Unable to determine params for: " <> pprint nm
                                                          ]
                              Just ts -> do let pats = fromMaybe (map (const WildP) ts) mbp
-                                               args = [ AppE (VarE (mkName ("get" ++ nameBase nm ++ "_" ++ show i))) scrut
-                                                      | (i, _) <- zip [(1 :: Int) ..] ts]
-                                               rec  = VarE $ mkName $ "is" ++ nameBase nm
+                                               args = [mkAccessorFor mbt nm i scrut | (i, _) <- zip [(1 :: Int) ..] ts]
+                                               testerExpr = mkTesterFor mbt nm scrut
 
                                                -- What are the free variables in the guard and the rhs that we bind?
                                                used    = Set.fromList [n | VarP n <- pats] `Set.intersection` allUsed
@@ -563,8 +786,8 @@ sCase = QuasiQuoter
 
                                                grd :: Exp
                                                grd = case mbG of
-                                                       Nothing -> AppE rec scrut
-                                                       Just g  -> foldl1 AppE [VarE '(.&&), AppE rec scrut, mkApp (close g)]
+                                                       Nothing -> testerExpr
+                                                       Just g  -> sAndAll [testerExpr, mkApp (close g)]
 
                                            pure (grd, mkApp (close rhs))
 
@@ -605,11 +828,12 @@ pCase = QuasiQuoter
         Just ((typ, scrutStr), altsStr) -> do
           let fullCase = "case " <> scrutStr <> " of " <> altsStr
               offsets  = findOffsets src
+              mbt      = recognizeBuiltin typ
           case metaParse fullCase of
             Right (CaseE scrut matches) -> do
               cs <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
-              validated <- checkProofCase typ (concat cs)
-              buildProofCase scrut typ validated
+              validated <- checkProofCase typ mbt (concat cs)
+              buildProofCase scrut typ mbt validated
             Right _  -> fail Unknown "pCase: Parse error, cannot extract a case-expression."
             Left err -> case lines err of
                           (_:loc:res) | ["SrcLoc", _, l, c] <- words loc, all isDigit l, all isDigit c
@@ -617,23 +841,13 @@ pCase = QuasiQuoter
                           _  -> fail Unknown $ "pCase parse error: " <> err
 
     -- | Validate cases for proof context
-    checkProofCase :: String -> [Case] -> Q [Case]
-    checkProofCase typ cases = do
+    checkProofCase :: String -> Maybe BuiltinType -> [Case] -> Q [Case]
+    checkProofCase typ mbt cases = do
         loc <- location
+        cstrs <- getCstrs mbt typ
 
-        cstrs <- let dropFieldNames (c, nts) = (c, map snd nts)
-                 in map dropFieldNames . snd <$> getConstructors (mkName typ)
-
-        -- Validate wildcard placement: unguarded wildcard must be last, nothing after it
-        let checkWild []                         = pure ()
-            checkWild (CMatch{}          : rest) = checkWild rest
-            checkWild (CWild _ Just{}  _ : rest) = checkWild rest
-            checkWild (CWild o Nothing _ : rest) =
-                  case rest of
-                    []  -> pure ()
-                    red -> fail o $ unlines $ "pCase: Wildcard makes the remaining matches redundant:"
-                                            : ["        " ++ showCaseGen (Just loc) r | r <- red]
-        checkWild cases
+        checkWildcard "pCase" loc cases
+        checkArities  "pCase" typ cstrs cases
 
         -- Wildcards must come after all explicit constructor matches
         let checkWildBeforeCstr [] = pure ()
@@ -644,35 +858,10 @@ pCase = QuasiQuoter
             checkWildBeforeCstr (_ : rest) = checkWildBeforeCstr rest
         checkWildBeforeCstr cases
 
-        -- Check arity and constructor validity
-        let chk1 :: Case -> Q ()
-            chk1 c = case c of
-                       CMatch o nm ps _ _ _ -> isSafe o nm (length <$> ps)
-                       CWild  {}            -> pure ()
-              where isSafe o nm mbLen
-                      | Just ts <- nm `lookup` cstrs
-                      = case mbLen of
-                           Nothing  -> pure ()
-                           Just cnt -> unless (length ts == cnt)
-                                            $ fail o $ unlines [ "pCase: Arity mismatch."
-                                                               , "        Type       : " ++ typ
-                                                               , "        Constructor: " ++ nameBase nm
-                                                               , "        Expected   : " ++ show (length ts)
-                                                               , "        Given      : " ++ show cnt
-                                                               ]
-                      | True
-                      = fail o $ unlines [ "pCase: Unknown constructor:"
-                                         , "        Type          : " ++ typ
-                                         , "        Saw           : " ++ pprint nm
-                                         , "        Must be one of: " ++ intercalate ", " (map (pprint . fst) cstrs)
-                                         ]
-
-        mapM_ chk1 cases
-
         -- Check overlap: unguarded constructor match followed by same constructor
         let chk2 [] = pure ()
             chk2 (c@(CMatch _ nm _ Nothing _ _) : rest)
-              = case filter (\oc -> getCaseConstructor oc == Just nm) rest of
+              = case filter (\oc -> maybe False (sameBase nm) (getCaseConstructor oc)) rest of
                   [] -> chk2 rest
                   os -> overlap loc (last os) (c : init os)
             chk2 (_ : rest) = chk2 rest
@@ -681,7 +870,7 @@ pCase = QuasiQuoter
 
         -- If every constructor has an unguarded match, any wildcard is redundant
         let fullyCovered = [ cstr | (cstr, _) <- cstrs
-                                  , any (\c -> getCaseConstructor c == Just cstr && not (isGuarded c)) cases
+                                  , any (\c -> maybe False (sameBase cstr) (getCaseConstructor c) && not (isGuarded c)) cases
                                   ]
         case [c | c@CWild{} <- cases] of
           []    -> pure ()
@@ -700,17 +889,16 @@ pCase = QuasiQuoter
                                                      ++ [ "        " ++ showCaseGen (Just loc) p | p <- xs]
 
     -- | Build the proof case expression
-    buildProofCase :: Exp -> String -> [Case] -> ExpQ
-    buildProofCase scrut typ cases = do
-        cstrs <- let dropFieldNames (c, nts) = (c, map snd nts)
-                 in map dropFieldNames . snd <$> getConstructors (mkName typ)
+    buildProofCase :: Exp -> String -> Maybe BuiltinType -> [Case] -> ExpQ
+    buildProofCase scrut typ mbt cases = do
+        cstrs <- getCstrs mbt typ
         -- Collect guard variables for each constructor across all arms
         -- (needed to suppress false "unused binding" warnings for guard-only variables)
         let allGrdVars :: Map Name (Set Name)
             allGrdVars = Map.fromListWith Set.union
                            [ (nm, maybe Set.empty freeVars mbG)
                            | CMatch _ nm _ mbG _ _ <- cases ]
-        allPairs <- processCases scrut cstrs allGrdVars [] cases
+        allPairs <- processCases scrut cstrs mbt allGrdVars [] cases
         let casesName   = mkName "cases"
             impliesName = mkName "==>"
             mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
@@ -722,35 +910,50 @@ pCase = QuasiQuoter
     --   fullGuard    = the complete guard expression (used for wildcard De Morgan negation)
     --   userGuardOnly = Just the user guard part (used for same-constructor negation)
     --                   Nothing if unguarded (same-constructor arms don't negate unguarded matches)
-    processCases :: Exp -> [(Name, [Type])] -> Map Name (Set Name) -> [(Maybe Name, Exp, Maybe Exp)] -> [Case] -> Q [(Exp, Exp)]
-    processCases _     _     _          _           []         = pure []
-    processCases scrut cstrs allGrdVars priorGuards (c:rest) = case c of
+    processCases :: Exp -> [(Name, [Type])] -> Maybe BuiltinType -> Map Name (Set Name) -> [(Maybe Name, Exp, Maybe Exp)] -> [Case] -> Q [(Exp, Exp)]
+    processCases _     _     _   _          _           []         = pure []
+    processCases scrut cstrs mbt allGrdVars priorGuards (c:rest) = case c of
       CWild _ mbG rhs -> do
         -- Wildcard: negate the disjunction of ALL prior full guards (De Morgan)
         let allGuards  = [g | (_, g, _) <- priorGuards]
             baseGuard  = negateAll allGuards
             finalGuard = case mbG of
                            Nothing -> baseGuard
-                           Just g  -> foldl1 AppE [VarE '(.&&), baseGuard, g]
-        rest' <- processCases scrut cstrs allGrdVars (priorGuards ++ [(Nothing, finalGuard, Nothing)]) rest
+                           Just g  -> sAndAll [baseGuard, g]
+        rest' <- processCases scrut cstrs mbt allGrdVars (priorGuards ++ [(Nothing, finalGuard, Nothing)]) rest
         pure $ (finalGuard, rhs) : rest'
 
       CMatch _o nm mbp mbG rhs _allUsed -> do
-        let ts   = case lookup nm cstrs of
+        let ts   = case lookupBase nm cstrs of
                      Just t  -> t
                      Nothing -> error $ "pCase: impossible: unknown constructor " ++ nameBase nm
             pats = fromMaybe (map (const WildP) ts) mbp
 
             -- Build let-bindings for pattern variables
-            args    = [ (i, AppE (VarE (mkName ("get" ++ nameBase nm ++ "_" ++ show i))) scrut)
-                      | (i, _) <- zip [(1 :: Int) ..] ts ]
+            args    = [(i, mkAccessorFor mbt nm i scrut) | (i, _) <- zip [(1 :: Int) ..] ts]
             bindings = [ ValD (VarP v) (NormalB acc) []
                        | (i, acc) <- args, VarP v <- [pats !! (i - 1)] ]
 
-            testerGuard = AppE (VarE (mkName ("is" ++ nameBase nm))) scrut
+            testerGuard = mkTesterFor mbt nm scrut
+
+            -- For list cons patterns in pCase, add a destructuring equality:
+            --   scrut .=== head scrut .: tail scrut
+            -- Lists use SMT Seq (not declare-datatypes), so the solver doesn't automatically
+            -- know that xs = head xs .: tail xs from sNot (null xs). We must add an explicit
+            -- equality to give the solver this information, mirroring what 'split' does.
+            -- All other types (ADTs, Maybe, Either, Tuple) use declare-datatypes and get
+            -- these axioms for free.
+            -- NB. For nested list cons patterns, the same equality is added by 'flattenCons'.
+            destructEq
+              | Just BTList <- mbt, nameBase nm == ":"
+              = let hd = AppE (VarE 'SL.head) scrut
+                    tl = AppE (VarE 'SL.tail) scrut
+                in [foldl1 AppE [VarE '(.===), scrut, InfixE (Just hd) (VarE '(SL..:)) (Just tl)]]
+              | otherwise
+              = []
 
             -- Only negate prior USER guards for the SAME constructor (others are mutually exclusive)
-            sameUserGuards = [ ug | (Just cn, _, Just ug) <- priorGuards, cn == nm ]
+            sameUserGuards = [ ug | (Just cn, _, Just ug) <- priorGuards, sameBase cn nm ]
             negPriors      = map (AppE (VarE 'sNot)) sameUserGuards
 
             -- Build the final guard (wrap user guard in bindings so pattern vars are in scope)
@@ -758,11 +961,8 @@ pCase = QuasiQuoter
             grdBindings = filter (\case
                                      ValD (VarP v) _ _ -> v `Set.member` grdVars
                                      _                 -> True) bindings
-            guardParts  = [testerGuard] ++ negPriors ++ maybe [] (pure . addLocals grdBindings) mbG
-            finalGuard  = case guardParts of
-                            []  -> VarE 'sTrue
-                            [g] -> g
-                            gs  -> foldl1 (\a b -> foldl1 AppE [VarE '(.&&), a, b]) gs
+            guardParts  = [testerGuard] ++ destructEq ++ negPriors ++ maybe [] (pure . addLocals grdBindings) mbG
+            finalGuard  = sAndAll guardParts
 
             -- Wrap RHS with let-bindings; include all bindings except those
             -- used in any guard of the same constructor but not in this RHS
@@ -779,7 +979,7 @@ pCase = QuasiQuoter
                               Nothing -> Nothing
             priorGuards' = priorGuards ++ [(Just nm, finalGuard, userGuardOnly)]
 
-        rest' <- processCases scrut cstrs allGrdVars priorGuards' rest
+        rest' <- processCases scrut cstrs mbt allGrdVars priorGuards' rest
         pure $ (finalGuard, rhs') : rest'
 
     -- | Negate the disjunction of all given guards using De Morgan: sNot (g1 .|| g2 .|| ...)

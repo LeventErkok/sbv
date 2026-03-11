@@ -7,6 +7,39 @@
     between the pure array theory (`select`/`store`/`const`) and the richer setting where
     arrays are identified with function spaces.
 
+  * The `sCase` and `pCase` quasi-quoters now support built-in types: `Maybe`, `Either`,
+    `List`, and `Tuple2` through `Tuple8`. Previously, these quoters only worked with
+    user-defined ADTs declared via `mkSymbolicADT`. Usage:
+
+    ```haskell
+    [sCase|Maybe m of
+       Nothing -> 0
+       Just x  -> x + 1
+    |]
+
+    [sCase|List xs of
+       []      -> 0
+       x : xs' -> x + f xs'
+    |]
+
+    [sCase|Tuple2 p of
+       (a, b) -> a + b
+    |]
+
+    [sCase|Either e of
+       Left x  -> x
+       Right _ -> 0
+    |]
+    ```
+
+    Nested patterns across built-in types are also supported (e.g., `Just (x:_)`,
+    `Left (a, b)`). The `pCase` quasi-quoter supports the same types for proof case-splits.
+    For single-constructor types (newtypes or data types with exactly one constructor),
+    the generated code omits the redundant constructor tester guard.
+
+  * Proof examples in `Documentation.SBV.Examples.TP` updated to use `pCase` for
+    list and tuple case-splits, replacing explicit uses of `split` and `split2`.
+
 ### Version 13.6, 2026-03-02
 
   * The `sCase` quasi-quoter now supports nested constructor patterns. Sub-patterns

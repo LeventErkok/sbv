@@ -25,7 +25,6 @@ module Documentation.SBV.Examples.TP.Coins where
 
 import Data.SBV
 import Data.SBV.Maybe hiding (maybe)
-import qualified Data.SBV.Maybe as SM
 import Data.SBV.TP
 
 #ifdef DOCTEST
@@ -60,15 +59,17 @@ mkChange = smtFunction "mkChange" $ \n ->
   $ ite (n .==  9) (sJust (sPocket 3 0))
   $ ite (n .== 10) (sJust (sPocket 0 2))
     -- n > 10: use change for (n-3) and add a 3-cent coin
-    [sCase|Pocket fromJust (mkChange (n - 3)) of
-       Pocket n3 n5 -> sJust (sPocket (n3 + 1) n5)
+    [sCase|Maybe mkChange (n - 3) of
+       Nothing             -> sNothing
+       Just (Pocket n3 n5) -> sJust (sPocket (n3 + 1) n5)
     |]
 
 -- | Evaluate the value of a pocket (total cents).
 evalPocket :: SMaybe Pocket -> SInteger
-evalPocket = SM.maybe 0 $ \p -> [sCase|Pocket p of
-                                  Pocket n3 n5 -> 3 * n3 + 5 * n5
-                                |]
+evalPocket mp = [sCase|Maybe mp of
+                   Nothing             -> 0
+                   Just (Pocket n3 n5) -> 3 * n3 + 5 * n5
+                |]
 
 -- * Correctness
 
@@ -91,7 +92,7 @@ evalPocket = SM.maybe 0 $ \p -> [sCase|Pocket p of
 --   Result:                               Q.E.D.
 -- [Proven] mkChangeCorrect :: Ɐn ∷ Integer → Bool
 correctness :: TP (Proof (Forall "n" Integer -> SBool))
-correctness = do
+correctness =
     sInduct "mkChangeCorrect"
             (\(Forall n) -> n .>= 8 .=> evalPocket (mkChange n) .== n)
             (id, []) $
@@ -102,8 +103,9 @@ correctness = do
                            , n .== 10 ==> trivial
                            , n .< 8   ==> trivial   -- Vacuously true: contradicts n >= 8
                            , n .> 10  ==> evalPocket (mkChange n) .== n
-                                       =: [sCase|Pocket fromJust (mkChange (n - 3)) of
-                                            Pocket n3 n5 -> evalPocket (sJust (sPocket (n3 + 1) n5)) .== n
+                                       =: [sCase|Maybe mkChange (n - 3) of
+                                            Nothing             -> evalPocket sNothing .== n
+                                            Just (Pocket n3 n5) -> evalPocket (sJust (sPocket (n3 + 1) n5)) .== n
                                          |]
                                        ?? ih `at` Inst @"n" (n - 3)
                                        =: sTrue

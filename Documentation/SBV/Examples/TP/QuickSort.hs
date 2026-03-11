@@ -16,6 +16,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -44,23 +45,25 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 -- | Quick-sort, using the first element as pivot.
 quickSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
-quickSort = smtFunction "quickSort" $ \l -> ite (null l)
-                                                []
-                                                (let (x,  xs) = uncons l
-                                                     (lo, hi) = untuple (partition x xs)
-                                                 in  quickSort lo ++ [x] ++ quickSort hi)
+quickSort = smtFunction "quickSort"
+          $ \l -> [sCase|List l of
+                     []     -> []
+                     x : xs -> let (lo, hi) = untuple (partition x xs)
+                               in  quickSort lo ++ [x] ++ quickSort hi
+                  |]
 
 -- | We define @partition@ as an explicit function. Unfortunately, we can't just replace this
 -- with @\pivot xs -> Data.List.SBV.partition (.< pivot) xs@ because that would create a firstified version of partition
 -- with a free-variable captured, which isn't supported due to higher-order limitations in SMTLib.
 partition :: (OrdSymbolic (SBV a), SymVal a) => SBV a -> SList a -> STuple [a] [a]
-partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
-                                                       (tuple ([], []))
-                                                       (let (a,  as) = uncons xs
-                                                            (lo, hi) = untuple (partition pivot as)
-                                                        in ite (a .< pivot)
-                                                               (tuple (a .: lo, hi))
-                                                               (tuple (lo, a .: hi)))
+partition = smtFunction "partition"
+          $ \pivot xs -> [sCase|List xs of
+                            []     -> tuple ([], [])
+                            a : as -> let (lo, hi) = untuple (partition pivot as)
+                                      in ite (a .< pivot)
+                                             (tuple (a .: lo, hi))
+                                             (tuple (lo, a .: hi))
+                         |]
 
 -- * Correctness proof
 
@@ -149,19 +152,21 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): partitionNotLongerFst
 --   Step: Measure is non-negative                             Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (2 way case split)
 --     Step: 1.1                                               Q.E.D.
 --     Step: 1.2.1                                             Q.E.D.
 --     Step: 1.2.2 (simplify)                                  Q.E.D.
 --     Step: 1.2.3                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): partitionNotLongerSnd
 --   Step: Measure is non-negative                             Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (2 way case split)
 --     Step: 1.1                                               Q.E.D.
 --     Step: 1.2.1                                             Q.E.D.
 --     Step: 1.2.2 (simplify)                                  Q.E.D.
 --     Step: 1.2.3                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Inductive lemma: countPartition
 --   Step: Base                                                Q.E.D.
@@ -178,7 +183,7 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): sortCountsMatch
 --   Step: Measure is non-negative                             Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (2 way case split)
 --     Step: 1.1                                               Q.E.D.
 --     Step: 1.2.1                                             Q.E.D.
 --     Step: 1.2.2 (expand quickSort)                          Q.E.D.
@@ -188,11 +193,12 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     Step: 1.2.6 (IH on lo)                                  Q.E.D.
 --     Step: 1.2.7 (IH on hi)                                  Q.E.D.
 --     Step: 1.2.8                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: sortIsPermutation                                    Q.E.D.
 -- Inductive lemma: nonDecreasingMerge
 --   Step: Base                                                Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (2 way case split)
 --     Step: 1.1                                               Q.E.D.
 --     Step: 1.2.1                                             Q.E.D.
 --     Step: 1.2.2                                             Q.E.D.
@@ -201,15 +207,17 @@ partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
 --     Step: 1.2.5                                             Q.E.D.
 --     Step: 1.2.6                                             Q.E.D.
 --     Step: 1.2.7                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): sortIsNonDecreasing
 --   Step: Measure is non-negative                             Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (2 way case split)
 --     Step: 1.1                                               Q.E.D.
 --     Step: 1.2.1                                             Q.E.D.
 --     Step: 1.2.2 (expand quickSort)                          Q.E.D.
 --     Step: 1.2.3 (push nonDecreasing down)                   Q.E.D.
 --     Step: 1.2.4                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: quickSortIsCorrect                                   Q.E.D.
 -- Inductive lemma: partitionSortedLeft
@@ -284,8 +292,16 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- llt: list less-than:     all the elements are <  pivot
   -- lge: list greater-equal: all the elements are >= pivot
   let llt, lge :: SBV a -> SList a -> SBool
-      llt = smtFunction "llt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& llt pivot xs
-      lge = smtFunction "lge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& lge pivot xs
+      llt = smtFunction "llt"
+          $ \pivot l -> [sCase|List l of
+                           []     -> sTrue
+                           x : xs -> x .<  pivot .&& llt pivot xs
+                        |]
+      lge = smtFunction "lge"
+          $ \pivot l -> [sCase|List l of
+                           []     -> sTrue
+                           x : xs -> x .>= pivot .&& lge pivot xs
+                        |]
 
   -- llt correctness
   lltCorrect <-
@@ -408,36 +424,40 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
      (\(Forall l) (Forall pivot) -> length (fst (partition @a pivot l)) .<= length l)
      (\l _ -> length l, []) $
      \ih l pivot -> [] |- length (fst (partition @a pivot l)) .<= length l
-                       =: split l trivial
-                                (\a as -> let lo = fst (partition pivot as)
-                                       in ite (a .< pivot)
-                                              (length (a .: lo) .<= length (a .: as))
-                                              (length       lo  .<= length (a .: as))
-                                       ?? "simplify"
-                                       =: ite (a .< pivot)
-                                              (length lo .<=     length as)
-                                              (length lo .<= 1 + length as)
-                                       ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
-                                       =: sTrue
-                                       =: qed)
+                       =: [pCase|List l of
+                            []     -> trivial
+                            a : as -> let lo = fst (partition pivot as)
+                                   in ite (a .< pivot)
+                                          (length (a .: lo) .<= length (a .: as))
+                                          (length       lo  .<= length (a .: as))
+                                   ?? "simplify"
+                                   =: ite (a .< pivot)
+                                          (length lo .<=     length as)
+                                          (length lo .<= 1 + length as)
+                                   ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                   =: sTrue
+                                   =: qed
+                          |]
 
   -- The second element of partition does not increase in size
   partitionNotLongerSnd <- sInduct "partitionNotLongerSnd"
      (\(Forall l) (Forall pivot) -> length (snd (partition @a pivot l)) .<= length l)
      (\l _ -> length l, []) $
      \ih l pivot -> [] |- length (snd (partition @a pivot l)) .<= length l
-                       =: split l trivial
-                                (\a as -> let hi = snd (partition pivot as)
-                                       in ite (a .< pivot)
-                                              (length       hi  .<= length (a .: as))
-                                              (length (a .: hi) .<= length (a .: as))
-                                       ?? "simplify"
-                                       =: ite (a .< pivot)
-                                              (length hi .<= 1 + length as)
-                                              (length hi .<=     length as)
-                                       ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
-                                       =: sTrue
-                                       =: qed)
+                       =: [pCase|List l of
+                            []     -> trivial
+                            a : as -> let hi = snd (partition pivot as)
+                                   in ite (a .< pivot)
+                                          (length       hi  .<= length (a .: as))
+                                          (length (a .: hi) .<= length (a .: as))
+                                   ?? "simplify"
+                                   =: ite (a .< pivot)
+                                          (length hi .<= 1 + length as)
+                                          (length hi .<=     length as)
+                                   ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                   =: sTrue
+                                   =: qed
+                          |]
 
   --------------------------------------------------------------------------------------------
   -- Part IV. Helper lemmas for count
@@ -490,29 +510,31 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
              (\xs _ -> length xs, []) $
              \ih xs e ->
                 [] |- count e (quickSort xs)
-                   =: split xs trivial
-                            (\a as -> count e (quickSort (a .: as))
-                                   ?? "expand quickSort"
-                                   =: count e (let (lo, hi) = untuple (partition a as)
-                                               in quickSort lo ++ [a] ++ quickSort hi)
-                                   ?? "push count down"
-                                   =: let (lo, hi) = untuple (partition a as)
-                                   in count e (quickSort lo ++ [a] ++ quickSort hi)
-                                   ?? countAppend `at` (Inst @"xs" (quickSort lo), Inst @"ys" ([a] ++ quickSort hi), Inst @"e" e)
-                                   =: count e (quickSort lo) + count e ([a] ++ quickSort hi)
-                                   ?? countAppend `at` (Inst @"xs" [a], Inst @"ys" (quickSort hi), Inst @"e" e)
-                                   =: count e (quickSort lo) + count e [a] + count e (quickSort hi)
-                                   ?? ih                    `at` (Inst @"xs" lo, Inst @"e" e)
-                                   ?? partitionNotLongerFst `at` (Inst @"l"  as, Inst @"pivot" a)
-                                   ?? "IH on lo"
-                                   =: count e lo + count e [a] + count e (quickSort hi)
-                                   ?? ih                    `at` (Inst @"xs" hi, Inst @"e" e)
-                                   ?? partitionNotLongerSnd `at` (Inst @"l"  as, Inst @"pivot" a)
-                                   ?? "IH on hi"
-                                   =: count e lo + count e [a] + count e hi
-                                   ?? countPartition `at` (Inst @"xs" as, Inst @"pivot" a, Inst @"e" e)
-                                   =: count e xs
-                                   =: qed)
+                   =: [pCase|List xs of
+                        []     -> trivial
+                        a : as -> count e (quickSort (a .: as))
+                               ?? "expand quickSort"
+                               =: count e (let (lo, hi) = untuple (partition a as)
+                                           in quickSort lo ++ [a] ++ quickSort hi)
+                               ?? "push count down"
+                               =: let (lo, hi) = untuple (partition a as)
+                               in count e (quickSort lo ++ [a] ++ quickSort hi)
+                               ?? countAppend `at` (Inst @"xs" (quickSort lo), Inst @"ys" ([a] ++ quickSort hi), Inst @"e" e)
+                               =: count e (quickSort lo) + count e ([a] ++ quickSort hi)
+                               ?? countAppend `at` (Inst @"xs" [a], Inst @"ys" (quickSort hi), Inst @"e" e)
+                               =: count e (quickSort lo) + count e [a] + count e (quickSort hi)
+                               ?? ih                    `at` (Inst @"xs" lo, Inst @"e" e)
+                               ?? partitionNotLongerFst `at` (Inst @"l"  as, Inst @"pivot" a)
+                               ?? "IH on lo"
+                               =: count e lo + count e [a] + count e (quickSort hi)
+                               ?? ih                    `at` (Inst @"xs" hi, Inst @"e" e)
+                               ?? partitionNotLongerSnd `at` (Inst @"l"  as, Inst @"pivot" a)
+                               ?? "IH on hi"
+                               =: count e lo + count e [a] + count e hi
+                               ?? countPartition `at` (Inst @"xs" as, Inst @"pivot" a, Inst @"e" e)
+                               =: count e xs
+                               =: qed
+                      |]
 
   sortIsPermutation <- lemma "sortIsPermutation" (\(Forall xs) -> isPermutation xs (quickSort xs)) [proofOf sortCountsMatch]
 
@@ -527,18 +549,20 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
           \ih (x, xs) pivot ys ->
                 [nonDecreasing (x .: xs), llt pivot xs, nonDecreasing ys, lge pivot ys]
              |- nonDecreasing (x .: xs ++ [pivot] ++ ys)
-             =: split xs trivial
-                      (\a as -> nonDecreasing (x .: (a .: as) ++ [pivot] ++ ys)
-                             =: nonDecreasing (x .: a .: (as ++ [pivot] ++ ys))
-                             =: x .<= a .&& nonDecreasing (a .: (as ++ [pivot] ++ ys))
-                             =: nonDecreasing (a .: (as ++ [pivot] ++ ys))
-                             =: nonDecreasing ((a .: as) ++ [pivot] ++ ys)
-                             =: nonDecreasing (xs ++ [pivot] ++ ys)
-                             -- This hint shouldn't be necessary, but it makes the proof go faster!
-                             ?? nonDecreasing xs
-                             ?? ih
-                             =: sTrue
-                             =: qed)
+             =: [pCase|List xs of
+                  []     -> trivial
+                  a : as -> nonDecreasing (x .: (a .: as) ++ [pivot] ++ ys)
+                         =: nonDecreasing (x .: a .: (as ++ [pivot] ++ ys))
+                         =: x .<= a .&& nonDecreasing (a .: (as ++ [pivot] ++ ys))
+                         =: nonDecreasing (a .: (as ++ [pivot] ++ ys))
+                         =: nonDecreasing ((a .: as) ++ [pivot] ++ ys)
+                         =: nonDecreasing (xs ++ [pivot] ++ ys)
+                         -- This hint shouldn't be necessary, but it makes the proof go faster!
+                         ?? nonDecreasing xs
+                         ?? ih
+                         =: sTrue
+                         =: qed
+                |]
 
   --------------------------------------------------------------------------------------------
   -- Part VII. Prove that the output of quick sort is non-decreasing
@@ -549,38 +573,40 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
              (length @a, []) $
              \ih xs ->
                 [] |- nonDecreasing (quickSort xs)
-                   =: split xs trivial
-                            (\a as -> nonDecreasing (quickSort (a .: as))
-                                   ?? "expand quickSort"
-                                   =: nonDecreasing (let (lo, hi) = untuple (partition a as)
-                                                     in quickSort lo ++ [a] ++ quickSort hi)
-                                   ?? "push nonDecreasing down"
-                                   =: let (lo, hi) = untuple (partition a as)
-                                   in nonDecreasing (quickSort lo ++ [a] ++ quickSort hi)
-                                   -- Deduce that lo/hi is not longer than as, and hence, shorter than xs
-                                   ?? partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
-                                   ?? partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
+                   =: [pCase|List xs of
+                        []     -> trivial
+                        a : as -> nonDecreasing (quickSort (a .: as))
+                               ?? "expand quickSort"
+                               =: nonDecreasing (let (lo, hi) = untuple (partition a as)
+                                                 in quickSort lo ++ [a] ++ quickSort hi)
+                               ?? "push nonDecreasing down"
+                               =: let (lo, hi) = untuple (partition a as)
+                               in nonDecreasing (quickSort lo ++ [a] ++ quickSort hi)
+                               -- Deduce that lo/hi is not longer than as, and hence, shorter than xs
+                               ?? partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
+                               ?? partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
 
-                                   -- Use the inductive hypothesis twice to deduce quickSort of lo and hi are nonDecreasing
-                                   ?? ih `at` Inst @"xs" lo  -- nonDecreasing (quickSort lo)
-                                   ?? ih `at` Inst @"xs" hi  -- nonDecreasing (quickSort hi)
+                               -- Use the inductive hypothesis twice to deduce quickSort of lo and hi are nonDecreasing
+                               ?? ih `at` Inst @"xs" lo  -- nonDecreasing (quickSort lo)
+                               ?? ih `at` Inst @"xs" hi  -- nonDecreasing (quickSort hi)
 
-                                   -- Deduce that lo is all less than a, and hi is all greater than or equal to a
-                                   ?? partitionFstLT `at` (Inst @"l" as, Inst @"pivot" a)
-                                   ?? partitionSndGE `at` (Inst @"l" as, Inst @"pivot" a)
+                               -- Deduce that lo is all less than a, and hi is all greater than or equal to a
+                               ?? partitionFstLT `at` (Inst @"l" as, Inst @"pivot" a)
+                               ?? partitionSndGE `at` (Inst @"l" as, Inst @"pivot" a)
 
-                                   -- Deduce that quickSort lo is all less than a
-                                   ?? sortIsPermutation `at`  Inst @"xs" lo
-                                   ?? lltPermutation    `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" lo)
+                               -- Deduce that quickSort lo is all less than a
+                               ?? sortIsPermutation `at`  Inst @"xs" lo
+                               ?? lltPermutation    `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" lo)
 
-                                   -- Deduce that quickSort hi is all greater than or equal to a
-                                   ?? sortIsPermutation `at`  Inst @"xs" hi
-                                   ?? lgePermutation    `at` (Inst @"xs" (quickSort hi), Inst @"pivot" a, Inst @"ys" hi)
+                               -- Deduce that quickSort hi is all greater than or equal to a
+                               ?? sortIsPermutation `at`  Inst @"xs" hi
+                               ?? lgePermutation    `at` (Inst @"xs" (quickSort hi), Inst @"pivot" a, Inst @"ys" hi)
 
-                                   -- Finally conclude that the whole reconstruction is non-decreasing
-                                   ?? nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
-                                   =: sTrue
-                                   =: qed)
+                               -- Finally conclude that the whole reconstruction is non-decreasing
+                               ?? nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
+                               =: sTrue
+                               =: qed
+                      |]
 
   --------------------------------------------------------------------------------------------
   -- Part VIII. Putting it together

@@ -17,6 +17,7 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -43,11 +44,16 @@ import qualified Documentation.SBV.Examples.TP.Lists as TP
 -- | This definition of reverse uses no helper functions, other than the usual
 -- head, tail, cons, and uncons to reverse a given list. Note that efficiency
 -- is not our concern here, we call 'rev' itself three times in the body.
+-- NB. We use 'uncons' on @rev as@ below since quasi-quote splices do not nest in Haskell,
+-- so we cannot use a nested @sCase@ call here.
 rev :: SymVal a => SList a -> SList a
-rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
-                                     (let (x, as)     = uncons xs
-                                          (hras, tas) = uncons (rev as)
-                                      in hras .: rev (x .: rev tas))
+rev = smtFunction "rev"
+    $ \xs -> [sCase|List xs of
+                []     -> xs
+                [_]    -> xs
+                x : as -> let (hras, tas) = uncons (rev as)
+                          in hras .: rev (x .: rev tas)
+             |]
 
 -- * Correctness proof
 
@@ -60,25 +66,25 @@ rev = smtFunction "rev" $ \xs -> ite (null xs .|| null (tail xs)) xs
 -- Lemma: revRev                           Q.E.D.
 -- Inductive lemma (strong): revCorrect
 --   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (3 way case split)
 --     Step: 1.1                           Q.E.D.
---     Step: 1.2 (2 way full case split)
---       Step: 1.2.1                       Q.E.D.
---       Step: 1.2.2.1                     Q.E.D.
---       Step: 1.2.2.2                     Q.E.D.
---       Step: 1.2.2.3                     Q.E.D.
---       Step: 1.2.2.4                     Q.E.D.
---       Step: 1.2.2.5                     Q.E.D.
---       Step: 1.2.2.6 (simplify head)     Q.E.D.
---       Step: 1.2.2.7                     Q.E.D.
---       Step: 1.2.2.8 (simplify tail)     Q.E.D.
---       Step: 1.2.2.9                     Q.E.D.
---       Step: 1.2.2.10                    Q.E.D.
---       Step: 1.2.2.11                    Q.E.D.
---       Step: 1.2.2.12 (substitute)       Q.E.D.
---       Step: 1.2.2.13                    Q.E.D.
---       Step: 1.2.2.14                    Q.E.D.
---       Step: 1.2.2.15                    Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.3.1                         Q.E.D.
+--     Step: 1.3.2                         Q.E.D.
+--     Step: 1.3.3                         Q.E.D.
+--     Step: 1.3.4                         Q.E.D.
+--     Step: 1.3.5                         Q.E.D.
+--     Step: 1.3.6 (simplify head)         Q.E.D.
+--     Step: 1.3.7                         Q.E.D.
+--     Step: 1.3.8 (simplify tail)         Q.E.D.
+--     Step: 1.3.9                         Q.E.D.
+--     Step: 1.3.10                        Q.E.D.
+--     Step: 1.3.11                        Q.E.D.
+--     Step: 1.3.12 (substitute)           Q.E.D.
+--     Step: 1.3.13                        Q.E.D.
+--     Step: 1.3.14                        Q.E.D.
+--     Step: 1.3.15                        Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] revCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
@@ -94,39 +100,41 @@ correctness = do
     (\(Forall xs) -> rev xs .== reverse xs)
     (length, []) $
     \ih xs -> [] |- rev xs
-                 =: split xs trivial
-                          (\a as -> split as trivial
-                                          (\_ _ -> head (rev as) .: rev (a .: rev (tail (rev as)))
-                                                ?? ih `at` Inst @"xs" as
-                                                =: head (reverse as) .: rev (a .: rev (tail (rev as)))
-                                                ?? ih `at` Inst @"xs" as
-                                                =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
-                                                ?? ih `at` Inst @"xs" (tail (rev as))
-                                                =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
-                                                ?? revSnoc `at` (Inst @"x" (last as), Inst @"xs" (init as))
-                                                =: let w = init as
-                                                       b = last as
-                                                in head (b .: reverse w) .: rev (a .: rev (tail (reverse as)))
-                                                ?? "simplify head"
-                                                =: b .: rev (a .: rev (tail (reverse as)))
-                                                ?? revSnoc `at` (Inst @"x" (last xs), Inst @"xs" (init as))
-                                                =: b .: rev (a .: rev (tail (b .: reverse w)))
-                                                ?? "simplify tail"
-                                                =: b .: rev (a .: rev (reverse w))
-                                                ?? ih     `at` Inst @"xs" (reverse w)
-                                                ?? revLen `at` Inst @"xs" w
-                                                =: b .: rev (a .: reverse (reverse w))
-                                                ?? revRev `at` Inst @"xs" w
-                                                =: b .: rev (a .: w)
-                                                ?? ih
-                                                =: b .: reverse (a .: w)
-                                                ?? "substitute"
-                                                =: last as .: reverse (a .: init as)
-                                                ?? revApp `at` (Inst @"xs" (a .: init as), Inst @"ys" [last as])
-                                                =: reverse (a .: init as ++ [last as])
-                                                =: reverse (a .: as)
-                                                =: reverse xs
-                                                =: qed))
+                 =: [pCase|List xs of
+                      []     -> trivial
+                      [_]    -> trivial
+                      a : as -> head (rev as) .: rev (a .: rev (tail (rev as)))
+                             ?? ih `at` Inst @"xs" as
+                             =: head (reverse as) .: rev (a .: rev (tail (rev as)))
+                             ?? ih `at` Inst @"xs" as
+                             =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
+                             ?? ih `at` Inst @"xs" (tail (rev as))
+                             =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
+                             ?? revSnoc `at` (Inst @"x" (last as), Inst @"xs" (init as))
+                             =: let w = init as
+                                    b = last as
+                             in head (b .: reverse w) .: rev (a .: rev (tail (reverse as)))
+                             ?? "simplify head"
+                             =: b .: rev (a .: rev (tail (reverse as)))
+                             ?? revSnoc `at` (Inst @"x" (last xs), Inst @"xs" (init as))
+                             =: b .: rev (a .: rev (tail (b .: reverse w)))
+                             ?? "simplify tail"
+                             =: b .: rev (a .: rev (reverse w))
+                             ?? ih     `at` Inst @"xs" (reverse w)
+                             ?? revLen `at` Inst @"xs" w
+                             =: b .: rev (a .: reverse (reverse w))
+                             ?? revRev `at` Inst @"xs" w
+                             =: b .: rev (a .: w)
+                             ?? ih
+                             =: b .: reverse (a .: w)
+                             ?? "substitute"
+                             =: last as .: reverse (a .: init as)
+                             ?? revApp `at` (Inst @"xs" (a .: init as), Inst @"ys" [last as])
+                             =: reverse (a .: init as ++ [last as])
+                             =: reverse (a .: as)
+                             =: reverse xs
+                             =: qed
+                    |]
 
 {- HLint ignore correctness "Use last"          -}
 {- HLint ignore correctness "Redundant reverse" -}
