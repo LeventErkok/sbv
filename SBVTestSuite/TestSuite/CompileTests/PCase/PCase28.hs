@@ -15,7 +15,7 @@ import Data.SBV.TP
 -- Positive: string literal in nested position (Var "x" -> ...)
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          Zero      -> e .== e =: qed
          Num k     -> sNum k .== sNum k =: e .== e =: qed
          Var "x"   -> sVar (literal "x") .== sVar (literal "x") =: e .== e =: qed

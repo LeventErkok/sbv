@@ -9,7 +9,7 @@ import Data.SBV
 import Data.SBV.TP
 
 t :: SExpr -> Proof SBool
-t e = [pCase|Expr e of
+t e = [pCase| e of
         Zero      -> undefined
         Num _     -> undefined
         Var _     -> undefined

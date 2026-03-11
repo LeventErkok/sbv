@@ -10,7 +10,7 @@ import Data.SBV.TP
 
 -- Negative: overlapping — second group for same constructor after first has sTrue catch-all guard
 t :: SExpr -> Proof SBool
-t e = [pCase|Expr e of
+t e = [pCase| e of
         Zero             -> undefined
         Num i | i .> 3   -> undefined
               | sTrue    -> undefined

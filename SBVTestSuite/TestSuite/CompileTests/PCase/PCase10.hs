@@ -10,7 +10,7 @@ import Data.SBV.TP
 
 -- Arity mismatch in nested pattern: Num takes 1, given 2
 t :: SExpr -> Proof SBool
-t e = [pCase|Expr e of
+t e = [pCase| e of
         Zero            -> undefined
         Num k           -> undefined
         Var _           -> undefined

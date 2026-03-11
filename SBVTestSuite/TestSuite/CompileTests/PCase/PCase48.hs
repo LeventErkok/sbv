@@ -16,7 +16,7 @@ import Data.SBV.TP
 -- (sCase would reject as non-exhaustive; pCase is fine)
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          Var s | s .== literal "a"                       -> e .== e =: qed
                | s .== literal "b" .|| s .== literal "c" -> e .== e =: qed
                | sTrue                                    -> e .== e =: qed

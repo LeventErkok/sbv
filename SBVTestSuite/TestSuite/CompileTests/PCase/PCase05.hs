@@ -10,7 +10,7 @@ import Data.SBV.TP
 
 -- Unknown constructor
 t :: SExpr -> Proof SBool
-t e = [pCase|Expr e of
+t e = [pCase| e of
         Zero  -> undefined
         Numb _ -> undefined
       |]

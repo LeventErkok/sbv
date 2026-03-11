@@ -16,7 +16,7 @@ import Data.SBV.TP
 -- Second arm gets: isNum e .&& sNot (i .> 0)
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          Zero             -> e .== e =: qed
          Num i | i .> 0   -> sNum i .== sNum i =: e .== e =: qed
                | sTrue    -> sNum i .== sNum i =: e .== e =: qed

@@ -10,7 +10,7 @@ import Data.SBV.TP
 
 -- Arity mismatch: Num takes 1 arg, given 2
 t :: SExpr -> Proof SBool
-t e = [pCase|Expr e of
+t e = [pCase| e of
         Zero     -> undefined
         Num _ _  -> undefined
         Var _    -> undefined

@@ -10,7 +10,7 @@ import Data.SBV.TP
 
 -- Pattern guards not supported
 t :: SExpr -> Proof SBool
-t e = [pCase|Expr e of
+t e = [pCase| e of
         Zero        -> undefined
         Num i | Just 1 <- Just i -> undefined
         Var _       -> undefined

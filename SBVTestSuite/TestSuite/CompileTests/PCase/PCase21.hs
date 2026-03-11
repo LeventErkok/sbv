@@ -15,7 +15,7 @@ import Data.SBV.TP
 -- Positive: deeply nested pattern Add (Add (Num _) j) k; use matched fields
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          Zero                  -> e .== e =: qed
          Num k                 -> sNum k .== sNum k =: e .== e =: qed
          Var s                 -> sVar s .== sVar s =: e .== e =: qed

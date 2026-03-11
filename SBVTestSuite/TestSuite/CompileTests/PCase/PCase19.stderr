@@ -5,7 +5,7 @@ PCase19.hs:13:14: error: [GHC-39584]
         PCase19.hs:15:9-13: Num i
 
     " In the quasi-quotation:
-        [pCase|Expr e of
+        [pCase| e of
         Zero             -> undefined
         Num i | i .> 3   -> undefined
               | sTrue    -> undefined
@@ -15,6 +15,6 @@ PCase19.hs:13:14: error: [GHC-39584]
         Let _ _ _        -> undefined
       |]
    |
-13 | t e = [pCase|Expr e of
-   |              ^^^^^^^^^...
+13 | t e = [pCase| e of
+   |              ^^^^^...
 

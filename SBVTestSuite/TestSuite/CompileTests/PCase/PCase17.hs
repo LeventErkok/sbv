@@ -15,7 +15,7 @@ import Data.SBV.TP
 -- Negative: pCase generates cases [...] which has type TPProofRaw, not Proof SBool;
 -- so using pCase outside a TP proof context is a type error
 t :: SExpr -> Proof SBool
-t e = [pCase|Expr e of
+t e = [pCase| e of
        Zero      -> e .== e =: qed
        Num _     -> e .== e =: qed
        Var _     -> e .== e =: qed

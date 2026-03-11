@@ -10,7 +10,7 @@ import Data.SBV.TP
 
 -- Negative: parse error (else keyword in wrong position)
 t :: SExpr -> Proof SBool
-t e = [pCase|Expr e of
+t e = [pCase| e of
         Zero  -> undefined
         Var s -> ite (s .== "a") undefined else undefined
         Num _ -> undefined

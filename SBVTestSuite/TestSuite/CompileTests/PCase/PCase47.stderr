@@ -5,7 +5,7 @@ PCase47.hs:18:15: error: [GHC-39584]
         PCase47.hs:21:10-14: Var s
 
     " In the quasi-quotation:
-        [pCase|Expr e of
+        [pCase| e of
          Zero      -> e .== e =: qed
          Num k     -> sNum k .== sNum k =: e .== e =: qed
          Var s     -> sVar s .== sVar s =: e .== e =: qed
@@ -14,6 +14,6 @@ PCase47.hs:18:15: error: [GHC-39584]
          Let nm a b -> sLet nm a b .== sLet nm a b =: e .== e =: qed
        |]
    |
-18 |     |- [pCase|Expr e of
-   |               ^^^^^^^^^...
+18 |     |- [pCase| e of
+   |               ^^^^^...
 

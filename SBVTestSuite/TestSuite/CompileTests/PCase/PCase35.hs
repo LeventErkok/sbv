@@ -16,7 +16,7 @@ import Data.SBV.TP
 -- (sCase rejects this as "guarded match might fail"; pCase is fine)
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          Zero           -> e .== e =: qed
          Num i | i .< 3 -> sNum i .== sNum i =: e .== e =: qed
          Var s          -> sVar s .== sVar s =: e .== e =: qed

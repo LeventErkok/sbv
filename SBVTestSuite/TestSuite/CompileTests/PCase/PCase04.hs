@@ -8,8 +8,8 @@ import Expr
 import Data.SBV
 import Data.SBV.TP
 
--- Unknown type
+-- Unknown constructor
 t :: SExpr -> Proof SBool
-t e = [pCase|FExpr e of
-        Num _ -> undefined
+t e = [pCase| e of
+        FooBar _ -> undefined
       |]

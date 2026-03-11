@@ -3,13 +3,13 @@ PCase34.hs:13:14: error: [GHC-39584]
         PCase34.hs:17:9: _
 
     " In the quasi-quotation:
-        [pCase|Expr e of
+        [pCase| e of
         Zero  -> undefined
         Num _ -> undefined
         _     -> undefined
         _     -> undefined
       |]
    |
-13 | t e = [pCase|Expr e of
-   |              ^^^^^^^^^...
+13 | t e = [pCase| e of
+   |              ^^^^^...
 

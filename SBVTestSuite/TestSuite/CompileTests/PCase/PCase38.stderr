@@ -12,6 +12,6 @@ PCase38.hs:12:14: error: [GHC-83865]
                  [(isZero e ==> undefined), (isNum e ==> undefined),
                   (isVar e ==> undefined), ....])
    |
-12 | t e = [pCase|Expr e of
-   |              ^^^^^^^^^...
+12 | t e = [pCase| e of
+   |              ^^^^^...
 

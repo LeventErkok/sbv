@@ -1,10 +1,14 @@
-PCase04.hs:13:14: error: [GHC-24922]
-    " FExpr is not in scope at a reify
+PCase04.hs:13:14: error: [GHC-39584]
+    " pCase: Unknown constructor: FooBar
+
+        Cannot find this constructor in scope.
+        Make sure the type is declared and mkSymbolic is called.
+
     " In the quasi-quotation:
-        [pCase|FExpr e of
-        Num _ -> undefined
+        [pCase| e of
+        FooBar _ -> undefined
       |]
    |
-13 | t e = [pCase|FExpr e of
-   |              ^^^^^^^^^^...
+13 | t e = [pCase| e of
+   |              ^^^^^...
 
