@@ -15,7 +15,7 @@ import Data.SBV.TP
 -- Dump test: multiple guards on same constructor (guard accumulation)
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          Zero              -> e .== e =: qed
          Num i | i .< 3    -> e .== e =: qed
                | i .< 10   -> e .== e =: qed

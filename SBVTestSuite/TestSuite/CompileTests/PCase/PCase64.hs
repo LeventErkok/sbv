@@ -14,6 +14,6 @@ import Data.SBV.TP
 
 t :: TP (Proof (Forall "p" (Integer, Bool) -> SBool))
 t = calc "t" (\(Forall @"p" (p :: STuple Integer Bool)) -> p .== p) $ \p -> []
-    |- [pCase|Tuple2 p of
+    |- [pCase| p of
          (_, _) -> p .== p =: qed
        |]

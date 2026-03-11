@@ -9,4 +9,4 @@ import Data.SBV
 
 -- bad syntax
 t :: SExpr -> SInteger
-t e = [sCase|Expr e + 1|]
+t e = [sCase| e + 1|]

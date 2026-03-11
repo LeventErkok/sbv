@@ -1,7 +1,7 @@
 SCase51.hs:(12,14)-(16,8): Splicing expression
     ghc-internal:GHC.Internal.TH.Quote.quoteExp
       sCase
-      "Expr e of\n\
+      " e of\n\
       \               Zero          -> 0\n\
       \               Num i         -> i\n\
       \               _             -> 99\n\

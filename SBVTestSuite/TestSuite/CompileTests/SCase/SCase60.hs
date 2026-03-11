@@ -10,7 +10,7 @@ import Prelude hiding (null, head, tail)
 import Data.SBV
 
 t :: SList Integer -> SInteger
-t xs = [sCase|List xs of
+t xs = [sCase| xs of
                 []         -> 0
                 y : _ | y .== 5 -> 100
                 _ : ys     -> t ys

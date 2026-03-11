@@ -1,7 +1,7 @@
 PCase60.hs:(23,15)-(33,9): Splicing expression
     ghc-internal:GHC.Internal.TH.Quote.quoteExp
       pCase
-      "Expr e of\n\
+      " e of\n\
       \         Add (Num i) b | i .> 0  -> sAdd (sNum i) b .== sAdd (sNum i) b =: e .== e =: qed\n\
       \         Num i | i .> 0           -> sNum i .== sNum i =: e .== e =: qed\n\
       \         Var s | s .== literal \"hey\" -> sVar s .== sVar s =: e .== e =: qed\n\

@@ -9,7 +9,7 @@ import Data.SBV
 
 -- Dump test: wildcard catch-all after some constructors (ite chain with default)
 t :: SExpr -> SInteger
-t e = [sCase|Expr e of
+t e = [sCase| e of
                Zero          -> 0
                Num i         -> i
                _             -> 99

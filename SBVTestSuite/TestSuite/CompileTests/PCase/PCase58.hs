@@ -15,7 +15,7 @@ import Data.SBV.TP
 -- Dump test: multiple guarded arms on nested pattern, variable in guard + RHS, wildcard
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          Let s (Num i) b | i .> 0   -> sLet s (sNum i) b .== sLet s (sNum i) b =: e .== e =: qed
                           | i .> -5  -> sLet s (sNum i) b .== sLet s (sNum i) b =: e .== e =: qed
                           | sTrue    -> sLet s (sNum i) b .== sLet s (sNum i) b =: e .== e =: qed

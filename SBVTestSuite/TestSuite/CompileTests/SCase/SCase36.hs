@@ -9,7 +9,7 @@ import Data.SBV
 
 -- Positive: nested pattern with wildcard inside the nested constructor
 t :: SExpr -> SInteger
-t e = [sCase|Expr e of
+t e = [sCase| e of
                Zero          -> 0
                Num k         -> k
                Var s         -> ite (s .== literal "a") 1 2

@@ -9,7 +9,7 @@ import Data.SBV
 
 -- Positive: integer literal at top level (Num 1 -> ...)
 t :: SExpr -> SInteger
-t e = [sCase|Expr e of
+t e = [sCase| e of
                Zero  -> 0
                Num 1 -> 100
                Num k -> k

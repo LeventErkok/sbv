@@ -8,7 +8,7 @@ module T where
 import Data.SBV
 
 t :: SEither Integer Bool -> SInteger
-t e = [sCase|Either e of
+t e = [sCase| e of
                Left a  -> a
                Right _ -> 0
       |]

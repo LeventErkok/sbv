@@ -8,7 +8,7 @@ module T where
 import Data.SBV
 
 t :: SMaybe (Integer, Bool) -> SInteger
-t m = [sCase|Maybe m of
+t m = [sCase| m of
                Nothing     -> 0
                Just (a, _) -> a
       |]

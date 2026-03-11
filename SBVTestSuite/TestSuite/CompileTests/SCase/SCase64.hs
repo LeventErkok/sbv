@@ -10,7 +10,7 @@ import Prelude hiding (null, head, tail)
 import Data.SBV
 
 t :: SList Integer -> SBool
-t xs = [sCase|List xs of
+t xs = [sCase| xs of
                 []     -> sTrue
                 _ : _  -> sFalse
        |]

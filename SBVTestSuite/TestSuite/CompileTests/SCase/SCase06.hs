@@ -7,6 +7,6 @@ module T where
 import Expr
 import Data.SBV
 
--- bad type
+-- Unknown constructor
 t :: SExpr -> SInteger
-t e = [sCase|FExpr e of Num _ -> 1|]
+t e = [sCase| e of FooBar _ -> 1|]

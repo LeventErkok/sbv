@@ -3,13 +3,13 @@ SCase12.hs:11:14: error: [GHC-39584]
         SCase12.hs:15:16: _
 
     " In the quasi-quotation:
-        [sCase|Expr e of
+        [sCase| e of
                Zero          -> 0
                Num i         -> i
                _ -> 3
                _ -> 5
       |]
    |
-11 | t e = [sCase|Expr e of
-   |              ^^^^^^^^^...
+11 | t e = [sCase| e of
+   |              ^^^^^...
 

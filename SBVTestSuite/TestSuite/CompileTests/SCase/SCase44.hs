@@ -9,7 +9,7 @@ import Data.SBV
 
 -- Positive: integer literal in nested position (Add (Num 0) j -> ...)
 t :: SExpr -> SInteger
-t e = [sCase|Expr e of
+t e = [sCase| e of
                Zero          -> 0
                Num k         -> k
                Var _         -> -1

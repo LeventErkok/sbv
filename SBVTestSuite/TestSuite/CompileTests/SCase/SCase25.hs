@@ -8,7 +8,7 @@ import Expr
 import Data.SBV
 
 f :: SExpr -> SInteger
-f e = [sCase|Expr e of
+f e = [sCase| e of
          Var s     | s .== literal "a"                       -> 0
                    | s .== literal "b" .|| s .== literal "c" -> 1
                    | sTrue                                   -> 2

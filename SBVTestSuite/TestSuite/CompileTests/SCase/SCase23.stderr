@@ -1,6 +1,6 @@
 SCase23.hs:11:14: error: [GHC-40910] [-Wunused-matches, Werror=unused-matches]
     Defined but not used: i
    |
-11 | t e = [sCase|Expr e of
-   |              ^^^^^^^^^...
+11 | t e = [sCase| e of
+   |              ^^^^^...
 

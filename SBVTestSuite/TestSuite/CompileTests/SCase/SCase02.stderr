@@ -7,11 +7,11 @@ SCase02.hs:11:14: error: [GHC-39584]
       You can use a '_' to match multiple cases.
 
     " In the quasi-quotation:
-        [sCase|Expr e of
+        [sCase| e of
         Zero  -> 0
         Num i -> i
       |]
    |
-11 | t e = [sCase|Expr e of
-   |              ^^^^^^^^^...
+11 | t e = [sCase| e of
+   |              ^^^^^...
 

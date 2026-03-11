@@ -8,7 +8,7 @@ import Expr
 import Data.SBV
 
 t :: SExpr -> SInteger
-t e = [sCase|Expr e of
+t e = [sCase| e of
         Zero  -> 0
         Num _ _ -> i
         Var _ -> 0

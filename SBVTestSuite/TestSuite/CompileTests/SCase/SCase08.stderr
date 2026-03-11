@@ -2,7 +2,7 @@ SCase08.hs:11:14: error: [GHC-39584]
     " SCase08.hs:14:50: Parse error: else
 
     " In the quasi-quotation:
-        [sCase|Expr e of
+        [sCase| e of
                Zero          -> 0
                Num i | Just 1 <- Just i         -> i
                Var s        -> ite (s .== "a") 1 else 2
@@ -10,6 +10,6 @@ SCase08.hs:11:14: error: [GHC-39584]
                Let _   _a  b -> t b
       |]
    |
-11 | t e = [sCase|Expr e of
-   |              ^^^^^^^^^...
+11 | t e = [sCase| e of
+   |              ^^^^^...
 

@@ -15,7 +15,7 @@ import Data.SBV.TP
 -- Dump test: guarded wildcard + nested pattern on a constructor
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          Add (Num i) _ | i .> 0  -> e .== e =: qed
          Add _ _                  -> e .== e =: qed
          _ | isZero e             -> e .== e =: qed

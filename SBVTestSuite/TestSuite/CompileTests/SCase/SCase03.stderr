@@ -6,7 +6,7 @@ SCase03.hs:11:14: error: [GHC-39584]
         Given      : 2
 
     " In the quasi-quotation:
-        [sCase|Expr e of
+        [sCase| e of
         Zero  -> 0
         Num _ _ -> i
         Var _ -> 0
@@ -14,6 +14,6 @@ SCase03.hs:11:14: error: [GHC-39584]
         Let _ _ _ -> 3
       |]
    |
-11 | t e = [sCase|Expr e of
-   |              ^^^^^^^^^...
+11 | t e = [sCase| e of
+   |              ^^^^^...
 

@@ -6,7 +6,7 @@ SCase18.hs:11:14: error: [GHC-39584]
         SCase18.hs:13:16-20: Num i
 
     " In the quasi-quotation:
-        [sCase|Expr e of
+        [sCase| e of
                Zero           -> 0
                Num i -> 4
                Num i | i .< 3 -> i
@@ -15,6 +15,6 @@ SCase18.hs:11:14: error: [GHC-39584]
                Let _   _a  b  -> t b
       |]
    |
-11 | t e = [sCase|Expr e of
-   |              ^^^^^^^^^...
+11 | t e = [sCase| e of
+   |              ^^^^^...
 

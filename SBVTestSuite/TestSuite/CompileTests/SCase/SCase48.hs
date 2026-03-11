@@ -9,7 +9,7 @@ import Data.SBV
 
 -- Negative: Add (Num 1) j without a fallback for the Add constructor
 t :: SExpr -> SInteger
-t e = [sCase|Expr e of
+t e = [sCase| e of
                Zero          -> 0
                Num k         -> k
                Var _         -> -1

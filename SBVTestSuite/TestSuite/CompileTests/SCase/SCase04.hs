@@ -8,7 +8,7 @@ import Expr
 import Data.SBV
 
 -- Rejected at the top level
-[sCase|Expr e of
+[sCase| e of
         Zero  -> 0
         Num i -> i
       |]

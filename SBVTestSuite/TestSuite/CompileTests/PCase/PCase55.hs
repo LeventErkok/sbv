@@ -15,7 +15,7 @@ import Data.SBV.TP
 -- Dump test: wildcard after some constructors (De Morgan negation)
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          Zero      -> e .== e =: qed
          Num _     -> e .== e =: qed
          _         -> e .== e =: qed

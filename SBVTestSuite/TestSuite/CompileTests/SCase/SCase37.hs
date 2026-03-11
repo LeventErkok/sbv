@@ -9,7 +9,7 @@ import Data.SBV
 
 -- Negative: literal pattern inside nested position is not supported
 t :: SExpr -> SInteger
-t e = [sCase|Expr e of
+t e = [sCase| e of
                Zero          -> 0
                Num k         -> k
                Var s         -> ite (s .== literal "a") 1 2

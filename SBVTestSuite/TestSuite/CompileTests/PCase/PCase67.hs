@@ -17,7 +17,7 @@ import Data.SBV.TP
 
 t :: TP (Proof (Forall "xs" [Integer] -> SBool))
 t = calc "t" (\(Forall @"xs" (xs :: SList Integer)) -> length xs .>= 0) $ \xs -> []
-    |- [pCase|List xs of
+    |- [pCase| xs of
          []              -> length xs .>= 0 =: qed
          _ : (_ : _)     -> length xs .>= 0 =: qed
          _ : _           -> length xs .>= 0 =: qed

@@ -15,6 +15,6 @@ import Data.SBV.TP
 -- Positive: wildcard-only, no explicit constructors
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          _ -> e .== e =: qed
        |]

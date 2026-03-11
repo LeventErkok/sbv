@@ -9,7 +9,7 @@ import Data.SBV
 
 -- Dump test: nested pattern with literal (synthetic guards, accessors, let-bindings)
 t :: SExpr -> SInteger
-t e = [sCase|Expr e of
+t e = [sCase| e of
                Add (Num 0) j -> t j
                Add a b       -> t a + t b
                Zero          -> 0

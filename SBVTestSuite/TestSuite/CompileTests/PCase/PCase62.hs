@@ -14,7 +14,7 @@ import Data.SBV.TP
 
 t :: TP (Proof (Forall "e" (Either Integer Bool) -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SEither Integer Bool)) -> e .== e) $ \e -> []
-    |- [pCase|Either e of
+    |- [pCase| e of
          Left _  -> e .== e =: qed
          Right _ -> e .== e =: qed
        |]

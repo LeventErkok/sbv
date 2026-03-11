@@ -9,7 +9,7 @@ import Data.SBV
 
 -- Negative: nested constructor with wrong arity (Num takes 1 arg, given 2)
 t :: SExpr -> SInteger
-t e = [sCase|Expr e of
+t e = [sCase| e of
                Zero              -> 0
                Num k             -> k
                Var s             -> ite (s .== literal "a") 1 2

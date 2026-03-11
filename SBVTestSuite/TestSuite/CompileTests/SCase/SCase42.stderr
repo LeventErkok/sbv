@@ -5,7 +5,7 @@ SCase42.hs:12:14: error: [GHC-39584]
       NB. Guarded match might fail.
 
     " In the quasi-quotation:
-        [sCase|Expr e of
+        [sCase| e of
                Zero                          -> 0
                Num k                         -> k
                Var s                         -> ite (s .== literal "a") 1 2
@@ -13,6 +13,6 @@ SCase42.hs:12:14: error: [GHC-39584]
                Let _   _a  b                 -> t b
       |]
    |
-12 | t e = [sCase|Expr e of
-   |              ^^^^^^^^^...
+12 | t e = [sCase| e of
+   |              ^^^^^...
 

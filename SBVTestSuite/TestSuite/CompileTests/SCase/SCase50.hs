@@ -9,7 +9,7 @@ import Data.SBV
 
 -- Dump test: multiple guards on same constructor (guard accumulation, ite chain)
 t :: SExpr -> SInteger
-t e = [sCase|Expr e of
+t e = [sCase| e of
                Zero              -> 0
                Num i | i .< 3    -> i
                      | i .< 10   -> i + 1

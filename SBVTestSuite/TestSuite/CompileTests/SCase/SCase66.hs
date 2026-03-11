@@ -10,7 +10,7 @@ import Prelude hiding (null, head, tail)
 import Data.SBV
 
 t :: SEither ([] Integer) Bool -> SInteger
-t e = [sCase|Either e of
+t e = [sCase| e of
                Left (x : _) -> x
                Left []      -> 0
                Right _      -> 1

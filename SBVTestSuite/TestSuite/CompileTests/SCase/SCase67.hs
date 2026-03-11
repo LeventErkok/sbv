@@ -8,7 +8,7 @@ module T where
 import Data.SBV
 
 t :: STuple Integer Integer -> SInteger
-t p = [sCase|Tuple2 p of
+t p = [sCase| p of
                (a, b) | a .> b -> a
                (_, b)          -> b
       |]

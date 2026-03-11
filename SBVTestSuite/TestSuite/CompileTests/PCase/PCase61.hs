@@ -14,7 +14,7 @@ import Data.SBV.TP
 
 t :: TP (Proof (Forall "m" (Maybe Integer) -> SBool))
 t = calc "t" (\(Forall @"m" (m :: SMaybe Integer)) -> m .== m) $ \m -> []
-    |- [pCase|Maybe m of
+    |- [pCase| m of
          Nothing -> m .== m =: qed
          Just _  -> m .== m =: qed
        |]

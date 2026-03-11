@@ -20,7 +20,7 @@ import Data.SBV.TP
 --   - Multiple guarded wildcards at the end
 t :: TP (Proof (Forall "e" Expr -> SBool))
 t = calc "t" (\(Forall @"e" (e :: SExpr)) -> e .== e) $ \e -> []
-    |- [pCase|Expr e of
+    |- [pCase| e of
          Add (Num i) b | i .> 0  -> sAdd (sNum i) b .== sAdd (sNum i) b =: e .== e =: qed
          Num i | i .> 0           -> sNum i .== sNum i =: e .== e =: qed
          Var s | s .== literal "hey" -> sVar s .== sVar s =: e .== e =: qed

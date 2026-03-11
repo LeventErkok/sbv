@@ -2,7 +2,7 @@ SCase15.hs:11:14: error: [GHC-39584]
     " SCase15.hs:16:20: Parse error in pattern: _
 
     " In the quasi-quotation:
-        [sCase|Expr e of
+        [sCase| e of
                Zero          -> 0
                Num i         -> i
                Var s         -> ite (s .== "a") 1 2
@@ -10,6 +10,6 @@ SCase15.hs:11:14: error: [GHC-39584]
                _ _ -> 3
       |]
    |
-11 | t e = [sCase|Expr e of
-   |              ^^^^^^^^^...
+11 | t e = [sCase| e of
+   |              ^^^^^...
 

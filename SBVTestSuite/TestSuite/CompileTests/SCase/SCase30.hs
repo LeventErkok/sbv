@@ -17,7 +17,7 @@ data A = A Integer
 mkSymbolic [''A]
 
 t :: SA -> SA
-t a = [sCase|A a of
+t a = [sCase| a of
          A u     -> sA (u+1)
          B f     -> sB (f+2)
          C a1 a2 -> sC (t a1) (t a2)

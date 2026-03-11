@@ -16,7 +16,7 @@ import Data.SBV.TP
 
 t :: TP (Proof (Forall "xs" [Integer] -> SBool))
 t = calc "t" (\(Forall @"xs" (xs :: SList Integer)) -> xs .== xs) $ \xs -> []
-    |- [pCase|List xs of
+    |- [pCase| xs of
          []    -> xs .== xs =: qed
          _ : _ -> xs .== xs =: qed
        |]
