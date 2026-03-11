@@ -67,7 +67,7 @@ type E = Env String Integer
 --   * @Let nm (Con v) b    → subst nm v b@
 simplify :: SE -> SE
 simplify = smtFunction "simplify" $ \expr ->
-  [sCase|Expr expr of
+  [sCase| expr of
     Sqr (Con v)         -> sCon (v * v)
 
     Inc (Con v)         -> sCon (v + 1)
@@ -102,7 +102,7 @@ simplify = smtFunction "simplify" $ \expr ->
 --   * @Let x a b     → Let x (subst nm v a) (if x == nm then b else subst nm v b)@
 subst :: SString -> SInteger -> SE -> SE
 subst = smtFunction "subst" $ \nm v expr ->
-  [sCase|Expr expr of
+  [sCase| expr of
 
     -- Substitute for vars if name matches
     Var x | x .== nm -> sCon v
@@ -125,7 +125,7 @@ subst = smtFunction "subst" $ \nm v expr ->
 -- | Constant fold an expression bottom-up: first fold sub-expressions, then simplify.
 cfold :: SE -> SE
 cfold = smtFunction "cfold" $ \expr ->
-  [sCase|Expr expr of
+  [sCase| expr of
     Var nm     -> sVar nm
     Con v      -> sCon v
     Sqr a      -> simplify (sSqr (cfold a))
@@ -1072,7 +1072,7 @@ simpCorrect = do
    calc "simpCorrect"
      (\(Forall @"e" (e :: SE)) (Forall @"env" (env :: E)) -> interpInEnv env (simplify e) .== interpInEnv env e) $
      \e env -> []
-     |- [pCase|Expr e of
+     |- [pCase| e of
           Var nm     -> interpInEnv env (simplify e)
                      ?? "Var"
                      =: interpInEnv env (simplify (sVar nm))
@@ -1397,7 +1397,7 @@ cfoldCorrect = do
      (\(Forall @"e" (e :: SE)) (Forall @"env" (env :: E)) -> interpInEnv env (cfold e) .== interpInEnv env e)
      (\e _ -> size e, [proofOf mnn]) $
      \ih e env -> []
-       |- [pCase|Expr e of
+       |- [pCase| e of
             Var nm     -> interpInEnv env (cfold e)
                        ?? "case Var"
                        =: interpInEnv env (cfold (sVar nm))

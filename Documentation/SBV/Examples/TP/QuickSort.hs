@@ -46,7 +46,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 -- | Quick-sort, using the first element as pivot.
 quickSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
 quickSort = smtFunction "quickSort"
-          $ \l -> [sCase|List l of
+          $ \l -> [sCase| l of
                      []     -> []
                      x : xs -> let (lo, hi) = untuple (partition x xs)
                                in  quickSort lo ++ [x] ++ quickSort hi
@@ -57,7 +57,7 @@ quickSort = smtFunction "quickSort"
 -- with a free-variable captured, which isn't supported due to higher-order limitations in SMTLib.
 partition :: (OrdSymbolic (SBV a), SymVal a) => SBV a -> SList a -> STuple [a] [a]
 partition = smtFunction "partition"
-          $ \pivot xs -> [sCase|List xs of
+          $ \pivot xs -> [sCase| xs of
                             []     -> tuple ([], [])
                             a : as -> let (lo, hi) = untuple (partition pivot as)
                                       in ite (a .< pivot)
@@ -293,12 +293,12 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
   -- lge: list greater-equal: all the elements are >= pivot
   let llt, lge :: SBV a -> SList a -> SBool
       llt = smtFunction "llt"
-          $ \pivot l -> [sCase|List l of
+          $ \pivot l -> [sCase| l of
                            []     -> sTrue
                            x : xs -> x .<  pivot .&& llt pivot xs
                         |]
       lge = smtFunction "lge"
-          $ \pivot l -> [sCase|List l of
+          $ \pivot l -> [sCase| l of
                            []     -> sTrue
                            x : xs -> x .>= pivot .&& lge pivot xs
                         |]
@@ -424,7 +424,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
      (\(Forall l) (Forall pivot) -> length (fst (partition @a pivot l)) .<= length l)
      (\l _ -> length l, []) $
      \ih l pivot -> [] |- length (fst (partition @a pivot l)) .<= length l
-                       =: [pCase|List l of
+                       =: [pCase| l of
                             []     -> trivial
                             a : as -> let lo = fst (partition pivot as)
                                    in ite (a .< pivot)
@@ -444,7 +444,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
      (\(Forall l) (Forall pivot) -> length (snd (partition @a pivot l)) .<= length l)
      (\l _ -> length l, []) $
      \ih l pivot -> [] |- length (snd (partition @a pivot l)) .<= length l
-                       =: [pCase|List l of
+                       =: [pCase| l of
                             []     -> trivial
                             a : as -> let hi = snd (partition pivot as)
                                    in ite (a .< pivot)
@@ -510,7 +510,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
              (\xs _ -> length xs, []) $
              \ih xs e ->
                 [] |- count e (quickSort xs)
-                   =: [pCase|List xs of
+                   =: [pCase| xs of
                         []     -> trivial
                         a : as -> count e (quickSort (a .: as))
                                ?? "expand quickSort"
@@ -549,7 +549,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
           \ih (x, xs) pivot ys ->
                 [nonDecreasing (x .: xs), llt pivot xs, nonDecreasing ys, lge pivot ys]
              |- nonDecreasing (x .: xs ++ [pivot] ++ ys)
-             =: [pCase|List xs of
+             =: [pCase| xs of
                   []     -> trivial
                   a : as -> nonDecreasing (x .: (a .: as) ++ [pivot] ++ ys)
                          =: nonDecreasing (x .: a .: (as ++ [pivot] ++ ys))
@@ -573,7 +573,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
              (length @a, []) $
              \ih xs ->
                 [] |- nonDecreasing (quickSort xs)
-                   =: [pCase|List xs of
+                   =: [pCase| xs of
                         []     -> trivial
                         a : as -> nonDecreasing (quickSort (a .: as))
                                ?? "expand quickSort"

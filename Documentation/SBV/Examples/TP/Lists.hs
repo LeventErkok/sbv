@@ -1103,7 +1103,7 @@ takeDropWhile f =
 -- | Remove adjacent duplicates.
 destutter :: SymVal a => SList a -> SList a
 destutter = smtFunction "destutter"
-          $ \xs -> [sCase|List xs of
+          $ \xs -> [sCase| xs of
                       []     -> xs
                       [_]    -> xs
                       a : as -> let r = destutter as
@@ -1174,7 +1174,7 @@ destutterIdempotent = do
                   (length, []) $
                   \ih xs -> []
                          |- noAdd (destutter xs)
-                         =: [pCase|List xs of
+                         =: [pCase| xs of
                               []         -> trivial
                               [_]        -> trivial
                               a : b : bs -> noAdd (destutter (a .: b .: bs))
@@ -1697,7 +1697,7 @@ map_snd_zip_take = do
 -- | Count the number of occurrences of an element in a list
 count :: SymVal a => SBV a -> SList a -> SInteger
 count = smtFunction "count"
-      $ \e l -> [sCase|List l of
+      $ \e l -> [sCase| l of
                    []               -> 0
                    x : xs | e .== x -> 1 + count e xs
                           | True    -> count e xs
@@ -1728,7 +1728,7 @@ interleaveLen = sInduct "interleaveLen"
                         (\(Forall xs) (Forall ys) -> length xs + length ys .== length (interleave xs ys))
                         (\xs ys -> length xs + length ys, []) $
                         \ih xs ys -> [] |- length xs + length ys .== length (interleave xs ys)
-                                        =: [pCase|List xs of
+                                        =: [pCase| xs of
                                              []     -> trivial
                                              a : as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
                                                     =: 1 + length as + length ys .== 1 + length (interleave ys as)
@@ -1745,7 +1745,7 @@ uninterleave lst = uninterleaveGen lst (tuple ([], []))
 uninterleaveGen :: SymVal a => SList a -> STuple [a] [a] -> STuple [a] [a]
 uninterleaveGen = smtFunction "uninterleave"
                 $ \xs alts -> let (es, os) = untuple alts
-                              in [sCase|List xs of
+                              in [sCase| xs of
                                     []     -> tuple (reverse es, reverse os)
                                     x : ys -> uninterleaveGen ys (tuple (os, x .: es))
                                  |]
@@ -1792,7 +1792,7 @@ interleaveRoundTrip = do
          \ih xs ys alts -> [length xs .== length ys]
                         |- let (es, os) = untuple alts
                         in uninterleaveGen (interleave xs ys) alts
-                        =: [pCase|Tuple2 tuple (xs, ys) of
+                        =: [pCase| tuple (xs, ys) of
                               ([], _)          -> trivial
                               (_, [])          -> trivial
                               (a : as, b : bs) -> uninterleaveGen (interleave (a .: as) (b .: bs)) alts

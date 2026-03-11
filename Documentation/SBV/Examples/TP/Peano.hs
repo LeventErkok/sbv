@@ -67,7 +67,7 @@ instance Num SNat where
 
   (+) = plus
       where plus = smtFunction "sNatPlus" $
-                     \m n -> [sCase|Nat m of
+                     \m n -> [sCase| m of
                                Zero   -> n
                                Succ p -> sSucc (p + n)
                              |]
@@ -76,14 +76,14 @@ instance Num SNat where
 
   (*) = times
       where times = smtFunction "sNatTimes" $
-                      \m n -> [sCase|Nat m of
+                      \m n -> [sCase| m of
                                 Zero   -> 0
                                 Succ p -> n + p * n
                               |]
 
   abs = id
 
-  signum m = [sCase|Nat m of
+  signum m = [sCase| m of
                Zero -> 0
                _    -> 1
              |]
@@ -98,7 +98,7 @@ instance OrdSymbolic SNat where
 --
 -- NB. When writing the properties below, we use the notation \(\overline{n}\) to mean @n2i n@.
 n2i :: SNat -> SInteger
-n2i = smtFunction "n2i" $ \n -> [sCase|Nat n of
+n2i = smtFunction "n2i" $ \n -> [sCase| n of
                                    Zero   -> 0
                                    Succ p -> 1 + n2i p
                                 |]

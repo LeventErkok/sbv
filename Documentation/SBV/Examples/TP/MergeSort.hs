@@ -41,7 +41,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 -- | Merge two already sorted lists into another
 merge :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a -> SList a
 merge = smtFunction "merge"
-      $ \l r -> [sCase|Tuple2 tuple (l, r) of
+      $ \l r -> [sCase| tuple (l, r) of
                    ([], _)          -> r
                    (_, [])          -> l
                    (a : as, b : bs) -> ite (a .<= b)
@@ -52,7 +52,7 @@ merge = smtFunction "merge"
 -- | Merge sort, using 'merge' above to successively sort halved input
 mergeSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
 mergeSort = smtFunction "mergeSort"
-          $ \l -> [sCase|List l of
+          $ \l -> [sCase| l of
                      []  -> l
                      [_] -> l
                      _   -> let (h1, h2) = splitAt (length l `sEDiv` 2) l
@@ -151,7 +151,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
            (\(Forall xs) (Forall ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys))
            (\xs ys -> tuple (length xs, length ys), []) $
            \ih xs ys -> [nonDecreasing xs, nonDecreasing ys]
-                     |- [pCase|Tuple2 tuple (xs, ys) of
+                     |- [pCase| tuple (xs, ys) of
                           ([], _)          -> trivial
                           (_, [])          -> trivial
                           (a : as, b : bs) ->
@@ -178,7 +178,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
         sInduct "sortNonDecreasing"
                 (\(Forall xs) -> nonDecreasing (mergeSort xs))
                 (length, []) $
-                \ih xs -> [] |- [pCase|List xs of
+                \ih xs -> [] |- [pCase| xs of
                                   []     -> qed
                                   e : es -> nonDecreasing (mergeSort (e .: es))
                                          ?? "unfold"
@@ -208,7 +208,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
         sInduct "mergeCount"
                 (\(Forall xs) (Forall ys) (Forall e) -> count e (merge xs ys) .== count e xs + count e ys)
                 (\xs ys _e -> tuple (length xs, length ys), []) $
-                \ih as bs e -> [] |- [pCase|Tuple2 tuple (as, bs) of
+                \ih as bs e -> [] |- [pCase| tuple (as, bs) of
                                       ([], _)          -> trivial
                                       (_, [])          -> trivial
                                       (x : xs, y : ys) -> count e (merge (x .: xs) (y .: ys))
@@ -245,7 +245,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
         sInductWith cvc5 "sortIsPermutation"
                 (\(Forall xs) (Forall e) -> count e xs .== count e (mergeSort xs))
                 (\xs _e -> length xs, []) $
-                \ih as e -> [] |- [pCase|List as of
+                \ih as e -> [] |- [pCase| as of
                                     []     -> trivial
                                     x : xs -> count e (mergeSort (x .: xs))
                                            ?? "unfold mergeSort"

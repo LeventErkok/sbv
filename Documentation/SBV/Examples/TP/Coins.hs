@@ -59,14 +59,14 @@ mkChange = smtFunction "mkChange" $ \n ->
   $ ite (n .==  9) (sJust (sPocket 3 0))
   $ ite (n .== 10) (sJust (sPocket 0 2))
     -- n > 10: use change for (n-3) and add a 3-cent coin
-    [sCase|Maybe mkChange (n - 3) of
+    [sCase| mkChange (n - 3) of
        Nothing             -> sNothing
        Just (Pocket n3 n5) -> sJust (sPocket (n3 + 1) n5)
     |]
 
 -- | Evaluate the value of a pocket (total cents).
 evalPocket :: SMaybe Pocket -> SInteger
-evalPocket mp = [sCase|Maybe mp of
+evalPocket mp = [sCase| mp of
                    Nothing             -> 0
                    Just (Pocket n3 n5) -> 3 * n3 + 5 * n5
                 |]
@@ -103,7 +103,7 @@ correctness =
                            , n .== 10 ==> trivial
                            , n .< 8   ==> trivial   -- Vacuously true: contradicts n >= 8
                            , n .> 10  ==> evalPocket (mkChange n) .== n
-                                       =: [sCase|Maybe mkChange (n - 3) of
+                                       =: [sCase| mkChange (n - 3) of
                                             Nothing             -> evalPocket sNothing .== n
                                             Just (Pocket n3 n5) -> evalPocket (sJust (sPocket (n3 + 1) n5)) .== n
                                          |]

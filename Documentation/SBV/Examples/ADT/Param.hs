@@ -76,7 +76,7 @@ instance (SymVal nm, SymVal val, Integral val) => Num (SExpr nm val) where
 -- variable referenced is introduced by an enclosing let expression.
 isValid :: (SymVal nm, Eq nm, SymVal val) => (SBV nm -> SBool) -> SExpr nm val -> SBool
 isValid nmChk = go []
-  where go = smtFunction "valid" $ \env expr -> [sCase|Expr expr of
+  where go = smtFunction "valid" $ \env expr -> [sCase| expr of
                                                    Var s     -> nmChk s  .&& s `SL.elem` env
                                                    Val _     -> sTrue
                                                    Add l r   -> go env l .&& go env r
@@ -87,7 +87,7 @@ isValid nmChk = go []
 -- | Evaluate an expression.
 eval :: (SymVal nm, SymVal val, Num (SBV val)) => SExpr nm val -> SBV val
 eval = go []
- where go = smtFunction "eval" $ \env expr -> [sCase|Expr expr of
+ where go = smtFunction "eval" $ \env expr -> [sCase| expr of
                                                  Val i     -> i
                                                  Var s     -> get env s
                                                  Add l r   -> go env l + go env r
@@ -96,7 +96,7 @@ eval = go []
                                               |]
 
        get = smtFunction "get"
-           $ \env s -> [sCase|List env of
+           $ \env s -> [sCase| env of
                            []          -> 0
                            (k, v) : es -> ite (s .== k) v (get es s)
                         |]

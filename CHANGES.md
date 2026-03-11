@@ -12,21 +12,21 @@
     user-defined ADTs declared via `mkSymbolicADT`. Usage:
 
     ```haskell
-    [sCase|Maybe m of
+    [sCase| m of
        Nothing -> 0
        Just x  -> x + 1
     |]
 
-    [sCase|List xs of
+    [sCase| xs of
        []      -> 0
        x : xs' -> x + f xs'
     |]
 
-    [sCase|Tuple2 p of
+    [sCase| p of
        (a, b) -> a + b
     |]
 
-    [sCase|Either e of
+    [sCase| e of
        Left x  -> x
        Right _ -> 0
     |]
@@ -47,7 +47,7 @@
 
     ```haskell
     normalize f = smtFunction "normalize" $ \f ->
-      [sCase|Formula f of
+      [sCase| f of
         If (If p q r) left right -> normalize (sIf p (sIf q left right) (sIf r left right))
         If c          left right -> sIf c (normalize left) (normalize right)
         _                        -> f
@@ -62,7 +62,7 @@
     positions (and at the top level inside a constructor). For example:
 
     ```haskell
-    p e = [sCase|Expr e of
+    p e = [sCase| e of
              Val 0         -> 100          -- fires when the Val field equals 0
              Val 1         -> 200          -- fires when the Val field equals 1
              Add (Val 0) r -> eval r       -- nested literal: fires when left child is Val 0

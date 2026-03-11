@@ -297,7 +297,7 @@ sumHalves = runTP $ do
       (\(Forall xs) -> halvingSum xs .== sum xs)
       (length, []) $
       \ih xs -> [] |- halvingSum xs
-                   =: [pCase|List xs of
+                   =: [pCase| xs of
                         []         -> qed
                         [_]        -> qed
                         a : b : bs -> halvingSum (a .: b .: bs)

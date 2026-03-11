@@ -283,7 +283,7 @@ evalTest sv rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                                  _       -> error $ "Unexpected: " ++ show cs
 
 f :: SExpr -> SInteger
-f e = [sCase|Expr e of
+f e = [sCase| e of
          Var s     | s .== literal "a"                       -> 0
                    | s .== literal "b" .|| s .== literal "c" -> 1
                    | sTrue                                   -> 2
@@ -318,7 +318,7 @@ t00 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                          _     -> error $ "Unexpected: " ++ show cs
 
 g :: SExpr -> SInteger
-g e = [sCase|Expr e of
+g e = [sCase| e of
          Var s     | s .== literal "a"                       -> 0
                    | s .== literal "b" .|| s .== literal "c" -> 1
                    | sTrue                                   -> 2
@@ -350,7 +350,7 @@ tSat i rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
 
 t :: SA -> SA
 t = smtFunction "t" $ \a ->
-       [sCase|A a of
+       [sCase| a of
          A u     -> sA (u+1)
          B w     -> sB (w+2)
          C a1 a2 -> sC (t a1) (t a2)
@@ -364,7 +364,7 @@ t = smtFunction "t" $ \a ->
 -- Mul (Val 0) _  => 0
 -- otherwise      => identity
 h :: SExpr -> SExpr
-h e = [sCase|Expr e of
+h e = [sCase| e of
          Add (Val i) r | i .== 0 -> r
          Add l (Val i) | i .== 0 -> l
          Mul (Val i) r | i .== 1 -> r
@@ -394,7 +394,7 @@ hPreservesEvalMul rf = void $ proveWith z3{verbose=True, redirectVerbose=Just rf
 -- | A constant-folder using a deeply nested pattern: recognizes Add (Mul (Val a) (Val b)) (Mul (Val c) (Val d))
 -- and folds it to Val (a*b + c*d). All four leaf positions use nested Val patterns simultaneously.
 cfold :: SExpr -> SExpr
-cfold e = [sCase|Expr e of
+cfold e = [sCase| e of
              Add (Mul (Val a) (Val b)) (Mul (Val c) (Val d)) -> sVal (a*b + c*d)
              _                                               -> e
           |]
@@ -411,7 +411,7 @@ cfoldPreservesEval rf = void $ proveWith z3{verbose=True, redirectVerbose=Just r
 -- Add (Val 0) r => eval r   (nested integer literal)
 -- _             => eval e   (fallthrough)
 p :: SExpr -> SInteger
-p e = [sCase|Expr e of
+p e = [sCase| e of
          Val 0         -> 100
          Val 1         -> 200
          Add (Val 0) r -> eval r

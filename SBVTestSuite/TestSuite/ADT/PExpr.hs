@@ -156,7 +156,7 @@ evalTest sv rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                                  _       -> error $ "Unexpected: " ++ show cs
 
 f :: SExpr String Integer -> SInteger
-f e = [sCase|Expr e of
+f e = [sCase| e of
          Var s     | s .== literal "a"                       -> 0
                    | s .== literal "b" .|| s .== literal "c" -> 1
                    | sTrue                                   -> 2
@@ -191,7 +191,7 @@ t00 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                          _     -> error $ "Unexpected: " ++ show cs
 
 g :: (SymVal val, OrdSymbolic (SBV val), Num (SBV val)) => SExpr String val -> SInteger
-g e = [sCase|Expr e of
+g e = [sCase| e of
          Var s     | s .== literal "a"                       -> 0
                    | s .== literal "b" .|| s .== literal "c" -> 1
                    | sTrue                                   -> 2
@@ -223,7 +223,7 @@ tSat i rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
 
 t :: SA -> SA
 t = smtFunction "t" $ \a ->
-       [sCase|A a of
+       [sCase| a of
          A u     -> sA (u+1)
          B w     -> sB (w+2)
          C a1 a2 -> sC (t a1) (t a2)

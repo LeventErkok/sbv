@@ -35,7 +35,7 @@ import qualified Documentation.SBV.Examples.TP.Lists as TP
 -- majority element, then the result is irrelevant.
 majority :: SymVal a => SBV a -> SInteger -> SList a -> SBV a
 majority = smtFunction "majority"
-                    $ \c i lst -> [sCase|List lst of
+                    $ \c i lst -> [sCase| lst of
                                      []     -> c
                                      x : xs -> ite (i .== 0)
                                                    (majority x 1 xs)

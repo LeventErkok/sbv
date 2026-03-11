@@ -83,7 +83,7 @@ isValid = ST.fst . goS []
   where isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
 
         goE :: SList String -> SExpr String val -> SBool
-        goE = smtFunction "validE" $ \env expr -> [sCase|Expr expr of
+        goE = smtFunction "validE" $ \env expr -> [sCase| expr of
                                                      Con _   -> sTrue
                                                      Var s   -> isId s .&& s `SL.elem` env
                                                      Add l r -> goE env l .&& goE env r
@@ -91,7 +91,7 @@ isValid = ST.fst . goS []
                                                   |]
 
         goS :: SList String -> SStmt String val -> STuple Bool [String]
-        goS = smtFunction "validS" $ \env stmt -> [sCase|Stmt stmt of
+        goS = smtFunction "validS" $ \env stmt -> [sCase| stmt of
                                                      Assign v e -> tuple (isId v .&& goE env e, v SL..: env)
                                                      Seq    a b -> let (lv, env')  = untuple $ goS env  a
                                                                        (rv, env'') = untuple $ goS env' b

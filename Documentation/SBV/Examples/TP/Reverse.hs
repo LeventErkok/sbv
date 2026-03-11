@@ -48,7 +48,7 @@ import qualified Documentation.SBV.Examples.TP.Lists as TP
 -- so we cannot use a nested @sCase@ call here.
 rev :: SymVal a => SList a -> SList a
 rev = smtFunction "rev"
-    $ \xs -> [sCase|List xs of
+    $ \xs -> [sCase| xs of
                 []     -> xs
                 [_]    -> xs
                 x : as -> let (hras, tas) = uncons (rev as)
@@ -100,7 +100,7 @@ correctness = do
     (\(Forall xs) -> rev xs .== reverse xs)
     (length, []) $
     \ih xs -> [] |- rev xs
-                 =: [pCase|List xs of
+                 =: [pCase| xs of
                       []     -> trivial
                       [_]    -> trivial
                       a : as -> head (rev as) .: rev (a .: rev (tail (rev as)))

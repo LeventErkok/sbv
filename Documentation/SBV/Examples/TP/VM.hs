@@ -83,7 +83,7 @@ mkSymbolic [''Expr]
 
 -- | Size of an expression. Used in strong induction.
 size :: (SymVal nm, SymVal val) => SExpr nm val -> SInteger
-size = smtFunction "exprSize" $ \expr -> [sCase|Expr expr of
+size = smtFunction "exprSize" $ \expr -> [sCase| expr of
                                             Var _     -> 0
                                             Con _     -> 0
                                             Sqr a     -> 1 + size a
@@ -101,7 +101,7 @@ type Env nm val = SList (nm, val)
 -- | Interpreter, in the usual functional style, taking an arbitrary environment.
 interpInEnv :: (SymVal nm, SymVal val, Num (SBV val)) => Env nm val -> SExpr nm val -> SBV val
 interpInEnv = smtFunction "interpInEnv" $ \env expr ->
-                 [sCase|Expr expr of
+                 [sCase| expr of
                     Var nm    -> nm `SL.lookup` env
                     Con v     -> v
                     Sqr a     -> let av = interpInEnv env a in av * av
@@ -151,7 +151,7 @@ type EnvStack nm val = SBV ([(nm, val)], [val])
 -- We produce the new environment, and the new stack.
 execute :: (SymVal nm, SymVal val, Num (SBV val)) => EnvStack nm val -> SInstr nm val -> EnvStack nm val
 execute envStk instr = let (env, stk) = untuple envStk
-                       in tuple [sCase|Instr instr of
+                       in tuple [sCase| instr of
                                    IPushN nm   -> (env, push (nm `SL.lookup` env) stk)
                                    IPushV v    -> (env, push v stk)
                                    IDup        -> (env, push (top stk) stk)
@@ -171,7 +171,7 @@ run = SL.foldl execute
 -- | Convert an expression to a sequence of instructions for our virtual machine.
 compile :: (SymVal nm, SymVal val, Num (SBV val)) => SExpr nm val -> SList (Instr nm val)
 compile = smtFunction "compile" $ \expr ->
-                [sCase|Expr expr of
+                [sCase| expr of
                    Var nm    -> [sIPushN nm]
                    Con v     -> [sIPushV v]
                    Sqr a     -> compile a SL.++ [sIDup,     sIMul]
@@ -317,7 +317,7 @@ correctness = do
                          .== tuple (env, push (interpInEnv env e) stk))
                (\e _ _  -> size e, [proofOf measureNonNeg]) $
                \ih e env stk -> []
-                 |- [pCase|Expr e of
+                 |- [pCase| e of
                       Var nm     -> run (tuple (env, stk)) (compile (sVar nm))
                                  ?? "case Var"
                                  =: run (tuple (env, stk)) [sIPushN nm]

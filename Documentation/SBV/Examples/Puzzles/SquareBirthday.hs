@@ -70,7 +70,7 @@ instance Show Date where
 symDate :: String -> Symbolic SDate
 symDate nm = do dt <- free nm
 
-                constrain [sCase|Date dt of
+                constrain [sCase| dt of
                               MkDate d _ y -> sAnd [ 1 .<= d, d .<= 31
                                                    , 0 .<= y
                                                    ]
@@ -116,7 +116,7 @@ squareYears = takeWhile (\(y, _) -> y < 2100)
 
 -- | A date is square if all its components are.
 squareDate :: SDate -> SBool
-squareDate dt = [sCase|Date dt of
+squareDate dt = [sCase| dt of
                    MkDate d m y -> squareDay d .&& squareMonth m .&& squareYear y
                 |]
   where squareDay   d = d `sElem` [1, 4, 9, 16, 25]
@@ -126,13 +126,13 @@ squareDate dt = [sCase|Date dt of
 
 -- | Summing the square-roots of the components of a date.
 sqrSum :: SDate -> SInteger
-sqrSum dt = [sCase|Date dt of
+sqrSum dt = [sCase| dt of
                MkDate d m y -> r d + mr m + r y
             |]
  where r v  = v `SL.lookup` literal ([(i * i, i) | i <- [1, 2, 3, 4, 5]] ++ squareYears)
 
        mr :: SMonth -> SInteger
-       mr m = [sCase|Month m of
+       mr m = [sCase| m of
                   Jan -> 1
                   Apr -> 2
                   Sep -> 3
@@ -159,7 +159,7 @@ puzzle = runSMT $ do
     constrain $ syear myBirthday .< 2000 .&& syear myBirthday .>= 1900
 
     -- My next birthday will be a square
-    let next = [sCase|Date myBirthday of
+    let next = [sCase| myBirthday of
                   MkDate d m _ -> sMkDate d m (syear today + oneIf (today `onOrAfter` myBirthday))
                |]
 
@@ -179,12 +179,12 @@ puzzle = runSMT $ do
     momBirthday <- symDate "Mom's Birthday"
 
     -- Mom has a square birth-date, except for the month:
-    constrain [sCase|Date momBirthday of
+    constrain [sCase| momBirthday of
                  MkDate d _ y -> squareDate (sMkDate d sJan y)
               |]
 
     -- Mom's day and month are perfect cubes
-    constrain [sCase|Date momBirthday of
+    constrain [sCase| momBirthday of
                  MkDate d m _ -> sAnd [ d `sElem` [1, 8, 27]
                                       , m `sElem` [sJan, sAug]
                                       ]

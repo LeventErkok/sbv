@@ -49,7 +49,7 @@ up n = upAcc n []
 -- | Keep consing the first argument on to the accumulator, until we hit zero. After that, return the second argument.
 -- Normally, we'd define this as a local function, but the definition needs to be visible for the proofs.
 upAcc :: SNat -> SList Integer -> SList Integer
-upAcc = smtFunction "up" $ \n lst -> [sCase|Nat n of
+upAcc = smtFunction "up" $ \n lst -> [sCase| n of
                                        Zero   -> lst
                                        Succ p -> upAcc p (n2i n .: lst)
                                      |]
@@ -61,7 +61,7 @@ upAcc = smtFunction "up" $ \n lst -> [sCase|Nat n of
 -- >>> down 5
 -- [5,4,3,2,1] :: [SInteger]
 down :: SNat -> SList Integer
-down = smtFunction "down" $ \n -> [sCase|Nat n of
+down = smtFunction "down" $ \n -> [sCase| n of
                                      Zero   -> []
                                      Succ p -> n2i n .: down p
                                   |]

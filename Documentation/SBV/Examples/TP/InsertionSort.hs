@@ -40,7 +40,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 -- | Insert an element into an already sorted list in the correct place.
 insert :: (OrdSymbolic (SBV a), SymVal a) => SBV a -> SList a -> SList a
 insert = smtFunction "insert"
-       $ \e l -> [sCase|List l of
+       $ \e l -> [sCase| l of
                      []               -> [e]
                      x : xs | e .<= x -> e .: x .: xs
                             | True    -> x .: insert e xs
@@ -49,7 +49,7 @@ insert = smtFunction "insert"
 -- | Insertion sort, using 'insert' above to successively insert the elements.
 insertionSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
 insertionSort = smtFunction "insertionSort"
-              $ \l -> [sCase|List l of
+              $ \l -> [sCase| l of
                           []     -> []
                           x : xs -> insert x (insertionSort xs)
                       |]
@@ -58,7 +58,7 @@ insertionSort = smtFunction "insertionSort"
 -- | Remove the first occurrence of an number from a list, if any.
 removeFirst :: (Eq a, SymVal a) => SBV a -> SList a -> SList a
 removeFirst = smtFunction "removeFirst"
-            $ \e l -> [sCase|List l of
+            $ \e l -> [sCase| l of
                           []               -> []
                           x : xs | e .== x -> xs
                                  | True    -> x .: removeFirst e xs
@@ -68,7 +68,7 @@ removeFirst = smtFunction "removeFirst"
 -- based definition of permutation here, since this variant works better with insertion sort.
 isPermutation :: (Eq a, SymVal a) => SList a -> SList a -> SBool
 isPermutation = smtFunction "isPermutation"
-              $ \l r -> [sCase|List l of
+              $ \l r -> [sCase| l of
                             []     -> null r
                             x : xs -> x `elem` r .&& isPermutation xs (removeFirst x r)
                         |]

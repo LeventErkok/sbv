@@ -9,10 +9,10 @@
 -- Add support for symbolic case expressions. Constructed with the help of ChatGPT,
 -- which was remarkably good at giving me the basic structure.
 --
--- Provides a quasiquoter  `[sCase|Expr expr of ... |]` for symbolic cases
+-- Provides a quasiquoter  `[sCase| expr of ... |]` for symbolic cases
 -- where @Expr@ is the underlying type.
 --
--- Also provides `[pCase|Expr expr of ... |]` for proof case-splits.
+-- Also provides `[pCase| expr of ... |]` for proof case-splits.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE LambdaCase            #-}
@@ -40,7 +40,7 @@ import qualified Data.SBV.Tuple as ST
 import qualified Data.SBV.Maybe as SM
 import qualified Data.SBV.Either as SE
 
-import Data.Char  (isSpace, isDigit)
+import Data.Char  (isDigit)
 import Data.List  (intercalate, stripPrefix)
 import Data.Maybe (isJust, fromMaybe)
 
@@ -124,7 +124,64 @@ recognizeBuiltinCon "Nothing" = Just BTMaybe
 recognizeBuiltinCon "Just"    = Just BTMaybe
 recognizeBuiltinCon "Left"    = Just BTEither
 recognizeBuiltinCon "Right"   = Just BTEither
+recognizeBuiltinCon "[]"      = Just BTList
+recognizeBuiltinCon ":"       = Just BTList
 recognizeBuiltinCon _         = Nothing
+
+-- | Infer the type from the constructor names used in the pattern matches.
+-- Examines top-level patterns to find the first informative one (i.e., not a wildcard),
+-- then resolves the constructor via TH to determine the parent type.
+inferType :: String -> [Match] -> Q (String, Maybe BuiltinType)
+inferType label matches = case firstInfo matches of
+    Just (Left n)     -> pure ("Tuple" ++ show n, Just (BTTuple n))
+    Just (Right Nothing)   -> pure ("List", Just BTList)
+    Just (Right (Just name)) -> resolveConType name
+    Nothing           -> fail Unknown $ unlines [ label ++ ": Cannot infer type from patterns."
+                                                , ""
+                                                , "        All branches use wildcards. At least one constructor pattern is needed."
+                                                ]
+  where
+    -- Left n = tuple of arity n, Right Nothing = list, Right (Just name) = constructor name
+    firstInfo [] = Nothing
+    firstInfo (Match pat _ _ : rest) = case patInfo pat of
+                                         Just info -> Just info
+                                         Nothing   -> firstInfo rest
+
+    patInfo (ConP n _ _)                              = Just (Right (Just n))
+    patInfo (RecP n _)                                = Just (Right (Just n))
+    patInfo (InfixP _ n _)  | nameBase n == ":"       = Just (Right Nothing)
+    patInfo (UInfixP _ n _) | nameBase n == ":"       = Just (Right Nothing)
+    patInfo (TupP ps)                                 = Just (Left (length ps))
+    patInfo (ListP _)                                 = Just (Right Nothing)
+    patInfo (ParensP p)                               = patInfo p
+    patInfo _                                         = Nothing
+
+    -- Resolve a constructor name to its parent type via TH
+    resolveConType conName = do
+      let base = nameBase conName
+      -- Check if it's a known built-in constructor first (for cases where lookupValueName
+      -- might not resolve, e.g., "[]" as a value name)
+      case recognizeBuiltinCon base of
+        Just bt -> pure (builtinTypeName bt, Just bt)
+        Nothing -> do
+          mbResolved <- lookupValueName base
+          case mbResolved of
+            Nothing -> fail Unknown $ unlines [ label ++ ": Unknown constructor: " ++ base
+                                              , ""
+                                              , "        Cannot find this constructor in scope."
+                                              , "        Make sure the type is declared and mkSymbolic is called."
+                                              ]
+            Just resolved -> do
+              info <- reify resolved
+              case info of
+                DataConI _ _ parentName -> let typName = nameBase parentName
+                                           in pure (typName, recognizeBuiltin typName)
+                _ -> fail Unknown $ label ++ ": " ++ base ++ " is not a data constructor."
+
+    builtinTypeName BTMaybe     = "Maybe"
+    builtinTypeName BTEither    = "Either"
+    builtinTypeName BTList      = "List"
+    builtinTypeName (BTTuple n) = "Tuple" ++ show n
 
 -- | Constructor info for a built-in type: (name, arity).
 builtinConstructors :: BuiltinType -> [(Name, Int)]
@@ -296,12 +353,6 @@ metaParse = fmap Meta.toExp . Meta.parseResultToEither . E.parseExpWithMode pm
         -- The above just mimics the defaults. These our extras.
         extras = [E.DataKinds]
 
--- | Split the quasiquote input into (type, scrutinee) and alternatives
-parts :: String -> Maybe ((String, String), String)
-parts = go ""
-  where go _     ""             = Nothing
-        go sofar ('o':'f':rest) = Just (break isSpace (dropWhile isSpace (reverse sofar)), rest)
-        go sofar (c:cs)         = go (c:sofar) cs
 
 -- | Extract guards from a match body
 getGuards :: Body -> [Dec] -> Q [(Maybe Exp, Exp)]
@@ -566,42 +617,33 @@ sCase = QuasiQuoter
     bad ctx _ = fail Unknown $ "sCase: not usable in " <> ctx <> " context"
 
     extract :: String -> ExpQ
-    extract src =
-      case parts src of
-        Nothing -> fail Unknown $ unlines [ "sCase: Failed to parse a symbolic case-expression."
-                                          , ""
-                                          , "           Instead of:   case      expr of alts"
-                                          , "           Write     : [sCase|Type expr of alts|]"
-                                          , ""
-                                          , "        where Type is the underlying concrete type of the expression."
-                                          ]
-        Just ((typ, scrutStr), altsStr) -> do
-          let fnTok    = "sCase" <> typ
-              fullCase = "case " <> scrutStr <> " of " <> altsStr
-              offsets  = findOffsets src
-              mbt      = recognizeBuiltin typ
-          case metaParse fullCase of
-            Right (CaseE scrut matches) -> do
-              mbFnName <- case mbt of
-                Just BTList      -> pure (Just (VarE 'SL.list))
-                Just BTMaybe     -> pure (Just (VarE 'SM.sCaseMaybe))
-                Just BTEither    -> pure (Just (VarE 'SE.sCaseEither))
-                Just (BTTuple _) -> pure Nothing
-                Nothing -> lookupValueName fnTok >>= \case
-                  Just n  -> pure (Just (VarE n))
-                  Nothing -> fail Unknown $ unlines [ "sCase: Unknown symbolic ADT: " <> typ
-                                                    , ""
-                                                    , "        To use a symbolic case expression, declare your ADT, and then:"
-                                                    , "             mkSymbolic [''" <> typ <> "]"
-                                                    , "        In a template-haskell context."
-                                                    ]
-              cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ mbt . concat
-              buildCase typ mbFnName scrut cases
-            Right _  -> fail Unknown "sCase: Parse error, cannot extract a case-expression."
-            Left err -> case lines err of
-                          (_:loc:res) | ["SrcLoc", _, l, c] <- words loc, all isDigit l, all isDigit c
-                             -> fail (OffBy (read l - 1) (read c - 1) 1) (unlines res)
-                          _  -> fail Unknown $ "sCase parse error: " <> err
+    extract src = do
+      let fullCase = "case " <> src
+          offsets  = findOffsets src
+      case metaParse fullCase of
+        Right (CaseE scrut matches) -> do
+          (typ, mbt) <- inferType "sCase" matches
+          mbFnName <- case mbt of
+            Just BTList      -> pure (Just (VarE 'SL.list))
+            Just BTMaybe     -> pure (Just (VarE 'SM.sCaseMaybe))
+            Just BTEither    -> pure (Just (VarE 'SE.sCaseEither))
+            Just (BTTuple _) -> pure Nothing
+            Nothing -> let fnTok = "sCase" <> typ
+                       in lookupValueName fnTok >>= \case
+                            Just n  -> pure (Just (VarE n))
+                            Nothing -> fail Unknown $ unlines [ "sCase: Unknown symbolic ADT: " <> typ
+                                                              , ""
+                                                              , "        To use a symbolic case expression, declare your ADT, and then:"
+                                                              , "             mkSymbolic [''" <> typ <> "]"
+                                                              , "        In a template-haskell context."
+                                                              ]
+          cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ mbt . concat
+          buildCase typ mbFnName scrut cases
+        Right _  -> fail Unknown "sCase: Parse error, cannot extract a case-expression."
+        Left err -> case lines err of
+                      (_:loc:res) | ["SrcLoc", _, l, c] <- words loc, all isDigit l, all isDigit c
+                         -> fail (OffBy (read l - 1) (read c - 1) 1) (unlines res)
+                      _  -> fail Unknown $ "sCase parse error: " <> err
 
     buildCase _    (Just caseFunc) scrut (Left  cases) = pure $ AppE (foldl AppE caseFunc cases) scrut
     buildCase _    Nothing         _     (Left  _)     = error "sCase: impossible: Strategy A without case function"
@@ -816,29 +858,20 @@ pCase = QuasiQuoter
     bad ctx _ = fail Unknown $ "pCase: not usable in " <> ctx <> " context"
 
     extractProof :: String -> ExpQ
-    extractProof src =
-      case parts src of
-        Nothing -> fail Unknown $ unlines [ "pCase: Failed to parse a proof case-expression."
-                                          , ""
-                                          , "           Instead of:   case      expr of alts"
-                                          , "           Write     : [pCase|Type expr of alts|]"
-                                          , ""
-                                          , "        where Type is the underlying concrete type of the expression."
-                                          ]
-        Just ((typ, scrutStr), altsStr) -> do
-          let fullCase = "case " <> scrutStr <> " of " <> altsStr
-              offsets  = findOffsets src
-              mbt      = recognizeBuiltin typ
-          case metaParse fullCase of
-            Right (CaseE scrut matches) -> do
-              cs <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
-              validated <- checkProofCase typ mbt (concat cs)
-              buildProofCase scrut typ mbt validated
-            Right _  -> fail Unknown "pCase: Parse error, cannot extract a case-expression."
-            Left err -> case lines err of
-                          (_:loc:res) | ["SrcLoc", _, l, c] <- words loc, all isDigit l, all isDigit c
-                             -> fail (OffBy (read l - 1) (read c - 1) 1) (unlines res)
-                          _  -> fail Unknown $ "pCase parse error: " <> err
+    extractProof src = do
+      let fullCase = "case " <> src
+          offsets  = findOffsets src
+      case metaParse fullCase of
+        Right (CaseE scrut matches) -> do
+          (typ, mbt) <- inferType "pCase" matches
+          cs <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
+          validated <- checkProofCase typ mbt (concat cs)
+          buildProofCase scrut typ mbt validated
+        Right _  -> fail Unknown "pCase: Parse error, cannot extract a case-expression."
+        Left err -> case lines err of
+                      (_:loc:res) | ["SrcLoc", _, l, c] <- words loc, all isDigit l, all isDigit c
+                         -> fail (OffBy (read l - 1) (read c - 1) 1) (unlines res)
+                      _  -> fail Unknown $ "pCase parse error: " <> err
 
     -- | Validate cases for proof context
     checkProofCase :: String -> Maybe BuiltinType -> [Case] -> Q [Case]

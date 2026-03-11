@@ -58,7 +58,7 @@ import Data.SBV.TP
 -- 6 :: SInteger
 mss :: SList Integer -> SInteger
 mss = smtFunction "mss"
-    $ \xs -> [sCase|List xs of
+    $ \xs -> [sCase| xs of
                  []    -> 0
                  _ : t -> mssBegin xs `smax` mss t
              |]
@@ -76,7 +76,7 @@ mss = smtFunction "mss"
 -- 6 :: SInteger
 mssBegin :: SList Integer -> SInteger
 mssBegin = smtFunction "mssBegin"
-         $ \xs -> [sCase|List xs of
+         $ \xs -> [sCase| xs of
                       []    -> 0
                       h : t -> 0 `smax` (h `smax` (h + mssBegin t))
                   |]
@@ -100,7 +100,7 @@ kadane xs = kadaneHelper xs 0 0
 kadaneHelper :: SList Integer -> SInteger -> SInteger -> SInteger
 kadaneHelper = smtFunction "kadaneHelper"
              $ \xs maxEndingHere maxSoFar ->
-                  [sCase|List xs of
+                  [sCase| xs of
                       []    -> maxSoFar
                       h : t -> let newMaxEndingHere = 0 `smax` (h + maxEndingHere)
                                    newMaxSofar      = maxSoFar `smax` newMaxEndingHere
