@@ -79,46 +79,50 @@ mergeSort = smtFunction "mergeSort"
 --   Step: 1                                                   Q.E.D.
 --   Step: 2                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
+-- Lemma: mergeHead                                            Q.E.D.
+-- Lemma: mergeUnfold                                          Q.E.D.
 -- Inductive lemma (strong): mergeKeepsSort
 --   Step: Measure is non-negative                             Q.E.D.
---   Step: 1 (4 way full case split)
+--   Step: 1 (3 way case split)
 --     Step: 1.1                                               Q.E.D.
 --     Step: 1.2                                               Q.E.D.
---     Step: 1.3                                               Q.E.D.
---     Step: 1.4.1 (unfold merge)                              Q.E.D.
---     Step: 1.4.2 (2 way case split)
---       Step: 1.4.2.1.1 (case split)                          Q.E.D.
---       Step: 1.4.2.1.2                                       Q.E.D.
---       Step: 1.4.2.2.1 (case split)                          Q.E.D.
---       Step: 1.4.2.2.2                                       Q.E.D.
---       Step: 1.4.2.Completeness                              Q.E.D.
+--     Step: 1.3 (2 way case split)
+--       Step: 1.3.1.1 (2 way case split)                      Q.E.D.
+--       Step: 1.3.1.2                                         Q.E.D.
+--       Step: 1.3.1.3                                         Q.E.D.
+--       Step: 1.3.2.1 (2 way case split)                      Q.E.D.
+--       Step: 1.3.2.2                                         Q.E.D.
+--       Step: 1.3.2.3                                         Q.E.D.
+--       Step: 1.3.Completeness                                Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): sortNonDecreasing
 --   Step: Measure is non-negative                             Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (2 way case split)
 --     Step: 1.1                                               Q.E.D.
 --     Step: 1.2.1 (unfold)                                    Q.E.D.
 --     Step: 1.2.2 (push nonDecreasing down)                   Q.E.D.
 --     Step: 1.2.3                                             Q.E.D.
 --     Step: 1.2.4                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): mergeCount
 --   Step: Measure is non-negative                             Q.E.D.
---   Step: 1 (4 way full case split)
+--   Step: 1 (3 way case split)
 --     Step: 1.1                                               Q.E.D.
 --     Step: 1.2                                               Q.E.D.
---     Step: 1.3                                               Q.E.D.
---     Step: 1.4.1 (unfold merge)                              Q.E.D.
---     Step: 1.4.2 (push count inside)                         Q.E.D.
---     Step: 1.4.3 (unfold count, twice)                       Q.E.D.
---     Step: 1.4.4                                             Q.E.D.
---     Step: 1.4.5                                             Q.E.D.
---     Step: 1.4.6 (unfold count in reverse, twice)            Q.E.D.
---     Step: 1.4.7 (simplify)                                  Q.E.D.
+--     Step: 1.3.1 (unfold merge)                              Q.E.D.
+--     Step: 1.3.2 (push count inside)                         Q.E.D.
+--     Step: 1.3.3 (unfold count, twice)                       Q.E.D.
+--     Step: 1.3.4                                             Q.E.D.
+--     Step: 1.3.5                                             Q.E.D.
+--     Step: 1.3.6 (unfold count in reverse, twice)            Q.E.D.
+--     Step: 1.3.7 (simplify)                                  Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): sortIsPermutation
 --   Step: Measure is non-negative                             Q.E.D.
---   Step: 1 (2 way full case split)
+--   Step: 1 (2 way case split)
 --     Step: 1.1                                               Q.E.D.
 --     Step: 1.2.1 (unfold mergeSort)                          Q.E.D.
 --     Step: 1.2.2 (push count down, simplify, rearrange)      Q.E.D.
@@ -126,6 +130,7 @@ mergeSort = smtFunction "mergeSort"
 --     Step: 1.2.4                                             Q.E.D.
 --     Step: 1.2.5                                             Q.E.D.
 --     Step: 1.2.6                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: mergeSortIsCorrect                                   Q.E.D.
 -- [Proven] mergeSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
@@ -142,6 +147,18 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
     nonDecrIns    <- SH.nonDecrIns    @a
     takeDropCount <- TP.takeDropCount @a
 
+    -- Head of merge: one unfold of merge suffices for the solver
+    mergeHead <- lemma "mergeHead"
+                    (\(Forall xs) (Forall ys) -> sNot (null ys) .=>
+                        head (merge xs ys) .== ite (null xs) (head ys) (ite (head xs .<= head ys) (head xs) (head ys)))
+                    []
+
+    -- Unfold lemma for merge's recursive case
+    mergeUnfold <- lemma "mergeUnfold"
+                    (\(Forall x) (Forall xs) (Forall y) (Forall ys) ->
+                        merge (x .: xs) (y .: ys) .== ite (x .<= y) (x .: merge xs (y .: ys)) (y .: merge (x .: xs) ys))
+                    []
+
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is non-decreasing.
     --------------------------------------------------------------------------------------------
@@ -156,19 +173,21 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                           (_, [])          -> trivial
                           (a : as, b : bs) ->
                                 nonDecreasing (merge (a .: as) (b .: bs))
-                             ?? "unfold merge"
-                             =: nonDecreasing (ite (a .<= b)
-                                                   (a .: merge as (b .: bs))
-                                                   (b .: merge (a .: as) bs))
-                             ?? "case split"
-                             =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
+                             ?? "2 way case split"
+                             =: cases [ a .<= b ==> nonDecreasing (merge (a .: as) (b .: bs))
+                                                 ?? mergeUnfold `at` (Inst @"x" a, Inst @"xs" as, Inst @"y" b, Inst @"ys" bs)
+                                                 =: nonDecreasing (a .: merge as (b .: bs))
                                                  ?? ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
                                                  ?? nonDecrIns `at` (Inst @"x" a, Inst @"xs" (merge as (b .: bs)))
+                                                 ?? mergeHead  `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
                                                  =: sTrue
                                                  =: qed
-                                      , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
+                                      , a .> b  ==> nonDecreasing (merge (a .: as) (b .: bs))
+                                                 ?? mergeUnfold `at` (Inst @"x" a, Inst @"xs" as, Inst @"y" b, Inst @"ys" bs)
+                                                 =: nonDecreasing (b .: merge (a .: as) bs)
                                                  ?? ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
                                                  ?? nonDecrIns `at` (Inst @"x" b, Inst @"xs" (merge (a .: as) bs))
+                                                 ?? mergeHead  `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
                                                  =: sTrue
                                                  =: qed
                                       ]
