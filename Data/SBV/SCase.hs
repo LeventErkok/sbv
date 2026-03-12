@@ -247,7 +247,7 @@ mkAccessor nm i scrut = case recognizeBuiltinCon (nameBase nm) of
     Nothing -> AppE (VarE (mkName ("get" ++ nameBase nm ++ "_" ++ show i))) scrut
 
 -- | Like 'mkTester', but when the built-in type is already known from the scrutinee type.
--- Used in top-level sCase/pCase code generation where 'mbt' is available.
+-- Used in top-level sCase/pCase code generation.
 mkTesterFor :: Maybe BuiltinType -> Name -> Exp -> Exp
 mkTesterFor (Just bt) nm scrut = builtinTester bt nm scrut
 mkTesterFor Nothing   nm scrut = AppE (VarE (mkName ("is" ++ nameBase nm))) scrut
@@ -543,7 +543,7 @@ flattenPat o _ p = fail o $ unlines [ "sCase/pCase: Unsupported complex pattern 
 -- We include a destructuring equality (arg .=== head arg .: tail arg) because lists use
 -- SMT Seq, not declare-datatypes, so the solver doesn't automatically know this relationship.
 -- This is critical for pCase proof progress; harmless for sCase (redundant guard in ite-chain).
--- NB. For top-level list cons patterns in pCase, the same equality is added by 'processCases'.
+-- NB. For top-level list cons patterns in pCase, the same equality is added by processCases.
 flattenCons :: Offset -> Exp -> Pat -> Pat -> Q (Pat, [Exp], [Dec])
 flattenCons off arg p1 p2 = do
     let headExpr = mkAccessorFor (Just BTList) (mkName ":") 1 arg
