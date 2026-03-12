@@ -189,9 +189,9 @@ lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$
           where tab s = "***              " ++ s
 
 -- | Create an SMTLib lambda, in the given state.
-lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTDef
-lambda inState scope fk = lambdaGen scope mkLam inState fk
-   where mkLam (Defn unints _frees params body) = SMTDef fk unints (extractAllUniversals <$> params) body
+lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> Bool -> a -> m SMTDef
+lambda inState scope fk hasMeasure = lambdaGen scope mkLam inState fk
+   where mkLam (Defn unints _frees params body) = SMTDef fk unints (extractAllUniversals <$> params) body hasMeasure
 
 -- | Create an anonymous lambda, rendered as n SMTLib string. The kind passed is the kind of the final result.
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTLambda

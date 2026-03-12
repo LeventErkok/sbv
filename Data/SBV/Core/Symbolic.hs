@@ -1123,21 +1123,23 @@ data SMTDef = SMTDef Kind             -- ^ Final kind of the definition (resulti
                      [String]         -- ^ other definitions it refers to
                      (Maybe String)   -- ^ parameter string
                      (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
+                     Bool             -- ^ does this definition have a termination measure?
             deriving G.Data
 
 -- | For debug purposes
 instance Show SMTDef where
-  show (SMTDef fk frees p body) = unlines [ "-- User defined function:"
-                                          , "-- Final return type    : " ++ show fk
-                                          , "-- Refers to            : " ++ intercalate ", " frees
-                                          , "-- Parameters           : " ++ fromMaybe "NONE" p
-                                          , "-- Body                 : "
-                                          , body 2
-                                          ]
+  show (SMTDef fk frees p body hasMeasure) = unlines [ "-- User defined function:"
+                                                      , "-- Final return type    : " ++ show fk
+                                                      , "-- Refers to            : " ++ intercalate ", " frees
+                                                      , "-- Parameters           : " ++ fromMaybe "NONE" p
+                                                      , "-- Has measure          : " ++ show hasMeasure
+                                                      , "-- Body                 : "
+                                                      , body 2
+                                                      ]
 
 -- | NFData instance for SMTDef
 instance NFData SMTDef where
-  rnf (SMTDef fk frees params body) = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
+  rnf (SMTDef fk frees params body hasMeasure) = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body `seq` rnf hasMeasure
 
 -- | The state of the symbolic interpreter
 data State  = State { sbvContext          :: SBVContext

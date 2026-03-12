@@ -30,7 +30,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), hasMeasure, SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , some
@@ -1229,6 +1229,11 @@ type family MeasureOf f r where
 data Measure f where
   NoMeasure   :: Measure f
   WithMeasure :: (Zero r, OrdSymbolic (SBV r)) => MeasureOf f r -> Measure f
+
+-- | Does the measure indicate a termination measure is present?
+hasMeasure :: Measure f -> Bool
+hasMeasure NoMeasure       = False
+hasMeasure (WithMeasure _) = True
 
 -- | Regular expressions can be compared for equality. Note that we diverge here from the equality
 -- in the concrete sense; i.e., the Eq instance does not match the symbolic case. This is a bit unfortunate,
@@ -2794,11 +2799,10 @@ class SMTDefinable a where
   mkADTAccessor    nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTAccessor    nm k)) Nothing $ UIFree True in v
 
   smtFunction nm msr v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing
-                       $ UIFun (v, \st fk -> do def <- lambda st TopLevel fk v
-                                                case msr of
-                                                  NoMeasure     -> pure ()
-                                                  WithMeasure _ -> modifyIORef' (rMeasureChecks st)
-                                                                                ((atProxy (Proxy @a) nm, pure ()) :)
+                       $ UIFun (v, \st fk -> do def <- lambda st TopLevel fk (hasMeasure msr) v
+                                                when (hasMeasure msr) $
+                                                  modifyIORef' (rMeasureChecks st)
+                                                               ((atProxy (Proxy @a) nm, pure ()) :)
                                                 pure def)
 
 

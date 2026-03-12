@@ -9,6 +9,8 @@
 -- Some recursive definitions.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Basics.Recursive(tests) where
@@ -17,7 +19,11 @@ import Utils.SBVTestFramework
 
 import Data.SBV.Internals  (genMkSymVar, unSBV, VarContext(..))
 
+import Data.List (isInfixOf)
+
 import qualified Data.SBV.Dynamic as D
+
+import qualified Control.Exception as C
 
 -- This is recursive and suffers from the termination problem.
 -- But we can still prove a few things about it!
@@ -50,11 +56,31 @@ checkThm r = assert isThm
                   ThmResult Satisfiable{}   -> return False
                   _                         -> error "checkThm: Unexpected result!"
 
+-- | Test that a recursive smtFunction without a measure is rejected
+recursiveNoMeasure :: Assertion
+recursiveNoMeasure = do
+  r <- C.try $ sat $ \(x :: SInteger) -> f x .== x
+  case r of
+    Left (e :: C.SomeException) -> if "missing termination measure" `isInfixOf` show e
+                                      then pure ()
+                                      else assertFailure $ "Unexpected exception: " ++ show e
+    Right _                     -> assertFailure "Expected error for recursive function without measure"
+  where f :: SInteger -> SInteger
+        f = smtFunction "recF" NoMeasure $ \x -> ite (x .<= 0) 0 (1 + f (x - 1))
+
+-- | Test that a non-recursive smtFunction without a measure is accepted
+nonRecursiveNoMeasure :: Assertion
+nonRecursiveNoMeasure = assertIsSat $ \(x :: SInteger) -> g x .== 4
+  where g :: SInteger -> SInteger
+        g = smtFunction "nonRecG" NoMeasure $ \x -> 2 * x
+
 -- Test suite
 tests :: TestTree
 tests = testGroup "Basics.Recursive"
-   [ testCase "recursive1"    $ assertIsThm $ \x -> mgcd    0 x .== x
-   , testCase "recursive2"    $ assertIsThm $ \x -> mgcd    x 0 .== x
-   , testCase "recursiveDyn1" $ checkThm =<< mgcdDyn 0
-   , testCase "recursiveDyn2" $ checkThm =<< mgcdDyn 1
+   [ testCase "recursive1"              $ assertIsThm $ \x -> mgcd    0 x .== x
+   , testCase "recursive2"              $ assertIsThm $ \x -> mgcd    x 0 .== x
+   , testCase "recursiveDyn1"           $ checkThm =<< mgcdDyn 0
+   , testCase "recursiveDyn2"           $ checkThm =<< mgcdDyn 1
+   , testCase "recursiveNoMeasure"      recursiveNoMeasure
+   , testCase "nonRecursiveNoMeasure"   nonRecursiveNoMeasure
    ]

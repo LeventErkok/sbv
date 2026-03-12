@@ -547,7 +547,7 @@ declUserFuns :: [(String, (SMTDef, SBVType))] -> [Text]
 declUserFuns ds = map declGroup sorted
   where mkNode d = (d, fst d, getDeps d)
 
-        getDeps (_, (SMTDef _ d _ _, _)) = d
+        getDeps (_, (SMTDef _ d _ _ _, _)) = d
 
         mkDecl Nothing  rt = "() " <> rt
         mkDecl (Just p) rt = T.pack p <> " " <> rt
@@ -555,12 +555,25 @@ declUserFuns ds = map declGroup sorted
         sorted = DG.stronglyConnComp (map mkNode ds)
 
         declGroup (DG.AcyclicSCC b)  = declUserDef False b
-        declGroup (DG.CyclicSCC  bs) = case bs of
+        declGroup (DG.CyclicSCC  bs) = checkMeasures bs `seq` case bs of
                                          []  -> error "Data.SBV.declFuns: Impossible happened: an empty cyclic group was returned!"
                                          [x] -> declUserDef True x
                                          xs  -> declUserDefMulti xs
 
-        declUserDef isRec (nm, (SMTDef fk deps param body, ty)) =
+        checkMeasures bs
+          | null missing = ()
+          | True         = error $ unlines $ [ ""
+                                             , "*** Data.SBV: Recursive function" ++ plural ++ " missing termination measure" ++ plural ++ ":"
+                                             ]
+                                          ++ ["***   " ++ nm | nm <- missing]
+                                          ++ [ "***"
+                                             , "*** Use 'WithMeasure' to provide a termination measure for recursive functions."
+                                             ]
+          where missing = [nm | (nm, (SMTDef _ _ _ _ False, _)) <- bs]
+                plural | length missing > 1 = "s"
+                       | True               = ""
+
+        declUserDef isRec (nm, (SMTDef fk deps param body _, ty)) =
           "; " <> T.pack nm <> " :: " <> T.pack (show ty) <> recursive <> frees <> "\n" <> s
            where (recursive, definer) | isRec = (" [Recursive]", "define-fun-rec")
                                       | True  = ("",             "define-fun")
@@ -575,7 +588,7 @@ declUserFuns ds = map declGroup sorted
 
         -- declare a bunch of mutually-recursive functions
         declUserDefMulti bs = render $ map collect bs
-          where collect (nm, (SMTDef fk deps param body, ty)) = (deps, nm, ty, "(" <> T.pack nm <> " " <> decl <> ")", body 3)
+          where collect (nm, (SMTDef fk deps param body _, ty)) = (deps, nm, ty, "(" <> T.pack nm <> " " <> decl <> ")", body 3)
                   where decl = mkDecl param (T.pack $ smtType fk)
 
                 render defs = T.intercalate "\n" $
