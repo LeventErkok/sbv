@@ -158,22 +158,22 @@ tests =
       , goldenCapturedIO "lambda52_c" $ runSat  (isOdd  21 .==)
 
       -- make sure we can pass globals
-      , goldenCapturedIO "lambda53" $ runSat $ \x -> x .== smtFunction "foo" (+(x::SInteger)) x
+      , goldenCapturedIO "lambda53" $ runSat $ \x -> x .== smtFunction "foo" NoMeasure (+(x::SInteger)) x
 
       -- Make sure we can handle dependency orders
-      , goldenCapturedIO "lambda54" $ runSat   $ \x -> let foo = smtFunction "foo" (\a -> bar a + 1)
-                                                           bar = smtFunction "bar" (+1)
+      , goldenCapturedIO "lambda54" $ runSat   $ \x -> let foo = smtFunction "foo" NoMeasure (\a -> bar a + 1)
+                                                           bar = smtFunction "bar" NoMeasure (+1)
                                                        in bar x + foo x .== (x :: SInteger)
-      , goldenCapturedIO "lambda55" $ runSat   $ \x -> let foo = smtFunction "foo" (\a -> bar a + 1)
-                                                           bar = smtFunction "bar" (+1)
+      , goldenCapturedIO "lambda55" $ runSat   $ \x -> let foo = smtFunction "foo" NoMeasure (\a -> bar a + 1)
+                                                           bar = smtFunction "bar" NoMeasure (+1)
                                                        in foo x + bar x .== (x :: SInteger)
-      , goldenCapturedIO "lambda56" $ runUnsat $ \x -> let foo = smtFunction "foo" (\a -> bar a + 1)
-                                                           bar = smtFunction "bar" (\a -> foo a + 1)
+      , goldenCapturedIO "lambda56" $ runUnsat $ \x -> let foo = smtFunction "foo" NoMeasure (\a -> bar a + 1)
+                                                           bar = smtFunction "bar" NoMeasure (\a -> foo a + 1)
                                                        in foo x + bar x .== (x :: SInteger)
-      , goldenCapturedIO "lambda57" $ runSat   $ \x -> let f1 = smtFunction "f1" (\a -> ite (a .== 0) 0 (1 + (f1 (a-1) + f2 (a-2))))
-                                                           f2 = smtFunction "f2" (\a -> ite (a .== 0) 0 (1 + (f2 (a-1) + f3 (a-2))))
-                                                           f3 = smtFunction "f3" (\a -> ite (a .== 0) 0 (1 + (f3 (a-1) + f4 (a-2))))
-                                                           f4 = smtFunction "f4" (\a -> ite (a .== 0) 0 (1 + (f4 (a-1) + f1 (a-2))))
+      , goldenCapturedIO "lambda57" $ runSat   $ \x -> let f1 = smtFunction "f1" NoMeasure (\a -> ite (a .== 0) 0 (1 + (f1 (a-1) + f2 (a-2))))
+                                                           f2 = smtFunction "f2" NoMeasure (\a -> ite (a .== 0) 0 (1 + (f2 (a-1) + f3 (a-2))))
+                                                           f3 = smtFunction "f3" NoMeasure (\a -> ite (a .== 0) 0 (1 + (f3 (a-1) + f4 (a-2))))
+                                                           f4 = smtFunction "f4" NoMeasure (\a -> ite (a .== 0) 0 (1 + (f4 (a-1) + f1 (a-2))))
                                                        in f1 x .== (x :: SWord8)
 
       -- Quantified axioms
@@ -273,17 +273,17 @@ tests =
                                                )
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr ((+) @SInteger) (0::SInteger))
-   P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
+   P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" NoMeasure ((+) :: SInteger -> SInteger -> SInteger))
    P.++ qc1 "lambdaQC3" (\n -> let pn = abs n in (pn * (pn+1)) `sDiv` 2)
-                        (let ssum = smtFunction "ssum" $ \(n :: SInteger) -> let pn = abs n in ite (pn .== 0) 0 (pn + ssum (pn - 1)) in ssum)
+                        (let ssum = smtFunction "ssum" NoMeasure $ \(n :: SInteger) -> let pn = abs n in ite (pn .== 0) 0 (pn + ssum (pn - 1)) in ssum)
   where def_foo, def_bar, def_baz, def_e, def_o :: SInteger -> SInteger
-        def_foo = smtFunction "foo" $ \x -> def_bar (x-1)
-        def_bar = smtFunction "bar" $ \x -> def_bar (x-1)
-        def_baz = smtFunction "baz" $ \x -> x+1
-        def_e = smtFunction "e" $ \x -> def_o (x-1)
-        def_o = smtFunction "o" $ \x -> def_e (x-1)
-        def_t1 = smtFunction "foo" (\x -> select [1,2,3]       (0 :: SWord32)  (x::SInteger))
-        def_t2 = smtFunction "foo" (\x -> select [x+1,x+2,x+3] (0 :: SInteger) (x::SInteger))
+        def_foo = smtFunction "foo" NoMeasure $ \x -> def_bar (x-1)
+        def_bar = smtFunction "bar" NoMeasure $ \x -> def_bar (x-1)
+        def_baz = smtFunction "baz" NoMeasure $ \x -> x+1
+        def_e = smtFunction "e" NoMeasure $ \x -> def_o (x-1)
+        def_o = smtFunction "o" NoMeasure $ \x -> def_e (x-1)
+        def_t1 = smtFunction "foo" NoMeasure (\x -> select [1,2,3]       (0 :: SWord32)  (x::SInteger))
+        def_t2 = smtFunction "foo" NoMeasure (\x -> select [x+1,x+2,x+3] (0 :: SInteger) (x::SInteger))
 
         mapl :: (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
         mapl = map
@@ -305,7 +305,7 @@ tests =
 
         rel, leq :: Relation Integer
         rel = uninterpret "R"
-        leq = uncurry $ smtFunction "leq" (.<=)
+        leq = uncurry $ smtFunction "leq" NoMeasure (.<=)
         po  = isPartialOrder "poR" rel
         poI = isPartialOrder "poI" leq
 

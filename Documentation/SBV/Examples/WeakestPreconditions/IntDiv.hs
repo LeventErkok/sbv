@@ -66,7 +66,7 @@ type D = DivS SInteger
 --
 -- Note that we need to explicitly annotate each loop with its invariant and the termination
 -- measure. For convenience, we take those two as parameters for simplicity.
-algorithm :: Invariant D -> Maybe (Measure D) -> Stmt D
+algorithm :: Invariant D -> Maybe (WPMeasure D) -> Stmt D
 algorithm inv msr = Seq [ assert "x, y >= 0" $ \DivS{x, y} -> x .>= 0 .&& y .>= 0
                         , Assign $ \st@DivS{x} -> st{r = x, q = 0}
                         , While "y <= r"
@@ -92,7 +92,7 @@ noChange :: Stable D
 noChange = [stable "x" x, stable "y" y]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
-imperativeDiv :: Invariant D -> Maybe (Measure D) -> Program D
+imperativeDiv :: Invariant D -> Maybe (WPMeasure D) -> Program D
 imperativeDiv inv msr = Program { setup         = return ()
                                 , precondition  = pre
                                 , program       = algorithm inv msr
@@ -110,7 +110,7 @@ invariant DivS{x, y, q, r} = y .> 0 .&& r .>= 0 .&& x .== q * y + r
 
 -- | The measure. In each iteration @r@ decreases, but always remains positive.
 -- Since @y@ is strictly positive, @r@ can serve as a measure for the loop.
-measure :: Measure D
+measure :: WPMeasure D
 measure DivS{r} = [r]
 
 -- | Check that the program terminates and the post condition holds. We have:

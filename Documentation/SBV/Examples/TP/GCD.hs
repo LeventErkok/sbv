@@ -45,7 +45,7 @@ import Data.SBV.Tuple
 -- there is no greatest common divisor for the pair @(0, 0)@. So, maximality here is meant
 -- to be in terms of divisibility. That is, any divisor of @a@ and @b@ will also divide their @gcd@.
 nGCD :: SInteger -> SInteger -> SInteger
-nGCD = smtFunction "nGCD" $ \a b -> ite (b .== 0) a (nGCD b (a `sEMod` b))
+nGCD = smtFunction "nGCD" NoMeasure $ \a b -> ite (b .== 0) a (nGCD b (a `sEMod` b))
 
 -- | Generalized GCD, working for all integers. We simply call @nGCD@ with the absolute value of the arguments.
 gcd :: SInteger -> SInteger -> SInteger
@@ -600,7 +600,7 @@ gcdCorrect = do
 gcdLargest :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
 gcdLargest = do
    maximal <- recall "gcdMaximal"     gcdMaximal
-   zero    <- recall "gcdZero"        gcdZero
+   gcdZ    <- recall "gcdZero"        gcdZero
    nn      <- recall "gcdNonNegative" gcdNonNegative
 
    calc "gcdLargest"
@@ -609,7 +609,7 @@ gcdLargest = do
                |- x .<= gcd a b
                ?? maximal `at` (Inst @"a" a, Inst @"b" b, Inst @"x" x)
                =: (x `dvd` gcd a b .=> x .<= gcd a b)
-               ?? zero  `at` (Inst @"a" a, Inst @"b" b)
+               ?? gcdZ  `at` (Inst @"a" a, Inst @"b" b)
                ?? nn    `at` (Inst @"a" a, Inst @"b" b)
                =: sTrue
                =: qed
@@ -820,11 +820,12 @@ gcdOddEven = do
 -- works on non-negative numbers. It has the precondition that @a >= b >= 0@, and maintains this invariant in each
 -- recursive call.
 nGCDSub :: SInteger -> SInteger -> SInteger
-nGCDSub = smtFunction "nGCDSub" $ \a b -> ite (a .== b) a
-                                        $ ite (a .== 0) b
-                                        $ ite (b .== 0) a
-                                        $ ite (a .> b)  (nGCDSub (a - b) b)
-                                                        (nGCDSub a (b - a))
+nGCDSub = smtFunction "nGCDSub" NoMeasure
+        $ \a b -> ite (a .== b) a
+                $ ite (a .== 0) b
+                $ ite (b .== 0) a
+                $ ite (a .> b)  (nGCDSub (a - b) b)
+                                (nGCDSub a (b - a))
 
 -- | Generalized version of subtraction based GCD, working over all integers.
 gcdSub :: SInteger -> SInteger -> SInteger
@@ -909,12 +910,13 @@ gcdSubEquiv = do
 
 -- | @nGCDBin@ is the binary GCD algorithm that works on non-negative numbers.
 nGCDBin :: SInteger -> SInteger -> SInteger
-nGCDBin = smtFunction "nGCDBin" $ \a b -> ite (a .== 0)               b
-                                        $ ite (b .== 0)               a
-                                        $ ite (isEven a .&& isEven b) (2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2))
-                                        $ ite (isOdd  a .&& isEven b) (    nGCDBin a             (b `sEDiv` 2))
-                                        $ ite (a .<= b)               (    nGCDBin a             (b - a))
-                                                                      (    nGCDBin (a - b)       b)
+nGCDBin = smtFunction "nGCDBin" NoMeasure
+        $ \a b -> ite (a .== 0)               b
+                $ ite (b .== 0)               a
+                $ ite (isEven a .&& isEven b) (2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2))
+                $ ite (isOdd  a .&& isEven b) (    nGCDBin a             (b `sEDiv` 2))
+                $ ite (a .<= b)               (    nGCDBin a             (b - a))
+                                              (    nGCDBin (a - b)       b)
 -- | Generalized version that works on arbitrary integers.
 gcdBin :: SInteger -> SInteger -> SInteger
 gcdBin a b = nGCDBin (abs a) (abs b)

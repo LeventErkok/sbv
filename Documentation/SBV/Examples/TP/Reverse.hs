@@ -47,7 +47,7 @@ import qualified Documentation.SBV.Examples.TP.Lists as TP
 -- NB. We use 'uncons' on @rev as@ below since quasi-quote splices do not nest in Haskell,
 -- so we cannot use a nested @sCase@ call here.
 rev :: SymVal a => SList a -> SList a
-rev = smtFunction "rev"
+rev = smtFunction "rev" NoMeasure
     $ \xs -> [sCase| xs of
                 []     -> xs
                 [_]    -> xs

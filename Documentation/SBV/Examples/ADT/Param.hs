@@ -76,26 +76,28 @@ instance (SymVal nm, SymVal val, Integral val) => Num (SExpr nm val) where
 -- variable referenced is introduced by an enclosing let expression.
 isValid :: (SymVal nm, Eq nm, SymVal val) => (SBV nm -> SBool) -> SExpr nm val -> SBool
 isValid nmChk = go []
-  where go = smtFunction "valid" $ \env expr -> [sCase| expr of
-                                                   Var s     -> nmChk s  .&& s `SL.elem` env
-                                                   Val _     -> sTrue
-                                                   Add l r   -> go env l .&& go env r
-                                                   Mul l r   -> go env l .&& go env r
-                                                   Let s a b -> nmChk s  .&& go env a .&& go (s SL..: env) b
-                                                |]
+  where go = smtFunction "valid" NoMeasure
+           $ \env expr -> [sCase| expr of
+                              Var s     -> nmChk s  .&& s `SL.elem` env
+                              Val _     -> sTrue
+                              Add l r   -> go env l .&& go env r
+                              Mul l r   -> go env l .&& go env r
+                              Let s a b -> nmChk s  .&& go env a .&& go (s SL..: env) b
+                           |]
 
 -- | Evaluate an expression.
 eval :: (SymVal nm, SymVal val, Num (SBV val)) => SExpr nm val -> SBV val
 eval = go []
- where go = smtFunction "eval" $ \env expr -> [sCase| expr of
-                                                 Val i     -> i
-                                                 Var s     -> get env s
-                                                 Add l r   -> go env l + go env r
-                                                 Mul l r   -> go env l * go env r
-                                                 Let s e r -> go (tuple (s, go env e) SL..: env) r
-                                              |]
+ where go = smtFunction "eval" NoMeasure
+          $ \env expr -> [sCase| expr of
+                            Val i     -> i
+                            Var s     -> get env s
+                            Add l r   -> go env l + go env r
+                            Mul l r   -> go env l * go env r
+                            Let s e r -> go (tuple (s, go env e) SL..: env) r
+                         |]
 
-       get = smtFunction "get"
+       get = smtFunction "get" NoMeasure
            $ \env s -> [sCase| env of
                            []          -> 0
                            (k, v) : es -> ite (s .== k) v (get es s)

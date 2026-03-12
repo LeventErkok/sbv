@@ -72,7 +72,7 @@ type S = SqrtS SInteger
 --
 -- Note that we need to explicitly annotate each loop with its invariant and the termination
 -- measure. For convenience, we take those two as parameters for simplicity.
-algorithm :: Invariant S -> Maybe (Measure S) -> Stmt S
+algorithm :: Invariant S -> Maybe (WPMeasure S) -> Stmt S
 algorithm inv msr = Seq [ assert "x >= 0" $ \SqrtS{x} -> x .>= 0
                         , Assign $ \st -> st{sqrt = 0, i = 1, j = 1}
                         , While "i <= x"
@@ -102,7 +102,7 @@ noChange :: Stable S
 noChange = [stable "x" x]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
-imperativeSqrt :: Invariant S -> Maybe (Measure S) -> Program S
+imperativeSqrt :: Invariant S -> Maybe (WPMeasure S) -> Program S
 imperativeSqrt inv msr = Program { setup         = return ()
                                  , precondition  = pre
                                  , program       = algorithm inv msr
@@ -123,7 +123,7 @@ invariant SqrtS{x, sqrt, i, j} = j .> 0 .&& sq sqrt .<= x .&& i .== sq (sqrt + 1
   where sq n = n * n
 
 -- | The measure. In each iteration @i@ strictly increases, thus reducing the differential @x - i@
-measure :: Measure S
+measure :: WPMeasure S
 measure SqrtS{x, i} = [x - i]
 
 -- | Check that the program terminates and the post condition holds. We have:

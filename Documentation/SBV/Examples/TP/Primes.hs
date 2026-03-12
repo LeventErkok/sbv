@@ -104,7 +104,7 @@ dividesTransitive = do
 -- @n@ that is at least @k@ is the number that is at least @k@ and divides @n@ evenly. The idea is that a number is
 -- prime if the least divisor starting from @2@ is itself.
 ld :: SInteger -> SInteger -> SInteger
-ld = smtFunction "ld" $ \k n -> ite (n `sEMod` k .== 0) k (ld (k+1) n)
+ld = smtFunction "ld" NoMeasure $ \k n -> ite (n `sEMod` k .== 0) k (ld (k+1) n)
 
 -- | \(1 < k \leq n \implies \mathit{ld}\,k\,n \mid n \land k \leq \mathit{ld}\,k\,n \leq n\)
 --
@@ -271,7 +271,7 @@ leastPrimeDivisor n = ld 2 n
 
 -- | The factorial function.
 fact :: SInteger -> SInteger
-fact = smtFunction "fact" $ \n -> ite (n .<= 0) 1 (n * fact (n - 1))
+fact = smtFunction "fact" NoMeasure $ \n -> ite (n .<= 0) 1 (n * fact (n - 1))
 
 -- | \(n! \geq 1\)
 --

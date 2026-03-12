@@ -68,13 +68,13 @@ ps (_, f) = scanl1 f
 
 -- | The Ladner-Fischer (@lf@) implementation of prefix-sum.
 lf :: (a, a -> a -> a) -> PowerList a -> PowerList a
-lf _ []         = error "lf: malformed (empty) powerlist"
-lf _ [x]        = [x]
-lf (zero, f) pl = zipPL (zipWith f (rsh lfpq) p) lfpq
+lf _            []  = error "lf: malformed (empty) powerlist"
+lf _            [x] = [x]
+lf (zeroE, f)   pl  = zipPL (zipWith f (rsh lfpq) p) lfpq
    where (p, q) = unzipPL pl
          pq     = zipWith f p q
-         lfpq   = lf (zero, f) pq
-         rsh xs = zero : init xs
+         lfpq   = lf (zeroE, f) pq
+         rsh xs = zeroE : init xs
 
 
 ----------------------------------------------------------------------

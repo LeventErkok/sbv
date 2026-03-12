@@ -25,7 +25,7 @@ module Data.SBV.Tools.WeakestPreconditions (
           Program(..), Stmt(..), assert, stable
 
         -- * Invariants, measures, and stability
-        , Invariant, Measure, Stable
+        , Invariant, WPMeasure, Stable
 
         -- * Verification conditions
         , VC(..)
@@ -93,18 +93,18 @@ type Invariant st = st -> SBool
 
 -- | A measure takes the state and returns a sequence of integers. The ordering
 -- will be done lexicographically over the elements.
-type Measure st = st -> [SInteger]
+type WPMeasure st = st -> [SInteger]
 
 -- | A statement in our imperative program, parameterized over the state.
-data Stmt st = Skip                                                                     -- ^ Skip, do nothing.
-             | Abort String                                                             -- ^ Abort execution. The name is for diagnostic purposes.
-             | Assign (st -> st)                                                        -- ^ Assignment: Transform the state by a function.
-             | If (st -> SBool) (Stmt st) (Stmt st)                                     -- ^ Conditional: @If condition thenBranch elseBranch@.
-             | While String (Invariant st) (Maybe (Measure st)) (st -> SBool) (Stmt st) -- ^ A while loop: @While name invariant measure condition body@.
-                                                                                        -- The string @name@ is merely for diagnostic purposes.
-                                                                                        -- If the measure is 'Nothing', then only partial correctness
-                                                                                        -- of this loop will be proven.
-             | Seq [Stmt st]                                                            -- ^ A sequence of statements.
+data Stmt st = Skip                                                                       -- ^ Skip, do nothing.
+             | Abort String                                                               -- ^ Abort execution. The name is for diagnostic purposes.
+             | Assign (st -> st)                                                          -- ^ Assignment: Transform the state by a function.
+             | If (st -> SBool) (Stmt st) (Stmt st)                                       -- ^ Conditional: @If condition thenBranch elseBranch@.
+             | While String (Invariant st) (Maybe (WPMeasure st)) (st -> SBool) (Stmt st) -- ^ A while loop: @While name invariant measure condition body@.
+                                                                                          -- The string @name@ is merely for diagnostic purposes.
+                                                                                          -- If the measure is 'Nothing', then only partial correctness
+                                                                                          -- of this loop will be proven.
+             | Seq [Stmt st]                                                              -- ^ A sequence of statements.
 
 -- | An 'assert' is a quick way of ensuring some condition holds. If it does,
 -- then it's equivalent to 'Skip'. Otherwise, it is equivalent to 'Abort'.
@@ -306,7 +306,7 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
                 let noMeasure = isNothing mm
                     m         = fromJust mm
                     curM      = m st'
-                    zero      = map (const 0) curM
+                    zeroM     = map (const 0) curM
 
                     iterates   = inv st' .&&       cond st'
                     terminates = inv st' .&& sNot (cond st')
@@ -324,7 +324,7 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
                 -- Condition 4: If we iterate, measure must always be non-negative
                 measureNonNegative <- if noMeasure
                                       then return  (const [])
-                                      else wp st' Skip (const [(iterates .=> curM .>= zero, MeasureBound nm (st', curM))])
+                                      else wp st' Skip (const [(iterates .=> curM .>= zeroM, MeasureBound nm (st', curM))])
 
                 -- Condition 5: If we iterate, the measure must decrease
                 measureDecreases <- if noMeasure
@@ -476,14 +476,14 @@ traceExecution Program{precondition, program, postcondition, stability} start = 
                            = step loc is $ tag "condition fails, terminating"
                            | not (currentInvariant is)
                            = stop loc (InvariantMaintain loopName prevST is) $ tag "invariant fails to hold in iteration " ++ show c
-                           | hasMeasure && mCur < zero
+                           | hasMeasure && mCur < zeroM
                            = stop loc (MeasureBound loopName (is, mCur)) $ tag "measure must be non-negative, evaluated to: " ++ show mCur
                            | hasMeasure, Just mPrev <- mbPrev, mCur >= mPrev
                            = stop loc (MeasureDecrease loopName (prevST, mPrev) (is, mCur)) $ tag $ "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
                            | True
                            = do nextState <- go (Iteration c : loc) body =<< step loc is (tag "condition holds, executing the body")
                                 while (c+1) is (Just mCur) nextState
-                           where mCur = currentMeasure is
-                                 zero = map (const 0) mCur
+                           where mCur  = currentMeasure is
+                                 zeroM = map (const 0) mCur
 
 {- HLint ignore traceExecution "Use fromMaybe" -}

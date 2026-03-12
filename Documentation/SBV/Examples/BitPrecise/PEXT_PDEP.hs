@@ -160,4 +160,4 @@ depositThenExtract = prove $ do x :: SWord 8 <- sWord "x"
 --                           (let ((l1_s28 (ite l1_s4 l1_s27 l1_s18)))
 --                           l1_s28))))))))))))))))))))))))))))
 pext_2 :: SWord 2 -> SWord 2 -> SWord 2
-pext_2 = smtFunction "pext_2" (pext @2)
+pext_2 = smtFunction "pext_2" NoMeasure (pext @2)

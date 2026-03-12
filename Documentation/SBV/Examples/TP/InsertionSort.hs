@@ -39,7 +39,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 -- | Insert an element into an already sorted list in the correct place.
 insert :: (OrdSymbolic (SBV a), SymVal a) => SBV a -> SList a -> SList a
-insert = smtFunction "insert"
+insert = smtFunction "insert" NoMeasure
        $ \e l -> [sCase| l of
                      []               -> [e]
                      x : xs | e .<= x -> e .: x .: xs
@@ -48,7 +48,7 @@ insert = smtFunction "insert"
 
 -- | Insertion sort, using 'insert' above to successively insert the elements.
 insertionSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
-insertionSort = smtFunction "insertionSort"
+insertionSort = smtFunction "insertionSort" NoMeasure
               $ \l -> [sCase| l of
                           []     -> []
                           x : xs -> insert x (insertionSort xs)
@@ -57,7 +57,7 @@ insertionSort = smtFunction "insertionSort"
 
 -- | Remove the first occurrence of an number from a list, if any.
 removeFirst :: (Eq a, SymVal a) => SBV a -> SList a -> SList a
-removeFirst = smtFunction "removeFirst"
+removeFirst = smtFunction "removeFirst" NoMeasure
             $ \e l -> [sCase| l of
                           []               -> []
                           x : xs | e .== x -> xs
@@ -67,7 +67,7 @@ removeFirst = smtFunction "removeFirst"
 -- | Are two lists permutations of each other? Note that we diverge from the counting
 -- based definition of permutation here, since this variant works better with insertion sort.
 isPermutation :: (Eq a, SymVal a) => SList a -> SList a -> SBool
-isPermutation = smtFunction "isPermutation"
+isPermutation = smtFunction "isPermutation" NoMeasure
               $ \l r -> [sCase| l of
                             []     -> null r
                             x : xs -> x `elem` r .&& isPermutation xs (removeFirst x r)

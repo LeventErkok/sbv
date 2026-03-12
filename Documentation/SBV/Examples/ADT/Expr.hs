@@ -69,28 +69,30 @@ isValid :: SExpr -> SBool
 isValid = go []
   where isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
         go :: SList String -> SExpr -> SBool
-        go = smtFunction "valid" $ \env expr -> [sCase| expr of
-                                                   Var s     -> isId s .&& s `SL.elem` env
-                                                   Val _     -> sTrue
-                                                   Add l r   -> go env l .&& go env r
-                                                   Mul l r   -> go env l .&& go env r
-                                                   Let s a b -> isId s .&& go env a .&& go (s SL..: env) b
-                                                |]
+        go = smtFunction "valid" NoMeasure
+           $ \env expr -> [sCase| expr of
+                              Var s     -> isId s .&& s `SL.elem` env
+                              Val _     -> sTrue
+                              Add l r   -> go env l .&& go env r
+                              Mul l r   -> go env l .&& go env r
+                              Let s a b -> isId s .&& go env a .&& go (s SL..: env) b
+                           |]
 
 -- | Evaluate an expression.
 eval :: SExpr -> SInteger
 eval = go []
  where go :: SList (String, Integer) -> SExpr -> SInteger
-       go = smtFunction "eval" $ \env expr -> [sCase| expr of
-                                                 Val i     -> i
-                                                 Var s     -> get env s
-                                                 Add l r   -> go env l + go env r
-                                                 Mul l r   -> go env l * go env r
-                                                 Let s e r -> go (tuple (s, go env e) SL..: env) r
-                                              |]
+       go = smtFunction "eval" NoMeasure
+          $ \env expr -> [sCase| expr of
+                            Val i     -> i
+                            Var s     -> get env s
+                            Add l r   -> go env l + go env r
+                            Mul l r   -> go env l * go env r
+                            Let s e r -> go (tuple (s, go env e) SL..: env) r
+                         |]
 
        get :: SList (String, Integer) -> SString -> SInteger
-       get = smtFunction "get"
+       get = smtFunction "get" NoMeasure
            $ \env s -> [sCase| env of
                           []          -> 0
                           (k, v) : es -> ite (s .== k) v (get es s)

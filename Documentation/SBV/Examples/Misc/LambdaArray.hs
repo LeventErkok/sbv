@@ -29,17 +29,17 @@ memset mem lo hi newVal = lambdaArray update
 -- Q.E.D.
 memsetExample :: IO ThmResult
 memsetExample = prove $ do
-   mem  <- sArray   "mem"
-   lo   <- sInteger "lo"
-   hi   <- sInteger "hi"
-   zero <- sInteger "zero"
+   mem   <- sArray   "mem"
+   lo    <- sInteger "lo"
+   hi    <- sInteger "hi"
+   zeroV <- sInteger "zero"
 
    -- Get an index within lo/hi
    idx  <- sInteger "idx"
    constrain $ idx .>= lo .&& idx .<= hi
 
    -- It must be the case that we get zero back after mem-setting
-   pure $ readArray (memset mem lo hi zero) idx .== zero
+   pure $ readArray (memset mem lo hi zeroV) idx .== zeroV
 
 -- | Get an example of reading a value out of range. The value returned should be out-of-range for lo/hi
 --
@@ -53,10 +53,10 @@ memsetExample = prove $ do
 --   Read =       1 :: Integer
 outOfInit :: IO SatResult
 outOfInit = sat $ do
-   mem  <- sArray "mem"
-   lo   <- sInteger "lo"
-   hi   <- sInteger "hi"
-   zero <- sInteger "zero"
+   mem   <- sArray "mem"
+   lo    <- sInteger "lo"
+   hi    <- sInteger "hi"
+   zeroV <- sInteger "zero"
 
    -- Get a meaningful range:
    constrain $ lo .<= hi
@@ -65,6 +65,6 @@ outOfInit = sat $ do
    idx  <- sInteger "idx"
 
    -- Let read produce non-zero
-   constrain $ observe "Read" (readArray (memset mem lo hi zero) idx) ./= zero
+   constrain $ observe "Read" (readArray (memset mem lo hi zeroV) idx) ./= zeroV
 
 {- HLint ignore module "Reduce duplication" -}

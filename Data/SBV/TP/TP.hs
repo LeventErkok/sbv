@@ -544,29 +544,6 @@ class Inductive a where
    {-# MINIMAL inductionStrategy #-}
    inductionStrategy :: (Proposition a, SymVal t, EqSymbolic (SBV t)) => a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> Symbolic InductionStrategy
 
--- | A class of values, capturing the zero of a measure value
-class OrdSymbolic (SBV a) => Zero a where
-  zero :: SBV a
-
--- | An integer as a measure
-instance Zero Integer where
-   zero = literal 0
-
--- | A tuple of integers as a measure
-instance Zero (Integer, Integer) where
-  zero = literal (0, 0)
-
--- | A triple of integers as a measure
-instance Zero (Integer, Integer, Integer) where
-  zero = literal (0, 0, 0)
-
--- | A quadruple of integers as a measure
-instance Zero (Integer, Integer, Integer, Integer) where
-  zero = literal (0, 0, 0, 0)
-
-instance Zero (Integer, Integer, Integer, Integer, Integer) where
-  zero = literal (0, 0, 0, 0, 0)
-
 -- | A class for doing generalized measure based strong inductive proofs.
 class SInductive a where
    -- | Inductively prove a lemma, using measure based induction, using the default config.

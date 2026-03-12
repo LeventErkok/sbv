@@ -49,10 +49,11 @@ up n = upAcc n []
 -- | Keep consing the first argument on to the accumulator, until we hit zero. After that, return the second argument.
 -- Normally, we'd define this as a local function, but the definition needs to be visible for the proofs.
 upAcc :: SNat -> SList Integer -> SList Integer
-upAcc = smtFunction "up" $ \n lst -> [sCase| n of
-                                       Zero   -> lst
-                                       Succ p -> upAcc p (n2i n .: lst)
-                                     |]
+upAcc = smtFunction "up" NoMeasure
+      $ \n lst -> [sCase| n of
+                     Zero   -> lst
+                     Succ p -> upAcc p (n2i n .: lst)
+                  |]
 
 -- | Construct a list of size @n@, containing numbers @n-1@ down to @0@.
 --
@@ -61,10 +62,11 @@ upAcc = smtFunction "up" $ \n lst -> [sCase| n of
 -- >>> down 5
 -- [5,4,3,2,1] :: [SInteger]
 down :: SNat -> SList Integer
-down = smtFunction "down" $ \n -> [sCase| n of
-                                     Zero   -> []
-                                     Succ p -> n2i n .: down p
-                                  |]
+down = smtFunction "down" NoMeasure
+     $ \n -> [sCase| n of
+                Zero   -> []
+                Succ p -> n2i n .: down p
+             |]
 
 -- | Prove that @reverse (down n)@ is the same as @up n@
 --

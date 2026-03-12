@@ -66,7 +66,7 @@ instance Num SNat where
   fromInteger = literal . fromInteger
 
   (+) = plus
-      where plus = smtFunction "sNatPlus" $
+      where plus = smtFunction "sNatPlus" NoMeasure $
                      \m n -> [sCase| m of
                                Zero   -> n
                                Succ p -> sSucc (p + n)
@@ -75,7 +75,7 @@ instance Num SNat where
   (-) = error "SNat: No support for subtraction"
 
   (*) = times
-      where times = smtFunction "sNatTimes" $
+      where times = smtFunction "sNatTimes" NoMeasure $
                       \m n -> [sCase| m of
                                 Zero   -> 0
                                 Succ p -> n + p * n
@@ -98,7 +98,7 @@ instance OrdSymbolic SNat where
 --
 -- NB. When writing the properties below, we use the notation \(\overline{n}\) to mean @n2i n@.
 n2i :: SNat -> SInteger
-n2i = smtFunction "n2i" $ \n -> [sCase| n of
+n2i = smtFunction "n2i" NoMeasure $ \n -> [sCase| n of
                                    Zero   -> 0
                                    Succ p -> 1 + n2i p
                                 |]
@@ -107,7 +107,7 @@ n2i = smtFunction "n2i" $ \n -> [sCase| n of
 --
 -- NB. When writing the properties below, we use the notation \(\underline{i}\) to mean @i2n i@.
 i2n :: SInteger -> SNat
-i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) 0 (sSucc (i2n (i - 1)))
+i2n = smtFunction "i2n" NoMeasure $ \i -> ite (i .<= 0) 0 (sSucc (i2n (i - 1)))
 
 -- | \(\overline{n} \geq 0\)
 --

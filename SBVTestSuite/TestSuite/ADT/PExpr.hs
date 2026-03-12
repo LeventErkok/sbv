@@ -222,7 +222,7 @@ tSat i rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                            _     -> error $ "Unexpected: " ++ show cs
 
 t :: SA -> SA
-t = smtFunction "t" $ \a ->
+t = smtFunction "t" NoMeasure $ \a ->
        [sCase| a of
          A u     -> sA (u+1)
          B w     -> sB (w+2)

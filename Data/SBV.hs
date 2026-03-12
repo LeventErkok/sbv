@@ -304,7 +304,7 @@ module Data.SBV (
 
   -- * Symbolic Equality and Comparisons
   -- $distinctNote
-  , EqSymbolic(..), OrdSymbolic(..), Equality(..)
+  , EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), Equality(..)
   -- * Conditionals: Mergeable values
   , Mergeable(..), ite, iteLazy
 
@@ -1166,18 +1166,20 @@ We also support a symbolic case-expression quasi-quoter, allowing us to write:
 eval :: SExpr -> SInteger
 eval = go []
  where go :: SList (String, Integer) -> SExpr -> SInteger
-       go = smtFunction "eval" $ \env expr -> [sCase| expr of
-                                                 Num i     -> i
-                                                 Var s     -> get env s
-                                                 Add l r   -> go env l + go env r
-                                                 Mul l r   -> go env l * go env r
-                                                 Let s e r -> go (tuple (s, go env e) SL..: env) r
-                                              |]
+       go = smtFunction "eval" NoMeasure
+          $ \env expr -> [sCase| expr of
+                            Num i     -> i
+                            Var s     -> get env s
+                            Add l r   -> go env l + go env r
+                            Mul l r   -> go env l * go env r
+                            Let s e r -> go (tuple (s, go env e) SL..: env) r
+                         |]
 
        get :: SList (String, Integer) -> SString -> SInteger
-       get = smtFunction "get" $ \env s -> ite (SL.null env) 0
-                                         $ let (k, v) = untuple (SL.head env)
-                                           in ite (s .== k) v (get (SL.tail env) s)
+       get = smtFunction "get" NoMeasure
+           $ \env s -> ite (SL.null env) 0
+                     $ let (k, v) = untuple (SL.head env)
+                       in ite (s .== k) v (get (SL.tail env) s)
 @
 
 which defines an interpreter for this data-type. Such definitions also come with an induction principle

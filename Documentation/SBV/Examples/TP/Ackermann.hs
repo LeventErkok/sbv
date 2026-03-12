@@ -48,21 +48,23 @@ import Data.SBV.TP
 -- original version, not the commonly referenced Ackermann-Péter function.
 -- The third argument @a@ generalizes the operation at each level.
 ack :: SInteger -> SInteger -> SInteger -> SInteger
-ack = smtFunction "ack" $ \m n a ->
-    ite (m .<= 0) (n + a)
-  $ ite (n .<= 0) 0
-  $ ite (n .== 1) a
-  $ ack (m - 1) (ack m (n - 1) a) a
+ack = smtFunction "ack" NoMeasure
+  $ \m n a ->
+      ite (m .<= 0) (n + a)
+    $ ite (n .<= 0) 0
+    $ ite (n .== 1) a
+    $ ack (m - 1) (ack m (n - 1) a) a
 
 -- * Ackermann-Péter function (1935)
 
 -- | The Ackermann-Péter function (1935), commonly known as "the Ackermann function."
 -- This is Rózsa Péter's simplified 2-argument version of Ackermann's original function.
 pet :: SInteger -> SInteger -> SInteger
-pet = smtFunction "pet" $ \m n ->
-    ite (m .<= 0) (n + 1)
-  $ ite (n .<= 0) (pet (m - 1) 1)
-  $ pet (m - 1)   (pet m (n - 1))
+pet = smtFunction "pet" NoMeasure
+  $ \m n ->
+      ite (m .<= 0) (n + 1)
+    $ ite (n .<= 0) (pet (m - 1) 1)
+    $ pet (m - 1)   (pet m (n - 1))
 
 -- * Correctness
 

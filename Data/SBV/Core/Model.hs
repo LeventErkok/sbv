@@ -9,6 +9,7 @@
 -- Instance declarations for our symbolic world
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE AllowAmbiguousTypes     #-}
 {-# LANGUAGE BangPatterns            #-}
 {-# LANGUAGE CPP                     #-}
 {-# LANGUAGE DataKinds               #-}
@@ -29,7 +30,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , some
@@ -119,7 +120,7 @@ import Data.SBV.SMT.SMT        (ThmResult, showModel)
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
-import Data.IORef (readIORef, writeIORef)
+import Data.IORef (readIORef, writeIORef, modifyIORef')
 import Data.SBV.Utils.Lib
 
 import Data.Char
@@ -1189,6 +1190,45 @@ instance (EqSymbolic a, EqSymbolic b, EqSymbolic c, EqSymbolic d, EqSymbolic e, 
 instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymbolic e, OrdSymbolic f, OrdSymbolic g) => OrdSymbolic (a, b, c, d, e, f, g) where
   (a0, b0, c0, d0, e0, f0, g0) .< (a1, b1, c1, d1, e1, f1, g1) =    (a0, b0, c0, d0, e0, f0) .<  (a1, b1, c1, d1, e1, f1)
                                                                .|| ((a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) .&& g0 .< g1)
+
+-- | A class of values that capture the notion of a zero for measure values.
+-- Used in termination checking for recursive SMT functions.
+class OrdSymbolic (SBV a) => Zero a where
+  zero :: SBV a
+
+-- | An integer as a measure
+instance Zero Integer where
+   zero = literal 0
+
+-- | A tuple of integers as a measure
+instance Zero (Integer, Integer) where
+  zero = literal (0, 0)
+
+-- | A triple of integers as a measure
+instance Zero (Integer, Integer, Integer) where
+  zero = literal (0, 0, 0)
+
+-- | A quadruple of integers as a measure
+instance Zero (Integer, Integer, Integer, Integer) where
+  zero = literal (0, 0, 0, 0)
+
+-- | A quintuple of integers as a measure
+instance Zero (Integer, Integer, Integer, Integer, Integer) where
+  zero = literal (0, 0, 0, 0, 0)
+
+-- | Type family that maps a function type to its corresponding measure type.
+-- The measure function takes the same arguments but returns a different type.
+type family MeasureOf f r where
+  MeasureOf (SBV a -> r) r' = SBV a -> MeasureOf r r'
+  MeasureOf (SBV a)      r  = SBV r
+
+-- | A measure for a function, used to prove termination of recursive definitions.
+-- If the function is not recursive, use 'NoMeasure'. For recursive functions, use
+-- 'WithMeasure' to provide a measure function that maps the arguments to a value
+-- that strictly decreases on each recursive call.
+data Measure f where
+  NoMeasure   :: Measure f
+  WithMeasure :: (Zero r, OrdSymbolic (SBV r)) => MeasureOf f r -> Measure f
 
 -- | Regular expressions can be compared for equality. Note that we diverge here from the equality
 -- in the concrete sense; i.e., the Eq instance does not match the symbolic case. This is a bit unfortunate,
@@ -2662,7 +2702,7 @@ class SMTDefinable a where
   -- But the ergonomics of that is worse, and doesn't fit with the general design philosophy. If you
   -- can think of a solution (perhaps using some nifty GHC tricks?) to avoid this issue without making
   -- 'smtFunction' return a monadic result, please get in touch!
-  smtFunction :: (Typeable a, Lambda Symbolic a) => String -> a -> a
+  smtFunction :: (Typeable a, Lambda Symbolic a) => String -> Measure a -> a -> a
 
   -- | Register a function. This function is typically not needed as SBV will register functions used
   -- automatically upon first use. However, there are scenarios (in particular query contexts)
@@ -2753,7 +2793,13 @@ class SMTDefinable a where
   mkADTTester      nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTTester      nm k)) Nothing $ UIFree True in v
   mkADTAccessor    nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTAccessor    nm k)) Nothing $ UIFree True in v
 
-  smtFunction nm v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing $ UIFun (v, \st fk -> lambda st TopLevel fk v)
+  smtFunction nm msr v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing
+                       $ UIFun (v, \st fk -> do def <- lambda st TopLevel fk v
+                                                case msr of
+                                                  NoMeasure     -> pure ()
+                                                  WithMeasure _ -> modifyIORef' (rMeasureChecks st)
+                                                                                ((atProxy (Proxy @a) nm, pure ()) :)
+                                                pure def)
 
 
 -- | Kind of uninterpretation
@@ -3346,7 +3392,7 @@ smtHOFunction nm f hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cach
   where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg (resKindOf (kindOf (Proxy @f))) f
                   let uniqLen = firstifyUniqueLen $ stCfg st
                       uniq    = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
-                  sbvToSV st (smtFunction (atProxy (Proxy @f) nm <> "_" <> uniq) hof arg)
+                  sbvToSV st (smtFunction (atProxy (Proxy @f) nm <> "_" <> uniq) NoMeasure hof arg)
 
         -- we get the functions as arrays here, so chase to find the result
         resKindOf (KArray _ k) = resKindOf k

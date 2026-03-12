@@ -36,7 +36,7 @@ import Documentation.SBV.Examples.TP.Lists
 
 -- | A predicate testing whether a given list is non-decreasing.
 nonDecreasing :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SBool
-nonDecreasing = smtFunction "nonDecreasing"
+nonDecreasing = smtFunction "nonDecreasing" NoMeasure
               $ \l -> [sCase| l of
                          []        -> sTrue
                          [_]       -> sTrue

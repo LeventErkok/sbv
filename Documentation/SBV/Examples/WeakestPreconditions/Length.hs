@@ -67,7 +67,7 @@ type S = LenS (SList Integer) SInteger
 --
 -- Note that we need to explicitly annotate each loop with its invariant and the termination
 -- measure. For convenience, we take those two as parameters, so we can experiment later.
-algorithm :: Invariant S -> Maybe (Measure S) -> Stmt S
+algorithm :: Invariant S -> Maybe (WPMeasure S) -> Stmt S
 algorithm inv msr = Seq [ Assign $ \st@LenS{xs} -> st{ys = xs, l = 0}
                         , While "! (null ys)"
                                 inv
@@ -91,7 +91,7 @@ noChange :: Stable S
 noChange = [stable "xs" xs]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
-imperativeLength :: Invariant S -> Maybe (Measure S) -> Program S
+imperativeLength :: Invariant S -> Maybe (WPMeasure S) -> Program S
 imperativeLength inv msr = Program { setup         = return ()
                                    , precondition  = pre
                                    , program       = algorithm inv msr
@@ -105,7 +105,7 @@ invariant :: Invariant S
 invariant LenS{xs, ys, l} = L.length xs .== l + L.length ys
 
 -- | The measure is obviously the length of @ys@, as we peel elements off of it through the loop.
-measure :: Measure S
+measure :: WPMeasure S
 measure LenS{ys} = [L.length ys]
 
 -- * Correctness

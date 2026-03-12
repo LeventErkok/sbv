@@ -468,7 +468,7 @@ mkADT adtKind typeName params cstrs = do
 
                            enumFrom n = SL.map SL.toEnum (SL.enumFromTo (SL.fromEnum n) (genericLength $universe - 1))
 
-                           enumFromThen = smtFunction ("EnumSymbolic." ++ TH.nameBase typeName ++ ".enumFromThen") $ \n1 n2 ->
+                           enumFromThen = smtFunction ("EnumSymbolic." ++ TH.nameBase typeName ++ ".enumFromThen") NoMeasure $ \n1 n2 ->
                                                       let i_n1, i_n2 :: SInteger
                                                           i_n1 = SL.fromEnum n1
                                                           i_n2 = SL.fromEnum n2

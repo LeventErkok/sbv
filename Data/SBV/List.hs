@@ -396,7 +396,7 @@ pre `isPrefixOf` l
 listEq :: forall a. SymVal a => SList a -> SList a -> SBool
 listEq
   | containsFloats (kindOf (Proxy @a))
-  = smtFunction "listEq" $ \xs ys -> ite (null xs) (null ys) (head xs .== head ys .&& listEq (tail xs) (tail ys))
+  = smtFunction "listEq" NoMeasure $ \xs ys -> ite (null xs) (null ys) (head xs .== head ys .&& listEq (tail xs) (tail ys))
   | True
   = (.==)
 
@@ -580,7 +580,7 @@ reverse l
   = literal (P.reverse l')
   | True
   = def l
-  where def = smtFunction "sbv.reverse" $ \xs -> ite (null xs) [] (let (h, t) = uncons xs in def t ++ [h])
+  where def = smtFunction "sbv.reverse" NoMeasure $ \xs -> ite (null xs) [] (let (h, t) = uncons xs in def t ++ [h])
 
 -- | A class of mappable functions. In SBV, we make a distinction between closures and regular functions, and
 -- we instantiate this class appropriately so it can handle both cases.
@@ -771,7 +771,7 @@ zip xs ys
  = literal $ P.zip xs' ys'
  | True
  = def xs ys
- where def = smtFunction "sbv.zip" $ \as bs -> ite (null as .|| null bs) [] (tuple (head as, head bs) .: def (tail as) (tail bs))
+ where def = smtFunction "sbv.zip" NoMeasure $ \as bs -> ite (null as .|| null bs) [] (tuple (head as, head bs) .: def (tail as) (tail bs))
 
 -- | A class of function that we can zip-with. In SBV, we make a distinction between closures and regular
 -- functions, and we instantiate this class appropriately so it can handle both cases.
@@ -880,7 +880,7 @@ replicate c e
  = literal (genericReplicate c' e')
  | True
  = def c e
- where def = smtFunction "sbv.replicate" $ \count elt -> ite (count .<= 0) [] (elt .: def (count - 1) elt)
+ where def = smtFunction "sbv.replicate" NoMeasure $ \count elt -> ite (count .<= 0) [] (elt .: def (count - 1) elt)
 
 -- | inits of a list.
 --
@@ -894,7 +894,7 @@ inits xs
  = literal (L.inits xs')
  | True
  = def xs
- where def = smtFunction "sbv.inits" $ \l -> ite (null l) [[]] (def (init l) ++ [l])
+ where def = smtFunction "sbv.inits" NoMeasure $ \l -> ite (null l) [[]] (def (init l) ++ [l])
 
 -- | tails of a list.
 --
@@ -908,7 +908,7 @@ tails xs
  = literal (L.tails xs')
  | True
  = def xs
- where def = smtFunction "sbv.tails" $ \l -> ite (null l) [[]] (l .: def (tail l))
+ where def = smtFunction "sbv.tails" NoMeasure $ \l -> ite (null l) [[]] (l .: def (tail l))
 
 -- | Minimum of a list that has symbolic-ordering. If the list is empty, then
 -- the result is underspecified, i.e., it is an arbitrary element of the element type.
@@ -952,7 +952,7 @@ xs \\ ys
  = literal (xs' L.\\ ys')
  | True
  = def xs ys
- where def = smtFunction "sbv.diff" $ \x y -> ite (null x)
+ where def = smtFunction "sbv.diff" NoMeasure $ \x y -> ite (null x)
                                                   []
                                                   (let (h, t) = uncons x
                                                        r      = def t y
@@ -1191,10 +1191,10 @@ class EnumSymbolic a where
 
 -- | 'EnumSymbolic' instance for words
 instance {-# OVERLAPPABLE #-} (SymVal a, Bounded a, Integral a, Num a, Num (SBV a)) => EnumSymbolic a where
-  succ = smtFunction "EnumSymbolic.succ" (\x -> ite (x .== maxBound) (some "EnumSymbolic.succ.maxBound" (const sTrue)) (x+1))
-  pred = smtFunction "EnumSymbolic.pred" (\x -> ite (x .== minBound) (some "EnumSymbolic.pred.minBound" (const sTrue)) (x-1))
+  succ = smtFunction "EnumSymbolic.succ" NoMeasure (\x -> ite (x .== maxBound) (some "EnumSymbolic.succ.maxBound" (const sTrue)) (x+1))
+  pred = smtFunction "EnumSymbolic.pred" NoMeasure (\x -> ite (x .== minBound) (some "EnumSymbolic.pred.minBound" (const sTrue)) (x-1))
 
-  toEnum = smtFunction "EnumSymbolic.toEnum" $ \x ->
+  toEnum = smtFunction "EnumSymbolic.toEnum" NoMeasure $ \x ->
                          ite (x .< sFromIntegral (minBound @(SBV a))) (some "EnumSymbolic.toEnum.<minBound" (const sTrue))
                        $ ite (x .> sFromIntegral (maxBound @(SBV a))) (some "EnumSymbolic.toEnum.>maxBound" (const sTrue))
                        $ sFromIntegral x
@@ -1202,7 +1202,7 @@ instance {-# OVERLAPPABLE #-} (SymVal a, Bounded a, Integral a, Num a, Num (SBV 
   fromEnum = sFromIntegral
 
   enumFrom n   = map sFromIntegral (enumFromTo @Integer (sFromIntegral n) (sFromIntegral (maxBound @(SBV a))))
-  enumFromThen = smtFunction "EnumSymbolic.enumFromThen" $ \n1 n2 ->
+  enumFromThen = smtFunction "EnumSymbolic.enumFromThen" NoMeasure $ \n1 n2 ->
                              let i_n1, i_n2 :: SInteger
                                  i_n1 = sFromIntegral n1
                                  i_n2 = sFromIntegral n2
@@ -1225,14 +1225,14 @@ instance {-# OVERLAPPING #-} EnumSymbolic Integer where
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go x (y-x)
-     where go = smtFunction "EnumSymbolic.Integer.enumFromThen" $ \start delta -> start .: go (start+delta) delta
+     where go = smtFunction "EnumSymbolic.Integer.enumFromThen" NoMeasure $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta = y - x
 
            up, down :: SInteger -> SInteger -> SInteger -> SList Integer
-           up    = smtFunction "EnumSymbolic.Integer.enumFromThenTo.up"   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
-           down  = smtFunction "EnumSymbolic.Integer.enumFromThenTo.down" $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
+           up    = smtFunction "EnumSymbolic.Integer.enumFromThenTo.up"   NoMeasure $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
+           down  = smtFunction "EnumSymbolic.Integer.enumFromThenTo.down" NoMeasure $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
 
 -- | 'EnumSymbolic instance for 'Float'. Note that the termination requirement as defined by the Haskell standard for floats state:
 --      > For Float and Double, the semantics of the enumFrom family is given by the rules for Int above,
@@ -1249,7 +1249,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic Float where
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go 0 x (y-x)
-     where go = smtFunction "EnumSymbolic.Float.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
+     where go = smtFunction "EnumSymbolic.Float.enumFromThen" NoMeasure $ \k n d -> (n + k * d) .: go (k+1) n d
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
      where delta, z :: SFloat
@@ -1257,8 +1257,8 @@ instance {-# OVERLAPPING #-} EnumSymbolic Float where
            z     = zIn + delta / 2
 
            up, down :: SFloat -> SFloat -> SFloat -> SFloat -> SList Float
-           up    = smtFunction "EnumSymbolic.Float.enumFromThenTo.up"   $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
-           down  = smtFunction "EnumSymbolic.Float.enumFromThenTo.down" $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
+           up    = smtFunction "EnumSymbolic.Float.enumFromThenTo.up"   NoMeasure $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
+           down  = smtFunction "EnumSymbolic.Float.enumFromThenTo.down" NoMeasure $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
 
 -- | 'EnumSymbolic instance for 'Double'
 instance {-# OVERLAPPING #-} EnumSymbolic Double where
@@ -1272,7 +1272,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic Double where
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go 0 x (y-x)
-     where go = smtFunction "EnumSymbolic.Double.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
+     where go = smtFunction "EnumSymbolic.Double.enumFromThen" NoMeasure $ \k n d -> (n + k * d) .: go (k+1) n d
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
      where delta, z :: SDouble
@@ -1280,8 +1280,8 @@ instance {-# OVERLAPPING #-} EnumSymbolic Double where
            z     = zIn + delta / 2
 
            up, down :: SDouble -> SDouble -> SDouble -> SDouble -> SList Double
-           up    = smtFunction "EnumSymbolic.Double.enumFromThenTo.up"   $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
-           down  = smtFunction "EnumSymbolic.Double.enumFromThenTo.down" $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
+           up    = smtFunction "EnumSymbolic.Double.enumFromThenTo.up"   NoMeasure $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
+           down  = smtFunction "EnumSymbolic.Double.enumFromThenTo.down" NoMeasure $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
 
 -- | 'EnumSymbolic instance for arbitrary floats
 instance {-# OVERLAPPING #-} ValidFloat eb sb => EnumSymbolic (FloatingPoint eb sb) where
@@ -1295,7 +1295,7 @@ instance {-# OVERLAPPING #-} ValidFloat eb sb => EnumSymbolic (FloatingPoint eb 
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go 0 x (y-x)
-     where go = smtFunction "EnumSymbolic.FloatingPoint.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
+     where go = smtFunction "EnumSymbolic.FloatingPoint.enumFromThen" NoMeasure $ \k n d -> (n + k * d) .: go (k+1) n d
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
      where delta, z :: SFloatingPoint eb sb
@@ -1303,8 +1303,8 @@ instance {-# OVERLAPPING #-} ValidFloat eb sb => EnumSymbolic (FloatingPoint eb 
            z     = zIn + delta / 2
 
            up, down :: SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SList (FloatingPoint eb sb)
-           up    = smtFunction "EnumSymbolic.FloatingPoint.enumFromThenTo.up"   $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
-           down  = smtFunction "EnumSymbolic.FloatingPoint.enumFromThenTo.down" $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
+           up    = smtFunction "EnumSymbolic.FloatingPoint.enumFromThenTo.up"   NoMeasure $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
+           down  = smtFunction "EnumSymbolic.FloatingPoint.enumFromThenTo.down" NoMeasure $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
 
 -- | 'EnumSymbolic instance for arbitrary AlgReal. We don't have to use the multiplicative trick here
 -- since alg-reals are precise. But, following rational in Haskell, we do use the stopping point of @z + delta / 2@.
@@ -1319,7 +1319,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go x (y-x)
-     where go = smtFunction "EnumSymbolic.AlgReal.enumFromThen" $ \start delta -> start .: go (start+delta) delta
+     where go = smtFunction "EnumSymbolic.AlgReal.enumFromThen" NoMeasure $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta, z :: SReal
@@ -1327,8 +1327,8 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
            z     = zIn + delta / 2
 
            up, down :: SReal -> SReal -> SReal -> SList AlgReal
-           up    = smtFunction "EnumSymbolic.AlgReal.enumFromThenTo.up"   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
-           down  = smtFunction "EnumSymbolic.AlgReal.enumFromThenTo.down" $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
+           up    = smtFunction "EnumSymbolic.AlgReal.enumFromThenTo.up"   NoMeasure $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
+           down  = smtFunction "EnumSymbolic.AlgReal.enumFromThenTo.down" NoMeasure $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
 
 -- | Lookup. If we can't find, then the result is unspecified.
 --
@@ -1339,7 +1339,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
 --   Data.SBV.List.lookup_notFound @Integer = 0 :: Integer
 --   s0                                     = 1 :: Integer
 lookup :: (SymVal k, SymVal v) => SBV k -> SList (k, v) -> SBV v
-lookup = smtFunction "Data.SBV.List.lookup" $ \k lst -> ite (null lst)
+lookup = smtFunction "Data.SBV.List.lookup" NoMeasure $ \k lst -> ite (null lst)
                                                             (some "Data.SBV.List.lookup_notFound" (const sTrue))
                                                             (let (k', v) = untuple (head lst)
                                                              in ite (k .== k') v (lookup k (tail lst)))

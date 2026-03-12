@@ -1167,6 +1167,8 @@ data State  = State { sbvContext          :: SBVContext
                     , rUserFuncs          :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
                     , rCgMap              :: IORef CgMap
                     , rDefns              :: IORef [(String, (SMTDef, SBVType))]
+                    , rMeasureChecks      :: IORef [(String, IO ())]  -- Measure checks for recursive functions
+                    , rSkipMeasureChecks  :: IORef Bool               -- If True, skip measure checking (used by TP and checker itself)
                     , rSMTOptions         :: IORef [SMTOption]
                     , rOptGoals           :: IORef [Objective (SV, SV)]
                     , rAsserts            :: IORef [(String, Maybe CallStack, SV)]
@@ -1817,6 +1819,8 @@ mkNewState cfg currentRunMode = liftIO $ do
      uis                <- newIORef Map.empty
      cgs                <- newIORef Map.empty
      defns              <- newIORef []
+     measureChecks      <- newIORef []
+     skipMeasureChecks  <- newIORef False
      swCache            <- newIORef IMap.empty
      usedKinds          <- newIORef Set.empty
      usedLbls           <- newIORef Set.empty
@@ -1854,6 +1858,8 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rUIMap              = uis
                   , rCgMap              = cgs
                   , rDefns              = defns
+                  , rMeasureChecks      = measureChecks
+                  , rSkipMeasureChecks  = skipMeasureChecks
                   , rSVCache            = swCache
                   , rConstraints        = cstrs
                   , rPartitionVars      = pvs

@@ -71,7 +71,7 @@ type S = SumS SInteger
 --
 -- Note that we need to explicitly annotate each loop with its invariant and the termination
 -- measure. For convenience, we take those two as parameters, so we can experiment later.
-algorithm :: Invariant S -> Maybe (Measure S) -> Stmt S
+algorithm :: Invariant S -> Maybe (WPMeasure S) -> Stmt S
 algorithm inv msr = Seq [ Assign $ \st -> st{i = 0, s = 0}
                         , assert "n >= 0" $ \SumS{n} -> n .>= 0
                         , While "i < n"
@@ -99,7 +99,7 @@ noChange :: Stable S
 noChange = [stable "n" n]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
-imperativeSum :: Invariant S -> Maybe (Measure S) -> Program S
+imperativeSum :: Invariant S -> Maybe (WPMeasure S) -> Program S
 imperativeSum inv msr = Program { setup         = return ()
                                 , precondition  = pre
                                 , program       = algorithm inv msr
@@ -143,7 +143,7 @@ imperativeSum inv msr = Program { setup         = return ()
 -- >>> correctness invariant (Just measure)
 -- Total correctness is established.
 -- Q.E.D.
-correctness :: Invariant S -> Maybe (Measure S) -> IO (ProofResult (SumS Integer))
+correctness :: Invariant S -> Maybe (WPMeasure S) -> IO (ProofResult (SumS Integer))
 correctness inv msr = wpProveWith defaultWPCfg{wpVerbose=True} (imperativeSum inv msr)
 
 -- * Example proof attempts
