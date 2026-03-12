@@ -3,11 +3,7 @@
 
 ### Version 13.6.5, Not yet released
 
-  * Improved documentation for `lambdaArray`, explaining the model-theoretic distinction
-    between the pure array theory (`select`/`store`/`const`) and the richer setting where
-    arrays are identified with function spaces.
-
-  * The `sCase` and `pCase` quasi-quoters no longer require a type prefix. The type is now
+  * [BACKWARDS COMPATIBILITY] The `sCase` and `pCase` quasi-quoters no longer require a type prefix. The type is now
     inferred automatically from the constructor names in the patterns. Old syntax:
     `[sCase|Expr e of ...]`. New syntax: `[sCase| e of ...]`.
 
@@ -53,8 +49,9 @@
     For single-constructor types (newtypes or data types with exactly one constructor),
     the generated code omits the redundant constructor tester guard.
 
-  * Proof examples in `Documentation.SBV.Examples.TP` updated to use `pCase` for
-    list and tuple case-splits, replacing explicit uses of `split` and `split2`.
+  * Improved documentation for `lambdaArray`, explaining the model-theoretic distinction
+    between the pure array theory (`select`/`store`/`const`) and the richer setting where
+    arrays are identified with function spaces.
 
 ### Version 13.6, 2026-03-02
 

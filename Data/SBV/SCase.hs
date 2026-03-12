@@ -42,7 +42,7 @@ import qualified Data.SBV.Either as SE
 
 import Data.Char  (isDigit)
 import Data.List  (intercalate, stripPrefix)
-import Data.Maybe (isJust, fromMaybe)
+import Data.Maybe (isJust, fromMaybe, catMaybes)
 
 import Prelude hiding (fail)
 import qualified Prelude as P(fail)
@@ -216,7 +216,7 @@ builtinAccessor (BTTuple _) _ i scrut
   -- Simplify _i (tuple (a, b, ...)) to just the i-th component
   | AppE (VarE f) (TupE components) <- scrut
   , nameBase f == "tuple"
-  , let cs = [e | Just e <- components]
+  , let cs = catMaybes components
   , i >= 1, i <= length cs
   = cs !! (i - 1)
   | otherwise
@@ -507,7 +507,7 @@ flattenPat off arg (ConP conName _ subpats) = do
       patDecs = [ ValD (VarP v) (NormalB (accessor i)) []
                 | (i, VarP v) <- zip [(1::Int)..] subPats ]
       -- Skip the tester guard for single-constructor types (it's always true)
-      guards  = (if singleCon then id else (tester :)) (subGrds)
+      guards  = (if singleCon then id else (tester :)) subGrds
   pure (WildP, guards, patDecs ++ subDecs)
 flattenPat off arg (LitP lit) = do
   eq <- litToEq off arg lit
@@ -729,7 +729,7 @@ sCase = QuasiQuoter
 
             -- If we have a non-guarded match, then there must be no matches for this constructor later on. If so, they're redundant.
             chk2 seen (c@(CMatch _ nm _ Nothing _ _) : rest)
-              = case filter (\oc -> maybe False (sameBase nm) (getCaseConstructor oc)) rest of
+              = case filter (maybe False (sameBase nm) . getCaseConstructor) rest of
                   [] -> chk2 (Set.insert (nameBase nm) seen) rest
                   os -> overlap (last os) (c : init os)
 
@@ -737,7 +737,7 @@ sCase = QuasiQuoter
             -- for it later on, or there must be a catch-all. We also accept it if the same constructor
             -- was seen earlier (e.g., multiple nested-pattern alternatives like Left (x:_) / Left []).
             chk2 seen (c@(CMatch _ nm _ Just{} _ _) : rest)
-              | hasCatchAll || any (\oc -> maybe False (sameBase nm) (getCaseConstructor oc)) rest || nameBase nm `Set.member` seen
+              | hasCatchAll || any (maybe False (sameBase nm) . getCaseConstructor) rest || nameBase nm `Set.member` seen
               = chk2 (Set.insert (nameBase nm) seen) rest
               | True
               = unmatched c
@@ -935,7 +935,7 @@ pCase = QuasiQuoter
         -- Check overlap: unguarded constructor match followed by same constructor
         let chk2 [] = pure ()
             chk2 (c@(CMatch _ nm _ Nothing _ _) : rest)
-              = case filter (\oc -> maybe False (sameBase nm) (getCaseConstructor oc)) rest of
+              = case filter (maybe False (sameBase nm) . getCaseConstructor) rest of
                   [] -> chk2 rest
                   os -> overlap loc (last os) (c : init os)
             chk2 (_ : rest) = chk2 rest
