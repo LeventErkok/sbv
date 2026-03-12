@@ -7,6 +7,22 @@
     between the pure array theory (`select`/`store`/`const`) and the richer setting where
     arrays are identified with function spaces.
 
+  * The `sCase` and `pCase` quasi-quoters no longer require a type prefix. The type is now
+    inferred automatically from the constructor names in the patterns. Old syntax:
+    `[sCase|Expr e of ...]`. New syntax: `[sCase| e of ...]`.
+
+  * The `sCase` and `pCase` quasi-quoters now support wildcard-only patterns, where no
+    constructor patterns are needed. An unguarded wildcard generates the rhs directly,
+    while guarded wildcards produce an `ite`-chain (for `sCase`) or proof obligations
+    (for `pCase`):
+
+    ```haskell
+    [sCase| x of
+       _ | x .> 0 -> x
+         | sTrue  -> -x
+    |]
+    ```
+
   * The `sCase` and `pCase` quasi-quoters now support built-in types: `Maybe`, `Either`,
     `List`, and `Tuple2` through `Tuple8`. Previously, these quoters only worked with
     user-defined ADTs declared via `mkSymbolicADT`. Usage:
