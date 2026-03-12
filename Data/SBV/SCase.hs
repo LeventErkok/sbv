@@ -646,8 +646,16 @@ sCase = QuasiQuoter
               allCases <- concat <$> zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
               loc <- location
               checkWildcard "sCase" loc allCases
-              let pairs = [(fromMaybe (VarE 'sTrue) mbG, rhs) | CWild _ mbG rhs <- allCases]
-              buildCase "wildcard" Nothing scrut (Right pairs)
+              let wilds = [(mbG, rhs) | CWild _ mbG rhs <- allCases]
+                  -- An unguarded wildcard is the base case (no ite wrapper needed).
+                  -- checkWildcard guarantees an unguarded wildcard is last if present.
+                  iteChain []                       = do uniq <- newName "u"
+                                                         let suffix = drop 2 (show uniq)
+                                                         pure $ AppE (VarE 'sym) (LitE (StringL ("unmatched_sCase_wildcard_" ++ suffix)))
+                  iteChain ((Nothing, rhs) : _)     = pure rhs
+                  iteChain ((Just g,  rhs) : rest)  = do r <- iteChain rest
+                                                         pure $ foldl AppE (VarE 'ite) [g, rhs, r]
+              iteChain wilds
             Just (typ, mbt) -> do
               mbFnName <- case mbt of
                 Just BTList      -> pure (Just (VarE 'SL.list))

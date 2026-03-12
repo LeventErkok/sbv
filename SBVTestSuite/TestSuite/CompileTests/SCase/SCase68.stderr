@@ -1,0 +1,8 @@
+SCase68.hs:(11,14)-(13,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " x of\n\
+      \               _ -> x + 1\n\
+      \      "
+  ======>
+    x + 1
