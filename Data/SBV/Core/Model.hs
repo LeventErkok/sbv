@@ -30,7 +30,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), hasMeasure, SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), withMeasure, hasMeasure, SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , some
@@ -104,6 +104,8 @@ import qualified Test.QuickCheck         as QC (quickCheckResult, counterexample
 import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, monitor)
 
 import qualified Data.Foldable as F (toList)
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence as Seq
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Sized
@@ -116,7 +118,7 @@ import Data.SBV.Lambda
 import Data.SBV.Utils.ExtractIO (ExtractIO)
 
 import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), defs2smt, prove)
-import Data.SBV.SMT.SMT        (ThmResult, showModel)
+import Data.SBV.SMT.SMT        (ThmResult(..), showModel)
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
@@ -1222,18 +1224,176 @@ type family MeasureOf f r where
   MeasureOf (SBV a -> r) r' = SBV a -> MeasureOf r r'
   MeasureOf (SBV a)      r  = SBV r
 
+-- | Apply a measure function to a list of 'SVal' arguments, producing the measure value.
+-- This is used internally during measure verification.
+class ApplyMeasure a r where
+  applyMeasure :: MeasureOf a r -> [SVal] -> SBV r
+
+instance ApplyMeasure (SBV a) r where
+  applyMeasure m [] = m
+  applyMeasure _ _  = error "Data.SBV.applyMeasure: too many arguments"
+
+instance ApplyMeasure b r => ApplyMeasure (SBV a -> b) r where
+  applyMeasure _ []       = error "Data.SBV.applyMeasure: not enough arguments"
+  applyMeasure m (sv:svs) = applyMeasure @b @r (m (SBV sv)) svs
+
+-- | An evaluated measure: captures the ability to apply the measure function
+-- to a list of arguments, along with the ordering and zero constraints.
+data MeasureEval where
+  MeasureEval :: (Zero r, OrdSymbolic (SBV r)) => ([SVal] -> SBV r) -> MeasureEval
+
 -- | A measure for a function, used to prove termination of recursive definitions.
 -- If the function is not recursive, use 'NoMeasure'. For recursive functions, use
--- 'WithMeasure' to provide a measure function that maps the arguments to a value
+-- 'withMeasure' to provide a measure function that maps the arguments to a value
 -- that strictly decreases on each recursive call.
 data Measure f where
-  NoMeasure   :: Measure f
-  WithMeasure :: (Zero r, OrdSymbolic (SBV r)) => MeasureOf f r -> Measure f
+  NoMeasure    :: Measure f
+  HasMeasure   :: MeasureEval -> Measure f
+
+-- | Construct a measure from a measure function. The measure function takes the same
+-- arguments as the original function but returns a value of a type with 'Zero' and
+-- 'OrdSymbolic' instances. The returned value must strictly decrease at each recursive call.
+withMeasure :: forall f r. (Zero r, OrdSymbolic (SBV r), ApplyMeasure f r) => MeasureOf f r -> Measure f
+withMeasure msf = HasMeasure (MeasureEval (applyMeasure @f @r msf))
 
 -- | Does the measure indicate a termination measure is present?
 hasMeasure :: Measure f -> Bool
-hasMeasure NoMeasure       = False
-hasMeasure (WithMeasure _) = True
+hasMeasure NoMeasure      = False
+hasMeasure (HasMeasure _) = True
+
+-- | Verify that a measure decreases at each recursive call site.
+-- Walks the expression DAG to find recursive calls, computes reaching conditions
+-- via ITE analysis, and verifies the measure property in a separate solver session.
+verifyMeasure :: String -> LambdaInfo -> MeasureEval -> IO ()
+verifyMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) = do
+   let -- The function name in the DAG is barified (SMTLib quoting)
+       barFuncNm = barify funcNm
+
+       -- Find all recursive call sites in the DAG
+       recCalls = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList liAssignments, nm == barFuncNm]
+
+   -- If there are no recursive calls, nothing to verify
+   if null recCalls
+     then pure ()
+     else do
+       -- Compute reaching conditions: for each SV, under what condition does it contribute to the output?
+       let reachConds = computeReachingConditions liAssignments liOutput
+
+       -- Build the verification obligation by replaying the DAG in a prove session
+       let paramSVs = map snd liParams
+
+       result <- prove (do
+          st <- symbolicEnv
+
+          -- Skip measure checks in this verification session to avoid re-entry
+          liftIO $ writeIORef (rSkipMeasureChecks st) True
+
+          -- Create fresh symbolic variables for the formal parameters
+          freshParams <- liftIO $ mapM (\sv -> newInternalVariable st (kindOf sv)) paramSVs
+
+          -- Register constants
+          freshConsts <- liftIO $ mapM (\(_, cv) -> svToSV st (SVal (kindOf cv) (Left cv))) liConsts
+
+          -- Build the SV mapping: old -> new
+          let constMapping = zip (map fst liConsts) freshConsts
+              paramMapping = zip paramSVs freshParams
+              initMap      = Map.fromList (constMapping ++ paramMapping)
+
+              -- Also map the built-in true/false SVs
+              builtinMap   = Map.fromList [(trueSV, trueSV), (falseSV, falseSV)]
+              startMap     = Map.union initMap builtinMap
+
+          -- Replay the DAG, building up the mapping, but skip recursive call nodes
+          svMap <- liftIO $ replayDAG st funcNm startMap (F.toList liAssignments)
+
+          -- Compute the measure on the formal parameters
+          let formalSVals = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) freshParams
+              mFormal     = applyM formalSVals
+
+          -- For each recursive call, compute the measure on the call args and check decrease
+          let mkObligation (rcSV, callArgSVs) =
+                -- Map the call argument SVs to their replayed versions
+                let mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
+                    argSVals   = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
+                    mCall      = applyM argSVals
+
+                    -- Get the reaching condition for this call site
+                    reachSVal  = case Map.lookup rcSV reachConds of
+                                   Just conds -> sAnd [ let sv' = Map.findWithDefault condSV condSV svMap
+                                                            s   = SBV (SVal KBool (Right (cache (\_ -> pure sv'))))
+                                                        in if pol then s else sNot s
+                                                      | (condSV, pol) <- conds
+                                                      ]
+                                   Nothing    -> sTrue  -- unconditional
+
+                -- The obligation: reachCond => (mFormal >= zero && mFormal > mCall)
+                in reachSVal .=> (mFormal .>= zero .&& mFormal .> mCall)
+
+          pure $ sAnd (map mkObligation recCalls) :: Symbolic SBool)
+
+       case result of
+         ThmResult Unsatisfiable{} -> pure ()
+         _                         -> error $ unlines
+            [ ""
+            , "*** Data.SBV: Measure verification failed for '" ++ funcNm ++ "'."
+            , "***"
+            , "*** " ++ show result
+            , "***"
+            , "*** The termination measure could not be verified to decrease at each recursive call."
+            ]
+
+-- | Replay the DAG in a new state, building up an SV mapping from old to new.
+-- Recursive call nodes (matching funcName) are skipped — they become fresh uninterpreted values.
+replayDAG :: State -> String -> Map.Map SV SV -> [(SV, SBVExpr)] -> IO (Map.Map SV SV)
+replayDAG st funcName = go
+  where barFuncName = barify funcName
+
+        go svMap []                = pure svMap
+        go svMap ((sv, expr):rest) = do
+          let SBVApp op args = expr
+              mappedArgs     = map (\a -> Map.findWithDefault a a svMap) args
+          newSV' <- case op of
+                      -- For recursive calls, create a fresh uninterpreted value instead of replaying
+                      Uninterpreted nm | nm == barFuncName -> newInternalVariable st (kindOf sv)
+                      -- For all other operations, replay the expression with mapped arguments
+                      _ -> do let mappedOp = mapOpSVs (\a -> Map.findWithDefault a a svMap) op
+                              newExpr st (kindOf sv) (SBVApp mappedOp mappedArgs)
+          go (Map.insert sv newSV' svMap) rest
+
+-- | Map any SVs embedded directly in an Op (e.g., in LkUp, FP_Cast)
+mapOpSVs :: (SV -> SV) -> Op -> Op
+mapOpSVs f (LkUp p sv1 sv2)                  = LkUp p (f sv1) (f sv2)
+mapOpSVs f (IEEEFP (FP_Cast fk tk sv))       = IEEEFP (FP_Cast fk tk (f sv))
+mapOpSVs _ (ArrayInit (Right (SMTLambda s)))  = ArrayInit (Right (SMTLambda s))  -- Lambda strings don't contain SVs to map
+mapOpSVs _ op                                 = op
+
+-- | Compute the reaching condition for each SV: under what boolean condition
+-- does the SV's value contribute to the output? Propagates conditions top-down
+-- through ITE nodes. Each reaching condition is a list of @(condSV, polarity)@ pairs;
+-- the actual condition is the conjunction: for each pair, @condSV@ if polarity is 'True',
+-- @not condSV@ if polarity is 'False'.
+computeReachingConditions :: Seq.Seq (SV, SBVExpr) -> SV -> Map.Map SV [(SV, Bool)]
+computeReachingConditions asgns outSV = go initMap (reverse $ F.toList asgns)
+  where
+    -- The output's reaching condition is True (empty conjunction)
+    initMap = Map.singleton outSV []
+
+    go condMap [] = condMap
+    go condMap ((sv, SBVApp op args) : rest) =
+      case Map.lookup sv condMap of
+        Nothing -> go condMap rest  -- This SV doesn't contribute to the output
+        Just rc ->
+          let condMap' = case (op, args) of
+                (Ite, [c, t, e]) ->
+                  let condMapT = addReach t ((c, True)  : rc) condMap
+                      condMapE = addReach e ((c, False) : rc) condMapT
+                  in condMapE
+                _ -> foldl' (\m a -> addReach a rc m) condMap args
+          in go condMap' rest
+
+    -- Add a reaching condition to an SV. For shared nodes, keep the first condition found
+    -- (most direct path from the output).
+    addReach sv rc m = Map.insertWith (\_ old -> old) sv rc m
 
 -- | Regular expressions can be compared for equality. Note that we diverge here from the equality
 -- in the concrete sense; i.e., the Eq instance does not match the symbolic case. This is a bit unfortunate,
@@ -2799,11 +2959,15 @@ class SMTDefinable a where
   mkADTAccessor    nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTAccessor    nm k)) Nothing $ UIFree True in v
 
   smtFunction nm msr v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing
-                       $ UIFun (v, \st fk -> do def <- lambda st TopLevel fk (hasMeasure msr) v
-                                                when (hasMeasure msr) $
-                                                  modifyIORef' (rMeasureChecks st)
-                                                               ((atProxy (Proxy @a) nm, pure ()) :)
-                                                pure def)
+                       $ UIFun (v, \st fk ->
+                          case msr of
+                            NoMeasure       -> lambda st TopLevel fk False v
+                            HasMeasure eval -> do
+                              (def, info) <- lambdaWithInfo st TopLevel fk v
+                              let funcNm = atProxy (Proxy @a) nm
+                              modifyIORef' (rMeasureChecks st)
+                                           ((funcNm, verifyMeasure funcNm info eval) :)
+                              pure def)
 
 
 -- | Kind of uninterpretation

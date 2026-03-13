@@ -33,7 +33,7 @@ module Data.SBV.Core.Data
  , SFloatingPoint, SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad
  , SWord, SInt, WordN, IntN
  , SRational
- , SChar, SString, SList
+ , SChar, SString, SList, (.:), nil
  , SArray, ArrayModel(..)
  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
  , RCSet(..), SSet
@@ -84,6 +84,8 @@ import qualified Data.Set as Set (toList)
 
 import GHC.Generics (Generic, U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
 import qualified GHC.Generics  as G
+
+import GHC.Exts (IsList(..))
 
 import System.Random
 
@@ -198,6 +200,34 @@ type SRational = SBV Rational
 -- length, and internally processed as one unit as opposed to a fixed-length list of items.
 -- Note that lists can be nested, i.e., we do allow lists of lists of ... items.
 type SList a = SBV [a]
+
+-- | Prepend an element, the traditional @cons@.
+--
+-- >>> 1 .: 2 .: 3 .: [4, 5, 6 :: SInteger]
+-- [1,2,3,4,5,6] :: [SInteger]
+infixr 5 .:
+(.:) :: forall a. SymVal a => SBV a -> SList a -> SList a
+a .: as = SBV $ SVal kl $ Right $ cache r
+  where ka = kindOf (Proxy @a)
+        kl = kindOf (Proxy @[a])
+        r st = do sva  <- sbvToSV st a
+                  svs  <- newExpr st kl (SBVApp (SeqOp (SeqUnit ka)) [sva])
+                  svas <- sbvToSV st as
+                  newExpr st kl (SBVApp (SeqOp (SeqConcat kl)) [svs, svas])
+
+-- | Empty list. This value has the property that it's the only list with length 0. If you use @OverloadedLists@ extension,
+-- you can write it as the familiar @[]@.
+nil :: SymVal [a] => SList a
+nil = literal []
+
+-- | 'IsList' instance allows list literals to be written compactly.
+instance (SymVal a, SymVal [a]) => IsList (SList a) where
+  type Item (SList a) = SBV a
+
+  fromList = foldr (.:) nil -- Don't use [] here for nil, as this is the very definition of doing overloaded lists
+  toList x = case unliteral x of
+               Nothing -> error "IsList.toList used in a symbolic context"
+               Just xs -> map literal xs
 
 -- | Symbolic arrays. A symbolic array is more akin to a function in SMTLib (and thus in SBV),
 -- as opposed to contagious-storage with a finite range as found in many programming languages.

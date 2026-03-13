@@ -51,8 +51,6 @@ import Data.Dynamic
 
 import Type.Reflection (typeRep)
 
-import qualified Data.SBV.List as SL ((.:))
-
 -- | A proposition is something SBV is capable of proving/disproving in TP.
 type Proposition a = ( QNot a
                      , QuantifiedBool a
@@ -123,7 +121,7 @@ instance (SymVal at, SymVal bt, SymVal ct, SymVal dt, SymVal et) => HasInduction
 instance SymVal x => HasInductionSchema (Forall nm [x] -> SBool) where
    inductionSchema p = proofOf $ internalAxiom ("induct" ++ show (typeRep @[x])) ax
      where pf = p . Forall
-           ax =   sAnd [pf [], quantifiedBool (\(Forall x) (Forall xs) -> pf xs .=> pf (x SL..: xs))]
+           ax =   sAnd [pf [], quantifiedBool (\(Forall x) (Forall xs) -> pf xs .=> pf (x .: xs))]
               .=> quantifiedBool (\(Forall xs) -> pf xs)
 
 -- | Induction schema for lists with one extra argument
@@ -131,7 +129,7 @@ instance (SymVal x, SymVal at) => HasInductionSchema (Forall nm [x] -> Forall an
    inductionSchema p = proofOf $ internalAxiom ("induct" ++ show (typeRep @[x]) ++ "1") ax
      where pf xs a = p (Forall xs) (Forall a)
            ax      = sAnd [ quantifiedBool (\                       (Forall a) -> pf [] a)
-                          , quantifiedBool (\(Forall x) (Forall xs) (Forall a) -> pf xs a .=> pf (x SL..: xs) a)]
+                          , quantifiedBool (\(Forall x) (Forall xs) (Forall a) -> pf xs a .=> pf (x .: xs) a)]
                      .=>    quantifiedBool (\(Forall xs) (Forall a) -> pf xs a)
 
 -- | Induction schema for lists with two extra arguments
@@ -139,7 +137,7 @@ instance (SymVal x, SymVal at, SymVal bt) => HasInductionSchema (Forall nm [x] -
    inductionSchema p = proofOf $ internalAxiom ("induct" ++ show (typeRep @[x]) ++ "2") ax
      where pf xs a b = p (Forall xs) (Forall a) (Forall b)
            ax        = sAnd [ quantifiedBool (\                       (Forall a) (Forall b) -> pf [] a b)
-                            , quantifiedBool (\(Forall x) (Forall xs) (Forall a) (Forall b) -> pf xs a b .=> pf (x SL..: xs) a b)]
+                            , quantifiedBool (\(Forall x) (Forall xs) (Forall a) (Forall b) -> pf xs a b .=> pf (x .: xs) a b)]
                        .=>    quantifiedBool (\(Forall xs) (Forall a) (Forall b) -> pf xs a b)
 
 -- | Induction schema for lists with three extra arguments
@@ -147,7 +145,7 @@ instance (SymVal x, SymVal at, SymVal bt, SymVal ct) => HasInductionSchema (Fora
    inductionSchema p = proofOf $ internalAxiom ("induct" ++ show (typeRep @[x]) ++ "3") ax
      where pf xs a b c = p (Forall xs) (Forall a) (Forall b) (Forall c)
            ax          = sAnd [ quantifiedBool (\                       (Forall a) (Forall b) (Forall c) -> pf [] a b c)
-                              , quantifiedBool (\(Forall x) (Forall xs) (Forall a) (Forall b) (Forall c) -> pf xs a b c .=> pf (x SL..: xs) a b c)]
+                              , quantifiedBool (\(Forall x) (Forall xs) (Forall a) (Forall b) (Forall c) -> pf xs a b c .=> pf (x .: xs) a b c)]
                          .=>    quantifiedBool (\(Forall xs) (Forall a) (Forall b) (Forall c) -> pf xs a b c)
 
 -- | Induction schema for lists with four extra arguments
@@ -155,7 +153,7 @@ instance (SymVal x, SymVal at, SymVal bt, SymVal ct, SymVal dt) => HasInductionS
    inductionSchema p = proofOf $ internalAxiom ("induct" ++ show (typeRep @[x]) ++ "4") ax
      where pf xs a b c d = p (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d)
            ax            = sAnd [ quantifiedBool (\                       (Forall a) (Forall b) (Forall c) (Forall d) -> pf [] a b c d)
-                                , quantifiedBool (\(Forall x) (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) -> pf xs a b c d .=> pf (x SL..: xs) a b c d)]
+                                , quantifiedBool (\(Forall x) (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) -> pf xs a b c d .=> pf (x .: xs) a b c d)]
                            .=>    quantifiedBool (\(Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) -> pf xs a b c d)
 
 -- | Induction schema for lists with five extra arguments
@@ -163,7 +161,7 @@ instance (SymVal x, SymVal at, SymVal bt, SymVal ct, SymVal dt, SymVal et) => Ha
    inductionSchema p = proofOf $ internalAxiom ("induct" ++ show (typeRep @[x]) ++ "5") ax
      where pf xs a b c d e = p (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
            ax              = sAnd [ quantifiedBool (\                       (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) -> pf [] a b c d e)
-                                  , quantifiedBool (\(Forall x) (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) -> pf xs a b c d e .=> pf (x SL..: xs) a b c d e)]
+                                  , quantifiedBool (\(Forall x) (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) -> pf xs a b c d e .=> pf (x .: xs) a b c d e)]
                              .=>    quantifiedBool (\(Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) -> pf xs a b c d e)
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,

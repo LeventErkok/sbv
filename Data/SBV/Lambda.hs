@@ -20,6 +20,7 @@
 
 module Data.SBV.Lambda (
             lambda,      lambdaStr
+          , lambdaWithInfo, LambdaInfo(..)
           , constraint,  constraintStr
           , LambdaScope(..)
         ) where
@@ -40,15 +41,25 @@ import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
 import Data.IORef (readIORef, modifyIORef')
 import Data.List
 import Data.Maybe (fromMaybe)
+import qualified Data.Map.Strict as Map
 
 import qualified Data.Foldable as F
 import qualified Data.Set      as Set
 
 import qualified Data.Generics.Uniplate.Data as G
+import qualified Data.Sequence as S
 
 -- | What's the scope of the generated lambda?
 data LambdaScope = HigherOrderArg   -- This lambda will be firstified, hence can't have any free variables
                  | TopLevel         -- This lambda is used to represent a quantified axiom, can have free vars
+
+-- | Information about a compiled lambda body, used for measure verification.
+data LambdaInfo = LambdaInfo
+  { liAssignments :: S.Seq (SV, SBVExpr)  -- ^ The expression DAG
+  , liParams      :: [(Quantifier, SV)]    -- ^ Formal parameters with quantifier
+  , liOutput      :: SV                    -- ^ The output node
+  , liConsts      :: [(SV, CV)]            -- ^ Constants used
+  }
 
 data Defn = Defn [String]                        -- The uninterpreted names referred to in the body
                  [String]                        -- Free variables (i.e., not uninterpreted nor bound in the definition itself)
@@ -192,6 +203,38 @@ lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$
 lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> Bool -> a -> m SMTDef
 lambda inState scope fk hasMeasure = lambdaGen scope mkLam inState fk
    where mkLam (Defn unints _frees params body) = SMTDef fk unints (extractAllUniversals <$> params) body hasMeasure
+
+-- | Like 'lambda', but also returns the sub-state's DAG info for measure verification.
+lambdaWithInfo :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m (SMTDef, LambdaInfo)
+lambdaWithInfo inState scope fk f = inSubState scope inState $ \st -> do
+   defn <- handleDefn <$> convert st fk (mkLambda st f)
+   info <- liftIO $ extractLambdaInfo st
+   pure (defn, info)
+   where handleDefn d@(Defn _ frees _ _)
+            | null frees = mkLam d
+            | True       = error $ unlines [ ""
+                                           , "*** Data.SBV.Lambda: Detected free variables in a function with a measure."
+                                           , "***  Free vars: " ++ unwords frees
+                                           ]
+         mkLam (Defn unints _frees params body) = SMTDef fk unints (extractAllUniversals <$> params) body True
+
+-- | Extract DAG information from a lambda sub-state.
+extractLambdaInfo :: State -> IO LambdaInfo
+extractLambdaInfo st = do
+   SBVPgm asgns <- readIORef (spgm st)
+   linps        <- readIORef (rlambdaInps st)
+   outs         <- readIORef (routs st)
+   cmap         <- readIORef (rconstMap st)
+   let params = [(q, getSV nsv) | (q, nsv) <- F.toList linps]
+       outSV  = case F.toList outs of
+                  [o] -> o
+                  os  -> error $ "Data.SBV.Lambda.extractLambdaInfo: expected exactly one output, got " ++ show (length os)
+   pure LambdaInfo { liAssignments = asgns
+                   , liParams      = params
+                   , liOutput      = outSV
+                   , liConsts      = map swap $ Map.toList cmap
+                   }
+   where swap (a, b) = (b, a)
 
 -- | Create an anonymous lambda, rendered as n SMTLib string. The kind passed is the kind of the final result.
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTLambda

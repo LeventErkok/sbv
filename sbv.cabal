@@ -293,6 +293,7 @@ Library
                   , Data.SBV.Core.Sized
                   , Data.SBV.Core.SizedFloats
                   , Data.SBV.Core.Symbolic
+                  , Data.SBV.Core.TH
                   , Data.SBV.Control.BaseIO
                   , Data.SBV.Control.Query
                   , Data.SBV.Control.Types

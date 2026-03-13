@@ -22,6 +22,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE NamedFieldPuns         #-}
 {-# LANGUAGE OverloadedLists        #-}
+{-# LANGUAGE QuasiQuotes            #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
@@ -99,7 +100,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.SizedFloats
 import Data.SBV.Core.Floating
-
+import Data.SBV.SCase (sCase)
 import Data.SBV.Tuple
 
 import Data.Maybe (isNothing, catMaybes)
@@ -109,8 +110,6 @@ import Data.List (genericLength, genericIndex, genericDrop, genericTake, generic
 import qualified Data.List as L (inits, tails, isSuffixOf, isPrefixOf, isInfixOf, partition, (\\))
 
 import Data.Proxy
-
-import GHC.Exts (IsList(..))
 
 #ifdef DOCTEST
 -- $setup
@@ -124,15 +123,6 @@ import GHC.Exts (IsList(..))
 -- >>> :set -XTypeApplications
 -- >>> :set -XQuasiQuotes
 #endif
-
--- | IsList instance allows list literals to be written compactly.
-instance SymVal a => IsList (SList a) where
-  type Item (SList a) = SBV a
-
-  fromList = P.foldr (.:) nil -- Don't use [] here for nil, as this is the very definition of doing overloaded lists
-  toList x = case unliteral x of
-               Nothing -> error "IsList.toList used in a symbolic context"
-               Just xs -> P.map literal xs
 
 -- | Length of a list.
 --
@@ -299,14 +289,6 @@ elemAt l i
 implode :: SymVal a => [SBV a] -> SList a
 implode = P.foldr ((++) . \x -> [x]) (literal [])
 
--- | Prepend an element, the traditional @cons@.
---
--- >>> 1 .: 2 .: 3 .: [4, 5, 6 :: SInteger]
--- [1,2,3,4,5,6] :: [SInteger]
-infixr 5 .:
-(.:) :: SymVal a => SBV a -> SList a -> SList a
-a .: as = singleton a ++ as  -- NB. Don't do "[a] ++ as" here. That type-checks but is recursive due to how overloaded-lists work.
-
 -- | Append an element
 --
 -- >>> [1, 2, 3 :: SInteger] `snoc` 4 `snoc` 5 `snoc` 6
@@ -314,15 +296,7 @@ a .: as = singleton a ++ as  -- NB. Don't do "[a] ++ as" here. That type-checks 
 snoc :: SymVal a => SList a -> SBV a -> SList a
 as `snoc` a = as ++ [a]
 
--- | Empty list. This value has the property that it's the only list with length 0. If you use @OverloadedLists@ extension,
--- you can write it as the familiar `[]`.
---
--- >>> prove $ \(l :: SList Integer) -> length l .== 0 .<=> l .== []
--- Q.E.D.
--- >>> prove $ \(l :: SString) -> length l .== 0 .<=> l .== []
--- Q.E.D.
-nil :: SymVal a => SList a
-nil = literal []
+-- nil is defined in Data.SBV.Core.Data and re-exported here.
 
 -- | Append two lists.
 --
@@ -580,7 +554,11 @@ reverse l
   = literal (P.reverse l')
   | True
   = def l
-  where def = smtFunction "sbv.reverse" NoMeasure $ \xs -> ite (null xs) [] (let (h, t) = uncons xs in def t ++ [h])
+  where def = smtFunction "sbv.reverse" (withMeasure length)
+            $ \xs -> [sCase| xs of
+                        []   -> []
+                        h:ts -> def ts ++ [h]
+                      |]
 
 -- | A class of mappable functions. In SBV, we make a distinction between closures and regular functions, and
 -- we instantiate this class appropriately so it can handle both cases.
@@ -880,7 +858,7 @@ replicate c e
  = literal (genericReplicate c' e')
  | True
  = def c e
- where def = smtFunction "sbv.replicate" NoMeasure $ \count elt -> ite (count .<= 0) [] (elt .: def (count - 1) elt)
+ where def = smtFunction "sbv.replicate" (withMeasure $ \count _elt -> count) $ \count elt -> ite (count .<= 0) [] (elt .: def (count - 1) elt)
 
 -- | inits of a list.
 --

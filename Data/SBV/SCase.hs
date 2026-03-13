@@ -31,14 +31,9 @@ import qualified Language.Haskell.Exts as E
 
 import Control.Monad (unless, when, zipWithM)
 
-import Data.SBV.Client (getConstructors)
+import Data.SBV.Core.TH    (getConstructors, sbvName)
 import Data.SBV.Core.Model (ite, sym)
 import Data.SBV.Core.Data  (sTrue, sNot, (.&&), (.||), (.==), (.===), literal)
-
-import qualified Data.SBV.List  as SL
-import qualified Data.SBV.Tuple as ST
-import qualified Data.SBV.Maybe as SM
-import qualified Data.SBV.Either as SE
 
 import Data.Char  (isDigit)
 import Data.List  (intercalate, stripPrefix)
@@ -191,27 +186,27 @@ builtinConstructors (BTTuple n)   = [(tupleDataName n, n)]
 -- | Generate a tester expression for a built-in type constructor.
 builtinTester :: BuiltinType -> Name -> Exp -> Exp
 builtinTester BTMaybe nm scrut
-  | nameBase nm == "Nothing" = AppE (VarE 'SM.isNothing) scrut
-  | nameBase nm == "Just"    = AppE (VarE 'SM.isJust)    scrut
+  | nameBase nm == "Nothing" = AppE (VarE (sbvName "Data.SBV.Maybe" "isNothing")) scrut
+  | nameBase nm == "Just"    = AppE (VarE (sbvName "Data.SBV.Maybe" "isJust"))    scrut
 builtinTester BTEither nm scrut
-  | nameBase nm == "Left"  = AppE (VarE 'SE.isLeft)  scrut
-  | nameBase nm == "Right" = AppE (VarE 'SE.isRight) scrut
+  | nameBase nm == "Left"  = AppE (VarE (sbvName "Data.SBV.Either" "isLeft"))  scrut
+  | nameBase nm == "Right" = AppE (VarE (sbvName "Data.SBV.Either" "isRight")) scrut
 builtinTester BTList nm scrut
-  | nameBase nm == "[]" = AppE (VarE 'SL.null) scrut
-  | nameBase nm == ":"  = AppE (VarE 'sNot) (AppE (VarE 'SL.null) scrut)
+  | nameBase nm == "[]" = AppE (VarE (sbvName "Data.SBV.List" "null")) scrut
+  | nameBase nm == ":"  = AppE (VarE 'sNot) (AppE (VarE (sbvName "Data.SBV.List" "null")) scrut)
 builtinTester (BTTuple _) _ _ = VarE 'sTrue
 builtinTester bt nm _ = error $ "sCase: builtinTester: unexpected constructor " ++ nameBase nm ++ " for " ++ show bt
 
 -- | Generate an accessor expression for a built-in type constructor field.
 builtinAccessor :: BuiltinType -> Name -> Int -> Exp -> Exp
 builtinAccessor BTMaybe nm i scrut
-  | nameBase nm == "Just", i == 1 = AppE (VarE 'SM.getJust_1) scrut
+  | nameBase nm == "Just", i == 1 = AppE (VarE (sbvName "Data.SBV.Maybe" "getJust_1")) scrut
 builtinAccessor BTEither nm i scrut
-  | nameBase nm == "Left",  i == 1 = AppE (VarE 'SE.getLeft_1)  scrut
-  | nameBase nm == "Right", i == 1 = AppE (VarE 'SE.getRight_1) scrut
+  | nameBase nm == "Left",  i == 1 = AppE (VarE (sbvName "Data.SBV.Either" "getLeft_1"))  scrut
+  | nameBase nm == "Right", i == 1 = AppE (VarE (sbvName "Data.SBV.Either" "getRight_1")) scrut
 builtinAccessor BTList nm i scrut
-  | nameBase nm == ":", i == 1 = AppE (VarE 'SL.head) scrut
-  | nameBase nm == ":", i == 2 = AppE (VarE 'SL.tail) scrut
+  | nameBase nm == ":", i == 1 = AppE (VarE (sbvName "Data.SBV.List" "head")) scrut
+  | nameBase nm == ":", i == 2 = AppE (VarE (sbvName "Data.SBV.List" "tail")) scrut
 builtinAccessor (BTTuple _) _ i scrut
   -- Simplify _i (tuple (a, b, ...)) to just the i-th component
   | AppE (VarE f) (TupE components) <- scrut
@@ -221,14 +216,14 @@ builtinAccessor (BTTuple _) _ i scrut
   = cs !! (i - 1)
   | otherwise
   = AppE (VarE (tupleAccessorName i)) scrut
-  where tupleAccessorName 1 = 'ST._1
-        tupleAccessorName 2 = 'ST._2
-        tupleAccessorName 3 = 'ST._3
-        tupleAccessorName 4 = 'ST._4
-        tupleAccessorName 5 = 'ST._5
-        tupleAccessorName 6 = 'ST._6
-        tupleAccessorName 7 = 'ST._7
-        tupleAccessorName 8 = 'ST._8
+  where tupleAccessorName 1 = sbvName "Data.SBV.Tuple" "_1"
+        tupleAccessorName 2 = sbvName "Data.SBV.Tuple" "_2"
+        tupleAccessorName 3 = sbvName "Data.SBV.Tuple" "_3"
+        tupleAccessorName 4 = sbvName "Data.SBV.Tuple" "_4"
+        tupleAccessorName 5 = sbvName "Data.SBV.Tuple" "_5"
+        tupleAccessorName 6 = sbvName "Data.SBV.Tuple" "_6"
+        tupleAccessorName 7 = sbvName "Data.SBV.Tuple" "_7"
+        tupleAccessorName 8 = sbvName "Data.SBV.Tuple" "_8"
         tupleAccessorName n = error $ "sCase: tupleAccessorName: unsupported index " ++ show n
 builtinAccessor bt nm i _ = error $ "sCase: builtinAccessor: unexpected constructor " ++ nameBase nm ++ " field " ++ show i ++ " for " ++ show bt
 
@@ -519,7 +514,7 @@ flattenPat off arg (UInfixP p1 conName p2)
   | nameBase conName == ":" = flattenCons off arg p1 p2
 -- Nested empty list pattern: []
 flattenPat _   arg (ListP []) =
-  pure (WildP, [AppE (VarE 'SL.null) arg], [])
+  pure (WildP, [AppE (VarE (sbvName "Data.SBV.List" "null")) arg], [])
 -- Nested list pattern with elements: [a], [a, b], etc. Desugar to nested cons.
 flattenPat off arg (ListP (p:ps)) =
   flattenPat off arg (InfixP p (mkName ":") (ListP ps))
@@ -549,7 +544,7 @@ flattenCons off arg p1 p2 = do
     let headExpr = mkAccessorFor (Just BTList) (mkName ":") 1 arg
         tailExpr = mkAccessorFor (Just BTList) (mkName ":") 2 arg
         tester   = mkTesterFor (Just BTList) (mkName ":") arg
-        destruct = foldl1 AppE [VarE '(.===), arg, InfixE (Just headExpr) (VarE '(SL..:)) (Just tailExpr)]
+        destruct = foldl1 AppE [VarE '(.===), arg, InfixE (Just headExpr) (VarE (sbvName "Data.SBV.Core.Data" ".:")) (Just tailExpr)]
     sub1 <- flattenPat off headExpr p1
     sub2 <- flattenPat off tailExpr p2
     let subGrds = sndOf3 sub1 ++ sndOf3 sub2
@@ -658,9 +653,9 @@ sCase = QuasiQuoter
               iteChain wilds
             Just (typ, mbt) -> do
               mbFnName <- case mbt of
-                Just BTList      -> pure (Just (VarE 'SL.list))
-                Just BTMaybe     -> pure (Just (VarE 'SM.sCaseMaybe))
-                Just BTEither    -> pure (Just (VarE 'SE.sCaseEither))
+                Just BTList      -> pure (Just (VarE (sbvName "Data.SBV.List"   "list")))
+                Just BTMaybe     -> pure (Just (VarE (sbvName "Data.SBV.Maybe"  "sCaseMaybe")))
+                Just BTEither    -> pure (Just (VarE (sbvName "Data.SBV.Either" "sCaseEither")))
                 Just (BTTuple _) -> pure Nothing
                 Nothing -> let fnTok = "sCase" <> typ
                            in lookupValueName fnTok >>= \case
@@ -1020,9 +1015,9 @@ pCase = QuasiQuoter
             -- NB. For nested list cons patterns, the same equality is added by 'flattenCons'.
             destructEq
               | Just BTList <- mbt, nameBase nm == ":"
-              = let hd = AppE (VarE 'SL.head) scrut
-                    tl = AppE (VarE 'SL.tail) scrut
-                in [foldl1 AppE [VarE '(.===), scrut, InfixE (Just hd) (VarE '(SL..:)) (Just tl)]]
+              = let hd = AppE (VarE (sbvName "Data.SBV.List" "head")) scrut
+                    tl = AppE (VarE (sbvName "Data.SBV.List" "tail")) scrut
+                in [foldl1 AppE [VarE '(.===), scrut, InfixE (Just hd) (VarE (sbvName "Data.SBV.Core.Data" ".:")) (Just tl)]]
               | otherwise
               = []
 
