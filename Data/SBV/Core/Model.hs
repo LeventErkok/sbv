@@ -85,7 +85,11 @@ import qualified Data.Array as DA (listArray)
 import Data.Bits   (Bits(..))
 import Data.Int    (Int8, Int16, Int32, Int64)
 import Data.Kind   (Type, Constraint)
-import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
+import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate
+#if !MIN_VERSION_base(4,20,0)
+                   , foldl'
+#endif
+                   )
 import Data.Maybe  (fromMaybe, mapMaybe)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
@@ -1355,6 +1359,9 @@ replayDAG st funcName = go
           newSV' <- case op of
                       -- For recursive calls, create a fresh uninterpreted value instead of replaying
                       Uninterpreted nm | nm == barFuncName -> newInternalVariable st (kindOf sv)
+                      -- For other uninterpreted functions/constants, also create fresh values
+                      -- (e.g., sCase sentinel values like unmatched_sCase_Tuple2_...)
+                      Uninterpreted{} -> newInternalVariable st (kindOf sv)
                       -- For all other operations, replay the expression with mapped arguments
                       _ -> do let mappedOp = mapOpSVs (\a -> Map.findWithDefault a a svMap) op
                               newExpr st (kindOf sv) (SBVApp mappedOp mappedArgs)

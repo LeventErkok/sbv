@@ -21,7 +21,7 @@
 
 module Documentation.SBV.Examples.TP.SortHelpers where
 
-import Prelude hiding (null, tail, elem, head, (++), take, drop)
+import Prelude hiding (null, length, tail, elem, head, (++), take, drop)
 
 import Data.SBV
 import Data.SBV.List
@@ -36,7 +36,7 @@ import Documentation.SBV.Examples.TP.Lists
 
 -- | A predicate testing whether a given list is non-decreasing.
 nonDecreasing :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SBool
-nonDecreasing = smtFunction "nonDecreasing" NoMeasure
+nonDecreasing = smtFunction "nonDecreasing" (withMeasure length)
               $ \l -> [sCase| l of
                          []        -> sTrue
                          [_]       -> sTrue

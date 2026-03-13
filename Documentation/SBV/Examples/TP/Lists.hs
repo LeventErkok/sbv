@@ -1706,7 +1706,7 @@ map_snd_zip_take = do
 
 -- | Count the number of occurrences of an element in a list
 count :: SymVal a => SBV a -> SList a -> SInteger
-count = smtFunction "count" NoMeasure
+count = smtFunction "count" (withMeasure $ \_ l -> length l)
       $ \e l -> [sCase| l of
                    []               -> 0
                    x : xs | e .== x -> 1 + count e xs

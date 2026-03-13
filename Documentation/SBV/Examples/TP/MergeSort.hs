@@ -40,7 +40,7 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 
 -- | Merge two already sorted lists into another
 merge :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a -> SList a
-merge = smtFunction "merge" NoMeasure
+merge = smtFunction "merge" (withMeasure $ \l r -> length l + length r)
       $ \l r -> [sCase| tuple (l, r) of
                    ([], _)          -> r
                    (_, [])          -> l
@@ -51,7 +51,7 @@ merge = smtFunction "merge" NoMeasure
 
 -- | Merge sort, using 'merge' above to successively sort halved input
 mergeSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
-mergeSort = smtFunction "mergeSort" NoMeasure
+mergeSort = smtFunction "mergeSort" (withMeasure length)
           $ \l -> [sCase| l of
                      []  -> l
                      [_] -> l
