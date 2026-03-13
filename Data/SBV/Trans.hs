@@ -49,7 +49,7 @@ module Data.SBV.Trans (
   , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sWords, sInt8s, sInt16s, sInt32s, sInt64s, sInts, sIntegers, sReals, sFloats, sDoubles, sChars, sStrings, sLists, sArrays
 
   -- * Symbolic Equality and Comparisons
-  , EqSymbolic(..), OrdSymbolic(..), Equality(..)
+  , EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), withMeasure, Equality(..)
   -- * Conditionals: Mergeable values
   , Mergeable(..), ite, iteLazy
 
