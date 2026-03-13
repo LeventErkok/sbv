@@ -36,7 +36,7 @@ import Data.Maybe (catMaybes)
 
 import Data.SBV.Core.Data     hiding (None)
 import Data.SBV.Trans.Control hiding (getProof)
-import Data.SBV.Core.Symbolic (MonadSymbolic)
+import Data.SBV.Core.Symbolic (MonadSymbolic(..), rSkipMeasureChecks)
 
 import Data.SBV.SMT.SMT
 import Data.SBV.Core.Model
@@ -48,6 +48,7 @@ import Data.Time (NominalDiffTime)
 import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
+import Data.IORef (writeIORef)
 
 import Type.Reflection (typeRep)
 
@@ -204,7 +205,9 @@ lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
                  tpSt <- getTPState
                  u    <- tpGetNextUnique
                  liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt cfg u
-  where go tpSt cfg u mbStartTime = do qSaturateSavingObservables inputProp
+  where go tpSt cfg u mbStartTime = do st <- symbolicEnv
+                                       liftIO $ writeIORef (rSkipMeasureChecks st) True
+                                       qSaturateSavingObservables inputProp
                                        mapM_ (constrain . getObjProof) by
                                        query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp [] (good cfg mbStartTime u)
 
