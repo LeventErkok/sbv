@@ -1289,7 +1289,7 @@ verifyMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (Me
           liftIO $ writeIORef (rSkipMeasureChecks st) True
 
           -- Create fresh symbolic variables for the formal parameters
-          freshParams <- liftIO $ mapM (\sv -> newInternalVariable st (kindOf sv)) paramSVs
+          freshParams <- liftIO $ mapM (newInternalVariable st . kindOf) paramSVs
 
           -- Register constants
           freshConsts <- liftIO $ mapM (\(_, cv) -> svToSV st (SVal (kindOf cv) (Left cv))) liConsts

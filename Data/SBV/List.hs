@@ -1420,4 +1420,5 @@ lift1Str w mbOp a
         r st = do sva <- sbvToSV st a
                   newExpr st k (SBVApp (StrOp w) [sva])
 
-{- HLint ignore implode "Use :" -}
+{- HLint ignore implode   "Use :" -}
+{- HLint ignore replicate "Use const" -}
