@@ -25,12 +25,13 @@
 module Data.SBV.TP.Utils (
          TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof
        , startTP, finishTP, getTPState, getTPConfig, setTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
-       , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
+       , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo, printMeasures
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML
        , withProofCache
        , tpQuiet, tpRibbon, tpAsms, tpStats, tpCache
        ) where
 
+import Control.Monad        (unless)
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
 import Control.Monad.Trans  (MonadIO)
 
@@ -43,7 +44,7 @@ import Data.Proxy
 import Data.Typeable (typeOf, TypeRep)
 
 import Data.Char (isSpace)
-import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf, nubBy, partition, sort)
+import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf, nubBy, partition, sort, dropWhileEnd)
 import Data.Int  (Int64)
 
 import Data.SBV.Utils.Lib (unQuote)
@@ -67,6 +68,9 @@ import Data.Dynamic
 import qualified Data.Map as Map
 import Data.Map (Map)
 
+import qualified Data.Set as Set
+import Data.Set (Set)
+
 -- | Various statistics we collect
 data TPStats = TPStats { noOfCheckSats :: Int
                        , solverElapsed :: NominalDiffTime
@@ -74,9 +78,10 @@ data TPStats = TPStats { noOfCheckSats :: Int
                        }
 
 -- | Extra state we carry in a TP context
-data TPState = TPState { stats      :: IORef TPStats
-                       , proofCache :: IORef (Map (String, TypeRep) ProofObj)
-                       , config     :: IORef SMTConfig
+data TPState = TPState { stats            :: IORef TPStats
+                       , proofCache       :: IORef (Map (String, TypeRep) ProofObj)
+                       , config           :: IORef SMTConfig
+                       , measuresVerified :: IORef (Set String)
                        }
 
 -- | Monad for running TP proofs in.
@@ -117,10 +122,16 @@ runTP = runTPWith defaultSMTCfg
 -- | Run a TP proof, using the given configuration.
 runTPWith :: SMTConfig -> TP a -> IO a
 runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
-   rStats <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0, qcElapsed = 0 }
-   rCache <- newIORef Map.empty
-   rCfg   <- newIORef cfg
-   (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = rCfg, stats = rStats, proofCache = rCache}
+   rStats    <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0, qcElapsed = 0 }
+   rCache    <- newIORef Map.empty
+   rCfg      <- newIORef cfg
+   rMeasures <- newIORef Set.empty
+   (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = rCfg, stats = rStats, proofCache = rCache, measuresVerified = rMeasures}
+
+   -- Print verified measures
+   verified <- readIORef rMeasures
+   unless (Set.null verified) $ printMeasures cfg (Set.toAscList verified)
+
    case mbT of
      Nothing -> pure ()
      Just t  -> do TPStats noOfCheckSats solverTime qcElapsed <- readIORef rStats
@@ -162,6 +173,19 @@ message :: MonadIO m => SMTConfig -> String -> m ()
 message SMTConfig{tpOptions = TPOptions{quiet}} s
   | quiet = pure ()
   | True  = liftIO $ putStr s
+
+-- | Print the list of functions whose termination measures have been verified.
+printMeasures :: SMTConfig -> [String] -> IO ()
+printMeasures cfg names = message cfg $ unlines $ "Termination measures:" : map fmt ms
+  where ms      = [case break (== '@') m of
+                     (nm, '@':'(':tp) | not (null tp) -> (strip nm, init tp)
+                     _                                -> (strip m,  "")
+                  | m <- sort names
+                  ]
+        strip   = dropWhileEnd (== ' ')
+        maxNm   = maximum [length nm | (nm, _) <- ms]
+        fmt (nm, "") = "  [Terminates] " ++ nm
+        fmt (nm, tp) = "  [Terminates] " ++ nm ++ replicate (maxNm - length nm) ' ' ++ " :: " ++ tp
 
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
 startTP :: SMTConfig -> Bool -> String -> Int -> TPProofContext -> IO Int

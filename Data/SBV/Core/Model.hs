@@ -85,7 +85,7 @@ import qualified Data.Array as DA (listArray)
 import Data.Bits   (Bits(..))
 import Data.Int    (Int8, Int16, Int32, Int64)
 import Data.Kind   (Type, Constraint)
-import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate
+import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate, dropWhileEnd
 #if !MIN_VERSION_base(4,20,0)
                    , foldl'
 #endif
@@ -1244,7 +1244,7 @@ instance ApplyMeasure b r => ApplyMeasure (SBV a -> b) r where
 -- | An evaluated measure: captures the ability to apply the measure function
 -- to a list of arguments, along with the ordering and zero constraints.
 data MeasureEval where
-  MeasureEval :: (Zero r, OrdSymbolic (SBV r)) => ([SVal] -> SBV r) -> MeasureEval
+  MeasureEval :: (Zero r, OrdSymbolic (SBV r), SymVal r) => ([SVal] -> SBV r) -> MeasureEval
 
 -- | A measure for a function, used to prove termination of recursive definitions.
 -- If the function is not recursive, use 'NoMeasure'. For recursive functions, use
@@ -1257,7 +1257,7 @@ data Measure f where
 -- | Construct a measure from a measure function. The measure function takes the same
 -- arguments as the original function but returns a value of a type with 'Zero' and
 -- 'OrdSymbolic' instances. The returned value must strictly decrease at each recursive call.
-withMeasure :: forall f r. (Zero r, OrdSymbolic (SBV r), ApplyMeasure f r) => MeasureOf f r -> Measure f
+withMeasure :: forall f r. (Zero r, OrdSymbolic (SBV r), SymVal r, ApplyMeasure f r) => MeasureOf f r -> Measure f
 withMeasure msf = HasMeasure (MeasureEval (applyMeasure @f @r msf))
 
 -- | Does the measure indicate a termination measure is present?
@@ -1286,65 +1286,99 @@ verifyMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (Me
        -- Build the verification obligation by replaying the DAG in a prove session
        let paramSVs = map snd liParams
 
-       result <- prove (do
-          st <- symbolicEnv
+       let prettyNm = prettyFuncNm funcNm
 
-          -- Skip measure checks in this verification session to avoid re-entry
-          liftIO $ writeIORef (rSkipMeasureChecks st) True
+           mkProveEnv = do
+              st <- symbolicEnv
+              liftIO $ writeIORef (rSkipMeasureChecks st) True
 
-          -- Create fresh symbolic variables for the formal parameters
-          freshParams <- liftIO $ mapM (newInternalVariable st . kindOf) paramSVs
+              freshParams <- liftIO $ sequence [svToSV st =<< svMkSymVar (NonQueryVar Nothing) (kindOf sv) (Just ("arg" ++ show i)) st
+                                               | (i, sv) <- zip [(0::Int)..] paramSVs
+                                               ]
+              freshConsts <- liftIO $ mapM (\(_, cv) -> svToSV st (SVal (kindOf cv) (Left cv))) liConsts
 
-          -- Register constants
-          freshConsts <- liftIO $ mapM (\(_, cv) -> svToSV st (SVal (kindOf cv) (Left cv))) liConsts
+              let constMapping = zip (map fst liConsts) freshConsts
+                  paramMapping = zip paramSVs freshParams
+                  initMap      = Map.fromList (constMapping ++ paramMapping)
+                  builtinMap   = Map.fromList [(trueSV, trueSV), (falseSV, falseSV)]
+                  startMap     = Map.union initMap builtinMap
 
-          -- Build the SV mapping: old -> new
-          let constMapping = zip (map fst liConsts) freshConsts
-              paramMapping = zip paramSVs freshParams
-              initMap      = Map.fromList (constMapping ++ paramMapping)
+              svMap <- liftIO $ replayDAG st funcNm startMap (F.toList liAssignments)
 
-              -- Also map the built-in true/false SVs
-              builtinMap   = Map.fromList [(trueSV, trueSV), (falseSV, falseSV)]
-              startMap     = Map.union initMap builtinMap
+              let formalSVals = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) freshParams
+                  mFormal     = applyM formalSVals
 
-          -- Replay the DAG, building up the mapping, but skip recursive call nodes
-          svMap <- liftIO $ replayDAG st funcNm startMap (F.toList liAssignments)
+              pure (svMap, mFormal)
 
-          -- Compute the measure on the formal parameters
-          let formalSVals = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) freshParams
-              mFormal     = applyM formalSVals
+       -- Check 1: Non-negativity
+       nonNegResult <- prove (do
+          (_, mFormal) <- mkProveEnv
+          sObserve "measure" (unSBV mFormal)
+          pure $ mFormal .>= zero :: Symbolic SBool)
 
-          -- For each recursive call, compute the measure on the call args and check decrease
-          let mkObligation (rcSV, callArgSVs) =
-                -- Map the call argument SVs to their replayed versions
+       case nonNegResult of
+         ThmResult Unsatisfiable{} -> pure ()
+         _                         -> error $ unlines $
+            [ ""
+            , "*** Data.SBV: Termination measure is not non-negative."
+            , "***"
+            , "***   Function: " ++ prettyNm
+            , "***"
+            ]
+            ++ ["***   " ++ l | l <- lines (show nonNegResult)]
+            ++
+            [ "***"
+            , "*** The measure must be non-negative for all inputs."
+            ]
+
+       -- Check 2: Strict decrease at each recursive call
+       decResult <- prove (do
+          (svMap, mFormal) <- mkProveEnv
+
+          let singleCall = length recCalls == 1
+              mkObligation (i, (rcSV, callArgSVs)) = do
                 let mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
                     argSVals   = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
                     mCall      = applyM argSVals
 
-                    -- Get the reaching condition for this call site
                     reachSVal  = case Map.lookup rcSV reachConds of
                                    Just conds -> sAnd [ let sv' = Map.findWithDefault condSV condSV svMap
                                                             s   = SBV (SVal KBool (Right (cache (\_ -> pure sv'))))
                                                         in if pol then s else sNot s
                                                       | (condSV, pol) <- conds
                                                       ]
-                                   Nothing    -> sTrue  -- unconditional
+                                   Nothing    -> sTrue
 
-                -- The obligation: reachCond => (mFormal >= zero && mFormal > mCall)
-                in reachSVal .=> (mFormal .>= zero .&& mFormal .> mCall)
+                    tag nm | singleCall = nm
+                           | True       = nm ++ "[" ++ show (i :: Int) ++ "]"
 
-          pure $ sAnd (map mkObligation recCalls) :: Symbolic SBool)
+                sObserve (tag "before") (unSBV mFormal)
+                sObserve (tag "then")   (unSBV mCall)
+                pure $ reachSVal .=> mFormal .> mCall
 
-       case result of
+          obligations <- mapM mkObligation (zip [1..] recCalls)
+          pure $ sAnd obligations :: Symbolic SBool)
+
+       case decResult of
          ThmResult Unsatisfiable{} -> pure ()
-         _                         -> error $ unlines
+         _                         -> error $ unlines $
             [ ""
-            , "*** Data.SBV: Measure verification failed for '" ++ funcNm ++ "'."
+            , "*** Data.SBV: Termination measure does not strictly decrease at a recursive call site."
             , "***"
-            , "*** " ++ show result
+            , "***   Function: " ++ prettyNm
             , "***"
-            , "*** The termination measure could not be verified to decrease at each recursive call."
             ]
+            ++ ["***   " ++ l | l <- lines (show decResult)]
+            ++
+            [ "***"
+            , "*** The measure must strictly decrease at every recursive call."
+            ]
+
+-- | Pretty-print a function name: turn @"insert @(SBV Integer -> SBV [Integer])"@ into @"insert :: SBV Integer -> SBV [Integer]"@
+prettyFuncNm :: String -> String
+prettyFuncNm m = case break (== '@') m of
+                   (nm, '@':'(':tp) | not (null tp) -> dropWhileEnd (== ' ') nm ++ " :: " ++ init tp
+                   _                                -> m
 
 -- | Replay the DAG in a new state, building up an SV mapping from old to new.
 -- Recursive call nodes (matching funcName) are skipped — they become fresh uninterpreted values.

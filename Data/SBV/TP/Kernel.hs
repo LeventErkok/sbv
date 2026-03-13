@@ -36,7 +36,7 @@ import Data.Maybe (catMaybes)
 
 import Data.SBV.Core.Data     hiding (None)
 import Data.SBV.Trans.Control hiding (getProof)
-import Data.SBV.Core.Symbolic (MonadSymbolic(..), rSkipMeasureChecks)
+import Data.SBV.Core.Symbolic (MonadSymbolic(..), rSkipMeasureChecks, rMeasureChecks)
 
 import Data.SBV.SMT.SMT
 import Data.SBV.Core.Model
@@ -48,7 +48,8 @@ import Data.Time (NominalDiffTime)
 import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
-import Data.IORef (writeIORef)
+import Data.IORef (readIORef, writeIORef)
+import qualified Data.Set as Set
 
 import Type.Reflection (typeRep)
 
@@ -206,9 +207,18 @@ lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
                  u    <- tpGetNextUnique
                  liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt cfg u
   where go tpSt cfg u mbStartTime = do st <- symbolicEnv
+                                       -- Skip measure checks in the normal runWithQuery path; we handle them here
                                        liftIO $ writeIORef (rSkipMeasureChecks st) True
                                        qSaturateSavingObservables inputProp
                                        mapM_ (constrain . getObjProof) by
+
+                                       -- Run measure checks for any newly encountered recursive functions
+                                       liftIO $ do checks   <- readIORef (rMeasureChecks st)
+                                                   verified <- readIORef (measuresVerified tpSt)
+                                                   let new = [(n, c) | (n, c) <- checks, n `Set.notMember` verified]
+                                                   mapM_ snd new
+                                                   writeIORef (measuresVerified tpSt) (verified `Set.union` Set.fromList (map fst new))
+
                                        query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp [] (good cfg mbStartTime u)
 
         -- What to do if all goes well
