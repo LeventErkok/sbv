@@ -567,7 +567,7 @@ declUserFuns ds = map declGroup sorted
                                              ]
                                           ++ ["***   " ++ nm | nm <- missing]
                                           ++ [ "***"
-                                             , "*** Use 'withMeasure' to provide a termination measure for recursive functions."
+                                             , "*** Use 'smtFunctionWithMeasure' to provide a termination measure for recursive functions."
                                              ]
           where missing = [nm | (nm, (SMTDef _ _ _ _ False, _)) <- bs]
                 plural | length missing > 1 = "s"

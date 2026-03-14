@@ -1269,25 +1269,55 @@ hasMeasure (HasMeasure _) = True
 -- | Verify that a measure decreases at each recursive call site.
 -- Walks the expression DAG to find recursive calls, computes reaching conditions
 -- via ITE analysis, and verifies the measure property in a separate solver session.
+-- Throws an error with a detailed message if verification fails.
 verifyMeasure :: String -> LambdaInfo -> MeasureEval -> IO ()
-verifyMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) = do
-   let -- The function name in the DAG is barified (SMTLib quoting)
-       barFuncNm = barify funcNm
+verifyMeasure funcNm info meval = do
+   result <- checkMeasure funcNm info meval
+   let prettyNm = prettyFuncNm funcNm
+   case result of
+     MeasureOK              -> pure ()
+     MeasureNotNonNeg r     -> error $ unlines $
+        [ ""
+        , "*** Data.SBV: Termination measure is not non-negative."
+        , "***"
+        , "***   Function: " ++ prettyNm
+        , "***"
+        ]
+        ++ ["***   " ++ l | l <- lines (show r)]
+        ++
+        [ "***"
+        , "*** The measure must be non-negative for all inputs."
+        ]
+     MeasureNotDecreasing r -> error $ unlines $
+        [ ""
+        , "*** Data.SBV: Termination measure does not strictly decrease at a recursive call site."
+        , "***"
+        , "***   Function: " ++ prettyNm
+        , "***"
+        ]
+        ++ ["***   " ++ l | l <- lines (show r)]
+        ++
+        [ "***"
+        , "*** The measure must strictly decrease at every recursive call."
+        ]
 
-       -- Find all recursive call sites in the DAG
-       recCalls = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList liAssignments, nm == barFuncNm]
+-- | Result of checking a measure.
+data MeasureCheckResult = MeasureOK                         -- ^ Measure is valid
+                        | MeasureNotNonNeg     ThmResult    -- ^ Measure can be negative
+                        | MeasureNotDecreasing ThmResult    -- ^ Measure doesn't strictly decrease
 
-   -- If there are no recursive calls, nothing to verify
+-- | Check that a measure is valid: non-negative and strictly decreasing at each recursive call.
+-- Returns 'MeasureOK' if valid, or the specific failure otherwise.
+checkMeasure :: String -> LambdaInfo -> MeasureEval -> IO MeasureCheckResult
+checkMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) = do
+   let barFuncNm = barify funcNm
+       recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList liAssignments, nm == barFuncNm]
+
    if null recCalls
-     then pure ()
+     then pure MeasureOK
      else do
-       -- Compute reaching conditions: for each SV, under what condition does it contribute to the output?
        let reachConds = computeReachingConditions liAssignments liOutput
-
-       -- Build the verification obligation by replaying the DAG in a prove session
-       let paramSVs = map snd liParams
-
-       let prettyNm = prettyFuncNm funcNm
+           paramSVs   = map snd liParams
 
            mkProveEnv = do
               st <- symbolicEnv
@@ -1318,62 +1348,104 @@ verifyMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (Me
           pure $ mFormal .>= zero :: Symbolic SBool)
 
        case nonNegResult of
-         ThmResult Unsatisfiable{} -> pure ()
-         _                         -> error $ unlines $
-            [ ""
-            , "*** Data.SBV: Termination measure is not non-negative."
-            , "***"
-            , "***   Function: " ++ prettyNm
-            , "***"
-            ]
-            ++ ["***   " ++ l | l <- lines (show nonNegResult)]
-            ++
-            [ "***"
-            , "*** The measure must be non-negative for all inputs."
-            ]
+         ThmResult Unsatisfiable{} -> do
+           -- Check 2: Strict decrease at each recursive call
+           decResult <- prove (do
+              (svMap, mFormal) <- mkProveEnv
 
-       -- Check 2: Strict decrease at each recursive call
-       decResult <- prove (do
-          (svMap, mFormal) <- mkProveEnv
+              let singleCall = length recCalls == 1
+                  mkObligation (i, (rcSV, callArgSVs)) = do
+                    let mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
+                        argSVals   = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
+                        mCall      = applyM argSVals
 
-          let singleCall = length recCalls == 1
-              mkObligation (i, (rcSV, callArgSVs)) = do
-                let mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
-                    argSVals   = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
-                    mCall      = applyM argSVals
+                        reachSVal  = case Map.lookup rcSV reachConds of
+                                       Just conds -> sAnd [ let sv' = Map.findWithDefault condSV condSV svMap
+                                                                s   = SBV (SVal KBool (Right (cache (\_ -> pure sv'))))
+                                                            in if pol then s else sNot s
+                                                          | (condSV, pol) <- conds
+                                                          ]
+                                       Nothing    -> sTrue
 
-                    reachSVal  = case Map.lookup rcSV reachConds of
-                                   Just conds -> sAnd [ let sv' = Map.findWithDefault condSV condSV svMap
-                                                            s   = SBV (SVal KBool (Right (cache (\_ -> pure sv'))))
-                                                        in if pol then s else sNot s
-                                                      | (condSV, pol) <- conds
-                                                      ]
-                                   Nothing    -> sTrue
+                        tag nm | singleCall = nm
+                               | True       = nm ++ "[" ++ show (i :: Int) ++ "]"
 
-                    tag nm | singleCall = nm
-                           | True       = nm ++ "[" ++ show (i :: Int) ++ "]"
+                    sObserve (tag "before") (unSBV mFormal)
+                    sObserve (tag "then")   (unSBV mCall)
+                    pure $ reachSVal .=> mFormal .> mCall
 
-                sObserve (tag "before") (unSBV mFormal)
-                sObserve (tag "then")   (unSBV mCall)
-                pure $ reachSVal .=> mFormal .> mCall
+              obligations <- mapM mkObligation (zip [1..] recCalls)
+              pure $ sAnd obligations :: Symbolic SBool)
 
-          obligations <- mapM mkObligation (zip [1..] recCalls)
-          pure $ sAnd obligations :: Symbolic SBool)
+           case decResult of
+             ThmResult Unsatisfiable{} -> pure MeasureOK
+             _                         -> pure $ MeasureNotDecreasing decResult
 
-       case decResult of
-         ThmResult Unsatisfiable{} -> pure ()
-         _                         -> error $ unlines $
-            [ ""
-            , "*** Data.SBV: Termination measure does not strictly decrease at a recursive call site."
-            , "***"
-            , "***   Function: " ++ prettyNm
-            , "***"
-            ]
-            ++ ["***   " ++ l | l <- lines (show decResult)]
-            ++
-            [ "***"
-            , "*** The measure must strictly decrease at every recursive call."
-            ]
+         _ -> pure $ MeasureNotNonNeg nonNegResult
+
+-- | Generate candidate measures based on parameter kinds.
+-- For list args, we use @length@. For integer args, we use @abs@.
+-- If there are multiple candidates, we also try their sum.
+-- All candidates produce 'SInteger' values. Returns both the measure and a description.
+guessMeasures :: [(Quantifier, SV)] -> [(String, MeasureEval)]
+guessMeasures params = map (\(d, f) -> (d, MeasureEval f)) (singles ++ summed)
+  where
+    singles :: [(String, [SVal] -> SInteger)]
+    singles = mapMaybe mkSingle (zip [0..] params)
+
+    mkSingle :: (Int, (Quantifier, SV)) -> Maybe (String, [SVal] -> SInteger)
+    mkSingle (i, (_, sv)) = case kindOf sv of
+      KList elemK -> Just ("length arg" ++ show (i+1), \svs ->
+                       let listSVal = svs !! i
+                       in SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
+                            s <- sbvToSV st (SBV listSVal)
+                            newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]))
+      KUnbounded  -> Just ("abs arg" ++ show (i+1), \svs -> abs (SBV (svs !! i)))
+      _           -> Nothing
+
+    summed | length singles > 1 = [( intercalate " + " (map fst singles)
+                                   , \svs -> sum [f svs | (_, f) <- singles]
+                                   )]
+           | otherwise          = []
+
+-- | Try to auto-guess a termination measure for a recursive function. Generates candidates
+-- based on parameter kinds and tries each one. Returns the first measure that passes both
+-- non-negativity and strict decrease checks, or 'Nothing' if no guess works.
+autoGuess :: String -> LambdaInfo -> IO (Maybe MeasureEval)
+autoGuess funcNm info = go candidates
+  where
+    candidates = guessMeasures (liParams info)
+    go []          = pure Nothing
+    go ((_, m):ms) = do result <- checkMeasure funcNm info m
+                        case result of
+                          MeasureOK -> pure (Just m)
+                          _         -> go ms
+
+-- | Auto-guess a termination measure, or fail with a helpful error message.
+autoGuessOrFail :: String -> LambdaInfo -> IO ()
+autoGuessOrFail funcNm info = do
+   mbMeasure <- autoGuess funcNm info
+   case mbMeasure of
+     Just _  -> pure ()
+     Nothing -> error $ unlines $
+        [ ""
+        , "*** Data.SBV: Cannot determine a termination measure."
+        , "***"
+        , "***   Function: " ++ prettyFuncNm funcNm
+        ]
+        ++ guessLines
+        ++
+        [ "***"
+        , "*** Please use 'smtFunctionWithMeasure' to provide an explicit measure."
+        ]
+  where candidates  = guessMeasures (liParams info)
+        guessLines
+          | null candidates = [ "***"
+                              , "***   No measure candidates could be derived from the argument types."
+                              ]
+          | otherwise       = [ "***"
+                              , "***   Measures tried: " ++ intercalate ", " [d | (d, _) <- candidates]
+                              ]
 
 -- | Pretty-print a function name: turn @"insert @(SBV Integer -> SBV [Integer])"@ into @"insert :: SBV Integer -> SBV [Integer]"@
 prettyFuncNm :: String -> String
@@ -3001,12 +3073,21 @@ class SMTDefinable a where
   mkADTAccessor    nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTAccessor    nm k)) Nothing $ UIFree True in v
 
   smtFunctionDef nm msr v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing
-                       $ UIFun (v, \st fk ->
+                       $ UIFun (v, \st fk -> do
+                          let funcNm = atProxy (Proxy @a) nm
+                          (def, info) <- lambdaWithInfo st TopLevel fk v
                           case msr of
-                            AutoMeasure     -> lambda st TopLevel fk False v
+                            AutoMeasure -> do
+                              let barFuncNm = barify funcNm
+                                  isRecursive = any (\(_, SBVApp op _) -> case op of
+                                                       Uninterpreted n -> n == barFuncNm
+                                                       _               -> False)
+                                                    (liAssignments info)
+                              when isRecursive $
+                                modifyIORef' (rMeasureChecks st)
+                                             ((funcNm, autoGuessOrFail funcNm info) :)
+                              pure def
                             HasMeasure eval -> do
-                              (def, info) <- lambdaWithInfo st TopLevel fk v
-                              let funcNm = atProxy (Proxy @a) nm
                               modifyIORef' (rMeasureChecks st)
                                            ((funcNm, verifyMeasure funcNm info eval) :)
                               pure def)
@@ -3626,3 +3707,4 @@ smtHOFunction nm f hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cach
 {- HLint ignore module "Eta reduce"           -}
 {- HLint ignore module "Avoid NonEmpty.unzip" -}
 {- HLint ignore module "Redundant id"         -}
+{- HLint ignore module "Use second"           -}

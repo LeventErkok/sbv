@@ -21,6 +21,7 @@ import Data.SBV.Internals  (genMkSymVar, unSBV, VarContext(..))
 
 import Data.List (isInfixOf)
 
+import qualified Data.SBV.List as L
 import qualified Data.SBV.Dynamic as D
 
 import qualified Control.Exception as C
@@ -56,17 +57,45 @@ checkThm r = assert isThm
                   ThmResult Satisfiable{}   -> return False
                   _                         -> error "checkThm: Unexpected result!"
 
--- | Test that a recursive smtFunction without a measure is rejected
-recursiveNoMeasure :: Assertion
-recursiveNoMeasure = do
-  r <- C.try $ sat $ \(x :: SInteger) -> f x .== x
+-- | Test that auto-guess succeeds for an integer-recursive function (abs measure)
+autoGuessInteger :: Assertion
+autoGuessInteger = assertIsSat $ \(x :: SInteger) -> f x .== x
+  where f :: SInteger -> SInteger
+        f = smtFunction "autoGuessIntF" $ \x -> ite (x .<= 0) 0 (1 + f (x - 1))
+
+-- | Test that auto-guess succeeds for a list-recursive function (length measure)
+autoGuessList :: Assertion
+autoGuessList = assertIsSat $ \(xs :: SList Integer) -> myLen xs .>= 0
+  where myLen :: SList Integer -> SInteger
+        myLen = smtFunction "autoGuessListLen" $ \xs ->
+                  ite (L.null xs) 0 (1 + myLen (L.tail xs))
+
+-- | Test that auto-guess fails when candidates exist but don't work (Ackermann)
+autoGuessFailCandidates :: Assertion
+autoGuessFailCandidates = do
+  r <- C.try $ sat $ \(x :: SInteger) (y :: SInteger) -> ack x y .== 0
   case r of
-    Left (e :: C.SomeException) -> if "missing termination measure" `isInfixOf` show e
+    Left (e :: C.SomeException) -> if "Cannot determine a termination measure" `isInfixOf` show e
                                       then pure ()
                                       else assertFailure $ "Unexpected exception: " ++ show e
-    Right _                     -> assertFailure "Expected error for recursive function without measure"
-  where f :: SInteger -> SInteger
-        f = smtFunction "recF" $ \x -> ite (x .<= 0) 0 (1 + f (x - 1))
+    Right _                     -> assertFailure "Expected error for Ackermann auto-guess"
+  where ack :: SInteger -> SInteger -> SInteger
+        ack = smtFunction "ackermann" $ \m n ->
+                ite (m .== 0) (n + 1)
+                    (ite (n .== 0) (ack (m - 1) 1)
+                                   (ack (m - 1) (ack m (n - 1))))
+
+-- | Test that auto-guess fails when no candidates can be derived (non-integer, non-list args)
+autoGuessNoCandidates :: Assertion
+autoGuessNoCandidates = do
+  r <- C.try $ sat $ \(b :: SBool) -> h b .== 0
+  case r of
+    Left (e :: C.SomeException) -> if "No measure candidates" `isInfixOf` show e
+                                      then pure ()
+                                      else assertFailure $ "Unexpected exception: " ++ show e
+    Right _                     -> assertFailure "Expected error for no-candidate auto-guess"
+  where h :: SBool -> SInteger
+        h = smtFunction "noCandidate" $ \b -> ite b (1 + h (sNot b)) 0
 
 -- | Test that a non-recursive smtFunction without a measure is accepted
 nonRecursiveNoMeasure :: Assertion
@@ -77,10 +106,13 @@ nonRecursiveNoMeasure = assertIsSat $ \(x :: SInteger) -> g x .== 4
 -- Test suite
 tests :: TestTree
 tests = testGroup "Basics.Recursive"
-   [ testCase "recursive1"              $ assertIsThm $ \x -> mgcd    0 x .== x
-   , testCase "recursive2"              $ assertIsThm $ \x -> mgcd    x 0 .== x
-   , testCase "recursiveDyn1"           $ checkThm =<< mgcdDyn 0
-   , testCase "recursiveDyn2"           $ checkThm =<< mgcdDyn 1
-   , testCase "recursiveNoMeasure"      recursiveNoMeasure
-   , testCase "nonRecursiveNoMeasure"   nonRecursiveNoMeasure
+   [ testCase "recursive1"                $ assertIsThm $ \x -> mgcd    0 x .== x
+   , testCase "recursive2"                $ assertIsThm $ \x -> mgcd    x 0 .== x
+   , testCase "recursiveDyn1"             $ checkThm =<< mgcdDyn 0
+   , testCase "recursiveDyn2"             $ checkThm =<< mgcdDyn 1
+   , testCase "autoGuessInteger"          autoGuessInteger
+   , testCase "autoGuessList"             autoGuessList
+   , testCase "autoGuessFailCandidates"   autoGuessFailCandidates
+   , testCase "autoGuessNoCandidates"     autoGuessNoCandidates
+   , testCase "nonRecursiveNoMeasure"     nonRecursiveNoMeasure
    ]
