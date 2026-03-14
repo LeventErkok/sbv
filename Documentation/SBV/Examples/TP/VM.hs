@@ -83,7 +83,7 @@ mkSymbolic [''Expr]
 
 -- | Size of an expression. Used in strong induction.
 size :: (SymVal nm, SymVal val) => SExpr nm val -> SInteger
-size = smtFunction "exprSize" NoMeasure
+size = smtFunction "exprSize"
      $ \expr -> [sCase| expr of
                    Var _     -> 0
                    Con _     -> 0
@@ -101,7 +101,7 @@ type Env nm val = SList (nm, val)
 
 -- | Interpreter, in the usual functional style, taking an arbitrary environment.
 interpInEnv :: (SymVal nm, SymVal val, Num (SBV val)) => Env nm val -> SExpr nm val -> SBV val
-interpInEnv = smtFunction "interpInEnv" NoMeasure
+interpInEnv = smtFunction "interpInEnv"
             $ \env expr ->
                  [sCase| expr of
                     Var nm    -> nm `SL.lookup` env
@@ -172,7 +172,7 @@ run = SL.foldl execute
 
 -- | Convert an expression to a sequence of instructions for our virtual machine.
 compile :: (SymVal nm, SymVal val, Num (SBV val)) => SExpr nm val -> SList (Instr nm val)
-compile = smtFunction "compile" NoMeasure
+compile = smtFunction "compile"
         $ \expr -> [sCase| expr of
                       Var nm    -> [sIPushN nm]
                       Con v     -> [sIPushV v]

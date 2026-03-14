@@ -36,7 +36,7 @@ import Data.SBV.TP
 
 -- | Accummulating reverse.
 revAcc :: SymVal a => SList a -> SList a -> SList a
-revAcc = smtFunction "revAcc" NoMeasure
+revAcc = smtFunction "revAcc"
        $ \acc xs -> [sCase| xs of
                        []     -> acc
                        a : as -> revAcc (a .: acc) as

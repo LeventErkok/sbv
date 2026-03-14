@@ -53,7 +53,7 @@ typeOf = uninterpret "typeOf"
 
 -- | Given a term and a type, check that the term has that type.
 tc :: SM -> ST -> SBool
-tc = smtFunction "constraints" NoMeasure $ \m t ->
+tc = smtFunction "constraints" $ \m t ->
         [sCase| m of
 
           -- Var case. The environment must match the type we expect.

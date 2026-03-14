@@ -69,7 +69,7 @@ isValid :: SExpr -> SBool
 isValid = go []
   where isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
         go :: SList String -> SExpr -> SBool
-        go = smtFunction "valid" NoMeasure
+        go = smtFunction "valid"
            $ \env expr -> [sCase| expr of
                               Var s     -> isId s .&& s `SL.elem` env
                               Val _     -> sTrue
@@ -82,7 +82,7 @@ isValid = go []
 eval :: SExpr -> SInteger
 eval = go []
  where go :: SList (String, Integer) -> SExpr -> SInteger
-       go = smtFunction "eval" NoMeasure
+       go = smtFunction "eval"
           $ \env expr -> [sCase| expr of
                             Val i     -> i
                             Var s     -> get env s
@@ -92,7 +92,7 @@ eval = go []
                          |]
 
        get :: SList (String, Integer) -> SString -> SInteger
-       get = smtFunction "get" NoMeasure
+       get = smtFunction "get"
            $ \env s -> [sCase| env of
                           []          -> 0
                           (k, v) : es -> ite (s .== k) v (get es s)

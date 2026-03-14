@@ -60,7 +60,7 @@ mkSymbolic [''Formula]
 
 -- | Depth of nested If constructors in the condition position.
 ifDepth :: SFormula -> SInteger
-ifDepth = smtFunction "ifDepth" NoMeasure
+ifDepth = smtFunction "ifDepth"
         $ \f -> [sCase| f of
                    If c _ _ -> 1 + ifDepth c
                    _        -> 0
@@ -76,7 +76,7 @@ ifDepthNonNeg = inductiveLemma "ifDepthNonNeg" (\(Forall f) -> ifDepth f .>= 0) 
 
 -- | Complexity of a formula (for termination measure).
 ifComplexity :: SFormula -> SInteger
-ifComplexity = smtFunction "ifComplexity" NoMeasure
+ifComplexity = smtFunction "ifComplexity"
              $ \f -> [sCase| f of
                         If c l r -> ifComplexity c * (ifComplexity l + ifComplexity r)
                         _        -> 1
@@ -112,7 +112,7 @@ ifComplexitySmaller = do
 
 -- | Check if a formula is in normal form (no nested If in condition position).
 isNormal :: SFormula -> SBool
-isNormal = smtFunction "isNormal" NoMeasure
+isNormal = smtFunction "isNormal"
          $ \f -> [sCase| f of
                     If c p q  -> sNot (isIf c) .&& isNormal p .&& isNormal q
                     _         -> sTrue
@@ -130,7 +130,7 @@ isNormal = smtFunction "isNormal" NoMeasure
 --
 -- Note that this transformation increases the size of the formula, but reduces its complexity.
 normalize :: SFormula -> SFormula
-normalize = smtFunction "normalize" NoMeasure
+normalize = smtFunction "normalize"
           $ \f -> [sCase| f of
                      If (If p q r) left right -> normalize (sIf p (sIf q left right) (sIf r left right))
                      If c          left right -> sIf c (normalize left) (normalize right)
@@ -194,7 +194,7 @@ mkSymbolic [''Binding]
 
 -- | Look up a variable in the binding list. If it's not in the list, then it's false.
 lookUp :: SInteger -> SList Binding -> SBool
-lookUp = smtFunction "lookUp" NoMeasure
+lookUp = smtFunction "lookUp"
        $ \vid bs -> [sCase| bs of
                        []                                 -> sFalse
                        Binding bId bVal : _ | vid .== bId -> bVal
@@ -203,7 +203,7 @@ lookUp = smtFunction "lookUp" NoMeasure
 
 -- | Check if a variable is assigned in the bindings.
 isAssigned :: SInteger -> SList Binding -> SBool
-isAssigned = smtFunction "isAssigned" NoMeasure
+isAssigned = smtFunction "isAssigned"
            $ \vid bs -> [sCase| bs of
                            []                                -> sFalse
                            Binding bId _ : rst | bId .== vid -> sTrue
@@ -259,7 +259,7 @@ isAssignedSame = lemma "isAssignedSame" (\(Forall n) (Forall v) (Forall bs) -> i
 
 -- | Evaluate a formula under a binding environment.
 eval :: SFormula -> SList Binding -> SBool
-eval = smtFunction "eval" NoMeasure
+eval = smtFunction "eval"
      $ \f bs -> [sCase| f of
                    Var n    -> lookUp n bs
                    If c l r -> ite (eval c bs) (eval l bs) (eval r bs)
@@ -271,7 +271,7 @@ eval = smtFunction "eval" NoMeasure
 
 -- | Check if a normalized formula is a tautology.
 isTautology' :: SFormula -> SList Binding -> SBool
-isTautology' = smtFunction "isTautology'" NoMeasure $ \f bs ->
+isTautology' = smtFunction "isTautology'" $ \f bs ->
   [sCase| f of
     -- Trivial cases
     FTrue          -> sTrue
@@ -790,7 +790,7 @@ mkSymbolic [''FalsifyResult]
 -- | Attempt to falsify a normalized formula under given bindings.
 -- Returns whether falsification succeeded and the counterexample bindings.
 falsify' :: SFormula -> SList Binding -> SFalsifyResult
-falsify' = smtFunction "falsify'" NoMeasure $ \f bs ->
+falsify' = smtFunction "falsify'" $ \f bs ->
   [sCase| f of
     FTrue          -> sFalsifyResult sFalse []
     FFalse         -> sFalsifyResult sTrue bs

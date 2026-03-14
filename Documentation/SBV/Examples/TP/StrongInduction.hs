@@ -53,7 +53,7 @@ import Data.SBV.TP
 oddSequence1 :: IO (Proof (Forall "n" Integer -> SBool))
 oddSequence1 = runTP $ do
   let s :: SInteger -> SInteger
-      s = smtFunction "seq" NoMeasure
+      s = smtFunction "seq"
         $ \n -> ite (n .<= 0) 1
               $ ite (n .== 1) 3
               $ s (n-2) + 2 * s (n-1)
@@ -101,7 +101,7 @@ oddSequence1 = runTP $ do
 oddSequence2 :: IO (Proof (Forall "n" Integer -> SBool))
 oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
   let s :: SInteger -> SInteger
-      s = smtFunction "seq" NoMeasure
+      s = smtFunction "seq"
         $ \n -> ite (n .<= 0) 1
               $ ite (n .== 1) 3
               $ 2 * s (n-1) - s (n-2)
@@ -152,7 +152,7 @@ oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
 won'tProve1 :: IO ()
 won'tProve1 = runTP $ do
    let len :: SList Integer -> SInteger
-       len = smtFunction "len" NoMeasure
+       len = smtFunction "len"
            $ \xs -> [sCase| xs of
                        []     -> 0
                        _ : as -> 1 + len as
@@ -182,7 +182,7 @@ won'tProve1 = runTP $ do
 won'tProve2 :: IO ()
 won'tProve2 = runTP $ do
    let len :: SList Integer -> SInteger
-       len = smtFunction "badLength" NoMeasure
+       len = smtFunction "badLength"
            $ \xs -> [sCase| xs of
                        []     -> 123
                        _ : as -> 1 + len as
@@ -236,7 +236,7 @@ won'tProve4 = runTP $ do
 
    let -- a bizarre (but valid!) way to sum two integers
        weirdSum :: SInteger -> SInteger -> SInteger
-       weirdSum = smtFunction "weirdSum" NoMeasure (\x y -> ite (x .<= 0) y (weirdSum (x - 1) (y + 1)))
+       weirdSum = smtFunction "weirdSum" (\x y -> ite (x .<= 0) y (weirdSum (x - 1) (y + 1)))
 
    _ <- sInductWith z3{extraArgs = ["-t:5000"]} "badMeasure"
                 (\(Forall x) (Forall y) -> x .>= 0 .=> weirdSum x y .== x + y)
@@ -284,7 +284,7 @@ sumHalves :: IO (Proof (Forall "xs" [Integer] -> SBool))
 sumHalves = runTP $ do
 
     let halvingSum :: SList Integer -> SInteger
-        halvingSum = smtFunction "halvingSum" NoMeasure
+        halvingSum = smtFunction "halvingSum"
                    $ \xs -> [sCase| xs of
                                 []  -> sum xs
                                 [_] -> sum xs

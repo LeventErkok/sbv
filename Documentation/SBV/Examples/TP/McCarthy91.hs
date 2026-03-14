@@ -24,7 +24,7 @@ import Data.SBV.TP
 
 -- | Nested recursive definition of McCarthy's function.
 mcCarthy91 :: SInteger -> SInteger
-mcCarthy91 = smtFunction "mcCarthy91" NoMeasure
+mcCarthy91 = smtFunction "mcCarthy91"
            $ \n -> ite (n .> 100)
                        (n - 10)
                        (mcCarthy91 (mcCarthy91 (n + 11)))

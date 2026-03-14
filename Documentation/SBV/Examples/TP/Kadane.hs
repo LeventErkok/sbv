@@ -57,7 +57,7 @@ import Data.SBV.TP
 -- >>> mss [1, 2, 3]             -- the whole list
 -- 6 :: SInteger
 mss :: SList Integer -> SInteger
-mss = smtFunction "mss" NoMeasure
+mss = smtFunction "mss"
     $ \xs -> [sCase| xs of
                  []    -> 0
                  _ : t -> mssBegin xs `smax` mss t
@@ -75,7 +75,7 @@ mss = smtFunction "mss" NoMeasure
 -- >>> mssBegin [1, 2, 3]             -- the whole list
 -- 6 :: SInteger
 mssBegin :: SList Integer -> SInteger
-mssBegin = smtFunction "mssBegin" NoMeasure
+mssBegin = smtFunction "mssBegin"
          $ \xs -> [sCase| xs of
                       []    -> 0
                       h : t -> 0 `smax` (h `smax` (h + mssBegin t))
@@ -98,7 +98,7 @@ kadane xs = kadaneHelper xs 0 0
 -- | Helper for Kadane's algorithm. Along with the list, we keep track of the maximum-value
 -- ending at the beginning of the list argument, and the maximum value sofar.
 kadaneHelper :: SList Integer -> SInteger -> SInteger -> SInteger
-kadaneHelper = smtFunction "kadaneHelper" NoMeasure
+kadaneHelper = smtFunction "kadaneHelper"
              $ \xs maxEndingHere maxSoFar ->
                   [sCase| xs of
                       []    -> maxSoFar

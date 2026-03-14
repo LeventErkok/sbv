@@ -30,7 +30,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), withMeasure, hasMeasure, SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), withMeasure, hasMeasure, SDivisible(..), SMTDefinable(..), smtFunction, smtFunctionWithMeasure, QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , some
@@ -1247,11 +1247,12 @@ data MeasureEval where
   MeasureEval :: (Zero r, OrdSymbolic (SBV r), SymVal r) => ([SVal] -> SBV r) -> MeasureEval
 
 -- | A measure for a function, used to prove termination of recursive definitions.
--- If the function is not recursive, use 'NoMeasure'. For recursive functions, use
--- 'withMeasure' to provide a measure function that maps the arguments to a value
--- that strictly decreases on each recursive call.
+--
+--   * 'AutoMeasure': The function either doesn't need a measure (because it's not recursive),
+--     or SBV will automatically guess one based on argument types.
+--   * 'HasMeasure': The user provided an explicit measure function.
 data Measure f where
-  NoMeasure    :: Measure f
+  AutoMeasure  :: Measure f
   HasMeasure   :: MeasureEval -> Measure f
 
 -- | Construct a measure from a measure function. The measure function takes the same
@@ -1262,7 +1263,7 @@ withMeasure msf = HasMeasure (MeasureEval (applyMeasure @f @r msf))
 
 -- | Does the measure indicate a termination measure is present?
 hasMeasure :: Measure f -> Bool
-hasMeasure NoMeasure      = False
+hasMeasure AutoMeasure    = True
 hasMeasure (HasMeasure _) = True
 
 -- | Verify that a measure decreases at each recursive call site.
@@ -2908,7 +2909,7 @@ class SMTDefinable a where
   -- But the ergonomics of that is worse, and doesn't fit with the general design philosophy. If you
   -- can think of a solution (perhaps using some nifty GHC tricks?) to avoid this issue without making
   -- 'smtFunction' return a monadic result, please get in touch!
-  smtFunction :: (Typeable a, Lambda Symbolic a) => String -> Measure a -> a -> a
+  smtFunctionDef :: (Typeable a, Lambda Symbolic a) => String -> Measure a -> a -> a
 
   -- | Register a function. This function is typically not needed as SBV will register functions used
   -- automatically upon first use. However, there are scenarios (in particular query contexts)
@@ -2999,10 +3000,10 @@ class SMTDefinable a where
   mkADTTester      nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTTester      nm k)) Nothing $ UIFree True in v
   mkADTAccessor    nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTAccessor    nm k)) Nothing $ UIFree True in v
 
-  smtFunction nm msr v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing
+  smtFunctionDef nm msr v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing
                        $ UIFun (v, \st fk ->
                           case msr of
-                            NoMeasure       -> lambda st TopLevel fk False v
+                            AutoMeasure     -> lambda st TopLevel fk False v
                             HasMeasure eval -> do
                               (def, info) <- lambdaWithInfo st TopLevel fk v
                               let funcNm = atProxy (Proxy @a) nm
@@ -3010,6 +3011,20 @@ class SMTDefinable a where
                                            ((funcNm, verifyMeasure funcNm info eval) :)
                               pure def)
 
+
+-- | Define an SMT function. If the function is recursive, SBV will automatically try to
+-- prove termination by guessing a measure based on argument types. If the guess fails,
+-- use 'smtFunctionWithMeasure' to provide an explicit measure.
+smtFunction :: (SMTDefinable a, Typeable a, Lambda Symbolic a) => String -> a -> a
+smtFunction nm = smtFunctionDef nm AutoMeasure
+
+-- | Define an SMT function with an explicit termination measure. Use this when 'smtFunction'
+-- cannot automatically determine a suitable measure. The measure function takes the same
+-- arguments as the original function but returns a value that must be non-negative and
+-- strictly decrease at each recursive call.
+smtFunctionWithMeasure :: forall f r. (SMTDefinable f, Typeable f, Lambda Symbolic f, Zero r, OrdSymbolic (SBV r), SymVal r, ApplyMeasure f r)
+                       => String -> MeasureOf f r -> f -> f
+smtFunctionWithMeasure nm mf = smtFunctionDef nm (HasMeasure (MeasureEval (applyMeasure @f @r mf)))
 
 -- | Kind of uninterpretation
 data UIKind a = UIFree  Bool                            -- ^ completely uninterpreted. If Bool is true, then this is curried.
@@ -3601,7 +3616,7 @@ smtHOFunction nm f hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cach
   where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg (resKindOf (kindOf (Proxy @f))) f
                   let uniqLen = firstifyUniqueLen $ stCfg st
                       uniq    = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
-                  sbvToSV st (smtFunction (atProxy (Proxy @f) nm <> "_" <> uniq) NoMeasure hof arg)
+                  sbvToSV st (smtFunctionDef (atProxy (Proxy @f) nm <> "_" <> uniq) AutoMeasure hof arg)
 
         -- we get the functions as arrays here, so chase to find the result
         resKindOf (KArray _ k) = resKindOf k

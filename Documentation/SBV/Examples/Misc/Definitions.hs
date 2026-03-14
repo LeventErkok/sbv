@@ -27,7 +27,7 @@ import qualified Data.SBV.List as L
 
 -- | Add one to an argument
 add1 :: SInteger -> SInteger
-add1 = smtFunction "add1" NoMeasure (+1)
+add1 = smtFunction "add1" (+1)
 
 -- | Reverse run the add1 function. Note that the generated SMTLib will have the function
 -- add1 itself defined. You can verify this by running the below in verbose mode.
@@ -50,7 +50,7 @@ add1Example = sat $ do
 -- directly in SMTLib. Note how the function itself takes a "recursive version"
 -- of itself, and all recursive calls are made with this name.
 sumToN :: SInteger -> SInteger
-sumToN = smtFunction "sumToN" NoMeasure $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
+sumToN = smtFunction "sumToN" $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
 
 -- | Prove that sumToN works as expected.
 --
@@ -65,7 +65,7 @@ sumToNExample = sat $ \a r -> a .== 5 .&& r .== sumToN a
 
 -- | Coding list-length recursively. Again, we map directly to an SMTLib function.
 len :: SList Integer -> SInteger
-len = smtFunction "list_length" NoMeasure $ \xs -> ite (L.null xs) 0 (1 + len (L.tail xs))
+len = smtFunction "list_length" $ \xs -> ite (L.null xs) 0 (1 + len (L.tail xs))
 
 -- | Calculate the length of a list, using recursive functions.
 --
@@ -90,10 +90,10 @@ lenExample = sat $ \a r -> a .== [1,2,3] .&& r .== len a
 pingPong :: IO SatResult
 pingPong = sat $ \x -> x .> 0 .&& ping x sTrue .> x
   where ping :: SInteger -> SBool -> SInteger
-        ping = smtFunction "ping" NoMeasure $ \x y -> ite y (pong (x+1) (sNot y)) (x - 1)
+        ping = smtFunction "ping" $ \x y -> ite y (pong (x+1) (sNot y)) (x - 1)
 
         pong :: SInteger -> SBool -> SInteger
-        pong = smtFunction "pong" NoMeasure $ \a b -> ite b (ping (a-1) (sNot b)) a
+        pong = smtFunction "pong" $ \a b -> ite b (ping (a-1) (sNot b)) a
 
 -- | Usual way to define even-odd mutually recursively. Unfortunately, while this goes through,
 -- the backend solver does not terminate on this example. See 'evenOdd2' for an alternative
@@ -101,13 +101,13 @@ pingPong = sat $ \x -> x .> 0 .&& ping x sTrue .> x
 evenOdd :: IO SatResult
 evenOdd = satWith z3{verbose=True} $ \a r -> a .== 20 .&& r .== isE a
   where isE, isO :: SInteger -> SBool
-        isE = smtFunction "isE" NoMeasure $ \x -> ite (x .< 0) (isE (-x)) (x .== 0 .|| isO (x - 1))
-        isO = smtFunction "isO" NoMeasure $ \x -> ite (x .< 0) (isO (-x)) (x .== 0 .|| isE (x - 1))
+        isE = smtFunction "isE" $ \x -> ite (x .< 0) (isE (-x)) (x .== 0 .|| isO (x - 1))
+        isO = smtFunction "isO" $ \x -> ite (x .< 0) (isO (-x)) (x .== 0 .|| isE (x - 1))
 
 -- | Another technique to handle mutually definitions is to define the functions together, and pull the results out individually.
 -- This usually works better than defining the functions separately, from a solver perspective.
 isEvenOdd :: SInteger -> STuple Bool Bool
-isEvenOdd = smtFunction "isEvenOdd" NoMeasure
+isEvenOdd = smtFunction "isEvenOdd"
           $ \x -> ite (x .<  0) (isEvenOdd (-x))
                 $ ite (x .== 0) (tuple (sTrue, sFalse))
                                 (swap (isEvenOdd (x - 1)))
@@ -136,7 +136,7 @@ evenOdd2 = sat $ \a r1 r2 -> a .== 20 .&& r1 .== isEven a .&& r2 .== isOdd a
 
 -- | Ackermann function, demonstrating nested recursion.
 ack :: SInteger -> SInteger -> SInteger
-ack = smtFunction "ack" NoMeasure
+ack = smtFunction "ack"
     $ \x y -> ite (x .== 0) (y + 1)
             $ ite (y .== 0) (ack (x - 1) 1)
                             (ack (x - 1) (ack x (y - 1)))

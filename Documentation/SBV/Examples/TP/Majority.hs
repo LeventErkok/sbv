@@ -34,7 +34,7 @@ import qualified Documentation.SBV.Examples.TP.Lists as TP
 -- Note that the algorithm returns the majority if it exists. If there is no
 -- majority element, then the result is irrelevant.
 majority :: SymVal a => SBV a -> SInteger -> SList a -> SBV a
-majority = smtFunction "majority" NoMeasure
+majority = smtFunction "majority"
                     $ \c i lst -> [sCase| lst of
                                      []     -> c
                                      x : xs -> ite (i .== 0)

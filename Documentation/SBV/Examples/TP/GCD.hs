@@ -45,7 +45,7 @@ import Data.SBV.Tuple
 -- there is no greatest common divisor for the pair @(0, 0)@. So, maximality here is meant
 -- to be in terms of divisibility. That is, any divisor of @a@ and @b@ will also divide their @gcd@.
 nGCD :: SInteger -> SInteger -> SInteger
-nGCD = smtFunction "nGCD" NoMeasure $ \a b -> ite (b .== 0) a (nGCD b (a `sEMod` b))
+nGCD = smtFunction "nGCD" $ \a b -> ite (b .== 0) a (nGCD b (a `sEMod` b))
 
 -- | Generalized GCD, working for all integers. We simply call @nGCD@ with the absolute value of the arguments.
 gcd :: SInteger -> SInteger -> SInteger
@@ -820,7 +820,7 @@ gcdOddEven = do
 -- works on non-negative numbers. It has the precondition that @a >= b >= 0@, and maintains this invariant in each
 -- recursive call.
 nGCDSub :: SInteger -> SInteger -> SInteger
-nGCDSub = smtFunction "nGCDSub" NoMeasure
+nGCDSub = smtFunction "nGCDSub"
         $ \a b -> ite (a .== b) a
                 $ ite (a .== 0) b
                 $ ite (b .== 0) a
@@ -910,7 +910,7 @@ gcdSubEquiv = do
 
 -- | @nGCDBin@ is the binary GCD algorithm that works on non-negative numbers.
 nGCDBin :: SInteger -> SInteger -> SInteger
-nGCDBin = smtFunction "nGCDBin" NoMeasure
+nGCDBin = smtFunction "nGCDBin"
         $ \a b -> ite (a .== 0)               b
                 $ ite (b .== 0)               a
                 $ ite (isEven a .&& isEven b) (2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2))

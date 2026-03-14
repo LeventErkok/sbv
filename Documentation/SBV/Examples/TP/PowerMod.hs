@@ -33,7 +33,7 @@ runCached = runTPWith (tpCache z3)
 
 -- | Power function over integers.
 power :: SInteger -> SInteger -> SInteger
-power = smtFunction "power" NoMeasure $ \b n -> ite (n .<= 0) 1 (b * power b (n-1))
+power = smtFunction "power" $ \b n -> ite (n .<= 0) 1 (b * power b (n-1))
 
 -- | \(m > 1 \Rightarrow n + mk \equiv n \pmod{m}\)
 --

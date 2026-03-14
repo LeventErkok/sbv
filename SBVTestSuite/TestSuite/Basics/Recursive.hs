@@ -66,13 +66,13 @@ recursiveNoMeasure = do
                                       else assertFailure $ "Unexpected exception: " ++ show e
     Right _                     -> assertFailure "Expected error for recursive function without measure"
   where f :: SInteger -> SInteger
-        f = smtFunction "recF" NoMeasure $ \x -> ite (x .<= 0) 0 (1 + f (x - 1))
+        f = smtFunction "recF" $ \x -> ite (x .<= 0) 0 (1 + f (x - 1))
 
 -- | Test that a non-recursive smtFunction without a measure is accepted
 nonRecursiveNoMeasure :: Assertion
 nonRecursiveNoMeasure = assertIsSat $ \(x :: SInteger) -> g x .== 4
   where g :: SInteger -> SInteger
-        g = smtFunction "nonRecG" NoMeasure $ \x -> 2 * x
+        g = smtFunction "nonRecG" $ \x -> 2 * x
 
 -- Test suite
 tests :: TestTree

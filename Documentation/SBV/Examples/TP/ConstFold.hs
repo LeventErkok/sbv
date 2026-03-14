@@ -66,7 +66,7 @@ type E = Env String Integer
 --   * @Mul (Con a) (Con b) → Con (a*b)@
 --   * @Let nm (Con v) b    → subst nm v b@
 simplify :: SE -> SE
-simplify = smtFunction "simplify" NoMeasure $ \expr ->
+simplify = smtFunction "simplify" $ \expr ->
   [sCase| expr of
     Sqr (Con v)         -> sCon (v * v)
 
@@ -101,7 +101,7 @@ simplify = smtFunction "simplify" NoMeasure $ \expr ->
 --   * @Mul a b       → Mul (subst nm v a) (subst nm v b)@
 --   * @Let x a b     → Let x (subst nm v a) (if x == nm then b else subst nm v b)@
 subst :: SString -> SInteger -> SE -> SE
-subst = smtFunction "subst" NoMeasure $ \nm v expr ->
+subst = smtFunction "subst" $ \nm v expr ->
   [sCase| expr of
 
     -- Substitute for vars if name matches
@@ -124,7 +124,7 @@ subst = smtFunction "subst" NoMeasure $ \nm v expr ->
 
 -- | Constant fold an expression bottom-up: first fold sub-expressions, then simplify.
 cfold :: SE -> SE
-cfold = smtFunction "cfold" NoMeasure $ \expr ->
+cfold = smtFunction "cfold" $ \expr ->
   [sCase| expr of
     Var nm     -> sVar nm
     Con v      -> sCon v

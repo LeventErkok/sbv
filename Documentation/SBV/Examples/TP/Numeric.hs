@@ -158,7 +158,7 @@ nicomachus = do
        infixr 8 ^
 
        sumCubed :: SInteger -> SInteger
-       sumCubed = smtFunction "sumCubed" NoMeasure $ \n -> ite (n .<= 0) 0 (n^3 + sumCubed (n - 1))
+       sumCubed = smtFunction "sumCubed" $ \n -> ite (n .<= 0) 0 (n^3 + sumCubed (n - 1))
 
    -- Grab the proof of regular summation formula
    sp <- sumProof
@@ -228,7 +228,7 @@ nicomachus = do
 elevenMinusFour :: TP (Proof (Forall "n" Integer -> SBool))
 elevenMinusFour = do
    let pow :: SInteger -> SInteger -> SInteger
-       pow = smtFunction "pow" NoMeasure $ \x y -> ite (y .== 0) 1 (x * pow x (y - 1))
+       pow = smtFunction "pow" $ \x y -> ite (y .== 0) 1 (x * pow x (y - 1))
 
        emf :: SInteger -> SBool
        emf n = 7 `sDivides` (11 `pow` n - 4 `pow` n)

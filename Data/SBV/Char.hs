@@ -293,9 +293,9 @@ isAsciiLower = liftPredL1 C.isAsciiLower
 
 -- | Symbolic enum instance for symbolic characters
 instance EnumSymbolic Char where
-   succ     = smtFunction "EnumSymbolic.Char.succ"   NoMeasure (\x -> ite (x .== maxBound) (some "EnumSymbolic.Char.succ_maxBound" (const sTrue)) (chr (ord x + 1)))
-   pred     = smtFunction "EnumSymbolic.Char.pred"   NoMeasure (\x -> ite (x .== minBound) (some "EnumSymbolic.Char.pred_minBound" (const sTrue)) (chr (ord x - 1)))
-   toEnum   = smtFunction "EnumSymbolic.Char.toEnum" NoMeasure (\x ->
+   succ     = smtFunction "EnumSymbolic.Char.succ"   (\x -> ite (x .== maxBound) (some "EnumSymbolic.Char.succ_maxBound" (const sTrue)) (chr (ord x + 1)))
+   pred     = smtFunction "EnumSymbolic.Char.pred"   (\x -> ite (x .== minBound) (some "EnumSymbolic.Char.pred_minBound" (const sTrue)) (chr (ord x - 1)))
+   toEnum   = smtFunction "EnumSymbolic.Char.toEnum" (\x ->
                             ite (x .< ord (minBound :: SChar)) (some "EnumSymbolic.Char.toEnum.<minBound" (const sTrue))
                           $ ite (x .> ord (maxBound :: SChar)) (some "EnumSymbolic.Char.toEnum.>maxBound" (const sTrue))
                           $ chr x)
@@ -303,7 +303,7 @@ instance EnumSymbolic Char where
    fromEnum = ord
 
    enumFrom n   = SL.map chr (enumFromTo @Integer (ord n) (ord (maxBound @SChar)))
-   enumFromThen = smtFunction "EnumSymbolic.Char.enumFromThen" NoMeasure $ \n1 n2 ->
+   enumFromThen = smtFunction "EnumSymbolic.Char.enumFromThen" $ \n1 n2 ->
                               let i_n1, i_n2 :: SInteger
                                   i_n1 = ord n1
                                   i_n2 = ord n2

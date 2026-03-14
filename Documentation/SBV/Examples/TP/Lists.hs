@@ -1102,7 +1102,7 @@ takeDropWhile f =
                                      ]
 -- | Remove adjacent duplicates.
 destutter :: SymVal a => SList a -> SList a
-destutter = smtFunction "destutter" NoMeasure
+destutter = smtFunction "destutter"
           $ \xs -> [sCase| xs of
                       []     -> xs
                       [_]    -> xs
@@ -1145,7 +1145,7 @@ destutterIdempotent :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool
 destutterIdempotent = do
 
    -- No adjacent duplicates
-   let noAdd = smtFunction "noAdd" NoMeasure
+   let noAdd = smtFunction "noAdd"
              $ \xs -> [sCase| xs of
                          []                  -> sTrue
                          [_]                 -> sTrue
@@ -1305,7 +1305,7 @@ diffDiff = induct "diffDiff"
 
 -- | Are the two lists disjoint?
 disjoint :: (Eq a, SymVal a) => SList a -> SList a -> SBool
-disjoint = smtFunction "disjoint" NoMeasure
+disjoint = smtFunction "disjoint"
          $ \xs ys -> [sCase| xs of
                         []     -> sTrue
                         a : as -> a `notElem` ys .&& disjoint as ys
@@ -1706,7 +1706,7 @@ map_snd_zip_take = do
 
 -- | Count the number of occurrences of an element in a list
 count :: SymVal a => SBV a -> SList a -> SInteger
-count = smtFunction "count" (withMeasure $ \_ l -> length l)
+count = smtFunction "count"
       $ \e l -> [sCase| l of
                    []               -> 0
                    x : xs | e .== x -> 1 + count e xs
@@ -1715,7 +1715,7 @@ count = smtFunction "count" (withMeasure $ \_ l -> length l)
 
 -- | Interleave the elements of two lists. If one ends, we take the rest from the other.
 interleave :: SymVal a => SList a -> SList a -> SList a
-interleave = smtFunction "interleave" NoMeasure
+interleave = smtFunction "interleave"
            $ \xs ys -> [sCase| xs of
                            []     -> ys
                            a : as -> a .: interleave ys as
@@ -1757,7 +1757,7 @@ uninterleave lst = uninterleaveGen lst (tuple ([], []))
 
 -- | Generalized form of uninterleave with the auxilary lists made explicit.
 uninterleaveGen :: SymVal a => SList a -> STuple [a] [a] -> STuple [a] [a]
-uninterleaveGen = smtFunction "uninterleave" NoMeasure
+uninterleaveGen = smtFunction "uninterleave"
                 $ \xs alts -> let (es, os) = untuple alts
                               in [sCase| xs of
                                     []     -> tuple (reverse es, reverse os)
