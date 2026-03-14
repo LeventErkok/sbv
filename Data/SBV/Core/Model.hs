@@ -30,7 +30,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), withMeasure, hasMeasure, SDivisible(..), SMTDefinable(..), smtFunction, smtFunctionWithMeasure, QSaturate, qSaturateSavingObservables
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), hasMeasure, SDivisible(..), SMTDefinable(..), smtFunction, smtFunctionWithMeasure, QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , some
@@ -1254,12 +1254,6 @@ data MeasureEval where
 data Measure f where
   AutoMeasure  :: Measure f
   HasMeasure   :: MeasureEval -> Measure f
-
--- | Construct a measure from a measure function. The measure function takes the same
--- arguments as the original function but returns a value of a type with 'Zero' and
--- 'OrdSymbolic' instances. The returned value must strictly decrease at each recursive call.
-withMeasure :: forall f r. (Zero r, OrdSymbolic (SBV r), SymVal r, ApplyMeasure f r) => MeasureOf f r -> Measure f
-withMeasure msf = HasMeasure (MeasureEval (applyMeasure @f @r msf))
 
 -- | Does the measure indicate a termination measure is present?
 hasMeasure :: Measure f -> Bool
