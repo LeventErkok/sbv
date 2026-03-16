@@ -606,7 +606,11 @@ instance (SymVal a, SymVal b) => SMap (SBV a -> SBV b) a b where
     = literal concResult
     | True
     = sbvMap l
-    where sbvMap = smtHOFunction "sbv.map" f $ \xs -> ite (null xs) [] (let (h, t) = uncons xs in f h .: sbvMap t)
+    where sbvMap = smtHOFunction "sbv.map" f
+                 $ \xs -> [sCase| xs of
+                             []    -> []
+                             h : t -> f h .: sbvMap t
+                          |]
 
 -- | Mapping symbolic closures.
 instance (SymVal env, SymVal a, SymVal b) => SMap (Closure (SBV env) (SBV a -> SBV b)) a b where
@@ -616,9 +620,10 @@ instance (SymVal env, SymVal a, SymVal b) => SMap (Closure (SBV env) (SBV a -> S
     | True
     = sbvMap (tuple (closureEnv, l))
     where sbvMap = smtHOFunction "sbv.closureMap" closureFun
-                 $ \envxs -> let (cEnv, xs) = untuple envxs
-                                 (h, t)     = uncons xs
-                             in ite (null xs) [] (closureFun cEnv h .: sbvMap (tuple (cEnv, t)))
+                 $ \envxs -> [sCase| envxs of
+                                (_,    [])    -> []
+                                (cEnv, h : t) -> closureFun cEnv h .: sbvMap (tuple (cEnv, t))
+                            |]
 
 -- | @concatMap f xs@ maps f over elements and concats the result.
 --
@@ -667,11 +672,10 @@ instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
     | True
     = sbvFoldl $ tuple (base, l)
     where sbvFoldl = smtHOFunction "sbv.foldl" (uncurry f . untuple)
-                   $ \exs -> let (e, xs) = untuple exs
-                                 (h, t)  = uncons xs
-                             in ite (null xs)
-                                    e
-                                    (sbvFoldl (tuple (e `f` h, t)))
+                   $ \exs -> [sCase| exs of
+                                (e, [])    -> e
+                                (e, h : t) -> sbvFoldl (tuple (e `f` h, t))
+                             |]
 
 -- | Folding left with symbolic closures.
 instance (SymVal env, SymVal a, SymVal b) => SFoldL (Closure (SBV env) (SBV b -> SBV a -> SBV b)) a b where
@@ -681,11 +685,10 @@ instance (SymVal env, SymVal a, SymVal b) => SFoldL (Closure (SBV env) (SBV b ->
     | True
     = sbvFoldl $ tuple (closureEnv, base, l)
     where sbvFoldl = smtHOFunction "sbv.closureFoldl" closureFun
-                   $ \envxs -> let (cEnv, e, xs) = untuple envxs
-                                   (h, t)        = uncons xs
-                               in ite (null xs)
-                                      e
-                                      (sbvFoldl (tuple (cEnv, closureFun closureEnv e h, t)))
+                   $ \envxs -> [sCase| envxs of
+                                  (_,    e, [])    -> e
+                                  (cEnv, e, h : t) -> sbvFoldl (tuple (cEnv, closureFun closureEnv e h, t))
+                               |]
 
 -- | A class of right foldable functions. In SBV, we make a distinction between closures and regular functions, and
 -- we instantiate this class appropriately so it can handle both cases.
@@ -721,11 +724,10 @@ instance (SymVal a, SymVal b) => SFoldR (SBV a -> SBV b -> SBV b) a b where
     | True
     = sbvFoldr $ tuple (base, l)
     where sbvFoldr = smtHOFunction "sbv.foldr" (uncurry f . untuple)
-                   $ \exs -> let (e, xs) = untuple exs
-                                 (h, t)  = uncons xs
-                             in ite (null xs)
-                                    e
-                                    (h `f` sbvFoldr (tuple (e, t)))
+                   $ \exs -> [sCase| exs of
+                                (e, [])    -> e
+                                (e, h : t) -> h `f` sbvFoldr (tuple (e, t))
+                             |]
 
 -- | Folding right with symbolic closures.
 instance (SymVal env, SymVal a, SymVal b) => SFoldR (Closure (SBV env) (SBV a -> SBV b -> SBV b)) a b where
@@ -735,11 +737,10 @@ instance (SymVal env, SymVal a, SymVal b) => SFoldR (Closure (SBV env) (SBV a ->
     | True
     = sbvFoldr $ tuple (closureEnv, base, l)
     where sbvFoldr = smtHOFunction "sbv.closureFoldr" closureFun
-                   $ \envxs -> let (cEnv, e, xs) = untuple envxs
-                                   (h, t)        = uncons xs
-                               in ite (null xs)
-                                      e
-                                      (closureFun closureEnv h (sbvFoldr (tuple (cEnv, e, t))))
+                   $ \envxs -> [sCase| envxs of
+                                  (_,    e, [])    -> e
+                                  (cEnv, e, h : t) -> closureFun closureEnv h (sbvFoldr (tuple (cEnv, e, t)))
+                               |]
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
@@ -794,10 +795,11 @@ instance (SymVal a, SymVal b, SymVal c) => SZipWith (SBV a -> SBV b -> SBV c) a 
     | True
     = sbvZipWith $ tuple (xs, ys)
     where sbvZipWith = smtHOFunction "sbv.zipWith" (uncurry f . untuple)
-                     $ \asbs -> let (as, bs) = untuple asbs
-                                in ite (null as .|| null bs)
-                                       []
-                                       (f (head as) (head bs) .: sbvZipWith (tuple (tail as, tail bs)))
+                     $ \asbs -> [sCase| asbs of
+                                   ([],   _   ) -> []
+                                   (_,    []  ) -> []
+                                   (a:as, b:bs) -> f a b .: sbvZipWith (tuple (as, bs))
+                                |]
 
 -- | Zipping with closures.
 instance (SymVal env, SymVal a, SymVal b, SymVal c) => SZipWith (Closure (SBV env) (SBV a -> SBV b -> SBV c)) a b c where
@@ -807,10 +809,11 @@ instance (SymVal env, SymVal a, SymVal b, SymVal c) => SZipWith (Closure (SBV en
     | True
     = sbvZipWith $ tuple (closureEnv, xs, ys)
     where sbvZipWith = smtHOFunction "sbv.closureZipWith" closureFun
-                     $ \envasbs -> let (cEnv, as, bs) = untuple envasbs
-                                   in ite (null as .|| null bs)
-                                          []
-                                          (closureFun cEnv (head as) (head bs) .: sbvZipWith (tuple (cEnv, tail as, tail bs)))
+                     $ \envasbs -> [sCase| envasbs of
+                                      (_,    [],   _   ) -> []
+                                      (_,    _,    []  ) -> []
+                                      (cEnv, a:as, b:bs) -> closureFun cEnv a b .: sbvZipWith (tuple (cEnv, as, bs))
+                                   |]
 
 -- | Concatenate list of lists.
 --
@@ -869,7 +872,11 @@ replicate c e
  = literal (genericReplicate c' e')
  | True
  = def c e
- where def = smtFunction "sbv.replicate" $ \count elt -> ite (count .<= 0) [] (elt .: def (count - 1) elt)
+ where def = smtFunction "sbv.replicate"
+           $ \count elt -> [sCase| count of
+                               _ | count .<= 0 -> []
+                               _               -> elt .: def (count - 1) elt
+                           |]
 
 -- | inits of a list.
 --
@@ -885,8 +892,8 @@ inits xs
  = def xs
  where def = smtFunction "sbv.inits"
            $ \l -> [sCase| l of
-                       []    -> [[]]
-                       _ : _ -> def (init l) ++ [l]
+                      []    -> [[]]
+                      _ : _ -> def (init l) ++ [l]
                    |]
 
 -- | tails of a list.
@@ -903,8 +910,8 @@ tails xs
  = def xs
  where def = smtFunction "sbv.tails"
            $ \l -> [sCase| l of
-                       []      -> [[]]
-                       _ : tl  -> l .: def tl
+                      []      -> [[]]
+                      _ : tl  -> l .: def tl
                    |]
 
 -- | Minimum of a list that has symbolic-ordering. If the list is empty, then
@@ -951,9 +958,9 @@ xs \\ ys
  = def xs ys
  where def = smtFunction "sbv.diff"
            $ \x y -> [sCase| x of
-                         []    -> []
-                         h : t -> let r = def t y
-                                  in ite (h `elem` y) r (h .: r)
+                        []    -> []
+                        h : t -> let r = def t y
+                                 in ite (h `elem` y) r (h .: r)
                      |]
 infix 5 \\  -- CPP: do not eat the final newline
 
@@ -1038,11 +1045,12 @@ instance SymVal a => SFilter (SBV a -> SBool) a where
     = literal concResult
     | True
     = sbvFilter l
-    where sbvFilter = smtHOFunction "sbv.filter" f $ \xs -> ite (null xs)
-                                                                []
-                                                                (let (h, t) = uncons xs
-                                                                     r      = sbvFilter t
-                                                                 in ite (f h) (h .: r) r)
+    where sbvFilter = smtHOFunction "sbv.filter" f
+                    $ \xs -> [sCase| xs of
+                                []    -> []
+                                h : t -> let r = sbvFilter t
+                                         in ite (f h) (h .: r) r
+                             |]
 
   -- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
   -- first element, and those that don't in the second.
@@ -1051,13 +1059,13 @@ instance SymVal a => SFilter (SBV a -> SBool) a where
     = literal concResult
     | True
     = sbvPartition l
-    where sbvPartition = smtHOFunction "sbv.partition" f $ \xs -> ite (null xs)
-                                                                      (tuple ([], []))
-                                                                      (let (h, t)   = uncons xs
-                                                                           (as, bs) = untuple $ sbvPartition t
-                                                                       in ite (f h)
-                                                                              (tuple (h .: as, bs))
-                                                                              (tuple (as, h .: bs)))
+    where sbvPartition = smtHOFunction "sbv.partition" f
+                       $ \xs -> [sCase| xs of
+                                   []    -> tuple ([], [])
+                                   h : t -> let (as, bs) = untuple $ sbvPartition t
+                                            in ite (f h) (tuple (h .: as, bs))
+                                                         (tuple (as, h .: bs))
+                                |]
 
   -- | @takeWhile f xs@ takes the prefix of @xs@ that satisfy the predicate.
   takeWhile f l
@@ -1065,10 +1073,12 @@ instance SymVal a => SFilter (SBV a -> SBool) a where
     = literal concResult
     | True
     = sbvTakeWhile l
-    where sbvTakeWhile = smtHOFunction "sbv.takeWhile" f $ \xs -> ite (null xs)
-                                                                      []
-                                                                      (let (h, t) = uncons xs
-                                                                       in ite (f h) (h .: sbvTakeWhile t) [])
+    where sbvTakeWhile = smtHOFunction "sbv.takeWhile" f
+                       $ \xs -> [sCase| xs of
+                                   []           -> []
+                                   h : t | f h  -> h .: sbvTakeWhile t
+                                         | True -> []
+                                |]
 
   -- | @dropWhile f xs@ drops the prefix of @xs@ that satisfy the predicate.
   dropWhile f l
@@ -1076,10 +1086,12 @@ instance SymVal a => SFilter (SBV a -> SBool) a where
     = literal concResult
     | True
     = sbvDropWhile l
-    where sbvDropWhile = smtHOFunction "sbv.dropWhile" f $ \xs -> ite (null xs)
-                                                                      []
-                                                                      (let (h, t) = uncons xs
-                                                                       in ite (f h) (sbvDropWhile t) xs)
+    where sbvDropWhile = smtHOFunction "sbv.dropWhile" f
+                       $ \xs -> [sCase| xs of
+                                   []           -> []
+                                   h : t | f h  -> sbvDropWhile t
+                                         | True -> xs
+                                |]
 
 -- | Filtering with closures.
 instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) a where
@@ -1089,13 +1101,11 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
     | True
     = sbvFilter (tuple (closureEnv, l))
     where sbvFilter = smtHOFunction "sbv.closureFilter" closureFun
-                    $ \envxs -> let (cEnv, xs) = untuple envxs
-                                    (h, t)     = uncons xs
-                                    r          = sbvFilter (tuple (cEnv, t))
-                                in ite (null xs) []
-                                 $ ite (closureFun cEnv h)
-                                       (h .: r)
-                                       r
+                    $ \envxs -> [sCase| envxs of
+                                   (_,    [])    -> []
+                                   (cEnv, h : t) -> let r = sbvFilter (tuple (cEnv, t))
+                                                    in ite (closureFun cEnv h) (h .: r) r
+                                |]
 
   partition cls@Closure{closureEnv, closureFun} l
     | Just concResult <- concretePartition cls (closureFun closureEnv) l
@@ -1103,13 +1113,12 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
     | True
     = sbvPartition (tuple (closureEnv, l))
     where sbvPartition = smtHOFunction "sbv.closurePartition" closureFun
-                       $ \envxs -> let (cEnv, xs) = untuple envxs
-                                       (h,    t)  = uncons xs
-                                       (as,   bs) = untuple $ sbvPartition (tuple (cEnv, t))
-                                   in ite (null xs) (tuple ([], []))
-                                    $ ite (closureFun cEnv h)
-                                          (tuple (h .: as, bs))
-                                          (tuple (as, h .: bs))
+                       $ \envxs -> [sCase| envxs of
+                                      (_, [])       -> tuple ([], [])
+                                      (cEnv, h : t) -> let (as, bs) = untuple $ sbvPartition (tuple (cEnv, t))
+                                                       in ite (closureFun cEnv h) (tuple (h .: as, bs))
+                                                                                  (tuple (as, h .: bs))
+                                   |]
 
   takeWhile cls@Closure{closureEnv, closureFun} l
     | Just concResult <- concreteTakeWhile cls (closureFun closureEnv) l
@@ -1117,12 +1126,11 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
     | True
     = sbvTakeWhile (tuple (closureEnv, l))
     where sbvTakeWhile = smtHOFunction "sbv.closureTakeWhile" closureFun
-                       $ \envxs -> let (cEnv, xs) = untuple envxs
-                                       (h, t)     = uncons xs
-                                in ite (null xs) []
-                                 $ ite (closureFun cEnv h)
-                                       (h .: sbvTakeWhile (tuple (cEnv, t)))
-                                       []
+                       $ \envxs -> [sCase| envxs of
+                                      (_,    [])                        -> []
+                                      (cEnv, h : t) | closureFun cEnv h -> h .: sbvTakeWhile (tuple (cEnv, t))
+                                                    | True              -> []
+                                   |]
 
   dropWhile cls@Closure{closureEnv, closureFun} l
     | Just concResult <- concreteDropWhile cls (closureFun closureEnv) l
@@ -1130,12 +1138,11 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
     | True
     = sbvDropWhile (tuple (closureEnv, l))
     where sbvDropWhile = smtHOFunction "sbv.closureDropWhile" closureFun
-                       $ \envxs -> let (cEnv, xs) = untuple envxs
-                                       (h, t)     = uncons xs
-                                in ite (null xs) []
-                                 $ ite (closureFun cEnv h)
-                                       (sbvDropWhile (tuple (cEnv, t)))
-                                       xs
+                       $ \envxs -> [sCase| envxs of
+                                      (_,    [])                        -> []
+                                      (cEnv, h : t) | closureFun cEnv h -> sbvDropWhile (tuple (cEnv, t))
+                                                    | True              -> h .: t
+                                   |]
 
 -- | @`sum` s@. Sum the given sequence.
 --
