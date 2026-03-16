@@ -639,7 +639,7 @@ class (SymVal a, SymVal b) => SFoldL func a b | func -> a b where
   -- >>> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) [sEnum|1 .. 5|]
   -- [5,4,3,2,1] :: [SInteger]
   --
-  -- Again, we can use 'Data.SBV.List.foldl' in the reverse too:
+  -- Again, we can use 'sbv.foldl' in the reverse too:
   --
   -- >>> sat $ \l -> foldl (\soFar elt -> [elt] ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: SInteger]
   -- Satisfiable. Model:
@@ -1334,12 +1334,12 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
 -- 3 :: SInteger
 -- >>> prove  $ \(x :: SInteger) -> x .== lookup 9 (literal [(5, 12), (4, 3), (2, 6 :: Integer)])
 -- Falsifiable. Counter-example:
---   Data.SBV.List.lookup_notFound @Integer = 0 :: Integer
---   s0                                     = 1 :: Integer
+--   sbv.lookup_notFound @Integer = 0 :: Integer
+--   s0                           = 1 :: Integer
 lookup :: (SymVal k, SymVal v) => SBV k -> SList (k, v) -> SBV v
-lookup = smtFunction "Data.SBV.List.lookup"
+lookup = smtFunction "sbv.lookup"
        $ \k lst -> [sCase| lst of
-                       []                        -> some "Data.SBV.List.lookup_notFound" (const sTrue)
+                       []                        -> some "sbv.lookup_notFound" (const sTrue)
                        (k', v) : rest | k .== k' -> v
                                       | True     -> lookup k rest
                    |]
