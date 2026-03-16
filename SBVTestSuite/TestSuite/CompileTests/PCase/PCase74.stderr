@@ -1,0 +1,14 @@
+PCase74.hs:17:15: error: [GHC-39584]
+    " PCase74.hs:18:10: pCase: Non-exhaustive pattern match.
+        All branches are guarded; add an unguarded wildcard or variable
+        as the last branch to ensure all cases are covered.
+
+    " In the quasi-quotation:
+        [pCase| x of
+         0 -> x .== x =: qed
+         1 -> x .== x =: qed
+       |]
+   |
+17 |     |- [pCase| x of
+   |               ^^^^^...
+

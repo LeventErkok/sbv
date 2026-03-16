@@ -1,0 +1,17 @@
+PCase73.hs:(17,15)-(21,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " x of\n\
+      \         0         -> x .== x =: qed\n\
+      \         n | n .> 0 -> x .== x =: qed\n\
+      \           | sTrue  -> x .== x =: qed\n\
+      \       "
+  ======>
+    cases
+      [((.==) x 0 ==> (x .== x =: qed)),
+       ((.&&) (sNot ((.==) x 0)) (let n = x in n .> 0)
+          ==> (x .== x =: qed)),
+       (sNot
+          ((.||)
+             ((.==) x 0) ((.&&) (sNot ((.==) x 0)) (let n = x in n .> 0)))
+          ==> (x .== x =: qed))]

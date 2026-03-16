@@ -1,0 +1,19 @@
+PCase69.hs:(17,15)-(21,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " b of\n\
+      \         True  | x .> 0 -> b .|| sNot b =: qed\n\
+      \               | sTrue  -> b .|| sNot b =: qed\n\
+      \         False           -> b .|| sNot b =: qed\n\
+      \       "
+  ======>
+    cases
+      [((.&&) b (x .> 0) ==> (b .|| sNot b =: qed)),
+       ((.&&) b (sNot (x .> 0)) ==> (b .|| sNot b =: qed)),
+       (sNot b ==> (b .|| sNot b =: qed))]
+PCase69.hs:16:57: error: [GHC-40910] [-Wunused-matches, Werror=unused-matches]
+    Defined but not used: x
+   |
+16 | t = calc "t" (\(Forall @"b" (b :: SBool)) (Forall @"x" (x :: SInteger)) -> b .|| sNot b) $ \b x -> []
+   |                                                         ^
+

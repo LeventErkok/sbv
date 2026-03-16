@@ -1,0 +1,11 @@
+PCase72.hs:(17,15)-(20,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " s of\n\
+      \         \"hello\" -> s .== s =: qed\n\
+      \         _       -> s .== s =: qed\n\
+      \       "
+  ======>
+    cases
+      [((.==) s (literal "hello") ==> (s .== s =: qed)),
+       (sNot ((.==) s (literal "hello")) ==> (s .== s =: qed))]

@@ -1,0 +1,9 @@
+PCase68.hs:(17,15)-(20,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " b of\n\
+      \         True  -> b .== b =: qed\n\
+      \         False -> b .== b =: qed\n\
+      \       "
+  ======>
+    cases [(b ==> (b .== b =: qed)), (sNot b ==> (b .== b =: qed))]

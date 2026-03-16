@@ -1,0 +1,18 @@
+PCase71.hs:(17,15)-(21,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " c of\n\
+      \         'a' -> c .== c =: qed\n\
+      \         'b' -> c .== c =: qed\n\
+      \         _   -> c .== c =: qed\n\
+      \       "
+  ======>
+    cases
+      [((.==) c (literal 'a') ==> (c .== c =: qed)),
+       ((.&&) (sNot ((.==) c (literal 'a'))) ((.==) c (literal 'b'))
+          ==> (c .== c =: qed)),
+       (sNot
+          ((.||)
+             ((.==) c (literal 'a'))
+             ((.&&) (sNot ((.==) c (literal 'a'))) ((.==) c (literal 'b'))))
+          ==> (c .== c =: qed))]
