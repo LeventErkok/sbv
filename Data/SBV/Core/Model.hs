@@ -1317,7 +1317,8 @@ checkMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (Mea
               st <- symbolicEnv
               liftIO $ writeIORef (rSkipMeasureChecks st) True
 
-              freshParams <- liftIO $ sequence [svToSV st =<< svMkSymVar (NonQueryVar Nothing) (kindOf sv) (Just ("arg" ++ show i)) st
+              let singleParam = length paramSVs == 1
+              freshParams <- liftIO $ sequence [svToSV st =<< svMkSymVar (NonQueryVar Nothing) (kindOf sv) (Just (if singleParam then "arg" else "arg" ++ show i)) st
                                                | (i, sv) <- zip [(0::Int)..] paramSVs
                                                ]
               freshConsts <- liftIO $ mapM (\(_, cv) -> svToSV st (SVal (kindOf cv) (Left cv))) liConsts
@@ -1364,10 +1365,10 @@ checkMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (Mea
                         tag nm | singleCall = nm
                                | True       = nm ++ "[" ++ show (i :: Int) ++ "]"
 
-                    sObserve (tag "before") (unSBV mFormal)
                     sObserve (tag "then")   (unSBV mCall)
                     pure $ reachSVal .=> mFormal .> mCall
 
+              sObserve "before" (unSBV mFormal)
               obligations <- mapM mkObligation (zip [1..] recCalls)
               pure $ sAnd obligations :: Symbolic SBool)
 

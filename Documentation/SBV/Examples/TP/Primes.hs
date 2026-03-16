@@ -105,10 +105,11 @@ dividesTransitive = do
 -- @n@ that is at least @k@ is the number that is at least @k@ and divides @n@ evenly. The idea is that a number is
 -- prime if the least divisor starting from @2@ is itself.
 ld :: SInteger -> SInteger -> SInteger
-ld = smtFunction "ld"
-   $ \k n -> [sCase| n `sEMod` k of
-                0 -> k
-                _ -> ld (k+1) n
+ld = smtFunctionWithMeasure "ld" (\k n -> (n - k) `smax` 0)
+   $ \k n -> [sCase| tuple (k .<= 0 .|| k .> n, n `sEMod` k) of
+                (True, _) -> 0
+                (_,    0) -> k
+                _         -> ld (k+1) n
              |]
 
 -- | \(1 < k \leq n \implies \mathit{ld}\,k\,n \mid n \land k \leq \mathit{ld}\,k\,n \leq n\)
@@ -122,6 +123,8 @@ ld = smtFunction "ld"
 --     Step: 1.2                           Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Termination measures:
+--   [Terminates] ld :: SBV Integer -> SBV Integer -> SBV Integer
 -- [Proven] leastDivisorDivides :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 leastDivisorDivides :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
 leastDivisorDivides =
@@ -152,6 +155,8 @@ leastDivisorDivides =
 --     Step: 1.2                           Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Termination measures:
+--   [Terminates] ld :: SBV Integer -> SBV Integer -> SBV Integer
 -- [Proven] leastDivisorisLeast :: Ɐk ∷ Integer → Ɐn ∷ Integer → Ɐd ∷ Integer → Bool
 leastDivisorIsLeast :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> Forall "d" Integer -> SBool))
 leastDivisorIsLeast =
@@ -185,6 +190,8 @@ leastDivisorIsLeast =
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: leastDivisorTwice                Q.E.D.
+-- Termination measures:
+--   [Terminates] ld :: SBV Integer -> SBV Integer -> SBV Integer
 -- [Proven] leastDivisorTwice :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 leastDivisorTwice :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
 leastDivisorTwice = do
@@ -240,6 +247,8 @@ isPrime n = n .>= 2 .&& ld 2 n .== n
 -- === __Proof__
 -- >>> runTP primeAtLeast2
 -- Lemma: primeAtLeast2                    Q.E.D.
+-- Termination measures:
+--   [Terminates] ld :: SBV Integer -> SBV Integer -> SBV Integer
 -- [Proven] primeAtLeast2 :: Ɐp ∷ Integer → Bool
 primeAtLeast2 :: TP (Proof (Forall "p" Integer -> SBool))
 primeAtLeast2 = lemma "primeAtLeast2" (\(Forall p) -> isPrime p .=> p .>= 2) []
@@ -253,6 +262,8 @@ primeAtLeast2 = lemma "primeAtLeast2" (\(Forall p) -> isPrime p .=> p .>= 2) []
 -- Lemma: leastDivisorIsPrime
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Termination measures:
+--   [Terminates] ld :: SBV Integer -> SBV Integer -> SBV Integer
 -- [Proven] leastDivisorIsPrime :: Ɐn ∷ Integer → Bool
 leastDivisorIsPrime :: TP (Proof (Forall "n" Integer -> SBool))
 leastDivisorIsPrime = do
@@ -290,6 +301,8 @@ fact = smtFunction "fact" $ \n -> ite (n .<= 0) 1 (n * fact (n - 1))
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Termination measures:
+--   [Terminates] fact :: SBV Integer -> SBV Integer
 -- [Proven] factAtLeast1 :: Ɐn ∷ Integer → Bool
 factAtLeast1 :: TP (Proof (Forall "n" Integer -> SBool))
 factAtLeast1 = inductWith cvc5 "factAtLeast1"
@@ -317,6 +330,8 @@ factAtLeast1 = inductWith cvc5 "factAtLeast1"
 --     Step: 2.2.2                         Q.E.D.
 --     Step: 2.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Termination measures:
+--   [Terminates] fact :: SBV Integer -> SBV Integer
 -- [Proven] dividesFact :: Ɐn ∷ Integer → Ɐk ∷ Integer → Bool
 dividesFact :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))
 dividesFact = do
@@ -348,6 +363,8 @@ dividesFact = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Termination measures:
+--   [Terminates] fact :: SBV Integer -> SBV Integer
 -- [Proven] notDividesFactP1 :: Ɐn ∷ Integer → Ɐk ∷ Integer → Bool
 notDividesFactP1 :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))
 notDividesFactP1 = do
@@ -380,6 +397,9 @@ greaterPrime n = leastPrimeDivisor (1 + fact n)
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Termination measures:
+--   [Terminates] fact :: SBV Integer -> SBV Integer
+--   [Terminates] ld   :: SBV Integer -> SBV Integer -> SBV Integer
 -- [Proven] greaterPrimeDivides :: Ɐn ∷ Integer → Bool
 greaterPrimeDivides :: TP (Proof (Forall "n" Integer -> SBool))
 greaterPrimeDivides = do
@@ -413,6 +433,9 @@ greaterPrimeDivides = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Termination measures:
+--   [Terminates] fact :: SBV Integer -> SBV Integer
+--   [Terminates] ld   :: SBV Integer -> SBV Integer -> SBV Integer
 -- [Proven] greaterPrimeGreater :: Ɐn ∷ Integer → Bool
 greaterPrimeGreater :: TP (Proof (Forall "n" Integer -> SBool))
 greaterPrimeGreater = do
@@ -455,6 +478,9 @@ greaterPrimeGreater = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Termination measures:
+--   [Terminates] fact :: SBV Integer -> SBV Integer
+--   [Terminates] ld   :: SBV Integer -> SBV Integer -> SBV Integer
 -- [Proven] infinitudeOfPrimes :: Ɐn ∷ Integer → Bool
 infinitudeOfPrimes :: TP (Proof (Forall "n" Integer -> SBool))
 infinitudeOfPrimes = do
@@ -486,6 +512,9 @@ infinitudeOfPrimes = do
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: noLargestPrime                   Q.E.D.
+-- Termination measures:
+--   [Terminates] fact :: SBV Integer -> SBV Integer
+--   [Terminates] ld   :: SBV Integer -> SBV Integer -> SBV Integer
 -- [Proven] noLargestPrime :: Ɐn ∷ Integer → ∃p ∷ Integer → Bool
 noLargestPrime :: TP (Proof (Forall "n" Integer -> Exists "p" Integer -> SBool))
 noLargestPrime = do

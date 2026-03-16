@@ -35,7 +35,8 @@ type Idx = (SInteger, SInteger)
 -- | Encode binary search in a functional style.
 bsearch :: Arr -> Idx -> SInteger -> SMaybe Integer
 bsearch array (low, high) = f array low high
-  where f = smtFunction "bsearch" $ \arr lo hi x ->
+  where f = smtFunctionWithMeasure "bsearch" (\_arr lo hi _x -> (hi - lo + 1) `smax` 0)
+          $ \arr lo hi x ->
                let mid  = (lo + hi) `sEDiv` 2
                    xmid = arr `readArray` mid
                in ite (lo .> hi)
@@ -104,6 +105,8 @@ inArray arr (low, high) elt = quantifiedBool $ \(Exists i) -> low .<= i .&& i .<
 --     Step: 1.2.2                                   Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
+-- Termination measures:
+--   [Terminates] bsearch :: SBV (ArrayModel Integer Integer) -> SBV Integer -> SBV Integer -> SBV Integer -> SBV (Maybe Integer)
 -- [Proven] bsearchCorrect :: Ɐarr ∷ (ArrayModel Integer Integer) → Ɐlo ∷ Integer → Ɐhi ∷ Integer → Ɐx ∷ Integer → Bool
 correctness :: IO (Proof (Forall "arr" (ArrayModel Integer Integer) -> Forall "lo" Integer -> Forall "hi" Integer -> Forall "x" Integer -> SBool))
 correctness = runTPWith (tpRibbon 50 cvc5) $ do
