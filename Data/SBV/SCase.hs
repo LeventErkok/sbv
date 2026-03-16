@@ -912,12 +912,13 @@ sCase = QuasiQuoter
 
                    pairs <- mapM collect cases
 
-                   -- When we have a complete unguarded match (all constructors present, no
-                   -- guards, no wildcard), the last constructor's tester is redundant. Replace
-                   -- it with sTrue so buildCase can use it as a default and avoid generating
-                   -- an unreachable fallback variable.
-                   let hasWildcard = any (\case CWild{} -> True; _ -> False) cases
-                       optimize ps | not hasGuards, not hasWildcard, not (null ps)
+                   -- When every constructor has at least one unguarded match, the pattern
+                   -- is exhaustive. The last entry's tester is then redundant — replace it
+                   -- with sTrue so buildCase uses it as the default, avoiding an unreachable
+                   -- fallback variable.
+                   let allCovered = all hasUnguarded cstrs
+                       hasUnguarded (cstr, _) = any (\case CMatch _ nm _ Nothing _ _ -> sameBase nm cstr; _ -> False) cases
+                       optimize ps | allCovered, not (null ps)
                                    = init ps ++ [(VarE 'sTrue, snd (last ps))]
                                    | otherwise = ps
 

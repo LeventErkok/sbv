@@ -7,10 +7,4 @@ SCase79.hs:(11,16)-(15,10): Splicing expression
       \                 False          -> -x\n\
       \        "
   ======>
-    ite
-      ((.&&) b (x .> 0)) x
-      (ite
-         b 0
-         (ite
-            (sNot b) (negate x)
-            (sym "unmatched_sCase_Bool_6989586621679034476")))
+    ite ((.&&) b (x .> 0)) x (ite b 0 (negate x))
