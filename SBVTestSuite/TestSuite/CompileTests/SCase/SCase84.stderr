@@ -1,0 +1,14 @@
+SCase84.hs:11:14: error: [GHC-39584]
+    " SCase84.hs:12:16: sCase: Non-exhaustive pattern match.
+        All branches are guarded; add an unguarded wildcard or variable
+        as the last branch to ensure all cases are covered.
+
+    " In the quasi-quotation:
+        [sCase| x of
+               0 -> sTrue
+               1 -> sFalse
+      |]
+   |
+11 | t x = [sCase| x of
+   |              ^^^^^...
+

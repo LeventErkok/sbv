@@ -1,0 +1,10 @@
+SCase82.hs:(12,14)-(16,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " x of\n\
+      \               0 -> 10\n\
+      \               1 -> 20\n\
+      \               _ -> x\n\
+      \      "
+  ======>
+    ite ((.==) x 0) 10 (ite ((.==) x 1) 20 x)

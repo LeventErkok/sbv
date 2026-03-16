@@ -1,0 +1,10 @@
+SCase74.hs:(11,16)-(15,10): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " x of\n\
+      \                 0         -> y\n\
+      \                 _ | x .> y -> x\n\
+      \                   | sTrue  -> y\n\
+      \        "
+  ======>
+    ite ((.==) x 0) y (ite (x .> y) x y)

@@ -85,7 +85,7 @@ fmtLoc loc@Loc{loc_start = (sl, _)} off = takeFileName (loc_filename newLoc) ++ 
 -- infrastructure, but we treat them as built-in so that the generated code uses TH-quoted names
 -- (which resolve at SCase.hs compile time) instead of mkName-based references (which would
 -- require the user to have the testers/accessors in scope at the splice site).
-data BuiltinType = BTMaybe | BTEither | BTList | BTTuple Int
+data BuiltinType = BTBool | BTMaybe | BTEither | BTList | BTTuple Int
   deriving Show
 
 -- | Compare two Names by their base (unqualified) name. This is needed because
@@ -104,6 +104,7 @@ lookupBase nm ((k,v):kvs)
 
 -- | Recognize built-in type names.
 recognizeBuiltin :: String -> Maybe BuiltinType
+recognizeBuiltin "Bool"   = Just BTBool
 recognizeBuiltin "Maybe"  = Just BTMaybe
 recognizeBuiltin "Either" = Just BTEither
 recognizeBuiltin "List"   = Just BTList
@@ -115,6 +116,8 @@ recognizeBuiltin _ = Nothing
 -- | Recognize a constructor name as belonging to a built-in type. Used in flattenPat
 -- to generate TH-quoted tester/accessor references for nested built-in constructors.
 recognizeBuiltinCon :: String -> Maybe BuiltinType
+recognizeBuiltinCon "True"    = Just BTBool
+recognizeBuiltinCon "False"   = Just BTBool
 recognizeBuiltinCon "Nothing" = Just BTMaybe
 recognizeBuiltinCon "Just"    = Just BTMaybe
 recognizeBuiltinCon "Left"    = Just BTEither
@@ -171,6 +174,7 @@ inferType label matches = case firstInfo matches of
                                            in pure (typName, recognizeBuiltin typName)
                 _ -> fail Unknown $ label ++ ": " ++ base ++ " is not a data constructor."
 
+    builtinTypeName BTBool      = "Bool"
     builtinTypeName BTMaybe     = "Maybe"
     builtinTypeName BTEither    = "Either"
     builtinTypeName BTList      = "List"
@@ -178,6 +182,7 @@ inferType label matches = case firstInfo matches of
 
 -- | Constructor info for a built-in type: (name, arity).
 builtinConstructors :: BuiltinType -> [(Name, Int)]
+builtinConstructors BTBool        = [(mkName "True", 0), (mkName "False", 0)]
 builtinConstructors BTMaybe       = [(mkName "Nothing", 0), (mkName "Just", 1)]
 builtinConstructors BTEither      = [(mkName "Left", 1), (mkName "Right", 1)]
 builtinConstructors BTList        = [(mkName "[]", 0), (mkName ":", 2)]
@@ -185,6 +190,9 @@ builtinConstructors (BTTuple n)   = [(tupleDataName n, n)]
 
 -- | Generate a tester expression for a built-in type constructor.
 builtinTester :: BuiltinType -> Name -> Exp -> Exp
+builtinTester BTBool nm scrut
+  | nameBase nm == "True"  = scrut
+  | nameBase nm == "False" = AppE (VarE 'sNot) scrut
 builtinTester BTMaybe nm scrut
   | nameBase nm == "Nothing" = AppE (VarE (sbvName "Data.SBV.Maybe" "isNothing")) scrut
   | nameBase nm == "Just"    = AppE (VarE (sbvName "Data.SBV.Maybe" "isJust"))    scrut
@@ -199,6 +207,7 @@ builtinTester bt nm _ = error $ "sCase: builtinTester: unexpected constructor " 
 
 -- | Generate an accessor expression for a built-in type constructor field.
 builtinAccessor :: BuiltinType -> Name -> Int -> Exp -> Exp
+builtinAccessor BTBool nm _ _ = error $ "sCase: builtinAccessor: Bool constructor " ++ nameBase nm ++ " has no fields"
 builtinAccessor BTMaybe nm i scrut
   | nameBase nm == "Just", i == 1 = AppE (VarE (sbvName "Data.SBV.Maybe" "getJust_1")) scrut
 builtinAccessor BTEither nm i scrut
@@ -462,14 +471,25 @@ matchToPair scrut off (Match pat grhs locals) = do
                     desugar (p:rest) = InfixP p (mkName ":") (desugar rest)
                 in matchToPair scrut off (Match (desugar ps) grhs locals)
 
+    -- Parenthesized pattern: unwrap and recurse
+    ParensP p -> matchToPair scrut off (Match p grhs locals)
+
+    -- Literal pattern at top level: 0, 1, "hello", etc.
+    -- Treated as a wildcard with a guard: scrut .== literal
+    LitP lit -> do eq <- litToEq off scrut lit
+                   pure [CWild off (Just (maybe eq (\g -> sAndAll [eq, g]) mbG)) rhs | (mbG, rhs) <- rhss]
+
+    -- Variable pattern at top level: binds the scrutinee (only when used)
+    VarP v   -> let bindScrut e | v `Set.member` freeVars e = LetE [ValD (VarP v) (NormalB scrut) []] e
+                                | otherwise                 = e
+                in pure [CWild off (fmap bindScrut mbG) (bindScrut rhs) | (mbG, rhs) <- rhss]
+
     _ -> fail Unknown $ unlines [ "sCase/pCase: Unsupported pattern:"
                                 , "            Saw: " <> pprint pat
                                 , ""
-                                , "        Only constructors with variables (i.e., Cstr a b _ d)"
-                                , "        Empty record matches (i.e., Cstr{})"
-                                , "        And wildcards (i.e., _) for default"
-                                , "        are supported at the top level."
-                                , "        (Integer and string literals are supported in nested positions.)"
+                                , "        Supported patterns: constructors (Cstr a b _ d),"
+                                , "        empty records (Cstr{}), wildcards (_), variables,"
+                                , "        and integer/string literals."
                                 ]
 
 -- | Flatten a sub-pattern against a given accessor expression.
@@ -581,7 +601,7 @@ getCstrs Nothing   typ = let dropFieldNames (c, nts) = (c, map snd nts)
 
 -- | Validate wildcard placement: unguarded wildcard must be last.
 checkWildcard :: String -> Loc -> [Case] -> Q ()
-checkWildcard label loc = go
+checkWildcard label loc cs = do go cs; checkExhaustive cs
   where go []                         = pure ()
         go (CMatch{}          : rest) = go rest
         go (CWild _ Just{}  _ : rest) = go rest
@@ -590,6 +610,27 @@ checkWildcard label loc = go
                 []  -> pure ()
                 red -> fail o $ unlines $ (label ++ ": Wildcard makes the remaining matches redundant:")
                                          : ["        " ++ showCaseGen (Just loc) r | r <- red]
+
+        -- If all cases are wildcards (no CMatch), then we need an unguarded wildcard
+        -- as a catch-all. Otherwise, guarded-only wildcards on an infinite domain
+        -- (Integer, String, etc.) silently produce a free variable for unmatched cases.
+        checkExhaustive cases
+          | any isCMatch cases           = pure ()  -- Has constructor patterns; exhaustiveness checked elsewhere
+          | any isUnguardedWild cases    = pure ()  -- Has an unguarded catch-all
+          | otherwise                    = fail (headOffset cases) $ unlines
+              [ label ++ ": Non-exhaustive pattern match."
+              , "        All branches are guarded; add an unguarded wildcard or variable"
+              , "        as the last branch to ensure all cases are covered."
+              ]
+
+        isCMatch CMatch{} = True
+        isCMatch _        = False
+
+        isUnguardedWild (CWild _ Nothing _) = True
+        isUnguardedWild _                   = False
+
+        headOffset (c:_) = caseOffset c
+        headOffset []    = Unknown
 
 -- | Validate that each constructor exists and has the right arity.
 checkArities :: String -> String -> [(Name, [Type])] -> [Case] -> Q ()
@@ -653,6 +694,7 @@ sCase = QuasiQuoter
               iteChain wilds
             Just (typ, mbt) -> do
               mbFnName <- case mbt of
+                Just BTBool      -> pure Nothing
                 Just BTList      -> pure (Just (VarE (sbvName "Data.SBV.List"   "list")))
                 Just BTMaybe     -> pure (Just (VarE (sbvName "Data.SBV.Maybe"  "sCaseMaybe")))
                 Just BTEither    -> pure (Just (VarE (sbvName "Data.SBV.Either" "sCaseEither")))
@@ -678,12 +720,19 @@ sCase = QuasiQuoter
         uniq <- newName "u"
         let suffix = drop 2 (show uniq)
             fallback  = AppE (VarE 'sym) (LitE (StringL ("unmatched_sCase_" ++ typ ++ "_" ++ suffix)))
-            -- NB. Do NOT optimize the single-element case [(_, e)] to skip the guard.
-            -- The ite-chain may not cover all constructors (e.g., guarded matches with
-            -- a wildcard fallback), so the unmatched fallback must remain reachable.
+
             iteChain []              = pure fallback
-            iteChain ((t, e) : rest) = do r <- iteChain rest
-                                          pure $ foldl AppE (VarE 'ite) [t, e, r]
+            iteChain ((t, e) : rest)
+              -- Last branch with a trivially-true guard (e.g., unguarded wildcard, or the last
+              -- constructor in a complete match): use its rhs directly as the default,
+              -- avoiding an unreachable fallback variable.
+              | null rest, isTriviallyTrue t = pure e
+              | otherwise                    = do r <- iteChain rest
+                                                  pure $ foldl AppE (VarE 'ite) [t, e, r]
+
+            isTriviallyTrue (VarE nm) = nameBase nm == nameBase 'sTrue
+            isTriviallyTrue (ConE nm) = nameBase nm == "True"
+            isTriviallyTrue _         = False
         iteChain cases
 
     -- Make sure things are in good-shape and decide if we have guards
@@ -754,9 +803,10 @@ sCase = QuasiQuoter
         -- Otherwise, this will become an ite-chain.
         -- Tuples don't have a case analyzer function, so we always use the ite-chain path for them.
         -- Other built-in types (Maybe, Either, List) now have case analyzers and can use Strategy A.
+        -- Bool and Tuple don't have a case analyzer function, so we always use the ite-chain path.
         let hasGuards    = any isGuarded cases
-            isTuple      = case mbt of { Just (BTTuple _) -> True; _ -> False }
-            useIteChain  = hasGuards || isTuple
+            noAnalyzer   = case mbt of { Just BTBool -> True; Just (BTTuple _) -> True; _ -> False }
+            useIteChain  = hasGuards || noAnalyzer
 
         if not useIteChain
            then do defaultCase <- case [((e, mbg), c) | c@(CWild _ mbg e) <- cases] of
@@ -860,7 +910,18 @@ sCase = QuasiQuoter
 
                                            pure (grd, mkApp (close rhs))
 
-                   Right <$> mapM collect cases
+                   pairs <- mapM collect cases
+
+                   -- When we have a complete unguarded match (all constructors present, no
+                   -- guards, no wildcard), the last constructor's tester is redundant. Replace
+                   -- it with sTrue so buildCase can use it as a default and avoid generating
+                   -- an unreachable fallback variable.
+                   let hasWildcard = any (\case CWild{} -> True; _ -> False) cases
+                       optimize ps | not hasGuards, not hasWildcard, not (null ps)
+                                   = init ps ++ [(VarE 'sTrue, snd (last ps))]
+                                   | otherwise = ps
+
+                   Right <$> pure (optimize pairs)
 
 -- * pCase
 
@@ -1086,12 +1147,12 @@ countArgs _                                       = 0
 -- | Generate a symbolic equality guard for a literal pattern.
 -- @litToEq off arg lit@ produces the expression @arg .== litVal@.
 -- For integers, the literal is used directly (relying on @fromInteger@).
--- For strings, the literal is wrapped with @literal@ to convert @String@ to @SString@.
--- Only integer and string literals are supported; others produce a compile error.
+-- For characters and strings, the literal is wrapped with @literal@.
 litToEq :: Offset -> Exp -> Lit -> Q Exp
 litToEq _   arg (IntegerL n) = pure $ foldl1 AppE [VarE '(.==), arg, LitE (IntegerL n)]
+litToEq _   arg (CharL    c) = pure $ foldl1 AppE [VarE '(.==), arg, AppE (VarE 'literal) (LitE (CharL c))]
 litToEq _   arg (StringL  s) = pure $ foldl1 AppE [VarE '(.==), arg, AppE (VarE 'literal) (LitE (StringL s))]
 litToEq off _   lit          = fail off $ unlines
   [ "sCase/pCase: Unsupported literal in pattern: " ++ show lit
-  , "       Only integer and string literals are supported."
+  , "       Only integer, character, and string literals are supported."
   ]

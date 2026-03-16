@@ -1,0 +1,12 @@
+SCase77.hs:(12,18)-(16,13): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " x of\n\
+      \                   0 -> 0\n\
+      \                   1 -> 1\n\
+      \                   n -> ite (n .> 0) 100 (-100)\n\
+      \           "
+  ======>
+    ite
+      ((.==) x 0) 0
+      (ite ((.==) x 1) 1 (let n = x in ite (n .> 0) 100 (negate 100)))

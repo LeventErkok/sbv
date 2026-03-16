@@ -1,0 +1,9 @@
+SCase72.hs:(11,14)-(14,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " x of\n\
+      \               0 -> 0\n\
+      \               n -> n + 1\n\
+      \      "
+  ======>
+    ite ((.==) x 0) 0 (let n = x in n + 1)

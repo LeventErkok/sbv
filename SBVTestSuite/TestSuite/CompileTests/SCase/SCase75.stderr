@@ -1,0 +1,11 @@
+SCase75.hs:(11,14)-(15,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " s of\n\
+      \               \"hello\" -> 1\n\
+      \               \"world\" -> 2\n\
+      \               _       -> 0\n\
+      \      "
+  ======>
+    ite
+      ((.==) s (literal "hello")) 1 (ite ((.==) s (literal "world")) 2 0)

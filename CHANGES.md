@@ -3,51 +3,34 @@
 
 ### Version 13.6.5, Not yet released
 
-  * [BACKWARDS COMPATIBILITY] The `sCase` and `pCase` quasi-quoters no longer require a type prefix. The type is now
-    inferred automatically from the constructor names in the patterns. Old syntax:
-    `[sCase|Expr e of ...]`. New syntax: `[sCase| e of ...]`.
+  * [BACKWARDS COMPATIBILITY] Major improvements to the `sCase` and `pCase` quasi-quoters:
+    - Type prefix is no longer required; the type is inferred automatically
+      from the patterns. Old syntax: `[sCase|Expr e of ...]`. New syntax: `[sCase| e of ...]`.
 
-  * The `sCase` and `pCase` quasi-quoters now support wildcard-only patterns, where no
-    constructor patterns are needed. An unguarded wildcard generates the rhs directly,
-    while guarded wildcards produce an `ite`-chain (for `sCase`) or proof obligations
-    (for `pCase`):
+    - Wildcard-only patterns are now supported. An unguarded wildcard generates the rhs directly,
+      while guarded wildcards produce an `ite`-chain (for `sCase`) or proof obligations (for `pCase`).
 
-    ```haskell
-    [sCase| x of
-       _ | x .> 0 -> x
-         | sTrue  -> -x
-    |]
-    ```
+    - Built-in types are now supported: `Maybe`, `Either`, `List`, and `Tuple2` through `Tuple8`.
+      Nested patterns across built-in types are also supported (e.g., `Just (x:_)`, `Left (a, b)`).
+      For single-constructor types, the generated code omits the redundant constructor tester guard.
 
-  * The `sCase` and `pCase` quasi-quoters now support built-in types: `Maybe`, `Either`,
-    `List`, and `Tuple2` through `Tuple8`. Previously, these quoters only worked with
-    user-defined ADTs declared via `mkSymbolicADT`. Usage:
+    - Primitive types are now supported: `Bool`, `Integer`, `Char`, and `String`. Patterns can use
+      `True`/`False`, integer literals, character literals, string literals, variable bindings,
+      and wildcards.
 
-    ```haskell
-    [sCase| m of
-       Nothing -> 0
-       Just x  -> x + 1
-    |]
+       ```haskell
+       [sCase| m of         [sCase| x of      [sCase| xs of                [sCase| c of
+          Nothing -> 0         0 -> sTrue        []      -> 0                 'a' -> 1
+          Just x  -> x + 1     _ -> sFalse       x : xs' -> x + f xs'         'b' -> 2
+       |]                   |]                |]                               _   -> 0
+                                                                           |]
 
-    [sCase| xs of
-       []      -> 0
-       x : xs' -> x + f xs'
-    |]
-
-    [sCase| p of
-       (a, b) -> a + b
-    |]
-
-    [sCase| e of
-       Left x  -> x
-       Right _ -> 0
-    |]
-    ```
-
-    Nested patterns across built-in types are also supported (e.g., `Just (x:_)`,
-    `Left (a, b)`). The `pCase` quasi-quoter supports the same types for proof case-splits.
-    For single-constructor types (newtypes or data types with exactly one constructor),
-    the generated code omits the redundant constructor tester guard.
+       [sCase| x of                            [sCase| x of
+          _ | x .> 0 -> x                         0         -> y
+            | sTrue  -> -x                        _ | x .> y -> x
+       |]                                           | sTrue  -> y
+                                               |]
+       ```
 
   * Improved documentation for `lambdaArray`, explaining the model-theoretic distinction
     between the pure array theory (`select`/`store`/`const`) and the richer setting where

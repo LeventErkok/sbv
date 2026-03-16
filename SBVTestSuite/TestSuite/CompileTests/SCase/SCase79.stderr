@@ -1,0 +1,16 @@
+SCase79.hs:(11,16)-(15,10): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " b of\n\
+      \                 True  | x .> 0 -> x\n\
+      \                 True           -> 0\n\
+      \                 False          -> -x\n\
+      \        "
+  ======>
+    ite
+      ((.&&) b (x .> 0)) x
+      (ite
+         b 0
+         (ite
+            (sNot b) (negate x)
+            (sym "unmatched_sCase_Bool_6989586621679034476")))

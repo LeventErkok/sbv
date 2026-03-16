@@ -1,0 +1,16 @@
+SCase80.hs:11:14: error: [GHC-39584]
+    " sCase: Pattern match(es) are non-exhaustive.
+        Not matched     : False
+        Patterns of type: Bool
+        Must match each : True, False
+
+      You can use a '_' to match multiple cases.
+
+    " In the quasi-quotation:
+        [sCase| x of
+               True -> 1
+      |]
+   |
+11 | t x = [sCase| x of
+   |              ^^^^^...
+
