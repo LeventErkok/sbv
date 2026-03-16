@@ -48,7 +48,7 @@ import Data.Time (NominalDiffTime)
 import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
-import Data.IORef (readIORef, writeIORef)
+import Data.IORef (readIORef, writeIORef, modifyIORef')
 import qualified Data.Set as Set
 
 import Type.Reflection (typeRep)
@@ -244,7 +244,9 @@ checkNewMeasures :: State -> TPState -> IO ()
 checkNewMeasures st tpSt = do
    checks   <- readIORef (rMeasureChecks st)
    verified <- readIORef (measuresVerified tpSt)
-   let new = [(n, c) | (n, c) <- checks, n `Set.notMember` verified]
+   let allNames = Set.fromList (map fst checks)
+       new      = [(n, c) | (n, c) <- checks, n `Set.notMember` verified]
+   modifyIORef' (measuresEncountered tpSt) (Set.union allNames)
    mapM_ snd new
    writeIORef (measuresVerified tpSt) (verified `Set.union` Set.fromList (map fst new))
 

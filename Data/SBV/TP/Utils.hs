@@ -78,10 +78,11 @@ data TPStats = TPStats { noOfCheckSats :: Int
                        }
 
 -- | Extra state we carry in a TP context
-data TPState = TPState { stats            :: IORef TPStats
-                       , proofCache       :: IORef (Map (String, TypeRep) ProofObj)
-                       , config           :: IORef SMTConfig
-                       , measuresVerified :: IORef (Set String)
+data TPState = TPState { stats                :: IORef TPStats
+                       , proofCache           :: IORef (Map (String, TypeRep) ProofObj)
+                       , config               :: IORef SMTConfig
+                       , measuresVerified     :: IORef (Set String)
+                       , measuresEncountered  :: IORef (Set String)
                        }
 
 -- | Monad for running TP proofs in.
@@ -125,12 +126,20 @@ runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
    rStats    <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0, qcElapsed = 0 }
    rCache    <- newIORef Map.empty
    rCfg      <- newIORef cfg
-   rMeasures <- newIORef Set.empty
-   (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = rCfg, stats = rStats, proofCache = rCache, measuresVerified = rMeasures}
+   rMeasures    <- newIORef Set.empty
+   rEncountered <- newIORef Set.empty
+   (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = rCfg, stats = rStats, proofCache = rCache, measuresVerified = rMeasures, measuresEncountered = rEncountered}
 
    -- Print verified measures
-   verified <- readIORef rMeasures
+   verified    <- readIORef rMeasures
+   encountered <- readIORef rEncountered
    unless (Set.null verified) $ printMeasures cfg (Set.toAscList verified)
+
+   -- Belt-and-suspenders: make sure all encountered measures have been verified
+   let missed = encountered `Set.difference` verified
+   unless (Set.null missed) $
+     error $ "SBV.runTP: Internal error: The following functions have termination measures that were encountered but not verified: "
+           ++ intercalate ", " (Set.toAscList missed)
 
    case mbT of
      Nothing -> pure ()
@@ -176,16 +185,8 @@ message SMTConfig{tpOptions = TPOptions{quiet}} s
 
 -- | Print the list of functions whose termination measures have been verified.
 printMeasures :: SMTConfig -> [String] -> IO ()
-printMeasures cfg names = message cfg $ unlines $ "Termination measures:" : map fmt ms
-  where ms      = [case break (== '@') m of
-                     (nm, '@':'(':tp) | not (null tp) -> (strip nm, init tp)
-                     _                                -> (strip m,  "")
-                  | m <- sort names
-                  ]
-        strip   = dropWhileEnd (== ' ')
-        maxNm   = maximum [length nm | (nm, _) <- ms]
-        fmt (nm, "") = "  [Terminates] " ++ nm
-        fmt (nm, tp) = "  [Terminates] " ++ nm ++ replicate (maxNm - length nm) ' ' ++ " :: " ++ tp
+printMeasures cfg names = message cfg $ "Functions proven terminating: " ++ intercalate ", " (sort (map strip names)) ++ "\n"
+  where strip = dropWhileEnd (== ' ') . takeWhile (/= '@')
 
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
 startTP :: SMTConfig -> Bool -> String -> Int -> TPProofContext -> IO Int
