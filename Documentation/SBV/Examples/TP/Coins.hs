@@ -90,6 +90,7 @@ evalPocket mp = [sCase| mp of
 --     Step: 1.5.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: mkChange
 -- [Proven] mkChangeCorrect :: Ɐn ∷ Integer → Bool
 correctness :: TP (Proof (Forall "n" Integer -> SBool))
 correctness =

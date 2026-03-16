@@ -53,6 +53,7 @@ fibTail = fib 1 1
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: fib, fibonacci
 -- [Proven] fibCorrect :: Ɐn ∷ Integer → Bool
 correctness :: IO (Proof (Forall "n" Integer -> SBool))
 correctness = runTP $ do

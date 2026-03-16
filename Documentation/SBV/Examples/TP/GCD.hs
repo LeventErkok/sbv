@@ -66,6 +66,7 @@ gcd a b = nGCD (abs a) (abs b)
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: nonNegative                      Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] nonNegative :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdNonNegative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdNonNegative = do
@@ -99,6 +100,7 @@ gcdNonNegative = do
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: gcdZero                          Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] gcdZero :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdZero :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdZero = do
@@ -132,6 +134,7 @@ gcdZero = do
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] commutative :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 commutative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 commutative = do
@@ -160,6 +163,7 @@ commutative = do
 -- ==== __Proof__
 -- >>> runTP negGCD
 -- Lemma: negGCD                           Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] negGCD :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 negGCD :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b .== g .&& g .== gcd a (-b)) []
@@ -169,6 +173,7 @@ negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b
 -- ==== __Proof__
 -- >>> runTP zeroGCD
 -- Lemma: negGCD                           Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] negGCD :: Ɐa ∷ Integer → Bool
 zeroGCD :: TP (Proof (Forall "a" Integer -> SBool))
 zeroGCD = lemma "negGCD" (\(Forall a) -> gcd a 0 .== gcd 0 a .&& gcd 0 a .== abs a .&& gcd 0 0 .== 0) []
@@ -406,6 +411,7 @@ dvdSum2 =
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: gcdDivides                       Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] gcdDivides :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdDivides :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdDivides = do
@@ -478,6 +484,7 @@ gcdDivides = do
 --     Step: 1.2.4                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] gcdMaximal :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐx ∷ Integer → Bool
 gcdMaximal :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
 gcdMaximal = do
@@ -557,6 +564,7 @@ gcdMaximal = do
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] gcdCorrect :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdCorrect :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdCorrect = do
@@ -596,6 +604,7 @@ gcdCorrect = do
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] gcdLargest :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐx ∷ Integer → Bool
 gcdLargest :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
 gcdLargest = do
@@ -633,6 +642,7 @@ gcdLargest = do
 --   Step: 6                               Q.E.D.
 --   Step: 7                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] gcdAdd :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdAdd :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdAdd = do
@@ -703,6 +713,7 @@ gcdAdd = do
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] gcdEvenEven :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdEvenEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdEvenEven = do
@@ -766,6 +777,7 @@ gcdEvenEven = do
 --   Step: 7                               Q.E.D.
 --   Step: 8                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: nGCD
 -- [Proven] gcdOddEven :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdOddEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdOddEven = do

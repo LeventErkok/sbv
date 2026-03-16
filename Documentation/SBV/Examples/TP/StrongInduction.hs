@@ -49,6 +49,7 @@ import Data.SBV.TP
 --     Step: 1.3.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: seq
 -- [Proven] oddSequence1 :: Ɐn ∷ Integer → Bool
 oddSequence1 :: IO (Proof (Forall "n" Integer -> SBool))
 oddSequence1 = runTP $ do
@@ -97,6 +98,7 @@ oddSequence1 = runTP $ do
 --     Step: 1.3.2                                   Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
+-- Functions proven terminating: seq
 -- [Proven] oddSequence2 :: Ɐn ∷ Integer → Bool
 oddSequence2 :: IO (Proof (Forall "n" Integer -> SBool))
 oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
@@ -279,6 +281,7 @@ won'tProve4 = runTP $ do
 --     Step: 1.3.6 (simplify)              Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: halvingSum
 -- [Proven] sumHalves :: Ɐxs ∷ [Integer] → Bool
 sumHalves :: IO (Proof (Forall "xs" [Integer] -> SBool))
 sumHalves = runTP $ do

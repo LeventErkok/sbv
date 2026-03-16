@@ -51,6 +51,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --
 -- >>> runTP $ nonDecrTail @Integer
 -- Lemma: nonDecrTail                      Q.E.D.
+-- Functions proven terminating: nonDecreasing
 -- [Proven] nonDecrTail :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 nonDecrTail :: forall a. (OrdSymbolic (SBV a), SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 nonDecrTail = lemma "nonDecrTail"
@@ -61,6 +62,7 @@ nonDecrTail = lemma "nonDecrTail"
 --
 -- >>> runTP $ nonDecrIns @Integer
 -- Lemma: nonDecrInsert                    Q.E.D.
+-- Functions proven terminating: nonDecreasing
 -- [Proven] nonDecrInsert :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 nonDecrIns :: forall a. (OrdSymbolic (SBV a), SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 nonDecrIns = lemma "nonDecrInsert"
@@ -103,6 +105,7 @@ sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e 
 -- Lemma: sublistCorrect
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: count
 -- [Proven] sublistCorrect :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Ɐx ∷ Integer → Bool
 sublistCorrect :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "x" a -> SBool))
 sublistCorrect = do
@@ -154,6 +157,7 @@ sublistCorrect = do
 -- Lemma: sublistElem
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: count
 -- [Proven] sublistElem :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 sublistElem :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 sublistElem = do
@@ -171,6 +175,7 @@ sublistElem = do
 --
 -- >>> runTP $ sublistTail @Integer
 -- Lemma: sublistTail                      Q.E.D.
+-- Functions proven terminating: count
 -- [Proven] sublistTail :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 sublistTail :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 sublistTail =
@@ -182,6 +187,7 @@ sublistTail =
 --
 -- >>> runTP $ sublistIfPerm @Integer
 -- Lemma: sublistIfPerm                    Q.E.D.
+-- Functions proven terminating: count
 -- [Proven] sublistIfPerm :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 sublistIfPerm :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 sublistIfPerm = lemma "sublistIfPerm"

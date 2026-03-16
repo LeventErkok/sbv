@@ -1140,6 +1140,7 @@ destutter = smtFunction "destutter"
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: destutterIdempotent              Q.E.D.
+-- Functions proven terminating: destutter, noAdd
 -- [Proven] destutterIdempotent :: Ɐxs ∷ [Integer] → Bool
 destutterIdempotent :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 destutterIdempotent = do
@@ -1319,6 +1320,7 @@ disjoint = smtFunction "disjoint"
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: disjoint
 -- [Proven] disjointDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Bool
 disjointDiff :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> SBool))
 disjointDiff = induct "disjointDiff"
@@ -1736,6 +1738,7 @@ interleave = smtFunction "interleave"
 --     Step: 1.2.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: interleave
 -- [Proven] interleaveLen :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 interleaveLen :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 interleaveLen = sInduct "interleaveLen"
@@ -1790,6 +1793,7 @@ uninterleaveGen = smtFunction "uninterleave"
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: interleave, uninterleave
 -- [Proven] interleaveRoundTrip :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 interleaveRoundTrip :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 interleaveRoundTrip = do
@@ -1843,6 +1847,7 @@ interleaveRoundTrip = do
 --   Step: 3                               Q.E.D.
 --   Step: 4 (simplify)                    Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: count
 -- [Proven] countAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Ɐe ∷ Integer → Bool
 countAppend :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "e" a -> SBool))
 countAppend =
@@ -1873,6 +1878,7 @@ countAppend =
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: count
 -- [Proven] takeDropCount :: Ɐxs ∷ [Integer] → Ɐn ∷ Integer → Ɐe ∷ Integer → Bool
 takeDropCount :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "n" Integer -> Forall "e" a -> SBool))
 takeDropCount = do
@@ -1900,6 +1906,7 @@ takeDropCount = do
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: count
 -- [Proven] countNonNeg :: Ɐxs ∷ [Integer] → Ɐe ∷ Integer → Bool
 countNonNeg :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "e" a -> SBool))
 countNonNeg =
@@ -1937,6 +1944,7 @@ countNonNeg =
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: count
 -- [Proven] countElem :: Ɐxs ∷ [Integer] → Ɐe ∷ Integer → Bool
 countElem :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "xs" [a] -> Forall "e" a -> SBool))
 countElem = do
@@ -1968,6 +1976,7 @@ countElem = do
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: count
 -- [Proven] elemCount :: Ɐxs ∷ [Integer] → Ɐe ∷ Integer → Bool
 elemCount :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "xs" [a] -> Forall "e" a -> SBool))
 elemCount =

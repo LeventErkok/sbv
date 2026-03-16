@@ -133,6 +133,7 @@ mergeSort = smtFunction "mergeSort"
 --     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: mergeSortIsCorrect                                   Q.E.D.
+-- Functions proven terminating: count, merge, mergeSort, nonDecreasing
 -- [Proven] mergeSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (OrdSymbolic (SBV a), SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
 correctness = runTPWith (tpRibbon 60 z3) $ do

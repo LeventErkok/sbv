@@ -86,6 +86,7 @@ rev = smtFunction "rev"
 --     Step: 1.3.15                        Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: rev
 -- [Proven] revCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 correctness = do

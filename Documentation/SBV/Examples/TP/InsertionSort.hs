@@ -119,6 +119,7 @@ isPermutation = smtFunction "isPermutation"
 --   Step: 5                                    Q.E.D.
 --   Result:                                    Q.E.D.
 -- Lemma: insertionSortIsCorrect                Q.E.D.
+-- Functions proven terminating: insert, insertionSort, isPermutation, nonDecreasing, removeFirst
 -- [Proven] insertionSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (OrdSymbolic (SBV a), Eq a, SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
 correctness = runTPWith (tpRibbon 45 cvc5) $ do

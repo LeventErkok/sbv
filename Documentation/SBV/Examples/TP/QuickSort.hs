@@ -269,6 +269,7 @@ partition = smtFunction "partition"
 --     │  │  └╴sublistTail
 --     │  └╴sublistIfPerm
 --     └╴nonDecreasingMerge
+-- Functions proven terminating: count, lge, llt, nonDecreasing, partition, quickSort
 -- [Proven] quickSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (Eq a, OrdSymbolic (SBV a), SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
 correctness = runTPWith (tpRibbon 60 z3) $ do

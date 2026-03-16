@@ -140,6 +140,7 @@ kadaneHelper = smtFunction "kadaneHelper"
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: kadaneHelper, mss, mssBegin
 -- [Proven] correctness :: Ɐxs ∷ [Integer] → Bool
 correctness :: TP (Proof (Forall "xs" [Integer] -> SBool))
 correctness = do

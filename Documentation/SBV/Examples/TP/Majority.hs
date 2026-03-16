@@ -92,6 +92,7 @@ howMany = TP.count
 -- Lemma: uniqueness
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: count, majority
 -- ([Proven] majority :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] ifExistsFound :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] ifNoMajority :: Ɐc ∷ Integer → Ɐxs ∷ [Integer] → Bool,[Proven] uniqueness :: Ɐm1 ∷ Integer → Ɐm2 ∷ Integer → Ɐxs ∷ [Integer] → Bool)
 correctness :: forall a. SymVal a
             => IO ( Proof (Forall "c" a -> Forall "xs" [a] -> SBool)                    -- If majority exists, the calculated value is majority

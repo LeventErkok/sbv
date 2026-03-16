@@ -149,6 +149,7 @@ sumSquareProof = do
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sumCubed
 -- [Proven] nicomachus :: Ɐn ∷ Integer → Bool
 nicomachus :: TP (Proof (Forall "n" Integer -> SBool))
 nicomachus = do

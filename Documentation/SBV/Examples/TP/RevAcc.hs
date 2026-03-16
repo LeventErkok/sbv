@@ -59,6 +59,7 @@ rev = revAcc []
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: revCorrect                       Q.E.D.
+-- Functions proven terminating: revAcc
 -- [Proven] revCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. SymVal a => IO (Proof (Forall "xs" [a] -> SBool))
 correctness = runTP $ do
