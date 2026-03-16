@@ -43,6 +43,7 @@ import Data.SBV.Core.Model (qSaturateSavingObservables)
 import Data.SBV.Core.Data  (SBV(..), SVal(..))
 import qualified Data.SBV.Core.Symbolic as S (sObserve)
 
+import Data.SBV.Core.Symbolic (rSkipMeasureChecks)
 import Data.SBV.Core.Operations (svEqual)
 import Data.SBV.Control hiding (getProof, (|->))
 
@@ -53,6 +54,7 @@ import qualified Data.SBV.List as SL
 
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
+import Data.IORef (writeIORef)
 
 import Data.Char  (isSpace)
 import Data.List  (intercalate, isPrefixOf, isSuffixOf)
@@ -176,6 +178,11 @@ class Calc a where
 
          -- Collect all subterms and saturate them
          mapM_ qSaturateSavingObservables $ getCalcStrategySaturatables strategy
+
+         -- Run measure checks for any newly encountered recursive functions
+         st <- symbolicEnv
+         liftIO $ do writeIORef (rSkipMeasureChecks st) True
+                     checkNewMeasures st tpSt
 
          query $ proveProofTree cfg tpSt nm (result, calcGoal) calcIntros calcProofTree u calcQCInstance
 
@@ -588,6 +595,11 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
                                  } <- getStrategy
 
       mapM_ qSaturateSavingObservables $ getInductionStrategySaturatables strategy
+
+      -- Run measure checks for any newly encountered recursive functions
+      st <- symbolicEnv
+      liftIO $ do writeIORef (rSkipMeasureChecks st) True
+                  checkNewMeasures st tpSt
 
       query $ do
 

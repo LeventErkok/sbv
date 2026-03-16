@@ -26,7 +26,7 @@ module Data.SBV.TP.Kernel (
        , inductiveLemma, inductiveLemmaWith
        , internalAxiom
        , TPProofContext (..), smtProofStep, HasInductionSchema(..)
-       , tpMergeCfg
+       , tpMergeCfg, checkNewMeasures
        ) where
 
 import Control.Monad.Trans  (liftIO, MonadIO)
@@ -213,11 +213,7 @@ lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
                                        mapM_ (constrain . getObjProof) by
 
                                        -- Run measure checks for any newly encountered recursive functions
-                                       liftIO $ do checks   <- readIORef (rMeasureChecks st)
-                                                   verified <- readIORef (measuresVerified tpSt)
-                                                   let new = [(n, c) | (n, c) <- checks, n `Set.notMember` verified]
-                                                   mapM_ snd new
-                                                   writeIORef (measuresVerified tpSt) (verified `Set.union` Set.fromList (map fst new))
+                                       liftIO $ checkNewMeasures st tpSt
 
                                        query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp [] (good cfg mbStartTime u)
 
@@ -241,6 +237,16 @@ inductiveLemma nm f by = do cfg <- getTPConfig
 -- | Prove a given statement, using the induction schema for the proposition. Using the default solver.
 inductiveLemmaWith :: Inductive a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
 inductiveLemmaWith cfg nm f by = lemmaWith cfg nm f (inductionSchema f : by)
+
+-- | Check any newly encountered recursive function measures. This reads deferred checks
+-- from 'rMeasureChecks', runs those not yet verified, and records them as verified.
+checkNewMeasures :: State -> TPState -> IO ()
+checkNewMeasures st tpSt = do
+   checks   <- readIORef (rMeasureChecks st)
+   verified <- readIORef (measuresVerified tpSt)
+   let new = [(n, c) | (n, c) <- checks, n `Set.notMember` verified]
+   mapM_ snd new
+   writeIORef (measuresVerified tpSt) (verified `Set.union` Set.fromList (map fst new))
 
 -- | Capture the general flow of a proof-step. Note that this is the only point where we call the backend solver
 -- in a TP proof.
