@@ -485,6 +485,7 @@ modMulLeft = do
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: powerMod                         Q.E.D.
+-- Functions proven terminating: power
 -- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerMod :: Ɐb ∷ Integer → Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 powerMod :: TP (Proof (Forall "b" Integer -> Forall "n" Integer -> Forall "m" Integer -> SBool))
 powerMod = do
@@ -521,6 +522,7 @@ powerMod = do
 --   Step: 1 (unfold power)                Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: power
 -- [Proven] onePower :: Ɐn ∷ Integer → Bool
 onePower :: TP (Proof (Forall "n" Integer -> SBool))
 onePower = induct "onePower"
@@ -627,6 +629,7 @@ onePower = induct "onePower"
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: power
 -- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerOf27 :: Ɐn ∷ Integer → Bool
 powerOf27 :: TP (Proof (Forall "n" Integer -> SBool))
 powerOf27 = do
@@ -741,6 +744,7 @@ powerOf27 = do
 -- Lemma: powerOfThreeMod13VarDivisor
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: power
 -- [Proven. Cached: modAddLeft, modAddMultiple, modAddRight, modMulRight] powerOfThreeMod13VarDivisor :: Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 powerOfThreeMod13VarDivisor :: TP (Proof (Forall "n" Integer -> Forall "m" Integer -> SBool))
 powerOfThreeMod13VarDivisor = do

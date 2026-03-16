@@ -249,6 +249,7 @@ letHelper = lemma "letHelper"
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: Data.SBV.List.lookup
 -- [Proven] lookupSwap :: Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
 lookupSwap :: TP (Proof (Forall "k" String -> Forall "b1" (String, Integer)
                       -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
@@ -332,6 +333,7 @@ lookupSwapPfx = do
 --
 -- >>> runTP lookupShadow
 -- Lemma: lookupShadow                     Q.E.D.
+-- Functions proven terminating: Data.SBV.List.lookup
 -- [Proven] lookupShadow :: Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
 lookupShadow :: TP (Proof (Forall "k" String -> Forall "b1" (String, Integer)
                         -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
@@ -359,6 +361,7 @@ lookupShadow = lemma "lookupShadow"
 --     Step: 1.2.5                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: Data.SBV.List.lookup
 -- [Proven] lookupShadowPfx :: Ɐpfx ∷ [([Char], Integer)] → Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
 lookupShadowPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1" (String, Integer)
                            -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))

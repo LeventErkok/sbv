@@ -134,6 +134,7 @@ appendAssoc =
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.inits
 -- [Proven] initsLength :: Ɐxs ∷ [Integer] → Bool
 initsLength :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 initsLength =
@@ -155,6 +156,7 @@ initsLength =
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.tails
 -- [Proven] tailsLength :: Ɐxs ∷ [Integer] → Bool
 tailsLength :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 tailsLength =
@@ -250,6 +252,7 @@ tailsAppend = do
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.reverse
 -- [Proven] revLen :: Ɐxs ∷ [Integer] → Bool
 revLen :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 revLen = induct "revLen"
@@ -273,6 +276,7 @@ revLen = induct "revLen"
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.reverse
 -- [Proven] revApp :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 revApp :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 revApp = induct "revApp"
@@ -290,6 +294,7 @@ revApp = induct "revApp"
 --
 -- >>> runTP $ revCons @Integer
 -- Lemma: revCons                          Q.E.D.
+-- Functions proven terminating: sbv.reverse
 -- [Proven] revCons :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 revCons :: forall a. SymVal a => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 revCons = lemma "revCons"
@@ -308,6 +313,7 @@ revCons = lemma "revCons"
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: revSnoc                          Q.E.D.
+-- Functions proven terminating: sbv.reverse
 -- [Proven] revSnoc :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 revSnoc :: forall a. SymVal a => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 revSnoc = do
@@ -335,6 +341,7 @@ revSnoc = do
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.reverse
 -- [Proven] revRev :: Ɐxs ∷ [Integer] → Bool
 revRev :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 revRev = do
@@ -476,6 +483,7 @@ lenAppend2 = lemma "lenAppend2"
 --     Step: 1.2.4                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.replicate
 -- [Proven] replicateLength :: Ɐk ∷ Integer → Ɐx ∷ Integer → Bool
 replicateLength :: forall a. SymVal a => TP (Proof (Forall "k" Integer -> Forall "x" a -> SBool))
 replicateLength = induct "replicateLength"
@@ -524,6 +532,7 @@ allAny = induct "allAny"
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.map
 -- [Proven] mapEquiv :: Ɐxs ∷ [Integer] → Bool
 mapEquiv :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
 mapEquiv f g = do
@@ -551,6 +560,7 @@ mapEquiv f g = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.map
 -- [Proven] mapAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 mapAppend :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 mapAppend f =
@@ -585,6 +595,7 @@ mapAppend f =
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.map, sbv.reverse
 -- [Proven] mapReverse :: Ɐxs ∷ [Integer] → Bool
 mapReverse :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
 mapReverse f = do
@@ -614,6 +625,7 @@ mapReverse f = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.map
 -- [Proven] mapCompose :: Ɐxs ∷ [Integer] → Bool
 mapCompose :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> (SBV b -> SBV c) -> TP (Proof (Forall "xs" [a] -> SBool))
 mapCompose f g =
@@ -1028,6 +1040,7 @@ bookKeeping a f = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.filter
 -- [Proven] filterAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 filterAppend :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 filterAppend p =
@@ -1086,6 +1099,7 @@ filterConcat p = do
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.dropWhile, sbv.takeWhile
 -- [Proven] takeDropWhile :: Ɐxs ∷ [Integer] → Bool
 takeDropWhile :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
 takeDropWhile f =
@@ -1211,6 +1225,7 @@ destutterIdempotent = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.diff
 -- [Proven] appendDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Ɐcs ∷ [Integer] → Bool
 appendDiff :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
 appendDiff = induct "appendDiff"
@@ -1232,6 +1247,7 @@ appendDiff = induct "appendDiff"
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.diff
 -- [Proven] diffAppend :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Ɐcs ∷ [Integer] → Bool
 diffAppend :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
 diffAppend = induct "diffAppend"
@@ -1270,6 +1286,7 @@ diffAppend = induct "diffAppend"
 --       Step: 1.2.2.Completeness          Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.diff
 -- [Proven] diffDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Ɐcs ∷ [Integer] → Bool
 diffDiff :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
 diffDiff = induct "diffDiff"
@@ -1342,6 +1359,7 @@ disjointDiff = induct "disjointDiff"
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.filter, sbv.partition
 -- [Proven] partition1 :: Ɐxs ∷ [Integer] → Bool
 partition1 :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
 partition1 f =
@@ -1368,6 +1386,7 @@ partition1 f =
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.filter, sbv.partition
 -- [Proven] partition2 :: Ɐxs ∷ [Integer] → Bool
 partition2 :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
 partition2 f =
@@ -1441,6 +1460,7 @@ take_cons = lemma "take_cons"
 -- Lemma: take_map
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.map
 -- [Proven] take_map :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_map f = do
@@ -1504,6 +1524,7 @@ drop_cons = lemma "drop_cons"
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.map
 -- [Proven] drop_map :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_map f = do
@@ -1612,6 +1633,7 @@ drop_append = lemmaWith cvc5 "drop_append"
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.map, sbv.zip
 -- [Proven] map_fst_zip :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_fst_zip :: forall a b. (SymVal a, SymVal b) => TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_fst_zip = induct "map_fst_zip"
@@ -1635,6 +1657,7 @@ map_fst_zip = induct "map_fst_zip"
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.map, sbv.zip
 -- [Proven] map_snd_zip :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_snd_zip :: forall a b. (SymVal a, SymVal b) => TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_snd_zip = induct "map_snd_zip"
@@ -1660,6 +1683,7 @@ map_snd_zip = induct "map_snd_zip"
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.map, sbv.zip
 -- [Proven] map_fst_zip_take :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_fst_zip_take :: forall a b. (SymVal a, SymVal b) => TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_fst_zip_take = do
@@ -1689,6 +1713,7 @@ map_fst_zip_take = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.map, sbv.zip
 -- [Proven] map_snd_zip_take :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_snd_zip_take :: forall a b. (SymVal a, SymVal b) => TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
 map_snd_zip_take = do
@@ -1793,7 +1818,7 @@ uninterleaveGen = smtFunction "uninterleave"
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven terminating: interleave, uninterleave
+-- Functions proven terminating: interleave, sbv.reverse, uninterleave
 -- [Proven] interleaveRoundTrip :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 interleaveRoundTrip :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 interleaveRoundTrip = do

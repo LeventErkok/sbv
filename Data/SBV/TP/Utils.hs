@@ -44,7 +44,7 @@ import Data.Proxy
 import Data.Typeable (typeOf, TypeRep)
 
 import Data.Char (isSpace)
-import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf, nubBy, partition, sort, dropWhileEnd)
+import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf, nub, nubBy, partition, sort, dropWhileEnd)
 import Data.Int  (Int64)
 
 import Data.SBV.Utils.Lib (unQuote)
@@ -185,7 +185,7 @@ message SMTConfig{tpOptions = TPOptions{quiet}} s
 
 -- | Print the list of functions whose termination measures have been verified.
 printMeasures :: SMTConfig -> [String] -> IO ()
-printMeasures cfg names = message cfg $ "Functions proven terminating: " ++ intercalate ", " (sort (map strip names)) ++ "\n"
+printMeasures cfg names = message cfg $ "Functions proven terminating: " ++ intercalate ", " (nub (sort (map strip names))) ++ "\n"
   where strip = dropWhileEnd (== ' ') . takeWhile (/= '@')
 
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
