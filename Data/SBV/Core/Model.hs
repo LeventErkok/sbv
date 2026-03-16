@@ -1386,17 +1386,33 @@ guessMeasures :: [(Quantifier, SV)] -> [(String, MeasureEval)]
 guessMeasures params = map (\(d, f) -> (d, MeasureEval f)) (singles ++ summed)
   where
     singles :: [(String, [SVal] -> SInteger)]
-    singles = mapMaybe mkSingle (zip [0..] params)
+    singles = concatMap mkCandidates (zip [0..] params)
 
-    mkSingle :: (Int, (Quantifier, SV)) -> Maybe (String, [SVal] -> SInteger)
-    mkSingle (i, (_, sv)) = case kindOf sv of
-      KList elemK -> Just ("length arg" ++ show (i+1), \svs ->
+    mkCandidates :: (Int, (Quantifier, SV)) -> [(String, [SVal] -> SInteger)]
+    mkCandidates (i, (_, sv)) = case kindOf sv of
+      KList elemK -> [("length arg" ++ show (i+1), \svs ->
                        let listSVal = svs !! i
                        in SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
                             s <- sbvToSV st (SBV listSVal)
-                            newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]))
-      KUnbounded  -> Just ("abs arg" ++ show (i+1), \svs -> abs (SBV (svs !! i)))
-      _           -> Nothing
+                            newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]))]
+      KUnbounded  -> [("abs arg" ++ show (i+1), \svs -> abs (SBV (svs !! i)))]
+      KTuple ks   -> concatMap (mkTupleComponent i (length ks)) (zip [1..] ks)
+      _           -> []
+
+    mkTupleComponent :: Int -> Int -> (Int, Kind) -> [(String, [SVal] -> SInteger)]
+    mkTupleComponent argIdx nFields (compIdx, compKind) = case compKind of
+      KList elemK -> [("length arg" ++ show (argIdx+1) ++ "._" ++ show compIdx, \svs ->
+                       let comp = SBV $ SVal compKind $ Right $ cache $ \st -> do
+                                    tupSV <- sbvToSV st (SBV (svs !! argIdx))
+                                    newExpr st compKind (SBVApp (TupleAccess compIdx nFields) [tupSV])
+                       in SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
+                            s <- sbvToSV st comp
+                            newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]))]
+      KUnbounded  -> [("abs arg" ++ show (argIdx+1) ++ "._" ++ show compIdx, \svs ->
+                       abs $ SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
+                         tupSV <- sbvToSV st (SBV (svs !! argIdx))
+                         newExpr st KUnbounded (SBVApp (TupleAccess compIdx nFields) [tupSV]))]
+      _           -> []
 
     summed | length singles > 1 = [( intercalate " + " (map fst singles)
                                    , \svs -> sum [f svs | (_, f) <- singles]

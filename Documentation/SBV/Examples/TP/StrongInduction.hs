@@ -281,7 +281,7 @@ won'tProve4 = runTP $ do
 --     Step: 1.3.6 (simplify)              Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven terminating: halvingSum
+-- Functions proven terminating: halvingSum, sbv.foldr
 -- [Proven] sumHalves :: Ɐxs ∷ [Integer] → Bool
 sumHalves :: IO (Proof (Forall "xs" [Integer] -> SBool))
 sumHalves = runTP $ do

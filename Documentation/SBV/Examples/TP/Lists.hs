@@ -196,6 +196,7 @@ tailsLength =
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.closureMap, sbv.tails
 -- [Proven] tailsAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 tailsAppend :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 tailsAppend = do
@@ -510,6 +511,7 @@ replicateLength = induct "replicateLength"
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldr
 -- [Proven] allAny :: Ɐxs ∷ [Bool] → Bool
 allAny :: TP (Proof (Forall "xs" [Bool] -> SBool))
 allAny = induct "allAny"
@@ -679,6 +681,7 @@ mapConcat f = do
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldr, sbv.map
 -- [Proven] foldrMapFusion :: Ɐxs ∷ [[Char]] → Bool
 foldrMapFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV c -> (SBV a -> SBV b) -> (SBV b -> SBV c -> SBV c) -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrMapFusion a g f =
@@ -734,6 +737,7 @@ foldrFusion a b f g h = do
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldr
 -- [Proven] foldrOverAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 foldrOverAppend :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 foldrOverAppend a f =
@@ -756,6 +760,7 @@ foldrOverAppend a f =
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldl
 -- [Proven] foldlOverAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Ɐe ∷ Bool → Bool
 foldlOverAppend :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "e" b -> SBool))
 foldlOverAppend f =
@@ -788,6 +793,7 @@ foldlOverAppend f =
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldl, sbv.foldr, sbv.reverse
 -- [Proven] foldrFoldlDuality :: Ɐxs ∷ [Integer] → Ɐe ∷ [Char] → Bool
 foldrFoldlDuality :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "e" b -> SBool))
 foldrFoldlDuality f = do
@@ -839,6 +845,7 @@ foldrFoldlDuality f = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldl, sbv.foldr
 -- [Proven] foldrFoldlDuality :: Ɐxs ∷ [Integer] → Bool
 foldrFoldlDualityGeneralized :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrFoldlDualityGeneralized e (@) = do
@@ -907,6 +914,7 @@ foldrFoldlDualityGeneralized e (@) = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldl, sbv.foldr
 -- [Proven] foldrFoldl :: Ɐxs ∷ [Integer] → Bool
 foldrFoldl :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> (SBV b -> SBV a -> SBV b) -> SBV b -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrFoldl (<+>) (<*>) e = do
@@ -1072,6 +1080,7 @@ filterAppend p =
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.filter, sbv.foldr, sbv.map
 -- [Proven] filterConcat :: Ɐxss ∷ [[Integer]] → Bool
 filterConcat :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xss" [[a]] -> SBool))
 filterConcat p = do

@@ -52,6 +52,7 @@ import Data.SBV.List
 --   Step: 4 (commutativity)               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldr, sbv.reverse
 -- [Proven] sumReverse :: Ɐxs ∷ [Integer] → Bool
 revSum :: forall a. (SymVal a, Num (SBV a)) => IO (Proof (Forall "xs" [a] -> SBool))
 revSum = runTP $ do

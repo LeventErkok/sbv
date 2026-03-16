@@ -46,6 +46,7 @@ import Data.SBV.List
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldr, sbv.replicate
 -- [Proven] sumConst_correct :: Ɐn ∷ Integer → Bool
 sumConstProof :: SInteger -> TP (Proof (Forall "n" Integer -> SBool))
 sumConstProof c = induct "sumConst_correct"
@@ -320,6 +321,7 @@ sumMulFactorial = do
 --     Step: 2.2.2                         Q.E.D.
 --     Step: 2.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldr
 -- [Proven] product0 :: Ɐxs ∷ [Integer] → Bool
 product0 :: TP (Proof (Forall "xs" [Integer] -> SBool))
 product0 =
