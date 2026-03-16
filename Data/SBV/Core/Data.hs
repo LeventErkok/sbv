@@ -206,8 +206,13 @@ type SList a = SBV [a]
 -- >>> 1 .: 2 .: 3 .: [4, 5, 6 :: SInteger]
 -- [1,2,3,4,5,6] :: [SInteger]
 infixr 5 .:
-(.:) :: forall a. SymVal a => SBV a -> SList a -> SList a
-a .: as = SBV $ SVal kl $ Right $ cache r
+(.:) :: forall a. (SymVal a, SymVal [a]) => SBV a -> SList a -> SList a
+a .: as
+  | Just av  <- unliteral a
+  , Just asv <- unliteral as
+  = literal (av : asv)
+  | True
+  = SBV $ SVal kl $ Right $ cache r
   where ka = kindOf (Proxy @a)
         kl = kindOf (Proxy @[a])
         r st = do sva  <- sbvToSV st a
