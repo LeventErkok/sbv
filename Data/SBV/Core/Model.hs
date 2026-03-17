@@ -132,6 +132,8 @@ import Data.SBV.Utils.Lib
 
 import Data.Char
 
+import System.FilePath (dropExtension, takeExtension)
+
 -- Symbolic-Word class instances
 
 import Crypto.Hash.SHA512 (hash)
@@ -1306,8 +1308,12 @@ data MeasureCheckResult = MeasureOK                         -- ^ Measure is vali
 -- If 'skipNonNeg' is 'True', the non-negativity check is skipped (used for ADT size measures
 -- where non-negativity is guaranteed by construction).
 checkMeasure :: SMTConfig -> String -> Bool -> LambdaInfo -> MeasureEval -> IO MeasureCheckResult
-checkMeasure cfg funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) = do
-   let barFuncNm = barify funcNm
+checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) = do
+   let -- Use a separate transcript for the measure check, so it doesn't clobber the main one
+       addSuffix s fp = dropExtension fp ++ "_measure_" ++ funcNm ++ "_" ++ s ++ takeExtension fp
+       cfgNonNeg      = cfgIn{transcript = addSuffix "nonNeg"   <$> transcript cfgIn}
+       cfgDecrease    = cfgIn{transcript = addSuffix "decrease"  <$> transcript cfgIn}
+       barFuncNm      = barify funcNm
        recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList liAssignments, nm == barFuncNm]
 
    if null recCalls
@@ -1342,7 +1348,7 @@ checkMeasure cfg funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutput,
        -- Check 1: Non-negativity (skipped for ADT size measures, which are non-negative by construction)
        nonNegOK <- if skipNonNeg
                    then pure (Right ())
-                   else do nonNegResult <- proveWith cfg (do
+                   else do nonNegResult <- proveWith cfgNonNeg (do
                               (_, mFormal) <- mkProveEnv
                               sObserve "measure" (unSBV mFormal)
                               pure $ mFormal .>= zero :: Symbolic SBool)
@@ -1353,7 +1359,7 @@ checkMeasure cfg funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutput,
        case nonNegOK of
          Right () -> do
            -- Check 2: Strict decrease at each recursive call
-           decResult <- proveWith cfg (do
+           decResult <- proveWith cfgDecrease (do
               (svMap, mFormal) <- mkProveEnv
 
               let singleCall = length recCalls == 1
@@ -1490,15 +1496,29 @@ adtNameOf _            = ""
 -- based on parameter kinds and tries each one. Returns the first measure that passes both
 -- non-negativity and strict decrease checks, or 'Nothing' if no guess works.
 autoGuess :: SMTConfig -> String -> LambdaInfo -> IO (Maybe MeasureEval)
-autoGuess cfg funcNm info = go candidates
+autoGuess cfg funcNm info = do
+    let barFuncNm = barify funcNm
+        recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList (liAssignments info), nm == barFuncNm]
+        allUIs    = [(nm, length args) | (_, SBVApp (Uninterpreted nm) args) <- F.toList (liAssignments info)]
+    msg $ "[MEASURE] " ++ funcNm ++ ": barified = " ++ show barFuncNm
+    msg $ "[MEASURE] " ++ funcNm ++ ": Uninterpreted ops in DAG: " ++ show allUIs
+    msg $ "[MEASURE] " ++ funcNm ++ ": recursive calls found = " ++ show (length recCalls)
+    go candidates
   where
     candidates = guessMeasures (liParams info)
     go []             = pure Nothing
     go ((desc, m):ms) = do let skipNonNeg = "sbv.dt.size." `isPrefixOf` desc
+                           msg $ "[MEASURE] " ++ funcNm ++ ": trying " ++ desc
                            result <- checkMeasure cfg funcNm skipNonNeg info m
                            case result of
-                             MeasureOK -> pure (Just m)
-                             _         -> go ms
+                             MeasureOK              -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK"
+                                                          pure (Just m)
+                             MeasureNotNonNeg r     -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed non-negativity: " ++ show r
+                                                          go ms
+                             MeasureNotDecreasing r -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed strict decrease: " ++ show r
+                                                          go ms
+    msg s | verbose cfg = putStrLn s
+          | True        = pure ()
 
 -- | Auto-guess a termination measure, or fail with a helpful error message.
 autoGuessOrFail :: SMTConfig -> String -> LambdaInfo -> IO ()
@@ -1562,9 +1582,9 @@ mapOpSVs _ op                                 = op
 
 -- | Compute the reaching condition for each SV: under what boolean condition
 -- does the SV's value contribute to the output? Propagates conditions top-down
--- through ITE nodes. Each reaching condition is a list of @(condSV, polarity)@ pairs;
--- the actual condition is the conjunction: for each pair, @condSV@ if polarity is 'True',
--- @not condSV@ if polarity is 'False'.
+-- through ITE, AND, and OR nodes. Each reaching condition is a list of
+-- @(condSV, polarity)@ pairs; the actual condition is the conjunction: for each
+-- pair, @condSV@ if polarity is 'True', @not condSV@ if polarity is 'False'.
 computeReachingConditions :: Seq.Seq (SV, SBVExpr) -> SV -> Map.Map SV [(SV, Bool)]
 computeReachingConditions asgns outSV = go initMap (reverse $ F.toList asgns)
   where
@@ -1581,6 +1601,16 @@ computeReachingConditions asgns outSV = go initMap (reverse $ F.toList asgns)
                   let condMapT = addReach t ((c, True)  : rc) condMap
                       condMapE = addReach e ((c, False) : rc) condMapT
                   in condMapE
+                -- For AND: each arg is only relevant when the other is True
+                (And, [a, b]) ->
+                  let condMapA = addReach a ((b, True) : rc) condMap
+                      condMapB = addReach b ((a, True) : rc) condMapA
+                  in condMapB
+                -- For OR: each arg is only relevant when the other is False
+                (Or, [a, b]) ->
+                  let condMapA = addReach a ((b, False) : rc) condMap
+                      condMapB = addReach b ((a, False) : rc) condMapA
+                  in condMapB
                 _ -> foldl' (\m a -> addReach a rc m) condMap args
           in go condMap' rest
 

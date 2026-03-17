@@ -191,7 +191,7 @@ internalAxiom nm p = Proof $ ProofObj { dependencies = []
 -- | Propagate the settings for ribbon/timing from top to current. Because in any subsequent configuration
 -- in a lemmaWith, inductWith etc., we just want to change the solver, not the actual settings for TP.
 tpMergeCfg :: SMTConfig -> SMTConfig -> SMTConfig
-tpMergeCfg cur top = cur{tpOptions = tpOptions top}
+tpMergeCfg cur top = cur{verbose = verbose top, tpOptions = tpOptions top}
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: Proposition a => String -> a -> [ProofObj] -> TP (Proof a)
