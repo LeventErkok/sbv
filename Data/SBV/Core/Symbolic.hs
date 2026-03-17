@@ -1169,7 +1169,7 @@ data State  = State { sbvContext          :: SBVContext
                     , rUserFuncs          :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
                     , rCgMap              :: IORef CgMap
                     , rDefns              :: IORef [(String, (SMTDef, SBVType))]
-                    , rMeasureChecks      :: IORef [(String, IO ())]  -- Measure checks for recursive functions
+                    , rMeasureChecks      :: IORef [(String, SMTConfig -> IO ())]  -- Measure checks for recursive functions
                     , rSkipMeasureChecks  :: IORef Bool               -- If True, skip measure checking (used by TP and checker itself)
                     , rSMTOptions         :: IORef [SMTOption]
                     , rOptGoals           :: IORef [Objective (SV, SV)]

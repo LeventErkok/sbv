@@ -213,7 +213,7 @@ lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
                                        mapM_ (constrain . getObjProof) by
 
                                        -- Run measure checks for any newly encountered recursive functions
-                                       liftIO $ checkNewMeasures st tpSt
+                                       liftIO $ checkNewMeasures cfg st tpSt
 
                                        query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp [] (good cfg mbStartTime u)
 
@@ -240,14 +240,14 @@ inductiveLemmaWith cfg nm f by = lemmaWith cfg nm f (inductionSchema f : by)
 
 -- | Check any newly encountered recursive function measures. This reads deferred checks
 -- from 'rMeasureChecks', runs those not yet verified, and records them as verified.
-checkNewMeasures :: State -> TPState -> IO ()
-checkNewMeasures st tpSt = do
+checkNewMeasures :: SMTConfig -> State -> TPState -> IO ()
+checkNewMeasures cfg st tpSt = do
    checks   <- readIORef (rMeasureChecks st)
    verified <- readIORef (measuresVerified tpSt)
    let allNames = Set.fromList (map fst checks)
        new      = [(n, c) | (n, c) <- checks, n `Set.notMember` verified]
    modifyIORef' (measuresEncountered tpSt) (Set.union allNames)
-   mapM_ snd new
+   mapM_ (\(_, c) -> c cfg) new
    writeIORef (measuresVerified tpSt) (verified `Set.union` Set.fromList (map fst new))
 
 -- | Capture the general flow of a proof-step. Note that this is the only point where we call the backend solver

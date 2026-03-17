@@ -85,7 +85,8 @@ import qualified Data.Array as DA (listArray)
 import Data.Bits   (Bits(..))
 import Data.Int    (Int8, Int16, Int32, Int64)
 import Data.Kind   (Type, Constraint)
-import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate, dropWhileEnd
+import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7
+                   , intercalate, dropWhileEnd, isPrefixOf
 #if !MIN_VERSION_base(4,20,0)
                    , foldl'
 #endif
@@ -121,7 +122,7 @@ import Data.SBV.Core.Kind
 import Data.SBV.Lambda
 import Data.SBV.Utils.ExtractIO (ExtractIO)
 
-import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), defs2smt, prove)
+import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), defs2smt, prove, proveWith)
 import Data.SBV.SMT.SMT        (ThmResult(..), showModel)
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
@@ -1264,9 +1265,9 @@ hasMeasure (HasMeasure _) = True
 -- Walks the expression DAG to find recursive calls, computes reaching conditions
 -- via ITE analysis, and verifies the measure property in a separate solver session.
 -- Throws an error with a detailed message if verification fails.
-verifyMeasure :: String -> LambdaInfo -> MeasureEval -> IO ()
-verifyMeasure funcNm info meval = do
-   result <- checkMeasure funcNm info meval
+verifyMeasure :: SMTConfig -> String -> LambdaInfo -> MeasureEval -> IO ()
+verifyMeasure cfg funcNm info meval = do
+   result <- checkMeasure cfg funcNm False info meval
    let prettyNm = prettyFuncNm funcNm
    case result of
      MeasureOK              -> pure ()
@@ -1302,8 +1303,10 @@ data MeasureCheckResult = MeasureOK                         -- ^ Measure is vali
 
 -- | Check that a measure is valid: non-negative and strictly decreasing at each recursive call.
 -- Returns 'MeasureOK' if valid, or the specific failure otherwise.
-checkMeasure :: String -> LambdaInfo -> MeasureEval -> IO MeasureCheckResult
-checkMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) = do
+-- If 'skipNonNeg' is 'True', the non-negativity check is skipped (used for ADT size measures
+-- where non-negativity is guaranteed by construction).
+checkMeasure :: SMTConfig -> String -> Bool -> LambdaInfo -> MeasureEval -> IO MeasureCheckResult
+checkMeasure cfg funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) = do
    let barFuncNm = barify funcNm
        recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList liAssignments, nm == barFuncNm]
 
@@ -1336,16 +1339,21 @@ checkMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (Mea
 
               pure (svMap, mFormal)
 
-       -- Check 1: Non-negativity
-       nonNegResult <- prove (do
-          (_, mFormal) <- mkProveEnv
-          sObserve "measure" (unSBV mFormal)
-          pure $ mFormal .>= zero :: Symbolic SBool)
+       -- Check 1: Non-negativity (skipped for ADT size measures, which are non-negative by construction)
+       nonNegOK <- if skipNonNeg
+                   then pure (Right ())
+                   else do nonNegResult <- proveWith cfg (do
+                              (_, mFormal) <- mkProveEnv
+                              sObserve "measure" (unSBV mFormal)
+                              pure $ mFormal .>= zero :: Symbolic SBool)
+                           pure $ case nonNegResult of
+                             ThmResult Unsatisfiable{} -> Right ()
+                             _                         -> Left nonNegResult
 
-       case nonNegResult of
-         ThmResult Unsatisfiable{} -> do
+       case nonNegOK of
+         Right () -> do
            -- Check 2: Strict decrease at each recursive call
-           decResult <- prove (do
+           decResult <- proveWith cfg (do
               (svMap, mFormal) <- mkProveEnv
 
               let singleCall = length recCalls == 1
@@ -1376,7 +1384,7 @@ checkMeasure funcNm LambdaInfo{liAssignments, liParams, liOutput, liConsts} (Mea
              ThmResult Unsatisfiable{} -> pure MeasureOK
              _                         -> pure $ MeasureNotDecreasing decResult
 
-         _ -> pure $ MeasureNotNonNeg nonNegResult
+         Left nonNegResult -> pure $ MeasureNotNonNeg nonNegResult
 
 -- | Generate candidate measures based on parameter kinds.
 -- For list args, we use @length@. For integer args, we use @abs@.
@@ -1397,6 +1405,15 @@ guessMeasures params = map (\(d, f) -> (d, MeasureEval f)) (singles ++ summed)
                             newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]))]
       KUnbounded  -> [("abs arg" ++ show (i+1), \svs -> abs (SBV (svs !! i)))]
       KTuple ks   -> concatMap (mkTupleComponent i (length ks)) (zip [1..] ks)
+      KADT adtName _ ctors
+        | any (any (isRecKind adtName) . snd) ctors ->
+            let sizeName = "sbv.dt.size." ++ adtName
+                adtKind  = kindOf sv
+            in [(sizeName ++ " arg" ++ show (i+1), \svs ->
+                 SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
+                      ensureADTSizeDefined st sizeName adtKind ctors
+                      s <- sbvToSV st (SBV (svs !! i))
+                      newExpr st KUnbounded (SBVApp (Uninterpreted sizeName) [s]))]
       _           -> []
 
     mkTupleComponent :: Int -> Int -> (Int, Kind) -> [(String, [SVal] -> SInteger)]
@@ -1419,23 +1436,74 @@ guessMeasures params = map (\(d, f) -> (d, MeasureEval f)) (singles ++ summed)
                                    )]
            | otherwise          = []
 
+-- | Check if a kind refers back to a given ADT name (i.e., is a recursive field).
+-- Recursive fields in constructor kinds use 'KApp', not 'KADT'.
+isRecKind :: String -> Kind -> Bool
+isRecKind adtName (KApp n _)   = n == adtName
+isRecKind adtName (KADT n _ _) = n == adtName
+isRecKind _       _            = False
+
+-- | Ensure that an ADT size function is defined in the given state. The size function
+-- maps ADT values to non-negative integers, returning 0 for base constructors and
+-- @1 + sum(sizes of recursive fields)@ for recursive constructors.
+-- This is used as a termination measure for functions that recurse on ADT values.
+ensureADTSizeDefined :: State -> String -> Kind -> [(String, [Kind])] -> IO ()
+ensureADTSizeDefined st sizeName adtKind ctors = do
+   defs <- readIORef (rDefns st)
+   unless (any ((== sizeName) . fst) defs) $ do
+      let argNm      = "x"
+          smtArgType = smtType adtKind
+
+          -- Build the SMT-Lib body for the size function
+          body = buildBody ctors
+
+          buildBody []  = "0"
+          buildBody [c] = caseExpr c
+          buildBody (c:cs) = "(ite " ++ testerExpr c ++ " " ++ caseExpr c ++ " " ++ buildBody cs ++ ")"
+
+          testerExpr (cName, _) = "(is-" ++ cName ++ " " ++ argNm ++ ")"
+
+          caseExpr (cName, flds) =
+            let recIdxs = [j | (j, k) <- zip [1::Int ..] flds, isRecKind (adtNameOf adtKind) k]
+            in if null recIdxs
+               then "0"
+               else let recCalls = ["(" ++ sizeName ++ " (get" ++ cName ++ "_" ++ show j ++ " " ++ argNm ++ "))" | j <- recIdxs]
+                    in "(+ 1 " ++ smtSum recCalls ++ ")"
+
+          smtSum [x]    = x
+          smtSum (x:xs) = "(+ " ++ x ++ " " ++ smtSum xs ++ ")"
+          smtSum []     = "0"
+
+          paramStr = "((" ++ argNm ++ " " ++ smtArgType ++ "))"
+          smtDef   = SMTDef KUnbounded [sizeName] (Just paramStr) (\n -> replicate n ' ' ++ body) True
+          sbvTy    = SBVType [adtKind, KUnbounded]
+
+      modifyIORef' (rDefns st) ((sizeName, (smtDef, sbvTy)) :)
+      modifyState st rUIMap (Map.insert sizeName (True, Nothing, sbvTy)) (pure ())
+
+-- | Extract the ADT name from a KADT kind.
+adtNameOf :: Kind -> String
+adtNameOf (KADT n _ _) = n
+adtNameOf _            = ""
+
 -- | Try to auto-guess a termination measure for a recursive function. Generates candidates
 -- based on parameter kinds and tries each one. Returns the first measure that passes both
 -- non-negativity and strict decrease checks, or 'Nothing' if no guess works.
-autoGuess :: String -> LambdaInfo -> IO (Maybe MeasureEval)
-autoGuess funcNm info = go candidates
+autoGuess :: SMTConfig -> String -> LambdaInfo -> IO (Maybe MeasureEval)
+autoGuess cfg funcNm info = go candidates
   where
     candidates = guessMeasures (liParams info)
-    go []          = pure Nothing
-    go ((_, m):ms) = do result <- checkMeasure funcNm info m
-                        case result of
-                          MeasureOK -> pure (Just m)
-                          _         -> go ms
+    go []             = pure Nothing
+    go ((desc, m):ms) = do let skipNonNeg = "sbv.dt.size." `isPrefixOf` desc
+                           result <- checkMeasure cfg funcNm skipNonNeg info m
+                           case result of
+                             MeasureOK -> pure (Just m)
+                             _         -> go ms
 
 -- | Auto-guess a termination measure, or fail with a helpful error message.
-autoGuessOrFail :: String -> LambdaInfo -> IO ()
-autoGuessOrFail funcNm info = do
-   mbMeasure <- autoGuess funcNm info
+autoGuessOrFail :: SMTConfig -> String -> LambdaInfo -> IO ()
+autoGuessOrFail cfg funcNm info = do
+   mbMeasure <- autoGuess cfg funcNm info
    case mbMeasure of
      Just _  -> pure ()
      Nothing -> error $ unlines $
@@ -3096,11 +3164,11 @@ class SMTDefinable a where
                                                     (liAssignments info)
                               when isRecursive $
                                 modifyIORef' (rMeasureChecks st)
-                                             ((funcNm, autoGuessOrFail funcNm info) :)
+                                             ((funcNm, \cfg -> autoGuessOrFail cfg funcNm info) :)
                               pure def
                             HasMeasure eval -> do
                               modifyIORef' (rMeasureChecks st)
-                                           ((funcNm, verifyMeasure funcNm info eval) :)
+                                           ((funcNm, \cfg -> verifyMeasure cfg funcNm info eval) :)
                               pure def)
 
 

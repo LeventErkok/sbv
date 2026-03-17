@@ -113,6 +113,7 @@ i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) 0 (sSucc (i2n (i - 1)))
 --
 -- >>> runTP n2iNonNeg
 -- Lemma: n2iNonNeg                        Q.E.D.
+-- Functions proven terminating: n2i
 -- [Proven] n2iNonNeg :: Ɐn ∷ Nat → Bool
 n2iNonNeg  :: TP (Proof (Forall "n" Nat -> SBool))
 n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
@@ -121,6 +122,7 @@ n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 --
 -- >>> runTP i2n2i
 -- Lemma: i2n2i                            Q.E.D.
+-- Functions proven terminating: i2n, n2i
 -- [Proven] i2n2i :: Ɐi ∷ Integer → Bool
 i2n2i :: TP (Proof (Forall "i" Integer -> SBool))
 i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> n2i (i2n i) .== i `smax` 0) []
@@ -129,6 +131,7 @@ i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> n2i (i2n i) .== i `smax` 0) []
 --
 -- >>> runTP n2i2n
 -- Lemma: n2i2n                            Q.E.D.
+-- Functions proven terminating: i2n, n2i
 -- [Proven] n2i2n :: Ɐn ∷ Nat → Bool
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
 n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
@@ -137,6 +140,7 @@ n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 --
 -- >>> runTP n2iAdd
 -- Lemma: n2iAdd                           Q.E.D.
+-- Functions proven terminating: n2i, sNatPlus
 -- [Proven] n2iAdd :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 n2iAdd :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 n2iAdd = inductiveLemma "n2iAdd" (\(Forall m) (Forall n) -> n2i (m + n) .== n2i m + n2i n) []
@@ -149,6 +153,7 @@ n2iAdd = inductiveLemma "n2iAdd" (\(Forall m) (Forall n) -> n2i (m + n) .== n2i 
 --
 -- >>> runTP addCorrect
 -- Lemma: addCorrect                       Q.E.D.
+-- Functions proven terminating: n2i, sNatPlus
 -- [Proven] addCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 addCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 addCorrect = inductiveLemma
@@ -162,6 +167,7 @@ addCorrect = inductiveLemma
 --
 -- >>> runTP addLeftUnit
 -- Lemma: addLeftUnit                      Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] addLeftUnit :: Ɐm ∷ Nat → Bool
 addLeftUnit :: TP (Proof (Forall "m" Nat -> SBool))
 addLeftUnit = lemma "addLeftUnit" (\(Forall m) -> 0 + m .== m) []
@@ -170,6 +176,7 @@ addLeftUnit = lemma "addLeftUnit" (\(Forall m) -> 0 + m .== m) []
 --
 -- >>> runTP addRightUnit
 -- Lemma: addRightUnit                     Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] addRightUnit :: Ɐm ∷ Nat → Bool
 addRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
 addRightUnit = inductiveLemma "addRightUnit" (\(Forall m) -> m + 0 .== m) []
@@ -186,6 +193,7 @@ addRightUnit = inductiveLemma "addRightUnit" (\(Forall m) -> m + 0 .== m) []
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: addSucc                          Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] addSucc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 addSucc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 addSucc = do
@@ -215,6 +223,7 @@ addSucc = do
 --
 -- >>> runTP addAssoc
 -- Lemma: addAssoc                         Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] addAssoc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 addAssoc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 addAssoc = inductiveLemma
@@ -237,6 +246,7 @@ addAssoc = inductiveLemma
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: addComm                          Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] addComm :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 addComm :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 addComm = do
@@ -281,6 +291,7 @@ addComm = do
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: mullCorrect                      Q.E.D.
+-- Functions proven terminating: n2i, sNatPlus, sNatTimes
 -- [Proven] mullCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 mulCorrect = do
@@ -315,6 +326,7 @@ mulCorrect = do
 --
 -- >>> runTP mulLeftAbsorb
 -- Lemma: mulLeftAbsorb                    Q.E.D.
+-- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulLeftAbsorb :: Ɐm ∷ Nat → Bool
 mulLeftAbsorb :: TP (Proof (Forall "m" Nat -> SBool))
 mulLeftAbsorb = lemma "mulLeftAbsorb" (\(Forall m) -> 0 * m .== 0) []
@@ -323,6 +335,7 @@ mulLeftAbsorb = lemma "mulLeftAbsorb" (\(Forall m) -> 0 * m .== 0) []
 --
 -- >>> runTP mulRightAbsorb
 -- Lemma: mulRightAbsorb                   Q.E.D.
+-- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulRightAbsorb :: Ɐm ∷ Nat → Bool
 mulRightAbsorb :: TP (Proof (Forall "m" Nat -> SBool))
 mulRightAbsorb = inductiveLemma "mulRightAbsorb" (\(Forall m) -> m * 0 .== 0) []
@@ -333,6 +346,7 @@ mulRightAbsorb = inductiveLemma "mulRightAbsorb" (\(Forall m) -> m * 0 .== 0) []
 --
 -- >>> runTP mulLeftUnit
 -- Lemma: mulLeftUnit                      Q.E.D.
+-- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulLeftUnit :: Ɐm ∷ Nat → Bool
 mulLeftUnit :: TP (Proof (Forall "m" Nat -> SBool))
 mulLeftUnit = inductiveLemma "mulLeftUnit" (\(Forall m) -> sSucc 0 * m .== m) []
@@ -341,6 +355,7 @@ mulLeftUnit = inductiveLemma "mulLeftUnit" (\(Forall m) -> sSucc 0 * m .== m) []
 --
 -- >>> runTP mulRightUnit
 -- Lemma: mulRightUnit                     Q.E.D.
+-- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulRightUnit :: Ɐm ∷ Nat → Bool
 mulRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
 mulRightUnit = inductiveLemma "mulRightUnit" (\(Forall m) -> m * sSucc 0 .== m) []
@@ -365,6 +380,7 @@ mulRightUnit = inductiveLemma "mulRightUnit" (\(Forall m) -> m * sSucc 0 .== m) 
 --   Step: 9                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: distribLeft                      Q.E.D.
+-- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] distribLeft :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 distribLeft :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 distribLeft = do
@@ -417,6 +433,7 @@ distribLeft = do
 --   Step: 7                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: distribRight                     Q.E.D.
+-- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] distribRight :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 distribRight :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 distribRight = do
@@ -466,6 +483,7 @@ distribRight = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulSucc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulSucc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 mulSucc = do
@@ -503,6 +521,7 @@ mulSucc = do
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: mulAssoc                         Q.E.D.
+-- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulAssoc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 mulAssoc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 mulAssoc = do
@@ -548,6 +567,7 @@ mulAssoc = do
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: mulComm                          Q.E.D.
+-- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulComm :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulComm :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 mulComm = do
@@ -596,6 +616,7 @@ mulComm = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] ltTrans :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 ltTrans :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 ltTrans = do
@@ -626,6 +647,7 @@ ltTrans = do
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] ltIrreflexive :: Ɐm ∷ Nat → Bool
 ltIrreflexive :: TP (Proof (Forall "m" Nat -> SBool))
 ltIrreflexive = do
@@ -678,6 +700,7 @@ ltIrreflexive = do
 --     Step: 7.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: lteEquiv                         Q.E.D.
+-- Functions proven terminating: i2n, n2i, sNatPlus
 -- [Proven] lteEquiv :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 lteEquiv :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 lteEquiv = do
@@ -741,6 +764,7 @@ lteEquiv = do
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: i2n, n2i, sNatPlus
 -- [Proven] ordered :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 ordered :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 ordered = do
@@ -760,6 +784,7 @@ ordered = do
 -- >>> runTP trichotomy
 -- Lemma: ordered                          Q.E.D.
 -- Lemma: trichotomy                       Q.E.D.
+-- Functions proven terminating: i2n, n2i, sNatPlus
 -- [Proven] trichotomy :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 trichotomy :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 trichotomy = do
@@ -783,6 +808,7 @@ trichotomy = do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] addOrder :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 addOrder :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 addOrder = do
@@ -818,6 +844,7 @@ addOrder = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulOrder :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 mulOrder :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 mulOrder = do
@@ -844,6 +871,7 @@ mulOrder = do
 --
 -- >>> runTP orderSum
 -- Lemma: orderSum                         Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] orderSum :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 orderSum :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 orderSum = lemma "orderSum"
@@ -856,6 +884,7 @@ orderSum = lemma "orderSum"
 --
 -- >>> runTP zeroLtOne
 -- Lemma: zeroLtOne                        Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] zeroLtOne :: Bool
 zeroLtOne :: TP (Proof SBool)
 zeroLtOne = lemma "zeroLtOne" (0 .< (1 :: SNat)) []
@@ -864,6 +893,7 @@ zeroLtOne = lemma "zeroLtOne" (0 .< (1 :: SNat)) []
 --
 -- >>> runTP nothingBetweenZeroAndOne
 -- Lemma: nothingBetweenZeroAndOne         Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] nothingBetweenZeroAndOne :: Ɐm ∷ Nat → Bool
 nothingBetweenZeroAndOne :: TP (Proof (Forall "m" Nat -> SBool))
 nothingBetweenZeroAndOne = lemma "nothingBetweenZeroAndOne"
@@ -876,6 +906,7 @@ nothingBetweenZeroAndOne = lemma "nothingBetweenZeroAndOne"
 --
 -- >>> runTP minimumElt
 -- Lemma: minimumElt                       Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] minimumElt :: Ɐm ∷ Nat → Bool
 minimumElt :: TP (Proof (Forall "m" Nat -> SBool))
 minimumElt = lemma "minimumElt" (\(Forall m) -> m .>= 0) []
@@ -886,6 +917,7 @@ minimumElt = lemma "minimumElt" (\(Forall m) -> m .>= 0) []
 --
 -- >>> runTP noMaximumElt
 -- Lemma: noMaximumElt                     Q.E.D.
+-- Functions proven terminating: sNatPlus
 -- [Proven] noMaximumElt :: Ɐm ∷ Nat → ∃n ∷ Nat → Bool
 noMaximumElt :: TP (Proof (Forall "m" Nat -> Exists "n" Nat -> SBool))
 noMaximumElt = lemma "noMaximumElt" (\(Forall m) (Exists n) -> m .< n) []

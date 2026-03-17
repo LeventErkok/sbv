@@ -182,7 +182,7 @@ class Calc a where
          -- Run measure checks for any newly encountered recursive functions
          st <- symbolicEnv
          liftIO $ do writeIORef (rSkipMeasureChecks st) True
-                     checkNewMeasures st tpSt
+                     checkNewMeasures cfg st tpSt
 
          query $ proveProofTree cfg tpSt nm (result, calcGoal) calcIntros calcProofTree u calcQCInstance
 
@@ -599,7 +599,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $
       -- Run measure checks for any newly encountered recursive functions
       st <- symbolicEnv
       liftIO $ do writeIORef (rSkipMeasureChecks st) True
-                  checkNewMeasures st tpSt
+                  checkNewMeasures cfg st tpSt
 
       query $ do
 

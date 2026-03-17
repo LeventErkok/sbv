@@ -761,7 +761,7 @@ runWithQuery reducer isSAT q cfg a = fst <$> runSymbolic cfg (SMTMode QueryInter
                                    let nms = map fst checks
                                    debug cfg ["[MEASURE] Verifying termination measures for: " ++ intercalate ", " nms]
                                    mapM_ (\(nm, check) -> do debug cfg ["[MEASURE] Checking: " ++ nm]
-                                                             check
+                                                             check cfg
                                                              debug cfg ["[MEASURE] Passed: " ++ nm]
                                          ) checks
 
