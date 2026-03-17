@@ -1346,7 +1346,7 @@ disjoint = smtFunction "disjoint"
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven terminating: disjoint
+-- Functions proven terminating: disjoint, sbv.diff
 -- [Proven] disjointDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Bool
 disjointDiff :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> SBool))
 disjointDiff = induct "disjointDiff"
