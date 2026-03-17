@@ -84,6 +84,7 @@ down = smtFunction "down"
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: upDown                           Q.E.D.
+-- Functions proven terminating: down, n2i, sbv.reverse, up
 -- [Proven] upDown :: Ɐn ∷ Nat → Bool
 upDown :: TP (Proof (Forall "n" Nat -> SBool))
 upDown = do
