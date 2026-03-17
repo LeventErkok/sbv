@@ -834,8 +834,8 @@ gcdOddEven = do
 nGCDSub :: SInteger -> SInteger -> SInteger
 nGCDSub = smtFunction "nGCDSub"
         $ \a b -> ite (a .== b) a
-                $ ite (a .== 0) b
-                $ ite (b .== 0) a
+                $ ite (a .<= 0) b
+                $ ite (b .<= 0) a
                 $ ite (a .> b)  (nGCDSub (a - b) b)
                                 (nGCDSub a (b - a))
 
@@ -873,6 +873,7 @@ gcdSub a b = nGCDSub (abs a) (abs b)
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: nGCD, nGCDSub
 -- [Proven] gcdSubEquiv :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdSubEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdSubEquiv = do
@@ -923,8 +924,8 @@ gcdSubEquiv = do
 -- | @nGCDBin@ is the binary GCD algorithm that works on non-negative numbers.
 nGCDBin :: SInteger -> SInteger -> SInteger
 nGCDBin = smtFunction "nGCDBin"
-        $ \a b -> ite (a .== 0)               b
-                $ ite (b .== 0)               a
+        $ \a b -> ite (a .<= 0)               b
+                $ ite (b .<= 0)               a
                 $ ite (isEven a .&& isEven b) (2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2))
                 $ ite (isOdd  a .&& isEven b) (    nGCDBin a             (b `sEDiv` 2))
                 $ ite (a .<= b)               (    nGCDBin a             (b - a))
@@ -975,6 +976,7 @@ gcdBin a b = nGCDBin (abs a) (abs b)
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: nGCD, nGCDBin
 -- [Proven] gcdBinEquiv :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdBinEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdBinEquiv = do

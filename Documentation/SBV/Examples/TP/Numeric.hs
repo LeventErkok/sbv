@@ -226,11 +226,12 @@ nicomachus = do
 --   Step: 7                               Q.E.D.
 --   Step: 8                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: pow
 -- [Proven] elevenMinusFour :: Ɐn ∷ Integer → Bool
 elevenMinusFour :: TP (Proof (Forall "n" Integer -> SBool))
 elevenMinusFour = do
    let pow :: SInteger -> SInteger -> SInteger
-       pow = smtFunction "pow" $ \x y -> ite (y .== 0) 1 (x * pow x (y - 1))
+       pow = smtFunction "pow" $ \x y -> ite (y .<= 0) 1 (x * pow x (y - 1))
 
        emf :: SInteger -> SBool
        emf n = 7 `sDivides` (11 `pow` n - 4 `pow` n)
