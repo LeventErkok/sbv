@@ -265,6 +265,7 @@ compileAndRun = top . ST.snd . run (tuple ([], [])) . compile
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: compile, exprSize, interpInEnv, sbv.foldl, sbv.lookup
 -- [Proven] correctness :: Ɐexpr ∷ (Expr [Char] Integer) → Bool
 correctness :: forall nm val. (SymVal nm, SymVal val, Num (SBV val)) => TP (Proof (Forall "expr" (Expr nm val) -> SBool))
 correctness = do

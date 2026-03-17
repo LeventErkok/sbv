@@ -1395,21 +1395,22 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
 -- | Generate candidate measures based on parameter kinds.
 -- For list args, we use @length@. For integer args, we use @abs@.
 -- If there are multiple candidates, we also try their sum.
--- All candidates produce 'SInteger' values. Returns both the measure and a description.
-guessMeasures :: [(Quantifier, SV)] -> [(String, MeasureEval)]
-guessMeasures params = map (\(d, f) -> (d, MeasureEval f)) (singles ++ summed)
+-- All candidates produce 'SInteger' values. Returns the measure, a description,
+-- and for ADT size measures, the 0-based parameter index (used for syntactic sub-term checking).
+guessMeasures :: [(Quantifier, SV)] -> [(String, MeasureEval, Maybe Int)]
+guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (singles ++ summed)
   where
-    singles :: [(String, [SVal] -> SInteger)]
+    singles :: [(String, [SVal] -> SInteger, Maybe Int)]
     singles = concatMap mkCandidates (zip [0..] params)
 
-    mkCandidates :: (Int, (Quantifier, SV)) -> [(String, [SVal] -> SInteger)]
+    mkCandidates :: (Int, (Quantifier, SV)) -> [(String, [SVal] -> SInteger, Maybe Int)]
     mkCandidates (i, (_, sv)) = case kindOf sv of
       KList elemK -> [("length arg" ++ show (i+1), \svs ->
                        let listSVal = svs !! i
                        in SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
                             s <- sbvToSV st (SBV listSVal)
-                            newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]))]
-      KUnbounded  -> [("abs arg" ++ show (i+1), \svs -> abs (SBV (svs !! i)))]
+                            newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]), Nothing)]
+      KUnbounded  -> [("abs arg" ++ show (i+1), \svs -> abs (SBV (svs !! i)), Nothing)]
       KTuple ks   -> concatMap (mkTupleComponent i (length ks)) (zip [1..] ks)
       KADT adtName _ ctors
         | any (any (isRecKind adtName) . snd) ctors ->
@@ -1419,10 +1420,10 @@ guessMeasures params = map (\(d, f) -> (d, MeasureEval f)) (singles ++ summed)
                  SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
                       ensureADTSizeDefined st sizeName adtKind ctors
                       s <- sbvToSV st (SBV (svs !! i))
-                      newExpr st KUnbounded (SBVApp (Uninterpreted sizeName) [s]))]
+                      newExpr st KUnbounded (SBVApp (Uninterpreted sizeName) [s]), Just i)]
       _           -> []
 
-    mkTupleComponent :: Int -> Int -> (Int, Kind) -> [(String, [SVal] -> SInteger)]
+    mkTupleComponent :: Int -> Int -> (Int, Kind) -> [(String, [SVal] -> SInteger, Maybe Int)]
     mkTupleComponent argIdx nFields (compIdx, compKind) = case compKind of
       KList elemK -> [("length arg" ++ show (argIdx+1) ++ "._" ++ show compIdx, \svs ->
                        let comp = SBV $ SVal compKind $ Right $ cache $ \st -> do
@@ -1430,15 +1431,16 @@ guessMeasures params = map (\(d, f) -> (d, MeasureEval f)) (singles ++ summed)
                                     newExpr st compKind (SBVApp (TupleAccess compIdx nFields) [tupSV])
                        in SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
                             s <- sbvToSV st comp
-                            newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]))]
+                            newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]), Nothing)]
       KUnbounded  -> [("abs arg" ++ show (argIdx+1) ++ "._" ++ show compIdx, \svs ->
                        abs $ SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
                          tupSV <- sbvToSV st (SBV (svs !! argIdx))
-                         newExpr st KUnbounded (SBVApp (TupleAccess compIdx nFields) [tupSV]))]
+                         newExpr st KUnbounded (SBVApp (TupleAccess compIdx nFields) [tupSV]), Nothing)]
       _           -> []
 
-    summed | length singles > 1 = [( intercalate " + " (map fst singles)
-                                   , \svs -> sum [f svs | (_, f) <- singles]
+    summed | length singles > 1 = [( intercalate " + " [d | (d, _, _) <- singles]
+                                   , \svs -> sum [f svs | (_, f, _) <- singles]
+                                   , Nothing
                                    )]
            | otherwise          = []
 
@@ -1492,6 +1494,34 @@ adtNameOf :: Kind -> String
 adtNameOf (KADT n _ _) = n
 adtNameOf _            = ""
 
+-- | Check if a function is structurally recursive on a given parameter.
+-- Returns 'True' if every recursive call passes a strict sub-term of the
+-- formal parameter (obtained via one or more 'ADTAccessor' operations) as
+-- the argument at that parameter position. Structural recursion on an ADT
+-- guarantees termination by the well-foundedness of the datatype, so the
+-- measure check can be skipped.
+isStructurallyDecreasing :: String -> LambdaInfo -> Int -> Bool
+isStructurallyDecreasing funcNm LambdaInfo{liAssignments, liParams} paramIdx =
+    not (null recCalls) && all checkCall recCalls
+  where
+    barFuncNm = barify funcNm
+    paramSV   = snd (liParams !! paramIdx)
+    asgns     = F.toList liAssignments
+    defMap    = Map.fromList asgns
+
+    recCalls = [args | (_, SBVApp (Uninterpreted nm) args) <- asgns, nm == barFuncNm]
+
+    checkCall callArgs
+      | paramIdx < length callArgs = isProperSubTerm (callArgs !! paramIdx)
+      | otherwise                  = False
+
+    -- An SV is a proper sub-term of the parameter if it is obtained by applying
+    -- one or more ADTAccessor operations to the parameter.
+    isProperSubTerm sv = case Map.lookup sv defMap of
+       Just (SBVApp (ADTOp (ADTAccessor _ _)) [parent]) ->
+            parent == paramSV || isProperSubTerm parent
+       _ -> False
+
 -- | Try to auto-guess a termination measure for a recursive function. Generates candidates
 -- based on parameter kinds and tries each one. Returns the first measure that passes both
 -- non-negativity and strict decrease checks, or 'Nothing' if no guess works.
@@ -1506,17 +1536,24 @@ autoGuess cfg funcNm info = do
     go candidates
   where
     candidates = guessMeasures (liParams info)
-    go []             = pure Nothing
-    go ((desc, m):ms) = do let skipNonNeg = "sbv.dt.size." `isPrefixOf` desc
-                           msg $ "[MEASURE] " ++ funcNm ++ ": trying " ++ desc
-                           result <- checkMeasure cfg funcNm skipNonNeg info m
-                           case result of
-                             MeasureOK              -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK"
-                                                          pure (Just m)
-                             MeasureNotNonNeg r     -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed non-negativity: " ++ show r
-                                                          go ms
-                             MeasureNotDecreasing r -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed strict decrease: " ++ show r
-                                                          go ms
+    go []                    = pure Nothing
+    go ((desc, m, mbIdx):ms) = do let skipNonNeg = "sbv.dt.size." `isPrefixOf` desc
+                                  msg $ "[MEASURE] " ++ funcNm ++ ": trying " ++ desc
+                                  -- For ADT size measures, try syntactic sub-term check first.
+                                  -- This avoids calling the solver, which can hang on recursive
+                                  -- define-fun-rec definitions.
+                                  result <- case mbIdx of
+                                              Just idx | isStructurallyDecreasing funcNm info idx -> do
+                                                 msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK (structural recursion)"
+                                                 pure MeasureOK
+                                              _ -> checkMeasure cfg funcNm skipNonNeg info m
+                                  case result of
+                                    MeasureOK              -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK"
+                                                                 pure (Just m)
+                                    MeasureNotNonNeg r     -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed non-negativity: " ++ show r
+                                                                 go ms
+                                    MeasureNotDecreasing r -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed strict decrease: " ++ show r
+                                                                 go ms
     msg s | verbose cfg = putStrLn s
           | True        = pure ()
 
@@ -1543,7 +1580,7 @@ autoGuessOrFail cfg funcNm info = do
                               , "***   No measure candidates could be derived from the argument types."
                               ]
           | otherwise       = [ "***"
-                              , "***   Measures tried: " ++ intercalate ", " [d | (d, _) <- candidates]
+                              , "***   Measures tried: " ++ intercalate ", " [d | (d, _, _) <- candidates]
                               ]
 
 -- | Pretty-print a function name: turn @"insert @(SBV Integer -> SBV [Integer])"@ into @"insert :: SBV Integer -> SBV [Integer]"@

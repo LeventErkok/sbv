@@ -70,6 +70,7 @@ ifDepth = smtFunction "ifDepth"
 --
 -- >>> runTP ifDepthNonNeg
 -- Lemma: ifDepthNonNeg                    Q.E.D.
+-- Functions proven terminating: ifDepth
 -- [Proven] ifDepthNonNeg :: Ɐf ∷ Formula → Bool
 ifDepthNonNeg :: TP (Proof (Forall "f" Formula -> SBool))
 ifDepthNonNeg = inductiveLemma "ifDepthNonNeg" (\(Forall f) -> ifDepth f .>= 0) []
@@ -86,6 +87,7 @@ ifComplexity = smtFunction "ifComplexity"
 --
 -- >>> runTP ifComplexityPos
 -- Lemma: ifComplexityPos                  Q.E.D.
+-- Functions proven terminating: ifComplexity
 -- [Proven] ifComplexityPos :: Ɐf ∷ Formula → Bool
 ifComplexityPos :: TP (Proof (Forall "f" Formula -> SBool))
 ifComplexityPos = inductiveLemma "ifComplexityPos" (\(Forall f) -> ifComplexity f .> 0) []
@@ -97,6 +99,7 @@ ifComplexityPos = inductiveLemma "ifComplexityPos" (\(Forall f) -> ifComplexity 
 -- >>> runTP ifComplexitySmaller
 -- Lemma: ifComplexityPos                  Q.E.D.
 -- Lemma: ifComplexitySmaller              Q.E.D.
+-- Functions proven terminating: ifComplexity
 -- [Proven] ifComplexitySmaller :: Ɐc ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
 ifComplexitySmaller :: TP (Proof (Forall "c" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
 ifComplexitySmaller = do
@@ -152,6 +155,7 @@ normalize = smtFunction "normalize"
 --   Step: 6                               Q.E.D.
 --   Step: 7                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: ifComplexity
 -- [Proven] normalizePreservesComplexity :: Ɐp ∷ Formula → Ɐq ∷ Formula → Ɐs ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
 normalizePreservesComplexity :: TP (Proof (Forall "p" Formula -> Forall "q" Formula -> Forall "s" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
 normalizePreservesComplexity = do
@@ -222,6 +226,7 @@ assumeFalse vid bs = sBinding vid sFalse .: bs
 --
 -- >>> runTP isAssignedExtends
 -- Lemma: isAssignedExtends                Q.E.D.
+-- Functions proven terminating: isAssigned
 -- [Proven] isAssignedExtends :: Ɐi ∷ Integer → Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
 isAssignedExtends :: TP (Proof (Forall "i" Integer -> Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
 isAssignedExtends = lemma "isAssignedExtends"
@@ -232,6 +237,7 @@ isAssignedExtends = lemma "isAssignedExtends"
 --
 -- >>> runTP lookUpExtends
 -- Lemma: lookUpExtends                    Q.E.D.
+-- Functions proven terminating: isAssigned, lookUp
 -- [Proven] lookUpExtends :: Ɐi ∷ Integer → Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
 lookUpExtends :: TP (Proof (Forall "i" Integer -> Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
 lookUpExtends = lemma "lookUpExtends"
@@ -243,6 +249,7 @@ lookUpExtends = lemma "lookUpExtends"
 --
 -- >>> runTP lookUpSame
 -- Lemma: lookUpSame                       Q.E.D.
+-- Functions proven terminating: lookUp
 -- [Proven] lookUpSame :: Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
 lookUpSame :: TP (Proof (Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
 lookUpSame = lemma "lookUpSame" (\(Forall n) (Forall v) (Forall bs) -> lookUp n (sBinding n v .: bs) .== v) []
@@ -251,6 +258,7 @@ lookUpSame = lemma "lookUpSame" (\(Forall n) (Forall v) (Forall bs) -> lookUp n 
 --
 -- >>> runTP isAssignedSame
 -- Lemma: isAssignedSame                   Q.E.D.
+-- Functions proven terminating: isAssigned
 -- [Proven] isAssignedSame :: Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
 isAssignedSame :: TP (Proof (Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
 isAssignedSame = lemma "isAssignedSame" (\(Forall n) (Forall v) (Forall bs) -> isAssigned n (sBinding n v .: bs)) []
@@ -318,6 +326,7 @@ isTautology f = isTautology' (normalize f) []
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: isAssigned, lookUp
 -- [Proven] lookUpStable :: Ɐa ∷ [Binding] → Ɐx ∷ Integer → Ɐb ∷ [Binding] → Bool
 lookUpStable :: TP (Proof (Forall "a" [Binding] -> Forall "x" Integer -> Forall "b" [Binding] -> SBool))
 lookUpStable =
@@ -347,6 +356,7 @@ lookUpStable =
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: isAssigned, lookUp
 -- [Proven] trueIsAssigned :: Ɐa ∷ [Binding] → Ɐx ∷ Integer → Bool
 trueIsAssigned :: TP (Proof (Forall "a" [Binding] -> Forall "x" Integer -> SBool))
 trueIsAssigned =
@@ -384,6 +394,7 @@ trueIsAssigned =
 --     Step: 1.4.6                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: eval, ifComplexity, lookUp
 -- [Proven] evalStable :: Ɐf ∷ Formula → Ɐx ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
 evalStable :: TP (Proof (Forall "f" Formula -> Forall "x" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
 evalStable = do
@@ -472,6 +483,7 @@ evalStable = do
 --       Step: 1.4.Completeness                      Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
+-- Functions proven terminating: eval, ifComplexity, isAssigned, isNormal, isTautology', lookUp
 -- [Proven] tautologyImpliesEval :: Ɐf ∷ Formula → Ɐa ∷ [Binding] → Ɐb ∷ [Binding] → Bool
 tautologyImpliesEval :: TP (Proof (Forall "f" Formula -> Forall "a" [Binding] -> Forall "b" [Binding] -> SBool))
 tautologyImpliesEval = do
@@ -830,6 +842,7 @@ falsify f = falsify' (normalize f) []
 --     Step: 1.4                                     Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
+-- Functions proven terminating: eval, falsify', ifComplexity, isAssigned, isNormal, isTautology', lookUp
 -- [Proven] nonTautIsFalsified :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
 nonTautIsFalsified :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
 nonTautIsFalsified = do
@@ -873,6 +886,7 @@ nonTautIsFalsified = do
 --     Step: 1.4                                     Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
+-- Functions proven terminating: eval, falsify', ifComplexity, isAssigned, lookUp
 -- [Proven] falsifyExtendsBindings :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Ɐi ∷ Integer → Bool
 falsifyExtendsBindings :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> Forall "i" Integer -> SBool))
 falsifyExtendsBindings = do
@@ -950,6 +964,7 @@ falsifyExtendsBindings = do
 --       Step: 1.4.Completeness                      Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
+-- Functions proven terminating: eval, falsify', ifComplexity, isAssigned, isNormal, lookUp
 -- [Proven] falsifyFalsifies :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
 falsifyFalsifies :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
 falsifyFalsifies = do

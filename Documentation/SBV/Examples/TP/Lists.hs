@@ -654,6 +654,7 @@ mapCompose f g =
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldr, sbv.map
 -- [Proven] mapConcat :: Ɐxs ∷ [[Integer]] → Bool
 mapConcat :: (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [[a]] -> SBool))
 mapConcat f = do
@@ -710,6 +711,7 @@ foldrMapFusion a g f =
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldr
 -- [Proven] foldrFusion :: Ɐxs ∷ [[Char]] → Bool
 foldrFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV c -> SBV b -> (SBV c -> SBV b) -> (SBV a -> SBV c -> SBV c) -> (SBV a -> SBV b -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrFusion a b f g h = do
@@ -982,6 +984,7 @@ foldrFoldl (<+>) (<*>) e = do
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.foldr, sbv.map
 -- [Proven] bookKeeping :: Ɐxss ∷ [[Integer]] → Bool
 --
 -- NB. This theorem does not hold if @f@ does not have a left-unit! Consider the input @[[], [x]]@. Left hand side reduces to
