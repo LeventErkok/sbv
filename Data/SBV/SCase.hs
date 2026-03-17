@@ -32,7 +32,7 @@ import qualified Language.Haskell.Exts as E
 import Control.Monad (unless, when, zipWithM)
 
 import Data.SBV.Core.TH    (getConstructors, sbvName)
-import Data.SBV.Core.Model (ite, sym)
+import Data.SBV.Core.Model (ite, symWithKind)
 import Data.SBV.Core.Data  (sTrue, sNot, (.&&), (.||), (.==), (.===), literal)
 
 import Data.Char  (isDigit)
@@ -687,7 +687,7 @@ sCase = QuasiQuoter
                   -- checkWildcard guarantees an unguarded wildcard is last if present.
                   iteChain []                       = do uniq <- newName "u"
                                                          let suffix = drop 2 (show uniq)
-                                                         pure $ AppE (VarE 'sym) (LitE (StringL ("unmatched_sCase_wildcard_" ++ suffix)))
+                                                         pure $ AppE (VarE 'symWithKind) (LitE (StringL ("unmatched_sCase_wildcard_" ++ suffix)))
                   iteChain ((Nothing, rhs) : _)     = pure rhs
                   iteChain ((Just g,  rhs) : rest)  = do r <- iteChain rest
                                                          pure $ foldl AppE (VarE 'ite) [g, rhs, r]
@@ -708,7 +708,8 @@ sCase = QuasiQuoter
                                                                   , "             mkSymbolic [''" <> typ <> "]"
                                                                   , "        In a template-haskell context."
                                                                   ]
-              cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ mbt . concat
+              let anyUserGuards = any (\(Match _ grhs _) -> case grhs of { GuardedB{} -> True; _ -> False }) matches
+              cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ mbt anyUserGuards . concat
               buildCase typ mbFnName scrut cases
         Right _  -> fail Unknown "sCase: Parse error, cannot extract a case-expression."
         Left err -> handleParseError "sCase" err
@@ -719,7 +720,7 @@ sCase = QuasiQuoter
     buildCase typ  _               _scrut (Right cases) = do
         uniq <- newName "u"
         let suffix = drop 2 (show uniq)
-            fallback  = AppE (VarE 'sym) (LitE (StringL ("unmatched_sCase_" ++ typ ++ "_" ++ suffix)))
+            fallback  = AppE (VarE 'symWithKind) (LitE (StringL ("unmatched_sCase_" ++ typ ++ "_" ++ suffix)))
 
             iteChain []              = pure fallback
             iteChain ((t, e) : rest)
@@ -736,8 +737,8 @@ sCase = QuasiQuoter
         iteChain cases
 
     -- Make sure things are in good-shape and decide if we have guards
-    checkCase :: Exp -> String -> Maybe BuiltinType -> [Case] -> Q (Either [Exp] [(Exp, Exp)])
-    checkCase scrut typ mbt cases = do
+    checkCase :: Exp -> String -> Maybe BuiltinType -> Bool -> [Case] -> Q (Either [Exp] [(Exp, Exp)])
+    checkCase scrut typ mbt anyUserGuards cases = do
         loc   <- location
         cstrs <- getCstrs mbt typ
 
@@ -916,7 +917,12 @@ sCase = QuasiQuoter
                    -- is exhaustive. The last entry's tester is then redundant — replace it
                    -- with sTrue so buildCase uses it as the default, avoiding an unreachable
                    -- fallback variable.
+                   -- For single-constructor types (tuples), all branches match the sole
+                   -- constructor, with guards from nested patterns only. When there are no
+                   -- user-provided guards, the nested patterns partition the space and the
+                   -- last branch is the default.
                    let allCovered = all hasUnguarded cstrs
+                                 || (length cstrs == 1 && not anyUserGuards)
                        hasUnguarded (cstr, _) = any (\case CMatch _ nm _ Nothing _ _ -> sameBase nm cstr; _ -> False) cases
                        optimize ps | allCovered, not (null ps)
                                    = init ps ++ [(VarE 'sTrue, snd (last ps))]

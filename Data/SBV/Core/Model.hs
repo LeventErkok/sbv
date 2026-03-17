@@ -3154,6 +3154,11 @@ class SMTDefinable a where
   -- having to call 'free' explicitly, i.e., without being in the symbolic monad.
   sym :: String -> a
 
+  -- | Like 'sym', but appends the type's kind to the name, ensuring uniqueness across
+  -- different type instantiations of the same polymorphic definition. Used internally by 'sCase'.
+  symWithKind :: String -> a
+  symWithKind = sym
+
   -- | Render an uninterpeted value as an SMTLib definition
   sbv2smt :: ExtractIO m => a -> m String
 
@@ -3269,6 +3274,8 @@ instance SymVal a => SMTDefinable (SBV a) where
                                           newExpr st ka $ SBVApp op svs
 
   registerFunction x = constrain $ x .== x
+
+  symWithKind nm = sym (nm ++ "_" ++ show (kindOf (Proxy @a)))
 
 
 instance (SymVal a, SMTDefinable b) => SMTDefinable (SBV a -> b) where
