@@ -135,7 +135,11 @@ isNormal = smtFunction "isNormal"
 normalize :: SFormula -> SFormula
 normalize = smtFunctionWithMeasure "normalize"
                                    ( \f -> tuple (ifComplexity f, ifDepth f)
-                                   , [measureLemma ifDepthNonNeg, measureLemma ifComplexityPos]
+                                   , [ measureLemma        ifDepthNonNeg
+                                     , measureLemma        ifComplexityPos
+                                     , measureLemmaWith z3 ifComplexitySmaller
+                                     , measureLemmaWith z3 normalizePreservesComplexity
+                                     ]
                                    )
           $ \f -> [sCase| f of
                      If (If p q r) left right -> normalize (sIf p (sIf q left right) (sIf r left right))
@@ -610,6 +614,7 @@ tautologyImpliesEval = do
 --       Step: 1.4.Completeness                      Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
+-- Functions proven terminating: ifComplexity, ifDepth, isNormal, normalize
 -- [Proven] normalizeCorrect :: Ɐf ∷ Formula → Bool
 normalizeCorrect :: TP (Proof (Forall "f" Formula -> SBool))
 normalizeCorrect = do
@@ -670,6 +675,7 @@ normalizeCorrect = do
 --     Step: 1.4.2                                   Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
+-- Functions proven terminating: ifComplexity, isNormal, normalize
 -- [Proven] normalizeSame :: Ɐf ∷ Formula → Bool
 normalizeSame :: TP (Proof (Forall "f" Formula -> SBool))
 normalizeSame = do
@@ -719,6 +725,7 @@ normalizeSame = do
 --       Step: 1.4.Completeness                      Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
+-- Functions proven terminating: eval, ifComplexity, ifDepth, lookUp, normalize
 -- [Proven] normalizeRespectsTruth :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
 normalizeRespectsTruth :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
 normalizeRespectsTruth = do
@@ -774,6 +781,7 @@ normalizeRespectsTruth = do
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: eval, ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 -- [Proven] soundness :: Ɐf ∷ Formula → Ɐbindings ∷ [Binding] → Bool
 soundness :: TP (Proof (Forall "f" Formula -> Forall "bindings" [Binding] -> SBool))
 soundness = do
@@ -1063,6 +1071,7 @@ falsifyFalsifies = do
 -- Lemma: nonTautIsFalsified               Q.E.D.
 -- Lemma: normalizeCorrect                 Q.E.D.
 -- Lemma: completenessHelper               Q.E.D.
+-- Functions proven terminating: eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 -- [Proven] completenessHelper :: Ɐf ∷ Formula → Bool
 completenessHelper :: TP (Proof (Forall "f" Formula -> SBool))
 completenessHelper = do
@@ -1086,6 +1095,7 @@ completenessHelper = do
 -- Lemma: completenessHelper               Q.E.D.
 -- Lemma: normalizeRespectsTruth           Q.E.D.
 -- Lemma: completeness                     Q.E.D.
+-- Functions proven terminating: eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 -- [Proven] completeness :: Ɐf ∷ Formula → Bool
 completeness :: TP (Proof (Forall "f" Formula -> SBool))
 completeness = do
