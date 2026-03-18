@@ -2233,13 +2233,15 @@ data SMTConfig = SMTConfig {
 
 -- | Configuration for TP
 data TPOptions = TPOptions {
-         ribbonLength :: Int  -- ^ Line length for TP proofs
-       , quiet        :: Bool -- ^ No messages what-so-ever for successful steps. (Will print if something fails)
-       , printAsms    :: Bool -- ^ Print assumptions as they are proven as separate steps.
-       , printStats   :: Bool -- ^ Print time/statistics. If quiet is True, then measureTime is ignored.
-       , cacheProofs  :: Bool -- ^ Treat lemma names as unique, and cache the results. Default: False. Note that this
-                              -- feature is unsound unless you make sure (by some other mechanism) that your lemma names
-                              -- are indeed unique.
+         ribbonLength          :: Int            -- ^ Line length for TP proofs
+       , quiet                 :: Bool           -- ^ No messages what-so-ever for successful steps. (Will print if something fails)
+       , printAsms             :: Bool           -- ^ Print assumptions as they are proven as separate steps.
+       , printStats            :: Bool           -- ^ Print time/statistics. If quiet is True, then measureTime is ignored.
+       , cacheProofs           :: Bool           -- ^ Treat lemma names as unique, and cache the results. Default: False. Note that this
+                                                 -- feature is unsound unless you make sure (by some other mechanism) that your lemma names
+                                                 -- are indeed unique.
+       , measuresBeingVerified :: Set.Set String -- ^ Functions whose measures are currently being verified. Used to prevent infinite
+                                                 -- recursion when a measureLemma proof uses the function whose measure is being checked.
        }
 
 -- | Ignore internal names and those the user told us to

@@ -136,8 +136,11 @@ runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
    encountered <- readIORef rEncountered
    unless (Set.null verified) $ printMeasures cfg (Set.toAscList verified)
 
-   -- Belt-and-suspenders: make sure all encountered measures have been verified
-   let missed = encountered `Set.difference` verified
+   -- Belt-and-suspenders: make sure all encountered measures have been verified.
+   -- Exclude functions in measuresBeingVerified: those are being verified by an outer caller
+   -- (e.g., when a measureLemma proof uses the function whose measure is being checked).
+   let beingVerified = measuresBeingVerified (tpOptions cfg)
+       missed = encountered `Set.difference` verified `Set.difference` beingVerified
    unless (Set.null missed) $
      error $ "SBV.runTP: Internal error: The following functions have termination measures that were encountered but not verified: "
            ++ intercalate ", " (Set.toAscList missed)

@@ -39,13 +39,19 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 #ifdef DOCTEST
 -- $setup
 -- >>> :set -XTypeApplications
+-- >>> import Data.SBV.TP
 #endif
 
 -- * Quick sort
 
 -- | Quick-sort, using the first element as pivot.
-quickSort :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
-quickSort = smtFunction "quickSort"
+quickSort :: forall a. (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a
+quickSort = smtFunctionWithMeasure "quickSort"
+              ( length @a
+              , [ measureLemma (partitionFstBound @a)
+                , measureLemma (partitionSndBound @a)
+                ]
+              )
           $ \l -> [sCase| l of
                      []     -> []
                      x : xs -> let (lo, hi) = untuple (partition x xs)
@@ -64,6 +70,74 @@ partition = smtFunction "partition"
                                              (tuple (a .: lo, hi))
                                              (tuple (lo, a .: hi))
                          |]
+
+-- | The first component of partition is no longer than the input.
+--
+-- >>> runTP $ partitionFstBound @Integer
+-- Inductive lemma (strong): partitionNotLongerFst
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (simplify)              Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: partition
+-- [Proven] partitionNotLongerFst :: Ɐl ∷ [Integer] → Ɐpivot ∷ Integer → Bool
+partitionFstBound :: forall a. (OrdSymbolic (SBV a), SymVal a) => TP (Proof (Forall "l" [a] -> Forall "pivot" a -> SBool))
+partitionFstBound = sInduct "partitionNotLongerFst"
+   (\(Forall l) (Forall pivot) -> length (fst (partition @a pivot l)) .<= length l)
+   (\l _ -> length l, []) $
+   \ih l pivot -> [] |- length (fst (partition @a pivot l)) .<= length l
+                     =: [pCase| l of
+                          []     -> trivial
+                          a : as -> let lo = fst (partition pivot as)
+                                 in ite (a .< pivot)
+                                        (length (a .: lo) .<= length (a .: as))
+                                        (length       lo  .<= length (a .: as))
+                                 ?? "simplify"
+                                 =: ite (a .< pivot)
+                                        (length lo .<=     length as)
+                                        (length lo .<= 1 + length as)
+                                 ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                 =: sTrue
+                                 =: qed
+                        |]
+
+-- | The second component of partition is no longer than the input.
+--
+-- >>> runTP $ partitionSndBound @Integer
+-- Inductive lemma (strong): partitionNotLongerSnd
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (simplify)              Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: partition
+-- [Proven] partitionNotLongerSnd :: Ɐl ∷ [Integer] → Ɐpivot ∷ Integer → Bool
+partitionSndBound :: forall a. (OrdSymbolic (SBV a), SymVal a) => TP (Proof (Forall "l" [a] -> Forall "pivot" a -> SBool))
+partitionSndBound = sInduct "partitionNotLongerSnd"
+   (\(Forall l) (Forall pivot) -> length (snd (partition @a pivot l)) .<= length l)
+   (\l _ -> length l, []) $
+   \ih l pivot -> [] |- length (snd (partition @a pivot l)) .<= length l
+                     =: [pCase| l of
+                          []     -> trivial
+                          a : as -> let hi = snd (partition pivot as)
+                                 in ite (a .< pivot)
+                                        (length       hi  .<= length (a .: as))
+                                        (length (a .: hi) .<= length (a .: as))
+                                 ?? "simplify"
+                                 =: ite (a .< pivot)
+                                        (length hi .<= 1 + length as)
+                                        (length hi .<=     length as)
+                                 ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                 =: sTrue
+                                 =: qed
+                        |]
 
 -- * Correctness proof
 
@@ -150,24 +224,8 @@ partition = smtFunction "partition"
 --   Step: 2 (push lge down)                                   Q.E.D.
 --   Step: 3                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma (strong): partitionNotLongerFst
---   Step: Measure is non-negative                             Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2 (simplify)                                  Q.E.D.
---     Step: 1.2.3                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
--- Inductive lemma (strong): partitionNotLongerSnd
---   Step: Measure is non-negative                             Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2 (simplify)                                  Q.E.D.
---     Step: 1.2.3                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+-- Lemma: partitionNotLongerFst                                Q.E.D.
+-- Lemma: partitionNotLongerSnd                                Q.E.D.
 -- Inductive lemma: countPartition
 --   Step: Base                                                Q.E.D.
 --   Step: 1 (expand partition)                                Q.E.D.
@@ -421,44 +479,10 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                              =: qed
 
   -- The first element of partition does not increase in size
-  partitionNotLongerFst <- sInduct "partitionNotLongerFst"
-     (\(Forall l) (Forall pivot) -> length (fst (partition @a pivot l)) .<= length l)
-     (\l _ -> length l, []) $
-     \ih l pivot -> [] |- length (fst (partition @a pivot l)) .<= length l
-                       =: [pCase| l of
-                            []     -> trivial
-                            a : as -> let lo = fst (partition pivot as)
-                                   in ite (a .< pivot)
-                                          (length (a .: lo) .<= length (a .: as))
-                                          (length       lo  .<= length (a .: as))
-                                   ?? "simplify"
-                                   =: ite (a .< pivot)
-                                          (length lo .<=     length as)
-                                          (length lo .<= 1 + length as)
-                                   ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
-                                   =: sTrue
-                                   =: qed
-                          |]
+  partitionNotLongerFst <- recall "partitionNotLongerFst" (partitionFstBound @a)
 
   -- The second element of partition does not increase in size
-  partitionNotLongerSnd <- sInduct "partitionNotLongerSnd"
-     (\(Forall l) (Forall pivot) -> length (snd (partition @a pivot l)) .<= length l)
-     (\l _ -> length l, []) $
-     \ih l pivot -> [] |- length (snd (partition @a pivot l)) .<= length l
-                       =: [pCase| l of
-                            []     -> trivial
-                            a : as -> let hi = snd (partition pivot as)
-                                   in ite (a .< pivot)
-                                          (length       hi  .<= length (a .: as))
-                                          (length (a .: hi) .<= length (a .: as))
-                                   ?? "simplify"
-                                   =: ite (a .< pivot)
-                                          (length hi .<= 1 + length as)
-                                          (length hi .<=     length as)
-                                   ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
-                                   =: sTrue
-                                   =: qed
-                          |]
+  partitionNotLongerSnd <- recall "partitionNotLongerSnd" (partitionSndBound @a)
 
   --------------------------------------------------------------------------------------------
   -- Part IV. Helper lemmas for count

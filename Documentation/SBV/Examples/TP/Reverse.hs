@@ -46,14 +46,51 @@ import qualified Documentation.SBV.Examples.TP.Lists as TP
 -- is not our concern here, we call 'rev' itself three times in the body.
 -- NB. We use 'uncons' on @rev as@ below since quasi-quote splices do not nest in Haskell,
 -- so we cannot use a nested @sCase@ call here.
-rev :: SymVal a => SList a -> SList a
-rev = smtFunction "rev"
+rev :: forall a. SymVal a => SList a -> SList a
+rev = smtFunctionWithMeasure "rev"
+        ( length @a
+        , [measureLemma (revPreservesLen @a)]
+        )
     $ \xs -> [sCase| xs of
                 []     -> xs
                 [_]    -> xs
                 x : as -> let (hras, tas) = uncons (rev as)
                           in hras .: rev (x .: rev tas)
              |]
+
+-- | Reversing preserves length. Needed as a measure helper for 'rev'.
+--
+-- >>> runTP $ revPreservesLen @Integer
+-- Inductive lemma (strong): revPreservesLen
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (3 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.3.1                         Q.E.D.
+--     Step: 1.3.2                         Q.E.D.
+--     Step: 1.3.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: rev
+-- [Proven] revPreservesLen :: Ɐxs ∷ [Integer] → Bool
+revPreservesLen :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
+revPreservesLen = sInductWith cvc5 "revPreservesLen"
+   (\(Forall xs) -> length (rev @a xs) .== length xs)
+   (\xs -> length xs, []) $
+   \ih xs -> [] |- length (rev @a xs) .== length xs
+               =: [pCase| xs of
+                    []     -> trivial
+                    [_]    -> trivial
+                    a : as -> length (head (rev as) .: rev (a .: rev (tail (rev as)))) .== length (a .: as)
+                           -- Simplify: length (h .: e) = 1 + length e
+                           =: (1 + length (rev (a .: rev (tail (rev as))))) .== (1 + length as)
+                           -- Now apply the IH instances in order: each precondition depends on previous conclusions
+                           ?? ih `at` Inst @"xs" as
+                           ?? ih `at` Inst @"xs" (tail (rev as))
+                           ?? ih `at` Inst @"xs" (a .: rev (tail (rev as)))
+                           =: sTrue
+                           =: qed
+                  |]
 
 -- * Correctness proof
 
@@ -86,7 +123,7 @@ rev = smtFunction "rev"
 --     Step: 1.3.15                        Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven terminating: rev
+-- Functions proven terminating: rev, sbv.reverse
 -- [Proven] revCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 correctness = do

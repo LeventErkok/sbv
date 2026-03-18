@@ -29,6 +29,7 @@ module Data.SBV.TP.Kernel (
        , tpMergeCfg, checkNewMeasures
        ) where
 
+import Control.Monad        (unless)
 import Control.Monad.Trans  (liftIO, MonadIO)
 
 import Data.List  (intercalate)
@@ -240,14 +241,28 @@ inductiveLemmaWith cfg nm f by = lemmaWith cfg nm f (inductionSchema f : by)
 
 -- | Check any newly encountered recursive function measures. This reads deferred checks
 -- from 'rMeasureChecks', runs those not yet verified, and records them as verified.
+-- Skips functions in 'measuresBeingVerified' to prevent infinite recursion when a
+-- measureLemma proof uses the function whose measure is currently being checked.
 checkNewMeasures :: SMTConfig -> State -> TPState -> IO ()
-checkNewMeasures cfg st tpSt = do
+checkNewMeasures cfg@SMTConfig{tpOptions = TPOptions{measuresBeingVerified}} st tpSt = do
    checks   <- readIORef (rMeasureChecks st)
    verified <- readIORef (measuresVerified tpSt)
    let allNames = Set.fromList (map fst checks)
-       new      = [(n, c) | (n, c) <- checks, n `Set.notMember` verified]
+       new      = [(n, c) | (n, c) <- checks, n `Set.notMember` verified, n `Set.notMember` measuresBeingVerified]
+       skipped  = [n | (n, _) <- checks, n `Set.notMember` verified, n `Set.member` measuresBeingVerified]
+
+       msg s | verbose cfg = putStrLn s
+             | True        = pure ()
+
+   unless (null new && null skipped) $
+      msg $ "[MEASURE] checkNewMeasures: " ++ show (length new) ++ " to verify"
+            ++ (if null skipped then "" else ", " ++ show (length skipped) ++ " skipped (being verified): " ++ show skipped)
+
    modifyIORef' (measuresEncountered tpSt) (Set.union allNames)
-   mapM_ (\(_, c) -> c cfg) new
+   let verify (n, c) = do msg $ "[MEASURE] checkNewMeasures: verifying " ++ n
+                          () <- c cfg
+                          msg $ "[MEASURE] checkNewMeasures: " ++ n ++ " verified"
+   mapM_ verify new
    writeIORef (measuresVerified tpSt) (verified `Set.union` Set.fromList (map fst new))
 
 -- | Capture the general flow of a proof-step. Note that this is the only point where we call the backend solver

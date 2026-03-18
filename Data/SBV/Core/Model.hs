@@ -1278,8 +1278,19 @@ hasMeasure (HasMeasure _ _) = True
 -- Throws an error with a detailed message if verification fails.
 verifyMeasure :: SMTConfig -> String -> LambdaInfo -> MeasureEval -> [MeasureHelper] -> IO ()
 verifyMeasure cfg funcNm info meval helpers = do
-   -- Run each helper: proves the property and returns the axiom to assert
-   axioms <- mapM (\h -> runMeasureHelper h cfg) helpers
+   -- Run each helper with funcNm added to measuresBeingVerified, preventing re-entrant verification.
+   -- This is needed when a measureLemma proof uses the function whose measure is being checked
+   -- (e.g., revPreservesLen proves length(rev xs) == length xs, using rev itself).
+   let curVerifying = measuresBeingVerified (tpOptions cfg)
+       cfg'         = cfg{tpOptions = (tpOptions cfg){measuresBeingVerified = Set.insert funcNm curVerifying}}
+
+       msg s | verbose cfg = putStrLn s
+             | True        = pure ()
+
+   msg $ "[MEASURE] " ++ funcNm ++ ": verifying with " ++ show (length helpers) ++ " helper(s)"
+         ++ if Set.null curVerifying then "" else ", already verifying: " ++ show (Set.toList curVerifying)
+   axioms <- mapM (\h -> runMeasureHelper h cfg') helpers
+   msg $ "[MEASURE] " ++ funcNm ++ ": " ++ show (length axioms) ++ " helper axiom(s) collected, checking measure"
    result <- checkMeasure cfg funcNm False info meval axioms
    let prettyNm = prettyFuncNm funcNm
    case result of
@@ -1323,7 +1334,7 @@ data MeasureCheckResult = MeasureOK                         -- ^ Measure is vali
 checkMeasure :: SMTConfig -> String -> Bool -> LambdaInfo -> MeasureEval -> [SBool] -> IO MeasureCheckResult
 checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) axioms = do
    let -- Use a separate transcript for the measure check, so it doesn't clobber the main one
-       addSuffix s fp = dropExtension fp ++ "_measure_" ++ funcNm ++ "_" ++ s ++ takeExtension fp
+       addSuffix s fp = dropExtension fp ++ "_measure_" ++ map (\c -> if c == ' ' then '_' else c) funcNm ++ "_" ++ s ++ takeExtension fp
        cfgNonNeg      = cfgIn{transcript = addSuffix "nonNeg"   <$> transcript cfgIn}
        cfgDecrease    = cfgIn{transcript = addSuffix "decrease"  <$> transcript cfgIn}
        barFuncNm      = barify funcNm
@@ -1335,6 +1346,11 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
        let reachConds = computeReachingConditions liAssignments liOutput
            paramSVs   = map snd liParams
 
+           -- Set up the proving environment: create fresh symbolic parameters,
+           -- constrain any axioms (which may register function definitions in this
+           -- session via the SVal cache mechanism), then replay the function body DAG.
+           -- The order matters: axioms must be constrained BEFORE replaying the DAG,
+           -- so that replayDAG knows which functions are available in this session.
            mkProveEnv = do
               st <- symbolicEnv
               liftIO $ writeIORef (rSkipMeasureChecks st) True
@@ -1345,13 +1361,21 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
                                                ]
               freshConsts <- liftIO $ mapM (\(_, cv) -> svToSV st (SVal (kindOf cv) (Left cv))) liConsts
 
+              -- Constrain axioms first: forcing axiom SBools triggers newUninterpreted
+              -- for any functions they reference, registering those definitions in this session.
+              mapM_ constrain axioms
+
+              -- Now read which functions are actually available in this session
+              sessionDefns <- liftIO $ readIORef (rDefns st)
+              let sessionFuncs = Set.fromList (map fst sessionDefns)
+
               let constMapping = zip (map fst liConsts) freshConsts
                   paramMapping = zip paramSVs freshParams
                   initMap      = Map.fromList (constMapping ++ paramMapping)
                   builtinMap   = Map.fromList [(trueSV, trueSV), (falseSV, falseSV)]
                   startMap     = Map.union initMap builtinMap
 
-              svMap <- liftIO $ replayDAG st funcNm startMap (F.toList liAssignments)
+              svMap <- liftIO $ replayDAG cfgIn st funcNm sessionFuncs startMap (F.toList liAssignments)
 
               let formalSVals = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) freshParams
                   mFormal     = applyM formalSVals
@@ -1363,7 +1387,6 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
                    then pure (Right ())
                    else do nonNegResult <- proveWith cfgNonNeg (do
                               (_, mFormal) <- mkProveEnv
-                              mapM_ constrain axioms
                               sObserve "measure" (unSBV mFormal)
                               pure $ mFormal .>= zero :: Symbolic SBool)
                            pure $ case nonNegResult of
@@ -1375,7 +1398,29 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
            -- Check 2: Strict decrease at each recursive call
            decResult <- proveWith cfgDecrease (do
               (svMap, mFormal) <- mkProveEnv
-              mapM_ constrain axioms
+
+              -- When we have axioms from measure helpers that reference the function being
+              -- verified (e.g., revPreservesLen references rev), the axioms register the
+              -- function definition in this session via the SVal cache mechanism. We then
+              -- connect the fresh variables (created by replayDAG for recursive calls) to
+              -- actual function calls, so the axioms can reason about them.
+              -- For example, the axiom len(rev(xs)) = len(xs) needs to know that fresh_1
+              -- is actually rev(as) in order to derive len(fresh_1) = len(as).
+              st <- symbolicEnv
+              defns <- liftIO $ readIORef (rDefns st)
+              let funcRegistered = barFuncNm `elem` map fst defns
+              when funcRegistered $
+                liftIO $ mapM_ (\(rcSV, callArgSVs) -> do
+                    let freshSV    = Map.findWithDefault rcSV rcSV svMap
+                        mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
+                        k          = kindOf rcSV
+                    -- Create the actual function call: f(mapped_args)
+                    actualSV <- newExpr st k (SBVApp (Uninterpreted barFuncNm) mappedArgs)
+                    -- Assert fresh_var == f(mapped_args)
+                    let freshSVal  = SVal k (Right (cache (const (pure freshSV))))
+                        actualSVal = SVal k (Right (cache (const (pure actualSV))))
+                    internalConstraint st False [] (svEqual freshSVal actualSVal)
+                  ) recCalls
 
               let singleCall = length recCalls == 1
                   mkObligation (i, (rcSV, callArgSVs)) = do
@@ -1605,9 +1650,17 @@ prettyFuncNm m = case break (== '@') m of
                    _                                -> m
 
 -- | Replay the DAG in a new state, building up an SV mapping from old to new.
--- Recursive call nodes (matching funcName) are skipped — they become fresh uninterpreted values.
-replayDAG :: State -> String -> Map.Map SV SV -> [(SV, SBVExpr)] -> IO (Map.Map SV SV)
-replayDAG st funcName = go
+-- Recursive calls to the function being verified are replaced with fresh variables.
+-- Calls to other DEFINED functions (present in the parent state's rDefns) are replayed as actual calls.
+-- All other Uninterpreted references (uninterpreted constants, free functions, sentinels)
+-- are replaced with fresh variables since they aren't defined in the fresh proveWith session.
+replayDAG :: SMTConfig -> State -> String -> Set.Set String -> Map.Map SV SV -> [(SV, SBVExpr)] -> IO (Map.Map SV SV)
+replayDAG cfg st funcName definedFuncs startMap dag = do
+  let n = length dag
+      msg s | verbose cfg = putStrLn s
+            | True        = pure ()
+  msg $ "[MEASURE] replayDAG " ++ funcName ++ ": replaying " ++ show n ++ " node(s)"
+  go startMap dag
   where barFuncName = barify funcName
 
         go svMap []                = pure svMap
@@ -1617,10 +1670,14 @@ replayDAG st funcName = go
           newSV' <- case op of
                       -- For recursive calls, create a fresh uninterpreted value instead of replaying
                       Uninterpreted nm | nm == barFuncName -> newInternalVariable st (kindOf sv)
-                      -- For other uninterpreted functions/constants, also create fresh values
-                      -- (e.g., sCase sentinel values like unmatched_sCase_Tuple2_...)
+                      -- For calls to other defined functions (e.g., partition), replay properly
+                      Uninterpreted nm | nm `Set.member` definedFuncs -> do
+                                          let mappedOp = mapOpSVs (\a -> Map.findWithDefault a a svMap) op
+                                          newExpr st (kindOf sv) (SBVApp mappedOp mappedArgs)
+                      -- For everything else that's Uninterpreted (free functions, sentinels, etc.),
+                      -- create fresh values since they aren't defined in the proveWith session
                       Uninterpreted{} -> newInternalVariable st (kindOf sv)
-                      -- For all other operations, replay the expression with mapped arguments
+                      -- For all other operations (arithmetic, list ops, etc.), replay properly
                       _ -> do let mappedOp = mapOpSVs (\a -> Map.findWithDefault a a svMap) op
                               newExpr st (kindOf sv) (SBVApp mappedOp mappedArgs)
           go (Map.insert sv newSV' svMap) rest

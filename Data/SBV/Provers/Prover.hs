@@ -51,6 +51,8 @@ import Data.List (intercalate, isPrefixOf)
 
 import Data.Maybe (mapMaybe, listToMaybe)
 
+import qualified Data.Set as Set (empty)
+
 import Data.IORef (readIORef)
 
 import qualified Data.Foldable   as S (toList)
@@ -108,11 +110,12 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , ignoreExitCode              = False
                                             , redirectVerbose             = Nothing
                                             , firstifyUniqueLen           = 10
-                                            , tpOptions                   = TPOptions { ribbonLength = 40
-                                                                                      , quiet        = False
-                                                                                      , printAsms    = False
-                                                                                      , printStats   = False
-                                                                                      , cacheProofs  = False
+                                            , tpOptions                   = TPOptions { ribbonLength          = 40
+                                                                                      , quiet                 = False
+                                                                                      , printAsms             = False
+                                                                                      , printStats            = False
+                                                                                      , cacheProofs           = False
+                                                                                      , measuresBeingVerified = Set.empty
                                                                                       }
                                             }
 
