@@ -35,7 +35,7 @@ type Idx = (SInteger, SInteger)
 -- | Encode binary search in a functional style.
 bsearch :: Arr -> Idx -> SInteger -> SMaybe Integer
 bsearch array (low, high) = f array low high
-  where f = smtFunctionWithMeasure "bsearch" (\_arr lo hi _x -> (hi - lo + 1) `smax` 0)
+  where f = smtFunctionWithMeasure "bsearch" (\_arr lo hi _x -> (hi - lo + 1) `smax` 0, [])
           $ \arr lo hi x ->
                let mid  = (lo + hi) `sEDiv` 2
                    xmid = arr `readArray` mid

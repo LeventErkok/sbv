@@ -36,6 +36,27 @@
     between the pure array theory (`select`/`store`/`const`) and the richer setting where
     arrays are identified with function spaces.
 
+  * SBV now automatically checks termination of recursive functions defined via `smtFunction`.
+    A measure (a non-negative expression that strictly decreases at each recursive call) is
+    guessed automatically from argument types when possible. For functions that need an explicit
+    measure, use `smtFunctionWithMeasure`:
+
+    ```haskell
+    ld = smtFunctionWithMeasure "ld" (\k n -> (n - k) `smax` 0, [])
+       $ \k n -> ite (n `sMod` k .== 0) k (ld (k+1) n)
+    ```
+
+    When the measure requires inductive properties to verify, supply TP proof actions as helpers
+    via `measureLemma`/`measureLemmaWith`:
+
+    ```haskell
+    normalize = smtFunctionWithMeasure "normalize"
+                  ( \f -> tuple (ifComplexity f, ifDepth f)
+                  , [measureLemma ifDepthNonNeg, measureLemma ifComplexityPos]
+                  )
+              $ \f -> ...
+    ```
+
 ### Version 13.6, 2026-03-02
 
   * The `sCase` quasi-quoter now supports nested constructor patterns. Sub-patterns

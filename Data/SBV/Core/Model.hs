@@ -30,7 +30,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), hasMeasure, SDivisible(..), SMTDefinable(..), smtFunction, smtFunctionWithMeasure, QSaturate, qSaturateSavingObservables
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), MeasureHelper(..), hasMeasure, SDivisible(..), SMTDefinable(..), smtFunction, smtFunctionWithMeasure, QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , some
@@ -1256,20 +1256,31 @@ data MeasureEval where
 --   * 'HasMeasure': The user provided an explicit measure function.
 data Measure f where
   AutoMeasure  :: Measure f
-  HasMeasure   :: MeasureEval -> Measure f
+  HasMeasure   :: MeasureEval -> [MeasureHelper] -> Measure f
+
+-- | A helper axiom for measure verification. When a measure's correctness depends on
+-- properties that require induction to prove (e.g., @ifComplexity f > 0@), the user
+-- provides these properties along with their proofs. During the measure check, each
+-- helper is run: the TP proof is executed to confirm the property holds, and the
+-- proven property is asserted as an axiom in the measure verification session.
+--
+-- Use the 'Data.SBV.TP.measureLemma' smart constructor to create these from TP proofs.
+newtype MeasureHelper = MeasureHelper { runMeasureHelper :: SMTConfig -> IO SBool }
 
 -- | Does the measure indicate a termination measure is present?
 hasMeasure :: Measure f -> Bool
-hasMeasure AutoMeasure    = True
-hasMeasure (HasMeasure _) = True
+hasMeasure AutoMeasure      = True
+hasMeasure (HasMeasure _ _) = True
 
 -- | Verify that a measure decreases at each recursive call site.
 -- Walks the expression DAG to find recursive calls, computes reaching conditions
 -- via ITE analysis, and verifies the measure property in a separate solver session.
 -- Throws an error with a detailed message if verification fails.
-verifyMeasure :: SMTConfig -> String -> LambdaInfo -> MeasureEval -> IO ()
-verifyMeasure cfg funcNm info meval = do
-   result <- checkMeasure cfg funcNm False info meval
+verifyMeasure :: SMTConfig -> String -> LambdaInfo -> MeasureEval -> [MeasureHelper] -> IO ()
+verifyMeasure cfg funcNm info meval helpers = do
+   -- Run each helper: proves the property and returns the axiom to assert
+   axioms <- mapM (\h -> runMeasureHelper h cfg) helpers
+   result <- checkMeasure cfg funcNm False info meval axioms
    let prettyNm = prettyFuncNm funcNm
    case result of
      MeasureOK              -> pure ()
@@ -1307,8 +1318,10 @@ data MeasureCheckResult = MeasureOK                         -- ^ Measure is vali
 -- Returns 'MeasureOK' if valid, or the specific failure otherwise.
 -- If 'skipNonNeg' is 'True', the non-negativity check is skipped (used for ADT size measures
 -- where non-negativity is guaranteed by construction).
-checkMeasure :: SMTConfig -> String -> Bool -> LambdaInfo -> MeasureEval -> IO MeasureCheckResult
-checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) = do
+-- The 'axioms' list contains additional properties to assert in the verification session
+-- (used for user-provided measures that depend on inductively-proven helper properties).
+checkMeasure :: SMTConfig -> String -> Bool -> LambdaInfo -> MeasureEval -> [SBool] -> IO MeasureCheckResult
+checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) axioms = do
    let -- Use a separate transcript for the measure check, so it doesn't clobber the main one
        addSuffix s fp = dropExtension fp ++ "_measure_" ++ funcNm ++ "_" ++ s ++ takeExtension fp
        cfgNonNeg      = cfgIn{transcript = addSuffix "nonNeg"   <$> transcript cfgIn}
@@ -1350,6 +1363,7 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
                    then pure (Right ())
                    else do nonNegResult <- proveWith cfgNonNeg (do
                               (_, mFormal) <- mkProveEnv
+                              mapM_ constrain axioms
                               sObserve "measure" (unSBV mFormal)
                               pure $ mFormal .>= zero :: Symbolic SBool)
                            pure $ case nonNegResult of
@@ -1361,6 +1375,7 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
            -- Check 2: Strict decrease at each recursive call
            decResult <- proveWith cfgDecrease (do
               (svMap, mFormal) <- mkProveEnv
+              mapM_ constrain axioms
 
               let singleCall = length recCalls == 1
                   mkObligation (i, (rcSV, callArgSVs)) = do
@@ -1546,7 +1561,7 @@ autoGuess cfg funcNm info = do
                                               Just idx | isStructurallyDecreasing funcNm info idx -> do
                                                  msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK (structural recursion)"
                                                  pure MeasureOK
-                                              _ -> checkMeasure cfg funcNm skipNonNeg info m
+                                              _ -> checkMeasure cfg funcNm skipNonNeg info m []
                                   case result of
                                     MeasureOK              -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK"
                                                                  pure (Just m)
@@ -3238,9 +3253,9 @@ class SMTDefinable a where
                                 modifyIORef' (rMeasureChecks st)
                                              ((funcNm, \cfg -> autoGuessOrFail cfg funcNm info) :)
                               pure def
-                            HasMeasure eval -> do
+                            HasMeasure eval helpers -> do
                               modifyIORef' (rMeasureChecks st)
-                                           ((funcNm, \cfg -> verifyMeasure cfg funcNm info eval) :)
+                                           ((funcNm, \cfg -> verifyMeasure cfg funcNm info eval helpers) :)
                               pure def)
 
 
@@ -3254,9 +3269,14 @@ smtFunction nm = smtFunctionDef nm AutoMeasure
 -- cannot automatically determine a suitable measure. The measure function takes the same
 -- arguments as the original function but returns a value that must be non-negative and
 -- strictly decrease at each recursive call.
+--
+-- The pair @(measure, helpers)@ provides the measure function and a list of auxiliary
+-- 'MeasureHelper' properties needed to verify the measure. Each helper is first proven
+-- (by running its TP proof), then asserted as an axiom in the measure verification session.
+-- Use 'Data.SBV.TP.measureLemma' to create helpers from TP proofs. Pass @[]@ when no helpers are needed.
 smtFunctionWithMeasure :: forall f r. (SMTDefinable f, Typeable f, Lambda Symbolic f, Zero r, OrdSymbolic (SBV r), SymVal r, ApplyMeasure f r)
-                       => String -> MeasureOf f r -> f -> f
-smtFunctionWithMeasure nm mf = smtFunctionDef nm (HasMeasure (MeasureEval (applyMeasure @f @r mf)))
+                       => String -> (MeasureOf f r, [MeasureHelper]) -> f -> f
+smtFunctionWithMeasure nm (mf, helpers) = smtFunctionDef nm (HasMeasure (MeasureEval (applyMeasure @f @r mf)) helpers)
 
 -- | Kind of uninterpretation
 data UIKind a = UIFree  Bool                            -- ^ completely uninterpreted. If Bool is true, then this is curried.
@@ -3879,7 +3899,7 @@ smtHOFunctionWithMeasure nm f msr hof arg = SBV $ SVal (kindOf (Proxy @(SBV b)))
                   let uniqLen = firstifyUniqueLen $ stCfg st
                       uniq    = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
                   sbvToSV st (smtFunctionDef (atProxy (Proxy @f) nm <> "_" <> uniq)
-                                             (HasMeasure (MeasureEval (applyMeasure @(a -> SBV b) @r msr)))
+                                             (HasMeasure (MeasureEval (applyMeasure @(a -> SBV b) @r msr)) [])
                                              hof arg)
 
         -- we get the functions as arrays here, so chase to find the result

@@ -50,6 +50,9 @@ module Data.SBV.TP (
        -- * Running TP proofs
        , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms, tpCache
 
+       -- * Measure helpers for smtFunctionWithMeasure
+       , measureLemma, measureLemmaWith
+
        -- * Starting a calculation proof
        , (|-), (⊢), (|->)
 

@@ -105,7 +105,7 @@ dividesTransitive = do
 -- @n@ that is at least @k@ is the number that is at least @k@ and divides @n@ evenly. The idea is that a number is
 -- prime if the least divisor starting from @2@ is itself.
 ld :: SInteger -> SInteger -> SInteger
-ld = smtFunctionWithMeasure "ld" (\k n -> (n - k) `smax` 0)
+ld = smtFunctionWithMeasure "ld" (\k n -> (n - k) `smax` 0, [])
    $ \k n -> [sCase| tuple (k .<= 0 .|| k .> n, n `sEMod` k) of
                 (True, _) -> 0
                 (_,    0) -> k

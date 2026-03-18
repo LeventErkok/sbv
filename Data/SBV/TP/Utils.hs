@@ -29,6 +29,7 @@ module Data.SBV.TP.Utils (
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML
        , withProofCache
        , tpQuiet, tpRibbon, tpAsms, tpStats, tpCache
+       , measureLemma, measureLemmaWith
        ) where
 
 import Control.Monad        (unless)
@@ -52,8 +53,8 @@ import Data.SBV.Utils.Lib (unQuote)
 import System.IO     (hFlush, stdout)
 import System.Random (randomIO)
 
-import Data.SBV.Core.Data      (SBool, Forall(..), quantifiedBool)
-import Data.SBV.Core.Model     (label)
+import Data.SBV.Core.Data      (SBool, Forall(..), QuantifiedBool, quantifiedBool)
+import Data.SBV.Core.Model     (label, MeasureHelper(..))
 import Data.SBV.Core.Symbolic  (SMTConfig, TPOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 
@@ -507,3 +508,33 @@ tpCache cfg = cfg{tpOptions = (tpOptions cfg) { cacheProofs = True }}
 -- But in certain cases seeing them would be helpful.
 tpAsms :: SMTConfig -> SMTConfig
 tpAsms cfg = cfg{tpOptions = (tpOptions cfg) { printAsms = True }}
+
+-- | Create a 'MeasureHelper' from a TP proof action. During measure verification,
+-- the proof is run to confirm the property holds, and the proven property is extracted
+-- and asserted as an axiom in the measure verification session. The solver configuration
+-- is inherited from the measure verification context, with output suppressed.
+--
+-- Example usage with 'Data.SBV.smtFunctionWithMeasure':
+--
+-- @
+-- normalize = smtFunctionWithMeasure "normalize"
+--               (\\f -> tuple (ifComplexity f, ifDepth f)
+--               , [measureLemma ifDepthNonNeg, measureLemma ifComplexityPos]
+--               )
+--             $ \\f -> ...
+-- @
+measureLemma :: forall a. (QuantifiedBool a, Typeable a) => TP (Proof a) -> MeasureHelper
+measureLemma tp = MeasureHelper $ \cfg -> do
+  proof <- runTPWith (tpQuiet True cfg) tp
+  case fromDynamic @a (getProp (proofOf proof)) of
+    Just prop -> pure (quantifiedBool prop)
+    Nothing   -> error "Data.SBV.measureLemma: impossible type mismatch in measure helper"
+
+-- | Like 'measureLemma', but using the given solver configuration, ignoring the
+-- one from the measure verification context.
+measureLemmaWith :: forall a. (QuantifiedBool a, Typeable a) => SMTConfig -> TP (Proof a) -> MeasureHelper
+measureLemmaWith userCfg tp = MeasureHelper $ \_cfg -> do
+  proof <- runTPWith (tpQuiet True userCfg) tp
+  case fromDynamic @a (getProp (proofOf proof)) of
+    Just prop -> pure (quantifiedBool prop)
+    Nothing   -> error "Data.SBV.measureLemmaWith: impossible type mismatch in measure helper"

@@ -133,7 +133,10 @@ isNormal = smtFunction "isNormal"
 --
 -- Note that this transformation increases the size of the formula, but reduces its complexity.
 normalize :: SFormula -> SFormula
-normalize = smtFunction "normalize"
+normalize = smtFunctionWithMeasure "normalize"
+                                   ( \f -> tuple (ifComplexity f, ifDepth f)
+                                   , [measureLemma ifDepthNonNeg, measureLemma ifComplexityPos]
+                                   )
           $ \f -> [sCase| f of
                      If (If p q r) left right -> normalize (sIf p (sIf q left right) (sIf r left right))
                      If c          left right -> sIf c (normalize left) (normalize right)
