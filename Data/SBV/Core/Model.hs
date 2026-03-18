@@ -1203,27 +1203,49 @@ instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymboli
 -- | A class of values that capture the notion of a zero for measure values.
 -- Used in termination checking for recursive SMT functions.
 class OrdSymbolic (SBV a) => Zero a where
-  zero :: SBV a
+  zero   :: SBV a
+  -- | Component-wise non-negativity check. For scalars this is simply @>= 0@.
+  -- For tuples, every component must be @>= 0@, which is stronger than
+  -- lexicographic @>= (0, 0, ..)@. This is required for well-foundedness
+  -- of the lexicographic ordering on the non-negative part.
+  nonNeg :: SBV a -> SBool
+  nonNeg x = x .>= zero
 
 -- | An integer as a measure
 instance Zero Integer where
    zero = literal 0
 
+-- NB. We would like to use 'Data.SBV.Tuple.untuple' in the 'nonNeg' definitions below,
+-- but 'Data.SBV.Tuple' imports 'Data.SBV.Core.Model', creating a circular dependency.
+-- So we extract components at the SVal level using 'TupleAccess' directly.
+
 -- | A tuple of integers as a measure
 instance Zero (Integer, Integer) where
-  zero = literal (0, 0)
+  zero   = literal (0, 0)
+  nonNeg = tupleNonNeg 2
 
 -- | A triple of integers as a measure
 instance Zero (Integer, Integer, Integer) where
-  zero = literal (0, 0, 0)
+  zero   = literal (0, 0, 0)
+  nonNeg = tupleNonNeg 3
 
 -- | A quadruple of integers as a measure
 instance Zero (Integer, Integer, Integer, Integer) where
-  zero = literal (0, 0, 0, 0)
+  zero   = literal (0, 0, 0, 0)
+  nonNeg = tupleNonNeg 4
 
 -- | A quintuple of integers as a measure
 instance Zero (Integer, Integer, Integer, Integer, Integer) where
-  zero = literal (0, 0, 0, 0, 0)
+  zero   = literal (0, 0, 0, 0, 0)
+  nonNeg = tupleNonNeg 5
+
+-- | Component-wise non-negativity for an n-tuple of integers.
+-- Extracts each component via 'TupleAccess' and checks @>= 0@.
+tupleNonNeg :: SymVal a => Int -> SBV a -> SBool
+tupleNonNeg n t = sAll (.>= (0 :: SInteger)) [acc i | i <- [1..n]]
+  where acc i = SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
+                  sv <- sbvToSV st t
+                  newExpr st KUnbounded (SBVApp (TupleAccess i n) [sv])
 
 -- | Type family that maps a function type to its corresponding measure type.
 -- The measure function takes the same arguments but returns a different type.
@@ -1388,7 +1410,7 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
                    else do nonNegResult <- proveWith cfgNonNeg (do
                               (_, mFormal) <- mkProveEnv
                               sObserve "measure" (unSBV mFormal)
-                              pure $ mFormal .>= zero :: Symbolic SBool)
+                              pure $ nonNeg mFormal :: Symbolic SBool)
                            pure $ case nonNegResult of
                              ThmResult Unsatisfiable{} -> Right ()
                              _                         -> Left nonNegResult
@@ -1454,11 +1476,12 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
 
 -- | Generate candidate measures based on parameter kinds.
 -- For list args, we use @length@. For integer args, we use @abs@.
--- If there are multiple candidates, we also try their sum.
--- All candidates produce 'SInteger' values. Returns the measure, a description,
--- and for ADT size measures, the 0-based parameter index (used for syntactic sub-term checking).
+-- If there are multiple scalar candidates, we also try their sum.
+-- For two or more scalar candidates, we also try lexicographic (tuple) measures
+-- using all pairs and triples, which handles functions like Ackermann that
+-- decrease lexicographically.
 guessMeasures :: [(Quantifier, SV)] -> [(String, MeasureEval, Maybe Int)]
-guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (singles ++ summed)
+guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (singles ++ summed) ++ lexPairs ++ lexTriples
   where
     singles :: [(String, [SVal] -> SInteger, Maybe Int)]
     singles = concatMap mkCandidates (zip [0..] params)
@@ -1503,6 +1526,48 @@ guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (singles ++ s
                                    , Nothing
                                    )]
            | otherwise          = []
+
+    -- Lexicographic pair measures: try all ordered pairs from the scalar candidates
+    lexPairs :: [(String, MeasureEval, Maybe Int)]
+    lexPairs
+      | length singles < 2 = []
+      | otherwise           = [ ( "(" ++ d1 ++ ", " ++ d2 ++ ")"
+                                , MeasureEval (\svs -> mkPair (f1 svs) (f2 svs))
+                                , Nothing
+                                )
+                              | (d1, f1, _) <- singles
+                              , (d2, f2, _) <- singles
+                              , d1 /= d2
+                              ]
+
+    -- Lexicographic triple measures: try all ordered triples from the scalar candidates
+    lexTriples :: [(String, MeasureEval, Maybe Int)]
+    lexTriples
+      | length singles < 3 = []
+      | otherwise           = [ ( "(" ++ d1 ++ ", " ++ d2 ++ ", " ++ d3 ++ ")"
+                                , MeasureEval (\svs -> mkTriple (f1 svs) (f2 svs) (f3 svs))
+                                , Nothing
+                                )
+                              | (d1, f1, _) <- singles
+                              , (d2, f2, _) <- singles
+                              , (d3, f3, _) <- singles
+                              , d1 /= d2, d1 /= d3, d2 /= d3
+                              ]
+
+    -- Build an SBV (Integer, Integer) from two SIntegers
+    mkPair :: SInteger -> SInteger -> SBV (Integer, Integer)
+    mkPair a b = SBV $ SVal (KTuple [KUnbounded, KUnbounded]) $ Right $ cache $ \st -> do
+      sa <- sbvToSV st a
+      sb <- sbvToSV st b
+      newExpr st (KTuple [KUnbounded, KUnbounded]) (SBVApp (TupleConstructor 2) [sa, sb])
+
+    -- Build an SBV (Integer, Integer, Integer) from three SIntegers
+    mkTriple :: SInteger -> SInteger -> SInteger -> SBV (Integer, Integer, Integer)
+    mkTriple a b c = SBV $ SVal (KTuple [KUnbounded, KUnbounded, KUnbounded]) $ Right $ cache $ \st -> do
+      sa <- sbvToSV st a
+      sb <- sbvToSV st b
+      sc <- sbvToSV st c
+      newExpr st (KTuple [KUnbounded, KUnbounded, KUnbounded]) (SBVApp (TupleConstructor 3) [sa, sb, sc])
 
 -- | Check if a kind refers back to a given ADT name (i.e., is a recursive field).
 -- Recursive fields in constructor kinds use 'KApp', not 'KADT'.

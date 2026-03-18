@@ -79,6 +79,7 @@ mergeSort = smtFunction "mergeSort"
 --   Step: 1                                                   Q.E.D.
 --   Step: 2                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
+-- Lemma: countOneStep                                         Q.E.D.
 -- Lemma: mergeHead                                            Q.E.D.
 -- Lemma: mergeUnfold                                          Q.E.D.
 -- Inductive lemma (strong): mergeKeepsSort
@@ -147,6 +148,7 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
 
     nonDecrIns    <- SH.nonDecrIns    @a
     takeDropCount <- TP.takeDropCount @a
+    cntStep       <- TP.countOneStep  @a
 
     -- Head of merge: one unfold of merge suffices for the solver
     mergeHead <- lemma "mergeHead"
@@ -241,6 +243,8 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                                                               (count e (x .: merge xs (y .: ys)))
                                                               (count e (y .: merge (x .: xs) ys))
                                                        ?? "unfold count, twice"
+                                                       ?? cntStep `at` (Inst @"e" e, Inst @"x" x, Inst @"xs" (merge xs (y .: ys)))
+                                                       ?? cntStep `at` (Inst @"e" e, Inst @"x" y, Inst @"xs" (merge (x .: xs) ys))
                                                        =: ite (x .<= y)
                                                               (let r = count e (merge xs (y .: ys)) in ite (e .== x) (1+r) r)
                                                               (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
@@ -253,6 +257,8 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                                                               (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
                                                               (let r = count e (x .: xs) + count e ys in ite (e .== y) (1+r) r)
                                                        ?? "unfold count in reverse, twice"
+                                                       ?? cntStep `at` (Inst @"e" e, Inst @"x" x, Inst @"xs" xs)
+                                                       ?? cntStep `at` (Inst @"e" e, Inst @"x" y, Inst @"xs" ys)
                                                        =: ite (x .<= y)
                                                               (count e (x .: xs) + count e (y .: ys))
                                                               (count e (x .: xs) + count e (y .: ys))

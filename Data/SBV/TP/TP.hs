@@ -1029,7 +1029,7 @@ instance (KnownSymbol na, SymVal a) => SInductive (Forall na a -> SBool) where
       let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) -> measure a' .< measure a .=> result (Forall a'))
           conc = result (Forall a)
 
-      mkIndStrategy (Just (measure a .>= zero, helpers))
+      mkIndStrategy (Just (nonNeg (measure a), helpers))
                     Nothing
                     (steps ih a)
                     (indResult [na] conc)
@@ -1044,7 +1044,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b) => SInductive (For
       let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .< measure a b .=> result (Forall a') (Forall b'))
           conc = result (Forall a) (Forall b)
 
-      mkIndStrategy (Just (measure a b .>= zero, helpers))
+      mkIndStrategy (Just (nonNeg (measure a b), helpers))
                     Nothing
                     (steps ih a b)
                     (indResult [na, nb] conc)
@@ -1060,7 +1060,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .< measure a b c .=> result (Forall a') (Forall b') (Forall c'))
           conc = result (Forall a) (Forall b) (Forall c)
 
-      mkIndStrategy (Just (measure a b c .>= zero, helpers))
+      mkIndStrategy (Just (nonNeg (measure a b c), helpers))
                     Nothing
                     (steps ih a b c)
                     (indResult [na, nb, nc] conc)
@@ -1077,7 +1077,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .< measure a b c d .=> result (Forall a') (Forall b') (Forall c') (Forall d'))
           conc = result (Forall a) (Forall b) (Forall c) (Forall d)
 
-      mkIndStrategy (Just (measure a b c d .>= zero, helpers))
+      mkIndStrategy (Just (nonNeg (measure a b c d), helpers))
                     Nothing
                     (steps ih a b c d)
                     (indResult [na, nb, nc, nd] conc)
@@ -1095,7 +1095,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       let ih   = internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .< measure a b c d e .=> result (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))
           conc = result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
 
-      mkIndStrategy (Just (measure a b c d e .>= zero, helpers))
+      mkIndStrategy (Just (nonNeg (measure a b c d e), helpers))
                     Nothing
                     (steps ih a b c d e)
                     (indResult [na, nb, nc, nd, ne] conc)

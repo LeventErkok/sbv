@@ -67,7 +67,7 @@ module Documentation.SBV.Examples.TP.Lists (
    , map_snd_zip_take
 
    -- * Counting elements
-   , count, countAppend, takeDropCount, countNonNeg, countElem, elemCount
+   , count, countOneStep, countAppend, takeDropCount, countNonNeg, countElem, elemCount
 
    -- * Disjointness
    , disjoint, disjointDiff
@@ -1751,6 +1751,19 @@ count = smtFunction "count"
                    x : xs | e .== x -> 1 + count e xs
                           | True    -> count e xs
                 |]
+
+-- | One-step unfolding of 'count' on a cons cell. The solver can expand the
+-- @define-fun-rec@ but struggles to fold it back, so we provide this as a reusable hint.
+--
+-- >>> runTP $ countOneStep @Integer
+-- Lemma: countOneStep                     Q.E.D.
+-- Functions proven terminating: count
+-- [Proven] countOneStep :: Ɐe ∷ Integer → Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
+countOneStep :: forall a. SymVal a => TP (Proof (Forall "e" a -> Forall "x" a -> Forall "xs" [a] -> SBool))
+countOneStep = lemma "countOneStep"
+   (\(Forall @"e" e) (Forall @"x" x) (Forall @"xs" (xs :: SList a)) ->
+      count e (x .: xs) .== ite (e .== x) (1 + count e xs) (count e xs))
+   []
 
 -- | Interleave the elements of two lists. If one ends, we take the rest from the other.
 interleave :: SymVal a => SList a -> SList a -> SList a
