@@ -279,11 +279,26 @@ lookupSwap = calc "lookupSwap"
                                   =: qed
                                ]
 
+-- | One-step unfolding of 'SL.lookup' on a cons cell. The solver can expand the
+-- @define-fun-rec@ but struggles to fold it back, so we provide this as a reusable hint.
+--
+-- >>> runTP lookupCons
+-- Lemma: lookupCons                       Q.E.D.
+-- Functions proven terminating: sbv.lookup
+-- [Proven] lookupCons :: Ɐk ∷ [Char] → Ɐb ∷ ([Char], Integer) → Ɐrest ∷ [([Char], Integer)] → Bool
+lookupCons :: TP (Proof (Forall "k" String -> Forall "b" (String, Integer) -> Forall "rest" EL -> SBool))
+lookupCons = lemma "lookupCons"
+   (\(Forall @"k" (k :: SString)) (Forall @"b" (b :: STuple String Integer)) (Forall @"rest" (rest :: E)) ->
+      let (bk, bv) = ST.untuple b
+      in SL.lookup k (b .: rest) .== ite (k .== bk) bv (SL.lookup k rest))
+   []
+
 -- | Generalized swap: swapping two adjacent distinct-keyed bindings behind
 -- a prefix does not affect lookup.
 --
 -- >>> runTP lookupSwapPfx
 -- Lemma: lookupSwap                       Q.E.D.
+-- Lemma: lookupCons                       Q.E.D.
 -- Inductive lemma (strong): lookupSwapPfx
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way case split)
@@ -295,11 +310,14 @@ lookupSwap = calc "lookupSwap"
 --     Step: 1.2.5                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: sbv.lookup
 -- [Proven] lookupSwapPfx :: Ɐpfx ∷ [([Char], Integer)] → Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
 lookupSwapPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1" (String, Integer)
                          -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
 lookupSwapPfx = do
    lkS <- recall "lookupSwap" lookupSwap
+   lkC <- recall "lookupCons" lookupCons
+
    sInduct "lookupSwapPfx"
      (\(Forall @"pfx" (pfx :: E)) (Forall @"k" (k :: SString)) (Forall @"b1" (b1 :: STuple String Integer))
        (Forall @"b2" (b2 :: STuple String Integer)) (Forall @"env" (env :: E)) ->
@@ -329,6 +347,7 @@ lookupSwapPfx = do
                        =: ite (k .== hk) hv (SL.lookup k (t ++ b1 .: b2 .: env))
                        ?? ih `at` (Inst @"pfx" t, Inst @"k" k, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
                        =: ite (k .== hk) hv (SL.lookup k (t ++ b2 .: b1 .: env))
+                       ?? lkC `at` (Inst @"k" k, Inst @"b" h, Inst @"rest" (t ++ b2 .: b1 .: env))
                        =: SL.lookup k (h .: (t ++ b2 .: b1 .: env))
                        =: SL.lookup k (pfx ++ b2 .: b1 .: env)
                        =: qed
@@ -355,6 +374,7 @@ lookupShadow = lemma "lookupShadow"
 --
 -- >>> runTP lookupShadowPfx
 -- Lemma: lookupShadow                     Q.E.D.
+-- Lemma: lookupCons                       Q.E.D.
 -- Inductive lemma (strong): lookupShadowPfx
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way case split)
@@ -372,6 +392,7 @@ lookupShadowPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1
                            -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
 lookupShadowPfx = do
    lkSh <- recall "lookupShadow" lookupShadow
+   lkC  <- recall "lookupCons"   lookupCons
    sInduct "lookupShadowPfx"
      (\(Forall @"pfx" (pfx :: E)) (Forall @"k" (k :: SString)) (Forall @"b1" (b1 :: STuple String Integer))
        (Forall @"b2" (b2 :: STuple String Integer)) (Forall @"env" (env :: E)) ->
@@ -401,6 +422,7 @@ lookupShadowPfx = do
                        =: ite (k .== hk) hv (SL.lookup k (t ++ b1 .: b2 .: env))
                        ?? ih `at` (Inst @"pfx" t, Inst @"k" k, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
                        =: ite (k .== hk) hv (SL.lookup k (t ++ b1 .: env))
+                       ?? lkC `at` (Inst @"k" k, Inst @"b" h, Inst @"rest" (t ++ b1 .: env))
                        =: SL.lookup k (h .: (t ++ b1 .: env))
                        =: SL.lookup k (pfx ++ b1 .: env)
                        =: qed
