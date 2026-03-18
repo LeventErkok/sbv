@@ -1289,7 +1289,7 @@ verifyMeasure cfg funcNm info meval helpers = do
 
    msg $ "[MEASURE] " ++ funcNm ++ ": verifying with " ++ show (length helpers) ++ " helper(s)"
          ++ if Set.null curVerifying then "" else ", already verifying: " ++ show (Set.toList curVerifying)
-   axioms <- mapM (\h -> runMeasureHelper h cfg') helpers
+   axioms <- mapM (`runMeasureHelper` cfg') helpers
    msg $ "[MEASURE] " ++ funcNm ++ ": " ++ show (length axioms) ++ " helper axiom(s) collected, checking measure"
    result <- checkMeasure cfg funcNm False info meval axioms
    let prettyNm = prettyFuncNm funcNm

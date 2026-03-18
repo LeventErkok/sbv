@@ -928,7 +928,7 @@ sCase = QuasiQuoter
                                    = init ps ++ [(VarE 'sTrue, snd (last ps))]
                                    | otherwise = ps
 
-                   Right <$> pure (optimize pairs)
+                   pure $ Right (optimize pairs)
 
 -- * pCase
 

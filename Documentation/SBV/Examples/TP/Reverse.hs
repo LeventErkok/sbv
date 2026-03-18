@@ -76,7 +76,7 @@ rev = smtFunctionWithMeasure "rev"
 revPreservesLen :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 revPreservesLen = sInductWith cvc5 "revPreservesLen"
    (\(Forall xs) -> length (rev @a xs) .== length xs)
-   (\xs -> length xs, []) $
+   (length, []) $
    \ih xs -> [] |- length (rev @a xs) .== length xs
                =: [pCase| xs of
                     []     -> trivial
