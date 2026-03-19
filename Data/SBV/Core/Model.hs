@@ -1523,13 +1523,13 @@ guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (singles ++ s
                                    , \svs -> sum [f svs | (_, f, _) <- singles]
                                    , Nothing
                                    )]
-           | otherwise          = []
+           | True               = []
 
     -- Lexicographic pair measures: try all ordered pairs from the scalar candidates
     lexPairs :: [(String, MeasureEval, Maybe Int)]
     lexPairs
       | length singles < 2 = []
-      | otherwise           = [ ( "(" ++ d1 ++ ", " ++ d2 ++ ")"
+      | True                = [ ( "(" ++ d1 ++ ", " ++ d2 ++ ")"
                                 , MeasureEval (\svs -> mkPair (f1 svs) (f2 svs))
                                 , Nothing
                                 )
@@ -1542,14 +1542,15 @@ guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (singles ++ s
     lexTriples :: [(String, MeasureEval, Maybe Int)]
     lexTriples
       | length singles < 3 = []
-      | otherwise           = [ ( "(" ++ d1 ++ ", " ++ d2 ++ ", " ++ d3 ++ ")"
+      | True                = [ ( "(" ++ d1 ++ ", " ++ d2 ++ ", " ++ d3 ++ ")"
                                 , MeasureEval (\svs -> mkTriple (f1 svs) (f2 svs) (f3 svs))
                                 , Nothing
                                 )
                               | (d1, f1, _) <- singles
                               , (d2, f2, _) <- singles
+                              , d1 /= d2
                               , (d3, f3, _) <- singles
-                              , d1 /= d2, d1 /= d3, d2 /= d3
+                              , d1 /= d3, d2 /= d3
                               ]
 
     -- Build an SBV (Integer, Integer) from two SIntegers
@@ -1636,7 +1637,7 @@ isStructurallyDecreasing funcNm LambdaInfo{liAssignments, liParams} paramIdx =
 
     checkCall callArgs
       | paramIdx < length callArgs = isProperSubTerm (callArgs !! paramIdx)
-      | otherwise                  = False
+      | True                       = False
 
     -- An SV is a proper sub-term of the parameter if it is obtained by applying
     -- one or more ADTAccessor operations to the parameter.
@@ -1702,7 +1703,7 @@ autoGuessOrFail cfg funcNm info = do
           | null candidates = [ "***"
                               , "***   No measure candidates could be derived from the argument types."
                               ]
-          | otherwise       = [ "***"
+          | True            = [ "***"
                               , "***   Measures tried:"
                               ]
                               ++ [ "***     " ++ d | (d, _, _) <- candidates]

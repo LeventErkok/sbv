@@ -283,7 +283,7 @@ svQuot x y
     isInteger = kindOf x == KUnbounded
 
     quot' a b | isInteger = div a (abs b) * signum b
-              | otherwise = quot a b
+              | True      = quot a b
 
 -- | Remainder: Overloaded operation whose meaning depends on the kind at which
 -- it is used: For unbounded integers, it corresponds to the SMT-Lib
@@ -303,7 +303,7 @@ svRem x y
     isInteger = kindOf x == KUnbounded
 
     rem' a b | isInteger = mod a (abs b)
-             | otherwise = rem a b
+             | True      = rem a b
 
 -- | Combination of quot and rem
 svQuotRem :: SVal -> SVal -> (SVal, SVal)

@@ -100,7 +100,7 @@ lookupBase :: Name -> [(Name, a)] -> Maybe a
 lookupBase _  []          = Nothing
 lookupBase nm ((k,v):kvs)
   | sameBase nm k = Just v
-  | otherwise     = lookupBase nm kvs
+  | True          = lookupBase nm kvs
 
 -- | Recognize built-in type names.
 recognizeBuiltin :: String -> Maybe BuiltinType
@@ -223,7 +223,7 @@ builtinAccessor (BTTuple _) _ i scrut
   , let cs = catMaybes components
   , i >= 1, i <= length cs
   = cs !! (i - 1)
-  | otherwise
+  | True
   = AppE (VarE (tupleAccessorName i)) scrut
   where tupleAccessorName 1 = sbvName "Data.SBV.Tuple" "_1"
         tupleAccessorName 2 = sbvName "Data.SBV.Tuple" "_2"
@@ -481,7 +481,7 @@ matchToPair scrut off (Match pat grhs locals) = do
 
     -- Variable pattern at top level: binds the scrutinee (only when used)
     VarP v   -> let bindScrut e | v `Set.member` freeVars e = LetE [ValD (VarP v) (NormalB scrut) []] e
-                                | otherwise                 = e
+                                | True                      = e
                 in pure [CWild off (fmap bindScrut mbG) (bindScrut rhs) | (mbG, rhs) <- rhss]
 
     _ -> fail Unknown $ unlines [ "sCase/pCase: Unsupported pattern:"
@@ -617,7 +617,7 @@ checkWildcard label loc cs = do go cs; checkExhaustive cs
         checkExhaustive cases
           | any isCMatch cases           = pure ()  -- Has constructor patterns; exhaustiveness checked elsewhere
           | any isUnguardedWild cases    = pure ()  -- Has an unguarded catch-all
-          | otherwise                    = fail (headOffset cases) $ unlines
+          | True                         = fail (headOffset cases) $ unlines
               [ label ++ ": Non-exhaustive pattern match."
               , "        All branches are guarded; add an unguarded wildcard or variable"
               , "        as the last branch to ensure all cases are covered."
@@ -728,7 +728,7 @@ sCase = QuasiQuoter
               -- constructor in a complete match): use its rhs directly as the default,
               -- avoiding an unreachable fallback variable.
               | null rest, isTriviallyTrue t = pure e
-              | otherwise                    = do r <- iteChain rest
+              | True                         = do r <- iteChain rest
                                                   pure $ foldl AppE (VarE 'ite) [t, e, r]
 
             isTriviallyTrue (VarE nm) = nameBase nm == nameBase 'sTrue
@@ -926,7 +926,7 @@ sCase = QuasiQuoter
                        hasUnguarded (cstr, _) = any (\case CMatch _ nm _ Nothing _ _ -> sameBase nm cstr; _ -> False) cases
                        optimize ps | allCovered, not (null ps)
                                    = init ps ++ [(VarE 'sTrue, snd (last ps))]
-                                   | otherwise = ps
+                                   | True      = ps
 
                    pure $ Right (optimize pairs)
 
@@ -1086,7 +1086,7 @@ pCase = QuasiQuoter
               = let hd = AppE (VarE (sbvName "Data.SBV.List" "head")) scrut
                     tl = AppE (VarE (sbvName "Data.SBV.List" "tail")) scrut
                 in [foldl1 AppE [VarE '(.===), scrut, InfixE (Just hd) (VarE (sbvName "Data.SBV.Core.Data" ".:")) (Just tl)]]
-              | otherwise
+              | True
               = []
 
             -- Only negate prior USER guards for the SAME constructor (others are mutually exclusive)
