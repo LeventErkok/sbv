@@ -1240,6 +1240,14 @@ instance Zero (Integer, Integer, Integer, Integer, Integer) where
   zero   = literal (0, 0, 0, 0, 0)
   nonNeg = tupleNonNeg 5
 
+-- | A float as a measure
+instance Zero Float where
+   zero = literal 0
+
+-- | A double as a measure
+instance Zero Double where
+   zero = literal 0
+
 -- | Component-wise non-negativity for an n-tuple of integers.
 -- Extracts each component via 'TupleAccess' and checks @>= 0@.
 tupleNonNeg :: SymVal a => Int -> SBV a -> SBool

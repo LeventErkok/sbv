@@ -1236,8 +1236,12 @@ instance {-# OVERLAPPING #-} EnumSymbolic Integer where
      where delta = y - x
 
            up, down :: SInteger -> SInteger -> SInteger -> SList Integer
-           up    = smtFunction "EnumSymbolic.Integer.enumFromThenTo.up"   $ \start d end -> ite (start .> end) [] (start .: up   (start + d) d end)
-           down  = smtFunction "EnumSymbolic.Integer.enumFromThenTo.down" $ \start d end -> ite (start .< end) [] (start .: down (start + d) d end)
+           up    = smtFunctionWithMeasure "EnumSymbolic.Integer.enumFromThenTo.up"
+                                          (\start _d end -> 0 `smax` (end - start + 1), [])
+                 $ \start d end -> ite (start .> end .|| d .<= 0) [] (start .: up   (start + d) d end)
+           down  = smtFunctionWithMeasure "EnumSymbolic.Integer.enumFromThenTo.down"
+                                          (\start _d end -> 0 `smax` (start - end + 1), [])
+                 $ \start d end -> ite (start .< end .|| d .>= 0) [] (start .: down (start + d) d end)
 
 -- | 'EnumSymbolic instance for 'Float'. Note that the termination requirement as defined by the Haskell standard for floats state:
 --      > For Float and Double, the semantics of the enumFrom family is given by the rules for Int above,
@@ -1256,14 +1260,18 @@ instance {-# OVERLAPPING #-} EnumSymbolic Float where
    enumFromThen x y = go 0 x (y-x)
      where go = smtFunction "EnumSymbolic.Float.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
-   enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
+   enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta, z :: SFloat
            delta = y - x
            z     = zIn + delta / 2
 
-           up, down :: SFloat -> SFloat -> SFloat -> SFloat -> SList Float
-           up    = smtFunction "EnumSymbolic.Float.enumFromThenTo.up"   $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
-           down  = smtFunction "EnumSymbolic.Float.enumFromThenTo.down" $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
+           up, down :: SFloat -> SFloat -> SFloat -> SList Float
+           up    = smtFunctionWithMeasure "EnumSymbolic.Float.enumFromThenTo.up"
+                                          (\start _d end -> 0 `smax` (end - start + 1), [])
+                 $ \start d end -> ite (start .> end .|| d .<= 0) [] (start .: up   (start + d) d end)
+           down  = smtFunctionWithMeasure "EnumSymbolic.Float.enumFromThenTo.down"
+                                          (\start _d end -> 0 `smax` (start - end + 1), [])
+                 $ \start d end -> ite (start .< end .|| d .>= 0) [] (start .: down (start + d) d end)
 
 -- | 'EnumSymbolic instance for 'Double'
 instance {-# OVERLAPPING #-} EnumSymbolic Double where
@@ -1279,14 +1287,18 @@ instance {-# OVERLAPPING #-} EnumSymbolic Double where
    enumFromThen x y = go 0 x (y-x)
      where go = smtFunction "EnumSymbolic.Double.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
-   enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
+   enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta, z :: SDouble
            delta = y - x
            z     = zIn + delta / 2
 
-           up, down :: SDouble -> SDouble -> SDouble -> SDouble -> SList Double
-           up    = smtFunction "EnumSymbolic.Double.enumFromThenTo.up"   $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
-           down  = smtFunction "EnumSymbolic.Double.enumFromThenTo.down" $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
+           up, down :: SDouble -> SDouble -> SDouble -> SList Double
+           up    = smtFunctionWithMeasure "EnumSymbolic.Double.enumFromThenTo.up"
+                                          (\start _d end -> 0 `smax` (end - start + 1), [])
+                 $ \start d end -> ite (start .> end .|| d .<= 0) [] (start .: up   (start + d) d end)
+           down  = smtFunctionWithMeasure "EnumSymbolic.Double.enumFromThenTo.down"
+                                          (\start _d end -> 0 `smax` (start - end + 1), [])
+                 $ \start d end -> ite (start .< end .|| d .>= 0) [] (start .: down (start + d) d end)
 
 -- | 'EnumSymbolic instance for arbitrary floats
 instance {-# OVERLAPPING #-} ValidFloat eb sb => EnumSymbolic (FloatingPoint eb sb) where

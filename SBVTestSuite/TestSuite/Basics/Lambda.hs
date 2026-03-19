@@ -271,11 +271,6 @@ tests =
                                                ( \xss ys ->   map (cls  ys) xss
                                                , \xss ys -> P.map (P.++ ys) xss
                                                )
-
-      -- Test that lexicographic measure auto-guess works for Ackermann (nested recursion)
-      , goldenCapturedIO "lambda89" $ \rf -> do m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
-                                                       \y r -> y .== (5 :: SInteger) .&& r .== ack 1 y
-                                                appendFile rf ("\nRESULT:\n" P.++ show m P.++ "\n")
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr ((+) @SInteger) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))

@@ -9,6 +9,8 @@
 -- Some recursive definitions.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -25,6 +27,8 @@ import qualified Data.SBV.List as L
 import qualified Data.SBV.Dynamic as D
 
 import qualified Control.Exception as C
+
+import Documentation.SBV.Examples.Misc.Definitions (ack)
 
 -- This is recursive and suffers from the termination problem.
 -- But we can still prove a few things about it!
@@ -73,17 +77,17 @@ autoGuessList = assertIsSat $ \(xs :: SList Integer) -> myLen xs .>= 0
 -- | Test that auto-guess fails when candidates exist but don't work (Ackermann)
 autoGuessFailCandidates :: Assertion
 autoGuessFailCandidates = do
-  r <- C.try $ sat $ \(x :: SInteger) (y :: SInteger) -> ack x y .== 0
+  r <- C.try $ sat $ \(x :: SInteger) (y :: SInteger) -> ack' x y .== 0
   case r of
     Left (e :: C.SomeException) -> if "Cannot determine a termination measure" `isInfixOf` show e
                                       then pure ()
                                       else assertFailure $ "Unexpected exception: " ++ show e
     Right _                     -> assertFailure "Expected error for Ackermann auto-guess"
-  where ack :: SInteger -> SInteger -> SInteger
-        ack = smtFunction "ackermann" $ \m n ->
+  where ack' :: SInteger -> SInteger -> SInteger
+        ack' = smtFunction "ackermann" $ \m n ->
                 ite (m .== 0) (n + 1)
-                    (ite (n .== 0) (ack (m - 1) 1)
-                                   (ack (m - 1) (ack m (n - 1))))
+                    (ite (n .== 0) (ack' (m - 1) 1)
+                                   (ack' (m - 1) (ack' m (n - 1))))
 
 -- | Test that auto-guess fails when no candidates can be derived (non-integer, non-list args)
 autoGuessNoCandidates :: Assertion
@@ -115,4 +119,14 @@ tests = testGroup "Basics.Recursive"
    , testCase "autoGuessFailCandidates"   autoGuessFailCandidates
    , testCase "autoGuessNoCandidates"     autoGuessNoCandidates
    , testCase "nonRecursiveNoMeasure"     nonRecursiveNoMeasure
+   -- Test that lexicographic measure auto-guess works for Ackermann (nested recursion)
+   , goldenCapturedIO "recursive1_ack" $ \rf -> do
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \y r -> y .== (5 :: SInteger) .&& r .== ack 1 y
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+   -- Test that explicit measure works for enumFromThenTo.down (descending enumeration)
+   , goldenCapturedIO "recursive2_enum" $ \rf -> do
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> L.length [sEnum|(5::SInteger), 4 .. x|] .>= 0
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
    ]
