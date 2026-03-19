@@ -22,9 +22,17 @@ import Data.SBV.TP
 
 -- * Definitions
 
--- | Nested recursive definition of McCarthy's function.
+-- | Nested recursive definition of McCarthy's function. We use 'smtFunctionWithContract' because
+-- the nested recursion @mcCarthy91 (mcCarthy91 (n + 11))@ requires knowing what the inner call returns
+-- in order to verify that the outer call's measure decreases. The contract states that for inputs @≤ 100@,
+-- the result is @91@. Note that the contract itself is verified as part of the measure check: SBV proves
+-- both measure decrease and the contract simultaneously via well-founded induction.
 mcCarthy91 :: SInteger -> SInteger
-mcCarthy91 = smtFunction "mcCarthy91"
+mcCarthy91 = smtFunctionWithContract "mcCarthy91"
+               ( \n -> 0 `smax` (101 - n)
+               , \n r -> n .<= 100 .=> r .== 91
+               , []
+               )
            $ \n -> ite (n .> 100)
                        (n - 10)
                        (mcCarthy91 (mcCarthy91 (n + 11)))
@@ -53,6 +61,7 @@ spec91 n = ite (n .> 100) (n - 10) 91
 --     Step: 1.3                           Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: mcCarthy91
 -- [Proven] mcCarthy91 :: Ɐn ∷ Integer → Bool
 correctness :: IO (Proof (Forall "n" Integer -> SBool))
 correctness = runTP $ do

@@ -29,6 +29,7 @@ import qualified Data.SBV.Dynamic as D
 import qualified Control.Exception as C
 
 import Documentation.SBV.Examples.Misc.Definitions (ack)
+import Documentation.SBV.Examples.TP.McCarthy91    (mcCarthy91)
 
 -- This is recursive and suffers from the termination problem.
 -- But we can still prove a few things about it!
@@ -139,4 +140,39 @@ tests = testGroup "Basics.Recursive"
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \x -> L.length [sEnum|(5::SInteger), 4 .. x|] .>= 0
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+   -- Test that contract-based measure works for McCarthy91 (nested recursion)
+   , goldenCapturedIO "recursive4_mcCarthy91" $ \rf -> do
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \n -> mcCarthy91 n .== (91 :: SInteger)
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+   -- Test that a bad contract is rejected (contract says result is always 0, which is wrong)
+   , goldenCapturedIO "recursive5_badContract" $ \rf -> do
+        let mc91bad :: SInteger -> SInteger
+            mc91bad = smtFunctionWithContract "mc91bad"
+                        ( \n -> 0 `smax` (101 - n)
+                        , \_ r -> r .== 0
+                        , []
+                        )
+                    $ \n -> ite (n .> 100) (n - 10) (mc91bad (mc91bad (n + 11)))
+        r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \n -> mc91bad n .>= 0
+        case r of
+          Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
+          Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+   -- Test that a true-but-useless contract is rejected (contract is trivially True,
+   -- so the IH provides no information about recursive call results, and the measure
+   -- decrease for the outer call can't be proven)
+   , goldenCapturedIO "recursive6_uselessContract" $ \rf -> do
+        let mc91triv :: SInteger -> SInteger
+            mc91triv = smtFunctionWithContract "mc91triv"
+                         ( \n -> 0 `smax` (101 - n)
+                         , \_ _ -> sTrue
+                         , []
+                         )
+                     $ \n -> ite (n .> 100) (n - 10) (mc91triv (mc91triv (n + 11)))
+        r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \n -> mc91triv n .>= 0
+        case r of
+          Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
+          Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
    ]

@@ -352,7 +352,7 @@ module Data.SBV (
   , mkSymbolic
 
   -- * Stopping unrolling: Defined functions
-  , SMTDefinable(..), smtFunction, smtFunctionWithMeasure, MeasureHelper(..)
+  , SMTDefinable(..), smtFunction, smtFunctionWithMeasure, smtFunctionWithContract, ContractOf, MeasureHelper(..)
   , smtHOFunction, smtHOFunctionWithMeasure, Closure(..), registerType
 
   -- * Special relations

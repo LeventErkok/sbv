@@ -30,7 +30,10 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), Zero(..), MeasureOf, Measure(..), MeasureHelper(..), hasMeasure, SDivisible(..), SMTDefinable(..), smtFunction, smtFunctionWithMeasure, QSaturate, qSaturateSavingObservables
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..)
+  , Zero(..), MeasureOf, Measure(..), MeasureHelper(..), hasMeasure
+  , ContractOf, smtFunction, smtFunctionWithMeasure, smtFunctionWithContract
+  , SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , some
@@ -65,7 +68,7 @@ module Data.SBV.Core.Model (
   where
 
 import Control.Applicative    (ZipList(ZipList))
-import Control.Monad          (when, unless, mplus, replicateM)
+import Control.Monad          (when, unless, mplus, replicateM, forM_)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import qualified Control.Exception as C
@@ -1275,19 +1278,51 @@ instance ApplyMeasure b r => ApplyMeasure (SBV a -> b) r where
   applyMeasure _ []       = error "Data.SBV.applyMeasure: not enough arguments"
   applyMeasure m (sv:svs) = applyMeasure @b @r (m (SBV sv)) svs
 
+-- | Type family that maps a function type to its corresponding contract type.
+-- A contract takes the same arguments as the function, plus the result, and returns 'SBool'.
+-- For example, a contract for @SBV Integer -> SBV Integer@ has type @SBV Integer -> SBV Integer -> SBool@
+-- (first arg is the input, second is the output).
+type family ContractOf f where
+  ContractOf (SBV a)      = SBV a -> SBool
+  ContractOf (SBV a -> r) = SBV a -> ContractOf r
+
+-- | Apply a contract function to a list of input 'SVal' arguments and a result 'SVal'.
+class ApplyContract a where
+  applyContract :: ContractOf a -> [SVal] -> SVal -> SBool
+
+instance ApplyContract (SBV a) where
+  applyContract c [] sv = c (SBV sv)
+  applyContract _ _  _  = error "Data.SBV.applyContract: too many arguments"
+
+instance ApplyContract b => ApplyContract (SBV a -> b) where
+  applyContract _ []       _ = error "Data.SBV.applyContract: not enough arguments"
+  applyContract c (sv:svs) r = applyContract @b (c (SBV sv)) svs r
+
 -- | An evaluated measure: captures the ability to apply the measure function
 -- to a list of arguments, along with the ordering and zero constraints.
 data MeasureEval where
   MeasureEval :: (Zero r, OrdSymbolic (SBV r), SymVal r) => ([SVal] -> SBV r) -> MeasureEval
+
+-- | An evaluated contract: captures the ability to apply a contract predicate
+-- to a list of input arguments and a result value. Used during measure verification
+-- for nested recursive functions, where the inductive hypothesis provides the contract
+-- on recursive call results.
+data ContractEval where
+  ContractEval :: ([SVal] -> SVal -> SBool) -> ContractEval
 
 -- | A measure for a function, used to prove termination of recursive definitions.
 --
 --   * 'AutoMeasure': The function either doesn't need a measure (because it's not recursive),
 --     or SBV will automatically guess one based on argument types.
 --   * 'HasMeasure': The user provided an explicit measure function.
+--   * 'HasContract': The user provided a measure and a contract. The contract is a predicate
+--     on the function's inputs and output that is proven simultaneously with the measure decrease
+--     via well-founded induction. This handles nested recursion (e.g., McCarthy 91) where the
+--     termination argument depends on the function's return value at smaller inputs.
 data Measure f where
   AutoMeasure  :: Measure f
   HasMeasure   :: MeasureEval -> [MeasureHelper] -> Measure f
+  HasContract  :: MeasureEval -> ContractEval -> [MeasureHelper] -> Measure f
 
 -- | A helper axiom for measure verification. When a measure's correctness depends on
 -- properties that require induction to prove (e.g., @ifComplexity f > 0@), the user
@@ -1300,8 +1335,9 @@ newtype MeasureHelper = MeasureHelper { runMeasureHelper :: SMTConfig -> IO SBoo
 
 -- | Does the measure indicate a termination measure is present?
 hasMeasure :: Measure f -> Bool
-hasMeasure AutoMeasure      = True
-hasMeasure (HasMeasure _ _) = True
+hasMeasure AutoMeasure        = True
+hasMeasure (HasMeasure _ _)   = True
+hasMeasure (HasContract _ _ _) = True
 
 -- | Verify that a measure decreases at each recursive call site.
 -- Walks the expression DAG to find recursive calls, computes reaching conditions
@@ -1479,6 +1515,204 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
              _                         -> pure $ MeasureNotDecreasing decResult
 
          Left nonNegResult -> pure $ MeasureNotNonNeg nonNegResult
+
+-- | Verify a measure with a contract for nested recursive functions.
+-- Uses well-founded induction: the inductive hypothesis provides the contract
+-- on recursive call results, and we prove both measure decrease and contract simultaneously.
+-- One-step unfolding of the function body at each recursive call site gives the solver
+-- information about base-case behavior without assuming totality.
+verifyMeasureWithContract :: SMTConfig -> String -> LambdaInfo -> MeasureEval -> ContractEval -> [MeasureHelper] -> IO ()
+verifyMeasureWithContract cfg funcNm info meval ceval helpers = do
+   -- Run helpers with funcNm added to measuresBeingVerified, same as verifyMeasure
+   let curVerifying = measuresBeingVerified (tpOptions cfg)
+       cfg'         = cfg{tpOptions = (tpOptions cfg){measuresBeingVerified = Set.insert funcNm curVerifying}}
+
+   debug cfg ["[MEASURE] " ++ funcNm ++ " (contract): verifying with " ++ show (length helpers) ++ " helper(s)"]
+   axioms <- mapM (`runMeasureHelper` cfg') helpers
+   debug cfg ["[MEASURE] " ++ funcNm ++ " (contract): " ++ show (length axioms) ++ " helper axiom(s) collected, checking measure+contract"]
+   result <- checkMeasureWithContract cfg funcNm False info meval ceval axioms
+   let prettyNm = prettyFuncNm funcNm
+   case result of
+     MeasureOK              -> pure ()
+     MeasureNotNonNeg r     -> error $ unlines $
+        [ ""
+        , "*** Data.SBV: Termination measure is not non-negative."
+        , "***"
+        , "***   Function: " ++ prettyNm
+        , "***"
+        ]
+        ++ ["***   " ++ l | l <- lines (show r)]
+        ++
+        [ "***"
+        , "*** The measure must be non-negative for all inputs."
+        ]
+     MeasureNotDecreasing r -> error $ unlines $
+        [ ""
+        , "*** Data.SBV: Measure+contract verification failed."
+        , "***"
+        , "***   Function: " ++ prettyNm
+        , "***"
+        ]
+        ++ ["***   " ++ l | l <- lines (show r)]
+        ++
+        [ "***"
+        , "*** The measure must strictly decrease at every recursive call,"
+        , "*** and the contract must hold for the function's output."
+        , "*** The inductive hypothesis provides the contract on recursive call"
+        , "*** results for inputs with strictly smaller measure."
+        ]
+
+-- | Check a measure with contract: non-negative, strictly decreasing, and contract holds.
+-- Uses one-step unfolding at each recursive call site to give the solver base-case behavior,
+-- and assumes the inductive hypothesis (contract on recursive call results) to handle
+-- nested recursion where a call's argument depends on another call's result.
+checkMeasureWithContract :: SMTConfig -> String -> Bool -> LambdaInfo -> MeasureEval -> ContractEval -> [SBool] -> IO MeasureCheckResult
+checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) (ContractEval applyC) axioms = do
+   let addSuffix s fp = dropExtension fp ++ "_measure_" ++ map (\c -> if c == ' ' then '_' else c) funcNm ++ "_" ++ s ++ takeExtension fp
+       cfgNonNeg      = cfgIn{transcript = addSuffix "nonNeg"   <$> transcript cfgIn}
+       cfgDecrease    = cfgIn{transcript = addSuffix "decrease"  <$> transcript cfgIn}
+       barFuncNm      = barify funcNm
+       recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList liAssignments, nm == barFuncNm]
+
+   if null recCalls
+     then pure MeasureOK
+     else do
+       -- Non-negativity: same as checkMeasure
+       nonNegOK <- if skipNonNeg
+                   then pure (Right ())
+                   else do nonNegResult <- proveWith cfgNonNeg (do
+                              st <- symbolicEnv
+                              liftIO $ writeIORef (rSkipMeasureChecks st) True
+
+                              let singleParam = length paramSVs == 1
+                              freshParams <- liftIO $ sequence [svToSV st =<< svMkSymVar (NonQueryVar Nothing) (kindOf sv) (Just (if singleParam then "arg" else "arg" ++ show i)) st
+                                                                | (i, sv) <- zip [(0::Int)..] paramSVs
+                                                                ]
+                              freshConsts <- liftIO $ mapM (\(_, cv) -> svToSV st (SVal (kindOf cv) (Left cv))) liConsts
+
+                              mapM_ constrain axioms
+                              sessionDefns <- liftIO $ readIORef (rDefns st)
+                              let sessionFuncs = Set.fromList (map fst sessionDefns)
+
+                              let constMapping = zip (map fst liConsts) freshConsts
+                                  paramMapping = zip paramSVs freshParams
+                                  initMap      = Map.fromList (constMapping ++ paramMapping)
+                                  builtinMap   = Map.fromList [(trueSV, trueSV), (falseSV, falseSV)]
+                                  startMap     = Map.union initMap builtinMap
+
+                              _ <- liftIO $ replayDAG cfgIn st funcNm sessionFuncs startMap (F.toList liAssignments)
+
+                              let formalSVals = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) freshParams
+                                  mFormal     = applyM formalSVals
+
+                              sObserve "measure" (unSBV mFormal)
+                              pure $ nonNeg mFormal :: Symbolic SBool)
+                           pure $ case nonNegResult of
+                             ThmResult Unsatisfiable{} -> Right ()
+                             _                         -> Left nonNegResult
+
+       case nonNegOK of
+         Right () -> do
+           -- Decrease + contract check
+           decResult <- proveWith cfgDecrease (do
+              st <- symbolicEnv
+              liftIO $ writeIORef (rSkipMeasureChecks st) True
+
+              let singleParam = length paramSVs == 1
+              freshParams <- liftIO $ sequence [svToSV st =<< svMkSymVar (NonQueryVar Nothing) (kindOf sv) (Just (if singleParam then "arg" else "arg" ++ show i)) st
+                                                | (i, sv) <- zip [(0::Int)..] paramSVs
+                                                ]
+              freshConsts <- liftIO $ mapM (\(_, cv) -> svToSV st (SVal (kindOf cv) (Left cv))) liConsts
+
+              mapM_ constrain axioms
+              sessionDefns <- liftIO $ readIORef (rDefns st)
+              let sessionFuncs = Set.fromList (map fst sessionDefns)
+
+              let constMapping = zip (map fst liConsts) freshConsts
+                  paramMapping = zip paramSVs freshParams
+                  initMap      = Map.fromList (constMapping ++ paramMapping)
+                  builtinMap   = Map.fromList [(trueSV, trueSV), (falseSV, falseSV)]
+                  startMap     = Map.union initMap builtinMap
+
+              svMap <- liftIO $ replayDAG cfgIn st funcNm sessionFuncs startMap (F.toList liAssignments)
+
+              let formalSVals = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) freshParams
+                  mFormal     = applyM formalSVals
+
+              -- One-step unfolding: for each recursive call, replay the function body
+              -- with the call's arguments substituted for the formal parameters.
+              -- This gives the solver base-case behavior without assuming totality.
+              let dagList = F.toList liAssignments
+              liftIO $ forM_ recCalls $ \(rcSV, callArgSVs) -> do
+                let -- Map the call's arguments through svMap to get the fresh session SVs
+                    mappedCallArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
+                    -- Build the initial map for the unfolded body: formal params -> call args
+                    unfoldParamMapping = zip paramSVs mappedCallArgs
+                    unfoldConstMapping = zip (map fst liConsts) freshConsts
+                    unfoldInitMap      = Map.fromList (unfoldConstMapping ++ unfoldParamMapping)
+                    unfoldStartMap     = Map.union unfoldInitMap builtinMap
+
+                -- Replay the entire function body with the call's args
+                unfoldSvMap <- replayDAG cfgIn st funcNm sessionFuncs unfoldStartMap dagList
+
+                -- The unfolded output SV
+                let unfoldedOutputSV = Map.findWithDefault liOutput liOutput unfoldSvMap
+                    -- The fresh variable that was assigned to this recursive call
+                    freshCallSV = Map.findWithDefault rcSV rcSV svMap
+                    -- Assert: fresh_call = unfolded_output
+                    freshSVal    = SVal (kindOf rcSV) (Right (cache (const (pure freshCallSV))))
+                    unfoldedSVal = SVal (kindOf rcSV) (Right (cache (const (pure unfoldedOutputSV))))
+                internalConstraint st False [] (svEqual freshSVal unfoldedSVal)
+
+              -- IH contract: for each recursive call, assume the contract holds on its result.
+              -- This is sound because we also prove measure decrease at each call site.
+              liftIO $ forM_ recCalls $ \(rcSV, callArgSVs) -> do
+                let mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
+                    argSVals   = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
+                    freshCallSV = Map.findWithDefault rcSV rcSV svMap
+                    freshResult = SVal (kindOf rcSV) (Right (cache (const (pure freshCallSV))))
+                    contractHolds = applyC argSVals freshResult
+                internalConstraint st False [] (unSBV contractHolds)
+
+              -- Proof obligations:
+              -- 1. Measure strictly decreases at each reachable recursive call site
+              let reachConds = computeReachingConditions liAssignments liOutput
+                  singleCall = length recCalls == 1
+                  mkDecreaseObligation (i, (rcSV, callArgSVs)) = do
+                    let mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
+                        argSVals   = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
+                        mCall      = applyM argSVals
+
+                        reachSVal  = case Map.lookup rcSV reachConds of
+                                       Just conds -> sAnd [ let sv' = Map.findWithDefault condSV condSV svMap
+                                                                s   = SBV (SVal KBool (Right (cache (\_ -> pure sv'))))
+                                                            in if pol then s else sNot s
+                                                          | (condSV, pol) <- conds
+                                                          ]
+                                       Nothing    -> sTrue
+
+                        tag nm | singleCall = nm
+                               | True       = nm ++ "[" ++ show (i :: Int) ++ "]"
+
+                    sObserve (tag "then")   (unSBV mCall)
+                    pure $ reachSVal .=> mFormal .> mCall
+
+              sObserve "before" (unSBV mFormal)
+              decreaseObligations <- mapM mkDecreaseObligation (zip [1..] recCalls)
+
+              -- 2. Contract holds for the function's output
+              let mappedOutput  = Map.findWithDefault liOutput liOutput svMap
+                  resultSVal   = SVal (kindOf liOutput) (Right (cache (const (pure mappedOutput))))
+                  contractObl  = applyC formalSVals resultSVal
+
+              pure $ sAnd decreaseObligations .&& contractObl :: Symbolic SBool)
+
+           case decResult of
+             ThmResult Unsatisfiable{} -> pure MeasureOK
+             _                         -> pure $ MeasureNotDecreasing decResult
+
+         Left nonNegResult -> pure $ MeasureNotNonNeg nonNegResult
+   where paramSVs = map snd liParams
 
 -- | Generate candidate measures based on parameter kinds.
 -- For list args, we use @length@. For integer args, we use @abs@.
@@ -3384,6 +3618,10 @@ class SMTDefinable a where
                             HasMeasure eval helpers -> do
                               modifyIORef' (rMeasureChecks st)
                                            ((funcNm, \cfg -> verifyMeasure cfg funcNm info eval helpers) :)
+                              pure def
+                            HasContract eval ceval helpers -> do
+                              modifyIORef' (rMeasureChecks st)
+                                           ((funcNm, \cfg -> verifyMeasureWithContract cfg funcNm info eval ceval helpers) :)
                               pure def)
 
 
@@ -3405,6 +3643,38 @@ smtFunction nm = smtFunctionDef nm AutoMeasure
 smtFunctionWithMeasure :: forall f r. (SMTDefinable f, Typeable f, Lambda Symbolic f, Zero r, OrdSymbolic (SBV r), SymVal r, ApplyMeasure f r)
                        => String -> (MeasureOf f r, [MeasureHelper]) -> f -> f
 smtFunctionWithMeasure nm (mf, helpers) = smtFunctionDef nm (HasMeasure (MeasureEval (applyMeasure @f @r mf)) helpers)
+
+-- | Define an SMT function with a termination measure and a contract (post-condition).
+-- Use this for nested recursive functions (like McCarthy's 91 function) where the termination
+-- argument depends on the function's return value at smaller inputs.
+--
+-- The triple @(measure, contract, helpers)@ provides:
+--
+--   * A measure function (same as 'smtFunctionWithMeasure')
+--   * A contract: a predicate on the function's inputs and output that is proven simultaneously
+--     with the measure decrease via well-founded induction. The inductive hypothesis provides
+--     the contract for all inputs with strictly smaller measure.
+--   * A list of auxiliary 'MeasureHelper' properties (pass @[]@ when none are needed)
+--
+-- For example, for McCarthy's 91 function:
+--
+-- @
+-- mcCarthy91 = smtFunctionWithContract \"mcCarthy91\"
+--     ( \\n -> 0 \`smax\` (101 - n)
+--     , \\n r -> n .<= 100 .=> r .== 91
+--     , []
+--     )
+--   $ \\n -> ite (n .> 100) (n - 10) (mcCarthy91 (mcCarthy91 (n + 11)))
+-- @
+--
+-- Here the contract says \"for inputs ≤ 100, the result is 91\". This is needed because the outer
+-- recursive call @mcCarthy91(mcCarthy91(n + 11))@ requires knowing what @mcCarthy91(n + 11)@ returns
+-- in order to verify that the measure decreases.
+smtFunctionWithContract :: forall f r. (SMTDefinable f, Typeable f, Lambda Symbolic f, Zero r, OrdSymbolic (SBV r), SymVal r, ApplyMeasure f r, ApplyContract f)
+                        => String -> (MeasureOf f r, ContractOf f, [MeasureHelper]) -> f -> f
+smtFunctionWithContract nm (mf, cf, helpers) = smtFunctionDef nm (HasContract (MeasureEval (applyMeasure @f @r mf))
+                                                                              (ContractEval (applyContract @f cf))
+                                                                              helpers)
 
 -- | Kind of uninterpretation
 data UIKind a = UIFree  Bool                            -- ^ completely uninterpreted. If Bool is true, then this is curried.

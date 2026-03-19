@@ -57,6 +57,20 @@
               $ \f -> ...
     ```
 
+  * For nested recursive functions (like McCarthy's 91 function) where the termination argument
+    depends on the function's return value at smaller inputs, use `smtFunctionWithContract`. This
+    takes a measure and a contract (post-condition) that are verified simultaneously via well-founded
+    induction:
+
+    ```haskell
+    mcCarthy91 = smtFunctionWithContract "mcCarthy91"
+                   ( \n -> 0 `smax` (101 - n)
+                   , \n r -> n .<= 100 .=> r .== 91
+                   , []
+                   )
+               $ \n -> ite (n .> 100) (n - 10) (mcCarthy91 (mcCarthy91 (n + 11)))
+    ```
+
 ### Version 13.6, 2026-03-02
 
   * The `sCase` quasi-quoter now supports nested constructor patterns. Sub-patterns
