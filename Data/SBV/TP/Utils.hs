@@ -224,11 +224,13 @@ printFunctions header cfg names
 
         go _ []     = ""
         go _ [n]    = n
-        go r (n:ns) = let entry = n ++ ", "
-                          len   = length entry
+        go r (n:ns) = let len  = length n + 2  -- account for ", "
+                          rest = go (r - len) ns
                       in if r - len < 0 && r /= limit
                          then "\n  " ++ go limit (n:ns)
-                         else entry ++ go (r - len) ns
+                         else case rest of
+                                '\n':_ -> n ++ "," ++ rest
+                                _      -> n ++ ", " ++ rest
 
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
 startTP :: SMTConfig -> Bool -> String -> Int -> TPProofContext -> IO Int

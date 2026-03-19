@@ -104,7 +104,8 @@ sumProof = induct "sum_correct"
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating:
---   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up, sbv.foldr, sbv.map
+--   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up,
+--   sbv.foldr, sbv.map
 -- [Proven] sumSquare_correct :: Ɐn ∷ Integer → Bool
 sumSquareProof :: TP (Proof (Forall "n" Integer -> SBool))
 sumSquareProof = do
@@ -155,7 +156,8 @@ sumSquareProof = do
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating:
---   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up, sbv.foldr, sumCubed
+--   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up,
+--   sbv.foldr, sumCubed
 -- [Proven] nicomachus :: Ɐn ∷ Integer → Bool
 nicomachus :: TP (Proof (Forall "n" Integer -> SBool))
 nicomachus = do
@@ -284,7 +286,8 @@ elevenMinusFour = do
 --   Step: 7                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating:
---   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up, sbv.foldr, sbv.map
+--   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up,
+--   sbv.foldr, sbv.map
 -- [Proven] sumMulFactorial :: Ɐn ∷ Integer → Bool
 sumMulFactorial :: TP (Proof (Forall "n" Integer -> SBool))
 sumMulFactorial = do
