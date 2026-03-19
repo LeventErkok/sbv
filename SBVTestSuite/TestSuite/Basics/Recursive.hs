@@ -119,6 +119,16 @@ tests = testGroup "Basics.Recursive"
    , testCase "autoGuessFailCandidates"   autoGuessFailCandidates
    , testCase "autoGuessNoCandidates"     autoGuessNoCandidates
    , testCase "nonRecursiveNoMeasure"     nonRecursiveNoMeasure
+   -- Test that an explicit measure that doesn't decrease is rejected
+   , goldenCapturedIO "recursive3_badMeasure" $ \rf -> do
+        let badSum :: SInteger -> SInteger
+            badSum = smtFunctionWithMeasure "badSum" (\_ -> 1 :: SInteger, [])
+                   $ \x -> ite (x .<= 0) 0 (x + badSum (x - 1))
+        r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> badSum x .>= 0
+        case r of
+          Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
+          Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
    -- Test that lexicographic measure auto-guess works for Ackermann (nested recursion)
    , goldenCapturedIO "recursive1_ack" $ \rf -> do
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
