@@ -208,12 +208,17 @@ printProductive :: SMTConfig -> [String] -> IO ()
 printProductive = printFunctions "Functions proven productive"
 
 -- | Print a list of function names under a header, wrapping lines to avoid excessively long output.
+-- If the list fits on one line, it follows the header directly. Otherwise, it starts on a new line.
 printFunctions :: String -> SMTConfig -> [String] -> IO ()
-printFunctions header cfg names = message cfg $ header ++ ": " ++ wrapped ++ "\n"
+printFunctions header cfg names
+  | length oneLine <= limit = message cfg $ header ++ ": " ++ oneLine ++ "\n"
+  | True                    = message cfg $ header ++ ":\n  " ++ wrapped ++ "\n"
   where cleaned = nub (sort (map strip names))
         strip   = dropWhileEnd (== ' ') . takeWhile (/= '@')
 
-        limit = 40
+        limit = 90
+
+        oneLine = intercalate ", " cleaned
 
         wrapped = go limit cleaned
 

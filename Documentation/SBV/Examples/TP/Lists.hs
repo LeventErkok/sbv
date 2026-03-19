@@ -413,7 +413,8 @@ enumLen =
 --     Step: 1.2.4                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven terminating: EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up, sbv.reverse
+-- Functions proven terminating:
+--   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up, sbv.reverse
 -- [Proven] revNM :: Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 revNM :: TP (Proof (Forall "n" Integer -> Forall "m" Integer -> SBool))
 revNM = do

@@ -1071,7 +1071,8 @@ falsifyFalsifies = do
 -- Lemma: nonTautIsFalsified               Q.E.D.
 -- Lemma: normalizeCorrect                 Q.E.D.
 -- Lemma: completenessHelper               Q.E.D.
--- Functions proven terminating: eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
+-- Functions proven terminating:
+--   eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 -- [Proven] completenessHelper :: Ɐf ∷ Formula → Bool
 completenessHelper :: TP (Proof (Forall "f" Formula -> SBool))
 completenessHelper = do
@@ -1095,7 +1096,8 @@ completenessHelper = do
 -- Lemma: completenessHelper               Q.E.D.
 -- Lemma: normalizeRespectsTruth           Q.E.D.
 -- Lemma: completeness                     Q.E.D.
--- Functions proven terminating: eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
+-- Functions proven terminating:
+--   eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 -- [Proven] completeness :: Ɐf ∷ Formula → Bool
 completeness :: TP (Proof (Forall "f" Formula -> SBool))
 completeness = do
