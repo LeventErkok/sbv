@@ -1703,8 +1703,9 @@ autoGuessOrFail cfg funcNm info = do
                               , "***   No measure candidates could be derived from the argument types."
                               ]
           | otherwise       = [ "***"
-                              , "***   Measures tried: " ++ intercalate ", " [d | (d, _, _) <- candidates]
+                              , "***   Measures tried:"
                               ]
+                              ++ [ "***     " ++ d | (d, _, _) <- candidates]
 
 -- | Pretty-print a function name: turn @"insert @(SBV Integer -> SBV [Integer])"@ into @"insert :: SBV Integer -> SBV [Integer]"@
 prettyFuncNm :: String -> String
