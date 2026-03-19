@@ -81,6 +81,7 @@ pet = smtFunction "pet"
 --     Step: 1.2.4                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: ack
 -- [Proven] ack_2_2_4 :: Ɐm ∷ Integer → Bool
 ack_2_2_4 :: TP (Proof (Forall "m" Integer -> SBool))
 ack_2_2_4 = sInduct "ack_2_2_4"
@@ -112,6 +113,7 @@ ack_2_2_4 = sInduct "ack_2_2_4"
 --     Step: 1.4.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: ack
 -- [Proven] ack_psd :: Ɐm ∷ Integer → Ɐn ∷ Integer → Ɐa ∷ Integer → Bool
 ack_psd :: TP (Proof (Forall "m" Integer -> Forall "n" Integer -> Forall "a" Integer -> SBool))
 ack_psd = sInduct "ack_psd"
@@ -148,6 +150,7 @@ ack_psd = sInduct "ack_psd"
 --     Step: 1.3.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: pet
 -- [Proven] pet_psd :: Ɐm ∷ Integer → Ɐn ∷ Integer → Bool
 pet_psd :: TP (Proof (Forall "m" Integer -> Forall "n" Integer -> SBool))
 pet_psd = do
@@ -216,6 +219,7 @@ pet_psd = do
 --     Step: 1.4.5                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
+-- Functions proven terminating: ack, pet
 -- [Proven] petAck :: Ɐm ∷ Integer → Ɐn ∷ Integer → Bool
 petAck :: TP (Proof (Forall "m" Integer -> Forall "n" Integer -> SBool))
 petAck = do

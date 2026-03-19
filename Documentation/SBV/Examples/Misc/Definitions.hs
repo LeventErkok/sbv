@@ -137,8 +137,8 @@ evenOdd2 = sat $ \a r1 r2 -> a .== 20 .&& r1 .== isEven a .&& r2 .== isOdd a
 -- | Ackermann function, demonstrating nested recursion.
 ack :: SInteger -> SInteger -> SInteger
 ack = smtFunction "ack"
-    $ \x y -> ite (x .== 0) (y + 1)
-            $ ite (y .== 0) (ack (x - 1) 1)
+    $ \x y -> ite (x .<= 0) (y + 1)
+            $ ite (y .<= 0) (ack (x - 1) 1)
                             (ack (x - 1) (ack x (y - 1)))
 
 -- | We can prove constant-folding instances of the equality @ack 1 y == y + 2@:

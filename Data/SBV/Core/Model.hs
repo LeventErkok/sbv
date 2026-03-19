@@ -124,6 +124,7 @@ import Data.SBV.Utils.ExtractIO (ExtractIO)
 
 import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), defs2smt, prove, proveWith)
 import Data.SBV.SMT.SMT        (ThmResult(..), showModel)
+import Data.SBV.SMT.Utils      (debug)
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
@@ -1306,13 +1307,10 @@ verifyMeasure cfg funcNm info meval helpers = do
    let curVerifying = measuresBeingVerified (tpOptions cfg)
        cfg'         = cfg{tpOptions = (tpOptions cfg){measuresBeingVerified = Set.insert funcNm curVerifying}}
 
-       msg s | verbose cfg = putStrLn s
-             | True        = pure ()
-
-   msg $ "[MEASURE] " ++ funcNm ++ ": verifying with " ++ show (length helpers) ++ " helper(s)"
-         ++ if Set.null curVerifying then "" else ", already verifying: " ++ show (Set.toList curVerifying)
+   debug cfg ["[MEASURE] " ++ funcNm ++ ": verifying with " ++ show (length helpers) ++ " helper(s)"
+              ++ if Set.null curVerifying then "" else ", already verifying: " ++ show (Set.toList curVerifying)]
    axioms <- mapM (`runMeasureHelper` cfg') helpers
-   msg $ "[MEASURE] " ++ funcNm ++ ": " ++ show (length axioms) ++ " helper axiom(s) collected, checking measure"
+   debug cfg ["[MEASURE] " ++ funcNm ++ ": " ++ show (length axioms) ++ " helper axiom(s) collected, checking measure"]
    result <- checkMeasure cfg funcNm False info meval axioms
    let prettyNm = prettyFuncNm funcNm
    case result of
@@ -1655,32 +1653,32 @@ autoGuess cfg funcNm info = do
     let barFuncNm = barify funcNm
         recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList (liAssignments info), nm == barFuncNm]
         allUIs    = [(nm, length args) | (_, SBVApp (Uninterpreted nm) args) <- F.toList (liAssignments info)]
-    msg $ "[MEASURE] " ++ funcNm ++ ": barified = " ++ show barFuncNm
-    msg $ "[MEASURE] " ++ funcNm ++ ": Uninterpreted ops in DAG: " ++ show allUIs
-    msg $ "[MEASURE] " ++ funcNm ++ ": recursive calls found = " ++ show (length recCalls)
+    debug cfg ["[MEASURE] " ++ funcNm ++ ": barified = " ++ show barFuncNm]
+    debug cfg ["[MEASURE] " ++ funcNm ++ ": Uninterpreted ops in DAG: " ++ show allUIs]
+    debug cfg ["[MEASURE] " ++ funcNm ++ ": recursive calls found = " ++ show (length recCalls)]
     go candidates
   where
     candidates = guessMeasures (liParams info)
     go []                    = pure Nothing
     go ((desc, m, mbIdx):ms) = do let skipNonNeg = "sbv.dt.size." `isPrefixOf` desc
-                                  msg $ "[MEASURE] " ++ funcNm ++ ": trying " ++ desc
+                                  debug cfg ["[MEASURE] " ++ funcNm ++ ": trying " ++ desc]
                                   -- For ADT size measures, try syntactic sub-term check first.
                                   -- This avoids calling the solver, which can hang on recursive
                                   -- define-fun-rec definitions.
                                   result <- case mbIdx of
                                               Just idx | isStructurallyDecreasing funcNm info idx -> do
-                                                 msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK (structural recursion)"
+                                                 debug cfg ["[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK (structural recursion)"]
                                                  pure MeasureOK
                                               _ -> checkMeasure cfg funcNm skipNonNeg info m []
                                   case result of
-                                    MeasureOK              -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK"
+                                    MeasureOK              -> do debug cfg ["[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK"]
                                                                  pure (Just m)
-                                    MeasureNotNonNeg r     -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed non-negativity: " ++ show r
+                                    MeasureNotNonNeg r     -> do debug cfg ["[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed non-negativity: " ++ show r]
+                                                                 debug cfg ["[MEASURE] " ++ funcNm ++ ": trying next candidate.."]
                                                                  go ms
-                                    MeasureNotDecreasing r -> do msg $ "[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed strict decrease: " ++ show r
+                                    MeasureNotDecreasing r -> do debug cfg ["[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed strict decrease: " ++ show r]
+                                                                 debug cfg ["[MEASURE] " ++ funcNm ++ ": trying next candidate.."]
                                                                  go ms
-    msg s | verbose cfg = putStrLn s
-          | True        = pure ()
 
 -- | Auto-guess a termination measure, or fail with a helpful error message.
 autoGuessOrFail :: SMTConfig -> String -> LambdaInfo -> IO ()
@@ -1722,9 +1720,7 @@ prettyFuncNm m = case break (== '@') m of
 replayDAG :: SMTConfig -> State -> String -> Set.Set String -> Map.Map SV SV -> [(SV, SBVExpr)] -> IO (Map.Map SV SV)
 replayDAG cfg st funcName definedFuncs startMap dag = do
   let n = length dag
-      msg s | verbose cfg = putStrLn s
-            | True        = pure ()
-  msg $ "[MEASURE] replayDAG " ++ funcName ++ ": replaying " ++ show n ++ " node(s)"
+  debug cfg ["[MEASURE] replayDAG " ++ funcName ++ ": replaying " ++ show n ++ " node(s)"]
   go startMap dag
   where barFuncName = barify funcName
 
