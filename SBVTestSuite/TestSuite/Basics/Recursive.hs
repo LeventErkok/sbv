@@ -120,6 +120,7 @@ tests = testGroup "Basics.Recursive"
    , testCase "autoGuessFailCandidates"   autoGuessFailCandidates
    , testCase "autoGuessNoCandidates"     autoGuessNoCandidates
    , testCase "nonRecursiveNoMeasure"     nonRecursiveNoMeasure
+
    -- Test that an explicit measure that doesn't decrease is rejected
    , goldenCapturedIO "recursive3_badMeasure" $ \rf -> do
         let badSum :: SInteger -> SInteger
@@ -130,21 +131,25 @@ tests = testGroup "Basics.Recursive"
         case r of
           Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
           Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
    -- Test that lexicographic measure auto-guess works for Ackermann (nested recursion)
    , goldenCapturedIO "recursive1_ack" $ \rf -> do
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \y r -> y .== (5 :: SInteger) .&& r .== ack 1 y
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
    -- Test that explicit measure works for enumFromThenTo.down (descending enumeration)
    , goldenCapturedIO "recursive2_enum" $ \rf -> do
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \x -> L.length [sEnum|(5::SInteger), 4 .. x|] .>= 0
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
    -- Test that contract-based measure works for McCarthy91 (nested recursion)
    , goldenCapturedIO "recursive4_mcCarthy91" $ \rf -> do
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \n -> mcCarthy91 n .== (91 :: SInteger)
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
    -- Test that a bad contract is rejected (contract says result is always 0, which is wrong)
    , goldenCapturedIO "recursive5_badContract" $ \rf -> do
         let mc91bad :: SInteger -> SInteger
@@ -159,6 +164,7 @@ tests = testGroup "Basics.Recursive"
         case r of
           Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
           Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
    -- Test that a true-but-useless contract is rejected (contract is trivially True,
    -- so the IH provides no information about recursive call results, and the measure
    -- decrease for the outer call can't be proven)
@@ -175,4 +181,32 @@ tests = testGroup "Basics.Recursive"
         case r of
           Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
           Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test that a productive function (guarded recursion) is accepted
+   , goldenCapturedIO "recursive7_productive" $ \rf -> do
+        let rep :: SInteger -> SInteger -> SList Integer
+            rep = smtProductiveFunction "rep" $ \n x ->
+                    ite (n .<= 0) L.nil (x L..: rep (n - 1) x)
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> L.length (rep 3 x) .== 3
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test that a non-guarded function marked productive is rejected
+   , goldenCapturedIO "recursive8_badProductive" $ \rf -> do
+        let bad :: SInteger -> SInteger
+            bad = smtProductiveFunction "bad" $ \n -> ite (n .== 0) 0 (1 + bad (n - 1))
+        r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \n -> bad n .>= 0
+        case r of
+          Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
+          Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test that a multi-arg productive function (guarded recursion) is accepted
+   , goldenCapturedIO "recursive9_productive2" $ \rf -> do
+        let countdown :: SInteger -> SList Integer
+            countdown = smtProductiveFunction "countdown" $ \n ->
+                          ite (n .<= 0) (L.singleton 0) (n L..: countdown (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \n -> L.head (countdown n) .== (n :: SInteger) .&& n .> 0
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
    ]

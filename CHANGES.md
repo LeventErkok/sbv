@@ -71,6 +71,13 @@
                $ \n -> ite (n .> 100) (n - 10) (mcCarthy91 (mcCarthy91 (n + 11)))
     ```
 
+  * Recursive functions whose every recursive call is guarded by a data constructor (i.e.,
+    corecursive/productive functions) can now be defined via `smtProductiveFunction`. SBV
+    verifies guardedness statically and emits them as `define-fun-rec` without requiring a
+    termination measure. See `Documentation.SBV.Examples.TP.Productive` for worked examples,
+    including inductive proofs of head-element, length, and element-indexing properties of a
+    `countdown` function.
+
 ### Version 13.6, 2026-03-02
 
   * The `sCase` quasi-quoter now supports nested constructor patterns. Sub-patterns

@@ -1230,7 +1230,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic Integer where
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go x (y-x)
-     where go = smtFunction "EnumSymbolic.Integer.enumFromThen" $ \start delta -> start .: go (start+delta) delta
+     where go = smtProductiveFunction "EnumSymbolic.Integer.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta = y - x
@@ -1258,7 +1258,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic Float where
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go 0 x (y-x)
-     where go = smtFunction "EnumSymbolic.Float.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
+     where go = smtProductiveFunction "EnumSymbolic.Float.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta, z :: SFloat
@@ -1285,7 +1285,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic Double where
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go 0 x (y-x)
-     where go = smtFunction "EnumSymbolic.Double.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
+     where go = smtProductiveFunction "EnumSymbolic.Double.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta, z :: SDouble
@@ -1312,7 +1312,7 @@ instance {-# OVERLAPPING #-} ValidFloat eb sb => EnumSymbolic (FloatingPoint eb 
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go 0 x (y-x)
-     where go = smtFunction "EnumSymbolic.FloatingPoint.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
+     where go = smtProductiveFunction "EnumSymbolic.FloatingPoint.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
      where delta, z :: SFloatingPoint eb sb
@@ -1336,7 +1336,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
    enumFromTo n = enumFromThenTo n (n+1)
 
    enumFromThen x y = go x (y-x)
-     where go = smtFunction "EnumSymbolic.AlgReal.enumFromThen" $ \start delta -> start .: go (start+delta) delta
+     where go = smtProductiveFunction "EnumSymbolic.AlgReal.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
      where delta, z :: SReal

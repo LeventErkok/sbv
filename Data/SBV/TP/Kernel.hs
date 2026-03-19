@@ -245,11 +245,13 @@ inductiveLemmaWith cfg nm f by = lemmaWith cfg nm f (inductionSchema f : by)
 -- measureLemma proof uses the function whose measure is currently being checked.
 checkNewMeasures :: SMTConfig -> State -> TPState -> IO ()
 checkNewMeasures cfg@SMTConfig{tpOptions = TPOptions{measuresBeingVerified}} st tpSt = do
-   checks   <- readIORef (rMeasureChecks st)
-   verified <- readIORef (measuresVerified tpSt)
-   let allNames = Set.fromList (map fst checks)
-       new      = [(n, c) | (n, c) <- checks, n `Set.notMember` verified, n `Set.notMember` measuresBeingVerified]
-       skipped  = [n | (n, _) <- checks, n `Set.notMember` verified, n `Set.member` measuresBeingVerified]
+   checks     <- readIORef (rMeasureChecks st)
+   verified   <- readIORef (measuresVerified tpSt)
+   productive <- readIORef (productiveVerified tpSt)
+   let allVerified = verified `Set.union` productive
+       allNames    = Set.fromList (map (\(n, _, _) -> n) checks)
+       new         = [(n, p, c) | (n, p, c) <- checks, n `Set.notMember` allVerified, n `Set.notMember` measuresBeingVerified]
+       skipped     = [n | (n, _, _) <- checks, n `Set.notMember` allVerified, n `Set.member` measuresBeingVerified]
 
        msg s | verbose cfg = putStrLn s
              | True        = pure ()
@@ -259,11 +261,14 @@ checkNewMeasures cfg@SMTConfig{tpOptions = TPOptions{measuresBeingVerified}} st 
             ++ (if null skipped then "" else ", " ++ show (length skipped) ++ " skipped (being verified): " ++ show skipped)
 
    modifyIORef' (measuresEncountered tpSt) (Set.union allNames)
-   let verify (n, c) = do msg $ "[MEASURE] checkNewMeasures: verifying " ++ n
-                          () <- c cfg
-                          msg $ "[MEASURE] checkNewMeasures: " ++ n ++ " verified"
+   let verify (n, isProductive, c) = do
+         msg $ "[MEASURE] checkNewMeasures: verifying " ++ n
+         () <- c cfg
+         msg $ "[MEASURE] checkNewMeasures: " ++ n ++ " verified"
+         if isProductive
+            then modifyIORef' (productiveVerified tpSt) (Set.insert n)
+            else modifyIORef' (measuresVerified   tpSt) (Set.insert n)
    mapM_ verify new
-   writeIORef (measuresVerified tpSt) (verified `Set.union` Set.fromList (map fst new))
 
 -- | Capture the general flow of a proof-step. Note that this is the only point where we call the backend solver
 -- in a TP proof.

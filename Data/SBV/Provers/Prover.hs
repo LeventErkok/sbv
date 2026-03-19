@@ -755,17 +755,19 @@ runWithQuery :: ExtractIO m => (a -> SymbolicT m SBool) -> Bool -> QueryT m b ->
 runWithQuery reducer isSAT q cfg a = fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup isSAT cfg) comp
   where comp =  do _ <- reducer a >>= output
 
-                   -- Run any registered measure checks (termination verification)
+                   -- Run any registered measure checks (termination/productivity verification)
                    st <- symbolicEnv
                    liftIO $ do skip <- readIORef (rSkipMeasureChecks st)
                                unless skip $ do
                                  checks <- readIORef (rMeasureChecks st)
                                  unless (null checks) $ do
-                                   let nms = map fst checks
+                                   let nms = map (\(n, _, _) -> n) checks
                                    debug cfg ["[MEASURE] Verifying termination measures for: " ++ intercalate ", " nms]
-                                   mapM_ (\(nm, check) -> do debug cfg ["[MEASURE] Checking: " ++ nm]
-                                                             check cfg
-                                                             debug cfg ["[MEASURE] Passed: " ++ nm]
+                                   mapM_ (\(nm, isProductive, check) -> do
+                                             debug cfg ["[MEASURE] Checking: " ++ nm]
+                                             check cfg
+                                             let tag = if isProductive then "productive" else "terminating"
+                                             debug cfg ["[MEASURE] Passed (" ++ tag ++ "): " ++ nm]
                                          ) checks
 
                    Control.executeQuery QueryInternal q

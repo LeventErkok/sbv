@@ -25,7 +25,7 @@
 module Data.SBV.TP.Utils (
          TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof
        , startTP, finishTP, getTPState, getTPConfig, setTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
-       , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo, printMeasures
+       , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML
        , withProofCache
        , tpQuiet, tpRibbon, tpAsms, tpStats, tpCache
@@ -83,6 +83,7 @@ data TPState = TPState { stats                :: IORef TPStats
                        , proofCache           :: IORef (Map (String, TypeRep) ProofObj)
                        , config               :: IORef SMTConfig
                        , measuresVerified     :: IORef (Set String)
+                       , productiveVerified   :: IORef (Set String)
                        , measuresEncountered  :: IORef (Set String)
                        }
 
@@ -124,23 +125,34 @@ runTP = runTPWith defaultSMTCfg
 -- | Run a TP proof, using the given configuration.
 runTPWith :: SMTConfig -> TP a -> IO a
 runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
-   rStats    <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0, qcElapsed = 0 }
-   rCache    <- newIORef Map.empty
-   rCfg      <- newIORef cfg
+   rStats       <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0, qcElapsed = 0 }
+   rCache       <- newIORef Map.empty
+   rCfg         <- newIORef cfg
    rMeasures    <- newIORef Set.empty
+   rProductive  <- newIORef Set.empty
    rEncountered <- newIORef Set.empty
-   (mbT, r) <- timeIf printStats $ runReaderT f TPState {config = rCfg, stats = rStats, proofCache = rCache, measuresVerified = rMeasures, measuresEncountered = rEncountered}
+   (mbT, r) <- timeIf printStats $ runReaderT f TPState { config              = rCfg
+                                                         , stats               = rStats
+                                                         , proofCache          = rCache
+                                                         , measuresVerified    = rMeasures
+                                                         , productiveVerified  = rProductive
+                                                         , measuresEncountered = rEncountered
+                                                         }
 
-   -- Print verified measures
+   -- Print verified measures and productive functions
    verified    <- readIORef rMeasures
+   productive  <- readIORef rProductive
    encountered <- readIORef rEncountered
-   unless (Set.null verified) $ printMeasures cfg (Set.toAscList verified)
+
+   unless (Set.null verified)   $ printMeasures   cfg (Set.toAscList verified)
+   unless (Set.null productive) $ printProductive cfg (Set.toAscList productive)
 
    -- Belt-and-suspenders: make sure all encountered measures have been verified.
    -- Exclude functions in measuresBeingVerified: those are being verified by an outer caller
    -- (e.g., when a measureLemma proof uses the function whose measure is being checked).
    let beingVerified = measuresBeingVerified (tpOptions cfg)
-       missed = encountered `Set.difference` verified `Set.difference` beingVerified
+       missed = encountered `Set.difference` verified `Set.difference` productive `Set.difference` beingVerified
+
    unless (Set.null missed) $
      error $ "SBV.runTP: Internal error: The following functions have termination measures that were encountered but not verified: "
            ++ intercalate ", " (Set.toAscList missed)
@@ -189,8 +201,29 @@ message SMTConfig{tpOptions = TPOptions{quiet}} s
 
 -- | Print the list of functions whose termination measures have been verified.
 printMeasures :: SMTConfig -> [String] -> IO ()
-printMeasures cfg names = message cfg $ "Functions proven terminating: " ++ intercalate ", " (nub (sort (map strip names))) ++ "\n"
-  where strip = dropWhileEnd (== ' ') . takeWhile (/= '@')
+printMeasures = printFunctions "Functions proven terminating"
+
+-- | Print the list of functions whose productivity (guardedness) has been verified.
+printProductive :: SMTConfig -> [String] -> IO ()
+printProductive = printFunctions "Functions proven productive"
+
+-- | Print a list of function names under a header, wrapping lines to avoid excessively long output.
+printFunctions :: String -> SMTConfig -> [String] -> IO ()
+printFunctions header cfg names = message cfg $ header ++ ": " ++ wrapped ++ "\n"
+  where cleaned = nub (sort (map strip names))
+        strip   = dropWhileEnd (== ' ') . takeWhile (/= '@')
+
+        limit = 40
+
+        wrapped = go limit cleaned
+
+        go _ []     = ""
+        go _ [n]    = n
+        go r (n:ns) = let entry = n ++ ", "
+                          len   = length entry
+                      in if r - len < 0 && r /= limit
+                         then "\n  " ++ go limit (n:ns)
+                         else entry ++ go (r - len) ns
 
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
 startTP :: SMTConfig -> Bool -> String -> Int -> TPProofContext -> IO Int

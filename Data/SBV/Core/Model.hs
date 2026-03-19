@@ -32,7 +32,7 @@
 module Data.SBV.Core.Model (
     Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..)
   , Zero(..), MeasureOf, Measure(..), MeasureHelper(..), hasMeasure
-  , ContractOf, smtFunction, smtFunctionWithMeasure, smtFunctionWithContract
+  , ContractOf, smtFunction, smtFunctionWithMeasure, smtFunctionWithContract, smtProductiveFunction
   , SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
@@ -1319,10 +1319,14 @@ data ContractEval where
 --     on the function's inputs and output that is proven simultaneously with the measure decrease
 --     via well-founded induction. This handles nested recursion (e.g., McCarthy 91) where the
 --     termination argument depends on the function's return value at smaller inputs.
+--   * 'Productive': The function is corecursive (productive). Instead of proving termination via a
+--     measure, SBV checks that every recursive call is guarded by a data constructor (list cons,
+--     ADT constructor, etc.), ensuring the function always produces output incrementally.
 data Measure f where
   AutoMeasure  :: Measure f
   HasMeasure   :: MeasureEval -> [MeasureHelper] -> Measure f
   HasContract  :: MeasureEval -> ContractEval -> [MeasureHelper] -> Measure f
+  Productive   :: Measure f
 
 -- | A helper axiom for measure verification. When a measure's correctness depends on
 -- properties that require induction to prove (e.g., @ifComplexity f > 0@), the user
@@ -1335,9 +1339,10 @@ newtype MeasureHelper = MeasureHelper { runMeasureHelper :: SMTConfig -> IO SBoo
 
 -- | Does the measure indicate a termination measure is present?
 hasMeasure :: Measure f -> Bool
-hasMeasure AutoMeasure        = True
-hasMeasure (HasMeasure _ _)   = True
+hasMeasure AutoMeasure         = True
+hasMeasure (HasMeasure _ _)    = True
 hasMeasure (HasContract _ _ _) = True
+hasMeasure Productive          = True
 
 -- | Verify that a measure decreases at each recursive call site.
 -- Walks the expression DAG to find recursive calls, computes reaching conditions
@@ -1713,6 +1718,50 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
 
          Left nonNegResult -> pure $ MeasureNotNonNeg nonNegResult
    where paramSVs = map snd liParams
+
+-- | Verify that a function marked as productive is guarded-recursive:
+-- every recursive call must be a direct argument to a data constructor.
+verifyGuardedness :: SMTConfig -> String -> LambdaInfo -> IO ()
+verifyGuardedness cfg funcNm info
+  | isGuardedRecursive funcNm info
+  = debug cfg ["[MEASURE] " ++ funcNm ++ ": productive (all recursive calls are guarded by constructors)"]
+  | True
+  = error $ unlines
+      [ ""
+      , "*** Data.SBV: Function marked as productive is not guarded-recursive."
+      , "***"
+      , "***   Function: " ++ prettyFuncNm funcNm
+      , "***"
+      , "*** Every recursive call must be a direct argument to a data constructor"
+      , "*** (list cons, ADT constructor, etc.) to ensure productivity."
+      ]
+
+-- | Check if a recursive function is guarded: every recursive call's result
+-- is consumed by a data constructor (list cons, ADT constructor, tuple constructor).
+-- This ensures the function is productive — it always makes progress by producing
+-- at least one constructor before recursing.
+isGuardedRecursive :: String -> LambdaInfo -> Bool
+isGuardedRecursive funcNm LambdaInfo{liAssignments} = all isGuarded recCallSVs
+  where
+    barFuncNm  = barify funcNm
+    dagList    = F.toList liAssignments
+    recCallSVs = [sv | (sv, SBVApp (Uninterpreted nm) _) <- dagList, nm == barFuncNm]
+
+    -- Build a map from SV to the set of operations that consume it
+    consumers :: Map.Map SV [(SV, Op)]
+    consumers = foldl' addConsumers Map.empty dagList
+      where addConsumers m (sv, SBVApp op args) =
+              foldl' (\m' a -> Map.insertWith (++) a [(sv, op)] m') m args
+
+    -- A recursive call is guarded if at least one of its consumers is a constructor
+    isGuarded sv = case Map.lookup sv consumers of
+                     Nothing   -> False
+                     Just cons -> any (isConstructorOp . snd) cons
+
+    isConstructorOp (SeqOp SeqConcat{})      = True
+    isConstructorOp (ADTOp ADTConstructor{}) = True
+    isConstructorOp (TupleConstructor _)     = True
+    isConstructorOp _                        = False
 
 -- | Generate candidate measures based on parameter kinds.
 -- For list args, we use @length@. For integer args, we use @abs@.
@@ -3613,15 +3662,19 @@ class SMTDefinable a where
                                                     (liAssignments info)
                               when isRecursive $
                                 modifyIORef' (rMeasureChecks st)
-                                             ((funcNm, \cfg -> autoGuessOrFail cfg funcNm info) :)
+                                             ((funcNm, False, \cfg -> autoGuessOrFail cfg funcNm info) :)
                               pure def
                             HasMeasure eval helpers -> do
                               modifyIORef' (rMeasureChecks st)
-                                           ((funcNm, \cfg -> verifyMeasure cfg funcNm info eval helpers) :)
+                                           ((funcNm, False, \cfg -> verifyMeasure cfg funcNm info eval helpers) :)
                               pure def
                             HasContract eval ceval helpers -> do
                               modifyIORef' (rMeasureChecks st)
-                                           ((funcNm, \cfg -> verifyMeasureWithContract cfg funcNm info eval ceval helpers) :)
+                                           ((funcNm, False, \cfg -> verifyMeasureWithContract cfg funcNm info eval ceval helpers) :)
+                              pure def
+                            Productive -> do
+                              modifyIORef' (rMeasureChecks st)
+                                           ((funcNm, True, \cfg -> verifyGuardedness cfg funcNm info) :)
                               pure def)
 
 
@@ -3675,6 +3728,17 @@ smtFunctionWithContract :: forall f r. (SMTDefinable f, Typeable f, Lambda Symbo
 smtFunctionWithContract nm (mf, cf, helpers) = smtFunctionDef nm (HasContract (MeasureEval (applyMeasure @f @r mf))
                                                                               (ContractEval (applyContract @f cf))
                                                                               helpers)
+
+-- | Define a productive (corecursive) SMT function. Use this for functions that intentionally
+-- don't terminate but produce output incrementally, such as infinite list generators.
+-- SBV verifies that every recursive call is guarded by a data constructor (list cons, ADT
+-- constructor, etc.), ensuring the function is productive.
+--
+-- @
+-- go = smtProductiveFunction \"go\" $ \\start delta -> start .: go (start + delta) delta
+-- @
+smtProductiveFunction :: (SMTDefinable a, Typeable a, Lambda Symbolic a) => String -> a -> a
+smtProductiveFunction nm = smtFunctionDef nm Productive
 
 -- | Kind of uninterpretation
 data UIKind a = UIFree  Bool                            -- ^ completely uninterpreted. If Bool is true, then this is curried.

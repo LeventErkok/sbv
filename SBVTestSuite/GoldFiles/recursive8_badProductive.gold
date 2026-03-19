@@ -1,0 +1,12 @@
+[MEASURE] Verifying termination measures for: bad @(SBV Integer -> SBV Integer)
+[MEASURE] Checking: bad @(SBV Integer -> SBV Integer)
+
+EXCEPTION:
+
+*** Data.SBV: Function marked as productive is not guarded-recursive.
+***
+***   Function: bad :: SBV Integer -> SBV Integer
+***
+*** Every recursive call must be a direct argument to a data constructor
+*** (list cons, ADT constructor, etc.) to ensure productivity.
+
