@@ -1787,7 +1787,14 @@ guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (adtSingles +
                        in SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
                             s <- sbvToSV st (SBV listSVal)
                             newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]), Nothing)]
-      KUnbounded  -> [("abs arg" ++ show (i+1), \svs -> abs (SBV (svs !! i)), Nothing)]
+      -- Unbounded integers: use abs as measure
+      KUnbounded       -> [("abs arg" ++ show (i+1), \svs -> abs (SBV (svs !! i)), Nothing)]
+
+      -- Bounded bitvectors: cast to Integer for the measure. Unsigned values are
+      -- already non-negative; signed values need abs to ensure non-negativity.
+      KBounded False _ -> [("arg" ++ show (i+1),     \svs ->      SBV (svFromIntegral KUnbounded (svs !! i)),  Nothing)]
+      KBounded True  _ -> [("abs arg" ++ show (i+1), \svs -> abs (SBV (svFromIntegral KUnbounded (svs !! i))), Nothing)]
+
       KTuple ks   -> concatMap (mkTupleComponent i (length ks)) (zip [1..] ks)
       KADT adtName _ ctors
         | any (any (isRecKind adtName) . snd) ctors ->

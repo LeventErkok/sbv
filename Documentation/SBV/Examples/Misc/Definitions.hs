@@ -106,8 +106,12 @@ evenOdd = satWith z3{verbose=True} $ \a r -> a .== 20 .&& r .== isE a
 
 -- | Another technique to handle mutually definitions is to define the functions together, and pull the results out individually.
 -- This usually works better than defining the functions separately, from a solver perspective.
+--
+-- The measure @(abs x, ite (x < 0) 1 0)@ ensures termination: when @x < 0@, the call @isEvenOdd(-x)@
+-- keeps @abs x@ the same but drops the second component from 1 to 0. When @x > 0@, the call
+-- @isEvenOdd(x-1)@ decreases @abs x@.
 isEvenOdd :: SInteger -> STuple Bool Bool
-isEvenOdd = smtFunction "isEvenOdd"
+isEvenOdd = smtFunctionWithMeasure "isEvenOdd" (\x -> tuple (abs x, ite (x .< 0) (1 :: SInteger) 0), [])
           $ \x -> ite (x .<  0) (isEvenOdd (-x))
                 $ ite (x .== 0) (tuple (sTrue, sFalse))
                                 (swap (isEvenOdd (x - 1)))
