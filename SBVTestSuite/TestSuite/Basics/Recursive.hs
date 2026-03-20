@@ -31,7 +31,7 @@ import qualified Control.Exception as C
 import Documentation.SBV.Examples.Misc.Definitions (ack)
 import Documentation.SBV.Examples.TP.McCarthy91    (mcCarthy91)
 
--- This is recursive and suffers from the termination problem.
+-- This is recursive and can't be symbolically simulated for arbitrary inputs.
 -- But we can still prove a few things about it!
 mgcd :: SWord8 -> SWord8 -> SWord8
 mgcd a b = ite (b .== 0) a (mgcd b (a `sMod` b))

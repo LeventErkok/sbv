@@ -46,9 +46,8 @@ add1Example = sat $ do
 
 -- | Sum of numbers from 0 to the given number. Since this is a recursive
 -- definition, we cannot simply symbolically simulate it as it wouldn't
--- terminat. So, we use the function generation facilities to define it
--- directly in SMTLib. Note how the function itself takes a "recursive version"
--- of itself, and all recursive calls are made with this name.
+-- terminate. So, we use the function generation facilities to define it
+-- directly in SMTLib.
 sumToN :: SInteger -> SInteger
 sumToN = smtFunction "sumToN" $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
 
