@@ -89,7 +89,7 @@
 
     ```haskell
     normalize f = smtFunction "normalize" $ \f ->
-      [sCase| f of
+      [sCase|Formula f of
         If (If p q r) left right -> normalize (sIf p (sIf q left right) (sIf r left right))
         If c          left right -> sIf c (normalize left) (normalize right)
         _                        -> f
@@ -104,7 +104,7 @@
     positions (and at the top level inside a constructor). For example:
 
     ```haskell
-    p e = [sCase| e of
+    p e = [sCase|Formula e of
              Val 0         -> 100          -- fires when the Val field equals 0
              Val 1         -> 200          -- fires when the Val field equals 1
              Add (Val 0) r -> eval r       -- nested literal: fires when left child is Val 0
