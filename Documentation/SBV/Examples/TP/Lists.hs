@@ -686,7 +686,7 @@ mapConcat f = do
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: sbv.foldr, sbv.map
--- [Proven] foldrMapFusion :: Ɐxs ∷ [[Char]] → Bool
+-- [Proven] foldrMapFusion :: Ɐxs ∷ [String] → Bool
 foldrMapFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV c -> (SBV a -> SBV b) -> (SBV b -> SBV c -> SBV c) -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrMapFusion a g f =
   induct "foldrMapFusion"
@@ -715,7 +715,7 @@ foldrMapFusion a g f =
 --   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: sbv.foldr
--- [Proven] foldrFusion :: Ɐxs ∷ [[Char]] → Bool
+-- [Proven] foldrFusion :: Ɐxs ∷ [String] → Bool
 foldrFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV c -> SBV b -> (SBV c -> SBV b) -> (SBV a -> SBV c -> SBV c) -> (SBV a -> SBV b -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
 foldrFusion a b f g h = do
    let -- Assumptions under which the equality holds
@@ -799,7 +799,7 @@ foldlOverAppend f =
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: sbv.foldl, sbv.foldr, sbv.reverse
--- [Proven] foldrFoldlDuality :: Ɐxs ∷ [Integer] → Ɐe ∷ [Char] → Bool
+-- [Proven] foldrFoldlDuality :: Ɐxs ∷ [Integer] → Ɐe ∷ String → Bool
 foldrFoldlDuality :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "e" b -> SBool))
 foldrFoldlDuality f = do
    foa <- foldlOverAppend (flip f)

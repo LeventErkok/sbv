@@ -200,9 +200,9 @@ lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$
           where tab s = "***              " ++ s
 
 -- | Create an SMTLib lambda, in the given state.
-lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> Bool -> a -> m SMTDef
-lambda inState scope fk hasMeasure = lambdaGen scope mkLam inState fk
-   where mkLam (Defn unints _frees params body) = SMTDef fk unints (extractAllUniversals <$> params) body hasMeasure
+lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTDef
+lambda inState scope fk = lambdaGen scope mkLam inState fk
+   where mkLam (Defn unints _frees params body) = SMTDef fk unints (extractAllUniversals <$> params) body
 
 -- | Like 'lambda', but also returns the sub-state's DAG info for measure verification.
 lambdaWithInfo :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m (SMTDef, LambdaInfo)
@@ -216,7 +216,7 @@ lambdaWithInfo inState scope fk f = inSubState scope inState $ \st -> do
                                            , "*** Data.SBV.Lambda: Detected free variables in a function with a measure."
                                            , "***  Free vars: " ++ unwords frees
                                            ]
-         mkLam (Defn unints _frees params body) = SMTDef fk unints (extractAllUniversals <$> params) body True
+         mkLam (Defn unints _frees params body) = SMTDef fk unints (extractAllUniversals <$> params) body
 
 -- | Extract DAG information from a lambda sub-state.
 extractLambdaInfo :: State -> IO LambdaInfo

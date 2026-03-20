@@ -408,7 +408,7 @@ instance Typeable a => Show (Proof a) where
 
           -- More mathematical notation for types.
           pretty :: String -> String
-          pretty = compress . unwords . walk . words . concatMap (\c -> if c == ',' then " , " else [c]) . clean
+          pretty = charToString . compress . unwords . walk . words . concatMap (\c -> if c == ',' then " , " else [c]) . clean
             where fa v = ['Ɐ' : unQuote v, "∷"]
                   ex v = ['∃' : unQuote v, "∷"]
 
@@ -416,6 +416,11 @@ instance Typeable a => Show (Proof a) where
                   compress (' ' : ',' : rest) = compress (',' : rest)
                   compress (c : rest)         = c : compress rest
                   compress []                 = []
+
+                  -- Replace [Char] with String everywhere
+                  charToString ('[':'C':'h':'a':'r':']':rest) = "String" ++ charToString rest
+                  charToString (c:rest)                       = c : charToString rest
+                  charToString []                             = []
 
                   walk ("SBV"    : "Bool" : rest) = walk $ "Bool" :  rest
                   walk ("Forall" : xs     : rest) = walk $ fa xs  ++ rest

@@ -31,7 +31,7 @@
 
 module Data.SBV.Core.Model (
     Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..)
-  , Zero(..), MeasureOf, Measure(..), MeasureHelper(..), hasMeasure
+  , Zero(..), MeasureOf, Measure(..), MeasureHelper(..)
   , ContractOf, smtFunction, smtFunctionWithMeasure, smtFunctionWithContract, smtProductiveFunction
   , SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
@@ -1337,13 +1337,6 @@ data Measure f where
 -- Use the 'Data.SBV.TP.measureLemma' smart constructor to create these from TP proofs.
 newtype MeasureHelper = MeasureHelper { runMeasureHelper :: SMTConfig -> IO SBool }
 
--- | Does the measure indicate a termination measure is present?
-hasMeasure :: Measure f -> Bool
-hasMeasure AutoMeasure         = True
-hasMeasure (HasMeasure _ _)    = True
-hasMeasure (HasContract _ _ _) = True
-hasMeasure Productive          = True
-
 -- | Verify that a measure decreases at each recursive call site.
 -- Walks the expression DAG to find recursive calls, computes reaching conditions
 -- via ITE analysis, and verifies the measure property in a separate solver session.
@@ -1898,7 +1891,7 @@ ensureADTSizeDefined st sizeName adtKind ctors = do
           smtSum []     = "0"
 
           paramStr = "((" ++ argNm ++ " " ++ smtArgType ++ "))"
-          smtDef   = SMTDef KUnbounded [sizeName] (Just paramStr) (\n -> replicate n ' ' ++ body) True
+          smtDef   = SMTDef KUnbounded [sizeName] (Just paramStr) (\n -> replicate n ' ' ++ body)
           sbvTy    = SBVType [adtKind, KUnbounded]
 
       modifyIORef' (rDefns st) ((sizeName, (smtDef, sbvTy)) :)

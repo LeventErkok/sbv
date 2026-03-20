@@ -142,7 +142,7 @@ cfold = smtFunction "cfold" $ \expr ->
 -- >>> runTP measureNonNeg
 -- Lemma: measureNonNeg                    Q.E.D.
 -- Functions proven terminating: exprSize
--- [Proven] measureNonNeg :: Ɐe ∷ (Expr [Char] Integer) → Bool
+-- [Proven] measureNonNeg :: Ɐe ∷ (Expr String Integer) → Bool
 measureNonNeg :: TP (Proof (Forall "e" Exp -> SBool))
 measureNonNeg = inductiveLemma "measureNonNeg"
                                (\(Forall @"e" (e :: SE)) -> size e .>= 0)
@@ -203,7 +203,7 @@ mulCongR = lemma "mulCongR"
 -- >>> runTP sqrHelper
 -- Lemma: sqrHelper                        Q.E.D.
 -- Functions proven terminating: interpInEnv, sbv.lookup
--- [Proven] sqrHelper :: Ɐenv ∷ [([Char], Integer)] → Ɐa ∷ (Expr [Char] Integer) → Bool
+-- [Proven] sqrHelper :: Ɐenv ∷ [(String, Integer)] → Ɐa ∷ (Expr String Integer) → Bool
 sqrHelper :: TP (Proof (Forall "env" EL -> Forall "a" Exp -> SBool))
 sqrHelper = lemma "sqrHelper"
                   (\(Forall @"env" (env :: E)) (Forall @"a" a) ->
@@ -214,7 +214,7 @@ sqrHelper = lemma "sqrHelper"
 -- >>> runTP addHelper
 -- Lemma: addHelper                        Q.E.D.
 -- Functions proven terminating: interpInEnv, sbv.lookup
--- [Proven] addHelper :: Ɐenv ∷ [([Char], Integer)] → Ɐa ∷ (Expr [Char] Integer) → Ɐb ∷ (Expr [Char] Integer) → Bool
+-- [Proven] addHelper :: Ɐenv ∷ [(String, Integer)] → Ɐa ∷ (Expr String Integer) → Ɐb ∷ (Expr String Integer) → Bool
 addHelper :: TP (Proof (Forall "env" EL -> Forall "a" Exp -> Forall "b" Exp -> SBool))
 addHelper = lemma "addHelper"
                   (\(Forall @"env" (env :: E)) (Forall @"a" a) (Forall @"b" b) ->
@@ -225,7 +225,7 @@ addHelper = lemma "addHelper"
 -- >>> runTP mulHelper
 -- Lemma: mulHelper                        Q.E.D.
 -- Functions proven terminating: interpInEnv, sbv.lookup
--- [Proven] mulHelper :: Ɐenv ∷ [([Char], Integer)] → Ɐa ∷ (Expr [Char] Integer) → Ɐb ∷ (Expr [Char] Integer) → Bool
+-- [Proven] mulHelper :: Ɐenv ∷ [(String, Integer)] → Ɐa ∷ (Expr String Integer) → Ɐb ∷ (Expr String Integer) → Bool
 mulHelper :: TP (Proof (Forall "env" EL -> Forall "a" Exp -> Forall "b" Exp -> SBool))
 mulHelper = lemma "mulHelper"
                   (\(Forall @"env" (env :: E)) (Forall @"a" a) (Forall @"b" b) ->
@@ -236,7 +236,7 @@ mulHelper = lemma "mulHelper"
 -- >>> runTP letHelper
 -- Lemma: letHelper                        Q.E.D.
 -- Functions proven terminating: interpInEnv, sbv.lookup
--- [Proven] letHelper :: Ɐenv ∷ [([Char], Integer)] → Ɐnm ∷ [Char] → Ɐa ∷ (Expr [Char] Integer) → Ɐb ∷ (Expr [Char] Integer) → Bool
+-- [Proven] letHelper :: Ɐenv ∷ [(String, Integer)] → Ɐnm ∷ String → Ɐa ∷ (Expr String Integer) → Ɐb ∷ (Expr String Integer) → Bool
 letHelper :: TP (Proof (Forall "env" EL -> Forall "nm" String -> Forall "a" Exp -> Forall "b" Exp -> SBool))
 letHelper = lemma "letHelper"
                   (\(Forall @"env" (env :: E)) (Forall @"nm" nm) (Forall @"a" a) (Forall @"b" b) ->
@@ -255,7 +255,7 @@ letHelper = lemma "letHelper"
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: sbv.lookup
--- [Proven] lookupSwap :: Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
+-- [Proven] lookupSwap :: Ɐk ∷ String → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 lookupSwap :: TP (Proof (Forall "k" String -> Forall "b1" (String, Integer)
                       -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
 lookupSwap = calc "lookupSwap"
@@ -285,7 +285,7 @@ lookupSwap = calc "lookupSwap"
 -- >>> runTP lookupCons
 -- Lemma: lookupCons                       Q.E.D.
 -- Functions proven terminating: sbv.lookup
--- [Proven] lookupCons :: Ɐk ∷ [Char] → Ɐb ∷ ([Char], Integer) → Ɐrest ∷ [([Char], Integer)] → Bool
+-- [Proven] lookupCons :: Ɐk ∷ String → Ɐb ∷ (String, Integer) → Ɐrest ∷ [(String, Integer)] → Bool
 lookupCons :: TP (Proof (Forall "k" String -> Forall "b" (String, Integer) -> Forall "rest" EL -> SBool))
 lookupCons = lemma "lookupCons"
    (\(Forall @"k" (k :: SString)) (Forall @"b" (b :: STuple String Integer)) (Forall @"rest" (rest :: E)) ->
@@ -311,7 +311,7 @@ lookupCons = lemma "lookupCons"
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: sbv.lookup
--- [Proven] lookupSwapPfx :: Ɐpfx ∷ [([Char], Integer)] → Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
+-- [Proven] lookupSwapPfx :: Ɐpfx ∷ [(String, Integer)] → Ɐk ∷ String → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 lookupSwapPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1" (String, Integer)
                          -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
 lookupSwapPfx = do
@@ -358,7 +358,7 @@ lookupSwapPfx = do
 -- >>> runTP lookupShadow
 -- Lemma: lookupShadow                     Q.E.D.
 -- Functions proven terminating: sbv.lookup
--- [Proven] lookupShadow :: Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
+-- [Proven] lookupShadow :: Ɐk ∷ String → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 lookupShadow :: TP (Proof (Forall "k" String -> Forall "b1" (String, Integer)
                         -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
 lookupShadow = lemma "lookupShadow"
@@ -387,7 +387,7 @@ lookupShadow = lemma "lookupShadow"
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: sbv.lookup
--- [Proven] lookupShadowPfx :: Ɐpfx ∷ [([Char], Integer)] → Ɐk ∷ [Char] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
+-- [Proven] lookupShadowPfx :: Ɐpfx ∷ [(String, Integer)] → Ɐk ∷ String → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 lookupShadowPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1" (String, Integer)
                            -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
 lookupShadowPfx = do
@@ -468,7 +468,7 @@ lookupShadowPfx = do
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: exprSize, interpInEnv, sbv.lookup
--- [Proven] envSwap :: Ɐe ∷ (Expr [Char] Integer) → Ɐpfx ∷ [([Char], Integer)] → Ɐenv ∷ [([Char], Integer)] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Bool
+-- [Proven] envSwap :: Ɐe ∷ (Expr String Integer) → Ɐpfx ∷ [(String, Integer)] → Ɐenv ∷ [(String, Integer)] → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Bool
 envSwap :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
                    -> Forall "b1" (String, Integer) -> Forall "b2" (String, Integer) -> SBool))
 envSwap = do
@@ -625,7 +625,7 @@ envSwap = do
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: exprSize, interpInEnv, sbv.lookup
--- [Proven] envShadow :: Ɐe ∷ (Expr [Char] Integer) → Ɐpfx ∷ [([Char], Integer)] → Ɐenv ∷ [([Char], Integer)] → Ɐb1 ∷ ([Char], Integer) → Ɐb2 ∷ ([Char], Integer) → Bool
+-- [Proven] envShadow :: Ɐe ∷ (Expr String Integer) → Ɐpfx ∷ [(String, Integer)] → Ɐenv ∷ [(String, Integer)] → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Bool
 envShadow :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
                      -> Forall "b1" (String, Integer) -> Forall "b2" (String, Integer) -> SBool))
 envShadow = do
@@ -750,7 +750,7 @@ envShadow = do
 -- >>> runTP varHelper
 -- Lemma: varHelper                        Q.E.D.
 -- Functions proven terminating: interpInEnv, sbv.lookup
--- [Proven] varHelper :: Ɐenv ∷ [([Char], Integer)] → Ɐnm ∷ [Char] → Bool
+-- [Proven] varHelper :: Ɐenv ∷ [(String, Integer)] → Ɐnm ∷ String → Bool
 varHelper :: TP (Proof (Forall "env" EL -> Forall "nm" String -> SBool))
 varHelper = lemma "varHelper"
                   (\(Forall @"env" (env :: E)) (Forall @"nm" nm) ->
@@ -818,7 +818,7 @@ varHelper = lemma "varHelper"
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: exprSize, interpInEnv, sbv.lookup, subst
--- [Proven] substCorrect :: Ɐe ∷ (Expr [Char] Integer) → Ɐnm ∷ [Char] → Ɐv ∷ Integer → Ɐenv ∷ [([Char], Integer)] → Bool
+-- [Proven] substCorrect :: Ɐe ∷ (Expr String Integer) → Ɐnm ∷ String → Ɐv ∷ Integer → Ɐenv ∷ [(String, Integer)] → Bool
 substCorrect :: TP (Proof (Forall "e" Exp -> Forall "nm" String -> Forall "v" Integer -> Forall "env" EL -> SBool))
 substCorrect = do
    mnn   <- recall "measureNonNeg" measureNonNeg
@@ -1092,7 +1092,7 @@ substCorrect = do
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: exprSize, interpInEnv, sbv.lookup, subst
--- [Proven] simpCorrect :: Ɐe ∷ (Expr [Char] Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
+-- [Proven] simpCorrect :: Ɐe ∷ (Expr String Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 simpCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))
 simpCorrect = do
    sqrC  <- recall "sqrCong"      sqrCong
@@ -1418,7 +1418,7 @@ simpCorrect = do
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: cfold, exprSize, interpInEnv, sbv.lookup, subst
--- [Proven] cfoldCorrect :: Ɐe ∷ (Expr [Char] Integer) → Ɐenv ∷ [([Char], Integer)] → Bool
+-- [Proven] cfoldCorrect :: Ɐe ∷ (Expr String Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 cfoldCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))
 cfoldCorrect = do
    mnn   <- recall "measureNonNeg" measureNonNeg
