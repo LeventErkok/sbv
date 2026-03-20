@@ -242,7 +242,7 @@ terminationDemo = runTP $ do
 -- | If SBV cannot determine a termination measure, it will report an error. Here, we define
 -- a function that recurses without decreasing any argument, and SBV rightfully rejects it:
 --
--- >>> badTermination `catch` (\(e :: SomeException) -> mapM_ putStrLn [l | l <- lines (show e), take 3 l == "***"])
+-- >>> badTermination `catch` (\(e :: SomeException) -> mapM_ putStrLn . filter (\l -> take 3 l == "***") . lines $ show e)
 -- *** Data.SBV: Cannot determine a termination measure.
 -- ***
 -- ***   Function: bad :: SBV Integer -> SBV Integer
@@ -262,7 +262,7 @@ badTermination = do
 -- SBV will detect this and report an error. Here, we use @const 0@ as a measure, which clearly
 -- does not decrease at recursive calls:
 --
--- >>> badMeasure `catch` (\(e :: SomeException) -> mapM_ putStrLn [l | l <- lines (show e), take 3 l == "***"])
+-- >>> badMeasure `catch` (\(e :: SomeException) -> mapM_ putStrLn . filter (\l -> take 3 l == "***") . lines $ show e)
 -- *** Data.SBV: Termination measure does not strictly decrease at a recursive call site.
 -- ***
 -- ***   Function: badM :: SBV Integer -> SBV Integer
