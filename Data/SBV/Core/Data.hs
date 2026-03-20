@@ -211,6 +211,10 @@ a .: as
   | Just av  <- unliteral a
   , Just asv <- unliteral as
   = literal (av : asv)
+  | Just asv <- unliteral as, null asv  -- singleton: skip the concat with empty
+  = SBV $ SVal kl $ Right $ cache $ \st -> do
+        sva <- sbvToSV st a
+        newExpr st kl (SBVApp (SeqOp (SeqUnit ka)) [sva])
   | True
   = SBV $ SVal kl $ Right $ cache r
   where ka = kindOf (Proxy @a)
