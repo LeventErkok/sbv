@@ -36,7 +36,8 @@ common common-settings
    default-language: Haskell2010
    ghc-options     : -Wall
    build-depends   : base >= 4.19.2 && < 5
-   other-extensions: BangPatterns
+   other-extensions: AllowAmbiguousTypes
+                     BangPatterns
                      CPP
                      ConstraintKinds
                      DataKinds
