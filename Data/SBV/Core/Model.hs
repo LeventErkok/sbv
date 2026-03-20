@@ -2029,24 +2029,37 @@ replayDAG cfg st funcName definedFuncs startMap dag = do
   go startMap dag
   where barFuncName = barify funcName
 
+        -- Map an SV through the svMap. If it's not found, it's an external captured variable
+        -- (e.g., from a higher-order function's closure). Create a fresh unconstrained variable
+        -- for it to avoid leaking foreign-context SVals into the current state.
+        mapArg svMap a = case Map.lookup a svMap of
+                           Just a' -> pure (a', svMap)
+                           Nothing -> do fresh <- newInternalVariable st (kindOf a)
+                                         pure (fresh, Map.insert a fresh svMap)
+
+        mapArgs svMap []     = pure ([], svMap)
+        mapArgs svMap (a:as) = do (a',  svMap')  <- mapArg svMap a
+                                  (as', svMap'') <- mapArgs svMap' as
+                                  pure (a':as', svMap'')
+
         go svMap []                = pure svMap
         go svMap ((sv, expr):rest) = do
           let SBVApp op args = expr
-              mappedArgs     = map (\a -> Map.findWithDefault a a svMap) args
+          (mappedArgs, svMap') <- mapArgs svMap args
           newSV' <- case op of
                       -- For recursive calls, create a fresh uninterpreted value instead of replaying
                       Uninterpreted nm | nm == barFuncName -> newInternalVariable st (kindOf sv)
                       -- For calls to other defined functions (e.g., partition), replay properly
                       Uninterpreted nm | nm `Set.member` definedFuncs -> do
-                                          let mappedOp = mapOpSVs (\a -> Map.findWithDefault a a svMap) op
+                                          let mappedOp = mapOpSVs (\a -> Map.findWithDefault a a svMap') op
                                           newExpr st (kindOf sv) (SBVApp mappedOp mappedArgs)
                       -- For everything else that's Uninterpreted (free functions, sentinels, etc.),
                       -- create fresh values since they aren't defined in the proveWith session
                       Uninterpreted{} -> newInternalVariable st (kindOf sv)
                       -- For all other operations (arithmetic, list ops, etc.), replay properly
-                      _ -> do let mappedOp = mapOpSVs (\a -> Map.findWithDefault a a svMap) op
+                      _ -> do let mappedOp = mapOpSVs (\a -> Map.findWithDefault a a svMap') op
                               newExpr st (kindOf sv) (SBVApp mappedOp mappedArgs)
-          go (Map.insert sv newSV' svMap) rest
+          go (Map.insert sv newSV' svMap') rest
 
 -- | Map any SVs embedded directly in an Op (e.g., in LkUp, FP_Cast)
 mapOpSVs :: (SV -> SV) -> Op -> Op
