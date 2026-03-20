@@ -1,12 +1,13 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.TP.Productive
+-- Module    : Documentation.SBV.Examples.TP.Countdown
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Demonstrating productive (corecursive) functions.
+-- Proving properties of a countdown function that builds a list
+-- from @n@ down to @0@.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
@@ -18,7 +19,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.TP.Productive where
+module Documentation.SBV.Examples.TP.Countdown where
 
 import Prelude hiding (head, length, (!!))
 
@@ -33,14 +34,13 @@ import Data.SBV.TP
 
 -- * Definitions
 
--- | A productive function that counts down from @n@ to @0@. Every recursive call is
--- guarded by a list constructor (@.:@), so SBV accepts it as productive without
--- requiring a termination measure.
+-- | A function that counts down from @n@ to @0@, building a list.
 countdown :: SInteger -> SList Integer
-countdown = smtProductiveFunction "countdown" $ \n -> [sCase| n of
-                                                         v | v .<= 0 -> singleton 0
-                                                           | True    -> v .: countdown (v - 1)
-                                                      |]
+countdown = smtFunction "countdown"
+          $ \n -> [sCase| n of
+                     v | v .<= 0 -> singleton 0
+                       | True    -> v .: countdown (v - 1)
+                  |]
 
 -- * Correctness
 
@@ -48,7 +48,7 @@ countdown = smtProductiveFunction "countdown" $ \n -> [sCase| n of
 --
 -- >>> runTP countdownHead
 -- Lemma: countdownHead                    Q.E.D.
--- Functions proven productive: countdown
+-- Functions proven terminating: countdown
 -- [Proven] countdownHead :: Ɐn ∷ Integer → Bool
 countdownHead :: TP (Proof (Forall "n" Integer -> SBool))
 countdownHead = lemma "countdownHead" (\(Forall @"n" n) -> n .> 0 .=> head (countdown n) .== n) []
@@ -61,7 +61,7 @@ countdownHead = lemma "countdownHead" (\(Forall @"n" n) -> n .> 0 .=> head (coun
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven productive: countdown
+-- Functions proven terminating: countdown
 -- [Proven] countdownNonEmpty :: Ɐn ∷ Integer → Bool
 countdownNonEmpty :: TP (Proof (Forall "n" Integer -> SBool))
 countdownNonEmpty =
@@ -82,7 +82,7 @@ countdownNonEmpty =
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven productive: countdown
+-- Functions proven terminating: countdown
 -- [Proven] countdownLen :: Ɐn ∷ Integer → Bool
 countdownLen :: TP (Proof (Forall "n" Integer -> SBool))
 countdownLen =
@@ -112,7 +112,7 @@ countdownLen =
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven productive: countdown
+-- Functions proven terminating: countdown
 -- [Proven] countdownElem :: Ɐn ∷ Integer → Ɐk ∷ Integer → Bool
 countdownElem :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))
 countdownElem = do
