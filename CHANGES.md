@@ -74,6 +74,14 @@
   * New example `Documentation.SBV.Examples.TP.Countdown`, proving properties of a
     list-building countdown function using induction.
 
+  * Productive (corecursive) functions can now be defined via `smtProductiveFunction`. Unlike
+    terminating functions, productive functions need not have a base case — they may produce
+    infinite output, so long as every recursive call is guarded by a data constructor.
+
+  * New example `Documentation.SBV.Examples.TP.NatStream`, demonstrating `smtProductiveFunction`
+    with the infinite stream `nats n = [n, n+1, n+2, ...]` and proofs about its head, length, and
+    element access.
+
 ### Version 13.6, 2026-03-02
 
   * The `sCase` quasi-quoter now supports nested constructor patterns. Sub-patterns
