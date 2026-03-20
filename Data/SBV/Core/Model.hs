@@ -1787,6 +1787,14 @@ guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (adtSingles +
                        in SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
                             s <- sbvToSV st (SBV listSVal)
                             newExpr st KUnbounded (SBVApp (SeqOp (SeqLen elemK)) [s]), Nothing)]
+
+      -- Strings are sequences of characters in SMTLib
+      KString      -> [("length arg" ++ show (i+1), \svs ->
+                       let strSVal = svs !! i
+                       in SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
+                            s <- sbvToSV st (SBV strSVal)
+                            newExpr st KUnbounded (SBVApp (SeqOp (SeqLen KChar)) [s]), Nothing)]
+
       -- Unbounded integers: use abs as measure
       KUnbounded       -> [("abs arg" ++ show (i+1), \svs -> abs (SBV (svs !! i)), Nothing)]
 
