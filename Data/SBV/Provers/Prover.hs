@@ -53,8 +53,6 @@ import Data.Maybe (mapMaybe, listToMaybe)
 
 import qualified Data.Set as Set (empty)
 
-import Data.IORef (readIORef)
-
 import qualified Data.Foldable   as S (toList)
 import qualified Data.Text       as T
 
@@ -754,22 +752,6 @@ runSMTWith cfg a = fst <$> runSymbolic cfg (SMTMode QueryExternal ISetup True cf
 runWithQuery :: ExtractIO m => (a -> SymbolicT m SBool) -> Bool -> QueryT m b -> SMTConfig -> a -> m b
 runWithQuery reducer isSAT q cfg a = fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup isSAT cfg) comp
   where comp =  do _ <- reducer a >>= output
-
-                   -- Run any registered measure checks (termination/productivity verification)
-                   st <- symbolicEnv
-                   liftIO $ do skip <- readIORef (rSkipMeasureChecks st)
-                               unless skip $ do
-                                 checks <- readIORef (rMeasureChecks st)
-                                 unless (null checks) $ do
-                                   let nms = map (\(n, _, _) -> n) checks
-                                   debug cfg ["[MEASURE] Verifying termination measures for: " ++ intercalate ", " nms]
-                                   mapM_ (\(nm, isProductive, check) -> do
-                                             debug cfg ["[MEASURE] Checking: " ++ nm]
-                                             check cfg
-                                             let tag = if isProductive then "productive" else "terminating"
-                                             debug cfg ["[MEASURE] Passed (" ++ tag ++ "): " ++ nm]
-                                         ) checks
-
                    Control.executeQuery QueryInternal q
 
 -- | Check if a safe-call was safe or not, turning a t'SafeResult' to a Bool.

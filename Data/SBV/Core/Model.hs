@@ -89,12 +89,12 @@ import Data.Bits   (Bits(..))
 import Data.Int    (Int8, Int16, Int32, Int64)
 import Data.Kind   (Type, Constraint)
 import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7
-                   , intercalate, dropWhileEnd, isPrefixOf
+                   , intercalate, dropWhileEnd, isPrefixOf, partition
 #if !MIN_VERSION_base(4,20,0)
                    , foldl'
 #endif
                    )
-import Data.Maybe  (fromMaybe, mapMaybe)
+import Data.Maybe  (fromMaybe, mapMaybe, isJust)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
 
@@ -1765,16 +1765,20 @@ isGuardedRecursive funcNm LambdaInfo{liAssignments} = all isGuarded recCallSVs
     isConstructorOp _                        = False
 
 -- | Generate candidate measures based on parameter kinds.
--- For list args, we use @length@. For integer args, we use @abs@.
+-- For list args, we use @length@. For integer args, we use @abs@. For recursive ADTs, we use @sbv.dt.size@.
+-- ADT size measures are tried first (most likely to succeed for structural recursion).
 -- If there are multiple scalar candidates, we also try their sum.
 -- For two or more scalar candidates, we also try lexicographic (tuple) measures
 -- using all pairs and triples, which handles functions like Ackermann that
 -- decrease lexicographically.
 guessMeasures :: [(Quantifier, SV)] -> [(String, MeasureEval, Maybe Int)]
-guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (singles ++ summed) ++ lexPairs ++ lexTriples
+guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (adtSingles ++ otherSingles ++ summed) ++ lexPairs ++ lexTriples
   where
     singles :: [(String, [SVal] -> SInteger, Maybe Int)]
     singles = concatMap mkCandidates (zip [0..] params)
+
+    -- ADT size measures are most likely to succeed for ADT-recursive functions, so try them first
+    (adtSingles, otherSingles) = partition (\(_, _, mi) -> isJust mi) singles
 
     mkCandidates :: (Int, (Quantifier, SV)) -> [(String, [SVal] -> SInteger, Maybe Int)]
     mkCandidates (i, (_, sv)) = case kindOf sv of

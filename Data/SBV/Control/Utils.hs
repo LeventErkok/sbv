@@ -1918,6 +1918,20 @@ executeQuery queryContext originalQuery = do
                   res     <- liftIO $ extractSymbolicSimulationState st
                   setOpts <- liftIO $ reverse <$> readIORef (rSMTOptions st)
 
+                  -- Run any registered measure checks (termination/productivity verification)
+                  liftIO $ do skip <- readIORef (rSkipMeasureChecks st)
+                              unless skip $ do
+                                checks <- readIORef (rMeasureChecks st)
+                                unless (null checks) $ do
+                                  let nms = map (\(n, _, _) -> n) checks
+                                  debug cfg ["[MEASURE] Verifying termination measures for: " ++ intercalate ", " nms]
+                                  mapM_ (\(nm, isProductive, check) -> do
+                                            debug cfg ["[MEASURE] Checking: " ++ nm]
+                                            check cfg
+                                            let tag = if isProductive then "productive" else "terminating"
+                                            debug cfg ["[MEASURE] Passed (" ++ tag ++ "): " ++ nm]
+                                        ) checks
+
                   let SMTProblem{smtLibPgm} = runProofOn rm queryContext [] res
                       cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ setOpts }
                       pgm  = smtLibPgm cfg'
