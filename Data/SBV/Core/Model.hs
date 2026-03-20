@@ -1265,7 +1265,7 @@ type family MeasureOf f r where
   MeasureOf (SBV a -> r) r' = SBV a -> MeasureOf r r'
   MeasureOf (SBV a)      r  = SBV r
 
--- | Apply a measure function to a list of 'SVal' arguments, producing the measure value.
+-- | Apply a measure function to a list of SVal arguments, producing the measure value.
 -- This is used internally during measure verification.
 class ApplyMeasure a r where
   applyMeasure :: MeasureOf a r -> [SVal] -> SBV r
@@ -1286,7 +1286,7 @@ type family ContractOf f where
   ContractOf (SBV a)      = SBV a -> SBool
   ContractOf (SBV a -> r) = SBV a -> ContractOf r
 
--- | Apply a contract function to a list of input 'SVal' arguments and a result 'SVal'.
+-- | Apply a contract function to a list of input t'SVal' arguments and a result t'SVal'.
 class ApplyContract a where
   applyContract :: ContractOf a -> [SVal] -> SVal -> SBool
 
@@ -1389,9 +1389,9 @@ data MeasureCheckResult = MeasureOK                         -- ^ Measure is vali
 
 -- | Check that a measure is valid: non-negative and strictly decreasing at each recursive call.
 -- Returns 'MeasureOK' if valid, or the specific failure otherwise.
--- If 'skipNonNeg' is 'True', the non-negativity check is skipped (used for ADT size measures
+-- If @skipNonNeg@ is 'True', the non-negativity check is skipped (used for ADT size measures
 -- where non-negativity is guaranteed by construction).
--- The 'axioms' list contains additional properties to assert in the verification session
+-- The @axioms@ list contains additional properties to assert in the verification session
 -- (used for user-provided measures that depend on inductively-proven helper properties).
 checkMeasure :: SMTConfig -> String -> Bool -> LambdaInfo -> MeasureEval -> [SBool] -> IO MeasureCheckResult
 checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutput, liConsts} (MeasureEval applyM) axioms = do
@@ -3611,7 +3611,7 @@ class SMTDefinable a where
   sym :: String -> a
 
   -- | Like 'sym', but appends the type's kind to the name, ensuring uniqueness across
-  -- different type instantiations of the same polymorphic definition. Used internally by 'sCase'.
+  -- different type instantiations of the same polymorphic definition. Used internally by sCase.
   symWithKind :: String -> a
   symWithKind = sym
 
@@ -3683,7 +3683,7 @@ smtFunction nm = smtFunctionDef nm AutoMeasure
 -- strictly decrease at each recursive call.
 --
 -- The pair @(measure, helpers)@ provides the measure function and a list of auxiliary
--- 'MeasureHelper' properties needed to verify the measure. Each helper is first proven
+-- t'MeasureHelper' properties needed to verify the measure. Each helper is first proven
 -- (by running its TP proof), then asserted as an axiom in the measure verification session.
 -- Use 'Data.SBV.TP.measureLemma' to create helpers from TP proofs. Pass @[]@ when no helpers are needed.
 smtFunctionWithMeasure :: forall f r. (SMTDefinable f, Typeable f, Lambda Symbolic f, Zero r, OrdSymbolic (SBV r), SymVal r, ApplyMeasure f r)
@@ -3700,7 +3700,7 @@ smtFunctionWithMeasure nm (mf, helpers) = smtFunctionDef nm (HasMeasure (Measure
 --   * A contract: a predicate on the function's inputs and output that is proven simultaneously
 --     with the measure decrease via well-founded induction. The inductive hypothesis provides
 --     the contract for all inputs with strictly smaller measure.
---   * A list of auxiliary 'MeasureHelper' properties (pass @[]@ when none are needed)
+--   * A list of auxiliary t'MeasureHelper' properties (pass @[]@ when none are needed)
 --
 -- For example, for McCarthy's 91 function:
 --

@@ -41,7 +41,7 @@ data Nat = Zero
 -- | Create a symbolic version of naturals.
 mkSymbolic [''Nat]
 
--- | Numeric instance. Choices: We clamp everything at 'Zero'. Negation is identity.
+-- | Numeric instance. Choices: We clamp everything at Zero. Negation is identity.
 instance Num Nat where
   fromInteger i | i <= 0 = Zero
                 | True   = Succ (fromInteger (i - 1))
@@ -103,7 +103,7 @@ n2i = smtFunction "n2i" $ \n -> [sCase| n of
                                    Succ p -> 1 + n2i p
                                 |]
 
--- | Convert Non-negative integers to 'Nat'. Negative numbers become 'Zero'.
+-- | Convert Non-negative integers to 'Nat'. Negative numbers become Zero.
 --
 -- NB. When writing the properties below, we use the notation \(\underline{i}\) to mean @i2n i@.
 i2n :: SInteger -> SNat

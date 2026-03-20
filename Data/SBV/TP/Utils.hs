@@ -557,7 +557,7 @@ tpCache cfg = cfg{tpOptions = (tpOptions cfg) { cacheProofs = True }}
 tpAsms :: SMTConfig -> SMTConfig
 tpAsms cfg = cfg{tpOptions = (tpOptions cfg) { printAsms = True }}
 
--- | Create a 'MeasureHelper' from a TP proof action. During measure verification,
+-- | Create a t'MeasureHelper' from a TP proof action. During measure verification,
 -- the proof is run to confirm the property holds, and the proven property is extracted
 -- and asserted as an axiom in the measure verification session. The solver configuration
 -- is inherited from the measure verification context, with output suppressed.

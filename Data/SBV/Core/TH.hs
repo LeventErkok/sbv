@@ -34,7 +34,7 @@ import Language.Haskell.TH.ExpandSyns as TH
 
 import Data.SBV.Core.Kind (smtType)
 
--- | Construct a TH 'Name' for a value\/function in the @sbv@ package, given
+-- | Construct a TH name for a value\/function in the @sbv@ package, given
 -- the fully qualified module name and the unqualified identifier. This avoids
 -- importing the target module (which would create import cycles) while still
 -- producing exact 'NameG' names that resolve correctly in generated TH splices.
