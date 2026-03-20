@@ -1251,6 +1251,14 @@ instance Zero Float where
 instance Zero Double where
    zero = literal 0
 
+-- | An algebraic real as a measure
+instance Zero AlgReal where
+   zero = literal 0
+
+-- | A floating-point as a measure
+instance ValidFloat eb sb => Zero (FloatingPoint eb sb) where
+   zero = literal 0
+
 -- | Component-wise non-negativity for an n-tuple of integers.
 -- Extracts each component via 'TupleAccess' and checks @>= 0@.
 tupleNonNeg :: SymVal a => Int -> SBV a -> SBool
