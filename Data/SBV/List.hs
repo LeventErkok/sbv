@@ -367,15 +367,17 @@ pre `isPrefixOf` l
 -- | @listEq@ is a variant of equality that you can use for lists of floats. It respects @NaN /= NaN@. The reason
 -- we do not do this automatically is that it complicates proof objectives usually, as it does not simply resolve to
 -- the native equality check.
+--
+-- NB. We case-split on @x@ only and use a guard for @y@ being empty, rather than case-splitting on the
+-- tuple @(x, y)@. A 4-way tuple match produces a larger and\/or\/not SMTLib tree that z3 struggles with.
 listEq :: forall a. SymVal a => SList a -> SList a -> SBool
 listEq
   | containsFloats (kindOf (Proxy @a))
   = smtFunction "listEq"
-  $ \x y -> [sCase| tuple (x, y) of
-                ([],   []  ) -> sTrue
-                ([],   _   ) -> sFalse
-                (_,    []  ) -> sFalse
-                (a:xs, b:ys) -> a .== b .&& listEq xs ys
+  $ \x y -> [sCase| x of
+                []            -> null y
+                a:xs | null y -> sFalse
+                     | True   -> let (b, ys) = uncons y in a .== b .&& xs `listEq` ys
             |]
   | True
   = (.==)
