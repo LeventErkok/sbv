@@ -219,32 +219,93 @@ qcFermat e = calc ("qcFermat " <> show e)
                          =: qed
   where n = literal e
 
--- * No termination checks
+-- * Termination checking
 
--- | It's important to realize that TP proofs in SBV neither check nor guarantee that the
--- functions we use are terminating. This is beyond the scope (and current capabilities) of what SBV can handle.
--- That is, the proof is up-to-termination, i.e., any proof implicitly assumes all functions defined (or axiomatized)
--- terminate for all possible inputs. If non-termination is possible, then the logic becomes inconsistent, i.e.,
+-- | When a recursive function is defined via 'smtFunction', SBV automatically checks that it terminates
+-- by guessing and verifying a termination measure. Here we define a simple recursive @sumToN@ and prove
+-- a property about it. Note the @Functions proven terminating@ line in the output, confirming that SBV
+-- verified the termination of @sumToN@ before proceeding with the proof.
+--
+-- >>> terminationDemo
+-- Lemma: sumToN_at_5                      Q.E.D.
+-- Functions proven terminating: sumToN
+-- [Proven] sumToN_at_5 :: Ɐn ∷ Integer → Bool
+terminationDemo :: IO (Proof (Forall "n" Integer -> SBool))
+terminationDemo = runTP $ do
+    let sumToN :: SInteger -> SInteger
+        sumToN = smtFunction "sumToN" $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
+
+    lemma "sumToN_at_5"
+          (\(Forall n) -> n .== 5 .=> sumToN n .== 15)
+          []
+
+-- | If SBV cannot determine a termination measure, it will report an error. Here, we define
+-- a function that recurses without decreasing any argument, and SBV rightfully rejects it:
+--
+-- >>> badTermination `catch` (\(e :: SomeException) -> mapM_ putStrLn [l | l <- lines (show e), take 3 l == "***"])
+-- *** Data.SBV: Cannot determine a termination measure.
+-- ***
+-- ***   Function: bad :: SBV Integer -> SBV Integer
+-- ***
+-- ***   Measures tried:
+-- ***     abs arg1
+-- ***
+-- *** Please use 'smtFunctionWithMeasure' to provide an explicit measure.
+badTermination :: IO ()
+badTermination = do
+    let bad :: SInteger -> SInteger
+        bad = smtFunction "bad" $ \x -> ite (x .== 0) 0 (bad x)
+    r <- prove $ \x -> bad x .== bad x
+    print r
+
+-- | If the user provides an explicit but incorrect termination measure via 'smtFunctionWithMeasure',
+-- SBV will detect this and report an error. Here, we use @const 0@ as a measure, which clearly
+-- does not decrease at recursive calls:
+--
+-- >>> badMeasure `catch` (\(e :: SomeException) -> mapM_ putStrLn [l | l <- lines (show e), take 3 l == "***"])
+-- *** Data.SBV: Termination measure does not strictly decrease at a recursive call site.
+-- ***
+-- ***   Function: badM :: SBV Integer -> SBV Integer
+-- ***
+-- ***   Falsifiable. Counter-example:
+-- ***     arg    = 1 :: Integer
+-- ***     before = 0 :: Integer
+-- ***     then   = 0 :: Integer
+-- ***
+-- *** The measure must strictly decrease at every recursive call.
+badMeasure :: IO ()
+badMeasure = do
+    let badM :: SInteger -> SInteger
+        badM = smtFunctionWithMeasure "badM" (\_ -> (0 :: SInteger), [])
+             $ \x -> ite (x .<= 0) 0 (x + badM (x - 1))
+    r <- prove $ \x -> badM x .== badM x
+    print r
+
+-- * Axioms and consistency
+
+-- | SBV checks that recursive functions defined via 'smtFunction' terminate, verifying a termination measure, which
+-- can be auto-guessed or specified by the user. However, axioms are taken on faith: they are not checked for consistency.
+-- If an axiom introduces a non-terminating or contradictory definition, the logic becomes inconsistent, i.e.,
 -- we can prove arbitrary results.
 --
--- Here is a simple example where we tell SBV that there is a function @f@ with non terminating behavior. Using this,
--- we can deduce @False@:
+-- Here is a simple example where we assert an axiom equivalent to a non-terminating definition @f n == 1 + f n@.
+-- Using this, we can deduce @False@:
 --
--- >>> noTerminationChecks
+-- >>> axiomsAreDangerous
 -- Axiom: bad
--- Lemma: noTerminationImpliesFalse
+-- Lemma: axiomsCanBeInconsistent
 --   Step: 1 (bad @ (n |-> 0 :: SInteger)) Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] noTerminationImpliesFalse :: Bool
-noTerminationChecks :: IO (Proof SBool)
-noTerminationChecks = runTP $ do
+-- [Proven] axiomsCanBeInconsistent :: Bool
+axiomsAreDangerous :: IO (Proof SBool)
+axiomsAreDangerous = runTP $ do
 
    let f :: SInteger -> SInteger
        f = uninterpret "f"
 
    badAxiom <- axiom "bad" (\(Forall n) -> f n .== 1 + f n)
 
-   calc "noTerminationImpliesFalse"
+   calc "axiomsCanBeInconsistent"
         sFalse
         ([] |- f 0
             ?? badAxiom `at` Inst @"n" (0 :: SInteger)
