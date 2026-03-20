@@ -110,7 +110,8 @@ tests =
                                             , \a b -> P.foldr  (+) 0 (P.zipWith  (+) a b)
                                             )
 
-      , goldenCapturedIO "lambda26" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]]) (concat, P.concat)
+      -- Disabled due to z3 bug: https://github.com/LeventErkok/sbv/issues/773
+      -- , goldenCapturedIO "lambda26" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]]) (concat, P.concat)
 
       , goldenCapturedIO "lambda27" $ eval1 [2, 4, 6,    8, 10 :: Integer] (all (\x -> x `sMod` 2 .== 0), P.all (\x -> x `mod` 2 == 0))
       , goldenCapturedIO "lambda28" $ eval1 [2, 4, 6, 1, 8, 10 :: Integer] (all (\x -> x `sMod` 2 .== 0), P.all (\x -> x `mod` 2 == 0))
@@ -263,6 +264,7 @@ tests =
                                                , \xs ys -> P.map (\x -> P.map (\y -> x + y) xs) ys
                                                )
 
+      {- Disabled due to z3 bug: https://github.com/LeventErkok/sbv/issues/773
       , let cls :: SList Integer -> Closure (SList Integer) (SList Integer -> SList Integer)
             cls ys = Closure { closureEnv = ys
                              , closureFun = \env xs -> xs ++ env
@@ -271,6 +273,7 @@ tests =
                                                ( \xss ys ->   map (cls  ys) xss
                                                , \xss ys -> P.map (P.++ ys) xss
                                                )
+      -}
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr ((+) @SInteger) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
