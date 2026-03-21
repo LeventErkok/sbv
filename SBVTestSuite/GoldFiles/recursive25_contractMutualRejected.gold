@@ -1,9 +1,15 @@
+[MEASURE] Verifying termination measures for: cf_mut @(SBV Integer -> SBV Integer), cf_mut @(SBV Integer -> SBV Integer), cg_mut @(SBV Integer -> SBV Integer)
+[MEASURE] Checking: cf_mut @(SBV Integer -> SBV Integer)
+[MEASURE] cf_mut @(SBV Integer -> SBV Integer) (contract): verifying with 0 helper(s)
+[MEASURE] cf_mut @(SBV Integer -> SBV Integer) (contract): 0 helper axiom(s) collected, checking measure+contract
+[MEASURE] Passed (terminating): cf_mut @(SBV Integer -> SBV Integer)
+[MEASURE] Checking: cf_mut @(SBV Integer -> SBV Integer)
 
 EXCEPTION:
 
 *** Data.SBV: smtFunctionWithContract does not support mutual recursion.
 ***
-***   Function: cf_mut @(SBV Integer -> SBV Integer)
+***   Function: cf_mut :: SBV Integer -> SBV Integer
 ***
 *** Please use smtFunction or smtFunctionWithMeasure for mutual recursion groups.
 

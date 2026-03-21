@@ -2059,6 +2059,29 @@ checkMutualFromState cfg funcNm st mbMeasure = do
          else debug cfg ["[MEASURE] " ++ funcNm ++ ": mutual group already verified, skipping"]
      _ -> debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual check"]
 
+-- | Reject mutual recursion for contract-based functions. Deferred to SCC computation time
+-- so that non-mutual cross-refs (helper functions, uninterpreted constants) don't cause false positives.
+rejectMutualContractFromState :: SMTConfig -> String -> State -> IO ()
+rejectMutualContractFromState cfg funcNm st = do
+   defns <- readIORef (rDefns st)
+
+   let barFuncNm = barify funcNm
+       nodes = [(nm, nm, deps) | (nm, (SMTDef _ deps _ _, _)) <- defns]
+       sccs  = DG.stronglyConnComp nodes
+       mySCC = [members | DG.CyclicSCC members <- sccs, barFuncNm `elem` members]
+
+   case mySCC of
+     [members] | length members >= 2 ->
+       error $ unlines [ ""
+                        , "*** Data.SBV: smtFunctionWithContract does not support mutual recursion."
+                        , "***"
+                        , "***   Function: " ++ prettyFuncNm funcNm
+                        , "***"
+                        , "*** Please use smtFunction or smtFunctionWithMeasure for mutual recursion groups."
+                        , ""
+                        ]
+     _ -> debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual contract check"]
+
 -- | Check that all members of a mutual recursion group marked as productive are guarded-recursive,
 -- considering cross-calls as well as self-calls.
 checkMutualProductiveFromState :: SMTConfig -> String -> State -> IO ()
@@ -3987,14 +4010,8 @@ class SMTDefinable a where
                               pure def
                             HasContract eval ceval helpers -> do
                               when hasCrossRefs $
-                                error $ unlines [ ""
-                                                , "*** Data.SBV: smtFunctionWithContract does not support mutual recursion."
-                                                , "***"
-                                                , "***   Function: " ++ funcNm
-                                                , "***"
-                                                , "*** Please use smtFunction or smtFunctionWithMeasure for mutual recursion groups."
-                                                , ""
-                                                ]
+                                modifyIORef' (rMeasureChecks st)
+                                             ((funcNm, False, \cfg -> rejectMutualContractFromState cfg funcNm st) :)
                               modifyIORef' (rMeasureChecks st)
                                            ((funcNm, False, \cfg -> verifyMeasureWithContract cfg funcNm info eval ceval helpers) :)
                               pure def

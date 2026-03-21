@@ -440,4 +440,20 @@ tests = testGroup "Basics.Recursive"
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \n -> L.head (spf n) .== (n :: SInteger) .&& n .> 0
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test 3-way mutually-recursive productive streams.
+   -- pa -> pb -> pc -> pa, all guarded by L..:
+   , goldenCapturedIO "recursive27_mutualProductive3" $ \rf -> do
+        let pa :: SInteger -> SList Integer
+            pa = smtProductiveFunction "pa27" $ \n ->
+                   ite (n .<= 0) (L.singleton 0) (n L..: pb (n - 1))
+            pb :: SInteger -> SList Integer
+            pb = smtProductiveFunction "pb27" $ \n ->
+                   ite (n .<= 0) (L.singleton 0) ((n * 10) L..: pc (n - 1))
+            pc :: SInteger -> SList Integer
+            pc = smtProductiveFunction "pc27" $ \n ->
+                   ite (n .<= 0) (L.singleton 0) ((n * 100) L..: pa (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \n -> L.head (pa n) .== (n :: SInteger) .&& n .> 0
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
    ]
