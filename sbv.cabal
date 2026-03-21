@@ -246,6 +246,7 @@ Library
                   , Documentation.SBV.Examples.TP.BinarySearch
                   , Documentation.SBV.Examples.TP.CaseSplit
                   , Documentation.SBV.Examples.TP.Coins
+                  , Documentation.SBV.Examples.TP.Collatz
                   , Documentation.SBV.Examples.TP.ConstFold
                   , Documentation.SBV.Examples.TP.Countdown
                   , Documentation.SBV.Examples.TP.Fibonacci

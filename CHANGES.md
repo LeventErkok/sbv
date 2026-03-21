@@ -71,12 +71,17 @@
                $ \n -> ite (n .> 100) (n - 10) (mcCarthy91 (mcCarthy91 (n + 11)))
     ```
 
-  * New example `Documentation.SBV.Examples.TP.Countdown`, proving properties of a
-    list-building countdown function using induction.
-
   * Productive (corecursive) functions can now be defined via `smtProductiveFunction`. Unlike
     terminating functions, productive functions need not have a base case — they may produce
     infinite output, so long as every recursive call is guarded by a data constructor.
+
+  * New function `smtFunctionNoTermination` for defining recursive SMT functions without any
+    termination check. The function is emitted as `define-fun-rec` and the user takes
+    responsibility for well-definedness. Use this for functions where termination is believed
+    but cannot be proven.
+
+  * New example `Documentation.SBV.Examples.TP.Countdown`, proving properties of a
+    list-building countdown function using induction.
 
   * New example `Documentation.SBV.Examples.TP.NatStream`, demonstrating `smtProductiveFunction`
     with the infinite stream `nats n = [n, n+1, n+2, ...]` and proofs about its head, length, and
@@ -86,6 +91,10 @@
     corecursive productive functions. Two functions `ping` and `pong` take turns producing
     elements of a stream, and we prove elementwise equality and that the k-th element of
     `ping n` is `n + k`.
+
+  * New example `Documentation.SBV.Examples.TP.Collatz`, using `smtFunctionNoTermination` to
+    define the Collatz function (whose termination is a famous open problem) and proving that
+    all powers of two reach 1.
 
 ### Version 13.6, 2026-03-02
 

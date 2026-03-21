@@ -32,7 +32,7 @@
 module Data.SBV.Core.Model (
     Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..)
   , Zero(..), MeasureOf, Measure(..), MeasureHelper(..)
-  , ContractOf, smtFunction, smtFunctionWithMeasure, smtFunctionWithContract, smtProductiveFunction
+  , ContractOf, smtFunction, smtFunctionWithMeasure, smtFunctionWithContract, smtProductiveFunction, smtFunctionNoTermination
   , checkMutualGroup
   , SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
@@ -1332,11 +1332,15 @@ data ContractEval where
 --   * 'Productive': The function is corecursive (productive). Instead of proving termination via a
 --     measure, SBV checks that every recursive call is guarded by a data constructor (list cons,
 --     ADT constructor, etc.), ensuring the function always produces output incrementally.
+--   * 'Unverified': No termination or productivity check is performed. The function is emitted as
+--     @define-fun-rec@ and the user takes responsibility for well-definedness. Use this for functions
+--     where termination is believed but cannot be proven (e.g., Collatz).
 data Measure f where
   AutoMeasure  :: Measure f
   HasMeasure   :: MeasureEval -> [MeasureHelper] -> Measure f
   HasContract  :: MeasureEval -> ContractEval -> [MeasureHelper] -> Measure f
   Productive   :: Measure f
+  Unverified   :: Measure f
 
 -- | A helper axiom for measure verification. When a measure's correctness depends on
 -- properties that require induction to prove (e.g., @ifComplexity f > 0@), the user
@@ -4022,7 +4026,8 @@ class SMTDefinable a where
                               when hasCrossRefs $
                                 modifyIORef' (rMeasureChecks st)
                                              ((funcNm, True, \cfg -> checkMutualProductiveFromState cfg funcNm st) :)
-                              pure def)
+                              pure def
+                            Unverified -> pure def)
 
 
 -- | Define an SMT function. If the function is recursive, SBV will automatically try to
@@ -4086,6 +4091,13 @@ smtFunctionWithContract nm (mf, cf, helpers) = smtFunctionDef nm (HasContract (M
 -- @
 smtProductiveFunction :: (SMTDefinable a, Typeable a, Lambda Symbolic a) => String -> a -> a
 smtProductiveFunction nm = smtFunctionDef nm Productive
+
+-- | Define a recursive SMT function without any termination check. The function
+-- is emitted as @define-fun-rec@ and the user takes responsibility for well-definedness.
+-- Use this for functions where termination is believed but cannot be proven, such as
+-- the Collatz function. See "Documentation.SBV.Examples.TP.Collatz" for an example use case.
+smtFunctionNoTermination :: (SMTDefinable a, Typeable a, Lambda Symbolic a) => String -> a -> a
+smtFunctionNoTermination nm = smtFunctionDef nm Unverified
 
 -- | Kind of uninterpretation
 data UIKind a = UIFree  Bool                            -- ^ completely uninterpreted. If Bool is true, then this is curried.
