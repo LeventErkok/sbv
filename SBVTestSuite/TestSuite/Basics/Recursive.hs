@@ -359,6 +359,17 @@ tests = testGroup "Basics.Recursive"
           Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
           Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
 
+   -- Test all-self-recursive mutual group with good cross-calls and explicit measures:
+   -- Both bf and bg self-recurse and cross-call with (n-1). User-provided abs measure works.
+   , goldenCapturedIO "recursive22_allSelfGoodCross" $ \rf -> do
+        let bf :: SInteger -> SInteger
+            bf = smtFunctionWithMeasure "bf22" (abs, []) $ \n -> ite (n .<= 0) 0 (bf (n - 1) + bg (n - 1))
+            bg :: SInteger -> SInteger
+            bg = smtFunctionWithMeasure "bg22" (abs, []) $ \n -> ite (n .<= 0) 0 (bg (n - 1) + bf (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> bf x .== (x :: SInteger)
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
    -- Test mutual recursion via TP proofs (exercises checkNewMeasures in Kernel.hs)
    , goldenCapturedIO "recursive20_mutualTP" $ \rf -> do
         let cfg = z3{verbose=True, redirectVerbose=Just rf}
