@@ -353,11 +353,11 @@ module Data.SBV (
 
   -- * Stopping unrolling: Defined functions
   , SMTDefinable(..)
-  , smtFunction                -- ^ Auto-guessed termination measure
-  , smtFunctionWithMeasure     -- ^ User-provided termination measure
-  , smtFunctionWithContract    -- ^ Measure + contract (for nested recursion)
-  , smtProductiveFunction      -- ^ Corecursive (productive) functions
-  , smtFunctionNoTermination   -- ^ No termination check (user takes responsibility)
+  , smtFunction
+  , smtFunctionWithMeasure
+  , smtFunctionWithContract
+  , smtProductiveFunction
+  , smtFunctionNoTermination
   , ContractOf, MeasureHelper(..)
   , smtHOFunction, smtHOFunctionWithMeasure, Closure(..), registerType
 
