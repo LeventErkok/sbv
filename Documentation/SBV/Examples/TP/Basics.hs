@@ -11,6 +11,7 @@
 
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -233,7 +234,10 @@ qcFermat e = calc ("qcFermat " <> show e)
 terminationDemo :: IO (Proof (Forall "n" Integer -> SBool))
 terminationDemo = runTP $ do
     let sumToN :: SInteger -> SInteger
-        sumToN = smtFunction "sumToN" $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
+        sumToN = smtFunction "sumToN" $ \x -> [sCase| x of
+                                                 _ | x .<= 0 -> 0
+                                                 _           -> x + sumToN (x - 1)
+                                              |]
 
     lemma "sumToN_at_5"
           (\(Forall n) -> n .== 5 .=> sumToN n .== 15)
@@ -254,7 +258,10 @@ terminationDemo = runTP $ do
 badTermination :: IO ()
 badTermination = do
     let bad :: SInteger -> SInteger
-        bad = smtFunction "bad" $ \x -> ite (x .== 0) 0 (bad x)
+        bad = smtFunction "bad" $ \x -> [sCase| x of
+                                           _ | x .== 0 -> 0
+                                           _           -> bad x
+                                        |]
     r <- prove $ \x -> bad x .== bad x
     print r
 
@@ -277,7 +284,10 @@ badMeasure :: IO ()
 badMeasure = do
     let badM :: SInteger -> SInteger
         badM = smtFunctionWithMeasure "badM" (\_ -> (0 :: SInteger), [])
-             $ \x -> ite (x .<= 0) 0 (x + badM (x - 1))
+             $ \x -> [sCase| x of
+                        _ | x .<= 0 -> 0
+                        _           -> x + badM (x - 1)
+                     |]
     r <- prove $ \x -> badM x .== badM x
     print r
 

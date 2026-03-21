@@ -26,6 +26,7 @@
 {-# LANGUAGE CPP               #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -49,11 +50,12 @@ import Data.SBV.TP
 -- The third argument @a@ generalizes the operation at each level.
 ack :: SInteger -> SInteger -> SInteger -> SInteger
 ack = smtFunction "ack"
-  $ \m n a ->
-      ite (m .<= 0) (n + a)
-    $ ite (n .<= 0) 0
-    $ ite (n .== 1) a
-    $ ack (m - 1) (ack m (n - 1) a) a
+  $ \m n a -> [sCase| m of
+                 _ | m .<= 0 -> n + a
+                 _ | n .<= 0 -> 0
+                 _ | n .== 1 -> a
+                 _           -> ack (m - 1) (ack m (n - 1) a) a
+              |]
 
 -- * Ackermann-Péter function (1935)
 
@@ -61,10 +63,11 @@ ack = smtFunction "ack"
 -- This is Rózsa Péter's simplified 2-argument version of Ackermann's original function.
 pet :: SInteger -> SInteger -> SInteger
 pet = smtFunction "pet"
-  $ \m n ->
-      ite (m .<= 0) (n + 1)
-    $ ite (n .<= 0) (pet (m - 1) 1)
-    $ pet (m - 1)   (pet m (n - 1))
+  $ \m n -> [sCase| m of
+               _ | m .<= 0 -> n + 1
+               _ | n .<= 0 -> pet (m - 1) 1
+               _           -> pet (m - 1) (pet m (n - 1))
+            |]
 
 -- * Correctness
 

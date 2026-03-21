@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE QuasiQuotes      #-}
 {-# LANGUAGE TypeAbstractions #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -33,9 +34,10 @@ mcCarthy91 = smtFunctionWithContract "mcCarthy91"
                , \n r -> n .<= 100 .=> r .== 91
                , []
                )
-           $ \n -> ite (n .> 100)
-                       (n - 10)
-                       (mcCarthy91 (mcCarthy91 (n + 11)))
+           $ \n -> [sCase| n of
+                      _ | n .> 100 -> n - 10
+                      _            -> mcCarthy91 (mcCarthy91 (n + 11))
+                   |]
 
 -- | Specification for McCarthy's function.
 spec91 :: SInteger -> SInteger

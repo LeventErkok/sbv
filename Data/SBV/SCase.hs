@@ -695,7 +695,7 @@ sCase = QuasiQuoter
             Just (typ, mbt) -> do
               mbFnName <- case mbt of
                 Just BTBool      -> pure Nothing
-                Just BTList      -> pure (Just (VarE (sbvName "Data.SBV.List"   "list")))
+                Just BTList      -> pure Nothing  -- Strategy B; see noAnalyzer comment above
                 Just BTMaybe     -> pure (Just (VarE (sbvName "Data.SBV.Maybe"  "sCaseMaybe")))
                 Just BTEither    -> pure (Just (VarE (sbvName "Data.SBV.Either" "sCaseEither")))
                 Just (BTTuple _) -> pure Nothing
@@ -802,11 +802,12 @@ sCase = QuasiQuoter
         -- At this point, we either have a simple case with no guards, in which case
         -- we translate this to an sCase for that type. So find all alternatives.
         -- Otherwise, this will become an ite-chain.
-        -- Tuples don't have a case analyzer function, so we always use the ite-chain path for them.
-        -- Other built-in types (Maybe, Either, List) now have case analyzers and can use Strategy A.
-        -- Bool and Tuple don't have a case analyzer function, so we always use the ite-chain path.
+        -- Bool, List, and Tuple use the ite-chain path (Strategy B) directly.
+        -- List is excluded from Strategy A because the case-analysis combinator 'list' is itself
+        -- a candidate for sCase rewriting; calling it here would create a circular dependency.
+        -- Maybe, Either, and user ADTs can use Strategy A (calling sCaseMaybe/sCaseEither/sCaseADT).
         let hasGuards    = any isGuarded cases
-            noAnalyzer   = case mbt of { Just BTBool -> True; Just (BTTuple _) -> True; _ -> False }
+            noAnalyzer   = case mbt of { Just BTBool -> True; Just BTList -> True; Just (BTTuple _) -> True; _ -> False }
             useIteChain  = hasGuards || noAnalyzer
 
         if not useIteChain

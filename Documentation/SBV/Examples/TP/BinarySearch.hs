@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE QuasiQuotes      #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -39,13 +40,12 @@ bsearch array (low, high) = f array low high
           $ \arr lo hi x ->
                let mid  = (lo + hi) `sEDiv` 2
                    xmid = arr `readArray` mid
-               in ite (lo .> hi)
-                      sNothing
-                      (ite (xmid .== x)
-                           (sJust mid)
-                           (ite (xmid .< x)
-                                (bsearch arr (mid+1, hi)    x)
-                                (bsearch arr (lo,    mid-1) x)))
+               in [sCase| lo of
+                     _ | lo .> hi   -> sNothing
+                     _ | xmid .== x -> sJust mid
+                     _ | xmid .< x  -> bsearch arr (mid+1, hi)    x
+                     _              -> bsearch arr (lo,    mid-1) x
+                  |]
 
 -- * Correctness proof
 

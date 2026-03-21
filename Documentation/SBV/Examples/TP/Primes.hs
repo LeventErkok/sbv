@@ -282,7 +282,10 @@ leastPrimeDivisor n = ld 2 n
 
 -- | The factorial function.
 fact :: SInteger -> SInteger
-fact = smtFunction "fact" $ \n -> ite (n .<= 0) 1 (n * fact (n - 1))
+fact = smtFunction "fact" $ \n -> [sCase| n of
+                                     _ | n .<= 0 -> 1
+                                     _           -> n * fact (n - 1)
+                                  |]
 
 -- | \(n! \geq 1\)
 --

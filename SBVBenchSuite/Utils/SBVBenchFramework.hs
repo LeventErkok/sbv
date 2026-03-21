@@ -73,7 +73,7 @@ timeStamp = fmap (spaceTo '-') . show <$> getCurrentTime
 
 spaceTo :: Char -> Char -> Char
 spaceTo c x | isSpace x = c
-            | otherwise = x
+            | True      = x
 
 -- | Construct a benchmark file name. The input name should be a time stamp or
 -- whatever you want to name the benchmark

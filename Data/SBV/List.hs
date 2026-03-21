@@ -211,7 +211,10 @@ uncons l = (head l, tail l)
 -- >>> prove $ \(l :: SList Integer) -> null l .|| list sFalse (\_ _ -> sTrue) l
 -- Q.E.D.
 list :: (SymVal a, SymVal b) => SBV b -> (SBV a -> SList a -> SBV b) -> SList a -> SBV b
-list nilCase consCase xs = ite (null xs) nilCase (consCase (head xs) (tail xs))
+list nilCase consCase xs = [sCase| xs of
+                              []   -> nilCase
+                              h:ts -> consCase h ts
+                           |]
 
 -- | @`init`@ returns all but the last element of the list. Unspecified if the list is empty.
 --

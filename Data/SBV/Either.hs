@@ -13,6 +13,7 @@
 {-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -37,7 +38,8 @@ import qualified Prelude
 
 import Data.SBV.Client
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model (ite, OrdSymbolic(..))
+import Data.SBV.Core.Model (OrdSymbolic(..))
+import Data.SBV.SCase      (sCase)
 
 #ifdef DOCTEST
 -- $setup
@@ -100,7 +102,10 @@ either :: forall a b c. (SymVal a, SymVal b, SymVal c)
        -> (SBV b -> SBV c)
        -> SEither a b
        -> SBV c
-either brA brB sab = ite (isLeft sab) (brA (fromLeft sab)) (brB (fromRight sab))
+either brA brB sab = [sCase| sab of
+                        Left x  -> brA x
+                        Right x -> brB x
+                     |]
 
 -- | Map over both sides of a symbolic 'Either' at the same time
 --

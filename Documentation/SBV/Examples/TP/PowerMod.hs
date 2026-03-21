@@ -13,6 +13,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE QuasiQuotes      #-}
 {-# LANGUAGE TypeAbstractions #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -33,7 +34,10 @@ runCached = runTPWith (tpCache z3)
 
 -- | Power function over integers.
 power :: SInteger -> SInteger -> SInteger
-power = smtFunction "power" $ \b n -> ite (n .<= 0) 1 (b * power b (n-1))
+power = smtFunction "power" $ \b n -> [sCase| n of
+                                         _ | n .<= 0 -> 1
+                                         _           -> b * power b (n-1)
+                                      |]
 
 -- | \(m > 1 \Rightarrow n + mk \equiv n \pmod{m}\)
 --

@@ -43,6 +43,7 @@ import qualified Prelude
 import Data.SBV.Client
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model (ite, OrdSymbolic(..))
+import Data.SBV.SCase      (sCase)
 
 #ifdef DOCTEST
 -- $setup
@@ -161,7 +162,10 @@ maybe :: forall a b.  (SymVal a, SymVal b)
       -> (SBV a -> SBV b)
       -> SMaybe a
       -> SBV b
-maybe brNothing brJust ma = ite (isNothing ma) brNothing (brJust (fromJust ma))
+maybe brNothing brJust ma = [sCase| ma of
+                               Nothing -> brNothing
+                               Just x  -> brJust x
+                            |]
 
 -- | Custom 'Num' instance over 'SMaybe'
 instance (Ord a, SymVal a, Num a, Num (SBV a)) => Num (SBV (Maybe a)) where

@@ -107,7 +107,10 @@ n2i = smtFunction "n2i" $ \n -> [sCase| n of
 --
 -- NB. When writing the properties below, we use the notation \(\underline{i}\) to mean @i2n i@.
 i2n :: SInteger -> SNat
-i2n = smtFunction "i2n" $ \i -> ite (i .<= 0) 0 (sSucc (i2n (i - 1)))
+i2n = smtFunction "i2n" $ \i -> [sCase| i of
+                                   _ | i .<= 0 -> 0
+                                   _           -> sSucc (i2n (i - 1))
+                                |]
 
 -- | \(\overline{n} \geq 0\)
 --

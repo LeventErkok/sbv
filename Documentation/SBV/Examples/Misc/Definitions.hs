@@ -12,6 +12,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE QuasiQuotes     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -19,7 +20,6 @@ module Documentation.SBV.Examples.Misc.Definitions where
 
 import Data.SBV
 import Data.SBV.Tuple
-import qualified Data.SBV.List as L
 
 -------------------------------------------------------------------------
 -- * Simple functions
@@ -49,7 +49,10 @@ add1Example = sat $ do
 -- terminate. So, we use the function generation facilities to define it
 -- directly in SMTLib.
 sumToN :: SInteger -> SInteger
-sumToN = smtFunction "sumToN" $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
+sumToN = smtFunction "sumToN" $ \x -> [sCase| x of
+                                         _ | x .<= 0 -> 0
+                                         _           -> x + sumToN (x - 1)
+                                      |]
 
 -- | Prove that sumToN works as expected.
 --
@@ -64,7 +67,10 @@ sumToNExample = sat $ \a r -> a .== 5 .&& r .== sumToN a
 
 -- | Coding list-length recursively. Again, we map directly to an SMTLib function.
 len :: SList Integer -> SInteger
-len = smtFunction "list_length" $ \xs -> ite (L.null xs) 0 (1 + len (L.tail xs))
+len = smtFunction "list_length" $ \xs -> [sCase| xs of
+                                            []   -> 0
+                                            _:ts -> 1 + len ts
+                                         |]
 
 -- | Calculate the length of a list, using recursive functions.
 --
@@ -89,10 +95,16 @@ lenExample = sat $ \a r -> a .== [1,2,3] .&& r .== len a
 pingPong :: IO SatResult
 pingPong = sat $ \x -> x .> 0 .&& ping x sTrue .> x
   where ping :: SInteger -> SBool -> SInteger
-        ping = smtFunction "ping" $ \x y -> ite y (pong (x+1) (sNot y)) (x - 1)
+        ping = smtFunction "ping" $ \x y -> [sCase| y of
+                                               True  -> pong (x+1) (sNot y)
+                                               False -> x - 1
+                                            |]
 
         pong :: SInteger -> SBool -> SInteger
-        pong = smtFunction "pong" $ \a b -> ite b (ping (a-1) (sNot b)) a
+        pong = smtFunction "pong" $ \a b -> [sCase| b of
+                                               True  -> ping (a-1) (sNot b)
+                                               False -> a
+                                            |]
 
 -- | Usual way to define even-odd mutually recursively. Unfortunately, while this goes through,
 -- the backend solver does not terminate on this example. See 'evenOdd2' for an alternative
@@ -100,8 +112,14 @@ pingPong = sat $ \x -> x .> 0 .&& ping x sTrue .> x
 evenOdd :: IO SatResult
 evenOdd = satWith z3{verbose=True} $ \a r -> a .== 20 .&& r .== isE a
   where isE, isO :: SInteger -> SBool
-        isE = smtFunction "isE" $ \x -> ite (x .< 0) (isE (-x)) (x .== 0 .|| isO (x - 1))
-        isO = smtFunction "isO" $ \x -> ite (x .< 0) (isO (-x)) (x .== 0 .|| isE (x - 1))
+        isE = smtFunction "isE" $ \x -> [sCase| x of
+                                           _ | x .< 0 -> isE (-x)
+                                           _          -> x .== 0 .|| isO (x - 1)
+                                        |]
+        isO = smtFunction "isO" $ \x -> [sCase| x of
+                                           _ | x .< 0 -> isO (-x)
+                                           _          -> x .== 0 .|| isE (x - 1)
+                                        |]
 
 -- | Another technique to handle mutually definitions is to define the functions together, and pull the results out individually.
 -- This usually works better than defining the functions separately, from a solver perspective.
@@ -111,9 +129,11 @@ evenOdd = satWith z3{verbose=True} $ \a r -> a .== 20 .&& r .== isE a
 -- @isEvenOdd(x-1)@ decreases @abs x@.
 isEvenOdd :: SInteger -> STuple Bool Bool
 isEvenOdd = smtFunctionWithMeasure "isEvenOdd" (\x -> tuple (abs x, ite (x .< 0) (1 :: SInteger) 0), [])
-          $ \x -> ite (x .<  0) (isEvenOdd (-x))
-                $ ite (x .== 0) (tuple (sTrue, sFalse))
-                                (swap (isEvenOdd (x - 1)))
+          $ \x -> [sCase| x of
+                     _ | x .<  0 -> isEvenOdd (-x)
+                     _ | x .== 0 -> tuple (sTrue, sFalse)
+                     _           -> swap (isEvenOdd (x - 1))
+                  |]
 
 -- | Extract the isEven function for easier use.
 isEven :: SInteger -> SBool
@@ -140,9 +160,11 @@ evenOdd2 = sat $ \a r1 r2 -> a .== 20 .&& r1 .== isEven a .&& r2 .== isOdd a
 -- | Ackermann function, demonstrating nested recursion.
 ack :: SInteger -> SInteger -> SInteger
 ack = smtFunction "ack"
-    $ \x y -> ite (x .<= 0) (y + 1)
-            $ ite (y .<= 0) (ack (x - 1) 1)
-                            (ack (x - 1) (ack x (y - 1)))
+    $ \x y -> [sCase| x of
+                 _ | x .<= 0 -> y + 1
+                 _ | y .<= 0 -> ack (x - 1) 1
+                 _           -> ack (x - 1) (ack x (y - 1))
+              |]
 
 -- | We can prove constant-folding instances of the equality @ack 1 y == y + 2@:
 --

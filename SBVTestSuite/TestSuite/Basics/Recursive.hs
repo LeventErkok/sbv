@@ -34,7 +34,10 @@ import Documentation.SBV.Examples.TP.McCarthy91    (mcCarthy91)
 -- This is recursive and can't be symbolically simulated for arbitrary inputs.
 -- But we can still prove a few things about it!
 mgcd :: SWord8 -> SWord8 -> SWord8
-mgcd a b = ite (b .== 0) a (mgcd b (a `sMod` b))
+mgcd a b = [sCase| b of
+              _ | b .== 0 -> a
+              _           -> mgcd b (a `sMod` b)
+           |]
 
 -- Same construction, expressed in terms of the dynamic interface
 mgcdDyn :: Int -> IO ThmResult

@@ -55,9 +55,11 @@ oddSequence1 :: IO (Proof (Forall "n" Integer -> SBool))
 oddSequence1 = runTP $ do
   let s :: SInteger -> SInteger
       s = smtFunction "seq"
-        $ \n -> ite (n .<= 0) 1
-              $ ite (n .== 1) 3
-              $ s (n-2) + 2 * s (n-1)
+        $ \n -> [sCase| n of
+                   _ | n .<= 0 -> 1
+                   _ | n .== 1 -> 3
+                   _           -> s (n-2) + 2 * s (n-1)
+                |]
 
   -- z3 can't handle this, but CVC5 is proves it just fine.
   -- Note also that we do a "proof-by-contradiction," by deriving that
@@ -104,9 +106,11 @@ oddSequence2 :: IO (Proof (Forall "n" Integer -> SBool))
 oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
   let s :: SInteger -> SInteger
       s = smtFunction "seq"
-        $ \n -> ite (n .<= 0) 1
-              $ ite (n .== 1) 3
-              $ 2 * s (n-1) - s (n-2)
+        $ \n -> [sCase| n of
+                   _ | n .<= 0 -> 1
+                   _ | n .== 1 -> 3
+                   _           -> 2 * s (n-1) - s (n-2)
+                |]
 
   s0 <- lemma "oddSequence_0" (s 0 .== 1) []
   s1 <- lemma "oddSequence_1" (s 1 .== 3) []
@@ -238,7 +242,11 @@ won'tProve4 = runTP $ do
 
    let -- a bizarre (but valid!) way to sum two integers
        weirdSum :: SInteger -> SInteger -> SInteger
-       weirdSum = smtFunction "weirdSum" (\x y -> ite (x .<= 0) y (weirdSum (x - 1) (y + 1)))
+       weirdSum = smtFunction "weirdSum"
+                $ \x y -> [sCase| x of
+                              _ | x .<= 0 -> y
+                              _           -> weirdSum (x - 1) (y + 1)
+                           |]
 
    _ <- sInductWith z3{extraArgs = ["-t:5000"]} "badMeasure"
                 (\(Forall x) (Forall y) -> x .>= 0 .=> weirdSum x y .== x + y)

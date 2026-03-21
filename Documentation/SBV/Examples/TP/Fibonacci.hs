@@ -11,6 +11,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE QuasiQuotes      #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -24,13 +25,19 @@ import Data.SBV.TP
 
 -- | Calculate fibonacci using the textbook definition.
 fibonacci :: SInteger -> SInteger
-fibonacci = smtFunction "fibonacci" $ \n -> ite (n .<= 1) 1 (fibonacci (n-1) + fibonacci (n-2))
+fibonacci = smtFunction "fibonacci" $ \n -> [sCase| n of
+                                               _ | n .<= 1 -> 1
+                                               _           -> fibonacci (n-1) + fibonacci (n-2)
+                                            |]
 
 -- * Tail recursive version
 
 -- | Tail recursive version
 fib :: SInteger -> SInteger -> SInteger -> SInteger
-fib = smtFunction "fib" $ \a b n -> ite (n .<= 0) a (fib b (a+b) (n-1))
+fib = smtFunction "fib" $ \a b n -> [sCase| n of
+                                       _ | n .<= 0 -> a
+                                       _           -> fib b (a+b) (n-1)
+                                    |]
 
 -- | Faster version of fibonacci, using the tail-recursive version.
 fibTail :: SInteger -> SInteger

@@ -16,6 +16,7 @@
 
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE QuasiQuotes      #-}
 {-# LANGUAGE TypeAbstractions #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -45,7 +46,10 @@ import Data.SBV.Tuple
 -- there is no greatest common divisor for the pair @(0, 0)@. So, maximality here is meant
 -- to be in terms of divisibility. That is, any divisor of @a@ and @b@ will also divide their @gcd@.
 nGCD :: SInteger -> SInteger -> SInteger
-nGCD = smtFunction "nGCD" $ \a b -> ite (b .== 0) a (nGCD b (a `sEMod` b))
+nGCD = smtFunction "nGCD" $ \a b -> [sCase| b of
+                                       _ | b .== 0 -> a
+                                       _           -> nGCD b (a `sEMod` b)
+                                    |]
 
 -- | Generalized GCD, working for all integers. We simply call @nGCD@ with the absolute value of the arguments.
 gcd :: SInteger -> SInteger -> SInteger
@@ -833,11 +837,13 @@ gcdOddEven = do
 -- recursive call.
 nGCDSub :: SInteger -> SInteger -> SInteger
 nGCDSub = smtFunction "nGCDSub"
-        $ \a b -> ite (a .== b) a
-                $ ite (a .<= 0) b
-                $ ite (b .<= 0) a
-                $ ite (a .> b)  (nGCDSub (a - b) b)
-                                (nGCDSub a (b - a))
+        $ \a b -> [sCase| a of
+                     _ | a .== b -> a
+                     _ | a .<= 0 -> b
+                     _ | b .<= 0 -> a
+                     _ | a .> b  -> nGCDSub (a - b) b
+                     _           -> nGCDSub a (b - a)
+                  |]
 
 -- | Generalized version of subtraction based GCD, working over all integers.
 gcdSub :: SInteger -> SInteger -> SInteger
@@ -924,12 +930,14 @@ gcdSubEquiv = do
 -- | @nGCDBin@ is the binary GCD algorithm that works on non-negative numbers.
 nGCDBin :: SInteger -> SInteger -> SInteger
 nGCDBin = smtFunction "nGCDBin"
-        $ \a b -> ite (a .<= 0)               b
-                $ ite (b .<= 0)               a
-                $ ite (isEven a .&& isEven b) (2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2))
-                $ ite (isOdd  a .&& isEven b) (    nGCDBin a             (b `sEDiv` 2))
-                $ ite (a .<= b)               (    nGCDBin a             (b - a))
-                                              (    nGCDBin (a - b)       b)
+        $ \a b -> [sCase| a of
+                     _ | a .<= 0               -> b
+                     _ | b .<= 0               -> a
+                     _ | isEven a .&& isEven b -> 2 * nGCDBin (a `sEDiv` 2) (b `sEDiv` 2)
+                     _ | isOdd  a .&& isEven b -> nGCDBin a (b `sEDiv` 2)
+                     _ | a .<= b               -> nGCDBin a (b - a)
+                     _                         -> nGCDBin (a - b) b
+                  |]
 -- | Generalized version that works on arbitrary integers.
 gcdBin :: SInteger -> SInteger -> SInteger
 gcdBin a b = nGCDBin (abs a) (abs b)
