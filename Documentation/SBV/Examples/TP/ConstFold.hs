@@ -817,7 +817,7 @@ varHelper = lemma "varHelper"
 --       Step: 1.7.2.Completeness          Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven terminating: exprSize, interpInEnv, sbv.lookup, subst
+-- Functions proven terminating: exprSize, interpInEnv, sbv.lookup, simplify, subst
 -- [Proven] substCorrect :: Ɐe ∷ (Expr String Integer) → Ɐnm ∷ String → Ɐv ∷ Integer → Ɐenv ∷ [(String, Integer)] → Bool
 substCorrect :: TP (Proof (Forall "e" Exp -> Forall "nm" String -> Forall "v" Integer -> Forall "env" EL -> SBool))
 substCorrect = do
@@ -1091,7 +1091,7 @@ substCorrect = do
 --       Step: 1.7.2.Completeness          Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven terminating: exprSize, interpInEnv, sbv.lookup, subst
+-- Functions proven terminating: exprSize, interpInEnv, sbv.lookup, simplify, subst
 -- [Proven] simpCorrect :: Ɐe ∷ (Expr String Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 simpCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))
 simpCorrect = do
@@ -1417,7 +1417,7 @@ simpCorrect = do
 --     Step: 1.7.5                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven terminating: cfold, exprSize, interpInEnv, sbv.lookup, subst
+-- Functions proven terminating: cfold, exprSize, interpInEnv, sbv.lookup, simplify, subst
 -- [Proven] cfoldCorrect :: Ɐe ∷ (Expr String Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 cfoldCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))
 cfoldCorrect = do

@@ -95,34 +95,45 @@ lenExample = sat $ \a r -> a .== [1,2,3] .&& r .== len a
 pingPong :: IO SatResult
 pingPong = sat $ \x -> x .> 0 .&& ping x sTrue .> x
   where ping :: SInteger -> SBool -> SInteger
-        ping = smtFunction "ping" $ \x y -> [sCase| y of
-                                               True  -> pong (x+1) (sNot y)
-                                               False -> x - 1
-                                            |]
+        ping = smtFunctionWithMeasure "ping" (\_ y -> ite y 1 (0 :: SInteger), [])
+             $ \x y -> [sCase| y of
+                           True  -> pong (x+1) (sNot y)
+                           False -> x - 1
+                        |]
 
         pong :: SInteger -> SBool -> SInteger
-        pong = smtFunction "pong" $ \a b -> [sCase| b of
-                                               True  -> ping (a-1) (sNot b)
-                                               False -> a
-                                            |]
+        pong = smtFunctionWithMeasure "pong" (\_ b -> ite b 1 (0 :: SInteger), [])
+             $ \a b -> [sCase| b of
+                           True  -> ping (a-1) (sNot b)
+                           False -> a
+                        |]
 
--- | Usual way to define even-odd mutually recursively. Unfortunately, while this goes through,
--- the backend solver does not terminate on this example. See 'evenOdd2' for an alternative
--- technique to handle such definitions, which seems to be more solver friendly.
+-- | Usual way to define even-odd mutually recursively. While the termination measure
+-- is verified, current SMT solvers do not terminate when evaluating mutually recursive
+-- @define-funs-rec@ definitions. See 'isEvenOdd' for a single-function alternative
+-- that is more solver-friendly.
+--
+-- >>> evenOdd
+-- Unknown.
+--   Reason: timeout
 evenOdd :: IO SatResult
-evenOdd = satWith z3{verbose=True} $ \a r -> a .== 20 .&& r .== isE a
+evenOdd = sat $ do setTimeOut 5000
+                   a <- sInteger "a"
+                   r <- sBool "r"
+                   constrain $ a .== 20 .&& r .== isE a
   where isE, isO :: SInteger -> SBool
-        isE = smtFunction "isE" $ \x -> [sCase| x of
-                                           _ | x .< 0 -> isE (-x)
-                                           _          -> x .== 0 .|| isO (x - 1)
-                                        |]
-        isO = smtFunction "isO" $ \x -> [sCase| x of
-                                           _ | x .< 0 -> isO (-x)
-                                           _          -> x .== 0 .|| isE (x - 1)
-                                        |]
+        isE = smtFunctionWithMeasure "isE" (\x -> tuple (abs x, ite (x .< 0) (1 :: SInteger) 0), [])
+            $ \x -> [sCase| x of
+                       _ | x .< 0 -> isE (-x)
+                       _          -> x .== 0 .|| isO (x - 1)
+                    |]
+        isO = smtFunctionWithMeasure "isO" (\x -> tuple (abs x, ite (x .< 0) (1 :: SInteger) 0), [])
+            $ \x -> [sCase| x of
+                       _ | x .< 0 -> isO (-x)
+                       _          -> x .== 0 .|| isE (x - 1)
+                    |]
 
 -- | Another technique to handle mutually definitions is to define the functions together, and pull the results out individually.
--- This usually works better than defining the functions separately, from a solver perspective.
 --
 -- The measure @(abs x, ite (x < 0) 1 0)@ ensures termination: when @x < 0@, the call @isEvenOdd(-x)@
 -- keeps @abs x@ the same but drops the second component from 1 to 0. When @x > 0@, the call

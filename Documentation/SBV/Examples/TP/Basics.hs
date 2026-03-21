@@ -253,6 +253,10 @@ terminationDemo = runTP $ do
 -- ***
 -- ***   Measures tried:
 -- ***     abs arg1
+-- ***     smax 0 arg1
+-- ***     abs arg1 + smax 0 arg1
+-- ***     (abs arg1, smax 0 arg1)
+-- ***     (smax 0 arg1, abs arg1)
 -- ***
 -- *** Please use 'smtFunctionWithMeasure' to provide an explicit measure.
 badTermination :: IO ()
