@@ -195,9 +195,13 @@ updStats TPState{stats} u = liftIO $ modifyIORef' stats u
 
 -- | Display the message if not quiet. Note that we don't print a newline; so the message must have it if needed.
 message :: MonadIO m => SMTConfig -> String -> m ()
-message SMTConfig{tpOptions = TPOptions{quiet}} s
-  | quiet = pure ()
-  | True  = liftIO $ putStr s
+message SMTConfig{tpOptions = TPOptions{quiet}, redirectVerbose} s
+  | quiet
+  = pure ()
+  | Just f <- redirectVerbose
+  = liftIO $ appendFile f s
+  | True
+  = liftIO $ putStr s
 
 -- | Print the list of functions whose termination measures have been verified.
 printMeasures :: SMTConfig -> [String] -> IO ()

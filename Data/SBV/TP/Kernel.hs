@@ -253,8 +253,12 @@ checkNewMeasures cfg@SMTConfig{tpOptions = TPOptions{measuresBeingVerified}} st 
        new         = [(n, p, c) | (n, p, c) <- checks, n `Set.notMember` allVerified, n `Set.notMember` measuresBeingVerified]
        skipped     = [n | (n, _, _) <- checks, n `Set.notMember` allVerified, n `Set.member` measuresBeingVerified]
 
-       msg s | verbose cfg = putStrLn s
-             | True        = pure ()
+       msg s | not (verbose cfg)
+             = pure ()
+             | Just f <- redirectVerbose cfg
+             = appendFile f (s ++ "\n")
+             | True
+             = putStrLn s
 
    unless (null new && null skipped) $
       msg $ "[MEASURE] checkNewMeasures: " ++ show (length new) ++ " to verify"

@@ -9,9 +9,11 @@
 -- Some recursive definitions.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeAbstractions    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -25,6 +27,7 @@ import Data.List (isInfixOf)
 
 import qualified Data.SBV.List as L
 import qualified Data.SBV.Dynamic as D
+import Data.SBV.TP (runTPWith, lemma)
 
 import qualified Control.Exception as C
 
@@ -341,4 +344,17 @@ tests = testGroup "Basics.Recursive"
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \x -> sf x .== (x :: SInteger)
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test mutual recursion via TP proofs (exercises checkNewMeasures in Kernel.hs)
+   , goldenCapturedIO "recursive20_mutualTP" $ \rf -> do
+        let cfg = z3{verbose=True, redirectVerbose=Just rf}
+            mf :: SInteger -> SInteger
+            mf = smtFunction "mf_tp" $ \n -> ite (n .<= 0) 0 (1 + mg (n - 1))
+            mg :: SInteger -> SInteger
+            mg = smtFunction "mg_tp" $ \n -> ite (n .<= 0) 0 (1 + mf (n - 1))
+        _ <- runTPWith cfg $
+                lemma "mutual_at_0"
+                      (\(Forall @"n" n) -> n .== 0 .=> mf n .== 0)
+                      []
+        pure ()
    ]
