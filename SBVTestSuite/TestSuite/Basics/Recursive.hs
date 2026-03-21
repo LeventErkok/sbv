@@ -252,10 +252,10 @@ tests = testGroup "Basics.Recursive"
    -- Test mutual recursion with explicit measures: ef calls eg, eg calls ef, both decreasing.
    , goldenCapturedIO "recursive13_mutualMeasure" $ \rf -> do
         let ef :: SInteger -> SInteger
-            ef = smtFunctionWithMeasure "ef" (\n -> abs n, [])
+            ef = smtFunctionWithMeasure "ef" (abs, [])
                $ \n -> ite (n .<= 0) 0 (1 + eg (n - 1))
             eg :: SInteger -> SInteger
-            eg = smtFunctionWithMeasure "eg" (\n -> abs n, [])
+            eg = smtFunctionWithMeasure "eg" (abs, [])
                $ \n -> ite (n .<= 0) 0 (1 + ef (n - 1))
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \x -> ef x .== (x :: SInteger)
@@ -279,7 +279,7 @@ tests = testGroup "Basics.Recursive"
    -- xf's user-provided measure (abs n) is tried first and works for the whole group.
    , goldenCapturedIO "recursive15_mixedMutualMeasure" $ \rf -> do
         let xf :: SInteger -> SInteger
-            xf = smtFunctionWithMeasure "xf" (\n -> abs n, [])
+            xf = smtFunctionWithMeasure "xf" (abs, [])
                $ \n -> ite (n .<= 0) 0 (1 + xg (n - 1))
             xg :: SInteger -> SInteger
             xg = smtFunction "xg"
@@ -292,7 +292,7 @@ tests = testGroup "Basics.Recursive"
    -- The user-provided measure fails, and auto-guess also fails.
    , goldenCapturedIO "recursive16_badMixedMutualMeasure" $ \rf -> do
         let yf :: SInteger -> SInteger
-            yf = smtFunctionWithMeasure "yf" (\n -> abs n, [])
+            yf = smtFunctionWithMeasure "yf" (abs, [])
                $ \n -> ite (n .<= 0) 0 (1 + yg (n - 1))
             yg :: SInteger -> SInteger
             yg = smtFunction "yg"

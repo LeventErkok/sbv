@@ -3905,7 +3905,7 @@ class SMTDefinable a where
                               hasCrossRefs = any (\(_, SBVApp op _) -> case op of
                                                     Uninterpreted n -> n /= barFuncNm
                                                     _               -> False)
-                                                 (F.toList (liAssignments info))
+                                                 (liAssignments info)
                           case msr of
                             AutoMeasure -> do
                               if isSelfRec
