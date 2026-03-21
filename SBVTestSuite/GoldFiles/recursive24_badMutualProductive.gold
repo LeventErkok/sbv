@@ -1,0 +1,14 @@
+[MEASURE] Verifying termination measures for: bad_pf @(SBV Integer -> SBV [Integer]), bad_pg @(SBV Integer -> SBV [Integer])
+[MEASURE] Checking: bad_pf @(SBV Integer -> SBV [Integer])
+[MEASURE] Checking mutual productive group: {bad_pf :: SBV Integer -> SBV [Integer], bad_pg :: SBV Integer -> SBV [Integer]}
+
+EXCEPTION:
+
+*** Data.SBV: Mutual productive group has unguarded recursive calls.
+***
+***   Group: {bad_pf :: SBV Integer -> SBV [Integer], bad_pg :: SBV Integer -> SBV [Integer]}
+***   Unguarded: bad_pg :: SBV Integer -> SBV [Integer]
+***
+*** Every recursive call (self or cross) must be a direct argument to a data constructor.
+
+

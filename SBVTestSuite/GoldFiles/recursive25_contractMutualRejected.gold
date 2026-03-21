@@ -1,0 +1,10 @@
+
+EXCEPTION:
+
+*** Data.SBV: smtFunctionWithContract does not support mutual recursion.
+***
+***   Function: cf_mut @(SBV Integer -> SBV Integer)
+***
+*** Please use smtFunction or smtFunctionWithMeasure for mutual recursion groups.
+
+

@@ -382,4 +382,62 @@ tests = testGroup "Basics.Recursive"
                       (\(Forall @"n" n) -> n .== 0 .=> mf n .== 0)
                       []
         pure ()
+
+   -- Test mutual productive functions (guarded cross-calls): pf and pg build lists via each other.
+   , goldenCapturedIO "recursive23_mutualProductive" $ \rf -> do
+        let pf :: SInteger -> SList Integer
+            pf = smtProductiveFunction "pf23" $ \n ->
+                   ite (n .<= 0) (L.singleton 0) (n L..: pg (n - 1))
+            pg :: SInteger -> SList Integer
+            pg = smtProductiveFunction "pg23" $ \n ->
+                   ite (n .<= 0) (L.singleton 0) (n L..: pf (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \n -> L.head (pf n) .== (n :: SInteger) .&& n .> 0
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test mutual productive functions with unguarded cross-call: bad_pg calls bad_pf without a constructor guard.
+   , goldenCapturedIO "recursive24_badMutualProductive" $ \rf -> do
+        let bad_pf :: SInteger -> SList Integer
+            bad_pf = smtProductiveFunction "bad_pf" $ \n ->
+                       ite (n .<= 0) (L.singleton 0) (n L..: bad_pg (n - 1))
+            bad_pg :: SInteger -> SList Integer
+            bad_pg = smtProductiveFunction "bad_pg" $ \n ->
+                       ite (n .<= 0) (L.singleton 0) (bad_pf (n - 1))  -- not guarded!
+        r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \(n :: SInteger) -> L.head (bad_pf n) .== n
+        case r of
+          Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
+          Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test that smtFunctionWithContract in a mutual group is rejected.
+   , goldenCapturedIO "recursive25_contractMutualRejected" $ \rf -> do
+        let cf :: SInteger -> SInteger
+            cf = smtFunctionWithContract "cf_mut"
+                   ( \n -> 0 `smax` (101 - n)
+                   , \_ r -> r .== 91
+                   , []
+                   )
+                 $ \n -> ite (n .> 100) (n - 10) (cg (n + 11))
+            cg :: SInteger -> SInteger
+            cg = smtFunction "cg_mut" $ \n -> ite (n .<= 0) 0 (1 + cf (n - 1))
+        r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \(n :: SInteger) -> cf n .== 0
+        case r of
+          Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
+          Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test productive function that is both self-recursive and has cross-refs.
+   -- spf calls itself AND spg, both guarded by L..:
+   , goldenCapturedIO "recursive26_selfAndMutualProductive" $ \rf -> do
+        let spf :: SInteger -> SList Integer
+            spf = smtProductiveFunction "spf26" $ \n ->
+                    ite (n .<= 0) (L.singleton 0)
+                        (ite (sMod n 2 .== 0) (n L..: spf (n - 1))
+                                              (n L..: spg (n - 1)))
+            spg :: SInteger -> SList Integer
+            spg = smtProductiveFunction "spg26" $ \n ->
+                    ite (n .<= 0) (L.singleton 0) (n L..: spf (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \n -> L.head (spf n) .== (n :: SInteger) .&& n .> 0
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
    ]

@@ -1726,7 +1726,7 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
 -- every recursive call must be a direct argument to a data constructor.
 verifyGuardedness :: SMTConfig -> String -> LambdaInfo -> IO ()
 verifyGuardedness cfg funcNm info
-  | isGuardedRecursive funcNm info
+  | isGuardedRecursive (Set.singleton (barify funcNm)) info
   = debug cfg ["[MEASURE] " ++ funcNm ++ ": productive (all recursive calls are guarded by constructors)"]
   | True
   = error $ unlines
@@ -1742,13 +1742,13 @@ verifyGuardedness cfg funcNm info
 -- | Check if a recursive function is guarded: every recursive call's result
 -- is consumed by a data constructor (list cons, ADT constructor, tuple constructor).
 -- This ensures the function is productive — it always makes progress by producing
--- at least one constructor before recursing.
-isGuardedRecursive :: String -> LambdaInfo -> Bool
-isGuardedRecursive funcNm LambdaInfo{liAssignments} = all isGuarded recCallSVs
+-- at least one constructor before recursing. The set of barified names covers
+-- all functions in the mutual recursion group (or just the function itself for self-recursion).
+isGuardedRecursive :: Set.Set String -> LambdaInfo -> Bool
+isGuardedRecursive barFuncNms LambdaInfo{liAssignments} = all isGuarded recCallSVs
   where
-    barFuncNm  = barify funcNm
     dagList    = F.toList liAssignments
-    recCallSVs = [sv | (sv, SBVApp (Uninterpreted nm) _) <- dagList, nm == barFuncNm]
+    recCallSVs = [sv | (sv, SBVApp (Uninterpreted nm) _) <- dagList, nm `Set.member` barFuncNms]
 
     -- Build a map from SV to the set of operations that consume it
     consumers :: Map.Map SV [(SV, Op)]
@@ -2056,6 +2056,43 @@ checkMutualFromState cfg funcNm st mbMeasure = do
                  modifyIORef' (rFuncLambdaInfos st) (\m -> foldl' (flip Map.delete) m plainMembers)
          else debug cfg ["[MEASURE] " ++ funcNm ++ ": mutual group already verified, skipping"]
      _ -> debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual check"]
+
+-- | Check that all members of a mutual recursion group marked as productive are guarded-recursive,
+-- considering cross-calls as well as self-calls.
+checkMutualProductiveFromState :: SMTConfig -> String -> State -> IO ()
+checkMutualProductiveFromState cfg funcNm st = do
+   defns     <- readIORef (rDefns st)
+   funcInfos <- readIORef (rFuncLambdaInfos st)
+
+   let barFuncNm = barify funcNm
+       nodes = [(nm, nm, deps) | (nm, (SMTDef _ deps _ _, _)) <- defns]
+       sccs  = DG.stronglyConnComp nodes
+       mySCC = [members | DG.CyclicSCC members <- sccs, barFuncNm `elem` members]
+
+   case mySCC of
+     [members] | length members >= 2 -> do
+       let plainMembers = map unBar members
+           infos = Map.fromList [(pnm, v) | pnm <- plainMembers, Just v <- [Map.lookup pnm funcInfos]]
+       if Map.size infos >= 2
+         then do let barNames = Set.fromList members
+                     memberNamesStr = intercalate ", " (map prettyFuncNm plainMembers)
+                 debug cfg ["[MEASURE] Checking mutual productive group: {" ++ memberNamesStr ++ "}"]
+                 let failed = [(pnm, info) | (pnm, info) <- Map.toList infos, not (isGuardedRecursive barNames info)]
+                 case failed of
+                   [] -> do debug cfg ["[MEASURE] Mutual productive group: all members are guarded"]
+                            modifyIORef' (rFuncLambdaInfos st) (\m -> foldl' (flip Map.delete) m plainMembers)
+                   _  -> error $ unlines
+                            [ ""
+                            , "*** Data.SBV: Mutual productive group has unguarded recursive calls."
+                            , "***"
+                            , "***   Group: {" ++ memberNamesStr ++ "}"
+                            , "***   Unguarded: " ++ intercalate ", " (map (prettyFuncNm . fst) failed)
+                            , "***"
+                            , "*** Every recursive call (self or cross) must be a direct argument to a data constructor."
+                            , ""
+                            ]
+         else debug cfg ["[MEASURE] " ++ funcNm ++ ": mutual productive group already verified, skipping"]
+     _ -> debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual productive check"]
 
 -- | Check termination for a mutual recursion group. Each function in the group
 -- gets an auto-guessed measure, and we verify that at every call edge (self or cross),
@@ -3926,12 +3963,25 @@ class SMTDefinable a where
                                              ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st (Just eval)) :)
                               pure def
                             HasContract eval ceval helpers -> do
+                              when hasCrossRefs $
+                                error $ unlines [ ""
+                                                , "*** Data.SBV: smtFunctionWithContract does not support mutual recursion."
+                                                , "***"
+                                                , "***   Function: " ++ funcNm
+                                                , "***"
+                                                , "*** Please use smtFunction or smtFunctionWithMeasure for mutual recursion groups."
+                                                , ""
+                                                ]
                               modifyIORef' (rMeasureChecks st)
                                            ((funcNm, False, \cfg -> verifyMeasureWithContract cfg funcNm info eval ceval helpers) :)
                               pure def
                             Productive -> do
-                              modifyIORef' (rMeasureChecks st)
-                                           ((funcNm, True, \cfg -> verifyGuardedness cfg funcNm info) :)
+                              when isSelfRec $
+                                modifyIORef' (rMeasureChecks st)
+                                             ((funcNm, True, \cfg -> verifyGuardedness cfg funcNm info) :)
+                              when hasCrossRefs $
+                                modifyIORef' (rMeasureChecks st)
+                                             ((funcNm, True, \cfg -> checkMutualProductiveFromState cfg funcNm st) :)
                               pure def)
 
 
