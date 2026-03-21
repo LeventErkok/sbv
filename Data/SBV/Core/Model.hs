@@ -4027,7 +4027,8 @@ class SMTDefinable a where
                                 modifyIORef' (rMeasureChecks st)
                                              ((funcNm, True, \cfg -> checkMutualProductiveFromState cfg funcNm st) :)
                               pure def
-                            Unverified -> pure def)
+                            Unverified -> do modifyIORef' (rNoTermCheckFunctions st) (Set.insert nm)
+                                             pure def)
 
 
 -- | Define an SMT function. If the function is recursive, SBV will automatically try to

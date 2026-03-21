@@ -44,7 +44,7 @@ import Data.SBV.Core.Model (qSaturateSavingObservables)
 import Data.SBV.Core.Data  (SBV(..), SVal(..))
 import qualified Data.SBV.Core.Symbolic as S (sObserve)
 
-import Data.SBV.Core.Symbolic (rSkipMeasureChecks)
+import Data.SBV.Core.Symbolic (rSkipMeasureChecks, rNoTermCheckFunctions)
 import Data.SBV.Core.Operations (svEqual)
 import Data.SBV.Control hiding (getProof, (|->))
 
@@ -55,7 +55,9 @@ import qualified Data.SBV.List as SL
 
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
-import Data.IORef (writeIORef)
+import Data.IORef (readIORef, writeIORef)
+
+import qualified Data.Set as Set
 
 import Data.Char  (isSpace)
 import Data.List  (intercalate, isPrefixOf, isSuffixOf)
@@ -228,15 +230,19 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
     queryDebug [nm ++ ": Proof end: proving the result:"]
 
     mbStartTime <- getTimeStampIf printStats
+    st <- symbolicEnv
+    noTermFns <- liftIO $ readIORef (rNoTermCheckFunctions st)
+    let ntcDeps = map noTermCheckProof (Set.toList noTermFns)
     smtProofStep cfg tpSt "Result" 1
                  (TPProofStep False nm [] [""])
                  (Just (initialHypotheses .=> sAnd results))
                  resultBool [] $ \d ->
                    do mbElapsed <- getElapsedTime mbStartTime
-                      let modulo = concludeModulo (concatMap getHelperProofs (getAllHelpers calcProofTree))
+                      let allDeps  = getDependencies calcProofTree ++ ntcDeps
+                          modulo   = concludeModulo (concatMap getHelperProofs (getAllHelpers calcProofTree) ++ ntcDeps)
                       finishTP cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
-                      pure $ Proof $ ProofObj { dependencies = getDependencies calcProofTree
+                      pure $ Proof $ ProofObj { dependencies = allDeps
                                               , isUserAxiom  = False
                                               , getObjProof  = label nm (quantifiedBool result)
                                               , getProp      = toDyn result

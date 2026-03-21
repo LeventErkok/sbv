@@ -23,7 +23,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.Utils (
-         TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof
+         TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof, noTermCheckProof
        , startTP, finishTP, getTPState, getTPConfig, setTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML
@@ -45,7 +45,7 @@ import Data.Proxy
 import Data.Typeable (typeOf, TypeRep)
 
 import Data.Char (isSpace)
-import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf, nub, nubBy, partition, sort, dropWhileEnd)
+import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf, nub, nubBy, sort, dropWhileEnd)
 import Data.Int  (Int64)
 
 import Data.SBV.Utils.Lib (unQuote)
@@ -53,7 +53,7 @@ import Data.SBV.Utils.Lib (unQuote)
 import System.IO     (hFlush, stdout)
 import System.Random (randomIO)
 
-import Data.SBV.Core.Data      (SBool, Forall(..), QuantifiedBool, quantifiedBool)
+import Data.SBV.Core.Data      (SBool, sTrue, Forall(..), QuantifiedBool, quantifiedBool)
 import Data.SBV.Core.Model     (label, MeasureHelper(..))
 import Data.SBV.Core.Symbolic  (SMTConfig, TPOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
@@ -79,12 +79,12 @@ data TPStats = TPStats { noOfCheckSats :: Int
                        }
 
 -- | Extra state we carry in a TP context
-data TPState = TPState { stats                :: IORef TPStats
-                       , proofCache           :: IORef (Map (String, TypeRep) ProofObj)
-                       , config               :: IORef SMTConfig
-                       , measuresVerified     :: IORef (Set String)
-                       , productiveVerified   :: IORef (Set String)
-                       , measuresEncountered  :: IORef (Set String)
+data TPState = TPState { stats               :: IORef TPStats
+                       , proofCache          :: IORef (Map (String, TypeRep) ProofObj)
+                       , config              :: IORef SMTConfig
+                       , measuresVerified    :: IORef (Set String)
+                       , productiveVerified  :: IORef (Set String)
+                       , measuresEncountered :: IORef (Set String)
                        }
 
 -- | Monad for running TP proofs in.
@@ -131,7 +131,7 @@ runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
    rMeasures    <- newIORef Set.empty
    rProductive  <- newIORef Set.empty
    rEncountered <- newIORef Set.empty
-   (mbT, r) <- timeIf printStats $ runReaderT f TPState { config              = rCfg
+   (mbT, r) <- timeIf printStats $ runReaderT f TPState { config               = rCfg
                                                          , stats               = rStats
                                                          , proofCache          = rCache
                                                          , measuresVerified    = rMeasures
@@ -262,10 +262,11 @@ finishTP cfg@SMTConfig{tpOptions = TPOptions{ribbonLength}} what (skip, mbT) ext
        mkTiming t = '[' : showTDiff t ++ "]"
 
 -- | Unique identifier for each proof.
-data TPUnique = TPInternal    -- IH's
-              | TPSorry       -- sorry
-              | TPQC          -- qc (quick-check)
-              | TPUser Int64  -- user given
+data TPUnique = TPInternal        -- IH's
+              | TPSorry           -- sorry
+              | TPQC              -- qc (quick-check)
+              | TPNoTermCheck     -- no termination check (smtFunctionNoTermination)
+              | TPUser Int64      -- user given
               deriving (NFData, Generic, Eq)
 
 -- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
@@ -357,10 +358,11 @@ depsToTree shouldCompress visited xform (cnt, ProofTree top ds) = (nVisited, Nod
 
         -- Don't show internal axioms, not interesting
         interesting (ProofTree p _) = case uniqId p of
-                                        TPInternal -> False
-                                        TPSorry    -> True
-                                        TPQC       -> True
-                                        TPUser{}   -> True
+                                        TPInternal    -> False
+                                        TPSorry       -> True
+                                        TPQC          -> True
+                                        TPNoTermCheck -> True
+                                        TPUser{}      -> True
 
         -- If a proof is used twice in the same proof, compress it
         compress :: [ProofTree] -> [(Int, ProofTree)]
@@ -492,16 +494,31 @@ quickCheckProof = ProofObj { dependencies = []
         -- solver to determine as false, we avoid the constant folding.
         p (Forall @"__sbvTP_quickCheck" (x :: SBool)) = label "QUICKCHECK: TP, proof uses \"qc\"" x
 
+-- | A proof object representing a function whose termination was not checked.
+-- When a function is defined with 'Data.SBV.smtFunctionNoTermination', its termination
+-- is assumed but not proven. Any proof that depends on such a function will be
+-- marked as modulo this assumption in its root of trust.
+noTermCheckProof :: String -> ProofObj
+noTermCheckProof nm = ProofObj { dependencies = []
+                               , isUserAxiom  = False
+                               , getObjProof  = sTrue
+                               , getProp      = toDyn True
+                               , proofName    = nm ++ " termination"
+                               , uniqId       = TPNoTermCheck
+                               , isCached     = False
+                               }
+
 -- | Calculate the root of trust. The returned list of proofs, if any, will need to be sorry and quickcheck free to
 -- have the given proof to be sorry-free.
 rootOfTrust :: Proof a -> RootOfTrust
 rootOfTrust = rot True . proofOf
   where rot atTop p@ProofObj{uniqId = curUniq, dependencies} = compress res
           where res = case curUniq of
-                        TPInternal -> RootOfTrust Nothing
-                        TPQC       -> RootOfTrust $ Just [quickCheckProof]
-                        TPSorry    -> RootOfTrust $ Just [sorry]
-                        TPUser {}  -> self <> foldMap (rot False) dependencies
+                        TPInternal    -> RootOfTrust Nothing
+                        TPQC          -> RootOfTrust $ Just [quickCheckProof]
+                        TPSorry       -> RootOfTrust $ Just [sorry]
+                        TPNoTermCheck -> RootOfTrust $ Just [p]
+                        TPUser {}     -> self <> foldMap (rot False) dependencies
 
                 -- if sorry or quickcheck is one of our direct dependencies, then we trust this proof.
                 -- Note that we skip this at the top. Why? at that level, we want to see the direct
@@ -512,14 +529,11 @@ rootOfTrust = rot True . proofOf
 
                 isUnsafe ProofObj{uniqId = u} = u `elem` [TPSorry, TPQC]
 
-                -- If we have any dependency that is not sorry itself, then we can skip all the sorries.
-                -- Why? Because "sorry" will implicitly be coming from one of these anyhow. (In other
-                -- words, we do not need to (or want to) distinguish between different uses of sorry.
+                -- If sorry is present, it dominates everything else. Otherwise keep all.
                 compress (RootOfTrust mbps) = RootOfTrust $ reduce <$> mbps
-                  where reduce ps = case partition isUnsafe ps of
-                                      (l, []) | TPSorry `elem` map uniqId l -> [sorry]
-                                              | True                        -> [quickCheckProof]
-                                      (_, os) -> os
+                  where reduce ps
+                          | any (\o -> uniqId o == TPSorry) ps = [sorry]
+                          | True                               = ps
 
 -- | Calculate the modulo string for dependencies
 concludeModulo :: [ProofObj] -> String

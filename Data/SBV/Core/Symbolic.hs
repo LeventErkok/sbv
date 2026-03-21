@@ -1149,43 +1149,44 @@ data LambdaInfo = LambdaInfo
   }
 
 -- | The state of the symbolic interpreter
-data State  = State { sbvContext          :: SBVContext
-                    , pathCond            :: SVal                             -- ^ kind KBool
-                    , stCfg               :: SMTConfig
-                    , startTime           :: UTCTime
-                    , rProgInfo           :: IORef ProgInfo
-                    , runMode             :: IORef SBVRunMode
-                    , rIncState           :: IORef IncState
-                    , rCInfo              :: IORef [(String, CV)]
-                    , rObservables        :: IORef (S.Seq (Name, CV -> Bool, SV))
-                    , rctr                :: IORef Int             -- Used for numbering SVs
-                    , freshNameCtr        :: IORef Int             -- Used for calls to some
-                    , rLambdaLevel        :: IORef (Maybe Int)     -- If Nothing, then top-level lambda
-                    , rUsedKinds          :: IORef KindSet
-                    , rUsedLbls           :: IORef (Set.Set String)
-                    , rinps               :: IORef Inputs
-                    , rlambdaInps         :: IORef LambdaInputs
-                    , rConstraints        :: IORef (S.Seq (Bool, [(String, String)], SV))
-                    , rPartitionVars      :: IORef [String]
-                    , routs               :: IORef [SV]
-                    , rtblMap             :: IORef TableMap
-                    , spgm                :: IORef SBVPgm
-                    , rconstMap           :: IORef CnstMap
-                    , rexprMap            :: IORef ExprMap
-                    , rUIMap              :: IORef UIMap
-                    , rUserFuncs          :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
-                    , rCgMap              :: IORef CgMap
-                    , rDefns              :: IORef [(String, (SMTDef, SBVType))]
-                    , rMeasureChecks      :: IORef [(String, Bool, SMTConfig -> IO ())]  -- Measure checks for recursive functions. Bool is True for productive (guarded), False for terminating.
-                    , rFuncLambdaInfos    :: IORef (Map.Map String LambdaInfo)  -- LambdaInfo for all smtFunction definitions, used for mutual recursion checking
-                    , rSkipMeasureChecks  :: IORef Bool               -- If True, skip measure checking (used by TP and checker itself)
-                    , rSMTOptions         :: IORef [SMTOption]
-                    , rOptGoals           :: IORef [Objective (SV, SV)]
-                    , rAsserts            :: IORef [(String, Maybe CallStack, SV)]
-                    , rOutstandingAsserts :: IORef Bool            -- Did we send an assert after the last check-sat call?
-                    , rSVCache            :: IORef (Cache SV)
-                    , rQueryState         :: IORef (Maybe QueryState)
-                    , parentState         :: Maybe State  -- Pointer to our parent if we're in a sublevel
+data State  = State { sbvContext            :: SBVContext
+                    , pathCond              :: SVal                             -- ^ kind KBool
+                    , stCfg                 :: SMTConfig
+                    , startTime             :: UTCTime
+                    , rProgInfo             :: IORef ProgInfo
+                    , runMode               :: IORef SBVRunMode
+                    , rIncState             :: IORef IncState
+                    , rCInfo                :: IORef [(String, CV)]
+                    , rObservables          :: IORef (S.Seq (Name, CV -> Bool, SV))
+                    , rctr                  :: IORef Int             -- Used for numbering SVs
+                    , freshNameCtr          :: IORef Int             -- Used for calls to some
+                    , rLambdaLevel          :: IORef (Maybe Int)     -- If Nothing, then top-level lambda
+                    , rUsedKinds            :: IORef KindSet
+                    , rUsedLbls             :: IORef (Set.Set String)
+                    , rinps                 :: IORef Inputs
+                    , rlambdaInps           :: IORef LambdaInputs
+                    , rConstraints          :: IORef (S.Seq (Bool, [(String, String)], SV))
+                    , rPartitionVars        :: IORef [String]
+                    , routs                 :: IORef [SV]
+                    , rtblMap               :: IORef TableMap
+                    , spgm                  :: IORef SBVPgm
+                    , rconstMap             :: IORef CnstMap
+                    , rexprMap              :: IORef ExprMap
+                    , rUIMap                :: IORef UIMap
+                    , rUserFuncs            :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
+                    , rCgMap                :: IORef CgMap
+                    , rDefns                :: IORef [(String, (SMTDef, SBVType))]
+                    , rMeasureChecks        :: IORef [(String, Bool, SMTConfig -> IO ())]  -- Measure checks for recursive functions. Bool is True for productive (guarded), False for terminating.
+                    , rFuncLambdaInfos      :: IORef (Map.Map String LambdaInfo)            -- LambdaInfo for all smtFunction definitions, used for mutual recursion checking
+                    , rSkipMeasureChecks    :: IORef Bool                                   -- If True, skip measure checking (used by TP and checker itself)
+                    , rNoTermCheckFunctions :: IORef (Set.Set String)                      -- Functions defined with smtFunctionNoTermination (no termination check)
+                    , rSMTOptions           :: IORef [SMTOption]
+                    , rOptGoals             :: IORef [Objective (SV, SV)]
+                    , rAsserts              :: IORef [(String, Maybe CallStack, SV)]
+                    , rOutstandingAsserts   :: IORef Bool            -- Did we send an assert after the last check-sat call?
+                    , rSVCache              :: IORef (Cache SV)
+                    , rQueryState           :: IORef (Maybe QueryState)
+                    , parentState           :: Maybe State  -- Pointer to our parent if we're in a sublevel
                     }
 
 -- | Chase to the root state. No infinite chains!
@@ -1832,6 +1833,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      measureChecks      <- newIORef []
      funcLambdaInfos    <- newIORef Map.empty
      skipMeasureChecks  <- newIORef False
+     noTermCheckFuncs   <- newIORef Set.empty
      swCache            <- newIORef IMap.empty
      usedKinds          <- newIORef Set.empty
      usedLbls           <- newIORef Set.empty
@@ -1844,43 +1846,44 @@ mkNewState cfg currentRunMode = liftIO $ do
      istate             <- newIORef =<< newIncState
      qstate             <- newIORef Nothing
      ctx                <- genSBVContext
-     pure $ State { sbvContext          = ctx
-                  , runMode             = rm
-                  , stCfg               = cfg
-                  , startTime           = currTime
-                  , rProgInfo           = progInfo
-                  , pathCond            = SVal KBool (Left trueCV)
-                  , rIncState           = istate
-                  , rCInfo              = cInfo
-                  , rObservables        = observes
-                  , rctr                = ctr
-                  , freshNameCtr        = fnctr
-                  , rLambdaLevel        = lambda
-                  , rUsedKinds          = usedKinds
-                  , rUsedLbls           = usedLbls
-                  , rinps               = inps
-                  , rlambdaInps         = lambdaInps
-                  , routs               = outs
-                  , rtblMap             = tables
-                  , spgm                = pgm
-                  , rconstMap           = cmap
-                  , rexprMap            = emap
-                  , rUserFuncs          = userFuncs
-                  , rUIMap              = uis
-                  , rCgMap              = cgs
-                  , rDefns              = defns
-                  , rMeasureChecks      = measureChecks
-                  , rFuncLambdaInfos    = funcLambdaInfos
-                  , rSkipMeasureChecks  = skipMeasureChecks
-                  , rSVCache            = swCache
-                  , rConstraints        = cstrs
-                  , rPartitionVars      = pvs
-                  , rSMTOptions         = smtOpts
-                  , rOptGoals           = optGoals
-                  , rAsserts            = asserts
-                  , rOutstandingAsserts = outstandingAsserts
-                  , rQueryState         = qstate
-                  , parentState         = Nothing
+     pure $ State { sbvContext            = ctx
+                  , runMode               = rm
+                  , stCfg                 = cfg
+                  , startTime             = currTime
+                  , rProgInfo             = progInfo
+                  , pathCond              = SVal KBool (Left trueCV)
+                  , rIncState             = istate
+                  , rCInfo                = cInfo
+                  , rObservables          = observes
+                  , rctr                  = ctr
+                  , freshNameCtr          = fnctr
+                  , rLambdaLevel          = lambda
+                  , rUsedKinds            = usedKinds
+                  , rUsedLbls             = usedLbls
+                  , rinps                 = inps
+                  , rlambdaInps           = lambdaInps
+                  , routs                 = outs
+                  , rtblMap               = tables
+                  , spgm                  = pgm
+                  , rconstMap             = cmap
+                  , rexprMap              = emap
+                  , rUserFuncs            = userFuncs
+                  , rUIMap                = uis
+                  , rCgMap                = cgs
+                  , rDefns                = defns
+                  , rMeasureChecks        = measureChecks
+                  , rFuncLambdaInfos      = funcLambdaInfos
+                  , rSkipMeasureChecks    = skipMeasureChecks
+                  , rNoTermCheckFunctions = noTermCheckFuncs
+                  , rSVCache              = swCache
+                  , rConstraints          = cstrs
+                  , rPartitionVars        = pvs
+                  , rSMTOptions           = smtOpts
+                  , rOptGoals             = optGoals
+                  , rAsserts              = asserts
+                  , rOutstandingAsserts   = outstandingAsserts
+                  , rQueryState           = qstate
+                  , parentState           = Nothing
                   }
 
 -- | Generalization of 'Data.SBV.runSymbolic'

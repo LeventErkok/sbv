@@ -37,7 +37,7 @@ import Data.Maybe (catMaybes)
 
 import Data.SBV.Core.Data     hiding (None)
 import Data.SBV.Trans.Control hiding (getProof)
-import Data.SBV.Core.Symbolic (MonadSymbolic(..), rSkipMeasureChecks, rMeasureChecks)
+import Data.SBV.Core.Symbolic (MonadSymbolic(..), rSkipMeasureChecks, rMeasureChecks, rNoTermCheckFunctions)
 
 import Data.SBV.SMT.SMT
 import Data.SBV.Core.Model
@@ -216,19 +216,25 @@ lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
                                        -- Run measure checks for any newly encountered recursive functions
                                        liftIO $ checkNewMeasures cfg st tpSt
 
-                                       query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp [] (good cfg mbStartTime u)
+                                       -- Read no-term-check functions from this proof's State (not TPState, which accumulates)
+                                       noTermFns <- liftIO $ readIORef (rNoTermCheckFunctions st)
+
+                                       query $ smtProofStep cfg tpSt "Lemma" 0 (TPProofOneShot nm by) Nothing inputProp [] (good noTermFns cfg mbStartTime u)
 
         -- What to do if all goes well
-        good cfg mbStart u d = do mbElapsed <- getElapsedTime mbStart
-                                  liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo by) d $ catMaybes [mbElapsed]
-                                  pure $ Proof $ ProofObj { dependencies = by
-                                                          , isUserAxiom  = False
-                                                          , getObjProof  = label nm (quantifiedBool inputProp)
-                                                          , getProp      = toDyn inputProp
-                                                          , proofName    = nm
-                                                          , uniqId       = u
-                                                          , isCached     = False
-                                                          }
+        good noTermFns cfg mbStart u d = do
+                                       mbElapsed <- getElapsedTime mbStart
+                                       let ntcDeps = map noTermCheckProof (Set.toList noTermFns)
+                                           allBy   = by ++ ntcDeps
+                                       liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo allBy) d $ catMaybes [mbElapsed]
+                                       pure $ Proof $ ProofObj { dependencies = allBy
+                                                               , isUserAxiom  = False
+                                                               , getObjProof  = label nm (quantifiedBool inputProp)
+                                                               , getProp      = toDyn inputProp
+                                                               , proofName    = nm
+                                                               , uniqId       = u
+                                                               , isCached     = False
+                                                               }
 
 -- | Prove a given statement, using the induction schema for the proposition. Using the default solver.
 inductiveLemma :: Inductive a => String -> a -> [ProofObj] -> TP (Proof a)
