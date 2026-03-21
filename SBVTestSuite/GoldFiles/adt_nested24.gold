@@ -1,4 +1,7 @@
-[MEASURE] Verifying termination measures for: eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer), get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)
+[MEASURE] Verifying termination measures for: eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer), eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer), get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)
+[MEASURE] Checking: eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)
+[MEASURE] eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer): not in a multi-member cycle, skipping mutual check
+[MEASURE] Passed (terminating): eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)
 [MEASURE] Checking: eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)
 [MEASURE] eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer): barified = "|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)|"
 [MEASURE] eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer): Uninterpreted ops in DAG: [("|get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV Expr -> SBV Integer)|",2)]
