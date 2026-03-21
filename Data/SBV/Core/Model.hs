@@ -3910,25 +3910,20 @@ class SMTDefinable a where
                                                  (liAssignments info)
                           case msr of
                             AutoMeasure -> do
-                              if isSelfRec
-                                then modifyIORef' (rMeasureChecks st)
-                                                  ((funcNm, False, \cfg -> autoGuessOrFail cfg funcNm info) :)
-                                else when hasCrossRefs $
-                                       -- Register a mutual recursion check: at verification time,
-                                       -- compute the SCC from rDefns and check the group
-                                       modifyIORef' (rMeasureChecks st)
-                                                    ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st Nothing) :)
+                              when isSelfRec $
+                                modifyIORef' (rMeasureChecks st)
+                                             ((funcNm, False, \cfg -> autoGuessOrFail cfg funcNm info) :)
+                              when hasCrossRefs $
+                                modifyIORef' (rMeasureChecks st)
+                                             ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st Nothing) :)
                               pure def
                             HasMeasure eval helpers -> do
-                              if isSelfRec
-                                then -- Self-recursive: verifyMeasure handles self-calls
-                                     modifyIORef' (rMeasureChecks st)
-                                                  ((funcNm, False, \cfg -> verifyMeasure cfg funcNm info eval helpers) :)
-                                else when hasCrossRefs $
-                                       -- Not self-recursive but has cross-references: mutual recursion
-                                       -- Pass the user-provided measure to checkMutualFromState
-                                       modifyIORef' (rMeasureChecks st)
-                                                    ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st (Just eval)) :)
+                              when isSelfRec $
+                                modifyIORef' (rMeasureChecks st)
+                                             ((funcNm, False, \cfg -> verifyMeasure cfg funcNm info eval helpers) :)
+                              when hasCrossRefs $
+                                modifyIORef' (rMeasureChecks st)
+                                             ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st (Just eval)) :)
                               pure def
                             HasContract eval ceval helpers -> do
                               modifyIORef' (rMeasureChecks st)

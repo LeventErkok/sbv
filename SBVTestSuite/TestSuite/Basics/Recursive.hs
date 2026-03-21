@@ -345,6 +345,20 @@ tests = testGroup "Basics.Recursive"
                 \x -> sf x .== (x :: SInteger)
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
 
+   -- Test all-self-recursive mutual group with bad cross-calls:
+   -- bf and bg both self-recurse (n-1), but cross-call with (n+1).
+   -- Self-recursion checks pass, but mutual group check must catch the bad cross-calls.
+   , goldenCapturedIO "recursive21_allSelfBadCross" $ \rf -> do
+        let bf :: SInteger -> SInteger
+            bf = smtFunction "bf21" $ \n -> ite (n .<= 0) 0 (bf (n - 1) + bg (n + 1))
+            bg :: SInteger -> SInteger
+            bg = smtFunction "bg21" $ \n -> ite (n .<= 0) 0 (bg (n - 1) + bf (n + 1))
+        r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> bf x .== (x :: SInteger)
+        case r of
+          Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
+          Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
    -- Test mutual recursion via TP proofs (exercises checkNewMeasures in Kernel.hs)
    , goldenCapturedIO "recursive20_mutualTP" $ \rf -> do
         let cfg = z3{verbose=True, redirectVerbose=Just rf}
