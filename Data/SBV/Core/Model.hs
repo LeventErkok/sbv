@@ -1797,8 +1797,10 @@ guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (adtSingles +
                             s <- sbvToSV st (SBV strSVal)
                             newExpr st KUnbounded (SBVApp (SeqOp (SeqLen KChar)) [s]), Nothing)]
 
-      -- Unbounded integers: use abs as measure
-      KUnbounded       -> [("abs arg" ++ show (i+1), \svs -> abs (SBV (svs !! i)), Nothing)]
+      -- Unbounded integers: try abs and smax 0 as measures
+      KUnbounded       -> [ ("abs arg"     ++ show (i+1), \svs ->      abs (SBV (svs !! i)), Nothing)
+                          , ("smax 0 arg"  ++ show (i+1), \svs -> 0 `smax` (SBV (svs !! i)), Nothing)
+                          ]
 
       -- Bounded bitvectors: cast to Integer for the measure. Unsigned values are
       -- already non-negative; signed values need abs to ensure non-negativity.
