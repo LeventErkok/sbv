@@ -78,7 +78,8 @@
   * New function `smtFunctionNoTermination` for defining recursive SMT functions without any
     termination check. The function is emitted as `define-fun-rec` and the user takes
     responsibility for well-definedness. Use this for functions where termination is believed
-    but cannot be proven.
+    but cannot be proven. Any TP proof that depends on such a function will be marked as
+    `[Modulo: <name> termination]` instead of `[Proven]` in its root of trust.
 
   * New example `Documentation.SBV.Examples.TP.Countdown`, proving properties of a
     list-building countdown function using induction.

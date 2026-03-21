@@ -456,4 +456,14 @@ tests = testGroup "Basics.Recursive"
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \n -> L.head (pa n) .== (n :: SInteger) .&& n .> 0
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test smtFunctionNoTermination: proofs show [Modulo: <name> termination]
+   , goldenCapturedIO "recursive28_noTermCheck" $ \rf -> do
+        let f :: SInteger -> SInteger
+            f = smtFunctionNoTermination "ntc28" $ \n -> ite (n .<= 0) 0 (1 + f (n - 1))
+        p <- runTPWith z3{verbose=True, redirectVerbose=Just rf} $
+                lemma "ntc_at_5"
+                      (\(Forall @"n" n) -> n .== 5 .=> f n .== 5)
+                      []
+        appendFile rf (show p ++ "\n")
    ]

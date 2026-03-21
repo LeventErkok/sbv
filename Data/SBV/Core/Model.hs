@@ -4028,6 +4028,7 @@ class SMTDefinable a where
                                              ((funcNm, True, \cfg -> checkMutualProductiveFromState cfg funcNm st) :)
                               pure def
                             Unverified -> do modifyIORef' (rNoTermCheckFunctions st) (Set.insert nm)
+                                             debug (stCfg st) ["[MEASURE] " ++ funcNm ++ ": no termination check (smtFunctionNoTermination)"]
                                              pure def)
 
 
