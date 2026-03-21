@@ -248,4 +248,58 @@ tests = testGroup "Basics.Recursive"
         case r of
           Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
           Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test mutual recursion with explicit measures: ef calls eg, eg calls ef, both decreasing.
+   , goldenCapturedIO "recursive13_mutualMeasure" $ \rf -> do
+        let ef :: SInteger -> SInteger
+            ef = smtFunctionWithMeasure "ef" (\n -> abs n, [])
+               $ \n -> ite (n .<= 0) 0 (1 + eg (n - 1))
+            eg :: SInteger -> SInteger
+            eg = smtFunctionWithMeasure "eg" (\n -> abs n, [])
+               $ \n -> ite (n .<= 0) 0 (1 + ef (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> ef x .== (x :: SInteger)
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test mutual recursion with explicit measure that fails: constant measure doesn't decrease.
+   , goldenCapturedIO "recursive14_badMutualMeasure" $ \rf -> do
+        let hf :: SInteger -> SInteger
+            hf = smtFunctionWithMeasure "hf" (\_ -> 1 :: SInteger, [])
+               $ \n -> ite (n .<= 0) 0 (1 + hg (n - 1))
+            hg :: SInteger -> SInteger
+            hg = smtFunctionWithMeasure "hg" (\_ -> 1 :: SInteger, [])
+               $ \n -> ite (n .<= 0) 0 (1 + hf (n - 1))
+        r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> hf x .== (x :: SInteger)
+        case r of
+          Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
+          Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test mixed mutual recursion: xf has explicit measure, xg uses auto-guess.
+   -- xf's user-provided measure (abs n) is tried first and works for the whole group.
+   , goldenCapturedIO "recursive15_mixedMutualMeasure" $ \rf -> do
+        let xf :: SInteger -> SInteger
+            xf = smtFunctionWithMeasure "xf" (\n -> abs n, [])
+               $ \n -> ite (n .<= 0) 0 (1 + xg (n - 1))
+            xg :: SInteger -> SInteger
+            xg = smtFunction "xg"
+               $ \n -> ite (n .<= 0) 0 (1 + xf (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> xf x .== (x :: SInteger)
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test bad mixed mutual recursion: yf has explicit measure but yg calls yf with (n+1).
+   -- The user-provided measure fails, and auto-guess also fails.
+   , goldenCapturedIO "recursive16_badMixedMutualMeasure" $ \rf -> do
+        let yf :: SInteger -> SInteger
+            yf = smtFunctionWithMeasure "yf" (\n -> abs n, [])
+               $ \n -> ite (n .<= 0) 0 (1 + yg (n - 1))
+            yg :: SInteger -> SInteger
+            yg = smtFunction "yg"
+               $ \n -> ite (n .<= 0) 0 (1 + yf (n + 1))
+        r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> yf x .== (x :: SInteger)
+        case r of
+          Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
+          Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
    ]

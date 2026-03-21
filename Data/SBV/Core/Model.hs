@@ -2028,8 +2028,11 @@ autoGuessOrFail cfg funcNm info = do
 -- same group may register this check, but only the first execution does work;
 -- after successful verification, verified members are removed from rFuncLambdaInfos,
 -- so subsequent closures find insufficient infos and skip.
-checkMutualFromState :: SMTConfig -> String -> State -> IO ()
-checkMutualFromState cfg funcNm st = do
+--
+-- The optional 'MeasureEval' is a user-provided measure (from 'smtFunctionWithMeasure').
+-- If given, it is tried first before falling back to auto-guessing.
+checkMutualFromState :: SMTConfig -> String -> State -> Maybe MeasureEval -> IO ()
+checkMutualFromState cfg funcNm st mbMeasure = do
    defns     <- readIORef (rDefns st)
    funcInfos <- readIORef (rFuncLambdaInfos st)
 
@@ -2047,7 +2050,7 @@ checkMutualFromState cfg funcNm st = do
        let plainMembers = map unBar members
            infos = Map.fromList [(pnm, v) | pnm <- plainMembers, Just v <- [Map.lookup pnm funcInfos]]
        if Map.size infos >= 2
-         then do checkMutualGroup cfg infos
+         then do checkMutualGroup cfg infos mbMeasure
                  -- Remove verified members from rFuncLambdaInfos so that subsequent closures
                  -- for the same group (registered by other members) find insufficient infos and skip.
                  modifyIORef' (rFuncLambdaInfos st) (\m -> foldl' (flip Map.delete) m plainMembers)
@@ -2057,32 +2060,48 @@ checkMutualFromState cfg funcNm st = do
 -- | Check termination for a mutual recursion group. Each function in the group
 -- gets an auto-guessed measure, and we verify that at every call edge (self or cross),
 -- the caller's measure at formal parameters strictly exceeds the callee's measure at actual arguments.
-checkMutualGroup :: SMTConfig -> Map.Map String LambdaInfo -> IO ()
-checkMutualGroup cfg members = do
+--
+-- If a user-provided measure is given ('Just'), it is tried first before auto-guessing.
+checkMutualGroup :: SMTConfig -> Map.Map String LambdaInfo -> Maybe MeasureEval -> IO ()
+checkMutualGroup cfg members mbMeasure = do
    let memberNames = Map.keys members
        memberNamesStr = intercalate ", " (map prettyFuncNm memberNames)
    debug cfg ["[MEASURE] Checking mutual recursion group: {" ++ memberNamesStr ++ "}"]
 
-   -- For each function, generate measure candidates
-   let memberCandidates = [(nm, info, guessMeasures (liParams info)) | (nm, info) <- Map.toList members]
+   -- If a user-provided measure is given, try it first
+   let memberList = Map.toList members
+   userOK <- case mbMeasure of
+     Nothing -> pure False
+     Just m  -> do
+       debug cfg ["[MEASURE] Mutual group: trying user-provided measure for all members"]
+       ok <- checkMutualMeasure cfg memberList m
+       if ok
+         then do debug cfg ["[MEASURE] Mutual group: user-provided measure works for all members"]
+                 pure True
+         else do debug cfg ["[MEASURE] Mutual group: user-provided measure failed, falling back to auto-guess"]
+                 pure False
 
-   -- Check if any member has no candidates at all
-   case [(nm, info) | (nm, info, []) <- memberCandidates] of
-     (nm, _):_ -> error $ unlines
-        [ ""
-        , "*** Data.SBV: Cannot determine a termination measure for mutual recursion group."
-        , "***"
-        , "***   Group: {" ++ memberNamesStr ++ "}"
-        , "***   Function with no measure candidates: " ++ prettyFuncNm nm
-        , "***"
-        , "*** Please use 'smtFunctionWithMeasure' to provide explicit measures."
-        ]
-     [] -> pure ()
+   unless userOK $ do
+     -- Auto-guess: for each function, generate measure candidates
+     let memberCandidates = [(nm, info, guessMeasures (liParams info)) | (nm, info) <- memberList]
 
-   -- Try to find a working combination. For efficiency, when all members have the same
-   -- parameter kinds, we try the same candidate for all. Otherwise we try combinations.
-   let allCandidateLists = [(nm, info, cs) | (nm, info, cs) <- memberCandidates]
-   tryMeasures allCandidateLists
+     -- Check if any member has no candidates at all
+     case [(nm, info) | (nm, info, []) <- memberCandidates] of
+       (nm, _):_ -> error $ unlines
+          [ ""
+          , "*** Data.SBV: Cannot determine a termination measure for mutual recursion group."
+          , "***"
+          , "***   Group: {" ++ memberNamesStr ++ "}"
+          , "***   Function with no measure candidates: " ++ prettyFuncNm nm
+          , "***"
+          , "*** Please use 'smtFunctionWithMeasure' to provide explicit measures."
+          ]
+       [] -> pure ()
+
+     -- Try to find a working combination. For efficiency, when all members have the same
+     -- parameter kinds, we try the same candidate for all. Otherwise we try combinations.
+     let allCandidateLists = [(nm, info, cs) | (nm, info, cs) <- memberCandidates]
+     tryMeasures allCandidateLists
 
  where
    tryMeasures :: [(String, LambdaInfo, [(String, MeasureEval, Maybe Int)])] -> IO ()
@@ -3878,29 +3897,36 @@ class SMTDefinable a where
                           (def, info) <- lambdaWithInfo st TopLevel fk v
                           -- Record LambdaInfo for SCC-aware mutual recursion checking
                           modifyIORef' (rFuncLambdaInfos st) (Map.insert funcNm info)
+                          let barFuncNm    = barify funcNm
+                              isSelfRec    = any (\(_, SBVApp op _) -> case op of
+                                                    Uninterpreted n -> n == barFuncNm
+                                                    _               -> False)
+                                                 (liAssignments info)
+                              hasCrossRefs = any (\(_, SBVApp op _) -> case op of
+                                                    Uninterpreted n -> n /= barFuncNm
+                                                    _               -> False)
+                                                 (F.toList (liAssignments info))
                           case msr of
                             AutoMeasure -> do
-                              let barFuncNm = barify funcNm
-                                  isRecursive = any (\(_, SBVApp op _) -> case op of
-                                                       Uninterpreted n -> n == barFuncNm
-                                                       _               -> False)
-                                                    (liAssignments info)
-                                  -- Check if this function references other uninterpreted names
-                                  -- (potential mutual recursion partners)
-                                  referencedUIs = [n | (_, SBVApp (Uninterpreted n) _) <- F.toList (liAssignments info)
-                                                     , n /= barFuncNm]
-                              if isRecursive
+                              if isSelfRec
                                 then modifyIORef' (rMeasureChecks st)
                                                   ((funcNm, False, \cfg -> autoGuessOrFail cfg funcNm info) :)
-                                else unless (null referencedUIs) $
+                                else when hasCrossRefs $
                                        -- Register a mutual recursion check: at verification time,
                                        -- compute the SCC from rDefns and check the group
                                        modifyIORef' (rMeasureChecks st)
-                                                    ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st) :)
+                                                    ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st Nothing) :)
                               pure def
                             HasMeasure eval helpers -> do
-                              modifyIORef' (rMeasureChecks st)
-                                           ((funcNm, False, \cfg -> verifyMeasure cfg funcNm info eval helpers) :)
+                              if isSelfRec
+                                then -- Self-recursive: verifyMeasure handles self-calls
+                                     modifyIORef' (rMeasureChecks st)
+                                                  ((funcNm, False, \cfg -> verifyMeasure cfg funcNm info eval helpers) :)
+                                else when hasCrossRefs $
+                                       -- Not self-recursive but has cross-references: mutual recursion
+                                       -- Pass the user-provided measure to checkMutualFromState
+                                       modifyIORef' (rMeasureChecks st)
+                                                    ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st (Just eval)) :)
                               pure def
                             HasContract eval ceval helpers -> do
                               modifyIORef' (rMeasureChecks st)
