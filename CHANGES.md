@@ -82,6 +82,11 @@
     with the infinite stream `nats n = [n, n+1, n+2, ...]` and proofs about its head, length, and
     element access.
 
+  * New example `Documentation.SBV.Examples.TP.MutualCorecursion`, demonstrating mutually
+    corecursive productive functions. Two functions `ping` and `pong` take turns producing
+    elements of a stream, and we prove elementwise equality and that the k-th element of
+    `ping n` is `n + k`.
+
 ### Version 13.6, 2026-03-02
 
   * The `sCase` quasi-quoter now supports nested constructor patterns. Sub-patterns
