@@ -212,4 +212,28 @@ tests = testGroup "Basics.Recursive"
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \n -> L.head (countdown n) .== (n :: SInteger) .&& n .> 0
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test mutual recursion (2-way): mf calls mg, mg calls mf, neither is self-recursive.
+   -- No measure check should fire. The SMTLib emission should use define-funs-rec.
+   , goldenCapturedIO "recursive10_mutual" $ \rf -> do
+        let mf :: SInteger -> SInteger
+            mf = smtFunction "mf" $ \n -> ite (n .<= 0) 0 (1 + mg (n - 1))
+            mg :: SInteger -> SInteger
+            mg = smtFunction "mg" $ \n -> ite (n .<= 0) 0 (1 + mf (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> mf x .== (x :: SInteger)
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test chain recursion (3-way): ca calls cb, cb calls cc, cc calls ca.
+   -- No measure check should fire. The SMTLib emission should use define-funs-rec.
+   , goldenCapturedIO "recursive11_chain" $ \rf -> do
+        let ca :: SInteger -> SInteger
+            ca = smtFunction "ca" $ \n -> ite (n .<= 0) 0 (1 + cb (n - 1))
+            cb :: SInteger -> SInteger
+            cb = smtFunction "cb" $ \n -> ite (n .<= 0) 0 (1 + cc (n - 1))
+            cc :: SInteger -> SInteger
+            cc = smtFunction "cc" $ \n -> ite (n .<= 0) 0 (1 + ca (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> ca x .== (x :: SInteger)
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
    ]
