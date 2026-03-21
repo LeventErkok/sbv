@@ -90,7 +90,7 @@ import Data.Bits   (Bits(..))
 import Data.Int    (Int8, Int16, Int32, Int64)
 import Data.Kind   (Type, Constraint)
 import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7
-                   , intercalate, dropWhileEnd, isPrefixOf, partition
+                   , intercalate, dropWhileEnd, isPrefixOf, partition, nubBy
 #if !MIN_VERSION_base(4,20,0)
                    , foldl'
 #endif
@@ -2106,14 +2106,12 @@ checkMutualGroup cfg members mbMeasure = do
  where
    tryMeasures :: [(String, LambdaInfo, [(String, MeasureEval, Maybe Int)])] -> IO ()
    tryMeasures memberInfos = do
-     -- Simple strategy: try each candidate from the first member's list,
-     -- and for each, try to find compatible candidates for other members.
-     -- For the common case (same signatures), all candidates are identical.
-     let firstCandidates = case memberInfos of
-           (_, _, cs):_ -> cs
-           []           -> []
+     -- Collect all unique candidates from all members (by description).
+     -- Different members may have different parameter kinds, yielding different candidates.
+     let allCandidates = nubBy (\(d1,_,_) (d2,_,_) -> d1 == d2)
+                              $ concatMap (\(_, _, cs) -> cs) memberInfos
 
-     result <- go firstCandidates
+     result <- go allCandidates
      case result of
        Just _  -> pure ()
        Nothing -> do
@@ -2131,14 +2129,18 @@ checkMutualGroup cfg members mbMeasure = do
      go [] = pure Nothing
      go ((desc, m, _mbIdx):rest) = do
        debug cfg ["[MEASURE] Mutual group: trying measure " ++ desc ++ " for all members"]
-       -- Try the same measure for all members
+       -- Try the same measure for all members. Catch exceptions from kind mismatches
+       -- (e.g., applying abs to a list parameter) and treat them as failure.
        let memberList = [(nm, info) | (nm, info, _) <- memberInfos]
-       ok <- checkMutualMeasure cfg memberList m
-       if ok
-         then do debug cfg ["[MEASURE] Mutual group: measure " ++ desc ++ " works for all members"]
-                 pure (Just m)
-         else do debug cfg ["[MEASURE] Mutual group: measure " ++ desc ++ " failed, trying next"]
-                 go rest
+       result <- C.try $ checkMutualMeasure cfg memberList m
+       case result of
+         Right True -> do debug cfg ["[MEASURE] Mutual group: measure " ++ desc ++ " works for all members"]
+                          pure (Just m)
+         Right False -> do debug cfg ["[MEASURE] Mutual group: measure " ++ desc ++ " failed, trying next"]
+                           go rest
+         Left (e :: C.SomeException) -> do
+                           debug cfg ["[MEASURE] Mutual group: measure " ++ desc ++ " incompatible: " ++ show e]
+                           go rest
 
 -- | Verify that a given measure works for all functions in a mutual recursion group.
 -- Uses the same measure for all members. For each function f, check that at every call

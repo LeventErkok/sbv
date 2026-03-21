@@ -302,4 +302,43 @@ tests = testGroup "Basics.Recursive"
         case r of
           Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
           Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test 3-way chain with explicit measures: da calls db, db calls dc, dc calls da, all with abs measure.
+   , goldenCapturedIO "recursive17_chainMeasure" $ \rf -> do
+        let da :: SInteger -> SInteger
+            da = smtFunctionWithMeasure "da" (abs, [])
+               $ \n -> ite (n .<= 0) 0 (1 + db (n - 1))
+            db :: SInteger -> SInteger
+            db = smtFunctionWithMeasure "db" (abs, [])
+               $ \n -> ite (n .<= 0) 0 (1 + dc (n - 1))
+            dc :: SInteger -> SInteger
+            dc = smtFunctionWithMeasure "dc" (abs, [])
+               $ \n -> ite (n .<= 0) 0 (1 + da (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> da x .== (x :: SInteger)
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test mutual recursion with different arg types: tf takes Integer, tg takes a list.
+   -- Auto-guess fails because no single measure applies to both signatures.
+   , testCase "diffTypeMutual" $ do
+        let tf :: SInteger -> SInteger
+            tf = smtFunction "tf" $ \n -> ite (n .<= 0) 0 (1 + tg (L.singleton n))
+            tg :: SList Integer -> SInteger
+            tg = smtFunction "tg" $ \xs -> ite (L.null xs) 0 (tf (L.head xs - 1))
+        r <- C.try $ sat $ \(x :: SInteger) -> tf x .== 0
+        case r of
+          Left (e :: C.SomeException) -> if "Cannot determine a termination measure" `isInfixOf` show e
+                                            then pure ()
+                                            else assertFailure $ "Unexpected exception: " ++ show e
+          Right _                     -> assertFailure "Expected error for different-type mutual recursion"
+
+   -- Test self-recursive + mutual: sf calls itself AND sg. Both paths should be checked.
+   , goldenCapturedIO "recursive19_selfAndMutual" $ \rf -> do
+        let sf :: SInteger -> SInteger
+            sf = smtFunction "sf" $ \n -> ite (n .<= 0) 0 (sf (n - 1) + sg (n - 1))
+            sg :: SInteger -> SInteger
+            sg = smtFunction "sg" $ \n -> ite (n .<= 0) 0 (1 + sf (n - 1))
+        m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> sf x .== (x :: SInteger)
+        appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
    ]
