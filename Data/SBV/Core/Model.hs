@@ -2224,7 +2224,8 @@ prettyFuncNm m = case break (== '@') m of
 replayDAG :: SMTConfig -> State -> Set.Set String -> Set.Set String -> Map.Map SV SV -> [(SV, SBVExpr)] -> IO (Map.Map SV SV)
 replayDAG cfg st recFuncNames definedFuncs startMap dag = do
   let n = length dag
-  debug cfg ["[MEASURE] replayDAG " ++ show recFuncNames ++ ": replaying " ++ show n ++ " node(s)"]
+  let nms = intercalate ", " (map unBar (Set.toList recFuncNames))
+  debug cfg ["[MEASURE] replayDAG {" ++ nms ++ "}: replaying " ++ show n ++ " node(s)"]
   go startMap dag
   where -- Map an SV through the svMap. If it's not found, it's an external captured variable
         -- (e.g., from a higher-order function's closure). Create a fresh unconstrained variable
