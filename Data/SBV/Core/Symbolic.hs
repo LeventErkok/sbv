@@ -59,6 +59,7 @@ module Data.SBV.Core.Symbolic
   , MonadQuery(..), QueryT(..), Query, QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), TPOptions(..), SMTEngine, isEmptyModel
   , validationRequested, outputSVal, ProgInfo(..), mustIgnoreVar, getRootState
+  , LambdaInfo(..)
   ) where
 
 import Control.DeepSeq             (NFData(..))
@@ -1139,6 +1140,14 @@ instance Show SMTDef where
 instance NFData SMTDef where
   rnf (SMTDef fk frees params body) = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
 
+-- | Information about a compiled lambda body, used for measure verification.
+data LambdaInfo = LambdaInfo
+  { liAssignments :: S.Seq (SV, SBVExpr)  -- ^ The expression DAG
+  , liParams      :: [(Quantifier, SV)]    -- ^ Formal parameters with quantifier
+  , liOutput      :: SV                    -- ^ The output node
+  , liConsts      :: [(SV, CV)]            -- ^ Constants used
+  }
+
 -- | The state of the symbolic interpreter
 data State  = State { sbvContext          :: SBVContext
                     , pathCond            :: SVal                             -- ^ kind KBool
@@ -1168,6 +1177,7 @@ data State  = State { sbvContext          :: SBVContext
                     , rCgMap              :: IORef CgMap
                     , rDefns              :: IORef [(String, (SMTDef, SBVType))]
                     , rMeasureChecks      :: IORef [(String, Bool, SMTConfig -> IO ())]  -- Measure checks for recursive functions. Bool is True for productive (guarded), False for terminating.
+                    , rFuncLambdaInfos    :: IORef (Map.Map String LambdaInfo)  -- LambdaInfo for all smtFunction definitions, used for mutual recursion checking
                     , rSkipMeasureChecks  :: IORef Bool               -- If True, skip measure checking (used by TP and checker itself)
                     , rSMTOptions         :: IORef [SMTOption]
                     , rOptGoals           :: IORef [Objective (SV, SV)]
@@ -1820,6 +1830,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      cgs                <- newIORef Map.empty
      defns              <- newIORef []
      measureChecks      <- newIORef []
+     funcLambdaInfos    <- newIORef Map.empty
      skipMeasureChecks  <- newIORef False
      swCache            <- newIORef IMap.empty
      usedKinds          <- newIORef Set.empty
@@ -1859,6 +1870,7 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rCgMap              = cgs
                   , rDefns              = defns
                   , rMeasureChecks      = measureChecks
+                  , rFuncLambdaInfos    = funcLambdaInfos
                   , rSkipMeasureChecks  = skipMeasureChecks
                   , rSVCache            = swCache
                   , rConstraints        = cstrs

@@ -47,19 +47,12 @@ import qualified Data.Foldable as F
 import qualified Data.Set      as Set
 
 import qualified Data.Generics.Uniplate.Data as G
-import qualified Data.Sequence as S
 
 -- | What's the scope of the generated lambda?
 data LambdaScope = HigherOrderArg   -- This lambda will be firstified, hence can't have any free variables
                  | TopLevel         -- This lambda is used to represent a quantified axiom, can have free vars
 
--- | Information about a compiled lambda body, used for measure verification.
-data LambdaInfo = LambdaInfo
-  { liAssignments :: S.Seq (SV, SBVExpr)  -- ^ The expression DAG
-  , liParams      :: [(Quantifier, SV)]    -- ^ Formal parameters with quantifier
-  , liOutput      :: SV                    -- ^ The output node
-  , liConsts      :: [(SV, CV)]            -- ^ Constants used
-  }
+-- LambdaInfo is defined in Data.SBV.Core.Symbolic and re-exported from here for backwards compatibility.
 
 data Defn = Defn [String]                        -- The uninterpreted names referred to in the body
                  [String]                        -- Free variables (i.e., not uninterpreted nor bound in the definition itself)
@@ -113,6 +106,7 @@ inSubState scope inState comp = do
                    , rCgMap              = share rCgMap
                    , rDefns              = share rDefns
                    , rMeasureChecks      = share rMeasureChecks
+                   , rFuncLambdaInfos    = share rFuncLambdaInfos
                    , rSkipMeasureChecks  = share rSkipMeasureChecks
                    , rSMTOptions         = share rSMTOptions
                    , rOptGoals           = share rOptGoals

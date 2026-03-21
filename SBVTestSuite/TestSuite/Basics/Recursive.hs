@@ -236,4 +236,16 @@ tests = testGroup "Basics.Recursive"
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \x -> ca x .== (x :: SInteger)
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
+
+   -- Test bad mutual recursion: bf calls bg with (n+1), so no measure can decrease.
+   , goldenCapturedIO "recursive12_badMutual" $ \rf -> do
+        let bf :: SInteger -> SInteger
+            bf = smtFunction "bf" $ \n -> ite (n .<= 0) 0 (1 + bg (n + 1))
+            bg :: SInteger -> SInteger
+            bg = smtFunction "bg" $ \n -> ite (n .<= 0) 0 (1 + bf (n - 1))
+        r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
+                \x -> bf x .== (x :: SInteger)
+        case r of
+          Left (e :: C.SomeException) -> appendFile rf ("\nEXCEPTION:\n" ++ show e ++ "\n")
+          Right m                     -> appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
    ]

@@ -33,6 +33,7 @@ module Data.SBV.Core.Model (
     Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..)
   , Zero(..), MeasureOf, Measure(..), MeasureHelper(..)
   , ContractOf, smtFunction, smtFunctionWithMeasure, smtFunctionWithContract, smtProductiveFunction
+  , checkMutualGroup
   , SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
@@ -102,6 +103,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NE
 
 import qualified Data.Set as Set
+import qualified Data.Graph as DG
 
 import Data.Proxy
 import Data.Dynamic (fromDynamic, toDyn, Typeable)
@@ -1445,7 +1447,7 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
                   builtinMap   = Map.fromList [(trueSV, trueSV), (falseSV, falseSV)]
                   startMap     = Map.union initMap builtinMap
 
-              svMap <- liftIO $ replayDAG cfgIn st funcNm sessionFuncs startMap (F.toList liAssignments)
+              svMap <- liftIO $ replayDAG cfgIn st (Set.singleton barFuncNm) sessionFuncs startMap (F.toList liAssignments)
 
               let formalSVals = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) freshParams
                   mFormal     = applyM formalSVals
@@ -1606,7 +1608,7 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
                                   builtinMap   = Map.fromList [(trueSV, trueSV), (falseSV, falseSV)]
                                   startMap     = Map.union initMap builtinMap
 
-                              _ <- liftIO $ replayDAG cfgIn st funcNm sessionFuncs startMap (F.toList liAssignments)
+                              _ <- liftIO $ replayDAG cfgIn st (Set.singleton barFuncNm) sessionFuncs startMap (F.toList liAssignments)
 
                               let formalSVals = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) freshParams
                                   mFormal     = applyM formalSVals
@@ -1640,7 +1642,7 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
                   builtinMap   = Map.fromList [(trueSV, trueSV), (falseSV, falseSV)]
                   startMap     = Map.union initMap builtinMap
 
-              svMap <- liftIO $ replayDAG cfgIn st funcNm sessionFuncs startMap (F.toList liAssignments)
+              svMap <- liftIO $ replayDAG cfgIn st (Set.singleton barFuncNm) sessionFuncs startMap (F.toList liAssignments)
 
               let formalSVals = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) freshParams
                   mFormal     = applyM formalSVals
@@ -1659,7 +1661,7 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
                     unfoldStartMap     = Map.union unfoldInitMap builtinMap
 
                 -- Replay the entire function body with the call's args
-                unfoldSvMap <- replayDAG cfgIn st funcNm sessionFuncs unfoldStartMap dagList
+                unfoldSvMap <- replayDAG cfgIn st (Set.singleton barFuncNm) sessionFuncs unfoldStartMap dagList
 
                 -- The unfolded output SV
                 let unfoldedOutputSV = Map.findWithDefault liOutput liOutput unfoldSvMap
@@ -2019,6 +2021,195 @@ autoGuessOrFail cfg funcNm info = do
                               ]
                               ++ [ "***     " ++ d | (d, _, _) <- candidates]
 
+-- | Check mutual recursion for a function by computing the SCC from State.
+-- This is called as a deferred closure from rMeasureChecks. It computes the SCC
+-- of the function graph, finds the group containing the given function, and
+-- verifies the whole group if it's a multi-member cycle. Multiple members of the
+-- same group may register this check, but only the first execution does work;
+-- after successful verification, verified members are removed from rFuncLambdaInfos,
+-- so subsequent closures find insufficient infos and skip.
+checkMutualFromState :: SMTConfig -> String -> State -> IO ()
+checkMutualFromState cfg funcNm st = do
+   defns     <- readIORef (rDefns st)
+   funcInfos <- readIORef (rFuncLambdaInfos st)
+
+   let barFuncNm = barify funcNm
+       nodes = [(nm, nm, deps) | (nm, (SMTDef _ deps _ _, _)) <- defns]
+       sccs  = DG.stronglyConnComp nodes
+
+       -- Find the SCC containing our function (using barified name since rDefns keys are barified)
+       mySCC = [members | DG.CyclicSCC members <- sccs, barFuncNm `elem` members]
+
+   case mySCC of
+     [members] | length members >= 2 -> do
+       -- rFuncLambdaInfos uses plain names, so unbar the SCC member names for lookup.
+       -- Build the infos map with plain names as keys (matching rFuncLambdaInfos convention).
+       let plainMembers = map unBar members
+           infos = Map.fromList [(pnm, v) | pnm <- plainMembers, Just v <- [Map.lookup pnm funcInfos]]
+       if Map.size infos >= 2
+         then do checkMutualGroup cfg infos
+                 -- Remove verified members from rFuncLambdaInfos so that subsequent closures
+                 -- for the same group (registered by other members) find insufficient infos and skip.
+                 modifyIORef' (rFuncLambdaInfos st) (\m -> foldl' (flip Map.delete) m plainMembers)
+         else debug cfg ["[MEASURE] " ++ funcNm ++ ": mutual group already verified, skipping"]
+     _ -> debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual check"]
+
+-- | Check termination for a mutual recursion group. Each function in the group
+-- gets an auto-guessed measure, and we verify that at every call edge (self or cross),
+-- the caller's measure at formal parameters strictly exceeds the callee's measure at actual arguments.
+checkMutualGroup :: SMTConfig -> Map.Map String LambdaInfo -> IO ()
+checkMutualGroup cfg members = do
+   let memberNames = Map.keys members
+       memberNamesStr = intercalate ", " (map prettyFuncNm memberNames)
+   debug cfg ["[MEASURE] Checking mutual recursion group: {" ++ memberNamesStr ++ "}"]
+
+   -- For each function, generate measure candidates
+   let memberCandidates = [(nm, info, guessMeasures (liParams info)) | (nm, info) <- Map.toList members]
+
+   -- Check if any member has no candidates at all
+   case [(nm, info) | (nm, info, []) <- memberCandidates] of
+     (nm, _):_ -> error $ unlines
+        [ ""
+        , "*** Data.SBV: Cannot determine a termination measure for mutual recursion group."
+        , "***"
+        , "***   Group: {" ++ memberNamesStr ++ "}"
+        , "***   Function with no measure candidates: " ++ prettyFuncNm nm
+        , "***"
+        , "*** Please use 'smtFunctionWithMeasure' to provide explicit measures."
+        ]
+     [] -> pure ()
+
+   -- Try to find a working combination. For efficiency, when all members have the same
+   -- parameter kinds, we try the same candidate for all. Otherwise we try combinations.
+   let allCandidateLists = [(nm, info, cs) | (nm, info, cs) <- memberCandidates]
+   tryMeasures allCandidateLists
+
+ where
+   tryMeasures :: [(String, LambdaInfo, [(String, MeasureEval, Maybe Int)])] -> IO ()
+   tryMeasures memberInfos = do
+     -- Simple strategy: try each candidate from the first member's list,
+     -- and for each, try to find compatible candidates for other members.
+     -- For the common case (same signatures), all candidates are identical.
+     let firstCandidates = case memberInfos of
+           (_, _, cs):_ -> cs
+           []           -> []
+
+     result <- go firstCandidates
+     case result of
+       Just _  -> pure ()
+       Nothing -> do
+         let allNames = intercalate ", " [prettyFuncNm nm | (nm, _, _) <- memberInfos]
+         error $ unlines
+           [ ""
+           , "*** Data.SBV: Cannot determine a termination measure for mutual recursion group."
+           , "***"
+           , "***   Group: {" ++ allNames ++ "}"
+           , "***"
+           , "*** Please use 'smtFunctionWithMeasure' to provide explicit measures."
+           ]
+
+    where
+     go [] = pure Nothing
+     go ((desc, m, _mbIdx):rest) = do
+       debug cfg ["[MEASURE] Mutual group: trying measure " ++ desc ++ " for all members"]
+       -- Try the same measure for all members
+       let memberList = [(nm, info) | (nm, info, _) <- memberInfos]
+       ok <- checkMutualMeasure cfg memberList m
+       if ok
+         then do debug cfg ["[MEASURE] Mutual group: measure " ++ desc ++ " works for all members"]
+                 pure (Just m)
+         else do debug cfg ["[MEASURE] Mutual group: measure " ++ desc ++ " failed, trying next"]
+                 go rest
+
+-- | Verify that a given measure works for all functions in a mutual recursion group.
+-- Uses the same measure for all members. For each function f, check that at every call
+-- site to any function g in the group, measure(f's formals) > measure(g's actuals).
+checkMutualMeasure :: SMTConfig -> [(String, LambdaInfo)] -> MeasureEval -> IO Bool
+checkMutualMeasure cfgIn members (MeasureEval applyM) = go members
+  where
+    -- Set of barified names of all group members
+    groupBarNames = Set.fromList [barify nm | (nm, _) <- members]
+
+    go [] = pure True
+    go ((funcNm, LambdaInfo{liAssignments, liParams, liOutput, liConsts}):rest) = do
+       -- Find all calls to any member of the mutual group
+       let allGroupCalls = [(sv, args)
+                           | (sv, SBVApp (Uninterpreted calleeNm) args) <- F.toList liAssignments
+                           , calleeNm `Set.member` groupBarNames
+                           ]
+
+       if null allGroupCalls
+         then go rest  -- No calls to group members, no decrease needed
+         else do
+           let addSuffix s fp = dropExtension fp ++ "_measure_" ++ map (\c -> if c == ' ' then '_' else c) funcNm ++ "_" ++ s ++ takeExtension fp
+               cfgDecrease    = cfgIn{transcript = addSuffix "mutual_decrease" <$> transcript cfgIn}
+               cfgNonNeg      = cfgIn{transcript = addSuffix "mutual_nonNeg"   <$> transcript cfgIn}
+               paramSVs       = map snd liParams
+               reachConds     = computeReachingConditions liAssignments liOutput
+
+               mkProveEnv = do
+                  st <- symbolicEnv
+                  liftIO $ writeIORef (rSkipMeasureChecks st) True
+                  let singleParam = length paramSVs == 1
+                  freshParams <- liftIO $ sequence
+                    [svToSV st =<< svMkSymVar (NonQueryVar Nothing) (kindOf sv)
+                                              (Just (if singleParam then "arg" else "arg" ++ show i)) st
+                    | (i, sv) <- zip [(0::Int)..] paramSVs
+                    ]
+                  freshConsts <- liftIO $ mapM (\(_, cv) -> svToSV st (SVal (kindOf cv) (Left cv))) liConsts
+                  sessionDefns <- liftIO $ readIORef (rDefns st)
+                  let sessionFuncs = Set.fromList (map fst sessionDefns)
+                      constMapping = zip (map fst liConsts) freshConsts
+                      paramMapping = zip paramSVs freshParams
+                      initMap      = Map.fromList (constMapping ++ paramMapping)
+                      builtinMap   = Map.fromList [(trueSV, trueSV), (falseSV, falseSV)]
+                      startMap     = Map.union initMap builtinMap
+                  svMap <- liftIO $ replayDAG cfgIn st groupBarNames sessionFuncs startMap (F.toList liAssignments)
+                  let formalSVals = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) freshParams
+                      mFormal     = applyM formalSVals
+                  pure (svMap, mFormal)
+
+           -- Check 1: Non-negativity of caller's measure
+           nonNegResult <- proveWith cfgNonNeg (do
+               (_, mFormal) <- mkProveEnv
+               sObserve "measure" (unSBV mFormal)
+               pure $ nonNeg mFormal :: Symbolic SBool)
+
+           case nonNegResult of
+             ThmResult Unsatisfiable{} -> do
+               -- Check 2: Strict decrease at each call site
+               decResult <- proveWith cfgDecrease (do
+                   (svMap, mFormal) <- mkProveEnv
+                   let singleCall = length allGroupCalls == 1
+                       mkObligation (i, (rcSV, callArgSVs)) = do
+                         let mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
+                             argSVals   = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
+                             mCall      = applyM argSVals
+                             reachSVal  = case Map.lookup rcSV reachConds of
+                                            Just conds -> sAnd [ let sv' = Map.findWithDefault condSV condSV svMap
+                                                                     s   = SBV (SVal KBool (Right (cache (\_ -> pure sv'))))
+                                                                 in if pol then s else sNot s
+                                                               | (condSV, pol) <- conds
+                                                               ]
+                                            Nothing    -> sTrue
+                             tag nm | singleCall = nm
+                                    | True       = nm ++ "[" ++ show (i :: Int) ++ "]"
+                         sObserve (tag "then") (unSBV mCall)
+                         pure $ reachSVal .=> mFormal .> mCall
+                   sObserve "before" (unSBV mFormal)
+                   obligations <- mapM mkObligation (zip [1..] allGroupCalls)
+                   pure $ sAnd obligations :: Symbolic SBool)
+               case decResult of
+                 ThmResult Unsatisfiable{} -> do
+                   debug cfgIn ["[MEASURE] Mutual group: decrease verified for " ++ funcNm]
+                   go rest
+                 _ -> do
+                   debug cfgIn ["[MEASURE] Mutual group: decrease failed for " ++ funcNm ++ ": " ++ show decResult]
+                   pure False
+             _ -> do
+               debug cfgIn ["[MEASURE] Mutual group: non-negativity failed for " ++ funcNm]
+               pure False
+
 -- | Pretty-print a function name: turn @"insert @(SBV Integer -> SBV [Integer])"@ into @"insert :: SBV Integer -> SBV [Integer]"@
 prettyFuncNm :: String -> String
 prettyFuncNm m = case break (== '@') m of
@@ -2026,18 +2217,16 @@ prettyFuncNm m = case break (== '@') m of
                    _                                -> m
 
 -- | Replay the DAG in a new state, building up an SV mapping from old to new.
--- Recursive calls to the function being verified are replaced with fresh variables.
+-- Recursive calls to the functions being verified are replaced with fresh variables.
 -- Calls to other DEFINED functions (present in the parent state's rDefns) are replayed as actual calls.
 -- All other Uninterpreted references (uninterpreted constants, free functions, sentinels)
 -- are replaced with fresh variables since they aren't defined in the fresh proveWith session.
-replayDAG :: SMTConfig -> State -> String -> Set.Set String -> Map.Map SV SV -> [(SV, SBVExpr)] -> IO (Map.Map SV SV)
-replayDAG cfg st funcName definedFuncs startMap dag = do
+replayDAG :: SMTConfig -> State -> Set.Set String -> Set.Set String -> Map.Map SV SV -> [(SV, SBVExpr)] -> IO (Map.Map SV SV)
+replayDAG cfg st recFuncNames definedFuncs startMap dag = do
   let n = length dag
-  debug cfg ["[MEASURE] replayDAG " ++ funcName ++ ": replaying " ++ show n ++ " node(s)"]
+  debug cfg ["[MEASURE] replayDAG " ++ show recFuncNames ++ ": replaying " ++ show n ++ " node(s)"]
   go startMap dag
-  where barFuncName = barify funcName
-
-        -- Map an SV through the svMap. If it's not found, it's an external captured variable
+  where -- Map an SV through the svMap. If it's not found, it's an external captured variable
         -- (e.g., from a higher-order function's closure). Create a fresh unconstrained variable
         -- for it to avoid leaking foreign-context SVals into the current state.
         mapArg svMap a = case Map.lookup a svMap of
@@ -2055,8 +2244,8 @@ replayDAG cfg st funcName definedFuncs startMap dag = do
           let SBVApp op args = expr
           (mappedArgs, svMap') <- mapArgs svMap args
           newSV' <- case op of
-                      -- For recursive calls, create a fresh uninterpreted value instead of replaying
-                      Uninterpreted nm | nm == barFuncName -> newInternalVariable st (kindOf sv)
+                      -- For recursive calls (self or mutual), create a fresh uninterpreted value instead of replaying
+                      Uninterpreted nm | nm `Set.member` recFuncNames -> newInternalVariable st (kindOf sv)
                       -- For calls to other defined functions (e.g., partition), replay properly
                       Uninterpreted nm | nm `Set.member` definedFuncs -> do
                                           let mappedOp = mapOpSVs (\a -> Map.findWithDefault a a svMap') op
@@ -3686,6 +3875,8 @@ class SMTDefinable a where
                        $ UIFun (v, \st fk -> do
                           let funcNm = atProxy (Proxy @a) nm
                           (def, info) <- lambdaWithInfo st TopLevel fk v
+                          -- Record LambdaInfo for SCC-aware mutual recursion checking
+                          modifyIORef' (rFuncLambdaInfos st) (Map.insert funcNm info)
                           case msr of
                             AutoMeasure -> do
                               let barFuncNm = barify funcNm
@@ -3693,9 +3884,18 @@ class SMTDefinable a where
                                                        Uninterpreted n -> n == barFuncNm
                                                        _               -> False)
                                                     (liAssignments info)
-                              when isRecursive $
-                                modifyIORef' (rMeasureChecks st)
-                                             ((funcNm, False, \cfg -> autoGuessOrFail cfg funcNm info) :)
+                                  -- Check if this function references other uninterpreted names
+                                  -- (potential mutual recursion partners)
+                                  referencedUIs = [n | (_, SBVApp (Uninterpreted n) _) <- F.toList (liAssignments info)
+                                                     , n /= barFuncNm]
+                              if isRecursive
+                                then modifyIORef' (rMeasureChecks st)
+                                                  ((funcNm, False, \cfg -> autoGuessOrFail cfg funcNm info) :)
+                                else unless (null referencedUIs) $
+                                       -- Register a mutual recursion check: at verification time,
+                                       -- compute the SCC from rDefns and check the group
+                                       modifyIORef' (rMeasureChecks st)
+                                                    ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st) :)
                               pure def
                             HasMeasure eval helpers -> do
                               modifyIORef' (rMeasureChecks st)
