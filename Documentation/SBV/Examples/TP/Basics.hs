@@ -283,7 +283,7 @@ badTermination = do
 badMeasure :: IO ()
 badMeasure = do
     let badM :: SInteger -> SInteger
-        badM = smtFunctionWithMeasure "badM" (\_ -> (0 :: SInteger), [])
+        badM = smtFunctionWithMeasure "badM" (const (0 :: SInteger), [])
              $ \x -> [sCase| x of
                         _ | x .<= 0 -> 0
                         _           -> x + badM (x - 1)
