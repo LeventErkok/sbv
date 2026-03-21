@@ -2029,7 +2029,7 @@ autoGuessOrFail cfg funcNm info = do
 -- after successful verification, verified members are removed from rFuncLambdaInfos,
 -- so subsequent closures find insufficient infos and skip.
 --
--- The optional 'MeasureEval' is a user-provided measure (from 'smtFunctionWithMeasure').
+-- The optional t'MeasureEval' is a user-provided measure (from 'smtFunctionWithMeasure').
 -- If given, it is tried first before falling back to auto-guessing.
 checkMutualFromState :: SMTConfig -> String -> State -> Maybe MeasureEval -> IO ()
 checkMutualFromState cfg funcNm st mbMeasure = do
