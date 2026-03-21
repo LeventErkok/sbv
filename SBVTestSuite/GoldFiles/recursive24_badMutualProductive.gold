@@ -6,7 +6,8 @@ EXCEPTION:
 
 *** Data.SBV: Mutual productive group has unguarded recursive calls.
 ***
-***   Group: {bad_pf :: SBV Integer -> SBV [Integer], bad_pg :: SBV Integer -> SBV [Integer]}
+***     bad_pf  :: SBV Integer -> SBV [Integer]
+***     bad_pg  :: SBV Integer -> SBV [Integer]
 ***   Unguarded: bad_pg :: SBV Integer -> SBV [Integer]
 ***
 *** Every recursive call (self or cross) must be a direct argument to a data constructor.

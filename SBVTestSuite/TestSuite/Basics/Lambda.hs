@@ -181,7 +181,7 @@ tests =
                                                           f3 = smtFunction "f3i" (\a -> ite (a .<= 0) 0 (1 + (f3 (a-1) + f4 (a-2))))
                                                           f4 = smtFunction "f4i" (\a -> ite (a .<= 0) 0 (1 + (f4 (a-1) + f1 (a-2))))
                                                       in f1 x .== (x :: SInteger)
-      , goldenCapturedIO "lambda57b" $ runSat $ \x -> let m  = \a -> 0 `smax` a :: SInteger
+      , goldenCapturedIO "lambda57b" $ runSat $ \x -> let m a = 0 `smax` a :: SInteger
                                                           f1 = smtFunctionWithMeasure "f1m" (m, []) (\a -> ite (a .<= 0) 0 (1 + (f1 (a-1) + f2 (a-2))))
                                                           f2 = smtFunctionWithMeasure "f2m" (m, []) (\a -> ite (a .<= 0) 0 (1 + (f2 (a-1) + f3 (a-2))))
                                                           f3 = smtFunctionWithMeasure "f3m" (m, []) (\a -> ite (a .<= 0) 0 (1 + (f3 (a-1) + f4 (a-2))))

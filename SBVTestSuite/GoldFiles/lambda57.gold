@@ -111,7 +111,10 @@ EXCEPTION CAUGHT:
 
 *** Data.SBV: Cannot determine a termination measure for mutual recursion group.
 ***
-***   Group: {f1 :: SBV Word8 -> SBV Word8, f2 :: SBV Word8 -> SBV Word8, f3 :: SBV Word8 -> SBV Word8, f4 :: SBV Word8 -> SBV Word8}
+***     f1  :: SBV Word8 -> SBV Word8
+***     f2  :: SBV Word8 -> SBV Word8
+***     f3  :: SBV Word8 -> SBV Word8
+***     f4  :: SBV Word8 -> SBV Word8
 ***
 *** Please use 'smtFunctionWithMeasure' to provide explicit measures.
 

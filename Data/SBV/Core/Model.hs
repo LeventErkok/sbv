@@ -1799,7 +1799,7 @@ guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (adtSingles +
 
       -- Unbounded integers: try abs and smax 0 as measures
       KUnbounded       -> [ ("abs arg"     ++ show (i+1), \svs ->      abs (SBV (svs !! i)), Nothing)
-                          , ("smax 0 arg"  ++ show (i+1), \svs -> 0 `smax` (SBV (svs !! i)), Nothing)
+                          , ("smax 0 arg"  ++ show (i+1), \svs -> 0 `smax` SBV (svs !! i), Nothing)
                           ]
 
       -- Bounded bitvectors: cast to Integer for the measure. Unsigned values are
@@ -2083,12 +2083,14 @@ checkMutualProductiveFromState cfg funcNm st = do
                  case failed of
                    [] -> do debug cfg ["[MEASURE] Mutual productive group: all members are guarded"]
                             modifyIORef' (rFuncLambdaInfos st) (\m -> foldl' (flip Map.delete) m plainMembers)
-                   _  -> error $ unlines
+                   _  -> error $ unlines $
                             [ ""
                             , "*** Data.SBV: Mutual productive group has unguarded recursive calls."
                             , "***"
-                            , "***   Group: {" ++ memberNamesStr ++ "}"
-                            , "***   Unguarded: " ++ intercalate ", " (map (prettyFuncNm . fst) failed)
+                            ]
+                            ++ groupLines (Map.toList infos)
+                            ++
+                            [ "***   Unguarded: " ++ intercalate ", " (map (prettyFuncNm . fst) failed)
                             , "***"
                             , "*** Every recursive call (self or cross) must be a direct argument to a data constructor."
                             , ""
@@ -2126,14 +2128,18 @@ checkMutualGroup cfg members mbMeasure = do
 
      -- Check if any member has no candidates at all
      case [(nm, info) | (nm, info, []) <- memberCandidates] of
-       (nm, _):_ -> error $ unlines
+       (nm, _):_ -> error $ unlines $
           [ ""
           , "*** Data.SBV: Cannot determine a termination measure for mutual recursion group."
           , "***"
-          , "***   Group: {" ++ memberNamesStr ++ "}"
-          , "***   Function with no measure candidates: " ++ prettyFuncNm nm
+          ]
+          ++ groupLines memberList
+          ++
+          [ "***   Function with no measure candidates: " ++ prettyFuncNm nm
           , "***"
-          , "*** Please use 'smtFunctionWithMeasure' to provide explicit measures."
+          , if isJust mbMeasure
+            then "*** The user-provided measure did not work, and no auto-guess candidates are available."
+            else "*** Please use 'smtFunctionWithMeasure' to provide explicit measures."
           ]
        [] -> pure ()
 
@@ -2154,14 +2160,17 @@ checkMutualGroup cfg members mbMeasure = do
      case result of
        Just _  -> pure ()
        Nothing -> do
-         let allNames = intercalate ", " [prettyFuncNm nm | (nm, _, _) <- memberInfos]
-         error $ unlines
+         error $ unlines $
            [ ""
            , "*** Data.SBV: Cannot determine a termination measure for mutual recursion group."
            , "***"
-           , "***   Group: {" ++ allNames ++ "}"
-           , "***"
-           , "*** Please use 'smtFunctionWithMeasure' to provide explicit measures."
+           ]
+           ++ groupLines (Map.toList members)
+           ++
+           [ "***"
+           , if isJust mbMeasure
+             then "*** The user-provided measure did not work, and auto-guessing also failed."
+             else "*** Please use 'smtFunctionWithMeasure' to provide explicit measures."
            ]
 
     where
@@ -2275,6 +2284,18 @@ prettyFuncNm :: String -> String
 prettyFuncNm m = case break (== '@') m of
                    (nm, '@':'(':tp) | not (null tp) -> dropWhileEnd (== ' ') nm ++ " :: " ++ init tp
                    _                                -> m
+
+-- | Format group members on separate lines, aligned on @::@.
+groupLines :: [(String, LambdaInfo)] -> [String]
+groupLines ms = case map (prettyFuncNm . fst) ms of
+  []    -> []
+  names -> let parts    = [(nm, tp) | n <- names, let (nm, tp) = case break (== ':') n of
+                                                                    (a, ':':':':b) -> (dropWhileEnd (== ' ') a, " ::" ++ b)
+                                                                    _              -> (n, "")]
+               maxNm    = maximum (map (length . fst) parts)
+               pad s    = s ++ replicate (maxNm - length s) ' '
+               fmt (n, t) = "***     " ++ pad n ++ " " ++ t
+           in map fmt parts
 
 -- | Replay the DAG in a new state, building up an SV mapping from old to new.
 -- Recursive calls to the functions being verified are replaced with fresh variables.

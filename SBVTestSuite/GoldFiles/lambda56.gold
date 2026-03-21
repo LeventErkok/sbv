@@ -451,7 +451,8 @@ EXCEPTION CAUGHT:
 
 *** Data.SBV: Cannot determine a termination measure for mutual recursion group.
 ***
-***   Group: {bar :: SBV Integer -> SBV Integer, foo :: SBV Integer -> SBV Integer}
+***     bar  :: SBV Integer -> SBV Integer
+***     foo  :: SBV Integer -> SBV Integer
 ***
 *** Please use 'smtFunctionWithMeasure' to provide explicit measures.
 
