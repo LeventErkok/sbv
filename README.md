@@ -141,6 +141,34 @@ Key capabilities:
 
 The documentation includes proofs of sorting algorithm correctness (insertion sort, merge sort, quick sort), irrationality of the square root of 2, properties of the Collatz sequence, and many more. See the `Documentation.SBV.Examples.TP` modules [on Hackage](http://hackage.haskell.org/package/sbv) for the full collection.
 
+## A Selection of Examples
+
+SBV ships with many worked examples across verification, theorem proving, puzzles, cryptography, and code generation. Here are some highlights:
+
+| Example | Description |
+|---------|-------------|
+| [Sudoku](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-Puzzles-Sudoku.html) | Solve Sudoku puzzles using SMT constraints |
+| [N-Queens](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-Puzzles-NQueens.html) | Solve the N-Queens placement puzzle |
+| [SEND + MORE = MONEY](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-Puzzles-SendMoreMoney.html) | The classic cryptarithmetic puzzle |
+| [Fish/Zebra](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-Puzzles-Fish.html) | Einstein's logic puzzle |
+| [SQL Injection](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-Strings-SQLInjection.html) | Find inputs that cause SQL injection vulnerabilities |
+| [Regex Crossword](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-Strings-RegexCrossword.html) | Solve regex crossword puzzles |
+| [BitTricks](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-BitPrecise-BitTricks.html) | Verify bit-manipulation tricks from Stanford's bithacks collection |
+| [Legato multiplier](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-BitPrecise-Legato.html) | Correctness proof of Legato's 8-bit multiplier |
+| [Prefix sum](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-BitPrecise-PrefixSum.html) | Ladner-Fischer prefix-sum implementation proof |
+| [AES](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-Crypto-AES.html) | AES encryption with C code generation |
+| [CRC](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-CodeGeneration-CRC_USB5.html) | Symbolic CRC computation with C code generation |
+| [Sqrt2 irrational](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-Sqrt2IsIrrational.html) | Prove that the square root of 2 is irrational |
+| [Sorting](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-InsertionSort.html) | Prove insertion sort, merge sort, and quick sort correct |
+| [Kadane](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-Kadane.html) | Prove Kadane's maximum segment-sum algorithm correct |
+| [McCarthy91](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-McCarthy91.html) | Prove McCarthy's 91 function meets its specification |
+| [Binary search](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-BinarySearch.html) | Prove binary search correct |
+| [Collatz](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-Collatz.html) | Explore properties of the Collatz sequence |
+| [Infinitely many primes](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-Primes.html) | Prove there are infinitely many primes |
+| [Tautology checker](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-TautologyChecker.html) | A verified BDD-style tautology checker |
+
+Browse the full collection in `Documentation.SBV.Examples` [on Hackage](http://hackage.haskell.org/package/sbv).
+
 ## License
 
 SBV is distributed under the [BSD3](http://en.wikipedia.org/wiki/BSD_licenses) license. See [COPYRIGHT](http://github.com/LeventErkok/sbv/tree/master/COPYRIGHT) and [LICENSE](http://github.com/LeventErkok/sbv/tree/master/LICENSE) for details.
