@@ -92,8 +92,6 @@ Then try it in GHCi:
 ```haskell
 $ ghci
 ghci> :m Data.SBV
-ghci> prove $ \x -> x `shiftL` 2 .== 4 * (x::SWord8)
-Q.E.D.
 ghci> sat $ \x -> x * x .== (1089::SInteger)
 Satisfiable. Model:
   s0 = 33 :: Integer
