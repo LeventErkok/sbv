@@ -8,10 +8,11 @@
 
 SBV turns Haskell into a verification-aware language. Write ordinary Haskell functions using symbolic types, then prove properties, find counterexamples, or generate C code — all backed by SMT solvers.
 
+## SBV in 5 Minutes
+
 For unbounded integers, `x + 1 .> x` is always true:
 
 ```haskell
-$ ghci
 ghci> :m Data.SBV
 ghci> prove $ \x -> x + 1 .> (x :: SInteger)
 Q.E.D.
