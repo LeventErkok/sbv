@@ -42,13 +42,13 @@ Satisfiable. Model:
   s0 = 171 :: Word8
 ```
 
-Solve a system of equations over integers:
+Solve a system of equations over integers, with skolemized quantifiers for named variables:
 
 ```haskell
-ghci> sat $ \x y -> x * y .== (96::SInteger) .&& x + y .== 28
+ghci> sat $ skolemize $ \(Exists @"x" x) (Exists @"y" y) -> x * y .== (96::SInteger) .&& x + y .== 28
 Satisfiable. Model:
-  s0 =  4 :: Integer
-  s1 = 24 :: Integer
+  x = 24 :: Integer
+  y =  4 :: Integer
 ```
 
 For problems beyond the reach of push-button SMT (induction, equational reasoning), SBV provides a semi-automated theorem prover:
