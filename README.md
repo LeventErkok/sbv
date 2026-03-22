@@ -10,6 +10,12 @@ SBV turns Haskell into a verification-aware language. Write ordinary Haskell fun
 
 ## SBV in 5 Minutes
 
+Fire up GHCi with SBV:
+
+```
+$ cabal repl --build-depends sbv
+```
+
 For unbounded integers, `x + 1 .> x` is always true:
 
 ```haskell
@@ -42,7 +48,7 @@ Satisfiable. Model:
   s0 = 171 :: Word8
 ```
 
-Solve a system of equations over integers, with skolemized quantifiers for named variables:
+Use quantifiers for named results:
 
 ```haskell
 ghci> sat $ skolemize $ \(Exists @"x" x) (Exists @"y" y) -> x * y .== (96::SInteger) .&& x + y .== 28
@@ -128,36 +134,9 @@ SBV communicates with solvers via the standard SMT-Lib interface:
 
 **Z3** is the default solver. Use `proveWith`, `satWith`, etc. to select a different one (e.g., `proveWith cvc5`). See [tested versions](http://github.com/LeventErkok/sbv/blob/master/SMTSolverVersions.md) for details. Other SMT-Lib compatible solvers can be hooked up with minimal effort — get in touch if you'd like to use one not listed here.
 
-## Getting Started
-
-Try it in GHCi:
-
-```haskell
-$ cabal repl --build-depends sbv
-ghci> :m Data.SBV
-ghci> sat $ \x -> x * x .== (1089::SInteger)
-Satisfiable. Model:
-  s0 = 33 :: Integer
-```
-
-For examples, see the `Documentation.SBV.Examples` modules [on Hackage](http://hackage.haskell.org/package/sbv).
-
-## Theorem Proving
-
-SBV's TP module supports semi-automated theorem proving for problems that require induction or complex equational reasoning — areas where push-button SMT solving falls short.
-
-Key capabilities:
-- Inductive proofs over recursive data structures
-- Equational reasoning with calculational proof chains
-- Recursive and mutually recursive function definitions with termination checking
-- Productive (co-recursive) function definitions
-- User-defined termination measures with automatic verification
-
-The documentation includes proofs of sorting algorithm correctness (insertion sort, merge sort, quick sort), irrationality of the square root of 2, properties of the Collatz sequence, and many more. See the `Documentation.SBV.Examples.TP` modules [on Hackage](http://hackage.haskell.org/package/sbv) for the full collection.
-
 ## A Selection of Examples
 
-SBV ships with many worked examples across verification, theorem proving, puzzles, cryptography, and code generation. Here are some highlights:
+SBV ships with many worked examples across verification, theorem proving, puzzles, cryptography, and code generation. The theorem proving examples include proofs of sorting algorithm correctness, irrationality of the square root of 2, properties of the Collatz sequence, and many more. Here are some highlights:
 
 | Example | Description |
 |---------|-------------|
