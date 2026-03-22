@@ -99,12 +99,13 @@ Functions proven terminating: sbv.reverse
 
 SBV communicates with solvers via the standard SMT-Lib interface:
 
-| Solver | From | | Solver | From | | Solver | From |
-|--------|------|-|--------|------|-|--------|------|
-| [ABC](http://www.eecs.berkeley.edu/~alanmi/abc) | Berkeley | | [CVC5](http://cvc5.github.io/) | Stanford / Iowa | | [OpenSMT](http://verify.inf.usi.ch/opensmt) | USI |
-| [Bitwuzla](http://bitwuzla.github.io/) | Stanford | | [DReal](http://dreal.github.io/) | CMU | | [Yices](http://github.com/SRI-CSL/yices2) | SRI |
-| [Boolector](http://boolector.github.io/) | JKU | | [MathSAT](http://mathsat.fbk.eu/) | FBK / Trento | | [Z3](http://github.com/Z3Prover/z3/wiki) | Microsoft |
-| [CVC4](http://cvc4.github.io/) | Stanford / Iowa | | | | | | |
+| Solver | From | | Solver | From |
+|--------|------|-|--------|------|
+| [ABC](http://www.eecs.berkeley.edu/~alanmi/abc) | Berkeley | | [CVC5](http://cvc5.github.io/) | Stanford / Iowa |
+| [Bitwuzla](http://bitwuzla.github.io/) | Stanford | | [DReal](http://dreal.github.io/) | CMU |
+| [Boolector](http://boolector.github.io/) | JKU | | [MathSAT](http://mathsat.fbk.eu/) | FBK / Trento |
+| [CVC4](http://cvc4.github.io/) | Stanford / Iowa | | [OpenSMT](http://verify.inf.usi.ch/opensmt) | USI |
+| [Yices](http://github.com/SRI-CSL/yices2) | SRI | | [Z3](http://github.com/Z3Prover/z3/wiki) | Microsoft |
 
 **Z3** is the default solver. Use `proveWith`, `satWith`, etc. to select a different one (e.g., `proveWith cvc5`). See [tested versions](http://github.com/LeventErkok/sbv/blob/master/SMTSolverVersions.md) for details. Other SMT-Lib compatible solvers can be hooked up with minimal effort — get in touch if you'd like to use one not listed here.
 
