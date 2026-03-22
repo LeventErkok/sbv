@@ -51,6 +51,23 @@ Satisfiable. Model:
   y =  4 :: Integer
 ```
 
+Optimize a cost function subject to constraints:
+
+```haskell
+ghci> :{
+optimize Lexicographic $ do x <- sInteger "x"
+                            y <- sInteger "y"
+                            constrain $ x + y .== 20
+                            constrain $ x .>= 5
+                            constrain $ y .>= 5
+                            minimize "cost" $ x * y
+:}
+Optimal in an extension field:
+  x    =  5 :: Integer
+  y    = 15 :: Integer
+  cost = 75 :: Integer
+```
+
 For problems beyond the reach of push-button SMT (induction, equational reasoning), SBV provides a semi-automated theorem prover:
 
 ```haskell
