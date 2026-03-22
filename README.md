@@ -2,11 +2,11 @@
 
 [![Build Status](https://github.com/LeventErkok/sbv/actions/workflows/ci.yml/badge.svg)](https://github.com/LeventErkok/sbv/actions/workflows/ci.yml)
 
-On Hackage: http://hackage.haskell.org/package/sbv
+> Express properties about Haskell programs and automatically prove them using SMT solvers.
 
-Express properties about Haskell programs and automatically prove them using SMT solvers.
+[Hackage](http://hackage.haskell.org/package/sbv) | [Release Notes](http://github.com/LeventErkok/sbv/tree/master/CHANGES.md) | [Documentation](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV.html)
 
-On one end, SBV can be used as a push-button prover over many types:
+SBV turns Haskell into a verification-aware language. Write ordinary Haskell functions using symbolic types, then prove properties, find counterexamples, or generate C code — all backed by SMT solvers.
 
 ```haskell
 $ ghci
@@ -18,7 +18,7 @@ Falsifiable. Counter-example:
   s0 = 32 :: Word8
 ```
 
-On the other extreme, SBV can be used as an SMT-based proof assistant to prove equational and inductive program properties:
+For problems beyond the reach of push-button SMT (induction, equational reasoning), SBV provides a semi-automated theorem prover:
 
 ```haskell
 revApp :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -34,9 +34,7 @@ revApp = induct "revApp"
                                       =: qed
 ```
 
-Running this proof produces:
-
-```haskell
+```
 ghci> runTP $ revApp @Integer
 Inductive lemma: revApp
   Step: Base                            Q.E.D.
@@ -46,111 +44,79 @@ Inductive lemma: revApp
   Step: 4                               Q.E.D.
   Step: 5                               Q.E.D.
   Result:                               Q.E.D.
+Functions proven terminating: sbv.reverse
 [Proven] revApp :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 ```
 
-Establishing how `reverse` distributes over `++` (at the monomorpic type of list of integers).
+## Features
 
-The function `prove` establishes theorem-hood, while `sat` finds a satisfying model if it exists. The `runTP` function
-runs a proof script, establishing theorems with user guidance.
+**Symbolic types** — Booleans, signed/unsigned integers (8/16/32/64-bit and arbitrary-width), unbounded integers, reals, rationals, IEEE-754 floats, characters, strings, lists, tuples, sums, optionals, sets, enumerations, algebraic data types, and uninterpreted sorts.
 
-All satisfying models can be computed using `allSat`.
-SBV can also perform static assertion checks, such as absence of division-by-0, and other user given properties.
-Furthermore, SBV can perform optimization, minimizing/maximizing arithmetic goals for their optimal values.
+**Verification** — `prove`/`sat`/`allSat` for property checking and model finding, `safe`/`sAssert` for assertion verification, `dsat`/`dprove` for delta-satisfiability, `optimize`/`maximize`/`minimize` for optimization, and QuickCheck integration.
 
-SBV also allows for an incremental mode: Users are given a handle to the SMT solver as their programs execute, and they can issue SMTLib commands programmatically, query values, and direct the interaction using a high-level typed API. The incremental mode also allows for creation of constraints based on the current model, and access to internals of SMT solvers for advanced users. See the `runSMT` and `query` commands for details.
+**Theorem proving (TP)** — Semi-automated inductive proofs with equational reasoning chains. Includes termination checking, recursive and mutually recursive definitions, productive (co-recursive) functions, and user-defined measures.
 
-## Overview
+**Code generation** — Compile symbolic programs to C as straight-line programs or libraries (`compileToC`, `compileToCLib`), and generate test vectors (`genTest`).
 
- - [Hackage](http://hackage.haskell.org/package/sbv)
- - [Release Notes](http://github.com/LeventErkok/sbv/tree/master/CHANGES.md)
-   
-SBV library provides support for dealing with symbolic values in Haskell. It introduces the types:
+**SMT interaction** — Incremental mode via `runSMT`/`query` for programmatic solver interaction with a high-level typed API. Run multiple solvers simultaneously with `proveWithAny`/`proveWithAll`.
 
- - `SBool`: Symbolic Booleans (bits).
- - `SWord8`, `SWord16`, `SWord32`, `SWord64`: Symbolic Words (unsigned).
- - `SInt8`, `SInt16`, `SInt32`, `SInt64`: Symbolic Ints (signed).
- - `SWord N`, `SInt N`, for `N > 0`: Arbitrary sized unsigned/signed bit-vectors, parameterized by the bitsize. (Using DataKinds extension.)
- - `SInteger`: Symbolic unbounded integers (signed).
- - `SReal`: Symbolic infinite precision algebraic reals (signed).
- - `SRational`: Symbolic rationals, ratio of two symbolic integers. (`Rational`.)
- - `SFloat`: IEEE-754 single precision floating point number. (`Float`.)
- - `SDouble`: IEEE-754 double precision floating point number. (`Double`.)
- - `SFloatingPoint`: IEEE-754 floating point number with user specified exponent and significand sizes. (`FloatingPoint`)
- - `SChar`: Symbolic characters, supporting unicode.
- - `SString`: Symbolic strings.
- - `SList`: Symbolic lists. (Which can be nested, i.e., lists of lists.)
- - `STuple`: Symbolic tuples (upto 8-tuples, can be nested)
- - `SEither`: Symbolic sums
- - `SMaybe`: Symbolic optional values
- - `SSet`: Symbolic sets
- - Arrays of symbolic values.
- - Symbolic enumerations, for arbitrary user-defined enumerated types.
- - Symbolic polynomials over GF(2^n ), polynomial arithmetic, and CRCs.
- - Uninterpreted constants and functions over symbolic values, with user defined axioms.
- - Uninterpreted sorts, and proofs over such sorts, potentially with axioms.
- - Algebraic data types, including recursive fields.
- - Ability to define SMTLib functions, generated directly from Haskell versions, including support for recursive and mutually recursive functions.
- - Reasoning with universal and existential quantifiers, including alternating quantifiers.
-   
-The user can construct ordinary Haskell programs using these types, which behave like ordinary Haskell values when used concretely. However, when used with symbolic arguments, functions built out of these types can also be:
+## Supported SMT Solvers
 
- - proven correct via an external SMT solver (the `prove` function),
- - checked for satisfiability (the `sat`, and `allSat` functions),
- - checked for assertion violations (the `safe` function with `sAssert` calls),
- - checked for delta-satisfiability (the `dsat` and `dprove` functions),
- - used in synthesis (the `sat`function with existentials),
- - checked for machine-arithmetic overflow/underflow conditions,
- - optimized with respect to cost functions (the `optimize`, `maximize`, and `minimize` functions),
- - quick-checked,
- - used for generating Haskell and C test vectors (the `genTest` function),
- - compiled down to C, rendered as straight-line programs or libraries (`compileToC` and `compileToCLib` functions).
-   
-## Picking the SMT solver to use
+SBV communicates with solvers via the standard SMT-Lib interface:
 
-The SBV library uses third-party SMT solvers via the standard SMT-Lib interface. The following solvers are supported:
+| Solver    | From                                                          |
+|-----------|---------------------------------------------------------------|
+| ABC       | [Berkeley](http://www.eecs.berkeley.edu/~alanmi/abc)          |
+| Boolector | [Johannes Kepler University](http://boolector.github.io/)     |
+| Bitwuzla  | [Stanford University](http://bitwuzla.github.io/)             |
+| CVC4      | [Stanford / Iowa](http://cvc4.github.io/)                     |
+| CVC5      | [Stanford / Iowa](http://cvc5.github.io/)                     |
+| DReal     | [CMU](http://dreal.github.io/)                                |
+| MathSAT   | [FBK / University of Trento](http://mathsat.fbk.eu/)          |
+| OpenSMT   | [USI](http://verify.inf.usi.ch/opensmt)                       |
+| Yices     | [SRI](http://github.com/SRI-CSL/yices2)                      |
+| Z3        | [Microsoft](http://github.com/Z3Prover/z3/wiki)              |
 
- - [ABC](http://www.eecs.berkeley.edu/~alanmi/abc) from University of Berkeley
- - [Boolector](http://boolector.github.io/) from Johannes Kepler University
- - [Bitwuzla](http://bitwuzla.github.io/) from Stanford University
- - [CVC4](http://cvc4.github.io/) from Stanford University and the University of Iowa
- - [CVC5](http://cvc5.github.io/) from Stanford University and the University of Iowa
- - [DReal](http://dreal.github.io/) from CMU
- - [MathSAT](http://mathsat.fbk.eu/) from FBK and DISI-University of Trento
- - [OpenSMT](http://verify.inf.usi.ch/opensmt) from Università della Svizzera italiana
- - [Yices](http://github.com/SRI-CSL/yices2) from SRI
- - [Z3](http://github.com/Z3Prover/z3/wiki) from Microsoft
-   
-Most functions have two variants: For instance `prove`/`proveWith`. The former uses the default solver, which is currently Z3. The latter expects you to pass it a configuration that picks the solver.
-The valid values are `abc`, `boolector`, `bitwuzla`, `cvc4`, `cvc5`, `dReal`, `mathSAT`, `openSMT`, `yices`, and `z3`.
+**Z3** is the default solver. Use `proveWith`, `satWith`, etc. to select a different one (e.g., `proveWith cvc5`). See [tested versions](http://github.com/LeventErkok/sbv/blob/master/SMTSolverVersions.md) for details. Other SMT-Lib compatible solvers can be hooked up with minimal effort — get in touch if you'd like to use one not listed here.
 
-See [versions](http://github.com/LeventErkok/sbv/blob/master/SMTSolverVersions.md) for a listing of the versions of these tools SBV has been tested with. Please report if you see any discrepancies!
+## Getting Started
 
-Other SMT solvers can be used with SBV as well, with a relatively easy hook-up mechanism. Please do get in touch if you plan to use SBV with any other solver.
+Install from Hackage:
 
-## Using multiple solvers, simultaneously
+```
+$ cabal install sbv
+```
 
-SBV also allows for running multiple solvers at the same time, either picking the result of the first to complete, or getting results from all.
-See `proveWithAny`/`proveWithAll` and `satWithAny`/`satWithAll` functions. The function `sbvAvailableSolvers` can be used to query the available solvers at run-time.
+Then try it in GHCi:
 
-## TP: Semi-automated theorem proving
+```haskell
+$ ghci
+ghci> :m Data.SBV
+ghci> prove $ \x -> x `shiftL` 2 .== 4 * (x::SWord8)
+Q.E.D.
+ghci> sat $ \x -> x * x .== (1089::SInteger)
+Satisfiable. Model:
+  s0 = 33 :: Integer
+```
 
-While SMT solvers are quite powerful, there is a certain class of problems that they are just not well suited for. In particular, SMT
-solvers are not good at proofs that require induction, or those that require complex chains of reasoning. Induction is necessary to reason about
-any recursive algorithm, and most such proofs require carefully constructed equational steps.
+For examples, see the [`Documentation.SBV.Examples`](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples.html) module on Hackage.
 
-SBV allows for a style of semi-automated theorem proving, called TP. which can be used to construct such proofs.
-The documentation includes example proofs for many list functions, and even inductive proofs for
-the familiar insertion, merge, quick-sort algorithms, along with a proof that the square-root of 2 is irrational.
-While a proper theorem prover (such as Lean, Isabelle etc.) is a more appropriate choice for such proofs, with some
-guidance (and acceptance of a much larger trusted code base!), SBV can be used to establish correctness of various mathematical
-claims and algorithms that are usually beyond the scope of SMT solvers alone. See the documentation under
-the `Documentation.SBV.Examples.TP` directory.
+## Theorem Proving
 
-## Copyright, License
+SBV's TP module supports semi-automated theorem proving for problems that require induction or complex equational reasoning — areas where push-button SMT solving falls short.
 
-The SBV library is distributed with the BSD3 license. See [COPYRIGHT](http://github.com/LeventErkok/sbv/tree/master/COPYRIGHT) for details.
-The [LICENSE](http://github.com/LeventErkok/sbv/tree/master/LICENSE) file contains the [BSD3](http://en.wikipedia.org/wiki/BSD_licenses) verbiage.
+Key capabilities:
+- Inductive proofs over recursive data structures
+- Equational reasoning with calculational proof chains
+- Recursive and mutually recursive function definitions with termination checking
+- Productive (co-recursive) function definitions
+- User-defined termination measures with automatic verification
+
+The documentation includes proofs of sorting algorithm correctness (insertion sort, merge sort, quick sort), irrationality of the square root of 2, properties of the Collatz sequence, and many more. See the [`Documentation.SBV.Examples.TP`](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP.html) module for the full collection.
+
+## License
+
+SBV is distributed under the [BSD3](http://en.wikipedia.org/wiki/BSD_licenses) license. See [COPYRIGHT](http://github.com/LeventErkok/sbv/tree/master/COPYRIGHT) and [LICENSE](http://github.com/LeventErkok/sbv/tree/master/LICENSE) for details.
 
 ## Thanks
 
