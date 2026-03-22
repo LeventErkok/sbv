@@ -129,8 +129,9 @@ eval add mul = smtFunction "eval" $ \e ->
        Add x y -> eval add mul x `add` eval add mul y
        Mul x y -> eval add mul x `mul` eval add mul y
     |]
-
 ```
+
+The `sCase` construct supports nested pattern matching, guards, and wildcards, making programming with algebraic data types natural.
 
 **Verification** — `prove`/`sat`/`allSat` for property checking and model finding, `safe`/`sAssert` for assertion verification, `dsat`/`dprove` for delta-satisfiability, and QuickCheck integration.
 
