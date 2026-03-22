@@ -106,11 +106,19 @@ Functions proven terminating: sbv.reverse
 
 ## Features
 
-**Symbolic types** — Booleans, signed/unsigned integers (8/16/32/64-bit and arbitrary-width), unbounded integers, reals, rationals, IEEE-754 floats, characters, strings, lists, tuples, sums, optionals, sets, enumerations, and uninterpreted sorts. User-defined algebraic data types (including recursive ones) are supported via `mkSymbolic`:
+**Symbolic types** — Booleans, signed/unsigned integers (8/16/32/64-bit and arbitrary-width), unbounded integers, reals, rationals, IEEE-754 floats, characters, strings, lists, tuples, sums, optionals, sets, enumerations, and uninterpreted sorts. User-defined algebraic data types (including enumerations, recursive, and parametric types) are supported via `mkSymbolic`, with pattern matching via `sCase`:
 
 ```haskell
-data Expr = Val Integer | Add Expr Expr | Mul Expr Expr
+data Expr a = Val a | Add (Expr a) (Expr a) | Mul (Expr a) (Expr a)
 mkSymbolic [''Expr]  -- generates SExpr and related instances
+
+eval :: SymVal a => (a -> a -> a) -> (a -> a -> a) -> SExpr a -> a
+eval add mul = smtFunction "eval" $ \e ->
+    [sCase| e of
+       Val v   -> v
+       Add x y -> eval add mul x `add` eval add mul y
+       Mul x y -> eval add mul x `mul` eval add mul y
+    |]
 ```
 
 **Verification** — `prove`/`sat`/`allSat` for property checking and model finding, `safe`/`sAssert` for assertion verification, `dsat`/`dprove` for delta-satisfiability, and QuickCheck integration.
