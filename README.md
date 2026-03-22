@@ -6,7 +6,7 @@
 
 [Hackage](http://hackage.haskell.org/package/sbv) | [Release Notes](http://github.com/LeventErkok/sbv/tree/master/CHANGES.md) | [Documentation](http://hackage.haskell.org/package/sbv/docs/Data-SBV.html)
 
-SBV turns Haskell into a verification-aware language. Write ordinary Haskell functions using symbolic types, then prove properties, find counterexamples, or generate C code — all backed by SMT solvers.
+SBV provides symbolic versions of Haskell types. Programs written with these types can be automatically verified, checked for satisfiability, optimized, or compiled to C — all via SMT solvers.
 
 ## SBV in 5 Minutes
 
@@ -40,7 +40,7 @@ Falsifiable. Counter-example:
   s0 = NaN :: Float
 ```
 
-SBV can also find values. What's the multiplicative inverse of 3 modulo 256?
+What's the multiplicative inverse of 3 modulo 256?
 
 ```haskell
 ghci> sat $ \x -> x * 3 .== (1 :: SWord8)
@@ -74,7 +74,7 @@ Optimal in an extension field:
   cost = 75 :: Integer
 ```
 
-For problems beyond the reach of push-button SMT (induction, equational reasoning), SBV provides a semi-automated theorem prover:
+For inductive proofs and equational reasoning, SBV includes a theorem prover:
 
 ```haskell
 revApp :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -106,7 +106,12 @@ Functions proven terminating: sbv.reverse
 
 ## Features
 
-**Symbolic types** — Booleans, signed/unsigned integers (8/16/32/64-bit and arbitrary-width), unbounded integers, reals, rationals, IEEE-754 floats, characters, strings, lists, tuples, sums, optionals, sets, enumerations, algebraic data types, and uninterpreted sorts.
+**Symbolic types** — Booleans, signed/unsigned integers (8/16/32/64-bit and arbitrary-width), unbounded integers, reals, rationals, IEEE-754 floats, characters, strings, lists, tuples, sums, optionals, sets, enumerations, and uninterpreted sorts. User-defined algebraic data types (including recursive ones) are supported via `mkSymbolic`:
+
+```haskell
+data Expr = Val Integer | Add Expr Expr | Mul Expr Expr
+mkSymbolic [''Expr]  -- generates SExpr and related instances
+```
 
 **Verification** — `prove`/`sat`/`allSat` for property checking and model finding, `safe`/`sAssert` for assertion verification, `dsat`/`dprove` for delta-satisfiability, and QuickCheck integration.
 
@@ -114,7 +119,7 @@ Functions proven terminating: sbv.reverse
 
 **Quantifiers and functions** — Universal and existential quantifiers (including alternating), with skolemization for named bindings. Define SMT-level functions directly from Haskell via `smtFunction`, including recursive and mutually recursive definitions with automatic termination checking.
 
-**Theorem proving (TP)** — Semi-automated inductive proofs with equational reasoning chains. Includes termination checking, recursive and mutually recursive definitions, productive (co-recursive) functions, and user-defined measures.
+**Theorem proving (TP)** — Semi-automated inductive proofs (including strong induction) with equational reasoning chains. Includes termination checking, recursive and mutually recursive definitions, productive (co-recursive) functions, and user-defined measures.
 
 **Code generation** — Compile symbolic programs to C as straight-line programs or libraries (`compileToC`, `compileToCLib`), and generate test vectors (`genTest`).
 
@@ -136,7 +141,7 @@ SBV communicates with solvers via the standard SMT-Lib interface:
 
 ## A Selection of Examples
 
-SBV ships with many worked examples across verification, theorem proving, puzzles, cryptography, and code generation. The theorem proving examples include proofs of sorting algorithm correctness, irrationality of the square root of 2, properties of the Collatz sequence, and many more. Here are some highlights:
+SBV ships with many worked examples. Here are some highlights:
 
 | Example | Description |
 |---------|-------------|
@@ -165,6 +170,8 @@ Browse the full collection in `Documentation.SBV.Examples` [on Hackage](http://h
 ## License
 
 SBV is distributed under the [BSD3](http://en.wikipedia.org/wiki/BSD_licenses) license. See [COPYRIGHT](http://github.com/LeventErkok/sbv/tree/master/COPYRIGHT) and [LICENSE](http://github.com/LeventErkok/sbv/tree/master/LICENSE) for details.
+
+Please report bugs and feature requests at the [GitHub issue tracker](http://github.com/LeventErkok/sbv/issues).
 
 ## Thanks
 
