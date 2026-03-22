@@ -3,6 +3,16 @@
 
 ### Version 13.6.5, Not yet released
 
+  * [BACKWARDS COMPATIBILITY] The most important change in this release is how SBV treats
+    function definitions via `smtFunction` and its variants. In prior versions, these definitions were
+    directly translated to SMT-lib, without checking that they actually terminate. Starting with
+    this release, SBV now requires all functions to terminate (with an escape hatch where the user
+    explicitly opts out), and it proves it for all functions involved in a proof. SBV guesses
+    and verifies a termination measure, and in case it can't do so will tell the user to supply
+    their own version. This major departure from the old style of ignoring termination is a step
+    towards incorporating a better architecture for much improved (semi-)automated theorem proving
+    in SBV. See below for more details.
+
   * [BACKWARDS COMPATIBILITY] Major improvements to the `sCase` and `pCase` quasi-quoters:
     - Type prefix is no longer required; the type is inferred automatically
       from the patterns. Old syntax: `[sCase|Expr e of ...]`. New syntax: `[sCase| e of ...]`.
