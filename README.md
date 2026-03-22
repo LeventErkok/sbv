@@ -106,7 +106,23 @@ Functions proven terminating: sbv.reverse
 
 ## Features
 
-**Symbolic types** — Booleans, signed/unsigned integers (8/16/32/64-bit and arbitrary-width), unbounded integers, reals, rationals, IEEE-754 floats, characters, strings, lists, tuples, sums, optionals, sets, enumerations, and uninterpreted sorts. User-defined algebraic data types (including enumerations, recursive, and parametric types) are supported via `mkSymbolic`, with pattern matching via `sCase`:
+**Symbolic types** — Booleans, signed/unsigned integers (8/16/32/64-bit and arbitrary-width), unbounded integers, reals, rationals, IEEE-754 floats, characters, strings, lists, tuples, sums, optionals, sets, enumerations, algebraic data types, and uninterpreted sorts.
+
+**Verification** — `prove`/`sat`/`allSat` for property checking and model finding, `safe`/`sAssert` for assertion verification, `dsat`/`dprove` for delta-satisfiability, and QuickCheck integration.
+
+**Optimization** — Minimize/maximize cost functions subject to constraints via `optimize`/`maximize`/`minimize`, with support for lexicographic, independent, and Pareto objectives.
+
+**Quantifiers and functions** — Universal and existential quantifiers (including alternating), with skolemization for named bindings. Define SMT-level functions directly from Haskell via `smtFunction`, including recursive and mutually recursive definitions with automatic termination checking.
+
+**Theorem proving (TP)** — Semi-automated inductive proofs (including strong induction) with equational reasoning chains. Includes termination checking, recursive and mutually recursive definitions, productive (co-recursive) functions, and user-defined measures.
+
+**Code generation** — Compile symbolic programs to C as straight-line programs or libraries (`compileToC`, `compileToCLib`), and generate test vectors (`genTest`).
+
+**SMT interaction** — Incremental mode via `runSMT`/`query` for programmatic solver interaction with a high-level typed API. Run multiple solvers simultaneously with `proveWithAny`/`proveWithAll`.
+
+## Algebraic Data Types
+
+User-defined algebraic data types — including enumerations, recursive, and parametric types — are supported via `mkSymbolic`, with pattern matching via `sCase`:
 
 ```haskell
 {-# LANGUAGE QuasiQuotes     #-}
@@ -132,18 +148,6 @@ eval add mul = smtFunction "eval" $ \e ->
 ```
 
 The `sCase` construct supports nested pattern matching, guards, and wildcards, making programming with algebraic data types natural.
-
-**Verification** — `prove`/`sat`/`allSat` for property checking and model finding, `safe`/`sAssert` for assertion verification, `dsat`/`dprove` for delta-satisfiability, and QuickCheck integration.
-
-**Optimization** — Minimize/maximize cost functions subject to constraints via `optimize`/`maximize`/`minimize`, with support for lexicographic, independent, and Pareto objectives.
-
-**Quantifiers and functions** — Universal and existential quantifiers (including alternating), with skolemization for named bindings. Define SMT-level functions directly from Haskell via `smtFunction`, including recursive and mutually recursive definitions with automatic termination checking.
-
-**Theorem proving (TP)** — Semi-automated inductive proofs (including strong induction) with equational reasoning chains. Includes termination checking, recursive and mutually recursive definitions, productive (co-recursive) functions, and user-defined measures.
-
-**Code generation** — Compile symbolic programs to C as straight-line programs or libraries (`compileToC`, `compileToCLib`), and generate test vectors (`genTest`).
-
-**SMT interaction** — Incremental mode via `runSMT`/`query` for programmatic solver interaction with a high-level typed API. Run multiple solvers simultaneously with `proveWithAny`/`proveWithAll`.
 
 ## Supported SMT Solvers
 
