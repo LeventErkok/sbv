@@ -8,24 +8,46 @@
 
 SBV turns Haskell into a verification-aware language. Write ordinary Haskell functions using symbolic types, then prove properties, find counterexamples, or generate C code — all backed by SMT solvers.
 
+For unbounded integers, `x + 1 .> x` is always true:
+
 ```haskell
 $ ghci
 ghci> :m Data.SBV
 ghci> prove $ \x -> x + 1 .> (x :: SInteger)
 Q.E.D.
+```
+
+But with machine arithmetic, overflow lurks:
+
+```haskell
 ghci> prove $ \x -> x + 1 .> (x :: SInt8)
 Falsifiable. Counter-example:
   s0 = 127 :: Int8
+```
+
+IEEE-754 floats break reflexivity of equality:
+
+```haskell
 ghci> prove $ \x -> (x :: SFloat) .== x
 Falsifiable. Counter-example:
   s0 = NaN :: Float
+```
+
+SBV can also find values. What's the multiplicative inverse of 3 modulo 256?
+
+```haskell
 ghci> sat $ \x -> x * 3 .== (1 :: SWord8)
 Satisfiable. Model:
   s0 = 171 :: Word8
-ghci> sat $ \x y -> x * y .== (96::SWord8) .&& x + y .== 28
+```
+
+Solve a system of equations over integers:
+
+```haskell
+ghci> sat $ \x y -> x * y .== (96::SInteger) .&& x + y .== 28
 Satisfiable. Model:
-  s0 =  4 :: Word8
-  s1 = 24 :: Word8
+  s0 =  4 :: Integer
+  s1 = 24 :: Integer
 ```
 
 For problems beyond the reach of push-button SMT (induction, equational reasoning), SBV provides a semi-automated theorem prover:
