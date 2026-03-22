@@ -87,6 +87,8 @@ Functions proven terminating: sbv.reverse
 
 **Verification** — `prove`/`sat`/`allSat` for property checking and model finding, `safe`/`sAssert` for assertion verification, `dsat`/`dprove` for delta-satisfiability, `optimize`/`maximize`/`minimize` for optimization, and QuickCheck integration.
 
+**Quantifiers and functions** — Universal and existential quantifiers (including alternating), with skolemization for named bindings. Define SMT-level functions directly from Haskell via `smtFunction`, including recursive and mutually recursive definitions with automatic termination checking.
+
 **Theorem proving (TP)** — Semi-automated inductive proofs with equational reasoning chains. Includes termination checking, recursive and mutually recursive definitions, productive (co-recursive) functions, and user-defined measures.
 
 **Code generation** — Compile symbolic programs to C as straight-line programs or libraries (`compileToC`, `compileToCLib`), and generate test vectors (`genTest`).
