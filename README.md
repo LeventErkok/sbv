@@ -102,7 +102,9 @@ Functions proven terminating: sbv.reverse
 
 **Symbolic types** — Booleans, signed/unsigned integers (8/16/32/64-bit and arbitrary-width), unbounded integers, reals, rationals, IEEE-754 floats, characters, strings, lists, tuples, sums, optionals, sets, enumerations, algebraic data types, and uninterpreted sorts.
 
-**Verification** — `prove`/`sat`/`allSat` for property checking and model finding, `safe`/`sAssert` for assertion verification, `dsat`/`dprove` for delta-satisfiability, `optimize`/`maximize`/`minimize` for optimization, and QuickCheck integration.
+**Verification** — `prove`/`sat`/`allSat` for property checking and model finding, `safe`/`sAssert` for assertion verification, `dsat`/`dprove` for delta-satisfiability, and QuickCheck integration.
+
+**Optimization** — Minimize/maximize cost functions subject to constraints via `optimize`/`maximize`/`minimize`, with support for lexicographic, independent, and Pareto objectives.
 
 **Quantifiers and functions** — Universal and existential quantifiers (including alternating), with skolemization for named bindings. Define SMT-level functions directly from Haskell via `smtFunction`, including recursive and mutually recursive definitions with automatic termination checking.
 
