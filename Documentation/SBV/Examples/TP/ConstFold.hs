@@ -817,7 +817,7 @@ varHelper = lemma "varHelper"
 --       Step: 1.7.2.Completeness          Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
--- Functions proven terminating: exprSize, interpInEnv, sbv.lookup, simplify, subst
+-- Functions proven terminating: exprSize, interpInEnv, sbv.lookup, subst
 -- [Proven] substCorrect :: Ɐe ∷ (Expr String Integer) → Ɐnm ∷ String → Ɐv ∷ Integer → Ɐenv ∷ [(String, Integer)] → Bool
 substCorrect :: TP (Proof (Forall "e" Exp -> Forall "nm" String -> Forall "v" Integer -> Forall "env" EL -> SBool))
 substCorrect = do
