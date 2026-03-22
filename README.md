@@ -159,7 +159,7 @@ SBV ships with many worked examples across verification, theorem proving, puzzle
 | [AES](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-Crypto-AES.html) | AES encryption with C code generation |
 | [CRC](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-CodeGeneration-CRC_USB5.html) | Symbolic CRC computation with C code generation |
 | [Sqrt2 irrational](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-Sqrt2IsIrrational.html) | Prove that the square root of 2 is irrational |
-| [Sorting](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-InsertionSort.html) | Prove insertion sort, merge sort, and quick sort correct |
+| [Sorting](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-InsertionSort.html) | Prove [insertion sort](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-InsertionSort.html), [merge sort](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-MergeSort.html), and [quick sort](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-QuickSort.html) correct |
 | [Kadane](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-Kadane.html) | Prove Kadane's maximum segment-sum algorithm correct |
 | [McCarthy91](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-McCarthy91.html) | Prove McCarthy's 91 function meets its specification |
 | [Binary search](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-BinarySearch.html) | Prove binary search correct |
