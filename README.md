@@ -97,7 +97,7 @@ Satisfiable. Model:
   s0 = 33 :: Integer
 ```
 
-For examples, see the [`Documentation.SBV.Examples`](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples.html) module on Hackage.
+For examples, see the `Documentation.SBV.Examples` modules [on Hackage](http://hackage.haskell.org/package/sbv).
 
 ## Theorem Proving
 
@@ -110,7 +110,7 @@ Key capabilities:
 - Productive (co-recursive) function definitions
 - User-defined termination measures with automatic verification
 
-The documentation includes proofs of sorting algorithm correctness (insertion sort, merge sort, quick sort), irrationality of the square root of 2, properties of the Collatz sequence, and many more. See the [`Documentation.SBV.Examples.TP`](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP.html) module for the full collection.
+The documentation includes proofs of sorting algorithm correctness (insertion sort, merge sort, quick sort), irrationality of the square root of 2, properties of the Collatz sequence, and many more. See the `Documentation.SBV.Examples.TP` modules [on Hackage](http://hackage.haskell.org/package/sbv) for the full collection.
 
 ## License
 
