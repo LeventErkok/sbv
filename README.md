@@ -2,9 +2,9 @@
 
 [![Build Status](https://github.com/LeventErkok/sbv/actions/workflows/ci.yml/badge.svg)](https://github.com/LeventErkok/sbv/actions/workflows/ci.yml)
 
-> Express properties about Haskell programs and automatically prove them using SMT solvers.
+***Express properties about Haskell programs and automatically prove them using SMT solvers.***
 
-[Hackage](http://hackage.haskell.org/package/sbv) | [Release Notes](http://github.com/LeventErkok/sbv/tree/master/CHANGES.md) | [Documentation](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV.html)
+[Hackage](http://hackage.haskell.org/package/sbv) | [Release Notes](http://github.com/LeventErkok/sbv/tree/master/CHANGES.md) | [Documentation](http://hackage.haskell.org/package/sbv/docs/Data-SBV.html)
 
 SBV turns Haskell into a verification-aware language. Write ordinary Haskell functions using symbolic types, then prove properties, find counterexamples, or generate C code — all backed by SMT solvers.
 
