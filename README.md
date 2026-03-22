@@ -116,16 +116,10 @@ SBV communicates with solvers via the standard SMT-Lib interface:
 
 ## Getting Started
 
-Install from Hackage:
-
-```
-$ cabal install sbv
-```
-
-Then try it in GHCi:
+Try it in GHCi:
 
 ```haskell
-$ ghci
+$ cabal repl --build-depends sbv
 ghci> :m Data.SBV
 ghci> sat $ \x -> x * x .== (1089::SInteger)
 Satisfiable. Model:
