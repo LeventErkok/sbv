@@ -1,0 +1,23 @@
+SCase91.hs:(12,14)-(23,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " e of\n\
+      \               Zero      -> 0\n\
+      \               Num k     -> k\n\
+      \               Var _     -> -1\n\
+      \               Add a b   -> case a of\n\
+      \                              Zero    -> t b\n\
+      \                              Num k   -> k + t b\n\
+      \                              Var _   -> t b\n\
+      \                              Add _ _ -> t a + t b\n\
+      \                              Let _ _ c -> t c + t b\n\
+      \               Let _ _ b -> t b\n\
+      \      "
+  ======>
+    sCaseExpr
+      0 (\ k -> k) (\ _ -> negate 1)
+      (\ a b
+         -> sCaseExpr
+              (t b) (\ k -> k + t b) (\ _ -> t b) (\ _ _ -> (t a) + t b)
+              (\ _ _ c -> (t c) + t b) a)
+      (\ _ _ b -> t b) e

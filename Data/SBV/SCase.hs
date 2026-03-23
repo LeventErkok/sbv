@@ -674,48 +674,59 @@ sCase = QuasiQuoter
       let fullCase = "case " <> src
           offsets  = findOffsets src
       case metaParse fullCase of
-        Right (CaseE scrut matches) -> do
-          mbTypeInfo <- inferType "sCase" matches
-          case mbTypeInfo of
-            Nothing -> do
-              -- Wildcard-only: no type needed, generate ite-chain directly
-              allCases <- concat <$> zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
-              loc <- location
-              checkWildcard "sCase" loc allCases
-              let wilds = [(mbG, rhs) | CWild _ mbG rhs <- allCases]
-                  -- An unguarded wildcard is the base case (no ite wrapper needed).
-                  -- checkWildcard guarantees an unguarded wildcard is last if present.
-                  iteChain []                       = do uniq <- newName "u"
-                                                         let suffix = drop 2 (show uniq)
-                                                         pure $ AppE (VarE 'symWithKind) (LitE (StringL ("unmatched_sCase_wildcard_" ++ suffix)))
-                  iteChain ((Nothing, rhs) : _)     = pure rhs
-                  iteChain ((Just g,  rhs) : rest)  = do r <- iteChain rest
-                                                         pure $ foldl AppE (VarE 'ite) [g, rhs, r]
-              iteChain wilds
-            Just (typ, mbt) -> do
-              mbFnName <- case mbt of
-                Just BTBool      -> pure Nothing
-                Just BTList      -> pure Nothing  -- Strategy B; see noAnalyzer comment above
-                Just BTMaybe     -> pure (Just (VarE (sbvName "Data.SBV.Maybe"  "sCaseMaybe")))
-                Just BTEither    -> pure (Just (VarE (sbvName "Data.SBV.Either" "sCaseEither")))
-                Just (BTTuple _) -> pure Nothing
-                Nothing -> let fnTok = "sCase" <> typ
-                           in lookupValueName fnTok >>= \case
-                                Just n  -> pure (Just (VarE n))
-                                Nothing -> fail Unknown $ unlines [ "sCase: Unknown symbolic ADT: " <> typ
-                                                                  , ""
-                                                                  , "        To use a symbolic case expression, declare your ADT, and then:"
-                                                                  , "             mkSymbolic [''" <> typ <> "]"
-                                                                  , "        In a template-haskell context."
-                                                                  ]
-              let anyUserGuards = any (\(Match _ grhs _) -> case grhs of { GuardedB{} -> True; _ -> False }) matches
-              cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ mbt anyUserGuards . concat
-              buildCase typ mbFnName scrut cases
+        Right (CaseE scrut matches) -> processCaseExp offsets scrut matches
         Right _  -> fail Unknown "sCase: Parse error, cannot extract a case-expression."
         Left err -> handleParseError "sCase" err
 
+-- | Core sCase pipeline: given a scrutinee and matches (already in TH AST form),
+-- run type inference, match conversion, validation, and code generation.
+-- Factored out of 'sCase' so that 'transformNestedCases' can call it for
+-- inner @case@ expressions.
+processCaseExp :: [Offset] -> Exp -> [Match] -> Q Exp
+processCaseExp offsets scrut0 matches0 = do
+    -- Transform any nested case expressions in the RHS/guards of each match.
+    -- This ensures inner cases become symbolic before the outer case processes them.
+    matches <- transformMatches matches0
+    scrut   <- transformNestedCases scrut0
+    mbTypeInfo <- inferType "sCase" matches
+    case mbTypeInfo of
+      Nothing -> do
+        -- Wildcard-only: no type needed, generate ite-chain directly
+        allCases <- concat <$> zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
+        loc <- location
+        checkWildcard "sCase" loc allCases
+        let wilds = [(mbG, rhs) | CWild _ mbG rhs <- allCases]
+            -- An unguarded wildcard is the base case (no ite wrapper needed).
+            -- checkWildcard guarantees an unguarded wildcard is last if present.
+            iteChain []                       = do uniq <- newName "u"
+                                                   let suffix = drop 2 (show uniq)
+                                                   pure $ AppE (VarE 'symWithKind) (LitE (StringL ("unmatched_sCase_wildcard_" ++ suffix)))
+            iteChain ((Nothing, rhs) : _)     = pure rhs
+            iteChain ((Just g,  rhs) : rest)  = do r <- iteChain rest
+                                                   pure $ foldl AppE (VarE 'ite) [g, rhs, r]
+        iteChain wilds
+      Just (typ, mbt) -> do
+        mbFnName <- case mbt of
+          Just BTBool      -> pure Nothing
+          Just BTList      -> pure Nothing  -- Strategy B; see noAnalyzer comment above
+          Just BTMaybe     -> pure (Just (VarE (sbvName "Data.SBV.Maybe"  "sCaseMaybe")))
+          Just BTEither    -> pure (Just (VarE (sbvName "Data.SBV.Either" "sCaseEither")))
+          Just (BTTuple _) -> pure Nothing
+          Nothing -> let fnTok = "sCase" <> typ
+                     in lookupValueName fnTok >>= \case
+                          Just n  -> pure (Just (VarE n))
+                          Nothing -> fail Unknown $ unlines [ "sCase: Unknown symbolic ADT: " <> typ
+                                                            , ""
+                                                            , "        To use a symbolic case expression, declare your ADT, and then:"
+                                                            , "             mkSymbolic [''" <> typ <> "]"
+                                                            , "        In a template-haskell context."
+                                                            ]
+        let anyUserGuards = any (\(Match _ grhs _) -> case grhs of { GuardedB{} -> True; _ -> False }) matches
+        cases <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches >>= checkCase scrut typ mbt anyUserGuards . concat
+        buildCase typ mbFnName scrut cases
+  where
     buildCase :: String -> Maybe Exp -> Exp -> Either [Exp] [(Exp, Exp)] -> ExpQ
-    buildCase _    (Just caseFunc) scrut (Left  cases) = pure $ AppE (foldl AppE caseFunc cases) scrut
+    buildCase _    (Just caseFunc) s (Left  cases) = pure $ AppE (foldl AppE caseFunc cases) s
     buildCase _    Nothing         _     (Left  _)     = error "sCase: impossible: Strategy A without case function"
     buildCase typ  _               _scrut (Right cases) = do
         uniq <- newName "u"
@@ -738,7 +749,7 @@ sCase = QuasiQuoter
 
     -- Make sure things are in good-shape and decide if we have guards
     checkCase :: Exp -> String -> Maybe BuiltinType -> Bool -> [Case] -> Q (Either [Exp] [(Exp, Exp)])
-    checkCase scrut typ mbt anyUserGuards cases = do
+    checkCase s typ mbt anyUserGuards cases = do
         loc   <- location
         cstrs <- getCstrs mbt typ
 
@@ -822,11 +833,11 @@ sCase = QuasiQuoter
                                                                       ]
                    let find _ []     = Nothing
                        find w (c:cs)
-                         | matches = Just c
-                         | True    = find w cs
-                         where matches = case c of
-                                           CMatch _ nm _ _ _ _ -> sameBase nm w
-                                           CWild  {}           -> False
+                         | mtches = Just c
+                         | True   = find w cs
+                         where mtches = case c of
+                                          CMatch _ nm _ _ _ _ -> sameBase nm w
+                                          CWild  {}           -> False
 
                        case2rhs :: Case -> [Type] -> (Maybe Exp, Exp)
                        case2rhs cs ts = (LamE pats <$> mbGuard, LamE pats e)
@@ -868,9 +879,9 @@ sCase = QuasiQuoter
 
                    -- Collect, for each constructor, the corresponding cases:
                    let cstrMatches :: [(Name, ([Type], [Case]))]
-                       cstrMatches = map (\(cstr, ts) -> (cstr, (ts, concatMap (matches cstr) cases))) cstrs
-                         where matches cstr c | Just n <- getCaseConstructor c, sameBase n cstr = [c]
-                                              | True                                      = []
+                       cstrMatches = map (\(cstr, ts) -> (cstr, (ts, concatMap (mtches cstr) cases))) cstrs
+                         where mtches cstr c | Just n <- getCaseConstructor c, sameBase n cstr = [c]
+                                             | True                                            = []
 
                    -- Make sure we have a match for every constructor or a catch-all
                    unless hasCatchAll $ case [nm | (nm, (_, [])) <- cstrMatches] of
@@ -894,8 +905,8 @@ sCase = QuasiQuoter
                                                          , "        Unable to determine params for: " <> pprint nm
                                                          ]
                              Just ts -> do let pats = fromMaybe (map (const WildP) ts) mbp
-                                               args = [mkAccessorFor mbt nm i scrut | (i, _) <- zip [(1 :: Int) ..] ts]
-                                               testerExpr = mkTesterFor mbt nm scrut
+                                               args = [mkAccessorFor mbt nm i s | (i, _) <- zip [(1 :: Int) ..] ts]
+                                               testerExpr = mkTesterFor mbt nm s
 
                                                -- What are the free variables in the guard and the rhs that we bind?
                                                used    = Set.fromList [n | VarP n <- pats] `Set.intersection` allUsed
@@ -930,6 +941,47 @@ sCase = QuasiQuoter
                                    | True      = ps
 
                    pure $ Right (optimize pairs)
+
+-- | Transform nested @case@ expressions inside a TH 'Exp' into symbolic case expressions.
+-- Walks the expression bottom-up: inner cases are transformed before outer ones.
+-- This is what enables @case@ expressions inside @[sCase| ... |]@ to work as symbolic cases.
+transformNestedCases :: Exp -> Q Exp
+transformNestedCases = everywhereM (mkM go)
+  where go :: Exp -> Q Exp
+        go (CaseE s ms) = processCaseExp (repeat Unknown) s ms
+        go e            = pure e
+
+-- | Transform the matches of an outer sCase expression, resolving any nested
+-- @case@ expressions in the RHS and guards before the outer case processes them.
+transformMatches :: [Match] -> Q [Match]
+transformMatches = mapM transformMatch
+  where transformMatch (Match pat body locals) = do
+          body'   <- transformBody body
+          locals' <- mapM transformDec locals
+          pure (Match pat body' locals')
+
+        transformBody (NormalB e)    = NormalB <$> transformNestedCases e
+        transformBody (GuardedB gs)  = GuardedB <$> mapM transformGuarded gs
+
+        transformGuarded (g, e) = do g' <- transformGuard g
+                                     e' <- transformNestedCases e
+                                     pure (g', e')
+
+        transformGuard (NormalG e) = NormalG <$> transformNestedCases e
+        transformGuard (PatG ss)   = PatG <$> mapM transformStmt ss
+
+        transformStmt (NoBindS e)  = NoBindS <$> transformNestedCases e
+        transformStmt s            = pure s
+
+        transformDec (ValD p b ls) = do b'  <- transformBody b
+                                        ls' <- mapM transformDec ls
+                                        pure (ValD p b' ls')
+        transformDec (FunD n cs)   = FunD n <$> mapM transformClause cs
+        transformDec d             = pure d
+
+        transformClause (Clause ps b ls) = do b'  <- transformBody b
+                                              ls' <- mapM transformDec ls
+                                              pure (Clause ps b' ls')
 
 -- * pCase
 

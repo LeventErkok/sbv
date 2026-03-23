@@ -1,0 +1,18 @@
+SCase94.hs:(12,16)-(20,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " e of\n\
+      \                Zero  -> case m of\n\
+      \                           Just v -> v\n\
+      \                           _      -> 0\n\
+      \                Num k     -> k\n\
+      \                _         -> case m of\n\
+      \                               Nothing -> -1\n\
+      \                               _       -> 42\n\
+      \       "
+  ======>
+    sCaseExpr
+      (Data.SBV.Maybe.sCaseMaybe 0 (\ v -> v) m) (\ k -> k)
+      (\ _ -> Data.SBV.Maybe.sCaseMaybe (negate 1) (\ _ -> 42) m)
+      (\ _ _ -> Data.SBV.Maybe.sCaseMaybe (negate 1) (\ _ -> 42) m)
+      (\ _ _ _ -> Data.SBV.Maybe.sCaseMaybe (negate 1) (\ _ -> 42) m) e
