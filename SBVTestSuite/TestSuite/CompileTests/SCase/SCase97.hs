@@ -1,5 +1,4 @@
-{-# LANGUAGE QuasiQuotes  #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 {-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
 
