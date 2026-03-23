@@ -138,8 +138,8 @@ evalSat = sat $ do e :: SExpr String Integer  <- free "e"
 --
 -- >>> genE
 -- Satisfiable. Model:
---   e1 = Let "h" (Val 4) (Val 3) :: Expr String Integer
---   e2 =                Val (-2) :: Expr String Integer
+--   e1 = Let "l" (Val 5) (Let "h" (Val (-42423)) (Add (Add (Val 28806) (Val 13620)) (Var "h"))) :: Expr String Integer
+--   e2 =                                                                               Val (-2) :: Expr String Integer
 genE :: IO SatResult
 genE = sat $ do e1 :: SExpr String Integer <- free "e1"
                 e2 :: SExpr String Integer <- free "e2"
@@ -155,9 +155,9 @@ genE = sat $ do e1 :: SExpr String Integer <- free "e1"
 -- | Query mode example.
 --
 -- >>> queryE
--- e1: (let c = (1 * -1) in (-3 * c))
--- e2: (let p = -2 in (0 + p))
--- e3: (let h = 90 % 91 in h)
+-- e1: (let h = (-3 * -1) in (1 * h))
+-- e2: -2
+-- e3: (let d = 98 % 99 in d)
 queryE :: IO ()
 queryE = runSMT $ do
            e1 :: SExpr String Integer <- free "e1"
