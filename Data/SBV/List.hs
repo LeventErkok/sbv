@@ -1145,9 +1145,9 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
     = sbvDropWhile (tuple (closureEnv, l))
     where sbvDropWhile = smtHOFunction "sbv.closureDropWhile" closureFun
                        $ \envxs -> [sCase| envxs of
-                                      (_,    [])                        -> []
-                                      (cEnv, h : t) | closureFun cEnv h -> sbvDropWhile (tuple (cEnv, t))
-                                                    | True              -> h .: t
+                                      (_,    [])                              -> []
+                                      (cEnv, lst@(h : t)) | closureFun cEnv h -> sbvDropWhile (tuple (cEnv, t))
+                                                          | True              -> lst
                                    |]
 
 -- | @`sum` s@. Sum the given sequence.

@@ -207,9 +207,9 @@ mkSymbolic [''Binding]
 lookUp :: SInteger -> SList Binding -> SBool
 lookUp = smtFunction "lookUp"
        $ \vid bs -> [sCase| bs of
-                       []                                 -> sFalse
-                       Binding bId bVal : _ | vid .== bId -> bVal
-                                            | True        -> lookUp vid (tail bs)
+                       []                                    -> sFalse
+                       Binding bId bVal : rest | vid .== bId -> bVal
+                                               | True        -> lookUp vid rest
                     |]
 
 -- | Check if a variable is assigned in the bindings.

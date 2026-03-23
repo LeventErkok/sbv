@@ -1135,8 +1135,8 @@ destutter = smtFunction "destutter"
           $ \xs -> [sCase| xs of
                       []   -> xs
                       [_]  -> xs
-                      a : b : as | a .== b ->      destutter (b .: as)
-                                 | True    -> a .: destutter (b .: as)
+                      a : rest@(b : _) | a .== b ->      destutter rest
+                                       | True    -> a .: destutter rest
                    |]
 
 -- | @destutter (destutter xs) == destutter xs@
@@ -1177,10 +1177,10 @@ destutterIdempotent = do
    -- No adjacent duplicates
    let noAdd = smtFunction "noAdd"
              $ \xs -> [sCase| xs of
-                         []                  -> sTrue
-                         [_]                 -> sTrue
-                         a : b : _ | a .== b -> sFalse
-                                   | True    -> noAdd (tail xs)
+                         []  -> sTrue
+                         [_] -> sTrue
+                         a : rest@(b : _) | a .== b -> sFalse
+                                          | True    -> noAdd rest
                       |]
 
    -- Helper: The head of a destuttered non-empty list does not change

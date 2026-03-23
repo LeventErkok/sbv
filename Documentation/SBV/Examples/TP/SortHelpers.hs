@@ -38,9 +38,9 @@ import Documentation.SBV.Examples.TP.Lists
 nonDecreasing :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SBool
 nonDecreasing = smtFunction "nonDecreasing"
               $ \l -> [sCase| l of
-                         []        -> sTrue
-                         [_]       -> sTrue
-                         x : y : _ -> x .<= y .&& nonDecreasing (tail l)
+                         []  -> sTrue
+                         [_] -> sTrue
+                         x : rest@(y : _) -> x .<= y .&& nonDecreasing rest
                       |]
 
 -- | Are two lists permutations of each other?

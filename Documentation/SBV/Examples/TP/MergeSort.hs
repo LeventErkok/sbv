@@ -45,8 +45,8 @@ merge = smtFunction "merge"
                    ([], _) -> r
                    (_, []) -> l
 
-                   (a : as, b : bs) | a .<= b -> a .: merge as (b .: bs)
-                                    | True    -> b .: merge (a .: as) bs
+                   (ll@(a : as), rr@(b : bs)) | a .<= b -> a .: merge as rr
+                                              | True    -> b .: merge ll bs
                 |]
 
 -- | Merge sort, using 'merge' above to successively sort halved input
