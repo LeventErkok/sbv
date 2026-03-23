@@ -79,7 +79,7 @@ revPreservesLen = sInductWith cvc5 "revPreservesLen"
                =: [pCase| xs of
                     []     -> trivial
                     [_]    -> trivial
-                    a : as -> length (head (rev as) .: rev (a .: rev (tail (rev as)))) .== length (a .: as)
+                    whole@(a : as) -> length (head (rev as) .: rev (a .: rev (tail (rev as)))) .== length whole
                            -- Simplify: length (h .: e) = 1 + length e
                            =: (1 + length (rev (a .: rev (tail (rev as))))) .== (1 + length as)
                            -- Now apply the IH instances in order: each precondition depends on previous conclusions

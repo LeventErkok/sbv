@@ -1211,19 +1211,20 @@ destutterIdempotent = do
                   \ih xs -> []
                          |- noAdd (destutter xs)
                          =: [pCase| xs of
-                              []         -> trivial
-                              [_]        -> trivial
-                              a : b : bs -> noAdd (destutter (a .: b .: bs))
-                                         =: cases [a .== b  ==> noAdd (destutter (b .: bs))
-                                                             ?? ih
-                                                             =: sTrue
-                                                             =: qed
-                                                  , a ./= b ==> noAdd (a .: destutter (b .: bs))
-                                                             ?? helper1 `at` (Inst @"xs" bs, Inst @"h" b)
-                                                             ?? ih
-                                                             =: sTrue
-                                                             =: qed
-                                                  ]
+                              []  -> trivial
+                              [_] -> trivial
+                              whole@(a : rest@(b : bs))
+                                 -> noAdd (destutter whole)
+                                 =: cases [a .== b  ==> noAdd (destutter rest)
+                                                     ?? ih
+                                                     =: sTrue
+                                                     =: qed
+                                          , a ./= b ==> noAdd (a .: destutter rest)
+                                                     ?? helper1 `at` (Inst @"xs" bs, Inst @"h" b)
+                                                     ?? ih
+                                                     =: sTrue
+                                                     =: qed
+                                          ]
                             |]
 
    -- Now we can prove idempotency easily:
@@ -1799,12 +1800,13 @@ interleaveLen = sInduct "interleaveLen"
                         (\xs ys -> length xs + length ys, []) $
                         \ih xs ys -> [] |- length xs + length ys .== length (interleave xs ys)
                                         =: [pCase| xs of
-                                             []     -> trivial
-                                             a : as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
-                                                    =: 1 + length as + length ys .== 1 + length (interleave ys as)
-                                                    ?? ih `at` (Inst @"xs" ys, Inst @"ys" as)
-                                                    =: sTrue
-                                                    =: qed
+                                              []             -> trivial
+                                              whole@(_ : as) ->
+                                                   length whole + length ys .== length (interleave whole ys)
+                                                =: 1 + length as + length ys .== 1 + length (interleave ys as)
+                                                ?? ih `at` (Inst @"xs" ys, Inst @"ys" as)
+                                                =: sTrue
+                                                =: qed
                                            |]
 
 -- | Uninterleave the elements of two lists. We roughly split it into two, of alternating elements.
@@ -1864,20 +1866,21 @@ interleaveRoundTrip = do
                         |- let (es, os) = untuple alts
                         in uninterleaveGen (interleave xs ys) alts
                         =: [pCase| tuple (xs, ys) of
-                              ([], _)          -> trivial
-                              (_, [])          -> trivial
-                              (a : as, b : bs) -> uninterleaveGen (interleave (a .: as) (b .: bs)) alts
-                                               =: uninterleaveGen (a .: interleave (b .: bs) as) alts
-                                               =: uninterleaveGen (a .: b .: interleave as bs) alts
-                                               =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
-                                               ?? ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
-                                               =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
-                                               ?? revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as)
-                                               =: tuple (reverse es ++ (a .: as), reverse (b .: os) ++ bs)
-                                               ?? revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs)
-                                               =: tuple (reverse es ++ (a .: as), reverse os ++ (b .: bs))
-                                               =: tuple (reverse es ++ xs, reverse os ++ ys)
-                                               =: qed
+                              ([], _) -> trivial
+                              (_, []) -> trivial
+                              (ll@(a : as), rr@(b : bs)) ->
+                                   uninterleaveGen (interleave ll rr) alts
+                                =: uninterleaveGen (a .: interleave rr as) alts
+                                =: uninterleaveGen (a .: b .: interleave as bs) alts
+                                =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
+                                ?? ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
+                                =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
+                                ?? revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as)
+                                =: tuple (reverse es ++ ll, reverse (b .: os) ++ bs)
+                                ?? revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs)
+                                =: tuple (reverse es ++ ll, reverse os ++ rr)
+                                =: tuple (reverse es ++ xs, reverse os ++ ys)
+                                =: qed
                            |]
 
    -- Round-trip theorem:

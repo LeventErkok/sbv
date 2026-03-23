@@ -174,23 +174,23 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                      |- [pCase| tuple (xs, ys) of
                           ([], _)          -> trivial
                           (_, [])          -> trivial
-                          (a : as, b : bs) ->
-                                nonDecreasing (merge (a .: as) (b .: bs))
+                          (ll@(a : as), rr@(b : bs)) ->
+                                nonDecreasing (merge ll rr)
                              ?? "2 way case split"
-                             =: cases [ a .<= b ==> nonDecreasing (merge (a .: as) (b .: bs))
+                             =: cases [ a .<= b ==> nonDecreasing (merge ll rr)
                                                  ?? mergeUnfold `at` (Inst @"x" a, Inst @"xs" as, Inst @"y" b, Inst @"ys" bs)
-                                                 =: nonDecreasing (a .: merge as (b .: bs))
-                                                 ?? ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
-                                                 ?? nonDecrIns `at` (Inst @"x" a, Inst @"xs" (merge as (b .: bs)))
-                                                 ?? mergeHead  `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
+                                                 =: nonDecreasing (a .: merge as rr)
+                                                 ?? ih         `at` (Inst @"xs" as, Inst @"ys" rr)
+                                                 ?? nonDecrIns `at` (Inst @"x" a, Inst @"xs" (merge as rr))
+                                                 ?? mergeHead  `at` (Inst @"xs" as, Inst @"ys" rr)
                                                  =: sTrue
                                                  =: qed
-                                      , a .> b  ==> nonDecreasing (merge (a .: as) (b .: bs))
+                                      , a .> b  ==> nonDecreasing (merge ll rr)
                                                  ?? mergeUnfold `at` (Inst @"x" a, Inst @"xs" as, Inst @"y" b, Inst @"ys" bs)
-                                                 =: nonDecreasing (b .: merge (a .: as) bs)
-                                                 ?? ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
-                                                 ?? nonDecrIns `at` (Inst @"x" b, Inst @"xs" (merge (a .: as) bs))
-                                                 ?? mergeHead  `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
+                                                 =: nonDecreasing (b .: merge ll bs)
+                                                 ?? ih         `at` (Inst @"xs" ll, Inst @"ys" bs)
+                                                 ?? nonDecrIns `at` (Inst @"x" b, Inst @"xs" (merge ll bs))
+                                                 ?? mergeHead  `at` (Inst @"xs" ll, Inst @"ys" bs)
                                                  =: sTrue
                                                  =: qed
                                       ]
@@ -201,26 +201,27 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                 (\(Forall xs) -> nonDecreasing (mergeSort xs))
                 (length, []) $
                 \ih xs -> [] |- [pCase| xs of
-                                  []     -> qed
-                                  e : es -> nonDecreasing (mergeSort (e .: es))
-                                         ?? "unfold"
-                                         =: let (h1, h2) = splitAt (length (e .: es) `sEDiv` 2) (e .: es)
-                                            in nonDecreasing (ite (length (e .: es) .<= 1)
-                                                                  (e .: es)
-                                                                  (merge (mergeSort h1) (mergeSort h2)))
-                                         ?? "push nonDecreasing down"
-                                         =: ite (length (e .: es) .<= 1)
-                                                (nonDecreasing (e .: es))
-                                                (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
-                                         ?? ih `at` Inst @"xs" es
-                                         =: ite (length (e .: es) .<= 1)
-                                                sTrue
-                                                (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
-                                         ?? ih `at` Inst @"xs" h1
-                                         ?? ih `at` Inst @"xs" h2
-                                         ?? mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
-                                         =: sTrue
-                                         =: qed
+                                  []             -> qed
+                                  whole@(_ : es) ->
+                                        nonDecreasing (mergeSort whole)
+                                     ?? "unfold"
+                                     =: let (h1, h2) = splitAt (length whole `sEDiv` 2) whole
+                                        in nonDecreasing (ite (length whole .<= 1)
+                                                              whole
+                                                              (merge (mergeSort h1) (mergeSort h2)))
+                                     ?? "push nonDecreasing down"
+                                     =: ite (length whole .<= 1)
+                                            (nonDecreasing whole)
+                                            (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
+                                     ?? ih `at` Inst @"xs" es
+                                     =: ite (length whole .<= 1)
+                                            sTrue
+                                            (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
+                                     ?? ih `at` Inst @"xs" h1
+                                     ?? ih `at` Inst @"xs" h2
+                                     ?? mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
+                                     =: sTrue
+                                     =: qed
                                 |]
 
     --------------------------------------------------------------------------------------------
@@ -231,40 +232,42 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                 (\(Forall xs) (Forall ys) (Forall e) -> count e (merge xs ys) .== count e xs + count e ys)
                 (\xs ys _e -> tuple (length xs, length ys), []) $
                 \ih as bs e -> [] |- [pCase| tuple (as, bs) of
-                                      ([], _)          -> trivial
-                                      (_, [])          -> trivial
-                                      (x : xs, y : ys) -> count e (merge (x .: xs) (y .: ys))
-                                                       ?? "unfold merge"
-                                                       =: count e (ite (x .<= y)
-                                                                       (x .: merge xs (y .: ys))
-                                                                       (y .: merge (x .: xs) ys))
-                                                       ?? "push count inside"
-                                                       =: ite (x .<= y)
-                                                              (count e (x .: merge xs (y .: ys)))
-                                                              (count e (y .: merge (x .: xs) ys))
-                                                       ?? "unfold count, twice"
-                                                       ?? cntStep `at` (Inst @"e" e, Inst @"x" x, Inst @"xs" (merge xs (y .: ys)))
-                                                       ?? cntStep `at` (Inst @"e" e, Inst @"x" y, Inst @"xs" (merge (x .: xs) ys))
-                                                       =: ite (x .<= y)
-                                                              (let r = count e (merge xs (y .: ys)) in ite (e .== x) (1+r) r)
-                                                              (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
-                                                       ?? ih `at` (Inst @"xs" xs, Inst @"ys" (y .: ys), Inst @"e" e)
-                                                       =: ite (x .<= y)
-                                                              (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
-                                                              (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
-                                                       ?? ih `at` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"e" e)
-                                                       =: ite (x .<= y)
-                                                              (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
-                                                              (let r = count e (x .: xs) + count e ys in ite (e .== y) (1+r) r)
-                                                       ?? "unfold count in reverse, twice"
-                                                       ?? cntStep `at` (Inst @"e" e, Inst @"x" x, Inst @"xs" xs)
-                                                       ?? cntStep `at` (Inst @"e" e, Inst @"x" y, Inst @"xs" ys)
-                                                       =: ite (x .<= y)
-                                                              (count e (x .: xs) + count e (y .: ys))
-                                                              (count e (x .: xs) + count e (y .: ys))
-                                                       ?? "simplify"
-                                                       =: count e (x .: xs) + count e (y .: ys)
-                                                       =: qed
+                                      ([], _) -> trivial
+                                      (_, []) -> trivial
+
+                                      (ll@(x : xs), rr@(y : ys)) ->
+                                              count e (merge ll rr)
+                                           ?? "unfold merge"
+                                           =: count e (ite (x .<= y)
+                                                           (x .: merge xs rr)
+                                                           (y .: merge ll ys))
+                                           ?? "push count inside"
+                                           =: ite (x .<= y)
+                                                  (count e (x .: merge xs rr))
+                                                  (count e (y .: merge ll ys))
+                                           ?? "unfold count, twice"
+                                           ?? cntStep `at` (Inst @"e" e, Inst @"x" x, Inst @"xs" (merge xs rr))
+                                           ?? cntStep `at` (Inst @"e" e, Inst @"x" y, Inst @"xs" (merge ll ys))
+                                           =: ite (x .<= y)
+                                                  (let r = count e (merge xs rr) in ite (e .== x) (1+r) r)
+                                                  (let r = count e (merge ll ys) in ite (e .== y) (1+r) r)
+                                           ?? ih `at` (Inst @"xs" xs, Inst @"ys" rr, Inst @"e" e)
+                                           =: ite (x .<= y)
+                                                  (let r = count e xs + count e rr in ite (e .== x) (1+r) r)
+                                                  (let r = count e (merge ll ys) in ite (e .== y) (1+r) r)
+                                           ?? ih `at` (Inst @"xs" ll, Inst @"ys" ys, Inst @"e" e)
+                                           =: ite (x .<= y)
+                                                  (let r = count e xs + count e rr in ite (e .== x) (1+r) r)
+                                                  (let r = count e ll + count e ys in ite (e .== y) (1+r) r)
+                                           ?? "unfold count in reverse, twice"
+                                           ?? cntStep `at` (Inst @"e" e, Inst @"x" x, Inst @"xs" xs)
+                                           ?? cntStep `at` (Inst @"e" e, Inst @"x" y, Inst @"xs" ys)
+                                           =: ite (x .<= y)
+                                                  (count e ll + count e rr)
+                                                  (count e ll + count e rr)
+                                           ?? "simplify"
+                                           =: count e ll + count e rr
+                                           =: qed
                                     |]
 
     sortIsPermutation <-
@@ -273,14 +276,14 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                 (\xs _e -> length xs, []) $
                 \ih as e -> [] |- [pCase| as of
                                     []     -> trivial
-                                    x : xs -> count e (mergeSort (x .: xs))
+                                    whole@(x : xs) -> count e (mergeSort whole)
                                            ?? "unfold mergeSort"
-                                           =: count e (ite (length (x .: xs) .<= 1)
-                                                           (x .: xs)
-                                                           (let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
+                                           =: count e (ite (length whole .<= 1)
+                                                           whole
+                                                           (let (h1, h2) = splitAt (length whole `sEDiv` 2) whole
                                                             in merge (mergeSort h1) (mergeSort h2)))
                                            ?? "push count down, simplify, rearrange"
-                                           =: let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
+                                           =: let (h1, h2) = splitAt (length whole `sEDiv` 2) whole
                                            in ite (null xs)
                                                   (count e [x])
                                                   (count e (merge (mergeSort h1) (mergeSort h2)))
@@ -296,10 +299,10 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                                            =: ite (null xs)
                                                   (count e [x])
                                                   (count e h1 + count e h2)
-                                           ?? takeDropCount `at` (Inst @"xs" (x .: xs), Inst @"n" (length (x .: xs) `sEDiv` 2), Inst @"e" e)
+                                           ?? takeDropCount `at` (Inst @"xs" whole, Inst @"n" (length whole `sEDiv` 2), Inst @"e" e)
                                            =: ite (null xs)
                                                   (count e [x])
-                                                  (count e (x .: xs))
+                                                  (count e whole)
                                            =: qed
                                   |]
 

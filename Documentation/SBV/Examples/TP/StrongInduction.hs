@@ -318,18 +318,19 @@ sumHalves = runTP $ do
       (length, []) $
       \ih xs -> [] |- halvingSum xs
                    =: [pCase| xs of
-                        []         -> qed
-                        [_]        -> qed
-                        a : b : bs -> halvingSum (a .: b .: bs)
-                                   =: let (f, s) = splitAt (length (a .: b .: bs) `sDiv` 2) (a .: b .: bs)
-                                   in halvingSum f + halvingSum s
-                                   ?? ih `at` Inst @"xs" f
-                                   =: sum f + halvingSum s
-                                   ?? ih `at` Inst @"xs" s
-                                   =: sum f + sum s
-                                   ?? helper `at` (Inst @"xs" f, Inst @"ys" s)
-                                   =: sum (f ++ s)
-                                   ?? "simplify"
-                                   =: sum (a .: b .: bs)
-                                   =: qed
+                        []                -> qed
+                        [_]               -> qed
+                        whole@(_ : _ : _) ->
+                             halvingSum whole
+                          =: let (f, s) = splitAt (length whole `sDiv` 2) whole
+                          in halvingSum f + halvingSum s
+                          ?? ih `at` Inst @"xs" f
+                          =: sum f + halvingSum s
+                          ?? ih `at` Inst @"xs" s
+                          =: sum f + sum s
+                          ?? helper `at` (Inst @"xs" f, Inst @"ys" s)
+                          =: sum (f ++ s)
+                          ?? "simplify"
+                          =: sum whole
+                          =: qed
                       |]

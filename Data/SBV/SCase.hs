@@ -1027,7 +1027,11 @@ pCase = QuasiQuoter
       let fullCase = "case " <> src
           offsets  = findOffsets src
       case metaParse fullCase of
-        Right (CaseE scrut matches) -> do
+        Right (CaseE scrut0 matches0) -> do
+          -- Transform any nested case expressions in the RHS/guards of each match.
+          -- This ensures inner cases become symbolic before the outer case processes them.
+          matches <- transformMatches matches0
+          scrut   <- transformNestedCases scrut0
           mbTypeInfo <- inferType "pCase" matches
           case mbTypeInfo of
             Nothing -> do
