@@ -1,1 +1,19 @@
-There was no failure during compilation.
+SCase60.hs:(13,15)-(17,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " xs of\n\
+      \                []         -> 0\n\
+      \                y : _ | y .== 5 -> 100\n\
+      \                _ : ys     -> t ys\n\
+      \       "
+  ======>
+    ite
+      (Data.SBV.List.null xs) 0
+      (ite
+         ((.&&)
+            (sNot (Data.SBV.List.null xs))
+            ((\ y _ -> y .== 5)
+               (Data.SBV.List.head xs) (Data.SBV.List.tail xs)))
+         ((\ y _ -> const 100 y)
+            (Data.SBV.List.head xs) (Data.SBV.List.tail xs))
+         ((\ _ ys -> t ys) (Data.SBV.List.head xs) (Data.SBV.List.tail xs)))

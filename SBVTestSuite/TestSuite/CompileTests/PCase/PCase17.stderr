@@ -1,3 +1,18 @@
+PCase17.hs:(18,14)-(24,7): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " e of\n\
+      \       Zero      -> e .== e =: qed\n\
+      \       Num _     -> e .== e =: qed\n\
+      \       Var _     -> e .== e =: qed\n\
+      \       Add _ _   -> e .== e =: qed\n\
+      \       Let _ _ _ -> e .== e =: qed\n\
+      \     "
+  ======>
+    cases
+      [(isZero e ==> (e .== e =: qed)), (isNum e ==> (e .== e =: qed)),
+       (isVar e ==> (e .== e =: qed)), (isAdd e ==> (e .== e =: qed)),
+       (isLet e ==> (e .== e =: qed))]
 PCase17.hs:18:14: error: [GHC-83865]
     " Couldn't match expected type: Proof SBool
                   with actual type: sbv-13.6.5:Data.SBV.TP.TP.TPProofGen

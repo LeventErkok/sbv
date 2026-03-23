@@ -1,1 +1,8 @@
-There was no failure during compilation.
+PCase64.hs:(17,15)-(19,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " p of\n\
+      \         (_, _) -> p .== p =: qed\n\
+      \       "
+  ======>
+    cases [(sTrue ==> (p .== p =: qed))]

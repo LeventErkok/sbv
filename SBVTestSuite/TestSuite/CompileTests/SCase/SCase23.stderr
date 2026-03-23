@@ -1,3 +1,17 @@
+SCase23.hs:(11,14)-(17,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " e of\n\
+      \               Zero           -> 0\n\
+      \               Num i          -> 4\n\
+      \               Var s          -> ite (s .== literal \"a\") 1 2\n\
+      \               Add a b        -> t a + t b\n\
+      \               Let _   _a  b  -> t b\n\
+      \      "
+  ======>
+    sCaseExpr
+      0 (\ i -> 4) (\ s -> ite (s .== literal "a") 1 2)
+      (\ a b -> (t a) + t b) (\ _ _a b -> t b) e
 SCase23.hs:11:14: error: [GHC-40910] [-Wunused-matches, Werror=unused-matches]
     Defined but not used: i
    |

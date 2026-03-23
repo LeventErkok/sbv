@@ -1,1 +1,19 @@
-There was no failure during compilation.
+PCase20.hs:(18,15)-(25,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " e of\n\
+      \         Num i | i .> 3  -> sNum i .== sNum i =: e .== e =: qed\n\
+      \               | sTrue   -> sNum i .== sNum i =: e .== e =: qed\n\
+      \         Zero{}           -> e .== e =: qed\n\
+      \         Var{}            -> e .== e =: qed\n\
+      \         Add{}            -> e .== e =: qed\n\
+      \         Let{}            -> e .== e =: qed\n\
+      \       "
+  ======>
+    cases
+      [((.&&) (isNum e) (let i = getNum_1 e in i .> 3)
+          ==> (let i = getNum_1 e in (sNum i) .== sNum i =: e .== e =: qed)),
+       ((.&&) (isNum e) (sNot (let i = getNum_1 e in i .> 3))
+          ==> (let i = getNum_1 e in (sNum i) .== sNum i =: e .== e =: qed)),
+       (isZero e ==> (e .== e =: qed)), (isVar e ==> (e .== e =: qed)),
+       (isAdd e ==> (e .== e =: qed)), (isLet e ==> (e .== e =: qed))]

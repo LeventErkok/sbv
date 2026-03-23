@@ -1,1 +1,12 @@
-There was no failure during compilation.
+SCase56.hs:(13,15)-(16,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " xs of\n\
+      \                []     -> 0\n\
+      \                y : ys -> y + t ys\n\
+      \       "
+  ======>
+    ite
+      (Data.SBV.List.null xs) 0
+      ((\ y ys -> y + t ys)
+         (Data.SBV.List.head xs) (Data.SBV.List.tail xs))

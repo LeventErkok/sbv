@@ -1,1 +1,12 @@
-There was no failure during compilation.
+SCase67.hs:(11,14)-(14,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " p of\n\
+      \               (a, b) | a .> b -> a\n\
+      \               (_, b)          -> b\n\
+      \      "
+  ======>
+    ite
+      ((\ a b -> a .> b) (Data.SBV.Tuple._1 p) (Data.SBV.Tuple._2 p))
+      ((\ a b -> const a b) (Data.SBV.Tuple._1 p) (Data.SBV.Tuple._2 p))
+      ((\ _ b -> b) (Data.SBV.Tuple._1 p) (Data.SBV.Tuple._2 p))

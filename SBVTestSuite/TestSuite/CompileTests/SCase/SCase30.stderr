@@ -1,1 +1,12 @@
-There was no failure during compilation.
+SCase30.hs:(20,14)-(24,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " a of\n\
+      \         A u     -> sA (u+1)\n\
+      \         B f     -> sB (f+2)\n\
+      \         C a1 a2 -> sC (t a1) (t a2)\n\
+      \      "
+  ======>
+    sCaseA
+      (\ u -> sA (u + 1)) (\ f -> sB (f + 2))
+      (\ a1 a2 -> sC (t a1) (t a2)) a

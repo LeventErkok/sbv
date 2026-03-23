@@ -1,1 +1,32 @@
-There was no failure during compilation.
+SCase35.hs:(12,14)-(19,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " e of\n\
+      \               Zero              -> 0\n\
+      \               Num k             -> k\n\
+      \               Var s             -> ite (s .== literal \"a\") 1 2\n\
+      \               Add (Num i) (Num j) -> i + j\n\
+      \               Add a b           -> t a + t b\n\
+      \               Let _   _a  b     -> t b\n\
+      \      "
+  ======>
+    ite
+      (isZero e) 0
+      (ite
+         (isNum e) ((\ k -> k) (getNum_1 e))
+         (ite
+            (isVar e) ((\ s -> ite (s .== literal "a") 1 2) (getVar_1 e))
+            (ite
+               ((.&&)
+                  (isAdd e)
+                  ((\ _ _ -> (.&&) (isNum (getAdd_1 e)) (isNum (getAdd_2 e)))
+                     (getAdd_1 e) (getAdd_2 e)))
+               ((\ _ _
+                   -> let
+                        i = getNum_1 (getAdd_1 e)
+                        j = getNum_1 (getAdd_2 e)
+                      in i + j)
+                  (getAdd_1 e) (getAdd_2 e))
+               (ite
+                  (isAdd e) ((\ a b -> (t a) + t b) (getAdd_1 e) (getAdd_2 e))
+                  ((\ _ _a b -> t b) (getLet_1 e) (getLet_2 e) (getLet_3 e))))))

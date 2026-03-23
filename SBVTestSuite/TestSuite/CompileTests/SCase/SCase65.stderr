@@ -1,1 +1,13 @@
-There was no failure during compilation.
+SCase65.hs:(11,14)-(14,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " m of\n\
+      \               Nothing     -> 0\n\
+      \               Just (a, _) -> a\n\
+      \      "
+  ======>
+    Data.SBV.Maybe.sCaseMaybe
+      0
+      (\ _
+         -> let a = Data.SBV.Tuple._1 (Data.SBV.Maybe.getJust_1 m) in a)
+      m

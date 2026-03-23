@@ -1,1 +1,11 @@
-There was no failure during compilation.
+PCase61.hs:(17,15)-(20,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " m of\n\
+      \         Nothing -> m .== m =: qed\n\
+      \         Just _  -> m .== m =: qed\n\
+      \       "
+  ======>
+    cases
+      [(Data.SBV.Maybe.isNothing m ==> (m .== m =: qed)),
+       (Data.SBV.Maybe.isJust m ==> (m .== m =: qed))]

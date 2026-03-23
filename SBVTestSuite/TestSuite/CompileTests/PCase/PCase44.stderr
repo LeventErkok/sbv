@@ -1,1 +1,48 @@
-There was no failure during compilation.
+PCase44.hs:(18,15)-(26,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " e of\n\
+      \         Var s | s .== literal \"a\"                       -> e .== e =: qed\n\
+      \               | s .== literal \"b\" .|| s .== literal \"c\" -> e .== e =: qed\n\
+      \               | sTrue                                    -> e .== e =: qed\n\
+      \\n\
+      \         Num _ | sTrue                                    -> e .== e =: qed\n\
+      \\n\
+      \         _                                                -> e .== e =: qed\n\
+      \       "
+  ======>
+    cases
+      [((.&&) (isVar e) (let s = getVar_1 e in s .== literal "a")
+          ==> (e .== e =: qed)),
+       ((.&&)
+          (isVar e)
+          ((.&&)
+             (sNot (let s = getVar_1 e in s .== literal "a"))
+             (let s = getVar_1 e in s .== literal "b" .|| s .== literal "c"))
+          ==> (e .== e =: qed)),
+       ((.&&)
+          (isVar e)
+          ((.&&)
+             (sNot (let s = getVar_1 e in s .== literal "a"))
+             (sNot
+                (let s = getVar_1 e in s .== literal "b" .|| s .== literal "c")))
+          ==> (e .== e =: qed)),
+       (isNum e ==> (e .== e =: qed)),
+       (sNot
+          ((.||)
+             ((.||)
+                ((.||)
+                   ((.&&) (isVar e) (let s = getVar_1 e in s .== literal "a"))
+                   ((.&&)
+                      (isVar e)
+                      ((.&&)
+                         (sNot (let s = getVar_1 e in s .== literal "a"))
+                         (let s = getVar_1 e in s .== literal "b" .|| s .== literal "c"))))
+                ((.&&)
+                   (isVar e)
+                   ((.&&)
+                      (sNot (let s = getVar_1 e in s .== literal "a"))
+                      (sNot
+                         (let s = getVar_1 e in s .== literal "b" .|| s .== literal "c")))))
+             (isNum e))
+          ==> (e .== e =: qed))]

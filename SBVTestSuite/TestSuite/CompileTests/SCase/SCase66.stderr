@@ -1,1 +1,34 @@
-There was no failure during compilation.
+SCase66.hs:(13,14)-(17,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " e of\n\
+      \               Left (x : _) -> x\n\
+      \               Left []      -> 0\n\
+      \               Right _      -> 1\n\
+      \      "
+  ======>
+    ite
+      ((.&&)
+         (Data.SBV.Either.isLeft e)
+         ((\ _
+             -> (.&&)
+                  (sNot (Data.SBV.List.null (Data.SBV.Either.getLeft_1 e)))
+                  ((.===)
+                     (Data.SBV.Either.getLeft_1 e)
+                     (Data.SBV.List.head (Data.SBV.Either.getLeft_1 e)
+                        sbv-13.6.5-4c3bb0ff:Data.SBV.Core.Data..:
+                          Data.SBV.List.tail (Data.SBV.Either.getLeft_1 e))))
+            (Data.SBV.Either.getLeft_1 e)))
+      ((\ _
+          -> let x = Data.SBV.List.head (Data.SBV.Either.getLeft_1 e) in x)
+         (Data.SBV.Either.getLeft_1 e))
+      (ite
+         ((.&&)
+            (Data.SBV.Either.isLeft e)
+            ((\ _ -> Data.SBV.List.null (Data.SBV.Either.getLeft_1 e))
+               (Data.SBV.Either.getLeft_1 e)))
+         ((\ _ -> 0) (Data.SBV.Either.getLeft_1 e))
+         (ite
+            (Data.SBV.Either.isRight e)
+            ((\ _ -> 1) (Data.SBV.Either.getRight_1 e))
+            (symWithKind "unmatched_sCase_Either_6989586621679034882")))

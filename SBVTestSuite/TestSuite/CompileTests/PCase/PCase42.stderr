@@ -1,1 +1,33 @@
-There was no failure during compilation.
+PCase42.hs:(19,15)-(26,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " e of\n\
+      \         Zero           -> e .== e =: qed\n\
+      \         Num i | i .< 3 -> sNum i .== sNum i =: e .== e =: qed\n\
+      \         Var s          -> sVar s .== sVar s =: e .== e =: qed\n\
+      \         Add a b        -> sAdd a b .== sAdd a b =: e .== e =: qed\n\
+      \         Num i          -> sNum i .== sNum i =: e .== e =: qed\n\
+      \         Let nm a b     -> sLet nm a b .== sLet nm a b =: e .== e =: qed\n\
+      \       "
+  ======>
+    cases
+      [(isZero e ==> (e .== e =: qed)),
+       ((.&&) (isNum e) (let i = getNum_1 e in i .< 3)
+          ==> (let i = getNum_1 e in (sNum i) .== sNum i =: e .== e =: qed)),
+       (isVar e
+          ==> (let s = getVar_1 e in (sVar s) .== sVar s =: e .== e =: qed)),
+       (isAdd e
+          ==>
+            (let
+               a = getAdd_1 e
+               b = getAdd_2 e
+             in (sAdd a b) .== sAdd a b =: e .== e =: qed)),
+       ((.&&) (isNum e) (sNot (let i = getNum_1 e in i .< 3))
+          ==> (let i = getNum_1 e in (sNum i) .== sNum i =: e .== e =: qed)),
+       (isLet e
+          ==>
+            (let
+               nm = getLet_1 e
+               a = getLet_2 e
+               b = getLet_3 e
+             in (sLet nm a b) .== sLet nm a b =: e .== e =: qed))]

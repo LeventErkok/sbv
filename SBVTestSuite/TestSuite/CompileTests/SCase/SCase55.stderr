@@ -1,1 +1,9 @@
-There was no failure during compilation.
+SCase55.hs:(11,14)-(14,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " e of\n\
+      \               Left a  -> a\n\
+      \               Right _ -> 0\n\
+      \      "
+  ======>
+    Data.SBV.Either.sCaseEither (\ a -> a) (\ _ -> 0) e
