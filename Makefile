@@ -84,18 +84,15 @@ bench:
 
 # Run this target, which updates the golds for those tests that rely on version updates
 # for SBV and Z3. Saves time before doing "make release"
+VERSION_CHANGE_TESTS = nested1 nested2 nested3 nested4 \
+		       allSat8 query1 noOpt1 noOpt2    \
+		       SCase89 SCase101                \
+		       PCase17 PCase38
+
 updateForVersionChange:
-	@cabal run SBVTest -- -p nested1 --accept --quiet
-	@cabal run SBVTest -- -p nested2 --accept --quiet
-	@cabal run SBVTest -- -p nested3 --accept --quiet
-	@cabal run SBVTest -- -p nested4 --accept --quiet
-	@cabal run SBVTest -- -p allSat8 --accept --quiet
-	@cabal run SBVTest -- -p query1  --accept --quiet
-	@cabal run SBVTest -- -p noOpt1  --accept --quiet
-	@cabal run SBVTest -- -p noOpt2  --accept --quiet
-	@cabal run SBVTest -- -p SCase89 --accept --quiet
-	@cabal run SBVTest -- -p PCase17 --accept --quiet
-	@cabal run SBVTest -- -p PCase38 --accept --quiet
+	@for t in $(VERSION_CHANGE_TESTS); do \
+		cabal run SBVTest -- -p $$t --accept --quiet; \
+	done
 
 testsuite: updateForVersionChange lintTest test testInterfaces benchBuild docTest mkDistro checkLinks
 

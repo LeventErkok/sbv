@@ -1,0 +1,31 @@
+SCase101.hs:(11,14)-(17,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " m of\n\
+      \               Just inner@(Left v)  -> v + case inner of\n\
+      \                                              Left w  -> w\n\
+      \                                              Right _ -> 0\n\
+      \               Just (Right _)       -> 1\n\
+      \               Nothing              -> 0\n\
+      \      "
+  ======>
+    ite
+      ((.&&)
+         (Data.SBV.Maybe.isJust m)
+         ((\ _ -> Data.SBV.Either.isLeft (Data.SBV.Maybe.getJust_1 m))
+            (Data.SBV.Maybe.getJust_1 m)))
+      ((\ _
+          -> let
+               inner = Data.SBV.Maybe.getJust_1 m
+               v = Data.SBV.Either.getLeft_1 (Data.SBV.Maybe.getJust_1 m)
+             in v + Data.SBV.Either.sCaseEither (\ w -> w) (\ _ -> 0) inner)
+         (Data.SBV.Maybe.getJust_1 m))
+      (ite
+         ((.&&)
+            (Data.SBV.Maybe.isJust m)
+            ((\ _ -> Data.SBV.Either.isRight (Data.SBV.Maybe.getJust_1 m))
+               (Data.SBV.Maybe.getJust_1 m)))
+         ((\ _ -> 1) (Data.SBV.Maybe.getJust_1 m))
+         (ite
+            (Data.SBV.Maybe.isNothing m) 0
+            (symWithKind "unmatched_sCase_Maybe_6989586621679034920")))
