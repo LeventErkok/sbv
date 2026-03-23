@@ -35,7 +35,7 @@ import Control.Monad (unless, when, zipWithM)
 
 import Data.SBV.Core.TH    (getConstructors, sbvName)
 import Data.SBV.Core.Model (ite, symWithKind)
-import Data.SBV.Core.Data  (sTrue, sNot, (.&&), (.||), (.==), (.===), literal)
+import Data.SBV.Core.Data  (sTrue, sNot, (.&&), (.||), (.==), (.===), (.:), literal)
 
 import Data.Char  (isDigit)
 import Data.List  (intercalate, stripPrefix)
@@ -152,6 +152,7 @@ inferType label matches = case firstInfo matches of
     patInfo (TupP ps)                                 = Just (Left (length ps))
     patInfo (ListP _)                                 = Just (Right Nothing)
     patInfo (ParensP p)                               = patInfo p
+    patInfo (AsP _ p)                                 = patInfo p
     patInfo _                                         = Nothing
 
     -- Resolve a constructor name to its parent type via TH
@@ -486,12 +487,21 @@ matchToPair scrut off (Match pat grhs locals) = do
                                 | True                      = e
                 in pure [CWild off (fmap bindScrut mbG) (bindScrut rhs) | (mbG, rhs) <- rhss]
 
+    -- As-pattern at top level: name@subpat — bind name to scrutinee, then process inner pattern
+    AsP name subpat -> do
+        cases <- matchToPair scrut off (Match subpat grhs locals)
+        let bindAs e | name `Set.member` freeVars e = LetE [ValD (VarP name) (NormalB scrut) []] e
+                     | True                         = e
+            addBind (CMatch o cn ps mbG' rhs' used) = CMatch o cn ps (fmap bindAs mbG') (bindAs rhs') used
+            addBind (CWild  o        mbG' rhs')     = CWild  o        (fmap bindAs mbG') (bindAs rhs')
+        pure (map addBind cases)
+
     _ -> fail Unknown $ unlines [ "sCase/pCase: Unsupported pattern:"
                                 , "            Saw: " <> pprint pat
                                 , ""
                                 , "        Supported patterns: constructors (Cstr a b _ d),"
                                 , "        empty records (Cstr{}), wildcards (_), variables,"
-                                , "        and integer/string literals."
+                                , "        as-patterns (x@pat), and integer/string literals."
                                 ]
 
 -- | Flatten a sub-pattern against a given accessor expression.
@@ -550,10 +560,15 @@ flattenPat off arg (TupP pats) = do
       patDecs = [ ValD (VarP v) (NormalB (accessor i)) []
                 | (i, VarP v) <- zip [(1::Int)..] (map fstOf3 subResults) ]
   pure (WildP, subGrds, patDecs ++ subDecs)
+-- Nested as-pattern: name@subpat — bind name to accessor, then process inner pattern
+flattenPat off arg (AsP name subpat) = do
+    (pat', guards, decs) <- flattenPat off arg subpat
+    let asDec = ValD (VarP name) (NormalB arg) []
+    pure (pat', guards, asDec : decs)
 flattenPat o _ p = fail o $ unlines [ "sCase/pCase: Unsupported complex pattern match."
                                     , "        Saw: " <> pprint p
                                     , ""
-                                    , "      Only variables, wildcards, nested constructors, and integer/string literals are supported."
+                                    , "      Only variables, wildcards, as-patterns, nested constructors, and integer/string literals are supported."
                                     ]
 
 -- | Flatten a nested list cons pattern (x : xs) against an accessor expression.
@@ -566,7 +581,7 @@ flattenCons off arg p1 p2 = do
     let headExpr = mkAccessorFor (Just BTList) (mkName ":") 1 arg
         tailExpr = mkAccessorFor (Just BTList) (mkName ":") 2 arg
         tester   = mkTesterFor (Just BTList) (mkName ":") arg
-        destruct = foldl1 AppE [VarE '(.===), arg, InfixE (Just headExpr) (VarE (sbvName "Data.SBV.Core.Data" ".:")) (Just tailExpr)]
+        destruct = foldl1 AppE [VarE '(.===), arg, InfixE (Just headExpr) (VarE '(.:)) (Just tailExpr)]
     sub1 <- flattenPat off headExpr p1
     sub2 <- flattenPat off tailExpr p2
     let subGrds = sndOf3 sub1 ++ sndOf3 sub2
@@ -1140,7 +1155,7 @@ pCase = QuasiQuoter
               | Just BTList <- mbt, nameBase nm == ":"
               = let hd = AppE (VarE (sbvName "Data.SBV.List" "head")) scrut
                     tl = AppE (VarE (sbvName "Data.SBV.List" "tail")) scrut
-                in [foldl1 AppE [VarE '(.===), scrut, InfixE (Just hd) (VarE (sbvName "Data.SBV.Core.Data" ".:")) (Just tl)]]
+                in [foldl1 AppE [VarE '(.===), scrut, InfixE (Just hd) (VarE '(.:)) (Just tl)]]
               | True
               = []
 

@@ -1,0 +1,16 @@
+SCase106.hs:(11,14)-(14,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " p of\n\
+      \               whole@(v, b) -> ite b v (case whole of\n\
+      \                                           (w, _) -> negate w)\n\
+      \      "
+  ======>
+    (\ v b
+       -> let whole = p
+          in
+            ite
+              b v
+              ((\ w _ -> negate w)
+                 (Data.SBV.Tuple._1 whole) (Data.SBV.Tuple._2 whole)))
+      (Data.SBV.Tuple._1 p) (Data.SBV.Tuple._2 p)

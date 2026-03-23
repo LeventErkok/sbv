@@ -1,0 +1,34 @@
+SCase105.hs:(11,15)-(17,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " xs of\n\
+      \                a : tl@(_ : _) -> a + case tl of\n\
+      \                                         b : _ -> b\n\
+      \                                         []    -> 0\n\
+      \                _ : _           -> 0\n\
+      \                []              -> 0\n\
+      \       "
+  ======>
+    ite
+      ((.&&)
+         (sNot (Data.SBV.List.null xs))
+         ((\ a _
+             -> const
+                  ((.&&)
+                     (sNot (Data.SBV.List.null (Data.SBV.List.tail xs)))
+                     ((.===)
+                        (Data.SBV.List.tail xs)
+                        (Data.SBV.List.head (Data.SBV.List.tail xs)
+                           .: Data.SBV.List.tail (Data.SBV.List.tail xs))))
+                  a)
+            (Data.SBV.List.head xs) (Data.SBV.List.tail xs)))
+      ((\ a _
+          -> let tl = Data.SBV.List.tail xs
+             in
+               a + ite
+                     (sNot (Data.SBV.List.null tl))
+                     ((\ b _ -> b) (Data.SBV.List.head tl) (Data.SBV.List.tail tl)) 0)
+         (Data.SBV.List.head xs) (Data.SBV.List.tail xs))
+      (ite
+         (sNot (Data.SBV.List.null xs))
+         ((\ _ _ -> 0) (Data.SBV.List.head xs) (Data.SBV.List.tail xs)) 0)
