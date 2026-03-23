@@ -122,7 +122,7 @@ Functions proven terminating: sbv.reverse
 
 ## Algebraic Data Types
 
-User-defined algebraic data types — including enumerations, recursive, and parametric types — are supported via `mkSymbolic`, with pattern matching via `sCase`:
+User-defined algebraic data types — including enumerations, recursive, and parametric types — are supported via `mkSymbolic`, with pattern matching via `sCase` (and its proof counterpart `pCase`):
 
 ```haskell
 {-# LANGUAGE QuasiQuotes     #-}
@@ -147,7 +147,7 @@ eval add mul = smtFunction "eval" $ \e ->
     |]
 ```
 
-The `sCase` construct supports nested pattern matching, as-patterns, guards, and wildcards, making programming with algebraic data types natural. Plain `case` expressions inside `sCase` are automatically treated as symbolic case-splits.
+The `sCase` construct supports nested pattern matching, as-patterns, guards, and wildcards, making programming with algebraic data types natural. Plain `case` expressions inside `sCase` are automatically treated as symbolic case-splits. The `pCase` variant provides the same features for proof case-splits in the theorem proving context.
 
 ## Supported SMT Solvers
 
