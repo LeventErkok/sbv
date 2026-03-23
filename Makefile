@@ -84,9 +84,9 @@ bench:
 
 # Run this target, which updates the golds for those tests that rely on version updates
 # for SBV and Z3. Saves time before doing "make release"
-VERSION_CHANGE_TESTS = nested1 nested2 nested3 nested4 \
-		       allSat8 query1 noOpt1 noOpt2    \
-		       SCase89 SCase101                \
+VERSION_CHANGE_TESTS = nested1 nested2 nested3 nested4   \
+		       allSat8 query1 noOpt1 noOpt2      \
+		       SCase66 SCase59 SCase89 SCase101  \
 		       PCase17 PCase38
 
 updateForVersionChange:
