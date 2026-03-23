@@ -1,0 +1,12 @@
+SCase103.hs:(12,14)-(16,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " e of\n\
+      \               whole@(Add a _) -> t a + t whole\n\
+      \               Num k           -> k\n\
+      \               _               -> 0\n\
+      \      "
+  ======>
+    sCaseExpr
+      0 (\ k -> k) (\ _ -> 0) (\ a _ -> let whole = e in (t a) + t whole)
+      (\ _ _ _ -> 0) e

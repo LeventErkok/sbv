@@ -1,0 +1,16 @@
+SCase100.hs:(11,14)-(16,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " m of\n\
+      \               whole@(Just v) -> v + case whole of\n\
+      \                                       Just w  -> w\n\
+      \                                       Nothing -> 0\n\
+      \               Nothing        -> 0\n\
+      \      "
+  ======>
+    Data.SBV.Maybe.sCaseMaybe
+      0
+      (\ v
+         -> let whole = m
+            in v + Data.SBV.Maybe.sCaseMaybe 0 (\ w -> w) whole)
+      m

@@ -1,0 +1,9 @@
+SCase104.hs:(11,14)-(14,8): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " m of\n\
+      \               _unused@(Just v) -> v\n\
+      \               Nothing          -> 0\n\
+      \      "
+  ======>
+    Data.SBV.Maybe.sCaseMaybe 0 (\ v -> v) m
