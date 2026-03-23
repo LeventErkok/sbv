@@ -1,4 +1,4 @@
-SCase97.hs:15:16: error: [GHC-79890]
+SCase97.hs:14:16: error: [GHC-79890]
     " Red is not in the type environment at a reify
     " In the quasi-quotation:
         [sCase| e of
@@ -12,6 +12,6 @@ SCase97.hs:15:16: error: [GHC-79890]
                 Let _ _ b -> t b c
        |]
    |
-15 | t e c = [sCase| e of
+14 | t e c = [sCase| e of
    |                ^^^^^...
 
