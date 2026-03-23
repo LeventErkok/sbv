@@ -41,7 +41,7 @@ import Control.Exception   (evaluate, try, throwIO, TypeError(..))
 import Control.Monad.Trans (liftIO)
 
 import qualified Data.ByteString.Lazy.Char8 as LBC
-import System.Directory   (removeFile)
+import System.Directory   (getCurrentDirectory, removeFile)
 
 import Test.Tasty            (testGroup, TestTree, TestName)
 import Test.Tasty.HUnit      ((@?), Assertion, testCase, AssertionPredicable, assertFailure)
@@ -305,7 +305,17 @@ mkCompileTest file = goldenVsStringDiff nm diffCmd (testDir </> nm <.> "stderr")
                  ++ concat [" -package " ++ pkg | pkg <- packages]
 
         compile path = withSystemTempDirectory "SBVTempDir" $ \tmpDir -> do
-           (exitCode, sOut, sErr) <- readProcessInDir testDir "ghc" (words (args tmpDir) ++ [path]) ""
+           -- Use the inplace package DB from dist-newstyle so we pick up
+           -- the locally-built sbv (built by cabal test) without needing
+           -- a separate 'cabal install --lib' step.
+           projRoot <- getCurrentDirectory
+           let cabalFile = projRoot </> "sbv.cabal"
+           ver <- extractVersion <$> readFile cabalFile
+           sbvDBs <- glob (projRoot </> "dist-newstyle/build/*/ghc-*/sbv-" ++ ver ++ "/package.conf.inplace")
+           let pkgDbArgs = case sbvDBs of
+                             (db:_) -> ["-package-db", db]
+                             []     -> []
+           (exitCode, sOut, sErr) <- readProcessInDir testDir "ghc" (pkgDbArgs ++ words (args tmpDir) ++ [path]) ""
            -- If the source uses -ddump-splices, include stdout (where GHC dumps splices)
            -- Filter to only keep "Splicing expression" blocks, stripping temp paths and preamble
            src <- readFile (testDir </> path)
@@ -321,5 +331,12 @@ mkCompileTest file = goldenVsStringDiff nm diffCmd (testDir </> nm <.> "stderr")
         isSpliceLine l = "Splicing expression" `isInfixOf` l
         skipLine     l = "Loaded package environment" `isInfixOf` l
                       || "Compiling" `isInfixOf` l
+
+        -- Extract the version string from sbv.cabal
+        extractVersion = go . lines
+          where go []     = error "mkCompileTest: Cannot find Version in sbv.cabal"
+                go (l:ls) = case words l of
+                              ["Version", ":", v] -> v
+                              _                   -> go ls
 
 {- HLint ignore module "Reduce duplication" -}
