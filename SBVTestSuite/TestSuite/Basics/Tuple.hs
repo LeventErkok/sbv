@@ -22,7 +22,8 @@ module TestSuite.Basics.Tuple (tests)  where
 import Prelude hiding ((!!))
 
 import Data.SBV.Control
-import Data.SBV.List ((!!), (.:))
+import Data.SBV.List ((!!))
+
 import Data.SBV.Tuple
 
 import qualified Data.SBV.List as L

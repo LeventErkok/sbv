@@ -29,7 +29,6 @@ module Documentation.SBV.Examples.TP.Kadane where
 import Prelude hiding (length, maximum, null, head, tail, (++))
 
 import Data.SBV
-import Data.SBV.List
 import Data.SBV.TP
 
 #ifdef DOCTEST
