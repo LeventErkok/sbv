@@ -42,6 +42,22 @@
                                                |]
        ```
 
+    - As-patterns (`x@pat`) are now supported in both top-level and nested positions.
+      The as-name is bound to the scrutinee (top-level) or accessor (nested) via a
+      let-binding, which is elided when the name is unused. This works with all pattern
+      types: constructors, tuples, lists, wildcards, and in combination with nested `case`
+      expressions.
+
+       ```haskell
+       [sCase| xs of
+          a : tl@(_ : _) -> a + case tl of
+                                   b : _ -> b
+                                   []    -> 0
+          _ : _           -> 0
+          []              -> 0
+       |]
+       ```
+
     - Plain `case` expressions inside `[sCase|...|]` are now automatically treated as symbolic
       case-splits. This works around GHC's quasi-quoter nesting limitation (`[sCase|` cannot
       contain `|]`), and makes nested symbolic case expressions natural:

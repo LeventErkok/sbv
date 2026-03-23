@@ -147,7 +147,7 @@ eval add mul = smtFunction "eval" $ \e ->
     |]
 ```
 
-The `sCase` construct supports nested pattern matching, guards, and wildcards, making programming with algebraic data types natural. Plain `case` expressions inside `sCase` are automatically treated as symbolic case-splits.
+The `sCase` construct supports nested pattern matching, as-patterns, guards, and wildcards, making programming with algebraic data types natural. Plain `case` expressions inside `sCase` are automatically treated as symbolic case-splits.
 
 ## Supported SMT Solvers
 
