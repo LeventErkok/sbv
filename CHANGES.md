@@ -58,9 +58,9 @@
        |]
        ```
 
-    - Plain `case` expressions inside `[sCase|...|]` are now automatically treated as symbolic
-      case-splits. This works around GHC's quasi-quoter nesting limitation (`[sCase|` cannot
-      contain `|]`), and makes nested symbolic case expressions natural:
+    - Plain `case` expressions inside `[sCase|...|]` and `[pCase|...|]` are now automatically
+      treated as symbolic case-splits. This works around GHC's quasi-quoter nesting limitation
+      (`[sCase|` cannot contain `|]`), and makes nested symbolic case expressions natural:
 
        ```haskell
        [sCase| e of
@@ -72,8 +72,8 @@
        |]
        ```
 
-      All `case` expressions inside `sCase` become symbolic; use a `let` or helper function
-      for regular Haskell case expressions.
+      All `case` expressions inside `sCase` and `pCase` become symbolic; use a `let` or helper
+      function for regular Haskell case expressions.
 
   * Improved documentation for `lambdaArray`, explaining the model-theoretic distinction
     between the pure array theory (`select`/`store`/`const`) and the richer setting where
