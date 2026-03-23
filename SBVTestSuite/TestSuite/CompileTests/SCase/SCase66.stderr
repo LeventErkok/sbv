@@ -16,8 +16,7 @@ SCase66.hs:(13,14)-(17,8): Splicing expression
                   ((.===)
                      (Data.SBV.Either.getLeft_1 e)
                      (Data.SBV.List.head (Data.SBV.Either.getLeft_1 e)
-                        sbv-13.6.5-4c3bb0ff:Data.SBV.Core.Data..:
-                          Data.SBV.List.tail (Data.SBV.Either.getLeft_1 e))))
+                        .: Data.SBV.List.tail (Data.SBV.Either.getLeft_1 e))))
             (Data.SBV.Either.getLeft_1 e)))
       ((\ _
           -> let x = Data.SBV.List.head (Data.SBV.Either.getLeft_1 e) in x)

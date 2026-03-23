@@ -10,8 +10,5 @@ PCase63.hs:(19,15)-(22,9): Splicing expression
       [(Data.SBV.List.null xs ==> (xs .== xs =: qed)),
        ((.&&)
           (sNot (Data.SBV.List.null xs))
-          ((.===)
-             xs
-             (Data.SBV.List.head xs
-                sbv-13.6.5-4c3bb0ff:Data.SBV.Core.Data..: Data.SBV.List.tail xs))
+          ((.===) xs (Data.SBV.List.head xs .: Data.SBV.List.tail xs))
           ==> (xs .== xs =: qed))]

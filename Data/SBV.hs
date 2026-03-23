@@ -238,7 +238,7 @@ module Data.SBV (
   , SChar, SString
   -- ** Symbolic lists
   -- $lists
-  , SList
+  , SList, (.:)
   -- ** Symbolic enumerators
   , EnumSymbolic(..), sEnum
   -- ** Symbolic case-expressions

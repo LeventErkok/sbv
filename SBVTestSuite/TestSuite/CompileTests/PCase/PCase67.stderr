@@ -12,31 +12,23 @@ PCase67.hs:(20,15)-(24,9): Splicing expression
        ((.&&)
           (sNot (Data.SBV.List.null xs))
           ((.&&)
-             ((.===)
-                xs
-                (Data.SBV.List.head xs
-                   sbv-13.6.5-4c3bb0ff:Data.SBV.Core.Data..: Data.SBV.List.tail xs))
+             ((.===) xs (Data.SBV.List.head xs .: Data.SBV.List.tail xs))
              ((.&&)
                 (sNot (Data.SBV.List.null (Data.SBV.List.tail xs)))
                 ((.===)
                    (Data.SBV.List.tail xs)
                    (Data.SBV.List.head (Data.SBV.List.tail xs)
-                      sbv-13.6.5-4c3bb0ff:Data.SBV.Core.Data..:
-                        Data.SBV.List.tail (Data.SBV.List.tail xs)))))
+                      .: Data.SBV.List.tail (Data.SBV.List.tail xs)))))
           ==> ((length xs) .>= 0 =: qed)),
        ((.&&)
           (sNot (Data.SBV.List.null xs))
           ((.&&)
-             ((.===)
-                xs
-                (Data.SBV.List.head xs
-                   sbv-13.6.5-4c3bb0ff:Data.SBV.Core.Data..: Data.SBV.List.tail xs))
+             ((.===) xs (Data.SBV.List.head xs .: Data.SBV.List.tail xs))
              (sNot
                 ((.&&)
                    (sNot (Data.SBV.List.null (Data.SBV.List.tail xs)))
                    ((.===)
                       (Data.SBV.List.tail xs)
                       (Data.SBV.List.head (Data.SBV.List.tail xs)
-                         sbv-13.6.5-4c3bb0ff:Data.SBV.Core.Data..:
-                           Data.SBV.List.tail (Data.SBV.List.tail xs))))))
+                         .: Data.SBV.List.tail (Data.SBV.List.tail xs))))))
           ==> ((length xs) .>= 0 =: qed))]

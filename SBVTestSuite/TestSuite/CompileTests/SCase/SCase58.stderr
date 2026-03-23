@@ -19,8 +19,7 @@ SCase58.hs:(13,15)-(17,9): Splicing expression
                         ((.===)
                            (Data.SBV.List.tail xs)
                            (Data.SBV.List.head (Data.SBV.List.tail xs)
-                              sbv-13.6.5-4c3bb0ff:Data.SBV.Core.Data..:
-                                Data.SBV.List.tail (Data.SBV.List.tail xs))))
+                              .: Data.SBV.List.tail (Data.SBV.List.tail xs))))
                      a)
                (Data.SBV.List.head xs) (Data.SBV.List.tail xs)))
          ((\ a _

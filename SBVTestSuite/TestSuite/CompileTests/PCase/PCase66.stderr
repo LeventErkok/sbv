@@ -12,10 +12,7 @@ PCase66.hs:(19,15)-(23,9): Splicing expression
        ((.&&)
           (sNot (Data.SBV.List.null xs))
           ((.&&)
-             ((.===)
-                xs
-                (Data.SBV.List.head xs
-                   sbv-13.6.5-4c3bb0ff:Data.SBV.Core.Data..: Data.SBV.List.tail xs))
+             ((.===) xs (Data.SBV.List.head xs .: Data.SBV.List.tail xs))
              (let y = Data.SBV.List.head xs in y .> 0))
           ==> (xs .== xs =: qed)),
        (sNot
@@ -24,9 +21,6 @@ PCase66.hs:(19,15)-(23,9): Splicing expression
              ((.&&)
                 (sNot (Data.SBV.List.null xs))
                 ((.&&)
-                   ((.===)
-                      xs
-                      (Data.SBV.List.head xs
-                         sbv-13.6.5-4c3bb0ff:Data.SBV.Core.Data..: Data.SBV.List.tail xs))
+                   ((.===) xs (Data.SBV.List.head xs .: Data.SBV.List.tail xs))
                    (let y = Data.SBV.List.head xs in y .> 0))))
           ==> (xs .== xs =: qed))]
