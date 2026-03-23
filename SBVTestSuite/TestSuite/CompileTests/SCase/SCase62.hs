@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
 
 -- Test: sCase with Either, guards and wildcard
 module T where

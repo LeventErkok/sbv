@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
 
 -- Test: pCase with Integer, no wildcard (only literals) — should fail with non-exhaustive
 module T where

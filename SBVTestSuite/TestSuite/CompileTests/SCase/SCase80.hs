@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
 
 -- Test: sCase Bool non-exhaustive (only True, no wildcard) — should fail
 module T where

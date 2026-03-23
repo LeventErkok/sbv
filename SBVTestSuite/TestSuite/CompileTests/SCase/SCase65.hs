@@ -1,6 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
 
 -- Test: sCase with nested tuple inside Maybe
 module T where

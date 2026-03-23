@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -ddump-splices #-}
 
 -- Test: pCase with Bool non-exhaustive (only True)
 -- (sCase would reject as non-exhaustive; pCase is fine)
