@@ -10,7 +10,9 @@
 -- which was remarkably good at giving me the basic structure.
 --
 -- Provides a quasiquoter  `[sCase| expr of ... |]` for symbolic cases
--- where @Expr@ is the underlying type.
+-- where @Expr@ is the underlying type. Plain @case@ expressions inside
+-- @sCase@ are automatically treated as symbolic case-splits, enabling
+-- nested symbolic pattern matching.
 --
 -- Also provides `[pCase| expr of ... |]` for proof case-splits.
 -----------------------------------------------------------------------------

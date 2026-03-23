@@ -378,9 +378,10 @@ listEq
   | containsFloats (kindOf (Proxy @a))
   = smtFunction "listEq"
   $ \x y -> [sCase| x of
-                []            -> null y
-                a:xs | null y -> sFalse
-                     | True   -> let (b, ys) = uncons y in a .== b .&& xs `listEq` ys
+                []   -> null y
+                a:xs -> case y of
+                          []     -> sFalse
+                          b : ys -> a .== b .&& xs `listEq` ys
             |]
   | True
   = (.==)
@@ -1067,9 +1068,9 @@ instance SymVal a => SFilter (SBV a -> SBool) a where
     where sbvPartition = smtHOFunction "sbv.partition" f
                        $ \xs -> [sCase| xs of
                                    []    -> tuple ([], [])
-                                   h : t -> let (as, bs) = untuple $ sbvPartition t
-                                            in ite (f h) (tuple (h .: as, bs))
-                                                         (tuple (as, h .: bs))
+                                   h : t -> case sbvPartition t of
+                                              (as, bs) | f h  -> tuple (h .: as, bs)
+                                                       | True -> tuple (as, h .: bs)
                                 |]
 
   -- | @takeWhile f xs@ takes the prefix of @xs@ that satisfy the predicate.
@@ -1120,9 +1121,9 @@ instance (SymVal env, SymVal a) => SFilter (Closure (SBV env) (SBV a -> SBool)) 
     where sbvPartition = smtHOFunction "sbv.closurePartition" closureFun
                        $ \envxs -> [sCase| envxs of
                                       (_, [])       -> tuple ([], [])
-                                      (cEnv, h : t) -> let (as, bs) = untuple $ sbvPartition (tuple (cEnv, t))
-                                                       in ite (closureFun cEnv h) (tuple (h .: as, bs))
-                                                                                  (tuple (as, h .: bs))
+                                      (cEnv, h : t) -> case sbvPartition (tuple (cEnv, t)) of
+                                                          (as, bs) | closureFun cEnv h -> tuple (h .: as, bs)
+                                                                   | True              -> tuple (as, h .: bs)
                                    |]
 
   takeWhile cls@Closure{closureEnv, closureFun} l

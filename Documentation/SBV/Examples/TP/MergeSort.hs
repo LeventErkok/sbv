@@ -42,11 +42,11 @@ import qualified Documentation.SBV.Examples.TP.SortHelpers as SH
 merge :: (OrdSymbolic (SBV a), SymVal a) => SList a -> SList a -> SList a
 merge = smtFunction "merge"
       $ \l r -> [sCase| tuple (l, r) of
-                   ([], _)          -> r
-                   (_, [])          -> l
-                   (a : as, b : bs) -> ite (a .<= b)
-                                           (a .: merge as (b .: bs))
-                                           (b .: merge (a .: as) bs)
+                   ([], _) -> r
+                   (_, []) -> l
+
+                   (a : as, b : bs) | a .<= b -> a .: merge as (b .: bs)
+                                    | True    -> b .: merge (a .: as) bs
                 |]
 
 -- | Merge sort, using 'merge' above to successively sort halved input

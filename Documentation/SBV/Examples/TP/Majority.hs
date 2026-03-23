@@ -36,10 +36,9 @@ import qualified Documentation.SBV.Examples.TP.Lists as TP
 majority :: SymVal a => SBV a -> SInteger -> SList a -> SBV a
 majority = smtFunction "majority"
                     $ \c i lst -> [sCase| lst of
-                                     []     -> c
-                                     x : xs -> ite (i .== 0)
-                                                   (majority x 1 xs)
-                                                   (majority c (i + ite (c .== x) 1 (-1)) xs)
+                                     []               -> c
+                                     x : xs | i .== 0 -> majority x 1 xs
+                                            | True    -> majority c (i + ite (c .== x) 1 (-1)) xs
                                   |]
 
 -- | We can now define mjrty, which simply feeds the majority function with an arbitrary element of the domain.

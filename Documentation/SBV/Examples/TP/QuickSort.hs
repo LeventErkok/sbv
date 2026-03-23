@@ -54,8 +54,8 @@ quickSort = smtFunctionWithMeasure "quickSort"
               )
           $ \l -> [sCase| l of
                      []     -> []
-                     x : xs -> let (lo, hi) = untuple (partition x xs)
-                               in  quickSort lo ++ [x] ++ quickSort hi
+                     x : xs -> case partition x xs of
+                                 (lo, hi) -> quickSort lo ++ [x] ++ quickSort hi
                   |]
 
 -- | We define @partition@ as an explicit function. Unfortunately, we can't just replace this
@@ -65,10 +65,9 @@ partition :: (OrdSymbolic (SBV a), SymVal a) => SBV a -> SList a -> STuple [a] [
 partition = smtFunction "partition"
           $ \pivot xs -> [sCase| xs of
                             []     -> tuple ([], [])
-                            a : as -> let (lo, hi) = untuple (partition pivot as)
-                                      in ite (a .< pivot)
-                                             (tuple (a .: lo, hi))
-                                             (tuple (lo, a .: hi))
+                            a : as -> case partition pivot as of
+                                        (lo, hi) | a .< pivot -> tuple (a .: lo, hi)
+                                                 | True       -> tuple (lo, a .: hi)
                          |]
 
 -- | The first component of partition is no longer than the input.

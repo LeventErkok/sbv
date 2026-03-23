@@ -99,8 +99,9 @@ eval = go []
 
        get = smtFunction "get"
            $ \env s -> [sCase| env of
-                           []          -> 0
-                           (k, v) : es -> ite (s .== k) v (get es s)
+                           []                    -> 0
+                           (k, v) : es | s .== k -> v
+                                       | True    -> get es s
                         |]
 
 -- | A basic theorem about 'eval'.

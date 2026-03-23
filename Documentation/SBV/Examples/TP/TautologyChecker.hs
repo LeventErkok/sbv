@@ -277,7 +277,8 @@ eval :: SFormula -> SList Binding -> SBool
 eval = smtFunction "eval"
      $ \f bs -> [sCase| f of
                    Var n    -> lookUp n bs
-                   If c l r -> ite (eval c bs) (eval l bs) (eval r bs)
+                   If c l r | eval c bs -> eval l bs
+                            | True      -> eval r bs
                    FTrue    -> sTrue
                    FFalse   -> sFalse
                 |]
@@ -815,12 +816,14 @@ mkSymbolic [''FalsifyResult]
 falsify' :: SFormula -> SList Binding -> SFalsifyResult
 falsify' = smtFunction "falsify'" $ \f bs ->
   [sCase| f of
-    FTrue          -> sFalsifyResult sFalse []
-    FFalse         -> sFalsifyResult sTrue bs
+    FTrue  -> sFalsifyResult sFalse []
+    FFalse -> sFalsifyResult sTrue bs
+
     Var i
       | isAssigned i bs, eval (sVar i) bs -> sFalsifyResult sFalse []
       | isAssigned i bs                   -> sFalsifyResult sTrue bs
       | True                              -> sFalsifyResult sTrue (sBinding i sFalse .: bs)
+
     If (Var i) l r
       | isAssigned i bs, eval (sVar i) bs -> falsify' l bs
       | isAssigned i bs                   -> falsify' r bs

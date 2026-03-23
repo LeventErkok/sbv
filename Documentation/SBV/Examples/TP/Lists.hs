@@ -1133,10 +1133,10 @@ takeDropWhile f =
 destutter :: SymVal a => SList a -> SList a
 destutter = smtFunction "destutter"
           $ \xs -> [sCase| xs of
-                      []     -> xs
-                      [_]    -> xs
-                      a : as -> let r = destutter as
-                                in ite (a .== head as) r (a .: r)
+                      []   -> xs
+                      [_]  -> xs
+                      a : b : as | a .== b ->      destutter (b .: as)
+                                 | True    -> a .: destutter (b .: as)
                    |]
 
 -- | @destutter (destutter xs) == destutter xs@

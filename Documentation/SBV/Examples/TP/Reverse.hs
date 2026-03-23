@@ -42,10 +42,8 @@ import qualified Documentation.SBV.Examples.TP.Lists as TP
 -- * Reversing with no auxiliaries
 
 -- | This definition of reverse uses no helper functions, other than the usual
--- head, tail, cons, and uncons to reverse a given list. Note that efficiency
+-- head, tail, and cons to reverse a given list. Note that efficiency
 -- is not our concern here, we call 'rev' itself three times in the body.
--- NB. We use 'uncons' on @rev as@ below since quasi-quote splices do not nest in Haskell,
--- so we cannot use a nested @sCase@ call here.
 rev :: forall a. SymVal a => SList a -> SList a
 rev = smtFunctionWithMeasure "rev"
         ( length @a
@@ -53,9 +51,9 @@ rev = smtFunctionWithMeasure "rev"
         )
     $ \xs -> [sCase| xs of
                 []     -> xs
-                [_]    -> xs
-                x : as -> let (hras, tas) = uncons (rev as)
-                          in hras .: rev (x .: rev tas)
+                x : as -> case rev as of
+                            []         -> [x]
+                            hras : tas -> hras .: rev (x .: rev tas)
              |]
 
 -- | Reversing preserves length. Needed as a measure helper for 'rev'.
