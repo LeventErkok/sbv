@@ -175,7 +175,7 @@ f e = [sCase| e of
 -- such that it evaluates to 12
 t00 :: FilePath -> IO ()
 t00 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
-            a :: SExpr String Word16 <- free "a"
+            a :: SExpr String Integer <- free "a"
             constrain $ isValid isId a
             constrain $ eval a .== 12
 
@@ -210,7 +210,7 @@ g e = [sCase| e of
 -- Show that g can never produce anything but 0..8
 tSat :: Integer -> FilePath -> IO ()
 tSat i rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
-              a :: SExpr String Word16 <- free "a"
+              a :: SExpr String Integer <- free "a"
               constrain $ g a .== literal i
 
               query $ do cs <- checkSat

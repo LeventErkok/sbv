@@ -1,21 +1,21 @@
-[MEASURE] Verifying termination measures for: eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16), eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16), get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16), valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)
-[MEASURE] Checking: eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)
-[MEASURE] eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16): not in a multi-member cycle, skipping mutual check
-[MEASURE] Passed (terminating): eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)
-[MEASURE] Checking: eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)
-[MEASURE] eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16): barified = "|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)|"
-[MEASURE] eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16): Uninterpreted ops in DAG: [("|get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)|",2),("|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)|",2),("|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)|",2),("|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)|",2),("|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)|",2),("|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)|",2),("|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)|",2)]
-[MEASURE] eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16): recursive calls found = 6
-[MEASURE] eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16): trying sbv.dt.size.Expr arg2
-[MEASURE] eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16): sbv.dt.size.Expr arg2 -> OK (structural recursion)
-[MEASURE] eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16): sbv.dt.size.Expr arg2 -> OK
-[MEASURE] Passed (terminating): eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)
-[MEASURE] Checking: get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)
-[MEASURE] get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16): barified = "|get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)|"
-[MEASURE] get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16): Uninterpreted ops in DAG: [("|get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)|",2)]
-[MEASURE] get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16): recursive calls found = 1
-[MEASURE] get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16): trying length arg1
-[MEASURE] replayDAG {get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)}: replaying 11 node(s)
+[MEASURE] Verifying termination measures for: eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer), eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer), get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer), valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)
+[MEASURE] Checking: eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)
+[MEASURE] eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer): not in a multi-member cycle, skipping mutual check
+[MEASURE] Passed (terminating): eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)
+[MEASURE] Checking: eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)
+[MEASURE] eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer): barified = "|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)|"
+[MEASURE] eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer): Uninterpreted ops in DAG: [("|get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)|",2),("|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)|",2)]
+[MEASURE] eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer): recursive calls found = 6
+[MEASURE] eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer): trying sbv.dt.size.Expr arg2
+[MEASURE] eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer): sbv.dt.size.Expr arg2 -> OK (structural recursion)
+[MEASURE] eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer): sbv.dt.size.Expr arg2 -> OK
+[MEASURE] Passed (terminating): eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)
+[MEASURE] Checking: get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)
+[MEASURE] get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer): barified = "|get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)|"
+[MEASURE] get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer): Uninterpreted ops in DAG: [("|get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)|",2)]
+[MEASURE] get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer): recursive calls found = 1
+[MEASURE] get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer): trying length arg1
+[MEASURE] replayDAG {get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)}: replaying 13 node(s)
 ** Calling: z3 -nw -in -smt2
 [GOOD] ; Automatically generated by SBV. Do not edit.
 [GOOD] (set-option :print-success true)
@@ -33,37 +33,38 @@
                                                          (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () (_ BitVec 16) #x0000)
-[GOOD] (define-fun s3 () Int 0)
-[GOOD] (define-fun s4 () Int 1)
+[GOOD] (define-fun s2 () Int 0)
+[GOOD] (define-fun s3 () Int 1)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (Seq (SBVTuple2 String (_ BitVec 16)))) ; tracks user variable "arg0"
+[GOOD] (declare-fun s0 () (Seq (SBVTuple2 String Int))) ; tracks user variable "arg0"
 [GOOD] (declare-fun s1 () String) ; tracks user variable "arg1"
-[GOOD] (declare-fun s13 () (_ BitVec 16)) ; tracks user variable "__internal_sbv_s13"
+[GOOD] (declare-fun s14 () Int) ; tracks user variable "__internal_sbv_s14"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s5 () Int (seq.len s0))
-[GOOD] (define-fun s6 () Bool (= s3 s5))
-[GOOD] (define-fun s7 () (SBVTuple2 String (_ BitVec 16)) (seq.nth s0 s3))
+[GOOD] (define-fun s4 () Int (seq.len s0))
+[GOOD] (define-fun s5 () Bool (= s2 s4))
+[GOOD] (define-fun s6 () Bool (not s5))
+[GOOD] (define-fun s7 () (SBVTuple2 String Int) (seq.nth s0 s2))
 [GOOD] (define-fun s8 () String (proj_1_SBVTuple2 s7))
 [GOOD] (define-fun s9 () Bool (= s1 s8))
-[GOOD] (define-fun s10 () (_ BitVec 16) (proj_2_SBVTuple2 s7))
-[GOOD] (define-fun s11 () Int (- s5 s4))
-[GOOD] (define-fun s12 () (Seq (SBVTuple2 String (_ BitVec 16))) (seq.extract s0 s4 s11))
-[GOOD] (define-fun s14 () (_ BitVec 16) (ite s9 s10 s13))
-[GOOD] (define-fun s15 () (_ BitVec 16) (ite s6 s2 s14))
-[GOOD] (define-fun s16 () Bool (>= s5 s3))
+[GOOD] (define-fun s10 () Bool (and s6 s9))
+[GOOD] (define-fun s11 () Int (proj_2_SBVTuple2 s7))
+[GOOD] (define-fun s12 () Int (- s4 s3))
+[GOOD] (define-fun s13 () (Seq (SBVTuple2 String Int)) (seq.extract s0 s3 s12))
+[GOOD] (define-fun s15 () Int (ite s10 s11 s14))
+[GOOD] (define-fun s16 () Int (ite s5 s2 s15))
+[GOOD] (define-fun s17 () Bool (>= s4 s2))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert (not s16))
+[GOOD] (assert (not s17))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] replayDAG {get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)}: replaying 11 node(s)
+[MEASURE] replayDAG {get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)}: replaying 13 node(s)
 ** Calling: z3 -nw -in -smt2
 [GOOD] ; Automatically generated by SBV. Do not edit.
 [GOOD] (set-option :print-success true)
@@ -81,33 +82,33 @@
                                                          (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () (_ BitVec 16) #x0000)
-[GOOD] (define-fun s3 () Int 0)
-[GOOD] (define-fun s4 () Int 1)
+[GOOD] (define-fun s2 () Int 0)
+[GOOD] (define-fun s3 () Int 1)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (Seq (SBVTuple2 String (_ BitVec 16)))) ; tracks user variable "arg0"
+[GOOD] (declare-fun s0 () (Seq (SBVTuple2 String Int))) ; tracks user variable "arg0"
 [GOOD] (declare-fun s1 () String) ; tracks user variable "arg1"
-[GOOD] (declare-fun s13 () (_ BitVec 16)) ; tracks user variable "__internal_sbv_s13"
+[GOOD] (declare-fun s14 () Int) ; tracks user variable "__internal_sbv_s14"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s5 () Int (seq.len s0))
-[GOOD] (define-fun s6 () Bool (= s3 s5))
-[GOOD] (define-fun s7 () (SBVTuple2 String (_ BitVec 16)) (seq.nth s0 s3))
+[GOOD] (define-fun s4 () Int (seq.len s0))
+[GOOD] (define-fun s5 () Bool (= s2 s4))
+[GOOD] (define-fun s6 () Bool (not s5))
+[GOOD] (define-fun s7 () (SBVTuple2 String Int) (seq.nth s0 s2))
 [GOOD] (define-fun s8 () String (proj_1_SBVTuple2 s7))
 [GOOD] (define-fun s9 () Bool (= s1 s8))
-[GOOD] (define-fun s10 () (_ BitVec 16) (proj_2_SBVTuple2 s7))
-[GOOD] (define-fun s11 () Int (- s5 s4))
-[GOOD] (define-fun s12 () (Seq (SBVTuple2 String (_ BitVec 16))) (seq.extract s0 s4 s11))
-[GOOD] (define-fun s14 () (_ BitVec 16) (ite s9 s10 s13))
-[GOOD] (define-fun s15 () (_ BitVec 16) (ite s6 s2 s14))
-[GOOD] (define-fun s16 () Int (seq.len s12))
-[GOOD] (define-fun s17 () Bool (not s9))
-[GOOD] (define-fun s18 () Bool (not s6))
-[GOOD] (define-fun s19 () Bool (and s17 s18))
-[GOOD] (define-fun s20 () Bool (> s5 s16))
+[GOOD] (define-fun s10 () Bool (and s6 s9))
+[GOOD] (define-fun s11 () Int (proj_2_SBVTuple2 s7))
+[GOOD] (define-fun s12 () Int (- s4 s3))
+[GOOD] (define-fun s13 () (Seq (SBVTuple2 String Int)) (seq.extract s0 s3 s12))
+[GOOD] (define-fun s15 () Int (ite s10 s11 s14))
+[GOOD] (define-fun s16 () Int (ite s5 s2 s15))
+[GOOD] (define-fun s17 () Int (seq.len s13))
+[GOOD] (define-fun s18 () Bool (not s10))
+[GOOD] (define-fun s19 () Bool (and s6 s18))
+[GOOD] (define-fun s20 () Bool (> s4 s17))
 [GOOD] (define-fun s21 () Bool (=> s19 s20))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
@@ -116,16 +117,16 @@
 [RECV] unsat
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16): length arg1 -> OK
-[MEASURE] Passed (terminating): get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)
-[MEASURE] Checking: valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)
-[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool): barified = "|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)|"
-[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool): Uninterpreted ops in DAG: [("|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)|",2),("|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)|",2),("|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)|",2),("|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)|",2),("|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)|",2),("|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)|",2)]
-[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool): recursive calls found = 6
-[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool): trying sbv.dt.size.Expr arg2
-[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool): sbv.dt.size.Expr arg2 -> OK (structural recursion)
-[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool): sbv.dt.size.Expr arg2 -> OK
-[MEASURE] Passed (terminating): valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)
+[MEASURE] get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer): length arg1 -> OK
+[MEASURE] Passed (terminating): get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)
+[MEASURE] Checking: valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)
+[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool): barified = "|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)|"
+[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool): Uninterpreted ops in DAG: [("|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)|",2),("|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)|",2),("|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)|",2),("|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)|",2),("|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)|",2),("|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)|",2)]
+[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool): recursive calls found = 6
+[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool): trying sbv.dt.size.Expr arg2
+[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool): sbv.dt.size.Expr arg2 -> OK (structural recursion)
+[MEASURE] valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool): sbv.dt.size.Expr arg2 -> OK
+[MEASURE] Passed (terminating): valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)
 ** Calling: z3 -nw -in -smt2
 [GOOD] ; Automatically generated by SBV. Do not edit.
 [GOOD] (set-option :print-success true)
@@ -153,16 +154,16 @@
        )))
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s1 () (Seq String) (as seq.empty (Seq String)))
-[GOOD] (define-fun s3 () (Seq (SBVTuple2 String (_ BitVec 16))) (as seq.empty (Seq (SBVTuple2 String (_ BitVec 16)))))
-[GOOD] (define-fun s5 () (_ BitVec 16) #x000c)
+[GOOD] (define-fun s3 () (Seq (SBVTuple2 String Int)) (as seq.empty (Seq (SBVTuple2 String Int))))
+[GOOD] (define-fun s5 () Int 12)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s0 () (Expr String (_ BitVec 16))) ; tracks user variable "a"
+[GOOD] (declare-fun s0 () (Expr String Int)) ; tracks user variable "a"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; |valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)| :: [SString] -> Expr String Word16 -> SBool [Recursive]
-[GOOD] (define-fun-rec |valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)| ((l1_s0 (Seq String)) (l1_s1 (Expr String (_ BitVec 16)))) Bool
+[GOOD] ; |valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)| :: [SString] -> Expr String Integer -> SBool [Recursive]
+[GOOD] (define-fun-rec |valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)| ((l1_s0 (Seq String)) (l1_s1 (Expr String Int))) Bool
                                  (let ((l1_s2 ((as is-Val Bool) l1_s1)))
                                  (let ((l1_s3 ((as is-Var Bool) l1_s1)))
                                  (let ((l1_s4 (getVar_1 l1_s1)))
@@ -172,24 +173,24 @@
                                  (let ((l1_s8 (and l1_s5 l1_s7)))
                                  (let ((l1_s9 ((as is-Add Bool) l1_s1)))
                                  (let ((l1_s10 (getAdd_1 l1_s1)))
-                                 (let ((l1_s11 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)| l1_s0 l1_s10)))
+                                 (let ((l1_s11 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)| l1_s0 l1_s10)))
                                  (let ((l1_s12 (getAdd_2 l1_s1)))
-                                 (let ((l1_s13 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)| l1_s0 l1_s12)))
+                                 (let ((l1_s13 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)| l1_s0 l1_s12)))
                                  (let ((l1_s14 (and l1_s11 l1_s13)))
                                  (let ((l1_s15 ((as is-Mul Bool) l1_s1)))
                                  (let ((l1_s16 (getMul_1 l1_s1)))
-                                 (let ((l1_s17 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)| l1_s0 l1_s16)))
+                                 (let ((l1_s17 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)| l1_s0 l1_s16)))
                                  (let ((l1_s18 (getMul_2 l1_s1)))
-                                 (let ((l1_s19 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)| l1_s0 l1_s18)))
+                                 (let ((l1_s19 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)| l1_s0 l1_s18)))
                                  (let ((l1_s20 (and l1_s17 l1_s19)))
                                  (let ((l1_s21 (getLet_1 l1_s1)))
                                  (let ((l1_s22 (str.in_re l1_s21 (re.++ (re.range "a" "z") (re.* (re.union (re.range "a" "z") (re.range "A" "Z") (re.range "0" "9")))))))
                                  (let ((l1_s23 (getLet_2 l1_s1)))
-                                 (let ((l1_s24 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)| l1_s0 l1_s23)))
+                                 (let ((l1_s24 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)| l1_s0 l1_s23)))
                                  (let ((l1_s25 (seq.unit l1_s21)))
                                  (let ((l1_s26 (seq.++ l1_s25 l1_s0)))
                                  (let ((l1_s27 (getLet_3 l1_s1)))
-                                 (let ((l1_s28 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)| l1_s26 l1_s27)))
+                                 (let ((l1_s28 (|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)| l1_s26 l1_s27)))
                                  (let ((l1_s29 (and l1_s24 l1_s28)))
                                  (let ((l1_s30 (and l1_s22 l1_s29)))
                                  (let ((l1_s31 (ite l1_s15 l1_s20 l1_s30)))
@@ -197,63 +198,64 @@
                                  (let ((l1_s33 (ite l1_s3 l1_s8 l1_s32)))
                                  (let ((l1_s34 (or l1_s2 l1_s33)))
                                  l1_s34))))))))))))))))))))))))))))))))))
-[GOOD] ; |get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)| :: [(SString, SWord16)] -> SString -> SWord16 [Recursive]
-[GOOD] (define-fun-rec |get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)| ((l2_s0 (Seq (SBVTuple2 String (_ BitVec 16)))) (l2_s1 String)) (_ BitVec 16)
+[GOOD] ; |get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)| :: [(SString, SInteger)] -> SString -> SInteger [Recursive]
+[GOOD] (define-fun-rec |get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)| ((l2_s0 (Seq (SBVTuple2 String Int))) (l2_s1 String)) Int
                                                  (let ((l2_s3 0))
-                                                 (let ((l2_s5 #x0000))
-                                                 (let ((l2_s10 1))
+                                                 (let ((l2_s11 1))
                                                  (let ((l2_s2 (seq.len l2_s0)))
                                                  (let ((l2_s4 (= l2_s2 l2_s3)))
+                                                 (let ((l2_s5 (not l2_s4)))
                                                  (let ((l2_s6 (seq.nth l2_s0 l2_s3)))
                                                  (let ((l2_s7 (proj_1_SBVTuple2 l2_s6)))
                                                  (let ((l2_s8 (= l2_s1 l2_s7)))
-                                                 (let ((l2_s9 (proj_2_SBVTuple2 l2_s6)))
-                                                 (let ((l2_s11 (- l2_s2 l2_s10)))
-                                                 (let ((l2_s12 (seq.extract l2_s0 l2_s10 l2_s11)))
-                                                 (let ((l2_s13 (|get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)| l2_s12 l2_s1)))
-                                                 (let ((l2_s14 (ite l2_s8 l2_s9 l2_s13)))
-                                                 (let ((l2_s15 (ite l2_s4 l2_s5 l2_s14)))
-                                                 l2_s15)))))))))))))))
-[GOOD] ; |eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)| :: [(SString, SWord16)] -> Expr String Word16 -> SWord16 [Recursive] [Refers to: |get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)|]
-[GOOD] (define-fun-rec |eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)| ((l1_s0 (Seq (SBVTuple2 String (_ BitVec 16)))) (l1_s1 (Expr String (_ BitVec 16)))) (_ BitVec 16)
+                                                 (let ((l2_s9 (and l2_s5 l2_s8)))
+                                                 (let ((l2_s10 (proj_2_SBVTuple2 l2_s6)))
+                                                 (let ((l2_s12 (- l2_s2 l2_s11)))
+                                                 (let ((l2_s13 (seq.extract l2_s0 l2_s11 l2_s12)))
+                                                 (let ((l2_s14 (|get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)| l2_s13 l2_s1)))
+                                                 (let ((l2_s15 (ite l2_s9 l2_s10 l2_s14)))
+                                                 (let ((l2_s16 (ite l2_s4 l2_s3 l2_s15)))
+                                                 l2_s16))))))))))))))))
+[GOOD] ; |eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| :: [(SString, SInteger)] -> Expr String Integer -> SInteger [Recursive] [Refers to: |get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)|]
+[GOOD] (define-fun-rec |eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| ((l1_s0 (Seq (SBVTuple2 String Int))) (l1_s1 (Expr String Int))) Int
                                  (let ((l1_s2 ((as is-Val Bool) l1_s1)))
                                  (let ((l1_s3 (getVal_1 l1_s1)))
                                  (let ((l1_s4 ((as is-Var Bool) l1_s1)))
                                  (let ((l1_s5 (getVar_1 l1_s1)))
-                                 (let ((l1_s6 (|get @(SBV [([Char],Word16)] -> SBV [Char] -> SBV Word16)| l1_s0 l1_s5)))
+                                 (let ((l1_s6 (|get @(SBV [([Char],Integer)] -> SBV [Char] -> SBV Integer)| l1_s0 l1_s5)))
                                  (let ((l1_s7 ((as is-Add Bool) l1_s1)))
                                  (let ((l1_s8 (getAdd_1 l1_s1)))
-                                 (let ((l1_s9 (|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)| l1_s0 l1_s8)))
+                                 (let ((l1_s9 (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| l1_s0 l1_s8)))
                                  (let ((l1_s10 (getAdd_2 l1_s1)))
-                                 (let ((l1_s11 (|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)| l1_s0 l1_s10)))
-                                 (let ((l1_s12 (bvadd l1_s9 l1_s11)))
+                                 (let ((l1_s11 (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| l1_s0 l1_s10)))
+                                 (let ((l1_s12 (+ l1_s9 l1_s11)))
                                  (let ((l1_s13 ((as is-Mul Bool) l1_s1)))
                                  (let ((l1_s14 (getMul_1 l1_s1)))
-                                 (let ((l1_s15 (|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)| l1_s0 l1_s14)))
+                                 (let ((l1_s15 (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| l1_s0 l1_s14)))
                                  (let ((l1_s16 (getMul_2 l1_s1)))
-                                 (let ((l1_s17 (|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)| l1_s0 l1_s16)))
-                                 (let ((l1_s18 (bvmul l1_s15 l1_s17)))
+                                 (let ((l1_s17 (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| l1_s0 l1_s16)))
+                                 (let ((l1_s18 (* l1_s15 l1_s17)))
                                  (let ((l1_s19 (getLet_1 l1_s1)))
                                  (let ((l1_s20 (getLet_2 l1_s1)))
-                                 (let ((l1_s21 (|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)| l1_s0 l1_s20)))
-                                 (let ((l1_s22 ((as mkSBVTuple2 (SBVTuple2 String (_ BitVec 16))) l1_s19 l1_s21)))
+                                 (let ((l1_s21 (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| l1_s0 l1_s20)))
+                                 (let ((l1_s22 ((as mkSBVTuple2 (SBVTuple2 String Int)) l1_s19 l1_s21)))
                                  (let ((l1_s23 (seq.unit l1_s22)))
                                  (let ((l1_s24 (seq.++ l1_s23 l1_s0)))
                                  (let ((l1_s25 (getLet_3 l1_s1)))
-                                 (let ((l1_s26 (|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)| l1_s24 l1_s25)))
+                                 (let ((l1_s26 (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| l1_s24 l1_s25)))
                                  (let ((l1_s27 (ite l1_s13 l1_s18 l1_s26)))
                                  (let ((l1_s28 (ite l1_s7 l1_s12 l1_s27)))
                                  (let ((l1_s29 (ite l1_s4 l1_s6 l1_s28)))
                                  (let ((l1_s30 (ite l1_s2 l1_s3 l1_s29)))
                                  l1_s30))))))))))))))))))))))))))))))
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s2 () Bool (|valid @(SBV [[Char]] -> SBV (Expr [Char] Word16) -> SBV Bool)| s1 s0))
-[GOOD] (define-fun s4 () (_ BitVec 16) (|eval @(SBV [([Char],Word16)] -> SBV (Expr [Char] Word16) -> SBV Word16)| s3 s0))
+[GOOD] (define-fun s2 () Bool (|valid @(SBV [[Char]] -> SBV (Expr [Char] Integer) -> SBV Bool)| s1 s0))
+[GOOD] (define-fun s4 () Int (|eval @(SBV [([Char],Integer)] -> SBV (Expr [Char] Integer) -> SBV Integer)| s3 s0))
 [GOOD] (define-fun s6 () Bool (= s4 s5))
 [GOOD] (define-fun s7 () Bool ((as is-Let Bool) s0))
-[GOOD] (define-fun s8 () (Expr String (_ BitVec 16)) (getLet_3 s0))
+[GOOD] (define-fun s8 () (Expr String Int) (getLet_3 s0))
 [GOOD] (define-fun s9 () Bool ((as is-Let Bool) s8))
-[GOOD] (define-fun s10 () (Expr String (_ BitVec 16)) (getLet_3 s8))
+[GOOD] (define-fun s10 () (Expr String Int) (getLet_3 s8))
 [GOOD] (define-fun s11 () Bool ((as is-Add Bool) s10))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
@@ -265,13 +267,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Let "b"
-            (Val #x0000)
-            (Let "a"
-                 (Add (Add (Add (Var "b") (Val #x0800)) (Var "b")) (Val #xf7fc))
-                 (Add (Mul (Var "a") (Var "a")) (Var "a"))))))
+[RECV] ((s0 (Let "p" (Val 8) (Let "v" (Val 6) (Add (Mul (Val 2) (Val 3)) (Var "v"))))))
 
-Got: (let b = 0 in (let a = (((b + 2048) + b) + 63484) in ((a * a) + a)))
+Got: (let p = 8 in (let v = 6 in ((2 * 3) + v)))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess
