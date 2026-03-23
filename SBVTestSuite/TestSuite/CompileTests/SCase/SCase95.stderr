@@ -1,0 +1,21 @@
+SCase95.hs:12:16: error: [GHC-39584]
+    " sCase: Pattern match(es) are non-exhaustive.
+        Not matched     : Nothing
+        Patterns of type: Maybe
+        Must match each : Nothing, Just
+
+      You can use a '_' to match multiple cases.
+
+    " In the quasi-quotation:
+        [sCase| e of
+                Zero      -> case m of
+                               Just v -> v
+                Num k     -> k
+                Var _     -> -1
+                Add a b   -> t a m + t b m
+                Let _ _ b -> t b m
+       |]
+   |
+12 | t e m = [sCase| e of
+   |                ^^^^^...
+

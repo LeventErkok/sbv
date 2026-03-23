@@ -1,0 +1,19 @@
+SCase98.hs:12:16: error: [GHC-39584]
+    " sCase: Non-exhaustive match:
+        Type       : Maybe
+        Constructor: Just v | v .> 0
+      NB. Guarded match might fail.
+
+    " In the quasi-quotation:
+        [sCase| e of
+                Zero      -> case m of
+                               Just v | v .> 0 -> v
+                Num k     -> k
+                Var _     -> -1
+                Add a b   -> t a m + t b m
+                Let _ _ b -> t b m
+       |]
+   |
+12 | t e m = [sCase| e of
+   |                ^^^^^...
+

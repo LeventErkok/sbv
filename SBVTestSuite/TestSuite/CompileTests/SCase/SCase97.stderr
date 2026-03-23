@@ -1,0 +1,17 @@
+SCase97.hs:15:16: error: [GHC-79890]
+    " Red is not in the type environment at a reify
+    " In the quasi-quotation:
+        [sCase| e of
+                Zero      -> case c of
+                               Red   -> 0
+                               Green -> 1
+                               Blue  -> 2
+                Num k     -> k
+                Var _     -> -1
+                Add a b   -> t a c + t b c
+                Let _ _ b -> t b c
+       |]
+   |
+15 | t e c = [sCase| e of
+   |                ^^^^^...
+

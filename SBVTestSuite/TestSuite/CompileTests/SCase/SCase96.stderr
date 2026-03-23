@@ -1,0 +1,22 @@
+SCase96.hs:12:16: error: [GHC-39584]
+    " sCase: Overlapping case constructors:
+        Type       : Maybe
+        Constructor: Just _
+      Overlaps with:
+        SCase96.hs:(12,16)-(21,10): Just v
+
+    " In the quasi-quotation:
+        [sCase| e of
+                Zero      -> case m of
+                               Nothing -> 0
+                               Just v  -> v
+                               Just _  -> 42
+                Num k     -> k
+                Var _     -> -1
+                Add a b   -> t a m + t b m
+                Let _ _ b -> t b m
+       |]
+   |
+12 | t e m = [sCase| e of
+   |                ^^^^^...
+
