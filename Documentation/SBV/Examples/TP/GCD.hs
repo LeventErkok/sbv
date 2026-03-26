@@ -249,7 +249,6 @@ dvdAbs = do
 --     Step: 1.1                           Q.E.D.
 --     Step: 1.2.1                         Q.E.D.
 --     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] dvdMul :: Ɐd ∷ Integer → Ɐa ∷ Integer → Ɐk ∷ Integer → Bool
@@ -262,9 +261,10 @@ dvdMul = calc "dvdMul"
                                          =: sTrue
                                          =: qed
                               , d ./= 0 ==> d `dvd` (k*a)
+                                         =: (k*a) `sEMod` d .== 0
                                          ?? a .== d * a `sEDiv` d
-                                         =: d `dvd` ((d * a `sEDiv` d) * k)
-                                         =: d `dvd` (d * ((a `sEDiv` d) * k))
+                                         ?? k * a .== d * (k * a `sEDiv` d)
+                                         ?? (d * (k * a `sEDiv` d)) `sEMod` d .== 0
                                          =: sTrue
                                          =: qed
                               ]
