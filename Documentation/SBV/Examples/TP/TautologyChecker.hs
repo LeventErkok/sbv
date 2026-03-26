@@ -98,18 +98,30 @@ ifComplexityPos = inductiveLemma "ifComplexityPos" (\(Forall f) -> ifComplexity 
 --
 -- >>> runTP ifComplexitySmaller
 -- Lemma: ifComplexityPos                  Q.E.D.
--- Lemma: ifComplexitySmaller              Q.E.D.
+-- Lemma: ifComplexitySmaller
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
 -- Functions proven terminating: ifComplexity
 -- [Proven] ifComplexitySmaller :: Ɐc ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
 ifComplexitySmaller :: TP (Proof (Forall "c" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
 ifComplexitySmaller = do
   icp <- recall "ifComplexityPos" ifComplexityPos
 
-  lemma "ifComplexitySmaller"
-        (\(Forall c) (Forall l) (Forall r) ->
-           let ic = ifComplexity (sIf c l r)
-           in ifComplexity c .< ic .&& ifComplexity l .< ic .&& ifComplexity r .< ic)
-        [proofOf icp]
+  calc "ifComplexitySmaller"
+       (\(Forall c) (Forall l) (Forall r) ->
+          let ic = ifComplexity (sIf c l r)
+          in ifComplexity c .< ic .&& ifComplexity l .< ic .&& ifComplexity r .< ic) $
+       \c l r ->
+         let ic = ifComplexity (sIf c l r)
+             cc = ifComplexity c
+             cl = ifComplexity l
+             cr = ifComplexity r
+         in [] |- cc .< ic .&& cl .< ic .&& cr .< ic
+               ?? icp `at` Inst @"f" c
+               ?? icp `at` Inst @"f" l
+               ?? icp `at` Inst @"f" r
+               =: sTrue
+               =: qed
 
 -- * Normalization
 
