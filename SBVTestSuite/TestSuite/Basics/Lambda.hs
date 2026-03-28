@@ -159,7 +159,7 @@ tests =
       , goldenCapturedIO "lambda52_c" $ runSat  (isOdd  21 .==)
 
       -- make sure we can pass globals
-      , goldenCapturedIO "lambda53" $ runSat $ \x -> x .== smtFunction "foo" (+(x::SInteger)) x
+      , goldenCapturedIO "lambda53" $ runS $ \x -> x .== smtFunction "foo" (+(x::SInteger)) x
 
       -- Make sure we can handle dependency orders
       , goldenCapturedIO "lambda54" $ runSat   $ \x -> let foo = smtFunction "foo" (\a -> bar a + 1)

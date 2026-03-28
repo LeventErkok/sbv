@@ -24,19 +24,13 @@
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s2)
-[GOOD] (declare-fun s3 () Int)
-[GOOD] (define-fun s4 () Int (|foo @(SBV Integer -> SBV Integer)| s3))
-[GOOD] (define-fun s5 () Bool (= s3 s4))
-[GOOD] (assert s5)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 0))
-[SEND] (get-value (s3))
-[RECV] ((s3 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 RESULT:
+Satisfiable. Model:
   s0 = 0 :: Integer
-  s3 = 0 :: Integer

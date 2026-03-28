@@ -48,7 +48,7 @@ module Data.SBV.Core.Symbolic
   , getUserName', getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex, sObserve
-  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefEq, withNewIncState, IncState(..), incrementInternalCounter, incrementFreshNameCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefEq, conflictError, withNewIncState, IncState(..), incrementInternalCounter, incrementFreshNameCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..), UIName(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, newInternalVariable, lambdaVar, quantVar
@@ -1146,6 +1146,18 @@ smtDefEq :: SMTDef -> SMTDef -> Bool
 smtDefEq (SMTDef k1 refs1 params1 body1) (SMTDef k2 refs2 params2 body2)
   = k1 == k2 && refs1 == refs2 && params1 == params2 && body1 0 == body2 0
 
+-- | Error for conflicting smtFunction definitions with the same name.
+conflictError :: String -> a
+conflictError nm = error $ unlines [ ""
+                                   , "*** Data.SBV: Function '" ++ nm ++ "' defined with conflicting bodies."
+                                   , "***"
+                                   , "*** Two calls to smtFunction (or related) used the name '" ++ nm ++ "'"
+                                   , "*** but with different definitions. This would generate conflicting"
+                                   , "*** SMTLib define-fun-rec declarations."
+                                   , "***"
+                                   , "*** Please use a unique name for each distinct function."
+                                   ]
+
 -- | Information about a compiled lambda body, used for measure verification.
 data LambdaInfo = LambdaInfo
   { liAssignments :: S.Seq (SV, SBVExpr)  -- ^ The expression DAG
@@ -1368,15 +1380,7 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                                 case lookup nm defs of
                                   Just (oldDef, _)
                                     | not (smtDefEq d oldDef)
-                                    -> error $ unlines [ ""
-                                                       , "*** Data.SBV: Function '" ++ nm ++ "' defined with conflicting bodies."
-                                                       , "***"
-                                                       , "*** Two calls to smtFunction (or related) used the name '" ++ nm ++ "'"
-                                                       , "*** but with different definitions. This would generate conflicting"
-                                                       , "*** SMTLib define-fun-rec declarations."
-                                                       , "***"
-                                                       , "*** Please use a unique name for each distinct function."
-                                                       ]
+                                    -> conflictError nm
                                   _ -> pure ()
                                 modifyState st rDefns (\defs' -> (nm, (d, t)) : filter (\(onm, _) -> onm /= nm) defs')
                                   $ noInteractive [ "Defined functions (smtFunction):"

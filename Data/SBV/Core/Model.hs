@@ -4130,23 +4130,23 @@ retrieveUICode (UIGiven nm) st fk (UIFun   (_, f)) = do
                       -- in the body text match exactly; this avoids fragile string normalization.
                       throwaway <- mkNewState (stCfg st) (LambdaGen origLevel)
                       modifyIORef' (rCompilingFuncs throwaway) (Set.insert nm)
-                      d <- f throwaway fk
-                      defs <- readIORef (rDefns st)
-                      case lookup (barify nm) defs of
-                        Just (oldDef, _)
-                          | not (smtDefEq d oldDef)
-                          -> error $ unlines [ ""
-                                             , "*** Data.SBV: Function '" ++ nm ++ "' defined with conflicting bodies."
-                                             , "***"
-                                             , "*** Two calls to smtFunction (or related) used the name '" ++ nm ++ "'"
-                                             , "*** but with different definitions. This would generate conflicting"
-                                             , "*** SMTLib define-fun-rec declarations."
-                                             , "***"
-                                             , "*** Please use a unique name for each distinct function."
-                                             ]
-                        _ -> pure ()
-                      -- Body matches; memoize this StableName hash so future calls with the same closure skip instantly.
-                      modifyState st rUserFuncs (Map.adjust (first (Set.insert sn)) nm) (pure ())
+                      -- If the body captures SVals from the live state's context, the throwaway
+                      -- compilation will throw (e.g., context-mismatch). That is a definite conflict:
+                      -- the body references different state-bound variables.
+                      mbD <- C.try (f throwaway fk)
+                      case mbD of
+                        Left (_ :: C.SomeException)
+                          -> conflictError nm
+                        Right d
+                          -> do defs <- readIORef (rDefns st)
+                                case lookup (barify nm) defs of
+                                  Just (oldDef, _)
+                                    | not (smtDefEq d oldDef)
+                                    -> conflictError nm
+                                  _ -> pure ()
+                                -- Body matches; memoize this StableName hash so future calls
+                                -- with the same closure skip instantly.
+                                modifyState st rUserFuncs (Map.adjust (first (Set.insert sn)) nm) (pure ())
                       pure $ UINone True
               Nothing
                 -> do -- First time seeing this name. Record lambda level for future comparison.
