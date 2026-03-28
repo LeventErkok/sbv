@@ -95,25 +95,23 @@ data TPState = TPState { stats               :: IORef TPStats
 newtype TP a = TP (ReaderT TPState IO a)
             deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader TPState, MonadFail)
 
--- | Extract the integer node ID from an 'SV'.
+-- | Extract the integer node ID from an SV.
 svIntId :: SV -> Int
 svIntId (SV _ (NodeId (_, _, i))) = i
 
--- | Zero out the 'SBVContext' in an 'SV', keeping only the kind and integer node ID.
--- Used to normalize 'Op' values for fingerprinting: some Op constructors ('LkUp', 'FP_Cast')
--- embed 'SV's that carry a per-State context, which would cause identical propositions
--- evaluated in different States to produce different fingerprints.
+-- | Zero out the SBVContext in an SV, keeping only the kind and integer node ID.
+-- Used to normalize 'Op' values for fingerprinting.
 zeroSV :: SV -> SV
 zeroSV (SV k (NodeId (_, mb, i))) = SV k (NodeId (globalSBVContext, mb, i))
 
--- | Zero out all embedded 'SBVContext' values inside an 'Op' using SYB generic traversal.
--- This automatically handles all current and future Op constructors that embed 'SV's.
+-- | Zero out all embedded SBVContext values inside an 'Op' using SYB generic traversal.
+-- This automatically handles all current and future Op constructors that embed SV's.
 zeroContextInOp :: Op -> Op
 zeroContextInOp = everywhere (mkT zeroSV)
 
 -- | Fingerprint of a proposition's symbolic expression DAG.
--- Computed by evaluating 'quantifiedBool' in a fresh 'State' and extracting
--- the expression program (with embedded 'SV' contexts zeroed out via SYB),
+-- Computed by evaluating 'quantifiedBool' in a fresh State and extracting
+-- the expression program (with embedded SV contexts zeroed out via SYB),
 -- the constant map (mapping constant values to their SV int IDs), and the final result SV.
 -- Two identical propositions evaluated in identically-initialized States produce
 -- identical fingerprints. Different propositions diverge somewhere in variable creation,
@@ -137,7 +135,7 @@ propFingerprint prop = do
       consts  = [(c, svIntId s) | (c, s) <- Map.toAscList cm]
   pure $ PropFingerprint (consts, entries, svIntId sv)
 
--- | After proving a proposition, add the proof to the cache for future 'recall' lookups.
+-- | After proving a proposition, add the proof to the cache for future recall lookups.
 addToProofCache :: forall a. (Typeable a, QuantifiedBool a) => a -> ProofObj -> TP ()
 addToProofCache prop prf = do
   TPState{proofCache} <- getTPState
@@ -146,7 +144,7 @@ addToProofCache prop prf = do
   liftIO $ modifyIORef' proofCache $ Map.insertWith (\_ old -> old ++ [prf]) key [prf]
 
 -- | Look up a cached proof for the given proposition. Only succeeds when in recall context
--- (i.e., called from within a 'recall' wrapper). On cache hit, the returned 'ProofObj' has
+-- (i.e., called from within a recall wrapper). On cache hit, the returned ProofObj has
 -- its 'aliases' field populated with the names of other proofs of the same proposition.
 lookupProofCache :: forall a. (Typeable a, QuantifiedBool a) => a -> TP (Maybe ProofObj)
 lookupProofCache prop = do
