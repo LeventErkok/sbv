@@ -661,7 +661,7 @@ mapCompose f g =
 -- [Proven] mapConcat :: Ɐxs ∷ [[Integer]] → Bool
 mapConcat :: (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [[a]] -> SBool))
 mapConcat f = do
-   ma <- recall "mapAppend" (mapAppend f)
+   ma <- recall (mapAppend f)
 
    induct "mapConcat"
           (\(Forall xs) -> map f (concat xs) .== concat (map (map f) xs)) $

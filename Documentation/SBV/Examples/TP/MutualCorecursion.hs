@@ -129,9 +129,9 @@ consIndex = lemma "consIndex"
 -- [Proven] pingEqPong :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 pingEqPong :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
 pingEqPong = do
-   piLen <- recall "pingLen"   pingLen
-   poLen <- recall "pongLen"   pongLen
-   ci    <- recall "consIndex" consIndex
+   piLen <- recall pingLen
+   poLen <- recall pongLen
+   ci    <- recall consIndex
 
    inductWith cvc5 "pingEqPong"
           (\(Forall @"k" k) (Forall @"n" n) -> k .>= 0 .=> ping n !! k .== pong n !! k) $
@@ -153,8 +153,8 @@ pingEqPong = do
 --
 -- >>> runTP pingElem
 -- Lemma: pingEqPong                       Q.E.D.
--- Lemma: consIndex                        Q.E.D.
--- Lemma: pongLen                          Q.E.D.
+-- Cached: consIndex                       Q.E.D.
+-- Cached: pongLen                         Q.E.D.
 -- Inductive lemma: pingElem
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -167,9 +167,9 @@ pingEqPong = do
 -- [Proven] pingElem :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 pingElem :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
 pingElem = do
-   eq    <- recall "pingEqPong" pingEqPong
-   ci    <- recall "consIndex"  consIndex
-   poLen <- recall "pongLen"    pongLen
+   eq    <- recall pingEqPong
+   ci    <- recall consIndex
+   poLen <- recall pongLen
 
    inductWith cvc5 "pingElem"
           (\(Forall @"k" k) (Forall @"n" n) -> k .>= 0 .=> ping n !! k .== n + k) $

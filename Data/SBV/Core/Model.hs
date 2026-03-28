@@ -134,6 +134,7 @@ import Data.SBV.SMT.Utils      (debug)
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
 import Data.IORef (readIORef, writeIORef, modifyIORef')
+import System.Mem.StableName (makeStableName, hashStableName)
 import Data.SBV.Utils.Lib
 
 import Data.Char
@@ -3851,10 +3852,12 @@ class SMTDefinable a where
   -- in generated SMTLib problem, or handling recursive (and mutually-recursive)
   -- definitions that wouldn't terminate in an unrolling symbolic simulation context.
   --
-  -- __IMPORTANT NOTE__ The string argument names this function. Note that SBV will identify
-  -- this function with that name, i.e., if you use this function twice (or use it recursively),
-  -- it will simply assume this name uniquely identifies the function being defined. Hence,
-  -- the user has to assure that this string is unique amongst all the functions you use.
+  -- __IMPORTANT NOTE__ The string argument names this function. SBV identifies
+  -- the function by this name: if you use this function twice (or use it recursively),
+  -- it will simply assume this name uniquely identifies the function being defined.
+  -- If two calls to 'smtFunction' (or its variants) use the same name but different
+  -- bodies, SBV will raise an error at runtime.
+  --
   -- Furthermore, if the call to 'smtFunction' happens in the scope of a parameter, you
   -- must make sure the string is chosen to keep it unique per parameter value. For instance,
   -- if you have:
@@ -3864,10 +3867,8 @@ class SMTDefinable a where
   --   bar k = smtFunction "bar" (\x -> x+k)   -- Note the capture of k!
   -- @
   --
-  -- and you call @bar 2@ and @bar 3@, you *will* get the same SMTLib function. Obviously
-  -- this is unsound. The reason is that the parameter value isn't captured by the name. In general,
-  -- you should simply not do this, but if you must, have a concrete argument to make sure you can
-  -- create a unique name. Something like:
+  -- and you call @bar 2@ and @bar 3@, SBV will detect that the two bodies differ and
+  -- raise an error. You should use a concrete argument to make the name unique:
   --
   -- @
   --   bar :: String -> SInteger -> SInteger -> SInteger
@@ -3878,12 +3879,6 @@ class SMTDefinable a where
   --
   -- Furthermore, the function argument must not capture any non-constant variables in the context.
   -- You can also define higher-order functions, see 'smtHOFunction' for that purpose.
-  --
-  -- Note that this is a design choice, to keep function creation as easy to use as possible. SBV
-  -- could've made 'smtFunction' a monadic call and generated the name itself to avoid all these issues.
-  -- But the ergonomics of that is worse, and doesn't fit with the general design philosophy. If you
-  -- can think of a solution (perhaps using some nifty GHC tricks?) to avoid this issue without making
-  -- 'smtFunction' return a monadic result, please get in touch!
   smtFunctionDef :: (Typeable a, Lambda Symbolic a) => String -> Measure a -> a -> a
 
   -- | Register a function. This function is typically not needed as SBV will register functions used
@@ -4113,10 +4108,24 @@ retrieveUICode :: UIName -> State -> Kind -> UIKind a -> IO UICodeKind
 retrieveUICode _            _  _  (UIFree  c)      = pure $ UINone c
 retrieveUICode (UIADT   _)  _  _  _                = pure $ UINone True
 retrieveUICode (UIGiven nm) st fk (UIFun   (_, f)) = do userFuncs <- readIORef (rUserFuncs st)
-                                                        if nm `Set.member` userFuncs
-                                                           then pure $ UINone True
-                                                           else do modifyState st rUserFuncs (Set.insert nm) (pure ())
-                                                                   UISMT <$> f st fk
+                                                        sn <- hashStableName <$> makeStableName f
+                                                        case Map.lookup nm userFuncs of
+                                                          Just oldSn
+                                                            | sn /= oldSn
+                                                            -> error $ unlines [ ""
+                                                                               , "*** Data.SBV: Function '" ++ nm ++ "' defined with conflicting bodies."
+                                                                               , "***"
+                                                                               , "*** Two calls to smtFunction (or related) used the name '" ++ nm ++ "'"
+                                                                               , "*** but with different definitions. This would generate conflicting"
+                                                                               , "*** SMTLib define-fun-rec declarations."
+                                                                               , "***"
+                                                                               , "*** Please use a unique name for each distinct function."
+                                                                               ]
+                                                            | True
+                                                            -> pure $ UINone True
+                                                          Nothing
+                                                            -> do modifyState st rUserFuncs (Map.insert nm sn) (pure ())
+                                                                  UISMT <$> f st fk
 retrieveUICode _            _  _  (UICodeC (_, c)) = pure $ UICgC c
 
 -- Get the constant value associated with the UI

@@ -105,7 +105,7 @@ ifComplexityPos = inductiveLemma "ifComplexityPos" (\(Forall f) -> ifComplexity 
 -- [Proven] ifComplexitySmaller :: Ɐc ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
 ifComplexitySmaller :: TP (Proof (Forall "c" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
 ifComplexitySmaller = do
-  icp <- recall "ifComplexityPos" ifComplexityPos
+  icp <- recall ifComplexityPos
 
   calc "ifComplexitySmaller"
        (\(Forall c) (Forall l) (Forall r) ->
@@ -418,8 +418,8 @@ trueIsAssigned =
 -- [Proven] evalStable :: Ɐf ∷ Formula → Ɐx ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
 evalStable :: TP (Proof (Forall "f" Formula -> Forall "x" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
 evalStable = do
-  icp <- recall "ifComplexityPos"     ifComplexityPos
-  ibs <- recall "ifComplexitySmaller" ifComplexitySmaller
+  icp <- recall ifComplexityPos
+  ibs <- recall ifComplexitySmaller
 
   sInduct "evalStable"
           (\(Forall f) (Forall x) (Forall v) (Forall bs) -> v .== lookUp x bs .=> eval f (sBinding x v .: bs) .== eval f bs)
@@ -508,11 +508,11 @@ evalStable = do
 tautologyImpliesEval :: TP (Proof (Forall "f" Formula -> Forall "a" [Binding] -> Forall "b" [Binding] -> SBool))
 tautologyImpliesEval = do
 
-  icp <- recall "ifComplexityPos"     ifComplexityPos
-  ibs <- recall "ifComplexitySmaller" ifComplexitySmaller
-  lus <- recall "lookUpStable"        lookUpStable
-  tia <- recall "trueIsAssigned"      trueIsAssigned
-  evs <- recall "evalStable"          evalStable
+  icp <- recall ifComplexityPos
+  ibs <- recall ifComplexitySmaller
+  lus <- recall lookUpStable
+  tia <- recall trueIsAssigned
+  evs <- recall evalStable
 
   sInduct "tautologyImpliesEval"
           (\(Forall f) (Forall a) (Forall b) -> isNormal f .&& isTautology' f b .=> eval f (b ++ a))
@@ -631,10 +631,10 @@ tautologyImpliesEval = do
 -- [Proven] normalizeCorrect :: Ɐf ∷ Formula → Bool
 normalizeCorrect :: TP (Proof (Forall "f" Formula -> SBool))
 normalizeCorrect = do
-  icp <- recall "ifComplexityPos"              ifComplexityPos
-  ibs <- recall "ifComplexitySmaller"          ifComplexitySmaller
-  npc <- recall "normalizePreservesComplexity" normalizePreservesComplexity
-  idn <- recall "ifDepthNonNeg"                ifDepthNonNeg
+  icp <- recall ifComplexityPos
+  ibs <- recall ifComplexitySmaller
+  npc <- recall normalizePreservesComplexity
+  idn <- recall ifDepthNonNeg
 
   sInductWith cvc5 "normalizeCorrect"
               (\(Forall f) -> isNormal (normalize f))
@@ -692,8 +692,8 @@ normalizeCorrect = do
 -- [Proven] normalizeSame :: Ɐf ∷ Formula → Bool
 normalizeSame :: TP (Proof (Forall "f" Formula -> SBool))
 normalizeSame = do
-  icp <- recall "ifComplexityPos"     ifComplexityPos
-  ibs <- recall "ifComplexitySmaller" ifComplexitySmaller
+  icp <- recall ifComplexityPos
+  ibs <- recall ifComplexitySmaller
 
   sInduct "normalizeSame"
           (\(Forall f) -> isNormal f .=> normalize f .== f)
@@ -742,10 +742,10 @@ normalizeSame = do
 -- [Proven] normalizeRespectsTruth :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
 normalizeRespectsTruth :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
 normalizeRespectsTruth = do
-  icp <- recall "ifComplexityPos"              ifComplexityPos
-  ibs <- recall "ifComplexitySmaller"          ifComplexitySmaller
-  npc <- recall "normalizePreservesComplexity" normalizePreservesComplexity
-  idn <- recall "ifDepthNonNeg"                ifDepthNonNeg
+  icp <- recall ifComplexityPos
+  ibs <- recall ifComplexitySmaller
+  npc <- recall normalizePreservesComplexity
+  idn <- recall ifDepthNonNeg
 
   sInductWith cvc5 "normalizeRespectsTruth"
               (\(Forall f) (Forall bs) -> eval (normalize f) bs .== eval f bs)
@@ -798,9 +798,9 @@ normalizeRespectsTruth = do
 -- [Proven] soundness :: Ɐf ∷ Formula → Ɐbindings ∷ [Binding] → Bool
 soundness :: TP (Proof (Forall "f" Formula -> Forall "bindings" [Binding] -> SBool))
 soundness = do
-  tie <- recallWith cvc5 "tautologyImpliesEval"   tautologyImpliesEval
-  nrt <- recall          "normalizeRespectsTruth" normalizeRespectsTruth
-  nc  <- recall          "normalizeCorrect"       normalizeCorrect
+  tie <- recallWith cvc5 tautologyImpliesEval
+  nrt <- recall normalizeRespectsTruth
+  nc  <- recall normalizeCorrect
 
   calc "soundness"
        (\(Forall f) (Forall bindings) -> isTautology f .=> eval f bindings) $
@@ -872,8 +872,8 @@ falsify f = falsify' (normalize f) []
 -- [Proven] nonTautIsFalsified :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
 nonTautIsFalsified :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
 nonTautIsFalsified = do
-  icp <- recall "ifComplexityPos"     ifComplexityPos
-  ibs <- recall "ifComplexitySmaller" ifComplexitySmaller
+  icp <- recall ifComplexityPos
+  ibs <- recall ifComplexitySmaller
 
   sInduct "nonTautIsFalsified"
           (\(Forall f) (Forall bs) -> isNormal f .&& sNot (isTautology' f bs) .=> sfalsified (falsify' f bs))
@@ -916,10 +916,10 @@ nonTautIsFalsified = do
 -- [Proven] falsifyExtendsBindings :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Ɐi ∷ Integer → Bool
 falsifyExtendsBindings :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> Forall "i" Integer -> SBool))
 falsifyExtendsBindings = do
-  icp <- recall "ifComplexityPos"     ifComplexityPos
-  ibs <- recall "ifComplexitySmaller" ifComplexitySmaller
-  iae <- recall "isAssignedExtends"   isAssignedExtends
-  lue <- recall "lookUpExtends"       lookUpExtends
+  icp <- recall ifComplexityPos
+  ibs <- recall ifComplexitySmaller
+  iae <- recall isAssignedExtends
+  lue <- recall lookUpExtends
 
   sInduct "falsifyExtendsBindings"
           (\(Forall f) (Forall bs) (Forall i) ->
@@ -994,11 +994,11 @@ falsifyExtendsBindings = do
 -- [Proven] falsifyFalsifies :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
 falsifyFalsifies :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
 falsifyFalsifies = do
-  icp <- recall "ifComplexityPos"        ifComplexityPos
-  ibs <- recall "ifComplexitySmaller"    ifComplexitySmaller
-  feb <- recall "falsifyExtendsBindings" falsifyExtendsBindings
-  lus <- recall "lookUpSame"             lookUpSame
-  ias <- recall "isAssignedSame"         isAssignedSame
+  icp <- recall ifComplexityPos
+  ibs <- recall ifComplexitySmaller
+  feb <- recall falsifyExtendsBindings
+  lus <- recall lookUpSame
+  ias <- recall isAssignedSame
 
   sInduct "falsifyFalsifies"
           (\(Forall f) (Forall bs) -> isNormal f .&& sfalsified (falsify' f bs) .=> sNot (eval f (scex (falsify' f bs))))
@@ -1091,9 +1091,9 @@ falsifyFalsifies = do
 -- [Proven] completenessHelper :: Ɐf ∷ Formula → Bool
 completenessHelper :: TP (Proof (Forall "f" Formula -> SBool))
 completenessHelper = do
-  ff  <- recall        "falsifyFalsifies"   falsifyFalsifies
-  nti <- recall        "nonTautIsFalsified" nonTautIsFalsified
-  nc  <- recallWith z3 "normalizeCorrect"   normalizeCorrect
+  ff  <- recall falsifyFalsifies
+  nti <- recall nonTautIsFalsified
+  nc  <- recallWith z3 normalizeCorrect
 
   lemma "completenessHelper"
         (\(Forall f) -> sNot (isTautology f) .=> sNot (eval (normalize f) (scex (falsify f))))
@@ -1116,8 +1116,8 @@ completenessHelper = do
 -- [Proven] completeness :: Ɐf ∷ Formula → Bool
 completeness :: TP (Proof (Forall "f" Formula -> SBool))
 completeness = do
-  ch  <- recall        "completenessHelper"     completenessHelper
-  nrt <- recallWith z3 "normalizeRespectsTruth" normalizeRespectsTruth
+  ch  <- recall completenessHelper
+  nrt <- recallWith z3 normalizeRespectsTruth
 
   lemma "completeness"
         (\(Forall f) -> sNot (isTautology f) .=> sNot (eval f (scex (falsify f))))

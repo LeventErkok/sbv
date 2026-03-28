@@ -36,7 +36,7 @@ module Data.SBV.Core.Symbolic
   , SV(..), swKind, trueSV, falseSV, contextOfSV
   , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..), ADTOp(..)
   , RegExp(..), regExpToSMTString, SMTLambda(..)
-  , Quantifier(..), needsExistentials, SBVContext(..), checkCompatibleContext, VarContext(..)
+  , Quantifier(..), needsExistentials, SBVContext(..), globalSBVContext, checkCompatibleContext, VarContext(..)
   , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted, prefixNameToUnique
   , SVal(..)
   , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
@@ -1140,6 +1140,12 @@ instance Show SMTDef where
 instance NFData SMTDef where
   rnf (SMTDef fk frees params body) = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
 
+-- | Compare two SMTDef values for semantic equality.
+-- The body is @(Int -> String)@ where @Int@ is indentation; we compare rendered output at indent 0.
+smtDefEq :: SMTDef -> SMTDef -> Bool
+smtDefEq (SMTDef k1 refs1 params1 body1) (SMTDef k2 refs2 params2 body2)
+  = k1 == k2 && refs1 == refs2 && params1 == params2 && body1 0 == body2 0
+
 -- | Information about a compiled lambda body, used for measure verification.
 data LambdaInfo = LambdaInfo
   { liAssignments :: S.Seq (SV, SBVExpr)  -- ^ The expression DAG
@@ -1173,7 +1179,7 @@ data State  = State { sbvContext            :: SBVContext
                     , rconstMap             :: IORef CnstMap
                     , rexprMap              :: IORef ExprMap
                     , rUIMap                :: IORef UIMap
-                    , rUserFuncs            :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
+                    , rUserFuncs            :: IORef (Map.Map String Int) -- Functions that the user wanted explicit code generation for, with StableName hash of the code generator
                     , rCgMap                :: IORef CgMap
                     , rDefns                :: IORef [(String, (SMTDef, SBVType))]
                     , rMeasureChecks        :: IORef [(String, Bool, SMTConfig -> IO ())]  -- Measure checks for recursive functions. Bool is True for productive (guarded), False for terminating.
@@ -1356,7 +1362,22 @@ newUninterpreted st uiName mbArgNames t uiCode = do
 
   isCurried <- case uiCode of
                  UINone c -> pure c
-                 UISMT d  -> do modifyState st rDefns (\defs -> (nm, (d, t)) : filter (\(onm, _) -> onm /= nm) defs)
+                 UISMT d  -> do -- Check for conflicting definitions with the same name
+                                defs <- readIORef (rDefns st)
+                                case lookup nm defs of
+                                  Just (oldDef, _)
+                                    | not (smtDefEq d oldDef)
+                                    -> error $ unlines [ ""
+                                                       , "*** Data.SBV: Function '" ++ nm ++ "' defined with conflicting bodies."
+                                                       , "***"
+                                                       , "*** Two calls to smtFunction (or related) used the name '" ++ nm ++ "'"
+                                                       , "*** but with different definitions. This would generate conflicting"
+                                                       , "*** SMTLib define-fun-rec declarations."
+                                                       , "***"
+                                                       , "*** Please use a unique name for each distinct function."
+                                                       ]
+                                  _ -> pure ()
+                                modifyState st rDefns (\defs' -> (nm, (d, t)) : filter (\(onm, _) -> onm /= nm) defs')
                                   $ noInteractive [ "Defined functions (smtFunction):"
                                                   , "  Name: " ++ nm ++ extraComment
                                                   , "  Type: " ++ show t
@@ -1826,7 +1847,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      lambdaInps         <- newIORef mempty
      outs               <- newIORef []
      tables             <- newIORef Map.empty
-     userFuncs          <- newIORef Set.empty
+     userFuncs          <- newIORef Map.empty
      uis                <- newIORef Map.empty
      cgs                <- newIORef Map.empty
      defns              <- newIORef []
@@ -2250,9 +2271,6 @@ data TPOptions = TPOptions {
        , quiet                 :: Bool           -- ^ No messages what-so-ever for successful steps. (Will print if something fails)
        , printAsms             :: Bool           -- ^ Print assumptions as they are proven as separate steps.
        , printStats            :: Bool           -- ^ Print time/statistics. If quiet is True, then measureTime is ignored.
-       , cacheProofs           :: Bool           -- ^ Treat lemma names as unique, and cache the results. Default: False. Note that this
-                                                 -- feature is unsound unless you make sure (by some other mechanism) that your lemma names
-                                                 -- are indeed unique.
        , measuresBeingVerified :: Set.Set String -- ^ Functions whose measures are currently being verified. Used to prevent infinite
                                                  -- recursion when a measureLemma proof uses the function whose measure is being checked.
        }

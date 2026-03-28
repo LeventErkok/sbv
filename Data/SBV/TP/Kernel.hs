@@ -186,7 +186,8 @@ internalAxiom nm p = Proof $ ProofObj { dependencies = []
                                       , getProp      = toDyn p
                                       , proofName    = nm
                                       , uniqId       = TPInternal
-                                      , isCached     = False
+                                      , aliases      = []
+                                      , wasCached    = False
                                       }
 
 -- | Propagate the settings for ribbon/timing from top to current. Because in any subsequent configuration
@@ -201,12 +202,18 @@ lemma nm f by = do cfg <- getTPConfig
 
 -- | Prove a lemma, using the given configuration.
 lemmaWith :: Proposition a => SMTConfig -> String -> a -> [ProofObj] -> TP (Proof a)
-lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
+lemmaWith cfgIn nm inputProp by = do
+                 cached <- lookupProofCache inputProp
                  topCfg <- getTPConfig
-                 let cfg@SMTConfig{tpOptions = TPOptions{printStats}} = cfgIn `tpMergeCfg` topCfg
-                 tpSt <- getTPState
-                 u    <- tpGetNextUnique
-                 liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt cfg u
+                 case cached of
+                   Just prf -> do let cfg = cfgIn `tpMergeCfg` topCfg
+                                  returnCachedProof cfg nm prf
+                   Nothing  -> do let cfg@SMTConfig{tpOptions = TPOptions{printStats}} = cfgIn `tpMergeCfg` topCfg
+                                  tpSt <- getTPState
+                                  u    <- tpGetNextUnique
+                                  result <- liftIO $ getTimeStampIf printStats >>= runSMTWith cfg . go tpSt cfg u
+                                  addToProofCache inputProp (proofOf result)
+                                  pure result
   where go tpSt cfg u mbStartTime = do st <- symbolicEnv
                                        -- Skip measure checks in the normal runWithQuery path; we handle them here
                                        liftIO $ writeIORef (rSkipMeasureChecks st) True
@@ -233,7 +240,8 @@ lemmaWith cfgIn nm inputProp by = withProofCache nm $ do
                                                                , getProp      = toDyn inputProp
                                                                , proofName    = nm
                                                                , uniqId       = u
-                                                               , isCached     = False
+                                                               , aliases      = []
+                                                               , wasCached    = False
                                                                }
 
 -- | Prove a given statement, using the induction schema for the proposition. Using the default solver.

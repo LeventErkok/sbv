@@ -88,8 +88,8 @@ down = smtFunction "down"
 -- [Proven] upDown :: Ɐn ∷ Nat → Bool
 upDown :: TP (Proof (Forall "n" Nat -> SBool))
 upDown = do
-   n2inn <- recall "n2iNonNeg" n2iNonNeg
-   rc    <- recall "revCons"   (revCons @Integer)
+   n2inn <- recall n2iNonNeg
+   rc    <- recall (revCons @Integer)
 
    -- We first generalize the theorem, to make it inductive
    upDownGen <- sInduct "upDownGen"

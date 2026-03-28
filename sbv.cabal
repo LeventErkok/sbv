@@ -391,7 +391,9 @@ Test-Suite SBVTest
                   , TestSuite.Basics.QRem
                   , TestSuite.Basics.Quantifiers
                   , TestSuite.Basics.Recursive
+                  , TestSuite.Basics.TPCaching
                   , TestSuite.Basics.Set
+                  , TestSuite.Basics.SmtFunctionUnique
                   , TestSuite.Basics.SmallShifts
                   , TestSuite.Basics.SquashReals
                   , TestSuite.Basics.String

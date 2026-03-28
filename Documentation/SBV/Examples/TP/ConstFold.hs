@@ -315,8 +315,8 @@ lookupCons = lemma "lookupCons"
 lookupSwapPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1" (String, Integer)
                          -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
 lookupSwapPfx = do
-   lkS <- recall "lookupSwap" lookupSwap
-   lkC <- recall "lookupCons" lookupCons
+   lkS <- recall lookupSwap
+   lkC <- recall lookupCons
 
    sInduct "lookupSwapPfx"
      (\(Forall @"pfx" (pfx :: E)) (Forall @"k" (k :: SString)) (Forall @"b1" (b1 :: STuple String Integer))
@@ -391,8 +391,8 @@ lookupShadow = lemma "lookupShadow"
 lookupShadowPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1" (String, Integer)
                            -> Forall "b2" (String, Integer) -> Forall "env" EL -> SBool))
 lookupShadowPfx = do
-   lkSh <- recall "lookupShadow" lookupShadow
-   lkC  <- recall "lookupCons"   lookupCons
+   lkSh <- recall lookupShadow
+   lkC  <- recall lookupCons
    sInduct "lookupShadowPfx"
      (\(Forall @"pfx" (pfx :: E)) (Forall @"k" (k :: SString)) (Forall @"b1" (b1 :: STuple String Integer))
        (Forall @"b2" (b2 :: STuple String Integer)) (Forall @"env" (env :: E)) ->
@@ -472,17 +472,17 @@ lookupShadowPfx = do
 envSwap :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
                    -> Forall "b1" (String, Integer) -> Forall "b2" (String, Integer) -> SBool))
 envSwap = do
-   mnn   <- recall "measureNonNeg" measureNonNeg
-   lkSP  <- recall "lookupSwapPfx" lookupSwapPfx
-   sqrC  <- recall "sqrCong"       sqrCong
-   sqrH  <- recall "sqrHelper"     sqrHelper
-   addCL <- recall "addCongL"      addCongL
-   addCR <- recall "addCongR"      addCongR
-   addH  <- recall "addHelper"     addHelper
-   mulCL <- recall "mulCongL"      mulCongL
-   mulCR <- recall "mulCongR"      mulCongR
-   mulH  <- recall "mulHelper"     mulHelper
-   letH  <- recall "letHelper"     letHelper
+   mnn   <- recall measureNonNeg
+   lkSP  <- recall lookupSwapPfx
+   sqrC  <- recall sqrCong
+   sqrH  <- recall sqrHelper
+   addCL <- recall addCongL
+   addCR <- recall addCongR
+   addH  <- recall addHelper
+   mulCL <- recall mulCongL
+   mulCR <- recall mulCongR
+   mulH  <- recall mulHelper
+   letH  <- recall letHelper
 
    sInduct "envSwap"
      (\(Forall @"e" (e :: SE)) (Forall @"pfx" (pfx :: E)) (Forall @"env" (env :: E))
@@ -629,17 +629,17 @@ envSwap = do
 envShadow :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
                      -> Forall "b1" (String, Integer) -> Forall "b2" (String, Integer) -> SBool))
 envShadow = do
-   mnn   <- recall "measureNonNeg"   measureNonNeg
-   lkShP <- recall "lookupShadowPfx" lookupShadowPfx
-   sqrC  <- recall "sqrCong"         sqrCong
-   sqrH  <- recall "sqrHelper"       sqrHelper
-   addCL <- recall "addCongL"        addCongL
-   addCR <- recall "addCongR"        addCongR
-   addH  <- recall "addHelper"       addHelper
-   mulCL <- recall "mulCongL"        mulCongL
-   mulCR <- recall "mulCongR"        mulCongR
-   mulH  <- recall "mulHelper"       mulHelper
-   letH  <- recall "letHelper"       letHelper
+   mnn   <- recall measureNonNeg
+   lkShP <- recall lookupShadowPfx
+   sqrC  <- recall sqrCong
+   sqrH  <- recall sqrHelper
+   addCL <- recall addCongL
+   addCR <- recall addCongR
+   addH  <- recall addHelper
+   mulCL <- recall mulCongL
+   mulCR <- recall mulCongR
+   mulH  <- recall mulHelper
+   letH  <- recall letHelper
 
    sInduct "envShadow"
      (\(Forall @"e" (e :: SE)) (Forall @"pfx" (pfx :: E)) (Forall @"env" (env :: E))
@@ -821,17 +821,17 @@ varHelper = lemma "varHelper"
 -- [Proven] substCorrect :: Ɐe ∷ (Expr String Integer) → Ɐnm ∷ String → Ɐv ∷ Integer → Ɐenv ∷ [(String, Integer)] → Bool
 substCorrect :: TP (Proof (Forall "e" Exp -> Forall "nm" String -> Forall "v" Integer -> Forall "env" EL -> SBool))
 substCorrect = do
-   mnn   <- recall "measureNonNeg" measureNonNeg
-   sqrC  <- recall "sqrCong"       sqrCong
-   sqrH  <- recall "sqrHelper"     sqrHelper
-   addH  <- recall "addHelper"     addHelper
-   mulCL <- recall "mulCongL"      mulCongL
-   mulCR <- recall "mulCongR"      mulCongR
-   mulH  <- recall "mulHelper"     mulHelper
-   letH  <- recall "letHelper"     letHelper
-   varH  <- recall "varHelper"     varHelper
-   eSwp  <- recall "envSwap"       envSwap
-   eShd  <- recall "envShadow"     envShadow
+   mnn   <- recall measureNonNeg
+   sqrC  <- recall sqrCong
+   sqrH  <- recall sqrHelper
+   addH  <- recall addHelper
+   mulCL <- recall mulCongL
+   mulCR <- recall mulCongR
+   mulH  <- recall mulHelper
+   letH  <- recall letHelper
+   varH  <- recall varHelper
+   eSwp  <- recall envSwap
+   eShd  <- recall envShadow
 
    sInduct "substCorrect"
      (\(Forall @"e" (e :: SE)) (Forall @"nm" (nm :: SString)) (Forall @"v" (v :: SInteger)) (Forall @"env" (env :: E)) ->
@@ -1095,14 +1095,14 @@ substCorrect = do
 -- [Proven] simpCorrect :: Ɐe ∷ (Expr String Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 simpCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))
 simpCorrect = do
-   sqrC  <- recall "sqrCong"      sqrCong
-   sqrH  <- recall "sqrHelper"    sqrHelper
-   addH  <- recall "addHelper"    addHelper
-   mulCL <- recall "mulCongL"     mulCongL
-   mulCR <- recall "mulCongR"     mulCongR
-   mulH  <- recall "mulHelper"    mulHelper
-   letH  <- recall "letHelper"    letHelper
-   subC  <- recall "substCorrect" substCorrect
+   sqrC  <- recall sqrCong
+   sqrH  <- recall sqrHelper
+   addH  <- recall addHelper
+   mulCL <- recall mulCongL
+   mulCR <- recall mulCongR
+   mulH  <- recall mulHelper
+   letH  <- recall letHelper
+   subC  <- recall substCorrect
 
    calc "simpCorrect"
      (\(Forall @"e" (e :: SE)) (Forall @"env" (env :: E)) -> interpInEnv env (simplify e) .== interpInEnv env e) $
@@ -1371,11 +1371,11 @@ simpCorrect = do
 -- >>> runTPWith cvc5 cfoldCorrect
 -- Lemma: measureNonNeg                    Q.E.D.
 -- Lemma: simpCorrect                      Q.E.D.
--- Lemma: sqrCong                          Q.E.D.
--- Lemma: sqrHelper                        Q.E.D.
--- Lemma: mulCongL                         Q.E.D.
--- Lemma: mulCongR                         Q.E.D.
--- Lemma: mulHelper                        Q.E.D.
+-- Cached: sqrCong                         Q.E.D.
+-- Cached: sqrHelper                       Q.E.D.
+-- Cached: mulCongL                        Q.E.D.
+-- Cached: mulCongR                        Q.E.D.
+-- Cached: mulHelper                       Q.E.D.
 -- Inductive lemma (strong): cfoldCorrect
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (7 way case split)
@@ -1421,13 +1421,13 @@ simpCorrect = do
 -- [Proven] cfoldCorrect :: Ɐe ∷ (Expr String Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 cfoldCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))
 cfoldCorrect = do
-   mnn   <- recall "measureNonNeg" measureNonNeg
-   sc    <- recall "simpCorrect"   simpCorrect
-   sqrC  <- recall "sqrCong"       sqrCong
-   sqrH  <- recall "sqrHelper"     sqrHelper
-   mulCL <- recall "mulCongL"      mulCongL
-   mulCR <- recall "mulCongR"      mulCongR
-   mulH  <- recall "mulHelper"     mulHelper
+   mnn   <- recall measureNonNeg
+   sc    <- recall simpCorrect
+   sqrC  <- recall sqrCong
+   sqrH  <- recall sqrHelper
+   mulCL <- recall mulCongL
+   mulCR <- recall mulCongR
+   mulH  <- recall mulHelper
 
    sInduct "cfoldCorrect"
      (\(Forall @"e" (e :: SE)) (Forall @"env" (env :: E)) -> interpInEnv env (cfold e) .== interpInEnv env e)

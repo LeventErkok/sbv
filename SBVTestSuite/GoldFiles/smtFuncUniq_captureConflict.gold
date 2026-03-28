@@ -1,0 +1,9 @@
+
+*** Data.SBV: Function 'bar @(SBV Integer -> SBV Integer)' defined with conflicting bodies.
+***
+*** Two calls to smtFunction (or related) used the name 'bar @(SBV Integer -> SBV Integer)'
+*** but with different definitions. This would generate conflicting
+*** SMTLib define-fun-rec declarations.
+***
+*** Please use a unique name for each distinct function.
+

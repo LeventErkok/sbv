@@ -79,6 +79,14 @@
     between the pure array theory (`select`/`store`/`const`) and the richer setting where
     arrays are identified with function spaces.
 
+  * [BACKWARDS COMPATIBILITY] `recall` and `recallWith` no longer take a `String` argument.
+    A recalled proof is now automatically cached and reused if the same proposition is
+    encountered again. `tpNoCache` has been removed.
+
+  * SBV now detects conflicting `smtFunction` definitions: if two calls use the same SMT
+    name but have different bodies, an error is raised. Identical re-registrations (which
+    happen naturally with recursive functions) remain allowed.
+
   * SBV now automatically checks termination of recursive functions defined via `smtFunction`.
     A measure (a non-negative expression that strictly decreases at each recursive call) is
     guessed automatically from argument types when possible. For functions that need an explicit

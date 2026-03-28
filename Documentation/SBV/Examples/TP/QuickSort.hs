@@ -479,10 +479,10 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                              =: qed
 
   -- The first element of partition does not increase in size
-  partitionNotLongerFst <- recall "partitionNotLongerFst" (partitionFstBound @a)
+  partitionNotLongerFst <- recall (partitionFstBound @a)
 
   -- The second element of partition does not increase in size
-  partitionNotLongerSnd <- recall "partitionNotLongerSnd" (partitionSndBound @a)
+  partitionNotLongerSnd <- recall (partitionSndBound @a)
 
   --------------------------------------------------------------------------------------------
   -- Part IV. Helper lemmas for count

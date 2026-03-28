@@ -103,8 +103,8 @@ pow2pos = induct "pow2pos"
 -- [Modulo: collatz termination] collatzPow2 :: Ɐk ∷ Integer → Bool
 collatzPow2 :: TP (Proof (Forall "k" Integer -> SBool))
 collatzPow2 = do
-   dbl <- recall "doubling" doubling
-   p2p <- recall "pow2pos"  pow2pos
+   dbl <- recall doubling
+   p2p <- recall pow2pos
 
    induct "collatzPow2"
           (\(Forall @"k" k) -> k .>= 0 .=> collatz (pow2 k) .== 1) $

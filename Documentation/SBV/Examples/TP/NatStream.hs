@@ -100,7 +100,7 @@ natsLen =
 -- [Proven] natsElem :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 natsElem :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
 natsElem = do
-   nLen <- recall "natsLen" natsLen
+   nLen <- recall natsLen
 
    elemOne <- lemma "elemOne"
                     (\(Forall @"x" (x :: SInteger)) (Forall @"y" y) (Forall @"k" k) ->

@@ -127,10 +127,10 @@ correctness :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 correctness = do
 
   -- Quietly import a few helpers from "Data.SBV.TP.List"
-  revLen  <- recall "revLen"  $ TP.revLen  @a
-  revApp  <- recall "revApp"  $ TP.revApp  @a
-  revSnoc <- recall "revSnoc" $ TP.revSnoc @a
-  revRev  <- recall "revRev"  $ TP.revRev  @a
+  revLen  <- recall $ TP.revLen  @a
+  revApp  <- recall $ TP.revApp  @a
+  revSnoc <- recall $ TP.revSnoc @a
+  revRev  <- recall $ TP.revRev  @a
 
   sInductWith cvc5 "revCorrect"
     (\(Forall xs) -> rev xs .== reverse xs)

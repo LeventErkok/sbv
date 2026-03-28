@@ -253,14 +253,14 @@ addAssoc = inductiveLemma
 -- [Proven] addComm :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 addComm :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 addComm = do
-    alu <- recall "addLeftUnit"  addLeftUnit
-    aru <- recall "addRightUnit" addRightUnit
+    alu <- recall addLeftUnit
+    aru <- recall addRightUnit
 
     caseZero <- lemma "caseZero"
                       (\(Forall @"n" (n :: SNat)) -> 0 + n .== n + 0)
                       [proofOf alu, proofOf aru]
 
-    as <- recall "addSucc" addSucc
+    as <- recall addSucc
 
     caseSucc <- calc "caseSucc"
                      (\(Forall @"m" m) (Forall @"n" n) -> m + n .== n + m .=> sSucc m + n .== n + sSucc m) $
@@ -302,7 +302,7 @@ mulCorrect = do
                      (\(Forall @"n" n) -> n2i (0 * n) .== n2i 0 * n2i n)
                      []
 
-   addC <- recall "addCorrect" addCorrect
+   addC <- recall addCorrect
 
    caseSucc <- calc "caseSucc"
                     (\(Forall @"m" m) (Forall @"n" n) ->
@@ -389,8 +389,8 @@ distribLeft :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> 
 distribLeft = do
    caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" (o :: SNat)) -> 0 * (n + o) .== 0 * n + 0 * o) []
 
-   addAsc <- recall "addAssoc" addAssoc
-   addCom <- recall "addComm"  addComm
+   addAsc <- recall addAssoc
+   addCom <- recall addComm
 
    caseSucc <- calc "caseSucc"
                     (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
@@ -425,7 +425,7 @@ distribLeft = do
 -- Lemma: caseZero                         Q.E.D.
 -- Lemma: addAssoc                         Q.E.D.
 -- Lemma: addComm                          Q.E.D.
--- Lemma: addSucc                          Q.E.D.
+-- Cached: addSucc                         Q.E.D.
 -- Lemma: caseSucc
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -442,9 +442,9 @@ distribRight :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat ->
 distribRight = do
    caseZero <- lemma "caseZero" (\(Forall @"n" n) (Forall @"o" (o :: SNat)) -> (0 + n) * o .== 0 * o + n * o) []
 
-   pAddAssoc <- recall "addAssoc" addAssoc
-   pAddCom   <- recall "addComm"  addComm
-   pAddSucc  <- recall "addSucc"  addSucc
+   pAddAssoc <- recall addAssoc
+   pAddCom   <- recall addComm
+   pAddSucc  <- recall addSucc
 
    caseSucc <- calc "caseSucc"
                     (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
@@ -478,7 +478,7 @@ distribRight = do
 -- Lemma: addLeftUnit                      Q.E.D.
 -- Lemma: distribLeft                      Q.E.D.
 -- Lemma: mulRightUnit                     Q.E.D.
--- Lemma: addComm                          Q.E.D.
+-- Cached: addComm                         Q.E.D.
 -- Lemma: mulSucc
 --   Step: 1                               Q.E.D.
 --   Step: 2 (defn of +)                   Q.E.D.
@@ -490,10 +490,10 @@ distribRight = do
 -- [Proven] mulSucc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulSucc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 mulSucc = do
-   alu <- recall "addLeftUnit"    addLeftUnit
-   dL  <- recall "distribLeft"    distribLeft
-   mru <- recall "mulRightUnit"   mulRightUnit
-   ac  <- recall "addComm"        addComm
+   alu <- recall addLeftUnit
+   dL  <- recall distribLeft
+   mru <- recall mulRightUnit
+   ac  <- recall addComm
 
    calc "mulSucc"
         (\(Forall @"m" m) (Forall @"n" n) -> m * sSucc n .== m * n + m) $
@@ -532,7 +532,7 @@ mulAssoc = do
                      (\(Forall @"n" n) (Forall @"o" (o :: SNat)) -> 0 * (n * o) .== (0 * n) * o)
                      []
 
-   distR <- recall "distribRight" distribRight
+   distR <- recall distribRight
 
    caseSucc <- calc "caseSucc"
                     (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) ->
@@ -574,14 +574,14 @@ mulAssoc = do
 -- [Proven] mulComm :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulComm :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 mulComm = do
-  mra <- recall "mulRightAbsorb" mulRightAbsorb
+  mra <- recall mulRightAbsorb
 
   caseZero <- lemma "caseZero"
                     (\(Forall @"m" (m :: SNat)) -> 0 * m .== m * 0)
                     [proofOf mra]
 
-  mru <- recall "mulRightUnit" mulRightUnit
-  dL  <- recall "distribLeft"  distribLeft
+  mru <- recall mulRightUnit
+  dL  <- recall distribLeft
 
   caseSucc <- calc "caseSucc"
                    (\(Forall @"m" m) (Forall @"n" n) -> m * n .== n * m .=> sSucc m * n .== n * sSucc m) $
@@ -623,7 +623,7 @@ mulComm = do
 -- [Proven] ltTrans :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 ltTrans :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 ltTrans = do
-  aa <- recall "addAssoc" addAssoc
+  aa <- recall addAssoc
 
   calc "ltTrans"
        (\(Forall @"m" m) (Forall @"n" n) (Forall @"o" o) -> m .< n .&& n .< o .=> m .< o) $
@@ -707,11 +707,11 @@ ltIrreflexive = do
 -- [Proven] lteEquiv :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 lteEquiv :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 lteEquiv = do
-    n2ia    <- recall "n2iAdd"       n2iAdd
-    nn      <- recall "n2iNonNeg"    n2iNonNeg
-    n2i2nId <- recall "n2i2n"        n2i2n
-    i2n2iId <- recall "i2n2i"        i2n2i
-    aru     <- recall "addRightUnit" addRightUnit
+    n2ia    <- recall n2iAdd
+    nn      <- recall n2iNonNeg
+    n2i2nId <- recall n2i2n
+    i2n2iId <- recall i2n2i
+    aru     <- recall addRightUnit
 
     ltr <- calcWith cvc5 "lteEquiv_ltr"
               (\(Forall @"m" m) (Forall @"n" n) -> (m .>= n) .=> (n2i m .>= n2i n)) $
@@ -771,7 +771,7 @@ lteEquiv = do
 -- [Proven] ordered :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 ordered :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 ordered = do
-   lteEq <- recall "lteEquiv" lteEquiv
+   lteEq <- recall lteEquiv
 
    calcWith cvc5 "ordered"
         (\(Forall m) (Forall n) -> m .>= n .|| n .>= m) $
@@ -791,7 +791,7 @@ ordered = do
 -- [Proven] trichotomy :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 trichotomy :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
 trichotomy = do
-   pOrdered <- recall "ordered" ordered
+   pOrdered <- recall ordered
 
    lemma "trichotomy"
          (\(Forall m) (Forall n) -> m .< n .|| m .== n .|| n .< m)
@@ -815,8 +815,8 @@ trichotomy = do
 -- [Proven] addOrder :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 addOrder :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 addOrder = do
-  pAddAssoc <- recall "addAssoc" addAssoc
-  pAddComm  <- recall "addComm"  addComm
+  pAddAssoc <- recall addAssoc
+  pAddComm  <- recall addComm
 
   calc "addOrder"
        (\(Forall m) (Forall n) (Forall o) -> m .< n .=> m + o .< n + o) $
@@ -851,7 +851,7 @@ addOrder = do
 -- [Proven] mulOrder :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 mulOrder :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
 mulOrder = do
-  pDistribRight <- recall "distribRight" distribRight
+  pDistribRight <- recall distribRight
 
   calc "mulOrder"
        (\(Forall m) (Forall n) (Forall o) -> 0 .< o .&& m .< n .=> m * o .< n * o) $

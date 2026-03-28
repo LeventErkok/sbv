@@ -80,7 +80,7 @@ dividesProduct = calc "dividesProduct"
 -- [Proven] dividesTransitive :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
 dividesTransitive :: TP (Proof (Forall "x" Integer -> Forall "y" Integer -> Forall "z" Integer -> SBool))
 dividesTransitive = do
-    dp <- recall "dividesProduct" dividesProduct
+    dp <- recall dividesProduct
 
     calc "dividesTransitive"
          (\(Forall x) (Forall y) (Forall z) -> x `dvd` y .&& y `dvd` z .=> x `dvd` z) $
@@ -177,7 +177,7 @@ leastDivisorIsLeast =
 -- >>> runTP leastDivisorTwice
 -- Lemma: dividesTransitive                Q.E.D.
 -- Lemma: leastDivisorDivides              Q.E.D.
--- Lemma: leastDivisorIsLeast              Q.E.D.
+-- Lemma: leastDivisorisLeast              Q.E.D.
 -- Lemma: helper1                          Q.E.D.
 -- Lemma: helper2                          Q.E.D.
 -- Lemma: helper3
@@ -192,9 +192,9 @@ leastDivisorIsLeast =
 -- [Proven] leastDivisorTwice :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 leastDivisorTwice :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
 leastDivisorTwice = do
-  dt  <- recall "dividesTransitive"   dividesTransitive
-  ldd <- recall "leastDivisorDivides" leastDivisorDivides
-  ldl <- recall "leastDivisorIsLeast" leastDivisorIsLeast
+  dt  <- recall dividesTransitive
+  ldd <- recall leastDivisorDivides
+  ldl <- recall leastDivisorIsLeast
 
   h1 <- lemmaWith cvc5
               "helper1"
@@ -254,7 +254,7 @@ primeAtLeast2 = lemma "primeAtLeast2" (\(Forall p) -> isPrime p .=> p .>= 2) []
 -- === __Proof__
 -- >>> runTP leastDivisorIsPrime
 -- Lemma: leastDivisorTwice                Q.E.D.
--- Lemma: leastDivisorDivides              Q.E.D.
+-- Cached: leastDivisorDivides             Q.E.D.
 -- Lemma: leastDivisorIsPrime
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
@@ -262,8 +262,8 @@ primeAtLeast2 = lemma "primeAtLeast2" (\(Forall p) -> isPrime p .=> p .>= 2) []
 -- [Proven] leastDivisorIsPrime :: Ɐn ∷ Integer → Bool
 leastDivisorIsPrime :: TP (Proof (Forall "n" Integer -> SBool))
 leastDivisorIsPrime = do
-   ldt <- recall "leastDivisorTwice"   leastDivisorTwice
-   ldd <- recall "leastDivisorDivides" leastDivisorDivides
+   ldt <- recall leastDivisorTwice
+   ldd <- recall leastDivisorDivides
 
    calc "leastDivisorIsPrime"
         (\(Forall n) -> n .>= 2 .=> isPrime (ld 2 n)) $
@@ -331,7 +331,7 @@ factAtLeast1 = inductWith cvc5 "factAtLeast1"
 -- [Proven] dividesFact :: Ɐn ∷ Integer → Ɐk ∷ Integer → Bool
 dividesFact :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))
 dividesFact = do
-   dvp <- recall "dividesProduct" dividesProduct
+   dvp <- recall dividesProduct
 
    induct "dividesFact"
           (\(Forall n) (Forall k) -> 1 .<= k .&& k .<= n .=> k `dvd` fact n) $
@@ -363,7 +363,7 @@ dividesFact = do
 -- [Proven] notDividesFactP1 :: Ɐn ∷ Integer → Ɐk ∷ Integer → Bool
 notDividesFactP1 :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))
 notDividesFactP1 = do
-   df    <- recall "dividesFact"  dividesFact
+   df    <- recall dividesFact
 
    calc "notDividesFactP1"
          (\(Forall n) (Forall k) -> 1 .< k .&& k .<= n .=> sNot (k `dvd` (fact n + 1))) $
@@ -396,8 +396,8 @@ greaterPrime n = leastPrimeDivisor (1 + fact n)
 -- [Proven] greaterPrimeDivides :: Ɐn ∷ Integer → Bool
 greaterPrimeDivides :: TP (Proof (Forall "n" Integer -> SBool))
 greaterPrimeDivides = do
-   ldd  <- recall "leastDivisorDivides" leastDivisorDivides
-   fal1 <- recall "factAtLeast1"        factAtLeast1
+   ldd  <- recall leastDivisorDivides
+   fal1 <- recall factAtLeast1
 
    calc "greaterPrimeDivides"
         (\(Forall n) -> greaterPrime n `dvd` (1 + fact n)) $
@@ -416,7 +416,7 @@ greaterPrimeDivides = do
 -- Lemma: notDividesFactP1                 Q.E.D.
 -- Lemma: greaterPrimeDivides              Q.E.D.
 -- Lemma: leastDivisorIsPrime              Q.E.D.
--- Lemma: factAtLeast1                     Q.E.D.
+-- Cached: factAtLeast1                    Q.E.D.
 -- Lemma: primeAtLeast2                    Q.E.D.
 -- Lemma: greaterPrimeGreater
 --   Step: 1                               Q.E.D.
@@ -430,11 +430,11 @@ greaterPrimeDivides = do
 -- [Proven] greaterPrimeGreater :: Ɐn ∷ Integer → Bool
 greaterPrimeGreater :: TP (Proof (Forall "n" Integer -> SBool))
 greaterPrimeGreater = do
-   ndfp1 <- recall "notDividesFactP1"    notDividesFactP1
-   gpd   <- recall "greaterPrimeDivides" greaterPrimeDivides
-   ldp   <- recall "leastDivisorIsPrime" leastDivisorIsPrime
-   fal1  <- recall "factAtLeast1"        factAtLeast1
-   pal2  <- recall "primeAtLeast2"       primeAtLeast2
+   ndfp1 <- recall notDividesFactP1
+   gpd   <- recall greaterPrimeDivides
+   ldp   <- recall leastDivisorIsPrime
+   fal1  <- recall factAtLeast1
+   pal2  <- recall primeAtLeast2
 
    calc "greaterPrimeGreater"
          (\(Forall n) -> greaterPrime n .> n) $
@@ -473,9 +473,9 @@ greaterPrimeGreater = do
 -- [Proven] infinitudeOfPrimes :: Ɐn ∷ Integer → Bool
 infinitudeOfPrimes :: TP (Proof (Forall "n" Integer -> SBool))
 infinitudeOfPrimes = do
-   ldp <- recall "leastDivisorIsPrime" leastDivisorIsPrime
-   fa1 <- recall "factAtLeast1"        factAtLeast1
-   gpg <- recall "greaterPrimeGreater" greaterPrimeGreater
+   ldp <- recall leastDivisorIsPrime
+   fa1 <- recall factAtLeast1
+   gpg <- recall greaterPrimeGreater
 
    calc "infinitudeOfPrimes"
          (\(Forall n) -> let p = greaterPrime n in p .> n .&& isPrime p) $
@@ -505,7 +505,7 @@ infinitudeOfPrimes = do
 -- [Proven] noLargestPrime :: Ɐn ∷ Integer → ∃p ∷ Integer → Bool
 noLargestPrime :: TP (Proof (Forall "n" Integer -> Exists "p" Integer -> SBool))
 noLargestPrime = do
-   iop <- recall "infinitudeOfPrimes" infinitudeOfPrimes
+   iop <- recall infinitudeOfPrimes
 
    h <- calc "helper"
              (\(Forall @"n" n) -> quantifiedBool (\(Exists p) -> isPrime p .&& p .> n)) $

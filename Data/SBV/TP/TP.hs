@@ -31,7 +31,7 @@ module Data.SBV.TP.TP (
        ,           induct,         inductWith
        ,          sInduct,        sInductWith
        , sorry
-       , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms, tpCache
+       , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms
        , measureLemma, measureLemmaWith
        , (|-), (|->), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        , qc, qcWith
@@ -55,7 +55,7 @@ import qualified Data.SBV.List as SL
 
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
-import Data.IORef (readIORef, writeIORef)
+import Data.IORef (readIORef, writeIORef, modifyIORef')
 
 import qualified Data.Set as Set
 
@@ -165,29 +165,36 @@ class Calc a where
   calcWith cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric False (tpMergeCfg cfg cfg') nm p steps
 
   calcGeneric :: (SymVal t, EqSymbolic (SBV t), Proposition a) => Bool -> SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
-  calcGeneric tagTheorem cfg nm result steps = withProofCache nm $ do
-      tpSt <- getTPState
-      u    <- tpGetNextUnique
+  calcGeneric tagTheorem cfg nm result steps = do
+      cached <- lookupProofCache result
+      case cached of
+        Just prf -> returnCachedProof cfg nm prf
+        Nothing  -> do
+          tpSt <- getTPState
+          u    <- tpGetNextUnique
 
-      (_, CalcStrategy {calcQCInstance}) <- liftIO $ runSMTWith cfg (calcSteps result steps)
+          (_, CalcStrategy {calcQCInstance}) <- liftIO $ runSMTWith cfg (calcSteps result steps)
 
-      liftIO $ runSMTWith cfg $ do
+          proof <- liftIO $ runSMTWith cfg $ do
 
-         qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
+             qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
-         message cfg $ (if tagTheorem then "Theorem" else "Lemma") ++ ": " ++ nm ++ "\n"
+             message cfg $ (if tagTheorem then "Theorem" else "Lemma") ++ ": " ++ nm ++ "\n"
 
-         (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
+             (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
 
-         -- Collect all subterms and saturate them
-         mapM_ qSaturateSavingObservables $ getCalcStrategySaturatables strategy
+             -- Collect all subterms and saturate them
+             mapM_ qSaturateSavingObservables $ getCalcStrategySaturatables strategy
 
-         -- Run measure checks for any newly encountered recursive functions
-         st <- symbolicEnv
-         liftIO $ do writeIORef (rSkipMeasureChecks st) True
-                     checkNewMeasures cfg st tpSt
+             -- Run measure checks for any newly encountered recursive functions
+             st <- symbolicEnv
+             liftIO $ do writeIORef (rSkipMeasureChecks st) True
+                         checkNewMeasures cfg st tpSt
 
-         query $ proveProofTree cfg tpSt nm (result, calcGoal) calcIntros calcProofTree u calcQCInstance
+             query $ proveProofTree cfg tpSt nm (result, calcGoal) calcIntros calcProofTree u calcQCInstance
+
+          addToProofCache result (proofOf proof)
+          pure proof
 
 -- | In the proof tree, what's the next node label?
 nextProofStep :: [Int] -> [Int]
@@ -248,7 +255,8 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                                               , getProp      = toDyn result
                                               , proofName    = nm
                                               , uniqId       = uniq
-                                              , isCached     = False
+                                              , aliases      = []
+                                              , wasCached    = False
                                               }
 
   where SMTConfig{tpOptions = TPOptions{printStats, printAsms}} = cfg
@@ -579,57 +587,64 @@ class SInductive a where
 
 -- | Do an inductive proof, based on the given strategy
 inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> TP (Proof a)
-inductionEngine style tagTheorem cfg nm result getStrategy = withProofCache nm $ do
-   tpSt <- getTPState
-   u    <- tpGetNextUnique
+inductionEngine style tagTheorem cfg nm result getStrategy = do
+   cached <- lookupProofCache result
+   case cached of
+     Just prf -> returnCachedProof cfg nm prf
+     Nothing -> do
+       tpSt <- getTPState
+       u    <- tpGetNextUnique
 
-   liftIO $ runSMTWith cfg $ do
+       proof <- liftIO $ runSMTWith cfg $ do
 
-      qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
+          qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
-      let qual = case style of
-                   RegularInduction -> ""
-                   GeneralInduction  -> " (strong)"
+          let qual = case style of
+                       RegularInduction -> ""
+                       GeneralInduction  -> " (strong)"
 
-      message cfg $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ qual ++ ": " ++ nm ++ "\n"
+          message cfg $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ qual ++ ": " ++ nm ++ "\n"
 
-      strategy@InductionStrategy { inductionIntros
-                                 , inductionMeasure
-                                 , inductionBaseCase
-                                 , inductionProofTree
-                                 , inductiveStep
-                                 , inductiveQCInstance
-                                 } <- getStrategy
+          strategy@InductionStrategy { inductionIntros
+                                     , inductionMeasure
+                                     , inductionBaseCase
+                                     , inductionProofTree
+                                     , inductiveStep
+                                     , inductiveQCInstance
+                                     } <- getStrategy
 
-      mapM_ qSaturateSavingObservables $ getInductionStrategySaturatables strategy
+          mapM_ qSaturateSavingObservables $ getInductionStrategySaturatables strategy
 
-      -- Run measure checks for any newly encountered recursive functions
-      st <- symbolicEnv
-      liftIO $ do writeIORef (rSkipMeasureChecks st) True
-                  checkNewMeasures cfg st tpSt
+          -- Run measure checks for any newly encountered recursive functions
+          st <- symbolicEnv
+          liftIO $ do writeIORef (rSkipMeasureChecks st) True
+                      checkNewMeasures cfg st tpSt
 
-      query $ do
+          query $ do
 
-       case inductionMeasure of
-          Nothing      -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no custom measure to show non-negativeness."]
-          Just (m, hs) -> do queryDebug [nm ++ ": Induction, proving measure is always non-negative:"]
-                             smtProofStep cfg tpSt "Step" 1
-                                                   (TPProofStep False nm [] ["Measure is non-negative"])
-                                                   (Just (sAnd (inductionIntros : map getObjProof hs)))
-                                                   m
-                                                   []
-                                                   (\d -> finishTP cfg "Q.E.D." d [])
-       case inductionBaseCase of
-          Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no base case to prove."]
-          Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
-                        smtProofStep cfg tpSt "Step" 1
-                                              (TPProofStep False nm [] ["Base"])
-                                              (Just inductionIntros)
-                                              bc
-                                              []
-                                              (\d -> finishTP cfg "Q.E.D." d [])
+           case inductionMeasure of
+              Nothing      -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no custom measure to show non-negativeness."]
+              Just (m, hs) -> do queryDebug [nm ++ ": Induction, proving measure is always non-negative:"]
+                                 smtProofStep cfg tpSt "Step" 1
+                                                       (TPProofStep False nm [] ["Measure is non-negative"])
+                                                       (Just (sAnd (inductionIntros : map getObjProof hs)))
+                                                       m
+                                                       []
+                                                       (\d -> finishTP cfg "Q.E.D." d [])
+           case inductionBaseCase of
+              Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no base case to prove."]
+              Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
+                            smtProofStep cfg tpSt "Step" 1
+                                                  (TPProofStep False nm [] ["Base"])
+                                                  (Just inductionIntros)
+                                                  bc
+                                                  []
+                                                  (\d -> finishTP cfg "Q.E.D." d [])
 
-       proveProofTree cfg tpSt nm (result, inductiveStep) inductionIntros inductionProofTree u inductiveQCInstance
+           proveProofTree cfg tpSt nm (result, inductiveStep) inductionIntros inductionProofTree u inductiveQCInstance
+
+       addToProofCache result (proofOf proof)
+       pure proof
 
 -- Induction strategy helper
 mkIndStrategy :: (SymVal a, EqSymbolic (SBV a)) => Maybe (SBool, [ProofObj]) -> Maybe SBool -> (SBool, TPProofRaw (SBV a)) -> SBool -> ([Int] -> Symbolic SBool) -> Symbolic InductionStrategy
@@ -1514,24 +1529,37 @@ infix 0 ==>
 (⟹) = (==>)
 infix 0 ⟹
 
--- | Recalling a proof. This essentially sets the verbose output off during this proof. Note that
--- if we're doing stats, we ignore this as the whole point of doing stats is to see steps in detail.
-recall :: String -> TP (Proof a) -> TP (Proof a)
-recall nm prf = getTPConfig >>= \cfg -> recallWith cfg nm prf
+-- | Recalling a proof. If the proposition was previously proved and cached, the cached result
+-- is returned without re-proving. The output is kept brief: a single "Q.E.D." line.
+-- If stats mode is on, we show the full proof steps as the point of stats is to see detail.
+recall :: TP (Proof a) -> TP (Proof a)
+recall prf = getTPConfig >>= \cfg -> recallWith cfg prf
 
--- | Recalling a proof, using a given config. We keep the stat field as the or of the current and the context
--- configuration.
-recallWith :: SMTConfig -> String -> TP (Proof a) -> TP (Proof a)
-recallWith cfgIn nm prf = do
+-- | Recalling a proof, using a given config. Sets the recall context flag so that
+-- proof engines check the cache before proving.
+recallWith :: SMTConfig -> TP (Proof a) -> TP (Proof a)
+recallWith cfgIn prf = do
   topCfg <- getTPConfig
+  tpSt   <- getTPState
   let cfg@SMTConfig{tpOptions = TPOptions{printStats}} = cfgIn `tpMergeCfg` topCfg
+  -- Set recall context so proof engines check the cache
+  liftIO $ modifyIORef' (inRecallContext tpSt) (+1)
+  let cleanup = liftIO $ modifyIORef' (inRecallContext tpSt) (subtract 1)
   if printStats
-     then do restoring cfg topCfg prf
-     else do tab <- liftIO $ startTP cfg (verbose cfg) "Lemma" 0 (TPProofOneShot nm [])
-             let new = cfg{tpOptions = (tpOptions cfg) {quiet = True}}
+     then restoring cfg topCfg $ do r <- prf
+                                    cleanup
+                                    pure r
+     else do let new = cfg{tpOptions = (tpOptions cfg) {quiet = True}}
              restoring new topCfg $ do
-                 r@Proof{proofOf = ProofObj{dependencies}} <- prf
-                 liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo dependencies) (tab, Nothing) []
+                 r@Proof{proofOf = po@ProofObj{dependencies, aliases = aka, wasCached = cached}} <- prf
+                 cleanup
+                 let nm       = proofName po
+                     akaStr   | null aka  = ""
+                              | True      = " (a.k.a. " ++ intercalate ", " aka ++ ")"
+                     what     | cached    = "Cached"
+                              | True      = "Lemma"
+                 tab <- liftIO $ startTP cfg (verbose cfg) what 0 (TPProofOneShot nm [])
+                 liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo dependencies ++ akaStr) (tab, Nothing) []
                  pure r
  where restoring new old act = do setTPConfig new
                                   res <- act

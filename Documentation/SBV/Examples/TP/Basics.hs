@@ -368,48 +368,29 @@ badLengthProof = runTP $ do
 -- | It is not unusual that TP proofs rely on other proofs. Typically, all the helpers are used together and proven in
 -- one go. It is, however, useful to be able to write these proofs as top-level entries, and reuse them multiple times
 -- in several proofs. (See "Documentation/SBV/Examples/TP/PowerMod.hs" for an example.) To avoid re-proving such
--- lemmas, you can turn on proof caching. The idea behind caching is simple: If we see a lemma with the same name being
--- proven again, then we simply reuse the last result. The catch here is that lemmas are identified by their names: Hence,
--- for caching to be sound, you need to make sure all names used in your proof are unique. Otherwise you can
--- conclude wrong results!
+-- lemmas, SBV caches proof results keyed by symbolic fingerprint. Use 'recall' to invoke a proof action that
+-- benefits from the cache: if the proposition has already been proved, the cached result is returned immediately.
+-- Note that 'lemma', 'calc', and 'induct' always prove from scratch and then store the result in the cache;
+-- only 'recall' performs a cache lookup.
 --
--- A good trick is to pay the price and run your entire proof without caching (which is the default) once, and if it is
--- all good, turn on caching to save time in regressions. (And rerun without caching after code changes.)
+-- Lemma names do not need to be unique. If you prove the same proposition under different names, 'recall' will
+-- show the aliases. If you prove different propositions under the same name, each is proved independently.
+-- To demonstrate, note that reusing the name @"evil"@ does not cause any confusion: the second call to
+-- 'lemma' proves from scratch and correctly fails:
 --
--- To demonstrate why caching can be unsound, simply consider a proof where we first prove true, and then prove false
--- but we /trick/ TP by reusing the name. If you run this, you'll see:
---
--- >>> runTP badCaching `catch` (\(_ :: SomeException) -> pure ())
+-- >>> runTP duplicateNames `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: evil                             Q.E.D.
 -- Lemma: evil
 -- *** Failed to prove evil.
 -- Falsifiable
 --
--- This is good, the proof failed since it's just not true. (Except for the confusing naming printed in the trace
--- due to our own choice.)
---
--- Let's see what happens if we turn caching on:
---
--- >>> runTPWith (tpCache z3) badCaching
--- Lemma: evil                             Q.E.D.
--- Cached: evil                            Q.E.D.
---
--- In this case we were able to ostensibly prove False, i.e., this result is unsound. But at least SBV warned us
--- that we used a cached proof (@evil@), reminding us that using unique names is a proof of obligation for the user
--- if caching is turned on. Clearly, we failed to uniquely name our proofs in this case.
---
--- Note that a bad proof obtained this way is unsound in the way that it is misleading: That is, it will lead you
--- to believe you proved something while you actually proved something else. (More technically, you cannot take the evil
--- lemma and use it to prove arbitrary things, since it's still just the proof of truth.) In this sense it is just
--- useless as opposed to soundness, but it is alarming as one can be led astray.
---
 -- (Incidentally, if you really want to be evil, you can just use 'axiom' and assert false, but that's another story.)
-badCaching :: TP ()
-badCaching = do
-   -- Prove true, giving it a bad name
+duplicateNames :: TP ()
+duplicateNames = do
+   -- Prove true
    _ <- lemma "evil" sTrue []
 
-   -- Attempt to prove false, using evil:
+   -- Attempt to prove false, reusing the same name:
    _ <- lemma "evil" sFalse []
 
    pure ()

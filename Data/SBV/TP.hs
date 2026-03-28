@@ -48,7 +48,7 @@ module Data.SBV.TP (
        , sorry
 
        -- * Running TP proofs
-       , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms, tpCache
+       , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms
 
        -- * Measure helpers for smtFunctionWithMeasure
        , measureLemma, measureLemmaWith
@@ -74,7 +74,7 @@ module Data.SBV.TP (
        -- * Displaying intermediate values of expressions
        , disp
 
-       -- * Recall an old proof, quietly proving it
+       -- * Recall an old proof, using the cache
        , recall, recallWith
        ) where
 

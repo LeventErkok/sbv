@@ -116,7 +116,7 @@ countdownLen =
 -- [Proven] countdownElem :: Ɐn ∷ Integer → Ɐk ∷ Integer → Bool
 countdownElem :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))
 countdownElem = do
-   cLen <- recall "countdownLen" countdownLen
+   cLen <- recall countdownLen
 
    -- NB. The precondition uses (<=) not (<): this is important so the lemma covers
    -- k = length y (the last valid index of x .: y), not just k < length y.

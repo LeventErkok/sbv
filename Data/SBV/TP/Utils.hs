@@ -27,14 +27,16 @@ module Data.SBV.TP.Utils (
        , startTP, finishTP, getTPState, getTPConfig, setTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML
-       , withProofCache
-       , tpQuiet, tpRibbon, tpAsms, tpStats, tpCache
+       , addToProofCache, lookupProofCache, returnCachedProof
+       , tpQuiet, tpRibbon, tpAsms, tpStats
        , measureLemma, measureLemmaWith
        ) where
 
 import Control.Monad        (unless)
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
 import Control.Monad.Trans  (MonadIO)
+
+import Data.Generics (everywhere, mkT)
 
 import Data.Time (NominalDiffTime)
 
@@ -53,14 +55,15 @@ import Data.SBV.Utils.Lib (unQuote)
 import System.IO     (hFlush, stdout)
 import System.Random (randomIO)
 
-import Data.SBV.Core.Data      (SBool, sTrue, Forall(..), QuantifiedBool, quantifiedBool)
+import Data.SBV.Core.Data      (SBool, sTrue, Forall(..), QuantifiedBool, quantifiedBool, SBV(..), SV(..), NodeId(..), SBVExpr(..), SBVPgm(..), Op(..), CV(..))
 import Data.SBV.Core.Model     (label, MeasureHelper(..))
-import Data.SBV.Core.Symbolic  (SMTConfig, TPOptions(..))
+import Data.SBV.Core.Symbolic  (SMTConfig, TPOptions(..), State(..), mkNewState, svToSV, SBVRunMode(..), globalSBVContext)
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 
 import Data.SBV.Utils.TDiff (showTDiff, timeIf)
 import Control.DeepSeq (NFData(rnf))
 
+import Data.Foldable (toList)
 import Data.IORef
 
 import GHC.Generics
@@ -80,8 +83,9 @@ data TPStats = TPStats { noOfCheckSats :: Int
 
 -- | Extra state we carry in a TP context
 data TPState = TPState { stats               :: IORef TPStats
-                       , proofCache          :: IORef (Map (String, TypeRep) ProofObj)
+                       , proofCache          :: IORef (Map (PropFingerprint, TypeRep) [ProofObj])
                        , config              :: IORef SMTConfig
+                       , inRecallContext     :: IORef Int
                        , measuresVerified    :: IORef (Set String)
                        , productiveVerified  :: IORef (Set String)
                        , measuresEncountered :: IORef (Set String)
@@ -91,24 +95,83 @@ data TPState = TPState { stats               :: IORef TPStats
 newtype TP a = TP (ReaderT TPState IO a)
             deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader TPState, MonadFail)
 
--- | If caches are enabled, see if we cached this proof and return it; otherwise generate it, cache it, and return it
-withProofCache :: forall a. Typeable a => String -> TP (Proof a) -> TP (Proof a)
-withProofCache nm genProof = do
-  TPState{proofCache, config} <- getTPState
-  cfg@SMTConfig {tpOptions = TPOptions {cacheProofs}} <- liftIO $ readIORef config
+-- | Extract the integer node ID from an 'SV'.
+svIntId :: SV -> Int
+svIntId (SV _ (NodeId (_, _, i))) = i
 
-  let key = (nm, typeOf (Proxy @a))
+-- | Zero out the 'SBVContext' in an 'SV', keeping only the kind and integer node ID.
+-- Used to normalize 'Op' values for fingerprinting: some Op constructors ('LkUp', 'FP_Cast')
+-- embed 'SV's that carry a per-State context, which would cause identical propositions
+-- evaluated in different States to produce different fingerprints.
+zeroSV :: SV -> SV
+zeroSV (SV k (NodeId (_, mb, i))) = SV k (NodeId (globalSBVContext, mb, i))
 
-  if not cacheProofs
-     then genProof
-     else do cache <- liftIO $ readIORef proofCache
-             case key `Map.lookup` cache of
-               Just prf -> do liftIO $ do tab <- startTP cfg False "Cached" 0 (TPProofOneShot nm [])
-                                          finishTP cfg "Q.E.D." (tab, Nothing) []
-                              pure $ Proof prf{isCached = True}
-               Nothing  -> do p <- genProof
-                              liftIO $ modifyIORef' proofCache (Map.insert key (proofOf p))
-                              pure p
+-- | Zero out all embedded 'SBVContext' values inside an 'Op' using SYB generic traversal.
+-- This automatically handles all current and future Op constructors that embed 'SV's.
+zeroContextInOp :: Op -> Op
+zeroContextInOp = everywhere (mkT zeroSV)
+
+-- | Fingerprint of a proposition's symbolic expression DAG.
+-- Computed by evaluating 'quantifiedBool' in a fresh 'State' and extracting
+-- the expression program (with embedded 'SV' contexts zeroed out via SYB),
+-- the constant map (mapping constant values to their SV int IDs), and the final result SV.
+-- Two identical propositions evaluated in identically-initialized States produce
+-- identical fingerprints. Different propositions diverge somewhere in variable creation,
+-- expression construction, or hash-consing, producing different fingerprints.
+newtype PropFingerprint = PropFingerprint ([(CV, Int)], [(Int, Op, [Int])], Int)
+  deriving (Eq, Ord)
+
+-- | Compute the fingerprint of a proposition by evaluating it in a fresh
+-- lightweight State (no solver connection needed). The State is created via
+-- 'mkNewState' with 'LambdaGen' mode, which initializes all counters identically
+-- without starting a solver process.
+propFingerprint :: QuantifiedBool a => a -> IO PropFingerprint
+propFingerprint prop = do
+  st  <- mkNewState defaultSMTCfg (LambdaGen Nothing)
+  sv  <- svToSV st (unSBV (quantifiedBool prop))
+  pgm <- readIORef (spgm st)
+  cm  <- readIORef (rconstMap st)
+  let entries = [ (svIntId target, zeroContextInOp op, map svIntId args)
+                | (target, SBVApp op args) <- toList (pgmAssignments pgm)
+                ]
+      consts  = [(c, svIntId s) | (c, s) <- Map.toAscList cm]
+  pure $ PropFingerprint (consts, entries, svIntId sv)
+
+-- | After proving a proposition, add the proof to the cache for future 'recall' lookups.
+addToProofCache :: forall a. (Typeable a, QuantifiedBool a) => a -> ProofObj -> TP ()
+addToProofCache prop prf = do
+  TPState{proofCache} <- getTPState
+  fp <- liftIO $ propFingerprint prop
+  let key = (fp, typeOf (Proxy @a))
+  liftIO $ modifyIORef' proofCache $ Map.insertWith (\_ old -> old ++ [prf]) key [prf]
+
+-- | Look up a cached proof for the given proposition. Only succeeds when in recall context
+-- (i.e., called from within a 'recall' wrapper). On cache hit, the returned 'ProofObj' has
+-- its 'aliases' field populated with the names of other proofs of the same proposition.
+lookupProofCache :: forall a. (Typeable a, QuantifiedBool a) => a -> TP (Maybe ProofObj)
+lookupProofCache prop = do
+  TPState{proofCache, inRecallContext} <- getTPState
+  inRecall <- liftIO $ readIORef inRecallContext
+  if inRecall == 0
+     then pure Nothing
+     else do fp <- liftIO $ propFingerprint prop
+             let key = (fp, typeOf (Proxy @a))
+             cache <- liftIO $ readIORef proofCache
+             pure $ case Map.lookup key cache of
+               Nothing     -> Nothing
+               Just []     -> Nothing
+               Just (p:ps) -> Just p { aliases = [proofName q | q <- ps] }
+
+-- | Return a cached proof, printing a brief "Q.E.D." line with optional "a.k.a." annotation.
+returnCachedProof :: SMTConfig -> String -> ProofObj -> TP (Proof a)
+returnCachedProof cfg nm prf = do
+   let aka    = filter (/= nm) $ nub $ proofName prf : aliases prf
+       prf'   = prf { proofName = nm, wasCached = True, aliases = aka }
+       akaStr | null aka  = ""
+              | True      = " (a.k.a. " ++ intercalate ", " aka ++ ")"
+   tab <- liftIO $ startTP cfg False "Cached" 0 (TPProofOneShot nm [])
+   liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo (dependencies prf) ++ akaStr) (tab, Nothing) []
+   pure $ Proof prf'
 
 -- | The context in which we make a check-sat call
 data TPProofContext = TPProofOneShot String      -- ^ A one shot proof, with string containing its name
@@ -128,12 +191,14 @@ runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
    rStats       <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0, qcElapsed = 0 }
    rCache       <- newIORef Map.empty
    rCfg         <- newIORef cfg
+   rRecall      <- newIORef (0 :: Int)
    rMeasures    <- newIORef Set.empty
    rProductive  <- newIORef Set.empty
    rEncountered <- newIORef Set.empty
    (mbT, r) <- timeIf printStats $ runReaderT f TPState { config               = rCfg
                                                          , stats               = rStats
                                                          , proofCache          = rCache
+                                                         , inRecallContext     = rRecall
                                                          , measuresVerified    = rMeasures
                                                          , productiveVerified  = rProductive
                                                          , measuresEncountered = rEncountered
@@ -288,7 +353,8 @@ data ProofObj = ProofObj { dependencies :: [ProofObj]     -- ^ Immediate depende
                          , getProp      :: Dynamic        -- ^ The actual proposition
                          , proofName    :: String         -- ^ User given name
                          , uniqId       :: TPUnique       -- ^ Unique identifier
-                         , isCached     :: Bool           -- ^ Was this a cached proof?
+                         , aliases      :: [String]       -- ^ Other names for proofs of the same proposition (populated on cache hit)
+                         , wasCached    :: Bool           -- ^ Was this proof retrieved from the cache?
                          }
 
 -- | Drop the instantiation part
@@ -326,12 +392,13 @@ instance Monoid RootOfTrust where
 
 -- | NFData ignores the getProp field
 instance NFData ProofObj where
-  rnf (ProofObj dependencies isUserAxiom getObjProof _getProp proofName uniqId isCached) =     rnf dependencies
-                                                                                         `seq` rnf isUserAxiom
-                                                                                         `seq` rnf getObjProof
-                                                                                         `seq` rnf proofName
-                                                                                         `seq` rnf uniqId
-                                                                                         `seq` rnf isCached
+  rnf (ProofObj dependencies isUserAxiom getObjProof _getProp proofName uniqId aliases wasCached) =     rnf dependencies
+                                                                                                 `seq` rnf isUserAxiom
+                                                                                                 `seq` rnf getObjProof
+                                                                                                 `seq` rnf proofName
+                                                                                                 `seq` rnf uniqId
+                                                                                                 `seq` rnf aliases
+                                                                                                 `seq` rnf wasCached
 
 -- | Dependencies of a proof, in a tree format.
 data ProofTree = ProofTree ProofObj [ProofTree]
@@ -401,16 +468,9 @@ showProofTreeHTML compress mbCSS p = htmlTree mbCSS $ snd $ depsToTree compress 
 
 -- | Show instance for t'Proof'
 instance Typeable a => Show (Proof a) where
-  show p@(Proof po@ProofObj{proofName = nm}) = '[' : sh (rootOfTrust p) ++ "] " ++ nm ++ " :: " ++ pretty (show (typeOf p))
-    where sh (RootOfTrust Nothing)   = "Proven"   ++ cacheInfo
-          sh (RootOfTrust (Just ps)) = "Modulo: " ++ shortProofNames ps ++ cacheInfo
-
-          cacheInfo = case cachedProofs po of
-                        [] -> ""
-                        cs -> ". Cached: " ++ shortProofNames (nubBy (\p1 p2 -> uniqId p1 == uniqId p2) cs)
-
-          cachedProofs prf@ProofObj{isCached} = if isCached then prf : rest else rest
-            where rest = concatMap cachedProofs (dependencies prf)
+  show p@(Proof ProofObj{proofName = nm}) = '[' : sh (rootOfTrust p) ++ "] " ++ nm ++ " :: " ++ pretty (show (typeOf p))
+    where sh (RootOfTrust Nothing)   = "Proven"
+          sh (RootOfTrust (Just ps)) = "Modulo: " ++ shortProofNames ps
 
           -- More mathematical notation for types.
           pretty :: String -> String
@@ -466,7 +526,8 @@ sorry = ProofObj { dependencies = []
                  , getProp      = toDyn p
                  , proofName    = "sorry"
                  , uniqId       = TPSorry
-                 , isCached     = False
+                 , aliases      = []
+                 , wasCached    = False
                  }
   where -- ideally, I'd rather just use
         --   p = sFalse
@@ -484,7 +545,8 @@ quickCheckProof = ProofObj { dependencies = []
                            , getProp      = toDyn p
                            , proofName    = "quickCheck"
                            , uniqId       = TPQC
-                           , isCached     = False
+                           , aliases      = []
+                           , wasCached    = False
                            }
   where -- ideally, I'd rather just use
         --   p = sFalse
@@ -505,7 +567,8 @@ noTermCheckProof nm = ProofObj { dependencies = []
                                , getProp      = toDyn True
                                , proofName    = nm ++ " termination"
                                , uniqId       = TPNoTermCheck
-                               , isCached     = False
+                               , aliases      = []
+                               , wasCached    = False
                                }
 
 -- | Calculate the root of trust. The returned list of proofs, if any, will need to be sorry and quickcheck free to
@@ -559,15 +622,6 @@ tpRibbon i cfg = cfg{tpOptions = (tpOptions cfg) { ribbonLength = i }}
 tpStats :: SMTConfig -> SMTConfig
 tpStats cfg = cfg{tpOptions = (tpOptions cfg) { printStats = True }}
 
--- | Make TP proofs use proof-cache. Note that if you use this option then you are obligated to ensure all
--- lemma\/theorem names\/type pairs you use are unique for the whole run. (That is, we will reuse proofs if they have the
--- same name and type; hence if you prove two theorems that share name and type will be considered the same.)
--- If you don't ensure this uniqueness,  the results are not guaranteed to be sound. A good tip is to run the proof at
--- least once to completion, and use cache for regression purposes to avoid re-runs. Also, this setting will be effective
--- with the call to 'runTP'\/'runTPWith', i.e., if you -- the solver in a call to 'Data.SBV.TP.lemmaWith'\/'Data.SBV.TP.theoremWith', we will
--- inherit the caching behavior settings from the surrounding environment.
-tpCache :: SMTConfig -> SMTConfig
-tpCache cfg = cfg{tpOptions = (tpOptions cfg) { cacheProofs = True }}
 
 -- | When proving assumptions for each step, print them as well. Normally, SBV doesn't
 -- print assumptions in each proof step, though it does prove them as they are typically trivial.

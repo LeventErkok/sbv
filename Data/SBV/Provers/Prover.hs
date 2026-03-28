@@ -112,7 +112,6 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                                                                       , quiet                 = False
                                                                                       , printAsms             = False
                                                                                       , printStats            = False
-                                                                                      , cacheProofs           = False
                                                                                       , measuresBeingVerified = Set.empty
                                                                                       }
                                             }

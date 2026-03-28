@@ -420,7 +420,7 @@ dvdSum2 =
 gcdDivides :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdDivides = do
 
-   dAbs <- recall "dvdAbs" dvdAbs
+   dAbs <- recall dvdAbs
 
    -- Helper about divisibility. If x|b and x| a%b, then x|a.
    helper <- calc "helper"
@@ -463,7 +463,7 @@ gcdDivides = do
 -- ==== __Proof__
 -- >>> runTP gcdMaximal
 -- Lemma: dvdAbs                           Q.E.D.
--- Lemma: gcdComm                          Q.E.D.
+-- Lemma: commutative                      Q.E.D.
 -- Lemma: eDiv                             Q.E.D.
 -- Lemma: helper
 --   Step: 1 (x `dvd` a && x `dvd` b)      Q.E.D.
@@ -493,8 +493,8 @@ gcdDivides = do
 gcdMaximal :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
 gcdMaximal = do
 
-   dAbs <- recall "dvdAbs" dvdAbs
-   comm <- recall "gcdComm" commutative
+   dAbs <- recall dvdAbs
+   comm <- recall commutative
 
    eDiv <- lemma "eDiv"
                  (\(Forall @"x" x) (Forall @"y" y) -> y ./= 0 .=> x .== (x `sEDiv` y) * y + x `sEMod` y)
@@ -572,8 +572,8 @@ gcdMaximal = do
 -- [Proven] gcdCorrect :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdCorrect :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdCorrect = do
-  divides <- recall "gcdDivides" gcdDivides
-  maximal <- recall "gcdMaximal" gcdMaximal
+  divides <- recall gcdDivides
+  maximal <- recall gcdMaximal
 
   calc "gcdCorrect"
        (\(Forall a) (Forall b) ->
@@ -603,7 +603,7 @@ gcdCorrect = do
 -- >>> runTP gcdLargest
 -- Lemma: gcdMaximal                       Q.E.D.
 -- Lemma: gcdZero                          Q.E.D.
--- Lemma: gcdNonNegative                   Q.E.D.
+-- Lemma: nonNegative                      Q.E.D.
 -- Lemma: gcdLargest
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -612,9 +612,9 @@ gcdCorrect = do
 -- [Proven] gcdLargest :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐx ∷ Integer → Bool
 gcdLargest :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
 gcdLargest = do
-   maximal <- recall "gcdMaximal"     gcdMaximal
-   gcdZ    <- recall "gcdZero"        gcdZero
-   nn      <- recall "gcdNonNegative" gcdNonNegative
+   maximal <- recall gcdMaximal
+   gcdZ    <- recall gcdZero
+   nn      <- recall gcdNonNegative
 
    calc "gcdLargest"
         (\(Forall a) (Forall b) (Forall x) -> (a ./= 0 .|| b ./= 0) .&& x `dvd` a .&& x `dvd` b .=> x .<= gcd a b) $
@@ -651,10 +651,10 @@ gcdLargest = do
 gcdAdd :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdAdd = do
 
-   dSum1   <- recall "dvdSum1"    dvdSum1
-   dSum2   <- recall "dvdSum2"    dvdSum2
-   divides <- recall "gcdDivides" gcdDivides
-   largest <- recall "gcdLargest" gcdLargest
+   dSum1   <- recall dvdSum1
+   dSum2   <- recall dvdSum2
+   divides <- recall gcdDivides
+   largest <- recall gcdLargest
 
    calc "gcdAdd"
         (\(Forall @"a" a) (Forall @"b" b) -> gcd a b .== gcd (a + b) b) $
@@ -786,11 +786,11 @@ gcdEvenEven = do
 gcdOddEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdOddEven = do
 
-   divides      <- recall "gcdDivides"     gcdDivides
-   largest      <- recall "gcdLargest"     gcdLargest
-   dMul         <- recall "dvdMul"         dvdMul
-   dOddThenOdd  <- recall "dvdOddThenOdd"  dvdOddThenOdd
-   dEvenWhenOdd <- recall "dvdEvenWhenOdd" dvdEvenWhenOdd
+   divides      <- recall gcdDivides
+   largest      <- recall gcdLargest
+   dMul         <- recall dvdMul
+   dOddThenOdd  <- recall dvdOddThenOdd
+   dEvenWhenOdd <- recall dvdEvenWhenOdd
 
    calc "gcdOddEven"
         (\(Forall a) (Forall b) -> gcd (2*a+1) (2*b) .== gcd (2*a+1) b) $
@@ -885,8 +885,8 @@ gcdSubEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdSubEquiv = do
 
    -- We'll be using the commutativity of GCD and the gcdAdd property
-   comm <- recall "commutative" commutative
-   addG <- recall "gcdAdd"      gcdAdd
+   comm <- recall commutative
+   addG <- recall gcdAdd
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDSubEquiv"
@@ -952,7 +952,7 @@ gcdBin a b = nGCDBin (abs a) (abs b)
 -- Lemma: gcdEvenEven                      Q.E.D.
 -- Lemma: gcdOddEven                       Q.E.D.
 -- Lemma: gcdAdd                           Q.E.D.
--- Lemma: commutative                      Q.E.D.
+-- Cached: commutative                     Q.E.D.
 -- Inductive lemma (strong): nGCDBinEquiv
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (5 way case split)
@@ -988,10 +988,10 @@ gcdBin a b = nGCDBin (abs a) (abs b)
 -- [Proven] gcdBinEquiv :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdBinEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdBinEquiv = do
-   gEvenEven <- recallWith cvc5 "gcdEvenEven" gcdEvenEven
-   gOddEven  <- recall          "gcdOddEven"  gcdOddEven
-   gAdd      <- recall          "gcdAdd"      gcdAdd
-   comm      <- recall          "commutative" commutative
+   gEvenEven <- recallWith cvc5 gcdEvenEven
+   gOddEven  <- recall gcdOddEven
+   gAdd      <- recall gcdAdd
+   comm      <- recall commutative
 
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDBinEquiv"

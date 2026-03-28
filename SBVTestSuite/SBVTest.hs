@@ -47,7 +47,9 @@ import qualified TestSuite.Basics.PseudoBoolean
 import qualified TestSuite.Basics.QRem
 import qualified TestSuite.Basics.Quantifiers
 import qualified TestSuite.Basics.Recursive
+import qualified TestSuite.Basics.TPCaching
 import qualified TestSuite.Basics.Set
+import qualified TestSuite.Basics.SmtFunctionUnique
 import qualified TestSuite.Basics.SmallShifts
 import qualified TestSuite.Basics.SquashReals
 import qualified TestSuite.Basics.String
@@ -170,7 +172,9 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.Basics.QRem.tests
                       , TestSuite.Basics.Quantifiers.tests
                       , TestSuite.Basics.Recursive.tests
+                      , TestSuite.Basics.TPCaching.tests
                       , TestSuite.Basics.Set.tests
+                      , TestSuite.Basics.SmtFunctionUnique.tests
                       , TestSuite.Basics.SmallShifts.tests
                       , TestSuite.Basics.SquashReals.tests
                       , TestSuite.Basics.String.tests
