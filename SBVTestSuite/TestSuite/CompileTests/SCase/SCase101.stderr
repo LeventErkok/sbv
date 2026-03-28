@@ -28,4 +28,4 @@ SCase101.hs:(11,14)-(17,8): Splicing expression
          ((\ _ -> 1) (Data.SBV.Maybe.getJust_1 m))
          (ite
             (Data.SBV.Maybe.isNothing m) 0
-            (symWithKind "unmatched_sCase_Maybe_6989586621679034916")))
+            (symWithKind "unmatched_sCase_Maybe_6989586621679034926")))
