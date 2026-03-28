@@ -86,6 +86,8 @@ import GHC.TypeLits
 import Data.Array  (Array, Ix, elems, bounds, rangeSize)
 import qualified Data.Array as DA (listArray)
 
+import Data.Bifunctor (first)
+
 import Data.Bits   (Bits(..))
 import Data.Int    (Int8, Int16, Int32, Int64)
 import Data.Kind   (Type, Constraint)
@@ -4116,15 +4118,19 @@ retrieveUICode (UIGiven nm) st fk (UIFun   (_, f)) = do
     else do userFuncs <- readIORef (rUserFuncs st)
             sn <- hashStableName <$> makeStableName f
             case Map.lookup nm userFuncs of
-              Just knownHashes
+              Just (knownHashes, origLevel)
                 | sn `Set.member` knownHashes
                 -> -- Same closure we've seen before; skip immediately.
                    pure $ UINone True
                 | True
-                -> do -- New closure for an already-compiled name. Compile body and compare.
-                      modifyState st rCompilingFuncs (Set.insert nm) (pure ())
-                      d <- f st fk
-                      modifyState st rCompilingFuncs (Set.delete nm) (pure ())
+                -> do -- New closure for an already-compiled name. Compile body in an isolated
+                      -- throwaway state (to avoid side-effects like duplicate measure registrations
+                      -- and context-dependent body differences), then compare with the existing definition.
+                      -- We use the SAME lambda level as the original compilation so that SV names
+                      -- in the body text match exactly; this avoids fragile string normalization.
+                      throwaway <- mkNewState (stCfg st) (LambdaGen origLevel)
+                      modifyIORef' (rCompilingFuncs throwaway) (Set.insert nm)
+                      d <- f throwaway fk
                       defs <- readIORef (rDefns st)
                       case lookup (barify nm) defs of
                         Just (oldDef, _)
@@ -4140,11 +4146,12 @@ retrieveUICode (UIGiven nm) st fk (UIFun   (_, f)) = do
                                              ]
                         _ -> pure ()
                       -- Body matches; memoize this StableName hash so future calls with the same closure skip instantly.
-                      modifyState st rUserFuncs (Map.adjust (Set.insert sn) nm) (pure ())
+                      modifyState st rUserFuncs (Map.adjust (first (Set.insert sn)) nm) (pure ())
                       pure $ UINone True
               Nothing
-                -> do -- First time seeing this name. Compile it.
-                      modifyState st rUserFuncs      (Map.insert nm (Set.singleton sn)) (pure ())
+                -> do -- First time seeing this name. Record lambda level for future comparison.
+                      ll <- readIORef (rLambdaLevel st)
+                      modifyState st rUserFuncs      (Map.insert nm (Set.singleton sn, ll)) (pure ())
                       modifyState st rCompilingFuncs (Set.insert nm) (pure ())
                       d <- UISMT <$> f st fk
                       modifyState st rCompilingFuncs (Set.delete nm) (pure ())

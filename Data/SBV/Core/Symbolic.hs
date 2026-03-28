@@ -1179,7 +1179,7 @@ data State  = State { sbvContext            :: SBVContext
                     , rconstMap             :: IORef CnstMap
                     , rexprMap              :: IORef ExprMap
                     , rUIMap                :: IORef UIMap
-                    , rUserFuncs            :: IORef (Map.Map String (Set.Set Int)) -- Functions with explicit code generation; maps name to set of verified StableName hashes
+                    , rUserFuncs            :: IORef (Map.Map String (Set.Set Int, Maybe Int)) -- Functions with explicit code generation; maps name to (verified StableName hashes, lambda level at first compilation)
                     , rCompilingFuncs       :: IORef (Set.Set String)     -- Functions currently being compiled (used to detect recursive self-calls vs. genuine conflicts)
                     , rCgMap                :: IORef CgMap
                     , rDefns                :: IORef [(String, (SMTDef, SBVType))]
