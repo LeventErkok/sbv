@@ -103,6 +103,7 @@ inSubState scope inState comp = do
                    , rUsedLbls             = share rUsedLbls
                    , rUIMap                = share rUIMap
                    , rUserFuncs            = share rUserFuncs
+                   , rCompilingFuncs       = share rCompilingFuncs
                    , rCgMap                = share rCgMap
                    , rDefns                = share rDefns
                    , rMeasureChecks        = share rMeasureChecks

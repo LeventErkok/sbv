@@ -4107,25 +4107,48 @@ data UIKind a = UIFree  Bool                            -- ^ completely uninterp
 retrieveUICode :: UIName -> State -> Kind -> UIKind a -> IO UICodeKind
 retrieveUICode _            _  _  (UIFree  c)      = pure $ UINone c
 retrieveUICode (UIADT   _)  _  _  _                = pure $ UINone True
-retrieveUICode (UIGiven nm) st fk (UIFun   (_, f)) = do userFuncs <- readIORef (rUserFuncs st)
-                                                        sn <- hashStableName <$> makeStableName f
-                                                        case Map.lookup nm userFuncs of
-                                                          Just oldSn
-                                                            | sn /= oldSn
-                                                            -> error $ unlines [ ""
-                                                                               , "*** Data.SBV: Function '" ++ nm ++ "' defined with conflicting bodies."
-                                                                               , "***"
-                                                                               , "*** Two calls to smtFunction (or related) used the name '" ++ nm ++ "'"
-                                                                               , "*** but with different definitions. This would generate conflicting"
-                                                                               , "*** SMTLib define-fun-rec declarations."
-                                                                               , "***"
-                                                                               , "*** Please use a unique name for each distinct function."
-                                                                               ]
-                                                            | True
-                                                            -> pure $ UINone True
-                                                          Nothing
-                                                            -> do modifyState st rUserFuncs (Map.insert nm sn) (pure ())
-                                                                  UISMT <$> f st fk
+retrieveUICode (UIGiven nm) st fk (UIFun   (_, f)) = do
+  compilingFuncs <- readIORef (rCompilingFuncs st)
+  if nm `Set.member` compilingFuncs
+    then -- This name is currently being compiled, so this is a recursive (or mutually recursive) self-call.
+         -- Break the cycle by skipping code generation.
+         pure $ UINone True
+    else do userFuncs <- readIORef (rUserFuncs st)
+            sn <- hashStableName <$> makeStableName f
+            case Map.lookup nm userFuncs of
+              Just knownHashes
+                | sn `Set.member` knownHashes
+                -> -- Same closure we've seen before; skip immediately.
+                   pure $ UINone True
+                | True
+                -> do -- New closure for an already-compiled name. Compile body and compare.
+                      modifyState st rCompilingFuncs (Set.insert nm) (pure ())
+                      d <- f st fk
+                      modifyState st rCompilingFuncs (Set.delete nm) (pure ())
+                      defs <- readIORef (rDefns st)
+                      case lookup (barify nm) defs of
+                        Just (oldDef, _)
+                          | not (smtDefEq d oldDef)
+                          -> error $ unlines [ ""
+                                             , "*** Data.SBV: Function '" ++ nm ++ "' defined with conflicting bodies."
+                                             , "***"
+                                             , "*** Two calls to smtFunction (or related) used the name '" ++ nm ++ "'"
+                                             , "*** but with different definitions. This would generate conflicting"
+                                             , "*** SMTLib define-fun-rec declarations."
+                                             , "***"
+                                             , "*** Please use a unique name for each distinct function."
+                                             ]
+                        _ -> pure ()
+                      -- Body matches; memoize this StableName hash so future calls with the same closure skip instantly.
+                      modifyState st rUserFuncs (Map.adjust (Set.insert sn) nm) (pure ())
+                      pure $ UINone True
+              Nothing
+                -> do -- First time seeing this name. Compile it.
+                      modifyState st rUserFuncs      (Map.insert nm (Set.singleton sn)) (pure ())
+                      modifyState st rCompilingFuncs (Set.insert nm) (pure ())
+                      d <- UISMT <$> f st fk
+                      modifyState st rCompilingFuncs (Set.delete nm) (pure ())
+                      pure d
 retrieveUICode _            _  _  (UICodeC (_, c)) = pure $ UICgC c
 
 -- Get the constant value associated with the UI

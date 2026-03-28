@@ -48,7 +48,7 @@ module Data.SBV.Core.Symbolic
   , getUserName', getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex, sObserve
-  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), withNewIncState, IncState(..), incrementInternalCounter, incrementFreshNameCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefEq, withNewIncState, IncState(..), incrementInternalCounter, incrementFreshNameCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..), UIName(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, newInternalVariable, lambdaVar, quantVar
@@ -1179,7 +1179,8 @@ data State  = State { sbvContext            :: SBVContext
                     , rconstMap             :: IORef CnstMap
                     , rexprMap              :: IORef ExprMap
                     , rUIMap                :: IORef UIMap
-                    , rUserFuncs            :: IORef (Map.Map String Int) -- Functions that the user wanted explicit code generation for, with StableName hash of the code generator
+                    , rUserFuncs            :: IORef (Map.Map String (Set.Set Int)) -- Functions with explicit code generation; maps name to set of verified StableName hashes
+                    , rCompilingFuncs       :: IORef (Set.Set String)     -- Functions currently being compiled (used to detect recursive self-calls vs. genuine conflicts)
                     , rCgMap                :: IORef CgMap
                     , rDefns                :: IORef [(String, (SMTDef, SBVType))]
                     , rMeasureChecks        :: IORef [(String, Bool, SMTConfig -> IO ())]  -- Measure checks for recursive functions. Bool is True for productive (guarded), False for terminating.
@@ -1848,6 +1849,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      outs               <- newIORef []
      tables             <- newIORef Map.empty
      userFuncs          <- newIORef Map.empty
+     compilingFuncs     <- newIORef Set.empty
      uis                <- newIORef Map.empty
      cgs                <- newIORef Map.empty
      defns              <- newIORef []
@@ -1889,6 +1891,7 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rconstMap             = cmap
                   , rexprMap              = emap
                   , rUserFuncs            = userFuncs
+                  , rCompilingFuncs       = compilingFuncs
                   , rUIMap                = uis
                   , rCgMap                = cgs
                   , rDefns                = defns
