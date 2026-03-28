@@ -3879,7 +3879,7 @@ class SMTDefinable a where
   --
   -- Then, make sure you use @bar "two" 2@ and @bar "three" 3@ etc. to preserve the invariant.
   --
-  -- Furthermore, the function argument must not capture any non-constant variables in the context.
+  -- Additionally, the function argument must not capture any non-constant variables in the context.
   -- You can also define higher-order functions, see 'smtHOFunction' for that purpose.
   smtFunctionDef :: (Typeable a, Lambda Symbolic a) => String -> Measure a -> a -> a
 

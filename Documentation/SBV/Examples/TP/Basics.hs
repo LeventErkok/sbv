@@ -390,7 +390,7 @@ duplicateNames = do
    -- Prove true
    _ <- lemma "evil" sTrue []
 
-   -- Attempt to prove false, reusing the same name:
+   -- Attempt to prove false, reusing the same name. Will be caught!
    _ <- lemma "evil" sFalse []
 
    pure ()
