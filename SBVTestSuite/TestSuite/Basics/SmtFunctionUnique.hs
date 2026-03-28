@@ -67,7 +67,7 @@ tests = testGroup "Basics.SmtFunctionUnique"
    -- for "bar", which should be detected as a conflict.
    , goldenCapturedIO "smtFuncUniq_captureConflict" $ \rf -> do
         let bar :: SInteger -> SInteger -> SInteger
-            bar k = smtFunction "bar" (\x -> x + k)
+            bar k = smtFunction "bar" (+ k)
         r <- C.try $ satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \x -> bar 2 x + bar 3 x .== 10
         case r of
@@ -77,7 +77,7 @@ tests = testGroup "Basics.SmtFunctionUnique"
    -- Fix for the above: use a tag to give each instantiation a unique name.
    , goldenCapturedIO "smtFuncUniq_captureTagged" $ \rf -> do
         let bar :: String -> SInteger -> SInteger -> SInteger
-            bar tag k = smtFunction ("bar_" ++ tag) (\x -> x + k)
+            bar tag k = smtFunction ("bar_" ++ tag) (+ k)
         m <- satWith z3{verbose=True, redirectVerbose=Just rf} $
                 \x -> bar "two" 2 x + bar "three" 3 x .== 10
         appendFile rf ("\nRESULT:\n" ++ show m ++ "\n")
