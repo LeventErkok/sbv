@@ -9,6 +9,7 @@
 -- Algebraic reals in Haskell.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric      #-}
@@ -101,7 +102,7 @@ mkPolyReal (Right (k, coeffs))
        merge []                     = []
        merge [x]                    = [x]
        merge ((a, b):r@((c, d):xs))
-         | b == d                   = merge ((a+c, b):xs)
+         | b == d                   = let !s = a+c in merge ((s, b):xs)
          | True                     = (a, b) : merge r
 
 instance Show AlgRealPoly where

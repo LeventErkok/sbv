@@ -1003,7 +1003,7 @@ instance (HasKind a, SymVal a) => EqSymbolic (SBV a) where
                         initArray :: SArray a Integer
                         initArray = constArray 0
 
-                        finalArray = foldl (\table x -> writeArrayNoKnd table x (incr x table)) initArray es
+                        finalArray = foldl' (\table x -> writeArrayNoKnd table x (incr x table)) initArray es
 
                     sbvToSV st $ sAll (\e -> readArrayNoEq finalArray e .<= (1 :: SInteger)) es
 
@@ -1446,7 +1446,7 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
 
               -- Now read which functions are actually available in this session
               sessionDefns <- liftIO $ readIORef (rDefns st)
-              let sessionFuncs = Set.fromList (map fst sessionDefns)
+              let sessionFuncs = Map.keysSet sessionDefns
 
               let constMapping = zip (map fst liConsts) freshConsts
                   paramMapping = zip paramSVs freshParams
@@ -1487,7 +1487,7 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
               -- is actually rev(as) in order to derive len(fresh_1) = len(as).
               st <- symbolicEnv
               defns <- liftIO $ readIORef (rDefns st)
-              let funcRegistered = barFuncNm `elem` map fst defns
+              let funcRegistered = Map.member barFuncNm defns
               when funcRegistered $
                 liftIO $ mapM_ (\(rcSV, callArgSVs) -> do
                     let freshSV    = Map.findWithDefault rcSV rcSV svMap
@@ -1607,7 +1607,7 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
 
                               mapM_ constrain axioms
                               sessionDefns <- liftIO $ readIORef (rDefns st)
-                              let sessionFuncs = Set.fromList (map fst sessionDefns)
+                              let sessionFuncs = Map.keysSet sessionDefns
 
                               let constMapping = zip (map fst liConsts) freshConsts
                                   paramMapping = zip paramSVs freshParams
@@ -1641,7 +1641,7 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
 
               mapM_ constrain axioms
               sessionDefns <- liftIO $ readIORef (rDefns st)
-              let sessionFuncs = Set.fromList (map fst sessionDefns)
+              let sessionFuncs = Map.keysSet sessionDefns
 
               let constMapping = zip (map fst liConsts) freshConsts
                   paramMapping = zip paramSVs freshParams
@@ -1904,7 +1904,7 @@ isRecKind _       _            = False
 ensureADTSizeDefined :: State -> String -> Kind -> [(String, [Kind])] -> IO ()
 ensureADTSizeDefined st sizeName adtKind ctors = do
    defs <- readIORef (rDefns st)
-   unless (any ((== sizeName) . fst) defs) $ do
+   unless (Map.member sizeName defs) $ do
       let argNm      = "x"
           smtArgType = smtType adtKind
 
@@ -1932,7 +1932,7 @@ ensureADTSizeDefined st sizeName adtKind ctors = do
           smtDef   = SMTDef KUnbounded [sizeName] (Just paramStr) (\n -> replicate n ' ' ++ body)
           sbvTy    = SBVType [adtKind, KUnbounded]
 
-      modifyIORef' (rDefns st) ((sizeName, (smtDef, sbvTy)) :)
+      modifyIORef' (rDefns st) (Map.insert sizeName (smtDef, sbvTy))
       modifyState st rUIMap (Map.insert sizeName (True, Nothing, sbvTy)) (pure ())
 
 -- | Extract the ADT name from a KADT kind.
@@ -2046,7 +2046,7 @@ checkMutualFromState cfg funcNm st mbMeasure = do
    funcInfos <- readIORef (rFuncLambdaInfos st)
 
    let barFuncNm = barify funcNm
-       nodes = [(nm, nm, deps) | (nm, (SMTDef _ deps _ _, _)) <- defns]
+       nodes = [(nm, nm, deps) | (nm, (SMTDef _ deps _ _, _)) <- Map.toList defns]
        sccs  = DG.stronglyConnComp nodes
 
        -- Find the SCC containing our function (using barified name since rDefns keys are barified)
@@ -2063,8 +2063,10 @@ checkMutualFromState cfg funcNm st mbMeasure = do
                  -- Remove verified members from rFuncLambdaInfos so that subsequent closures
                  -- for the same group (registered by other members) find insufficient infos and skip.
                  modifyIORef' (rFuncLambdaInfos st) (\m -> foldl' (flip Map.delete) m plainMembers)
-         else debug cfg ["[MEASURE] " ++ funcNm ++ ": mutual group already verified, skipping"]
-     _ -> debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual check"]
+         else do debug cfg ["[MEASURE] " ++ funcNm ++ ": mutual group already verified, skipping"]
+                 modifyIORef' (rFuncLambdaInfos st) (Map.delete funcNm)
+     _ -> do debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual check"]
+             modifyIORef' (rFuncLambdaInfos st) (Map.delete funcNm)
 
 -- | Reject mutual recursion for contract-based functions. Deferred to SCC computation time
 -- so that non-mutual cross-refs (helper functions, uninterpreted constants) don't cause false positives.
@@ -2073,7 +2075,7 @@ rejectMutualContractFromState cfg funcNm st = do
    defns <- readIORef (rDefns st)
 
    let barFuncNm = barify funcNm
-       nodes = [(nm, nm, deps) | (nm, (SMTDef _ deps _ _, _)) <- defns]
+       nodes = [(nm, nm, deps) | (nm, (SMTDef _ deps _ _, _)) <- Map.toList defns]
        sccs  = DG.stronglyConnComp nodes
        mySCC = [members | DG.CyclicSCC members <- sccs, barFuncNm `elem` members]
 
@@ -2097,7 +2099,7 @@ checkMutualProductiveFromState cfg funcNm st = do
    funcInfos <- readIORef (rFuncLambdaInfos st)
 
    let barFuncNm = barify funcNm
-       nodes = [(nm, nm, deps) | (nm, (SMTDef _ deps _ _, _)) <- defns]
+       nodes = [(nm, nm, deps) | (nm, (SMTDef _ deps _ _, _)) <- Map.toList defns]
        sccs  = DG.stronglyConnComp nodes
        mySCC = [members | DG.CyclicSCC members <- sccs, barFuncNm `elem` members]
 
@@ -2125,8 +2127,10 @@ checkMutualProductiveFromState cfg funcNm st = do
                             , "*** Every recursive call (self or cross) must be a direct argument to a data constructor."
                             , ""
                             ]
-         else debug cfg ["[MEASURE] " ++ funcNm ++ ": mutual productive group already verified, skipping"]
-     _ -> debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual productive check"]
+         else do debug cfg ["[MEASURE] " ++ funcNm ++ ": mutual productive group already verified, skipping"]
+                 modifyIORef' (rFuncLambdaInfos st) (Map.delete funcNm)
+     _ -> do debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual productive check"]
+             modifyIORef' (rFuncLambdaInfos st) (Map.delete funcNm)
 
 -- | Check termination for a mutual recursion group. Each function in the group
 -- gets an auto-guessed measure, and we verify that at every call edge (self or cross),
@@ -2257,7 +2261,7 @@ checkMutualMeasure cfgIn members (MeasureEval applyM) = go members
                     ]
                   freshConsts <- liftIO $ mapM (\(_, cv) -> svToSV st (SVal (kindOf cv) (Left cv))) liConsts
                   sessionDefns <- liftIO $ readIORef (rDefns st)
-                  let sessionFuncs = Set.fromList (map fst sessionDefns)
+                  let sessionFuncs = Map.keysSet sessionDefns
                       constMapping = zip (map fst liConsts) freshConsts
                       paramMapping = zip paramSVs freshParams
                       initMap      = Map.fromList (constMapping ++ paramMapping)
@@ -4139,7 +4143,7 @@ retrieveUICode (UIGiven nm) st fk (UIFun   (_, f)) = do
                           -> conflictError nm
                         Right d
                           -> do defs <- readIORef (rDefns st)
-                                case lookup (barify nm) defs of
+                                case Map.lookup (barify nm) defs of
                                   Just (oldDef, _)
                                     | not (smtDefEq d oldDef)
                                     -> conflictError nm

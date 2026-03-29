@@ -361,9 +361,9 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
 
                frees = map show badFrees
                  where (defs, uses) = unzip [(d, u) | (d, SBVApp _ u) <- F.toList asgnsSeq]
-                       allDefs      = defs ++ map snd params ++ map fst constants
-                       allUses      = concat uses
-                       allFrees     = nub allUses \\ nub allDefs
+                       defSet       = Set.fromList (defs ++ map snd params ++ map fst constants)
+                       useSet       = Set.fromList (concat uses)
+                       allFrees     = Set.toList (useSet `Set.difference` defSet)
                        badFrees     = filter (not . global . getId . swNodeId) allFrees
 
                        -- is this a global?

@@ -100,19 +100,19 @@ instance (HasKind a, HasKind b) => HasKind (ArrayModel a b) where
 -- | A constant value.
 -- Note: If you add a new constructor here, make sure you add the
 -- corresponding equality in the instance "Eq CVal" and "Ord CVal"!
-data CVal = CAlgReal  !AlgReal                 -- ^ Algebraic real
-          | CInteger  !Integer                 -- ^ Bit-vector/unbounded integer
-          | CFloat    !Float                   -- ^ Float
-          | CDouble   !Double                  -- ^ Double
-          | CFP       !FP                      -- ^ Arbitrary float
-          | CRational Rational                 -- ^ Rational
-          | CChar     !Char                    -- ^ Character
-          | CString   !String                  -- ^ String
-          | CList     ![CVal]                  -- ^ List
-          | CSet      !(RCSet CVal)            -- ^ Set. Can be regular or complemented.
-          | CADT      (String, [(Kind, CVal)]) -- ^ ADT: Constructor, and fields
-          | CTuple    ![CVal]                  -- ^ Tuple
-          | CArray    !(ArrayModel CVal CVal)  -- ^ Arrays are backed by look-up tables concretely
+data CVal = CAlgReal  !AlgReal                  -- ^ Algebraic real
+          | CInteger  !Integer                  -- ^ Bit-vector/unbounded integer
+          | CFloat    !Float                    -- ^ Float
+          | CDouble   !Double                   -- ^ Double
+          | CFP       !FP                       -- ^ Arbitrary float
+          | CRational !Rational                 -- ^ Rational
+          | CChar     !Char                     -- ^ Character
+          | CString   !String                   -- ^ String
+          | CList     ![CVal]                   -- ^ List
+          | CSet      !(RCSet CVal)             -- ^ Set. Can be regular or complemented.
+          | CADT      !(String, [(Kind, CVal)]) -- ^ ADT: Constructor, and fields
+          | CTuple    ![CVal]                   -- ^ Tuple
+          | CArray    !(ArrayModel CVal CVal)   -- ^ Arrays are backed by look-up tables concretely
           deriving (G.Data, Generic, NFData)
 
 -- | Assign a rank to constant values, this is structural and helps with ordering

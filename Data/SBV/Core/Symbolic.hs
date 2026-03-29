@@ -93,10 +93,10 @@ import qualified Data.IORef                  as R    (modifyIORef')
 import qualified Data.Generics               as G    (Data(..))
 import qualified Data.Generics.Uniplate.Data as G
 import qualified Data.IntMap.Strict          as IMap (IntMap, empty, lookup, insertWith)
-import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size, notMember)
-import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
+import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size, notMember, keysSet)
+import qualified Data.Set                    as Set  (Set, empty, toList, insert, member, notMember)
 import qualified Data.Foldable               as F    (toList)
-import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), lookup, elemIndexL)
+import qualified Data.Sequence               as S    (Seq, empty, (|>), lookup, elemIndexL)
 import qualified Data.Text                   as T
 import           Data.Text                   (Text)
 
@@ -766,7 +766,7 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              , queryConfig              :: SMTConfig
                              , queryTerminate           :: Maybe C.SomeException -> IO ()
                              , queryTimeOutValue        :: Maybe Int
-                             , queryAssertionStackDepth :: Int
+                             , queryAssertionStackDepth :: !Int
                              }
 
 -- | Computations which support query operations.
@@ -830,9 +830,9 @@ instance NFData ResultInp where
    rnf (ResultLamInps xs) = rnf xs
 
 -- | Several data about the program
-data ProgInfo = ProgInfo { hasQuants         :: Bool
-                         , progSpecialRels   :: [SpecialRelOp]
-                         , progTransClosures :: [(String, String)]
+data ProgInfo = ProgInfo { hasQuants         :: !Bool
+                         , progSpecialRels   :: ![SpecialRelOp]
+                         , progTransClosures :: ![(String, String)]
                          }
                          deriving G.Data
 
@@ -1099,7 +1099,7 @@ addInternInput sv nm = goAll . goIntern
 -- | Add a new user input
 addUserInput :: SV -> Name -> Inputs -> Inputs
 addUserInput sv nm = goAll . goUser
-  where new    = toNamedSV sv nm
+  where !new   = toNamedSV sv nm
         goUser = onUserInputs (S.|> new)        -- add to the end of the sequence
         goAll  = onAllInputs  (Set.insert nm)
 
@@ -1194,7 +1194,7 @@ data State  = State { sbvContext            :: SBVContext
                     , rUserFuncs            :: IORef (Map.Map String (Set.Set Int, Maybe Int)) -- Functions with explicit code generation; maps name to (verified StableName hashes, lambda level at first compilation)
                     , rCompilingFuncs       :: IORef (Set.Set String)     -- Functions currently being compiled (used to detect recursive self-calls vs. genuine conflicts)
                     , rCgMap                :: IORef CgMap
-                    , rDefns                :: IORef [(String, (SMTDef, SBVType))]
+                    , rDefns                :: IORef (Map.Map String (SMTDef, SBVType))
                     , rMeasureChecks        :: IORef [(String, Bool, SMTConfig -> IO ())]  -- Measure checks for recursive functions. Bool is True for productive (guarded), False for terminating.
                     , rFuncLambdaInfos      :: IORef (Map.Map String LambdaInfo)            -- LambdaInfo for all smtFunction definitions, used for mutual recursion checking
                     , rSkipMeasureChecks    :: IORef Bool                                   -- If True, skip measure checking (used by TP and checker itself)
@@ -1283,9 +1283,8 @@ modifyIncState State{rIncState} field update = do
         R.modifyIORef' (field incState) update
 
 -- | Add an observable
--- notice that we cons like a list, we should build at the end of the seq, but cons to preserve semantics for now
 recordObservable :: State -> String -> (CV -> Bool) -> SV -> IO ()
-recordObservable st (T.pack -> nm) chk sv = modifyState st rObservables ((nm, chk, sv) S.<|) (return ())
+recordObservable st (T.pack -> nm) chk sv = modifyState st rObservables (S.|> (nm, chk, sv)) (return ())
 
 -- | Increment the variable counter
 incrementInternalCounter :: State -> IO Int
@@ -1377,12 +1376,12 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                  UINone c -> pure c
                  UISMT d  -> do -- Check for conflicting definitions with the same name
                                 defs <- readIORef (rDefns st)
-                                case lookup nm defs of
+                                case Map.lookup nm defs of
                                   Just (oldDef, _)
                                     | not (smtDefEq d oldDef)
                                     -> conflictError nm
                                   _ -> pure ()
-                                modifyState st rDefns (\defs' -> (nm, (d, t)) : filter (\(onm, _) -> onm /= nm) defs')
+                                modifyState st rDefns (Map.insert nm (d, t))
                                   $ noInteractive [ "Defined functions (smtFunction):"
                                                   , "  Name: " ++ nm ++ extraComment
                                                   , "  Type: " ++ show t
@@ -1481,8 +1480,10 @@ registerKind st k
        existingKinds <- readIORef (rUsedKinds st)
 
        -- For ADTs we need to make sure we haven't added it before
-       let adtExists = case k of
-                         KADT s _ _  -> s `elem` [s' | KADT s' _ _ <- Set.toList existingKinds]
+       let adtNameExists s = any (\ek -> case ek of KADT s' _ _ -> s == s'; _ -> False) existingKinds
+
+           adtExists = case k of
+                         KADT s _ _  -> adtNameExists s
                          _           -> False
 
        unless adtExists $
@@ -1492,9 +1493,9 @@ registerKind st k
               -- order: In particular, if an uninterpreted kind is already in there, we don't
               -- want to re-add because double-declaration would be wrong. See 'cvtInc' for details.
               let needsAdding = case k of
-                                  KADT s _ _  -> s `notElem` [s' | KADT s' _ _ <- Set.toList existingKinds]
-                                  KList{}     -> k `notElem` existingKinds
-                                  KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
+                                  KADT s _ _  -> not (adtNameExists s)
+                                  KList{}     -> k `Set.notMember` existingKinds
+                                  KTuple nks  -> not $ any (\ek -> case ek of KTuple oks -> length nks == length oks; _ -> False) existingKinds
                                   _           -> False
 
               when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
@@ -1856,7 +1857,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      compilingFuncs     <- newIORef Set.empty
      uis                <- newIORef Map.empty
      cgs                <- newIORef Map.empty
-     defns              <- newIORef []
+     defns              <- newIORef Map.empty
      measureChecks      <- newIORef []
      funcLambdaInfos    <- newIORef Map.empty
      skipMeasureChecks  <- newIORef False
@@ -2001,17 +2002,17 @@ extractSymbolicSimulationState st@State{ runMode=rrm
    let cnsts = sortBy cmp . map swap . Map.toList $ constMap
 
    tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
-   ds    <- reverse <$> readIORef defns
+   defnMap <- readIORef defns
+   let ds         = Map.toList defnMap
+       definedSet = Map.keysSet defnMap
    unint <- do unints <- Map.toList <$> readIORef uis
                -- drop those that has a definition associated with it
-               let defineds = map fst ds
-               pure [ui | ui@(nm, _) <- unints, nm `notElem` defineds]
+               pure [ui | ui@(nm, _) <- unints, nm `Set.notMember` definedSet]
    knds  <- readIORef usedKinds
    cgMap <- Map.toList <$> readIORef cgs
 
    traceVals   <- reverse <$> readIORef cInfo
-   observables <- reverse . fmap (\(n,f,sv) -> (T.unpack n, f, sv)) . F.toList
-                  <$> readIORef observes
+   observables <- fmap (\(n,f,sv) -> (T.unpack n, f, sv)) . F.toList <$> readIORef observes
    extraCstrs  <- readIORef cstrs
    assertions  <- reverse <$> readIORef asserts
 

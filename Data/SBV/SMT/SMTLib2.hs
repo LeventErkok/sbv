@@ -224,7 +224,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
            = case ctx of
                QueryExternal -> ["(set-logic ALL) ; external query, using all logics."]
                QueryInternal -> if supportsBitVectors solverCaps
-                                then ["(set-logic " <> T.pack (T.unpack qs <> T.unpack as <> T.unpack ufs) <> "BV)"]
+                                then ["(set-logic " <> qs <> as <> ufs <> "BV)"]
                                 else ["(set-logic ALL)"] -- fall-thru
           where qs  | not needsQuantifiers  = "QF_"
                     | True                  = ""

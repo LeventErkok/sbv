@@ -37,7 +37,7 @@ module Data.SBV.Control.Utils (
      , startOptimizer, getObjectiveValues, getModel, getModelAtIndex
      ) where
 
-import Data.List  (sortBy, sortOn, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf, isSuffixOf)
+import Data.List  (sortBy, sortOn, partition, groupBy, tails, intercalate, isPrefixOf, isSuffixOf)
 
 import Data.Char      (isPunctuation, isSpace, isDigit)
 import Data.Function  (on)
@@ -47,6 +47,7 @@ import Data.Proxy
 
 import qualified Data.Foldable      as F (toList)
 import qualified Data.Map.Strict    as Map
+import qualified Data.Set           as Set  (empty, fromList, toAscList)
 import qualified Data.Sequence      as S
 import qualified Data.Text          as T
 
@@ -102,8 +103,6 @@ import Data.SBV.Utils.SExpr
 import Data.SBV.Utils.PrettyNum (cvToSMTLib)
 
 import Data.SBV.Control.Types
-
-import qualified Data.Set as Set (empty, fromList, toAscList)
 
 import qualified Control.Exception as C
 
@@ -173,7 +172,7 @@ syncUpSolver progInfo rGlobalConsts is = do
         -- update global consts to have the new ones
         (newConsts, allConsts) <- liftIO $ do nc <- readIORef (rNewConsts is)
                                               oc <- readIORef rGlobalConsts
-                                              let allConsts = Map.union nc oc
+                                              let !allConsts = Map.union nc oc
                                               writeIORef rGlobalConsts allConsts
                                               pure (nc, allConsts)
 
@@ -1305,12 +1304,11 @@ getObservables = do State{rObservables} <- queryState
 getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, (Bool, Maybe [String], SBVType))]
 getUIs = do State{rUIMap, rDefns, rIncState} <- queryState
             -- NB. no need to worry about new-defines, because we don't allow definitions once query mode starts
-            defines <- do allDefs <- io $ readIORef rDefns
-                          pure $ map fst allDefs
+            defineSet <- Map.keysSet <$> io (readIORef rDefns)
 
             prior <- io $ readIORef rUIMap
             new   <- io $ readIORef rIncState >>= readIORef . rNewUIs
-            return $ nub $ sort [p | p@(n, _) <- Map.toList prior ++ Map.toList new, n `notElem` defines]
+            return $ Map.toList $ Map.withoutKeys (Map.union prior new) defineSet
 
 -- | Return all satisfying models.
 getAllSatResult :: forall m. (MonadIO m, MonadQuery m, SolverContext m) => m AllSatResult

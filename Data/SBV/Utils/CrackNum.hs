@@ -76,7 +76,7 @@ split4 n
 
 -- Convert bits to the corresponding integer.
 getVal :: [Bool] -> Integer
-getVal = foldl (\s b -> 2 * s + if b then 1 else 0) 0
+getVal = foldl' (\s b -> 2 * s + if b then 1 else 0) 0
 
 -- Show in hex, but pay attention to how wide a field it should be in
 mkHex :: [Bool] -> String

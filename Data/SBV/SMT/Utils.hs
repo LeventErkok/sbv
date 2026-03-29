@@ -35,7 +35,6 @@ module Data.SBV.SMT.Utils (
 
 import qualified Control.Exception as C
 
-import Control.Monad (zipWithM_)
 import Control.Monad.Trans (MonadIO, liftIO)
 
 import Data.SBV.Core.Data
@@ -278,7 +277,7 @@ recordTranscript (Just f) m = do tsPre <- formatTime defaultTimeLocale "; [%T%Q"
                                                                                         xs  -> (ts ++ "] Received: ") : map (";   " ++) xs
                                    DebugMsg msg            -> let tag = ts ++ "] "
                                                                   emp = ';' : drop 1 (map (const ' ') tag)
-                                                              in zipWithM_ (\t l -> appendFile f (t ++ l ++ "\n")) (tag : repeat emp) (lines msg)
+                                                              in appendFile f $ unlines $ zipWith (++) (tag : repeat emp) (lines msg)
         where to Nothing  = ""
               to (Just i) = "[Timeout: " ++ showTimeoutValue i ++ "] "
 {-# INLINE recordTranscript #-}

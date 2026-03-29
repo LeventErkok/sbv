@@ -113,8 +113,8 @@ instance Show (FloatingPoint eb sb) where
 -- then the total number of floats is 2^sb*(2^eb-1) + 3: All exponents except 11..11
 -- is allowed. So we get, 2^eb-1, different combinations, each with a sign, giving
 -- us 2^sb*(2^eb-1) totals. Then we have two infinities, and one NaN, adding 3 more.
-data FP = FP { fpExponentSize    :: Int
-             , fpSignificandSize :: Int
+data FP = FP { fpExponentSize    :: !Int
+             , fpSignificandSize :: !Int
              , fpValue           :: BigFloat
              }
              deriving (Eq, G.Data)

@@ -34,7 +34,7 @@ import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult, OptimizeRes
 
 import GHC.TypeLits (KnownNat)
 
-import Data.IORef(readIORef, writeIORef)
+import Data.IORef(readIORef, modifyIORef')
 
 import qualified Data.SBV.Core.Data      as Trans
 import qualified Data.SBV.Core.Model     as Trans
@@ -224,7 +224,7 @@ allSatPartition nm term = do
                         let new = case filter (`notElem` olds) (nm : [nm ++ "_" ++ show i | i <- [(1 :: Int) ..]]) of
                                     h:_ -> h
                                     []  -> error $ "Impossible: Can't get a fresh variable from infinite list in partition." ++ show (nm, term)
-                        writeIORef rPartitionVars (olds ++ [new])
+                        modifyIORef' rPartitionVars (++ [new])
                         pure new
 
    -- declare and constrain

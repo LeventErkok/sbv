@@ -9,6 +9,7 @@
 -- Abstraction of SMT solvers
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
@@ -109,10 +110,10 @@ newtype SatResult = SatResult SMTResult
                   deriving NFData
 
 -- | An 'Data.SBV.allSat' call results in a t'AllSatResult'
-data AllSatResult = AllSatResult { allSatMaxModelCountReached  :: Bool          -- ^ Did we reach the user given model count limit?
-                                 , allSatSolverReturnedUnknown :: Bool          -- ^ Did the solver report unknown at the end?
-                                 , allSatSolverReturnedDSat    :: Bool          -- ^ Did the solver report delta-satisfiable at the end?
-                                 , allSatResults               :: [SMTResult]   -- ^ All satisfying models
+data AllSatResult = AllSatResult { allSatMaxModelCountReached  :: !Bool          -- ^ Did we reach the user given model count limit?
+                                 , allSatSolverReturnedUnknown :: !Bool          -- ^ Did the solver report unknown at the end?
+                                 , allSatSolverReturnedDSat    :: !Bool          -- ^ Did the solver report delta-satisfiable at the end?
+                                 , allSatResults               :: ![SMTResult]   -- ^ All satisfying models
                                  }
 
 -- | A 'Data.SBV.safe' call results in a t'SafeResult'
@@ -825,7 +826,7 @@ runSolver cfg ctx execPath opts pgm continuation
                             go isFirst i sofar = do
                                             errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (SolverException (show e))))
                                             case errln of
-                                              SolverRegular ln -> let need  = i + parenDeficit ln
+                                              SolverRegular ln -> let !need = i + parenDeficit ln
                                                                       -- make sure we get *something*
                                                                       empty = case dropWhile isSpace ln of
                                                                                 []      -> True

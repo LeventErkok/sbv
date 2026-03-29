@@ -69,16 +69,16 @@ import Data.IORef
 import GHC.Generics
 import Data.Dynamic
 
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Map (Map)
 
 import qualified Data.Set as Set
 import Data.Set (Set)
 
 -- | Various statistics we collect
-data TPStats = TPStats { noOfCheckSats :: Int
-                       , solverElapsed :: NominalDiffTime
-                       , qcElapsed     :: NominalDiffTime
+data TPStats = TPStats { noOfCheckSats :: !Int
+                       , solverElapsed :: !NominalDiffTime
+                       , qcElapsed     :: !NominalDiffTime
                        }
 
 -- | Extra state we carry in a TP context
@@ -141,7 +141,7 @@ addToProofCache prop prf = do
   TPState{proofCache} <- getTPState
   fp <- liftIO $ propFingerprint prop
   let key = (fp, typeOf (Proxy @a))
-  liftIO $ modifyIORef' proofCache $ Map.insertWith (\_ old -> old ++ [prf]) key [prf]
+  liftIO $ modifyIORef' proofCache $ Map.insertWith (\_ old -> prf : old) key [prf]
 
 -- | Look up a cached proof for the given proposition. Only succeeds when in recall context
 -- (i.e., called from within a recall wrapper). On cache hit, the returned ProofObj has
@@ -155,7 +155,7 @@ lookupProofCache prop = do
      else do fp <- liftIO $ propFingerprint prop
              let key = (fp, typeOf (Proxy @a))
              cache <- liftIO $ readIORef proofCache
-             pure $ case Map.lookup key cache of
+             pure $ case reverse <$> Map.lookup key cache of
                Nothing     -> Nothing
                Just []     -> Nothing
                Just (p:ps) -> Just p { aliases = [proofName q | q <- ps] }

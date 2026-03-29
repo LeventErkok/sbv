@@ -145,7 +145,7 @@ polyMult (x, y, red)
   = fromBitsLE $ genericTake sz $ r ++ repeat sFalse
   where (_, r) = mdp ms rs
         ms = genericTake (2*sz) $ mul (blastLE x) (blastLE y) [] ++ repeat sFalse
-        rs = genericTake (2*sz) $ [fromBool (i `elem` red) |  i <- [0 .. foldr max 0 red] ] ++ repeat sFalse
+        rs = genericTake (2*sz) $ [fromBool (i `elem` red) |  i <- [0 .. foldl' max 0 red] ] ++ repeat sFalse
         sz = intSizeOf x
         mul _  []     ps = ps
         mul as (b:bs) ps = mul (sFalse:as) bs (ites b (as `addPoly` ps) ps)
