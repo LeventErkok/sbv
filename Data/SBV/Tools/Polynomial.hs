@@ -9,6 +9,7 @@
 -- Implementation of polynomial arithmetic
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -20,7 +21,11 @@ module Data.SBV.Tools.Polynomial (
         ) where
 
 import Data.Bits  (Bits(..))
-import Data.List  (genericTake)
+import Data.List  (genericTake
+#if !MIN_VERSION_base(4,20,0)
+                  , foldl'
+#endif
+                  )
 import Data.Maybe (fromJust, fromMaybe)
 import Data.Word  (Word8, Word16, Word32, Word64)
 
