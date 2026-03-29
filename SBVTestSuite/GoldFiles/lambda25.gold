@@ -223,10 +223,10 @@
 [GOOD] (assert (not s19))
 [SEND] (check-sat)
 [RECV] sat
-[SEND] (get-value (s16))
-[RECV] ((s16 0))
 [SEND] (get-value (s14))
 [RECV] ((s14 0))
+[SEND] (get-value (s16))
+[RECV] ((s16 0))
 [SEND] (get-value (s0))
 [RECV] ((s0 (mkSBVTuple2 0 (seq.unit 2))))
 [SEND] (get-value (s11))
