@@ -19,6 +19,7 @@
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -1480,7 +1481,7 @@ registerKind st k
        existingKinds <- readIORef (rUsedKinds st)
 
        -- For ADTs we need to make sure we haven't added it before
-       let adtNameExists s = any (\ek -> case ek of KADT s' _ _ -> s == s'; _ -> False) existingKinds
+       let adtNameExists s = any (\case KADT s' _ _ -> s == s'; _ -> False) existingKinds
 
            adtExists = case k of
                          KADT s _ _  -> adtNameExists s
@@ -1495,7 +1496,7 @@ registerKind st k
               let needsAdding = case k of
                                   KADT s _ _  -> not (adtNameExists s)
                                   KList{}     -> k `Set.notMember` existingKinds
-                                  KTuple nks  -> not $ any (\ek -> case ek of KTuple oks -> length nks == length oks; _ -> False) existingKinds
+                                  KTuple nks  -> not $ any (\case KTuple oks -> length nks == length oks; _ -> False) existingKinds
                                   _           -> False
 
               when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
