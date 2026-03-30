@@ -267,11 +267,11 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Let "b"
-            (Let "n" (Add (Val (- 1)) (Val 4)) (Mul (Val 2) (Val 3)))
-            (Let "l" (Val 15) (Add (Val (- 3)) (Var "l"))))))
+[RECV] ((s0 (Let "y"
+            (Add (Val (- 2)) (Mul (Val (- 1)) (Val 3)))
+            (Let "a" (Val 13) (Add (Add (Val (- 3)) (Val 2)) (Var "a"))))))
 
-Got: (let b = (let n = (-1 + 4) in (2 * 3)) in (let l = 15 in (-3 + l)))
+Got: (let y = (-2 + (-1 * 3)) in (let a = 13 in ((-3 + 2) + a)))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess

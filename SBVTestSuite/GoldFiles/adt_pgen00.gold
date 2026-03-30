@@ -267,9 +267,11 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Let "p" (Val 8) (Let "v" (Val 6) (Add (Mul (Val 2) (Val 3)) (Var "v"))))))
+[RECV] ((s0 (Let "s"
+            (Let "i" (Val 1) (Mul (Val 2) (Add (Var "i") (Var "i"))))
+            (Let "a" (Val 9) (Add (Val 3) (Var "a"))))))
 
-Got: (let p = 8 in (let v = 6 in ((2 * 3) + v)))
+Got: (let s = (let i = 1 in (2 * (i + i))) in (let a = 9 in (3 + a)))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess
