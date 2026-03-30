@@ -4132,7 +4132,7 @@ retrieveUICode (UIGiven nm) st fk (UIFun   (_, f)) = do
                       -- and context-dependent body differences), then compare with the existing definition.
                       -- We use the SAME lambda level as the original compilation so that SV names
                       -- in the body text match exactly; this avoids fragile string normalization.
-                      throwaway <- mkNewState (stCfg st) (LambdaGen origLevel)
+                      throwaway <- mkNewState ((stCfg st) {verbose = False}) (LambdaGen origLevel)
                       modifyIORef' (rCompilingFuncs throwaway) (Set.insert nm)
                       -- If the body captures SVals from the live state's context, the throwaway
                       -- compilation will throw (e.g., context-mismatch). That is a definite conflict:
