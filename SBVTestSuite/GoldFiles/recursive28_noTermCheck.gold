@@ -36,7 +36,6 @@
 [GOOD] ; --- formula ---
 ; smtProofStep: No context value to push.
 Lemma: ntc_at_5
-[MEASURE] ntc28 @(SBV Integer -> SBV Integer): no termination check (smtFunctionNoTermination)
 [GOOD] (define-fun s6 () Bool (forall ((l1_s0 Int))
                                  (let ((l1_s1 5))
                                  (let ((l1_s2 (= l1_s0 l1_s1)))
