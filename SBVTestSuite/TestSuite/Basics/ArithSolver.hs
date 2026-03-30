@@ -877,7 +877,7 @@ ars = map fromRational rs
 
 rs :: [Ratio Integer]
 rs = [i % d | i <- is, d <- dens]
- where is   = [-1000000] ++ [-1 .. 1] ++ [10000001]
+ where is   = [-1000000] ++ [-1 .. 1] ++ [1000001]
        dens = [5,100,1000000]
 
 -- Admittedly paltry test-cases for float/double
