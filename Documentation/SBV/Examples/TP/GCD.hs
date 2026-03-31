@@ -705,13 +705,12 @@ gcdAdd = do
 -- | \(\gcd\, (2a)\, (2b) = 2 (\gcd\,a\, b)\)
 --
 -- ==== __Proof__
--- >>> runTPWith cvc5 gcdEvenEven
+-- >>> runTP gcdEvenEven
 -- Lemma: red2                             Q.E.D.
 -- Lemma: modEE
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Inductive lemma (strong): nGCDEvenEven
 --   Step: Measure is non-negative         Q.E.D.
@@ -734,11 +733,11 @@ gcdAdd = do
 gcdEvenEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 gcdEvenEven = do
 
-   red2  <- lemma "red2"
+   red2  <- lemmaWith z3 "red2"
                   (\(Forall @"a" a) (Forall @"b" b) -> b ./= 0 .=> (2*a) `sEDiv` (2*b) .== a `sEDiv` b)
                   []
 
-   modEE <- calc "modEE"
+   modEE <- calcWith cvc5 "modEE"
                  (\(Forall @"a" a) (Forall @"b" b) -> b ./= 0 .=> (2*a) `sEMod` (2*b) .== 2 * (a `sEMod` b)) $
                  \a b -> [b ./= 0]
                       |- (2*a) `sEMod` (2*b)
