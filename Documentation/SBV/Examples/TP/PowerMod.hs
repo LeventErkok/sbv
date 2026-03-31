@@ -41,33 +41,64 @@ power = smtFunction "power" $ \b n -> [sCase| n of
 --
 -- ==== __Proof__
 -- >>> runTP modAddMultiple
--- Inductive lemma: modAddMultiple
+-- Inductive lemma: modAddMultiplePos
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
+-- Lemma: modAddMultiple
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] modAddMultiple :: Ɐk ∷ Integer → Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 modAddMultiple :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> Forall "m" Integer -> SBool))
 modAddMultiple = do
-   inductWith cvc5 "modAddMultiple"
+   -- First prove for k >= 0 by induction. We need this restriction since
+   -- the inductive hypothesis for integers is guarded by k >= 0.
+   pos <- induct "modAddMultiplePos"
+             (\(Forall k) (Forall n) (Forall m) -> k .>= 0 .&& m .> 1 .=> (n + m*k) `sEMod` m .== n `sEMod` m) $
+             \ih k n m -> [k .>= 0, m .> 1] |- (n + m*(k+1)) `sEMod` m
+                                             =: (n + m*k + m) `sEMod` m
+                                             ?? m `sEMod` m .== 0
+                                             ?? (n + m*k + m) `sEDiv` m .== (n + m*k) `sEDiv` m + 1
+                                             =: (n + m*k) `sEMod` m
+                                             ?? ih `at` (Inst @"n" n, Inst @"m" m)
+                                             =: n `sEMod` m
+                                             =: qed
+
+   -- Extend to all k by case-splitting. For k < 0, use the positive case with
+   -- k' = -k > 0 and n' = n+m*k: pos gives (n'+m*k') mod m = n' mod m,
+   -- i.e., n mod m = (n+m*k) mod m.
+   calc "modAddMultiple"
       (\(Forall k) (Forall n) (Forall m) -> m .> 1 .=> (n + m*k) `sEMod` m .== n `sEMod` m) $
-      \ih k n m -> [m .> 1] |- (n + m*(k+1)) `sEMod` m
-                              =: (n + m*k + m) `sEMod` m
-                              =: (n + m*k) `sEMod` m
-                              ?? ih `at` (Inst @"n" n, Inst @"m" m)
-                              =: n `sEMod` m
-                              =: qed
+      \k n m -> [m .> 1] |- cases [ k .>= 0 ==> (n + m*k) `sEMod` m
+                                             ?? pos `at` (Inst @"k" k, Inst @"n" n, Inst @"m" m)
+                                             =: n `sEMod` m
+                                             =: qed
+                                  , k .< 0  ==> (n + m*k) `sEMod` m
+                                             ?? pos `at` (Inst @"k" (-k), Inst @"n" (n + m*k), Inst @"m" m)
+                                             =: n `sEMod` m
+                                             =: qed
+                                  ]
 
 -- | \(m > 0 \Rightarrow a + b \equiv a + (b \bmod m) \pmod{m}\)
 --
 -- ==== __Proof__
 -- >>> runTP modAddRight
--- Inductive lemma: modAddMultiple
+-- Inductive lemma: modAddMultiplePos
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAddMultiple
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: modAddRight
 --   Step: 1                               Q.E.D.
@@ -89,11 +120,17 @@ modAddRight = do
 --
 -- ==== __Proof__
 -- >>> runTP modAddLeft
--- Inductive lemma: modAddMultiple
+-- Inductive lemma: modAddMultiplePos
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAddMultiple
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: modAddRight
 --   Step: 1                               Q.E.D.
@@ -121,11 +158,17 @@ modAddLeft = do
 --
 -- ==== __Proof__
 -- >>> runTP modSubRight
--- Inductive lemma: modAddMultiple
+-- Inductive lemma: modAddMultiplePos
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAddMultiple
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: modSubRight
 --   Step: 1                               Q.E.D.
@@ -150,11 +193,17 @@ modSubRight = do
 --
 -- ==== __Proof__
 -- >>> runTP modMulRightNonneg
--- Inductive lemma: modAddMultiple
+-- Inductive lemma: modAddMultiplePos
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAddMultiple
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: modAddRight
 --   Step: 1                               Q.E.D.
@@ -200,11 +249,17 @@ modMulRightNonneg = do
 --
 -- ==== __Proof__
 -- >>> runTP modMulRightNeg
--- Inductive lemma: modAddMultiple
+-- Inductive lemma: modAddMultiplePos
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAddMultiple
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: modAddRight
 --   Step: 1                               Q.E.D.
@@ -250,11 +305,17 @@ modMulRightNeg = do
 --
 -- ==== __Proof__
 -- >>> runTP modMulRight
--- Inductive lemma: modAddMultiple
+-- Inductive lemma: modAddMultiplePos
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: modAddMultiple
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: modAddRight
 --   Step: 1                               Q.E.D.
