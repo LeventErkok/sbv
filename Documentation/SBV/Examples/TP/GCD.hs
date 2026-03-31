@@ -198,48 +198,6 @@ isOdd  = sNot . isEven
 dvd :: SInteger -> SInteger -> SBool
 a `dvd` b = ite (a .== 0) (b .== 0) (b `sEMod` a .== 0)
 
--- | \(a \mid |b| \iff a \mid b\)
---
--- A number divides another exactly when it also divides its absolute value. While this property
--- seems obvious, I was unable to get z3 to prove it. Even CVC5 needs a bit of help to guide it through
--- the case split on @b@.
---
--- ==== __Proof__
--- >>> runTP dvdAbs
--- Lemma: dvdAbs_l2r
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs_r2l
---   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs                           Q.E.D.
--- [Proven] dvdAbs :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
-dvdAbs :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
-dvdAbs = do
-   l2r <- calcWith cvc5 "dvdAbs_l2r"
-                   (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` abs b .=> a `dvd` b) $
-                   \a b -> [a `dvd` abs b]
-                        |- cases [ b .<  0 ==> sTrue =: qed
-                                 , b .>= 0 ==> sTrue =: qed
-                                 ]
-
-   r2l <- calcWith cvc5 "dvdAbs_r2l"
-                   (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` b .=> a `dvd` abs b) $
-                   \a b -> [a `dvd` b]
-                        |- cases [ b .<  0 ==> sTrue =: qed
-                                 , b .>= 0 ==> sTrue =: qed
-                                 ]
-
-   lemma "dvdAbs"
-         (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` b .== a `dvd` abs b)
-         [proofOf l2r, proofOf r2l]
-
 -- | \(d \mid a \implies d \mid ka\)
 --
 -- ==== __Proof__
@@ -268,6 +226,60 @@ dvdMul = calc "dvdMul"
                                          =: sTrue
                                          =: qed
                               ]
+
+-- | \(a \mid |b| \iff a \mid b\)
+--
+-- A number divides another exactly when it also divides its absolute value. This follows
+-- from 'dvdMul', as both directions are an instance of multiplying by @-1@.
+--
+-- ==== __Proof__
+-- >>> runTP dvdAbs
+-- Lemma: dvdMul                           Q.E.D.
+-- Lemma: dvdAbs_l2r
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: dvdAbs_r2l
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: dvdAbs                           Q.E.D.
+-- [Proven] dvdAbs :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
+dvdAbs :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
+dvdAbs = do
+   dM <- recall dvdMul
+
+   l2r <- calc "dvdAbs_l2r"
+               (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` abs b .=> a `dvd` b) $
+               \a b -> [a `dvd` abs b]
+                    |- cases [ b .>= 0 ==> a `dvd` b
+                                        =: sTrue
+                                        =: qed
+                             , b .<  0 ==> a `dvd` b
+                                        ?? dM `at` (Inst @"d" a, Inst @"a" (abs b), Inst @"k" (-1))
+                                        =: sTrue
+                                        =: qed
+                             ]
+
+   r2l <- calc "dvdAbs_r2l"
+               (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` b .=> a `dvd` abs b) $
+               \a b -> [a `dvd` b]
+                    |- cases [ b .>= 0 ==> a `dvd` abs b
+                                        =: sTrue
+                                        =: qed
+                             , b .<  0 ==> a `dvd` abs b
+                                        ?? dM `at` (Inst @"d" a, Inst @"a" b, Inst @"k" (-1))
+                                        =: sTrue
+                                        =: qed
+                             ]
+
+   lemma "dvdAbs"
+         (\(Forall @"a" a) (Forall @"b" b) -> a `dvd` b .== a `dvd` abs b)
+         [proofOf l2r, proofOf r2l]
 
 -- | \(d \mid (2a + 1) \implies \mathrm{isOdd}(d)\)
 --
@@ -730,7 +742,6 @@ gcdEvenEven = do
                  (\(Forall @"a" a) (Forall @"b" b) -> b ./= 0 .=> (2*a) `sEMod` (2*b) .== 2 * (a `sEMod` b)) $
                  \a b -> [b ./= 0]
                       |- (2*a) `sEMod` (2*b)
-                      =: 2*a - 2*b * ((2*a) `sEDiv` (2*b))
                       ?? red2 `at` (Inst @"a" a, Inst @"b" b)
                       =: 2*a - 2*b * (a `sEDiv` b)
                       =: 2 * (a - b * (a `sEDiv` b))
@@ -768,7 +779,7 @@ gcdEvenEven = do
 -- >>> runTP gcdOddEven
 -- Lemma: gcdDivides                       Q.E.D.
 -- Lemma: gcdLargest                       Q.E.D.
--- Lemma: dvdMul                           Q.E.D.
+-- Cached: dvdMul                          Q.E.D.
 -- Lemma: dvdOddThenOdd                    Q.E.D.
 -- Lemma: dvdEvenWhenOdd                   Q.E.D.
 -- Lemma: gcdOddEven
