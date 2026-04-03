@@ -9,7 +9,6 @@
 -- Code generation utilities
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -58,9 +57,7 @@ import Data.SBV.Core.Symbolic (MonadSymbolic(..), svToSymSV, svMkSymVar, outputS
 
 import Data.SBV.Provers.Prover(defaultSMTCfg)
 
-#if MIN_VERSION_base(4,11,0)
 import Control.Monad.Fail as Fail
-#endif
 
 -- | Abstract over code generation for different languages
 class CgTarget a where
@@ -126,9 +123,7 @@ initCgState = CgState {
 newtype SBVCodeGen a = SBVCodeGen (StateT CgState Symbolic a)
                    deriving ( Applicative, Functor, Monad, MonadIO, MonadState CgState
                             , MonadSymbolic
-#if MIN_VERSION_base(4,11,0)
                             , Fail.MonadFail
-#endif
                             )
 
 -- | Reach into symbolic monad from code-generation

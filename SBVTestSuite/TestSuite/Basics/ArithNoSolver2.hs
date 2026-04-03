@@ -10,7 +10,6 @@
 -- the constant folding based arithmetic implementation in SBV
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP               #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -19,11 +18,7 @@
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE QuasiQuotes       #-}
 
-#if MIN_VERSION_base(4,19,0)
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns -Wno-x-partial #-}
-#else
-{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
-#endif
 
 module TestSuite.Basics.ArithNoSolver2(tests) where
 

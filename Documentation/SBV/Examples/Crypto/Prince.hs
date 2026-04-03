@@ -14,7 +14,7 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE ParallelListComp #-}
 
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
 
 module Documentation.SBV.Examples.Crypto.Prince where
 

@@ -11,7 +11,6 @@
 -- constant folding.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
@@ -21,11 +20,7 @@
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
-#if MIN_VERSION_base(4,19,0)
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns -Wno-x-partial #-}
-#else
-{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
-#endif
 
 module TestSuite.Basics.ArithSolver(tests) where
 

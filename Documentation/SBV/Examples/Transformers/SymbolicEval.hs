@@ -20,7 +20,6 @@
 -- named @x@ and @y@.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -41,12 +40,8 @@ import Data.SBV.Dynamic   (SVal)
 import Data.SBV.Internals (SBV(SBV), unSBV)
 import Data.SBV.Trans.Control
 
--- Starting with base 4.16; Data.Bits exports And, which conflicts with the definition here
-#if MIN_VERSION_base(4,16,0)
+-- Data.Bits exports And, which conflicts with the definition here
 import Data.SBV.Trans hiding(And)
-#else
-import Data.SBV.Trans
-#endif
 
 -- * Allocation of symbolic variables, so we can extract a model later.
 

@@ -10,7 +10,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE BangPatterns               #-}
-{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DefaultSignatures          #-}
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
@@ -115,9 +114,7 @@ import Data.Containers.ListUtils (nubOrd)
 
 import Data.SBV.Control.Types
 
-#if MIN_VERSION_base(4,11,0)
 import Control.Monad.Fail as Fail
-#endif
 
 -- | Context identifier. 0 is reserved global context
 newtype SBVContext = SBVContext Int64 deriving (Eq, Ord, G.Data, Show)
@@ -928,11 +925,7 @@ instance Show Result where
           soft False = ""
 
           shAssert (nm, stk, p) = "  -- assertion: " ++ nm ++ " " ++ maybe "[No location]"
-#if MIN_VERSION_base(4,9,0)
                 prettyCallStack
-#else
-                showCallStack
-#endif
                 stk ++ ": " ++ show p
 
 -- | Expression map, used for hash-consing
@@ -1648,9 +1641,7 @@ instance (MonadSymbolic m, Monoid w) => MonadSymbolic (LW.WriterT w m)
 newtype SymbolicT m a = SymbolicT { runSymbolicT :: ReaderT State m a }
                    deriving newtype ( Applicative, Functor, Monad, MonadIO, MonadTrans
                             , MonadError e, MonadState s, MonadWriter w
-#if MIN_VERSION_base(4,11,0)
                             , Fail.MonadFail
-#endif
                             )
 
 -- | `MonadSymbolic` instance for `SymbolicT m`
@@ -2162,13 +2153,6 @@ instance Show SMTLibPgm where
 instance NFData GeneralizedCV where
   rnf (ExtendedCV e) = e `seq` ()
   rnf (RegularCV  c) = c `seq` ()
-
-#if MIN_VERSION_base(4,9,0)
-#else
--- Can't really force this, but not a big deal
-instance NFData CallStack where
-  rnf _ = ()
-#endif
 
 instance NFData NamedSymVar where
   rnf (NamedSymVar s n) = rnf s `seq` rnf n

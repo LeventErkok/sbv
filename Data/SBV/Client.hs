@@ -49,9 +49,7 @@ import Data.Int
 import Data.Ratio
 
 import qualified "template-haskell" Language.Haskell.TH        as TH
-#if MIN_VERSION_template_haskell(2,18,0)
 import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
-#endif
 
 import Language.Haskell.TH.ExpandSyns as TH
 
@@ -154,22 +152,14 @@ mkSymbolicADT typeName = do
 
 -- | Add document to a generated declaration for the declaration
 addDeclDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
-#if MIN_VERSION_template_haskell(2,18,0)
 addDeclDocs (tnm, ts) cnms = do add True (tnm, ts)
                                 mapM_  (add False) cnms
    where add True  (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the type t'"        ++ cs ++ "'."
          add False (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the constructor v'" ++ cs ++ "'."
-#else
-addDeclDocs _ _ = pure ()
-#endif
 
 -- | Add document to a generated function
 addDoc :: String -> TH.Name -> TH.Q ()
-#if MIN_VERSION_template_haskell(2,18,0)
 addDoc what tnm = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc tnm) what
-#else
-addDoc _ _ = pure ()
-#endif
 
 -- | Symbolic version of a type
 mkSBV :: TH.Type -> TH.Type

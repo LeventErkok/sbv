@@ -78,10 +78,7 @@ import GHC.Generics (M1(..), U1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
 
 import GHC.Stack
-import GHC.TypeLits
-#if MIN_VERSION_base(4,18,0)
-                    hiding(SChar)
-#endif
+import GHC.TypeLits hiding(SChar)
 
 import Data.Array  (Array, Ix, elems, bounds, rangeSize)
 import qualified Data.Array as DA (listArray)
