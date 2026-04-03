@@ -127,6 +127,7 @@ checkLinks:
 mkDistro:
 	$(TIME) cabal sdist
 
+fullRelease: export SBV_COMM_TIMEOUT_FACTOR=5
 fullRelease: veryclean checkExtensions install docs testsuite
 	@echo "*** SBV is ready for release!"
 	git status
