@@ -4732,15 +4732,7 @@ smtHOFunction :: forall a b f.
                    -> f            -- The higher-order argument. We're very generic here!
                    -> (a -> SBV b) -- The ho-function we're modeling
                    ->  a -> SBV b  -- The resulting function, that can be used as is, and will be rendered in SMTLib without unfolding
-smtHOFunction nm f hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cache r
-  where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg (resKindOf (kindOf (Proxy @f))) f
-                  let uniqLen = firstifyUniqueLen $ stCfg st
-                      uniq    = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
-                  sbvToSV st (smtFunctionDef (atProxy (Proxy @f) nm <> "_" <> uniq) AutoMeasure hof arg)
-
-        -- we get the functions as arrays here, so chase to find the result
-        resKindOf (KArray _ k) = resKindOf k
-        resKindOf k            = k
+smtHOFunction nm f = smtHOFunctionGen nm f AutoMeasure
 
 -- | Like 'smtHOFunction', but with an explicit termination measure. Use this when the
 -- auto-guess measure doesn't work for a higher-order recursive function.
@@ -4760,17 +4752,39 @@ smtHOFunctionWithMeasure :: forall a b f r.
                    -> MeasureOf (a -> SBV b) r    -- ^ Termination measure
                    -> (a -> SBV b)                -- ^ The ho-function we're modeling
                    ->  a -> SBV b                 -- ^ The resulting function
-smtHOFunctionWithMeasure nm f msr hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cache r
-  where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg (resKindOf (kindOf (Proxy @f))) f
-                  let uniqLen = firstifyUniqueLen $ stCfg st
-                      uniq    = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
-                  sbvToSV st (smtFunctionDef (atProxy (Proxy @f) nm <> "_" <> uniq)
-                                             (HasMeasure (MeasureEval (applyMeasure @(a -> SBV b) @r msr)) [])
-                                             hof arg)
+smtHOFunctionWithMeasure nm f msr = smtHOFunctionGen nm f (HasMeasure (MeasureEval (applyMeasure @(a -> SBV b) @r msr)) [])
 
-        -- we get the functions as arrays here, so chase to find the result
-        resKindOf (KArray _ k) = resKindOf k
-        resKindOf k            = k
+-- | Common implementation for higher-order SMT function definitions.
+smtHOFunctionGen :: forall a b f.
+                 ( SMTDefinable (a -> SBV b)
+                 , Lambda Symbolic f
+                 , Lambda Symbolic (a -> SBV b)
+                 , HasKind b
+                 , HasKind f
+                 , Typeable a
+                 , Typeable b
+                 , Typeable f
+                 ) => String               -- ^ prefix to use
+                   -> f                    -- ^ The higher-order argument
+                   -> Measure (a -> SBV b) -- ^ Termination measure
+                   -> (a -> SBV b)         -- ^ The ho-function we're modeling
+                   ->  a -> SBV b          -- ^ The resulting function
+smtHOFunctionGen nm f measure hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cache r
+  where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg (arrayResultKind (kindOf (Proxy @f))) f
+                  let uniq = lambdaFingerprint st lam
+                  sbvToSV st (smtFunctionDef (atProxy (Proxy @f) nm <> "_" <> uniq) measure hof arg)
+
+-- | Chase through nested array kinds to find the final result kind. Higher-order
+-- arguments are firstified into arrays, so we peel off the array wrappers.
+arrayResultKind :: Kind -> Kind
+arrayResultKind (KArray _ k) = arrayResultKind k
+arrayResultKind k            = k
+
+-- | Generate a short fingerprint from a lambda body string, used to give
+-- unique names to firstified higher-order function instantiations.
+lambdaFingerprint :: State -> String -> String
+lambdaFingerprint st lam = take uniqLen (BC.unpack (B.encode (hash (BC.pack (unwords (words lam))))))
+  where uniqLen = firstifyUniqueLen $ stCfg st
 
 {- HLint ignore module "Reduce duplication"   -}
 {- HLint ignore module "Eta reduce"           -}
