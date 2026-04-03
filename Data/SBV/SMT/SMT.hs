@@ -13,6 +13,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE NumericUnderscores         #-}
 {-# LANGUAGE Rank2Types                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeApplications           #-}
@@ -60,7 +61,7 @@ import Data.IORef (readIORef, writeIORef)
 import Data.Either (rights)
 
 import System.Directory   (findExecutable)
-import System.Environment (getEnv)
+import System.Environment (getEnv, lookupEnv)
 import System.Exit        (ExitCode(..))
 import System.IO          (hClose, hFlush, hPutStrLn, hGetContents, hGetLine, hReady, hGetChar)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
@@ -691,6 +692,34 @@ pipeProcess cfg ctx execName opts pgm continuation = do
                                                                                                 ])
                         ]
 
+-- Communication-level timeouts (microseconds). These are NOT solver timeouts
+-- (i.e., how long check-sat takes); they govern how long SBV waits for the
+-- solver process to respond to individual IPC commands.
+--
+-- Adjust via the @SBV_COMM_TIMEOUT_FACTOR@ environment variable (default: 1).
+-- For instance, setting it to 2 doubles all communication timeouts.
+
+-- | Timeout for @set-option@ commands (expected to be fast).
+setCommandTimeOut :: Int
+setCommandTimeOut = 2_000_000   -- 2 seconds
+
+-- | Timeout for subsequent response lines once the solver starts responding,
+--   and for heartbeat\/sync-point reads.
+defaultLineTimeOut :: Int
+defaultLineTimeOut = 5_000_000  -- 5 seconds
+
+-- | Read @SBV_COMM_TIMEOUT_FACTOR@ and return a function that scales timeout values.
+-- If the variable is unset, the identity function is returned. If set to an invalid
+-- value (not a positive number), an error is raised.
+commTimeOutScaler :: IO (Int -> Int)
+commTimeOutScaler = do
+   mbFactor <- lookupEnv "SBV_COMM_TIMEOUT_FACTOR"
+   case mbFactor of
+     Nothing -> pure id
+     Just s  -> case reads s of
+                  [(f, "")] | f > (0 :: Double) -> pure (round . (f *) . fromIntegral)
+                  _                              -> error $ "SBV_COMM_TIMEOUT_FACTOR: invalid value " ++ show s ++ ". Must be a positive number."
+
 -- | A standard engine interface. Most solvers follow-suit here in how we "chat" to them..
 standardEngine :: String
                -> String
@@ -727,13 +756,19 @@ data SolverLine = SolverRegular   String -- ^ All is well
 -- | A variant of @readProcessWithExitCode@; except it deals with SBV continuations
 runSolver :: SMTConfig -> State -> FilePath -> [String] -> String -> (State -> IO a) -> IO a
 runSolver cfg ctx execPath opts pgm continuation
- = do let nm  = show (name (solver cfg))
+ = do scaler <- commTimeOutScaler
+
+      let nm  = show (name (solver cfg))
           msg = debug cfg . map ("*** " ++)
 
           clean = preprocess (solver cfg)
 
           -- the very first command we send
           heartbeat = "(set-option :print-success true)"
+
+          -- Scaled communication timeouts
+          setCommandTO  = Just (scaler setCommandTimeOut)
+          defaultLineTO = Just (scaler defaultLineTimeOut)
 
       (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
@@ -749,14 +784,8 @@ runSolver cfg ctx execPath opts pgm continuation
 
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
                     ask :: Maybe Int -> String -> IO String
-                    ask mbTimeOutGiven command =
-                                  let -- If the command is a set-option call, make sure there's a timeout on it
-                                      -- This ensures that if we try to set an option before diagnostic-output
-                                      -- is redirected to stdout and the solver chokes, then we can catch it
-                                      mbTimeOut | isSetCommand (Just command) = Just 1000000
-                                                | True                        = mbTimeOutGiven
-
-                                      -- solvers don't respond to empty lines or comments; we just pass back
+                    ask mbTimeOut command =
+                                  let -- solvers don't respond to empty lines or comments; we just pass back
                                       -- success in these cases to keep the illusion of everything has a response
                                       cmd = dropWhile isSpace command
 
@@ -766,8 +795,8 @@ runSolver cfg ctx execPath opts pgm continuation
                                              getResponseFromSolver (Just command) mbTimeOut
 
                     -- Get a response from the solver, with an optional time-out on how long
-                    -- to wait. Note that there's *always* a time-out of 5 seconds once we get the
-                    -- first line of response, as while the solver might take it's time to respond,
+                    -- to wait. Note that there's *always* a time-out once we get the
+                    -- first line of response, as while the solver might take its time to respond,
                     -- once it starts responding successive lines should come quickly.
                     getResponseFromSolver :: Maybe String -> Maybe Int -> IO String
                     getResponseFromSolver mbCommand mbTimeOut = do
@@ -777,9 +806,9 @@ runSolver cfg ctx execPath opts pgm continuation
                                 return collated
 
                       where safeGetLine isFirst h =
-                                         let timeOutToUse | isSetCommand mbCommand = Just 2000000
+                                         let timeOutToUse | isSetCommand mbCommand = setCommandTO
                                                           | isFirst                = mbTimeOut
-                                                          | True                   = Just 5000000
+                                                          | True                   = defaultLineTO
                                              timeOutMsg t | isFirst = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded"
                                                           | True    = "A multiline complete response wasn't received before " ++ showTimeoutValue t ++ " exceeded"
 
@@ -945,7 +974,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                     ]
 
                                                             -- put a sync point here before we die so we consume everything
-                                                            mbExtras <- (Right <$> getResponseFromSolver Nothing (Just 5000000))
+                                                            mbExtras <- (Right <$> getResponseFromSolver Nothing defaultLineTO)
                                                                         `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (Left (show e))))
 
                                                             -- Ignore any exceptions from last sync, pointless.
@@ -978,7 +1007,7 @@ runSolver cfg ctx execPath opts pgm continuation
                              let backend = name $ solver cfg
                              if not (supportsCustomQueries (capabilities (solver cfg)))
                                 then debug cfg ["** Skipping heart-beat for the solver " ++ show backend]
-                                else do r <- ask (Just 5000000) heartbeat  -- Give the solver 5s to respond, this should be plenty enough!
+                                else do r <- ask defaultLineTO heartbeat
                                         case words r of
                                           ["success"]     -> debug cfg ["[GOOD] " ++ heartbeat]
                                           ["unsupported"] -> error $ unlines [ ""
