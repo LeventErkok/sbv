@@ -57,8 +57,6 @@ import Data.SBV.Core.Symbolic (MonadSymbolic(..), svToSymSV, svMkSymVar, outputS
 
 import Data.SBV.Provers.Prover(defaultSMTCfg)
 
-import Control.Monad.Fail as Fail
-
 -- | Abstract over code generation for different languages
 class CgTarget a where
   targetName :: a -> String
@@ -123,7 +121,7 @@ initCgState = CgState {
 newtype SBVCodeGen a = SBVCodeGen (StateT CgState Symbolic a)
                    deriving ( Applicative, Functor, Monad, MonadIO, MonadState CgState
                             , MonadSymbolic
-                            , Fail.MonadFail
+                            , MonadFail
                             )
 
 -- | Reach into symbolic monad from code-generation

@@ -83,12 +83,9 @@ common common-settings
                      TypeOperators
                      UndecidableInstances
                      ViewPatterns
+                     TypeAbstractions
 
-   if impl(ghc >= 9.8.1)
-      other-extensions: TypeAbstractions
-
-   if impl(ghc >= 8.10.1)
-      ghc-options  : -Wunused-packages
+   ghc-options  : -Wunused-packages
 
 Library
   import          : common-settings

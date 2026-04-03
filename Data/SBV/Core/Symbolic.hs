@@ -114,7 +114,6 @@ import Data.Containers.ListUtils (nubOrd)
 
 import Data.SBV.Control.Types
 
-import Control.Monad.Fail as Fail
 
 -- | Context identifier. 0 is reserved global context
 newtype SBVContext = SBVContext Int64 deriving (Eq, Ord, G.Data, Show)
@@ -1641,7 +1640,7 @@ instance (MonadSymbolic m, Monoid w) => MonadSymbolic (LW.WriterT w m)
 newtype SymbolicT m a = SymbolicT { runSymbolicT :: ReaderT State m a }
                    deriving newtype ( Applicative, Functor, Monad, MonadIO, MonadTrans
                             , MonadError e, MonadState s, MonadWriter w
-                            , Fail.MonadFail
+                            , MonadFail
                             )
 
 -- | `MonadSymbolic` instance for `SymbolicT m`
