@@ -22,16 +22,20 @@ module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlif
                           , needsBars, barify, isEnclosedInBars
                           , noSurrounding, unQuote, unBar, nameSupply
                           , atProxy
+                          , mapToSortedList
                           ,   curry2,   curry3,   curry4,   curry5,   curry6,   curry7,   curry8,   curry9,   curry10,   curry11,   curry12
                           , uncurry2, uncurry3, uncurry4, uncurry5, uncurry6, uncurry7, uncurry8, uncurry9, uncurry10, uncurry11, uncurry12
                           )
                           where
 
 import Data.Char    (isSpace, chr, ord, isDigit, isAscii, isAlphaNum)
-import Data.List    (isPrefixOf, isSuffixOf)
+import Data.List    (isPrefixOf, isSuffixOf, sortBy)
+import Data.Ord     (comparing)
 import Data.Dynamic (fromDynamic, toDyn, Typeable)
 import Data.Maybe   (fromJust, isJust, isNothing)
 import Data.Proxy
+
+import qualified Data.Map.Strict as Map
 
 import Type.Reflection (typeRep)
 
@@ -272,3 +276,9 @@ uncurry11 fn (a, b, c, d, e, f, g, h, i, j, k) = fn a b c d e f g h i j k
 
 uncurry12 :: (a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> k -> l -> z) -> (a, b, c, d, e, f, g, h, i, j, k, l) -> z
 uncurry12 fn (a, b, c, d, e, f, g, h, i, j, k, l) = fn a b c d e f g h i j k l
+
+-- | Convert a map to a list of @(value, key)@ pairs, sorted by value.
+-- Useful when the map is keyed by a descriptor but indexed by an integer
+-- that determines output order.
+mapToSortedList :: Ord v => Map.Map k v -> [(v, k)]
+mapToSortedList = sortBy (comparing fst) . map (\(a, b) -> (b, a)) . Map.toList

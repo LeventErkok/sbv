@@ -73,7 +73,7 @@ import Control.Monad.Trans         (MonadIO(liftIO), MonadTrans(lift))
 import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
 import Data.IORef                  (IORef, newIORef, readIORef)
-import Data.List                   (intercalate, sortBy, isPrefixOf)
+import Data.List                   (intercalate, isPrefixOf)
 import Data.Maybe                  (fromMaybe)
 import Data.String                 (IsString(fromString))
 
@@ -108,7 +108,7 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.SMT.SMTLibNames
 import Data.SBV.Utils.TDiff   (Timing)
-import Data.SBV.Utils.Lib     (stringToQFS, checkObservableName, barify)
+import Data.SBV.Utils.Lib     (stringToQFS, checkObservableName, barify, mapToSortedList)
 import Data.SBV.Utils.Numeric (RoundingMode)
 
 import Data.Containers.ListUtils (nubOrd)
@@ -1995,14 +1995,12 @@ extractSymbolicSimulationState st@State{ runMode=rrm
 
    outsO <- reverse <$> readIORef outs
 
-   let swap  (a, b)              = (b, a)
-       cmp   (a, _) (b, _)       = a `compare` b
-       arrange (i, (at, rt, es)) = ((i, at, rt), es)
+   let arrange (i, (at, rt, es)) = ((i, at, rt), es)
 
    constMap <- readIORef (rconstMap st)
-   let cnsts = sortBy cmp . map swap . Map.toList $ constMap
+   let cnsts = mapToSortedList constMap
 
-   tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
+   tbls  <- map arrange . mapToSortedList <$> readIORef tables
    defnMap <- readIORef defns
    let ds         = Map.toList defnMap
        definedSet = Map.keysSet defnMap

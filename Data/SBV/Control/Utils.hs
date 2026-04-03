@@ -37,7 +37,7 @@ module Data.SBV.Control.Utils (
      , startOptimizer, getObjectiveValues, getModel, getModelAtIndex
      ) where
 
-import Data.List  (sortBy, sortOn, partition, groupBy, tails, intercalate, isPrefixOf, isSuffixOf)
+import Data.List  (sortOn, partition, groupBy, tails, intercalate, isPrefixOf, isSuffixOf)
 
 import Data.Char      (isPunctuation, isSpace, isDigit)
 import Data.Function  (on)
@@ -98,7 +98,7 @@ import Data.SBV.SMT.Utils   ( showTimeoutValue, addAnnotations, alignPlain, debu
                             )
 
 import Data.SBV.Utils.ExtractIO
-import Data.SBV.Utils.Lib       (qfsToString, unBar)
+import Data.SBV.Utils.Lib       (qfsToString, unBar, mapToSortedList)
 import Data.SBV.Utils.SExpr
 import Data.SBV.Utils.PrettyNum (cvToSMTLib)
 
@@ -176,17 +176,15 @@ syncUpSolver progInfo rGlobalConsts is = do
                                               writeIORef rGlobalConsts allConsts
                                               pure (nc, allConsts)
 
-        ls  <- io $ do let swap  (a, b)        = (b, a)
-                           cmp   (a, _) (b, _) = a `compare` b
-                           arrange (i, (at, rt, es)) = ((i, at, rt), es)
+        ls  <- io $ do let arrange (i, (at, rt, es)) = ((i, at, rt), es)
                        inps        <- reverse <$> readIORef (rNewInps is)
                        ks          <- readIORef (rNewKinds is)
-                       tbls        <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef (rNewTbls is)
+                       tbls        <- map arrange . mapToSortedList <$> readIORef (rNewTbls is)
                        uis         <- Map.toAscList <$> readIORef (rNewUIs is)
                        as          <- readIORef (rNewAsgns is)
                        constraints <- readIORef (rNewConstraints is)
 
-                       let cnsts = sortBy cmp . map swap . Map.toList $ newConsts
+                       let cnsts = mapToSortedList newConsts
 
                        return $ map T.unpack $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis as constraints cfg
 
