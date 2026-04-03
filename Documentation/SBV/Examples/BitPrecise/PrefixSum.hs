@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
-{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}

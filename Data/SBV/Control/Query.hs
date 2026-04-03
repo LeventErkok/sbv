@@ -13,7 +13,7 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module Data.SBV.Control.Query (
        send, ask, retrieveResponse

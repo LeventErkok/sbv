@@ -10,7 +10,7 @@
 -- Bench suite for Documentation.SBV.Examples.Uninterpreted.Deduce
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module BenchSuite.Uninterpreted.Deduce(benchmarks) where

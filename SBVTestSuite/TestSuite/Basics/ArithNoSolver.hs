@@ -10,7 +10,7 @@
 -- the constant folding based arithmetic implementation in SBV
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types    #-}
+{-# LANGUAGE RankNTypes    #-}
 {-# LANGUAGE TupleSections #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns -Wno-x-partial #-}

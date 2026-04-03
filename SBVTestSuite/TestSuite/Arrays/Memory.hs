@@ -9,7 +9,7 @@
 -- Test suite for Examples.Arrays.Memory
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE RankNTypes #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

@@ -14,7 +14,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans -fno-warn-missing-methods #-} -- for ProvableM orphan
+{-# OPTIONS_GHC -Wno-orphans -Wno-missing-methods #-} -- for ProvableM orphan
 
 module Utils.SBVBenchFramework
   ( mkExecString

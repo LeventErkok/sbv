@@ -10,7 +10,7 @@
 -- Bench suite for Documentation.SBV.Examples.WeakestPreconditions.Fig
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module BenchSuite.WeakestPreconditions.Fib(benchmarks) where
 

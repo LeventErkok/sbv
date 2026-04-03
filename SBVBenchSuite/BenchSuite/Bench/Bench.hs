@@ -10,7 +10,7 @@
 -- Assessing the overhead of calling solving examples via sbv vs individual solvers
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 {-# LANGUAGE CPP                       #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts          #-}

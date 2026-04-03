@@ -12,7 +12,7 @@
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE Rank2Types            #-}
+{-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}

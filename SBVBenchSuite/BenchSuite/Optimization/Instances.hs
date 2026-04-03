@@ -10,7 +10,7 @@
 -- Helper file to provide common orphaned instances for Optimization benchmarks
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module BenchSuite.Optimization.Instances where
 

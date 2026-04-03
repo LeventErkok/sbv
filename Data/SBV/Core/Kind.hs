@@ -23,7 +23,7 @@
 {-# LANGUAGE ViewPatterns         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module Data.SBV.Core.Kind (
           Kind(..), HasKind(..), smtType, hasUninterpretedSorts

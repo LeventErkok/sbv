@@ -10,7 +10,7 @@
 -- Bench suite for Documentation.SBV.Examples.WeakestPreconditions.Length
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module BenchSuite.WeakestPreconditions.Length(benchmarks) where
 

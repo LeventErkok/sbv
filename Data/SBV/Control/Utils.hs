@@ -16,13 +16,13 @@
 {-# LANGUAGE LambdaCase             #-}
 {-# LANGUAGE NamedFieldPuns         #-}
 {-# LANGUAGE OverloadedStrings      #-}
-{-# LANGUAGE Rank2Types             #-}
+{-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TupleSections          #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE ViewPatterns           #-}
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module Data.SBV.Control.Utils (
        io

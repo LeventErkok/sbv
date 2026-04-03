@@ -24,7 +24,7 @@
 {-# LANGUAGE FlexibleInstances   #-}
 #endif
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module Data.SBV.Client
   ( sbvCheckSolverInstallation

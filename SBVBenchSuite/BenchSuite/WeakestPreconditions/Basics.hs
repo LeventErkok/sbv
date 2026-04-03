@@ -10,7 +10,7 @@
 -- Bench suite for Documentation.SBV.Examples.WeakestPreconditions.Basics
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module BenchSuite.WeakestPreconditions.Basics(benchmarks) where

@@ -10,7 +10,7 @@
 -- Bench suite for Documentation.SBV.Examples.ProofTools.Strengthen
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module BenchSuite.ProofTools.Strengthen(benchmarks) where
 

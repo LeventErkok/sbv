@@ -10,7 +10,7 @@
 -- Bench suite for Documentation.SBV.Examples.WeakestPreconditions.Sum
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module BenchSuite.WeakestPreconditions.Sum(benchmarks) where

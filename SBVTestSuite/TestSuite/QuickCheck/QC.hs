@@ -9,7 +9,7 @@
 -- Quick-check based test suite for SBV
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE RankNTypes #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

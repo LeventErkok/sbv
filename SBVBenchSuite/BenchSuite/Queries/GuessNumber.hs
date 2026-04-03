@@ -10,7 +10,7 @@
 -- Bench suite for Documentation.SBV.Examples.Queries.GuessNumber
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module BenchSuite.Queries.GuessNumber(benchmarks) where
 

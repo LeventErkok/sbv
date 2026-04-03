@@ -9,7 +9,7 @@
 -- Test suite for Examples.Basics.BasicTests
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}

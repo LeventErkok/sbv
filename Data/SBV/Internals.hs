@@ -19,7 +19,7 @@
 
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE Rank2Types       #-}
+{-# LANGUAGE RankNTypes       #-}
 {-# LANGUAGE TypeOperators    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
