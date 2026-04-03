@@ -77,7 +77,7 @@ ghci:
 	cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv SBVTest SBVConnections SBVHLint SBVBench SBVDocTest
 
 ghcid:
-	ghcid --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv SBVTest SBVConnections SBVHLint SBVBench SBVDocTest"
+	ghcid --outputfile=/tmp/ghcid.txt --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv SBVTest SBVConnections SBVHLint SBVBench SBVDocTest"
 
 bench:
 	cabal bench
