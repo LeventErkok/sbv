@@ -1,6 +1,11 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 14.0.5, Not yet released
+
+  * Consolidated internal solver IPC timeouts into named constants.
+    Set the environment variable `SBV_COMM_TIMEOUT_FACTOR` to scale them (e.g., `2` to double).
+
 ### Version 14.0, 2026-04-01
 
   * [BACKWARDS COMPATIBILITY] The most important change in this release is how SBV treats
