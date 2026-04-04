@@ -45,7 +45,7 @@ goodSum = do x <- sInteger "x"
                       Unk    -> error "Too bad, solver said unknown.." -- Won't happen
                       DSat{} -> error "Unexpected dsat result.."       -- Won't happen
                       Unsat  -> do io $ putStrLn "No other solution!"
-                                   return $ reverse sofar
+                                   pure $ reverse sofar
 
                       Sat    -> do xv <- getValue x
                                    yv <- getValue y

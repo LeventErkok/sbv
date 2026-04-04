@@ -73,7 +73,7 @@ import Data.SBV.Control
 --
 -- The 'setup' field is reserved for any symbolic code you might
 -- want to run before the proof takes place, typically for calls
--- to 'Data.SBV.setOption'. If not needed, simply pass @return ()@.
+-- to 'Data.SBV.setOption'. If not needed, simply pass @pure ()@.
 -- For an interesting use case where we use setup to axiomatize
 -- the spec, see "Documentation.SBV.Examples.WeakestPreconditions.Fib"
 -- and "Documentation.SBV.Examples.WeakestPreconditions.GCD".
@@ -234,7 +234,7 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
                  Sat    -> do let checkVC :: (SBool, VC st SInteger) -> Query [VC res Integer]
                                   checkVC (cond, vc) = do c <- getValue cond
                                                           if c
-                                                             then return []   -- The VC was OK
+                                                             then pure []   -- The VC was OK
                                                              else do vc' <- case vc of
                                                                               BadPrecondition     s                 -> BadPrecondition     <$> project s
                                                                               BadPostcondition    s1 s2             -> BadPostcondition    <$> project s1 <*> project s2
@@ -244,13 +244,13 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
                                                                               InvariantMaintain l s1 s2             -> InvariantMaintain l <$> project s1 <*> project s2
                                                                               MeasureBound      l (s, m)            -> do r <- project s
                                                                                                                           v <- mapM getValue m
-                                                                                                                          return $ MeasureBound l (r, v)
+                                                                                                                          pure $ MeasureBound l (r, v)
                                                                               MeasureDecrease   l (s1, i1) (s2, i2) -> do r1 <- project s1
                                                                                                                           v1 <- mapM getValue i1
                                                                                                                           r2 <- project s2
                                                                                                                           v2 <- mapM getValue i2
-                                                                                                                          return $ MeasureDecrease l (r1, v1) (r2, v2)
-                                                                     return [vc']
+                                                                                                                          pure $ MeasureDecrease l (r1, v1) (r2, v2)
+                                                                     pure [vc']
 
                               badVCs <- concat <$> mapM checkVC vcs
 
@@ -267,7 +267,7 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
                               let disp c = mapM_ msg ["  " ++ l | l <- lines (show c)]
                               mapM_ disp badVCs
 
-                              return $ Failed badVCs
+                              pure $ Failed badVCs
 
         msg = io . when wpVerbose . putStrLn
 
@@ -275,28 +275,28 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
         wp :: st -> Stmt st -> (st -> [(SBool, VC st SInteger)]) -> Query (st -> [(SBool, VC st SInteger)])
 
         -- Skip simply keeps the conditions
-        wp _ Skip post = return post
+        wp _ Skip post = pure post
 
         -- Abort is never satisfiable. The only way to have Abort's VC to pass is
         -- to run it in a precondition (either via program or in an if branch) that
         -- evaluates to false, i.e., it must not be reachable.
-        wp start (Abort nm) _ = return $ \st -> [(sFalse, AbortReachable nm start st)]
+        wp start (Abort nm) _ = pure $ \st -> [(sFalse, AbortReachable nm start st)]
 
         -- Assign simply transforms the state and passes on. It also checks that the
         -- stability constraints are not violated.
-        wp _ (Assign f) post = return $ \st -> let st'       = f st
-                                                   vcs       = map (\s -> let (nm, b) = s st st' in (b, Unstable nm st st')) stability
-                                               in vcs ++ post st'
+        wp _ (Assign f) post = pure $ \st -> let st'       = f st
+                                                 vcs       = map (\s -> let (nm, b) = s st st' in (b, Unstable nm st st')) stability
+                                             in vcs ++ post st'
 
         -- Conditional: We separately collect the VCs, and predicate with the proper branch condition
         wp start (If c tb fb) post = do tWP <- wp start tb post
                                         fWP <- wp start fb post
-                                        return $ \st -> let cond = c st
-                                                        in   [(     cond .=> b, v) | (b, v) <- tWP st]
-                                                          ++ [(sNot cond .=> b, v) | (b, v) <- fWP st]
+                                        pure $ \st -> let cond = c st
+                                                      in   [(     cond .=> b, v) | (b, v) <- tWP st]
+                                                        ++ [(sNot cond .=> b, v) | (b, v) <- fWP st]
 
         -- Sequencing: Simply run through the statements
-        wp _     (Seq [])              post = return post
+        wp _     (Seq [])              post = pure post
         wp start (Seq (s:ss))          post = wp start s =<< wp start (Seq ss) post
 
         -- While loop, where all the WP magic happens!
@@ -323,20 +323,20 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
 
                 -- Condition 4: If we iterate, measure must always be non-negative
                 measureNonNegative <- if noMeasure
-                                      then return  (const [])
+                                      then pure  (const [])
                                       else wp st' Skip (const [(iterates .=> curM .>= zeroM, MeasureBound nm (st', curM))])
 
                 -- Condition 5: If we iterate, the measure must decrease
                 measureDecreases <- if noMeasure
-                                    then return  (const [])
+                                    then pure  (const [])
                                     else wp st' body (\st -> let prevM = m st in [(iterates .=> prevM .< curM, MeasureDecrease nm (st', curM) (st, prevM))])
 
                 -- Simply concatenate the VCs from all our conditions:
-                return $ \st ->    invHoldsPrior      st
-                                ++ invMaintained      st'
-                                ++ invEstablish       st'
-                                ++ measureNonNegative st'
-                                ++ measureDecreases   st'
+                pure $ \st ->    invHoldsPrior      st
+                              ++ invMaintained      st'
+                              ++ invEstablish       st'
+                              ++ measureNonNegative st'
+                              ++ measureDecreases   st'
 
 -- | Check correctness using the default solver. Equivalent to @'wpProveWith' 'defaultWPCfg'@.
 wpProve :: (Show res, Mergeable st, Queriable IO st, res ~ QueryResult st) => Program st -> IO (ProofResult res)
@@ -388,7 +388,7 @@ traceExecution Program{precondition, program, postcondition, stability} start = 
                           else giveUp start (BadPrecondition start) "*** Initial state does not satisfy the precondition:"
 
                 case status of
-                  s@Stuck{} -> return s
+                  s@Stuck{} -> pure s
                   Good end  -> if unwrap [] "checking postcondition" (postcondition end)
                                then step [] end "*** Program successfully terminated, post condition holds of the final state:"
                                else giveUp end (BadPostcondition start end) "*** Failed, final state does not satisfy the postcondition:"
@@ -403,16 +403,16 @@ traceExecution Program{precondition, program, postcondition, stability} start = 
         step :: Loc -> st -> String -> IO (Status st)
         step l st m = do putStrLn $ sLoc l m
                          printST st
-                         return $ Good st
+                         pure $ Good st
 
         stop :: Loc -> VC st Integer -> String -> IO (Status st)
         stop l vc m = do putStrLn $ sLoc l m
-                         return $ Stuck vc
+                         pure $ Stuck vc
 
         giveUp :: st -> VC st Integer -> String -> IO (Status st)
         giveUp st vc m = do r <- stop [] vc m
                             printST st
-                            return r
+                            pure r
 
         dispST :: st -> String
         dispST st = intercalate "\n" ["  " ++ l | l <- lines (show st)]
@@ -434,7 +434,7 @@ traceExecution Program{precondition, program, postcondition, stability} start = 
                                                     ]
 
         go :: Loc -> Stmt st -> Status st -> IO (Status st)
-        go _   _ s@Stuck{}  = return s
+        go _   _ s@Stuck{}  = pure s
         go loc p (Good  st) = analyze p
           where analyze Skip = step loc st "Skip"
 
@@ -453,7 +453,7 @@ traceExecution Program{precondition, program, postcondition, stability} start = 
                   where branchTrue = unwrap loc "evaluating the test condition" (c st)
 
                 analyze (Seq stmts)  = walk stmts 1 (Good st)
-                  where walk []     _ is = return is
+                  where walk []     _ is = pure is
                         walk (s:ss) c is = walk ss (c+1) =<< go (Line c : loc) s is
 
                 analyze (While loopName invariant mbMeasure condition body)
@@ -470,7 +470,7 @@ traceExecution Program{precondition, program, postcondition, stability} start = 
                          currentMeasure   = map (unwrap loc (tag  "evaluating the measure"))   . measure
                          currentInvariant = unwrap loc (tag  "evaluating the invariant")       . invariant
 
-                         while _ _      _      s@Stuck{}  = return s
+                         while _ _      _      s@Stuck{}  = pure s
                          while c prevST mbPrev (Good  is)
                            | not (currentCondition is)
                            = step loc is $ tag "condition fails, terminating"

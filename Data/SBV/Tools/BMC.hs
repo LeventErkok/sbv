@@ -34,7 +34,7 @@ data BMCKind = Refute
 bmcRefute :: (Queriable IO st, res ~ QueryResult st)
     => Maybe Int                            -- ^ Optional bound
     -> Bool                                 -- ^ Verbose: prints iteration count
-    -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
+    -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @pure ()@ if not needed.)
     -> (st -> SBool)                        -- ^ Initial condition
     -> (st -> st -> SBool)                  -- ^ Transition relation
     -> (st -> SBool)                        -- ^ Goal to cover, i.e., we find a set of transitions that satisfy this predicate.
@@ -46,7 +46,7 @@ bmcRefuteWith :: (Queriable IO st, res ~ QueryResult st)
     => SMTConfig                            -- ^ Solver to use
     -> Maybe Int                            -- ^ Optional bound
     -> Bool                                 -- ^ Verbose: prints iteration count
-    -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
+    -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @pure ()@ if not needed.)
     -> (st -> SBool)                        -- ^ Initial condition
     -> (st -> st -> SBool)                  -- ^ Transition relation
     -> (st -> SBool)                        -- ^ Goal to cover, i.e., we find a set of transitions that satisfy this predicate.
@@ -59,7 +59,7 @@ bmcRefuteWith = bmcWith Refute
 bmcCover :: (Queriable IO st, res ~ QueryResult st)
     => Maybe Int                            -- ^ Optional bound
     -> Bool                                 -- ^ Verbose: prints iteration count
-    -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
+    -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @pure ()@ if not needed.)
     -> (st -> SBool)                        -- ^ Initial condition
     -> (st -> st -> SBool)                  -- ^ Transition relation
     -> (st -> SBool)                        -- ^ Goal to cover, i.e., we find a set of transitions that satisfy this predicate.
@@ -71,7 +71,7 @@ bmcCoverWith :: (Queriable IO st, res ~ QueryResult st)
     => SMTConfig                            -- ^ Solver to use
     -> Maybe Int                            -- ^ Optional bound
     -> Bool                                 -- ^ Verbose: prints iteration count
-    -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
+    -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @pure ()@ if not needed.)
     -> (st -> SBool)                        -- ^ Initial condition
     -> (st -> st -> SBool)                  -- ^ Transition relation
     -> (st -> SBool)                        -- ^ Goal to cover, i.e., we find a set of transitions that satisfy this predicate.
@@ -93,7 +93,7 @@ bmcWith kind cfg mbLimit chatty setup initial trans goal
 
          go i _ _
           | Just l <- mbLimit, i >= l
-          = return $ Left $ what ++ " limit of " ++ show l ++ " reached. " ++ badResult
+          = pure $ Left $ what ++ " limit of " ++ show l ++ " reached. " ++ badResult
 
          go i curState sofar = do when chatty $ io $ putStrLn $ what ++ ": Iteration: " ++ show i
 
@@ -110,9 +110,9 @@ bmcWith kind cfg mbLimit chatty setup initial trans goal
                                     DSat{} -> error $ what ++ ": Solver returned an unexpected delta-sat result."
                                     Sat    -> do when chatty $ io $ putStrLn $ what ++ ": " ++ goodResult ++ " state found at iteration " ++ show i
                                                  ms <- mapM project (curState : sofar)
-                                                 return $ Right (i, reverse ms)
+                                                 pure $ Right (i, reverse ms)
                                     Unk    -> do when chatty $ io $ putStrLn $ what ++ ": Backend solver said unknown at iteration " ++ show  i
-                                                 return $ Left $ what ++ ": Solver said unknown in iteration " ++ show i
+                                                 pure $ Left $ what ++ ": Solver said unknown in iteration " ++ show i
                                     Unsat  -> do pop 1
                                                  nextState <- create
                                                  constrain $ curState `trans` nextState

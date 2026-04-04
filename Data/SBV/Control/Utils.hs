@@ -186,7 +186,7 @@ syncUpSolver progInfo rGlobalConsts is = do
 
                        let cnsts = mapToSortedList newConsts
 
-                       return $ map T.unpack $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis as constraints cfg
+                       pure $ map T.unpack $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis as constraints cfg
 
         mapM_ (send True) $ mergeSExpr ls
 
@@ -199,7 +199,7 @@ getQueryState = do state <- queryState
                                                 , "*** Data.SBV: Impossible happened: Query context required in a non-query mode."
                                                 , "Please report this as a bug!"
                                                 ]
-                     Just qs -> return qs
+                     Just qs -> pure qs
 
 -- | Generalization of 'Data.SBV.Control.modifyQueryState'
 modifyQueryState :: (MonadIO m, MonadQuery m) => (QueryState -> QueryState) -> m ()
@@ -219,7 +219,7 @@ inNewContext act = do st@State{rconstMap, rProgInfo} <- queryState
                       (is, r)  <- io $ withNewIncState st act
                       progInfo <- io $ readIORef rProgInfo
                       syncUpSolver progInfo rconstMap is
-                      return r
+                      pure r
 
 -- | Generalization of 'Data.SBV.Control.freshVar_'
 freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => m (SBV a)
@@ -271,7 +271,7 @@ askIgnoring s ignoreList = do
 
            let loop currentResponse
                  | currentResponse `notElem` ignoreList
-                 = return currentResponse
+                 = pure currentResponse
                  | True
                  = do queryDebug ["[WARN] Previous response is explicitly ignored, beware!"]
                       newResponse <- io $ queryRetrieveResponse queryTimeOutValue
@@ -330,7 +330,7 @@ retrieveResponse userTag mbTo = do
                   -- here, though I wish we didn't have to.
                   if s == synchTag || show s == synchTag
                      then do queryDebug ["[SYNC] Synchronization achieved using tag: " ++ synchTag]
-                             return $ reverse sofar
+                             pure $ reverse sofar
                      else do queryDebug ["[RECV] " `alignPlain` s]
                              loop (s : sofar)
 
@@ -384,7 +384,7 @@ getValue s = do
                               ] ++ map ("    " ++) (lines (show mdl)))
 
       cv <- getValueCV Nothing sv
-      return $ fromCV cv
+      pure $ fromCV cv
 
 -- | A class which allows for sexpr-conversion to functions
 class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
@@ -441,14 +441,14 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
              case S.findIndexR ((== r) . fst) asgns of
                Nothing -> cantFind uiMap
                Just i  -> case asgns `S.index` i of
-                            (sv, SBVApp (Uninterpreted nm) _) | r == sv -> return nm
+                            (sv, SBVApp (Uninterpreted nm) _) | r == sv -> pure nm
                             _                                           -> cantFind uiMap
 
   sexprToFun f (s, e) = do nm    <- fst . fst <$> smtFunName f
                            si    <- contextState >>= getSInfo
                            mbRes <- case parseSExprFunction e of
                                       Just (Left nm') -> case (nm == nm', smtFunDefault f) of
-                                                           (True, Just v)  -> return $ Just ([], v)
+                                                           (True, Just v)  -> pure $ Just ([], v)
                                                            _               -> bailOut nm
                                       Just (Right v)  -> convert si v
                                       Nothing         -> do mbPVS <- pointWiseExtract nm (smtFunType f)
@@ -498,7 +498,7 @@ pointWiseExtract nm typ = tryPointWise
 
                           r <- ask cmd
 
-                          parse r bad $ \case EApp [EApp [_, e]] -> return (args, e)
+                          parse r bad $ \case EApp [EApp [_, e]] -> pure (args, e)
                                               _                  -> bad r Nothing
 
         getBVals :: m [([SExpr], SExpr)]
@@ -506,14 +506,14 @@ pointWiseExtract nm typ = tryPointWise
 
         tryPointWise
           | not isBoolFunc
-          = return Nothing
+          = pure Nothing
           | nArgs < 1
           = error $ "Data.SBV.pointWiseExtract: Impossible happened, nArgs < 1: " ++ show nArgs ++ " type: " ++ show typ
           | True
           = do vs <- getBVals
                -- Pick the value that will give us the fewer entries
                let (trues, falses) = partition (\(_, v) -> isTrueSExpr v) vs
-               return $ Just $ if length trues <= length falses
+               pure $ Just $ if length trues <= length falses
                                then (trues,  falseSExpr)
                                else (falses, trueSExpr)
 
@@ -852,16 +852,16 @@ getFunction f = do ((nm, args), isCurried) <- smtFunName f
                    parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> do
                                           mbAssocs <- sexprToFun f (trimFunctionResponse r nm isCurried args, e)
                                           case mbAssocs of
-                                            Right assocs -> return $ Right assocs
+                                            Right assocs -> pure $ Right assocs
                                             Left  raw    -> do
                                                let rawRes = Left (raw, (isCurried, args, e))
                                                mbPVS <- pointWiseExtract nm (smtFunType f)
                                                case mbPVS of
                                                  Just ps -> do rs <- convert si ps
                                                                case rs of
-                                                                  Just x  -> return $ Right x
-                                                                  Nothing -> return rawRes
-                                                 Nothing -> return rawRes
+                                                                  Just x  -> pure $ Right x
+                                                                  Nothing -> pure rawRes
+                                                 Nothing -> pure rawRes
                                        _ -> bad r Nothing
     where convert si (vs, d) = do ps <- mapM (sexprPoint si) vs
                                   pure $ (,) <$> sequenceA ps <*> sexprToVal si d
@@ -873,9 +873,9 @@ getFunction f = do ((nm, args), isCurried) <- smtFunName f
 getValueCVHelper :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV
 getValueCVHelper mbi s
   | s == trueSV
-  = return trueCV
+  = pure trueCV
   | s == falseSV
-  = return falseCV
+  = pure falseCV
   | True
   = extractValue mbi (show s) (kindOf s)
 
@@ -1170,7 +1170,7 @@ getValueCV mbi s
                   let bad = unexpected "getValueCV" "get-value" ("a real-valued binding for " ++ show s) Nothing (show (rep1, rep2)) Nothing
 
                   case (rep1, rep2) of
-                    (CV KReal (CAlgReal a), CV KReal (CAlgReal b)) -> return $ CV KReal (CAlgReal (mergeAlgReals ("Cannot merge real-values for " ++ show s) a b))
+                    (CV KReal (CAlgReal a), CV KReal (CAlgReal b)) -> pure $ CV KReal (CAlgReal (mergeAlgReals ("Cannot merge real-values for " ++ show s) a b))
                     _                                              -> bad
 
 -- | Retrieve value from the solver
@@ -1189,7 +1189,7 @@ extractValue mbi nm k = do
        si <- queryState >>= getSInfo
 
        let recover val = case recoverKindedValue si k val of
-                           Just cv -> return cv
+                           Just cv -> pure cv
                            Nothing -> bad r Nothing
 
        parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> recover val
@@ -1239,10 +1239,10 @@ getUIFunCVAssoc mbi (nm, (isCurried, mbArgs, typ)) = do
                           Just sExprs -> pure $ maybe (Left fallBack) Right (convert sExprs)
 
   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> case parseSExprFunction e of
-                                                             Just (Right assocs) | Just res <- convert assocs                 -> return (Right res)
+                                                             Just (Right assocs) | Just res <- convert assocs                 -> pure (Right res)
                                                                                  | True                                       -> tryPointWise
 
-                                                             Just (Left nm')     | nm == nm', let res = defaultKindedValue rt -> return (Right ([], res))
+                                                             Just (Left nm')     | nm == nm', let res = defaultKindedValue rt -> pure (Right ([], res))
                                                                                  | True                                       -> bad r Nothing
 
                                                              Nothing                                                          -> tryPointWise
@@ -1269,9 +1269,9 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
                                                Nothing -> pure Nothing
                                                Just o  -> Just <$> ask o
 
-                       parse r bad $ \case ECon "sat"       -> return Sat
-                                           ECon "unsat"     -> return Unsat
-                                           ECon "unknown"   -> return Unk
+                       parse r bad $ \case ECon "sat"       -> pure Sat
+                                           ECon "unsat"     -> pure Unsat
+                                           ECon "unknown"   -> pure Unk
                                            ECon "delta-sat" -> DSat <$> getPrecision
                                            _                -> bad r Nothing
 
@@ -1289,7 +1289,7 @@ getObservables = do State{rObservables} <- queryState
                     rObs <- liftIO $ readIORef rObservables
 
                     -- This intentionally reverses the result; since 'rObs' stores in reversed order
-                    let walk []             !sofar = return sofar
+                    let walk []             !sofar = pure sofar
                         walk ((n, f, s):os) !sofar = do cv <- getValueCV Nothing s
                                                         if f cv
                                                           then walk os ((n, cv) : sofar)
@@ -1306,7 +1306,7 @@ getUIs = do State{rUIMap, rDefns, rIncState} <- queryState
 
             prior <- io $ readIORef rUIMap
             new   <- io $ readIORef rIncState >>= readIORef . rNewUIs
-            return $ Map.toList $ Map.withoutKeys (Map.union prior new) defineSet
+            pure $ Map.toList $ Map.withoutKeys (Map.union prior new) defineSet
 
 -- | Return all satisfying models.
 getAllSatResult :: forall m. (MonadIO m, MonadQuery m, SolverContext m) => m AllSatResult
@@ -1342,7 +1342,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                          -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
                          -- there is no way to reflect back the values to the solver.)
-                         collectAcceptable []                                sofar = return sofar
+                         collectAcceptable []                                sofar = pure sofar
                          collectAcceptable ((nm, (_, _, t@(SBVType ats))):rest) sofar
                            | not (any hasUninterpretedSorts ats)
                            = collectAcceptable rest (nm : sofar)
@@ -1361,7 +1361,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      unless (null uiFuns) $
                         let solverCaps = capabilities (solver cfg)
                         in case supportsFlattenedModels solverCaps of
-                             Nothing   -> return ()
+                             Nothing   -> pure ()
                              Just cmds -> mapM_ (send True) cmds
 
                      let usorts = [s | us@(KADT s _ _) <- Set.toAscList ki, isUninterpreted us]
@@ -1371,7 +1371,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                        ]
 
                      -- Drop the things that are not model vars or internal
-                     let mkSVal nm@(getSV -> sv) = (SVal (kindOf sv) (Right (cache (const (return sv)))), nm)
+                     let mkSVal nm@(getSV -> sv) = (SVal (kindOf sv) (Right (cache (const (pure sv)))), nm)
                      let extractVars :: S.Seq (SVal, NamedSymVar)
                          extractVars = mkSVal <$> S.filter (not . mustIgnoreVar cfg . getUserName') allModelInputs
 
@@ -1489,15 +1489,15 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                    io $ modifyIORef' finalResult $ \(h, s, _, _) -> (h, s{allSatSolverReturnedDSat = True}, True, Just ("[" ++ m ++ "]"))
 
                                       Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
-                                                                                                   return (sv, (n, (sval, cv)))) extractVars
+                                                                                                   pure (sv, (n, (sval, cv)))) extractVars
 
                                                    bindings <- let grab i@(getSV -> sv) = case lookupInput fst sv assocs of
-                                                                                            Just (_, (_, (_, cv))) -> return (i, cv)
+                                                                                            Just (_, (_, (_, cv))) -> pure (i, cv)
                                                                                             Nothing                -> do !cv <- getValueCV Nothing sv
-                                                                                                                         return (i, cv)
+                                                                                                                         pure (i, cv)
                                                                in if validationRequested cfg
                                                                   then Just <$> mapM grab allInputs
-                                                                  else return Nothing
+                                                                  else pure Nothing
 
                                                    obsvs <- getObservables
 
@@ -1566,7 +1566,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
                    = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
                         when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
-                        return $! sofar { allSatMaxModelCountReached = True }
+                        pure $! sofar { allSatMaxModelCountReached = True }
                    | True
                    = do queryDebug ["Looking for solution " ++ show cnt]
 
@@ -1576,23 +1576,23 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                         case cs of
                           Unsat  -> do endMsg Nothing
-                                       return sofar
+                                       pure sofar
 
                           Unk    -> do let m = "Solver returned unknown, terminating query."
                                        queryDebug ["*** " ++ m]
                                        endMsg $ Just $ "[" ++ m ++ "]"
-                                       return sofar{ allSatSolverReturnedUnknown = True }
+                                       pure sofar{ allSatSolverReturnedUnknown = True }
 
                           DSat _ -> do let m = "Solver returned delta-sat, terminating query."
                                        queryDebug ["*** " ++ m]
                                        endMsg $ Just $ "[" ++ m ++ "]"
-                                       return sofar{ allSatSolverReturnedDSat = True }
+                                       pure sofar{ allSatSolverReturnedDSat = True }
 
                           Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
-                                                                                       return (sv, (n, (sval, cv)))) vars
+                                                                                       pure (sv, (n, (sval, cv)))) vars
 
                                        let getUIFun ui@(nm, (isCurried, _, t)) = do cvs <- getUIFunCVAssoc Nothing ui
-                                                                                    return (nm, (isCurried, t, cvs))
+                                                                                    pure (nm, (isCurried, t, cvs))
                                        uiFunVals <- mapM getUIFun allUiFuns
 
                                        uiRegVals <- mapM (\ui@(nm, _) -> (nm,) <$> getUICVal Nothing ui) allUiRegs
@@ -1600,12 +1600,12 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                        obsvs <- getObservables
 
                                        bindings <- let grab i@(getSV -> sv) = case lookupInput fst sv assocs of
-                                                                                Just (_, (_, (_, cv))) -> return (i, cv)
+                                                                                Just (_, (_, (_, cv))) -> pure (i, cv)
                                                                                 Nothing                -> do !cv <- getValueCV Nothing sv
-                                                                                                             return (i, cv)
+                                                                                                             pure (i, cv)
                                                    in if validationRequested cfg
                                                          then Just <$> mapM grab allInputs
-                                                         else return Nothing
+                                                         else pure Nothing
 
                                        let model = SMTModel { modelObjectives = []
                                                             , modelBindings   = F.toList <$> bindings
@@ -1746,17 +1746,17 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                           else do let uiFunRejector   = "uiFunRejector_model_" ++ show cnt
                                                       header          = "define-fun " ++ uiFunRejector ++ " () Bool "
 
-                                                      defineRejector []     = return ()
+                                                      defineRejector []     = pure ()
                                                       defineRejector [x]    = send True $ "(" ++ header ++ x ++ ")"
                                                       defineRejector (x:xs) = mapM_ (send True) $ mergeSExpr $  ("(" ++ header)
                                                                                                              :  ("        (or " ++ x)
                                                                                                              :  ["            " ++ e | e <- xs]
                                                                                                              ++ ["        ))"]
                                                   rejectFuncs <- case uninterpretedReject of
-                                                                   Nothing -> return Nothing
+                                                                   Nothing -> pure Nothing
                                                                    Just fs -> do mapM_ (send True) $ mergeSExpr uninterpretedFuns
                                                                                  defineRejector fs
-                                                                                 return $ Just uiFunRejector
+                                                                                 pure $ Just uiFunRejector
 
                                                   -- send the disallow clause and the uninterpreted rejector:
                                                   case (disallow, rejectFuncs) of
@@ -1795,7 +1795,7 @@ getUnsatAssumptions originals proxyMap = do
         -- in the original list of assumptions for `check-sat-assuming`. So, we walk over
         -- and ignore those that weren't in the original list, and put a warning for those
         -- we couldn't find.
-        let walk []     sofar = return $ reverse sofar
+        let walk []     sofar = pure $ reverse sofar
             walk (a:as) sofar = case a `lookup` proxyMap of
                                   Just v  -> walk as (v:sofar)
                                   Nothing -> do queryDebug [ "*** In call to 'getUnsatAssumptions'"
@@ -1829,7 +1829,7 @@ timeout :: (MonadIO m, MonadQuery m) => Int -> m a -> m a
 timeout n q = do modifyQueryState (\qs -> qs {queryTimeOutValue = Just n})
                  r <- q
                  modifyQueryState (\qs -> qs {queryTimeOutValue = Nothing})
-                 return r
+                 pure r
 
 -- | Bail out if a parse goes bad
 parse :: String -> (String -> Maybe [String] -> a) -> (SExpr -> a) -> a
@@ -1889,8 +1889,8 @@ executeQuery queryContext originalQuery = do
 
      -- Make sure the phases match:
      () <- liftIO $ case (queryContext, rm) of
-                      (QueryInternal, _)                                -> return ()  -- no worries, internal
-                      (QueryExternal, SMTMode QueryExternal ISetup _ _) -> return () -- legitimate runSMT call
+                      (QueryInternal, _)                                -> pure ()  -- no worries, internal
+                      (QueryExternal, SMTMode QueryExternal ISetup _ _) -> pure () -- legitimate runSMT call
                       _                                                 -> invalidQuery rm
 
      case rm of
@@ -1937,7 +1937,7 @@ executeQuery queryContext originalQuery = do
                   let terminateSolver maybeForwardedException = do
                          qs <- readIORef $ rQueryState st
                          case qs of
-                           Nothing                         -> return ()
+                           Nothing                         -> pure ()
                            Just QueryState{queryTerminate} -> queryTerminate maybeForwardedException
 
                   -- If this is an extrnal query and there are objectives, let's add those to the list before we run
@@ -1954,7 +1954,7 @@ executeQuery queryContext originalQuery = do
                     r <- restore (extractIO $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT (runQueryT userQuery))
                           `C.catch` \e -> terminateSolver (Just e) >> C.throwIO (e :: C.SomeException)
                     terminateSolver Nothing
-                    return r
+                    pure r
 
         -- Already in a query, in theory we can just continue, but that causes use-case issues
         -- so we reject it. TODO: Review if we should actually support this. The issue arises with
@@ -2021,7 +2021,7 @@ startOptimizer config style = do
   objectives <- getObjectives
 
   if null objectives
-     then return Nothing
+     then pure Nothing
      else do unless (supportsOptimization (capabilities (solver config))) $
                     error $ unlines [ ""
                                     , "*** Data.SBV: The backend solver " ++ show (name (solver config)) ++ "does not support optimization goals."
@@ -2081,13 +2081,13 @@ getObjectiveValues = do let cmd = "(get-objectives)"
         getObjValue :: SInfo -> (forall a. Maybe [String] -> m a) -> [NamedSymVar] -> SExpr -> m (Maybe (String, GeneralizedCV))
         getObjValue si bailOut inputs expr =
                 case expr of
-                  EApp [_]          -> return Nothing            -- Happens when a soft-assertion has no associated group.
+                  EApp [_]          -> pure Nothing            -- Happens when a soft-assertion has no associated group.
                   EApp [ECon nm, v] -> locate nm v               -- Regular case
                   _                 -> dontUnderstand (show expr)
 
           where locate nm v = case listToMaybe [p | p@(NamedSymVar sv _) <- inputs, show sv == nm] of
-                                Nothing                          -> return Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
-                                Just (NamedSymVar sv actualName) -> grab sv v >>= \val -> return $ Just (T.unpack actualName, val)
+                                Nothing                          -> pure Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
+                                Just (NamedSymVar sv actualName) -> grab sv v >>= \val -> pure $ Just (T.unpack actualName, val)
 
                 dontUnderstand s = bailOut $ Just [ "Unable to understand solver output."
                                                   , "While trying to process: " ++ s
@@ -2095,19 +2095,19 @@ getObjectiveValues = do let cmd = "(get-objectives)"
 
                 grab :: SV -> SExpr -> m GeneralizedCV
                 grab s topExpr
-                  | Just v <- recoverKindedValue si k topExpr = return $ RegularCV v
+                  | Just v <- recoverKindedValue si k topExpr = pure $ RegularCV v
                   | True                                      = ExtendedCV <$> cvt (simplify topExpr)
                   where k = kindOf s
 
                         -- Convert to an extended expression. Hopefully complete!
                         cvt :: SExpr -> m ExtCV
-                        cvt (ECon "oo")                    = return $ Infinite  k
-                        cvt (ECon "epsilon")               = return $ Epsilon   k
+                        cvt (ECon "oo")                    = pure $ Infinite  k
+                        cvt (ECon "epsilon")               = pure $ Epsilon   k
                         cvt (EApp [ECon "interval", x, y]) =          Interval  <$> cvt x <*> cvt y
-                        cvt (ENum    (i, _, _))            = return $ BoundedCV $ mkConstCV k i
-                        cvt (EReal   r)                    = return $ BoundedCV $ CV k $ CAlgReal r
-                        cvt (EFloat  f)                    = return $ BoundedCV $ CV k $ CFloat   f
-                        cvt (EDouble d)                    = return $ BoundedCV $ CV k $ CDouble  d
+                        cvt (ENum    (i, _, _))            = pure $ BoundedCV $ mkConstCV k i
+                        cvt (EReal   r)                    = pure $ BoundedCV $ CV k $ CAlgReal r
+                        cvt (EFloat  f)                    = pure $ BoundedCV $ CV k $ CFloat   f
+                        cvt (EDouble d)                    = pure $ BoundedCV $ CV k $ CDouble  d
                         cvt (EApp [ECon "+", x, y])        =          AddExtCV <$> cvt x <*> cvt y
                         cvt (EApp [ECon "*", x, y])        =          MulExtCV <$> cvt x <*> cvt y
                         -- Nothing else should show up, hopefully!
@@ -2156,27 +2156,27 @@ getModelAtIndex mbi = do
           unless (null uiFuns) $
              let solverCaps = capabilities (solver cfg)
              in case supportsFlattenedModels solverCaps of
-                  Nothing   -> return ()
+                  Nothing   -> pure ()
                   Just cmds -> mapM_ (send True) cmds
 
           bindings <- let get i@(getSV -> sv) = case lookupInput fst sv inputAssocs of
-                                                  Just (_, (_, cv)) -> return (i, cv)
+                                                  Just (_, (_, cv)) -> pure (i, cv)
                                                   Nothing           -> do cv <- getValueCV mbi sv
-                                                                          return (i, cv)
+                                                                          pure (i, cv)
 
                       in if validationRequested cfg
                          then Just <$> mapM get allModelInputs
-                         else return Nothing
+                         else pure Nothing
 
           uiFunVals <- mapM (\ui@(nm, (c, _, t)) -> (\a -> (nm, (c, t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
 
           uiVals    <- mapM (\ui@(nm, (_, _, _)) -> (nm,) <$> getUICVal mbi ui) uiRegs
 
-          return $ unBarModel $ SMTModel { modelObjectives = []
-                                         , modelBindings   = F.toList <$> bindings
-                                         , modelAssocs     = uiVals ++ F.toList (first T.unpack <$> assocs)
-                                         , modelUIFuns     = uiFunVals
-                                         }
+          pure $ unBarModel $ SMTModel { modelObjectives = []
+                                       , modelBindings   = F.toList <$> bindings
+                                       , modelAssocs     = uiVals ++ F.toList (first T.unpack <$> assocs)
+                                       , modelUIFuns     = uiFunVals
+                                       }
 
 -- | Remove the bars from model names; these are (mostly!) automatically inserted
 unBarModel :: SMTModel -> SMTModel

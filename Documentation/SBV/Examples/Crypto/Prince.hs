@@ -131,8 +131,8 @@ srInv b = fromNibbles [n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n1
 -- Q.E.D.
 prop_sr :: Predicate
 prop_sr = do b <- free "block"
-             return $   b .== sr (srInv b)
-                    .&& b .== srInv (sr b)
+             pure $   b .== sr (srInv b)
+                  .&& b .== srInv (sr b)
 
 -- | M' transformation
 m' :: Block -> Block
@@ -189,8 +189,8 @@ sBoxInv = nonLinear [0xB, 0x7, 0x3, 0x2, 0xF, 0xD, 0x8, 0x9, 0xA, 0x6, 0x4, 0x0,
 -- Q.E.D.
 prop_SBox :: Predicate
 prop_SBox = do b <- free "block"
-               return $   b .== sBoxInv (sBox b)
-                      .&& b .== sBox (sBoxInv b)
+               pure $   b .== sBoxInv (sBox b)
+                    .&& b .== sBox (sBoxInv b)
 
 -- * Round constants
 

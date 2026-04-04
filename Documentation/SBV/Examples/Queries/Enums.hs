@@ -60,6 +60,6 @@ findDays = runSMT $ do (d1 :: SDay) <- free "d1"
                                     Sat -> do a <- getValue d1
                                               b <- getValue d2
                                               c <- getValue d3
-                                              return [a, b, c]
+                                              pure [a, b, c]
 
                                     _   -> error "Impossible, can't find days!"

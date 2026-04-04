@@ -303,7 +303,7 @@ printFunctions header cfg names
 startTP :: SMTConfig -> Bool -> String -> Int -> TPProofContext -> IO Int
 startTP cfg newLine what level ctx = do message cfg $ line ++ if newLine then "\n" else ""
                                         hFlush stdout
-                                        return (length line)
+                                        pure (length line)
   where nm = case ctx of
                TPProofOneShot n _       -> n
                TPProofStep    _ _ hs ss -> intercalate "." ss ++ userHints hs

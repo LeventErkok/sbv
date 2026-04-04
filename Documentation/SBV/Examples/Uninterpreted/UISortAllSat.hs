@@ -85,4 +85,4 @@ genLs = do [l, l0, l1, l2] <- symbolics ["l", "l0", "l1", "l2"]
            constrain $ classify l0 .== 0
            constrain $ classify l1 .== 1
            constrain $ classify l2 .== 2
-           return $ l .== l0 .|| l .== l1 .|| l .== l2
+           pure $ l .== l0 .|| l .== l1 .|| l .== l2

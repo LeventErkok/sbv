@@ -93,7 +93,7 @@ noChange = [stable "x" x, stable "y" y]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeDiv :: Invariant D -> Maybe (WPMeasure D) -> Program D
-imperativeDiv inv msr = Program { setup         = return ()
+imperativeDiv inv msr = Program { setup         = pure ()
                                 , precondition  = pre
                                 , program       = algorithm inv msr
                                 , postcondition = post

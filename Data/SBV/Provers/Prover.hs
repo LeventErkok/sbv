@@ -209,7 +209,7 @@ class ExtractIO m => SatisfiableM m a where
   satWith cfg a = do r <- runWithQuery satArgReduce True (checkNoOptimizations >> Control.getSMTResult) cfg a
                      SatResult <$> if validationRequested cfg
                                    then validate satArgReduce True cfg a r
-                                   else return r
+                                   else pure r
 
   -- | Generalization of 'Data.SBV.sat'
   dsat :: a -> m SatResult
@@ -220,7 +220,7 @@ class ExtractIO m => SatisfiableM m a where
   dsatWith cfg a = do r <- runWithQuery satArgReduce True (checkNoOptimizations >> Control.getSMTResult) cfg a
                       SatResult <$> if validationRequested cfg
                                     then validate satArgReduce True cfg a r
-                                    else return r
+                                    else pure r
 
   -- | Generalization of 'Data.SBV.allSat'
   allSat :: a -> m AllSatResult
@@ -231,8 +231,8 @@ class ExtractIO m => SatisfiableM m a where
   allSatWith cfg a = do asr <- runWithQuery satArgReduce True (checkNoOptimizations >> Control.getAllSatResult) cfg a
                         if validationRequested cfg
                            then do rs' <- mapM (validate satArgReduce True cfg a) (allSatResults asr)
-                                   return asr{allSatResults = rs'}
-                           else return asr
+                                   pure asr{allSatResults = rs'}
+                           else pure asr
 
   -- | Generalization of 'Data.SBV.isSatisfiable'
   isSatisfiable :: a -> m Bool
@@ -242,8 +242,8 @@ class ExtractIO m => SatisfiableM m a where
   isSatisfiableWith :: SMTConfig -> a -> m Bool
   isSatisfiableWith cfg p = do r <- satWith cfg p
                                case r of
-                                 SatResult Satisfiable{}   -> return True
-                                 SatResult Unsatisfiable{} -> return False
+                                 SatResult Satisfiable{}   -> pure True
+                                 SatResult Unsatisfiable{} -> pure False
                                  _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
   -- | Generalization of 'Data.SBV.optimize'
@@ -255,12 +255,12 @@ class ExtractIO m => SatisfiableM m a where
   optimizeWith config style optGoal = do
                    res <- runWithQuery satArgReduce True opt config optGoal
                    if not (optimizeValidateConstraints config)
-                      then return res
+                      then pure res
                       else let v :: SMTResult -> m SMTResult
                                v = validate satArgReduce True config optGoal
                            in case res of
                                 LexicographicResult m -> LexicographicResult <$> v m
-                                IndependentResult xs  -> let w []            sofar = return (reverse sofar)
+                                IndependentResult xs  -> let w []            sofar = pure (reverse sofar)
                                                              w ((n, m):rest) sofar = v m >>= \m' -> w rest ((n, m') : sofar)
                                                          in IndependentResult <$> w xs []
                                 ParetoResult (b, rs)  -> ParetoResult . (b, ) <$> mapM v rs
@@ -302,7 +302,7 @@ satWithAny = (`sbvWithAny` satWith)
 -- performance benefit.
 satConcurrentWithAny :: Satisfiable a => SMTConfig -> [Query b] -> a -> IO (Solver, NominalDiffTime, SatResult)
 satConcurrentWithAny solver qs a = do (slvr,time,result) <- sbvConcurrentWithAny solver go qs a
-                                      return (slvr, time, SatResult result)
+                                      pure (slvr, time, SatResult result)
   where go cfg a' q = runWithQuery satArgReduce True (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
 
 -- | Find a satisfying assignment to a property using a single solver, but run
@@ -310,7 +310,7 @@ satConcurrentWithAny solver qs a = do (slvr,time,result) <- sbvConcurrentWithAny
 -- finish. See 'satConcurrentWithAny' for more details.
 satConcurrentWithAll :: Satisfiable a => SMTConfig -> [Query b] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
 satConcurrentWithAll solver qs a = do results <- sbvConcurrentWithAll solver go qs a
-                                      return $ (\(a',b,c) -> (a',b,SatResult c)) <$> results
+                                      pure $ (\(a',b,c) -> (a',b,SatResult c)) <$> results
   where go cfg a' q = runWithQuery satArgReduce True (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
 
 -- | A type @a@ is provable if we can turn it into a predicate, i.e., it has to return a boolean.
@@ -328,7 +328,7 @@ class ExtractIO m => ProvableM m a where
   proveWith cfg a = do r <- runWithQuery proofArgReduce False (checkNoOptimizations >> Control.getSMTResult) cfg a
                        ThmResult <$> if validationRequested cfg
                                      then validate proofArgReduce False cfg a r
-                                     else return r
+                                     else pure r
 
   -- | Generalization of 'Data.SBV.dprove'
   dprove :: a -> m ThmResult
@@ -339,7 +339,7 @@ class ExtractIO m => ProvableM m a where
   dproveWith cfg a = do r <- runWithQuery proofArgReduce False (checkNoOptimizations >> Control.getSMTResult) cfg a
                         ThmResult <$> if validationRequested cfg
                                       then validate proofArgReduce False cfg a r
-                                      else return r
+                                      else pure r
 
   -- | Generalization of 'Data.SBV.isVacuousProof'
   isVacuousProof :: a -> m Bool
@@ -352,9 +352,9 @@ class ExtractIO m => ProvableM m a where
      where
        check = do cs <- Control.checkSat
                   case cs of
-                    Control.Unsat  -> return True
-                    Control.Sat    -> return False
-                    Control.DSat{} -> return False
+                    Control.Unsat  -> pure True
+                    Control.Sat    -> pure False
+                    Control.DSat{} -> pure False
                     Control.Unk    -> error "SBV: isVacuous: Solver returned unknown!"
 
   -- | Generalization of 'Data.SBV.isTheorem'
@@ -366,10 +366,10 @@ class ExtractIO m => ProvableM m a where
   isTheoremWith cfg p = do r <- proveWith cfg p
                            let bad = error $ "SBV.isTheorem: Received:\n" ++ show r
                            case r of
-                             ThmResult Unsatisfiable{} -> return True
-                             ThmResult Satisfiable{}   -> return False
-                             ThmResult DeltaSat{}      -> return False
-                             ThmResult SatExtField{}   -> return False
+                             ThmResult Unsatisfiable{} -> pure True
+                             ThmResult Satisfiable{}   -> pure False
+                             ThmResult DeltaSat{}      -> pure False
+                             ThmResult SatExtField{}   -> pure False
                              ThmResult Unknown{}       -> bad
                              ThmResult ProofError{}    -> bad
 
@@ -390,21 +390,21 @@ proveWithAll  = (`sbvWithAll` proveWith)
 -- concurrently and return the first that finishes, killing the others
 proveConcurrentWithAny :: Provable a => SMTConfig -> [Query b] -> a -> IO (Solver, NominalDiffTime, ThmResult)
 proveConcurrentWithAny solver qs a = do (slvr,time,result) <- sbvConcurrentWithAny solver go qs a
-                                        return (slvr, time, ThmResult result)
+                                        pure (slvr, time, ThmResult result)
   where go cfg a' q = runWithQuery proofArgReduce False (do _ <- q;  checkNoOptimizations >> Control.getSMTResult) cfg a'
 
 -- | Prove a property by running many queries each isolated to their own thread
 -- concurrently and wait for each to finish returning all results
 proveConcurrentWithAll :: Provable a => SMTConfig -> [Query b] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
 proveConcurrentWithAll solver qs a = do results <- sbvConcurrentWithAll solver go qs a
-                                        return $ (\(a',b,c) -> (a',b,ThmResult c)) <$> results
+                                        pure $ (\(a',b,c) -> (a',b,ThmResult c)) <$> results
   where go cfg a' q = runWithQuery proofArgReduce False (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
 
 -- | Validate a model obtained from the solver
 validate :: MonadIO m => (a -> SymbolicT m SBool) -> Bool -> SMTConfig -> a -> SMTResult -> m SMTResult
 validate reducer isSAT cfg p res =
      case res of
-       Unsatisfiable{} -> return res
+       Unsatisfiable{} -> pure res
        Satisfiable _ m -> case modelBindings m of
                             Nothing  -> error "Data.SBV.validate: Impossible happened; no bindings generated during model validation."
                             Just env -> check env
@@ -419,10 +419,10 @@ validate reducer isSAT cfg p res =
                                , "To turn validation off, use `cfg{optimizeValidateConstraints = False}`"
                                ]
 
-       Unknown{}       -> return res
-       ProofError{}    -> return res
+       Unknown{}       -> pure res
+       ProofError{}    -> pure res
 
-  where cant msg = return $ ProofError cfg (msg ++ [ ""
+  where cant msg = pure $ ProofError cfg (msg ++ [ ""
                                                    , "Unable to validate the produced model."
                                                    ]) (Just res)
 
@@ -430,7 +430,7 @@ validate reducer isSAT cfg p res =
                               where modelBinds = [(T.unpack n, RegularCV v) | (NamedSymVar _ n, v) <- env]
 
                            notify s
-                             | not (verbose cfg) = return ()
+                             | not (verbose cfg) = pure ()
                              | True              = debug cfg ["[VALIDATE] " `alignPlain` s]
 
                        notify $ "Validating the model. " ++ if null env then "There are no assignments." else "Assignment:"
@@ -445,7 +445,7 @@ validate reducer isSAT cfg p res =
                                    ++ [ "    " ++ l | l <- lines envShown]
                                    ++ [ "" ]
 
-                           wrap tag extras = return $ ProofError cfg (tag : explain ++ extras) (Just res)
+                           wrap tag extras = pure $ ProofError cfg (tag : explain ++ extras) (Just res)
 
                            giveUp   s     = wrap ("Data.SBV: Cannot validate the model: " ++ s)
                                                  [ "SBV's model validator is incomplete, and cannot handle this particular case."
@@ -507,7 +507,7 @@ validate reducer isSAT cfg p res =
                            -- SAT: All outputs must be true
                            satLoop []
                              = do notify "All outputs are satisfied. Validation complete."
-                                  return res
+                                  pure res
                            satLoop (sv:svs)
                              | kindOf sv /= KBool
                              = giveUp $ "Output tied to " ++ show sv ++ " is non-boolean."
@@ -521,7 +521,7 @@ validate reducer isSAT cfg p res =
                            -- Proof: At least one output must be false
                            proveLoop [] somethingFailed
                              | somethingFailed = do notify "Counterexample is validated."
-                                                    return res
+                                                    pure res
                              | True            = do notify "Counterexample violates none of the outputs."
                                                     badModel "Counter-example violates no constraints."
                            proveLoop (sv:svs) somethingFailed
@@ -574,7 +574,7 @@ generateSMTBenchMarkGen isSat reduce render a = do
 
       let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode QueryInternal IRun isSat cfg) QueryInternal comments res
 
-      return $ render (smtLibPgm cfg)
+      pure $ render (smtLibPgm cfg)
 
 checkNoOptimizations :: MonadIO m => QueryT m ()
 checkNoOptimizations = do objectives <- Control.getObjectives
@@ -591,8 +591,8 @@ instance ExtractIO m => SatisfiableM m (SymbolicT m ()) where satArgReduce a = s
 instance ExtractIO m => SatisfiableM m (SymbolicT m SBool) where satArgReduce   = id
 instance ExtractIO m => ProvableM    m (SymbolicT m SBool) where proofArgReduce = id
 
-instance ExtractIO m => SatisfiableM m SBool where satArgReduce   = return
-instance ExtractIO m => ProvableM    m SBool where proofArgReduce = return
+instance ExtractIO m => SatisfiableM m SBool where satArgReduce   = pure
+instance ExtractIO m => ProvableM    m SBool where proofArgReduce = pure
 
 instance {-# OVERLAPPABLE #-} (ExtractIO m, SatisfiableM m a) => SatisfiableM m (SymbolicT m a) where satArgReduce   a = a >>= satArgReduce
 instance {-# OVERLAPPABLE #-} (ExtractIO m, ProvableM    m a) => ProvableM    m (SymbolicT m a) where proofArgReduce a = a >>= proofArgReduce
@@ -652,7 +652,7 @@ instance (SymVal a, ProvableM m p) => ProvableM m (SBV a -> p) where
 
 -- | Create an 'SBVs' sequence of arguments
 mkArgs :: MonadSymbolic m => SymValInsts as -> m (SBVs as)
-mkArgs SymValsNil = return SBVsNil
+mkArgs SymValsNil = pure SBVsNil
 mkArgs (SymValsCons insts) = SBVsCons <$> mkArgs insts <*> mkArg
 
 -- Multi-arity Functions
@@ -768,7 +768,7 @@ runInThread :: NFData b => UTCTime -> (SMTConfig -> IO b) -> SMTConfig -> IO (As
 runInThread beginTime action config = async $ do
                 result  <- action config
                 endTime <- rnf result `seq` getCurrentTime
-                return (name (solver config), endTime `diffUTCTime` beginTime, result)
+                pure (name (solver config), endTime `diffUTCTime` beginTime, result)
 
 -- | Perform action for all given configs, return the first one that wins. Note that we do
 -- not wait for the other asyncs to terminate; hopefully they'll do so quickly.
@@ -797,7 +797,7 @@ sbvConcurrentWithAll solver what queries a = mapConcurrently runQueryInThread qu
   where  runQueryInThread q = do beginTime <- getCurrentTime
                                  runInThread beginTime (\cfg -> what cfg a q) solver
 
-         go []  = return []
+         go []  = pure []
          go as  = do (d, r) <- waitAny as
                      -- The following filter works because the Eq instance on Async
                      -- checks the thread-id; so we know that we're removing the
@@ -805,13 +805,13 @@ sbvConcurrentWithAll solver what queries a = mapConcurrently runQueryInThread qu
                      -- running the same-solver (with different options), since
                      -- they will get different thread-ids.
                      rs <- unsafeInterleaveIO $ go (filter (/= d) as)
-                     return (r : rs)
+                     pure (r : rs)
 
 -- | Perform action for all given configs, return all the results.
 sbvWithAll :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO [(Solver, NominalDiffTime, b)]
 sbvWithAll solvers what a = do beginTime <- getCurrentTime
                                mapM (runInThread beginTime (`what` a)) solvers >>= (unsafeInterleaveIO . go)
-   where go []  = return []
+   where go []  = pure []
          go as  = do (d, r) <- waitAny as
                      -- The following filter works because the Eq instance on Async
                      -- checks the thread-id; so we know that we're removing the
@@ -819,7 +819,7 @@ sbvWithAll solvers what a = do beginTime <- getCurrentTime
                      -- running the same-solver (with different options), since
                      -- they will get different thread-ids.
                      rs <- unsafeInterleaveIO $ go (filter (/= d) as)
-                     return (r : rs)
+                     pure (r : rs)
 
 -- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficiently populated internally to cover most use
 -- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.
@@ -853,12 +853,12 @@ class ExtractIO m => SExecutable m a where
                                 Control.send True $ "(assert " ++ show cond ++ ")"
                                 r <- Control.getSMTResult
                                 Control.pop 1
-                                return r
+                                pure r
 
-                   return $ SafeResult (location, msg, result)
+                   pure $ SafeResult (location, msg, result)
 
 instance (ExtractIO m, NFData a) => SExecutable m (SymbolicT m a) where
-   sName a = a >>= \r -> rnf r `seq` return ()
+   sName a = a >>= \r -> rnf r `seq` pure ()
 
 instance ExtractIO m => SExecutable m (SBV a) where
    sName v = sName (output v :: SymbolicT m (SBV a))

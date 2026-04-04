@@ -44,7 +44,7 @@ type Coin = SWord16
 mkCoin :: Int -> Symbolic Coin
 mkCoin i = do c <- free $ 'c' : show i
               constrain $ sAny (.== c) [1, 5, 10, 25, 50, 100]
-              return c
+              pure c
 
 -- | Return all combinations of a sequence of values.
 combinations :: [a] -> [[a]]
@@ -105,4 +105,4 @@ puzzle = sat $ do
         constrain $ sAnd $ zipWith (.>=) cs (drop 1 cs)
 
         -- assert that the sum must be 115 cents.
-        return $ sum cs .== 115
+        pure $ sum cs .== 115

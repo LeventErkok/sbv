@@ -34,7 +34,7 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
         let mkRow rowRegExp = do row :: SString <- free_
                                  constrain $ row `R.match` rowRegExp
                                  constrain $ L.length row .== literal numCols
-                                 return row
+                                 pure row
 
         rows <- mapM mkRow rowRegExps
 
@@ -42,7 +42,7 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
         let mkCol colRegExp = do col :: SString <- free_
                                  constrain $ col `R.match` colRegExp
                                  constrain $ L.length col .== literal numRows
-                                 return col
+                                 pure col
 
         cols <- mapM mkCol colRegExps
 

@@ -100,7 +100,7 @@ noChange = [stable "n" n]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeSum :: Invariant S -> Maybe (WPMeasure S) -> Program S
-imperativeSum inv msr = Program { setup         = return ()
+imperativeSum inv msr = Program { setup         = pure ()
                                 , precondition  = pre
                                 , program       = algorithm inv msr
                                 , postcondition = post

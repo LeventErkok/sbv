@@ -422,7 +422,7 @@ foldlSBVs f r (SBVsCons args arg) = f (foldlSBVs f r args) arg
 -- | Map a monadic function over the SBV values in an SBVs sequence in a
 -- manner similar to 'mapM' for lists
 mapMSBVs :: Monad m => (forall a. SBV a -> m r) -> SBVs as -> m (RList r)
-mapMSBVs f = foldlSBVs (\m arg -> (:>) <$> m <*> f arg) (return RNil)
+mapMSBVs f = foldlSBVs (\m arg -> (:>) <$> m <*> f arg) (pure RNil)
 
 -- | Fold a function over each SBV value in an SBVs sequence in a manner similar
 -- to 'foldr' for lists (but backwards because SBVs have cons on the right),
@@ -482,7 +482,7 @@ newtype ForallN (n :: Nat) (nm :: Symbol) a = ForallN [SBV a]
 mkQArg :: forall m a. (HasKind a, MonadIO m) => State -> Quantifier -> m (SBV a)
 mkQArg st q = do let k = kindOf (Proxy @a)
                  sv <- liftIO $ quantVar q st k
-                 pure $ SBV $ SVal k (Right (cache (const (return sv))))
+                 pure $ SBV $ SVal k (Right (cache (const (pure sv))))
 
 -- | Functions of a single existential
 instance (SymVal a, Constraint m r) => Constraint m (Exists nm a -> r) where
@@ -523,7 +523,7 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
   mkLambda st fn = mkArg >>= mkLambda st . fn
     where mkArg = do let k = kindOf (Proxy @a)
                      sv <- liftIO $ lambdaVar st k
-                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+                     pure $ SBV $ SVal k (Right (cache (const (pure sv))))
 
 -- | A value that can be used as a quantified boolean
 class QuantifiedBool a where
@@ -611,13 +611,13 @@ class Outputtable a where
 instance Outputtable (SBV a) where
   output i = do
           outputSVal (unSBV i)
-          return i
+          pure i
 
 instance Outputtable a => Outputtable [a] where
   output = mapM output
 
 instance Outputtable () where
-  output = return
+  output = pure
 
 instance (Outputtable a, Outputtable b) => Outputtable (a, b) where
   output = mlift2 (,) output output

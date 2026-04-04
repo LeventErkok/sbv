@@ -50,7 +50,7 @@ guess input = do g <- sInteger "guess"
                             Sat    -> do gv <- getValue g
                                          case gv `compare` input of
                                            EQ -> -- Got it, return:
-                                                 return (reverse (gv : sofar))
+                                                 pure (reverse (gv : sofar))
                                            LT -> -- Solver guess is too small, increase the lower bound:
                                                  loop ((lb+1) `max` (lb + (input - lb) `div` 2)) ub (gv : sofar)
                                            GT -> -- Solver guess is too big, decrease the upper bound:

@@ -90,7 +90,7 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
                               -- make sure we do not overflow at the intermediate points
                               constrain $ fpIsPoint lhs
                               constrain $ fpIsPoint rhs
-                              return $ lhs .== rhs
+                              pure $ lhs .== rhs
 
 -----------------------------------------------------------------------------
 -- * FP addition by non-zero can result in no change
@@ -118,7 +118,7 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
                              constrain $ fpIsPoint a
                              constrain $ fpIsPoint b
                              constrain $ a + b .== a
-                             return $ b .== 0
+                             pure $ b .== 0
 
 -----------------------------------------------------------------------------
 -- * FP multiplicative inverses may not exist
@@ -142,7 +142,7 @@ multInverse :: IO ThmResult
 multInverse = prove $ do a <- sFloat "a"
                          constrain $ fpIsPoint a
                          constrain $ fpIsPoint (1/a)
-                         return $ a * (1/a) .== 1
+                         pure $ a * (1/a) .== 1
 
 -----------------------------------------------------------------------------
 -- * Effect of rounding modes
@@ -189,7 +189,7 @@ roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
                        let rhs = x + y
                        constrain $ fpIsPoint lhs
                        constrain $ fpIsPoint rhs
-                       return $ lhs ./= rhs
+                       pure $ lhs ./= rhs
 
 -- | Arbitrary precision floating-point numbers. SBV can talk about floating point numbers with arbitrary
 -- exponent and significand sizes as well. Here is a simple example demonstrating the minimum non-zero positive

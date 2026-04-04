@@ -104,7 +104,7 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
                     if null extras
                        then case sexp of
                               EApp [ECon "error", ECon er] -> Left $ "Solver returned an error: " ++ er
-                              _                            -> return sexp
+                              _                            -> pure sexp
 
                        else die "Extra tokens after valid input"
   where inpToks = tokenize inp
@@ -115,21 +115,21 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         parse []         = die "ran out of tokens"
         parse ("(":toks) = do (f, r) <- parseApp toks []
                               f' <- cvt (EApp f)
-                              return (f', r)
+                              pure (f', r)
         parse (")":_)    = die "extra tokens after close paren"
         parse [tok]      = do t <- pTok tok
-                              return (t, [])
+                              pure (t, [])
         parse _          = die "ill-formed s-expr"
 
         parseApp []         _     = die "failed to grab s-expr application"
-        parseApp (")":toks) sofar = return (reverse sofar, toks)
+        parseApp (")":toks) sofar = pure (reverse sofar, toks)
         parseApp ("(":toks) sofar = do (f, r) <- parse ("(":toks)
                                        parseApp r (f : sofar)
         parseApp (tok:toks) sofar = do t <- pTok tok
                                        parseApp toks (t : sofar)
 
-        pTok "false" = return $ ENum (0, Nothing, True)
-        pTok "true"  = return $ ENum (1, Nothing, True)
+        pTok "false" = pure $ ENum (0, Nothing, True)
+        pTok "true"  = pure $ ENum (1, Nothing, True)
 
         pTok ('0':'b':r)                                 = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
         pTok ('b':'v':r) | not (null r) && all isDigit r = mkNum Nothing               $ readDec (takeWhile (/= '[') r)
@@ -137,7 +137,7 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         pTok ('#':'x':r)                                 = mkNum (Just (4 * length r)) $ readHex r
 
         pTok n | possiblyNum n = if all intChar n then mkNum Nothing $ readSigned readDec n else getReal n
-        pTok n                 = return $ ECon (constantMap n)
+        pTok n                 = pure $ ECon (constantMap n)
 
         -- crude, but effective!
         possiblyNum s = case s of
@@ -147,10 +147,10 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
 
         intChar c = c == '-' || isDigit c
 
-        mkNum l [(n, "")] = return $ ENum (n, l, False)
+        mkNum l [(n, "")] = pure $ ENum (n, l, False)
         mkNum _ _         = die "cannot read number"
 
-        getReal n = return $ EReal $ mkPolyReal (Left (exact, n'))
+        getReal n = pure $ EReal $ mkPolyReal (Left (exact, n'))
           where exact = not ("?" `isPrefixOf` reverse n)
                 n' | exact = n
                    | True  = init n
@@ -160,19 +160,19 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         thd3 (_, _, c) = c
 
         -- simplify numbers and root-obj values
-        cvt (EApp [ECon "to_int",  EReal a])                       = return $ EReal a   -- ignore the "casting"
-        cvt (EApp [ECon "to_real", EReal a])                       = return $ EReal a   -- ignore the "casting"
-        cvt (EApp [ECon "/", EReal a, EReal b])                    = return $ EReal (a / b)
-        cvt (EApp [ECon "/", EReal a, ENum  b])                    = return $ EReal (a                    / fromInteger (fst3 b))
-        cvt (EApp [ECon "/", ENum  a, EReal b])                    = return $ EReal (fromInteger (fst3 a) /             b      )
-        cvt (EApp [ECon "/", ENum  a, ENum  b])                    = return $ EReal (fromInteger (fst3 a) / fromInteger (fst3 b))
-        cvt (EApp [ECon "-", EReal a])                             = return $ EReal (-a)
-        cvt (EApp [ECon "-", ENum a])                              = return $ ENum  (-(fst3 a), snd3 a, thd3 a)
+        cvt (EApp [ECon "to_int",  EReal a])                       = pure $ EReal a   -- ignore the "casting"
+        cvt (EApp [ECon "to_real", EReal a])                       = pure $ EReal a   -- ignore the "casting"
+        cvt (EApp [ECon "/", EReal a, EReal b])                    = pure $ EReal (a / b)
+        cvt (EApp [ECon "/", EReal a, ENum  b])                    = pure $ EReal (a                    / fromInteger (fst3 b))
+        cvt (EApp [ECon "/", ENum  a, EReal b])                    = pure $ EReal (fromInteger (fst3 a) /             b      )
+        cvt (EApp [ECon "/", ENum  a, ENum  b])                    = pure $ EReal (fromInteger (fst3 a) / fromInteger (fst3 b))
+        cvt (EApp [ECon "-", EReal a])                             = pure $ EReal (-a)
+        cvt (EApp [ECon "-", ENum a])                              = pure $ ENum  (-(fst3 a), snd3 a, thd3 a)
 
         -- bit-vector value as CVC4 prints: (_ bv0 16) for instance
-        cvt (EApp [ECon "_", ENum a, ENum _b])                     = return $ ENum a
+        cvt (EApp [ECon "_", ENum a, ENum _b])                     = pure $ ENum a
         cvt (EApp [ECon "root-obj", EApp (ECon "+":trms), ENum k]) = do ts <- mapM getCoeff trms
-                                                                        return $ EReal $ mkPolyReal (Right (fst3 k, ts))
+                                                                        pure $ EReal $ mkPolyReal (Right (fst3 k, ts))
         cvt (EApp [ECon "as", n, EApp [ECon "_", ECon "FloatingPoint", ENum (11, _, _), ENum (53, _, _)]]) = getDouble n
         cvt (EApp [ECon "as", n, EApp [ECon "_", ECon "FloatingPoint", ENum ( 8, _, _), ENum (24, _, _)]]) = getFloat  n
         cvt (EApp [ECon "as", n, ECon "Float64"])                                                          = getDouble n
@@ -183,10 +183,10 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
                                    , EApp [ECon "or", EApp [ECon "=", ECon v', val], _]]) | v == v'   = do
                                                 approx <- cvt val
                                                 case approx of
-                                                  ENum (s, _, _) -> return $ EReal $ mkPolyReal (Left (False, show s))
+                                                  ENum (s, _, _) -> pure $ EReal $ mkPolyReal (Left (False, show s))
                                                   EReal aval     -> case aval of
-                                                                      AlgRational _ r -> return $ EReal $ AlgRational False r
-                                                                      _               -> return $ EReal aval
+                                                                      AlgRational _ r -> pure $ EReal $ AlgRational False r
+                                                                      _               -> pure $ EReal aval
                                                   _              -> die $ "Cannot parse a CVC4 approximate value from: " ++ show x
 
         -- Deal with CVC5's algebraic reals. This is very crude!
@@ -194,83 +194,83 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
             let isComma (ECon ",") = True
                 isComma _          = False
 
-                get (ENum    (n, _, _))            = return $ fromIntegral n
-                get (EReal   (AlgRational True r)) = return r
-                get (EFloat  f)                    = return $ toRational f
-                get (EDouble d)                    = return $ toRational d
+                get (ENum    (n, _, _))            = pure $ fromIntegral n
+                get (EReal   (AlgRational True r)) = pure r
+                get (EFloat  f)                    = pure $ toRational f
+                get (EDouble d)                    = pure $ toRational d
                 get t                              = die $ "Cannot get a CVC5 real-algebraic bound from: " ++ show t
 
             in case drop 1 (dropWhile (not . isComma) rest) of
                 [EApp [n1, n2], _] -> do low  <- get n1
                                          high <- get n2
-                                         return $ EReal $ AlgInterval (OpenPoint low) (OpenPoint high)
+                                         pure $ EReal $ AlgInterval (OpenPoint low) (OpenPoint high)
                 _                  -> die $ "Cannot parse a CVC5 real-algebraic number from: " ++ show x
 
         -- NB. Note the lengths on the mantissa for the following two are 23/52; not 24/53!
-        cvt (EApp [ECon "fp",    ENum (s, Just 1, _), ENum ( e, Just  8, _), ENum (m, Just 23, _)]) = return $ EFloat         $ getTripleFloat  s e m
-        cvt (EApp [ECon "fp",    ENum (s, Just 1, _), ENum ( e, Just 11, _), ENum (m, Just 52, _)]) = return $ EDouble        $ getTripleDouble s e m
-        cvt (EApp [ECon "fp",    ENum (s, Just 1, _), ENum ( e, Just eb, _), ENum (m, Just sb, _)]) = return $ EFloatingPoint $ fpFromRawRep (s == 1) (e, eb) (m, sb+1)
+        cvt (EApp [ECon "fp",    ENum (s, Just 1, _), ENum ( e, Just  8, _), ENum (m, Just 23, _)]) = pure $ EFloat         $ getTripleFloat  s e m
+        cvt (EApp [ECon "fp",    ENum (s, Just 1, _), ENum ( e, Just 11, _), ENum (m, Just 52, _)]) = pure $ EDouble        $ getTripleDouble s e m
+        cvt (EApp [ECon "fp",    ENum (s, Just 1, _), ENum ( e, Just eb, _), ENum (m, Just sb, _)]) = pure $ EFloatingPoint $ fpFromRawRep (s == 1) (e, eb) (m, sb+1)
 
-        cvt (EApp [ECon "_",     ECon "NaN",       ENum ( 8, _, _),       ENum (24, _, _)])         = return $ EFloat           nan
-        cvt (EApp [ECon "_",     ECon "NaN",       ENum (11, _, _),       ENum (53, _, _)])         = return $ EDouble          nan
-        cvt (EApp [ECon "_",     ECon "NaN",       ENum (eb, _, _),       ENum (sb, _, _)])         = return $ EFloatingPoint $ fpNaN (fromIntegral eb) (fromIntegral sb)
+        cvt (EApp [ECon "_",     ECon "NaN",       ENum ( 8, _, _),       ENum (24, _, _)])         = pure $ EFloat           nan
+        cvt (EApp [ECon "_",     ECon "NaN",       ENum (11, _, _),       ENum (53, _, _)])         = pure $ EDouble          nan
+        cvt (EApp [ECon "_",     ECon "NaN",       ENum (eb, _, _),       ENum (sb, _, _)])         = pure $ EFloatingPoint $ fpNaN (fromIntegral eb) (fromIntegral sb)
 
-        cvt (EApp [ECon "_",     ECon "+oo",       ENum ( 8, _, _),       ENum (24, _, _)])         = return $ EFloat           infinity
-        cvt (EApp [ECon "_",     ECon "+oo",       ENum (11, _, _),       ENum (53, _, _)])         = return $ EDouble          infinity
-        cvt (EApp [ECon "_",     ECon "+oo",       ENum (eb, _, _),       ENum (sb, _, _)])         = return $ EFloatingPoint $ fpInf False (fromIntegral eb) (fromIntegral sb)
+        cvt (EApp [ECon "_",     ECon "+oo",       ENum ( 8, _, _),       ENum (24, _, _)])         = pure $ EFloat           infinity
+        cvt (EApp [ECon "_",     ECon "+oo",       ENum (11, _, _),       ENum (53, _, _)])         = pure $ EDouble          infinity
+        cvt (EApp [ECon "_",     ECon "+oo",       ENum (eb, _, _),       ENum (sb, _, _)])         = pure $ EFloatingPoint $ fpInf False (fromIntegral eb) (fromIntegral sb)
 
-        cvt (EApp [ECon "_",     ECon "-oo",       ENum ( 8, _, _),       ENum (24, _, _)])         = return $ EFloat         $ -infinity
-        cvt (EApp [ECon "_",     ECon "-oo",       ENum (11, _, _),       ENum (53, _, _)])         = return $ EDouble        $ -infinity
-        cvt (EApp [ECon "_",     ECon "-oo",       ENum (eb, _, _),       ENum (sb, _, _)])         = return $ EFloatingPoint $ fpInf True (fromIntegral eb) (fromIntegral sb)
+        cvt (EApp [ECon "_",     ECon "-oo",       ENum ( 8, _, _),       ENum (24, _, _)])         = pure $ EFloat         $ -infinity
+        cvt (EApp [ECon "_",     ECon "-oo",       ENum (11, _, _),       ENum (53, _, _)])         = pure $ EDouble        $ -infinity
+        cvt (EApp [ECon "_",     ECon "-oo",       ENum (eb, _, _),       ENum (sb, _, _)])         = pure $ EFloatingPoint $ fpInf True (fromIntegral eb) (fromIntegral sb)
 
-        cvt (EApp [ECon "_",     ECon "+zero",     ENum ( 8, _, _),       ENum (24, _, _)])         = return $ EFloat  0
-        cvt (EApp [ECon "_",     ECon "+zero",     ENum (11, _, _),       ENum (53, _, _)])         = return $ EDouble 0
-        cvt (EApp [ECon "_",     ECon "+zero",     ENum (eb, _, _),       ENum (sb, _, _)])         = return $ EFloatingPoint $ fpZero False (fromIntegral eb) (fromIntegral sb)
+        cvt (EApp [ECon "_",     ECon "+zero",     ENum ( 8, _, _),       ENum (24, _, _)])         = pure $ EFloat  0
+        cvt (EApp [ECon "_",     ECon "+zero",     ENum (11, _, _),       ENum (53, _, _)])         = pure $ EDouble 0
+        cvt (EApp [ECon "_",     ECon "+zero",     ENum (eb, _, _),       ENum (sb, _, _)])         = pure $ EFloatingPoint $ fpZero False (fromIntegral eb) (fromIntegral sb)
 
-        cvt (EApp [ECon "_",     ECon "-zero",     ENum ( 8, _, _),       ENum (24, _, _)])         = return $ EFloat         $ -0
-        cvt (EApp [ECon "_",     ECon "-zero",     ENum (11, _, _),       ENum (53, _, _)])         = return $ EDouble        $ -0
-        cvt (EApp [ECon "_",     ECon "-zero",     ENum (eb, _, _),       ENum (sb, _, _)])         = return $ EFloatingPoint $ fpZero True (fromIntegral eb) (fromIntegral sb)
+        cvt (EApp [ECon "_",     ECon "-zero",     ENum ( 8, _, _),       ENum (24, _, _)])         = pure $ EFloat         $ -0
+        cvt (EApp [ECon "_",     ECon "-zero",     ENum (11, _, _),       ENum (53, _, _)])         = pure $ EDouble        $ -0
+        cvt (EApp [ECon "_",     ECon "-zero",     ENum (eb, _, _),       ENum (sb, _, _)])         = pure $ EFloatingPoint $ fpZero True (fromIntegral eb) (fromIntegral sb)
 
-        cvt x                                                                                       = return x
+        cvt x                                                                                       = pure x
 
-        getCoeff (EApp [ECon "*", ENum k, EApp [ECon "^", ECon "x", ENum p]]) = return (fst3 k, fst3 p)  -- kx^p
-        getCoeff (EApp [ECon "*", ENum k,                 ECon "x"        ] ) = return (fst3 k,      1)  -- kx
-        getCoeff (                        EApp [ECon "^", ECon "x", ENum p] ) = return (     1, fst3 p)  --  x^p
-        getCoeff (                                        ECon "x"          ) = return (     1,      1)  --  x
-        getCoeff (                ENum k                                    ) = return (fst3 k,      0)  -- k
+        getCoeff (EApp [ECon "*", ENum k, EApp [ECon "^", ECon "x", ENum p]]) = pure (fst3 k, fst3 p)  -- kx^p
+        getCoeff (EApp [ECon "*", ENum k,                 ECon "x"        ] ) = pure (fst3 k,      1)  -- kx
+        getCoeff (                        EApp [ECon "^", ECon "x", ENum p] ) = pure (     1, fst3 p)  --  x^p
+        getCoeff (                                        ECon "x"          ) = pure (     1,      1)  --  x
+        getCoeff (                ENum k                                    ) = pure (fst3 k,      0)  -- k
         getCoeff x = die $ "Cannot parse a root-obj,\nProcessing term: " ++ show x
         getDouble (ECon s)  = case (s, rdFP (dropWhile (== '+') s)) of
-                                ("plusInfinity",  _     ) -> return $ EDouble infinity
-                                ("minusInfinity", _     ) -> return $ EDouble (-infinity)
-                                ("oo",            _     ) -> return $ EDouble infinity
-                                ("-oo",           _     ) -> return $ EDouble (-infinity)
-                                ("zero",          _     ) -> return $ EDouble 0
-                                ("-zero",         _     ) -> return $ EDouble (-0)
-                                ("NaN",           _     ) -> return $ EDouble nan
-                                (_,               Just v) -> return $ EDouble v
+                                ("plusInfinity",  _     ) -> pure $ EDouble infinity
+                                ("minusInfinity", _     ) -> pure $ EDouble (-infinity)
+                                ("oo",            _     ) -> pure $ EDouble infinity
+                                ("-oo",           _     ) -> pure $ EDouble (-infinity)
+                                ("zero",          _     ) -> pure $ EDouble 0
+                                ("-zero",         _     ) -> pure $ EDouble (-0)
+                                ("NaN",           _     ) -> pure $ EDouble nan
+                                (_,               Just v) -> pure $ EDouble v
                                 _               -> die $ "Cannot parse a double value from: " ++ s
         getDouble (EApp [_, s, _, _]) = getDouble s
-        getDouble (EReal r) = return $ EDouble $ fromRat $ toRational r
+        getDouble (EReal r) = pure $ EDouble $ fromRat $ toRational r
         getDouble x         = die $ "Cannot parse a double value from: " ++ show x
         getFloat (ECon s)   = case (s, rdFP (dropWhile (== '+') s)) of
-                                ("plusInfinity",  _     ) -> return $ EFloat infinity
-                                ("minusInfinity", _     ) -> return $ EFloat (-infinity)
-                                ("oo",            _     ) -> return $ EFloat infinity
-                                ("-oo",           _     ) -> return $ EFloat (-infinity)
-                                ("zero",          _     ) -> return $ EFloat 0
-                                ("-zero",         _     ) -> return $ EFloat (-0)
-                                ("NaN",           _     ) -> return $ EFloat nan
-                                (_,               Just v) -> return $ EFloat v
+                                ("plusInfinity",  _     ) -> pure $ EFloat infinity
+                                ("minusInfinity", _     ) -> pure $ EFloat (-infinity)
+                                ("oo",            _     ) -> pure $ EFloat infinity
+                                ("-oo",           _     ) -> pure $ EFloat (-infinity)
+                                ("zero",          _     ) -> pure $ EFloat 0
+                                ("-zero",         _     ) -> pure $ EFloat (-0)
+                                ("NaN",           _     ) -> pure $ EFloat nan
+                                (_,               Just v) -> pure $ EFloat v
                                 _               -> die $ "Cannot parse a float value from: " ++ s
-        getFloat (EReal r)  = return $ EFloat $ fromRat $ toRational r
+        getFloat (EReal r)  = pure $ EFloat $ fromRat $ toRational r
         getFloat (EApp [_, s, _, _]) = getFloat s
         getFloat x          = die $ "Cannot parse a float value from: " ++ show x
 
 -- | Parses the Z3 floating point formatted numbers like so: 1.321p5/1.2123e9 etc.
 rdFP :: (Read a, RealFloat a) => String -> Maybe a
 rdFP s = case break (`elem` "pe") s of
-           (m, 'p':e) -> rd m >>= \m' -> rd e >>= \e' -> return $ m' * ( 2 ** e')
-           (m, 'e':e) -> rd m >>= \m' -> rd e >>= \e' -> return $ m' * (10 ** e')
+           (m, 'p':e) -> rd m >>= \m' -> rd e >>= \e' -> pure $ m' * ( 2 ** e')
+           (m, 'e':e) -> rd m >>= \m' -> rd e >>= \e' -> pure $ m' * (10 ** e')
            (m, "")    -> rd m
            _          -> Nothing
  where rd v = case reads v of
@@ -504,10 +504,10 @@ parseStoreAssociations :: SExpr -> Maybe (Either String ([([SExpr], SExpr)], SEx
 parseStoreAssociations (EApp [ECon "_", ECon "as-array", ECon nm]) = Just $ Left nm
 parseStoreAssociations e                                           = Right <$> (chainAssigns =<< vals e)
     where vals :: SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
-          vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"],            defVal]) = return [Right defVal]
-          vals (EApp [EApp [ECon "as", ECon "const", EApp (ECon "Array" : _)], defVal]) = return [Right defVal]
+          vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"],            defVal]) = pure [Right defVal]
+          vals (EApp [EApp [ECon "as", ECon "const", EApp (ECon "Array" : _)], defVal]) = pure [Right defVal]
           vals (EApp (ECon "store" : prev : argsVal)) | length argsVal >= 2             = do rest <- vals prev
-                                                                                             return $ Left (init argsVal, last argsVal) : rest
+                                                                                             pure $ Left (init argsVal, last argsVal) : rest
           vals _                                                                        = Nothing
 
 -- | Turn a sequence of left-right chain assignments (condition + free) into a single chain
@@ -576,7 +576,7 @@ makeHaskellFunction resp nm isCurried mbArgs
        Right (EApp [EApp [ECon o, e]]) | o == nm -> do (args, bd) <- lambda e
                                                        let params | isCurried = unwords args
                                                                   | True      = '(' : intercalate ", " args ++ ")"
-                                                       return $ unBar nm ++ " " ++ params ++ " = " ++ bd
+                                                       pure $ unBar nm ++ " " ++ params ++ " = " ++ bd
        _                                         -> Nothing
 
   where -- infinite supply of names; starting with the ones we're given

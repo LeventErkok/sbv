@@ -842,7 +842,7 @@ sSets = symbolics
 
 -- | Generalization of 'Data.SBV.solve'
 solve :: MonadSymbolic m => [SBool] -> m SBool
-solve = return . sAnd
+solve = pure . sAnd
 
 -- | Convert an SReal to an SInteger. That is, it computes the
 -- largest integer @n@ that satisfies @sIntegerToSReal n <= r@
@@ -890,7 +890,7 @@ observeIf cond m x
   where k = kindOf x
         r st = do xsv <- sbvToSV st (label ("Observing: " ++ m) x)
                   recordObservable st m (cond . fromCV) xsv
-                  return xsv
+                  pure xsv
 
 -- | Observe the value of an expression, unconditionally. See 'observeIf' for a generalized version.
 observe :: SymVal a => String -> SBV a -> SBV a
@@ -3495,7 +3495,7 @@ sAssert cs msg cond x
                        mustNeverHappen = pc .&& sNot cond
                    cnd <- sbvToSV st mustNeverHappen
                    addAssertion st cs msg cnd
-                   return xsv
+                   pure xsv
 
         locInfo ps = intercalate ",\n " (map loc ps)
           where loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
@@ -3532,7 +3532,7 @@ instance SymVal a => Mergeable (SBV a) where
             r st  = do sws <- mapM (sbvToSV st) xs
                        swe <- sbvToSV st err
                        if all (== swe) sws  -- off-chance that all elts are the same. Note that this also correctly covers the case when list is empty.
-                          then return swe
+                          then pure swe
                           else do idx <- getTableIndex st kInd kElt sws
                                   swi <- sbvToSV st ind
                                   let len = length xs
@@ -4466,7 +4466,7 @@ instance Testable (Symbolic SBool) where
                      case map fst unints of
                        [] -> case unliteral r of
                                Nothing -> cantQuickCheck "The result did not evaluate to a concrete value"
-                               Just b  -> return (cond, b, tvals ++ mapMaybe getObservable ovals)
+                               Just b  -> pure (cond, b, tvals ++ mapMaybe getObservable ovals)
                        uis -> cantQuickCheck $ "Uninterpreted constants remain: " ++ unwords uis
 
            complain qcInfo = showModel defaultSMTCfg (SMTModel [] Nothing qcInfo [])
@@ -4504,7 +4504,7 @@ sbvQuickCheck prop = QC.isSuccess `fmap` QC.quickCheckResult prop
 instance Testable (Symbolic SVal) where
   property m = property $ do s <- m
                              when (kindOf s /= KBool) $ error "Cannot quickcheck non-boolean value"
-                             return (SBV s :: SBool)
+                             pure (SBV s :: SBool)
 
 -- | Explicit sharing combinator. The SBV library has internal caching/hash-consing mechanisms
 -- built in, based on Andy Gill's type-safe observable sharing technique (see: <http://ku-fpg.github.io/files/Gill-09-TypeSafeReification.pdf>).
@@ -4515,7 +4515,7 @@ slet :: forall a b. (HasKind a, HasKind b) => SBV a -> (SBV a -> SBV b) -> SBV b
 slet x f = SBV $ SVal k $ Right $ cache r
     where k    = kindOf (Proxy @b)
           r st = do xsv <- sbvToSV st x
-                    let xsbv = SBV $ SVal (kindOf x) (Right (cache (const (return xsv))))
+                    let xsbv = SBV $ SVal (kindOf x) (Right (cache (const (pure xsv))))
                         res  = f xsbv
                     sbvToSV st res
 

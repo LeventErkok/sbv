@@ -144,7 +144,7 @@ rc4IsCorrect = prove $ do
         let ks  = keySchedule key
             ct  = zipWith xor ks pt
             pt' = zipWith xor ks ct
-        return $ pt .== pt'
+        pure $ pt .== pt'
 
 --------------------------------------------------------------------------------------------
 -- | For doctest purposes only

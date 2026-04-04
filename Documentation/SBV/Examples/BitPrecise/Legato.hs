@@ -294,7 +294,7 @@ correctnessTheorem = proveWith defaultSMTCfg{timing = PrintTiming} $ do
         flagC <- sBool "flagC"
         flagZ <- sBool "flagZ"
 
-        return $ legatoIsCorrect (x, y, lo, regX, regA, flagC, flagZ)
+        pure $ legatoIsCorrect (x, y, lo, regX, regA, flagC, flagZ)
 
 ------------------------------------------------------------------
 -- * C Code generation

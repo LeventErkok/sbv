@@ -484,7 +484,7 @@ randomCVal k =
     KSet  ek           -> do i <- randomIO                           -- regular or complement
                              l <- randomRIO (0, 100)                 -- some set upto 100 elements
                              vals <- Set.fromList <$> replicateM l (randomCVal ek)
-                             return $ CSet $ if i then RegularSet vals else ComplementSet vals
+                             pure $ CSet $ if i then RegularSet vals else ComplementSet vals
 
     KTuple ks          -> CTuple <$> traverse randomCVal ks
 
@@ -492,7 +492,7 @@ randomCVal k =
                              ks  <- replicateM l (randomCVal k1)
                              vs  <- replicateM l (randomCVal k2)
                              def <- randomCVal k2
-                             return $ CArray $ ArrayModel (zip ks vs) def
+                             pure $ CArray $ ArrayModel (zip ks vs) def
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)

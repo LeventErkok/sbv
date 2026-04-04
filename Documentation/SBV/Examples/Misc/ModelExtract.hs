@@ -25,7 +25,7 @@ outside :: [Integer] -> IO SatResult
 outside disallow = sat $ do x <- sInteger "x"
                             let notEq i = constrain $ x ./= literal i
                             mapM_ notEq disallow
-                            return $ x .>= 0
+                            pure $ x .>= 0
 
 -- | We now use "outside" repeatedly to generate 10 integers, such that we not only disallow
 -- previously generated elements, but also any value that differs from previous solutions
@@ -37,7 +37,7 @@ outside disallow = sat $ do x <- sInteger "x"
 genVals :: IO [Integer]
 genVals = go [] []
   where go _ model
-         | length model >= 10 = return model
+         | length model >= 10 = pure model
         go disallow model
           = do res <- outside disallow
                -- Look up the value of "x" in the generated model
@@ -45,4 +45,4 @@ genVals = go [] []
                -- SBV known type would be OK as well.
                case "x" `getModelValue` res of
                  Just c -> go ([c-4 .. c+4] ++ disallow) (c : model)
-                 _      -> return model
+                 _      -> pure model

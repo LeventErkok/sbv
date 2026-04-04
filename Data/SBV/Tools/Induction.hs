@@ -84,7 +84,7 @@ instance Show a => Show (InductionResult a) where
 -- and "Documentation.SBV.Examples.ProofTools.Sum" for examples.
 induct :: (Show res, Queriable IO st, res ~ QueryResult st)
        => Bool                             -- ^ Verbose mode
-       -> Symbolic ()                      -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
+       -> Symbolic ()                      -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @pure ()@ if not needed.)
        -> (st -> SBool)                    -- ^ Initial condition
        -> (st -> st -> SBool)              -- ^ Transition relation
        -> [(String, st -> SBool)]          -- ^ Strengthenings, if any. The @String@ is a simple tag.
@@ -115,14 +115,14 @@ inductWith cfg chatty setup initial trans strengthenings inv goal =
                $ try "Proving partial correctness"
                      (\s _ -> let (term, result) = goal s in inv s .&& term .=> result)
                      (Failed PartialCorrectness)
-                     (msg "Done" >> return Proven)
+                     (msg "Done" >> pure Proven)
 
   where msg = when chatty . putStrLn
 
         try m p wrap cont = do msg m
                                res <- check p
                                case res of
-                                 Just ex -> return $ wrap ex
+                                 Just ex -> pure $ wrap ex
                                  Nothing -> cont
 
         check p = runSMTWith cfg $ do
@@ -135,14 +135,14 @@ inductWith cfg chatty setup initial trans strengthenings inv goal =
                                    case cs of
                                      Unk    -> error "Solver said unknown"
                                      DSat{} -> error "Solver returned a delta-sat result"
-                                     Unsat  -> return Nothing
+                                     Unsat  -> pure Nothing
                                      Sat    -> do io $ msg "Failed in state:"
                                                   exS  <- project s
                                                   io $ msg $ show exS
                                                   io $ msg "Transitioning to:"
                                                   exS' <- project s'
                                                   io $ msg $ show exS'
-                                                  return $ Just (exS, exS')
+                                                  pure $ Just (exS, exS')
 
         strengthen []             cont = cont
         strengthen ((nm, st):sts) cont = try ("Proving strengthening initiation  : " ++ nm)

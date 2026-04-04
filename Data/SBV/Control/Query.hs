@@ -112,17 +112,17 @@ getInfo flag = do
 
     parse r bad $ \pe ->
        if isAllStat
-          then return $ Resp_AllStatistics $ grabAllStats pe
+          then pure $ Resp_AllStatistics $ grabAllStats pe
           else case pe of
-                 ECon "unsupported"                                        -> return Resp_Unsupported
-                 EApp [ECon ":assertion-stack-levels", ENum (i, _, _)]     -> return $ Resp_AssertionStackLevels i
-                 EApp (ECon ":authors" : ns)                               -> return $ Resp_Authors (map render ns)
-                 EApp [ECon ":error-behavior", ECon "immediate-exit"]      -> return $ Resp_Error ErrorImmediateExit
-                 EApp [ECon ":error-behavior", ECon "continued-execution"] -> return $ Resp_Error ErrorContinuedExecution
-                 EApp (ECon ":name" : o)                                   -> return $ Resp_Name (render (EApp o))
-                 EApp (ECon ":reason-unknown" : o)                         -> return $ Resp_ReasonUnknown (unk o)
-                 EApp (ECon ":version" : o)                                -> return $ Resp_Version (render (EApp o))
-                 EApp (ECon s : o)                                         -> return $ Resp_InfoKeyword s (map render o)
+                 ECon "unsupported"                                        -> pure Resp_Unsupported
+                 EApp [ECon ":assertion-stack-levels", ENum (i, _, _)]     -> pure $ Resp_AssertionStackLevels i
+                 EApp (ECon ":authors" : ns)                               -> pure $ Resp_Authors (map render ns)
+                 EApp [ECon ":error-behavior", ECon "immediate-exit"]      -> pure $ Resp_Error ErrorImmediateExit
+                 EApp [ECon ":error-behavior", ECon "continued-execution"] -> pure $ Resp_Error ErrorContinuedExecution
+                 EApp (ECon ":name" : o)                                   -> pure $ Resp_Name (render (EApp o))
+                 EApp (ECon ":reason-unknown" : o)                         -> pure $ Resp_ReasonUnknown (unk o)
+                 EApp (ECon ":version" : o)                                -> pure $ Resp_Version (render (EApp o))
+                 EApp (ECon s : o)                                         -> pure $ Resp_InfoKeyword s (map render o)
                  _                                                         -> bad r Nothing
 
   where render = serialize True
@@ -165,28 +165,28 @@ getOption f = case f undefined of
 
                 r <- ask cmd
 
-                parse r bad $ \case ECon "unsupported" -> return Nothing
+                parse r bad $ \case ECon "unsupported" -> pure Nothing
                                     e                  -> continue e (bad r)
 
-        string c (ECon s) _ = return $ Just $ c s
+        string c (ECon s) _ = pure $ Just $ c s
         string _ e        k = k $ Just ["Expected string, but got: " ++ show (serialize False e)]
 
-        bool c (ENum (0, _, True)) _ = return $ Just $ c False
-        bool c (ENum (1, _, True)) _ = return $ Just $ c True
+        bool c (ENum (0, _, True)) _ = pure $ Just $ c False
+        bool c (ENum (1, _, True)) _ = pure $ Just $ c True
         bool _ e                   k = k $ Just ["Expected boolean, but got: " ++ show (serialize False e)]
 
-        integer c (ENum (i, _, _)) _ = return $ Just $ c i
+        integer c (ENum (i, _, _)) _ = pure $ Just $ c i
         integer _ e                k = k $ Just ["Expected integer, but got: " ++ show (serialize False e)]
 
         -- free format, really
-        stringList c e _ = return $ Just $ c $ stringsOf e
+        stringList c e _ = pure $ Just $ c $ stringsOf e
 
 -- | Generalization of 'Data.SBV.Control.getUnknownReason'
 getUnknownReason :: (MonadIO m, MonadQuery m) => m SMTReasonUnknown
 getUnknownReason = do ru <- getInfo ReasonUnknown
                       case ru of
-                        Resp_Unsupported     -> return $ UnknownOther "Solver responded: Unsupported."
-                        Resp_ReasonUnknown r -> return r
+                        Resp_Unsupported     -> pure $ UnknownOther "Solver responded: Unsupported."
+                        Resp_ReasonUnknown r -> pure r
                         -- Shouldn't happen, but just in case:
                         _                    -> error $ "Unexpected reason value received: " ++ show ru
 
@@ -195,8 +195,8 @@ ensureSat :: (MonadIO m, MonadQuery m) => m ()
 ensureSat = do cfg <- getConfig
                cs <- checkSatUsing $ satCmd cfg
                case cs of
-                 Sat    -> return ()
-                 DSat{} -> return ()
+                 Sat    -> pure ()
+                 DSat{} -> pure ()
                  Unk    -> do s <- getUnknownReason
                               error $ unlines [ ""
                                               , "*** Data.SBV.ensureSat: Solver reported Unknown!"
@@ -232,7 +232,7 @@ getLexicographicOptResults = do cfg <- getConfig
                                   Unk    -> Unknown       cfg <$> getUnknownReason
    where getModelWithObjectives = do objectiveValues <- getObjectiveValues
                                      m               <- getModel
-                                     return m {modelObjectives = objectiveValues}
+                                     pure m {modelObjectives = objectiveValues}
 
 -- | Generalization of 'Data.SBV.Control.getIndependentOptResults'
 getIndependentOptResults :: forall m. (MonadIO m, MonadQuery m) => [String] -> m [(String, SMTResult)]
@@ -240,44 +240,44 @@ getIndependentOptResults objNames = do cfg <- getConfig
                                        cs  <- checkSat
 
                                        case cs of
-                                         Unsat  -> getUnsatCoreIfRequested >>= \mbUC -> return [(nm, Unsatisfiable cfg mbUC) | nm <- objNames]
+                                         Unsat  -> getUnsatCoreIfRequested >>= \mbUC -> pure [(nm, Unsatisfiable cfg mbUC) | nm <- objNames]
                                          Sat    -> continue (classifyModel cfg)
                                          DSat{} -> continue (classifyModel cfg)
                                          Unk    -> do ur <- Unknown cfg <$> getUnknownReason
-                                                      return [(nm, ur) | nm <- objNames]
+                                                      pure [(nm, ur) | nm <- objNames]
 
   where continue classify = do objectiveValues <- getObjectiveValues
                                nms <- zipWithM getIndependentResult [0..] objNames
-                               return [(n, classify (m {modelObjectives = objectiveValues})) | (n, m) <- nms]
+                               pure [(n, classify (m {modelObjectives = objectiveValues})) | (n, m) <- nms]
 
         getIndependentResult :: Int -> String -> m (String, SMTModel)
         getIndependentResult i s = do m <- getModelAtIndex (Just i)
-                                      return (s, m)
+                                      pure (s, m)
 
 -- | Generalization of 'Data.SBV.Control.getParetoOptResults'
 getParetoOptResults :: (MonadIO m, MonadQuery m) => Maybe Int -> m (Bool, [SMTResult])
 getParetoOptResults (Just i)
-        | i <= 0             = return (True, [])
+        | i <= 0             = pure (True, [])
 getParetoOptResults mbN      = do cfg <- getConfig
                                   cs  <- checkSat
 
                                   case cs of
-                                    Unsat  -> return (False, [])
+                                    Unsat  -> pure (False, [])
                                     Sat    -> continue (classifyModel cfg)
                                     DSat{} -> continue (classifyModel cfg)
                                     Unk    -> do ur <- getUnknownReason
-                                                 return (False, [ProofError cfg [show ur] Nothing])
+                                                 pure (False, [ProofError cfg [show ur] Nothing])
 
   where continue classify = do m <- getModel
                                (limReached, fronts) <- getParetoFronts (subtract 1 <$> mbN) [m]
-                               return (limReached, reverse (map classify fronts))
+                               pure (limReached, reverse (map classify fronts))
 
         getParetoFronts :: (MonadIO m, MonadQuery m) => Maybe Int -> [SMTModel] -> m (Bool, [SMTModel])
-        getParetoFronts (Just i) sofar | i <= 0 = return (True, sofar)
+        getParetoFronts (Just i) sofar | i <= 0 = pure (True, sofar)
         getParetoFronts mbi      sofar          = do cs <- checkSat
                                                      let more = getModel >>= \m -> getParetoFronts (subtract 1 <$> mbi) (m : sofar)
                                                      case cs of
-                                                       Unsat  -> return (False, sofar)
+                                                       Unsat  -> pure (False, sofar)
                                                        Sat    -> more
                                                        DSat{} -> more
                                                        Unk    -> more
@@ -295,14 +295,14 @@ checkSatAssumingHelper :: (MonadIO m, MonadQuery m) => Bool -> [SBool] -> m (Che
 checkSatAssumingHelper getAssumptions sBools = do
         -- sigh.. SMT-Lib requires the values to be literals only. So, create proxies.
         let mkAssumption st = do swsOriginal <- mapM (\sb -> do sv <- sbvToSV st sb
-                                                                return (sv, sb)) sBools
+                                                                pure (sv, sb)) sBools
 
                                  -- drop duplicates and trues
                                  let swbs = [p | p@(sv, _) <- nubBy ((==) `on` fst) swsOriginal, sv /= trueSV]
 
                                  -- get a unique proxy name for each
                                  uniqueSWBs <- mapM (\(sv, sb) -> do unique <- incrementInternalCounter st
-                                                                     return (sv, (unique, sb))) swbs
+                                                                     pure (sv, (unique, sb))) swbs
 
                                  let translate (sv, (unique, sb)) = (nm, decls, (proxy, sb))
                                         where nm    = show sv
@@ -311,7 +311,7 @@ checkSatAssumingHelper getAssumptions sBools = do
                                                       , "(assert (= " ++ proxy ++ " " ++ nm ++ "))"
                                                       ]
 
-                                 return $ map translate uniqueSWBs
+                                 pure $ map translate uniqueSWBs
 
         assumptions <- inNewContext mkAssumption
 
@@ -331,12 +331,12 @@ checkSatAssumingHelper getAssumptions sBools = do
 
         let grabUnsat
              | getAssumptions = do as <- getUnsatAssumptions origNames proxyMap
-                                   return (Unsat, Just as)
-             | True           = return (Unsat, Nothing)
+                                   pure (Unsat, Just as)
+             | True           = pure (Unsat, Nothing)
 
-        parse r bad $ \case ECon "sat"     -> return (Sat, Nothing)
+        parse r bad $ \case ECon "sat"     -> pure (Sat, Nothing)
                             ECon "unsat"   -> grabUnsat
-                            ECon "unknown" -> return (Unk, Nothing)
+                            ECon "unknown" -> pure (Unk, Nothing)
                             _              -> bad r Nothing
 
 -- | Generalization of 'Data.SBV.Control.getAssertionStackDepth'
@@ -352,7 +352,7 @@ restoreTablesAndArrays = do st <- queryState
                             let inits = [ "table"  ++ show i ++ "_initializer" | i <- [0 .. tCount - 1]]
 
                             case inits of
-                              []  -> return ()   -- Nothing to do
+                              []  -> pure ()   -- Nothing to do
                               [x] -> send True $ "(assert " ++ x ++ ")"
                               xs  -> send True $ "(assert (and " ++ unwords xs ++ "))"
 
@@ -361,7 +361,7 @@ inNewAssertionStack :: (MonadIO m, MonadQuery m) => m a -> m a
 inNewAssertionStack q = do push 1
                            r <- q
                            pop 1
-                           return r
+                           pure r
 
 -- | Generalization of 'Data.SBV.Control.push'
 push :: (MonadIO m, MonadQuery m) => Int -> m ()
@@ -398,7 +398,7 @@ caseSplit printCases cases = do cfg <- getConfig
                                 go cfg (cases ++ [("Coverage", sNot (sOr (map snd cases)))])
   where msg = when printCases . io . putStrLn
 
-        go _ []            = return Nothing
+        go _ []            = pure Nothing
         go cfg ((n,c):ncs) = do let notify s = msg $ "Case " ++ n ++ ": " ++ s
 
                                 notify "Starting"
@@ -410,15 +410,15 @@ caseSplit printCases cases = do cfg <- getConfig
 
                                   Sat      -> do notify "Satisfiable"
                                                  res <- Satisfiable cfg <$> getModel
-                                                 return $ Just (n, res)
+                                                 pure $ Just (n, res)
 
                                   DSat mbP -> do notify $ "Delta satisfiable" ++ maybe "" (" (precision: " ++) mbP
                                                  res <- DeltaSat cfg mbP <$> getModel
-                                                 return $ Just (n, res)
+                                                 pure $ Just (n, res)
 
                                   Unk      -> do notify "Unknown"
                                                  res <- Unknown cfg <$> getUnknownReason
-                                                 return $ Just (n, res)
+                                                 pure $ Just (n, res)
 
 -- | Generalization of 'Data.SBV.Control.resetAssertions'
 resetAssertions :: (MonadIO m, MonadQuery m) => m ()
@@ -439,7 +439,7 @@ echo s = do let cmd = "(echo \"" ++ concatMap sanitize s ++ "\")"
             -- and forgets about it immediately.
             _ <- ask cmd
 
-            return ()
+            pure ()
   where sanitize '"'  = "\"\""  -- quotes need to be duplicated
         sanitize c    = [c]
 
@@ -473,7 +473,7 @@ getUnsatCore = do
         r <- ask cmd
 
         parse r bad $ \case
-           EApp es | Just xs <- mapM fromECon es -> return $ map unBar xs
+           EApp es | Just xs <- mapM fromECon es -> pure $ map unBar xs
            _                                     -> bad r Nothing
 
 -- | Retrieve the unsat core if it was asked for in the configuration
@@ -482,7 +482,7 @@ getUnsatCoreIfRequested = do
         cfg <- getConfig
         if or [b | ProduceUnsatCores b <- solverSetOptions cfg]
            then Just <$> getUnsatCore
-           else return Nothing
+           else pure Nothing
 
 -- | Generalization of 'Data.SBV.Control.getProof'
 getProof :: (MonadIO m, MonadQuery m) => m String
@@ -502,7 +502,7 @@ getProof = do
 
         -- we only care about the fact that we can parse the output, so the
         -- result of parsing is ignored.
-        parse r bad $ \_ -> return r
+        parse r bad $ \_ -> pure r
 
 -- | Generalization of 'Data.SBV.Control.getInterpolantMathSAT'. Use this version with MathSAT.
 getInterpolantMathSAT :: (MonadIO m, MonadQuery m) => [String] -> m String
@@ -524,7 +524,7 @@ getInterpolantMathSAT fs
 
        r <- ask cmd
 
-       parse r bad $ \e -> return $ serialize False e
+       parse r bad $ \e -> pure $ serialize False e
 
 
 -- | Generalization of 'Data.SBV.Control.getAbduct'.
@@ -536,7 +536,7 @@ getAbduct mbGrammar defName b = do
 
    r <- ask cmd
 
-   parse r bad $ \e -> return $ serialize False e
+   parse r bad $ \e -> pure $ serialize False e
 
 -- | Generalization of 'Data.SBV.Control.getAbductNext'.
 getAbductNext :: (MonadIO m, MonadQuery m) => m String
@@ -546,7 +546,7 @@ getAbductNext = do
 
    r <- ask cmd
 
-   parse r bad $ \e -> return $ serialize False e
+   parse r bad $ \e -> pure $ serialize False e
 
 -- | Generalization of 'Data.SBV.Control.getInterpolantZ3'. Use this version with Z3.
 getInterpolantZ3 :: (MonadIO m, MonadQuery m) => [SBool] -> m String
@@ -554,7 +554,7 @@ getInterpolantZ3 fs
   | length fs < 2
   = error $ "SBV.getInterpolantZ3 requires at least two booleans, received: " ++ show fs
   | True
-  = do ss <- let fAll []     sofar = return $ reverse sofar
+  = do ss <- let fAll []     sofar = pure $ reverse sofar
                  fAll (b:bs) sofar = do sv <- inNewContext (`sbvToSV` b)
                                         fAll bs (sv : sofar)
              in fAll fs []
@@ -564,7 +564,7 @@ getInterpolantZ3 fs
 
        r <- ask cmd
 
-       parse r bad $ \e -> return $ serialize False e
+       parse r bad $ \e -> pure $ serialize False e
 
 -- | Generalization of 'Data.SBV.Control.getAssertions'
 getAssertions :: (MonadIO m, MonadQuery m) => m [String]
@@ -583,8 +583,8 @@ getAssertions = do
         r <- ask cmd
 
         parse r bad $ \pe -> case pe of
-                                EApp xs -> return $ map render xs
-                                _       -> return [render pe]
+                                EApp xs -> pure $ map render xs
+                                _       -> pure [render pe]
 
 -- | Generalization of 'Data.SBV.Control.getAssignment'
 getAssignment :: (MonadIO m, MonadQuery m) => m [(String, Bool)]
@@ -606,7 +606,7 @@ getAssignment = do
 
         r <- ask cmd
 
-        parse r bad $ \case EApp ps | Just vs <- mapM grab ps -> return vs
+        parse r bad $ \case EApp ps | Just vs <- mapM grab ps -> pure vs
                             _                                 -> bad r Nothing
 
 -- | Make an assignment. The type 'Assignment' is abstract, the result is typically passed
@@ -636,7 +636,7 @@ mkSMTResult asgns = do
              QueryState{queryConfig} <- getQueryState
              inps <- F.toList <$> getTopLevelInputs
 
-             let grabValues st = do let extract (Assign s n) = sbvToSV st (SBV s) >>= \sv -> return (sv, n)
+             let grabValues st = do let extract (Assign s n) = sbvToSV st (SBV s) >>= \sv -> pure (sv, n)
 
                                     modelAssignment <- mapM extract asgns
 
@@ -687,7 +687,7 @@ mkSMTResult asgns = do
                                                                                 , "***   Candidates: " ++ unwords nms
                                                                                 ]
 
-                                    return [(findName s, n) | (s, n) <- modelAssignment]
+                                    pure [(findName s, n) | (s, n) <- modelAssignment]
 
              assocs <- inNewContext grabValues
 
@@ -697,4 +697,4 @@ mkSMTResult asgns = do
                               , modelUIFuns     = []
                               }
 
-             return $ Satisfiable queryConfig m
+             pure $ Satisfiable queryConfig m

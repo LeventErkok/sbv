@@ -88,7 +88,7 @@ isPermutationOf as bs = go as (map (, sTrue) bs) .&& go bs (map (, sTrue) as)
 correctness :: Int -> IO ThmResult
 correctness n = prove $ do xs <- mkFreeVars n
                            let ys = mergeSort xs
-                           return $ nonDecreasing ys .&& isPermutationOf xs ys
+                           pure $ nonDecreasing ys .&& isPermutationOf xs ys
 
 -----------------------------------------------------------------------------
 -- * Generating C code

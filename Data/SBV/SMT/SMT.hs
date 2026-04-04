@@ -238,7 +238,7 @@ class SatModel a where
   -- | Given a parsed model instance, transform it using @f@, and return the result.
   -- The default definition for this method should be sufficient in most use cases.
   cvtModel :: (a -> Maybe b) -> Maybe (a, [CV]) -> Maybe (b, [CV])
-  cvtModel f x = x >>= \(a, r) -> f a >>= \b -> return (b, r)
+  cvtModel f x = x >>= \(a, r) -> f a >>= \b -> pure (b, r)
 
   {-# MINIMAL parseCVs #-}
 
@@ -249,12 +249,12 @@ genParse _ _                                         = Nothing
 
 -- | Base case for 'SatModel' at unit type. Comes in handy if there are no real variables.
 instance SatModel () where
-  parseCVs xs = return ((), xs)
+  parseCVs xs = pure ((), xs)
 
 -- | 'Bool' as extracted from a model
 instance SatModel Bool where
   parseCVs xs = do (x, r) <- genParse KBool xs
-                   return ((x :: Integer) /= 0, r)
+                   pure ((x :: Integer) /= 0, r)
 
 -- | 'Word8' as extracted from a model
 instance SatModel Word8 where
@@ -371,37 +371,37 @@ instance {-# OVERLAPPABLE #-} SatModel a => SatModel [a] where
 instance (SatModel a, SatModel b) => SatModel (a, b) where
   parseCVs as = do (a, bs) <- parseCVs as
                    (b, cs) <- parseCVs bs
-                   return ((a, b), cs)
+                   pure ((a, b), cs)
 
 -- | 3-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c) => SatModel (a, b, c) where
   parseCVs as = do (a,      bs) <- parseCVs as
                    ((b, c), ds) <- parseCVs bs
-                   return ((a, b, c), ds)
+                   pure ((a, b, c), ds)
 
 -- | 4-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d) => SatModel (a, b, c, d) where
   parseCVs as = do (a,         bs) <- parseCVs as
                    ((b, c, d), es) <- parseCVs bs
-                   return ((a, b, c, d), es)
+                   pure ((a, b, c, d), es)
 
 -- | 5-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e) => SatModel (a, b, c, d, e) where
   parseCVs as = do (a, bs)            <- parseCVs as
                    ((b, c, d, e), fs) <- parseCVs bs
-                   return ((a, b, c, d, e), fs)
+                   pure ((a, b, c, d, e), fs)
 
 -- | 6-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f) => SatModel (a, b, c, d, e, f) where
   parseCVs as = do (a, bs)               <- parseCVs as
                    ((b, c, d, e, f), gs) <- parseCVs bs
-                   return ((a, b, c, d, e, f), gs)
+                   pure ((a, b, c, d, e, f), gs)
 
 -- | 7-Tuples extracted from a model
 instance (SatModel a, SatModel b, SatModel c, SatModel d, SatModel e, SatModel f, SatModel g) => SatModel (a, b, c, d, e, f, g) where
   parseCVs as = do (a, bs)                  <- parseCVs as
                    ((b, c, d, e, f, g), hs) <- parseCVs bs
-                   return ((a, b, c, d, e, f, g), hs)
+                   pure ((a, b, c, d, e, f, g), hs)
 
 -- | Various SMT results that we can extract models out of.
 class Modelable a where
@@ -519,8 +519,8 @@ displayModels :: SatModel a => ([(Bool, a)] -> [(Bool, a)]) -> (Int -> (Bool, a)
 displayModels arrange disp AllSatResult{allSatResults = ms} = do
     let models = rights (map (getModelAssignment . SatResult) ms)
     inds <- zipWithM display (arrange models) [(1::Int)..]
-    return $ last (0:inds)
-  where display r i = disp i r >> return i
+    pure $ last (0:inds)
+  where display r i = disp i r >> pure i
 
 -- | Show an SMTResult; generic version
 showSMTResult :: String -> String -> String -> String -> (Maybe String -> String) -> String -> SMTResult -> String
@@ -726,8 +726,8 @@ standardEngine :: String
                -> SMTEngine
 standardEngine envName envOptName cfg ctx pgm continuation = do
 
-    execName <-                    getEnv envName     `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (executable (solver cfg))))
-    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (options (solver cfg) cfg)))
+    execName <-                    getEnv envName     `C.catch` (\(e :: C.SomeException) -> handleAsync e (pure (executable (solver cfg))))
+    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(e :: C.SomeException) -> handleAsync e (pure (options (solver cfg) cfg)))
 
     let cfg' = cfg {solver = (solver cfg) {executable = execName, options = const execOpts}}
 
@@ -803,7 +803,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                       cmd = dropWhile isSpace command
 
                                   in if null cmd || ";" `isPrefixOf` cmd
-                                     then return "success"
+                                     then pure "success"
                                      else do send mbTimeOut command
                                              getResponseFromSolver (Just command) mbTimeOut
 
@@ -816,7 +816,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                 response <- go True 0 []
                                 let collated = intercalate "\n" $ reverse response
                                 recordTranscript (transcript cfg) $ RecvMsg collated
-                                return collated
+                                pure collated
 
                       where safeGetLine isFirst h =
                                          let timeOutToUse | isSetCommand mbCommand = setCommandTO
@@ -840,7 +840,7 @@ runSolver cfg ctx execPath opts pgm continuation
 
                                                                                   if stillInside
                                                                                      then collect True sofar'
-                                                                                     else return sofar'
+                                                                                     else pure sofar'
 
                                              -- Carefully grab things as they are ready. But don't block!
                                              collectH handle = reverse <$> coll ""
@@ -857,7 +857,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                               Nothing -> SolverRegular <$> getFullLine
                                               Just t  -> do r <- Timeout.timeout t getFullLine
                                                             case r of
-                                                              Just l  -> return $ SolverRegular l
+                                                              Just l  -> pure $ SolverRegular l
                                                               Nothing -> do out <- grab outh
                                                                             err <- grab errh
                                                                             -- in this case, if we have something on out/err pass that back as regular
@@ -866,7 +866,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                               _                     -> pure $ SolverTimeout (timeOutMsg t)
 
                             go isFirst i sofar = do
-                                            errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (SolverException (show e))))
+                                            errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> handleAsync e (pure (SolverException (show e))))
                                             case errln of
                                               SolverRegular ln -> let !need = i + parenDeficit ln
                                                                       -- make sure we get *something*
@@ -878,7 +878,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                         (True, _)      -> do debug cfg ["[SKIP] " `alignPlain` ln]
                                                                                              go isFirst need sofar
                                                                         (False, False) -> go False   need (ln:sofar)
-                                                                        (False, True)  -> return (ln:sofar)
+                                                                        (False, True)  -> pure (ln:sofar)
 
                                               SolverException e -> do terminateProcess pid
                                                                       C.throwIO (solverException e)
@@ -907,16 +907,16 @@ runSolver cfg ctx execPath opts pgm continuation
 
                     terminateSolver = do hClose inh
                                          outMVar <- newEmptyMVar
-                                         out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
+                                         out <- hGetContents outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (pure (show e)))
                                          _ <- forkIO $ C.evaluate (length out) >> putMVar outMVar ()
-                                         err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return (show e)))
+                                         err <- hGetContents errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (pure (show e)))
                                          _ <- forkIO $ C.evaluate (length err) >> putMVar outMVar ()
                                          takeMVar outMVar
                                          takeMVar outMVar
-                                         hClose outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
-                                         hClose errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (return ()))
-                                         ex <- waitForProcess pid `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (ExitFailure (-999))))
-                                         return (out, err, ex)
+                                         hClose outh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (pure ()))
+                                         hClose errh `C.catch`  (\(e :: C.SomeException) -> handleAsync e (pure ()))
+                                         ex <- waitForProcess pid `C.catch` (\(e :: C.SomeException) -> handleAsync e (pure (ExitFailure (-999))))
+                                         pure (out, err, ex)
 
                     cleanUp maybeForwardedException
                       = do (out, err, ex) <- terminateSolver
@@ -932,7 +932,7 @@ runSolver cfg ctx execPath opts pgm continuation
 
                            case (ex, maybeForwardedException) of
                              (_,           Just forwardedException) -> C.throwIO forwardedException
-                             (ExitSuccess, _)                       -> return ()
+                             (ExitSuccess, _)                       -> pure ()
                              _                                      -> if ignoreExitCode cfg
                                                                           then msg ["Ignoring non-zero exit code of " ++ show ex ++ " per user request!"]
                                                                           else C.throwIO (solverException ("Failed to complete the call to " ++ nm))
@@ -944,7 +944,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                                                                 else Nothing
                                                                                                       }
 
-                return (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid)
+                pure (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid)
 
       let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
                                  sendAndGetSuccess mbTimeOut l
@@ -971,7 +971,7 @@ runSolver cfg ctx execPath opts pgm continuation
 
                                                             -- put a sync point here before we die so we consume everything
                                                             mbExtras <- (Right <$> getResponseFromSolver Nothing defaultLineTO)
-                                                                        `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (Left (show e))))
+                                                                        `C.catch` (\(e :: C.SomeException) -> handleAsync e (pure (Left (show e))))
 
                                                             -- Ignore any exceptions from last sync, pointless.
                                                             let extras = case mbExtras of

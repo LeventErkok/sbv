@@ -188,7 +188,7 @@ swNodeId (SV _ nid) = nid
 -- to an uninterpreted function are evaluated before called; the semantics of uinterpreted
 -- functions is necessarily strict; deviating from Haskell's
 forceSVArg :: SV -> IO ()
-forceSVArg (SV k n) = k `seq` n `seq` return ()
+forceSVArg (SV k n) = k `seq` n `seq` pure ()
 
 -- | Constant False as an t'SV'. Note that this value always occupies slot -2 and level 0.
 falseSV :: SV
@@ -997,11 +997,11 @@ instance Show SBVRunMode where
 -- | Is this a CodeGen run? (i.e., generating code)
 isCodeGenMode :: State -> IO Bool
 isCodeGenMode State{runMode} = do rm <- readIORef runMode
-                                  return $ case rm of
-                                             Concrete{}  -> False
-                                             SMTMode{}   -> False
-                                             LambdaGen{} -> False
-                                             CodeGen     -> True
+                                  pure $ case rm of
+                                           Concrete{}  -> False
+                                           SMTMode{}   -> False
+                                           LambdaGen{} -> False
+                                           CodeGen     -> True
 
 -- | The state in query mode, i.e., additional context
 data IncState = IncState { rNewInps        :: IORef [NamedSymVar]   -- always existential!
@@ -1023,14 +1023,14 @@ newIncState = do
         ui    <- newIORef Map.empty
         pgm   <- newIORef (SBVPgm S.empty)
         cstrs <- newIORef S.empty
-        return IncState { rNewInps        = is
-                        , rNewKinds       = ks
-                        , rNewConsts      = nc
-                        , rNewTbls        = tm
-                        , rNewUIs         = ui
-                        , rNewAsgns       = pgm
-                        , rNewConstraints = cstrs
-                        }
+        pure IncState { rNewInps        = is
+                      , rNewKinds       = ks
+                      , rNewConsts      = nc
+                      , rNewTbls        = tm
+                      , rNewUIs         = ui
+                      , rNewAsgns       = pgm
+                      , rNewConstraints = cstrs
+                      }
 
 -- | Get a new IncState
 withNewIncState :: State -> (State -> IO a) -> IO (IncState, a)
@@ -1039,7 +1039,7 @@ withNewIncState st cont = do
         R.modifyIORef' (rIncState st) (const is)
         r  <- cont st
         finalIncState <- readIORef (rIncState st)
-        return (finalIncState, r)
+        pure (finalIncState, r)
 
 -- | User defined inputs
 type UserInputs = S.Seq NamedSymVar
@@ -1220,11 +1220,11 @@ extendSValPathCondition st f = st{pathCond = f (pathCond st)}
 -- | Are we running in proof mode?
 inSMTMode :: State -> IO Bool
 inSMTMode State{runMode} = do rm <- readIORef runMode
-                              return $ case rm of
-                                         CodeGen     -> False
-                                         LambdaGen{} -> False
-                                         Concrete{}  -> False
-                                         SMTMode{}   -> True
+                              pure $ case rm of
+                                       CodeGen     -> False
+                                       LambdaGen{} -> False
+                                       Concrete{}  -> False
+                                       SMTMode{}   -> True
 
 -- | The "Symbolic" value. Either a constant (@Left@) or a symbolic
 -- value (@Right Cached@). Note that caching is essential for making
@@ -1267,7 +1267,7 @@ modifyState st@State{runMode} field update interactiveUpdate = do
         rm <- readIORef runMode
         case rm of
           SMTMode _ IRun _ _ -> interactiveUpdate
-          _                  -> return ()
+          _                  -> pure ()
 
 -- | Modify the incremental state
 modifyIncState  :: State -> (IncState -> IORef a) -> (a -> a) -> IO ()
@@ -1277,20 +1277,20 @@ modifyIncState State{rIncState} field update = do
 
 -- | Add an observable
 recordObservable :: State -> String -> (CV -> Bool) -> SV -> IO ()
-recordObservable st (T.pack -> nm) chk sv = modifyState st rObservables (S.|> (nm, chk, sv)) (return ())
+recordObservable st (T.pack -> nm) chk sv = modifyState st rObservables (S.|> (nm, chk, sv)) (pure ())
 
 -- | Increment the variable counter
 incrementInternalCounter :: State -> IO Int
 incrementInternalCounter st = do ctr <- readIORef (rctr st)
-                                 modifyState st rctr (+1) (return ())
-                                 return ctr
+                                 modifyState st rctr (+1) (pure ())
+                                 pure ctr
 {-# INLINE incrementInternalCounter #-}
 
 -- | Increment the fresh-var counter
 incrementFreshNameCounter :: State -> IO Int
 incrementFreshNameCounter st = do ctr <- readIORef (freshNameCtr st)
-                                  modifyState st freshNameCtr (+1) (return ())
-                                  return ctr
+                                  modifyState st freshNameCtr (+1) (pure ())
+                                  pure ctr
 {-# INLINE incrementFreshNameCounter #-}
 
 -- | Kind of code we have for uninterpretation
@@ -1384,7 +1384,7 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                                                   ]
                                 pure True
                  UICgC c  -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
-                             do modifyState st rCgMap (Map.insert nm c) (return ())
+                             do modifyState st rCgMap (Map.insert nm c) (pure ())
                                 pure True
 
   let checkType :: SBVType -> r -> r
@@ -1398,7 +1398,7 @@ newUninterpreted st uiName mbArgNames t uiCode = do
   unless adtOp $ do
     uiMap <- readIORef (rUIMap st)
     case nm `Map.lookup` uiMap of
-      Just (_, _, t') -> checkType t' (return ())
+      Just (_, _, t') -> checkType t' (pure ())
       Nothing         -> modifyState st rUIMap (Map.insert nm (isCurried, mbArgNames, t))
                            $ modifyIncState st rNewUIs
                                               (\newUIs -> case nm `Map.lookup` newUIs of
@@ -1427,14 +1427,14 @@ newInternalVariable st k = do NamedSymVar sv nm <- newSV st k
                               let n = "__internal_sbv_" <> nm
                                   v = NamedSymVar sv n
                               modifyState st rinps (addUserInput sv n) $ modifyIncState st rNewInps (v :)
-                              return sv
+                              pure sv
 {-# INLINE newInternalVariable #-}
 
 -- | Create a variable to be used in a constraint-expression
 quantVar :: Quantifier -> State -> Kind -> IO SV
 quantVar q st k = do v@(NamedSymVar sv _) <- newSV st k
-                     modifyState st rlambdaInps (S.|> (q, v)) (return ())
-                     return sv
+                     modifyState st rlambdaInps (S.|> (q, v)) (pure ())
+                     pure sv
 {-# INLINE quantVar #-}
 
 -- | Create a variable to be used in a lambda-expression
@@ -1448,7 +1448,7 @@ newSV st k = do ctr <- incrementInternalCounter st
                 ll  <- readIORef (rLambdaLevel st)
                 let sv = SV k (NodeId (sbvContext st, ll, ctr))
                 registerKind st k
-                return $ NamedSymVar sv $ T.pack (show sv)
+                pure $ NamedSymVar sv $ T.pack (show sv)
 {-# INLINE newSV #-}
 
 -- | Register a new kind with the system, used for uninterpreted sorts.
@@ -1495,17 +1495,17 @@ registerKind st k
 
        -- Don't forget to register subkinds!
        case k of
-         KVar      {}    -> return ()
-         KBool     {}    -> return ()
-         KBounded  {}    -> return ()
-         KUnbounded{}    -> return ()
-         KReal     {}    -> return ()
-         KFloat    {}    -> return ()
-         KDouble   {}    -> return ()
-         KFP       {}    -> return ()
-         KRational {}    -> return ()
-         KChar     {}    -> return ()
-         KString   {}    -> return ()
+         KVar      {}    -> pure ()
+         KBool     {}    -> pure ()
+         KBounded  {}    -> pure ()
+         KUnbounded{}    -> pure ()
+         KReal     {}    -> pure ()
+         KFloat    {}    -> pure ()
+         KDouble   {}    -> pure ()
+         KFP       {}    -> pure ()
+         KRational {}    -> pure ()
+         KChar     {}    -> pure ()
+         KString   {}    -> pure ()
 
          KApp _ ks       -> mapM_ (registerKind st) ks
          KADT _ pks cks  -> mapM_ (registerKind st) (map snd pks ++ concatMap snd cks)
@@ -1527,7 +1527,7 @@ registerLabel whence st nm
   = do old <- readIORef $ rUsedLbls st
        if nm `Set.member` old
           then err "is used multiple times. Please do not use duplicate names!"
-          else modifyState st rUsedLbls (Set.insert nm) (return ())
+          else modifyState st rUsedLbls (Set.insert nm) (pure ())
 
   where err w = error $ "SBV (" ++ whence ++ "): " ++ show nm ++ " " ++ w
 
@@ -1539,11 +1539,11 @@ newConst st c = do
     -- NB. Unlike in 'newExpr', we don't have to make sure the returned sv
     -- has the kind we asked for, because the constMap stores the full CV
     -- which already has a kind field in it.
-    Just sv -> return sv
+    Just sv -> pure sv
     Nothing -> do (NamedSymVar sv _) <- newSV st (kindOf c)
                   let ins = Map.insert c sv
                   modifyState st rconstMap ins $ modifyIncState st rNewConsts ins
-                  return sv
+                  pure sv
 {-# INLINE newConst #-}
 
 -- | Create a new table; hash-cons as necessary
@@ -1552,11 +1552,11 @@ getTableIndex st at rt elts = do
   let key = (at, rt, elts)
   tblMap <- readIORef (rtblMap st)
   case key `Map.lookup` tblMap of
-    Just i -> return i
+    Just i -> pure i
     _      -> do let i   = Map.size tblMap
                      upd = Map.insert key i
                  modifyState st rtblMap upd $ modifyIncState st rNewTbls upd
-                 return i
+                 pure i
 
 -- | Create a new expression; hash-cons as necessary
 newExpr :: State -> Kind -> SBVExpr -> IO SV
@@ -1569,13 +1569,13 @@ newExpr st k app = do
      -- at first, but `svSign` and `svUnsign` rely on this as we can
      -- get the same expression but at a different type. See
      -- <http://github.com/GaloisInc/cryptol/issues/566> as an example.
-     Just sv | kindOf sv == k -> return sv
+     Just sv | kindOf sv == k -> pure sv
      _                        -> do (NamedSymVar sv _) <- newSV st k
                                     checkConsistent sv e
                                     let append (SBVPgm xs) = SBVPgm (xs S.|> (sv, e))
                                     modifyState st spgm append $ modifyIncState st rNewAsgns append
-                                    modifyState st rexprMap (Map.insert e sv) (return ())
-                                    return sv
+                                    modifyState st rexprMap (Map.insert e sv) (pure ())
+                                    pure sv
 {-# INLINE newExpr #-}
 
 -- | In rare cases, we can get a context mismatch; so make sure the expression is well-formed.
@@ -1719,8 +1719,8 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                        let nm = fromMaybe (T.unpack internalName) mbNm
                        introduceUserName st (isQueryVar, isTracker) nm k q sv
 
-            mkC cv = do modifyState st rCInfo ((fromMaybe "_" mbNm, cv):) (return ())
-                        return $ SVal k (Left cv)
+            mkC cv = do modifyState st rCInfo ((fromMaybe "_" mbNm, cv):) (pure ())
+                        pure $ SVal k (Left cv)
 
         case (mbQ, rm) of
           (Just q,  SMTMode{}          ) -> mkS q
@@ -1809,7 +1809,7 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
                                      $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
                       else modifyState st rinps (addUserInput sv nm)
                                      $ modifyIncState st rNewInps newInp
-                   return $ SVal k $ Right $ cache (const (return sv))
+                   pure $ SVal k $ Right $ cache (const (pure sv))
 
    where -- The following can be rather slow if we keep reusing the same prefix, but I doubt it'll be a problem in practice
          -- Also, the following will fail if we span the range of integers without finding a match, but your computer would
@@ -1941,7 +1941,7 @@ runSymbolicInState st (SymbolicT c) = do
 
    mapM_ check $ nubOrd $ G.universeBi res
 
-   return (r, res)
+   pure (r, res)
 
 -- | Grab the program from a running symbolic simulation state.
 extractSymbolicSimulationState :: State -> IO Result
@@ -2007,12 +2007,12 @@ extractSymbolicSimulationState st@State{ runMode=rrm
 
    pinfo <- readIORef progInfo
 
-   return $ Result pinfo knds traceVals observables cgMap inpsO (constMap, cnsts) tbls unint ds (SBVPgm rpgm) extraCstrs assertions outsO
+   pure $ Result pinfo knds traceVals observables cgMap inpsO (constMap, cnsts) tbls unint ds (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Generalization of 'Data.SBV.addNewSMTOption'
 addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
 addNewSMTOption o = do st <- symbolicEnv
-                       liftIO $ modifyState st rSMTOptions (o:) (return ())
+                       liftIO $ modifyState st rSMTOptions (o:) (pure ())
 
 -- | Generalization of 'Data.SBV.imposeConstraint'
 imposeConstraint :: MonadSymbolic m => Bool -> [(String, String)] -> SVal -> m ()
@@ -2056,7 +2056,7 @@ addSValOptGoal obj = do st <- symbolicEnv
                         let mkGoal nm orig = liftIO $ do origSV  <- svToSV st orig
                                                          track   <- svMkTrackerVar (kindOf orig) nm st
                                                          trackSV <- svToSV st track
-                                                         return (origSV, trackSV)
+                                                         pure (origSV, trackSV)
 
                         let walk (Minimize          nm v)     = Minimize nm                     <$> mkGoal nm v
                             walk (Maximize          nm v)     = Maximize nm                     <$> mkGoal nm v
@@ -2083,11 +2083,11 @@ outputSVal :: MonadSymbolic m => SVal -> m ()
 outputSVal (SVal _ (Left c)) = do
   st <- symbolicEnv
   sv <- liftIO $ newConst st c
-  liftIO $ modifyState st routs (sv:) (return ())
+  liftIO $ modifyState st routs (sv:) (pure ())
 outputSVal (SVal _ (Right f)) = do
   st <- symbolicEnv
   sv <- liftIO $ uncache f st
-  liftIO $ modifyState st routs (sv:) (return ())
+  liftIO $ modifyState st routs (sv:) (pure ())
 
 ---------------------------------------------------------------------------------
 -- * Cached values
@@ -2123,10 +2123,10 @@ uncacheGen getCache (Cached f) st = do
         sn <- f `seq` makeStableName f
         let h = hashStableName sn
         case (h `IMap.lookup` stored) >>= (sn `lookup`) of
-          Just r  -> return r
+          Just r  -> pure r
           Nothing -> do r <- f st
                         r `seq` R.modifyIORef' rCache (IMap.insertWith (++) h [(sn, r)])
-                        return r
+                        pure r
 
 -- | Representation of SMTLib Program versions. As of June 2015, we're dropping support
 -- for SMTLib1, and supporting SMTLib2 only. We keep this data-type around in case

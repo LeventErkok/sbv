@@ -110,6 +110,6 @@ checkCorrectMidValue f = prove $ do low  <- sInt32 "low"
 
                                         mid   = f low high
 
-                                    return $ sFromIntegral mid .== mid'
+                                    pure $ sFromIntegral mid .== mid'
 
 {- HLint ignore module "Reduce duplication" -}

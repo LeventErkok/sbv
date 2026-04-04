@@ -68,7 +68,7 @@ problem trans strengthenings = induct chatty setup initial trans strengthenings 
         -- calls to 'Data.SBV.setOption'. We do not need any for this problem,
         -- so we simply do nothing.
         setup :: Symbolic ()
-        setup = return ()
+        setup = pure ()
 
         -- Initially, @x@ and @y@ are both @1@
         initial :: S SInteger -> SBool

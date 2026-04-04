@@ -49,7 +49,7 @@ getTestValues (TV vs) = vs
 genTest :: Outputtable a => Int -> Symbolic a -> IO TestVectors
 genTest n m = gen 0 []
   where gen i sofar
-         | i == n = return $ TV $ reverse sofar
+         | i == n = pure $ TV $ reverse sofar
          | True   = do t <- tc
                        gen (i+1) (t:sofar)
         tc = do (_, Result {resTraces=tvals, resConsts=(_, cs), resDefinitions=definitions, resConstraints=cstrs, resOutputs=os}) <- runSymbolic defaultSMTCfg (Concrete Nothing) (m >>= output)
@@ -57,7 +57,7 @@ genTest n m = gen 0 []
                     cond = and [cvToBool (cval v) | (False, _, v) <- F.toList cstrs] -- Only pick-up "hard" constraints, as indicated by False in the fist component
                 unless (null definitions) $ error "Cannot generate tests in the presence of 'smtFunction' calls!"
                 if cond
-                   then return (map snd tvals, map cval os)
+                   then pure (map snd tvals, map cval os)
                    else tc   -- try again, with the same set of constraints
 
 -- | Test output style

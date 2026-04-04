@@ -60,7 +60,7 @@ sumCorrect = induct chatty setup initial trans strengthenings inv goal
         -- calls to 'Data.SBV.setOption'. We do not need any for this problem,
         -- so we simply do nothing.
         setup :: Symbolic ()
-        setup = return ()
+        setup = pure ()
 
         -- Initially, @s@ and @i@ are both @0@. We also require @n@ to be at least @0@.
         initial :: S SInteger -> SBool

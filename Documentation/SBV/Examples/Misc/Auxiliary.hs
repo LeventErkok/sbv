@@ -28,7 +28,7 @@ problem = do x <- free "x"
              y <- free "y"
              constrain $ x .>= 0
              constrain $ x .<= 1
-             return $ x - abs y .== (0 :: SInteger)
+             pure $ x - abs y .== (0 :: SInteger)
 
 -- | Generate all satisfying assignments for our problem. We have:
 --

@@ -70,10 +70,10 @@ instance Show Solution where
 ldn :: forall proxy n. KnownNat n => proxy n -> Maybe Int -> [([Integer], Integer)] -> IO Solution
 ldn pn mbLim problem = do solution <- basis pn mbLim (map (map literal) m)
                           if homogeneous
-                              then return $ Homogeneous solution
+                              then pure $ Homogeneous solution
                               else do let ones  = [xs | (1:xs) <- solution]
                                           zeros = [xs | (0:xs) <- solution]
-                                      return $ NonHomogeneous ones zeros
+                                      pure $ NonHomogeneous ones zeros
   where rhs = map snd problem
         lhs = map fst problem
         homogeneous = all (== 0) rhs
@@ -170,5 +170,5 @@ sailors = search 1
                                   , ([0,  0,  0,  0,  0,  4, -5], 1)
                                   ]
                       case soln of
-                        NonHomogeneous (xs:_) _ -> return xs
+                        NonHomogeneous (xs:_) _ -> pure xs
                         _                       -> search (i+1)

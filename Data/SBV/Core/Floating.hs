@@ -382,9 +382,9 @@ concEval3 mbOp mbRm a b c = do op <- mbOp
 
 -- | Add the converted rounding mode if given as an argument
 addRM :: State -> Maybe SRoundingMode -> [SV] -> IO [SV]
-addRM _  Nothing   as = return as
+addRM _  Nothing   as = pure as
 addRM st (Just rm) as = do svm <- sbvToSV st rm
-                           return (svm : as)
+                           pure (svm : as)
 
 -- | Lift a 1 arg FP-op
 lift1 :: SymVal a => FPOp -> Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a

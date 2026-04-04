@@ -120,7 +120,7 @@ minMaxBV isMax cfg getUC v
                                else constrain $ sNot b
                       r <- checkSat
                       case r of
-                        Sat    -> go bs >>= \res -> pop 1 >> return res
+                        Sat    -> go bs >>= \res -> pop 1 >> pure res
                         Unsat  ->                   pop 1 >> go bs
                         Unk    ->                   pop 1 >> rUnk
                         DSat{} -> error "minMaxBV: Unexpected DSat result"

@@ -114,7 +114,7 @@ instance Mergeable a => Mergeable (Move a) where
          let (ar, s1) = runState a s
              (br, s2) = runState b s
          put $ symbolicMerge f t s1 s2
-         return $ symbolicMerge f t ar br
+         pure $ symbolicMerge f t ar br
 
 -- | Read the state via an accessor function
 peek :: (Status -> a) -> Move a
@@ -151,7 +151,7 @@ bumpTime2 p1 p2 = modify $ \s -> s{time = time s + sCrossTime p1 `smax` sCrossTi
 
 -- | Symbolic version of 'Control.Monad.when'
 whenS :: SBool -> Move () -> Move ()
-whenS t a = ite t a (return ())
+whenS t a = ite t a (pure ())
 
 -- | Move one member, remembering to take the flash
 move1 :: SU2Member -> Move ()
@@ -215,19 +215,19 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
               let genAct = do b  <- free_
                               p1 <- free_
                               p2 <- free_
-                              return (b, p1, p2)
+                              pure (b, p1, p2)
               res <- allSat $ isValid `fmap` mapM (const genAct) [1..n]
               cnt <- displayModels (sortOn show) disp res
-              if cnt == 0 then return False
+              if cnt == 0 then pure False
                           else do putStrLn $ "Found: " ++ show cnt ++ " solution" ++ plu cnt ++ " with " ++ show n ++ " move" ++ plu n ++ "."
-                                  return True
+                                  pure True
   where plu v = if v == 1 then "" else "s"
         disp :: Int -> (Bool, [(Bool, U2Member, U2Member)]) -> IO ()
         disp i (_, ss)
          | lss /= n = error $ "Expected " ++ show n ++ " results; got: " ++ show lss
          | True     = do putStrLn $ "Solution #" ++ show i ++ ":"
                          go False 0 ss
-                         return ()
+                         pure ()
          where lss  = length ss
                go _ t []                   = putStrLn $ "Total time: " ++ show t
                go l t ((True,  a, _):rest) = do putStrLn $ sh2 t ++ shL l ++ show a

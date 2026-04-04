@@ -69,11 +69,11 @@ import Data.SBV.TP.Kernel
 -- | Check whether the given solver is installed and is ready to go. This call does a
 -- simple call to the solver to ensure all is well.
 sbvCheckSolverInstallation :: SMTConfig -> IO Bool
-sbvCheckSolverInstallation cfg = check `C.catch` (\(_ :: C.SomeException) -> return False)
+sbvCheckSolverInstallation cfg = check `C.catch` (\(_ :: C.SomeException) -> pure False)
   where check = do ThmResult r <- proveWith cfg $ \x -> sNot (sNot x) .== (x :: SBool)
                    case r of
-                     Unsatisfiable{} -> return True
-                     _               -> return False
+                     Unsatisfiable{} -> pure True
+                     _               -> pure False
 
 -- | The default configs corresponding to supported SMT solvers
 defaultSolverConfig :: Solver -> SMTConfig
@@ -280,7 +280,7 @@ mkADT adtKind typeName params cstrs = do
                        concretize (TH.AppT l arg) = TH.AppT (concretize l) (concretize arg)
                        concretize r               = r
 
-                   end <- TH.noBindS [| return () |]
+                   end <- TH.noBindS [| pure () |]
                    pure $ TH.DoE Nothing $ [TH.NoBindS (TH.AppE (TH.AppE (TH.VarE 'registerKind) (TH.VarE st))
                                                                 (TH.AppE (TH.VarE 'kindOf)
                                                                          (TH.AppTypeE (TH.ConE 'Proxy) (concretize t))))

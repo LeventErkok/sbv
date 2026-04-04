@@ -108,7 +108,7 @@ ranges = rangesWith defaultSMTCfg
 rangesWith :: forall a. (OrdSymbolic (SBV a), Num a, SymVal a,  SatModel a, Metric a, SymVal (MetricSpace a), SatModel (MetricSpace a)) => SMTConfig -> (SBV a -> SBool) -> IO [Range a]
 rangesWith cfg prop = do mbBounds <- getInitialBounds
                          case mbBounds of
-                           Nothing -> return []
+                           Nothing -> pure []
                            Just r  -> search [r] []
 
   where getInitialBounds :: IO (Maybe (Range a))
@@ -155,16 +155,16 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                                                                                       constrain $ prop x
                                                                                                       cstr objName x
                                    case m of
-                                     Unsatisfiable{} -> return Nothing
+                                     Unsatisfiable{} -> pure Nothing
                                      Unknown{}       -> error "Solver said Unknown!"
                                      ProofError{}    -> error (show res)
-                                     _               -> return $ getModelObjectiveValue (annotateForMS (Proxy @a) objName) m
+                                     _               -> pure $ getModelObjectiveValue (annotateForMS (Proxy @a) objName) m
 
             mi <- getBound minimize
             ma <- getBound maximize
             case (mi, ma) of
-              (Just minV, Just maxV) -> return $ Just $ Range (getGenVal minV) (getGenVal maxV)
-              _                      -> return Nothing
+              (Just minV, Just maxV) -> pure $ Just $ Range (getGenVal minV) (getGenVal maxV)
+              _                      -> pure Nothing
 
         -- Is this range satisfiable? Returns a witness to it.
         witness :: Range a -> Symbolic (SBV a)
@@ -180,17 +180,17 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
 
                                    constrain $ lower .&& upper
 
-                                   return x
+                                   pure x
 
         isFeasible :: Range a -> IO Bool
         isFeasible r = runSMTWith cfg $ do _ <- witness r
 
                                            query $ do cs <- checkSat
                                                       case cs of
-                                                        Unsat  -> return False
+                                                        Unsat  -> pure False
                                                         DSat{} -> error "Data.SBV.interval.isFeasible: Solver returned a delta-satisfiable result!"
                                                         Unk    -> error "Data.SBV.interval.isFeasible: Solver said unknown!"
-                                                        Sat    -> return True
+                                                        Sat    -> pure True
 
         bisect :: Range a -> IO (Maybe [Range a])
         bisect r@(Range lo hi) = runSMTWith cfg $ do x <- witness r
@@ -199,14 +199,14 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
 
                                                      query $ do cs <- checkSat
                                                                 case cs of
-                                                                  Unsat  -> return Nothing
+                                                                  Unsat  -> pure Nothing
                                                                   DSat{} -> error "Data.SBV.interval.bisect: Solver returned a delta-satisfiable result!"
                                                                   Unk    -> error "Data.SBV.interval.bisect: Solver said unknown!"
                                                                   Sat    -> do midV <- Open <$> getValue x
-                                                                               return $ Just [Range lo midV, Range midV hi]
+                                                                               pure $ Just [Range lo midV, Range midV hi]
 
         search :: [Range a] -> [Range a] -> IO [Range a]
-        search []     sofar = return $ reverse sofar
+        search []     sofar = pure $ reverse sofar
         search (c:cs) sofar = do feasible <- isFeasible c
                                  if feasible
                                     then do mbCS <- bisect c

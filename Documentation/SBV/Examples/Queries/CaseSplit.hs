@@ -54,7 +54,7 @@ csDemo1 = runSMT $ do
                   case mbR of
                     Nothing     -> error "Cannot find a FP number x such that x /= x"  -- Won't happen!
                     Just (s, _) -> do xv <- getValue x
-                                      return (s, xv)
+                                      pure (s, xv)
 
 -- | Demonstrates the "coverage" case.
 --
@@ -82,4 +82,4 @@ csDemo2 = runSMT $ do
                   case mbR of
                     Nothing     -> error "Cannot find a solution!" -- Won't happen!
                     Just (s, _) -> do xv <- getValue x
-                                      return (s, xv)
+                                      pure (s, xv)

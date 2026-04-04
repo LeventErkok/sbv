@@ -92,7 +92,7 @@ noChange = [stable "xs" xs]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeLength :: Invariant S -> Maybe (WPMeasure S) -> Program S
-imperativeLength inv msr = Program { setup         = return ()
+imperativeLength inv msr = Program { setup         = pure ()
                                    , precondition  = pre
                                    , program       = algorithm inv msr
                                    , postcondition = post

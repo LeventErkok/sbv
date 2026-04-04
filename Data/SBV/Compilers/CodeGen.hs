@@ -213,7 +213,7 @@ svCgInput :: Kind -> String -> SBVCodeGen SVal
 svCgInput k nm = do r  <- symbolicEnv >>= liftIO . svMkSymVar (NonQueryVar (Just ALL)) k Nothing
                     sv <- svToSymSV r
                     modify' (\s -> s { cgInputs = (nm, CgAtomic sv) : cgInputs s })
-                    return r
+                    pure r
 
 -- | Creates an array input in the generated code.
 svCgInputArr :: Kind -> Int -> String -> SBVCodeGen [SVal]
@@ -222,7 +222,7 @@ svCgInputArr k sz nm
   | True   = do rs  <- symbolicEnv >>= liftIO . replicateM sz . svMkSymVar (NonQueryVar (Just ALL)) k Nothing
                 sws <- mapM svToSymSV rs
                 modify' (\s -> s { cgInputs = (nm, CgArray sws) : cgInputs s })
-                return rs
+                pure rs
 
 -- | Creates an atomic output in the generated code.
 svCgOutput :: String -> SVal -> SBVCodeGen ()
@@ -259,7 +259,7 @@ cgInput :: SymVal a => String -> SBVCodeGen (SBV a)
 cgInput nm = do r  <- free_
                 sv <- sbvToSymSV r
                 modify' (\s -> s { cgInputs = (nm, CgAtomic sv) : cgInputs s })
-                return r
+                pure r
 
 -- | Creates an array input in the generated code.
 cgInputArr :: SymVal a => Int -> String -> SBVCodeGen [SBV a]
@@ -268,7 +268,7 @@ cgInputArr sz nm
   | True   = do rs <- mapM (const free_) [1..sz]
                 sws <- mapM sbvToSymSV rs
                 modify' (\s -> s { cgInputs = (nm, CgArray sws) : cgInputs s })
-                return rs
+                pure rs
 
 -- | Creates an atomic output in the generated code.
 cgOutput :: String -> SBV a -> SBVCodeGen ()
@@ -340,7 +340,7 @@ codeGen l cgConfig nm (SBVCodeGen comp) = do
    unless (null dupNames) $
         error $ "SBV.codeGen: " ++ show nm ++ " has following argument names duplicated: " ++ unwords dupNames
 
-   return (retVal, cgFinalConfig st, translate l (cgFinalConfig st) nm st res)
+   pure (retVal, cgFinalConfig st, translate l (cgFinalConfig st) nm st res)
 
 -- | Render a code-gen bundle to a directory or to stdout
 renderCgPgmBundle :: Maybe FilePath -> (CgConfig, CgPgmBundle) -> IO ()
@@ -354,14 +354,14 @@ renderCgPgmBundle (Just dirName) (cfg, CgPgmBundle _ files) = do
         dups <- filterM (\fn -> doesFileExist (dirName </> fn)) (map fst files)
 
         goOn <- case (overWrite, dups) of
-                  (True, _) -> return True
-                  (_,   []) -> return True
+                  (True, _) -> pure True
+                  (_,   []) -> pure True
                   _         -> do putStrLn $ "Code generation would overwrite the following " ++ (if length dups == 1 then "file:" else "files:")
                                   mapM_ (\fn -> putStrLn ('\t' : fn)) dups
                                   putStr "Continue? [yn] "
                                   hFlush stdout
                                   resp <- getLine
-                                  return $ map toLower resp `isPrefixOf` "yes"
+                                  pure $ map toLower resp `isPrefixOf` "yes"
 
         if goOn then do mapM_ renderFile files
                         unless overWrite $ putStrLn "Done."

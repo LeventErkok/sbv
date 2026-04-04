@@ -262,20 +262,20 @@ runInterpM = flip evalState Map.empty
 -- | Interpret an 'Op' into a function over SBV values
 interpOp :: Op ins out -> InterpM (OpTypes2SBV ins out)
 interpOp (Op_Unint uop)                      = state (unintEnsure uop)
-interpOp Op_And                              = return (.&&)
-interpOp Op_Or                               = return (.||)
-interpOp Op_Not                              = return sNot
-interpOp (Op_BoolLit    b)                   = return $ fromBool b
-interpOp (Op_IfThenElse Repr_Bool)           = return ite
-interpOp (Op_IfThenElse (Repr_BV BVWidth{})) = return ite
-interpOp (Op_Plus       BVWidth{})           = return (+)
-interpOp (Op_Minus      BVWidth{})           = return (-)
-interpOp (Op_Times      BVWidth{})           = return (*)
-interpOp (Op_Abs        BVWidth{})           = return abs
-interpOp (Op_Signum     BVWidth{})           = return signum
-interpOp (Op_BVLit      BVWidth{} i)         = return $ fromInteger i
-interpOp (Op_BVEq       BVWidth{})           = return (.==)
-interpOp (Op_BVLt       BVWidth{})           = return (.<)
+interpOp Op_And                              = pure (.&&)
+interpOp Op_Or                               = pure (.||)
+interpOp Op_Not                              = pure sNot
+interpOp (Op_BoolLit    b)                   = pure $ fromBool b
+interpOp (Op_IfThenElse Repr_Bool)           = pure ite
+interpOp (Op_IfThenElse (Repr_BV BVWidth{})) = pure ite
+interpOp (Op_Plus       BVWidth{})           = pure (+)
+interpOp (Op_Minus      BVWidth{})           = pure (-)
+interpOp (Op_Times      BVWidth{})           = pure (*)
+interpOp (Op_Abs        BVWidth{})           = pure abs
+interpOp (Op_Signum     BVWidth{})           = pure signum
+interpOp (Op_BVLit      BVWidth{} i)         = pure $ fromInteger i
+interpOp (Op_BVEq       BVWidth{})           = pure (.==)
+interpOp (Op_BVLt       BVWidth{})           = pure (.<)
 
 -- | Interpret an t'EUFExpr' into an SBV value.
 interpEUFExpr :: EUFExpr tp -> InterpM (Type2SBV tp)
@@ -284,7 +284,7 @@ interpEUFExpr (EUFExpr op args) = do f <- interpOp op
 
 -- | Apply an interpretation of an operator to the interpretations of a sequence of arguments for it.
 interpApplyEUFExprs :: ghost out -> OpTypes2SBV ins out -> EUFExprs ins -> InterpM (Type2SBV out)
-interpApplyEUFExprs _   f EUFExprsNil         = return f
+interpApplyEUFExprs _   f EUFExprsNil         = pure f
 interpApplyEUFExprs out f (EUFExprsCons e es) = do f_app <- f <$> interpEUFExpr e
                                                    interpApplyEUFExprs out f_app es
 

@@ -59,7 +59,7 @@ problem lim initial = bmcCover (Just lim) True setup initial trans goal
         -- calls to 'Data.SBV.setOption'. We do not need any for this problem,
         -- so we simply do nothing.
         setup :: Symbolic ()
-        setup = return ()
+        setup = pure ()
 
         -- Transition relation: At each step we either
         -- get to increase @x@ by 2, or decrement @y@ by 4:

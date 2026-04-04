@@ -42,7 +42,7 @@ f = uninterpret "f"
 --   f _ = Q_1
 t1 :: IO SatResult
 t1 = sat $ do x <- free "x"
-              return $ f x ./= x
+              pure $ f x ./= x
 
 -- | This is a variant on the first example, except we also add an axiom
 -- for the sort, stating that the domain 'Q' has only one element. In this case
@@ -53,4 +53,4 @@ t1 = sat $ do x <- free "x"
 t2 :: IO SatResult
 t2 = sat $ do x <- free "x"
               constrain $ \(Forall a) (Forall b) -> a .== (b :: SQ)
-              return $ f x ./= x
+              pure $ f x ./= x

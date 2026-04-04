@@ -91,7 +91,7 @@ allPossibleTrees = trees $ replicate 4 F
 fill :: T () () -> Symbolic (T SBinOp SUnOp)
 fill (B _ l r) = B <$> free_ <*> fill l <*> fill r
 fill (U _ t)   = U <$> free_ <*> fill t
-fill F         = return F
+fill F         = pure F
 
 -- | Minor helper for writing "symbolic" case statements. Simply walks down a list
 -- of values to match against a symbolic version of the key.
@@ -109,27 +109,27 @@ eval :: T SBinOp SUnOp -> Symbolic SInteger
 eval tree = case tree of
               B b l r -> eval l >>= \l' -> eval r >>= \r' -> binOp b l' r'
               U u t   -> eval t >>= uOp u
-              F       -> return 4
+              F       -> pure 4
 
   where binOp :: SBinOp -> SInteger -> SInteger -> Symbolic SInteger
         binOp o l r = do constrain $ o .== sDivide .=> r .== 4 .|| r .== 2
                          constrain $ o .== sExpt   .=> r .== 0
-                         return $ cases o
-                                    [ (Plus,    l+r)
-                                    , (Minus,   l-r)
-                                    , (Times,   l*r)
-                                    , (Divide,  l `sDiv` r)
-                                    , (Expt,    1)   -- exponent is restricted to 0, so the value is 1
-                                    ]
+                         pure $ cases o
+                                  [ (Plus,    l+r)
+                                  , (Minus,   l-r)
+                                  , (Times,   l*r)
+                                  , (Divide,  l `sDiv` r)
+                                  , (Expt,    1)   -- exponent is restricted to 0, so the value is 1
+                                  ]
 
         uOp :: SUnOp -> SInteger -> Symbolic SInteger
         uOp o v = do constrain $ o .== sSqrt      .=> v .== 4
                      constrain $ o .== sFactorial .=> v .== 4
-                     return $ cases o
-                                [ (Negate,    -v)
-                                , (Sqrt,       2)  -- argument is restricted to 4, so the value is 2
-                                , (Factorial, 24)  -- argument is restricted to 4, so the value is 24
-                                ]
+                     pure $ cases o
+                              [ (Negate,    -v)
+                              , (Sqrt,       2)  -- argument is restricted to 4, so the value is 2
+                              , (Factorial, 24)  -- argument is restricted to 4, so the value is 24
+                              ]
 
 -- | In the query mode, find a filling of a given tree shape /t/, such that it evaluates to the
 -- requested number /i/. Note that we return back a concrete tree.
@@ -140,10 +140,10 @@ generate i t = runSMT $ do symT <- fill t
                            query $ do cs <- checkSat
                                       case cs of
                                         Sat -> Just <$> construct symT
-                                        _   -> return Nothing
+                                        _   -> pure Nothing
     where -- Walk through the tree, ask the solver for
           -- the assignment to symbolic operators and fill back.
-          construct F           = return F
+          construct F           = pure F
           construct (U o s')    = do uo <- getValue o
                                      U uo <$> construct s'
           construct (B b l' r') = do bo <- getValue b

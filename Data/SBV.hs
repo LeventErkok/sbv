@@ -1851,6 +1851,6 @@ instance {-# OVERLAPPABLE #-} (MonadIO m, SymVal a) => Queriable m (SBV a) where
 
   create  = freshVar_
   project = getValue
-  embed   = return . literal
+  embed   = pure . literal
 
 {- HLint ignore module "Use import/export shortcut" -}

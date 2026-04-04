@@ -49,11 +49,11 @@ eval :: SQLExpr -> M SString
 eval (Query q)         = do q' <- eval q
                             tell [q']
                             lift $ lift free_
-eval (Const str)       = return $ literal str
+eval (Const str)       = pure $ literal str
 eval (Concat e1 e2)    = (++) <$> eval e1 <*> eval e2
 eval (ReadVar nm)      = do n   <- eval nm
                             arr <- get
-                            return $ readArray arr n
+                            pure $ readArray arr n
 
 -- | A simple program to query all messages with a given topic id. In SQL like notation:
 --

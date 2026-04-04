@@ -119,7 +119,7 @@ alignWithPrefix pre tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (p
 -- | Diagnostic message when verbose
 debug :: MonadIO m => SMTConfig -> [String] -> m ()
 debug cfg
-  | not (verbose cfg)             = const (return ())
+  | not (verbose cfg)             = const (pure ())
   | Just f <- redirectVerbose cfg = liftIO . mapM_ (appendFile f . (++ "\n"))
   | True                          = liftIO . mapM_ putStrLn
 
@@ -219,15 +219,15 @@ instance Show SBVException where
 -- | Compute and report the end time
 recordEndTime :: SMTConfig -> State -> IO ()
 recordEndTime SMTConfig{timing} state = case timing of
-                                           NoTiming        -> return ()
+                                           NoTiming        -> pure ()
                                            PrintTiming     -> do e <- elapsed
                                                                  putStrLn $ "*** SBV: Elapsed time: " ++ showTDiff e
                                            SaveTiming here -> writeIORef here =<< elapsed
-  where elapsed = getCurrentTime >>= \end -> return $ diffUTCTime end (startTime state)
+  where elapsed = getCurrentTime >>= \end -> pure $ diffUTCTime end (startTime state)
 
 -- | Start a transcript file, if requested.
 startTranscript :: Maybe FilePath -> SMTConfig -> IO ()
-startTranscript Nothing  _   = return ()
+startTranscript Nothing  _   = pure ()
 startTranscript (Just f) cfg = do ts <- show <$> getZonedTime
                                   mbExecPath <- findExecutable (executable (solver cfg))
                                   writeFile f $ start ts mbExecPath
@@ -246,7 +246,7 @@ startTranscript (Just f) cfg = do ts <- show <$> getZonedTime
 
 -- | Finish up the transcript file.
 finalizeTranscript :: Maybe FilePath -> ExitCode -> IO ()
-finalizeTranscript Nothing  _  = return ()
+finalizeTranscript Nothing  _  = pure ()
 finalizeTranscript (Just f) ec = do ts <- show <$> getZonedTime
                                     appendFile f $ end ts
   where end ts = unlines [ ""
@@ -266,7 +266,7 @@ data TranscriptMsg = SentMsg  String (Maybe Int) -- ^ Message sent, and time-out
 
 -- If requested, record in the transcript file
 recordTranscript :: Maybe FilePath -> TranscriptMsg -> IO ()
-recordTranscript Nothing  _ = return ()
+recordTranscript Nothing  _ = pure ()
 recordTranscript (Just f) m = do tsPre <- formatTime defaultTimeLocale "; [%T%Q" <$> getZonedTime
                                  let ts = take 15 $ tsPre ++ repeat '0'
                                  case m of
@@ -284,7 +284,7 @@ recordTranscript (Just f) m = do tsPre <- formatTime defaultTimeLocale "; [%T%Q"
 
 -- Record the exception
 recordException :: Maybe FilePath -> String -> IO ()
-recordException Nothing  _ = return ()
+recordException Nothing  _ = pure ()
 recordException (Just f) m = do ts <- show <$> getZonedTime
                                 appendFile f $ exc ts
   where exc ts = unlines $ [ ""

@@ -36,7 +36,7 @@ p = do a <- sInteger "a"
        query $ do cs <- checkSat
                   case cs of
                     Unsat -> Just <$> getUnsatCore
-                    _     -> return Nothing
+                    _     -> pure Nothing
 
 
 -- | Extract the unsat-core of 'p'. We have:

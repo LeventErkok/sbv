@@ -94,4 +94,4 @@ problem = do
     humanHeight :: SHumanHeightInCm <- free "humanheight"
     constrain $ humanHeight .== tallestHumanEver
 
-    return $ ceilingHighEnoughForHuman ceiling humanHeight
+    pure $ ceilingHighEnoughForHuman ceiling humanHeight

@@ -85,7 +85,7 @@ lf (zeroE, f)   pl  = zipPL (zipWith f (rsh lfpq) p) lfpq
 flIsCorrect :: Int -> (forall a. (OrdSymbolic a, Num a, Bits a) => (a, a -> a -> a)) -> Symbolic SBool
 flIsCorrect n zf = do
         args :: PowerList SWord32 <- mkFreeVars n
-        return $ ps zf args .== lf zf args
+        pure $ ps zf args .== lf zf args
 
 -- | Proves Ladner-Fischer is equivalent to reference specification for addition.
 -- @0@ is the left-unit element, and we use a power-list of size @8@. We have:

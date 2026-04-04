@@ -932,8 +932,8 @@ svSymbolicMerge k force t a b
 
                              -- merge, but simplify for certain boolean cases:
                              case () of
-                               () | swa == swb                      -> return swa                                     -- if t then a      else a     ==> a
-                               () | swa == trueSV && swb == falseSV -> return swt                                     -- if t then true   else false ==> t
+                               () | swa == swb                      -> pure swa                                       -- if t then a      else a     ==> a
+                               () | swa == trueSV && swb == falseSV -> pure swt                                       -- if t then true   else false ==> t
                                () | swa == falseSV && swb == trueSV -> newExpr st k (SBVApp Not [swt])                -- if t then false  else true  ==> not t
                                () | swa == trueSV                   -> newExpr st k (SBVApp Or  [swt, swb])           -- if t then true   else b     ==> t OR b
                                () | swa == falseSV                  -> do swt' <- newExpr st KBool (SBVApp Not [swt])
@@ -969,7 +969,7 @@ svSelect xsOrig err ind = xs `seq` SVal kElt (Right (cache r))
     r st = do sws <- mapM (svToSV st) xs
               swe <- svToSV st err
               if all (== swe) sws  -- off-chance that all elts are the same
-                 then return swe
+                 then pure swe
                  else do idx <- getTableIndex st kInd kElt sws
                          swi <- svToSV st ind
                          let len = length xs
@@ -1141,7 +1141,7 @@ svShift toLeft x i
                                        | True   = Shr
 
                                 adjustedShift <- if kx == ki
-                                                 then return sw2
+                                                 then pure sw2
                                                  else newExpr st kx (SBVApp (KindCast ki kx) [sw2])
 
                                 newExpr st kx (SBVApp op [sw1, adjustedShift])
@@ -1369,14 +1369,14 @@ liftSym2 opS _    _    _    _    _    _  _      a@(SVal k _)      b             
 
 -- | Create a symbolic two argument operation; with shortcut optimizations
 mkSymOpSC :: (SV -> SV -> Maybe SV) -> Op -> State -> Kind -> SV -> SV -> IO SV
-mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) return (shortCut a b)
+mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) pure (shortCut a b)
 
 -- | Create a symbolic two argument operation; no shortcut optimizations
 mkSymOp :: Op -> State -> Kind -> SV -> SV -> IO SV
 mkSymOp = mkSymOpSC (const (const Nothing))
 
 mkSymOp1SC :: (SV -> Maybe SV) -> Op -> State -> Kind -> SV -> IO SV
-mkSymOp1SC shortCut op st k a = maybe (newExpr st k (SBVApp op [a])) return (shortCut a)
+mkSymOp1SC shortCut op st k a = maybe (newExpr st k (SBVApp op [a])) pure (shortCut a)
 
 mkSymOp1 :: Op -> State -> Kind -> SV -> IO SV
 mkSymOp1 = mkSymOp1SC (const Nothing)
@@ -1530,8 +1530,8 @@ svFloatAsSWord32 fVal@(SVal KFloat _)
                              newExpr st w32 (SBVApp (IEEEFP (FP_Reinterpret KFloat w32)) [f])
                      else do n   <- newInternalVariable st w32
                              ysw <- newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret w32 KFloat)) [n])
-                             internalConstraint st False [] $ fVal `svStrongEqual` SVal KFloat (Right (cache (\_ -> return ysw)))
-                             return n
+                             internalConstraint st False [] $ fVal `svStrongEqual` SVal KFloat (Right (cache (\_ -> pure ysw)))
+                             pure n
 svFloatAsSWord32 (SVal k _) = error $ "svFloatAsSWord32: non-float type: " ++ show k
 
 -- | Convert an 'Data.SBV.SDouble' to an 'Data.SBV.SWord64', preserving the bit-correspondence. Note that since the
@@ -1556,8 +1556,8 @@ svDoubleAsSWord64 fVal@(SVal KDouble _)
                              newExpr st w64 (SBVApp (IEEEFP (FP_Reinterpret KDouble w64)) [f])
                      else do n   <- newInternalVariable st w64
                              ysw <- newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret w64 KDouble)) [n])
-                             internalConstraint st False [] $ fVal `svStrongEqual` SVal KDouble (Right (cache (\_ -> return ysw)))
-                             return n
+                             internalConstraint st False [] $ fVal `svStrongEqual` SVal KDouble (Right (cache (\_ -> pure ysw)))
+                             pure n
 svDoubleAsSWord64 (SVal k _) = error $ "svDoubleAsSWord64: non-float type: " ++ show k
 
 -- | Convert a float to the word containing the corresponding bit pattern
@@ -1575,8 +1575,8 @@ svFloatingPointAsSWord fVal@(SVal kFrom@(KFP eb sb) _)
                              newExpr st kTo (SBVApp (IEEEFP (FP_Reinterpret kFrom kTo)) [f])
                      else do n   <- newInternalVariable st kTo
                              ysw <- newExpr st kFrom (SBVApp (IEEEFP (FP_Reinterpret kTo kFrom)) [n])
-                             internalConstraint st False [] $ fVal `svStrongEqual` SVal kFrom (Right (cache (\_ -> return ysw)))
-                             return n
+                             internalConstraint st False [] $ fVal `svStrongEqual` SVal kFrom (Right (cache (\_ -> pure ysw)))
+                             pure n
 svFloatingPointAsSWord (SVal k _) = error $ "svFloatingPointAsSWord: non-float type: " ++ show k
 
 {- HLint ignore svIte     "Eta reduce"         -}
