@@ -847,7 +847,7 @@ class ExtractIO m => SExecutable m a where
            verify mkRelative (msg, cs, cond) = do
                    let locInfo ps = let loc (f, sl) = concat [mkRelative (srcLocFile sl), ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                     in intercalate ",\n " (map loc ps)
-                       location   = (locInfo . getCallStack) <$> cs
+                       location   = locInfo . getCallStack <$> cs
 
                    result <- do Control.push 1
                                 Control.send True $ "(assert " ++ show cond ++ ")"

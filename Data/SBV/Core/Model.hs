@@ -3484,7 +3484,7 @@ sAssert cs msg cond x
    | Just mustHold <- unliteral cond
    = if mustHold
      then x
-     else error $ show $ SafeResult ((locInfo . getCallStack) <$> cs, msg, Satisfiable defaultSMTCfg (SMTModel [] Nothing [] []))
+     else error $ show $ SafeResult (locInfo . getCallStack <$> cs, msg, Satisfiable defaultSMTCfg (SMTModel [] Nothing [] []))
    | True
    = SBV $ SVal k $ Right $ cache r
   where k     = kindOf x

@@ -1609,7 +1609,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                             }
                                            m = Satisfiable cfg model
 
-                                           (interpreteds, uninterpreteds) = S.partition (not . isUninterpreted . kindOf . fst) ((snd . snd) <$> assocs)
+                                           (interpreteds, uninterpreteds) = S.partition (not . isUninterpreted . kindOf . fst) (snd . snd <$> assocs)
 
                                            interpretedRegUis = filter (not . isUninterpreted . kindOf . snd) uiRegVals
 

@@ -217,7 +217,7 @@ instance (KnownNat n, BVIsNonZero n) => Bits (IntN n) where
 
 -- | Quickcheck instance for WordN
 instance KnownNat n => Arbitrary (WordN n) where
-  arbitrary = (WordN . norm . abs) <$> arbitrary
+  arbitrary = WordN . norm . abs <$> arbitrary
     where sz = intOfProxy (Proxy @n)
 
           norm v | sz == 0 = 0
@@ -225,7 +225,7 @@ instance KnownNat n => Arbitrary (WordN n) where
 
 -- | Quickcheck instance for IntN
 instance KnownNat n => Arbitrary (IntN n) where
-  arbitrary = (IntN . norm) <$> arbitrary
+  arbitrary = IntN . norm <$> arbitrary
     where sz = intOfProxy (Proxy @n)
 
           norm v | sz == 0 = 0
