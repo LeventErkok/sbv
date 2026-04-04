@@ -62,6 +62,7 @@ common common-settings
                      MultiParamTypeClasses
                      NamedFieldPuns
                      NegativeLiterals
+                     NumericUnderscores
                      OverloadedLists
                      OverloadedRecordDot
                      OverloadedStrings
@@ -69,7 +70,6 @@ common common-settings
                      ParallelListComp
                      QuantifiedConstraints
                      QuasiQuotes
-                     Rank2Types
                      RankNTypes
                      RecordWildCards
                      ScopedTypeVariables
