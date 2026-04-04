@@ -69,7 +69,7 @@ module Data.SBV.Core.Model (
   where
 
 import Control.Applicative    (ZipList(ZipList))
-import Control.Monad          (when, unless, mplus, replicateM, forM_)
+import Control.Monad          (when, unless, mplus, replicateM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import qualified Control.Exception as C
@@ -112,7 +112,7 @@ import qualified Test.QuickCheck.Test    as QC (isSuccess)
 import qualified Test.QuickCheck         as QC (quickCheckResult, counterexample)
 import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, monitor)
 
-import qualified Data.Foldable as F (toList)
+import qualified Data.Foldable as F (toList, for_)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 
@@ -1655,7 +1655,7 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
               -- with the call's arguments substituted for the formal parameters.
               -- This gives the solver base-case behavior without assuming totality.
               let dagList = F.toList liAssignments
-              liftIO $ forM_ recCalls $ \(rcSV, callArgSVs) -> do
+              liftIO $ F.for_ recCalls $ \(rcSV, callArgSVs) -> do
                 let -- Map the call's arguments through svMap to get the fresh session SVs
                     mappedCallArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
                     -- Build the initial map for the unfolded body: formal params -> call args
@@ -1678,7 +1678,7 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
 
               -- IH contract: for each recursive call, assume the contract holds on its result.
               -- This is sound because we also prove measure decrease at each call site.
-              liftIO $ forM_ recCalls $ \(rcSV, callArgSVs) -> do
+              liftIO $ F.for_ recCalls $ \(rcSV, callArgSVs) -> do
                 let mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
                     argSVals   = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
                     freshCallSV = Map.findWithDefault rcSV rcSV svMap
@@ -3406,7 +3406,7 @@ sEMod (SBV a) (SBV b) = SBV $ a `svRem` b
 
 -- Quickcheck interface
 instance (SymVal a, Arbitrary a) => Arbitrary (SBV a) where
-  arbitrary = literal `fmap` arbitrary
+  arbitrary = literal <$> arbitrary
 
 -- |  Symbolic conditionals are modeled by the 'Mergeable' class, describing
 -- how to merge the results of an if-then-else call with a symbolic test. SBV
@@ -3484,7 +3484,7 @@ sAssert cs msg cond x
    | Just mustHold <- unliteral cond
    = if mustHold
      then x
-     else error $ show $ SafeResult ((locInfo . getCallStack) `fmap` cs, msg, Satisfiable defaultSMTCfg (SMTModel [] Nothing [] []))
+     else error $ show $ SafeResult ((locInfo . getCallStack) <$> cs, msg, Satisfiable defaultSMTCfg (SMTModel [] Nothing [] []))
    | True
    = SBV $ SVal k $ Right $ cache r
   where k     = kindOf x
@@ -3972,7 +3972,7 @@ class SMTDefinable a where
   sbv2smt             a         = sbvFun2smt (\(_ :: SBVs RNil) -> a)
 
   sbvDefineValue nm mbArgs k    =
-    sbvDefineValueFun nm mbArgs SymValsNil (fmap const k) SBVsNil
+    sbvDefineValueFun nm mbArgs SymValsNil (const <$> k) SBVsNil
 
   mkADTConstructor nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTConstructor nm k)) Nothing $ UIFree True in v
   mkADTTester      nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTTester      nm k)) Nothing $ UIFree True in v
@@ -4204,7 +4204,7 @@ instance (SymVal a, SMTDefinable b) => SMTDefinable (SBV a -> b) where
 
   sbvDefineValueFun nm mbArgs insts uiKind args a =
     sbvDefineValueFun nm mbArgs (SymValsCons insts)
-    (fmap (\f (SBVsCons xs x) -> f xs x) uiKind) (SBVsCons args a)
+    ((\f (SBVsCons xs x) -> f xs x) <$> uiKind) (SBVsCons args a)
 
   registerFunction f = do let k = kindOf (Proxy @a)
                           st <- symbolicEnv
@@ -4327,7 +4327,7 @@ instance MonadIO m => SolverContext (SymbolicT m) where
 
 -- | Generalization of 'Data.SBV.assertWithPenalty'
 assertWithPenalty :: MonadSymbolic m => String -> SBool -> Penalty -> m ()
-assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o p
+assertWithPenalty nm o p = addSValOptGoal $ unSBV <$> AssertWithPenalty nm o p
 
 -- | Class of metrics we can optimize for. Currently, booleans,
 -- bounded signed/unsigned bit-vectors, unbounded integers,
@@ -4363,13 +4363,13 @@ class Metric a where
   msMinimize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
   msMinimize nm o = do let nm' = annotateForMS (Proxy @a) nm
                        when (nm' /= nm) $ sObserve nm (unSBV o)
-                       addSValOptGoal $ unSBV `fmap` Minimize nm' (toMetricSpace o)
+                       addSValOptGoal $ unSBV <$> Minimize nm' (toMetricSpace o)
 
   -- | Maximizing a metric space
   msMaximize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
   msMaximize nm o = do let nm' = annotateForMS (Proxy @a) nm
                        when (nm' /= nm) $ sObserve nm (unSBV o)
-                       addSValOptGoal $ unSBV `fmap` Maximize nm' (toMetricSpace o)
+                       addSValOptGoal $ unSBV <$> Maximize nm' (toMetricSpace o)
 
   -- if MetricSpace is the same, we can give a default definition
   default toMetricSpace :: (a ~ MetricSpace a) => SBV a -> SBV (MetricSpace a)
@@ -4450,7 +4450,7 @@ instance Testable (Symbolic SBool) where
                                      QC.pre cond
                                      unless (r || null modelVals) $ QC.monitor (QC.counterexample (complain modelVals))
                                      QC.assert r
-     where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=(_, cs), resConstraints=cstrs, resUIConsts=unints}) <- 
+     where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=(_, cs), resConstraints=cstrs, resUIConsts=unints}) <-
                                  C.catch (runSymbolic defaultSMTCfg (Concrete Nothing) prop)
                                          (\(e :: C.SomeException) -> cantQuickCheck (show e))
 
@@ -4497,7 +4497,7 @@ cantQuickCheck why = error $ unlines [ "*** Data.SBV: Cannot quickcheck the give
 -- | Quick check an SBV property. Note that a regular @quickCheck@ call will work just as
 -- well. Use this variant if you want to receive the boolean result.
 sbvQuickCheck :: Symbolic SBool -> IO Bool
-sbvQuickCheck prop = QC.isSuccess `fmap` QC.quickCheckResult prop
+sbvQuickCheck prop = QC.isSuccess <$> QC.quickCheckResult prop
 
 -- Quickcheck interface on dynamically-typed values. A run-time check
 -- ensures that the value has boolean type.

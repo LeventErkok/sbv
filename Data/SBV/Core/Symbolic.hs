@@ -1095,7 +1095,7 @@ lookupInput f sv ns
    | True        = Nothing  -- l != Just 0, a lambda var, whether top-level or in a scope, so we ignore
   where
     (_, l, i) = getId (swNodeId sv)
-    svs       = fmap f ns
+    svs       = f <$> ns
     res       = case S.lookup i ns of -- Nothing on negative Int or Int > length seq
                   Nothing    -> secondLookup
                   x@(Just e) -> if sv == f e then x else secondLookup

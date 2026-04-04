@@ -64,7 +64,7 @@ compileToC mbDirName nm f = do (retVal, cfg, bundle) <- compileToC' nm f
 
 -- | Lower level version of 'compileToC', producing a t'CgPgmBundle'
 compileToC' :: String -> SBVCodeGen a -> IO (a, CgConfig, CgPgmBundle)
-compileToC' nm f = do rands <- randoms `fmap` newStdGen
+compileToC' nm f = do rands <- randoms <$> newStdGen
                       codeGen SBVToC (defaultCgConfig { cgDriverVals = rands }) nm f
 
 -- | Create code to generate a library archive (.a) from given symbolic functions. Useful when generating code
@@ -609,7 +609,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        genAssert (msg, cs, sv) = (getNodeId sv, doc)
          where doc =     text "/* ASSERTION:" <+> text msg
-                     $$  maybe empty (vcat . map text) (locInfo (getCallStack `fmap` cs))
+                     $$  maybe empty (vcat . map text) (locInfo (getCallStack <$> cs))
                      $$  text " */"
                      $$  text "if" P.<> parens (showSV cfg consts sv)
                      $$  text "{"

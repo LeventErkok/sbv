@@ -70,7 +70,6 @@ import GHC.Generics
 import Data.Dynamic
 
 import qualified Data.Map.Strict as Map
-import Data.Map (Map)
 
 import qualified Data.Set as Set
 import Data.Set (Set)
@@ -83,7 +82,7 @@ data TPStats = TPStats { noOfCheckSats :: !Int
 
 -- | Extra state we carry in a TP context
 data TPState = TPState { stats               :: IORef TPStats
-                       , proofCache          :: IORef (Map (PropFingerprint, TypeRep) [ProofObj])
+                       , proofCache          :: IORef (Map.Map (PropFingerprint, TypeRep) [ProofObj])
                        , config              :: IORef SMTConfig
                        , inRecallContext     :: IORef Int
                        , measuresVerified    :: IORef (Set String)

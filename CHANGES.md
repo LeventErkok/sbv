@@ -314,7 +314,7 @@
     variable or an underscore.) Symbolic-boolean guards allow for concise expressions. This construct makes
     symbolic programming with ADTs easier.
 
-  * Added examples under Documentation.SBV.Examples.ADT, demonstrating the use of basic ADTs and a case study 
+  * Added examples under Documentation.SBV.Examples.ADT, demonstrating the use of basic ADTs and a case study
     of modeling type-checking constraints.
 
   * Added Documentation.SBV.Examples.TP.Peano, modeling peano numbers using an ADT and demonstrating many proofs.
@@ -443,7 +443,7 @@
     methods/tactics on top of knuckle-dragger provided facilities.
 
 ### Version 11.6, 2025-05-10
- 
+
   * Make SBV compile cleanly with GHC 9.8.4. This is really as far back a GHC you should be using,
     unless you can't use anything newer.
 

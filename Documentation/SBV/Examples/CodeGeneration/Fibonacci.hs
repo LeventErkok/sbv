@@ -107,7 +107,7 @@ fib1 top n = fib' 0 1 0
 -- >   const SWord64 s32 = s6 ? 0x0000000000000001ULL : s31;
 -- >   const SWord64 s33 = s4 ? 0x0000000000000001ULL : s32;
 -- >   const SWord64 s34 = s2 ? 0x0000000000000000ULL : s33;
--- >   
+-- >
 -- >   return s34;
 -- > }
 genFib1 :: SWord64 -> IO ()
@@ -176,7 +176,7 @@ fib2 top = select table 0
 -- >       0x000003af9a19bbd9ULL, 0x000005f6c7b064e2ULL, 0x000009a661ca20bbULL
 -- >   };
 -- >   const SWord64 s65 = s0 >= 65 ? 0x0000000000000000ULL : table0[s0];
--- >   
+-- >
 -- >   return s65;
 -- > }
 genFib2 :: Word64 -> IO ()

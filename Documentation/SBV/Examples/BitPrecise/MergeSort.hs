@@ -53,7 +53,7 @@ mergeSort xs  = merge (mergeSort th) (mergeSort bh)
 There are two main parts to proving that a sorting algorithm is correct:
 
        * Prove that the output is non-decreasing
- 
+
        * Prove that the output is a permutation of the input
 -}
 

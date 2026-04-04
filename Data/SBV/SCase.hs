@@ -46,7 +46,6 @@ import qualified Prelude as P(fail)
 
 import Data.Generics
 import qualified Data.Map.Strict as Map
-import Data.Map (Map)
 import qualified Data.Set as Set
 import Data.Set (Set)
 
@@ -485,15 +484,15 @@ matchToPair scrut off (Match pat grhs locals) = do
     -- Variable pattern at top level: binds the scrutinee (only when used)
     VarP v   -> let bindScrut e | v `Set.member` freeVars e = LetE [ValD (VarP v) (NormalB scrut) []] e
                                 | True                      = e
-                in pure [CWild off (fmap bindScrut mbG) (bindScrut rhs) | (mbG, rhs) <- rhss]
+                in pure [CWild off (bindScrut <$> mbG) (bindScrut rhs) | (mbG, rhs) <- rhss]
 
     -- As-pattern at top level: name@subpat — bind name to scrutinee, then process inner pattern
     AsP name subpat -> do
         cases <- matchToPair scrut off (Match subpat grhs locals)
         let bindAs e | name `Set.member` freeVars e = LetE [ValD (VarP name) (NormalB scrut) []] e
                      | True                         = e
-            addBind (CMatch o cn ps mbG' rhs' used) = CMatch o cn ps (fmap bindAs mbG') (bindAs rhs') used
-            addBind (CWild  o        mbG' rhs')     = CWild  o        (fmap bindAs mbG') (bindAs rhs')
+            addBind (CMatch o cn ps mbG' rhs' used) = CMatch o cn ps (bindAs <$> mbG') (bindAs rhs') used
+            addBind (CWild  o        mbG' rhs')     = CWild  o        (bindAs <$> mbG') (bindAs rhs')
         pure (map addBind cases)
 
     _ -> fail Unknown $ unlines [ "sCase/pCase: Unsupported pattern:"
@@ -1105,7 +1104,7 @@ pCase = QuasiQuoter
         cstrs <- getCstrs mbt typ
         -- Collect guard variables for each constructor across all arms
         -- (needed to suppress false "unused binding" warnings for guard-only variables)
-        let allGrdVars :: Map Name (Set Name)
+        let allGrdVars :: Map.Map Name (Set Name)
             allGrdVars = Map.fromListWith Set.union
                            [ (nm, maybe Set.empty freeVars mbG)
                            | CMatch _ nm _ mbG _ _ <- cases ]
@@ -1121,7 +1120,7 @@ pCase = QuasiQuoter
     --   fullGuard    = the complete guard expression (used for wildcard De Morgan negation)
     --   userGuardOnly = Just the user guard part (used for same-constructor negation)
     --                   Nothing if unguarded (same-constructor arms don't negate unguarded matches)
-    processCases :: Exp -> [(Name, [Type])] -> Maybe BuiltinType -> Map Name (Set Name) -> [(Maybe Name, Exp, Maybe Exp)] -> [Case] -> Q [(Exp, Exp)]
+    processCases :: Exp -> [(Name, [Type])] -> Maybe BuiltinType -> Map.Map Name (Set Name) -> [(Maybe Name, Exp, Maybe Exp)] -> [Case] -> Q [(Exp, Exp)]
     processCases _     _     _   _          _           []         = pure []
     processCases scrut cstrs mbt allGrdVars priorGuards (c:rest) = case c of
       CWild _ mbG rhs -> do

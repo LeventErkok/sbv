@@ -51,7 +51,7 @@ import qualified Data.Set           as Set  (empty, fromList, toAscList)
 import qualified Data.Sequence      as S
 import qualified Data.Text          as T
 
-import Control.Monad            (join, unless, zipWithM, when, replicateM, forM_)
+import Control.Monad            (join, unless, zipWithM, when, replicateM)
 import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
@@ -1545,7 +1545,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                 send True "(pop 1)"
                                                                 pure r
 
-                                                   forM_ [0 .. length terms - 1] $ \i -> do
+                                                   F.for_ [0 .. length terms - 1] $ \i -> do
                                                         sc <- shouldContinue
                                                         when sc $ do case S.splitAt i terms of
                                                                        (pre, rest@(cur S.:<| _)) -> scope cur pre $ walk False rest
@@ -1609,7 +1609,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                             }
                                            m = Satisfiable cfg model
 
-                                           (interpreteds, uninterpreteds) = S.partition (not . isUninterpreted . kindOf . fst) (fmap (snd . snd) assocs)
+                                           (interpreteds, uninterpreteds) = S.partition (not . isUninterpreted . kindOf . fst) ((snd . snd) <$> assocs)
 
                                            interpretedRegUis = filter (not . isUninterpreted . kindOf . snd) uiRegVals
 
@@ -2138,7 +2138,7 @@ getModelAtIndex mbi = do
           let name     = fst . snd
               removeSV = snd
               prepare  = S.unstableSort . S.filter (not . mustIgnoreVar cfg . T.unpack . name)
-              assocs   = fmap removeSV (prepare inputAssocs) <> S.fromList (sortOn fst obsvs)
+              assocs   = (removeSV <$> prepare inputAssocs) <> S.fromList (sortOn fst obsvs)
 
           -- collect UIs, and UI functions if requested
           let uiFuns = [ui | ui@(nm, (_, _, SBVType as)) <- uis, length as >  1, allSatTrackUFs cfg, not (mustIgnoreVar cfg nm)] -- functions have at least two things in their type!

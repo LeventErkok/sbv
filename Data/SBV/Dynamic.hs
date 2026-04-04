@@ -166,78 +166,78 @@ toSBool = SBV.SBV
 
 -- | Create SMT-Lib benchmark for a sat call
 generateSMTBenchmarkSat :: Symbolic SVal -> IO String
-generateSMTBenchmarkSat s = SBV.generateSMTBenchmarkSat (fmap toSBool s)
+generateSMTBenchmarkSat s = SBV.generateSMTBenchmarkSat (toSBool <$> s)
 
 -- | Create SMT-Lib benchmark for a proof call
 generateSMTBenchmarkProof :: Symbolic SVal -> IO String
-generateSMTBenchmarkProof s = SBV.generateSMTBenchmarkProof (fmap toSBool s)
+generateSMTBenchmarkProof s = SBV.generateSMTBenchmarkProof (toSBool <$> s)
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: SMTConfig -> Symbolic SVal -> IO ThmResult
-proveWith cfg s = SBV.proveWith cfg (fmap toSBool s)
+proveWith cfg s = SBV.proveWith cfg (toSBool <$> s)
 
 -- | Find a satisfying assignment using the given SMT-solver
 satWith :: SMTConfig -> Symbolic SVal -> IO SatResult
-satWith cfg s = SBV.satWith cfg (fmap toSBool s)
+satWith cfg s = SBV.satWith cfg (toSBool <$> s)
 
 -- | Check safety using the given SMT-solver
 safeWith :: SMTConfig -> Symbolic SVal -> IO [SafeResult]
-safeWith cfg s = SBV.safeWith cfg (fmap toSBool s)
+safeWith cfg s = SBV.safeWith cfg (toSBool <$> s)
 
 -- | Find all satisfying assignments using the given SMT-solver
 allSatWith :: SMTConfig -> Symbolic SVal -> IO AllSatResult
-allSatWith cfg s = SBV.allSatWith cfg (fmap toSBool s)
+allSatWith cfg s = SBV.allSatWith cfg (toSBool <$> s)
 
 -- | Prove a property with multiple solvers, running them in separate threads. The
 -- results will be returned in the order produced.
 proveWithAll :: [SMTConfig] -> Symbolic SVal -> IO [(Solver, NominalDiffTime, ThmResult)]
-proveWithAll cfgs s = SBV.proveWithAll cfgs (fmap toSBool s)
+proveWithAll cfgs s = SBV.proveWithAll cfgs (toSBool <$> s)
 
 -- | Prove a property with multiple solvers, running them in separate
 -- threads. Only the result of the first one to finish will be
 -- returned, remaining threads will be killed.
 proveWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, NominalDiffTime, ThmResult)
-proveWithAny cfgs s = SBV.proveWithAny cfgs (fmap toSBool s)
+proveWithAny cfgs s = SBV.proveWithAny cfgs (toSBool <$> s)
 
 -- | Prove a property with query mode using multiple threads. Each query
 -- computation will spawn a thread and a unique instance of your solver to run
 -- asynchronously. The 'Symbolic' t'SVal' is duplicated for each thread. This
 -- function will block until all child threads return.
 proveConcurrentWithAll :: SMTConfig -> Symbolic SVal -> [Query SVal] -> IO [(Solver, NominalDiffTime, ThmResult)]
-proveConcurrentWithAll cfg s queries = SBV.proveConcurrentWithAll cfg queries (fmap toSBool s)
+proveConcurrentWithAll cfg s queries = SBV.proveConcurrentWithAll cfg queries (toSBool <$> s)
 
 -- | Prove a property with query mode using multiple threads. Each query
 -- computation will spawn a thread and a unique instance of your solver to run
 -- asynchronously. The 'Symbolic' t'SVal' is duplicated for each thread. This
 -- function will return the first query computation that completes, killing the others.
 proveConcurrentWithAny :: SMTConfig -> Symbolic SVal -> [Query SVal] -> IO (Solver, NominalDiffTime, ThmResult)
-proveConcurrentWithAny cfg s queries = SBV.proveConcurrentWithAny cfg queries (fmap toSBool s)
+proveConcurrentWithAny cfg s queries = SBV.proveConcurrentWithAny cfg queries (toSBool <$> s)
 
 -- | Find a satisfying assignment to a property with multiple solvers,
 -- running them in separate threads. The results will be returned in
 -- the order produced.
 satWithAll :: [SMTConfig] -> Symbolic SVal -> IO [(Solver, NominalDiffTime, SatResult)]
-satWithAll cfgs s = SBV.satWithAll cfgs (fmap toSBool s)
+satWithAll cfgs s = SBV.satWithAll cfgs (toSBool <$> s)
 
 -- | Find a satisfying assignment to a property with multiple solvers,
 -- running them in separate threads. Only the result of the first one
 -- to finish will be returned, remaining threads will be killed.
 satWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, NominalDiffTime, SatResult)
-satWithAny cfgs s = SBV.satWithAny cfgs (fmap toSBool s)
+satWithAny cfgs s = SBV.satWithAny cfgs (toSBool <$> s)
 
 -- | Find a satisfying assignment to a property with multiple threads in query
 -- mode. The 'Symbolic' t'SVal' represents what is known to all child query threads.
 -- Each query thread will spawn a unique instance of the solver. Only the first
 -- one to finish will be returned and the other threads will be killed.
 satConcurrentWithAny :: SMTConfig -> [Query b] -> Symbolic SVal -> IO (Solver, NominalDiffTime, SatResult)
-satConcurrentWithAny cfg qs s = SBV.satConcurrentWithAny cfg qs (fmap toSBool s)
+satConcurrentWithAny cfg qs s = SBV.satConcurrentWithAny cfg qs (toSBool <$> s)
 
 -- | Find a satisfying assignment to a property with multiple threads in query
 -- mode. The 'Symbolic' t'SVal' represents what is known to all child query threads.
 -- Each query thread will spawn a unique instance of the solver. This function
 -- will block until all child threads have completed.
 satConcurrentWithAll :: SMTConfig -> [Query b] -> Symbolic SVal -> IO [(Solver, NominalDiffTime, SatResult)]
-satConcurrentWithAll cfg qs s = SBV.satConcurrentWithAll cfg qs (fmap toSBool s)
+satConcurrentWithAll cfg qs s = SBV.satConcurrentWithAll cfg qs (toSBool <$> s)
 
 -- | Extract a model, the result is a tuple where the first argument (if True)
 -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)

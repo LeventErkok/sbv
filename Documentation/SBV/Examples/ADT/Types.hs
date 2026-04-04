@@ -42,7 +42,7 @@ mkSymbolic [''T]
 -- types, we'll simply use an uninterpreted function. Note that
 -- this also implies we consider all terms to be given so that variables
 -- do not shadow each other; i.e., all variables are unique. This is
--- a simplification, but it is not without justification: One can 
+-- a simplification, but it is not without justification: One can
 -- always alpha-rename bound variables so all bound variables are unique.
 env :: SString -> ST
 env = uninterpret "env"

@@ -418,7 +418,7 @@ class Modelable a where
 
   -- | Extract a model value for a given element. Also see `getModelValues`.
   getModelValue :: SymVal b => String -> a -> Maybe b
-  getModelValue v r = fromCV `fmap` (v `M.lookup` getModelDictionary r)
+  getModelValue v r = fromCV <$> (v `M.lookup` getModelDictionary r)
 
   -- | A simpler variant of 'getModelAssignment' to get a model out without the fuss.
   extractModel :: SatModel b => a -> Maybe b
@@ -727,7 +727,7 @@ standardEngine :: String
 standardEngine envName envOptName cfg ctx pgm continuation = do
 
     execName <-                    getEnv envName     `C.catch` (\(e :: C.SomeException) -> handleAsync e (pure (executable (solver cfg))))
-    execOpts <- (splitArgs `fmap`  getEnv envOptName) `C.catch` (\(e :: C.SomeException) -> handleAsync e (pure (options (solver cfg) cfg)))
+    execOpts <- (splitArgs <$> getEnv envOptName) `C.catch` (\(e :: C.SomeException) -> handleAsync e (pure (options (solver cfg) cfg)))
 
     let cfg' = cfg {solver = (solver cfg) {executable = execName, options = const execOpts}}
 

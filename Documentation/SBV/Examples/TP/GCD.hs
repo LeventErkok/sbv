@@ -124,7 +124,7 @@ gcdZero = do
                              ]
 
   lemma "gcdZero"
-        (\(Forall @"a" a) (Forall @"b" b) -> gcd a b .== 0 .=> a .== 0 .&& b .== 0) 
+        (\(Forall @"a" a) (Forall @"b" b) -> gcd a b .== 0 .=> a .== 0 .&& b .== 0)
         [proofOf nGCDZero]
 
 -- | \(\gcd\, a\ b=\gcd\, b\ a\)

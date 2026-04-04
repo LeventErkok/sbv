@@ -559,12 +559,12 @@ instance Metric Float where
    msMinimize nm o = do constrain $ sNot $ fpIsNaN o
                         let nm' = annotateForMS (Proxy @Float) nm
                         when (nm' /= nm) $ sObserve nm (unSBV o)
-                        addSValOptGoal $ unSBV `fmap` Minimize nm' (toMetricSpace o)
+                        addSValOptGoal $ unSBV <$> Minimize nm' (toMetricSpace o)
 
    msMaximize nm o = do constrain $ sNot $ fpIsNaN o
                         let nm' = annotateForMS (Proxy @Float) nm
                         when (nm' /= nm) $ sObserve nm (unSBV o)
-                        addSValOptGoal $ unSBV `fmap` Maximize nm' (toMetricSpace o)
+                        addSValOptGoal $ unSBV <$> Maximize nm' (toMetricSpace o)
 
    annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
@@ -579,12 +579,12 @@ instance Metric Double where
    msMinimize nm o = do constrain $ sNot $ fpIsNaN o
                         let nm' = annotateForMS (Proxy @Double) nm
                         when (nm' /= nm) $ sObserve nm (unSBV o)
-                        addSValOptGoal $ unSBV `fmap` Minimize nm' (toMetricSpace o)
+                        addSValOptGoal $ unSBV <$> Minimize nm' (toMetricSpace o)
 
    msMaximize nm o = do constrain $ sNot $ fpIsNaN o
                         let nm' = annotateForMS (Proxy @Double) nm
                         when (nm' /= nm) $ sObserve nm (unSBV o)
-                        addSValOptGoal $ unSBV `fmap` Maximize nm' (toMetricSpace o)
+                        addSValOptGoal $ unSBV <$> Maximize nm' (toMetricSpace o)
 
    annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
@@ -653,12 +653,12 @@ instance (BVIsNonZero (eb + sb), KnownNat (eb + sb), ValidFloat eb sb) => Metric
    msMinimize nm o = do constrain $ sNot $ fpIsNaN o
                         let nm' = annotateForMS (Proxy @(FloatingPoint eb sb)) nm
                         when (nm' /= nm) $ sObserve nm (unSBV o)
-                        addSValOptGoal $ unSBV `fmap` Minimize nm' (toMetricSpace o)
+                        addSValOptGoal $ unSBV <$> Minimize nm' (toMetricSpace o)
 
    msMaximize nm o = do constrain $ sNot $ fpIsNaN o
                         let nm' = annotateForMS (Proxy @(FloatingPoint eb sb)) nm
                         when (nm' /= nm) $ sObserve nm (unSBV o)
-                        addSValOptGoal $ unSBV `fmap` Maximize nm' (toMetricSpace o)
+                        addSValOptGoal $ unSBV <$> Maximize nm' (toMetricSpace o)
 
    annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 

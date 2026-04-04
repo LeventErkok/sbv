@@ -349,4 +349,4 @@ mergeAlgReals m _ _ = error m
 
 -- Quickcheck instance
 instance Arbitrary AlgReal where
-  arbitrary = AlgRational True `fmap` arbitrary
+  arbitrary = AlgRational True <$> arbitrary

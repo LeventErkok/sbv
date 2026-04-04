@@ -180,7 +180,7 @@ existsConjunctionNot p q = runTP $ do
 -- Lemma: qcExample
 --   Step: 1 (passed 1000 tests)           Q.E.D. [Modulo: quickCheck]
 --   Step: 2 (Failed during quickTest)
--- 
+--
 -- *** QuickCheck failed for qcExample.2
 -- *** Failed! Assertion failed (after 1 test):
 --   n   = 175 :: Word8

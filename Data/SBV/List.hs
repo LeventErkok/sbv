@@ -762,7 +762,7 @@ zip xs ys
  = literal $ P.zip xs' ys'
  | True
  = def xs ys
- where def = smtFunction "sbv.zip" 
+ where def = smtFunction "sbv.zip"
            $ \x y -> [sCase| tuple (x, y) of
                          ([],   _   ) -> []
                          (_,    []  ) -> []

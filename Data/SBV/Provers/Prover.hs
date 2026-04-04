@@ -775,7 +775,7 @@ runInThread beginTime action config = async $ do
 sbvWithAny :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO (Solver, NominalDiffTime, b)
 sbvWithAny []      _    _ = error "SBV.withAny: No solvers given!"
 sbvWithAny solvers what a = do beginTime <- getCurrentTime
-                               snd `fmap` (mapM (runInThread beginTime (`what` a)) solvers >>= waitAnyFastCancel)
+                               snd <$> (mapM (runInThread beginTime (`what` a)) solvers >>= waitAnyFastCancel)
    where -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
          -- wait part for killed threads.
          waitAnyFastCancel asyncs = waitAny asyncs `finally` mapM_ cancelFast asyncs
@@ -783,7 +783,7 @@ sbvWithAny solvers what a = do beginTime <- getCurrentTime
 
 
 sbvConcurrentWithAny :: NFData c => SMTConfig -> (SMTConfig -> a -> QueryT m b -> IO c) -> [QueryT m b] -> a -> IO (Solver, NominalDiffTime, c)
-sbvConcurrentWithAny solver what queries a = snd `fmap` (mapM runQueryInThread queries >>= waitAnyFastCancel)
+sbvConcurrentWithAny solver what queries a = snd <$> (mapM runQueryInThread queries >>= waitAnyFastCancel)
   where  -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
          -- wait part for killed threads.
          waitAnyFastCancel asyncs = waitAny asyncs `finally` mapM_ cancelFast asyncs
@@ -847,7 +847,7 @@ class ExtractIO m => SExecutable m a where
            verify mkRelative (msg, cs, cond) = do
                    let locInfo ps = let loc (f, sl) = concat [mkRelative (srcLocFile sl), ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f]
                                     in intercalate ",\n " (map loc ps)
-                       location   = (locInfo . getCallStack) `fmap` cs
+                       location   = (locInfo . getCallStack) <$> cs
 
                    result <- do Control.push 1
                                 Control.send True $ "(assert " ++ show cond ++ ")"
