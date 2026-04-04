@@ -19,8 +19,8 @@ module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlif
                           , stringToQFS, qfsToString
                           , isKString
                           , checkObservableName
-                          , needsBars, barify, isEnclosedInBars
-                          , noSurrounding, unQuote, unBar, nameSupply
+                          , needsBars, barify
+                          , unQuote, unBar, nameSupply
                           , atProxy
                           , mapToSortedList
                           ,   curry2,   curry3,   curry4,   curry5,   curry6,   curry7,   curry8,   curry9,   curry10,   curry11,   curry12

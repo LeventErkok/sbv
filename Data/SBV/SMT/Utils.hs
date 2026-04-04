@@ -19,7 +19,6 @@ module Data.SBV.SMT.Utils (
         , SMTLibIncConverter
         , addAnnotations
         , showTimeoutValue
-        , alignDiagnostic
         , alignPlain
         , debug
         , mergeSExpr

@@ -29,11 +29,11 @@ module Data.SBV.Control.Utils (
      , ask, send, getValue, getFunction
      , getValueCV, getUICVal, getUIFunCVAssoc, getUnsatAssumptions
      , SMTFunction(..), getQueryState, modifyQueryState, getConfig, getObjectives, getUIs
-     , getSBVAssertions, getSBVPgm, getObservables
+     , getSBVAssertions, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_
      , getTopLevelInputs, parse, unexpected
-     , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
+     , timeout, queryDebug, retrieveResponse, runProofOn, executeQuery
      , startOptimizer, getObjectiveValues, getModel, getModelAtIndex
      ) where
 
@@ -45,7 +45,7 @@ import Data.Bifunctor (first)
 
 import Data.Proxy
 
-import qualified Data.Foldable      as F (toList)
+import qualified Data.Foldable      as F (toList, for_)
 import qualified Data.Map.Strict    as Map
 import qualified Data.Set           as Set  (empty, fromList, toAscList)
 import qualified Data.Sequence      as S
@@ -149,11 +149,6 @@ getConfig = queryConfig <$> getQueryState
 getObjectives :: (MonadIO m, MonadQuery m) => m [Objective (SV, SV)]
 getObjectives = do State{rOptGoals} <- queryState
                    io $ reverse <$> readIORef rOptGoals
-
--- | Get the program
-getSBVPgm :: (MonadIO m, MonadQuery m) => m SBVPgm
-getSBVPgm = do State{spgm} <- queryState
-               io $ readIORef spgm
 
 -- | Get the assertions put in via 'Data.SBV.sAssert'
 getSBVAssertions :: (MonadIO m, MonadQuery m) => m [(String, Maybe CallStack, SV)]
@@ -1360,9 +1355,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      -- as cex's tend to get larger
                      unless (null uiFuns) $
                         let solverCaps = capabilities (solver cfg)
-                        in case supportsFlattenedModels solverCaps of
-                             Nothing   -> pure ()
-                             Just cmds -> mapM_ (send True) cmds
+                        in F.for_ (supportsFlattenedModels solverCaps) (mapM_ (send True))
 
                      let usorts = [s | us@(KADT s _ _) <- Set.toAscList ki, isUninterpreted us]
 
@@ -2155,9 +2148,7 @@ getModelAtIndex mbi = do
           -- as cex's tend to get larger
           unless (null uiFuns) $
              let solverCaps = capabilities (solver cfg)
-             in case supportsFlattenedModels solverCaps of
-                  Nothing   -> pure ()
-                  Just cmds -> mapM_ (send True) cmds
+             in F.for_ (supportsFlattenedModels solverCaps) (mapM_ (send True))
 
           bindings <- let get i@(getSV -> sv) = case lookupInput fst sv inputAssocs of
                                                   Just (_, (_, cv)) -> pure (i, cv)

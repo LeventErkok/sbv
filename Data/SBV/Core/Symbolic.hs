@@ -33,18 +33,17 @@
 
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
-  , SV(..), swKind, trueSV, falseSV, contextOfSV
+  , SV(..), swKind, trueSV, falseSV
   , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..), ADTOp(..)
   , RegExp(..), regExpToSMTString, SMTLambda(..)
-  , Quantifier(..), needsExistentials, SBVContext(..), globalSBVContext, checkCompatibleContext, VarContext(..)
-  , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted, prefixNameToUnique
+  , Quantifier(..), needsExistentials, SBVContext(..), globalSBVContext, VarContext(..)
+  , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted
   , SVal(..)
   , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
   , svToSV, svToSymSV, forceSVArg
   , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
   , Cached, cache, uncache, modifyState, modifyIncState
-  , NamedSymVar(..), Name, UserInputs, Inputs(..), getSV, swNodeId, namedNodeId
-  , addInternInput, addUserInput
+  , NamedSymVar(..), Name, UserInputs, Inputs(..), getSV, swNodeId
   , getUserName', getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex, sObserve
@@ -57,7 +56,7 @@ module Data.SBV.Core.Symbolic
   , extractSymbolicSimulationState, CnstMap
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , MonadQuery(..), QueryT(..), Query, QueryState(..), QueryContext(..)
-  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), TPOptions(..), SMTEngine, isEmptyModel
+  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), TPOptions(..), SMTEngine
   , validationRequested, outputSVal, ProgInfo(..), mustIgnoreVar, getRootState
   , LambdaInfo(..)
   ) where
@@ -93,7 +92,7 @@ import qualified Data.IORef                  as R    (modifyIORef')
 import qualified Data.Generics               as G    (Data(..))
 import qualified Data.Generics.Uniplate.Data as G
 import qualified Data.IntMap.Strict          as IMap (IntMap, empty, lookup, insertWith)
-import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size, notMember, keysSet)
+import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size, keysSet)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member, notMember)
 import qualified Data.Foldable               as F    (toList)
 import qualified Data.Sequence               as S    (Seq, empty, (|>), lookup, elemIndexL)
@@ -150,10 +149,6 @@ instance Eq NodeId where
 -- | A symbolic word, tracking its kind and node representing it
 data SV = SV !Kind !NodeId
         deriving G.Data
-
--- | Which context are we using this var at?
-contextOfSV :: SV -> SBVContext
-contextOfSV (SV _ (NodeId (c, _, _))) = c
 
 -- | For equality, we merely use the lambda-level/node-id
 instance Eq SV where
@@ -709,10 +704,6 @@ toNamedSV' s = NamedSymVar s . T.pack
 -- | Convert to a named symvar, from text
 toNamedSV :: SV -> Name -> NamedSymVar
 toNamedSV = NamedSymVar
-
--- | Get the node id from a named sym var
-namedNodeId :: NamedSymVar -> NodeId
-namedNodeId = swNodeId . getSV
 
 -- | Get the SV from a named sym var
 getSV :: NamedSymVar -> SV
@@ -1323,18 +1314,6 @@ svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
                        mapM_ forceSVArg sws
                        newExpr st k $ SBVApp op sws
 
--- | Generate a unique name for the given function based on the object's stable name
-prefixNameToUnique :: State -> String -> IO String
-prefixNameToUnique st pre = do
-   uiMap <- readIORef (rUIMap st)
-
-   let suffix 0 = pre
-       suffix i = pre ++ "_" ++ show i
-
-   case [cand | i <- [0::Int ..], let cand = suffix i, cand `Map.notMember` uiMap] of
-      (n:_) -> pure n
-      []    -> error $ "genUniqueName: Can't generate a unique name for prefix: " ++ pre   -- can't happen
-
 -- | Create a new value, possibly with user given code. This function might change
 -- the name given, putting bars around it if needed. That's the name returned.
 newUninterpreted :: State -> UIName -> Maybe [String] -> SBVType -> UICodeKind -> IO Op
@@ -1594,15 +1573,6 @@ checkConsistent lhs (SBVApp _ args) = mapM_ check args
 compatibleContext :: SBVContext -> SBVContext -> Bool
 compatibleContext c1 c2 = c1 == c2 || c1 == globalSBVContext || c2 == globalSBVContext
 {-# INLINE compatibleContext #-}
-
--- | Same as checkConsistent above, except in an array context
-checkCompatibleContext :: SBVContext -> SBVContext -> IO ()
-checkCompatibleContext ctx1 ctx2
-   | ctx1 `compatibleContext` ctx2
-   = pure ()
-   | True
-   = contextMismatchError ctx1 ctx2
-{-# INLINE checkCompatibleContext #-}
 
 -- | Convert a symbolic value to an internal SV
 svToSV :: State -> SVal -> IO SV
@@ -2292,10 +2262,6 @@ data SMTModel = SMTModel {
                                                                                         -- difficult for SBV to figure out what it means
      }
      deriving Show
-
--- | Is it the case that the model is really uninteresting? This is the case when there are no assocs nor ui's
-isEmptyModel :: SMTModel -> Bool
-isEmptyModel SMTModel{modelAssocs, modelUIFuns} = null modelAssocs && null modelUIFuns
 
 -- | The result of an SMT solver call. Each constructor is tagged with
 -- the t'SMTConfig' that created it so that further tools can inspect it

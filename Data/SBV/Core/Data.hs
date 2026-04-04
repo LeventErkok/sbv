@@ -47,11 +47,11 @@ module Data.SBV.Core.Data
  , SBV(..), NodeId(..), mkSymSBV
  , sbvToSV, sbvToSymSV, forceSVArg
  , RList(..), RNil, (:>), rlist2list
- , SBVs(..), foldlSBVs, mapMSBVs, foldlSymSBVs
+ , SBVs(..), mapMSBVs, foldlSymSBVs
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, HasKind(..)
  , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExOp(..), SeqOp(..), RegExp(..), NamedSymVar(..), OvOp(..), getTableIndex
- , SBVPgm(..), Symbolic, runSymbolic, State, SInfo(..), getSInfo, getPathCondition, extendPathCondition
+ , SBVPgm(..), Symbolic, runSymbolic, State, SInfo(..), getSInfo, getPathCondition
  , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , SolverContext(..), internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted
@@ -107,10 +107,6 @@ import Test.QuickCheck (Arbitrary(..))
 -- | Get the current path condition
 getPathCondition :: State -> SBool
 getPathCondition st = SBV (getSValPathCondition st)
-
--- | Extend the path condition with the given test value.
-extendPathCondition :: State -> (SBool -> SBool) -> State
-extendPathCondition st f = extendSValPathCondition st (unSBV . f . SBV)
 
 -- | The "Symbolic" value. The parameter @a@ is phantom, but is
 -- extremely important in keeping the user interface strongly typed.
