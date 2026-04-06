@@ -225,41 +225,33 @@ countWS = smtFunction "countWS"
 --
 -- >>> runTPWith (tpRibbon 60 cvc5) swapWeight
 -- Lemma: treeSizePos                                          Q.E.D.
--- Lemma: distribute                                           Q.E.D.
+-- Lemma: distFold                                             Q.E.D.
 -- Lemma: countWSBin                                           Q.E.D.
 -- Lemma: mulCong                                              Q.E.D.
 -- Lemma: tipHelper                                            Q.E.D.
 -- Inductive lemma (strong): swapWeight
 --   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                             Q.E.D.
---     Step: 1.1.2 (3 way case split)
---       Step: 1.1.2.1.1                                       Q.E.D.
---       Step: 1.1.2.1.2                                       Q.E.D.
---       Step: 1.1.2.1.3                                       Q.E.D.
---       Step: 1.1.2.1.4                                       Q.E.D.
---       Step: 1.1.2.1.5                                       Q.E.D.
---       Step: 1.1.2.2.1                                       Q.E.D.
---       Step: 1.1.2.2.2                                       Q.E.D.
---       Step: 1.1.2.2.3                                       Q.E.D.
---       Step: 1.1.2.2.4                                       Q.E.D.
---       Step: 1.1.2.2.5                                       Q.E.D.
---       Step: 1.1.2.3.1                                       Q.E.D.
---       Step: 1.1.2.3.2                                       Q.E.D.
---       Step: 1.1.2.3.3                                       Q.E.D.
---       Step: 1.1.2.3.4                                       Q.E.D.
---       Step: 1.1.2.Completeness                              Q.E.D.
+--     Step: 1.1 (3 way case split)
+--       Step: 1.1.1.1                                         Q.E.D.
+--       Step: 1.1.1.2                                         Q.E.D.
+--       Step: 1.1.1.3                                         Q.E.D.
+--       Step: 1.1.1.4                                         Q.E.D.
+--       Step: 1.1.2.1                                         Q.E.D.
+--       Step: 1.1.2.2                                         Q.E.D.
+--       Step: 1.1.2.3                                         Q.E.D.
+--       Step: 1.1.2.4                                         Q.E.D.
+--       Step: 1.1.3.1                                         Q.E.D.
+--       Step: 1.1.3.2                                         Q.E.D.
+--       Step: 1.1.3.3                                         Q.E.D.
+--       Step: 1.1.Completeness                                Q.E.D.
 --     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2                                             Q.E.D.
---     Step: 1.2.3 (apply IH for l)                            Q.E.D.
---     Step: 1.2.4 (apply IH for r)                            Q.E.D.
---     Step: 1.2.5 (regroup)                                   Q.E.D.
+--     Step: 1.2.2 (apply IH for l)                            Q.E.D.
+--     Step: 1.2.3 (apply IH for r)                            Q.E.D.
+--     Step: 1.2.4 (regroup)                                   Q.E.D.
+--     Step: 1.2.5                                             Q.E.D.
 --     Step: 1.2.6                                             Q.E.D.
 --     Step: 1.2.7                                             Q.E.D.
---     Step: 1.2.8                                             Q.E.D.
---     Step: 1.2.9                                             Q.E.D.
---     Step: 1.2.10                                            Q.E.D.
---     Step: 1.2.11                                            Q.E.D.
 --     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Functions proven terminating: countWS, swap, treeSize, treeWeight
@@ -272,9 +264,10 @@ swapWeight = do
                            (\(Forall @"t" t) -> treeSize t .>= 1)
                            []
 
-   dist <- lemma "distribute"
-                  (\(Forall @"a" a) (Forall @"x" x) (Forall @"y" y) -> a * x + a * y .== a * (x + y))
-                  []
+   distFold <- lemma "distFold"
+                     (\(Forall @"a" a) (Forall @"x" x) (Forall @"y" y) (Forall @"z" z) ->
+                         x + y .== z .=> a * x + a * y .== a * z)
+                     []
 
    cwsBin <- inductiveLemma "countWSBin"
                   (\(Forall @"w" w) (Forall @"s" s) (Forall @"l" l) (Forall @"r" r) ->
@@ -299,7 +292,6 @@ swapWeight = do
      \ih wa sa wb sb t -> []
        |- [pCase| t of
              Tip w s -> treeWeight (swap wa sa wb sb t)
-                     =: treeWeight (swap wa sa wb sb (sTip w s))
                      =: cases
                        [ s .== sa .&& w .== wa
                            ==> treeWeight (sTip wb sb)
@@ -310,7 +302,6 @@ swapWeight = do
                                               , Inst @"q" (countWS wb sb t)
                                               )
                             =: w + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
-                            =: treeWeight t + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
                             =: qed
 
                        , sNot (s .== sa .&& w .== wa) .&& s .== sb .&& w .== wb
@@ -322,7 +313,6 @@ swapWeight = do
                                               , Inst @"q" (countWS wa sa t)
                                               )
                             =: w + (wa - wb) * countWS wb sb t + (wb - wa) * countWS wa sa t
-                            =: treeWeight t + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
                             =: qed
 
                        , sNot (s .== sa .&& w .== wa) .&& sNot (s .== sb .&& w .== wb)
@@ -331,12 +321,10 @@ swapWeight = do
                             ?? mulCong `at` (Inst @"a" (wb - wa), Inst @"x" (countWS wa sa t), Inst @"y" (0 :: SInteger))
                             ?? mulCong `at` (Inst @"a" (wa - wb), Inst @"x" (countWS wb sb t), Inst @"y" (0 :: SInteger))
                             =: w + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
-                            =: treeWeight t + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
                             =: qed
                        ]
 
              Bin l r -> treeWeight (swap wa sa wb sb t)
-                     =: treeWeight (swap wa sa wb sb (sBin l r))
                      -- unfold swap and treeWeight at Bin
                      =: treeWeight (swap wa sa wb sb l) + treeWeight (swap wa sa wb sb r)
 
@@ -363,35 +351,17 @@ swapWeight = do
                      + ((wb - wa) * countWS wa sa l + (wb - wa) * countWS wa sa r)
                      + ((wa - wb) * countWS wb sb l + (wa - wb) * countWS wb sb r)
 
-                     ?? dist `at` (Inst @"a" (wb - wa), Inst @"x" (countWS wa sa l), Inst @"y" (countWS wa sa r))
+                     ?? cwsBin   `at` (Inst @"w" wa, Inst @"s" sa, Inst @"l" l, Inst @"r" r)
+                     ?? distFold `at` ( Inst @"a" (wb - wa), Inst @"x" (countWS wa sa l)
+                                      , Inst @"y" (countWS wa sa r), Inst @"z" (countWS wa sa (sBin l r)))
                      =: (treeWeight l + treeWeight r)
-                     + (wb - wa) * (countWS wa sa l + countWS wa sa r)
+                     + (wb - wa) * countWS wa sa (sBin l r)
                      + ((wa - wb) * countWS wb sb l + (wa - wb) * countWS wb sb r)
 
-                     ?? dist `at` (Inst @"a" (wa - wb), Inst @"x" (countWS wb sb l), Inst @"y" (countWS wb sb r))
+                     ?? cwsBin   `at` (Inst @"w" wb, Inst @"s" sb, Inst @"l" l, Inst @"r" r)
+                     ?? distFold `at` ( Inst @"a" (wa - wb), Inst @"x" (countWS wb sb l)
+                                      , Inst @"y" (countWS wb sb r), Inst @"z" (countWS wb sb (sBin l r)))
                      =: (treeWeight l + treeWeight r)
-                     + (wb - wa) * (countWS wa sa l + countWS wa sa r)
-                     + (wa - wb) * (countWS wb sb l + countWS wb sb r)
-
-                     =: treeWeight (sBin l r)
-                     + (wb - wa) * (countWS wa sa l + countWS wa sa r)
-                     + (wa - wb) * (countWS wb sb l + countWS wb sb r)
-
-                     ?? cwsBin  `at` (Inst @"w" wa, Inst @"s" sa, Inst @"l" l, Inst @"r" r)
-                     ?? mulCong `at` ( Inst @"a" (wb - wa)
-                                     , Inst @"x" (countWS wa sa l + countWS wa sa r)
-                                     , Inst @"y" (countWS wa sa (sBin l r))
-                                     )
-                     =: treeWeight (sBin l r)
-                     + (wb - wa) * countWS wa sa (sBin l r)
-                     + (wa - wb) * (countWS wb sb l + countWS wb sb r)
-
-                     ?? cwsBin  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"l" l, Inst @"r" r)
-                     ?? mulCong `at` ( Inst @"a" (wa - wb)
-                                     , Inst @"x" (countWS wb sb l + countWS wb sb r)
-                                     , Inst @"y" (countWS wb sb (sBin l r))
-                                     )
-                     =: treeWeight (sBin l r)
                      + (wb - wa) * countWS wa sa (sBin l r)
                      + (wa - wb) * countWS wb sb (sBin l r)
 
