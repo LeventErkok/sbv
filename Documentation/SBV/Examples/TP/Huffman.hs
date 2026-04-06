@@ -269,12 +269,12 @@ swapWeight = do
                          x + y .== z .=> a * x + a * y .== a * z)
                      []
 
-   cwsBin <- inductiveLemma "countWSBin"
+   cwsBin   <- inductiveLemma "countWSBin"
                   (\(Forall @"w" w) (Forall @"s" s) (Forall @"l" l) (Forall @"r" r) ->
                      countWS w s l + countWS w s r .== countWS w s (sBin l r))
                   []
 
-   mulCong <- lemma "mulCong"
+   mulCong   <- lemma "mulCong"
                     (\(Forall @"a" a) (Forall @"x" x) (Forall @"y" y) -> x .== y .=> a * x .== a * y)
                     []
 
@@ -368,5 +368,196 @@ swapWeight = do
                      ?? mulCong `at` (Inst @"a" (wb - wa), Inst @"x" (countWS wa sa (sBin l r)), Inst @"y" (countWS wa sa t))
                      ?? mulCong `at` (Inst @"a" (wa - wb), Inst @"x" (countWS wb sb (sBin l r)), Inst @"y" (countWS wb sb t))
                      =: treeWeight t + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
+                     =: qed
+          |]
+
+-- ** Swap cost lemma
+--
+-- The cost analogue of 'swapWeight': swapping two leaves changes the cost
+-- by a linear combination of their depth sums. Combined with 'swapWeight',
+-- this shows that swapping a heavier-deeper leaf with a lighter-shallower
+-- one does not increase cost — the key exchange argument for Huffman optimality.
+
+-- | Weighted depth sum: total depth of all leaves matching a (weight, symbol)
+-- pair. At a 'Tip', the depth is 0. At a 'Bin', each matching leaf's depth
+-- increases by 1, accounted for by adding 'countWS'.
+depthSum :: SInteger -> SInteger -> SHTree -> SInteger
+depthSum = smtFunction "depthSum"
+         $ \w s t -> [sCase| t of
+                        Tip _ _ -> 0
+                        Bin l r -> depthSum w s l + countWS w s l
+                                 + depthSum w s r + countWS w s r
+                     |]
+
+-- | Swap cost lemma: swapping two leaves changes the cost by a linear
+-- combination of their depth sums, paralleling 'swapWeight'. This is the
+-- key algebraic fact underlying Huffman optimality.
+--
+-- >>> runTPWith (tpRibbon 60 cvc5) swapCost
+-- Lemma: swapWeight                                           Q.E.D.
+-- Lemma: treeSizePos                                          Q.E.D.
+-- Lemma: depthSumBin                                          Q.E.D.
+-- Lemma: factor4                                              Q.E.D.
+-- Lemma: mulCong                                              Q.E.D.
+-- Inductive lemma (strong): swapCost
+--   Step: Measure is non-negative                             Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1 (3 way case split)
+--       Step: 1.1.1.1                                         Q.E.D.
+--       Step: 1.1.1.2                                         Q.E.D.
+--       Step: 1.1.1.3                                         Q.E.D.
+--       Step: 1.1.2.1                                         Q.E.D.
+--       Step: 1.1.2.2                                         Q.E.D.
+--       Step: 1.1.2.3                                         Q.E.D.
+--       Step: 1.1.3.1                                         Q.E.D.
+--       Step: 1.1.3.2                                         Q.E.D.
+--       Step: 1.1.3.3                                         Q.E.D.
+--       Step: 1.1.Completeness                                Q.E.D.
+--     Step: 1.2.1                                             Q.E.D.
+--     Step: 1.2.2 (apply swapCost IH for l)                   Q.E.D.
+--     Step: 1.2.3 (apply swapCost IH for r)                   Q.E.D.
+--     Step: 1.2.4 (apply swapWeight for l)                    Q.E.D.
+--     Step: 1.2.5 (apply swapWeight for r)                    Q.E.D.
+--     Step: 1.2.6 (regroup)                                   Q.E.D.
+--     Step: 1.2.7 (fold depthSum for (wa, sa))                Q.E.D.
+--     Step: 1.2.8 (fold depthSum for (wb, sb))                Q.E.D.
+--     Step: 1.2.9                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Functions proven terminating: cost, countWS, depthSum, swap, treeSize, treeWeight
+-- [Proven] swapCost :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+swapCost :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
+                       -> Forall "wb" Integer -> Forall "sb" Integer
+                       -> Forall "t"  HTree   -> SBool))
+swapCost = do
+   swpW <- recall swapWeight
+
+   tsPos <- inductiveLemma "treeSizePos"
+                           (\(Forall @"t" t) -> treeSize t .>= 1)
+                           []
+
+   dsBin <- inductiveLemma "depthSumBin"
+                (\(Forall @"w" w) (Forall @"s" s) (Forall @"l" l) (Forall @"r" r) ->
+                   depthSum w s l + countWS w s l + depthSum w s r + countWS w s r
+                     .== depthSum w s (sBin l r))
+                []
+
+   factor4 <- lemma "factor4"
+                    (\(Forall @"a" a) (Forall @"x" x) (Forall @"y" y)
+                     (Forall @"u" u) (Forall @"v" v) ->
+                        a * x + a * y + a * u + a * v .== a * (x + y + u + v))
+                    []
+
+   mulCong <- lemma "mulCong"
+                    (\(Forall @"a" a) (Forall @"x" x) (Forall @"y" y) ->
+                        x .== y .=> a * x .== a * y)
+                    []
+
+   sInduct "swapCost"
+     (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb)
+      (Forall @"t" t) ->
+         cost (swap wa sa wb sb t) .== cost t
+                                     + (wb - wa) * depthSum wa sa t
+                                     + (wa - wb) * depthSum wb sb t)
+     (\_ _ _ _ t -> treeSize t, [proofOf tsPos]) $
+     \ih wa sa wb sb t -> []
+       |- [pCase| t of
+             Tip w s -> cost (swap wa sa wb sb t)
+                     =: cases
+                       [ s .== sa .&& w .== wa
+                           ==> cost (sTip wb sb)
+                            =: (0 :: SInteger)
+                            ?? mulCong `at` (Inst @"a" (wb - wa), Inst @"x" (depthSum wa sa t), Inst @"y" (0 :: SInteger))
+                            ?? mulCong `at` (Inst @"a" (wa - wb), Inst @"x" (depthSum wb sb t), Inst @"y" (0 :: SInteger))
+                            =: cost t + (wb - wa) * depthSum wa sa t + (wa - wb) * depthSum wb sb t
+                            =: qed
+
+                       , sNot (s .== sa .&& w .== wa) .&& s .== sb .&& w .== wb
+                           ==> cost (sTip wa sa)
+                            =: (0 :: SInteger)
+                            ?? mulCong `at` (Inst @"a" (wb - wa), Inst @"x" (depthSum wa sa t), Inst @"y" (0 :: SInteger))
+                            ?? mulCong `at` (Inst @"a" (wa - wb), Inst @"x" (depthSum wb sb t), Inst @"y" (0 :: SInteger))
+                            =: cost t + (wb - wa) * depthSum wa sa t + (wa - wb) * depthSum wb sb t
+                            =: qed
+
+                       , sNot (s .== sa .&& w .== wa) .&& sNot (s .== sb .&& w .== wb)
+                           ==> cost (sTip w s)
+                            =: (0 :: SInteger)
+                            ?? mulCong `at` (Inst @"a" (wb - wa), Inst @"x" (depthSum wa sa t), Inst @"y" (0 :: SInteger))
+                            ?? mulCong `at` (Inst @"a" (wa - wb), Inst @"x" (depthSum wb sb t), Inst @"y" (0 :: SInteger))
+                            =: cost t + (wb - wa) * depthSum wa sa t + (wa - wb) * depthSum wb sb t
+                            =: qed
+                       ]
+
+             Bin l r -> cost (swap wa sa wb sb t)
+                     -- unfold swap and cost at Bin
+                     =: cost (swap wa sa wb sb l) + cost (swap wa sa wb sb r)
+                      + treeWeight (swap wa sa wb sb l) + treeWeight (swap wa sa wb sb r)
+
+                     ?? "apply swapCost IH for l"
+                     ?? tsPos `at` Inst @"t" r
+                     ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                     =: cost l + (wb - wa) * depthSum wa sa l + (wa - wb) * depthSum wb sb l
+                      + cost (swap wa sa wb sb r)
+                      + treeWeight (swap wa sa wb sb l) + treeWeight (swap wa sa wb sb r)
+
+                     ?? "apply swapCost IH for r"
+                     ?? tsPos `at` Inst @"t" l
+                     ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                     =: cost l + (wb - wa) * depthSum wa sa l + (wa - wb) * depthSum wb sb l
+                      + cost r + (wb - wa) * depthSum wa sa r + (wa - wb) * depthSum wb sb r
+                      + treeWeight (swap wa sa wb sb l) + treeWeight (swap wa sa wb sb r)
+
+                     ?? "apply swapWeight for l"
+                     ?? swpW `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                     =: cost l + (wb - wa) * depthSum wa sa l + (wa - wb) * depthSum wb sb l
+                      + cost r + (wb - wa) * depthSum wa sa r + (wa - wb) * depthSum wb sb r
+                      + treeWeight l + (wb - wa) * countWS wa sa l + (wa - wb) * countWS wb sb l
+                      + treeWeight (swap wa sa wb sb r)
+
+                     ?? "apply swapWeight for r"
+                     ?? swpW `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                     =: cost l + (wb - wa) * depthSum wa sa l + (wa - wb) * depthSum wb sb l
+                      + cost r + (wb - wa) * depthSum wa sa r + (wa - wb) * depthSum wb sb r
+                      + treeWeight l + (wb - wa) * countWS wa sa l + (wa - wb) * countWS wb sb l
+                      + treeWeight r + (wb - wa) * countWS wa sa r + (wa - wb) * countWS wb sb r
+
+                     ?? "regroup"
+                     =: (cost l + cost r + treeWeight l + treeWeight r)
+                      + ((wb - wa) * depthSum wa sa l + (wb - wa) * countWS wa sa l
+                       + (wb - wa) * depthSum wa sa r + (wb - wa) * countWS wa sa r)
+                      + ((wa - wb) * depthSum wb sb l + (wa - wb) * countWS wb sb l
+                       + (wa - wb) * depthSum wb sb r + (wa - wb) * countWS wb sb r)
+
+                     ?? "fold depthSum for (wa, sa)"
+                     ?? dsBin   `at` (Inst @"w" wa, Inst @"s" sa, Inst @"l" l, Inst @"r" r)
+                     ?? factor4 `at` ( Inst @"a" (wb - wa), Inst @"x" (depthSum wa sa l)
+                                     , Inst @"y" (countWS wa sa l), Inst @"u" (depthSum wa sa r)
+                                     , Inst @"v" (countWS wa sa r))
+                     ?? mulCong `at` ( Inst @"a" (wb - wa)
+                                     , Inst @"x" (depthSum wa sa l + countWS wa sa l
+                                                 + depthSum wa sa r + countWS wa sa r)
+                                     , Inst @"y" (depthSum wa sa (sBin l r)))
+                     =: (cost l + cost r + treeWeight l + treeWeight r)
+                      + (wb - wa) * depthSum wa sa (sBin l r)
+                      + ((wa - wb) * depthSum wb sb l + (wa - wb) * countWS wb sb l
+                       + (wa - wb) * depthSum wb sb r + (wa - wb) * countWS wb sb r)
+
+                     ?? "fold depthSum for (wb, sb)"
+                     ?? dsBin   `at` (Inst @"w" wb, Inst @"s" sb, Inst @"l" l, Inst @"r" r)
+                     ?? factor4 `at` ( Inst @"a" (wa - wb), Inst @"x" (depthSum wb sb l)
+                                     , Inst @"y" (countWS wb sb l), Inst @"u" (depthSum wb sb r)
+                                     , Inst @"v" (countWS wb sb r))
+                     ?? mulCong `at` ( Inst @"a" (wa - wb)
+                                     , Inst @"x" (depthSum wb sb l + countWS wb sb l
+                                                 + depthSum wb sb r + countWS wb sb r)
+                                     , Inst @"y" (depthSum wb sb (sBin l r)))
+                     =: (cost l + cost r + treeWeight l + treeWeight r)
+                      + (wb - wa) * depthSum wa sa (sBin l r)
+                      + (wa - wb) * depthSum wb sb (sBin l r)
+
+                     ?? mulCong `at` (Inst @"a" (wb - wa), Inst @"x" (depthSum wa sa (sBin l r)), Inst @"y" (depthSum wa sa t))
+                     ?? mulCong `at` (Inst @"a" (wa - wb), Inst @"x" (depthSum wb sb (sBin l r)), Inst @"y" (depthSum wb sb t))
+                     =: cost t + (wb - wa) * depthSum wa sa t + (wa - wb) * depthSum wb sb t
                      =: qed
           |]
