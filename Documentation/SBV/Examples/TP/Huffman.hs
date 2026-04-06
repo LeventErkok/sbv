@@ -105,20 +105,20 @@ decode = smtFunction "decode"
 -- | Roundtrip property: for any symbol @s@ that is a member of tree @t@,
 -- decoding the encoded path yields @s@.
 --
--- >>> runTPWith (tpRibbon 60 cvc5) roundtrip
--- Lemma: treeSizePos                                          Q.E.D.
+-- >>> runTPWith (tpRibbon 50 cvc5) roundtrip
+-- Lemma: treeSizePos                                Q.E.D.
 -- Inductive lemma (strong): huffmanRoundtrip
---   Step: Measure is non-negative                             Q.E.D.
+--   Step: Measure is non-negative                   Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                               Q.E.D.
+--     Step: 1.1                                     Q.E.D.
 --     Step: 1.2 (2 way case split)
---       Step: 1.2.1.1                                         Q.E.D.
---       Step: 1.2.1.2                                         Q.E.D.
---       Step: 1.2.2.1                                         Q.E.D.
---       Step: 1.2.2.2                                         Q.E.D.
---       Step: 1.2.Completeness                                Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--       Step: 1.2.1.1                               Q.E.D.
+--       Step: 1.2.1.2                               Q.E.D.
+--       Step: 1.2.2.1                               Q.E.D.
+--       Step: 1.2.2.2                               Q.E.D.
+--       Step: 1.2.Completeness                      Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
 -- Functions proven terminating: decode, findPath, member, treeSize
 -- [Proven] huffmanRoundtrip :: Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
 roundtrip :: TP (Proof (Forall "s" Integer -> Forall "t" HTree -> SBool))
@@ -223,37 +223,37 @@ countWS = smtFunction "countWS"
 -- the count of @(wb, sb)@ leaves. In particular, when each pair occurs exactly
 -- once, the changes cancel and weight is preserved.
 --
--- >>> runTPWith (tpRibbon 60 cvc5) swapWeight
--- Lemma: treeSizePos                                          Q.E.D.
--- Lemma: distFold                                             Q.E.D.
--- Lemma: countWSBin                                           Q.E.D.
--- Lemma: mulCong                                              Q.E.D.
--- Lemma: tipHelper                                            Q.E.D.
+-- >>> runTPWith (tpRibbon 50 cvc5) swapWeight
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: distFold                                   Q.E.D.
+-- Lemma: countWSBin                                 Q.E.D.
+-- Lemma: mulCong                                    Q.E.D.
+-- Lemma: tipHelper                                  Q.E.D.
 -- Inductive lemma (strong): swapWeight
---   Step: Measure is non-negative                             Q.E.D.
+--   Step: Measure is non-negative                   Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1 (3 way case split)
---       Step: 1.1.1.1                                         Q.E.D.
---       Step: 1.1.1.2                                         Q.E.D.
---       Step: 1.1.1.3                                         Q.E.D.
---       Step: 1.1.1.4                                         Q.E.D.
---       Step: 1.1.2.1                                         Q.E.D.
---       Step: 1.1.2.2                                         Q.E.D.
---       Step: 1.1.2.3                                         Q.E.D.
---       Step: 1.1.2.4                                         Q.E.D.
---       Step: 1.1.3.1                                         Q.E.D.
---       Step: 1.1.3.2                                         Q.E.D.
---       Step: 1.1.3.3                                         Q.E.D.
---       Step: 1.1.Completeness                                Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2 (apply IH for l)                            Q.E.D.
---     Step: 1.2.3 (apply IH for r)                            Q.E.D.
---     Step: 1.2.4 (regroup)                                   Q.E.D.
---     Step: 1.2.5                                             Q.E.D.
---     Step: 1.2.6                                             Q.E.D.
---     Step: 1.2.7                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--       Step: 1.1.1.1                               Q.E.D.
+--       Step: 1.1.1.2                               Q.E.D.
+--       Step: 1.1.1.3                               Q.E.D.
+--       Step: 1.1.1.4                               Q.E.D.
+--       Step: 1.1.2.1                               Q.E.D.
+--       Step: 1.1.2.2                               Q.E.D.
+--       Step: 1.1.2.3                               Q.E.D.
+--       Step: 1.1.2.4                               Q.E.D.
+--       Step: 1.1.3.1                               Q.E.D.
+--       Step: 1.1.3.2                               Q.E.D.
+--       Step: 1.1.3.3                               Q.E.D.
+--       Step: 1.1.Completeness                      Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (apply IH for l)                  Q.E.D.
+--     Step: 1.2.3 (apply IH for r)                  Q.E.D.
+--     Step: 1.2.4 (regroup)                         Q.E.D.
+--     Step: 1.2.5                                   Q.E.D.
+--     Step: 1.2.6                                   Q.E.D.
+--     Step: 1.2.7                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
 -- Functions proven terminating: countWS, swap, treeSize, treeWeight
 -- [Proven] swapWeight :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 swapWeight :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
@@ -393,37 +393,37 @@ depthSum = smtFunction "depthSum"
 -- combination of their depth sums, paralleling 'swapWeight'. This is the
 -- key algebraic fact underlying Huffman optimality.
 --
--- >>> runTPWith (tpRibbon 60 cvc5) swapCost
--- Lemma: swapWeight                                           Q.E.D.
--- Lemma: treeSizePos                                          Q.E.D.
--- Lemma: depthSumBin                                          Q.E.D.
--- Lemma: factor4                                              Q.E.D.
--- Lemma: mulCong                                              Q.E.D.
+-- >>> runTPWith (tpRibbon 50 cvc5) swapCost
+-- Lemma: swapWeight                                 Q.E.D.
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: depthSumBin                                Q.E.D.
+-- Lemma: factor4                                    Q.E.D.
+-- Lemma: mulCong                                    Q.E.D.
 -- Inductive lemma (strong): swapCost
---   Step: Measure is non-negative                             Q.E.D.
+--   Step: Measure is non-negative                   Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1 (3 way case split)
---       Step: 1.1.1.1                                         Q.E.D.
---       Step: 1.1.1.2                                         Q.E.D.
---       Step: 1.1.1.3                                         Q.E.D.
---       Step: 1.1.2.1                                         Q.E.D.
---       Step: 1.1.2.2                                         Q.E.D.
---       Step: 1.1.2.3                                         Q.E.D.
---       Step: 1.1.3.1                                         Q.E.D.
---       Step: 1.1.3.2                                         Q.E.D.
---       Step: 1.1.3.3                                         Q.E.D.
---       Step: 1.1.Completeness                                Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2 (apply swapCost IH for l)                   Q.E.D.
---     Step: 1.2.3 (apply swapCost IH for r)                   Q.E.D.
---     Step: 1.2.4 (apply swapWeight for l)                    Q.E.D.
---     Step: 1.2.5 (apply swapWeight for r)                    Q.E.D.
---     Step: 1.2.6 (regroup)                                   Q.E.D.
---     Step: 1.2.7 (fold depthSum for (wa, sa))                Q.E.D.
---     Step: 1.2.8 (fold depthSum for (wb, sb))                Q.E.D.
---     Step: 1.2.9                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--       Step: 1.1.1.1                               Q.E.D.
+--       Step: 1.1.1.2                               Q.E.D.
+--       Step: 1.1.1.3                               Q.E.D.
+--       Step: 1.1.2.1                               Q.E.D.
+--       Step: 1.1.2.2                               Q.E.D.
+--       Step: 1.1.2.3                               Q.E.D.
+--       Step: 1.1.3.1                               Q.E.D.
+--       Step: 1.1.3.2                               Q.E.D.
+--       Step: 1.1.3.3                               Q.E.D.
+--       Step: 1.1.Completeness                      Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (apply swapCost IH for l)         Q.E.D.
+--     Step: 1.2.3 (apply swapCost IH for r)         Q.E.D.
+--     Step: 1.2.4 (apply swapWeight for l)          Q.E.D.
+--     Step: 1.2.5 (apply swapWeight for r)          Q.E.D.
+--     Step: 1.2.6 (regroup)                         Q.E.D.
+--     Step: 1.2.7 (fold depthSum for (wa, sa))      Q.E.D.
+--     Step: 1.2.8 (fold depthSum for (wb, sb))      Q.E.D.
+--     Step: 1.2.9                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
 -- Functions proven terminating: cost, countWS, depthSum, swap, treeSize, treeWeight
 -- [Proven] swapCost :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 swapCost :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
@@ -561,3 +561,67 @@ swapCost = do
                      =: cost t + (wb - wa) * depthSum wa sa t + (wa - wb) * depthSum wb sb t
                      =: qed
           |]
+
+-- ** Cost reduction corollary
+--
+-- If the heavier symbol is deeper (has a larger depth sum), swapping the two
+-- does not increase cost. This is the exchange argument: any tree where a
+-- heavier symbol sits below a lighter one can be improved by swapping them.
+
+-- | Cost reduction: when @wb >= wa@ (b is at least as heavy) and b is at least
+-- as deep (@depthSum(wb,sb,t) >= depthSum(wa,sa,t)@), swapping does not increase cost.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) swapReducesCost
+-- Lemma: swapCost                                   Q.E.D.
+-- Inductive lemma (strong): signProd
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Lemma: swapReducesCost
+--   Step: 1                                         Q.E.D.
+--   Step: 2                                         Q.E.D.
+--   Step: 3                                         Q.E.D.
+--   Step: 4                                         Q.E.D.
+--   Step: 5                                         Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: cost, countWS, depthSum, swap, treeSize, treeWeight
+-- [Proven] swapReducesCost :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+swapReducesCost :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
+                              -> Forall "wb" Integer -> Forall "sb" Integer
+                              -> Forall "t"  HTree   -> SBool))
+swapReducesCost = do
+   swpC <- recall swapCost
+
+   signProd <- sInduct "signProd"
+       (\(Forall @"a" a) (Forall @"b" b) ->
+           a .>= 0 .&& b .<= 0 .=> a * b .<= 0)
+       (\a _ -> ite (a .>= 0) a 0, []) $
+       \ih a b -> [a .>= 0, b .<= 0]
+         |- a * b .<= (0 :: SInteger)
+         =: cases
+              [ a .== 0 ==> (0 :: SInteger) * b .<= (0 :: SInteger) =: sTrue =: qed
+              , a .>= 1 ==> (a - 1) * b + b .<= (0 :: SInteger)
+                         ?? ih `at` (Inst @"a" (a - 1), Inst @"b" b)
+                         =: sTrue
+                         =: qed
+              ]
+
+   calc "swapReducesCost"
+     (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+         wb .>= wa .&& depthSum wb sb t .>= depthSum wa sa t
+           .=> cost (swap wa sa wb sb t) .<= cost t) $
+     \wa sa wb sb t -> [wb .>= wa, depthSum wb sb t .>= depthSum wa sa t]
+       |- cost (swap wa sa wb sb t) .<= cost t
+       ?? swpC `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" t)
+       =: cost t + (wb - wa) * depthSum wa sa t + (wa - wb) * depthSum wb sb t .<= cost t
+       =: (wb - wa) * depthSum wa sa t + (wa - wb) * depthSum wb sb t .<= (0 :: SInteger)
+       =: (wb - wa) * depthSum wa sa t - (wb - wa) * depthSum wb sb t .<= (0 :: SInteger)
+       =: (wb - wa) * (depthSum wa sa t - depthSum wb sb t) .<= (0 :: SInteger)
+       ?? signProd `at` (Inst @"a" (wb - wa), Inst @"b" (depthSum wa sa t - depthSum wb sb t))
+       =: sTrue
+       =: qed
