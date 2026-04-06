@@ -27,7 +27,6 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
-{-# LANGUAGE ViewPatterns               #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
@@ -51,7 +50,7 @@ module Data.SBV.Core.Symbolic
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..), UIName(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, newInternalVariable, lambdaVar, quantVar
-  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
+  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension, smtLibPgmText
   , SolverCapabilities(..)
   , extractSymbolicSimulationState, CnstMap
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
@@ -106,7 +105,7 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.SMT.SMTLibNames
 import Data.SBV.Utils.TDiff   (Timing)
-import Data.SBV.Utils.Lib     (stringToQFS, checkObservableName, barify, mapToSortedList)
+import Data.SBV.Utils.Lib     (stringToQFS, checkObservableName, barify, mapToSortedList, showText)
 import Data.SBV.Utils.Numeric (RoundingMode)
 
 import Data.Containers.ListUtils (nubOrd)
@@ -225,7 +224,7 @@ data Op = Plus
         | LkUp (Int, Kind, Kind, Int) !SV !SV   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
         | KindCast Kind Kind
         | Uninterpreted String
-        | QuantifiedBool String                 -- When we generate a forall/exists (nested etc.) boolean value. NB. This used to be "QuantifiedBool [Op] String", keeping track of Ops. That turned out to cause memory leaks. So avoid that.
+        | QuantifiedBool T.Text                 -- When we generate a forall/exists (nested etc.) boolean value. NB. This used to be "QuantifiedBool [Op] String", keeping track of Ops. That turned out to cause memory leaks. So avoid that.
         | SpecialRelOp Kind SpecialRelOp        -- Generate the equality to the internal operation
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
@@ -449,37 +448,37 @@ instance Num RegExp where
 
 -- | Convert a reg-exp to a Haskell-like string
 instance Show RegExp where
-  show = regExpToString show
+  show = T.unpack . regExpToText (T.pack . show)
 
 -- | Convert a reg-exp to a SMT-lib acceptable representation
-regExpToSMTString :: RegExp -> String
-regExpToSMTString = regExpToString (\s -> '"' : stringToQFS s ++ "\"")
+regExpToSMTString :: RegExp -> Text
+regExpToSMTString = regExpToText (\s -> "\"" <> T.pack (stringToQFS s) <> "\"")
 
--- | Convert a RegExp to a string, parameterized by how strings are converted
-regExpToString :: (String -> String) -> RegExp -> String
-regExpToString fs (Literal s)       = "(str.to.re " ++ fs s ++ ")"
-regExpToString _  All               = "re.all"
-regExpToString _  AllChar           = "re.allchar"
-regExpToString _  None              = "re.nostr"
-regExpToString fs (Range ch1 ch2)   = "(re.range " ++ fs [ch1] ++ " " ++ fs [ch2] ++ ")"
-regExpToString _  (Conc [])         = show (1 :: Integer)
-regExpToString fs (Conc [x])        = regExpToString fs x
-regExpToString fs (Conc xs)         = "(re.++ " ++ unwords (map (regExpToString fs) xs) ++ ")"
-regExpToString fs (KStar r)         = "(re.* " ++ regExpToString fs r ++ ")"
-regExpToString fs (KPlus r)         = "(re.+ " ++ regExpToString fs r ++ ")"
-regExpToString fs (Opt   r)         = "(re.opt " ++ regExpToString fs r ++ ")"
-regExpToString fs (Comp  r)         = "(re.comp " ++ regExpToString fs r ++ ")"
-regExpToString fs (Diff  r1 r2)     = "(re.diff " ++ regExpToString fs r1 ++ " " ++ regExpToString fs r2 ++ ")"
-regExpToString fs (Loop  lo hi r)
-   | lo >= 0, hi >= lo = "((_ re.loop " ++ show lo ++ " " ++ show hi ++ ") " ++ regExpToString fs r ++ ")"
+-- | Convert a RegExp to text, parameterized by how strings are converted
+regExpToText :: (String -> Text) -> RegExp -> Text
+regExpToText fs (Literal s)       = "(str.to.re " <> fs s <> ")"
+regExpToText _  All               = "re.all"
+regExpToText _  AllChar           = "re.allchar"
+regExpToText _  None              = "re.nostr"
+regExpToText fs (Range ch1 ch2)   = "(re.range " <> fs [ch1] <> " " <> fs [ch2] <> ")"
+regExpToText _  (Conc [])         = "1"
+regExpToText fs (Conc [x])        = regExpToText fs x
+regExpToText fs (Conc xs)         = "(re.++ " <> T.unwords (map (regExpToText fs) xs) <> ")"
+regExpToText fs (KStar r)         = "(re.* " <> regExpToText fs r <> ")"
+regExpToText fs (KPlus r)         = "(re.+ " <> regExpToText fs r <> ")"
+regExpToText fs (Opt   r)         = "(re.opt " <> regExpToText fs r <> ")"
+regExpToText fs (Comp  r)         = "(re.comp " <> regExpToText fs r <> ")"
+regExpToText fs (Diff  r1 r2)     = "(re.diff " <> regExpToText fs r1 <> " " <> regExpToText fs r2 <> ")"
+regExpToText fs (Loop  lo hi r)
+   | lo >= 0, hi >= lo = "((_ re.loop " <> showText lo <> " " <> showText hi <> ") " <> regExpToText fs r <> ")"
    | True              = error $ "Invalid regular-expression Loop with arguments: " ++ show (lo, hi)
-regExpToString fs (Power n r)
-   | n >= 0            = regExpToString fs (Loop n n r)
+regExpToText fs (Power n r)
+   | n >= 0            = regExpToText fs (Loop n n r)
    | True              = error $ "Invalid regular-expression Power with arguments: " ++ show n
-regExpToString fs (Inter r1 r2)     = "(re.inter " ++ regExpToString fs r1 ++ " " ++ regExpToString fs r2 ++ ")"
-regExpToString _  (Union [])        = "re.nostr"
-regExpToString fs (Union [x])       = regExpToString fs x
-regExpToString fs (Union xs)        = "(re.union " ++ unwords (map (regExpToString fs) xs) ++ ")"
+regExpToText fs (Inter r1 r2)     = "(re.inter " <> regExpToText fs r1 <> " " <> regExpToText fs r2 <> ")"
+regExpToText _  (Union [])        = "re.nostr"
+regExpToText fs (Union [x])       = regExpToText fs x
+regExpToText fs (Union xs)        = "(re.union " <> T.unwords (map (regExpToText fs) xs) <> ")"
 
 -- | Show instance for @StrOp@. Note that the mapping here is important to match the SMTLib equivalents.
 instance Show StrOp where
@@ -488,22 +487,22 @@ instance Show StrOp where
   show StrToCode   = "str.to_code"
   show StrFromCode = "str.from_code"
   -- Note the breakage here with respect to argument order. We fix this explicitly later.
-  show (StrInRe s) = "str.in_re " ++ regExpToSMTString s
+  show (StrInRe s) = "str.in_re " ++ T.unpack (regExpToSMTString s)
 
 -- | Show instance for @RegExOp@.
 instance Show RegExOp where
-  show (RegExEq  r1 r2) = "(= "        ++ regExpToSMTString r1 ++ " " ++ regExpToSMTString r2 ++ ")"
-  show (RegExNEq r1 r2) = "(distinct " ++ regExpToSMTString r1 ++ " " ++ regExpToSMTString r2 ++ ")"
+  show (RegExEq  r1 r2) = "(= "        ++ T.unpack (regExpToSMTString r1) ++ " " ++ T.unpack (regExpToSMTString r2) ++ ")"
+  show (RegExNEq r1 r2) = "(distinct " ++ T.unpack (regExpToSMTString r1) ++ " " ++ T.unpack (regExpToSMTString r2) ++ ")"
 
 -- | For now, we represent lambda functions in op with their SMTLib equivalent strings.
 -- This might change in the future.
-newtype SMTLambda = SMTLambda String
+newtype SMTLambda = SMTLambda T.Text
                   deriving (Eq, Ord, G.Data, Generic)
                   deriving newtype NFData
 
 -- | Simple show instance for SMTLambda
 instance Show SMTLambda where
-  show (SMTLambda s) = s
+  show (SMTLambda s) = T.unpack s
 
 -- | Sequence operations. Indexed by the element kind.
 data SeqOp = SeqLen      Kind
@@ -578,7 +577,7 @@ instance Show Op where
 
   show (KindCast fr to)     = "cast_" ++ show fr ++ "_" ++ show to
   show (Uninterpreted i)    = "[uninterpreted] " ++ i
-  show (QuantifiedBool i)   = "[quantified boolean] " ++ i
+  show (QuantifiedBool i)   = "[quantified boolean] " ++ T.unpack i
 
   show (Label s)            = "[label] " ++ s
 
@@ -697,10 +696,6 @@ instance Eq NamedSymVar where
 instance Ord NamedSymVar where
   compare (NamedSymVar l _) (NamedSymVar r _) = compare l r
 
--- | Convert to a named symvar, from string
-toNamedSV' :: SV -> String -> NamedSymVar
-toNamedSV' s = NamedSymVar s . T.pack
-
 -- | Convert to a named symvar, from text
 toNamedSV :: SV -> Name -> NamedSymVar
 toNamedSV = NamedSymVar
@@ -748,8 +743,8 @@ objectiveName (Maximize          s _)   = s
 objectiveName (AssertWithPenalty s _ _) = s
 
 -- | The state we keep track of as we interact with the solver
-data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -> IO String
-                             , querySend                :: Maybe Int -> String -> IO ()
+data QueryState = QueryState { queryAsk                 :: Maybe Int -> Text -> IO String
+                             , querySend                :: Maybe Int -> Text -> IO ()
                              , queryRetrieveResponse    :: Maybe Int -> IO String
                              , queryConfig              :: SMTConfig
                              , queryTerminate           :: Maybe C.SomeException -> IO ()
@@ -900,7 +895,7 @@ instance Show Result where
           shn (NamedSymVar sv nm) = "  " <> ni <> " :: " ++ show (swKind sv) ++ alias
             where ni = show sv
 
-                  alias | ni == T.unpack nm = ""
+                  alias | T.pack ni == nm = ""
                         | True              = ", aliasing " ++ show nm
 
           shq (q, v) = shn v ++ ", " ++ if q == ALL then "universal" else "existential"
@@ -1106,8 +1101,8 @@ lookupInput f sv ns
 -- | A defined function/value
 data SMTDef = SMTDef Kind             -- ^ Final kind of the definition (resulting kind, not the params)
                      [String]         -- ^ other definitions it refers to
-                     (Maybe String)   -- ^ parameter string
-                     (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
+                     (Maybe Text)     -- ^ parameter string
+                     (Int -> Text)    -- ^ Body, in SMTLib syntax, given the tab amount
             deriving G.Data
 
 -- | For debug purposes
@@ -1115,9 +1110,9 @@ instance Show SMTDef where
   show (SMTDef fk frees p body) = unlines [ "-- User defined function:"
                                                       , "-- Final return type    : " ++ show fk
                                                       , "-- Refers to            : " ++ intercalate ", " frees
-                                                      , "-- Parameters           : " ++ fromMaybe "NONE" p
+                                                      , "-- Parameters           : " ++ maybe "NONE" T.unpack p
                                                       , "-- Body                 : "
-                                                      , body 2
+                                                      , T.unpack (body 2)
                                                       ]
 
 -- | NFData instance for SMTDef
@@ -1125,7 +1120,7 @@ instance NFData SMTDef where
   rnf (SMTDef fk frees params body) = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
 
 -- | Compare two SMTDef values for semantic equality.
--- The body is @(Int -> String)@ where @Int@ is indentation; we compare rendered output at indent 0.
+-- The body is @(Int -> Text)@ where @Int@ is indentation; we compare rendered output at indent 0.
 smtDefEq :: SMTDef -> SMTDef -> Bool
 smtDefEq (SMTDef k1 refs1 params1 body1) (SMTDef k2 refs2 params2 body2)
   = k1 == k2 && refs1 == refs2 && params1 == params2 && body1 0 == body2 0
@@ -1267,8 +1262,8 @@ modifyIncState State{rIncState} field update = do
         R.modifyIORef' (field incState) update
 
 -- | Add an observable
-recordObservable :: State -> String -> (CV -> Bool) -> SV -> IO ()
-recordObservable st (T.pack -> nm) chk sv = modifyState st rObservables (S.|> (nm, chk, sv)) (pure ())
+recordObservable :: State -> Text -> (CV -> Bool) -> SV -> IO ()
+recordObservable st nm chk sv = modifyState st rObservables (S.|> (nm, chk, sv)) (pure ())
 
 -- | Increment the variable counter
 incrementInternalCounter :: State -> IO Int
@@ -1427,7 +1422,7 @@ newSV st k = do ctr <- incrementInternalCounter st
                 ll  <- readIORef (rLambdaLevel st)
                 let sv = SV k (NodeId (sbvContext st, ll, ctr))
                 registerKind st k
-                pure $ NamedSymVar sv $ T.pack (show sv)
+                pure $ NamedSymVar sv $ showText sv
 {-# INLINE newSV #-}
 
 -- | Register a new kind with the system, used for uninterpreted sorts.
@@ -1686,7 +1681,7 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                                   QueryVar       -> (True,  Just EX)
 
             mkS q = do (NamedSymVar sv internalName) <- newSV st k
-                       let nm = fromMaybe (T.unpack internalName) mbNm
+                       let nm = maybe internalName T.pack mbNm
                        introduceUserName st (isQueryVar, isTracker) nm k q sv
 
             mkC cv = do modifyState st rCInfo ((fromMaybe "_" mbNm, cv):) (pure ())
@@ -1719,8 +1714,8 @@ svMkSymVarGen isTracker varContext k mbNm st = do
 
                         (NamedSymVar sv internalName) <- newSV st k
 
-                        let nm = fromMaybe (T.unpack internalName) mbNm
-                            nsv = toNamedSV' sv nm
+                        let nm = maybe internalName T.pack mbNm
+                            nsv = NamedSymVar sv nm
 
                             -- Ignore the context equivalence check here. When validating, we are in a different
                             -- context; so they won't match
@@ -1743,11 +1738,11 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                         mkC cv
 
 -- | Introduce a new user name. We simply append a suffix if we have seen this variable before.
-introduceUserName :: State -> (Bool, Bool) -> String -> Kind -> Quantifier -> SV -> IO SVal
+introduceUserName :: State -> (Bool, Bool) -> Text -> Kind -> Quantifier -> SV -> IO SVal
 introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
         old <- allInputs <$> readIORef (rinps st)
 
-        let nm  = mkUnique (T.pack nmOrig) old
+        let nm  = mkUnique nmOrig old
 
         -- If this is not a query variable and we're in a query, reject it.
         -- See https://github.com/LeventErkok/sbv/issues/554 for the rationale.
@@ -1785,7 +1780,7 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
          -- Also, the following will fail if we span the range of integers without finding a match, but your computer would
          -- die way ahead of that happening if that's the case!
          mkUnique :: T.Text -> Set.Set Name -> T.Text
-         mkUnique prefix names = case dropWhile (`Set.member` names) (prefix : [prefix <> "_" <> T.pack (show i) | i <- [(0::Int)..]]) of
+         mkUnique prefix names = case dropWhile (`Set.member` names) (prefix : [prefix <> "_" <> showText i | i <- [(0::Int)..]]) of
                                    h:_ -> h
                                    _   -> error $ "mkUnique: Impossible happened! Couldn't get a unique name for " ++ show (prefix, names)
 
@@ -2046,7 +2041,7 @@ sObserve m x
   | True
   = do st <- symbolicEnv
        liftIO $ do xsv <- svToSV st x
-                   recordObservable st m (const True) xsv
+                   recordObservable st (T.pack m) (const True) xsv
 
 -- | Generalization of 'Data.SBV.outputSVal'
 outputSVal :: MonadSymbolic m => SVal -> m ()
@@ -2117,6 +2112,10 @@ instance NFData SMTLibPgm     where rnf (SMTLibPgm v p d) = rnf v `seq` rnf p `s
 
 instance Show SMTLibPgm where
   show (SMTLibPgm _ pgm _) = T.unpack pgm
+
+-- | Extract the program text from an 'SMTLibPgm' without converting to 'String'.
+smtLibPgmText :: SMTLibPgm -> Text
+smtLibPgmText (SMTLibPgm _ pgm _) = pgm
 
 -- Other Technicalities..
 instance NFData GeneralizedCV where
@@ -2236,8 +2235,8 @@ data TPOptions = TPOptions {
        }
 
 -- | Ignore internal names and those the user told us to
-mustIgnoreVar :: SMTConfig -> String -> Bool
-mustIgnoreVar cfg s = "__internal_sbv" `isPrefixOf` s || isNonModelVar cfg s
+mustIgnoreVar :: SMTConfig -> T.Text -> Bool
+mustIgnoreVar cfg s = "__internal_sbv" `T.isPrefixOf` s || isNonModelVar cfg (T.unpack s)
 
 -- | We show the name of the solver for the config. Arguably this is misleading, but better than nothing.
 instance Show SMTConfig where
@@ -2285,7 +2284,7 @@ data SMTScript = SMTScript {
 type SMTEngine =  forall res.
                   SMTConfig         -- ^ current configuration
                -> State             -- ^ the state in which to run the engine
-               -> String            -- ^ program
+               -> Text              -- ^ program
                -> (State -> IO res) -- ^ continuation
                -> IO res
 
@@ -2306,7 +2305,7 @@ data Solver = ABC
 data SMTSolver = SMTSolver {
          name           :: Solver                -- ^ The solver in use
        , executable     :: String                -- ^ The path to its executable
-       , preprocess     :: String -> String      -- ^ Each line sent to the solver will be passed through this function (typically id)
+       , preprocess     :: Text -> Text          -- ^ Each line sent to the solver will be passed through this function (typically id)
        , options        :: SMTConfig -> [String] -- ^ Options to provide to the solver
        , engine         :: SMTEngine             -- ^ The solver engine, responsible for interpreting solver output
        , capabilities   :: SolverCapabilities    -- ^ Various capabilities of the solver

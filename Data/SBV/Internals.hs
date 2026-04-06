@@ -103,6 +103,7 @@ import Data.SBV.Utils.PrettyNum
 import GHC.TypeLits
 
 import qualified Data.SBV.Control.Utils as Query
+import qualified Data.Text              as T
 
 import Data.SBV.Lambda
 
@@ -118,7 +119,7 @@ import Data.SBV.TP.Kernel
 -- Note that this is inherently dangerous as it can put the solver in an arbitrary
 -- state and confuse SBV. If you use this feature, you are on your own!
 sendStringToSolver :: (MonadIO m, MonadQuery m) => String -> m ()
-sendStringToSolver = Query.send False
+sendStringToSolver = Query.send False . T.pack
 
 -- | Retrieve multiple responses from the solver, until it responds with a user given
 -- tag that we shall arrange for internally. The optional timeout is in milliseconds.
@@ -132,7 +133,7 @@ retrieveResponseFromSolver = Query.retrieveResponse
 -- Note that this is inherently dangerous as it can put the solver in an arbitrary
 -- state and confuse SBV.
 sendRequestToSolver :: (MonadIO m, MonadQuery m) => String -> m String
-sendRequestToSolver = Query.ask
+sendRequestToSolver = Query.ask . T.pack
 
 {- $coordinateSolverInfo
 In rare cases it might be necessary to send an arbitrary string down to the solver. Needless to say, this

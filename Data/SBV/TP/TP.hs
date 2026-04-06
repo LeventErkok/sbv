@@ -13,6 +13,7 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE NamedFieldPuns         #-}
 {-# LANGUAGE OverloadedLists        #-}
+{-# LANGUAGE OverloadedStrings      #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TupleSections          #-}
 {-# LANGUAGE TypeApplications       #-}
@@ -43,6 +44,8 @@ import Data.SBV
 import Data.SBV.Core.Model (qSaturateSavingObservables)
 import Data.SBV.Core.Data  (SBV(..), SVal(..))
 import qualified Data.SBV.Core.Symbolic as S (sObserve)
+
+import qualified Data.Text as T
 
 import Data.SBV.Core.Symbolic (rSkipMeasureChecks, rNoTermCheckFunctions)
 import Data.SBV.Core.Operations (svEqual)
@@ -234,7 +237,7 @@ proveProofTree :: Proposition a
 proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree uniq quickCheckInstance = do
     results <- walk initialHypotheses 1 ([1], calcProofTree)
 
-    queryDebug [nm ++ ": Proof end: proving the result:"]
+    queryDebug [T.pack nm <> ": Proof end: proving the result:"]
 
     mbStartTime <- getTimeStampIf printStats
     st <- symbolicEnv
@@ -623,8 +626,8 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
           query $ do
 
            case inductionMeasure of
-              Nothing      -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no custom measure to show non-negativeness."]
-              Just (m, hs) -> do queryDebug [nm ++ ": Induction, proving measure is always non-negative:"]
+              Nothing      -> queryDebug [T.pack nm <> ": Induction" <> T.pack qual <> ", there is no custom measure to show non-negativeness."]
+              Just (m, hs) -> do queryDebug [T.pack nm <> ": Induction, proving measure is always non-negative:"]
                                  smtProofStep cfg tpSt "Step" 1
                                                        (TPProofStep False nm [] ["Measure is non-negative"])
                                                        (Just (sAnd (inductionIntros : map getObjProof hs)))
@@ -632,8 +635,8 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
                                                        []
                                                        (\d -> finishTP cfg "Q.E.D." d [])
            case inductionBaseCase of
-              Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no base case to prove."]
-              Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
+              Nothing -> queryDebug [T.pack nm <> ": Induction" <> T.pack qual <> ", there is no base case to prove."]
+              Just bc -> do queryDebug [T.pack nm <> ": Induction, proving base case:"]
                             smtProofStep cfg tpSt "Step" 1
                                                   (TPProofStep False nm [] ["Base"])
                                                   (Just inductionIntros)

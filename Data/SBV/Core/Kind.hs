@@ -16,6 +16,7 @@
 {-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
@@ -57,7 +58,7 @@ import Data.Type.Equality
 
 import GHC.TypeLits
 
-import Data.SBV.Utils.Lib     (isKString)
+import Data.SBV.Utils.Lib     (isKString, showText)
 import Data.SBV.Utils.Numeric (RoundingMode)
 
 import GHC.Generics
@@ -147,23 +148,23 @@ instance Show Kind where
 showBaseKind :: Kind -> Text
 showBaseKind = sh
   where sh (KVar s)           = T.pack s
-        sh k@KBool            = noS (T.pack $ show k)
-        sh (KBounded False n) = T.pack (pickType n "Word" "WordN ") <> T.pack (show n)
-        sh (KBounded True n)  = T.pack (pickType n "Int"  "IntN ")  <> T.pack (show n)
-        sh (KApp s ks)        = T.pack $ unwords (s : map (T.unpack . kindParen . sh) ks)
-        sh k@KUnbounded       = noS (T.pack $ show k)
-        sh k@KReal            = noS (T.pack $ show k)
-        sh k@KADT{}           = T.pack $ show k     -- Leave user-sorts untouched!
-        sh k@KFloat           = noS (T.pack $ show k)
-        sh k@KDouble          = noS (T.pack $ show k)
-        sh k@KFP{}            = noS (T.pack $ show k)
-        sh k@KChar            = noS (T.pack $ show k)
-        sh k@KString          = noS (T.pack $ show k)
-        sh KRational          = T.pack "Rational"
-        sh (KList k)          = T.pack "[" <> sh k <> T.pack "]"
-        sh (KSet k)           = T.pack "{" <> sh k <> T.pack "}"
-        sh (KTuple ks)        = T.pack "(" <> T.pack (intercalate ", " (map (T.unpack . sh) ks)) <> T.pack ")"
-        sh (KArray  k1 k2)    = T.pack "Array "  <> kindParen (sh k1) <> T.pack " " <> kindParen (sh k2)
+        sh k@KBool            = noS (showText k)
+        sh (KBounded False n) = T.pack (pickType n "Word" "WordN ") <> showText n
+        sh (KBounded True n)  = T.pack (pickType n "Int"  "IntN ")  <> showText n
+        sh (KApp s ks)        = T.unwords (T.pack s : map (kindParen . sh) ks)
+        sh k@KUnbounded       = noS (showText k)
+        sh k@KReal            = noS (showText k)
+        sh k@KADT{}           = showText k     -- Leave user-sorts untouched!
+        sh k@KFloat           = noS (showText k)
+        sh k@KDouble          = noS (showText k)
+        sh k@KFP{}            = noS (showText k)
+        sh k@KChar            = noS (showText k)
+        sh k@KString          = noS (showText k)
+        sh KRational          = "Rational"
+        sh (KList k)          = "[" <> sh k <> "]"
+        sh (KSet k)           = "{" <> sh k <> "}"
+        sh (KTuple ks)        = "(" <> T.intercalate ", " (map sh ks) <> ")"
+        sh (KArray  k1 k2)    = "Array "  <> kindParen (sh k1) <> " " <> kindParen (sh k2)
 
         -- Drop the initial S if it's there
         noS s = case T.uncons s of
@@ -185,33 +186,26 @@ kindParen s = case T.uncons s of
                                  then T.singleton '(' <> s <> T.singleton ')'
                                  else s
 
--- | String version of kindParen for backward compatibility
-kindParenStr :: String -> String
-kindParenStr s@('[':_) = s
-kindParenStr s@('(':_) = s
-kindParenStr s | any isSpace s = '(' : s ++ ")"
-               | True          = s
-
 -- | How the type maps to SMT land
-smtType :: Kind -> String
-smtType (KVar s)        = s
+smtType :: Kind -> Text
+smtType (KVar s)        = T.pack s
 smtType KBool           = "Bool"
-smtType (KBounded _ sz) = "(_ BitVec " ++ show sz ++ ")"
+smtType (KBounded _ sz) = "(_ BitVec " <> showText sz <> ")"
 smtType KUnbounded      = "Int"
 smtType KReal           = "Real"
 smtType KFloat          = "(_ FloatingPoint  8 24)"
 smtType KDouble         = "(_ FloatingPoint 11 53)"
-smtType (KFP eb sb)     = "(_ FloatingPoint " ++ show eb ++ " " ++ show sb ++ ")"
+smtType (KFP eb sb)     = "(_ FloatingPoint " <> showText eb <> " " <> showText sb <> ")"
 smtType KString         = "String"
 smtType KChar           = "String"
-smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
-smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
-smtType (KApp s ks)     = kindParenStr $ unwords (s : map smtType          ks)
-smtType (KADT s pks _)  = kindParenStr $ unwords (s : map (smtType . snd) pks)
+smtType (KList k)       = "(Seq "   <> smtType k <> ")"
+smtType (KSet  k)       = "(Array " <> smtType k <> " Bool)"
+smtType (KApp s ks)     = kindParen $ T.unwords (T.pack s : map smtType          ks)
+smtType (KADT s pks _)  = kindParen $ T.unwords (T.pack s : map (smtType . snd) pks)
 smtType (KTuple [])     = "SBVTuple0"
-smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
+smtType (KTuple kinds)  = "(SBVTuple" <> showText (length kinds) <> " " <> T.unwords (smtType <$> kinds) <> ")"
 smtType KRational       = "SBVRational"
-smtType (KArray  k1 k2) = "(Array "      ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
+smtType (KArray  k1 k2) = "(Array " <> smtType k1 <> " " <> smtType k2 <> ")"
 
 instance Eq G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)

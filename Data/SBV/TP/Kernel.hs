@@ -14,6 +14,7 @@
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -42,6 +43,7 @@ import Data.SBV.Core.Symbolic (MonadSymbolic(..), rSkipMeasureChecks, rMeasureCh
 import Data.SBV.SMT.SMT
 import Data.SBV.Core.Model
 import Data.SBV.Provers.Prover
+import Data.SBV.Utils.Lib     (showText)
 
 import Data.SBV.TP.Utils
 
@@ -306,7 +308,7 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
         case mbAssumptions of
            Nothing  -> do queryDebug ["; smtProofStep: No context value to push."]
                           check
-           Just asm -> do queryDebug ["; smtProofStep: Pushing in the context: " ++ show asm]
+           Just asm -> do queryDebug ["; smtProofStep: Pushing in the context: " <> showText asm]
                           inNewAssertionStack $ do constrain asm
                                                    check
 

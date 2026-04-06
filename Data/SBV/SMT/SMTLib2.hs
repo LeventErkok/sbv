@@ -35,11 +35,12 @@ import Data.SBV.Control.Types
 
 import Data.SBV.SMT.Utils
 
-import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName', getSV, regExpToSMTString, NROp(..)
-                              , SMTDef(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..), ADTOp(..)
+import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName, getUserName', getSV, regExpToSMTString, NROp(..)
+                              , SMTDef(..), SMTLambda(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..), ADTOp(..)
                               )
 
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cvToSMTLib)
+import Data.SBV.Utils.Lib       (showText)
 
 import qualified Data.Generics.Uniplate.Data as G
 
@@ -146,7 +147,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                           ]
 
                  nope w = [ "***     Given problem requires support for " <> T.pack w
-                          , "***     But the chosen solver (" <> T.pack (show (name (solver cfg))) <> ") doesn't support this feature."
+                          , "***     But the chosen solver (" <> showText (name (solver cfg)) <> ") doesn't support this feature."
                           ]
 
         -- Some cases require all, some require none.
@@ -168,8 +169,8 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                          []  -> Nothing
                          [l] -> Just l
                          ls  -> let msg = T.unlines [ ""
-                                                , "*** Only one setOption call to 'setLogic' is allowed, found: " <> T.pack (show (length ls))
-                                                , "***  " <> T.unwords (map (T.pack . show) ls)
+                                                , "*** Only one setOption call to 'setLogic' is allowed, found: " <> showText (length ls)
+                                                , "***  " <> T.unwords (map showText ls)
                                                 ]
                                 in error $ T.unpack msg
            = case l of
@@ -279,7 +280,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              <> [ "; --- top level inputs ---"]
              <> concat [declareFun s (SBVType [kindOf s]) (userName s) | var <- inputs, let s = getSV var]
              <> [ "; --- optimization tracker variables ---" | not (null trackerVars) ]
-             <> concat [declareFun s (SBVType [kindOf s]) (Just ("tracks " <> T.pack nm)) | var <- trackerVars, let s = getSV var, let nm = getUserName' var]
+             <> concat [declareFun s (SBVType [kindOf s]) (Just ("tracks " <> getUserName var)) | var <- trackerVars, let s = getSV var]
              <> [ "; --- constant tables ---" ]
              <> concatMap (uncurry (:) . mkTable) constTables
              <> [ "; --- non-constant tables ---" ]
@@ -346,7 +347,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
 
         userNameMap = M.fromList $ map (\nSymVar -> (getSV nSymVar, getUserName' nSymVar)) inputs
         userName s = case M.lookup s userNameMap of
-                        Just u  | show s /= u -> Just $ "tracks user variable " <> T.pack (show u)
+                        Just u  | show s /= u -> Just $ "tracks user variable " <> showText u
                         _                     -> Nothing
 
 -- | Declare ADTs
@@ -367,7 +368,7 @@ declADT = concatMap declGroup . DG.stronglyConnComp . map mkNode
 
         mkC (nm, []) = T.pack nm
         mkC (nm, ts) = T.pack nm <> " " <> T.unwords ['(' `T.cons` mkF (nm <> "_" <> show i) t <> ")" | (i, t) <- zip [(1::Int)..] ts]
-          where mkF a t  = "get" <> T.pack a <> " " <> T.pack (smtType t)
+          where mkF a t  = "get" <> T.pack a <> " " <> smtType t
 
         singleADT :: (String, [(String, Kind)], [(String, [Kind])]) -> [Text]
         singleADT (tName, [], []) = ["(declare-sort " <> T.pack tName <> " 0) ; N.B. Uninterpreted sort."]
@@ -384,7 +385,7 @@ declADT = concatMap declGroup . DG.stronglyConnComp . map mkNode
                      : concatMap adtBody adts
                     <> ["))"]
 
-                typeDecls = T.unwords ['(' `T.cons` T.pack name <> " " <> T.pack (show (length pks)) <> ")" | (name, pks, _) <- adts]
+                typeDecls = T.unwords ['(' `T.cons` T.pack name <> " " <> showText (length pks) <> ")" | (name, pks, _) <- adts]
 
                 adtBody (_, pks, cstrs) = body
                   where (parOpen, parClose) = parParens pks
@@ -407,18 +408,18 @@ declTuple arity
   | arity == 1 = error "Data.SBV.declTuple: Unexpected one-tuple"
   | True       =    (l1 <> "(par (" <> T.unwords [param i | i <- [1..arity]] <> ")")
                  :  [pre i <> proj i <> post i    | i <- [1..arity]]
-  where l1     = "(declare-datatypes ((SBVTuple" <> T.pack (show arity) <> " " <> T.pack (show arity) <> ")) ("
-        l2     = T.replicate (T.length l1) " " <> "((mkSBVTuple" <> T.pack (show arity) <> " "
+  where l1     = "(declare-datatypes ((SBVTuple" <> showText arity <> " " <> showText arity <> ")) ("
+        l2     = T.replicate (T.length l1) " " <> "((mkSBVTuple" <> showText arity <> " "
         tab    = T.replicate (T.length l2) " "
 
         pre 1  = l2
         pre _  = tab
 
-        proj i = "(proj_" <> T.pack (show i) <> "_SBVTuple" <> T.pack (show arity) <> " " <> param i <> ")"
+        proj i = "(proj_" <> showText i <> "_SBVTuple" <> showText arity <> " " <> param i <> ")"
 
         post i = if i == arity then ")))))" else ""
 
-        param i = "T" <> T.pack (show i)
+        param i = "T" <> showText i
 
 -- | Find the set of tuple sizes to declare, eg (2-tuple, 5-tuple).
 -- NB. We do *not* need to recursively go into list/tuple kinds here,
@@ -508,7 +509,7 @@ defineFun cfg (s, def) mbComment
    | True      = [ "(declare-fun " <> varT <> ")" <> cmnt
                  , "(assert (= " <> var <> " " <> def <> "))"
                  ]
-  where var  = T.pack $ show s
+  where var  = showText s
         varT = var <> " " <> svFunType [] s
         cmnt = maybe "" (" ; " <>) mbComment
 
@@ -527,7 +528,7 @@ mkRelEq :: Text -> (Text, Text) -> Kind -> Text
 mkRelEq nm (fun, order) ak = res
    where lhs = "(" <> nm <> " x y)"
          rhs = "((_ " <> fun <> " " <> order <> ") x y)"
-         tk  = T.pack $ smtType ak
+         tk  = smtType ak
          res = "(forall ((x " <> tk <> ") (y " <> tk <> ")) (= " <> lhs <> " " <> rhs <> "))"
 
 declUI :: ProgInfo -> (String, (Bool, Maybe [String], SBVType)) -> [Text]
@@ -550,7 +551,7 @@ declUserFuns ds = map declGroup sorted
         getDeps (_, (SMTDef _ d _ _, _)) = d
 
         mkDecl Nothing  rt = "() " <> rt
-        mkDecl (Just p) rt = T.pack p <> " " <> rt
+        mkDecl (Just p) rt = p <> " " <> rt
 
         sorted = DG.stronglyConnComp (map mkNode ds)
 
@@ -561,7 +562,7 @@ declUserFuns ds = map declGroup sorted
                                          xs  -> declUserDefMulti xs
 
         declUserDef isRec (nm, (SMTDef fk deps param body, ty)) =
-          "; " <> T.pack nm <> " :: " <> T.pack (show ty) <> recursive <> frees <> "\n" <> s
+          "; " <> T.pack nm <> " :: " <> showText ty <> recursive <> frees <> "\n" <> s
            where (recursive, definer) | isRec = (" [Recursive]", "define-fun-rec")
                                       | True  = ("",             "define-fun")
 
@@ -569,17 +570,17 @@ declUserFuns ds = map declGroup sorted
                  frees | null otherDeps = ""
                        | True           = " [Refers to: " <> T.intercalate ", " (map T.pack otherDeps) <> "]"
 
-                 decl = mkDecl param (T.pack $ smtType fk)
+                 decl = mkDecl param (smtType fk)
 
-                 s = "(" <> definer <> " " <> T.pack nm <> " " <> decl <> "\n" <> T.pack (body 2) <> ")"
+                 s = "(" <> definer <> " " <> T.pack nm <> " " <> decl <> "\n" <> body 2 <> ")"
 
         -- declare a bunch of mutually-recursive functions
         declUserDefMulti bs = render $ map collect bs
           where collect (nm, (SMTDef fk deps param body, ty)) = (deps, nm, ty, "(" <> T.pack nm <> " " <> decl <> ")", body 3)
-                  where decl = mkDecl param (T.pack $ smtType fk)
+                  where decl = mkDecl param (smtType fk)
 
                 render defs = T.intercalate "\n" $
-                                  [ "; " <> T.intercalate ", " [T.pack n <> " :: " <> T.pack (show ty) | (_, n, ty, _, _) <- defs]
+                                  [ "; " <> T.intercalate ", " [T.pack n <> " :: " <> showText ty | (_, n, ty, _, _) <- defs]
                                   , "(define-funs-rec"
                                   ]
                                <> [ open i <> param d <> close1 i | (i, d) <- zip [1..] defs]
@@ -589,8 +590,8 @@ declUserFuns ds = map declGroup sorted
 
                            param (_deps, _nm, _ty, p, _body) = p
 
-                           dump (deps, nm, ty, _, body) = "; Definition of: " <> T.pack nm <> " :: " <> T.pack (show ty) <> ". [Refers to: " <> T.intercalate ", " (map T.pack deps) <> "]"
-                                                        <> "\n" <> T.pack body
+                           dump (deps, nm, ty, _, body) = "; Definition of: " <> T.pack nm <> " :: " <> showText ty <> ". [Refers to: " <> T.intercalate ", " (map T.pack deps) <> "]"
+                                                        <> "\n" <> body
 
                            ld = length defs
 
@@ -599,12 +600,12 @@ declUserFuns ds = map declGroup sorted
 
 mkTable :: (((Int, Kind, Kind), [SV]), [Text]) -> (Text, [Text])
 mkTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is <> setup)
-  where t       = "table" <> T.pack (show i)
-        decl    = "(declare-fun " <> t <> " (" <> T.pack (smtType ak) <> ") " <> T.pack (smtType rk) <> ")"
+  where t       = "table" <> showText i
+        decl    = "(declare-fun " <> t <> " (" <> smtType ak <> ") " <> smtType rk <> ")"
 
         -- Arrange for initializers
-        mkInit idx   = "table" <> T.pack (show i) <> "_initializer_" <> T.pack (show (idx :: Int))
-        initializer  = "table" <> T.pack (show i) <> "_initializer"
+        mkInit idx   = "table" <> showText i <> "_initializer_" <> showText (idx :: Int)
+        initializer  = "table" <> showText i <> "_initializer"
 
         wrap index s = "(define-fun " <> mkInit index <> " () Bool " <> s <> ")"
 
@@ -621,8 +622,8 @@ mkTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is <> setu
                              ]
 nonConstTable :: (((Int, Kind, Kind), [SV]), [Text]) -> Text
 nonConstTable (((i, ak, rk), _elts), _) = decl
-  where t    = "table" <> T.pack (show i)
-        decl = "(declare-fun " <> t <> " (" <> T.pack (smtType ak) <> ") " <> T.pack (smtType rk) <> ")"
+  where t    = "table" <> showText i
+        decl = "(declare-fun " <> t <> " (" <> smtType ak <> ") " <> smtType rk <> ")"
 
 constructTables :: RoundingMode -> [(SV, CV)] -> [((Int, Kind, Kind), [SV])]
                 -> ( IM.IntMap Text                              -- table enumeration
@@ -635,7 +636,7 @@ constructTables rm consts tbls = (tableMap, constTables, nonConstTables)
        nonConstTables = [(t, d) | (t, Right d) <- allTables]
        tableMap       = IM.fromList $ map grab allTables
 
-       grab (((t, _, _), _), _) = (t, "table" <> T.pack (show t))
+       grab (((t, _, _), _), _) = (t, "table" <> showText t)
 
 -- Left if all constants, Right if otherwise
 genTableData :: RoundingMode -> [SV] -> ((Int, Kind, Kind), [SV]) -> Either [Text] [Text]
@@ -643,7 +644,7 @@ genTableData rm consts ((i, aknd, _), elts)
   | null post = Left  (map (mkEntry . snd) pre)
   | True      = Right (map (mkEntry . snd) (pre ++ post))
   where (pre, post) = partition fst (zipWith mkElt elts [(0::Int)..])
-        t           = "table" <> T.pack (show i)
+        t           = "table" <> showText i
 
         mkElt x k   = (isReady, (idx, cvtSV x))
           where idx = cvtCV rm (mkConstCV aknd k)
@@ -654,30 +655,29 @@ genTableData rm consts ((i, aknd, _), elts)
         constsSet = Set.fromList consts
 
 svType :: SV -> Text
-svType s = T.pack $ smtType (kindOf s)
+svType s = smtType (kindOf s)
 
 svFunType :: [SV] -> SV -> Text
 svFunType ss s = "(" <> T.unwords (map svType ss) <> ") " <> svType s
 
 cvtType :: SBVType -> Text
 cvtType (SBVType []) = error "SBV.SMT.SMTLib2.cvtType: internal: received an empty type!"
-cvtType (SBVType xs) = "(" <> T.unwords (map (T.pack . smtType) body) <> ") " <> T.pack (smtType ret)
+cvtType (SBVType xs) = "(" <> T.unwords (map smtType body) <> ") " <> smtType ret
   where (body, ret) = (init xs, last xs)
 
 type TableMap = IM.IntMap Text
 
 -- Present an SV, simply show
 cvtSV :: SV -> Text
-cvtSV = T.pack . show
+cvtSV = showText
 
 cvtCV :: RoundingMode -> CV -> Text
-cvtCV = T.pack .* cvToSMTLib
-  where (.*) = (.) . (.)
+cvtCV = cvToSMTLib
 
 getTable :: TableMap -> Int -> Text
 getTable m i
   | Just tn <- i `IM.lookup` m = tn
-  | True                       = "table" <> T.pack (show i)
+  | True                       = "table" <> showText i
 
 cvtExp :: SMTConfig -> ProgInfo -> SolverCapabilities -> RoundingMode -> TableMap -> SBVExpr -> Text
 cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
@@ -701,7 +701,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         ensureBVOrBool = bvOp || boolOp || bad
         ensureBV       = bvOp || bad
 
-        addRM s = s <> " " <> T.pack (smtRoundingMode rm)
+        addRM s = s <> " " <> smtRoundingMode rm
 
         isZ3 = case name (solver cfg) of
                  Z3 -> True
@@ -848,18 +848,18 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (KindCast f t) [a]) = handleKindCast f t (cvtSV a)
 
-        sh (SBVApp (ArrayInit (Left (f, t))) [a])   = "((as const (Array " <> T.pack (smtType f) <> " " <> T.pack (smtType t) <> ")) " <> cvtSV a <> ")"
-        sh (SBVApp (ArrayInit (Right s)) [])        = T.pack $ show s
-        sh (SBVApp ReadArray             [a, i])    = "(select " <> cvtSV a <> " " <> cvtSV i <> ")"
-        sh (SBVApp WriteArray            [a, i, e]) = "(store "  <> cvtSV a <> " " <> cvtSV i <> " " <> cvtSV e <> ")"
+        sh (SBVApp (ArrayInit (Left (f, t))) [a])        = "((as const (Array " <> smtType f <> " " <> smtType t <> ")) " <> cvtSV a <> ")"
+        sh (SBVApp (ArrayInit (Right (SMTLambda s))) []) = s
+        sh (SBVApp ReadArray             [a, i])         = "(select " <> cvtSV a <> " " <> cvtSV i <> ")"
+        sh (SBVApp WriteArray            [a, i, e])      = "(store "  <> cvtSV a <> " " <> cvtSV i <> " " <> cvtSV e <> ")"
 
         sh (SBVApp (Uninterpreted nm) [])   = T.pack nm
         sh (SBVApp (Uninterpreted nm) args) = "(" <> T.pack nm <> " " <> T.unwords (map cvtSV args) <> ")"
 
         sh (SBVApp (ADTOp aop) args) = handleADT caps aop args
 
-        sh (SBVApp (QuantifiedBool i) [])   = T.pack i
-        sh (SBVApp (QuantifiedBool i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
+        sh (SBVApp (QuantifiedBool i) [])   = i
+        sh (SBVApp (QuantifiedBool i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (T.unpack i, args)
 
         sh a@(SBVApp (SpecialRelOp k o) args)
           | not (null args)
@@ -870,16 +870,16 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                           Nothing -> error $ unlines [ "SBV.SMT.SMTLib2.cvtExp: Cannot find " ++ show o ++ " in the special-relations list."
                                                      , "Known relations: " ++ intercalate ", " (map show specialRels)
                                                      ]
-                asrt nm fun = mkRelEq (T.pack nm) (T.pack fun, T.pack $ show order) k
+                asrt nm fun = mkRelEq (T.pack nm) (T.pack fun, showText order) k
             in case o of
                  IsPartialOrder         nm -> asrt nm "partial-order"
                  IsLinearOrder          nm -> asrt nm "linear-order"
                  IsTreeOrder            nm -> asrt nm "tree-order"
                  IsPiecewiseLinearOrder nm -> asrt nm "piecewise-linear-order"
 
-        sh (SBVApp (Divides n) [a]) = "((_ divisible " <> T.pack (show n) <> ") " <> cvtSV a <> ")"
+        sh (SBVApp (Divides n) [a]) = "((_ divisible " <> showText n <> ") " <> cvtSV a <> ")"
 
-        sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " <> T.pack (show i) <> " " <> T.pack (show j) <> ") " <> cvtSV a <> ")"
+        sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " <> showText i <> " " <> showText j <> ") " <> cvtSV a <> ")"
 
         sh (SBVApp (Rol i) [a])
            | bvOp  = rot "rotate_left"  i a
@@ -898,11 +898,11 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
            | True  = bad
 
         sh (SBVApp (ZeroExtend i) [a])
-          | bvOp = "((_ zero_extend " <> T.pack (show i) <> ") " <> cvtSV a <> ")"
+          | bvOp = "((_ zero_extend " <> showText i <> ") " <> cvtSV a <> ")"
           | True = bad
 
         sh (SBVApp (SignExtend i) [a])
-          | bvOp = "((_ sign_extend " <> T.pack (show i) <> ") " <> cvtSV a <> ")"
+          | bvOp = "((_ sign_extend " <> showText i <> ") " <> cvtSV a <> ")"
           | True = bad
 
         sh (SBVApp op args)
@@ -921,7 +921,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (Label _) [a]) = cvtSV a  -- This won't be reached; but just in case!
 
         sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo (cvtSV m) (T.unwords (map cvtSV args))
-        sh (SBVApp (IEEEFP w                    ) args) = "(" <> T.pack (show w) <> " " <> T.unwords (map cvtSV args) <> ")"
+        sh (SBVApp (IEEEFP w                    ) args) = "(" <> showText w <> " " <> T.unwords (map cvtSV args) <> ")"
 
         -- Some non-linear operators are supported by z3/CVC5 specifically, so do the custom translation Otherwise
         -- we pass them along.
@@ -930,26 +930,26 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (NonLinear NR_Pow)  [a, b]) | isZ3 || isCVC5  = "(^  " <> cvtSV a <> " " <> cvtSV b <> ")"
 
-        sh (SBVApp (NonLinear w) args) = "(" <> T.pack (show w) <> " " <> T.unwords (map cvtSV args) <> ")"
+        sh (SBVApp (NonLinear w) args) = "(" <> showText w <> " " <> T.unwords (map cvtSV args) <> ")"
 
         sh (SBVApp (PseudoBoolean pb) args)
           | hasPB = handlePB pb args'
           | True  = reducePB pb args'
           where args' = map cvtSV args
 
-        sh (SBVApp (OverflowOp op) args) = "(" <> T.pack (show op) <> " " <> T.unwords (map cvtSV args) <> ")"
+        sh (SBVApp (OverflowOp op) args) = "(" <> showText op <> " " <> T.unwords (map cvtSV args) <> ")"
 
         -- Note the unfortunate reversal in StrInRe..
-        sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in_re " <> T.unwords (map cvtSV args) <> " " <> T.pack (regExpToSMTString r) <> ")"
-        sh (SBVApp (StrOp op)          args) = "(" <> T.pack (show op) <> " " <> T.unwords (map cvtSV args) <> ")"
+        sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in_re " <> T.unwords (map cvtSV args) <> " " <> regExpToSMTString r <> ")"
+        sh (SBVApp (StrOp op)          args) = "(" <> showText op <> " " <> T.unwords (map cvtSV args) <> ")"
 
-        sh (SBVApp (RegExOp o@RegExEq{})  []) = T.pack (show o)
-        sh (SBVApp (RegExOp o@RegExNEq{}) []) = T.pack (show o)
+        sh (SBVApp (RegExOp o@RegExEq{})  []) = showText o
+        sh (SBVApp (RegExOp o@RegExNEq{}) []) = showText o
 
         -- Sequences. The only interesting thing here is that unit over KChar is a no-op since SMTLib doesn't distinguish
         -- Strings and Characters, but SBV does.
         sh (SBVApp (SeqOp (SeqUnit KChar)) [a]) = cvtSV a
-        sh (SBVApp (SeqOp op)             args) = "(" <> T.pack (show op) <> " " <> T.unwords (map cvtSV args) <> ")"
+        sh (SBVApp (SeqOp op)             args) = "(" <> showText op <> " " <> T.unwords (map cvtSV args) <> ")"
 
         sh (SBVApp (SetOp SetEqual)      args)   = "(= "      <> T.unwords (map cvtSV args) <> ")"
         sh (SBVApp (SetOp SetMember)     [e, s]) = "(select " <> cvtSV s <> " " <> cvtSV e <> ")"
@@ -962,8 +962,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (SetOp SetComplement) args)   = "(complement "   <> T.unwords (map cvtSV args) <> ")"
 
         sh (SBVApp (TupleConstructor 0)   [])    = "mkSBVTuple0"
-        sh (SBVApp (TupleConstructor n)   args)  = "((as mkSBVTuple" <> T.pack (show n) <> " " <> T.pack (smtType (KTuple (map kindOf args))) <> ") " <> T.unwords (map cvtSV args) <> ")"
-        sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" <> T.pack (show i) <> "_SBVTuple" <> T.pack (show n) <> " " <> cvtSV tup <> ")"
+        sh (SBVApp (TupleConstructor n)   args)  = "((as mkSBVTuple" <> showText n <> " " <> smtType (KTuple (map kindOf args)) <> ") " <> T.unwords (map cvtSV args) <> ")"
+        sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" <> showText i <> "_SBVTuple" <> showText n <> " " <> cvtSV tup <> ")"
 
         sh (SBVApp  RationalConstructor    [t, b]) = "(SBV.Rational " <> cvtSV t <> " " <> cvtSV b <> ")"
 
@@ -1088,7 +1088,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                ]
 
 declareFun :: SV -> SBVType -> Maybe Text -> [Text]
-declareFun sv = declareName (T.pack $ show sv)
+declareFun sv = declareName (showText sv)
 
 -- If we have a char, we have to make sure it's and SMTLib string of length exactly one
 -- If we have a rational, we have to make sure the denominator is > 0
@@ -1113,8 +1113,8 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         resultVar | needsQuant = "result"
                   | True       = s
 
-        argList   = ["a" <> T.pack (show i) | (i, _) <- zip [1::Int ..] args]
-        argTList  = ["(" <> a <> " " <> T.pack (smtType k) <> ")" | (a, k) <- zip argList args]
+        argList   = ["a" <> showText i | (i, _) <- zip [1::Int ..] args]
+        argTList  = ["(" <> a <> " " <> smtType k <> ")" | (a, k) <- zip argList args]
         resultExp = "(" <> s <> " " <> T.unwords argList <> ")"
 
         restrict | noCharOrRat = []
@@ -1159,25 +1159,25 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         walk _d nm f k@KString   {}         = f k nm
         walk  d nm f  (KList k)
           | charRatFree k                 = []
-          | True                          = let fnm   = "seq" <> T.pack (show d)
+          | True                          = let fnm   = "seq" <> showText d
                                                 cstrs = walk (d+1) ("(seq.nth " <> nm <> " " <> fnm <> ")") f k
-                                            in mkAnd cstrs $ \hole -> ["(forall ((" <> fnm <> " " <> T.pack (smtType KUnbounded) <> ")) (=> (and (>= " <> fnm <> " 0) (< " <> fnm <> " (seq.len " <> nm <> "))) " <> hole <> "))"]
+                                            in mkAnd cstrs $ \hole -> ["(forall ((" <> fnm <> " " <> smtType KUnbounded <> ")) (=> (and (>= " <> fnm <> " 0) (< " <> fnm <> " (seq.len " <> nm <> "))) " <> hole <> "))"]
         walk  d  nm f (KSet k)
           | charRatFree k                 = []
-          | True                          = let fnm    = "set" <> T.pack (show d)
+          | True                          = let fnm    = "set" <> showText d
                                                 cstrs  = walk (d+1) nm (\sk snm -> ["(=> (select " <> snm <> " " <> fnm <> ") " <> c <> ")" | c <- f sk fnm]) k
-                                            in mkAnd cstrs $ \hole -> ["(forall ((" <> fnm <> " " <> T.pack (smtType k) <> ")) " <> hole <> ")"]
-        walk  d  nm  f (KTuple ks)        = let tt        = "SBVTuple" <> T.pack (show (length ks))
-                                                project i = "(proj_" <> T.pack (show i) <> "_" <> tt <> " " <> nm <> ")"
+                                            in mkAnd cstrs $ \hole -> ["(forall ((" <> fnm <> " " <> smtType k <> ")) " <> hole <> ")"]
+        walk  d  nm  f (KTuple ks)        = let tt        = "SBVTuple" <> showText (length ks)
+                                                project i = "(proj_" <> showText i <> "_" <> tt <> " " <> nm <> ")"
                                                 nmks      = [(project i, k) | (i, k) <- zip [1::Int ..] ks]
                                             in concatMap (\(n, k) -> walk (d+1) n f k) nmks
         walk d  nm f  (KArray k1 k2)
           | all charRatFree [k1, k2]      = []
-          | True                          = let fnm   = "array" <> T.pack (show d)
+          | True                          = let fnm   = "array" <> showText d
                                                 cstrs = walk (d+1) ("(select " <> nm <> " " <> fnm <> ")") f k2
-                                            in mkAnd cstrs $ \hole -> ["(forall ((" <> fnm <> " " <> T.pack (smtType k1) <> ")) " <> hole <> ")"]
+                                            in mkAnd cstrs $ \hole -> ["(forall ((" <> fnm <> " " <> smtType k1 <> ")) " <> hole <> ")"]
         walk d nm f (KADT ty dict pureFS) = let fs = [(c, map (substituteADTVars ty dict) ks) | (c, ks) <- pureFS]
-                                                nmks  = [("(get" <> T.pack c <> "_" <> T.pack (show i) <> " " <> nm <> ")", k) | (c, ks) <- fs, (i, k) <- zip [(1::Int)..] ks]
+                                                nmks  = [("(get" <> T.pack c <> "_" <> showText i <> " " <> nm <> ")", k) | (c, ks) <- fs, (i, k) <- zip [(1::Int)..] ks]
                                             in concatMap (\(n, k) -> walk (d+1) n f k) nmks
 
 -----------------------------------------------------------------------------------------------
@@ -1219,7 +1219,7 @@ handleFPCast kFromIn kToIn rm input
         simplify KDouble = KFP  11 53
         simplify k       = k
 
-        size (eb, sb) = T.pack (show eb) <> " " <> T.pack (show sb)
+        size (eb, sb) = showText eb <> " " <> showText sb
 
         -- To go and back from Ints, we detour through reals
         cast KUnbounded (KFP eb sb) a = "(_ to_fp " <> size (eb, sb) <> ") "  <> rm <> " (to_real " <> a <> ")"
@@ -1232,8 +1232,8 @@ handleFPCast kFromIn kToIn rm input
         cast KFP{}              (KFP eb sb) a = addRM a $ "(_ to_fp "          <> size (eb, sb) <> ")"
 
         -- From float/double
-        cast KFP{} (KBounded False m) a = addRM a $ "(_ fp.to_ubv " <> T.pack (show m) <> ")"
-        cast KFP{} (KBounded True  m) a = addRM a $ "(_ fp.to_sbv " <> T.pack (show m) <> ")"
+        cast KFP{} (KBounded False m) a = addRM a $ "(_ fp.to_ubv " <> showText m <> ")"
+        cast KFP{} (KBounded True  m) a = addRM a $ "(_ fp.to_sbv " <> showText m <> ")"
 
         -- To real
         cast KFP{} KReal a = "fp.to_real" <> " " <> a
@@ -1242,7 +1242,7 @@ handleFPCast kFromIn kToIn rm input
         cast f  d  _ = error $ "SBV.SMTLib2: Unexpected FPCast from: " ++ show f ++ " to " ++ show d
 
 rot :: Text -> Int -> SV -> Text
-rot o c x = "((_ " <> o <> " " <> T.pack (show c) <> ") " <> cvtSV x <> ")"
+rot o c x = "((_ " <> o <> " " <> showText c <> ") " <> cvtSV x <> ")"
 
 shft :: Text -> Text -> SV -> SV -> Text
 shft oW oS x c = "(" <> o <> " " <> cvtSV x <> " " <> cvtSV c <> ")"
@@ -1260,7 +1260,7 @@ handleADT caps op args = case args of
                                      else ascribe (T.pack nm) k
               ADTAccessor    nm _ -> T.pack nm
 
-        ascribe nm k = "(as " <> nm <> " " <> T.pack (smtType k) <> ")"
+        ascribe nm k = "(as " <> nm <> " " <> smtType k <> ")"
 
 -- Various casts
 handleKindCast :: Kind -> Kind -> Text -> Text
@@ -1277,7 +1277,7 @@ handleKindCast kFrom kTo a
 
       KUnbounded   -> case kTo of
                         KReal        -> "(to_real " <> a <> ")"
-                        KBounded _ n -> "((_ int_to_bv " <> T.pack (show n) <> ") " <> a <> ")"
+                        KBounded _ n -> "((_ int_to_bv " <> showText n <> ") " <> a <> ")"
                         _            -> tryFPCast
 
       KReal        -> case kTo of
@@ -1290,7 +1290,7 @@ handleKindCast kFrom kTo a
         -- Otherwise complain
         tryFPCast
           | any (\k -> isFloat k || isDouble k) [kFrom, kTo]
-          = handleFPCast kFrom kTo (T.pack $ smtRoundingMode RoundNearestTiesToEven) a
+          = handleFPCast kFrom kTo (smtRoundingMode RoundNearestTiesToEven) a
           | True
           = error $ "SBV.SMTLib2: Unexpected cast from: " ++ show kFrom ++ " to " ++ show kTo
 
@@ -1299,36 +1299,36 @@ handleKindCast kFrom kTo a
          | m == n = a
          | True   = extract (n - 1)
 
-        signExtend i = "((_ sign_extend " <> T.pack (show i) <>  ") "  <> a <> ")"
-        zeroExtend i = "((_ zero_extend " <> T.pack (show i) <>  ") "  <> a <> ")"
-        extract    i = "((_ extract "     <> T.pack (show i) <> " 0) " <> a <> ")"
+        signExtend i = "((_ sign_extend " <> showText i <>  ") "  <> a <> ")"
+        zeroExtend i = "((_ zero_extend " <> showText i <>  ") "  <> a <> ")"
+        extract    i = "((_ extract "     <> showText i <> " 0) " <> a <> ")"
 
 -- Translation of pseudo-booleans, in case the solver supports them
 handlePB :: PBOp -> [Text] -> Text
-handlePB (PB_AtMost  k) args = "((_ at-most "  <> T.pack (show k)                                                <> ") " <> T.unwords args <> ")"
-handlePB (PB_AtLeast k) args = "((_ at-least " <> T.pack (show k)                                                <> ") " <> T.unwords args <> ")"
-handlePB (PB_Exactly k) args = "((_ pbeq "     <> T.unwords (map (T.pack . show) (k : replicate (length args) 1)) <> ") " <> T.unwords args <> ")"
-handlePB (PB_Eq cs   k) args = "((_ pbeq "     <> T.unwords (map (T.pack . show) (k : cs))                        <> ") " <> T.unwords args <> ")"
-handlePB (PB_Le cs   k) args = "((_ pble "     <> T.unwords (map (T.pack . show) (k : cs))                        <> ") " <> T.unwords args <> ")"
-handlePB (PB_Ge cs   k) args = "((_ pbge "     <> T.unwords (map (T.pack . show) (k : cs))                        <> ") " <> T.unwords args <> ")"
+handlePB (PB_AtMost  k) args = "((_ at-most "  <> showText k                                               <> ") " <> T.unwords args <> ")"
+handlePB (PB_AtLeast k) args = "((_ at-least " <> showText k                                               <> ") " <> T.unwords args <> ")"
+handlePB (PB_Exactly k) args = "((_ pbeq "     <> T.unwords (map showText (k : replicate (length args) 1)) <> ") " <> T.unwords args <> ")"
+handlePB (PB_Eq cs   k) args = "((_ pbeq "     <> T.unwords (map showText (k : cs))                        <> ") " <> T.unwords args <> ")"
+handlePB (PB_Le cs   k) args = "((_ pble "     <> T.unwords (map showText (k : cs))                        <> ") " <> T.unwords args <> ")"
+handlePB (PB_Ge cs   k) args = "((_ pbge "     <> T.unwords (map showText (k : cs))                        <> ") " <> T.unwords args <> ")"
 
 -- Translation of pseudo-booleans, in case the solver does *not* support them
 reducePB :: PBOp -> [Text] -> Text
 reducePB op args = case op of
-                     PB_AtMost  k -> "(<= " <> addIf (repeat 1) <> " " <> T.pack (show k) <> ")"
-                     PB_AtLeast k -> "(>= " <> addIf (repeat 1) <> " " <> T.pack (show k) <> ")"
-                     PB_Exactly k -> "(=  " <> addIf (repeat 1) <> " " <> T.pack (show k) <> ")"
-                     PB_Le cs   k -> "(<= " <> addIf cs         <> " " <> T.pack (show k) <> ")"
-                     PB_Ge cs   k -> "(>= " <> addIf cs         <> " " <> T.pack (show k) <> ")"
-                     PB_Eq cs   k -> "(=  " <> addIf cs         <> " " <> T.pack (show k) <> ")"
+                     PB_AtMost  k -> "(<= " <> addIf (repeat 1) <> " " <> showText k <> ")"
+                     PB_AtLeast k -> "(>= " <> addIf (repeat 1) <> " " <> showText k <> ")"
+                     PB_Exactly k -> "(=  " <> addIf (repeat 1) <> " " <> showText k <> ")"
+                     PB_Le cs   k -> "(<= " <> addIf cs         <> " " <> showText k <> ")"
+                     PB_Ge cs   k -> "(>= " <> addIf cs         <> " " <> showText k <> ")"
+                     PB_Eq cs   k -> "(=  " <> addIf cs         <> " " <> showText k <> ")"
 
   where addIf :: [Int] -> Text
-        addIf cs = "(+ " <> T.unwords ["(ite " <> a <> " " <> T.pack (show c) <> " 0)" | (a, c) <- zip args cs] <> ")"
+        addIf cs = "(+ " <> T.unwords ["(ite " <> a <> " " <> showText c <> " 0)" | (a, c) <- zip args cs] <> ")"
 
 -- | Translate an option setting to SMTLib. Note the SetLogic/SetInfo discrepancy.
 setSMTOption :: SMTConfig -> SMTOption -> Text
 setSMTOption cfg = set
-  where set (DiagnosticOutputChannel   f) = opt   [":diagnostic-output-channel",   T.pack $ show f]
+  where set (DiagnosticOutputChannel   f) = opt   [":diagnostic-output-channel",   showText f]
         set (ProduceAssertions         b) = opt   [":produce-assertions",          smtBool b]
         set (ProduceAssignments        b) = opt   [":produce-assignments",         smtBool b]
         set (ProduceProofs             b) = opt   [":produce-proofs",              smtBool b]
@@ -1336,9 +1336,9 @@ setSMTOption cfg = set
         set (ProduceUnsatAssumptions   b) = opt   [":produce-unsat-assumptions",   smtBool b]
         set (ProduceUnsatCores         b) = opt   [":produce-unsat-cores",         smtBool b]
         set (ProduceAbducts            b) = opt   [":produce-abducts",             smtBool b]
-        set (RandomSeed                i) = opt   [":random-seed",                 T.pack $ show i]
-        set (ReproducibleResourceLimit i) = opt   [":reproducible-resource-limit", T.pack $ show i]
-        set (SMTVerbosity              i) = opt   [":verbosity",                   T.pack $ show i]
+        set (RandomSeed                i) = opt   [":random-seed",                 showText i]
+        set (ReproducibleResourceLimit i) = opt   [":reproducible-resource-limit", showText i]
+        set (SMTVerbosity              i) = opt   [":verbosity",                   showText i]
         set (OptionKeyword          k as) = opt   (T.pack k : map T.pack as)
         set (SetLogic                  l) = logic l
         set (SetInfo                k as) = info  (T.pack k : map T.pack as)
@@ -1348,14 +1348,14 @@ setSMTOption cfg = set
         info  xs = "(set-info "   <> T.unwords xs <> ")"
 
         logic Logic_NONE = "; NB. not setting the logic per user request of Logic_NONE"
-        logic l          = "(set-logic " <> T.pack (show l) <> ")"
+        logic l          = "(set-logic " <> showText l <> ")"
 
         -- timeout is not standard. We distinguish between CVC/Z3. All else follows z3
         -- The value is in milliseconds, which is how z3/CVC interpret it
         timeOut i = case name (solver cfg) of
-                     CVC4 -> [":tlimit-per", T.pack $ show i]
-                     CVC5 -> [":tlimit-per", T.pack $ show i]
-                     _    -> [":timeout",    T.pack $ show i]
+                     CVC4 -> [":tlimit-per", showText i]
+                     CVC5 -> [":tlimit-per", showText i]
+                     _    -> [":timeout",    showText i]
 
         -- SMTLib's True/False is spelled differently than Haskell's.
         smtBool :: Bool -> Text

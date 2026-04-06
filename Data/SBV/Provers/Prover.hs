@@ -15,6 +15,7 @@
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
 
@@ -61,6 +62,7 @@ import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.Utils (debug, alignPlain)
 import Data.SBV.Utils.ExtractIO
+import Data.SBV.Utils.Lib    (showText)
 import Data.SBV.Utils.TDiff
 
 import Data.SBV.Lambda () -- instances only
@@ -273,7 +275,7 @@ class ExtractIO m => SatisfiableM m a where
                                                   , "*** Use \"sat\" for plain satisfaction"
                                                   ]
                      Just (objectives, optimizerDirectives) -> do
-                       mapM_ (Control.send True) optimizerDirectives
+                       mapM_ (Control.send True . T.pack) optimizerDirectives
 
                        case style of
                          Lexicographic -> LexicographicResult <$> Control.getLexicographicOptResults
@@ -431,7 +433,7 @@ validate reducer isSAT cfg p res =
 
                            notify s
                              | not (verbose cfg) = pure ()
-                             | True              = debug cfg ["[VALIDATE] " `alignPlain` s]
+                             | True              = debug cfg ["[VALIDATE] " `alignPlain` T.pack s]
 
                        notify $ "Validating the model. " ++ if null env then "There are no assignments." else "Assignment:"
                        mapM_ notify ["    " ++ l | l <- lines envShown]
@@ -850,7 +852,7 @@ class ExtractIO m => SExecutable m a where
                        location   = locInfo . getCallStack <$> cs
 
                    result <- do Control.push 1
-                                Control.send True $ "(assert " ++ show cond ++ ")"
+                                Control.send True $ "(assert " <> showText cond <> ")"
                                 r <- Control.getSMTResult
                                 Control.pop 1
                                 pure r

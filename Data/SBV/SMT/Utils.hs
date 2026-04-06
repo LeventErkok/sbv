@@ -39,7 +39,7 @@ import Control.Monad.Trans (MonadIO, liftIO)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (QueryContext, CnstMap, SMTDef, ResultInp(..), ProgInfo(..), startTime)
 
-import Data.SBV.Utils.Lib   (joinArgs)
+import Data.SBV.Utils.Lib   (joinArgs, showText)
 import Data.SBV.Utils.TDiff (Timing(..), showTDiff)
 
 import Data.IORef (writeIORef)
@@ -47,12 +47,12 @@ import Data.Time  (getZonedTime, defaultTimeLocale, formatTime, diffUTCTime, get
 
 import Data.Char  (isSpace)
 import Data.Maybe (fromMaybe)
-import Data.List  (intercalate)
 
 import qualified Data.Set      as Set (Set)
 import qualified Data.Sequence as S   (Seq)
 
-import qualified Data.Text as T
+import qualified Data.Text    as T
+import qualified Data.Text.IO as TIO
 import           Data.Text (Text)
 
 import System.Directory (findExecutable)
@@ -104,56 +104,60 @@ showTimeoutValue i = case (i `quotRem` 1000000, i `quotRem` 500000) of
                        _            -> shows i "ms"
 
 -- | Nicely align a potentially multi-line message with some tag, but prefix with three stars
-alignDiagnostic :: String -> String -> String
+alignDiagnostic :: Text -> Text -> Text
 alignDiagnostic = alignWithPrefix "*** "
 
 -- | Nicely align a potentially multi-line message with some tag, no prefix.
-alignPlain :: String -> String -> String
+alignPlain :: Text -> Text -> Text
 alignPlain = alignWithPrefix ""
 
 -- | Align with some given prefix
-alignWithPrefix :: String -> String -> String -> String
-alignWithPrefix pre tag multi = intercalate "\n" $ zipWith (++) (tag : repeat (pre ++ replicate (length tag - length pre) ' ')) (filter (not . null) (lines multi))
+alignWithPrefix :: Text -> Text -> Text -> Text
+alignWithPrefix pre tag multi = T.intercalate "\n" $ zipWith (<>) (tag : repeat (pre <> T.replicate (T.length tag - T.length pre) " ")) (filter (not . T.null) (T.lines multi))
 
 -- | Diagnostic message when verbose
-debug :: MonadIO m => SMTConfig -> [String] -> m ()
+debug :: MonadIO m => SMTConfig -> [Text] -> m ()
 debug cfg
   | not (verbose cfg)             = const (pure ())
-  | Just f <- redirectVerbose cfg = liftIO . mapM_ (appendFile f . (++ "\n"))
-  | True                          = liftIO . mapM_ putStrLn
+  | Just f <- redirectVerbose cfg = liftIO . mapM_ (\t -> TIO.appendFile f (t <> "\n"))
+  | True                          = liftIO . mapM_ TIO.putStrLn
 
 -- | In case the SMT-Lib solver returns a response over multiple lines, compress them so we have
 -- each S-Expression spanning only a single line.
-mergeSExpr :: [String] -> [String]
+mergeSExpr :: [Text] -> [Text]
 mergeSExpr []       = []
 mergeSExpr (x:xs)
  | d == 0 = x : mergeSExpr xs
- | True   = let (f, r) = grab d xs in unlines (x:f) : mergeSExpr r
+ | True   = let (f, r) = grab d xs in T.unlines (x:f) : mergeSExpr r
  where d = parenDiff x
 
-       parenDiff :: String -> Int
+       parenDiff :: Text -> Int
        parenDiff = go 0
-         where go i ""       = i
-               go i ('(':cs) = let i'= i+1 in i' `seq` go i' cs
-               go i (')':cs) = let i'= i-1 in i' `seq` go i' cs
-               go i ('"':cs) = go i (skipString cs)
-               go i ('|':cs) = go i (skipBar cs)
-               go i (';':cs) = go i (drop 1 (dropWhile (/= '\n') cs))
-               go i (_  :cs) = go i cs
+         where go i t = case T.uncons t of
+                 Nothing       -> i
+                 Just ('(', r) -> let i' = i+1 in i' `seq` go i' r
+                 Just (')', r) -> let i' = i-1 in i' `seq` go i' r
+                 Just ('"', r) -> go i (skipString r)
+                 Just ('|', r) -> go i (skipBar r)
+                 Just (';', r) -> go i (T.drop 1 (T.dropWhile (/= '\n') r))
+                 Just (_,   r) -> go i r
 
        grab i ls
          | i <= 0    = ([], ls)
        grab _ []     = ([], [])
        grab i (l:ls) = let (a, b) = grab (i+parenDiff l) ls in (l:a, b)
 
-       skipString ('"':'"':cs)   = skipString cs
-       skipString ('"':cs)       = cs
-       skipString (_:cs)         = skipString cs
-       skipString []             = []             -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
+       skipString t = case T.uncons t of
+         Nothing       -> T.empty             -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
+         Just ('"', r) -> case T.uncons r of
+           Just ('"', r') -> skipString r'    -- escaped quote
+           _              -> r                -- end of string
+         Just (_,   r) -> skipString r
 
-       skipBar ('|':cs) = cs
-       skipBar (_:cs)   = skipBar cs
-       skipBar []       = []                     -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
+       skipBar t = case T.uncons t of
+         Nothing       -> T.empty             -- Oh dear, line finished, but the bar didn't. We're in trouble. Ignore!
+         Just ('|', r) -> r
+         Just (_,   r) -> skipBar r
 
 -- | An exception thrown from SBV. If the solver ever responds with a non-success value for a command,
 -- SBV will throw an t'SBVException', it so the user can process it as required. The provided 'Show' instance
@@ -191,29 +195,29 @@ instance Show SBVException where
                    }
 
          = let grp1 = [ ""
-                      , "*** Data.SBV: " ++ sbvExceptionDescription ++ ":"
+                      , "*** Data.SBV: " <> T.pack sbvExceptionDescription <> ":"
                       ]
 
-               grp2 =  ["***    Sent      : " `alignDiagnostic` snt     | Just snt  <- [sbvExceptionSent],     not $ null snt ]
-                    ++ ["***    Expected  : " `alignDiagnostic` excp    | Just excp <- [sbvExceptionExpected], not $ null excp]
-                    ++ ["***    Received  : " `alignDiagnostic` rcvd    | Just rcvd <- [sbvExceptionReceived], not $ null rcvd]
+               grp2 =  ["***    Sent      : " `alignDiagnostic` T.pack snt  | Just snt  <- [sbvExceptionSent],     not $ null snt ]
+                    <> ["***    Expected  : " `alignDiagnostic` T.pack excp | Just excp <- [sbvExceptionExpected], not $ null excp]
+                    <> ["***    Received  : " `alignDiagnostic` T.pack rcvd | Just rcvd <- [sbvExceptionReceived], not $ null rcvd]
 
-               grp3 =  ["***    Stdout    : " `alignDiagnostic` out     | Just out  <- [sbvExceptionStdOut],   not $ null out ]
-                    ++ ["***    Stderr    : " `alignDiagnostic` err     | Just err  <- [sbvExceptionStdErr],   not $ null err ]
-                    ++ ["***    Exit code : " `alignDiagnostic` show ec | Just ec   <- [sbvExceptionExitCode]                 ]
-                    ++ ["***    Executable: " `alignDiagnostic` executable (solver sbvExceptionConfig)                                   ]
-                    ++ ["***    Options   : " `alignDiagnostic` joinArgs (options (solver sbvExceptionConfig) sbvExceptionConfig)        ]
+               grp3 =  ["***    Stdout    : " `alignDiagnostic` T.pack out  | Just out  <- [sbvExceptionStdOut],   not $ null out ]
+                    <> ["***    Stderr    : " `alignDiagnostic` T.pack err  | Just err  <- [sbvExceptionStdErr],   not $ null err ]
+                    <> ["***    Exit code : " `alignDiagnostic` showText ec | Just ec   <- [sbvExceptionExitCode]                 ]
+                    <> ["***    Executable: " `alignDiagnostic` T.pack (executable (solver sbvExceptionConfig))                           ]
+                    <> ["***    Options   : " `alignDiagnostic` T.pack (joinArgs (options (solver sbvExceptionConfig) sbvExceptionConfig))]
 
-               grp4 =  ["***    Reason    : " `alignDiagnostic` unlines rsn | Just rsn <- [sbvExceptionReason]]
-                    ++ ["***    Hint      : " `alignDiagnostic` unlines hnt | Just hnt <- [sbvExceptionHint  ]]
+               grp4 =  ["***    Reason    : " `alignDiagnostic` T.pack (unlines rsn) | Just rsn <- [sbvExceptionReason]]
+                    <> ["***    Hint      : " `alignDiagnostic` T.pack (unlines hnt) | Just hnt <- [sbvExceptionHint  ]]
 
                join []     = []
                join [x]    = x
                join (g:gs) = case join gs of
                                []    -> g
-                               rest  -> g ++ ["***"] ++ rest
+                               rest  -> g <> ["***"] <> rest
 
-          in unlines $ join [grp1, grp2, grp3, grp4]
+          in T.unpack $ T.unlines $ join [grp1, grp2, grp3, grp4]
 
 -- | Compute and report the end time
 recordEndTime :: SMTConfig -> State -> IO ()
@@ -259,9 +263,9 @@ finalizeTranscript (Just f) ec = do ts <- show <$> getZonedTime
                          ]
 
 -- Kind of things we can record
-data TranscriptMsg = SentMsg  String (Maybe Int) -- ^ Message sent, and time-out if any
+data TranscriptMsg = SentMsg  Text   (Maybe Int) -- ^ Message sent, and time-out if any
                    | RecvMsg  String             -- ^ Message received
-                   | DebugMsg String             -- ^ A debug message; neither sent nor received
+                   | DebugMsg Text               -- ^ A debug message; neither sent nor received
 
 -- If requested, record in the transcript file
 recordTranscript :: Maybe FilePath -> TranscriptMsg -> IO ()
@@ -269,16 +273,16 @@ recordTranscript Nothing  _ = pure ()
 recordTranscript (Just f) m = do tsPre <- formatTime defaultTimeLocale "; [%T%Q" <$> getZonedTime
                                  let ts = take 15 $ tsPre ++ repeat '0'
                                  case m of
-                                   SentMsg sent mbTimeOut  -> appendFile f $ unlines $ (ts ++ "] " ++ to mbTimeOut ++ "Sending:") : lines sent
+                                   SentMsg sent mbTimeOut  -> TIO.appendFile f $ T.unlines $ (T.pack ts <> "] " <> to mbTimeOut <> "Sending:") : T.lines sent
                                    RecvMsg recv            -> appendFile f $ unlines $ case lines (dropWhile isSpace recv) of
                                                                                         []  -> [ts ++ "] Received: <NO RESPONSE>"]  -- can't really happen.
                                                                                         [x] -> [ts ++ "] Received: " ++ x]
                                                                                         xs  -> (ts ++ "] Received: ") : map (";   " ++) xs
-                                   DebugMsg msg            -> let tag = ts ++ "] "
-                                                                  emp = ';' : drop 1 (map (const ' ') tag)
-                                                              in appendFile f $ unlines $ zipWith (++) (tag : repeat emp) (lines msg)
+                                   DebugMsg msg            -> let tag = T.pack ts <> "] "
+                                                                  emp = T.cons ';' (T.replicate (T.length tag - 1) " ")
+                                                              in TIO.appendFile f $ T.unlines $ zipWith (<>) (tag : repeat emp) (T.lines msg)
         where to Nothing  = ""
-              to (Just i) = "[Timeout: " ++ showTimeoutValue i ++ "] "
+              to (Just i) = "[Timeout: " <> T.pack (showTimeoutValue i) <> "] "
 {-# INLINE recordTranscript #-}
 
 -- Record the exception

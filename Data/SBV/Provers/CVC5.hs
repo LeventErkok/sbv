@@ -9,11 +9,15 @@
 -- The connection to the CVC5 SMT solver
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE OverloadedStrings #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Provers.CVC5(cvc5) where
 
 import Data.Char (isSpace)
+
+import qualified Data.Text as T
 
 import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
@@ -52,11 +56,14 @@ cvc5 = SMTSolver {
                               }
          }
   where -- CVC5 wants all input on one line
-        clean = map simpleSpace . noComment
+        clean = T.map simpleSpace . noComment
 
-        noComment ""       = ""
-        noComment (';':cs) = noComment $ dropWhile (/= '\n') cs
-        noComment (c:cs)   = c : noComment cs
+        noComment t
+          | T.null t  = T.empty
+          | True      = case T.break (== ';') t of
+                          (before, rest)
+                            | T.null rest -> before
+                            | True        -> before <> noComment (T.dropWhile (/= '\n') (T.tail rest))
 
         simpleSpace c
           | isSpace c = ' '

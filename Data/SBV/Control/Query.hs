@@ -11,6 +11,7 @@
 
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
@@ -54,7 +55,7 @@ import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
 import Data.SBV.Control.Utils
 
-import Data.SBV.Utils.Lib       (unBar)
+import Data.SBV.Utils.Lib       (showText, unBar)
 import Data.SBV.Utils.PrettyNum (showNegativeNumber)
 
 -- | An Assignment of a model binding
@@ -90,7 +91,7 @@ serialize removeQuotes = go
 -- | Generalization of 'Data.SBV.Control.getInfo'
 getInfo :: (MonadIO m, MonadQuery m) => SMTInfoFlag -> m SMTInfoResponse
 getInfo flag = do
-    let cmd = "(get-info " ++ show flag ++ ")"
+    let cmd = "(get-info " <> showText flag <> ")"
         bad = unexpected "getInfo" cmd "a valid get-info response" Nothing
 
         isAllStatistics AllStatistics = True
@@ -160,7 +161,7 @@ getOption f = case f undefined of
                  SetInfo{}                   -> error "Data.SBV.Query: SMTLib does not allow querying value of meta-info!"
 
   where askFor sbvName smtLibName continue = do
-                let cmd = "(get-option " ++ smtLibName ++ ")"
+                let cmd = "(get-option " <> T.pack smtLibName <> ")"
                     bad = unexpected ("getOption " ++ sbvName) cmd "a valid option value" Nothing
 
                 r <- ask cmd
@@ -317,7 +318,7 @@ checkSatAssumingHelper getAssumptions sBools = do
 
         let (origNames, declss, proxyMap) = unzip3 assumptions
 
-        let cmd = "(check-sat-assuming (" ++ unwords (map fst proxyMap) ++ "))"
+        let cmd = "(check-sat-assuming (" <> T.pack (unwords (map fst proxyMap)) <> "))"
             bad = unexpected "checkSatAssuming" cmd "one of sat/unsat/unknown"
                            $ Just [ "Make sure you use:"
                                   , ""
@@ -326,7 +327,7 @@ checkSatAssumingHelper getAssumptions sBools = do
                                   , "to tell the solver to produce unsat assumptions."
                                   ]
 
-        mapM_ (send True) $ concat declss
+        mapM_ (send True . T.pack) $ concat declss
         r <- ask cmd
 
         let grabUnsat
@@ -353,8 +354,8 @@ restoreTablesAndArrays = do st <- queryState
 
                             case inits of
                               []  -> pure ()   -- Nothing to do
-                              [x] -> send True $ "(assert " ++ x ++ ")"
-                              xs  -> send True $ "(assert (and " ++ unwords xs ++ "))"
+                              [x] -> send True $ "(assert " <> T.pack x <> ")"
+                              xs  -> send True $ "(assert (and " <> T.pack (unwords xs) <> "))"
 
 -- | Generalization of 'Data.SBV.Control.inNewAssertionStack'
 inNewAssertionStack :: (MonadIO m, MonadQuery m) => m a -> m a
@@ -368,7 +369,7 @@ push :: (MonadIO m, MonadQuery m) => Int -> m ()
 push i
  | i <= 0 = error $ "Data.SBV: push requires a strictly positive level argument, received: " ++ show i
  | True   = do depth <- getAssertionStackDepth
-               send True $ "(push " ++ show i ++ ")"
+               send True $ "(push " <> showText i <> ")"
                modifyQueryState $ \s -> s{queryAssertionStackDepth = depth + i}
 
 -- | Generalization of 'Data.SBV.Control.pop'
@@ -386,7 +387,7 @@ pop i
                                                   , "***"
                                                   , "*** Request this as a feature for the underlying solver!"
                                                   ]
-                             else do send True $ "(pop " ++ show i ++ ")"
+                             else do send True $ "(pop " <> showText i <> ")"
                                      restoreTablesAndArrays
                                      modifyQueryState $ \s -> s{queryAssertionStackDepth = depth - i}
    where shl 1 = "one level"
@@ -430,7 +431,7 @@ resetAssertions = do send True "(reset-assertions)"
 
 -- | Generalization of 'Data.SBV.Control.echo'
 echo :: (MonadIO m, MonadQuery m) => String -> m ()
-echo s = do let cmd = "(echo \"" ++ concatMap sanitize s ++ "\")"
+echo s = do let cmd = "(echo \"" <> T.pack (concatMap sanitize s) <> "\")"
 
             -- we send the command, but otherwise ignore the response
             -- note that 'send True/False' would be incorrect here. 'send True' would
@@ -451,7 +452,7 @@ exit = do send True "(exit)"
 -- | Generalization of 'Data.SBV.Control.getUnsatCore'
 getUnsatCore :: (MonadIO m, MonadQuery m) => m [String]
 getUnsatCore = do
-        let cmd = "(get-unsat-core)"
+        let cmd = "(get-unsat-core)" :: T.Text
             bad = unexpected "getUnsatCore" cmd "an unsat-core response"
                            $ Just [ "Make sure you use:"
                                   , ""
@@ -487,7 +488,7 @@ getUnsatCoreIfRequested = do
 -- | Generalization of 'Data.SBV.Control.getProof'
 getProof :: (MonadIO m, MonadQuery m) => m String
 getProof = do
-        let cmd = "(get-proof)"
+        let cmd = "(get-proof)" :: T.Text
             bad = unexpected "getProof" cmd "a get-proof response"
                            $ Just [ "Make sure you use:"
                                   , ""
@@ -511,7 +512,7 @@ getInterpolantMathSAT fs
   = error "SBV.getInterpolantMathSAT requires at least one marked constraint, received none!"
   | True
   = do let bar s = '|' : s ++ "|"
-           cmd = "(get-interpolant (" ++ unwords (map bar fs) ++ "))"
+           cmd = "(get-interpolant (" <> T.pack (unwords (map bar fs)) <> "))"
            bad = unexpected "getInterpolant" cmd "a get-interpolant response"
                           $ Just [ "Make sure you use:"
                                  , ""
@@ -531,7 +532,7 @@ getInterpolantMathSAT fs
 getAbduct :: (SolverContext m, MonadIO m, MonadQuery m) => Maybe String -> String -> SBool -> m String
 getAbduct mbGrammar defName b = do
    s <- inNewContext (`sbvToSV` b)
-   let cmd = "(get-abduct " ++ defName ++ " " ++ show s ++ fromMaybe "" mbGrammar ++ ")"
+   let cmd = "(get-abduct " <> T.pack defName <> " " <> showText s <> T.pack (fromMaybe "" mbGrammar) <> ")"
        bad = unexpected "getAbduct" cmd "a get-abduct response" Nothing
 
    r <- ask cmd
@@ -541,7 +542,7 @@ getAbduct mbGrammar defName b = do
 -- | Generalization of 'Data.SBV.Control.getAbductNext'.
 getAbductNext :: (MonadIO m, MonadQuery m) => m String
 getAbductNext = do
-   let cmd = "(get-abduct-next)"
+   let cmd = "(get-abduct-next)" :: T.Text
        bad = unexpected "getAbductNext" cmd "a get-abduct-next response" Nothing
 
    r <- ask cmd
@@ -559,7 +560,7 @@ getInterpolantZ3 fs
                                         fAll bs (sv : sofar)
              in fAll fs []
 
-       let cmd = "(get-interpolant " ++ unwords (map show ss) ++ ")"
+       let cmd = "(get-interpolant " <> T.pack (unwords (map show ss)) <> ")"
            bad = unexpected "getInterpolant" cmd "a get-interpolant response" Nothing
 
        r <- ask cmd
@@ -569,7 +570,7 @@ getInterpolantZ3 fs
 -- | Generalization of 'Data.SBV.Control.getAssertions'
 getAssertions :: (MonadIO m, MonadQuery m) => m [String]
 getAssertions = do
-        let cmd = "(get-assertions)"
+        let cmd = "(get-assertions)" :: T.Text
             bad = unexpected "getAssertions" cmd "a get-assertions response"
                            $ Just [ "Make sure you use:"
                                   , ""
@@ -589,7 +590,7 @@ getAssertions = do
 -- | Generalization of 'Data.SBV.Control.getAssignment'
 getAssignment :: (MonadIO m, MonadQuery m) => m [(String, Bool)]
 getAssignment = do
-        let cmd = "(get-assignment)"
+        let cmd = "(get-assignment)" :: T.Text
             bad = unexpected "getAssignment" cmd "a get-assignment response"
                            $ Just [ "Make sure you use:"
                                   , ""

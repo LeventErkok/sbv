@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
@@ -42,7 +43,7 @@ import Data.SBV.Core.Kind (smtType, showBaseKind)
 import Data.SBV.Core.AlgReals    (algRealToSMTLib2)
 import Data.SBV.Core.SizedFloats (fprToSMTLib2, bfToString)
 
-import Data.SBV.Utils.Lib     (stringToQFS)
+import Data.SBV.Utils.Lib     (stringToQFS, showText)
 import Data.SBV.Utils.Numeric (smtRoundingMode)
 
 -- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
@@ -62,20 +63,20 @@ class PrettyNum a where
 
 -- Why not default methods? Because defaults need "Integral a" but Bool is not..
 instance PrettyNum Bool where
-  hexS = T.pack . show
-  binS = T.pack . show
-  hexP = T.pack . show
-  binP = T.pack . show
-  hex  = T.pack . show
-  bin  = T.pack . show
+  hexS = showText
+  binS = showText
+  hexP = showText
+  binP = showText
+  hex  = showText
+  bin  = showText
 
 instance PrettyNum String where
-  hexS = T.pack . show
-  binS = T.pack . show
-  hexP = T.pack . show
-  binP = T.pack . show
-  hex  = T.pack . show
-  bin  = T.pack . show
+  hexS = showText
+  binS = showText
+  hexP = showText
+  binP = showText
+  hex  = showText
+  bin  = showText
 
 instance PrettyNum Word8 where
   hexS = shex True  True  (False, 8)
@@ -171,75 +172,75 @@ shBKind :: HasKind a => a -> Text
 shBKind a = T.pack " :: " <> showBaseKind (kindOf a)
 
 instance PrettyNum CV where
-  hexS cv | isADT           cv = T.pack (show cv) <> shBKind cv
+  hexS cv | isADT           cv = showText cv <> shBKind cv
           | isBoolean       cv = hexS (cvToBool cv) <> shBKind cv
           | isFloat         cv = let CFloat   f = cvVal cv in T.pack (N.showHFloat f "") <> shBKind cv
           | isDouble        cv = let CDouble  d = cvVal cv in T.pack (N.showHFloat d "") <> shBKind cv
           | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 16 True True f) <> shBKind cv
-          | isReal          cv = let CAlgReal r = cvVal cv in T.pack (show r) <> shBKind cv
-          | isString        cv = let CString  s = cvVal cv in T.pack (show s) <> shBKind cv
+          | isReal          cv = let CAlgReal r = cvVal cv in showText r <> shBKind cv
+          | isString        cv = let CString  s = cvVal cv in showText s <> shBKind cv
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI True True i
           | True               = let CInteger i = cvVal cv in shex  True True (hasSign cv, intSizeOf cv) i
 
-  binS cv | isADT           cv = T.pack (show cv) <> shBKind cv
+  binS cv | isADT           cv = showText cv <> shBKind cv
           | isBoolean       cv = binS (cvToBool cv) <> shBKind cv
           | isFloat         cv = let CFloat   f = cvVal cv in T.pack (showBFloat f "") <> shBKind cv
           | isDouble        cv = let CDouble  d = cvVal cv in T.pack (showBFloat d "") <> shBKind cv
           | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 2 True True f) <> shBKind cv
-          | isReal          cv = let CAlgReal r = cvVal cv in T.pack (show r) <> shBKind cv
-          | isString        cv = let CString  s = cvVal cv in T.pack (show s) <> shBKind cv
+          | isReal          cv = let CAlgReal r = cvVal cv in showText r <> shBKind cv
+          | isString        cv = let CString  s = cvVal cv in showText s <> shBKind cv
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI True True i
           | True               = let CInteger i = cvVal cv in sbin  True True (hasSign cv, intSizeOf cv) i
 
-  hexP cv | isADT           cv = T.pack (show cv)
+  hexP cv | isADT           cv = showText cv
           | isBoolean       cv = hexS (cvToBool cv)
-          | isFloat         cv = let CFloat   f = cvVal cv in T.pack (show f)
-          | isDouble        cv = let CDouble  d = cvVal cv in T.pack (show d)
+          | isFloat         cv = let CFloat   f = cvVal cv in showText f
+          | isDouble        cv = let CDouble  d = cvVal cv in showText d
           | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 16 True True f)
-          | isReal          cv = let CAlgReal r = cvVal cv in T.pack (show r)
-          | isString        cv = let CString  s = cvVal cv in T.pack (show s)
+          | isReal          cv = let CAlgReal r = cvVal cv in showText r
+          | isString        cv = let CString  s = cvVal cv in showText s
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI False True i
           | True               = let CInteger i = cvVal cv in shex  False True (hasSign cv, intSizeOf cv) i
 
-  binP cv | isADT           cv = T.pack (show cv)
+  binP cv | isADT           cv = showText cv
           | isBoolean       cv = binS (cvToBool cv)
-          | isFloat         cv = let CFloat   f = cvVal cv in T.pack (show f)
-          | isDouble        cv = let CDouble  d = cvVal cv in T.pack (show d)
+          | isFloat         cv = let CFloat   f = cvVal cv in showText f
+          | isDouble        cv = let CDouble  d = cvVal cv in showText d
           | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 2 True True f)
-          | isReal          cv = let CAlgReal r = cvVal cv in T.pack (show r)
-          | isString        cv = let CString  s = cvVal cv in T.pack (show s)
+          | isReal          cv = let CAlgReal r = cvVal cv in showText r
+          | isString        cv = let CString  s = cvVal cv in showText s
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False True i
           | True               = let CInteger i = cvVal cv in sbin  False True (hasSign cv, intSizeOf cv) i
 
-  hex cv  | isADT           cv = T.pack (show cv)
+  hex cv  | isADT           cv = showText cv
           | isBoolean       cv = hexS (cvToBool cv)
-          | isFloat         cv = let CFloat   f = cvVal cv in T.pack (show f)
-          | isDouble        cv = let CDouble  d = cvVal cv in T.pack (show d)
+          | isFloat         cv = let CFloat   f = cvVal cv in showText f
+          | isDouble        cv = let CDouble  d = cvVal cv in showText d
           | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 16 False True f)
-          | isReal          cv = let CAlgReal r = cvVal cv in T.pack (show r)
-          | isString        cv = let CString  s = cvVal cv in T.pack (show s)
+          | isReal          cv = let CAlgReal r = cvVal cv in showText r
+          | isString        cv = let CString  s = cvVal cv in showText s
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI False False i
           | True               = let CInteger i = cvVal cv in shex  False False (hasSign cv, intSizeOf cv) i
 
-  bin cv  | isADT           cv = T.pack (show cv)
+  bin cv  | isADT           cv = showText cv
           | isBoolean       cv = binS (cvToBool cv)
-          | isFloat         cv = let CFloat   f = cvVal cv in T.pack (show f)
-          | isDouble        cv = let CDouble  d = cvVal cv in T.pack (show d)
+          | isFloat         cv = let CFloat   f = cvVal cv in showText f
+          | isDouble        cv = let CDouble  d = cvVal cv in showText d
           | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 2 False True f)
-          | isReal          cv = let CAlgReal r = cvVal cv in T.pack (show r)
-          | isString        cv = let CString  s = cvVal cv in T.pack (show s)
+          | isReal          cv = let CAlgReal r = cvVal cv in showText r
+          | isString        cv = let CString  s = cvVal cv in showText s
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False False i
           | True               = let CInteger i = cvVal cv in sbin  False False (hasSign cv, intSizeOf cv) i
 
 instance (SymVal a, PrettyNum a) => PrettyNum (SBV a) where
-  hexS s = maybe (T.pack $ show s) (hexS :: a -> Text) $ unliteral s
-  binS s = maybe (T.pack $ show s) (binS :: a -> Text) $ unliteral s
+  hexS s = maybe (showText s) (hexS :: a -> Text) $ unliteral s
+  binS s = maybe (showText s) (binS :: a -> Text) $ unliteral s
 
-  hexP s = maybe (T.pack $ show s) (hexP :: a -> Text) $ unliteral s
-  binP s = maybe (T.pack $ show s) (binP :: a -> Text) $ unliteral s
+  hexP s = maybe (showText s) (hexP :: a -> Text) $ unliteral s
+  binP s = maybe (showText s) (binP :: a -> Text) $ unliteral s
 
-  hex  s = maybe (T.pack $ show s) (hex  :: a -> Text) $ unliteral s
-  bin  s = maybe (T.pack $ show s) (bin  :: a -> Text) $ unliteral s
+  hex  s = maybe (showText s) (hex  :: a -> Text) $ unliteral s
+  bin  s = maybe (showText s) (bin  :: a -> Text) $ unliteral s
 
 -- | Show as a hexadecimal value. First bool controls whether type info is printed
 -- while the second boolean controls whether 0x prefix is printed. The tuple is
@@ -251,7 +252,7 @@ shex shType shPre (signed, size) a
  = T.pack "-" <> pre <> T.pack (pad l (s16 (abs (fromIntegral a :: Integer)))) <> t
  | True
  = pre <> T.pack (pad l (s16 a)) <> t
- where t | shType = T.pack " :: " <> T.pack (if signed then "Int" else "Word") <> T.pack (show size)
+ where t | shType = T.pack " :: " <> T.pack (if signed then "Int" else "Word") <> showText size
          | True   = T.empty
        pre | shPre = T.pack "0x"
            | True  = T.empty
@@ -305,7 +306,7 @@ sbin shType shPre (signed,size) a
  = T.pack "-" <> pre <> T.pack (pad size (s2 (abs (fromIntegral a :: Integer)))) <> t
  | True
  = pre <> T.pack (pad size (s2 a)) <> t
- where t | shType = T.pack " :: " <> T.pack (if signed then "Int" else "Word") <> T.pack (show size)
+ where t | shType = T.pack " :: " <> T.pack (if signed then "Int" else "Word") <> showText size
          | True   = T.empty
        pre | shPre = T.pack "0b"
            | True  = T.empty
@@ -341,7 +342,7 @@ readBin s = case readInt 2 isDigit cvt s' of
               [(a, "")] -> a
               _         -> error $ "SBV.readBin: Cannot read a binary number from: " ++ show s
   where cvt c = ord c - ord '0'
-        isDigit = (`elem` "01")
+        isDigit = (`elem` ("01" :: String))
         s' | "0b" `isPrefixOf` s = drop 2 s
            | True                = s
 
@@ -378,53 +379,53 @@ showHDouble d
    | True                = show d
 
 -- | A version of show for floats that generates correct SMTLib literals using the rounding mode
-showSMTFloat :: RoundingMode -> Float -> String
+showSMTFloat :: RoundingMode -> Float -> Text
 showSMTFloat rm f
    | isNaN f             = as "NaN"
    | isInfinite f, f < 0 = as "-oo"
    | isInfinite f        = as "+oo"
    | isNegativeZero f    = as "-zero"
    | f == 0              = as "+zero"
-   | True                = "((_ to_fp 8 24) " ++ smtRoundingMode rm ++ " " ++ toSMTLibRational (toRational f) ++ ")"
-   where as s = "(_ " ++ s ++ " 8 24)"
+   | True                = "((_ to_fp 8 24) " <> smtRoundingMode rm <> " " <> toSMTLibRational (toRational f) <> ")"
+   where as s = "(_ " <> s <> " 8 24)"
 
 
 -- | A version of show for doubles that generates correct SMTLib literals using the rounding mode
-showSMTDouble :: RoundingMode -> Double -> String
+showSMTDouble :: RoundingMode -> Double -> Text
 showSMTDouble rm d
    | isNaN d             = as "NaN"
    | isInfinite d, d < 0 = as "-oo"
    | isInfinite d        = as "+oo"
    | isNegativeZero d    = as "-zero"
    | d == 0              = as "+zero"
-   | True                = "((_ to_fp 11 53) " ++ smtRoundingMode rm ++ " " ++ toSMTLibRational (toRational d) ++ ")"
-   where as s = "(_ " ++ s ++ " 11 53)"
+   | True                = "((_ to_fp 11 53) " <> smtRoundingMode rm <> " " <> toSMTLibRational (toRational d) <> ")"
+   where as s = "(_ " <> s <> " 11 53)"
 
 -- | Show an SBV rational as an SMTLib value. This is used for faithful rationals.
-showSMTRational :: Rational -> String
-showSMTRational r = "(SBV.Rational " ++ showNegativeNumber (numerator r) ++ " " ++ showNegativeNumber (denominator r) ++ ")"
+showSMTRational :: Rational -> Text
+showSMTRational r = "(SBV.Rational " <> T.pack (showNegativeNumber (numerator r)) <> " " <> T.pack (showNegativeNumber (denominator r)) <> ")"
 
 -- | Show a rational in SMTLib format. This is used for conversions from regular rationals.
-toSMTLibRational :: Rational -> String
+toSMTLibRational :: Rational -> Text
 toSMTLibRational r
    | n < 0
-   = "(- (/ "  ++ show (abs n) ++ ".0 " ++ show d ++ ".0))"
+   = "(- (/ "  <> showText (abs n) <> ".0 " <> showText d <> ".0))"
    | True
-   = "(/ " ++ show n ++ ".0 " ++ show d ++ ".0)"
+   = "(/ " <> showText n <> ".0 " <> showText d <> ".0)"
   where n = numerator r
         d = denominator r
 
 -- | Convert a CV to an SMTLib2 compliant value
-cvToSMTLib :: RoundingMode -> CV -> String
+cvToSMTLib :: RoundingMode -> CV -> Text
 cvToSMTLib rm x
   | isBoolean       x, CInteger  w      <- cvVal x = if w == 0 then "false" else "true"
   | isRoundingMode  x, CADT (s, [])     <- cvVal x = roundModeConvert s
-  | isReal          x, CAlgReal  r      <- cvVal x = algRealToSMTLib2 r
+  | isReal          x, CAlgReal  r      <- cvVal x = T.pack (algRealToSMTLib2 r)
   | isFloat         x, CFloat    f      <- cvVal x = showSMTFloat  rm f
   | isDouble        x, CDouble   d      <- cvVal x = showSMTDouble rm d
   | isRational      x, CRational r      <- cvVal x = showSMTRational r
-  | isFP            x, CFP       f      <- cvVal x = fprToSMTLib2 f
-  | not (isBounded x), CInteger  w      <- cvVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
+  | isFP            x, CFP       f      <- cvVal x = T.pack (fprToSMTLib2 f)
+  | not (isBounded x), CInteger  w      <- cvVal x = if w >= 0 then showText w else "(- " <> showText (abs w) <> ")"
   | not (hasSign x)  , CInteger  w      <- cvVal x = smtLibHex (intSizeOf x) w
   -- signed numbers (with 2's complement representation) is problematic
   -- since there's no way to put a bvneg over a positive number to get minBound..
@@ -432,8 +433,8 @@ cvToSMTLib rm x
   | hasSign x        , CInteger  w      <- cvVal x = if w == negate (2 ^ intSizeOf x)
                                                      then mkMinBound (intSizeOf x)
                                                      else negIf (w < 0) $ smtLibHex (intSizeOf x) (abs w)
-  | isChar x         , CChar c          <- cvVal x = "(_ char " ++ smtLibHex 8 (fromIntegral (ord c)) ++ ")"
-  | isString x       , CString s        <- cvVal x = '\"' : stringToQFS s ++ "\""
+  | isChar x         , CChar c          <- cvVal x = "(_ char " <> smtLibHex 8 (fromIntegral (ord c)) <> ")"
+  | isString x       , CString s        <- cvVal x = "\"" <> T.pack (stringToQFS s) <> "\""
   | isList x         , CList xs         <- cvVal x = smtLibSeq (kindOf x) xs
   | isSet x          , CSet s           <- cvVal x = smtLibSet (kindOf x) s
   | isTuple x        , CTuple xs        <- cvVal x = smtLibTup (kindOf x) xs
@@ -445,29 +446,29 @@ cvToSMTLib rm x
   | isADT x          , CADT c          <- cvVal x = smtLibADT (cvKind x) c
 
   | True = error $ "SBV.cvtCV: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
-  where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
+  where roundModeConvert s = fromMaybe (T.pack s) (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
         -- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time
         -- being, SBV only supports sizes that are multiples of 4, but the below code is more robust
         -- in case of future extensions to support arbitrary sizes.
-        smtLibHex :: Int -> Integer -> String
-        smtLibHex 1  v = "#b" ++ show v
+        smtLibHex :: Int -> Integer -> Text
+        smtLibHex 1  v = "#b" <> showText v
         smtLibHex sz v
-          | sz `mod` 4 == 0 = "#x" ++ pad (sz `div` 4) (showHex v "")
-          | True            = "#b" ++ pad sz (showBin v "")
+          | sz `mod` 4 == 0 = "#x" <> T.pack (pad (sz `div` 4) (showHex v ""))
+          | True            = "#b" <> T.pack (pad sz (showBin v ""))
            where showBin = showIntAtBase 2 intToDigit
-        negIf :: Bool -> String -> String
-        negIf True  a = "(bvneg " ++ a ++ ")"
+        negIf :: Bool -> Text -> Text
+        negIf True  a = "(bvneg " <> a <> ")"
         negIf False a = a
 
-        smtLibSeq :: Kind -> [CVal] -> String
-        smtLibSeq k          [] = "(as seq.empty " ++ smtType k ++ ")"
+        smtLibSeq :: Kind -> [CVal] -> Text
+        smtLibSeq k          [] = "(as seq.empty " <> smtType k <> ")"
         smtLibSeq (KList ek) xs = let mkSeq  [e]   = e
-                                      mkSeq  es    = "(seq.++ " ++ unwords es ++ ")"
-                                      mkUnit inner = "(seq.unit " ++ inner ++ ")"
+                                      mkSeq  es    = "(seq.++ " <> T.unwords es <> ")"
+                                      mkUnit inner = "(seq.unit " <> inner <> ")"
                                   in mkSeq (mkUnit . cvToSMTLib rm . CV ek <$> xs)
-        smtLibSeq k _ = error "SBV.cvToSMTLib: Impossible case (smtLibSeq), received kind: " ++ show k
+        smtLibSeq k _ = error $ "SBV.cvToSMTLib: Impossible case (smtLibSeq), received kind: " ++ show k
 
-        smtLibSet :: Kind -> RCSet CVal -> String
+        smtLibSet :: Kind -> RCSet CVal -> Text
         smtLibSet k set = case set of
                             RegularSet    rs -> Set.foldr' (modify "true")  (start "false") rs
                             ComplementSet rs -> Set.foldr' (modify "false") (start "true")  rs
@@ -475,38 +476,38 @@ cvToSMTLib rm x
                        KSet ek -> ek
                        _       -> error $ "SBV.cvToSMTLib: Impossible case (smtLibSet), received kind: " ++ show k
 
-                start def = "((as const " ++ smtType k ++ ") " ++ def ++ ")"
+                start def = "((as const " <> smtType k <> ") " <> def <> ")"
 
-                modify how e s = "(store " ++ s ++ " " ++ cvToSMTLib rm (CV ke e) ++ " " ++ how ++ ")"
+                modify how e s = "(store " <> s <> " " <> cvToSMTLib rm (CV ke e) <> " " <> how <> ")"
 
-        smtLibTup :: Kind -> [CVal] -> String
+        smtLibTup :: Kind -> [CVal] -> Text
         smtLibTup (KTuple []) _  = "mkSBVTuple0"
-        smtLibTup (KTuple ks) xs = "(mkSBVTuple" ++ show (length ks) ++ " " ++ unwords (zipWith (\ek e -> cvToSMTLib rm (CV ek e)) ks xs) ++ ")"
+        smtLibTup (KTuple ks) xs = "(mkSBVTuple" <> showText (length ks) <> " " <> T.unwords (zipWith (\ek e -> cvToSMTLib rm (CV ek e)) ks xs) <> ")"
         smtLibTup k           _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
 
         -- Remember that in an ArrayModel we keep a history; i.e., the earlier elements are written later. So, we reverse the assocs
-        smtLibArray :: Kind -> ArrayModel CVal CVal -> String
+        smtLibArray :: Kind -> ArrayModel CVal CVal -> Text
         smtLibArray k@(KArray k1 k2) (ArrayModel assocs def) = mkStoreChain k k1 k2 (reverse assocs) def
         smtLibArray k              _                         = error $ "SBV.cvToSMTLib: Impossible case (smtLibArray), received non-matching kind: " ++ show k
 
         mkStoreChain k k1 k2 writes def = walk writes base
-          where base = "((as const " ++ smtType k ++ ") " ++ cvToSMTLib rm (CV k2 def) ++ ")"
+          where base = "((as const " <> smtType k <> ") " <> cvToSMTLib rm (CV k2 def) <> ")"
 
                 walk []                  sofar = sofar
                 walk ((key, val) : rest) sofar = walk rest (store key val sofar)
 
-                store key val sofar = "(store " ++ sofar ++ " " ++ cvToSMTLib rm (CV k1 key) ++ " " ++ cvToSMTLib rm (CV k2 val) ++ ")"
+                store key val sofar = "(store " <> sofar <> " " <> cvToSMTLib rm (CV k1 key) <> " " <> cvToSMTLib rm (CV k2 val) <> ")"
 
         -- anomaly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
-        mkMinBound :: Int -> String
-        mkMinBound i = "#b1" ++ replicate (i-1) '0'
+        mkMinBound :: Int -> Text
+        mkMinBound i = "#b1" <> T.pack (replicate (i-1) '0')
 
         -- ADTs
-        smtLibADT :: Kind -> (String,  [(Kind, CVal)]) -> String
+        smtLibADT :: Kind -> (String,  [(Kind, CVal)]) -> Text
         smtLibADT knd (c, [])  = ascribe c knd
-        smtLibADT knd (c, kvs) = '(' : ascribe c knd ++ " " ++ unwords (map (\(k, v) -> cvToSMTLib rm (CV  k v)) kvs) ++ ")"
-        ascribe nm k = "(as " ++ nm ++ " " ++ smtType k ++ ")"
+        smtLibADT knd (c, kvs) = "(" <> ascribe c knd <> " " <> T.unwords (map (\(k, v) -> cvToSMTLib rm (CV  k v)) kvs) <> ")"
+        ascribe nm k = "(as " <> T.pack nm <> " " <> smtType k <> ")"
 
 -- | Show a float as a binary
 showBFloat :: (Show a, RealFloat a) => a -> ShowS

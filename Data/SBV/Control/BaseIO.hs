@@ -21,6 +21,8 @@ import Data.SBV.Core.Concrete (CV)
 import Data.SBV.Core.Data     (Symbolic, SymVal, SBool, SBV, SBVType)
 import Data.SBV.Core.Symbolic (Query, QueryContext, QueryState, State, SMTModel, SMTResult, SV, Name)
 
+import Data.Text (Text)
+
 import qualified Data.SBV.Control.Query as Trans
 import qualified Data.SBV.Control.Utils as Trans
 
@@ -401,20 +403,20 @@ freshVar = Trans.freshVar
 -- file redirection is given, the output will go to the file.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.queryDebug'
-queryDebug :: [String] -> Query ()
+queryDebug :: [Text] -> Query ()
 queryDebug = Trans.queryDebug
 
 -- | Send a string to the solver, and return the response
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.ask'
-ask :: String -> Query String
+ask :: Text -> Query String
 ask = Trans.ask
 
 -- | Send a string to the solver. If the first argument is 'True', we will require
 -- a "success" response as well. Otherwise, we'll fire and forget.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.send'
-send :: Bool -> String -> Query ()
+send :: Bool -> Text -> Query ()
 send = Trans.send
 
 -- | Retrieve a responses from the solver until it produces a synchronization tag. We make the tag
@@ -506,7 +508,7 @@ timeout = Trans.timeout
 -- | Bail out if we don't get what we expected
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.unexpected'
-unexpected :: String -> String -> String -> Maybe [String] -> String -> Maybe [String] -> Query a
+unexpected :: String -> Text -> String -> Maybe [String] -> String -> Maybe [String] -> Query a
 unexpected = Trans.unexpected
 
 -- | Execute a query.

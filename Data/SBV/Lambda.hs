@@ -13,6 +13,7 @@
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE NamedFieldPuns       #-}
+{-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE TupleSections        #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -33,6 +34,7 @@ import qualified Data.Text as T
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
 import Data.SBV.SMT.SMTLib2
+import Data.SBV.Utils.Lib       (showText)
 import Data.SBV.Utils.PrettyNum
 
 import           Data.SBV.Core.Symbolic hiding   (mkNewState)
@@ -56,8 +58,8 @@ data LambdaScope = HigherOrderArg   -- This lambda will be firstified, hence can
 
 data Defn = Defn [String]                        -- The uninterpreted names referred to in the body
                  [String]                        -- Free variables (i.e., not uninterpreted nor bound in the definition itself)
-                 (Maybe [(Quantifier, String)])  -- Param declaration groups, if any
-                 (Int -> String)                 -- Body, given the tab amount.
+                 (Maybe [(Quantifier, T.Text)])  -- Param declaration groups, if any
+                 (Int -> T.Text)                 -- Body, given the tab amount.
 
 -- | Maka a new substate from the incoming state, sharing parts as necessary
 inSubState :: MonadIO m => LambdaScope -> State -> (State -> m b) -> m b
@@ -139,12 +141,12 @@ inSubState scope inState comp = do
                    }
 
 -- In this case, we expect just one group of parameters, with universal quantification
-extractAllUniversals :: [(Quantifier, String)] -> String
+extractAllUniversals :: [(Quantifier, T.Text)] -> T.Text
 extractAllUniversals [(ALL, s)] = s
 extractAllUniversals other      = error $ unlines [ ""
                                                   , "*** Data.SBV.Lambda: Impossible happened. Got existential quantifiers."
                                                   , "***"
-                                                  , "***  Params: " ++ show other
+                                                  , "***  Params: " ++ show (map (\(q, t) -> (q, T.unpack t)) other)
                                                   , "***"
                                                   , "*** Please report this as a bug!"
                                                   ]
@@ -188,8 +190,8 @@ lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$
                               , "*** touch for further possible enhancements."
                               ]
 
-        sh (Defn _unints _frees Nothing       body) = body 0
-        sh (Defn _unints _frees (Just params) body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
+        sh (Defn _unints _frees Nothing       body) = T.unpack (body 0)
+        sh (Defn _unints _frees (Just params) body) = "(lambda " ++ T.unpack (extractAllUniversals params) ++ "\n" ++ T.unpack (body 2) ++ ")"
 
         shift []     = []
         shift (x:xs) = intercalate "\n" (x : map tab xs)
@@ -236,20 +238,20 @@ extractLambdaInfo st = do
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTLambda
 lambdaStr st scope k a = SMTLambda <$> lambdaGen scope mkLam st k a
    where mkLam (Defn _unints _frees Nothing       body) = body 0
-         mkLam (Defn _unints _frees (Just params) body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
+         mkLam (Defn _unints _frees (Just params) body) = "(lambda " <> extractAllUniversals params <> "\n" <> body 2 <> ")"
 
 -- | Generic constraint generator.
-constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => LambdaScope -> ([String] -> (Int -> String) -> b) -> State -> a -> m b
+constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => LambdaScope -> ([String] -> (Int -> T.Text) -> b) -> State -> a -> m b
 constraintGen scope trans inState@State{rProgInfo} f = do
    -- indicate we have quantifiers
    liftIO $ modifyIORef' rProgInfo (\u -> u{hasQuants = True})
 
    let mkDef (Defn deps _frees Nothing       body) = trans deps body
-       mkDef (Defn deps _frees (Just params) body) = trans deps $ \i -> unwords (map mkGroup params) ++ "\n"
-                                                                     ++ body (i + 2)
-                                                                     ++ replicate (length params) ')'
-       mkGroup (ALL, s) = "(forall " ++ s
-       mkGroup (EX,  s) = "(exists " ++ s
+       mkDef (Defn deps _frees (Just params) body) = trans deps $ \i -> T.unwords (map mkGroup params) <> "\n"
+                                                                     <> body (i + 2)
+                                                                     <> T.replicate (length params) ")"
+       mkGroup (ALL, s) = "(forall " <> s
+       mkGroup (EX,  s) = "(exists " <> s
 
    inSubState scope inState $ \st -> mkDef <$> convert st KBool (mkConstraint st f >>= output >> pure ())
 
@@ -268,9 +270,9 @@ constraint st = join . constraintGen TopLevel mkSV st
 -- We allow free variables here (first arg of constraintGen). This might prove to be not kosher!
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m String
 constraintStr = constraintGen TopLevel toStr
-   where toStr deps body = intercalate "\n" [ "; user defined axiom: " ++ depInfo deps
-                                            , "(assert " ++ body 2 ++ ")"
-                                            ]
+   where toStr deps body = T.unpack $ T.intercalate "\n" [ "; user defined axiom: " <> T.pack (depInfo deps)
+                                                          , "(assert " <> body 2 <> ")"
+                                                          ]
 
          depInfo [] = ""
          depInfo ds = "[Refers to: " ++ intercalate ", " ds ++ "]"
@@ -374,29 +376,29 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                  | null params = Nothing
                  | True        = Just [(q, paramList (map snd l)) | l@((q, _) : _)  <- pGroups]
                  where pGroups = groupBy (\(q1, _) (q2, _) -> q1 == q2) params
-                       paramList ps = '(' : unwords (map (\p -> '(' : show p ++ " " ++ smtType (kindOf p) ++ ")")  ps) ++ ")"
+                       paramList ps = "(" <> T.unwords (map (\p -> "(" <> showText p <> " " <> smtType (kindOf p) <> ")")  ps) <> ")"
 
                body tabAmnt
                  | null constTables
                  , null nonConstTables
                  , Just e <- simpleBody (map (, Nothing) constBindings ++ svBindings) out
-                 = tab ++ e
+                 = tab <> e
                  | True
-                 = intercalate "\n" $ map (tab ++) $  [mkLet sv  | sv <- constBindings]
-                                                   ++ [mkTable t | t  <- constTables]
-                                                   ++ walk svBindings nonConstTables
-                                                   ++ [shift ++ show out ++ replicate totalClose ')']
+                 = T.intercalate "\n" $ map (tab <>)  $  [mkLet sv  | sv <- constBindings]
+                                                       ++ [mkTable t | t  <- constTables]
+                                                       ++ walk svBindings nonConstTables
+                                                       ++ [shift <> showText out <> T.replicate totalClose ")"]
 
-                 where tab  = replicate tabAmnt ' '
+                 where tab  = T.replicate tabAmnt " "
 
-                       mkBind l r   = shift ++ "(let ((" ++ l ++ " " ++ r ++ "))"
-                       mkLet (s, v) = mkBind (show s) v
+                       mkBind l r   = shift <> "(let ((" <> l <> " " <> r <> "))"
+                       mkLet (s, v) = mkBind (showText s) v
 
                        -- Align according to level.
-                       shift = replicate (24 + 16 * (fromMaybe 0 level - 1)) ' '
+                       shift = T.replicate (24 + 16 * (fromMaybe 0 level - 1)) " "
 
-                       mkTable (((i, ak, rk), elts), _) = mkBind nm (lambdaTable (map (const ' ') nm) ak rk elts)
-                          where nm = "table" ++ show i
+                       mkTable (((i, ak, rk), elts), _) = mkBind nm (lambdaTable (T.map (const ' ') nm) ak rk elts)
+                          where nm = "table" <> showText i
 
                        totalClose = length constBindings
                                   + length svBindings
@@ -410,7 +412,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                                                       ++ walk rest notReady
                           where (ready, notReady) = partition (\(need, _) -> need < getLLI nd) remaining
                                 mkLocalBind (b, Nothing) = mkLet b
-                                mkLocalBind (b, Just l)  = mkLet b ++ " ; " ++ l
+                                mkLocalBind (b, Just l)  = mkLet b <> " ; " <> T.pack l
 
                getLLI :: NodeId -> (Int, Int)
                getLLI (NodeId (_, mbl, i)) = (fromMaybe 0 mbl, i)
@@ -420,23 +422,23 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                -- (see https://github.com/LeventErkok/sbv/issues/733), so only do it if we're being verbose for debugging purposes.
                mkPretty = verbose cfg
 
-               simpleBody :: [((SV, String), Maybe String)] -> SV -> Maybe String
-               simpleBody [((v, e), Nothing)] o | v == o, not mkPretty || '\n' `notElem` e = Just e
-               simpleBody _                   _                                            = Nothing
+               simpleBody :: [((SV, T.Text), Maybe String)] -> SV -> Maybe T.Text
+               simpleBody [((v, e), Nothing)] o | v == o, not mkPretty || not (T.any (== '\n') e) = Just e
+               simpleBody _                   _                                                   = Nothing
 
                assignments = F.toList (pgmAssignments pgm)
 
                constants = filter ((`notElem` [falseSV, trueSV]) . fst) consts
 
-               constBindings :: [(SV, String)]
+               constBindings :: [(SV, T.Text)]
                constBindings = map mkConst constants
-                 where mkConst :: (SV, CV) -> (SV, String)
+                 where mkConst :: (SV, CV) -> (SV, T.Text)
                        mkConst (sv, cv) = (sv, cvToSMTLib (roundingMode cfg) cv)
 
-               svBindings :: [((SV, String), Maybe String)]
+               svBindings :: [((SV, T.Text), Maybe String)]
                svBindings = map mkAsgn assignments
-                 where mkAsgn (sv, e@(SBVApp (Label l) _)) = ((sv, T.unpack $ converter e), Just l)
-                       mkAsgn (sv, e)                      = ((sv, T.unpack $ converter e), Nothing)
+                 where mkAsgn (sv, e@(SBVApp (Label l) _)) = ((sv, converter e), Just l)
+                       mkAsgn (sv, e)                      = ((sv, converter e), Nothing)
 
                        converter = cvtExp cfg curProgInfo (capabilities (solver cfg)) rm tableMap
 
@@ -459,9 +461,9 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                nonConstTables = [ (maximum ((0, 0) : [getLLI n | SV _ n <- elts]), nct)
                                 | nct@((_, elts), _) <- nonConstTablesUnindexed]
 
-               lambdaTable :: String -> Kind -> Kind -> [SV] -> String
-               lambdaTable extraSpace ak rk elts = "(lambda ((" ++ lv ++ " " ++ smtType ak ++ "))" ++ space ++ chain 0 elts ++ ")"
-                 where cnst k i = T.unpack $ cvtCV rm (mkConstCV k (i::Integer))
+               lambdaTable :: T.Text -> Kind -> Kind -> [SV] -> T.Text
+               lambdaTable extraSpace ak rk elts = "(lambda ((" <> lv <> " " <> smtType ak <> "))" <> space <> chain 0 elts <> ")"
+                 where cnst k i = cvtCV rm (mkConstCV k (i::Integer))
 
                        lv = "idx"
 
@@ -469,15 +471,15 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                        long = not (null (drop 5 elts))
                        space
                          | long
-                         = "\n                  " ++ extraSpace
+                         = "\n                  " <> extraSpace
                          | True
                          = " "
 
                        chain _ []     = cnst rk 0
-                       chain _ [x]    = show x
-                       chain i (x:xs) = "(ite (= " ++ lv ++ " " ++ cnst ak i ++ ") "
-                                           ++ show x ++ space
-                                           ++ chain (i+1) xs
-                                           ++ ")"
+                       chain _ [x]    = showText x
+                       chain i (x:xs) = "(ite (= " <> lv <> " " <> cnst ak i <> ") "
+                                           <> showText x <> space
+                                           <> chain (i+1) xs
+                                           <> ")"
 
 {- HLint ignore module "Use second" -}

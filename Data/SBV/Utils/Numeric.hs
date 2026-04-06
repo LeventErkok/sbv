@@ -9,7 +9,8 @@
 -- Various number related utilities
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -20,6 +21,7 @@ module Data.SBV.Utils.Numeric (
          ) where
 
 import Data.Word
+import Data.Text         (Text)
 import Data.Array.ST     (newArray, readArray, MArray, STUArray)
 import Data.Array.Unsafe (castSTUArray)
 import GHC.ST            (runST, ST)
@@ -176,7 +178,7 @@ instance Arbitrary RoundingMode where
   arbitrary = elements [minBound .. maxBound]
 
 -- | Convert a rounding mode to the format SMT-Lib2 understands.
-smtRoundingMode :: RoundingMode -> String
+smtRoundingMode :: RoundingMode -> Text
 smtRoundingMode RoundNearestTiesToEven = "roundNearestTiesToEven"
 smtRoundingMode RoundNearestTiesToAway = "roundNearestTiesToAway"
 smtRoundingMode RoundTowardPositive    = "roundTowardPositive"

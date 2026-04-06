@@ -14,6 +14,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE NumericUnderscores         #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeApplications           #-}
@@ -63,11 +64,12 @@ import Data.Either (rights)
 import System.Directory   (findExecutable)
 import System.Environment (getEnv, lookupEnv)
 import System.Exit        (ExitCode(..))
-import System.IO          (hClose, hFlush, hPutStrLn, hGetContents, hGetLine, hReady, hGetChar)
+import System.IO          (hClose, hFlush, hGetContents, hGetLine, hReady, hGetChar)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Text       as T
+import qualified Data.Text.IO    as TIO
 import Text.Read (readMaybe)
 
 import Data.SBV.Core.AlgReals
@@ -83,7 +85,7 @@ import Data.SBV.SMT.Utils     ( showTimeoutValue, alignPlain, debug, mergeSExpr,
                               )
 
 import Data.SBV.Utils.PrettyNum
-import Data.SBV.Utils.Lib       (joinArgs, splitArgs, needsBars)
+import Data.SBV.Utils.Lib       (joinArgs, splitArgs, needsBars, showText)
 import Data.SBV.Utils.SExpr     (parenDeficit, nameSupply)
 
 import qualified System.Timeout as Timeout (timeout)
@@ -530,7 +532,7 @@ showSMTResult unsatMsg unkMsg satMsg satMsgModel dSatMsgModel satExtMsg result =
   Satisfiable _   m                  -> satMsgModel    ++ showModel cfg m
   DeltaSat    _ p m                  -> dSatMsgModel p ++ showModel cfg m
   SatExtField _ (SMTModel b _ _ _)   -> satExtMsg   ++ showModelDictionary True False cfg b
-  Unknown     _ r                    -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
+  Unknown     _ r                    -> unkMsg ++ ".\n" ++ T.unpack ("  Reason: " `alignPlain` showText r)
   ProofError  _ [] Nothing           -> "*** An error occurred. No additional information available. Try running in verbose mode."
   ProofError  _ ls Nothing           -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
   ProofError  _ ls (Just r)          -> intercalate "\n" $  [ "*** " ++ l | l <- ls]
@@ -571,7 +573,7 @@ showModelDictionary warnEmpty includeEverything cfg allVars
         relevantVars  = filter (not . ignore) allVars
         ignore (T.pack -> s, _)
           | includeEverything = False
-          | True              = mustIgnoreVar cfg (T.unpack s)
+          | True              = mustIgnoreVar cfg s
 
         shM (s, RegularCV v) = let vs = shCV cfg s v in ((length s, s), (vlength vs, vs))
         shM (s, other)       = let vs = show other   in ((length s, s), (vlength vs, vs))
@@ -674,7 +676,7 @@ shCV SMTConfig{printBase, crackNum, verbose, crackNumSurfaceVals} nm cv = cracke
                              Just cs -> def ++ "\n" ++ cs
 
 -- | Helper function to spin off to an SMT solver.
-pipeProcess :: SMTConfig -> State -> String -> [String] -> String -> (State -> IO a) -> IO a
+pipeProcess :: SMTConfig -> State -> String -> [String] -> T.Text -> (State -> IO a) -> IO a
 pipeProcess cfg ctx execName opts pgm continuation = do
     mbExecPath <- findExecutable execName
     case mbExecPath of
@@ -737,15 +739,15 @@ standardEngine envName envOptName cfg ctx pgm continuation = do
 -- communicating with it.
 standardSolver :: SMTConfig       -- ^ The current configuration
                -> State           -- ^ Context in which we are running
-               -> String          -- ^ The program
+               -> T.Text          -- ^ The program
                -> (State -> IO a) -- ^ The continuation
                -> IO a
 standardSolver config ctx pgm continuation = do
-    let msg s    = debug config ["** " ++ s]
+    let msg s    = debug config ["** " <> s]
         smtSolver= solver config
         exec     = executable smtSolver
         opts     = options smtSolver config ++ extraArgs config
-    msg $ "Calling: "  ++ (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
+    msg $ "Calling: "  <> T.pack (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
     rnf pgm `seq` pipeProcess config ctx exec opts pgm continuation
 
 -- | An internal type to track of solver interactions
@@ -754,12 +756,12 @@ data SolverLine = SolverRegular   String -- ^ All is well
                 | SolverException String -- ^ Something else went wrong
 
 -- | A variant of @readProcessWithExitCode@; except it deals with SBV continuations
-runSolver :: SMTConfig -> State -> FilePath -> [String] -> String -> (State -> IO a) -> IO a
+runSolver :: SMTConfig -> State -> FilePath -> [String] -> T.Text -> (State -> IO a) -> IO a
 runSolver cfg ctx execPath opts pgm continuation
  = do scaler <- commTimeOutScaler
 
       let nm  = show (name (solver cfg))
-          msg = debug cfg . map ("*** " ++)
+          msg = debug cfg . map ("*** " <>)
 
           clean = preprocess (solver cfg)
 
@@ -786,8 +788,8 @@ runSolver cfg ctx execPath opts pgm continuation
       (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
-                let send :: Maybe Int -> String -> IO ()
-                    send mbTimeOut command = do hPutStrLn inh (clean command)
+                let send :: Maybe Int -> T.Text -> IO ()
+                    send mbTimeOut command = do TIO.hPutStrLn inh (clean command)
                                                 hFlush inh
                                                 recordTranscript (transcript cfg) $ SentMsg command mbTimeOut
 
@@ -796,16 +798,16 @@ runSolver cfg ctx execPath opts pgm continuation
                       where chk cmd = cmd /= heartbeat && "(set-option :" `isPrefixOf` cmd
 
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
-                    ask :: Maybe Int -> String -> IO String
+                    ask :: Maybe Int -> T.Text -> IO String
                     ask mbTimeOut command =
                                   let -- solvers don't respond to empty lines or comments; we just pass back
                                       -- success in these cases to keep the illusion of everything has a response
-                                      cmd = dropWhile isSpace command
+                                      cmd = T.dropWhile isSpace command
 
-                                  in if null cmd || ";" `isPrefixOf` cmd
+                                  in if T.null cmd || ";" `T.isPrefixOf` cmd
                                      then pure "success"
                                      else do send mbTimeOut command
-                                             getResponseFromSolver (Just command) mbTimeOut
+                                             getResponseFromSolver (Just (T.unpack command)) mbTimeOut
 
                     -- Get a response from the solver, with an optional time-out on how long
                     -- to wait. Note that there's *always* a time-out once we get the
@@ -875,7 +877,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                 (';':_) -> True   -- yes this does happen! I've seen z3 print out comments on stderr.
                                                                                 _       -> False
                                                                   in case (empty, need <= 0) of
-                                                                        (True, _)      -> do debug cfg ["[SKIP] " `alignPlain` ln]
+                                                                        (True, _)      -> do debug cfg ["[SKIP] " `alignPlain` T.pack ln]
                                                                                              go isFirst need sofar
                                                                         (False, False) -> go False   need (ln:sofar)
                                                                         (False, True)  -> pure (ln:sofar)
@@ -921,11 +923,11 @@ runSolver cfg ctx execPath opts pgm continuation
                     cleanUp maybeForwardedException
                       = do (out, err, ex) <- terminateSolver
 
-                           msg $   [ "Solver   : " ++ nm
-                                   , "Exit code: " ++ show ex
+                           msg $   [ "Solver   : " <> T.pack nm
+                                   , "Exit code: " <> showText ex
                                    ]
-                                ++ [ "Std-out  : " ++ intercalate "\n           " (lines out) | not (null out)]
-                                ++ [ "Std-err  : " ++ intercalate "\n           " (lines err) | not (null err)]
+                                <> [ "Std-out  : " <> T.pack (intercalate "\n           " (lines out)) | not (null out)]
+                                <> [ "Std-err  : " <> T.pack (intercalate "\n           " (lines err)) | not (null err)]
 
                            finalizeTranscript (transcript cfg) ex
                            recordEndTime cfg ctx
@@ -934,7 +936,7 @@ runSolver cfg ctx execPath opts pgm continuation
                              (_,           Just forwardedException) -> C.throwIO forwardedException
                              (ExitSuccess, _)                       -> pure ()
                              _                                      -> if ignoreExitCode cfg
-                                                                          then msg ["Ignoring non-zero exit code of " ++ show ex ++ " per user request!"]
+                                                                          then msg ["Ignoring non-zero exit code of " <> showText ex <> " per user request!"]
                                                                           else C.throwIO (solverException ("Failed to complete the call to " ++ nm))
                                                                                                       { sbvExceptionStdOut    = Just out
                                                                                                       , sbvExceptionStdErr    = Just err
@@ -946,7 +948,7 @@ runSolver cfg ctx execPath opts pgm continuation
 
                 pure (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid)
 
-      let executeSolver = do let sendAndGetSuccess :: Maybe Int -> String -> IO ()
+      let executeSolver = do let sendAndGetSuccess :: Maybe Int -> T.Text -> IO ()
                                  sendAndGetSuccess mbTimeOut l
                                    -- The pathetic case when the solver doesn't support queries, so we pretend it responded "success"
                                    -- Currently ABC is the only such solver.
@@ -959,7 +961,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                           ["success"] -> debug cfg ["[GOOD] " `alignPlain` l]
                                           _           -> do debug cfg ["[FAIL] " `alignPlain` l]
 
-                                                            let isOption = "(set-option" `isPrefixOf` dropWhile isSpace l
+                                                            let isOption = T.isPrefixOf "(set-option" (T.dropWhile isSpace l)
 
                                                                 reason | isOption = [ "Backend solver reports it does not support this option."
                                                                                     , "Check the spelling, and if correct please report this as a"
@@ -983,7 +985,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                 err = intercalate "\n" . lines $ errOrig
 
                                                                 exc = (solverException ("Unexpected non-success response from " ++ nm))
-                                                                                   { sbvExceptionSent     = Just l
+                                                                                   { sbvExceptionSent     = Just (T.unpack l)
                                                                                    , sbvExceptionExpected = Just "success"
                                                                                    , sbvExceptionReceived = Just $ r ++ "\n" ++ extras
                                                                                    , sbvExceptionStdOut   = Just out
@@ -1000,10 +1002,10 @@ runSolver cfg ctx execPath opts pgm continuation
                              -- First check that the solver supports :print-success
                              let backend = name $ solver cfg
                              if not (supportsCustomQueries (capabilities (solver cfg)))
-                                then debug cfg ["** Skipping heart-beat for the solver " ++ show backend]
-                                else do r <- ask defaultLineTO heartbeat
+                                then debug cfg ["** Skipping heart-beat for the solver " <> showText backend]
+                                else do r <- ask defaultLineTO (T.pack heartbeat)
                                         case words r of
-                                          ["success"]     -> debug cfg ["[GOOD] " ++ heartbeat]
+                                          ["success"]     -> debug cfg ["[GOOD] " <> T.pack heartbeat]
                                           ["unsupported"] -> error $ unlines [ ""
                                                                              , "*** Backend solver (" ++  show backend ++ ") does not support the command:"
                                                                              , "***"
@@ -1025,13 +1027,13 @@ runSolver cfg ctx execPath opts pgm continuation
                              -- For push/pop support, we require :global-declarations to be true. But not all solvers
                              -- support this. Issue it if supported. (If not, we'll reject pop calls.)
                              if not (supportsGlobalDecls (capabilities (solver cfg)))
-                                then debug cfg [ "** Backend solver " ++ show backend ++ " does not support global decls."
+                                then debug cfg [ "** Backend solver " <> showText backend <> " does not support global decls."
                                                , "** Some incremental calls, such as pop, will be limited."
                                                ]
                                 else sendAndGetSuccess Nothing "(set-option :global-declarations true)"
 
                              -- Now dump the program!
-                             mapM_ (sendAndGetSuccess Nothing) (mergeSExpr (lines pgm))
+                             mapM_ (sendAndGetSuccess Nothing) (mergeSExpr (T.lines pgm))
 
                              -- Prepare the query context and ship it off
                              let qs = QueryState { queryAsk                 = ask

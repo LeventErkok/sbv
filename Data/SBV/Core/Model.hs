@@ -20,6 +20,7 @@
 {-# LANGUAGE GADTs                   #-}
 {-# LANGUAGE MultiParamTypeClasses   #-}
 {-# LANGUAGE NamedFieldPuns          #-}
+{-# LANGUAGE OverloadedStrings       #-}
 {-# LANGUAGE RankNTypes              #-}
 {-# LANGUAGE ScopedTypeVariables     #-}
 {-# LANGUAGE TypeApplications        #-}
@@ -115,6 +116,7 @@ import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, mon
 import qualified Data.Foldable as F (toList, for_)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
+import qualified Data.Text as T
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Sized
@@ -889,7 +891,7 @@ observeIf cond m x
   = SBV $ SVal k $ Right $ cache r
   where k = kindOf x
         r st = do xsv <- sbvToSV st (label ("Observing: " ++ m) x)
-                  recordObservable st m (cond . fromCV) xsv
+                  recordObservable st (T.pack m) (cond . fromCV) xsv
                   pure xsv
 
 -- | Observe the value of an expression, unconditionally. See 'observeIf' for a generalized version.
@@ -1363,10 +1365,10 @@ verifyMeasure cfg funcNm info meval helpers = do
    let curVerifying = measuresBeingVerified (tpOptions cfg)
        cfg'         = cfg{tpOptions = (tpOptions cfg){measuresBeingVerified = Set.insert funcNm curVerifying}}
 
-   debug cfg ["[MEASURE] " ++ funcNm ++ ": verifying with " ++ show (length helpers) ++ " helper(s)"
-              ++ if Set.null curVerifying then "" else ", already verifying: " ++ show (Set.toList curVerifying)]
+   debug cfg ["[MEASURE] " <> T.pack funcNm <> ": verifying with " <> showText (length helpers) <> " helper(s)"
+              <> if Set.null curVerifying then "" else ", already verifying: " <> showText (Set.toList curVerifying)]
    axioms <- mapM (`runMeasureHelper` cfg') helpers
-   debug cfg ["[MEASURE] " ++ funcNm ++ ": " ++ show (length axioms) ++ " helper axiom(s) collected, checking measure"]
+   debug cfg ["[MEASURE] " <> T.pack funcNm <> ": " <> showText (length axioms) <> " helper axiom(s) collected, checking measure"]
    result <- checkMeasure cfg funcNm False info meval axioms
    let prettyNm = prettyFuncNm funcNm
    case result of
@@ -1539,9 +1541,9 @@ verifyMeasureWithContract cfg funcNm info meval ceval helpers = do
    let curVerifying = measuresBeingVerified (tpOptions cfg)
        cfg'         = cfg{tpOptions = (tpOptions cfg){measuresBeingVerified = Set.insert funcNm curVerifying}}
 
-   debug cfg ["[MEASURE] " ++ funcNm ++ " (contract): verifying with " ++ show (length helpers) ++ " helper(s)"]
+   debug cfg ["[MEASURE] " <> T.pack funcNm <> " (contract): verifying with " <> showText (length helpers) <> " helper(s)"]
    axioms <- mapM (`runMeasureHelper` cfg') helpers
-   debug cfg ["[MEASURE] " ++ funcNm ++ " (contract): " ++ show (length axioms) ++ " helper axiom(s) collected, checking measure+contract"]
+   debug cfg ["[MEASURE] " <> T.pack funcNm <> " (contract): " <> showText (length axioms) <> " helper axiom(s) collected, checking measure+contract"]
    result <- checkMeasureWithContract cfg funcNm False info meval ceval axioms
    let prettyNm = prettyFuncNm funcNm
    case result of
@@ -1731,7 +1733,7 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
 verifyGuardedness :: SMTConfig -> String -> LambdaInfo -> IO ()
 verifyGuardedness cfg funcNm info
   | isGuardedRecursive (Set.singleton (barify funcNm)) info
-  = debug cfg ["[MEASURE] " ++ funcNm ++ ": productive (all recursive calls are guarded by constructors)"]
+  = debug cfg ["[MEASURE] " <> T.pack funcNm <> ": productive (all recursive calls are guarded by constructors)"]
   | True
   = error $ unlines
       [ ""
@@ -1903,7 +1905,7 @@ ensureADTSizeDefined st sizeName adtKind ctors = do
    defs <- readIORef (rDefns st)
    unless (Map.member sizeName defs) $ do
       let argNm      = "x"
-          smtArgType = smtType adtKind
+          smtArgType = T.unpack (smtType adtKind)
 
           -- Build the SMT-Lib body for the size function
           body = buildBody ctors
@@ -1925,8 +1927,8 @@ ensureADTSizeDefined st sizeName adtKind ctors = do
           smtSum (x:xs) = "(+ " ++ x ++ " " ++ smtSum xs ++ ")"
           smtSum []     = "0"
 
-          paramStr = "((" ++ argNm ++ " " ++ smtArgType ++ "))"
-          smtDef   = SMTDef KUnbounded [sizeName] (Just paramStr) (\n -> replicate n ' ' ++ body)
+          paramStr = T.pack $ "((" ++ argNm ++ " " ++ smtArgType ++ "))"
+          smtDef   = SMTDef KUnbounded [sizeName] (Just paramStr) (\n -> T.pack (replicate n ' ' ++ body))
           sbvTy    = SBVType [adtKind, KUnbounded]
 
       modifyIORef' (rDefns st) (Map.insert sizeName (smtDef, sbvTy))
@@ -1973,31 +1975,31 @@ autoGuess cfg funcNm info = do
     let barFuncNm = barify funcNm
         recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList (liAssignments info), nm == barFuncNm]
         allUIs    = [(nm, length args) | (_, SBVApp (Uninterpreted nm) args) <- F.toList (liAssignments info)]
-    debug cfg ["[MEASURE] " ++ funcNm ++ ": barified = " ++ show barFuncNm]
-    debug cfg ["[MEASURE] " ++ funcNm ++ ": Uninterpreted ops in DAG: " ++ show allUIs]
-    debug cfg ["[MEASURE] " ++ funcNm ++ ": recursive calls found = " ++ show (length recCalls)]
+    debug cfg ["[MEASURE] " <> T.pack funcNm <> ": barified = " <> showText barFuncNm]
+    debug cfg ["[MEASURE] " <> T.pack funcNm <> ": Uninterpreted ops in DAG: " <> showText allUIs]
+    debug cfg ["[MEASURE] " <> T.pack funcNm <> ": recursive calls found = " <> showText (length recCalls)]
     go candidates
   where
     candidates = guessMeasures (liParams info)
     go []                    = pure Nothing
     go ((desc, m, mbIdx):ms) = do let skipNonNeg = "sbv.dt.size." `isPrefixOf` desc
-                                  debug cfg ["[MEASURE] " ++ funcNm ++ ": trying " ++ desc]
+                                  debug cfg ["[MEASURE] " <> T.pack funcNm <> ": trying " <> T.pack desc]
                                   -- For ADT size measures, try syntactic sub-term check first.
                                   -- This avoids calling the solver, which can hang on recursive
                                   -- define-fun-rec definitions.
                                   result <- case mbIdx of
                                               Just idx | isStructurallyDecreasing funcNm info idx -> do
-                                                 debug cfg ["[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK (structural recursion)"]
+                                                 debug cfg ["[MEASURE] " <> T.pack funcNm <> ": " <> T.pack desc <> " -> OK (structural recursion)"]
                                                  pure MeasureOK
                                               _ -> checkMeasure cfg funcNm skipNonNeg info m []
                                   case result of
-                                    MeasureOK              -> do debug cfg ["[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " -> OK"]
+                                    MeasureOK              -> do debug cfg ["[MEASURE] " <> T.pack funcNm <> ": " <> T.pack desc <> " -> OK"]
                                                                  pure (Just m)
-                                    MeasureNotNonNeg r     -> do debug cfg ["[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed non-negativity: " ++ show r]
-                                                                 debug cfg ["[MEASURE] " ++ funcNm ++ ": trying next candidate.."]
+                                    MeasureNotNonNeg r     -> do debug cfg ["[MEASURE] " <> T.pack funcNm <> ": " <> T.pack desc <> " failed non-negativity: " <> showText r]
+                                                                 debug cfg ["[MEASURE] " <> T.pack funcNm <> ": trying next candidate.."]
                                                                  go ms
-                                    MeasureNotDecreasing r -> do debug cfg ["[MEASURE] " ++ funcNm ++ ": " ++ desc ++ " failed strict decrease: " ++ show r]
-                                                                 debug cfg ["[MEASURE] " ++ funcNm ++ ": trying next candidate.."]
+                                    MeasureNotDecreasing r -> do debug cfg ["[MEASURE] " <> T.pack funcNm <> ": " <> T.pack desc <> " failed strict decrease: " <> showText r]
+                                                                 debug cfg ["[MEASURE] " <> T.pack funcNm <> ": trying next candidate.."]
                                                                  go ms
 
 -- | Auto-guess a termination measure, or fail with a helpful error message.
@@ -2060,9 +2062,9 @@ checkMutualFromState cfg funcNm st mbMeasure = do
                  -- Remove verified members from rFuncLambdaInfos so that subsequent closures
                  -- for the same group (registered by other members) find insufficient infos and skip.
                  modifyIORef' (rFuncLambdaInfos st) (\m -> foldl' (flip Map.delete) m plainMembers)
-         else do debug cfg ["[MEASURE] " ++ funcNm ++ ": mutual group already verified, skipping"]
+         else do debug cfg ["[MEASURE] " <> T.pack funcNm <> ": mutual group already verified, skipping"]
                  modifyIORef' (rFuncLambdaInfos st) (Map.delete funcNm)
-     _ -> do debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual check"]
+     _ -> do debug cfg ["[MEASURE] " <> T.pack funcNm <> ": not in a multi-member cycle, skipping mutual check"]
              modifyIORef' (rFuncLambdaInfos st) (Map.delete funcNm)
 
 -- | Reject mutual recursion for contract-based functions. Deferred to SCC computation time
@@ -2086,7 +2088,7 @@ rejectMutualContractFromState cfg funcNm st = do
                         , "*** Please use smtFunction or smtFunctionWithMeasure for mutual recursion groups."
                         , ""
                         ]
-     _ -> debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual contract check"]
+     _ -> debug cfg ["[MEASURE] " <> T.pack funcNm <> ": not in a multi-member cycle, skipping mutual contract check"]
 
 -- | Check that all members of a mutual recursion group marked as productive are guarded-recursive,
 -- considering cross-calls as well as self-calls.
@@ -2107,10 +2109,11 @@ checkMutualProductiveFromState cfg funcNm st = do
        if Map.size infos >= 2
          then do let barNames = Set.fromList members
                      memberNamesStr = intercalate ", " (map prettyFuncNm plainMembers)
-                 debug cfg ["[MEASURE] Checking mutual productive group: {" ++ memberNamesStr ++ "}"]
+                 debug cfg ["[MEASURE] Checking mutual productive group: {" <> T.pack memberNamesStr <> "}"]
                  let failed = [(pnm, info) | (pnm, info) <- Map.toList infos, not (isGuardedRecursive barNames info)]
                  case failed of
                    [] -> do debug cfg ["[MEASURE] Mutual productive group: all members are guarded"]
+
                             modifyIORef' (rFuncLambdaInfos st) (\m -> foldl' (flip Map.delete) m plainMembers)
                    _  -> error $ unlines $
                             [ ""
@@ -2124,9 +2127,9 @@ checkMutualProductiveFromState cfg funcNm st = do
                             , "*** Every recursive call (self or cross) must be a direct argument to a data constructor."
                             , ""
                             ]
-         else do debug cfg ["[MEASURE] " ++ funcNm ++ ": mutual productive group already verified, skipping"]
+         else do debug cfg ["[MEASURE] " <> T.pack funcNm <> ": mutual productive group already verified, skipping"]
                  modifyIORef' (rFuncLambdaInfos st) (Map.delete funcNm)
-     _ -> do debug cfg ["[MEASURE] " ++ funcNm ++ ": not in a multi-member cycle, skipping mutual productive check"]
+     _ -> do debug cfg ["[MEASURE] " <> T.pack funcNm <> ": not in a multi-member cycle, skipping mutual productive check"]
              modifyIORef' (rFuncLambdaInfos st) (Map.delete funcNm)
 
 -- | Check termination for a mutual recursion group. Each function in the group
@@ -2138,7 +2141,7 @@ checkMutualGroup :: SMTConfig -> Map.Map String LambdaInfo -> Maybe MeasureEval 
 checkMutualGroup cfg members mbMeasure = do
    let memberNames = Map.keys members
        memberNamesStr = intercalate ", " (map prettyFuncNm memberNames)
-   debug cfg ["[MEASURE] Checking mutual recursion group: {" ++ memberNamesStr ++ "}"]
+   debug cfg ["[MEASURE] Checking mutual recursion group: {" <> T.pack memberNamesStr <> "}"]
 
    -- If a user-provided measure is given, try it first
    let memberList = Map.toList members
@@ -2207,18 +2210,18 @@ checkMutualGroup cfg members mbMeasure = do
     where
      go [] = pure Nothing
      go ((desc, m, _mbIdx):rest) = do
-       debug cfg ["[MEASURE] Mutual group: trying measure " ++ desc ++ " for all members"]
+       debug cfg ["[MEASURE] Mutual group: trying measure " <> T.pack desc <> " for all members"]
        -- Try the same measure for all members. Catch exceptions from kind mismatches
        -- (e.g., applying abs to a list parameter) and treat them as failure.
        let memberList = [(nm, info) | (nm, info, _) <- memberInfos]
        result <- C.try $ checkMutualMeasure cfg memberList m
        case result of
-         Right True -> do debug cfg ["[MEASURE] Mutual group: measure " ++ desc ++ " works for all members"]
+         Right True -> do debug cfg ["[MEASURE] Mutual group: measure " <> T.pack desc <> " works for all members"]
                           pure (Just m)
-         Right False -> do debug cfg ["[MEASURE] Mutual group: measure " ++ desc ++ " failed, trying next"]
+         Right False -> do debug cfg ["[MEASURE] Mutual group: measure " <> T.pack desc <> " failed, trying next"]
                            go rest
          Left (e :: C.SomeException) -> do
-                           debug cfg ["[MEASURE] Mutual group: measure " ++ desc ++ " incompatible: " ++ show e]
+                           debug cfg ["[MEASURE] Mutual group: measure " <> T.pack desc <> " incompatible: " <> showText e]
                            go rest
 
 -- | Verify that a given measure works for all functions in a mutual recursion group.
@@ -2301,13 +2304,13 @@ checkMutualMeasure cfgIn members (MeasureEval applyM) = go members
                    pure $ sAnd obligations :: Symbolic SBool)
                case decResult of
                  ThmResult Unsatisfiable{} -> do
-                   debug cfgIn ["[MEASURE] Mutual group: decrease verified for " ++ funcNm]
+                   debug cfgIn ["[MEASURE] Mutual group: decrease verified for " <> T.pack funcNm]
                    go rest
                  _ -> do
-                   debug cfgIn ["[MEASURE] Mutual group: decrease failed for " ++ funcNm ++ ": " ++ show decResult]
+                   debug cfgIn ["[MEASURE] Mutual group: decrease failed for " <> T.pack funcNm <> ": " <> showText decResult]
                    pure False
              _ -> do
-               debug cfgIn ["[MEASURE] Mutual group: non-negativity failed for " ++ funcNm]
+               debug cfgIn ["[MEASURE] Mutual group: non-negativity failed for " <> T.pack funcNm]
                pure False
 
 -- | Pretty-print a function name: turn @"insert @(SBV Integer -> SBV [Integer])"@ into @"insert :: SBV Integer -> SBV [Integer]"@
@@ -2337,7 +2340,7 @@ replayDAG :: SMTConfig -> State -> Set.Set String -> Set.Set String -> Map.Map S
 replayDAG cfg st recFuncNames definedFuncs startMap dag = do
   let n = length dag
   let nms = intercalate ", " (map unBar (Set.toList recFuncNames))
-  debug cfg ["[MEASURE] replayDAG {" ++ nms ++ "}: replaying " ++ show n ++ " node(s)"]
+  debug cfg ["[MEASURE] replayDAG {" <> T.pack nms <> "}: replaying " <> showText n <> " node(s)"]
   go startMap dag
   where -- Map an SV through the svMap. If it's not found, it's an external captured variable
         -- (e.g., from a higher-order function's closure). Create a fresh unconstrained variable
@@ -3592,7 +3595,8 @@ instance Mergeable a => Mergeable (Maybe a) where
   symbolicMerge _ _ a b = cannotMerge "'Maybe' values"
                                       ("Branches produce different constructors: " ++ show (k a, k b))
                                       "Instead of an option type, try using a valid bit to indicate when a result is valid."
-      where k Nothing = "Nothing"
+      where k :: Maybe a -> String
+            k Nothing = "Nothing"
             k _       = "Just"
 
 -- Either
@@ -3602,7 +3606,8 @@ instance (Mergeable a, Mergeable b) => Mergeable (Either a b) where
   symbolicMerge _ _ a b = cannotMerge "'Either' values"
                                       ("Branches produce different constructors: " ++ show (k a, k b))
                                       "Consider using a product type by a tag instead."
-     where k (Left _)  = "Left"
+     where k :: Either a b -> String
+           k (Left _)  = "Left"
            k (Right _) = "Right"
 
 -- Arrays
@@ -4026,7 +4031,7 @@ class SMTDefinable a where
                                              ((funcNm, True, \cfg -> checkMutualProductiveFromState cfg funcNm st) :)
                               pure def
                             Unverified -> do modifyIORef' (rNoTermCheckFunctions st) (Set.insert nm)
-                                             debug (stCfg st) ["[MEASURE] " ++ funcNm ++ ": no termination check (smtFunctionNoTermination)"]
+                                             debug (stCfg st) ["[MEASURE] " <> T.pack funcNm <> ": no termination check (smtFunctionNoTermination)"]
                                              pure def)
 
 
@@ -4172,7 +4177,7 @@ instance SymVal a => SMTDefinable (SBV a) where
     = do st <- mkNewState defaultSMTCfg (LambdaGen (Just 0))
          s <- lambdaStr st TopLevel (kindOf a) a
          pure $ intercalate "\n" [ "; Automatically generated by SBV. Do not modify!"
-                                 , "; Type: " ++ smtType (kindOf a)
+                                 , "; Type: " ++ T.unpack (smtType (kindOf a))
                                  , show s
                                  ]
   sbvFun2smt fn = defs2smt (\args -> fn args .== fn args)
@@ -4768,7 +4773,7 @@ smtHOFunctionGen :: forall a b f.
                    ->  a -> SBV b          -- ^ The resulting function
 smtHOFunctionGen nm f measure hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cache r
   where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg (arrayResultKind (kindOf (Proxy @f))) f
-                  let uniq = lambdaFingerprint st lam
+                  let uniq = lambdaFingerprint st (T.unpack lam)
                   sbvToSV st (smtFunctionDef (atProxy (Proxy @f) nm <> "_" <> uniq) measure hof arg)
 
 -- | Chase through nested array kinds to find the final result kind. Higher-order

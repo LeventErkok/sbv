@@ -80,9 +80,9 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , registerLabel, svMkSymVar, validationRequested
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState, MonadSymbolic(..)
-                              , UserInputs, getSV, NamedSymVar(..), lookupInput, getUserName'
+                              , UserInputs, getSV, NamedSymVar(..), lookupInput, getUserName, getUserName'
                               , Name, CnstMap, Inputs(..), ProgInfo(..)
-                              , mustIgnoreVar, newInternalVariable, Penalty(..)
+                              , mustIgnoreVar, newInternalVariable, Penalty(..), smtLibPgmText
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -98,7 +98,7 @@ import Data.SBV.SMT.Utils   ( showTimeoutValue, addAnnotations, alignPlain, debu
                             )
 
 import Data.SBV.Utils.ExtractIO
-import Data.SBV.Utils.Lib       (qfsToString, unBar, mapToSortedList)
+import Data.SBV.Utils.Lib       (qfsToString, unBar, mapToSortedList, showText)
 import Data.SBV.Utils.SExpr
 import Data.SBV.Utils.PrettyNum (cvToSMTLib)
 
@@ -128,7 +128,7 @@ instance MonadIO m => SolverContext (QueryT m) where
                                              , "*** Hint: Move the call to 'setOption' before the query."
                                              ]
      | True                = do State{stCfg} <- contextState
-                                send True $ T.unpack $ setSMTOption stCfg o
+                                send True $ setSMTOption stCfg o
 
 -- | Adding a constraint, possibly with attributes and possibly soft. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.
@@ -137,7 +137,7 @@ addQueryConstraint isSoft atts b = do sv <- inNewContext (\st -> liftIO $ do map
                                                                              sbvToSV st b)
 
                                       unless (null atts && sv == trueSV) $
-                                             send True $ "(" ++ asrt ++ " " ++ T.unpack (addAnnotations atts (T.pack (show sv)))  ++ ")"
+                                             send True $ "(" <> T.pack asrt <> " " <> addAnnotations atts (showText sv) <> ")"
    where asrt | isSoft = "assert-soft"
               | True   = "assert"
 
@@ -181,7 +181,7 @@ syncUpSolver progInfo rGlobalConsts is = do
 
                        let cnsts = mapToSortedList newConsts
 
-                       pure $ map T.unpack $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis as constraints cfg
+                       pure $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis as constraints cfg
 
         mapM_ (send True) $ mergeSExpr ls
 
@@ -227,31 +227,30 @@ freshVar nm = inNewContext $ fmap SBV . svMkSymVar QueryVar k (Just nm)
   where k = kindOf (Proxy @a)
 
 -- | Generalization of 'Data.SBV.Control.queryDebug'
-queryDebug :: (MonadIO m, MonadQuery m) => [String] -> m ()
+queryDebug :: (MonadIO m, MonadQuery m) => [T.Text] -> m ()
 queryDebug msgs = do QueryState{queryConfig} <- getQueryState
                      io $ do debug queryConfig msgs
-                             -- If we're doing a transcript, record it there too
-                             recordTranscript (transcript queryConfig) (DebugMsg (unlines msgs))
+                             recordTranscript (transcript queryConfig) (DebugMsg (T.unlines msgs))
 
 -- | We need to track sent asserts/check-sat calls so we can issue an extra check-sat call if needed
-trackAsserts :: (MonadIO m, MonadQuery m) => String -> m ()
+trackAsserts :: (MonadIO m, MonadQuery m) => T.Text -> m ()
 trackAsserts s
    | isCheckSat || isAssert
    = do State{rOutstandingAsserts} <- queryState
         liftIO $ writeIORef rOutstandingAsserts isAssert
    | True
    = pure ()
-  where trimmedS   = dropWhile isSpace s
-        isCheckSat = "(check-sat" `isPrefixOf` trimmedS
-        isAssert   = "(assert"    `isPrefixOf` trimmedS
+  where trimmedS   = T.dropWhile isSpace s
+        isCheckSat = "(check-sat" `T.isPrefixOf` trimmedS
+        isAssert   = "(assert"    `T.isPrefixOf` trimmedS
 
 -- | Generalization of 'Data.SBV.Control.ask'
-ask :: (MonadIO m, MonadQuery m) => String -> m String
+ask :: (MonadIO m, MonadQuery m) => T.Text -> m String
 ask s = askIgnoring s []
 
 -- | Send a string to the solver, and return the response. Except, if the response
 -- is one of the "ignore" ones, keep querying.
-askIgnoring :: (MonadIO m, MonadQuery m) => String -> [String] -> m String
+askIgnoring :: (MonadIO m, MonadQuery m) => T.Text -> [String] -> m String
 askIgnoring s ignoreList = do
 
            trackAsserts s
@@ -260,9 +259,9 @@ askIgnoring s ignoreList = do
 
            case queryTimeOutValue of
              Nothing -> queryDebug ["[SEND] " `alignPlain` s]
-             Just i  -> queryDebug ["[SEND, TimeOut: " ++ showTimeoutValue i ++ "] " `alignPlain` s]
+             Just i  -> queryDebug ["[SEND, TimeOut: " <> T.pack (showTimeoutValue i) <> "] " `alignPlain` s]
            r <- io $ queryAsk queryTimeOutValue s
-           queryDebug ["[RECV] " `alignPlain` r]
+           queryDebug ["[RECV] " `alignPlain` T.pack r]
 
            let loop currentResponse
                  | currentResponse `notElem` ignoreList
@@ -270,13 +269,13 @@ askIgnoring s ignoreList = do
                  | True
                  = do queryDebug ["[WARN] Previous response is explicitly ignored, beware!"]
                       newResponse <- io $ queryRetrieveResponse queryTimeOutValue
-                      queryDebug ["[RECV] " `alignPlain` newResponse]
+                      queryDebug ["[RECV] " `alignPlain` T.pack newResponse]
                       loop newResponse
 
            loop r
 
 -- | Generalization of 'Data.SBV.Control.send'
-send :: (MonadIO m, MonadQuery m) => Bool -> String -> m ()
+send :: (MonadIO m, MonadQuery m) => Bool -> T.Text -> m ()
 send requireSuccess s = do
 
             trackAsserts s
@@ -290,11 +289,11 @@ send requireSuccess s = do
                          ["success"] -> queryDebug ["[GOOD] " `alignPlain` s]
                          _           -> do case queryTimeOutValue of
                                              Nothing -> queryDebug ["[FAIL] " `alignPlain` s]
-                                             Just i  -> queryDebug [("[FAIL, TimeOut: " ++ showTimeoutValue i ++ "]  ") `alignPlain` s]
+                                             Just i  -> queryDebug ["[FAIL, TimeOut: " <> T.pack (showTimeoutValue i) <> "]  " `alignPlain` s]
 
 
-                                           let cmd = case words (dropWhile (\c -> isSpace c || isPunctuation c) s) of
-                                                       (c:_) -> c
+                                           let cmd = case T.words (T.dropWhile (\c -> isSpace c || isPunctuation c) s) of
+                                                       (c:_) -> T.unpack c
                                                        _     -> "Command"
 
                                            unexpected cmd s "success" Nothing r Nothing
@@ -311,9 +310,9 @@ retrieveResponse userTag mbTo = do
              let synchTag = show $ userTag ++ " (at: " ++ ts ++ ")"
                  cmd = "(echo " ++ synchTag ++ ")"
 
-             queryDebug ["[SYNC] Attempting to synchronize with tag: " ++ synchTag]
+             queryDebug ["[SYNC] Attempting to synchronize with tag: " <> T.pack synchTag]
 
-             send False cmd
+             send False (T.pack cmd)
 
              QueryState{queryRetrieveResponse} <- getQueryState
 
@@ -324,9 +323,9 @@ retrieveResponse userTag mbTo = do
                   -- echo'ed strings, but they don't always do. Accommodate for that
                   -- here, though I wish we didn't have to.
                   if s == synchTag || show s == synchTag
-                     then do queryDebug ["[SYNC] Synchronization achieved using tag: " ++ synchTag]
+                     then do queryDebug ["[SYNC] Synchronization achieved using tag: " <> T.pack synchTag]
                              pure $ reverse sofar
-                     else do queryDebug ["[RECV] " `alignPlain` s]
+                     else do queryDebug ["[RECV] " `alignPlain` T.pack s]
                              loop (s : sofar)
 
              loop []
@@ -487,7 +486,7 @@ pointWiseExtract nm typ = tryPointWise
 
                               as = unwords $ map shc args
 
-                              cmd   = "(get-value ((" ++ nm ++ " " ++ as ++ ")))"
+                              cmd   = "(get-value ((" <> T.pack nm <> " " <> T.pack as <> ")))"
 
                               bad   = unexpected "get-value" cmd ("pointwise value of boolean function " ++ nm ++ " on " ++ show as) Nothing
 
@@ -837,7 +836,7 @@ getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVa
             => fun -> m (Either (String, (Bool, Maybe [String], SExpr))  ([(a, r)], r))
 getFunction f = do ((nm, args), isCurried) <- smtFunName f
 
-                   let cmd = "(get-value (" ++ nm ++ "))"
+                   let cmd = "(get-value (" <> T.pack nm <> "))"
                        bad = unexpected "getFunction" cmd "a function value" Nothing
 
                    r <- ask cmd
@@ -1159,7 +1158,7 @@ getValueCV mbi s
           else do send True "(set-option :pp.decimal false)"
                   rep1 <- getValueCVHelper mbi s
                   send True   "(set-option :pp.decimal true)"
-                  send True $ "(set-option :pp.decimal_precision " ++ show (printRealPrec cfg) ++ ")"
+                  send True $ "(set-option :pp.decimal_precision " <> showText (printRealPrec cfg) <> ")"
                   rep2 <- getValueCVHelper mbi s
 
                   let bad = unexpected "getValueCV" "get-value" ("a real-valued binding for " ++ show s) Nothing (show (rep1, rep2)) Nothing
@@ -1175,7 +1174,7 @@ extractValue mbi nm k = do
                           Nothing -> ""
                           Just i  -> " :model_index " ++ show i
 
-           cmd        = "(get-value (" ++ nm ++ ")" ++ modelIndex ++ ")"
+           cmd        = "(get-value (" <> T.pack nm <> ")" <> T.pack modelIndex <> ")"
 
            bad = unexpected "get-value" cmd ("a value binding for kind: " ++ show k) Nothing
 
@@ -1203,7 +1202,7 @@ getUIFunCVAssoc mbi (nm, (isCurried, mbArgs, typ)) = do
                      Nothing -> ""
                      Just i  -> " :model_index " ++ show i
 
-      cmd        = "(get-value (" ++ nm ++ ")" ++ modelIndex ++ ")"
+      cmd        = "(get-value (" <> T.pack nm <> ")" <> T.pack modelIndex <> ")"
 
       bad        = unexpected "get-value" cmd "a function value" Nothing
 
@@ -1251,18 +1250,18 @@ checkSat = do cfg <- getConfig
 
 -- | Generalization of 'Data.SBV.Control.checkSatUsing'
 checkSatUsing :: (MonadIO m, MonadQuery m) => String -> m CheckSatResult
-checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unknown" Nothing
+checkSatUsing cmd = do let bad = unexpected "checkSat" (T.pack cmd) "one of sat/unsat/unknown" Nothing
 
                            -- Sigh.. Ignore some of the pesky warnings. We only do it as an exception here.
                            ignoreList = ["WARNING: optimization with quantified constraints is not supported"]
 
-                       r <- askIgnoring cmd ignoreList
+                       r <- askIgnoring (T.pack cmd) ignoreList
 
                        -- query for the precision if supported
                        let getPrecision = do cfg <- getConfig
                                              case supportsDeltaSat (capabilities (solver cfg)) of
                                                Nothing -> pure Nothing
-                                               Just o  -> Just <$> ask o
+                                               Just o  -> Just <$> ask (T.pack o)
 
                        parse r bad $ \case ECon "sat"       -> pure Sat
                                            ECon "unsat"     -> pure Unsat
@@ -1328,11 +1327,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                       -- Functions have at least two kinds in their type and all components must be "interpreted"
                      let allUiFuns = [u | allSatTrackUFs cfg                                              -- config says consider UIFs
                                         , u@(nm, (_, _, SBVType as)) <- allUninterpreteds, length as > 1  -- get the function ones
-                                        , not (mustIgnoreVar cfg nm)                                      -- make sure they aren't explicitly ignored
+                                        , not (mustIgnoreVar cfg (T.pack nm))                              -- make sure they aren't explicitly ignored
                                      ]
 
                          allUiRegs = [u | u@(nm, (_, _, SBVType as)) <- allUninterpreteds, length as == 1 -- non-function ones
-                                        , not (mustIgnoreVar cfg nm)                                      -- make sure they aren't explicitly ignored
+                                        , not (mustIgnoreVar cfg (T.pack nm))                              -- make sure they aren't explicitly ignored
                                      ]
 
                          -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
@@ -1342,7 +1341,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                            | not (any hasUninterpretedSorts ats)
                            = collectAcceptable rest (nm : sofar)
                            | True
-                           = do queryDebug [ "*** SBV.allSat: Uninterpreted function: " ++ nm ++ " :: " ++ show t
+                           = do queryDebug [ "*** SBV.allSat: Uninterpreted function: " <> T.pack nm <> " :: " <> showText t
                                            , "*** Will *not* be used in allSat considerations since its type"
                                            , "*** has uninterpreted sorts present."
                                            ]
@@ -1355,18 +1354,18 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      -- as cex's tend to get larger
                      unless (null uiFuns) $
                         let solverCaps = capabilities (solver cfg)
-                        in F.for_ (supportsFlattenedModels solverCaps) (mapM_ (send True))
+                        in F.for_ (supportsFlattenedModels solverCaps) (mapM_ (send True . T.pack))
 
                      let usorts = [s | us@(KADT s _ _) <- Set.toAscList ki, isUninterpreted us]
 
-                     unless (null usorts) $ queryDebug [ "*** SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
+                     unless (null usorts) $ queryDebug [ "*** SBV.allSat: Uninterpreted sorts present: " <> T.pack (unwords usorts)
                                                        , "***             SBV will use equivalence classes to generate all-satisfying instances."
                                                        ]
 
                      -- Drop the things that are not model vars or internal
                      let mkSVal nm@(getSV -> sv) = (SVal (kindOf sv) (Right (cache (const (pure sv)))), nm)
                      let extractVars :: S.Seq (SVal, NamedSymVar)
-                         extractVars = mkSVal <$> S.filter (not . mustIgnoreVar cfg . getUserName') allModelInputs
+                         extractVars = mkSVal <$> S.filter (not . mustIgnoreVar cfg . getUserName) allModelInputs
 
                          vars :: S.Seq (SVal, NamedSymVar)
                          vars = case partitionVars of
@@ -1457,7 +1456,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                 else case allSatMaxModelCount cfg of
                                                        Just maxModels
                                                          | have >= maxModels -> do unless (allSatMaxModelCountReached sofar) $ do
-                                                                                      queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
+                                                                                      queryDebug ["*** Maximum model count request of " <> showText maxModels <> " reached, stopping the search."]
                                                                                       when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
                                                                                       io $ modifyIORef' finalResult $ \(h, s, _, m) -> (h, s{ allSatMaxModelCountReached = True }, True, m)
                                                                                    pure Nothing
@@ -1466,20 +1465,18 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                 case mbCont of
                                   Nothing  -> pure ()
                                   Just cnt -> do
-                                    queryDebug ["Fast allSat, Looking for solution " ++ show cnt]
+                                    queryDebug ["Fast allSat, Looking for solution " <> showText cnt]
 
                                     cs <- checkSat
 
                                     case cs of
                                       Unsat  -> pure ()
 
-                                      Unk    -> do let m = "Solver returned unknown, terminating query."
-                                                   queryDebug ["*** " ++ m]
-                                                   io $ modifyIORef' finalResult $ \(h, s, _, _) -> (h, s{allSatSolverReturnedUnknown = True}, True, Just ("[" ++ m ++ "]"))
+                                      Unk    -> do queryDebug ["*** Solver returned unknown, terminating query."]
+                                                   io $ modifyIORef' finalResult $ \(h, s, _, _) -> (h, s{allSatSolverReturnedUnknown = True}, True, Just "[Solver returned unknown, terminating query.]")
 
-                                      DSat _ -> do let m = "Solver returned delta-sat, terminating query."
-                                                   queryDebug ["*** " ++ m]
-                                                   io $ modifyIORef' finalResult $ \(h, s, _, _) -> (h, s{allSatSolverReturnedDSat = True}, True, Just ("[" ++ m ++ "]"))
+                                      DSat _ -> do queryDebug ["*** Solver returned delta-sat, terminating query."]
+                                                   io $ modifyIORef' finalResult $ \(h, s, _, _) -> (h, s{allSatSolverReturnedDSat = True}, True, Just "[Solver returned delta-sat, terminating query.]")
 
                                       Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
                                                                                                    pure (sv, (n, (sval, cv)))) extractVars
@@ -1557,11 +1554,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
            where go :: Int -> AllSatResult -> m AllSatResult
                  go !cnt !sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
-                   = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
+                   = do queryDebug ["*** Maximum model count request of " <> showText maxModels <> " reached, stopping the search."]
                         when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
                         pure $! sofar { allSatMaxModelCountReached = True }
                    | True
-                   = do queryDebug ["Looking for solution " ++ show cnt]
+                   = do queryDebug ["Looking for solution " <> showText cnt]
 
                         cs <- checkSat
 
@@ -1571,14 +1568,12 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                           Unsat  -> do endMsg Nothing
                                        pure sofar
 
-                          Unk    -> do let m = "Solver returned unknown, terminating query."
-                                       queryDebug ["*** " ++ m]
-                                       endMsg $ Just $ "[" ++ m ++ "]"
+                          Unk    -> do queryDebug ["*** Solver returned unknown, terminating query."]
+                                       endMsg $ Just "[Solver returned unknown, terminating query.]"
                                        pure sofar{ allSatSolverReturnedUnknown = True }
 
-                          DSat _ -> do let m = "Solver returned delta-sat, terminating query."
-                                       queryDebug ["*** " ++ m]
-                                       endMsg $ Just $ "[" ++ m ++ "]"
+                          DSat _ -> do queryDebug ["*** Solver returned delta-sat, terminating query."]
+                                       endMsg $ Just "[Solver returned delta-sat, terminating query.]"
                                        pure sofar{ allSatSolverReturnedDSat = True }
 
                           Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
@@ -1648,8 +1643,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                            -- For each uninterpreted function, create a disqualifying equation
                                            -- We do this rather brute-force, since we need to create a new function
                                            -- and do an existential assertion.
-                                           uninterpretedReject :: Maybe [String]
-                                           uninterpretedFuns   :: [String]
+                                           uninterpretedReject :: Maybe [T.Text]
+                                           uninterpretedFuns   :: [T.Text]
                                            (uninterpretedReject, uninterpretedFuns) = (uiReject, concat defs)
                                                where uiReject = case rejects of
                                                                   []  -> Nothing
@@ -1681,39 +1676,39 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                           , "*** NB. If this is a use case you'd like SBV to support, please get in touch!"
                                                           ]
                                                      mkNotEq (nm, (_, SBVType ts, Right vs)) = (reject, def ++ dif)
-                                                       where nm' = nm ++ "_model" ++ show cnt
+                                                       where nm' = T.pack nm <> "_model" <> showText cnt
 
-                                                             reject = nm' ++ "_reject"
+                                                             reject = nm' <> "_reject"
 
                                                              -- rounding mode doesn't matter here, just pick one
                                                              scv = cvToSMTLib RoundNearestTiesToEven
 
                                                              (ats, rt) = (init ts, last ts)
 
-                                                             args = unwords ["(x!" ++ show i ++ " " ++ smtType t ++ ")" | (t, i) <- zip ats [(0::Int)..]]
+                                                             args = T.unwords ["(x!" <> showText i <> " " <> smtType t <> ")" | (t, i) <- zip ats [(0::Int)..]]
                                                              res  = smtType rt
 
-                                                             params = ["x!" ++ show i | (_, i) <- zip ats [(0::Int)..]]
+                                                             params = ["x!" <> showText i | (_, i) <- zip ats [(0::Int)..]]
 
-                                                             uparams = unwords params
+                                                             uparams = T.unwords params
 
                                                              chain (vals, fallThru) = walk vals
-                                                               where walk []               = ["   " ++ scv fallThru ++ replicate (length vals) ')']
-                                                                     walk ((as, r) : rest) = ("   (ite " ++ cond as ++ " " ++ scv r) :  walk rest
+                                                               where walk []               = ["   " <> scv fallThru <> T.replicate (length vals) ")"]
+                                                                     walk ((as, r) : rest) = ("   (ite " <> cond as <> " " <> scv r) :  walk rest
 
-                                                                     cond as = "(and " ++ unwords (zipWith eq params as) ++ ")"
-                                                                     eq p a  = "(= " ++ p ++ " " ++ scv a ++ ")"
+                                                                     cond as = "(and " <> T.unwords (zipWith eq params as) <> ")"
+                                                                     eq p a  = "(= " <> p <> " " <> scv a <> ")"
 
-                                                             def =    ("(define-fun " ++ nm' ++ " (" ++ args ++ ") " ++ res)
+                                                             def =    ("(define-fun " <> nm' <> " (" <> args <> ") " <> res)
                                                                    :  chain vs
                                                                    ++ [")"]
 
-                                                             pad = replicate (1 + length nm' - length nm) ' '
+                                                             pad = T.replicate (1 + T.length nm' - length nm) " "
 
-                                                             dif = [ "(define-fun " ++  reject ++ " () Bool"
-                                                                   , "   (exists (" ++ args ++ ")"
-                                                                   , "           (distinct (" ++ nm  ++ pad ++ uparams ++ ")"
-                                                                   , "                     (" ++ nm' ++ " " ++ uparams ++ "))))"
+                                                             dif = [ "(define-fun " <>  reject <> " () Bool"
+                                                                   , "   (exists (" <> args <> ")"
+                                                                   , "           (distinct (" <> T.pack nm  <> pad <> uparams <> ")"
+                                                                   , "                     (" <> nm' <> " " <> uparams <> "))))"
                                                                    ]
 
                                            eqs = interpretedEqs ++ uninterpretedEqs
@@ -1740,11 +1735,12 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                       header          = "define-fun " ++ uiFunRejector ++ " () Bool "
 
                                                       defineRejector []     = pure ()
-                                                      defineRejector [x]    = send True $ "(" ++ header ++ x ++ ")"
-                                                      defineRejector (x:xs) = mapM_ (send True) $ mergeSExpr $  ("(" ++ header)
-                                                                                                             :  ("        (or " ++ x)
-                                                                                                             :  ["            " ++ e | e <- xs]
-                                                                                                             ++ ["        ))"]
+                                                      defineRejector [x]    = send True $ "(" <> T.pack header <> x <> ")"
+                                                      defineRejector (x:xs) = mapM_ (send True) $ mergeSExpr
+                                                                                                                  $  T.pack ("(" ++ header)
+                                                                                                                  :  ("        (or " <> x)
+                                                                                                                  :  ["            " <> e | e <- xs]
+                                                                                                                  ++ ["        ))"]
                                                   rejectFuncs <- case uninterpretedReject of
                                                                    Nothing -> pure Nothing
                                                                    Just fs -> do mapM_ (send True) $ mergeSExpr uninterpretedFuns
@@ -1756,19 +1752,19 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                      (Nothing, Nothing) -> pure resultsSoFar
                                                      (Just d,  Nothing) -> do constrain d
                                                                               go (cnt+1) resultsSoFar
-                                                     (Nothing, Just f)  -> do send True $ "(assert " ++ f ++ ")"
+                                                     (Nothing, Just f)  -> do send True $ "(assert " <> T.pack f <> ")"
                                                                               go (cnt+1) resultsSoFar
                                                      (Just d,  Just f)  -> -- This is where it gets ugly. We have an SBV and a string and we need to "or" them.
                                                                            -- But we need a way to force 'd' to be produced. So, go ahead and force it:
                                                                            do constrain $ d .=> d  -- NB: Redundant, but it makes sure the corresponding constraint gets shown
                                                                               svd <- io $ svToSV topState (unSBV d)
-                                                                              send True $ "(assert (or " ++ f ++ " " ++ show svd ++ "))"
+                                                                              send True $ "(assert (or " <> T.pack f <> " " <> showText svd <> "))"
                                                                               go (cnt+1) resultsSoFar
 
 -- | Generalization of 'Data.SBV.Control.getUnsatAssumptions'
 getUnsatAssumptions :: (MonadIO m, MonadQuery m) => [String] -> [(String, a)] -> m [a]
 getUnsatAssumptions originals proxyMap = do
-        let cmd = "(get-unsat-assumptions)"
+        let cmd = "(get-unsat-assumptions)" :: T.Text
 
             bad = unexpected "getUnsatAssumptions" cmd "a list of unsatisfiable assumptions"
                            $ Just [ "Make sure you use:"
@@ -1793,8 +1789,8 @@ getUnsatAssumptions originals proxyMap = do
                                   Just v  -> walk as (v:sofar)
                                   Nothing -> do queryDebug [ "*** In call to 'getUnsatAssumptions'"
                                                            , "***"
-                                                           , "***    Unexpected assumption named: " ++ show a
-                                                           , "***    Was expecting one of       : " ++ show originals
+                                                           , "***    Unexpected assumption named: " <> showText a
+                                                           , "***    Was expecting one of       : " <> showText originals
                                                            , "***"
                                                            , "*** This can happen if unsat-cores are also enabled. Ignoring."
                                                            ]
@@ -1831,7 +1827,7 @@ parse r fCont sCont = case parseSExpr r of
                         Right res -> sCont res
 
 -- | Generalization of 'Data.SBV.Control.unexpected'
-unexpected :: (MonadIO m, MonadQuery m) => String -> String -> String -> Maybe [String] -> String -> Maybe [String] -> m a
+unexpected :: (MonadIO m, MonadQuery m) => String -> T.Text -> String -> Maybe [String] -> String -> Maybe [String] -> m a
 unexpected ctx sent expected mbHint received mbReason = do
         -- empty the response channel first
         extras <- retrieveResponse "terminating upon unexpected response" (Just 5000000)
@@ -1839,7 +1835,7 @@ unexpected ctx sent expected mbHint received mbReason = do
         cfg <- getConfig
 
         let exc = SBVException { sbvExceptionDescription = "Unexpected response from the solver, context: " ++ ctx
-                               , sbvExceptionSent        = Just sent
+                               , sbvExceptionSent        = Just (T.unpack sent)
                                , sbvExceptionExpected    = Just expected
                                , sbvExceptionReceived    = Just received
                                , sbvExceptionStdOut      = Just $ unlines extras
@@ -1913,12 +1909,12 @@ executeQuery queryContext originalQuery = do
                                 checks <- readIORef (rMeasureChecks st)
                                 unless (null checks) $ do
                                   let nms = map (\(n, _, _) -> n) checks
-                                  debug cfg ["[MEASURE] Verifying termination measures for: " ++ intercalate ", " nms]
+                                  debug cfg ["[MEASURE] Verifying termination measures for: " <> T.pack (intercalate ", " nms)]
                                   mapM_ (\(nm, isProductive, check) -> do
-                                            debug cfg ["[MEASURE] Checking: " ++ nm]
+                                            debug cfg ["[MEASURE] Checking: " <> T.pack nm]
                                             check cfg
                                             let tag = if isProductive then "productive" else "terminating"
-                                            debug cfg ["[MEASURE] Passed (" ++ tag ++ "): " ++ nm]
+                                            debug cfg ["[MEASURE] Passed (" <> tag <> "): " <> T.pack nm]
                                         ) checks
 
                   let SMTProblem{smtLibPgm} = runProofOn rm queryContext [] res
@@ -1940,11 +1936,11 @@ executeQuery queryContext originalQuery = do
                                     QueryExternal -> do mbDirs <- startOptimizer cfg Lexicographic
                                                         case mbDirs of
                                                           Nothing        -> pure ()
-                                                          Just (_, cmds) -> mapM_ (send True) cmds
+                                                          Just (_, cmds) -> mapM_ (send True . T.pack) cmds
                                                         originalQuery
 
                   lift $ join $ liftIO $ C.mask $ \restore -> do
-                    r <- restore (extractIO $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT (runQueryT userQuery))
+                    r <- restore (extractIO $ join $ liftIO $ backend cfg' st (smtLibPgmText pgm) $ extractIO . runReaderT (runQueryT userQuery))
                           `C.catch` \e -> terminateSolver (Just e) >> C.throwIO (e :: C.SomeException)
                     terminateSolver Nothing
                     pure r
@@ -2057,7 +2053,7 @@ startOptimizer config style = do
 -- | Just after a check-sat is issued, collect objective values. Used
 -- internally only, not exposed to the user.
 getObjectiveValues :: forall m. (MonadIO m, MonadQuery m) => m [(String, GeneralizedCV)]
-getObjectiveValues = do let cmd = "(get-objectives)"
+getObjectiveValues = do let cmd = "(get-objectives)" :: T.Text
 
                             bad = unexpected "getObjectiveValues" cmd "a list of objective values" Nothing
 
@@ -2137,18 +2133,18 @@ getModelAtIndex mbi = do
 
           let name     = fst . snd
               removeSV = snd
-              prepare  = S.unstableSort . S.filter (not . mustIgnoreVar cfg . T.unpack . name)
+              prepare  = S.unstableSort . S.filter (not . mustIgnoreVar cfg . name)
               assocs   = (removeSV <$> prepare inputAssocs) <> S.fromList (sortOn fst obsvs)
 
           -- collect UIs, and UI functions if requested
-          let uiFuns = [ui | ui@(nm, (_, _, SBVType as)) <- uis, length as >  1, allSatTrackUFs cfg, not (mustIgnoreVar cfg nm)] -- functions have at least two things in their type!
-              uiRegs = [ui | ui@(nm, (_, _, SBVType as)) <- uis, length as == 1,                     not (mustIgnoreVar cfg nm)]
+          let uiFuns = [ui | ui@(nm, (_, _, SBVType as)) <- uis, length as >  1, allSatTrackUFs cfg, not (mustIgnoreVar cfg (T.pack nm))] -- functions have at least two things in their type!
+              uiRegs = [ui | ui@(nm, (_, _, SBVType as)) <- uis, length as == 1,                     not (mustIgnoreVar cfg (T.pack nm))]
 
           -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
           -- as cex's tend to get larger
           unless (null uiFuns) $
              let solverCaps = capabilities (solver cfg)
-             in F.for_ (supportsFlattenedModels solverCaps) (mapM_ (send True))
+             in F.for_ (supportsFlattenedModels solverCaps) (mapM_ (send True . T.pack))
 
           bindings <- let get i@(getSV -> sv) = case lookupInput fst sv inputAssocs of
                                                   Just (_, (_, cv)) -> pure (i, cv)
@@ -2178,7 +2174,11 @@ unBarModel SMTModel {modelObjectives, modelBindings, modelAssocs, modelUIFuns}
               , modelUIFuns     = ubf       <$> modelUIFuns
               }
    where ubf (n, a) = (unBar n, a)
-         ubn (NamedSymVar sv nm, a) = (NamedSymVar sv (T.pack (unBar (T.unpack nm))), a)
+         ubn (NamedSymVar sv nm, a) = (NamedSymVar sv (unBarT nm), a)
+
+         unBarT t = case T.uncons t of
+                      Just ('|', rest) | not (T.null rest) && T.last rest == '|' -> T.init rest
+                      _                                                          -> t
 
 {- HLint ignore module          "Reduce duplication" -}
 {- HLint ignore getAllSatResult "Use forM_"          -}

@@ -17,6 +17,7 @@
 module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlift8
                           , joinArgs, splitArgs
                           , stringToQFS, qfsToString
+                          , showText
                           , isKString
                           , checkObservableName
                           , needsBars, barify
@@ -34,6 +35,9 @@ import Data.Ord     (comparing)
 import Data.Dynamic (fromDynamic, toDyn, Typeable)
 import Data.Maybe   (fromJust, isJust, isNothing)
 import Data.Proxy
+import Data.Text    (Text)
+
+import qualified Data.Text as T
 
 import qualified Data.Map.Strict as Map
 
@@ -137,6 +141,10 @@ qfsToString = go
 
         -- Otherwise, just proceed; hopefully we covered everything above
         go (c : rest) = c : go rest
+
+-- | Show a value as 'Text'.
+showText :: Show a => a -> Text
+showText = T.pack . show
 
 -- | Given a Haskell string, convert it to SMTLib. if ord is 0x00020 to 0x0007E, then we print it as is
 -- to cover the printable ASCII range.
