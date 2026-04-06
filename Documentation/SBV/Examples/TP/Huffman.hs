@@ -625,3 +625,332 @@ swapReducesCost = do
        ?? signProd `at` (Inst @"a" (wb - wa), Inst @"b" (depthSum wa sa t - depthSum wb sb t))
        =: sTrue
        =: qed
+
+-- ** Greedy choice helpers
+--
+-- To state and prove the greedy choice property, we need to identify the deepest
+-- sibling pair in a tree and show that the two lightest symbols can be swapped
+-- into those positions without increasing cost.
+
+-- | Height of a tree: the maximum depth of any leaf.
+height :: SHTree -> SInteger
+height = smtFunction "height"
+       $ \t -> [sCase| t of
+                  Tip _ _ -> 0
+                  Bin l r -> 1 + ite (height l .>= height r) (height l) (height r)
+               |]
+
+-- | Weight of a deepest leaf (left-biased tie-breaking).
+deepW :: SHTree -> SInteger
+deepW = smtFunction "deepW"
+      $ \t -> [sCase| t of
+                 Tip w _ -> w
+                 Bin l r -> ite (height l .>= height r) (deepW l) (deepW r)
+              |]
+
+-- | Symbol of a deepest leaf (left-biased tie-breaking).
+deepS :: SHTree -> SInteger
+deepS = smtFunction "deepS"
+      $ \t -> [sCase| t of
+                 Tip _ s -> s
+                 Bin l r -> ite (height l .>= height r) (deepS l) (deepS r)
+              |]
+
+-- | Weight of the sibling of the deepest leaf. When the deeper subtree
+-- is itself a leaf (height 0), the sibling is the other child; otherwise
+-- we recurse into the deeper subtree.
+sibW :: SHTree -> SInteger
+sibW = smtFunction "sibW"
+     $ \t -> [sCase| t of
+                Tip w _ -> w
+                Bin l r | height l .>= height r .&& height l .== 0 -> deepW r
+                        | height l .>= height r                    -> sibW l
+                        | height r .== 0                           -> deepW l
+                        | True                                     -> sibW r
+             |]
+
+-- | Symbol of the sibling of the deepest leaf.
+sibS :: SHTree -> SInteger
+sibS = smtFunction "sibS"
+     $ \t -> [sCase| t of
+                Tip _ s -> s
+                Bin l r | height l .>= height r .&& height l .== 0 -> deepS r
+                        | height l .>= height r                    -> sibS l
+                        | height r .== 0                           -> deepS l
+                        | True                                     -> sibS r
+             |]
+
+-- | Structural properties of the greedy choice helpers, building toward
+-- the first swap lemma: putting the lightest symbol at maximum depth
+-- does not increase cost.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) greedySetup
+-- Lemma: swapReducesCost                            Q.E.D.
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: heightNonNeg                               Q.E.D.
+-- Lemma: deepMember                                 Q.E.D.
+-- Lemma: maxGeL                                     Q.E.D.
+-- Lemma: maxGeR                                     Q.E.D.
+-- Inductive lemma (strong): depthLeqHeight
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Inductive lemma (strong): countWSNonNeg
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Inductive lemma (strong): depthSumZero
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Lemma: countWSBin                                 Q.E.D.
+-- Inductive lemma (strong): depthSumLeqHeight
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (3 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.3.1                             Q.E.D.
+--       Step: 1.2.2.3.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Inductive lemma (strong): deepCountWS
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Inductive lemma (strong): deepDepthSum
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: cost, countWS, deepS, deepW, depth, depthSum, height, member, swap, treeSize, treeWeight
+greedySetup :: TP ()
+greedySetup = do
+   _swpRC <- recall swapReducesCost
+
+   tsPos <- inductiveLemma "treeSizePos"
+       (\(Forall @"t" t) -> treeSize t .>= 1) []
+
+   _heightNonNeg <- inductiveLemma "heightNonNeg"
+       (\(Forall @"t" t) -> height t .>= 0) []
+
+   _deepMember <- inductiveLemma "deepMember"
+       (\(Forall @"t" t) -> member (deepS t) t) []
+
+   maxGeL <- lemma "maxGeL"
+       (\(Forall @"a" a) (Forall @"b" b) ->
+           a .<= ite (a .>= b) a (b :: SInteger)) []
+
+   maxGeR <- lemma "maxGeR"
+       (\(Forall @"a" a) (Forall @"b" b) ->
+           b .<= ite (a .>= b) a (b :: SInteger)) []
+
+   _depthLeqHeight <- sInduct "depthLeqHeight"
+       (\(Forall @"s" s) (Forall @"t" t) ->
+           member s t .=> depth s t .<= height t)
+       (\_ t -> treeSize t, [proofOf tsPos]) $
+       \ih s t -> [member s t]
+         |- depth s t .<= height t
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> depth s t .<= height t
+                       =: cases
+                            [ member s l
+                                ==> 1 + depth s l .<= 1 + ite (height l .>= height r) (height l) (height r)
+                                 ?? tsPos `at` Inst @"t" r
+                                 ?? ih `at` (Inst @"s" s, Inst @"t" l)
+                                 ?? maxGeL `at` (Inst @"a" (height l), Inst @"b" (height r))
+                                 =: sTrue
+                                 =: qed
+                            , sNot (member s l)
+                                ==> 1 + depth s r .<= 1 + ite (height l .>= height r) (height l) (height r)
+                                 ?? tsPos `at` Inst @"t" l
+                                 ?? ih `at` (Inst @"s" s, Inst @"t" r)
+                                 ?? maxGeR `at` (Inst @"a" (height l), Inst @"b" (height r))
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
+
+   countWSNonNeg <- sInduct "countWSNonNeg"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
+           countWS w s t .>= 0)
+       (\_ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih w s t -> []
+         |- countWS w s t .>= (0 :: SInteger)
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> countWS w s l + countWS w s r .>= (0 :: SInteger)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                       =: sTrue
+                       =: qed
+            |]
+
+   depthSumZero <- sInduct "depthSumZero"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
+           countWS w s t .== 0 .=> depthSum w s t .== 0)
+       (\_ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih w s t -> [countWS w s t .== 0]
+         |- depthSum w s t .== (0 :: SInteger)
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> depthSum w s l + countWS w s l + depthSum w s r + countWS w s r .== (0 :: SInteger)
+                       ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                       ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                       =: sTrue
+                       =: qed
+            |]
+
+   cwsBin <- inductiveLemma "countWSBin"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"l" l) (Forall @"r" r) ->
+           countWS w s l + countWS w s r .== countWS w s (sBin l r)) []
+
+   -- depthSum version of depthLeqHeight: avoids the depth function
+   -- (which is left-biased on symbols) by using (weight, symbol) matching.
+   _depthSumLeqHeight <- sInduct "depthSumLeqHeight"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
+           countWS w s t .== 1 .=> depthSum w s t .<= height t)
+       (\_ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih w s t -> [countWS w s t .== 1]
+         |- depthSum w s t .<= height t
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> depthSum w s t .<= height t
+                       =: cases
+                            [ countWS w s l .== 1
+                                ==> depthSum w s t .<= height t
+                                 ?? depthSumZero  `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                                 ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                                 ?? tsPos         `at` Inst @"t" r
+                                 ?? ih            `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                                 ?? maxGeL        `at` (Inst @"a" (height l), Inst @"b" (height r))
+                                 =: sTrue
+                                 =: qed
+                            , countWS w s l .== 0
+                                ==> depthSum w s t .<= height t
+                                 ?? depthSumZero  `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                                 ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                                 ?? tsPos         `at` Inst @"t" l
+                                 ?? ih            `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                                 ?? maxGeR        `at` (Inst @"a" (height l), Inst @"b" (height r))
+                                 =: sTrue
+                                 =: qed
+                            , sNot (countWS w s l .== 1) .&& sNot (countWS w s l .== 0)
+                                ==> depthSum w s t .<= height t
+                                 ?? cwsBin        `at` (Inst @"w" w, Inst @"s" s, Inst @"l" l, Inst @"r" r)
+                                 ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                                 ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
+
+   -- The deep leaf is counted at least once.
+   deepCountWS <- sInduct "deepCountWS"
+       (\(Forall @"t" t) -> countWS (deepW t) (deepS t) t .>= 1)
+       (\t -> treeSize t, [proofOf tsPos]) $
+       \ih t -> []
+         |- countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
+                       =: cases
+                            [ height l .>= height r
+                                ==> countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
+                                 ?? ih            `at` Inst @"t" l
+                                 ?? countWSNonNeg `at` (Inst @"w" (deepW l), Inst @"s" (deepS l), Inst @"t" r)
+                                 ?? tsPos         `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            , sNot (height l .>= height r)
+                                ==> countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
+                                 ?? ih            `at` Inst @"t" r
+                                 ?? countWSNonNeg `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
+                                 ?? tsPos         `at` Inst @"t" l
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
+
+   -- The deep leaf's depthSum equals the height (when unique).
+   _deepDepthSum <- sInduct "deepDepthSum"
+       (\(Forall @"t" t) ->
+           countWS (deepW t) (deepS t) t .== 1
+             .=> depthSum (deepW t) (deepS t) t .== height t)
+       (\t -> treeSize t, [proofOf tsPos]) $
+       \ih t -> [countWS (deepW t) (deepS t) t .== 1]
+         |- depthSum (deepW t) (deepS t) t .== height t
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> depthSum (deepW t) (deepS t) t .== height t
+                       =: cases
+                            [ height l .>= height r
+                                ==> depthSum (deepW t) (deepS t) t .== height t
+                                 ?? cwsBin        `at` (Inst @"w" (deepW l), Inst @"s" (deepS l), Inst @"l" l, Inst @"r" r)
+                                 ?? deepCountWS   `at` Inst @"t" l
+                                 ?? countWSNonNeg `at` (Inst @"w" (deepW l), Inst @"s" (deepS l), Inst @"t" r)
+                                 ?? depthSumZero  `at` (Inst @"w" (deepW l), Inst @"s" (deepS l), Inst @"t" r)
+                                 ?? ih            `at` Inst @"t" l
+                                 ?? tsPos         `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            , sNot (height l .>= height r)
+                                ==> depthSum (deepW t) (deepS t) t .== height t
+                                 ?? cwsBin        `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"l" l, Inst @"r" r)
+                                 ?? deepCountWS   `at` Inst @"t" r
+                                 ?? countWSNonNeg `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
+                                 ?? depthSumZero  `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
+                                 ?? ih            `at` Inst @"t" r
+                                 ?? tsPos         `at` Inst @"t" l
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
+
+   pure ()
