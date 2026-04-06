@@ -168,11 +168,10 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
            | Just l <- case [l | SetLogic l <- solverSetOptions cfg] of
                          []  -> Nothing
                          [l] -> Just l
-                         ls  -> let msg = T.unlines [ ""
-                                                , "*** Only one setOption call to 'setLogic' is allowed, found: " <> showText (length ls)
-                                                , "***  " <> T.unwords (map showText ls)
-                                                ]
-                                in error $ T.unpack msg
+                         ls  -> error $ T.unpack $ T.unlines [ ""
+                                                             , "*** Only one setOption call to 'setLogic' is allowed, found: " <> showText (length ls)
+                                                             , "***  " <> T.unwords (map showText ls)
+                                                             ]
            = case l of
                Logic_NONE -> ["; NB. Not setting the logic per user request of Logic_NONE"]
                _          -> ["(set-logic " <> T.pack (showLogic l) <> ") ; NB. User specified."]
