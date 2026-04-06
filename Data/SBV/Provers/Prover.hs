@@ -485,7 +485,7 @@ validate reducer isSAT cfg p res =
                                                                         OverflowOp _     -> Just "Overflow-checking is not done concretely."
                                                                         Uninterpreted v
                                                                           | any isADT as -> Just "Models containing ADTs are currently only partially supported."
-                                                                          | True         -> Just $ "The value depends on the uninterpreted constant " ++ show v ++ "."
+                                                                          | True         -> Just $ "The value depends on the uninterpreted constant " ++ T.unpack v ++ "."
                                                                         _                -> listToMaybe $ mapMaybe why as
 
                            cstrs = S.toList $ resConstraints result

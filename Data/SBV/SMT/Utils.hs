@@ -97,11 +97,11 @@ addAnnotations atts x = "(! " <> x <> " " <> T.unwords (map (T.pack . mkAttr) at
         sanitize c    = [c]
 
 -- | Show a millisecond time-out value somewhat nicely
-showTimeoutValue :: Int -> String
+showTimeoutValue :: Int -> Text
 showTimeoutValue i = case (i `quotRem` 1000000, i `quotRem` 500000) of
-                       ((s, 0), _)  -> shows s                              "s"
-                       (_, (hs, 0)) -> shows (fromIntegral hs / (2::Float)) "s"
-                       _            -> shows i "ms"
+                       ((s, 0), _)  -> showText s                              <> "s"
+                       (_, (hs, 0)) -> showText (fromIntegral hs / (2::Float)) <> "s"
+                       _            -> showText i <> "ms"
 
 -- | Nicely align a potentially multi-line message with some tag, but prefix with three stars
 alignDiagnostic :: Text -> Text -> Text
@@ -282,7 +282,7 @@ recordTranscript (Just f) m = do tsPre <- formatTime defaultTimeLocale "; [%T%Q"
                                                                   emp = T.cons ';' (T.replicate (T.length tag - 1) " ")
                                                               in TIO.appendFile f $ T.unlines $ zipWith (<>) (tag : repeat emp) (T.lines msg)
         where to Nothing  = ""
-              to (Just i) = "[Timeout: " <> T.pack (showTimeoutValue i) <> "] "
+              to (Just i) = "[Timeout: " <> showTimeoutValue i <> "] "
 {-# INLINE recordTranscript #-}
 
 -- Record the exception

@@ -28,7 +28,7 @@
 {-# LANGUAGE TypeOperators           #-}
 {-# LANGUAGE UndecidableInstances    #-}
 
-{-# OPTIONS_GHC -Wall -Werror -Wno-orphans -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module Data.SBV.Core.Model (
     Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..)
@@ -433,8 +433,9 @@ instance SymVal () where
 instance (SymVal a, SymVal b) => SymVal (a, b) where
    mkSymVal         = genMkSymVar (kindOf (Proxy @(a, b)))
    literal (v1, v2) = mkCVTup 2   (kindOf (Proxy @(a, b))) [toCV v1, toCV v2]
-   fromCV  cv       = let ~[v1, v2] = fromCVTup 2 cv
-                      in (fromCV v1, fromCV v2)
+   fromCV  cv       = case fromCVTup 2 cv of
+                        [v1, v2] -> (fromCV v1, fromCV v2)
+                        res      -> error $ "Data.SBV.SymVal-Tuple2: Unexpected result: " ++ show res
 
    minMaxBound = Nothing
 
@@ -442,48 +443,54 @@ instance (SymVal a, SymVal b) => SymVal (a, b) where
 instance (SymVal a, SymVal b, SymVal c) => SymVal (a, b, c) where
    mkSymVal             = genMkSymVar (kindOf (Proxy @(a, b, c)))
    literal (v1, v2, v3) = mkCVTup 3   (kindOf (Proxy @(a, b, c))) [toCV v1, toCV v2, toCV v3]
-   fromCV  cv           = let ~[v1, v2, v3] = fromCVTup 3 cv
-                          in (fromCV v1, fromCV v2, fromCV v3)
+   fromCV  cv           = case fromCVTup 3 cv of
+                            [v1, v2, v3] -> (fromCV v1, fromCV v2, fromCV v3)
+                            res          -> error $ "Data.SBV.SymVal-Tuple3: Unexpected result: " ++ show res
    minMaxBound          = Nothing
 
 -- | SymVal for 4-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d) => SymVal (a, b, c, d) where
    mkSymVal                 = genMkSymVar (kindOf (Proxy @(a, b, c, d)))
    literal (v1, v2, v3, v4) = mkCVTup 4   (kindOf (Proxy @(a, b, c, d))) [toCV v1, toCV v2, toCV v3, toCV v4]
-   fromCV  cv               = let ~[v1, v2, v3, v4] = fromCVTup 4 cv
-                              in (fromCV v1, fromCV v2, fromCV v3, fromCV v4)
+   fromCV  cv               = case fromCVTup 4 cv of
+                                [v1, v2, v3, v4] -> (fromCV v1, fromCV v2, fromCV v3, fromCV v4)
+                                res              -> error $ "Data.SBV.SymVal-Tuple4: Unexpected result: " ++ show res
    minMaxBound              = Nothing
 
 -- | SymVal for 5-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => SymVal (a, b, c, d, e) where
    mkSymVal                     = genMkSymVar (kindOf (Proxy @(a, b, c, d, e)))
    literal (v1, v2, v3, v4, v5) = mkCVTup 5   (kindOf (Proxy @(a, b, c, d, e))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5]
-   fromCV  cv                   = let ~[v1, v2, v3, v4, v5] = fromCVTup 5 cv
-                                  in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5)
+   fromCV  cv                   = case fromCVTup 5 cv of
+                                    [v1, v2, v3, v4, v5] -> (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5)
+                                    res                  -> error $ "Data.SBV.SymVal-Tuple5: Unexpected result: " ++ show res
    minMaxBound                  = Nothing
 
 -- | SymVal for 6-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f) => SymVal (a, b, c, d, e, f) where
    mkSymVal                         = genMkSymVar (kindOf (Proxy @(a, b, c, d, e, f)))
    literal (v1, v2, v3, v4, v5, v6) = mkCVTup 6   (kindOf (Proxy @(a, b, c, d, e, f))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6]
-   fromCV  cv                       = let ~[v1, v2, v3, v4, v5, v6] = fromCVTup 6 cv
-                                      in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6)
+   fromCV  cv                       = case fromCVTup 6 cv of
+                                        [v1, v2, v3, v4, v5, v6] -> (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6)
+                                        res                      -> error $ "Data.SBV.SymVal-Tuple6: Unexpected result: " ++ show res
    minMaxBound                      = Nothing
 
 -- | SymVal for 7-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g) => SymVal (a, b, c, d, e, f, g) where
    mkSymVal                             = genMkSymVar (kindOf (Proxy @(a, b, c, d, e, f, g)))
    literal (v1, v2, v3, v4, v5, v6, v7) = mkCVTup 7   (kindOf (Proxy @(a, b, c, d, e, f, g))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6, toCV v7]
-   fromCV  cv                           = let ~[v1, v2, v3, v4, v5, v6, v7] = fromCVTup 7 cv
-                                          in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6, fromCV v7)
+   fromCV  cv                           = case fromCVTup 7 cv of
+                                            [v1, v2, v3, v4, v5, v6, v7] -> (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6, fromCV v7)
+                                            res                          -> error $ "Data.SBV.SymVal-Tuple7: Unexpected result: " ++ show res
    minMaxBound                          = Nothing
 
 -- | SymVal for 8-tuples
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h) => SymVal (a, b, c, d, e, f, g, h) where
    mkSymVal                                 = genMkSymVar (kindOf (Proxy @(a, b, c, d, e, f, g, h)))
    literal (v1, v2, v3, v4, v5, v6, v7, v8) = mkCVTup 8   (kindOf (Proxy @(a, b, c, d, e, f, g, h))) [toCV v1, toCV v2, toCV v3, toCV v4, toCV v5, toCV v6, toCV v7, toCV v8]
-   fromCV  cv                               = let ~[v1, v2, v3, v4, v5, v6, v7, v8] = fromCVTup 8 cv
-                                              in (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6, fromCV v7, fromCV v8)
+   fromCV  cv                               = case fromCVTup 8 cv of
+                                                [v1, v2, v3, v4, v5, v6, v7, v8] -> (fromCV v1, fromCV v2, fromCV v3, fromCV v4, fromCV v5, fromCV v6, fromCV v7, fromCV v8)
+                                                res                              -> error $ "Data.SBV.SymVal-Tuple8: Unexpected result: " ++ show res
    minMaxBound                              = Nothing
 
 instance IsString SString where
@@ -1416,7 +1423,7 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
        cfgNonNeg      = cfgIn{transcript = addSuffix "nonNeg"   <$> transcript cfgIn}
        cfgDecrease    = cfgIn{transcript = addSuffix "decrease"  <$> transcript cfgIn}
        barFuncNm      = barify funcNm
-       recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList liAssignments, nm == barFuncNm]
+       recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList liAssignments, nm == T.pack barFuncNm]
 
    if null recCalls
      then pure MeasureOK
@@ -1493,7 +1500,7 @@ checkMeasure cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liParams, liOutpu
                         mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
                         k          = kindOf rcSV
                     -- Create the actual function call: f(mapped_args)
-                    actualSV <- newExpr st k (SBVApp (Uninterpreted barFuncNm) mappedArgs)
+                    actualSV <- newExpr st k (SBVApp (Uninterpreted (T.pack barFuncNm)) mappedArgs)
                     -- Assert fresh_var == f(mapped_args)
                     let freshSVal  = SVal k (Right (cache (const (pure freshSV))))
                         actualSVal = SVal k (Right (cache (const (pure actualSV))))
@@ -1586,7 +1593,7 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
        cfgNonNeg      = cfgIn{transcript = addSuffix "nonNeg"   <$> transcript cfgIn}
        cfgDecrease    = cfgIn{transcript = addSuffix "decrease"  <$> transcript cfgIn}
        barFuncNm      = barify funcNm
-       recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList liAssignments, nm == barFuncNm]
+       recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList liAssignments, nm == T.pack barFuncNm]
 
    if null recCalls
      then pure MeasureOK
@@ -1754,7 +1761,7 @@ isGuardedRecursive :: Set.Set String -> LambdaInfo -> Bool
 isGuardedRecursive barFuncNms LambdaInfo{liAssignments} = all isGuarded recCallSVs
   where
     dagList    = F.toList liAssignments
-    recCallSVs = [sv | (sv, SBVApp (Uninterpreted nm) _) <- dagList, nm `Set.member` barFuncNms]
+    recCallSVs = [sv | (sv, SBVApp (Uninterpreted nm) _) <- dagList, nm `Set.member` Set.map T.pack barFuncNms]
 
     -- Build a map from SV to the set of operations that consume it
     consumers :: Map.Map SV [(SV, Op)]
@@ -1822,7 +1829,7 @@ guessMeasures params = map (\(d, f, mi) -> (d, MeasureEval f, mi)) (adtSingles +
                  SBV $ SVal KUnbounded $ Right $ cache $ \st -> do
                       ensureADTSizeDefined st sizeName adtKind ctors
                       s <- sbvToSV st (SBV (svs !! i))
-                      newExpr st KUnbounded (SBVApp (Uninterpreted sizeName) [s]), Just i)]
+                      newExpr st KUnbounded (SBVApp (Uninterpreted (T.pack sizeName)) [s]), Just i)]
       _           -> []
 
     mkTupleComponent :: Int -> Int -> (Int, Kind) -> [(String, [SVal] -> SInteger, Maybe Int)]
@@ -1954,7 +1961,7 @@ isStructurallyDecreasing funcNm LambdaInfo{liAssignments, liParams} paramIdx =
     asgns     = F.toList liAssignments
     defMap    = Map.fromList asgns
 
-    recCalls = [args | (_, SBVApp (Uninterpreted nm) args) <- asgns, nm == barFuncNm]
+    recCalls = [args | (_, SBVApp (Uninterpreted nm) args) <- asgns, nm == T.pack barFuncNm]
 
     checkCall callArgs
       | paramIdx < length callArgs = isProperSubTerm (callArgs !! paramIdx)
@@ -1973,7 +1980,7 @@ isStructurallyDecreasing funcNm LambdaInfo{liAssignments, liParams} paramIdx =
 autoGuess :: SMTConfig -> String -> LambdaInfo -> IO (Maybe MeasureEval)
 autoGuess cfg funcNm info = do
     let barFuncNm = barify funcNm
-        recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList (liAssignments info), nm == barFuncNm]
+        recCalls  = [(sv, args) | (sv, SBVApp (Uninterpreted nm) args) <- F.toList (liAssignments info), nm == T.pack barFuncNm]
         allUIs    = [(nm, length args) | (_, SBVApp (Uninterpreted nm) args) <- F.toList (liAssignments info)]
     debug cfg ["[MEASURE] " <> T.pack funcNm <> ": barified = " <> showText barFuncNm]
     debug cfg ["[MEASURE] " <> T.pack funcNm <> ": Uninterpreted ops in DAG: " <> showText allUIs]
@@ -2238,7 +2245,7 @@ checkMutualMeasure cfgIn members (MeasureEval applyM) = go members
        -- Find all calls to any member of the mutual group
        let allGroupCalls = [(sv, args)
                            | (sv, SBVApp (Uninterpreted calleeNm) args) <- F.toList liAssignments
-                           , calleeNm `Set.member` groupBarNames
+                           , calleeNm `Set.member` Set.map T.pack groupBarNames
                            ]
 
        if null allGroupCalls
@@ -2361,9 +2368,9 @@ replayDAG cfg st recFuncNames definedFuncs startMap dag = do
           (mappedArgs, svMap') <- mapArgs svMap args
           newSV' <- case op of
                       -- For recursive calls (self or mutual), create a fresh uninterpreted value instead of replaying
-                      Uninterpreted nm | nm `Set.member` recFuncNames -> newInternalVariable st (kindOf sv)
+                      Uninterpreted nm | nm `Set.member` Set.map T.pack recFuncNames -> newInternalVariable st (kindOf sv)
                       -- For calls to other defined functions (e.g., partition), replay properly
-                      Uninterpreted nm | nm `Set.member` definedFuncs -> do
+                      Uninterpreted nm | nm `Set.member` Set.map T.pack definedFuncs -> do
                                           let mappedOp = mapOpSVs (\a -> Map.findWithDefault a a svMap') op
                                           newExpr st (kindOf sv) (SBVApp mappedOp mappedArgs)
                       -- For everything else that's Uninterpreted (free functions, sentinels, etc.),
@@ -3617,7 +3624,8 @@ instance (Ix a, Mergeable b) => Mergeable (Array a b) where
     | True     = cannotMerge "'Array' values"
                              ("Branches produce different ranges: " ++ show (k ba, k bb))
                              "Consider using SBV's native 'SArray' abstraction."
-    where [ba, bb] = map bounds [a, b]
+    where ba = bounds a
+          bb = bounds b
           k = rangeSize
 
 -- Functions
@@ -3979,9 +3987,9 @@ class SMTDefinable a where
   sbvDefineValue nm mbArgs k    =
     sbvDefineValueFun nm mbArgs SymValsNil (const <$> k) SBVsNil
 
-  mkADTConstructor nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTConstructor nm k)) Nothing $ UIFree True in v
-  mkADTTester      nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTTester      nm k)) Nothing $ UIFree True in v
-  mkADTAccessor    nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTAccessor    nm k)) Nothing $ UIFree True in v
+  mkADTConstructor nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTConstructor (T.pack nm) k)) Nothing $ UIFree True in v
+  mkADTTester      nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTTester      (T.pack nm) k)) Nothing $ UIFree True in v
+  mkADTAccessor    nm = let k = resKind (kindOf v); v = sbvDefineValue (UIADT (ADTAccessor    (T.pack nm) k)) Nothing $ UIFree True in v
 
   smtFunctionDef nm msr v = sbvDefineValue (UIGiven (atProxy (Proxy @a) nm)) Nothing
                        $ UIFun (v, \st fk -> do
@@ -3990,12 +3998,13 @@ class SMTDefinable a where
                           -- Record LambdaInfo for SCC-aware mutual recursion checking
                           modifyIORef' (rFuncLambdaInfos st) (Map.insert funcNm info)
                           let barFuncNm    = barify funcNm
+                              tBarFuncNm   = T.pack barFuncNm
                               isSelfRec    = any (\(_, SBVApp op _) -> case op of
-                                                    Uninterpreted n -> n == barFuncNm
+                                                    Uninterpreted n -> n == tBarFuncNm
                                                     _               -> False)
                                                  (liAssignments info)
                               hasCrossRefs = any (\(_, SBVApp op _) -> case op of
-                                                    Uninterpreted n -> n /= barFuncNm
+                                                    Uninterpreted n -> n /= tBarFuncNm
                                                     _               -> False)
                                                  (liAssignments info)
                           case msr of

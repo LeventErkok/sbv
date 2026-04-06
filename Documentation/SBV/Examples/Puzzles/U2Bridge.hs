@@ -15,7 +15,7 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeApplications  #-}
 
-{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Puzzles.U2Bridge where
 
@@ -133,7 +133,10 @@ xferFlash = modify $ \s -> s{flash = ite (flash s .== sHere) sThere sHere}
 
 -- | Transferring a person to the other side
 xferPerson :: SU2Member -> Move ()
-xferPerson p =  do ~[lb, le, la, ll] <- mapM peek [lBono, lEdge, lAdam, lLarry]
+xferPerson p =  do lb <- peek lBono
+                   le <- peek lEdge
+                   la <- peek lAdam
+                   ll <- peek lLarry
                    let move l = ite (l .== sHere) sThere sHere
                        lb' = ite (p .== sBono)  (move lb) lb
                        le' = ite (p .== sEdge)  (move le) le

@@ -80,10 +80,10 @@ stringsOf (EApp ss)          = concatMap stringsOf ss
 serialize :: Bool -> SExpr -> String
 serialize removeQuotes = go
   where go (ECon s)           = if removeQuotes then unQuote s else s
-        go (ENum (i, _, _))   = showNegativeNumber i
-        go (EReal   r)        = showNegativeNumber r
-        go (EFloat  f)        = showNegativeNumber f
-        go (EDouble d)        = showNegativeNumber d
+        go (ENum (i, _, _))   = T.unpack (showNegativeNumber i)
+        go (EReal   r)        = T.unpack (showNegativeNumber r)
+        go (EFloat  f)        = T.unpack (showNegativeNumber f)
+        go (EDouble d)        = T.unpack (showNegativeNumber d)
         go (EFloatingPoint f) = show f
         go (EApp [x])         = go x
         go (EApp ss)          = "(" ++ unwords (map go ss) ++ ")"

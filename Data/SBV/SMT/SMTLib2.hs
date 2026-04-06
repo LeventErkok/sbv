@@ -852,8 +852,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp ReadArray             [a, i])         = "(select " <> cvtSV a <> " " <> cvtSV i <> ")"
         sh (SBVApp WriteArray            [a, i, e])      = "(store "  <> cvtSV a <> " " <> cvtSV i <> " " <> cvtSV e <> ")"
 
-        sh (SBVApp (Uninterpreted nm) [])   = T.pack nm
-        sh (SBVApp (Uninterpreted nm) args) = "(" <> T.pack nm <> " " <> T.unwords (map cvtSV args) <> ")"
+        sh (SBVApp (Uninterpreted nm) [])   = nm
+        sh (SBVApp (Uninterpreted nm) args) = "(" <> nm <> " " <> T.unwords (map cvtSV args) <> ")"
 
         sh (SBVApp (ADTOp aop) args) = handleADT caps aop args
 
@@ -1253,11 +1253,11 @@ handleADT caps op args = case args of
                           [] -> f
                           _  -> "(" <> f <> " " <> T.unwords (map cvtSV args) <> ")"
   where f = case op of
-              ADTConstructor nm k -> ascribe (T.pack nm) k
+              ADTConstructor nm k -> ascribe nm k
               ADTTester      nm k -> if supportsDirectTesters caps
-                                     then T.pack nm
-                                     else ascribe (T.pack nm) k
-              ADTAccessor    nm _ -> T.pack nm
+                                     then nm
+                                     else ascribe nm k
+              ADTAccessor    nm _ -> nm
 
         ascribe nm k = "(as " <> nm <> " " <> smtType k <> ")"
 
@@ -1298,8 +1298,8 @@ handleKindCast kFrom kTo a
          | m == n = a
          | True   = extract (n - 1)
 
-        signExtend i = "((_ sign_extend " <> showText i <>  ") "  <> a <> ")"
-        zeroExtend i = "((_ zero_extend " <> showText i <>  ") "  <> a <> ")"
+        signExtend i = "((_ sign_extend " <> showText i <> ") "   <> a <> ")"
+        zeroExtend i = "((_ zero_extend " <> showText i <> ") "   <> a <> ")"
         extract    i = "((_ extract "     <> showText i <> " 0) " <> a <> ")"
 
 -- Translation of pseudo-booleans, in case the solver supports them

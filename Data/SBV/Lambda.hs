@@ -346,7 +346,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                ]
          | True
          = res
-         where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi allOps])
+         where res = Defn (nub [T.unpack nm | Uninterpreted nm <- G.universeBi allOps])
                           frees
                           mbParam
                           body

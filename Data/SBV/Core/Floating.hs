@@ -18,7 +18,7 @@
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wall -Werror -Wno-orphans -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module Data.SBV.Core.Floating (
          IEEEFloating(..), IEEEFloatConvertible(..)
@@ -527,12 +527,17 @@ sWord64AsSDouble dVal
 -- and it works as long as you do not have a @NaN@.
 sFloatAsComparableSWord32 :: SFloat -> SWord32
 sFloatAsComparableSWord32 f = ite (fpIsNegativeZero f) (sFloatAsComparableSWord32 0) (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
-  where (sb : rest) = blastBE $ sFloatAsSWord32 f
+  where (sb, rest) = case blastBE $ sFloatAsSWord32 f of
+                        b : bs -> (b, bs)
+                        []     -> error "sFloatAsComparableSWord32: impossible, blastBE produced empty list"
 
 -- | Inverse transformation to 'sFloatAsComparableSWord32'.
 sComparableSWord32AsSFloat :: SWord32 -> SFloat
 sComparableSWord32AsSFloat w = sWord32AsSFloat $ ite sb (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
-  where allBits@(sb : rest) = blastBE w
+  where allBits    = blastBE w
+        (sb, rest) = case allBits of
+                        b : bs -> (b, bs)
+                        []     -> error "sComparableSWord32AsSFloat: impossible, blastBE produced empty list"
 
 -- | Convert a double to a comparable 'SWord64'. The trick is to ignore the
 -- sign of -0, and if it's a negative value flip all the bits, and otherwise
@@ -540,13 +545,18 @@ sComparableSWord32AsSFloat w = sWord32AsSFloat $ ite sb (fromBitsBE $ sFalse : r
 -- and it works as long as you do not have a @NaN@.
 sDoubleAsComparableSWord64 :: SDouble -> SWord64
 sDoubleAsComparableSWord64 d = ite (fpIsNegativeZero d) (sDoubleAsComparableSWord64 0) (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
-  where (sb : rest) = blastBE $ sDoubleAsSWord64 d
+  where (sb, rest) = case blastBE $ sDoubleAsSWord64 d of
+                        b : bs -> (b, bs)
+                        []     -> error "sDoubleAsComparableSWord64: impossible, blastBE produced empty list"
 
 -- | Inverse transformation to 'sDoubleAsComparableSWord64'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
 -- Otherwise, it's faithful:
 sComparableSWord64AsSDouble :: SWord64 -> SDouble
 sComparableSWord64AsSDouble w = sWord64AsSDouble $ ite sb (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
-  where allBits@(sb : rest) = blastBE w
+  where allBits    = blastBE w
+        (sb, rest) = case allBits of
+                        b : bs -> (b, bs)
+                        []     -> error "sComparableSWord64AsSDouble: impossible, blastBE produced empty list"
 
 -- | 'Float' instance for 'Metric' goes through the lexicographic ordering on 'Word32'.
 -- It implicitly makes sure that the value is not @NaN@.
@@ -613,13 +623,18 @@ sFloatingPointAsSWord (SBV v) = SBV (svFloatingPointAsSWord v)
 sFloatingPointAsComparableSWord :: forall eb sb. (ValidFloat eb sb, KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
 sFloatingPointAsComparableSWord f = ite (fpIsNegativeZero f) posZero (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
   where posZero     = sFloatingPointAsComparableSWord (0 :: SFloatingPoint eb sb)
-        (sb : rest) = blastBE (sFloatingPointAsSWord f :: SWord (eb + sb))
+        (sb, rest)  = case blastBE (sFloatingPointAsSWord f :: SWord (eb + sb)) of
+                         b : bs -> (b, bs)
+                         []     -> error "sFloatingPointAsComparableSWord: impossible, blastBE produced empty list"
 
 -- | Inverse transformation to 'sFloatingPointAsComparableSWord'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
 -- Otherwise, it's faithful:
 sComparableSWordAsSFloatingPoint :: forall eb sb. (KnownNat (eb + sb), BVIsNonZero (eb + sb), ValidFloat eb sb) => SWord (eb + sb) -> SFloatingPoint eb sb
 sComparableSWordAsSFloatingPoint w = sWordAsSFloatingPoint $ ite signBit (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
-  where allBits@(signBit : rest) = blastBE w
+  where allBits        = blastBE w
+        (signBit, rest) = case allBits of
+                             b : bs -> (b, bs)
+                             []     -> error "sComparableSWordAsSFloatingPoint: impossible, blastBE produced empty list"
 
 -- | Convert a word to an arbitrary float, by reinterpreting the bits of the word as the corresponding bits of the float.
 sWordAsSFloatingPoint :: forall eb sb. (KnownNat (eb + sb), BVIsNonZero (eb + sb), ValidFloat eb sb) => SWord (eb + sb) -> SFloatingPoint eb sb

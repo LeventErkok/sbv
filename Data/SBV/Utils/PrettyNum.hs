@@ -13,7 +13,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Utils.PrettyNum (
         PrettyNum(..), readBin, shex, chex, shexI, sbin, sbinI
@@ -169,68 +169,39 @@ instance PrettyNum Integer where
   bin  = sbinI False False
 
 shBKind :: HasKind a => a -> Text
-shBKind a = T.pack " :: " <> showBaseKind (kindOf a)
+shBKind a = " :: " <> showBaseKind (kindOf a)
 
 instance PrettyNum CV where
-  hexS cv | isADT           cv = showText cv <> shBKind cv
-          | isBoolean       cv = hexS (cvToBool cv) <> shBKind cv
-          | isFloat         cv = let CFloat   f = cvVal cv in T.pack (N.showHFloat f "") <> shBKind cv
-          | isDouble        cv = let CDouble  d = cvVal cv in T.pack (N.showHFloat d "") <> shBKind cv
-          | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 16 True True f) <> shBKind cv
-          | isReal          cv = let CAlgReal r = cvVal cv in showText r <> shBKind cv
-          | isString        cv = let CString  s = cvVal cv in showText s <> shBKind cv
-          | not (isBounded cv) = let CInteger i = cvVal cv in shexI True True i
-          | True               = let CInteger i = cvVal cv in shex  True True (hasSign cv, intSizeOf cv) i
+  hexS = cvPretty True  True  True  True  (\f -> T.pack (N.showHFloat f "")) (\d -> T.pack (N.showHFloat d ""))
+  binS = cvPretty False True  True  True  (\f -> T.pack (showBFloat f ""))   (\d -> T.pack (showBFloat d ""))
+  hexP = cvPretty True  False True  False showText                           showText
+  binP = cvPretty False False True  False showText                           showText
+  hex  = cvPretty True  False False False showText                           showText
+  bin  = cvPretty False False False False showText                           showText
 
-  binS cv | isADT           cv = showText cv <> shBKind cv
-          | isBoolean       cv = binS (cvToBool cv) <> shBKind cv
-          | isFloat         cv = let CFloat   f = cvVal cv in T.pack (showBFloat f "") <> shBKind cv
-          | isDouble        cv = let CDouble  d = cvVal cv in T.pack (showBFloat d "") <> shBKind cv
-          | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 2 True True f) <> shBKind cv
-          | isReal          cv = let CAlgReal r = cvVal cv in showText r <> shBKind cv
-          | isString        cv = let CString  s = cvVal cv in showText s <> shBKind cv
-          | not (isBounded cv) = let CInteger i = cvVal cv in sbinI True True i
-          | True               = let CInteger i = cvVal cv in sbin  True True (hasSign cv, intSizeOf cv) i
-
-  hexP cv | isADT           cv = showText cv
-          | isBoolean       cv = hexS (cvToBool cv)
-          | isFloat         cv = let CFloat   f = cvVal cv in showText f
-          | isDouble        cv = let CDouble  d = cvVal cv in showText d
-          | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 16 True True f)
-          | isReal          cv = let CAlgReal r = cvVal cv in showText r
-          | isString        cv = let CString  s = cvVal cv in showText s
-          | not (isBounded cv) = let CInteger i = cvVal cv in shexI False True i
-          | True               = let CInteger i = cvVal cv in shex  False True (hasSign cv, intSizeOf cv) i
-
-  binP cv | isADT           cv = showText cv
-          | isBoolean       cv = binS (cvToBool cv)
-          | isFloat         cv = let CFloat   f = cvVal cv in showText f
-          | isDouble        cv = let CDouble  d = cvVal cv in showText d
-          | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 2 True True f)
-          | isReal          cv = let CAlgReal r = cvVal cv in showText r
-          | isString        cv = let CString  s = cvVal cv in showText s
-          | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False True i
-          | True               = let CInteger i = cvVal cv in sbin  False True (hasSign cv, intSizeOf cv) i
-
-  hex cv  | isADT           cv = showText cv
-          | isBoolean       cv = hexS (cvToBool cv)
-          | isFloat         cv = let CFloat   f = cvVal cv in showText f
-          | isDouble        cv = let CDouble  d = cvVal cv in showText d
-          | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 16 False True f)
-          | isReal          cv = let CAlgReal r = cvVal cv in showText r
-          | isString        cv = let CString  s = cvVal cv in showText s
-          | not (isBounded cv) = let CInteger i = cvVal cv in shexI False False i
-          | True               = let CInteger i = cvVal cv in shex  False False (hasSign cv, intSizeOf cv) i
-
-  bin cv  | isADT           cv = showText cv
-          | isBoolean       cv = binS (cvToBool cv)
-          | isFloat         cv = let CFloat   f = cvVal cv in showText f
-          | isDouble        cv = let CDouble  d = cvVal cv in showText d
-          | isFP            cv = let CFP      f = cvVal cv in T.pack (bfToString 2 False True f)
-          | isReal          cv = let CAlgReal r = cvVal cv in showText r
-          | isString        cv = let CString  s = cvVal cv in showText s
-          | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False False i
-          | True               = let CInteger i = cvVal cv in sbin  False False (hasSign cv, intSizeOf cv) i
+-- | Factor out the common structure of PrettyNum CV methods
+cvPretty :: Bool              -- ^ isHex (True) or isBin (False)
+         -> Bool              -- ^ Show type suffix on integers
+         -> Bool              -- ^ Show prefix (0x/0b) on integers
+         -> Bool              -- ^ Show kind suffix on non-integer cases
+         -> (Float -> Text)   -- ^ Float formatter
+         -> (Double -> Text)  -- ^ Double formatter
+         -> CV -> Text
+cvPretty isHex shType shPre shKind fmtF fmtD cv
+  | isADT           cv                         = showText cv <> knd
+  | isBoolean       cv                         = (if isHex then hexS else binS) (cvToBool cv) <> knd
+  | isFloat         cv, CFloat   f <- cvVal cv = fmtF f <> knd
+  | isDouble        cv, CDouble  d <- cvVal cv = fmtD d <> knd
+  | isFP            cv, CFP      f <- cvVal cv = T.pack (bfToString base shPre True f) <> knd
+  | isReal          cv, CAlgReal r <- cvVal cv = showText r <> knd
+  | isString        cv, CString  s <- cvVal cv = showText s <> knd
+  | not (isBounded cv), CInteger i <- cvVal cv = intI i
+  | CInteger i <- cvVal cv                     = intB (hasSign cv, intSizeOf cv) i
+  | True                                       = error $ "PrettyNum: Received CV that can't be displayed: " ++ show cv
+  where knd  = if shKind then shBKind cv else ""
+        base = if isHex then 16 else 2
+        intI = (if isHex then shexI else sbinI) shType shPre
+        intB = (if isHex then shex  else sbin)  shType shPre
 
 instance (SymVal a, PrettyNum a) => PrettyNum (SBV a) where
   hexS s = maybe (showText s) (hexS :: a -> Text) $ unliteral s
@@ -249,12 +220,12 @@ instance (SymVal a, PrettyNum a) => PrettyNum (SBV a) where
 shex :: (Show a, Integral a) => Bool -> Bool -> (Bool, Int) -> a -> Text
 shex shType shPre (signed, size) a
  | a < 0
- = T.pack "-" <> pre <> T.pack (pad l (s16 (abs (fromIntegral a :: Integer)))) <> t
+ = "-" <> pre <> T.pack (pad l (s16 (abs (fromIntegral a :: Integer)))) <> t
  | True
  = pre <> T.pack (pad l (s16 a)) <> t
- where t | shType = T.pack " :: " <> T.pack (if signed then "Int" else "Word") <> showText size
+ where t | shType = " :: " <> (if signed then "Int" else "Word") <> showText size
          | True   = T.empty
-       pre | shPre = T.pack "0x"
+       pre | shPre = "0x"
            | True  = T.empty
        l = (size + 3) `div` 4
 
@@ -291,36 +262,36 @@ chex shType shPre (signed, size) a
 shexI :: Bool -> Bool -> Integer -> Text
 shexI shType shPre a
  | a < 0
- = T.pack "-" <> pre <> T.pack (s16 (abs a)) <> t
+ = "-" <> pre <> T.pack (s16 (abs a)) <> t
  | True
  = pre <> T.pack (s16 a) <> t
- where t | shType = T.pack " :: Integer"
+ where t | shType = " :: Integer"
          | True   = T.empty
-       pre | shPre = T.pack "0x"
+       pre | shPre = "0x"
            | True  = T.empty
 
 -- | Similar to 'shex'; except in binary.
 sbin :: (Show a, Integral a) => Bool -> Bool -> (Bool, Int) -> a -> Text
 sbin shType shPre (signed,size) a
  | a < 0
- = T.pack "-" <> pre <> T.pack (pad size (s2 (abs (fromIntegral a :: Integer)))) <> t
+ = "-" <> pre <> T.pack (pad size (s2 (abs (fromIntegral a :: Integer)))) <> t
  | True
  = pre <> T.pack (pad size (s2 a)) <> t
- where t | shType = T.pack " :: " <> T.pack (if signed then "Int" else "Word") <> showText size
+ where t | shType = " :: " <> (if signed then "Int" else "Word") <> showText size
          | True   = T.empty
-       pre | shPre = T.pack "0b"
+       pre | shPre = "0b"
            | True  = T.empty
 
 -- | Similar to 'shexI'; except in binary.
 sbinI :: Bool -> Bool -> Integer -> Text
 sbinI shType shPre a
  | a < 0
- = T.pack "-" <> pre <> T.pack (s2 (abs a)) <> t
+ = "-" <> pre <> T.pack (s2 (abs a)) <> t
  | True
  = pre <> T.pack (s2 a) <> t
- where t | shType = T.pack " :: Integer"
+ where t | shType = " :: Integer"
          | True   = T.empty
-       pre | shPre = T.pack "0b"
+       pre | shPre = "0b"
            | True  = T.empty
 
 -- | Pad a string to a given length. If the string is longer, then we don't drop anything.
@@ -403,7 +374,7 @@ showSMTDouble rm d
 
 -- | Show an SBV rational as an SMTLib value. This is used for faithful rationals.
 showSMTRational :: Rational -> Text
-showSMTRational r = "(SBV.Rational " <> T.pack (showNegativeNumber (numerator r)) <> " " <> T.pack (showNegativeNumber (denominator r)) <> ")"
+showSMTRational r = "(SBV.Rational " <> showNegativeNumber (numerator r) <> " " <> showNegativeNumber (denominator r) <> ")"
 
 -- | Show a rational in SMTLib format. This is used for conversions from regular rationals.
 toSMTLibRational :: Rational -> Text
@@ -501,7 +472,7 @@ cvToSMTLib rm x
         -- anomaly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
         mkMinBound :: Int -> Text
-        mkMinBound i = "#b1" <> T.pack (replicate (i-1) '0')
+        mkMinBound i = "#b1" <> T.replicate (i-1) "0"
 
         -- ADTs
         smtLibADT :: Kind -> (String,  [(Kind, CVal)]) -> Text
@@ -571,7 +542,7 @@ showFloatAtBase base input
                   | True    = '<' : show v ++ ">"
 
 -- | When we show a negative number in SMTLib, we must properly parenthesize.
-showNegativeNumber :: (Show a, Num a, Ord a) => a -> String
+showNegativeNumber :: (Show a, Num a, Ord a) => a -> Text
 showNegativeNumber i
-  | i < 0 = "(- " ++ show (-i) ++ ")"
-  | True  = show i
+  | i < 0 = "(- " <> showText (-i) <> ")"
+  | True  = showText i

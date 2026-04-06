@@ -486,6 +486,8 @@ module Data.SBV (
 import Control.Monad       (unless)
 import Control.Monad.Trans (MonadIO)
 
+import qualified Data.Text as T
+
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data       hiding (free, free_, mkFreeVars,
                                         output, symbolic, symbolics, mkSymVal,
@@ -1742,7 +1744,7 @@ mkTransitiveClosure nm rel = res
                                sa <- sbvToSV st a
                                sb <- sbvToSV st b
 
-                               newExpr st KBool $ SBVApp (Uninterpreted nm) [sa, sb]
+                               newExpr st KBool $ SBVApp (Uninterpreted (T.pack nm)) [sa, sb]
 
 -- | Check if the given relation satisfies the required axioms
 checkSpecialRelation :: forall a. SymVal a => SpecialRelOp -> Relation a -> SBool
@@ -1768,8 +1770,8 @@ checkSpecialRelation op rel = SBV $ SVal KBool $ Right $ cache result
                           uop <- newUninterpreted st (UIGiven nm) Nothing (SBVType [ka, ka, KBool]) (UINone True)
 
                           let nm' = case uop of
-                                      Uninterpreted s -> s
-                                      _               -> error "Data.SBV: Impossible happened: checkSpecialRelation received: " ++ show op
+                                      Uninterpreted s -> T.unpack s
+                                      _               -> error $ "Data.SBV: Impossible happened: checkSpecialRelation received: " ++ show op
 
                           -- Add to the end so if we get incremental ones the order doesn't change for old ones!
                           modifyIORef' (rProgInfo st) (\u -> u{progSpecialRels = curSpecialRels ++ [iop]})

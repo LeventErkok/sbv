@@ -259,7 +259,7 @@ askIgnoring s ignoreList = do
 
            case queryTimeOutValue of
              Nothing -> queryDebug ["[SEND] " `alignPlain` s]
-             Just i  -> queryDebug ["[SEND, TimeOut: " <> T.pack (showTimeoutValue i) <> "] " `alignPlain` s]
+             Just i  -> queryDebug ["[SEND, TimeOut: " <> showTimeoutValue i <> "] " `alignPlain` s]
            r <- io $ queryAsk queryTimeOutValue s
            queryDebug ["[RECV] " `alignPlain` T.pack r]
 
@@ -289,7 +289,7 @@ send requireSuccess s = do
                          ["success"] -> queryDebug ["[GOOD] " `alignPlain` s]
                          _           -> do case queryTimeOutValue of
                                              Nothing -> queryDebug ["[FAIL] " `alignPlain` s]
-                                             Just i  -> queryDebug ["[FAIL, TimeOut: " <> T.pack (showTimeoutValue i) <> "]  " `alignPlain` s]
+                                             Just i  -> queryDebug ["[FAIL, TimeOut: " <> showTimeoutValue i <> "]  " `alignPlain` s]
 
 
                                            let cmd = case T.words (T.dropWhile (\c -> isSpace c || isPunctuation c) s) of
@@ -435,7 +435,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
              case S.findIndexR ((== r) . fst) asgns of
                Nothing -> cantFind uiMap
                Just i  -> case asgns `S.index` i of
-                            (sv, SBVApp (Uninterpreted nm) _) | r == sv -> pure nm
+                            (sv, SBVApp (Uninterpreted nm) _) | r == sv -> pure (T.unpack nm)
                             _                                           -> cantFind uiMap
 
   sexprToFun f (s, e) = do nm    <- fst . fst <$> smtFunName f
@@ -1409,7 +1409,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      if isSimple
                         then do let mkVar :: (String, (Bool, Maybe [String], SBVType)) -> IO (SVal, NamedSymVar)
-                                    mkVar (nm, (_, _, SBVType [k])) = do sv <- newExpr topState k (SBVApp (Uninterpreted nm) [])
+                                    mkVar (nm, (_, _, SBVType [k])) = do sv <- newExpr topState k (SBVApp (Uninterpreted (T.pack nm)) [])
                                                                          let sval = SVal k $ Right $ cache $ \_ -> pure sv
                                                                              nsv  = NamedSymVar sv (T.pack nm)
                                                                          pure (sval, nsv)
@@ -1611,7 +1611,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                            interpretedRegUiSVs = [(cvt n (kindOf cv), cv) | (n, cv) <- interpretedRegUis]
                                              where cvt :: String -> Kind -> SVal
                                                    cvt nm k = SVal k $ Right $ cache r
-                                                     where r st = newExpr st k (SBVApp (Uninterpreted nm) [])
+                                                     where r st = newExpr st k (SBVApp (Uninterpreted (T.pack nm)) [])
 
                                            -- For each interpreted variable, figure out the model equivalence
                                            -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's

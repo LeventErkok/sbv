@@ -223,7 +223,7 @@ data Op = Plus
         | SignExtend Int
         | LkUp (Int, Kind, Kind, Int) !SV !SV   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
         | KindCast Kind Kind
-        | Uninterpreted String
+        | Uninterpreted T.Text
         | QuantifiedBool T.Text                 -- When we generate a forall/exists (nested etc.) boolean value. NB. This used to be "QuantifiedBool [Op] String", keeping track of Ops. That turned out to cause memory leaks. So avoid that.
         | SpecialRelOp Kind SpecialRelOp        -- Generate the equality to the internal operation
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
@@ -247,9 +247,9 @@ data Op = Plus
         deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | ADT operations
-data ADTOp = ADTConstructor String Kind    -- Construct an ADT. Kind is the kind of the resulting ADT
-           | ADTTester      String Kind    -- Check if top-level constructor matches. Kind is the kind of the argument
-           | ADTAccessor    String Kind    -- Extract a field from an ADT value. Kind is the kind of the argument
+data ADTOp = ADTConstructor T.Text Kind    -- Construct an ADT. Kind is the kind of the resulting ADT
+           | ADTTester      T.Text Kind    -- Check if top-level constructor matches. Kind is the kind of the argument
+           | ADTAccessor    T.Text Kind    -- Extract a field from an ADT value. Kind is the kind of the argument
            deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | Special relations supported by z3
@@ -576,7 +576,7 @@ instance Show Op where
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
 
   show (KindCast fr to)     = "cast_" ++ show fr ++ "_" ++ show to
-  show (Uninterpreted i)    = "[uninterpreted] " ++ i
+  show (Uninterpreted i)    = "[uninterpreted] " ++ T.unpack i
   show (QuantifiedBool i)   = "[quantified boolean] " ++ T.unpack i
 
   show (Label s)            = "[label] " ++ s
@@ -892,7 +892,7 @@ instance Show Result where
 
           shcg (s, ss) = ("Variable: " ++ s) : map ("  " ++) ss
 
-          shn (NamedSymVar sv nm) = "  " <> ni <> " :: " ++ show (swKind sv) ++ alias
+          shn (NamedSymVar sv nm) = "  " ++ ni ++ " :: " ++ show (swKind sv) ++ alias
             where ni = show sv
 
                   alias | T.pack ni == nm = ""
@@ -1317,9 +1317,9 @@ newUninterpreted st uiName mbArgNames t uiCode = do
   let (adtOp, candName) = case uiName of
                             UIGiven n -> (False, n)
                             UIADT   o -> case o of
-                                           ADTConstructor n _ -> (True, n)
-                                           ADTTester      n _ -> (True, n)
-                                           ADTAccessor    n _ -> (True, n)
+                                           ADTConstructor n _ -> (True, T.unpack n)
+                                           ADTTester      n _ -> (True, T.unpack n)
+                                           ADTAccessor    n _ -> (True, T.unpack n)
 
   -- determine the final name. We leave constructors alone.
   let nm = case () of
@@ -1379,11 +1379,12 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                                                             Just (_, _, t') -> checkType t' newUIs
                                                             Nothing         -> Map.insert nm (isCurried, mbArgNames, t) newUIs)
 
-  pure $ case uiName of
-          UIGiven{}                  -> Uninterpreted nm
-          UIADT (ADTConstructor _ k) -> ADTOp (ADTConstructor nm k)
-          UIADT (ADTTester      _ k) -> ADTOp (ADTTester      nm k)
-          UIADT (ADTAccessor    _ k) -> ADTOp (ADTAccessor    nm k)
+  pure $ let tnm = T.pack nm
+         in case uiName of
+              UIGiven{}                  -> Uninterpreted tnm
+              UIADT (ADTConstructor _ k) -> ADTOp (ADTConstructor tnm k)
+              UIADT (ADTTester      _ k) -> ADTOp (ADTTester      tnm k)
+              UIADT (ADTAccessor    _ k) -> ADTOp (ADTAccessor    tnm k)
 
 -- | Add a new sAssert based constraint
 addAssertion :: State -> Maybe CallStack -> String -> SV -> IO ()

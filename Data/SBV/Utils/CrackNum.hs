@@ -11,7 +11,7 @@
 
 {-# LANGUAGE NamedFieldPuns #-}
 
-{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Utils.CrackNum (
         crackNum
@@ -57,10 +57,17 @@ instance CrackNum CV where
                                KArray     {}  -> Nothing
 
                                -- Actual crackables
-                               KFloat{}       -> Just $ let CFloat   f = cvVal cv in float verbose mbIV f
-                               KDouble{}      -> Just $ let CDouble  d = cvVal cv in float verbose mbIV d
-                               KFP{}          -> Just $ let CFP      f = cvVal cv in float verbose mbIV f
-                               KBounded sg sz -> Just $ let CInteger i = cvVal cv in int   sg sz i
+                               KFloat{}       | CFloat   f <- cvVal cv -> Just $ float verbose mbIV f
+                                              | True                   -> Nothing   -- Can't really happen; but don't die
+
+                               KDouble{}      | CDouble  d <- cvVal cv -> Just $ float verbose mbIV d
+                                              | True                   -> Nothing   -- Can't really happen; but don't die
+
+                               KFP{}          | CFP      f <- cvVal cv -> Just $ float verbose mbIV f
+                                              | True                   -> Nothing   -- Can't really happen; but don't die
+
+                               KBounded sg sz | CInteger i <- cvVal cv -> Just $ int   sg sz i
+                                              | True                   -> Nothing   -- Can't really happen; but don't die
 
 -- How far off the screen we want displayed? Somewhat experimentally found.
 tab :: String

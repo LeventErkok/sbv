@@ -764,8 +764,8 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         p (PseudoBoolean pb) as = handlePB pb as
         p (OverflowOp o) _      = tbd $ "Overflow operations" ++ show o
         p (KindCast _ to)   [a] = parens (text (show to)) <+> a
-        p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text s
-        p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text s P.<> parens (fsep (punctuate comma as))
+        p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text (T.unpack s)
+        p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text (T.unpack s) P.<> parens (fsep (punctuate comma as))
         p (Extract i j) [a]    = extract i j (hd "Extract" opArgs) a
         p Join [a, b]          = join (let (s1 : s2 : _) = opArgs in (s1, s2, a, b))
         p (Rol i) [a]          = rotate True  i a (hd "Rol" opArgs)
