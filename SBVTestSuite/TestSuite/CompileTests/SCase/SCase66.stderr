@@ -30,4 +30,4 @@ SCase66.hs:(13,14)-(17,8): Splicing expression
          (ite
             (Data.SBV.Either.isRight e)
             ((\ _ -> 1) (Data.SBV.Either.getRight_1 e))
-            (symWithKind "unmatched_sCase_Either_6989586621679034871")))
+            (symWithKind "unmatched_sCase_Either_6989586621679034880")))
