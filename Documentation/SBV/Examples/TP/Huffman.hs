@@ -9,9 +9,9 @@
 -- Proving the roundtrip correctness of Huffman encoding: for any symbol @s@
 -- that is a member of a binary tree @t@, decoding the encoded path yields @s@.
 --
--- We define a simple binary tree (no weights needed for roundtrip), encode a
--- symbol by finding its path from root to leaf, and decode by following a bit
--- path through the tree. The main theorem shows these are inverses.
+-- We also prove the optimality of the Huffman encoding: among all binary trees
+-- with the same weighted symbols, the Huffman tree minimizes the weighted path
+-- length (cost).
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP               #-}
@@ -40,8 +40,11 @@ import Data.SBV.TP
 
 -- * Huffman tree
 
--- | A binary tree with integer symbols at the leaves.
-data HTree = Tip { symbol :: Integer }
+-- | A binary tree with weighted symbols at the leaves. The weight
+-- represents the frequency of the symbol in the input.
+data HTree = Tip { weight :: Integer
+                 , symbol :: Integer
+                 }
            | Bin { left   :: HTree
                  , right  :: HTree
                  }
@@ -55,7 +58,7 @@ mkSymbolic [''HTree]
 treeSize :: SHTree -> SInteger
 treeSize = smtFunction "treeSize"
          $ \t -> [sCase| t of
-                    Tip _   -> 1
+                    Tip _ _ -> 1
                     Bin l r -> 1 + treeSize l + treeSize r
                  |]
 
@@ -63,7 +66,7 @@ treeSize = smtFunction "treeSize"
 member :: SInteger -> SHTree -> SBool
 member = smtFunction "member"
        $ \s t -> [sCase| t of
-                    Tip x   -> s .== x
+                    Tip _ x -> s .== x
                     Bin l r -> member s l .|| member s r
                  |]
 
@@ -76,7 +79,7 @@ member = smtFunction "member"
 findPath :: SInteger -> SHTree -> SList Bool
 findPath = smtFunction "findPath"
          $ \s t -> [sCase| t of
-                      Tip _   -> nil
+                      Tip _ _ -> nil
                       Bin l r | member s l -> sFalse .: findPath s l
                               | True       -> sTrue  .: findPath s r
                    |]
@@ -87,7 +90,7 @@ findPath = smtFunction "findPath"
 decode :: SList Bool -> SHTree -> SInteger
 decode = smtFunction "decode"
        $ \bs t -> [sCase| t of
-                     Tip x   -> x
+                     Tip _ x -> x
                      Bin l r -> case bs of
                                   -- Empty bit-string at an internal node shouldn't happen
                                   -- with a valid encoding. If it does due to a bug, we
@@ -130,7 +133,7 @@ roundtrip = do
      \ih s t -> [member s t]
        |- decode (findPath s t) t .== s
        =: [pCase| t of
-             Tip _   -> trivial
+             Tip _ _ -> trivial
 
              Bin l r -> cases
                [ member s l
@@ -147,4 +150,258 @@ roundtrip = do
                     =: sTrue
                     =: qed
                ]
+          |]
+
+-- * Optimality
+
+-- | Total weight of a tree: sum of all leaf weights.
+treeWeight :: SHTree -> SInteger
+treeWeight = smtFunction "treeWeight"
+           $ \t -> [sCase| t of
+                      Tip w _ -> w
+                      Bin l r -> treeWeight l + treeWeight r
+                   |]
+
+-- | Cost of a tree (weighted path length). This equals the sum over all leaves
+-- of @weight(leaf) * depth(leaf)@, but is defined recursively: merging two
+-- subtrees adds their combined weight to the cost.
+cost :: SHTree -> SInteger
+cost = smtFunction "cost"
+     $ \t -> [sCase| t of
+                Tip _ _ -> 0
+                Bin l r -> cost l + cost r + treeWeight l + treeWeight r
+             |]
+
+-- | Number of leaves in a tree.
+numLeaves :: SHTree -> SInteger
+numLeaves = smtFunction "numLeaves"
+          $ \t -> [sCase| t of
+                     Tip _ _ -> 1
+                     Bin l r -> numLeaves l + numLeaves r
+                  |]
+
+-- | Depth of a symbol in a tree. Returns 0 at the leaf containing the symbol.
+-- At a 'Bin', we add 1 and recurse into the subtree containing the symbol.
+depth :: SInteger -> SHTree -> SInteger
+depth = smtFunction "depth"
+      $ \s t -> [sCase| t of
+                   Tip _ _ -> 0
+                   Bin l r | member s l -> 1 + depth s l
+                           | True       -> 1 + depth s r
+                |]
+
+-- | Swap two symbols (and their weights) in a tree. Given two leaves
+-- identified by their (weight, symbol) pairs, this exchanges their
+-- positions in the tree. The tree structure is preserved.
+swap :: SInteger -> SInteger -> SInteger -> SInteger -> SHTree -> SHTree
+swap = smtFunction "swap"
+     $ \wa sa wb sb t ->
+         [sCase| t of
+            Tip w s | s .== sa .&& w .== wa -> sTip wb sb
+                    | s .== sb .&& w .== wb -> sTip wa sa
+                    | True                  -> sTip w s
+            Bin l r -> sBin (swap wa sa wb sb l) (swap wa sa wb sb r)
+         |]
+
+-- | Count leaves matching a specific (weight, symbol) pair.
+countWS :: SInteger -> SInteger -> SHTree -> SInteger
+countWS = smtFunction "countWS"
+        $ \w s t -> [sCase| t of
+                       Tip tw ts -> ite (w .== tw .&& s .== ts) 1 0
+                       Bin l r   -> countWS w s l + countWS w s r
+                    |]
+
+-- ** Swap lemmas
+--
+-- The key algebraic fact underlying Huffman optimality: swapping two leaves
+-- changes the cost by @(wb - wa) * (depth(sa, T) - depth(sb, T))@. Therefore,
+-- if the lighter symbol is deeper, swapping it with a heavier shallower symbol
+-- does not increase cost.
+
+-- | General weight formula for swap: the change in tree weight equals
+-- @(wb - wa)@ times the count of @(wa, sa)@ leaves, plus @(wa - wb)@ times
+-- the count of @(wb, sb)@ leaves. In particular, when each pair occurs exactly
+-- once, the changes cancel and weight is preserved.
+--
+-- >>> runTPWith (tpRibbon 60 cvc5) swapWeight
+-- Lemma: treeSizePos                                          Q.E.D.
+-- Lemma: distribute                                           Q.E.D.
+-- Lemma: countWSBin                                           Q.E.D.
+-- Lemma: mulCong                                              Q.E.D.
+-- Lemma: mulZero                                              Q.E.D.
+-- Lemma: tipHelper                                            Q.E.D.
+-- Inductive lemma (strong): swapWeight
+--   Step: Measure is non-negative                             Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                             Q.E.D.
+--     Step: 1.1.2 (3 way case split)
+--       Step: 1.1.2.1.1                                       Q.E.D.
+--       Step: 1.1.2.1.2                                       Q.E.D.
+--       Step: 1.1.2.1.3                                       Q.E.D.
+--       Step: 1.1.2.1.4                                       Q.E.D.
+--       Step: 1.1.2.1.5                                       Q.E.D.
+--       Step: 1.1.2.2.1                                       Q.E.D.
+--       Step: 1.1.2.2.2                                       Q.E.D.
+--       Step: 1.1.2.2.3                                       Q.E.D.
+--       Step: 1.1.2.2.4                                       Q.E.D.
+--       Step: 1.1.2.2.5                                       Q.E.D.
+--       Step: 1.1.2.3.1                                       Q.E.D.
+--       Step: 1.1.2.3.2                                       Q.E.D.
+--       Step: 1.1.2.3.3                                       Q.E.D.
+--       Step: 1.1.2.3.4                                       Q.E.D.
+--       Step: 1.1.2.Completeness                              Q.E.D.
+--     Step: 1.2.1                                             Q.E.D.
+--     Step: 1.2.2                                             Q.E.D.
+--     Step: 1.2.3 (apply IH for l)                            Q.E.D.
+--     Step: 1.2.4 (apply IH for r)                            Q.E.D.
+--     Step: 1.2.5 (regroup)                                   Q.E.D.
+--     Step: 1.2.6                                             Q.E.D.
+--     Step: 1.2.7                                             Q.E.D.
+--     Step: 1.2.8                                             Q.E.D.
+--     Step: 1.2.9                                             Q.E.D.
+--     Step: 1.2.10                                            Q.E.D.
+--     Step: 1.2.11                                            Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Functions proven terminating: countWS, swap, treeSize, treeWeight
+-- [Proven] swapWeight :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+swapWeight :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
+                         -> Forall "wb" Integer -> Forall "sb" Integer
+                         -> Forall "t"  HTree   -> SBool))
+swapWeight = do
+   tsPos <- inductiveLemma "treeSizePos"
+                           (\(Forall @"t" t) -> treeSize t .>= 1)
+                           []
+
+   dist <- lemma "distribute"
+                  (\(Forall @"a" a) (Forall @"x" x) (Forall @"y" y) -> a * x + a * y .== a * (x + y))
+                  []
+
+   cwsBin <- inductiveLemma "countWSBin"
+                  (\(Forall @"w" w) (Forall @"s" s) (Forall @"l" l) (Forall @"r" r) ->
+                     countWS w s l + countWS w s r .== countWS w s (sBin l r))
+                  []
+
+   mulCong <- lemma "mulCong"
+                    (\(Forall @"a" a) (Forall @"x" x) (Forall @"y" y) -> x .== y .=> a * x .== a * y)
+                    []
+
+   mulZero <- lemma "mulZero"
+                    (\(Forall @"a" a) (Forall @"b" b) -> (a .== 0 .|| b .== 0) .=> a * b .== 0)
+                    []
+
+   tipHelper <- lemma "tipHelper"
+                      (\(Forall @"a" a) (Forall @"b" b) (Forall @"p" p) (Forall @"q" q) ->
+                          (a + b .== 0 .&& p .== 1 .&& (a .== 0 .|| q .== 0)) .=> a * p + b * q .== a)
+                      []
+
+   sInduct "swapWeight"
+     (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+         treeWeight (swap wa sa wb sb t) .== treeWeight t
+                                           + (wb - wa) * countWS wa sa t
+                                           + (wa - wb) * countWS wb sb t)
+     (\_ _ _ _ t -> treeSize t, [proofOf tsPos]) $
+     \ih wa sa wb sb t -> []
+       |- [pCase| t of
+             Tip w s -> treeWeight (swap wa sa wb sb t)
+                     =: treeWeight (swap wa sa wb sb (sTip w s))
+                     =: cases
+                       [ s .== sa .&& w .== wa
+                           ==> treeWeight (sTip wb sb)
+                            =: wb
+                            =: w + (wb - wa)
+                            ?? tipHelper `at` ( Inst @"a" (wb - wa), Inst @"b" (wa - wb)
+                                              , Inst @"p" (countWS wa sa t)
+                                              , Inst @"q" (countWS wb sb t)
+                                              )
+                            =: w + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
+                            =: treeWeight t + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
+                            =: qed
+
+                       , sNot (s .== sa .&& w .== wa) .&& s .== sb .&& w .== wb
+                           ==> treeWeight (sTip wa sa)
+                            =: wa
+                            =: w + (wa - wb)
+                            ?? tipHelper `at` ( Inst @"a" (wa - wb), Inst @"b" (wb - wa)
+                                              , Inst @"p" (countWS wb sb t)
+                                              , Inst @"q" (countWS wa sa t)
+                                              )
+                            =: w + (wa - wb) * countWS wb sb t + (wb - wa) * countWS wa sa t
+                            =: treeWeight t + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
+                            =: qed
+
+                       , sNot (s .== sa .&& w .== wa) .&& sNot (s .== sb .&& w .== wb)
+                           ==> treeWeight (sTip w s)
+                            =: w
+                            ?? mulZero `at` (Inst @"a" (wb - wa), Inst @"b" (countWS wa sa t))
+                            ?? mulZero `at` (Inst @"a" (wa - wb), Inst @"b" (countWS wb sb t))
+                            =: w + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
+                            =: treeWeight t + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
+                            =: qed
+                       ]
+
+             Bin l r -> treeWeight (swap wa sa wb sb t)
+                     =: treeWeight (swap wa sa wb sb (sBin l r))
+                     -- unfold swap and treeWeight at Bin
+                     =: treeWeight (swap wa sa wb sb l) + treeWeight (swap wa sa wb sb r)
+
+                     ?? "apply IH for l"
+                     ?? tsPos `at` Inst @"t" r
+                     ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                     =: treeWeight l
+                     + (wb - wa) * countWS wa sa l
+                     + (wa - wb) * countWS wb sb l
+                     + treeWeight (swap wa sa wb sb r)
+
+                     ?? "apply IH for r"
+                     ?? tsPos `at` Inst @"t" l
+                     ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                     =: treeWeight l
+                     + (wb - wa) * countWS wa sa l
+                     + (wa - wb) * countWS wb sb l
+                     + treeWeight r
+                     + (wb - wa) * countWS wa sa r
+                     + (wa - wb) * countWS wb sb r
+
+                     ?? "regroup"
+                     =: (treeWeight l + treeWeight r)
+                     + ((wb - wa) * countWS wa sa l + (wb - wa) * countWS wa sa r)
+                     + ((wa - wb) * countWS wb sb l + (wa - wb) * countWS wb sb r)
+
+                     ?? dist `at` (Inst @"a" (wb - wa), Inst @"x" (countWS wa sa l), Inst @"y" (countWS wa sa r))
+                     =: (treeWeight l + treeWeight r)
+                     + (wb - wa) * (countWS wa sa l + countWS wa sa r)
+                     + ((wa - wb) * countWS wb sb l + (wa - wb) * countWS wb sb r)
+
+                     ?? dist `at` (Inst @"a" (wa - wb), Inst @"x" (countWS wb sb l), Inst @"y" (countWS wb sb r))
+                     =: (treeWeight l + treeWeight r)
+                     + (wb - wa) * (countWS wa sa l + countWS wa sa r)
+                     + (wa - wb) * (countWS wb sb l + countWS wb sb r)
+
+                     =: treeWeight (sBin l r)
+                     + (wb - wa) * (countWS wa sa l + countWS wa sa r)
+                     + (wa - wb) * (countWS wb sb l + countWS wb sb r)
+
+                     ?? cwsBin  `at` (Inst @"w" wa, Inst @"s" sa, Inst @"l" l, Inst @"r" r)
+                     ?? mulCong `at` ( Inst @"a" (wb - wa)
+                                     , Inst @"x" (countWS wa sa l + countWS wa sa r)
+                                     , Inst @"y" (countWS wa sa (sBin l r))
+                                     )
+                     =: treeWeight (sBin l r)
+                     + (wb - wa) * countWS wa sa (sBin l r)
+                     + (wa - wb) * (countWS wb sb l + countWS wb sb r)
+
+                     ?? cwsBin  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"l" l, Inst @"r" r)
+                     ?? mulCong `at` ( Inst @"a" (wa - wb)
+                                     , Inst @"x" (countWS wb sb l + countWS wb sb r)
+                                     , Inst @"y" (countWS wb sb (sBin l r))
+                                     )
+                     =: treeWeight (sBin l r)
+                     + (wb - wa) * countWS wa sa (sBin l r)
+                     + (wa - wb) * countWS wb sb (sBin l r)
+
+                     ?? mulCong `at` (Inst @"a" (wb - wa), Inst @"x" (countWS wa sa (sBin l r)), Inst @"y" (countWS wa sa t))
+                     ?? mulCong `at` (Inst @"a" (wa - wb), Inst @"x" (countWS wb sb (sBin l r)), Inst @"y" (countWS wb sb t))
+                     =: treeWeight t + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
+                     =: qed
           |]
