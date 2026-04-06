@@ -2114,7 +2114,7 @@ instance NFData SMTLibPgm     where rnf (SMTLibPgm v p d) = rnf v `seq` rnf p `s
 instance Show SMTLibPgm where
   show (SMTLibPgm _ pgm _) = T.unpack pgm
 
--- | Extract the program text from an 'SMTLibPgm' without converting to 'String'.
+-- | Extract the program text from an SMTLibPgm without converting to String.
 smtLibPgmText :: SMTLibPgm -> Text
 smtLibPgmText (SMTLibPgm _ pgm _) = pgm
 
