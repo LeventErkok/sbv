@@ -228,7 +228,6 @@ countWS = smtFunction "countWS"
 -- Lemma: distribute                                           Q.E.D.
 -- Lemma: countWSBin                                           Q.E.D.
 -- Lemma: mulCong                                              Q.E.D.
--- Lemma: mulZero                                              Q.E.D.
 -- Lemma: tipHelper                                            Q.E.D.
 -- Inductive lemma (strong): swapWeight
 --   Step: Measure is non-negative                             Q.E.D.
@@ -286,10 +285,6 @@ swapWeight = do
                     (\(Forall @"a" a) (Forall @"x" x) (Forall @"y" y) -> x .== y .=> a * x .== a * y)
                     []
 
-   mulZero <- lemma "mulZero"
-                    (\(Forall @"a" a) (Forall @"b" b) -> (a .== 0 .|| b .== 0) .=> a * b .== 0)
-                    []
-
    tipHelper <- lemma "tipHelper"
                       (\(Forall @"a" a) (Forall @"b" b) (Forall @"p" p) (Forall @"q" q) ->
                           (a + b .== 0 .&& p .== 1 .&& (a .== 0 .|| q .== 0)) .=> a * p + b * q .== a)
@@ -333,8 +328,8 @@ swapWeight = do
                        , sNot (s .== sa .&& w .== wa) .&& sNot (s .== sb .&& w .== wb)
                            ==> treeWeight (sTip w s)
                             =: w
-                            ?? mulZero `at` (Inst @"a" (wb - wa), Inst @"b" (countWS wa sa t))
-                            ?? mulZero `at` (Inst @"a" (wa - wb), Inst @"b" (countWS wb sb t))
+                            ?? mulCong `at` (Inst @"a" (wb - wa), Inst @"x" (countWS wa sa t), Inst @"y" (0 :: SInteger))
+                            ?? mulCong `at` (Inst @"a" (wa - wb), Inst @"x" (countWS wb sb t), Inst @"y" (0 :: SInteger))
                             =: w + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
                             =: treeWeight t + (wb - wa) * countWS wa sa t + (wa - wb) * countWS wb sb t
                             =: qed
