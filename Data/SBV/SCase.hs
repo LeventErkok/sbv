@@ -1046,7 +1046,7 @@ processProofCaseExp scrut0 matches0 = do
         let cases = concat cs
         loc <- location
         cstrs <- getCstrs mbt typ
-        checkWildcard "proofCase" loc cases
+        checkWildcard "pCase" loc cases
         checkArities  "pCase" typ cstrs cases
         let allGrdVars :: Map.Map Name (Set Name)
             allGrdVars = Map.fromListWith Set.union
