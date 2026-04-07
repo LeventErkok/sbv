@@ -17,6 +17,7 @@
 {-# LANGUAGE CPP               #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeAbstractions  #-}
@@ -1998,3 +1999,76 @@ collapseReducesTreeSizeProof = do
                                  =: qed
                             ]
             |]
+
+-- * Part 3: Huffman construction and optimality
+--
+-- We build the Huffman tree by greedily merging the two lightest subtrees
+-- from a weight-sorted forest, then prove this construction is optimal.
+
+-- ** Building the Huffman tree
+
+-- | Insert a tree into a weight-sorted forest, maintaining sort order.
+sortedInsert :: SHTree -> SList HTree -> SList HTree
+sortedInsert = smtFunction "sortedInsert"
+             $ \t ts -> [sCase| ts of
+                           []                                     -> [t]
+                           u : us | treeWeight t .<= treeWeight u -> t .: u .: us
+                                  | True                          -> u .: sortedInsert t us
+                        |]
+
+-- | Length of forest after sorted insertion is one more than the original.
+--
+-- >>> runTPWith cvc5 sortedInsertLengthProof
+-- Inductive lemma (strong): sortedInsertLength
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2                   Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2                   Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: sortedInsert, treeWeight
+-- [Proven] sortedInsertLength :: Ɐt ∷ HTree → Ɐts ∷ [HTree] → Bool
+sortedInsertLengthProof :: TP (Proof (Forall "t" HTree -> Forall "ts" [HTree] -> SBool))
+sortedInsertLengthProof =
+   sInduct "sortedInsertLength"
+       (\(Forall @"t" t) (Forall @"ts" ts) ->
+           length (sortedInsert t ts) .== 1 + length ts)
+       (\_ ts -> length ts, []) $
+       \ih t ts -> []
+         |- length (sortedInsert t ts) .== 1 + length ts
+         =: [pCase| ts of
+               [] -> length (sortedInsert t ts) .== 1 + length ts
+                  =: sTrue
+                  =: qed
+               u : us -> length (sortedInsert t ts) .== 1 + length ts
+                      =: cases
+                           [ treeWeight t .<= treeWeight u
+                               ==> length (sortedInsert t ts) .== 1 + length ts
+                                =: sTrue
+                                =: qed
+                           , sNot (treeWeight t .<= treeWeight u)
+                               ==> length (sortedInsert t ts) .== 1 + length ts
+                                ?? ih `at` (Inst @"t" t, Inst @"ts" us)
+                                =: sTrue
+                                =: qed
+                           ]
+            |]
+
+-- | Build a Huffman tree from a weight-sorted forest by repeatedly merging
+-- the two lightest subtrees.
+buildHuffman :: SList HTree -> SHTree
+buildHuffman = smtFunctionWithMeasure "buildHuffman"
+                 (length @HTree, [measureLemma sortedInsertLengthProof])
+             $ \ts -> [sCase| ts of
+                         []     -> sTip 0 0
+                         t : rest -> case rest of
+                                       []     -> t
+                                       u : us -> buildHuffman (sortedInsert (sBin t u) us)
+                      |]
