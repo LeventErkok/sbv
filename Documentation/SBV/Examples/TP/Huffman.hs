@@ -2072,3 +2072,108 @@ buildHuffman = smtFunctionWithMeasure "buildHuffman"
                                        []     -> t
                                        u : us -> buildHuffman (sortedInsert (sBin t u) us)
                       |]
+
+-- ** Weight invariants
+
+-- | Total weight of all trees in a forest.
+forestWeight :: SList HTree -> SInteger
+forestWeight = smtFunction "forestWeight"
+             $ \ts -> [sCase| ts of
+                         []     -> 0
+                         t : rest -> treeWeight t + forestWeight rest
+                      |]
+
+-- | Sorted insertion preserves total forest weight.
+--
+-- >>> runTPWith cvc5 sortedInsertWeightProof
+-- Inductive lemma (strong): sortedInsertWeight
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2                   Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2                   Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: forestWeight, sortedInsert, treeWeight
+-- [Proven] sortedInsertWeight :: Ɐt ∷ HTree → Ɐts ∷ [HTree] → Bool
+sortedInsertWeightProof :: TP (Proof (Forall "t" HTree -> Forall "ts" [HTree] -> SBool))
+sortedInsertWeightProof =
+   sInduct "sortedInsertWeight"
+       (\(Forall @"t" t) (Forall @"ts" ts) ->
+           forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts)
+       (\_ ts -> length ts, []) $
+       \ih t ts -> []
+         |- forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts
+         =: [pCase| ts of
+               [] -> forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts
+                  =: sTrue
+                  =: qed
+               u : us -> forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts
+                      =: cases
+                           [ treeWeight t .<= treeWeight u
+                               ==> forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts
+                                =: sTrue
+                                =: qed
+                           , sNot (treeWeight t .<= treeWeight u)
+                               ==> forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts
+                                ?? ih `at` (Inst @"t" t, Inst @"ts" us)
+                                =: sTrue
+                                =: qed
+                           ]
+            |]
+
+-- | Building the Huffman tree preserves total weight: the resulting tree's
+-- weight equals the sum of all input tree weights.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) buildHuffmanWeightProof
+-- Lemma: sortedInsertWeight                         Q.E.D.
+-- Lemma: sortedInsertLength                         Q.E.D.
+-- Inductive lemma (strong): buildHuffmanWeight
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: buildHuffman, forestWeight, sortedInsert, treeWeight
+-- [Proven] buildHuffmanWeight :: Ɐts ∷ [HTree] → Bool
+buildHuffmanWeightProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
+buildHuffmanWeightProof = do
+   siWt  <- recall sortedInsertWeightProof
+   siLen <- recall sortedInsertLengthProof
+
+   sInduct "buildHuffmanWeight"
+       (\(Forall @"ts" ts) ->
+           length ts .>= 1 .=> treeWeight (buildHuffman ts) .== forestWeight ts)
+       (\ts -> length ts, []) $
+       \ih ts -> [length ts .>= 1]
+         |- treeWeight (buildHuffman ts) .== forestWeight ts
+         =: [pCase| ts of
+               [] -> treeWeight (buildHuffman ts) .== forestWeight ts
+                  =: sTrue
+                  =: qed
+               t : rest -> treeWeight (buildHuffman ts) .== forestWeight ts
+                        =: case rest of
+                             [] -> treeWeight (buildHuffman ts) .== forestWeight ts
+                                =: sTrue
+                                =: qed
+                             u : us -> treeWeight (buildHuffman ts) .== forestWeight ts
+                                    ?? ih    `at` Inst @"ts" (sortedInsert (sBin t u) us)
+                                    ?? siWt  `at` (Inst @"t" (sBin t u), Inst @"ts" us)
+                                    ?? siLen `at` (Inst @"t" (sBin t u), Inst @"ts" us)
+                                    =: sTrue
+                                    =: qed
+            |]
