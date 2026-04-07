@@ -31,6 +31,7 @@ import Prelude hiding (null, head, tail, length)
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.TP
+import Data.SBV.Tuple hiding (swap)
 
 #ifdef DOCTEST
 -- $setup
@@ -524,10 +525,10 @@ swapCost = do
 
                      ?? "regroup"
                      =: (cost l + cost r + treeWeight l + treeWeight r)
-                      + ((wb - wa) * depthSum wa sa l + (wb - wa) * countWS wa sa l
-                       + (wb - wa) * depthSum wa sa r + (wb - wa) * countWS wa sa r)
-                      + ((wa - wb) * depthSum wb sb l + (wa - wb) * countWS wb sb l
-                       + (wa - wb) * depthSum wb sb r + (wa - wb) * countWS wb sb r)
+                      + (wb - wa) * depthSum wa sa l + (wb - wa) * countWS wa sa l
+                      + (wb - wa) * depthSum wa sa r + (wb - wa) * countWS wa sa r
+                      + (wa - wb) * depthSum wb sb l + (wa - wb) * countWS wb sb l
+                      + (wa - wb) * depthSum wb sb r + (wa - wb) * countWS wb sb r
 
                      ?? "fold depthSum for (wa, sa)"
                      ?? dsBin   `at` (Inst @"w" wa, Inst @"s" sa, Inst @"l" l, Inst @"r" r)
@@ -540,8 +541,8 @@ swapCost = do
                                      , Inst @"y" (depthSum wa sa (sBin l r)))
                      =: (cost l + cost r + treeWeight l + treeWeight r)
                       + (wb - wa) * depthSum wa sa (sBin l r)
-                      + ((wa - wb) * depthSum wb sb l + (wa - wb) * countWS wb sb l
-                       + (wa - wb) * depthSum wb sb r + (wa - wb) * countWS wb sb r)
+                      + (wa - wb) * depthSum wb sb l + (wa - wb) * countWS wb sb l
+                      + (wa - wb) * depthSum wb sb r + (wa - wb) * countWS wb sb r
 
                      ?? "fold depthSum for (wb, sb)"
                      ?? dsBin   `at` (Inst @"w" wb, Inst @"s" sb, Inst @"l" l, Inst @"r" r)
@@ -680,15 +681,234 @@ sibS = smtFunction "sibS"
                         | True                                     -> sibS r
              |]
 
--- | Structural properties of the greedy choice helpers, building toward
--- the first swap lemma: putting the lightest symbol at maximum depth
--- does not increase cost.
+-- ** Shared helper proofs
 --
--- >>> runTPWith (tpRibbon 50 cvc5) greedySetup
--- Lemma: swapReducesCost                            Q.E.D.
+-- Commonly needed structural lemmas, extracted as standalone proofs so they
+-- can be recalled by multiple proof groups without code duplication.
+
+-- | Every tree has at least one node: @treeSize t >= 1@.
+--
+-- >>> runTPWith cvc5 treeSizePosProof
+-- Lemma: treeSizePos                      Q.E.D.
+-- Functions proven terminating: treeSize
+-- [Proven] treeSizePos :: Ɐt ∷ HTree → Bool
+treeSizePosProof :: TP (Proof (Forall "t" HTree -> SBool))
+treeSizePosProof = inductiveLemma "treeSizePos" (\(Forall @"t" t) -> treeSize t .>= 1) []
+
+-- | Leaf counts are non-negative: @countWS w s t >= 0@.
+--
+-- >>> runTPWith cvc5 countWSNonNegProof
+-- Lemma: treeSizePos                      Q.E.D.
+-- Inductive lemma (strong): countWSNonNeg
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: countWS, treeSize
+-- [Proven] countWSNonNeg :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
+countWSNonNegProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> SBool))
+countWSNonNegProof = do
+   tsPos <- recall treeSizePosProof
+   sInduct "countWSNonNeg"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
+           countWS w s t .>= 0)
+       (\_ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih w s t -> []
+         |- countWS w s t .>= (0 :: SInteger)
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> countWS w s l + countWS w s r .>= (0 :: SInteger)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                       =: sTrue
+                       =: qed
+            |]
+
+-- | If a (weight, symbol) pair doesn't appear in the tree, its depth sum is zero:
+-- @countWS w s t == 0 => depthSum w s t == 0@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) depthSumZeroProof
 -- Lemma: treeSizePos                                Q.E.D.
--- Lemma: heightNonNeg                               Q.E.D.
--- Lemma: deepMember                                 Q.E.D.
+-- Lemma: countWSNonNeg                              Q.E.D.
+-- Inductive lemma (strong): depthSumZero
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: countWS, depthSum, treeSize
+-- [Proven] depthSumZero :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
+depthSumZeroProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> SBool))
+depthSumZeroProof = do
+   tsPos         <- recall treeSizePosProof
+   countWSNonNeg <- recall countWSNonNegProof
+   sInduct "depthSumZero"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
+           countWS w s t .== 0 .=> depthSum w s t .== 0)
+       (\_ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih w s t -> [countWS w s t .== 0]
+         |- depthSum w s t .== (0 :: SInteger)
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> depthSum w s l + countWS w s l + depthSum w s r + countWS w s r .== (0 :: SInteger)
+                       ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                       ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                       =: sTrue
+                       =: qed
+            |]
+
+-- | The deepest leaf always appears at least once in the tree:
+-- @countWS (deepW t) (deepS t) t >= 1@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) deepCountWSProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: countWSNonNeg                              Q.E.D.
+-- Inductive lemma (strong): deepCountWS
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: countWS, deepS, deepW, height, treeSize
+-- [Proven] deepCountWS :: Ɐt ∷ HTree → Bool
+deepCountWSProof :: TP (Proof (Forall "t" HTree -> SBool))
+deepCountWSProof = do
+   tsPos         <- recall treeSizePosProof
+   countWSNonNeg <- recall countWSNonNegProof
+   sInduct "deepCountWS"
+       (\(Forall @"t" t) -> countWS (deepW t) (deepS t) t .>= 1)
+       (\t -> treeSize t, [proofOf tsPos]) $
+       \ih t -> []
+         |- countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
+                       =: cases
+                            [ height l .>= height r
+                                ==> countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
+                                 ?? ih            `at` Inst @"t" l
+                                 ?? countWSNonNeg `at` (Inst @"w" (deepW l), Inst @"s" (deepS l), Inst @"t" r)
+                                 ?? tsPos         `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            , sNot (height l .>= height r)
+                                ==> countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
+                                 ?? ih            `at` Inst @"t" r
+                                 ?? countWSNonNeg `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
+                                 ?? tsPos         `at` Inst @"t" l
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
+
+
+-- | Tree height is non-negative: @height t >= 0@.
+--
+-- >>> runTPWith cvc5 heightNonNegProof
+-- Lemma: heightNonNeg                     Q.E.D.
+-- Functions proven terminating: height
+-- [Proven] heightNonNeg :: Ɐt ∷ HTree → Bool
+heightNonNegProof :: TP (Proof (Forall "t" HTree -> SBool))
+heightNonNegProof = inductiveLemma "heightNonNeg"
+    (\(Forall @"t" t) -> height t .>= 0) []
+
+-- | The deepest leaf is always a member of the tree.
+--
+-- >>> runTPWith cvc5 deepMemberProof
+-- Lemma: deepMember                       Q.E.D.
+-- Functions proven terminating: deepS, height, member
+-- [Proven] deepMember :: Ɐt ∷ HTree → Bool
+deepMemberProof :: TP (Proof (Forall "t" HTree -> SBool))
+deepMemberProof = inductiveLemma "deepMember"
+    (\(Forall @"t" t) -> member (deepS t) t) []
+
+-- | @max(a, b) >= a@.
+--
+-- >>> runTPWith cvc5 maxGeLProof
+-- Lemma: maxGeL                           Q.E.D.
+-- [Proven] maxGeL :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
+maxGeLProof :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
+maxGeLProof = lemma "maxGeL"
+    (\(Forall @"a" a) (Forall @"b" b) ->
+        a .<= ite (a .>= b) a (b :: SInteger)) []
+
+-- | @max(a, b) >= b@.
+--
+-- >>> runTPWith cvc5 maxGeRProof
+-- Lemma: maxGeR                           Q.E.D.
+-- [Proven] maxGeR :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
+maxGeRProof :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
+maxGeRProof = lemma "maxGeR"
+    (\(Forall @"a" a) (Forall @"b" b) ->
+        b .<= ite (a .>= b) a (b :: SInteger)) []
+
+-- | @height t == 0 => depthSum w s t == 0@. A height-0 tree is a single
+-- leaf, so its depthSum is always 0.
+--
+-- >>> runTPWith cvc5 heightZeroDepthSumProof
+-- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: heightZeroDepthSum
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: countWS, depthSum, height
+-- [Proven] heightZeroDepthSum :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
+heightZeroDepthSumProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> SBool))
+heightZeroDepthSumProof = do
+   hNN <- recall heightNonNegProof
+
+   calc "heightZeroDepthSum"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
+           height t .== 0 .=> depthSum w s t .== 0) $
+       \w s t -> [height t .== 0]
+              |- depthSum w s t .== (0 :: SInteger)
+              =: [pCase| t of
+                    Tip _ _ -> trivial
+                    Bin l r -> depthSum w s t .== (0 :: SInteger)
+                            ?? hNN `at` Inst @"t" l
+                            ?? hNN `at` Inst @"t" r
+                            =: sTrue
+                            =: qed
+                 |]
+
+-- | @countWS@ distributes over @Bin@: the count in a binary node equals the
+-- sum of counts in its children.
+--
+-- >>> runTPWith cvc5 countWSBinProof
+-- Lemma: countWSBin                       Q.E.D.
+-- Functions proven terminating: countWS
+-- [Proven] countWSBin :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐl ∷ HTree → Ɐr ∷ HTree → Bool
+countWSBinProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "l" HTree -> Forall "r" HTree -> SBool))
+countWSBinProof = inductiveLemma "countWSBin"
+    (\(Forall @"w" w) (Forall @"s" s) (Forall @"l" l) (Forall @"r" r) ->
+        countWS w s l + countWS w s r .== countWS w s (sBin l r)) []
+
+-- | The depth of any member symbol is bounded by the tree height:
+-- @member s t => depth s t <= height t@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) depthLeqHeightProof
+-- Lemma: treeSizePos                                Q.E.D.
 -- Lemma: maxGeL                                     Q.E.D.
 -- Lemma: maxGeR                                     Q.E.D.
 -- Inductive lemma (strong): depthLeqHeight
@@ -704,87 +924,14 @@ sibS = smtFunction "sibS"
 --       Step: 1.2.2.Completeness                    Q.E.D.
 --     Step: 1.Completeness                          Q.E.D.
 --   Result:                                         Q.E.D.
--- Inductive lemma (strong): countWSNonNeg
---   Step: Measure is non-negative                   Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
--- Inductive lemma (strong): depthSumZero
---   Step: Measure is non-negative                   Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
--- Lemma: countWSBin                                 Q.E.D.
--- Inductive lemma (strong): depthSumLeqHeight
---   Step: Measure is non-negative                   Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2 (3 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.3.1                             Q.E.D.
---       Step: 1.2.2.3.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
--- Inductive lemma (strong): deepCountWS
---   Step: Measure is non-negative                   Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
--- Inductive lemma (strong): deepDepthSum
---   Step: Measure is non-negative                   Q.E.D.
---   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
--- Functions proven terminating: cost, countWS, deepS, deepW, depth, depthSum, height, member, swap, treeSize, treeWeight
-greedySetup :: TP ()
-greedySetup = do
-   _swpRC <- recall swapReducesCost
-
-   tsPos <- inductiveLemma "treeSizePos"
-       (\(Forall @"t" t) -> treeSize t .>= 1) []
-
-   _heightNonNeg <- inductiveLemma "heightNonNeg"
-       (\(Forall @"t" t) -> height t .>= 0) []
-
-   _deepMember <- inductiveLemma "deepMember"
-       (\(Forall @"t" t) -> member (deepS t) t) []
-
-   maxGeL <- lemma "maxGeL"
-       (\(Forall @"a" a) (Forall @"b" b) ->
-           a .<= ite (a .>= b) a (b :: SInteger)) []
-
-   maxGeR <- lemma "maxGeR"
-       (\(Forall @"a" a) (Forall @"b" b) ->
-           b .<= ite (a .>= b) a (b :: SInteger)) []
-
-   _depthLeqHeight <- sInduct "depthLeqHeight"
+-- Functions proven terminating: depth, height, member, treeSize
+-- [Proven] depthLeqHeight :: Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
+depthLeqHeightProof :: TP (Proof (Forall "s" Integer -> Forall "t" HTree -> SBool))
+depthLeqHeightProof = do
+   tsPos  <- recall treeSizePosProof
+   maxGeL <- recall maxGeLProof
+   maxGeR <- recall maxGeRProof
+   sInduct "depthLeqHeight"
        (\(Forall @"s" s) (Forall @"t" t) ->
            member s t .=> depth s t .<= height t)
        (\_ t -> treeSize t, [proofOf tsPos]) $
@@ -811,49 +958,42 @@ greedySetup = do
                             ]
             |]
 
-   countWSNonNeg <- sInduct "countWSNonNeg"
-       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
-           countWS w s t .>= 0)
-       (\_ _ t -> treeSize t, [proofOf tsPos]) $
-       \ih w s t -> []
-         |- countWS w s t .>= (0 :: SInteger)
-         =: [pCase| t of
-               Tip _ _ -> trivial
-               Bin l r -> countWS w s l + countWS w s r .>= (0 :: SInteger)
-                       ?? tsPos `at` Inst @"t" l
-                       ?? tsPos `at` Inst @"t" r
-                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
-                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
-                       =: sTrue
-                       =: qed
-            |]
-
-   depthSumZero <- sInduct "depthSumZero"
-       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
-           countWS w s t .== 0 .=> depthSum w s t .== 0)
-       (\_ _ t -> treeSize t, [proofOf tsPos]) $
-       \ih w s t -> [countWS w s t .== 0]
-         |- depthSum w s t .== (0 :: SInteger)
-         =: [pCase| t of
-               Tip _ _ -> trivial
-               Bin l r -> depthSum w s l + countWS w s l + depthSum w s r + countWS w s r .== (0 :: SInteger)
-                       ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
-                       ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
-                       ?? tsPos `at` Inst @"t" l
-                       ?? tsPos `at` Inst @"t" r
-                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
-                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
-                       =: sTrue
-                       =: qed
-            |]
-
-   cwsBin <- inductiveLemma "countWSBin"
-       (\(Forall @"w" w) (Forall @"s" s) (Forall @"l" l) (Forall @"r" r) ->
-           countWS w s l + countWS w s r .== countWS w s (sBin l r)) []
-
-   -- depthSum version of depthLeqHeight: avoids the depth function
-   -- (which is left-biased on symbols) by using (weight, symbol) matching.
-   _depthSumLeqHeight <- sInduct "depthSumLeqHeight"
+-- | A unique leaf's depth sum is bounded by the tree height:
+-- @countWS w s t == 1 => depthSum w s t <= height t@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) depthSumLeqHeightProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: countWSNonNeg                              Q.E.D.
+-- Lemma: depthSumZero                               Q.E.D.
+-- Lemma: maxGeL                                     Q.E.D.
+-- Lemma: maxGeR                                     Q.E.D.
+-- Lemma: countWSBin                                 Q.E.D.
+-- Inductive lemma (strong): depthSumLeqHeight
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (3 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.3.1                             Q.E.D.
+--       Step: 1.2.2.3.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: countWS, depthSum, height, treeSize
+-- [Proven] depthSumLeqHeight :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
+depthSumLeqHeightProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> SBool))
+depthSumLeqHeightProof = do
+   tsPos         <- recall treeSizePosProof
+   countWSNonNeg <- recall countWSNonNegProof
+   depthSumZero  <- recall depthSumZeroProof
+   maxGeL        <- recall maxGeLProof
+   maxGeR        <- recall maxGeRProof
+   cwsBin        <- recall countWSBinProof
+   sInduct "depthSumLeqHeight"
        (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
            countWS w s t .== 1 .=> depthSum w s t .<= height t)
        (\_ _ t -> treeSize t, [proofOf tsPos]) $
@@ -891,35 +1031,37 @@ greedySetup = do
                             ]
             |]
 
-   -- The deep leaf is counted at least once.
-   deepCountWS <- sInduct "deepCountWS"
-       (\(Forall @"t" t) -> countWS (deepW t) (deepS t) t .>= 1)
-       (\t -> treeSize t, [proofOf tsPos]) $
-       \ih t -> []
-         |- countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
-         =: [pCase| t of
-               Tip _ _ -> trivial
-               Bin l r -> countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
-                       =: cases
-                            [ height l .>= height r
-                                ==> countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
-                                 ?? ih            `at` Inst @"t" l
-                                 ?? countWSNonNeg `at` (Inst @"w" (deepW l), Inst @"s" (deepS l), Inst @"t" r)
-                                 ?? tsPos         `at` Inst @"t" r
-                                 =: sTrue
-                                 =: qed
-                            , sNot (height l .>= height r)
-                                ==> countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
-                                 ?? ih            `at` Inst @"t" r
-                                 ?? countWSNonNeg `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
-                                 ?? tsPos         `at` Inst @"t" l
-                                 =: sTrue
-                                 =: qed
-                            ]
-            |]
-
-   -- The deep leaf's depthSum equals the height (when unique).
-   _deepDepthSum <- sInduct "deepDepthSum"
+-- | The deepest leaf's depthSum equals the height (when unique).
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) deepDepthSumProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: countWSNonNeg                              Q.E.D.
+-- Lemma: depthSumZero                               Q.E.D.
+-- Lemma: deepCountWS                                Q.E.D.
+-- Lemma: countWSBin                                 Q.E.D.
+-- Inductive lemma (strong): deepDepthSum
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: countWS, deepS, deepW, depthSum, height, treeSize
+-- [Proven] deepDepthSum :: Ɐt ∷ HTree → Bool
+deepDepthSumProof :: TP (Proof (Forall "t" HTree -> SBool))
+deepDepthSumProof = do
+   tsPos         <- recall treeSizePosProof
+   countWSNonNeg <- recall countWSNonNegProof
+   depthSumZero  <- recall depthSumZeroProof
+   deepCountWS   <- recall deepCountWSProof
+   cwsBin        <- recall countWSBinProof
+   sInduct "deepDepthSum"
        (\(Forall @"t" t) ->
            countWS (deepW t) (deepS t) t .== 1
              .=> depthSum (deepW t) (deepS t) t .== height t)
@@ -953,4 +1095,366 @@ greedySetup = do
                             ]
             |]
 
-   pure ()
+-- | First greedy swap: a leaf lighter than the deepest can be swapped
+-- to the deepest position without increasing cost.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) greedySwap1Proof
+-- Lemma: swapReducesCost                            Q.E.D.
+-- Lemma: deepDepthSum                               Q.E.D.
+-- Lemma: depthSumLeqHeight                          Q.E.D.
+-- Lemma: greedySwap1
+--   Step: 1                                         Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: cost, countWS, deepS, deepW, depthSum, height, swap, treeSize, treeWeight
+-- [Proven] greedySwap1 :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐt ∷ HTree → Bool
+greedySwap1Proof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer -> Forall "t" HTree -> SBool))
+greedySwap1Proof = do
+   swpRC         <- recall swapReducesCost
+   deepDepthSum  <- recall deepDepthSumProof
+   depthSumLeqHt <- recall depthSumLeqHeightProof
+   calc "greedySwap1"
+       (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"t" t) ->
+           wa .<= deepW t
+           .&& countWS wa sa t .== 1
+           .&& countWS (deepW t) (deepS t) t .== 1
+             .=> cost (swap wa sa (deepW t) (deepS t) t) .<= cost t) $
+       \wa sa t -> [wa .<= deepW t, countWS wa sa t .== 1, countWS (deepW t) (deepS t) t .== 1]
+         |- cost (swap wa sa (deepW t) (deepS t) t) .<= cost t
+         ?? swpRC         `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" t)
+         ?? deepDepthSum  `at` Inst @"t" t
+         ?? depthSumLeqHt `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" t)
+         =: sTrue
+         =: qed
+
+-- ** Swap preservation and exchange lemmas
+--
+-- Swapping two leaves preserves @countWS@ and @depthSum@ for unrelated pairs,
+-- and exchanges them for the swapped pairs.
+
+-- | Swap preserves countWS for unrelated (weight, symbol) pairs.
+-- Uses tuples to keep the arity within sInduct's limit.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) swapPreservesCountWSProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Inductive lemma (strong): swapPreservesCountWS
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: countWS, swap, treeSize
+-- [Proven] swapPreservesCountWS :: Ɐa ∷ (Integer, Integer) → Ɐb ∷ (Integer, Integer) → Ɐc ∷ (Integer, Integer) → Ɐt ∷ HTree → Bool
+swapPreservesCountWSProof :: TP (Proof (   Forall "a" (Integer, Integer)
+                                        -> Forall "b" (Integer, Integer)
+                                        -> Forall "c" (Integer, Integer)
+                                        -> Forall "t" HTree -> SBool))
+swapPreservesCountWSProof = do
+   tsPos <- recall treeSizePosProof
+   sInduct "swapPreservesCountWS"
+       (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) (Forall @"t" t) ->
+           let (wa, sa) = untuple a
+               (wb, sb) = untuple b
+               (w, s)   = untuple c
+           in sNot (w .== wa .&& s .== sa) .&& sNot (w .== wb .&& s .== sb)
+              .=> countWS w s (swap wa sa wb sb t) .== countWS w s t)
+       (\_ _ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih a b c t ->
+         let (wa, sa) = untuple a
+             (wb, sb) = untuple b
+             (w, s)   = untuple c
+         in [sNot (w .== wa .&& s .== sa), sNot (w .== wb .&& s .== sb)]
+           |- countWS w s (swap wa sa wb sb t) .== countWS w s t
+           =: [pCase| t of
+                 Tip _ _ -> trivial
+                 Bin l r -> countWS w s (swap wa sa wb sb t) .== countWS w s t
+                         ?? ih `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" l)
+                         ?? ih `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" r)
+                         ?? tsPos `at` Inst @"t" l
+                         ?? tsPos `at` Inst @"t" r
+                         =: sTrue
+                         =: qed
+              |]
+
+-- | Swap preserves depthSum for unrelated (weight, symbol) pairs.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) swapPreservesDepthSumProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: swapPreservesCountWS                       Q.E.D.
+-- Inductive lemma (strong): swapPreservesDepthSum
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: countWS, depthSum, swap, treeSize
+-- [Proven] swapPreservesDepthSum :: Ɐa ∷ (Integer, Integer) → Ɐb ∷ (Integer, Integer) → Ɐc ∷ (Integer, Integer) → Ɐt ∷ HTree → Bool
+swapPreservesDepthSumProof :: TP (Proof (   Forall "a" (Integer, Integer)
+                                          -> Forall "b" (Integer, Integer)
+                                          -> Forall "c" (Integer, Integer)
+                                          -> Forall "t" HTree -> SBool))
+swapPreservesDepthSumProof = do
+   tsPos   <- recall treeSizePosProof
+   swapCWS <- recall swapPreservesCountWSProof
+   sInduct "swapPreservesDepthSum"
+       (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) (Forall @"t" t) ->
+           let (wa, sa) = untuple a
+               (wb, sb) = untuple b
+               (w, s)   = untuple c
+           in sNot (w .== wa .&& s .== sa) .&& sNot (w .== wb .&& s .== sb)
+              .=> depthSum w s (swap wa sa wb sb t) .== depthSum w s t)
+       (\_ _ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih a b c t ->
+         let (wa, sa) = untuple a
+             (wb, sb) = untuple b
+             (w, s)   = untuple c
+         in [sNot (w .== wa .&& s .== sa), sNot (w .== wb .&& s .== sb)]
+           |- depthSum w s (swap wa sa wb sb t) .== depthSum w s t
+           =: [pCase| t of
+                 Tip _ _ -> trivial
+                 Bin l r -> depthSum w s (swap wa sa wb sb t) .== depthSum w s t
+                         ?? ih      `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" l)
+                         ?? ih      `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" r)
+                         ?? swapCWS `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" l)
+                         ?? swapCWS `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" r)
+                         ?? tsPos   `at` Inst @"t" l
+                         ?? tsPos   `at` Inst @"t" r
+                         =: sTrue
+                         =: qed
+              |]
+
+-- | Swap exchanges countWS: after swapping @(wa,sa)@ with @(wb,sb)@,
+-- the count of @(wb,sb)@ equals the old count of @(wa,sa)@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) swapExchangesCountWSProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Inductive lemma (strong): swapExchangesCountWS
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: countWS, swap, treeSize
+-- [Proven] swapExchangesCountWS :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+swapExchangesCountWSProof :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
+                                        -> Forall "wb" Integer -> Forall "sb" Integer
+                                        -> Forall "t"  HTree   -> SBool))
+swapExchangesCountWSProof = do
+   tsPos <- recall treeSizePosProof
+   sInduct "swapExchangesCountWS"
+       (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb)
+        (Forall @"t" t) ->
+           countWS wb sb (swap wa sa wb sb t) .== countWS wa sa t)
+       (\_ _ _ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih wa sa wb sb t -> []
+         |- countWS wb sb (swap wa sa wb sb t) .== countWS wa sa t
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> countWS wb sb (swap wa sa wb sb t) .== countWS wa sa t
+                       ?? ih    `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                       ?? ih    `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       =: sTrue
+                       =: qed
+            |]
+
+-- | Swap exchanges depthSum: after swapping, the depthSum of @(wb,sb)@
+-- equals the old depthSum of @(wa,sa)@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) swapExchangesDepthSumProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: swapExchangesCountWS                       Q.E.D.
+-- Inductive lemma (strong): swapExchangesDepthSum
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: countWS, depthSum, swap, treeSize
+-- [Proven] swapExchangesDepthSum :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+swapExchangesDepthSumProof :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
+                                          -> Forall "wb" Integer -> Forall "sb" Integer
+                                          -> Forall "t"  HTree   -> SBool))
+swapExchangesDepthSumProof = do
+   tsPos    <- recall treeSizePosProof
+   swapXCWS <- recall swapExchangesCountWSProof
+   sInduct "swapExchangesDepthSum"
+       (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb)
+        (Forall @"t" t) ->
+           depthSum wb sb (swap wa sa wb sb t) .== depthSum wa sa t)
+       (\_ _ _ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih wa sa wb sb t -> []
+         |- depthSum wb sb (swap wa sa wb sb t) .== depthSum wa sa t
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> depthSum wb sb (swap wa sa wb sb t) .== depthSum wa sa t
+                       ?? ih       `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                       ?? ih       `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                       ?? swapXCWS `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                       ?? swapXCWS `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                       ?? tsPos    `at` Inst @"t" l
+                       ?? tsPos    `at` Inst @"t" r
+                       =: sTrue
+                       =: qed
+            |]
+
+-- ** Sibling lemmas
+--
+-- The sibling of the deepest leaf has count at least 1,
+-- and its depthSum equals the height when it is unique.
+
+-- | The sibling leaf is counted at least once.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) sibCountWSProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: countWSNonNeg                              Q.E.D.
+-- Lemma: deepCountWS                                Q.E.D.
+-- Lemma: heightNonNeg                               Q.E.D.
+-- Inductive lemma (strong): sibCountWS
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (3 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.3.1                             Q.E.D.
+--       Step: 1.2.2.3.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: countWS, deepS, deepW, height, sibS, sibW, treeSize
+-- [Proven] sibCountWS :: Ɐt ∷ HTree → Bool
+sibCountWSProof :: TP (Proof (Forall "t" HTree -> SBool))
+sibCountWSProof = do
+   tsPos         <- recall treeSizePosProof
+   countWSNonNeg <- recall countWSNonNegProof
+   deepCountWS   <- recall deepCountWSProof
+   heightNonNeg  <- recall heightNonNegProof
+   sInduct "sibCountWS"
+       (\(Forall @"t" t) -> countWS (sibW t) (sibS t) t .>= 1)
+       (\t -> treeSize t, [proofOf tsPos]) $
+       \ih t -> []
+         |- countWS (sibW t) (sibS t) t .>= (1 :: SInteger)
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> countWS (sibW t) (sibS t) t .>= (1 :: SInteger)
+                       =: cases
+                            [ height l .>= height r .&& height l .== 0
+                                ==> countWS (sibW t) (sibS t) t .>= (1 :: SInteger)
+                                 ?? deepCountWS   `at` Inst @"t" r
+                                 ?? countWSNonNeg `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
+                                 =: sTrue
+                                 =: qed
+                            , height l .>= height r .&& sNot (height l .== 0)
+                                ==> countWS (sibW t) (sibS t) t .>= (1 :: SInteger)
+                                 ?? ih            `at` Inst @"t" l
+                                 ?? countWSNonNeg `at` (Inst @"w" (sibW l), Inst @"s" (sibS l), Inst @"t" r)
+                                 ?? tsPos         `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            , sNot (height l .>= height r)
+                                ==> countWS (sibW t) (sibS t) t .>= (1 :: SInteger)
+                                 ?? ih            `at` Inst @"t" r
+                                 ?? countWSNonNeg `at` (Inst @"w" (sibW r), Inst @"s" (sibS r), Inst @"t" l)
+                                 ?? tsPos         `at` Inst @"t" l
+                                 ?? heightNonNeg  `at` Inst @"t" l
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
+
+-- | The sibling leaf's depthSum equals the height (when unique).
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) sibDepthSumProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: countWSNonNeg                              Q.E.D.
+-- Lemma: depthSumZero                               Q.E.D.
+-- Lemma: deepCountWS                                Q.E.D.
+-- Lemma: heightNonNeg                               Q.E.D.
+-- Lemma: sibCountWS                                 Q.E.D.
+-- Lemma: countWSBin                                 Q.E.D.
+-- Lemma: heightZeroDepthSum                         Q.E.D.
+-- Inductive lemma (strong): sibDepthSum
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (3 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.3.1                             Q.E.D.
+--       Step: 1.2.2.3.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: countWS, deepS, deepW, depthSum, height, sibS, sibW, treeSize
+-- [Proven] sibDepthSum :: Ɐt ∷ HTree → Bool
+sibDepthSumProof :: TP (Proof (Forall "t" HTree -> SBool))
+sibDepthSumProof = do
+   tsPos         <- recall treeSizePosProof
+   countWSNonNeg <- recall countWSNonNegProof
+   depthSumZero  <- recall depthSumZeroProof
+   deepCountWS   <- recall deepCountWSProof
+   heightNonNeg  <- recall heightNonNegProof
+   sibCountWS    <- recall sibCountWSProof
+   cwsBin        <- recall countWSBinProof
+   heightZeroDS  <- recall heightZeroDepthSumProof
+
+   sInduct "sibDepthSum"
+       (\(Forall @"t" t) ->
+           countWS (sibW t) (sibS t) t .== 1
+             .=> depthSum (sibW t) (sibS t) t .== height t)
+       (\t -> treeSize t, [proofOf tsPos]) $
+       \ih t -> [countWS (sibW t) (sibS t) t .== 1]
+         |- depthSum (sibW t) (sibS t) t .== height t
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> depthSum (sibW t) (sibS t) t .== height t
+                       =: cases
+                            [ height l .>= height r .&& height l .== 0
+                                ==> depthSum (sibW t) (sibS t) t .== height t
+                                 ?? cwsBin        `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"l" l, Inst @"r" r)
+                                 ?? deepCountWS   `at` Inst @"t" r
+                                 ?? countWSNonNeg `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
+                                 ?? depthSumZero  `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
+                                 ?? heightNonNeg  `at` Inst @"t" r
+                                 ?? heightZeroDS  `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
+                                 ?? heightZeroDS  `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" r)
+                                 =: sTrue
+                                 =: qed
+                            , height l .>= height r .&& sNot (height l .== 0)
+                                ==> depthSum (sibW t) (sibS t) t .== height t
+                                 ?? cwsBin        `at` (Inst @"w" (sibW l), Inst @"s" (sibS l), Inst @"l" l, Inst @"r" r)
+                                 ?? sibCountWS    `at` Inst @"t" l
+                                 ?? countWSNonNeg `at` (Inst @"w" (sibW l), Inst @"s" (sibS l), Inst @"t" r)
+                                 ?? depthSumZero  `at` (Inst @"w" (sibW l), Inst @"s" (sibS l), Inst @"t" r)
+                                 ?? ih            `at` Inst @"t" l
+                                 ?? tsPos         `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            , sNot (height l .>= height r)
+                                ==> depthSum (sibW t) (sibS t) t .== height t
+                                 ?? cwsBin        `at` (Inst @"w" (sibW r), Inst @"s" (sibS r), Inst @"l" l, Inst @"r" r)
+                                 ?? sibCountWS    `at` Inst @"t" r
+                                 ?? countWSNonNeg `at` (Inst @"w" (sibW r), Inst @"s" (sibS r), Inst @"t" l)
+                                 ?? depthSumZero  `at` (Inst @"w" (sibW r), Inst @"s" (sibS r), Inst @"t" l)
+                                 ?? ih            `at` Inst @"t" r
+                                 ?? tsPos         `at` Inst @"t" l
+                                 ?? heightNonNeg  `at` Inst @"t" l
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
