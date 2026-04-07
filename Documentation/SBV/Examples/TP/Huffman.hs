@@ -1912,3 +1912,89 @@ costDecompProof = do
                                               =: qed
                                          ]
             |]
+
+-- | Height zero means the tree is a single leaf (treeSize 1).
+--
+-- >>> runTPWith cvc5 heightZeroTreeSizeOneProof
+-- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: heightZeroTreeSizeOne            Q.E.D.
+-- Functions proven terminating: height, treeSize
+-- [Proven] heightZeroTreeSizeOne :: Ɐt ∷ HTree → Bool
+heightZeroTreeSizeOneProof :: TP (Proof (Forall "t" HTree -> SBool))
+heightZeroTreeSizeOneProof = do
+   hNN <- recall heightNonNegProof
+   lemma "heightZeroTreeSizeOne"
+       (\(Forall @"t" t) -> height t .== 0 .=> treeSize t .== 1)
+       [proofOf hNN]
+
+-- | Collapsing reduces tree size by exactly 2: the deepest sibling pair
+-- (a @Bin@ with two @Tip@ children) is replaced by a single @Tip@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) collapseReducesTreeSizeProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: heightNonNeg                               Q.E.D.
+-- Lemma: heightPosTreeSize                          Q.E.D.
+-- Lemma: heightZeroTreeSizeOne                      Q.E.D.
+-- Inductive lemma (strong): collapseReducesTreeSize
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (3 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.3.1                             Q.E.D.
+--       Step: 1.2.2.3.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: collapse, height, treeSize, treeWeight
+-- [Proven] collapseReducesTreeSize :: Ɐt ∷ HTree → Bool
+collapseReducesTreeSizeProof :: TP (Proof (Forall "t" HTree -> SBool))
+collapseReducesTreeSizeProof = do
+   tsPos <- recall treeSizePosProof
+   hNN   <- recall heightNonNegProof
+   hpTS  <- recall heightPosTreeSizeProof
+   hzTS  <- recall heightZeroTreeSizeOneProof
+
+   sInduct "collapseReducesTreeSize"
+       (\(Forall @"t" t) ->
+           treeSize t .>= 2 .=> treeSize (collapse t) .== treeSize t - 2)
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> [treeSize t .>= 2]
+         |- treeSize (collapse t) .== treeSize t - 2
+         =: [pCase| t of
+               Tip _ _ -> treeSize (collapse t) .== treeSize t - 2
+                       =: sTrue
+                       =: qed
+               Bin l r -> treeSize (collapse t) .== treeSize t - 2
+                       =: cases
+                            [ height l .>= height r .&& height l .== 0
+                                ==> treeSize (collapse t) .== treeSize t - 2
+                                 ?? hzTS `at` Inst @"t" l
+                                 ?? hzTS `at` Inst @"t" r
+                                 ?? hNN  `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            , height l .>= height r .&& sNot (height l .== 0)
+                                ==> treeSize (collapse t) .== treeSize t - 2
+                                 ?? ih    `at` Inst @"t" l
+                                 ?? tsPos `at` Inst @"t" r
+                                 ?? hpTS  `at` Inst @"t" l
+                                 ?? hNN   `at` Inst @"t" l
+                                 =: sTrue
+                                 =: qed
+                            , sNot (height l .>= height r)
+                                ==> treeSize (collapse t) .== treeSize t - 2
+                                 ?? ih    `at` Inst @"t" r
+                                 ?? tsPos `at` Inst @"t" l
+                                 ?? hpTS  `at` Inst @"t" r
+                                 ?? hNN   `at` Inst @"t" l
+                                 ?? hNN   `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
