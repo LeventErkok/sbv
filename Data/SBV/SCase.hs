@@ -14,7 +14,9 @@
 -- @sCase@ are automatically treated as symbolic case-splits, enabling
 -- nested symbolic pattern matching.
 --
--- Also provides `[pCase| expr of ... |]` for proof case-splits.
+-- Also provides `[pCase| expr of ... |]` for proof case-splits. Plain
+-- @case@ expressions inside @pCase@ are automatically treated as nested
+-- proof case-splits (generating @cases [...]@ calls).
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE LambdaCase            #-}
@@ -574,7 +576,7 @@ flattenPat o _ p = fail o $ unlines [ "sCase/pCase: Unsupported complex pattern 
 -- We include a destructuring equality (arg .=== head arg .: tail arg) because lists use
 -- SMT Seq, not declare-datatypes, so the solver doesn't automatically know this relationship.
 -- This is critical for pCase proof progress; harmless for sCase (redundant guard in ite-chain).
--- NB. For top-level list cons patterns in pCase, the same equality is added by processCases.
+-- NB. For top-level list cons patterns in pCase, the same equality is added by processProofCases.
 flattenCons :: Offset -> Exp -> Pat -> Pat -> Q (Pat, [Exp], [Dec])
 flattenCons off arg p1 p2 = do
     let headExpr = mkAccessorFor (Just BTList) (mkName ":") 1 arg
@@ -967,26 +969,45 @@ transformNestedCases = everywhereM (mkM go)
         go (CaseE s ms) = processCaseExp (repeat Unknown) s ms
         go e            = pure e
 
+-- | Transform nested @case@ expressions inside a TH 'Exp' into proof case-splits.
+-- Like 'transformNestedCases', but generates @cases [cond ==> rhs, ...]@ instead of
+-- @ite@ chains. This is what enables @case@ expressions inside @[pCase| ... |]@ to work
+-- as nested proof case-splits.
+transformNestedCasesProof :: Exp -> Q Exp
+transformNestedCasesProof = everywhereM (mkM go)
+  where go :: Exp -> Q Exp
+        go (CaseE s ms) = processProofCaseExp s ms
+        go e            = pure e
+
 -- | Transform the matches of an outer sCase expression, resolving any nested
 -- @case@ expressions in the RHS and guards before the outer case processes them.
 transformMatches :: [Match] -> Q [Match]
-transformMatches = mapM transformMatch
+transformMatches = transformMatchesWith transformNestedCases
+
+-- | Transform the matches of an outer pCase expression, resolving any nested
+-- @case@ expressions in the RHS and guards as proof case-splits.
+transformMatchesProof :: [Match] -> Q [Match]
+transformMatchesProof = transformMatchesWith transformNestedCasesProof
+
+-- | Generic match transformer parameterized by the nested-case handler.
+transformMatchesWith :: (Exp -> Q Exp) -> [Match] -> Q [Match]
+transformMatchesWith xform = mapM transformMatch
   where transformMatch (Match pat body locals) = do
           body'   <- transformBody body
           locals' <- mapM transformDec locals
           pure (Match pat body' locals')
 
-        transformBody (NormalB e)    = NormalB <$> transformNestedCases e
+        transformBody (NormalB e)    = NormalB <$> xform e
         transformBody (GuardedB gs)  = GuardedB <$> mapM transformGuarded gs
 
         transformGuarded (g, e) = do g' <- transformGuard g
-                                     e' <- transformNestedCases e
+                                     e' <- xform e
                                      pure (g', e')
 
-        transformGuard (NormalG e) = NormalG <$> transformNestedCases e
+        transformGuard (NormalG e) = NormalG <$> xform e
         transformGuard (PatG ss)   = PatG <$> mapM transformStmt ss
 
-        transformStmt (NoBindS e)  = NoBindS <$> transformNestedCases e
+        transformStmt (NoBindS e)  = NoBindS <$> xform e
         transformStmt s            = pure s
 
         transformDec (ValD p b ls) = do b'  <- transformBody b
@@ -998,6 +1019,44 @@ transformMatches = mapM transformMatch
         transformClause (Clause ps b ls) = do b'  <- transformBody b
                                               ls' <- mapM transformDec ls
                                               pure (Clause ps b' ls')
+
+-- | Core proof-case pipeline: given a scrutinee and matches (in TH AST form),
+-- generate @cases [cond ==> rhs, ...]@. This is the proof-level counterpart of
+-- 'processCaseExp', used by 'transformNestedCasesProof' to handle inner @case@
+-- expressions inside @[pCase| ... |]@.
+processProofCaseExp :: Exp -> [Match] -> Q Exp
+processProofCaseExp scrut0 matches0 = do
+    -- Recursively transform any nested case expressions as proof case-splits.
+    matches <- transformMatchesProof matches0
+    scrut   <- transformNestedCasesProof scrut0
+    mbTypeInfo <- inferType "pCase" matches
+    let offsets = repeat Unknown
+    case mbTypeInfo of
+      Nothing -> do
+        allCases <- concat <$> zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
+        loc <- location
+        checkWildcard "pCase" loc allCases
+        allPairs <- processProofCases scrut [] Nothing Map.empty [] allCases
+        let casesName   = mkName "cases"
+            impliesName = mkName "==>"
+            mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
+        pure $ AppE (VarE casesName) (ListE (map mkPair allPairs))
+      Just (typ, mbt) -> do
+        cs <- zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
+        let cases = concat cs
+        loc <- location
+        cstrs <- getCstrs mbt typ
+        checkWildcard "proofCase" loc cases
+        checkArities  "pCase" typ cstrs cases
+        let allGrdVars :: Map.Map Name (Set Name)
+            allGrdVars = Map.fromListWith Set.union
+                           [ (nm, maybe Set.empty freeVars mbG)
+                           | CMatch _ nm _ mbG _ _ <- cases ]
+        allPairs <- processProofCases scrut cstrs mbt allGrdVars [] cases
+        let casesName   = mkName "cases"
+            impliesName = mkName "==>"
+            mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
+        pure $ AppE (VarE casesName) (ListE (map mkPair allPairs))
 
 -- * pCase
 
@@ -1028,9 +1087,10 @@ pCase = QuasiQuoter
       case metaParse fullCase of
         Right (CaseE scrut0 matches0) -> do
           -- Transform any nested case expressions in the RHS/guards of each match.
-          -- This ensures inner cases become symbolic before the outer case processes them.
-          matches <- transformMatches matches0
-          scrut   <- transformNestedCases scrut0
+          -- Inner case expressions become proof case-splits (cases [...]),
+          -- just like inner cases in sCase become symbolic ite-chains.
+          matches <- transformMatchesProof matches0
+          scrut   <- transformNestedCasesProof scrut0
           mbTypeInfo <- inferType "pCase" matches
           case mbTypeInfo of
             Nothing -> do
@@ -1038,7 +1098,7 @@ pCase = QuasiQuoter
               allCases <- concat <$> zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
               loc <- location
               checkWildcard "pCase" loc allCases
-              allPairs <- processCases scrut [] Nothing Map.empty [] allCases
+              allPairs <- processProofCases scrut [] Nothing Map.empty [] allCases
               let casesName   = mkName "cases"
                   impliesName = mkName "==>"
                   mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
@@ -1108,94 +1168,100 @@ pCase = QuasiQuoter
             allGrdVars = Map.fromListWith Set.union
                            [ (nm, maybe Set.empty freeVars mbG)
                            | CMatch _ nm _ mbG _ _ <- cases ]
-        allPairs <- processCases scrut cstrs mbt allGrdVars [] cases
+        allPairs <- processProofCases scrut cstrs mbt allGrdVars [] cases
         let casesName   = mkName "cases"
             impliesName = mkName "==>"
             mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
         pure $ AppE (VarE casesName) (ListE (map mkPair allPairs))
 
-    -- | Process all cases linearly, accumulating prior guards.
-    -- Prior guards are tagged with their constructor name (Nothing for wildcards).
-    -- Each entry stores (constructor, fullGuard, userGuardOnly):
-    --   fullGuard    = the complete guard expression (used for wildcard De Morgan negation)
-    --   userGuardOnly = Just the user guard part (used for same-constructor negation)
-    --                   Nothing if unguarded (same-constructor arms don't negate unguarded matches)
-    processCases :: Exp -> [(Name, [Type])] -> Maybe BuiltinType -> Map.Map Name (Set Name) -> [(Maybe Name, Exp, Maybe Exp)] -> [Case] -> Q [(Exp, Exp)]
-    processCases _     _     _   _          _           []         = pure []
-    processCases scrut cstrs mbt allGrdVars priorGuards (c:rest) = case c of
-      CWild _ mbG rhs -> do
-        -- Wildcard: negate the disjunction of ALL prior full guards (De Morgan)
-        let allGuards  = [g | (_, g, _) <- priorGuards]
-            baseGuard  = negateAll allGuards
-            finalGuard = case mbG of
-                           Nothing -> baseGuard
-                           Just g  -> sAndAll [baseGuard, g]
-        rest' <- processCases scrut cstrs mbt allGrdVars (priorGuards ++ [(Nothing, finalGuard, Nothing)]) rest
-        pure $ (finalGuard, rhs) : rest'
+-- * Proof case processing
 
-      CMatch _o nm mbp mbG rhs _allUsed -> do
-        let ts   = case lookupBase nm cstrs of
-                     Just t  -> t
-                     Nothing -> error $ "pCase: impossible: unknown constructor " ++ nameBase nm
-            pats = fromMaybe (map (const WildP) ts) mbp
+-- | Process all proof cases linearly, accumulating prior guards.
+-- Shared between the top-level @pCase@ quasi-quoter and 'processProofCaseExp'
+-- (which handles nested @case@ expressions inside @[pCase| ... |]@).
+--
+-- Prior guards are tagged with their constructor name (Nothing for wildcards).
+-- Each entry stores (constructor, fullGuard, userGuardOnly):
+--
+--   * fullGuard    = the complete guard expression (used for wildcard De Morgan negation)
+--   * userGuardOnly = Just the user guard part (used for same-constructor negation),
+--                     Nothing if unguarded (same-constructor arms don't negate unguarded matches)
+processProofCases :: Exp -> [(Name, [Type])] -> Maybe BuiltinType -> Map.Map Name (Set Name) -> [(Maybe Name, Exp, Maybe Exp)] -> [Case] -> Q [(Exp, Exp)]
+processProofCases _     _     _   _          _           []         = pure []
+processProofCases scrut cstrs mbt allGrdVars priorGuards (c:rest) = case c of
+  CWild _ mbG rhs -> do
+    -- Wildcard: negate the disjunction of ALL prior full guards (De Morgan)
+    let allGuards  = [g | (_, g, _) <- priorGuards]
+        baseGuard  = negateAllGuards allGuards
+        finalGuard = case mbG of
+                       Nothing -> baseGuard
+                       Just g  -> sAndAll [baseGuard, g]
+    rest' <- processProofCases scrut cstrs mbt allGrdVars (priorGuards ++ [(Nothing, finalGuard, Nothing)]) rest
+    pure $ (finalGuard, rhs) : rest'
 
-            -- Build let-bindings for pattern variables
-            args    = [(i, mkAccessorFor mbt nm i scrut) | (i, _) <- zip [(1 :: Int) ..] ts]
-            bindings = [ ValD (VarP v) (NormalB acc) []
-                       | (i, acc) <- args, VarP v <- [pats !! (i - 1)] ]
+  CMatch _o nm mbp mbG rhs _allUsed -> do
+    let ts   = case lookupBase nm cstrs of
+                 Just t  -> t
+                 Nothing -> error $ "pCase: impossible: unknown constructor " ++ nameBase nm
+        pats = fromMaybe (map (const WildP) ts) mbp
 
-            testerGuard = mkTesterFor mbt nm scrut
+        -- Build let-bindings for pattern variables
+        args    = [(i, mkAccessorFor mbt nm i scrut) | (i, _) <- zip [(1 :: Int) ..] ts]
+        bindings = [ ValD (VarP v) (NormalB acc) []
+                   | (i, acc) <- args, VarP v <- [pats !! (i - 1)] ]
 
-            -- For list cons patterns in pCase, add a destructuring equality:
-            --   scrut .=== head scrut .: tail scrut
-            -- Lists use SMT Seq (not declare-datatypes), so the solver doesn't automatically
-            -- know that xs = head xs .: tail xs from sNot (null xs). We must add an explicit
-            -- equality to give the solver this information, mirroring what 'split' does.
-            -- All other types (ADTs, Maybe, Either, Tuple) use declare-datatypes and get
-            -- these axioms for free.
-            -- NB. For nested list cons patterns, the same equality is added by 'flattenCons'.
-            destructEq
-              | Just BTList <- mbt, nameBase nm == ":"
-              = let hd = AppE (VarE (sbvName "Data.SBV.List" "head")) scrut
-                    tl = AppE (VarE (sbvName "Data.SBV.List" "tail")) scrut
-                in [foldl1 AppE [VarE '(.===), scrut, InfixE (Just hd) (VarE '(.:)) (Just tl)]]
-              | True
-              = []
+        testerGuard = mkTesterFor mbt nm scrut
 
-            -- Only negate prior USER guards for the SAME constructor (others are mutually exclusive)
-            sameUserGuards = [ ug | (Just cn, _, Just ug) <- priorGuards, sameBase cn nm ]
-            negPriors      = map (AppE (VarE 'sNot)) sameUserGuards
+        -- For list cons patterns in pCase, add a destructuring equality:
+        --   scrut .=== head scrut .: tail scrut
+        -- Lists use SMT Seq (not declare-datatypes), so the solver doesn't automatically
+        -- know that xs = head xs .: tail xs from sNot (null xs). We must add an explicit
+        -- equality to give the solver this information, mirroring what 'split' does.
+        -- All other types (ADTs, Maybe, Either, Tuple) use declare-datatypes and get
+        -- these axioms for free.
+        -- NB. For nested list cons patterns, the same equality is added by 'flattenCons'.
+        destructEq
+          | Just BTList <- mbt, nameBase nm == ":"
+          = let hd = AppE (VarE (sbvName "Data.SBV.List" "head")) scrut
+                tl = AppE (VarE (sbvName "Data.SBV.List" "tail")) scrut
+            in [foldl1 AppE [VarE '(.===), scrut, InfixE (Just hd) (VarE '(.:)) (Just tl)]]
+          | True
+          = []
 
-            -- Build the final guard (wrap user guard in bindings so pattern vars are in scope)
-            grdVars     = maybe Set.empty freeVars mbG
-            grdBindings = filter (\case
-                                     ValD (VarP v) _ _ -> v `Set.member` grdVars
-                                     _                 -> True) bindings
-            guardParts  = [testerGuard] ++ destructEq ++ negPriors ++ maybe [] (pure . addLocals grdBindings) mbG
-            finalGuard  = sAndAll guardParts
+        -- Only negate prior USER guards for the SAME constructor (others are mutually exclusive)
+        sameUserGuards = [ ug | (Just cn, _, Just ug) <- priorGuards, sameBase cn nm ]
+        negPriors      = map (AppE (VarE 'sNot)) sameUserGuards
 
-            -- Wrap RHS with let-bindings; include all bindings except those
-            -- used in any guard of the same constructor but not in this RHS
-            -- (to avoid false "unused" warnings from GHC for guard-only variables)
-            cstrGrdVars = Map.findWithDefault Set.empty nm allGrdVars
-            rhsVars = freeVars rhs
-            rhs'    = addLocals (filter (\case
-                                            ValD (VarP v) _ _ -> not (v `Set.member` cstrGrdVars) || v `Set.member` rhsVars
-                                            _                 -> True) bindings) rhs
+        -- Build the final guard (wrap user guard in bindings so pattern vars are in scope)
+        grdVars     = maybe Set.empty freeVars mbG
+        grdBindings = filter (\case
+                                 ValD (VarP v) _ _ -> v `Set.member` grdVars
+                                 _                 -> True) bindings
+        guardParts  = [testerGuard] ++ destructEq ++ negPriors ++ maybe [] (pure . addLocals grdBindings) mbG
+        finalGuard  = sAndAll guardParts
 
-            -- Track: full guard for wildcard negation, user guard for same-constructor negation
-            userGuardOnly = case mbG of
-                              Just g  -> Just (addLocals grdBindings g)
-                              Nothing -> Nothing
-            priorGuards' = priorGuards ++ [(Just nm, finalGuard, userGuardOnly)]
+        -- Wrap RHS with let-bindings; include all bindings except those
+        -- used in any guard of the same constructor but not in this RHS
+        -- (to avoid false "unused" warnings from GHC for guard-only variables)
+        cstrGrdVars = Map.findWithDefault Set.empty nm allGrdVars
+        rhsVars = freeVars rhs
+        rhs'    = addLocals (filter (\case
+                                        ValD (VarP v) _ _ -> not (v `Set.member` cstrGrdVars) || v `Set.member` rhsVars
+                                        _                 -> True) bindings) rhs
 
-        rest' <- processCases scrut cstrs mbt allGrdVars priorGuards' rest
-        pure $ (finalGuard, rhs') : rest'
+        -- Track: full guard for wildcard negation, user guard for same-constructor negation
+        userGuardOnly = case mbG of
+                          Just g  -> Just (addLocals grdBindings g)
+                          Nothing -> Nothing
+        priorGuards' = priorGuards ++ [(Just nm, finalGuard, userGuardOnly)]
 
-    -- | Negate the disjunction of all given guards using De Morgan: sNot (g1 .|| g2 .|| ...)
-    negateAll :: [Exp] -> Exp
-    negateAll [] = VarE 'sTrue
-    negateAll gs = AppE (VarE 'sNot) (foldl1 (\a b -> foldl1 AppE [VarE '(.||), a, b]) gs)
+    rest' <- processProofCases scrut cstrs mbt allGrdVars priorGuards' rest
+    pure $ (finalGuard, rhs') : rest'
+
+-- | Negate the disjunction of all given guards using De Morgan: sNot (g1 .|| g2 .|| ...)
+negateAllGuards :: [Exp] -> Exp
+negateAllGuards [] = VarE 'sTrue
+negateAllGuards gs = AppE (VarE 'sNot) (foldl1 (\a b -> foldl1 AppE [VarE '(.||), a, b]) gs)
 
 -- * Standalone helpers
 

@@ -3,6 +3,9 @@
 
 ### Version 14.0.5, Not yet released
 
+  * `pCase` now supports nested `case` expressions as proof case-splits,
+    mirroring how `sCase` treats nested `case` as symbolic cases.
+
   * Consolidated internal solver IPC timeouts into named constants.
     Set the environment variable `SBV_COMM_TIMEOUT_FACTOR` to scale them (e.g., `2` to double).
 

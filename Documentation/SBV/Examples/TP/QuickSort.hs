@@ -538,28 +538,27 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                    =: [pCase| xs of
                         []             -> trivial
                         whole@(a : as) ->
-                              count e (quickSort whole)
-                           ?? "expand quickSort"
-                           =: count e (case partition a as of
-                                         (lo, hi) -> quickSort lo ++ [a] ++ quickSort hi)
-                           ?? "push count down"
-                           =: case partition a as of
-                                (lo, hi) -> count e (quickSort lo ++ [a] ++ quickSort hi)
-                                         ?? countAppend `at` (Inst @"xs" (quickSort lo), Inst @"ys" ([a] ++ quickSort hi), Inst @"e" e)
-                                         =: count e (quickSort lo) + count e ([a] ++ quickSort hi)
-                                         ?? countAppend `at` (Inst @"xs" [a], Inst @"ys" (quickSort hi), Inst @"e" e)
-                                         =: count e (quickSort lo) + count e [a] + count e (quickSort hi)
-                                         ?? ih                    `at` (Inst @"xs" lo, Inst @"e" e)
-                                         ?? partitionNotLongerFst `at` (Inst @"l"  as, Inst @"pivot" a)
-                                         ?? "IH on lo"
-                                         =: count e lo + count e [a] + count e (quickSort hi)
-                                         ?? ih                    `at` (Inst @"xs" hi, Inst @"e" e)
-                                         ?? partitionNotLongerSnd `at` (Inst @"l"  as, Inst @"pivot" a)
-                                         ?? "IH on hi"
-                                         =: count e lo + count e [a] + count e hi
-                                         ?? countPartition `at` (Inst @"xs" as, Inst @"pivot" a, Inst @"e" e)
-                                         =: count e xs
-                                         =: qed
+                              let (lo, hi) = untuple (partition a as)
+                              in count e (quickSort whole)
+                              ?? "expand quickSort"
+                              =: count e (quickSort lo ++ [a] ++ quickSort hi)
+                              ?? "push count down"
+                              =: count e (quickSort lo ++ [a] ++ quickSort hi)
+                              ?? countAppend `at` (Inst @"xs" (quickSort lo), Inst @"ys" ([a] ++ quickSort hi), Inst @"e" e)
+                              =: count e (quickSort lo) + count e ([a] ++ quickSort hi)
+                              ?? countAppend `at` (Inst @"xs" [a], Inst @"ys" (quickSort hi), Inst @"e" e)
+                              =: count e (quickSort lo) + count e [a] + count e (quickSort hi)
+                              ?? ih                    `at` (Inst @"xs" lo, Inst @"e" e)
+                              ?? partitionNotLongerFst `at` (Inst @"l"  as, Inst @"pivot" a)
+                              ?? "IH on lo"
+                              =: count e lo + count e [a] + count e (quickSort hi)
+                              ?? ih                    `at` (Inst @"xs" hi, Inst @"e" e)
+                              ?? partitionNotLongerSnd `at` (Inst @"l"  as, Inst @"pivot" a)
+                              ?? "IH on hi"
+                              =: count e lo + count e [a] + count e hi
+                              ?? countPartition `at` (Inst @"xs" as, Inst @"pivot" a, Inst @"e" e)
+                              =: count e xs
+                              =: qed
                       |]
 
   sortIsPermutation <- lemma "sortIsPermutation" (\(Forall xs) -> isPermutation xs (quickSort xs)) [proofOf sortCountsMatch]
@@ -603,37 +602,34 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
                    =: [pCase| xs of
                         [] -> trivial
                         whole@(a : as) ->
-                             nonDecreasing (quickSort whole)
+                             let (lo, hi) = untuple (partition a as)
+                             in nonDecreasing (quickSort whole)
                           ?? "expand quickSort"
-                          =: nonDecreasing (case partition a as of
-                                              (lo, hi) -> quickSort lo ++ [a] ++ quickSort hi)
-                          ?? "push nonDecreasing down"
-                          =: case partition a as of
-                               (lo, hi) -> nonDecreasing (quickSort lo ++ [a] ++ quickSort hi)
-                                        -- Deduce that lo/hi is not longer than as, and hence, shorter than xs
-                                        ?? partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
-                                        ?? partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
+                          =: nonDecreasing (quickSort lo ++ [a] ++ quickSort hi)
+                          -- Deduce that lo/hi is not longer than as, and hence, shorter than xs
+                          ?? partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
+                          ?? partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
 
-                                        -- Use the inductive hypothesis twice to deduce quickSort of lo and hi are nonDecreasing
-                                        ?? ih `at` Inst @"xs" lo  -- nonDecreasing (quickSort lo)
-                                        ?? ih `at` Inst @"xs" hi  -- nonDecreasing (quickSort hi)
+                          -- Use the inductive hypothesis twice to deduce quickSort of lo and hi are nonDecreasing
+                          ?? ih `at` Inst @"xs" lo  -- nonDecreasing (quickSort lo)
+                          ?? ih `at` Inst @"xs" hi  -- nonDecreasing (quickSort hi)
 
-                                        -- Deduce that lo is all less than a, and hi is all greater than or equal to a
-                                        ?? partitionFstLT `at` (Inst @"l" as, Inst @"pivot" a)
-                                        ?? partitionSndGE `at` (Inst @"l" as, Inst @"pivot" a)
+                          -- Deduce that lo is all less than a, and hi is all greater than or equal to a
+                          ?? partitionFstLT `at` (Inst @"l" as, Inst @"pivot" a)
+                          ?? partitionSndGE `at` (Inst @"l" as, Inst @"pivot" a)
 
-                                        -- Deduce that quickSort lo is all less than a
-                                        ?? sortIsPermutation `at`  Inst @"xs" lo
-                                        ?? lltPermutation    `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" lo)
+                          -- Deduce that quickSort lo is all less than a
+                          ?? sortIsPermutation `at`  Inst @"xs" lo
+                          ?? lltPermutation    `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" lo)
 
-                                        -- Deduce that quickSort hi is all greater than or equal to a
-                                        ?? sortIsPermutation `at`  Inst @"xs" hi
-                                        ?? lgePermutation    `at` (Inst @"xs" (quickSort hi), Inst @"pivot" a, Inst @"ys" hi)
+                          -- Deduce that quickSort hi is all greater than or equal to a
+                          ?? sortIsPermutation `at`  Inst @"xs" hi
+                          ?? lgePermutation    `at` (Inst @"xs" (quickSort hi), Inst @"pivot" a, Inst @"ys" hi)
 
-                                        -- Finally conclude that the whole reconstruction is non-decreasing
-                                        ?? nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
-                                        =: sTrue
-                                        =: qed
+                          -- Finally conclude that the whole reconstruction is non-decreasing
+                          ?? nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
+                          =: sTrue
+                          =: qed
                       |]
 
   --------------------------------------------------------------------------------------------
