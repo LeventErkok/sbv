@@ -1165,10 +1165,205 @@ greedySwap2Proof = do
          =: sTrue
          =: qed
 
--- ** Swap preservation and exchange lemmas
+-- | Combined greedy choice: apply two swaps to place the two lightest leaves at the
+-- deepest and sibling positions without increasing cost.  The first swap moves
+-- @(wa, sa)@ to the deepest leaf; the second moves @(wb, sb)@ to its sibling.
+-- Conditions on the intermediate tree @t1 = swap wa sa (deepW t) (deepS t) t@ are
+-- stated directly as preconditions.
 --
--- Swapping two leaves preserves @countWS@ and @depthSum@ for unrelated pairs,
--- and exchanges them for the swapped pairs.
+-- >>> runTPWith (tpRibbon 50 cvc5) greedyChoiceProof
+-- Lemma: greedySwap1                                Q.E.D.
+-- Lemma: greedySwap2                                Q.E.D.
+-- Lemma: greedyChoice
+--   Step: 1                                         Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: cost, countWS, deepS, deepW, depthSum, height, sibS, sibW, swap, treeSize, treeWeight
+-- [Proven] greedyChoice :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+greedyChoiceProof :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
+                                -> Forall "wb" Integer -> Forall "sb" Integer
+                                -> Forall "t"  HTree   -> SBool))
+greedyChoiceProof = do
+   gs1 <- recall greedySwap1Proof
+   gs2 <- recall greedySwap2Proof
+
+   calc "greedyChoice"
+       (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+           let t1 = swap wa sa (deepW t) (deepS t) t
+           in    wa .<= deepW t
+             .&& countWS wa sa t .== 1
+             .&& countWS (deepW t) (deepS t) t .== 1
+             .&& wb .<= sibW t1
+             .&& countWS wb sb t1 .== 1
+             .&& countWS (sibW t1) (sibS t1) t1 .== 1
+               .=> cost (swap wb sb (sibW t1) (sibS t1) t1) .<= cost t) $
+       \wa sa wb sb t ->
+           let t1 = swap wa sa (deepW t) (deepS t) t
+           in [ wa .<= deepW t
+              , countWS wa sa t .== 1
+              , countWS (deepW t) (deepS t) t .== 1
+              , wb .<= sibW t1
+              , countWS wb sb t1 .== 1
+              , countWS (sibW t1) (sibS t1) t1 .== 1
+              ]
+           |- cost (swap wb sb (sibW t1) (sibS t1) t1) .<= cost t
+           ?? gs1 `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"t" t)
+           ?? gs2 `at` (Inst @"wb" wb, Inst @"sb" sb, Inst @"t" t1)
+           =: sTrue
+           =: qed
+
+-- ** Swap structural invariants
+--
+-- Swapping two leaves preserves tree structure: height, @countWS@ and @depthSum@
+-- for unrelated pairs, and exchanges them for the swapped pairs.
+
+-- | Swap preserves tree height: @height (swap wa sa wb sb t) == height t@.
+-- Since swap only relabels leaves without changing the Tip\/Bin skeleton,
+-- the height is invariant.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) swapPreservesHeightProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Inductive lemma (strong): swapPreservesHeight
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: height, swap, treeSize
+-- [Proven] swapPreservesHeight :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+swapPreservesHeightProof :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
+                                       -> Forall "wb" Integer -> Forall "sb" Integer
+                                       -> Forall "t"  HTree   -> SBool))
+swapPreservesHeightProof = do
+   tsPos <- recall treeSizePosProof
+
+   sInduct "swapPreservesHeight"
+       (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+           height (swap wa sa wb sb t) .== height t)
+       (\_ _ _ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih wa sa wb sb t -> []
+         |- height (swap wa sa wb sb t) .== height t
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> height (swap wa sa wb sb t) .== height t
+                       ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                       ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       =: sTrue
+                       =: qed
+            |]
+
+-- | Swapping @(wa, sa)@ with the deepest leaf places @wa@ at the deepest position:
+-- @deepW (swap wa sa (deepW t) (deepS t) t) == wa@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) swapDeepWProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: swapPreservesHeight                        Q.E.D.
+-- Inductive lemma (strong): swapDeepW
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: deepS, deepW, height, swap, treeSize
+-- [Proven] swapDeepW :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐt ∷ HTree → Bool
+swapDeepWProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer -> Forall "t" HTree -> SBool))
+swapDeepWProof = do
+   tsPos <- recall treeSizePosProof
+   swpHt <- recall swapPreservesHeightProof
+
+   sInduct "swapDeepW"
+       (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"t" t) ->
+           deepW (swap wa sa (deepW t) (deepS t) t) .== wa)
+       (\_ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih wa sa t -> []
+         |- deepW (swap wa sa (deepW t) (deepS t) t) .== wa
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> deepW (swap wa sa (deepW t) (deepS t) t) .== wa
+                       =: cases
+                            [ height l .>= height r
+                                ==> deepW (swap wa sa (deepW t) (deepS t) t) .== wa
+                                 ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" l)
+                                 ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" r)
+                                 ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"t" l)
+                                 ?? tsPos `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            , sNot (height l .>= height r)
+                                ==> deepW (swap wa sa (deepW t) (deepS t) t) .== wa
+                                 ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" l)
+                                 ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" r)
+                                 ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"t" r)
+                                 ?? tsPos `at` Inst @"t" l
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
+
+-- | Swapping @(wa, sa)@ with the deepest leaf places @sa@ at the deepest position:
+-- @deepS (swap wa sa (deepW t) (deepS t) t) == sa@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) swapDeepSProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: swapPreservesHeight                        Q.E.D.
+-- Inductive lemma (strong): swapDeepS
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: deepS, deepW, height, swap, treeSize
+-- [Proven] swapDeepS :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐt ∷ HTree → Bool
+swapDeepSProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer -> Forall "t" HTree -> SBool))
+swapDeepSProof = do
+   tsPos <- recall treeSizePosProof
+   swpHt <- recall swapPreservesHeightProof
+
+   sInduct "swapDeepS"
+       (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"t" t) ->
+           deepS (swap wa sa (deepW t) (deepS t) t) .== sa)
+       (\_ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih wa sa t -> []
+         |- deepS (swap wa sa (deepW t) (deepS t) t) .== sa
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> deepS (swap wa sa (deepW t) (deepS t) t) .== sa
+                       =: cases
+                            [ height l .>= height r
+                                ==> deepS (swap wa sa (deepW t) (deepS t) t) .== sa
+                                 ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" l)
+                                 ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" r)
+                                 ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"t" l)
+                                 ?? tsPos `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            , sNot (height l .>= height r)
+                                ==> deepS (swap wa sa (deepW t) (deepS t) t) .== sa
+                                 ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" l)
+                                 ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" r)
+                                 ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"t" r)
+                                 ?? tsPos `at` Inst @"t" l
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
 
 -- | Swap preserves countWS for unrelated (weight, symbol) pairs.
 -- Uses tuples to keep the arity within sInduct's limit.
@@ -1501,4 +1696,219 @@ sibDepthSumProof = do
                                  =: sTrue
                                  =: qed
                             ]
+            |]
+
+-- ** Tree collapse and cost decomposition
+--
+-- Collapsing the deepest sibling pair into a single leaf preserves
+-- 'treeWeight' and decomposes 'cost' into the collapsed cost plus
+-- the weights of the two merged leaves.
+
+-- | Collapse the deepest sibling pair: replace the 'Bin' node whose children
+-- are both tips (at maximum depth) with a single 'Tip' whose weight is their sum.
+-- The symbol of the collapsed leaf is 0 (irrelevant for cost calculations).
+collapse :: SHTree -> SHTree
+collapse = smtFunction "collapse"
+         $ \t -> [sCase| t of
+                    Tip w s -> sTip w s
+                    Bin l r | height l .>= height r .&& height l .== 0
+                                -> sTip (treeWeight l + treeWeight r) 0
+                            | height l .>= height r
+                                -> sBin (collapse l) r
+                            | height r .== 0
+                                -> sTip (treeWeight l + treeWeight r) 0
+                            | True
+                                -> sBin l (collapse r)
+                 |]
+
+-- | Collapsing preserves tree weight: @treeWeight (collapse t) == treeWeight t@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) collapsePreservesWeightProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: heightNonNeg                               Q.E.D.
+-- Inductive lemma (strong): collapsePreservesWeight
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (3 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.3.1                             Q.E.D.
+--       Step: 1.2.2.3.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: collapse, height, treeSize, treeWeight
+-- [Proven] collapsePreservesWeight :: Ɐt ∷ HTree → Bool
+collapsePreservesWeightProof :: TP (Proof (Forall "t" HTree -> SBool))
+collapsePreservesWeightProof = do
+   tsPos <- recall treeSizePosProof
+   hNN   <- recall heightNonNegProof
+
+   sInduct "collapsePreservesWeight"
+       (\(Forall @"t" t) -> treeWeight (collapse t) .== treeWeight t)
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> []
+         |- treeWeight (collapse t) .== treeWeight t
+         =: [pCase| t of
+               Tip _ _ -> trivial
+               Bin l r -> treeWeight (collapse t) .== treeWeight t
+                       =: cases
+                            [ height l .>= height r .&& height l .== 0
+                                ==> treeWeight (collapse t) .== treeWeight t
+                                 =: sTrue
+                                 =: qed
+                            , height l .>= height r .&& sNot (height l .== 0)
+                                ==> treeWeight (collapse t) .== treeWeight t
+                                 ?? ih `at` Inst @"t" l
+                                 ?? tsPos `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            , sNot (height l .>= height r)
+                                ==> treeWeight (collapse t) .== treeWeight t
+                                 ?? ih `at` Inst @"t" r
+                                 ?? tsPos `at` Inst @"t" l
+                                 ?? hNN `at` Inst @"t" l
+                                 ?? hNN `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
+
+-- | Trees with positive height have at least 3 nodes (they must be a 'Bin'
+-- with two children, each of size at least 1).
+--
+-- >>> runTPWith cvc5 heightPosTreeSizeProof
+-- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: heightPosTreeSize                Q.E.D.
+-- Functions proven terminating: height, treeSize
+-- [Proven] heightPosTreeSize :: Ɐt ∷ HTree → Bool
+heightPosTreeSizeProof :: TP (Proof (Forall "t" HTree -> SBool))
+heightPosTreeSizeProof = do
+   tsPos <- recall treeSizePosProof
+   lemma "heightPosTreeSize"
+       (\(Forall @"t" t) -> height t .>= 1 .=> treeSize t .>= 3)
+       [proofOf tsPos]
+
+-- | Cost decomposition: the cost of a tree with at least two leaves equals
+-- the cost of its collapse plus the weights of the deepest sibling pair.
+-- @cost t == cost (collapse t) + deepW t + sibW t@ when @treeSize t >= 2@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) costDecompProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: collapsePreservesWeight                    Q.E.D.
+-- Cached: heightNonNeg                              Q.E.D.
+-- Lemma: heightPosTreeSize                          Q.E.D.
+-- Inductive lemma (strong): costDecomp
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2 (2 way case split)
+--         Step: 1.2.2.1.2.1.1                       Q.E.D.
+--         Step: 1.2.2.1.2.1.2                       Q.E.D.
+--         Step: 1.2.2.1.2.2.1                       Q.E.D.
+--         Step: 1.2.2.1.2.2.2 (2 way case split)
+--           Step: 1.2.2.1.2.2.2.1.1                 Q.E.D.
+--           Step: 1.2.2.1.2.2.2.1.2                 Q.E.D.
+--           Step: 1.2.2.1.2.2.2.2.1                 Q.E.D.
+--           Step: 1.2.2.1.2.2.2.2.2                 Q.E.D.
+--           Step: 1.2.2.1.2.2.2.Completeness        Q.E.D.
+--         Step: 1.2.2.1.2.Completeness              Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2 (2 way case split)
+--         Step: 1.2.2.2.2.1.1                       Q.E.D.
+--         Step: 1.2.2.2.2.1.2 (2 way case split)
+--           Step: 1.2.2.2.2.1.2.1.1                 Q.E.D.
+--           Step: 1.2.2.2.2.1.2.1.2                 Q.E.D.
+--           Step: 1.2.2.2.2.1.2.2.1                 Q.E.D.
+--           Step: 1.2.2.2.2.1.2.2.2                 Q.E.D.
+--           Step: 1.2.2.2.2.1.2.Completeness        Q.E.D.
+--         Step: 1.2.2.2.2.2.1                       Q.E.D.
+--         Step: 1.2.2.2.2.2.2                       Q.E.D.
+--         Step: 1.2.2.2.2.Completeness              Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: collapse, cost, deepW, height, sibW, treeSize, treeWeight
+-- [Proven] costDecomp :: Ɐt ∷ HTree → Bool
+costDecompProof :: TP (Proof (Forall "t" HTree -> SBool))
+costDecompProof = do
+   tsPos    <- recall treeSizePosProof
+   collWt   <- recall collapsePreservesWeightProof
+   hNN      <- recall heightNonNegProof
+   hpTS     <- recall heightPosTreeSizeProof
+
+   sInduct "costDecomp"
+       (\(Forall @"t" t) ->
+           treeSize t .>= 2 .=> cost t .== cost (collapse t) + deepW t + sibW t)
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> [treeSize t .>= 2]
+         |- cost t .== cost (collapse t) + deepW t + sibW t
+         =: [pCase| t of
+               Tip _ _ -> cost t .== cost (collapse t) + deepW t + sibW t
+                       =: sTrue
+                       =: qed
+               Bin l r -> cost t .== cost (collapse t) + deepW t + sibW t
+                       =: case l of
+                            Tip _ _ -> cost t .== cost (collapse t) + deepW t + sibW t
+                                    =: case r of
+                                         Tip _ _ -> cost t .== cost (collapse t) + deepW t + sibW t
+                                                 =: sTrue
+                                                 =: qed
+                                         Bin rl rr -> cost t .== cost (collapse t) + deepW t + sibW t
+                                                  =: cases
+                                                       [ height l .>= height r
+                                                           ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                                            ?? hNN `at` Inst @"t" rl
+                                                            ?? hNN `at` Inst @"t" rr
+                                                            =: sTrue
+                                                            =: qed
+                                                       , sNot (height l .>= height r)
+                                                           ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                                            ?? ih     `at` Inst @"t" r
+                                                            ?? tsPos  `at` Inst @"t" l
+                                                            ?? collWt `at` Inst @"t" r
+                                                            ?? hpTS   `at` Inst @"t" r
+                                                            =: sTrue
+                                                            =: qed
+                                                       ]
+                            Bin ll lr -> cost t .== cost (collapse t) + deepW t + sibW t
+                                    =: cases
+                                         [ height l .>= height r
+                                             ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                              =: cases
+                                                   [ height l .== 0
+                                                       ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                                        ?? hNN `at` Inst @"t" ll
+                                                        ?? hNN `at` Inst @"t" lr
+                                                        =: sTrue
+                                                        =: qed
+                                                   , sNot (height l .== 0)
+                                                       ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                                        ?? ih     `at` Inst @"t" l
+                                                        ?? tsPos  `at` Inst @"t" r
+                                                        ?? collWt `at` Inst @"t" l
+                                                        ?? hpTS   `at` Inst @"t" l
+                                                        ?? hNN    `at` Inst @"t" l
+                                                        =: sTrue
+                                                        =: qed
+                                                   ]
+                                         , sNot (height l .>= height r)
+                                             ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                              ?? ih     `at` Inst @"t" r
+                                              ?? tsPos  `at` Inst @"t" l
+                                              ?? collWt `at` Inst @"t" r
+                                              ?? hpTS   `at` Inst @"t" r
+                                              ?? hNN    `at` Inst @"t" l
+                                              ?? hNN    `at` Inst @"t" r
+                                              =: sTrue
+                                              =: qed
+                                         ]
             |]
