@@ -795,7 +795,7 @@ deepCountWSProof = do
    countWSNonNeg <- recall countWSNonNegProof
    sInduct "deepCountWS"
        (\(Forall @"t" t) -> countWS (deepW t) (deepS t) t .>= 1)
-       (\t -> treeSize t, [proofOf tsPos]) $
+       (treeSize, [proofOf tsPos]) $
        \ih t -> []
          |- countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
          =: [pCase| t of
@@ -1065,7 +1065,7 @@ deepDepthSumProof = do
        (\(Forall @"t" t) ->
            countWS (deepW t) (deepS t) t .== 1
              .=> depthSum (deepW t) (deepS t) t .== height t)
-       (\t -> treeSize t, [proofOf tsPos]) $
+       (treeSize, [proofOf tsPos]) $
        \ih t -> [countWS (deepW t) (deepS t) t .== 1]
          |- depthSum (deepW t) (deepS t) t .== height t
          =: [pCase| t of
@@ -1343,7 +1343,7 @@ sibCountWSProof = do
    heightNonNeg  <- recall heightNonNegProof
    sInduct "sibCountWS"
        (\(Forall @"t" t) -> countWS (sibW t) (sibS t) t .>= 1)
-       (\t -> treeSize t, [proofOf tsPos]) $
+       (treeSize, [proofOf tsPos]) $
        \ih t -> []
          |- countWS (sibW t) (sibS t) t .>= (1 :: SInteger)
          =: [pCase| t of
@@ -1417,7 +1417,7 @@ sibDepthSumProof = do
        (\(Forall @"t" t) ->
            countWS (sibW t) (sibS t) t .== 1
              .=> depthSum (sibW t) (sibS t) t .== height t)
-       (\t -> treeSize t, [proofOf tsPos]) $
+       (treeSize, [proofOf tsPos]) $
        \ih t -> [countWS (sibW t) (sibS t) t .== 1]
          |- depthSum (sibW t) (sibS t) t .== height t
          =: [pCase| t of
