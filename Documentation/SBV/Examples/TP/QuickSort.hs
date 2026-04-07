@@ -273,8 +273,7 @@ partitionSndBound = sInduct "partitionNotLongerSnd"
 --     Step: 1.1                                               Q.E.D.
 --     Step: 1.2.1                                             Q.E.D.
 --     Step: 1.2.2 (expand quickSort)                          Q.E.D.
---     Step: 1.2.3 (push nonDecreasing down)                   Q.E.D.
---     Step: 1.2.4                                             Q.E.D.
+--     Step: 1.2.3                                             Q.E.D.
 --     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: quickSortIsCorrect                                   Q.E.D.
