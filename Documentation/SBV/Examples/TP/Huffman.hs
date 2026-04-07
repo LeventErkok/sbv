@@ -2177,3 +2177,115 @@ buildHuffmanWeightProof = do
                                     =: sTrue
                                     =: qed
             |]
+
+-- ** Cost and countWS invariants
+
+-- | Total cost of all trees in a forest.
+forestCost :: SList HTree -> SInteger
+forestCost = smtFunction "forestCost"
+           $ \ts -> [sCase| ts of
+                       []       -> 0
+                       t : rest -> cost t + forestCost rest
+                    |]
+
+-- | Total count of a (weight, symbol) pair across all trees in a forest.
+forestCountWS :: SInteger -> SInteger -> SList HTree -> SInteger
+forestCountWS = smtFunction "forestCountWS"
+              $ \w s ts -> [sCase| ts of
+                               []       -> 0
+                               t : rest -> countWS w s t + forestCountWS w s rest
+                           |]
+
+-- | Sorted insertion preserves total forest cost.
+--
+-- >>> runTPWith cvc5 sortedInsertCostProof
+-- Inductive lemma (strong): sortedInsertCost
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2                   Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2                   Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: cost, forestCost, sortedInsert, treeWeight
+-- [Proven] sortedInsertCost :: Ɐt ∷ HTree → Ɐts ∷ [HTree] → Bool
+sortedInsertCostProof :: TP (Proof (Forall "t" HTree -> Forall "ts" [HTree] -> SBool))
+sortedInsertCostProof =
+   sInduct "sortedInsertCost"
+       (\(Forall @"t" t) (Forall @"ts" ts) ->
+           forestCost (sortedInsert t ts) .== cost t + forestCost ts)
+       (\_ ts -> length ts, []) $
+       \ih t ts -> []
+         |- forestCost (sortedInsert t ts) .== cost t + forestCost ts
+         =: [pCase| ts of
+               [] -> forestCost (sortedInsert t ts) .== cost t + forestCost ts
+                  =: sTrue
+                  =: qed
+               u : us -> forestCost (sortedInsert t ts) .== cost t + forestCost ts
+                      =: cases
+                           [ treeWeight t .<= treeWeight u
+                               ==> forestCost (sortedInsert t ts) .== cost t + forestCost ts
+                                =: sTrue
+                                =: qed
+                           , sNot (treeWeight t .<= treeWeight u)
+                               ==> forestCost (sortedInsert t ts) .== cost t + forestCost ts
+                                ?? ih `at` (Inst @"t" t, Inst @"ts" us)
+                                =: sTrue
+                                =: qed
+                           ]
+            |]
+
+-- | Sorted insertion preserves total forest countWS.
+--
+-- >>> runTPWith cvc5 sortedInsertCountWSProof
+-- Inductive lemma (strong): sortedInsertCountWS
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2                   Q.E.D.
+--       Step: 1.2.2.1.3                   Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2                   Q.E.D.
+--       Step: 1.2.2.2.3                   Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: countWS, forestCountWS, sortedInsert, treeWeight
+-- [Proven] sortedInsertCountWS :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐt ∷ HTree → Ɐts ∷ [HTree] → Bool
+sortedInsertCountWSProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> Forall "ts" [HTree] -> SBool))
+sortedInsertCountWSProof =
+   sInduct "sortedInsertCountWS"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) (Forall @"ts" ts) ->
+           forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts)
+       (\_ _ _ ts -> length ts, []) $
+       \ih w s t ts -> []
+         |- forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts
+         =: [pCase| ts of
+               [] -> forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts
+                  =: sTrue
+                  =: qed
+               u : us -> forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts
+                      =: cases
+                           [ treeWeight t .<= treeWeight u
+                               ==> forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts
+                                =: forestCountWS w s (t .: u .: us) .== countWS w s t + forestCountWS w s (u .: us)
+                                =: sTrue
+                                =: qed
+                           , sNot (treeWeight t .<= treeWeight u)
+                               ==> forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts
+                                =: forestCountWS w s (u .: sortedInsert t us) .== countWS w s t + forestCountWS w s (u .: us)
+                                ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" t, Inst @"ts" us)
+                                =: sTrue
+                                =: qed
+                           ]
+            |]
