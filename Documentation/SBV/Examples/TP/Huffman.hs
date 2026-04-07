@@ -712,6 +712,7 @@ treeSizePosProof = inductiveLemma "treeSizePos" (\(Forall @"t" t) -> treeSize t 
 countWSNonNegProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> SBool))
 countWSNonNegProof = do
    tsPos <- recall treeSizePosProof
+
    sInduct "countWSNonNeg"
        (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
            countWS w s t .>= 0)
@@ -749,6 +750,7 @@ depthSumZeroProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Fora
 depthSumZeroProof = do
    tsPos         <- recall treeSizePosProof
    countWSNonNeg <- recall countWSNonNegProof
+
    sInduct "depthSumZero"
        (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
            countWS w s t .== 0 .=> depthSum w s t .== 0)
@@ -793,6 +795,7 @@ deepCountWSProof :: TP (Proof (Forall "t" HTree -> SBool))
 deepCountWSProof = do
    tsPos         <- recall treeSizePosProof
    countWSNonNeg <- recall countWSNonNegProof
+
    sInduct "deepCountWS"
        (\(Forall @"t" t) -> countWS (deepW t) (deepS t) t .>= 1)
        (treeSize, [proofOf tsPos]) $
@@ -931,6 +934,7 @@ depthLeqHeightProof = do
    tsPos  <- recall treeSizePosProof
    maxGeL <- recall maxGeLProof
    maxGeR <- recall maxGeRProof
+
    sInduct "depthLeqHeight"
        (\(Forall @"s" s) (Forall @"t" t) ->
            member s t .=> depth s t .<= height t)
@@ -993,6 +997,7 @@ depthSumLeqHeightProof = do
    maxGeL        <- recall maxGeLProof
    maxGeR        <- recall maxGeRProof
    cwsBin        <- recall countWSBinProof
+
    sInduct "depthSumLeqHeight"
        (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
            countWS w s t .== 1 .=> depthSum w s t .<= height t)
@@ -1061,6 +1066,7 @@ deepDepthSumProof = do
    depthSumZero  <- recall depthSumZeroProof
    deepCountWS   <- recall deepCountWSProof
    cwsBin        <- recall countWSBinProof
+
    sInduct "deepDepthSum"
        (\(Forall @"t" t) ->
            countWS (deepW t) (deepS t) t .== 1
@@ -1112,6 +1118,7 @@ greedySwap1Proof = do
    swpRC         <- recall swapReducesCost
    deepDepthSum  <- recall deepDepthSumProof
    depthSumLeqHt <- recall depthSumLeqHeightProof
+
    calc "greedySwap1"
        (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"t" t) ->
            wa .<= deepW t
@@ -1123,6 +1130,38 @@ greedySwap1Proof = do
          ?? swpRC         `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" t)
          ?? deepDepthSum  `at` Inst @"t" t
          ?? depthSumLeqHt `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" t)
+         =: sTrue
+         =: qed
+
+-- | Second greedy swap: a leaf lighter than the sibling can be swapped
+-- to the sibling position without increasing cost.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) greedySwap2Proof
+-- Lemma: swapReducesCost                            Q.E.D.
+-- Lemma: sibDepthSum                                Q.E.D.
+-- Lemma: depthSumLeqHeight                          Q.E.D.
+-- Lemma: greedySwap2
+--   Step: 1                                         Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: cost, countWS, deepS, deepW, depthSum, height, sibS, sibW, swap, treeSize, treeWeight
+-- [Proven] greedySwap2 :: Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+greedySwap2Proof :: TP (Proof (Forall "wb" Integer -> Forall "sb" Integer -> Forall "t" HTree -> SBool))
+greedySwap2Proof = do
+   swpRC         <- recall swapReducesCost
+   sibDepthSum   <- recall sibDepthSumProof
+   depthSumLeqHt <- recall depthSumLeqHeightProof
+
+   calc "greedySwap2"
+       (\(Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+           wb .<= sibW t
+           .&& countWS wb sb t .== 1
+           .&& countWS (sibW t) (sibS t) t .== 1
+             .=> cost (swap wb sb (sibW t) (sibS t) t) .<= cost t) $
+       \wb sb t -> [wb .<= sibW t, countWS wb sb t .== 1, countWS (sibW t) (sibS t) t .== 1]
+         |- cost (swap wb sb (sibW t) (sibS t) t) .<= cost t
+         ?? swpRC         `at` (Inst @"wa" wb, Inst @"sa" sb, Inst @"wb" (sibW t), Inst @"sb" (sibS t), Inst @"t" t)
+         ?? sibDepthSum   `at` Inst @"t" t
+         ?? depthSumLeqHt `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" t)
          =: sTrue
          =: qed
 
@@ -1152,6 +1191,7 @@ swapPreservesCountWSProof :: TP (Proof (   Forall "a" (Integer, Integer)
                                         -> Forall "t" HTree -> SBool))
 swapPreservesCountWSProof = do
    tsPos <- recall treeSizePosProof
+
    sInduct "swapPreservesCountWS"
        (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) (Forall @"t" t) ->
            let (wa, sa) = untuple a
@@ -1199,6 +1239,7 @@ swapPreservesDepthSumProof :: TP (Proof (   Forall "a" (Integer, Integer)
 swapPreservesDepthSumProof = do
    tsPos   <- recall treeSizePosProof
    swapCWS <- recall swapPreservesCountWSProof
+
    sInduct "swapPreservesDepthSum"
        (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) (Forall @"t" t) ->
            let (wa, sa) = untuple a
@@ -1246,6 +1287,7 @@ swapExchangesCountWSProof :: TP (Proof (   Forall "wa" Integer -> Forall "sa" In
                                         -> Forall "t"  HTree   -> SBool))
 swapExchangesCountWSProof = do
    tsPos <- recall treeSizePosProof
+
    sInduct "swapExchangesCountWS"
        (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb)
         (Forall @"t" t) ->
@@ -1286,6 +1328,7 @@ swapExchangesDepthSumProof :: TP (Proof (   Forall "wa" Integer -> Forall "sa" I
 swapExchangesDepthSumProof = do
    tsPos    <- recall treeSizePosProof
    swapXCWS <- recall swapExchangesCountWSProof
+
    sInduct "swapExchangesDepthSum"
        (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb)
         (Forall @"t" t) ->
@@ -1341,6 +1384,7 @@ sibCountWSProof = do
    countWSNonNeg <- recall countWSNonNegProof
    deepCountWS   <- recall deepCountWSProof
    heightNonNeg  <- recall heightNonNegProof
+
    sInduct "sibCountWS"
        (\(Forall @"t" t) -> countWS (sibW t) (sibS t) t .>= 1)
        (treeSize, [proofOf tsPos]) $
