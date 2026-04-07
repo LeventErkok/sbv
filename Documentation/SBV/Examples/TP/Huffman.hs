@@ -2158,7 +2158,7 @@ buildHuffmanWeightProof = do
    sInduct "buildHuffmanWeight"
        (\(Forall @"ts" ts) ->
            length ts .>= 1 .=> treeWeight (buildHuffman ts) .== forestWeight ts)
-       (\ts -> length ts, []) $
+       (length, []) $
        \ih ts -> [length ts .>= 1]
          |- treeWeight (buildHuffman ts) .== forestWeight ts
          =: [pCase| ts of
