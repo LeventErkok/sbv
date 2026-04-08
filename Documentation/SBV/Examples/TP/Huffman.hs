@@ -2495,54 +2495,50 @@ tipForestIdempotentProof =
                         =: qed
             |]
 
--- | Substitution lemma: replacing a tree in @sortedInsert@ with another of the same weight
--- changes @buildHuffman@ cost by exactly the difference in individual costs.
---
--- >>> runTPWith (tpRibbon 50 cvc5) buildHuffmanCostSubstProof
--- TBD
-buildHuffmanCostSubstProof :: TP (Proof (Forall "t1" HTree -> Forall "t2" HTree -> Forall "ts" [HTree] -> SBool))
-buildHuffmanCostSubstProof =
-    sInduct "buildHuffmanCostSubst"
-       (\(Forall @"t1" t1) (Forall @"t2" t2) (Forall @"ts" ts) ->
-              treeWeight t1 .== treeWeight t2
-          .=> cost (buildHuffman (sortedInsert t1 ts)) .== cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2)
-       (\_ _ ts -> length ts, []) $
-       \ih t1 t2 ts ->
-           [treeWeight t1 .== treeWeight t2]
-           |- cost (buildHuffman (sortedInsert t1 ts))
-           =: [pCase| ts of
-                 [] -> cost (buildHuffman (sortedInsert t1 ts))
-                    =: cost t1
-                    =: cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2
-                    =: qed
-                 t : rest -> cost (buildHuffman (sortedInsert t1 ts))
-                          =: cases
-                               [ treeWeight t1 .<= treeWeight t
-                                   ==> cost (buildHuffman (sortedInsert t1 ts))
-                                    =: cost (buildHuffman (t1 .: t .: rest))
-                                    =: cost (buildHuffman (sortedInsert (sBin t1 t) rest))
-                                    ?? ih `at` (Inst @"t1" (sBin t1 t), Inst @"t2" (sBin t2 t), Inst @"ts" rest)
-                                    =: cost (buildHuffman (sortedInsert (sBin t2 t) rest)) + cost (sBin t1 t) - cost (sBin t2 t)
-                                    =: cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2
-                                    =: qed
-                               , sNot (treeWeight t1 .<= treeWeight t)
-                                   ==> cost (buildHuffman (sortedInsert t1 ts))
-                                    =: cost (buildHuffman (t .: sortedInsert t1 rest))
-                                    =: cost (buildHuffman (sortedInsert (sBin t (head (sortedInsert t1 rest))) (tail (sortedInsert t1 rest))))
-                                    =: cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2
-                                    =: qed
-                               ]
-              |]
-
 -- | Cost additivity: the cost of building a Huffman tree from a forest equals
 -- the forest cost plus the cost of building from the tip-only version.
 --
 -- >>> runTPWith (tpRibbon 50 cvc5) buildHuffmanAdditivityProof
--- TBD
+-- Lemma: tipForestCommute                           Q.E.D.
+-- Lemma: tipForestCostZero                          Q.E.D.
+-- Lemma: tipForestIdempotent                        Q.E.D.
+-- Lemma: tipForestLength                            Q.E.D.
+-- Lemma: sortedInsertCost                           Q.E.D.
+-- Lemma: sortedInsertLength                         Q.E.D.
+-- Inductive lemma (strong): buildHuffmanAdditivity
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.1.3                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.2.3                             Q.E.D.
+--       Step: 1.2.2.2.4                             Q.E.D.
+--       Step: 1.2.2.2.5                             Q.E.D.
+--       Step: 1.2.2.2.6                             Q.E.D.
+--       Step: 1.2.2.2.7                             Q.E.D.
+--       Step: 1.2.2.2.8                             Q.E.D.
+--       Step: 1.2.2.2.9                             Q.E.D.
+--       Step: 1.2.2.2.10                            Q.E.D.
+--       Step: 1.2.2.2.11                            Q.E.D.
+--       Step: 1.2.2.2.12                            Q.E.D.
+--       Step: 1.2.2.2.13                            Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: buildHuffman, cost, forestCost, sortedInsert, tipForest, treeWeight
+-- [Proven] buildHuffmanAdditivity :: Ɐts ∷ [HTree] → Bool
 buildHuffmanAdditivityProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
 buildHuffmanAdditivityProof = do
-    costSub <- recall buildHuffmanCostSubstProof
     tfComm  <- recall tipForestCommuteProof
+    tfCost0 <- recall tipForestCostZeroProof
+    tfIdem  <- recall tipForestIdempotentProof
+    tfLen   <- recall tipForestLengthProof
     siCost  <- recall sortedInsertCostProof
     siLen   <- recall sortedInsertLengthProof
 
@@ -2551,39 +2547,89 @@ buildHuffmanAdditivityProof = do
            length ts .>= 1 .=> cost (buildHuffman ts) .== forestCost ts + cost (buildHuffman (tipForest ts)))
        (length, []) $
        \ih ts -> [length ts .>= 1]
-         |- cost (buildHuffman (ts :: SList HTree))
+         |- forestCost (ts :: SList HTree) + cost (buildHuffman (tipForest ts))
          =: [pCase| ts of
-               [] -> cost (buildHuffman ts)
-                  =: forestCost ts + cost (buildHuffman (tipForest ts))
+               [] -> forestCost ts + cost (buildHuffman (tipForest ts))
+                  =: cost (buildHuffman ts)
                   =: qed
                a : rest' ->
-                  cost (buildHuffman ts)
+                  forestCost ts + cost (buildHuffman (tipForest ts))
                   =: case rest' of
-                        [] -> cost (buildHuffman ts)
+                        [] -> forestCost ts + cost (buildHuffman (tipForest ts))
                            =: cost a
-                           =: forestCost ts + cost (buildHuffman (tipForest ts))
+                           =: cost (buildHuffman ts)
                            =: qed
                         b : rest ->
-                           cost (buildHuffman ts)
-                           =: cost (buildHuffman (sortedInsert (sBin a b) rest))
-                           ?? costSub `at` (Inst @"t1" (sBin a b), Inst @"t2" (sTip (treeWeight a + treeWeight b) 0), Inst @"ts" rest)
-                           =: cost (buildHuffman (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest))
-                              + cost (sBin a b) - cost (sTip (treeWeight a + treeWeight b) 0)
-                           =: cost (buildHuffman (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest))
-                              + cost (sBin a b)
-                           ?? ih `at` Inst @"ts" (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest)
-                           ?? siLen `at` (Inst @"t" (sTip (treeWeight a + treeWeight b) 0), Inst @"ts" rest)
-                           =: forestCost (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest)
-                              + cost (buildHuffman (tipForest (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest)))
-                              + cost (sBin a b)
-                           ?? siCost `at` (Inst @"t" (sTip (treeWeight a + treeWeight b) 0), Inst @"ts" rest)
-                           =: forestCost rest
-                              + cost (buildHuffman (tipForest (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest)))
-                              + cost (sBin a b)
-                           ?? tfComm `at` (Inst @"x" (sTip (treeWeight a + treeWeight b) 0), Inst @"ts" rest)
-                           =: forestCost rest
-                              + cost (buildHuffman (sortedInsert (sTip (treeWeight a + treeWeight b) 0) (tipForest rest)))
-                              + cost (sBin a b)
-                           =: forestCost ts + cost (buildHuffman (tipForest ts))
+                           let wa       = treeWeight a
+                               wb       = treeWeight b
+                               binAB    = sBin a b
+                               tipWab   = sTip (wa + wb) 0
+                               tipA     = sTip wa 0
+                               tipB     = sTip wb 0
+                               binTipAB = sBin tipA tipB
+                           in  forestCost ts + cost (buildHuffman (tipForest ts))
+                           =: cost a + cost b + forestCost rest
+                            + cost (buildHuffman (tipA .: tipB .: tipForest rest))
+                           =: cost a + cost b + forestCost rest
+                            + cost (buildHuffman (sortedInsert binTipAB (tipForest rest)))
+                           ?? ih    `at` Inst @"ts" (sortedInsert binTipAB (tipForest rest))
+                           ?? siLen `at` (Inst @"t" binTipAB, Inst @"ts" (tipForest rest))
+                           ?? tfLen `at` Inst @"ts" rest
+                           =: cost a + cost b + forestCost rest
+                            + forestCost (sortedInsert binTipAB (tipForest rest))
+                            + cost (buildHuffman (tipForest (sortedInsert binTipAB (tipForest rest))))
+                           ?? siCost `at` (Inst @"t" binTipAB, Inst @"ts" (tipForest rest))
+                           =: cost a + cost b + forestCost rest
+                            + cost binTipAB + forestCost (tipForest rest)
+                            + cost (buildHuffman (tipForest (sortedInsert binTipAB (tipForest rest))))
+                           ?? tfCost0 `at` Inst @"ts" rest
+                           ?? cost binTipAB .== wa + wb
+                           =: cost a + cost b + forestCost rest + (wa + wb)
+                            + cost (buildHuffman (tipForest (sortedInsert binTipAB (tipForest rest))))
+                           ?? tfComm `at` (Inst @"x" binTipAB, Inst @"ts" (tipForest rest))
+                           ?? treeWeight binTipAB .== wa + wb
+                           =: cost a + cost b + forestCost rest + (wa + wb)
+                            + cost (buildHuffman (sortedInsert tipWab (tipForest (tipForest rest))))
+                           ?? tfIdem `at` Inst @"ts" rest
+                           =: cost a + cost b + forestCost rest + (wa + wb)
+                            + cost (buildHuffman (sortedInsert tipWab (tipForest rest)))
+                           =: cost binAB + forestCost rest
+                            + cost (buildHuffman (sortedInsert tipWab (tipForest rest)))
+                           ?? tfComm `at` (Inst @"x" binAB, Inst @"ts" rest)
+                           ?? treeWeight binAB .== wa + wb
+                           =: cost binAB + forestCost rest
+                            + cost (buildHuffman (tipForest (sortedInsert binAB rest)))
+                           ?? siCost `at` (Inst @"t" binAB, Inst @"ts" rest)
+                           =: forestCost (sortedInsert binAB rest)
+                            + cost (buildHuffman (tipForest (sortedInsert binAB rest)))
+                           ?? ih    `at` Inst @"ts" (sortedInsert binAB rest)
+                           ?? siLen `at` (Inst @"t" binAB, Inst @"ts" rest)
+                           =: cost (buildHuffman (sortedInsert binAB rest))
+                           =: cost (buildHuffman ts)
                            =: qed
             |]
+
+-- | Substitution lemma: replacing a tree in @sortedInsert@ with another of the same weight
+-- changes @buildHuffman@ cost by exactly the difference in individual costs.
+-- Derived as a corollary of 'buildHuffmanAdditivityProof'.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) buildHuffmanCostSubstProof
+-- Lemma: buildHuffmanAdditivity                     Q.E.D.
+-- Cached: tipForestCommute                          Q.E.D.
+-- Cached: sortedInsertCost                          Q.E.D.
+-- Cached: sortedInsertLength                        Q.E.D.
+-- Lemma: buildHuffmanCostSubst                      Q.E.D.
+-- Functions proven terminating: buildHuffman, cost, forestCost, sortedInsert, tipForest, treeWeight
+-- [Proven] buildHuffmanCostSubst :: Ɐt1 ∷ HTree → Ɐt2 ∷ HTree → Ɐts ∷ [HTree] → Bool
+buildHuffmanCostSubstProof :: TP (Proof (Forall "t1" HTree -> Forall "t2" HTree -> Forall "ts" [HTree] -> SBool))
+buildHuffmanCostSubstProof = do
+    additivity <- recall buildHuffmanAdditivityProof
+    tfComm     <- recall tipForestCommuteProof
+    siCost     <- recall sortedInsertCostProof
+    siLen      <- recall sortedInsertLengthProof
+
+    lemma "buildHuffmanCostSubst"
+          (\(Forall @"t1" t1) (Forall @"t2" t2) (Forall @"ts" ts) ->
+                 treeWeight t1 .== treeWeight t2
+             .=> cost (buildHuffman (sortedInsert t1 ts)) .== cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2)
+          [proofOf additivity, proofOf tfComm, proofOf siCost, proofOf siLen]
