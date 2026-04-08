@@ -133,23 +133,23 @@ roundtrip = do
      (\(Forall @"s" s) (Forall @"t" t) -> member s t .=> decode (findPath s t) t .== s)
      (\_ t -> treeSize t, [proofOf tsPos]) $
      \ih s t -> [member s t]
-       |- decode (findPath s t) t .== s
+       |- decode (findPath s t) t
        =: [pCase| t of
              Tip _ _ -> trivial
 
              Bin l r -> cases
                [ member s l
-                   ==> decode (findPath s (sBin l r)) (sBin l r) .== s
+                   ==> decode (findPath s (sBin l r)) (sBin l r)
                     ?? tsPos `at` Inst @"t" r
                     ?? ih `at` (Inst @"s" s, Inst @"t" l)
-                    =: sTrue
+                    =: s
                     =: qed
 
                , sNot (member s l)
-                   ==> decode (findPath s (sBin l r)) (sBin l r) .== s
+                   ==> decode (findPath s (sBin l r)) (sBin l r)
                     ?? tsPos `at` Inst @"t" l
                     ?? ih `at` (Inst @"s" s, Inst @"t" r)
-                    =: sTrue
+                    =: s
                     =: qed
                ]
           |]
@@ -600,8 +600,7 @@ swapReducesCost = do
    swpC <- recall swapCost
 
    signProd <- sInduct "signProd"
-       (\(Forall @"a" a) (Forall @"b" b) ->
-           a .>= 0 .&& b .<= 0 .=> a * b .<= 0)
+       (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .<= 0 .=> a * b .<= 0)
        (\a _ -> ite (a .>= 0) a 0, []) $
        \ih a b -> [a .>= 0, b .<= 0]
          |- a * b .<= (0 :: SInteger)
@@ -715,8 +714,7 @@ countWSNonNegProof = do
    tsPos <- recall treeSizePosProof
 
    sInduct "countWSNonNeg"
-       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
-           countWS w s t .>= 0)
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) -> countWS w s t .>= 0)
        (\_ _ t -> treeSize t, [proofOf tsPos]) $
        \ih w s t -> []
          |- countWS w s t .>= (0 :: SInteger)
@@ -757,17 +755,17 @@ depthSumZeroProof = do
            countWS w s t .== 0 .=> depthSum w s t .== 0)
        (\_ _ t -> treeSize t, [proofOf tsPos]) $
        \ih w s t -> [countWS w s t .== 0]
-         |- depthSum w s t .== (0 :: SInteger)
+         |- depthSum w s t
          =: [pCase| t of
                Tip _ _ -> trivial
-               Bin l r -> depthSum w s l + countWS w s l + depthSum w s r + countWS w s r .== (0 :: SInteger)
+               Bin l r -> depthSum w s l + countWS w s l + depthSum w s r + countWS w s r
                        ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
                        ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
                        ?? tsPos `at` Inst @"t" l
                        ?? tsPos `at` Inst @"t" r
                        ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
                        ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
-                       =: sTrue
+                       =: (0 :: SInteger)
                        =: qed
             |]
 
@@ -886,13 +884,13 @@ heightZeroDepthSumProof = do
        (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
            height t .== 0 .=> depthSum w s t .== 0) $
        \w s t -> [height t .== 0]
-              |- depthSum w s t .== (0 :: SInteger)
+              |- depthSum w s t
               =: [pCase| t of
                     Tip _ _ -> trivial
-                    Bin l r -> depthSum w s t .== (0 :: SInteger)
+                    Bin l r -> depthSum w s t
                             ?? hNN `at` Inst @"t" l
                             ?? hNN `at` Inst @"t" r
-                            =: sTrue
+                            =: (0 :: SInteger)
                             =: qed
                  |]
 
@@ -937,8 +935,7 @@ depthLeqHeightProof = do
    maxGeR <- recall maxGeRProof
 
    sInduct "depthLeqHeight"
-       (\(Forall @"s" s) (Forall @"t" t) ->
-           member s t .=> depth s t .<= height t)
+       (\(Forall @"s" s) (Forall @"t" t) -> member s t .=> depth s t .<= height t)
        (\_ t -> treeSize t, [proofOf tsPos]) $
        \ih s t -> [member s t]
          |- depth s t .<= height t
@@ -1000,8 +997,7 @@ depthSumLeqHeightProof = do
    cwsBin        <- recall countWSBinProof
 
    sInduct "depthSumLeqHeight"
-       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
-           countWS w s t .== 1 .=> depthSum w s t .<= height t)
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) -> countWS w s t .== 1 .=> depthSum w s t .<= height t)
        (\_ _ t -> treeSize t, [proofOf tsPos]) $
        \ih w s t -> [countWS w s t .== 1]
          |- depthSum w s t .<= height t
@@ -1074,30 +1070,30 @@ deepDepthSumProof = do
              .=> depthSum (deepW t) (deepS t) t .== height t)
        (treeSize, [proofOf tsPos]) $
        \ih t -> [countWS (deepW t) (deepS t) t .== 1]
-         |- depthSum (deepW t) (deepS t) t .== height t
+         |- depthSum (deepW t) (deepS t) t
          =: [pCase| t of
                Tip _ _ -> trivial
-               Bin l r -> depthSum (deepW t) (deepS t) t .== height t
+               Bin l r -> depthSum (deepW t) (deepS t) t
                        =: cases
                             [ height l .>= height r
-                                ==> depthSum (deepW t) (deepS t) t .== height t
+                                ==> depthSum (deepW t) (deepS t) t
                                  ?? cwsBin        `at` (Inst @"w" (deepW l), Inst @"s" (deepS l), Inst @"l" l, Inst @"r" r)
                                  ?? deepCountWS   `at` Inst @"t" l
                                  ?? countWSNonNeg `at` (Inst @"w" (deepW l), Inst @"s" (deepS l), Inst @"t" r)
                                  ?? depthSumZero  `at` (Inst @"w" (deepW l), Inst @"s" (deepS l), Inst @"t" r)
                                  ?? ih            `at` Inst @"t" l
                                  ?? tsPos         `at` Inst @"t" r
-                                 =: sTrue
+                                 =: height t
                                  =: qed
                             , sNot (height l .>= height r)
-                                ==> depthSum (deepW t) (deepS t) t .== height t
+                                ==> depthSum (deepW t) (deepS t) t
                                  ?? cwsBin        `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"l" l, Inst @"r" r)
                                  ?? deepCountWS   `at` Inst @"t" r
                                  ?? countWSNonNeg `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
                                  ?? depthSumZero  `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
                                  ?? ih            `at` Inst @"t" r
                                  ?? tsPos         `at` Inst @"t" l
-                                 =: sTrue
+                                 =: height t
                                  =: qed
                             ]
             |]
@@ -1122,10 +1118,10 @@ greedySwap1Proof = do
 
    calc "greedySwap1"
        (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"t" t) ->
-           wa .<= deepW t
+               wa .<= deepW t
            .&& countWS wa sa t .== 1
            .&& countWS (deepW t) (deepS t) t .== 1
-             .=> cost (swap wa sa (deepW t) (deepS t) t) .<= cost t) $
+           .=> cost (swap wa sa (deepW t) (deepS t) t) .<= cost t) $
        \wa sa t -> [wa .<= deepW t, countWS wa sa t .== 1, countWS (deepW t) (deepS t) t .== 1]
          |- cost (swap wa sa (deepW t) (deepS t) t) .<= cost t
          ?? swpRC         `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" t)
@@ -1154,10 +1150,10 @@ greedySwap2Proof = do
 
    calc "greedySwap2"
        (\(Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
-           wb .<= sibW t
+               wb .<= sibW t
            .&& countWS wb sb t .== 1
            .&& countWS (sibW t) (sibS t) t .== 1
-             .=> cost (swap wb sb (sibW t) (sibS t) t) .<= cost t) $
+           .=> cost (swap wb sb (sibW t) (sibS t) t) .<= cost t) $
        \wb sb t -> [wb .<= sibW t, countWS wb sb t .== 1, countWS (sibW t) (sibS t) t .== 1]
          |- cost (swap wb sb (sibW t) (sibS t) t) .<= cost t
          ?? swpRC         `at` (Inst @"wa" wb, Inst @"sa" sb, Inst @"wb" (sibW t), Inst @"sb" (sibS t), Inst @"t" t)
@@ -1196,7 +1192,7 @@ greedyChoiceProof = do
              .&& wb .<= sibW t1
              .&& countWS wb sb t1 .== 1
              .&& countWS (sibW t1) (sibS t1) t1 .== 1
-               .=> cost (swap wb sb (sibW t1) (sibS t1) t1) .<= cost t) $
+             .=> cost (swap wb sb (sibW t1) (sibS t1) t1) .<= cost t) $
        \wa sa wb sb t ->
            let t1 = swap wa sa (deepW t) (deepS t) t
            in [ wa .<= deepW t
@@ -1244,15 +1240,15 @@ swapPreservesHeightProof = do
            height (swap wa sa wb sb t) .== height t)
        (\_ _ _ _ t -> treeSize t, [proofOf tsPos]) $
        \ih wa sa wb sb t -> []
-         |- height (swap wa sa wb sb t) .== height t
+         |- height (swap wa sa wb sb t)
          =: [pCase| t of
                Tip _ _ -> trivial
-               Bin l r -> height (swap wa sa wb sb t) .== height t
+               Bin l r -> height (swap wa sa wb sb t)
                        ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
                        ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
                        ?? tsPos `at` Inst @"t" l
                        ?? tsPos `at` Inst @"t" r
-                       =: sTrue
+                       =: height t
                        =: qed
             |]
 
@@ -1287,26 +1283,26 @@ swapDeepWProof = do
            deepW (swap wa sa (deepW t) (deepS t) t) .== wa)
        (\_ _ t -> treeSize t, [proofOf tsPos]) $
        \ih wa sa t -> []
-         |- deepW (swap wa sa (deepW t) (deepS t) t) .== wa
+         |- deepW (swap wa sa (deepW t) (deepS t) t)
          =: [pCase| t of
                Tip _ _ -> trivial
-               Bin l r -> deepW (swap wa sa (deepW t) (deepS t) t) .== wa
+               Bin l r -> deepW (swap wa sa (deepW t) (deepS t) t)
                        =: cases
                             [ height l .>= height r
-                                ==> deepW (swap wa sa (deepW t) (deepS t) t) .== wa
+                                ==> deepW (swap wa sa (deepW t) (deepS t) t)
                                  ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" l)
                                  ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" r)
                                  ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"t" l)
                                  ?? tsPos `at` Inst @"t" r
-                                 =: sTrue
+                                 =: wa
                                  =: qed
                             , sNot (height l .>= height r)
-                                ==> deepW (swap wa sa (deepW t) (deepS t) t) .== wa
+                                ==> deepW (swap wa sa (deepW t) (deepS t) t)
                                  ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" l)
                                  ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" r)
                                  ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"t" r)
                                  ?? tsPos `at` Inst @"t" l
-                                 =: sTrue
+                                 =: wa
                                  =: qed
                             ]
             |]
@@ -1342,26 +1338,26 @@ swapDeepSProof = do
            deepS (swap wa sa (deepW t) (deepS t) t) .== sa)
        (\_ _ t -> treeSize t, [proofOf tsPos]) $
        \ih wa sa t -> []
-         |- deepS (swap wa sa (deepW t) (deepS t) t) .== sa
+         |- deepS (swap wa sa (deepW t) (deepS t) t)
          =: [pCase| t of
                Tip _ _ -> trivial
-               Bin l r -> deepS (swap wa sa (deepW t) (deepS t) t) .== sa
+               Bin l r -> deepS (swap wa sa (deepW t) (deepS t) t)
                        =: cases
                             [ height l .>= height r
-                                ==> deepS (swap wa sa (deepW t) (deepS t) t) .== sa
+                                ==> deepS (swap wa sa (deepW t) (deepS t) t)
                                  ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" l)
                                  ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" r)
                                  ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"t" l)
                                  ?? tsPos `at` Inst @"t" r
-                                 =: sTrue
+                                 =: sa
                                  =: qed
                             , sNot (height l .>= height r)
-                                ==> deepS (swap wa sa (deepW t) (deepS t) t) .== sa
+                                ==> deepS (swap wa sa (deepW t) (deepS t) t)
                                  ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" l)
                                  ?? swpHt `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" (deepW t), Inst @"sb" (deepS t), Inst @"t" r)
                                  ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"t" r)
                                  ?? tsPos `at` Inst @"t" l
-                                 =: sTrue
+                                 =: sa
                                  =: qed
                             ]
             |]
@@ -1401,15 +1397,15 @@ swapPreservesCountWSProof = do
              (wb, sb) = untuple b
              (w, s)   = untuple c
          in [sNot (w .== wa .&& s .== sa), sNot (w .== wb .&& s .== sb)]
-           |- countWS w s (swap wa sa wb sb t) .== countWS w s t
+           |- countWS w s (swap wa sa wb sb t)
            =: [pCase| t of
                  Tip _ _ -> trivial
-                 Bin l r -> countWS w s (swap wa sa wb sb t) .== countWS w s t
+                 Bin l r -> countWS w s (swap wa sa wb sb t)
                          ?? ih `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" l)
                          ?? ih `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" r)
                          ?? tsPos `at` Inst @"t" l
                          ?? tsPos `at` Inst @"t" r
-                         =: sTrue
+                         =: countWS w s t
                          =: qed
               |]
 
@@ -1449,17 +1445,17 @@ swapPreservesDepthSumProof = do
              (wb, sb) = untuple b
              (w, s)   = untuple c
          in [sNot (w .== wa .&& s .== sa), sNot (w .== wb .&& s .== sb)]
-           |- depthSum w s (swap wa sa wb sb t) .== depthSum w s t
+           |- depthSum w s (swap wa sa wb sb t)
            =: [pCase| t of
                  Tip _ _ -> trivial
-                 Bin l r -> depthSum w s (swap wa sa wb sb t) .== depthSum w s t
+                 Bin l r -> depthSum w s (swap wa sa wb sb t)
                          ?? ih      `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" l)
                          ?? ih      `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" r)
                          ?? swapCWS `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" l)
                          ?? swapCWS `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" r)
                          ?? tsPos   `at` Inst @"t" l
                          ?? tsPos   `at` Inst @"t" r
-                         =: sTrue
+                         =: depthSum w s t
                          =: qed
               |]
 
@@ -1490,15 +1486,15 @@ swapExchangesCountWSProof = do
            countWS wb sb (swap wa sa wb sb t) .== countWS wa sa t)
        (\_ _ _ _ t -> treeSize t, [proofOf tsPos]) $
        \ih wa sa wb sb t -> []
-         |- countWS wb sb (swap wa sa wb sb t) .== countWS wa sa t
+         |- countWS wb sb (swap wa sa wb sb t)
          =: [pCase| t of
                Tip _ _ -> trivial
-               Bin l r -> countWS wb sb (swap wa sa wb sb t) .== countWS wa sa t
+               Bin l r -> countWS wb sb (swap wa sa wb sb t)
                        ?? ih    `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
                        ?? ih    `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
                        ?? tsPos `at` Inst @"t" l
                        ?? tsPos `at` Inst @"t" r
-                       =: sTrue
+                       =: countWS wa sa t
                        =: qed
             |]
 
@@ -1531,17 +1527,17 @@ swapExchangesDepthSumProof = do
            depthSum wb sb (swap wa sa wb sb t) .== depthSum wa sa t)
        (\_ _ _ _ t -> treeSize t, [proofOf tsPos]) $
        \ih wa sa wb sb t -> []
-         |- depthSum wb sb (swap wa sa wb sb t) .== depthSum wa sa t
+         |- depthSum wb sb (swap wa sa wb sb t)
          =: [pCase| t of
                Tip _ _ -> trivial
-               Bin l r -> depthSum wb sb (swap wa sa wb sb t) .== depthSum wa sa t
+               Bin l r -> depthSum wb sb (swap wa sa wb sb t)
                        ?? ih       `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
                        ?? ih       `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
                        ?? swapXCWS `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
                        ?? swapXCWS `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
                        ?? tsPos    `at` Inst @"t" l
                        ?? tsPos    `at` Inst @"t" r
-                       =: sTrue
+                       =: depthSum wa sa t
                        =: qed
             |]
 
@@ -1659,13 +1655,13 @@ sibDepthSumProof = do
              .=> depthSum (sibW t) (sibS t) t .== height t)
        (treeSize, [proofOf tsPos]) $
        \ih t -> [countWS (sibW t) (sibS t) t .== 1]
-         |- depthSum (sibW t) (sibS t) t .== height t
+         |- depthSum (sibW t) (sibS t) t
          =: [pCase| t of
                Tip _ _ -> trivial
-               Bin l r -> depthSum (sibW t) (sibS t) t .== height t
+               Bin l r -> depthSum (sibW t) (sibS t) t
                        =: cases
                             [ height l .>= height r .&& height l .== 0
-                                ==> depthSum (sibW t) (sibS t) t .== height t
+                                ==> depthSum (sibW t) (sibS t) t
                                  ?? cwsBin        `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"l" l, Inst @"r" r)
                                  ?? deepCountWS   `at` Inst @"t" r
                                  ?? countWSNonNeg `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
@@ -1673,20 +1669,20 @@ sibDepthSumProof = do
                                  ?? heightNonNeg  `at` Inst @"t" r
                                  ?? heightZeroDS  `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" l)
                                  ?? heightZeroDS  `at` (Inst @"w" (deepW r), Inst @"s" (deepS r), Inst @"t" r)
-                                 =: sTrue
+                                 =: height t
                                  =: qed
                             , height l .>= height r .&& sNot (height l .== 0)
-                                ==> depthSum (sibW t) (sibS t) t .== height t
+                                ==> depthSum (sibW t) (sibS t) t
                                  ?? cwsBin        `at` (Inst @"w" (sibW l), Inst @"s" (sibS l), Inst @"l" l, Inst @"r" r)
                                  ?? sibCountWS    `at` Inst @"t" l
                                  ?? countWSNonNeg `at` (Inst @"w" (sibW l), Inst @"s" (sibS l), Inst @"t" r)
                                  ?? depthSumZero  `at` (Inst @"w" (sibW l), Inst @"s" (sibS l), Inst @"t" r)
                                  ?? ih            `at` Inst @"t" l
                                  ?? tsPos         `at` Inst @"t" r
-                                 =: sTrue
+                                 =: height t
                                  =: qed
                             , sNot (height l .>= height r)
-                                ==> depthSum (sibW t) (sibS t) t .== height t
+                                ==> depthSum (sibW t) (sibS t) t
                                  ?? cwsBin        `at` (Inst @"w" (sibW r), Inst @"s" (sibS r), Inst @"l" l, Inst @"r" r)
                                  ?? sibCountWS    `at` Inst @"t" r
                                  ?? countWSNonNeg `at` (Inst @"w" (sibW r), Inst @"s" (sibS r), Inst @"t" l)
@@ -1694,7 +1690,7 @@ sibDepthSumProof = do
                                  ?? ih            `at` Inst @"t" r
                                  ?? tsPos         `at` Inst @"t" l
                                  ?? heightNonNeg  `at` Inst @"t" l
-                                 =: sTrue
+                                 =: height t
                                  =: qed
                             ]
             |]
@@ -1753,28 +1749,28 @@ collapsePreservesWeightProof = do
        (\(Forall @"t" t) -> treeWeight (collapse t) .== treeWeight t)
        (treeSize, [proofOf tsPos]) $
        \ih t -> []
-         |- treeWeight (collapse t) .== treeWeight t
+         |- treeWeight (collapse t)
          =: [pCase| t of
                Tip _ _ -> trivial
-               Bin l r -> treeWeight (collapse t) .== treeWeight t
+               Bin l r -> treeWeight (collapse t)
                        =: cases
                             [ height l .>= height r .&& height l .== 0
-                                ==> treeWeight (collapse t) .== treeWeight t
-                                 =: sTrue
+                                ==> treeWeight (collapse t)
+                                 =: treeWeight t
                                  =: qed
                             , height l .>= height r .&& sNot (height l .== 0)
-                                ==> treeWeight (collapse t) .== treeWeight t
+                                ==> treeWeight (collapse t)
                                  ?? ih `at` Inst @"t" l
                                  ?? tsPos `at` Inst @"t" r
-                                 =: sTrue
+                                 =: treeWeight t
                                  =: qed
                             , sNot (height l .>= height r)
-                                ==> treeWeight (collapse t) .== treeWeight t
+                                ==> treeWeight (collapse t)
                                  ?? ih `at` Inst @"t" r
                                  ?? tsPos `at` Inst @"t" l
                                  ?? hNN `at` Inst @"t" l
                                  ?? hNN `at` Inst @"t" r
-                                 =: sTrue
+                                 =: treeWeight t
                                  =: qed
                             ]
             |]
@@ -1790,6 +1786,7 @@ collapsePreservesWeightProof = do
 heightPosTreeSizeProof :: TP (Proof (Forall "t" HTree -> SBool))
 heightPosTreeSizeProof = do
    tsPos <- recall treeSizePosProof
+
    lemma "heightPosTreeSize"
        (\(Forall @"t" t) -> height t .>= 1 .=> treeSize t .>= 3)
        [proofOf tsPos]
@@ -1851,65 +1848,65 @@ costDecompProof = do
            treeSize t .>= 2 .=> cost t .== cost (collapse t) + deepW t + sibW t)
        (treeSize, [proofOf tsPos]) $
        \ih t -> [treeSize t .>= 2]
-         |- cost t .== cost (collapse t) + deepW t + sibW t
+         |- cost t
          =: [pCase| t of
-               Tip _ _ -> cost t .== cost (collapse t) + deepW t + sibW t
-                       =: sTrue
+               Tip _ _ -> cost t
+                       =: cost (collapse t) + deepW t + sibW t
                        =: qed
-               Bin l r -> cost t .== cost (collapse t) + deepW t + sibW t
+               Bin l r -> cost t
                        =: case l of
-                            Tip _ _ -> cost t .== cost (collapse t) + deepW t + sibW t
+                            Tip _ _ -> cost t
                                     =: case r of
-                                         Tip _ _ -> cost t .== cost (collapse t) + deepW t + sibW t
-                                                 =: sTrue
+                                         Tip _ _ -> cost t
+                                                 =: cost (collapse t) + deepW t + sibW t
                                                  =: qed
-                                         Bin rl rr -> cost t .== cost (collapse t) + deepW t + sibW t
+                                         Bin rl rr -> cost t
                                                   =: cases
                                                        [ height l .>= height r
-                                                           ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                                           ==> cost t
                                                             ?? hNN `at` Inst @"t" rl
                                                             ?? hNN `at` Inst @"t" rr
-                                                            =: sTrue
+                                                            =: cost (collapse t) + deepW t + sibW t
                                                             =: qed
                                                        , sNot (height l .>= height r)
-                                                           ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                                           ==> cost t
                                                             ?? ih     `at` Inst @"t" r
                                                             ?? tsPos  `at` Inst @"t" l
                                                             ?? collWt `at` Inst @"t" r
                                                             ?? hpTS   `at` Inst @"t" r
-                                                            =: sTrue
+                                                            =: cost (collapse t) + deepW t + sibW t
                                                             =: qed
                                                        ]
-                            Bin ll lr -> cost t .== cost (collapse t) + deepW t + sibW t
+                            Bin ll lr -> cost t
                                     =: cases
                                          [ height l .>= height r
-                                             ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                             ==> cost t
                                               =: cases
                                                    [ height l .== 0
-                                                       ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                                       ==> cost t
                                                         ?? hNN `at` Inst @"t" ll
                                                         ?? hNN `at` Inst @"t" lr
-                                                        =: sTrue
+                                                        =: cost (collapse t) + deepW t + sibW t
                                                         =: qed
                                                    , sNot (height l .== 0)
-                                                       ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                                       ==> cost t
                                                         ?? ih     `at` Inst @"t" l
                                                         ?? tsPos  `at` Inst @"t" r
                                                         ?? collWt `at` Inst @"t" l
                                                         ?? hpTS   `at` Inst @"t" l
                                                         ?? hNN    `at` Inst @"t" l
-                                                        =: sTrue
+                                                        =: cost (collapse t) + deepW t + sibW t
                                                         =: qed
                                                    ]
                                          , sNot (height l .>= height r)
-                                             ==> cost t .== cost (collapse t) + deepW t + sibW t
+                                             ==> cost t
                                               ?? ih     `at` Inst @"t" r
                                               ?? tsPos  `at` Inst @"t" l
                                               ?? collWt `at` Inst @"t" r
                                               ?? hpTS   `at` Inst @"t" r
                                               ?? hNN    `at` Inst @"t" l
                                               ?? hNN    `at` Inst @"t" r
-                                              =: sTrue
+                                              =: cost (collapse t) + deepW t + sibW t
                                               =: qed
                                          ]
             |]
@@ -1924,6 +1921,7 @@ costDecompProof = do
 heightZeroTreeSizeOneProof :: TP (Proof (Forall "t" HTree -> SBool))
 heightZeroTreeSizeOneProof = do
    hNN <- recall heightNonNegProof
+
    lemma "heightZeroTreeSizeOne"
        (\(Forall @"t" t) -> height t .== 0 .=> treeSize t .== 1)
        [proofOf hNN]
@@ -1966,36 +1964,36 @@ collapseReducesTreeSizeProof = do
            treeSize t .>= 2 .=> treeSize (collapse t) .== treeSize t - 2)
        (treeSize, [proofOf tsPos]) $
        \ih t -> [treeSize t .>= 2]
-         |- treeSize (collapse t) .== treeSize t - 2
+         |- treeSize (collapse t)
          =: [pCase| t of
-               Tip _ _ -> treeSize (collapse t) .== treeSize t - 2
-                       =: sTrue
+               Tip _ _ -> treeSize (collapse t)
+                       =: treeSize t - 2
                        =: qed
-               Bin l r -> treeSize (collapse t) .== treeSize t - 2
+               Bin l r -> treeSize (collapse t)
                        =: cases
                             [ height l .>= height r .&& height l .== 0
-                                ==> treeSize (collapse t) .== treeSize t - 2
+                                ==> treeSize (collapse t)
                                  ?? hzTS `at` Inst @"t" l
                                  ?? hzTS `at` Inst @"t" r
                                  ?? hNN  `at` Inst @"t" r
-                                 =: sTrue
+                                 =: treeSize t - 2
                                  =: qed
                             , height l .>= height r .&& sNot (height l .== 0)
-                                ==> treeSize (collapse t) .== treeSize t - 2
+                                ==> treeSize (collapse t)
                                  ?? ih    `at` Inst @"t" l
                                  ?? tsPos `at` Inst @"t" r
                                  ?? hpTS  `at` Inst @"t" l
                                  ?? hNN   `at` Inst @"t" l
-                                 =: sTrue
+                                 =: treeSize t - 2
                                  =: qed
                             , sNot (height l .>= height r)
-                                ==> treeSize (collapse t) .== treeSize t - 2
+                                ==> treeSize (collapse t)
                                  ?? ih    `at` Inst @"t" r
                                  ?? tsPos `at` Inst @"t" l
                                  ?? hpTS  `at` Inst @"t" r
                                  ?? hNN   `at` Inst @"t" l
                                  ?? hNN   `at` Inst @"t" r
-                                 =: sTrue
+                                 =: treeSize t - 2
                                  =: qed
                             ]
             |]
@@ -2042,21 +2040,21 @@ sortedInsertLengthProof =
            length (sortedInsert t ts) .== 1 + length ts)
        (\_ ts -> length ts, []) $
        \ih t ts -> []
-         |- length (sortedInsert t ts) .== 1 + length ts
+         |- length (sortedInsert t ts)
          =: [pCase| ts of
-               [] -> length (sortedInsert t ts) .== 1 + length ts
-                  =: sTrue
+               [] -> length (sortedInsert t ts)
+                  =: 1 + length ts
                   =: qed
-               u : us -> length (sortedInsert t ts) .== 1 + length ts
+               u : us -> length (sortedInsert t ts)
                       =: cases
                            [ treeWeight t .<= treeWeight u
-                               ==> length (sortedInsert t ts) .== 1 + length ts
-                                =: sTrue
+                               ==> length (sortedInsert t ts)
+                                =: 1 + length ts
                                 =: qed
                            , sNot (treeWeight t .<= treeWeight u)
-                               ==> length (sortedInsert t ts) .== 1 + length ts
+                               ==> length (sortedInsert t ts)
                                 ?? ih `at` (Inst @"t" t, Inst @"ts" us)
-                                =: sTrue
+                                =: 1 + length ts
                                 =: qed
                            ]
             |]
@@ -2109,21 +2107,21 @@ sortedInsertWeightProof =
            forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts)
        (\_ ts -> length ts, []) $
        \ih t ts -> []
-         |- forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts
+         |- forestWeight (sortedInsert t ts)
          =: [pCase| ts of
-               [] -> forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts
-                  =: sTrue
+               [] -> forestWeight (sortedInsert t ts)
+                  =: treeWeight t + forestWeight ts
                   =: qed
-               u : us -> forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts
+               u : us -> forestWeight (sortedInsert t ts)
                       =: cases
                            [ treeWeight t .<= treeWeight u
-                               ==> forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts
-                                =: sTrue
+                               ==> forestWeight (sortedInsert t ts)
+                                =: treeWeight t + forestWeight ts
                                 =: qed
                            , sNot (treeWeight t .<= treeWeight u)
-                               ==> forestWeight (sortedInsert t ts) .== treeWeight t + forestWeight ts
+                               ==> forestWeight (sortedInsert t ts)
                                 ?? ih `at` (Inst @"t" t, Inst @"ts" us)
-                                =: sTrue
+                                =: treeWeight t + forestWeight ts
                                 =: qed
                            ]
             |]
@@ -2160,21 +2158,21 @@ buildHuffmanWeightProof = do
            length ts .>= 1 .=> treeWeight (buildHuffman ts) .== forestWeight ts)
        (length, []) $
        \ih ts -> [length ts .>= 1]
-         |- treeWeight (buildHuffman ts) .== forestWeight ts
+         |- treeWeight (buildHuffman ts)
          =: [pCase| ts of
-               [] -> treeWeight (buildHuffman ts) .== forestWeight ts
-                  =: sTrue
+               [] -> treeWeight (buildHuffman ts)
+                  =: forestWeight ts
                   =: qed
-               t : rest -> treeWeight (buildHuffman ts) .== forestWeight ts
+               t : rest -> treeWeight (buildHuffman ts)
                         =: case rest of
-                             [] -> treeWeight (buildHuffman ts) .== forestWeight ts
-                                =: sTrue
+                             [] -> treeWeight (buildHuffman ts)
+                                =: forestWeight ts
                                 =: qed
-                             u : us -> treeWeight (buildHuffman ts) .== forestWeight ts
+                             u : us -> treeWeight (buildHuffman ts)
                                     ?? ih    `at` Inst @"ts" (sortedInsert (sBin t u) us)
                                     ?? siWt  `at` (Inst @"t" (sBin t u), Inst @"ts" us)
                                     ?? siLen `at` (Inst @"t" (sBin t u), Inst @"ts" us)
-                                    =: sTrue
+                                    =: forestWeight ts
                                     =: qed
             |]
 
@@ -2222,21 +2220,21 @@ sortedInsertCostProof =
            forestCost (sortedInsert t ts) .== cost t + forestCost ts)
        (\_ ts -> length ts, []) $
        \ih t ts -> []
-         |- forestCost (sortedInsert t ts) .== cost t + forestCost ts
+         |- forestCost (sortedInsert t ts)
          =: [pCase| ts of
-               [] -> forestCost (sortedInsert t ts) .== cost t + forestCost ts
-                  =: sTrue
+               [] -> forestCost (sortedInsert t ts)
+                  =: cost t + forestCost ts
                   =: qed
-               u : us -> forestCost (sortedInsert t ts) .== cost t + forestCost ts
+               u : us -> forestCost (sortedInsert t ts)
                       =: cases
                            [ treeWeight t .<= treeWeight u
-                               ==> forestCost (sortedInsert t ts) .== cost t + forestCost ts
-                                =: sTrue
+                               ==> forestCost (sortedInsert t ts)
+                                =: cost t + forestCost ts
                                 =: qed
                            , sNot (treeWeight t .<= treeWeight u)
-                               ==> forestCost (sortedInsert t ts) .== cost t + forestCost ts
+                               ==> forestCost (sortedInsert t ts)
                                 ?? ih `at` (Inst @"t" t, Inst @"ts" us)
-                                =: sTrue
+                                =: cost t + forestCost ts
                                 =: qed
                            ]
             |]
@@ -2269,23 +2267,270 @@ sortedInsertCountWSProof =
            forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts)
        (\_ _ _ ts -> length ts, []) $
        \ih w s t ts -> []
-         |- forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts
+         |- forestCountWS w s (sortedInsert t ts)
          =: [pCase| ts of
-               [] -> forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts
-                  =: sTrue
+               [] -> forestCountWS w s (sortedInsert t ts)
+                  =: countWS w s t + forestCountWS w s ts
                   =: qed
-               u : us -> forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts
+               u : us -> forestCountWS w s (sortedInsert t ts)
                       =: cases
                            [ treeWeight t .<= treeWeight u
-                               ==> forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts
-                                =: forestCountWS w s (t .: u .: us) .== countWS w s t + forestCountWS w s (u .: us)
-                                =: sTrue
+                               ==> forestCountWS w s (sortedInsert t ts)
+                                =: forestCountWS w s (t .: u .: us)
+                                =: countWS w s t + forestCountWS w s (u .: us)
                                 =: qed
                            , sNot (treeWeight t .<= treeWeight u)
-                               ==> forestCountWS w s (sortedInsert t ts) .== countWS w s t + forestCountWS w s ts
-                                =: forestCountWS w s (u .: sortedInsert t us) .== countWS w s t + forestCountWS w s (u .: us)
+                               ==> forestCountWS w s (sortedInsert t ts)
+                                =: forestCountWS w s (u .: sortedInsert t us)
                                 ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" t, Inst @"ts" us)
-                                =: sTrue
+                                =: countWS w s t + forestCountWS w s (u .: us)
                                 =: qed
                            ]
+            |]
+
+-- * Phase 2: Cost additivity
+
+-- | Convert a forest to a tip-only forest, preserving weights.
+tipForest :: SList HTree -> SList HTree
+tipForest = smtFunction "tipForest"
+          $ \ts -> [sCase| ts of
+                      []       -> nil
+                      t : rest -> sTip (treeWeight t) 0 .: tipForest rest
+                   |]
+
+-- | @tipForest@ preserves the length of the forest.
+--
+-- >>> tipForestLengthProof
+-- Inductive lemma: tipForestLength
+--   Step: Base                                 Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Result:                                    Q.E.D.
+-- [Proven] tipForestLength :: Ɐts ∷ [HTree] → Bool
+tipForestLengthProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
+tipForestLengthProof =
+    sInduct "tipForestLength"
+       (\(Forall @"ts" ts) -> length (tipForest ts) .== length ts)
+       (length, []) $
+       \ih ts -> []
+         |- length (tipForest (ts :: SList HTree))
+         =: length (sTip (treeWeight (head ts)) 0 .: tipForest (tail ts))
+         ?? ih `at` Inst @"ts" (tail ts)
+         =: length ts
+         =: qed
+
+-- | @tipForest@ produces zero forest cost.
+--
+-- >>> tipForestCostZeroProof
+-- Inductive lemma: tipForestCostZero
+--   Step: Base                                 Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Result:                                    Q.E.D.
+-- [Proven] tipForestCostZero :: Ɐts ∷ [HTree] → Bool
+tipForestCostZeroProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
+tipForestCostZeroProof =
+    sInduct "tipForestCostZero"
+       (\(Forall @"ts" ts) -> forestCost (tipForest ts) .== 0)
+       (length, []) $
+       \ih ts -> []
+         |- forestCost (tipForest (ts :: SList HTree))
+         =: forestCost (sTip (treeWeight (head ts)) 0 .: tipForest (tail ts))
+         ?? ih `at` Inst @"ts" (tail ts)
+         =: (0 :: SInteger)
+         =: qed
+
+-- | @tipForest@ preserves forest weight.
+--
+-- >>> tipForestWeightProof
+-- Inductive lemma: tipForestWeight
+--   Step: Base                                 Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Result:                                    Q.E.D.
+-- [Proven] tipForestWeight :: Ɐts ∷ [HTree] → Bool
+tipForestWeightProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
+tipForestWeightProof =
+    sInduct "tipForestWeight"
+       (\(Forall @"ts" ts) -> forestWeight (tipForest ts) .== forestWeight ts)
+       (length, []) $
+       \ih ts -> []
+         |- forestWeight (tipForest (ts :: SList HTree))
+         =: forestWeight (sTip (treeWeight (head ts)) 0 .: tipForest (tail ts))
+         ?? ih `at` Inst @"ts" (tail ts)
+         =: forestWeight ts
+         =: qed
+
+-- | @tipForest@ commutes with @sortedInsert@.
+--
+-- >>> tipForestCommuteProof
+-- Inductive lemma: tipForestCommute
+--   Step: Base                                 Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Step: 3                                    Q.E.D.
+--   Step: 4                                    Q.E.D.
+--   Result:                                    Q.E.D.
+-- [Proven] tipForestCommute :: Ɐx ∷ HTree → Ɐts ∷ [HTree] → Bool
+tipForestCommuteProof :: TP (Proof (Forall "x" HTree -> Forall "ts" [HTree] -> SBool))
+tipForestCommuteProof =
+    sInduct "tipForestCommute"
+       (\(Forall @"x" x) (Forall @"ts" ts) ->
+           tipForest (sortedInsert x ts) .== sortedInsert (sTip (treeWeight x) 0) (tipForest ts))
+       (\_ ts -> length ts, []) $
+       \ih x ts -> []
+         |- tipForest (sortedInsert x (ts :: SList HTree))
+         =: [pCase| ts of
+               [] -> tipForest (sortedInsert x ts)
+                  =: tipForest (singleton x)
+                  =: singleton (sTip (treeWeight x) 0)
+                  =: sortedInsert (sTip (treeWeight x) 0) nil
+                  =: sortedInsert (sTip (treeWeight x) 0) (tipForest ts)
+                  =: qed
+               u : us -> tipForest (sortedInsert x ts)
+                      =: cases
+                           [ treeWeight x .<= treeWeight u
+                               ==> tipForest (sortedInsert x ts)
+                                =: tipForest (x .: u .: us)
+                                =: sTip (treeWeight x) 0 .: tipForest (u .: us)
+                                =: sortedInsert (sTip (treeWeight x) 0) (tipForest (u .: us))
+                                =: sortedInsert (sTip (treeWeight x) 0) (tipForest ts)
+                                =: qed
+                           , sNot (treeWeight x .<= treeWeight u)
+                               ==> tipForest (sortedInsert x ts)
+                                =: tipForest (u .: sortedInsert x us)
+                                =: sTip (treeWeight u) 0 .: tipForest (sortedInsert x us)
+                                ?? ih `at` (Inst @"x" x, Inst @"ts" us)
+                                =: sTip (treeWeight u) 0 .: sortedInsert (sTip (treeWeight x) 0) (tipForest us)
+                                =: sortedInsert (sTip (treeWeight x) 0) (sTip (treeWeight u) 0 .: tipForest us)
+                                =: sortedInsert (sTip (treeWeight x) 0) (tipForest ts)
+                                =: qed
+                           ]
+            |]
+
+-- | @tipForest@ is idempotent.
+--
+-- >>> tipForestIdempotentProof
+-- Inductive lemma: tipForestIdempotent
+--   Step: Base                                 Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Result:                                    Q.E.D.
+-- [Proven] tipForestIdempotent :: Ɐts ∷ [HTree] → Bool
+tipForestIdempotentProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
+tipForestIdempotentProof =
+    sInduct "tipForestIdempotent"
+       (\(Forall @"ts" ts) -> tipForest (tipForest ts) .== tipForest ts)
+       (length, []) $
+       \ih ts -> []
+         |- tipForest (tipForest (ts :: SList HTree))
+         =: tipForest (sTip (treeWeight (head ts)) 0 .: tipForest (tail ts))
+         ?? ih `at` Inst @"ts" (tail ts)
+         =: tipForest ts
+         =: qed
+
+-- | Substitution lemma: replacing a tree in @sortedInsert@ with another of the same weight
+-- changes @buildHuffman@ cost by exactly the difference in individual costs.
+buildHuffmanCostSubstProof :: TP (Proof (Forall "t1" HTree -> Forall "t2" HTree -> Forall "ts" [HTree] -> SBool))
+buildHuffmanCostSubstProof =
+    sInduct "buildHuffmanCostSubst"
+       (\(Forall @"t1" t1) (Forall @"t2" t2) (Forall @"ts" ts) ->
+              treeWeight t1 .== treeWeight t2
+          .=> cost (buildHuffman (sortedInsert t1 ts)) .== cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2)
+       (\_ _ ts -> length ts, []) $
+       \ih t1 t2 ts ->
+           [treeWeight t1 .== treeWeight t2]
+           |- cost (buildHuffman (sortedInsert t1 ts))
+              .== cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2
+           =: [pCase| ts of
+                 [] -> cost (buildHuffman (sortedInsert t1 ts))
+                       .== cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2
+                    =: cost (buildHuffman (singleton t1))
+                       .== cost (buildHuffman (singleton t2)) + cost t1 - cost t2
+                    =: cost t1 .== cost t2 + cost t1 - cost t2
+                    =: sTrue
+                    =: qed
+                 t : rest -> cost (buildHuffman (sortedInsert t1 ts))
+                             .== cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2
+                          =: cases
+                               [ treeWeight t1 .<= treeWeight t
+                                   ==> cost (buildHuffman (sortedInsert t1 ts))
+                                       .== cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2
+                                    =: cost (buildHuffman (t1 .: t .: rest))
+                                       .== cost (buildHuffman (t2 .: t .: rest)) + cost t1 - cost t2
+                                    =: cost (buildHuffman (sortedInsert (sBin t1 t) rest))
+                                       .== cost (buildHuffman (sortedInsert (sBin t2 t) rest)) + cost t1 - cost t2
+                                    ?? ih `at` (Inst @"t1" (sBin t1 t), Inst @"t2" (sBin t2 t), Inst @"ts" rest)
+                                    =: cost (buildHuffman (sortedInsert (sBin t2 t) rest)) + cost (sBin t1 t) - cost (sBin t2 t)
+                                       .== cost (buildHuffman (sortedInsert (sBin t2 t) rest)) + cost t1 - cost t2
+                                    =: sTrue
+                                    =: qed
+                               , sNot (treeWeight t1 .<= treeWeight t)
+                                   ==> cost (buildHuffman (sortedInsert t1 ts))
+                                       .== cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2
+                                    =: cost (buildHuffman (t .: sortedInsert t1 rest))
+                                       .== cost (buildHuffman (t .: sortedInsert t2 rest)) + cost t1 - cost t2
+                                    =: cost (buildHuffman (sortedInsert (sBin t (head (sortedInsert t1 rest))) (tail (sortedInsert t1 rest))))
+                                       .== cost (buildHuffman (sortedInsert (sBin t (head (sortedInsert t2 rest))) (tail (sortedInsert t2 rest)))) + cost t1 - cost t2
+                                    =: sTrue
+                                    =: qed
+                               ]
+              |]
+
+-- | Cost additivity: the cost of building a Huffman tree from a forest equals
+-- the forest cost plus the cost of building from the tip-only version.
+buildHuffmanAdditivityProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
+buildHuffmanAdditivityProof = do
+    costSub <- recall buildHuffmanCostSubstProof
+    tfComm  <- recall tipForestCommuteProof
+    siCost  <- recall sortedInsertCostProof
+    siLen   <- recall sortedInsertLengthProof
+
+    sInduct "buildHuffmanAdditivity"
+       (\(Forall @"ts" ts) ->
+           length ts .>= 1 .=> cost (buildHuffman ts) .== forestCost ts + cost (buildHuffman (tipForest ts)))
+       (length, []) $
+       \ih ts -> [length ts .>= 1]
+         |- cost (buildHuffman (ts :: SList HTree))
+            .== forestCost ts + cost (buildHuffman (tipForest ts))
+         =: [pCase| ts of
+               [] -> cost (buildHuffman ts) .== forestCost ts + cost (buildHuffman (tipForest ts))
+                  =: sTrue
+                  =: qed
+               a : rest' ->
+                  cost (buildHuffman ts) .== forestCost ts + cost (buildHuffman (tipForest ts))
+                  =: case rest' of
+                        [] -> cost (buildHuffman ts) .== forestCost ts + cost (buildHuffman (tipForest ts))
+                           =: cost a .== cost a + 0
+                           =: sTrue
+                           =: qed
+                        b : rest ->
+                           cost (buildHuffman ts) .== forestCost ts + cost (buildHuffman (tipForest ts))
+                           =: cost (buildHuffman (sortedInsert (sBin a b) rest))
+                              .== forestCost (a .: b .: rest) + cost (buildHuffman (tipForest (a .: b .: rest)))
+                           ?? costSub `at` (Inst @"t1" (sBin a b), Inst @"t2" (sTip (treeWeight a + treeWeight b) 0), Inst @"ts" rest)
+                           =: cost (buildHuffman (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest))
+                              + cost (sBin a b) - cost (sTip (treeWeight a + treeWeight b) 0)
+                              .== forestCost (a .: b .: rest) + cost (buildHuffman (tipForest (a .: b .: rest)))
+                           =: cost (buildHuffman (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest))
+                              + cost (sBin a b)
+                              .== forestCost (a .: b .: rest) + cost (buildHuffman (tipForest (a .: b .: rest)))
+                           ?? ih `at` Inst @"ts" (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest)
+                           ?? siLen `at` (Inst @"t" (sTip (treeWeight a + treeWeight b) 0), Inst @"ts" rest)
+                           =: forestCost (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest)
+                              + cost (buildHuffman (tipForest (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest)))
+                              + cost (sBin a b)
+                              .== forestCost (a .: b .: rest) + cost (buildHuffman (tipForest (a .: b .: rest)))
+                           ?? siCost `at` (Inst @"t" (sTip (treeWeight a + treeWeight b) 0), Inst @"ts" rest)
+                           =: forestCost rest
+                              + cost (buildHuffman (tipForest (sortedInsert (sTip (treeWeight a + treeWeight b) 0) rest)))
+                              + cost (sBin a b)
+                              .== forestCost (a .: b .: rest) + cost (buildHuffman (tipForest (a .: b .: rest)))
+                           ?? tfComm `at` (Inst @"x" (sTip (treeWeight a + treeWeight b) 0), Inst @"ts" rest)
+                           =: forestCost rest
+                              + cost (buildHuffman (sortedInsert (sTip (treeWeight a + treeWeight b) 0) (tipForest rest)))
+                              + cost (sBin a b)
+                              .== forestCost (a .: b .: rest) + cost (buildHuffman (tipForest (a .: b .: rest)))
+                           =: sTrue
+                           =: qed
             |]
