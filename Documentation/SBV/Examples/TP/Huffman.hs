@@ -60,7 +60,7 @@ mkSymbolic [''HTree]
 treeSize :: SHTree -> SInteger
 treeSize = smtFunction "treeSize"
          $ \t -> [sCase| t of
-                    Tip _ _ -> 1
+                    Tip{}   -> 1
                     Bin l r -> 1 + treeSize l + treeSize r
                  |]
 
@@ -81,7 +81,7 @@ member = smtFunction "member"
 findPath :: SInteger -> SHTree -> SList Bool
 findPath = smtFunction "findPath"
          $ \s t -> [sCase| t of
-                      Tip _ _ -> nil
+                      Tip{}   -> nil
                       Bin l r | member s l -> sFalse .: findPath s l
                               | True       -> sTrue  .: findPath s r
                    |]
@@ -135,7 +135,7 @@ roundtrip = do
      \ih s t -> [member s t]
        |- decode (findPath s t) t
        =: [pCase| t of
-             Tip _ _ -> trivial
+             Tip{}   -> trivial
 
              Bin l r -> cases
                [ member s l
@@ -170,7 +170,7 @@ treeWeight = smtFunction "treeWeight"
 cost :: SHTree -> SInteger
 cost = smtFunction "cost"
      $ \t -> [sCase| t of
-                Tip _ _ -> 0
+                Tip{}   -> 0
                 Bin l r -> cost l + cost r + treeWeight l + treeWeight r
              |]
 
@@ -178,7 +178,7 @@ cost = smtFunction "cost"
 numLeaves :: SHTree -> SInteger
 numLeaves = smtFunction "numLeaves"
           $ \t -> [sCase| t of
-                     Tip _ _ -> 1
+                     Tip{}   -> 1
                      Bin l r -> numLeaves l + numLeaves r
                   |]
 
@@ -187,7 +187,7 @@ numLeaves = smtFunction "numLeaves"
 depth :: SInteger -> SHTree -> SInteger
 depth = smtFunction "depth"
       $ \s t -> [sCase| t of
-                   Tip _ _ -> 0
+                   Tip{}   -> 0
                    Bin l r | member s l -> 1 + depth s l
                            | True       -> 1 + depth s r
                 |]
@@ -386,7 +386,7 @@ swapWeight = do
 depthSum :: SInteger -> SInteger -> SHTree -> SInteger
 depthSum = smtFunction "depthSum"
          $ \w s t -> [sCase| t of
-                        Tip _ _ -> 0
+                        Tip{}   -> 0
                         Bin l r -> depthSum w s l + countWS w s l
                                  + depthSum w s r + countWS w s r
                      |]
@@ -637,7 +637,7 @@ swapReducesCost = do
 height :: SHTree -> SInteger
 height = smtFunction "height"
        $ \t -> [sCase| t of
-                  Tip _ _ -> 0
+                  Tip{}   -> 0
                   Bin l r -> 1 + ite (height l .>= height r) (height l) (height r)
                |]
 
@@ -719,7 +719,7 @@ countWSNonNegProof = do
        \ih w s t -> []
          |- countWS w s t .>= (0 :: SInteger)
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> countWS w s l + countWS w s r .>= (0 :: SInteger)
                        ?? tsPos `at` Inst @"t" l
                        ?? tsPos `at` Inst @"t" r
@@ -757,7 +757,7 @@ depthSumZeroProof = do
        \ih w s t -> [countWS w s t .== 0]
          |- depthSum w s t
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> depthSum w s l + countWS w s l + depthSum w s r + countWS w s r
                        ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
                        ?? countWSNonNeg `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
@@ -801,7 +801,7 @@ deepCountWSProof = do
        \ih t -> []
          |- countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> countWS (deepW t) (deepS t) t .>= (1 :: SInteger)
                        =: cases
                             [ height l .>= height r
@@ -886,7 +886,7 @@ heightZeroDepthSumProof = do
        \w s t -> [height t .== 0]
               |- depthSum w s t
               =: [pCase| t of
-                    Tip _ _ -> trivial
+                    Tip{}   -> trivial
                     Bin l r -> depthSum w s t
                             ?? hNN `at` Inst @"t" l
                             ?? hNN `at` Inst @"t" r
@@ -940,7 +940,7 @@ depthLeqHeightProof = do
        \ih s t -> [member s t]
          |- depth s t .<= height t
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> depth s t .<= height t
                        =: cases
                             [ member s l
@@ -1002,7 +1002,7 @@ depthSumLeqHeightProof = do
        \ih w s t -> [countWS w s t .== 1]
          |- depthSum w s t .<= height t
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> depthSum w s t .<= height t
                        =: cases
                             [ countWS w s l .== 1
@@ -1072,7 +1072,7 @@ deepDepthSumProof = do
        \ih t -> [countWS (deepW t) (deepS t) t .== 1]
          |- depthSum (deepW t) (deepS t) t
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> depthSum (deepW t) (deepS t) t
                        =: cases
                             [ height l .>= height r
@@ -1242,7 +1242,7 @@ swapPreservesHeightProof = do
        \ih wa sa wb sb t -> []
          |- height (swap wa sa wb sb t)
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> height (swap wa sa wb sb t)
                        ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
                        ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
@@ -1285,7 +1285,7 @@ swapDeepWProof = do
        \ih wa sa t -> []
          |- deepW (swap wa sa (deepW t) (deepS t) t)
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> deepW (swap wa sa (deepW t) (deepS t) t)
                        =: cases
                             [ height l .>= height r
@@ -1340,7 +1340,7 @@ swapDeepSProof = do
        \ih wa sa t -> []
          |- deepS (swap wa sa (deepW t) (deepS t) t)
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> deepS (swap wa sa (deepW t) (deepS t) t)
                        =: cases
                             [ height l .>= height r
@@ -1399,7 +1399,7 @@ swapPreservesCountWSProof = do
          in [sNot (w .== wa .&& s .== sa), sNot (w .== wb .&& s .== sb)]
            |- countWS w s (swap wa sa wb sb t)
            =: [pCase| t of
-                 Tip _ _ -> trivial
+                 Tip{}   -> trivial
                  Bin l r -> countWS w s (swap wa sa wb sb t)
                          ?? ih `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" l)
                          ?? ih `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" r)
@@ -1447,7 +1447,7 @@ swapPreservesDepthSumProof = do
          in [sNot (w .== wa .&& s .== sa), sNot (w .== wb .&& s .== sb)]
            |- depthSum w s (swap wa sa wb sb t)
            =: [pCase| t of
-                 Tip _ _ -> trivial
+                 Tip{}   -> trivial
                  Bin l r -> depthSum w s (swap wa sa wb sb t)
                          ?? ih      `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" l)
                          ?? ih      `at` (Inst @"a" a, Inst @"b" b, Inst @"c" c, Inst @"t" r)
@@ -1488,7 +1488,7 @@ swapExchangesCountWSProof = do
        \ih wa sa wb sb t -> []
          |- countWS wb sb (swap wa sa wb sb t)
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> countWS wb sb (swap wa sa wb sb t)
                        ?? ih    `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
                        ?? ih    `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
@@ -1529,7 +1529,7 @@ swapExchangesDepthSumProof = do
        \ih wa sa wb sb t -> []
          |- depthSum wb sb (swap wa sa wb sb t)
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> depthSum wb sb (swap wa sa wb sb t)
                        ?? ih       `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
                        ?? ih       `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
@@ -1583,7 +1583,7 @@ sibCountWSProof = do
        \ih t -> []
          |- countWS (sibW t) (sibS t) t .>= (1 :: SInteger)
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> countWS (sibW t) (sibS t) t .>= (1 :: SInteger)
                        =: cases
                             [ height l .>= height r .&& height l .== 0
@@ -1657,7 +1657,7 @@ sibDepthSumProof = do
        \ih t -> [countWS (sibW t) (sibS t) t .== 1]
          |- depthSum (sibW t) (sibS t) t
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> depthSum (sibW t) (sibS t) t
                        =: cases
                             [ height l .>= height r .&& height l .== 0
@@ -1751,7 +1751,7 @@ collapsePreservesWeightProof = do
        \ih t -> []
          |- treeWeight (collapse t)
          =: [pCase| t of
-               Tip _ _ -> trivial
+               Tip{}   -> trivial
                Bin l r -> treeWeight (collapse t)
                        =: cases
                             [ height l .>= height r .&& height l .== 0
@@ -1850,14 +1850,14 @@ costDecompProof = do
        \ih t -> [treeSize t .>= 2]
          |- cost t
          =: [pCase| t of
-               Tip _ _ -> cost t
+               Tip{}   -> cost t
                        =: cost (collapse t) + deepW t + sibW t
                        =: qed
                Bin l r -> cost t
                        =: case l of
-                            Tip _ _ -> cost t
+                            Tip{}   -> cost t
                                     =: case r of
-                                         Tip _ _ -> cost t
+                                         Tip{}   -> cost t
                                                  =: cost (collapse t) + deepW t + sibW t
                                                  =: qed
                                          Bin rl rr -> cost t
@@ -1966,7 +1966,7 @@ collapseReducesTreeSizeProof = do
        \ih t -> [treeSize t .>= 2]
          |- treeSize (collapse t)
          =: [pCase| t of
-               Tip _ _ -> treeSize (collapse t)
+               Tip{}   -> treeSize (collapse t)
                        =: treeSize t - 2
                        =: qed
                Bin l r -> treeSize (collapse t)
@@ -1996,6 +1996,507 @@ collapseReducesTreeSizeProof = do
                                  =: treeSize t - 2
                                  =: qed
                             ]
+            |]
+
+-- | Collapse reduces the number of leaves by one.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) collapseNumLeavesProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: heightNonNeg                               Q.E.D.
+-- Lemma: heightPosTreeSize                          Q.E.D.
+-- Lemma: heightZeroNumLeavesOne                     Q.E.D.
+-- Inductive lemma (strong): collapseNumLeaves
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2 (3 way case split)
+--       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.2                             Q.E.D.
+--       Step: 1.2.2.2.1                             Q.E.D.
+--       Step: 1.2.2.2.2                             Q.E.D.
+--       Step: 1.2.2.3.1                             Q.E.D.
+--       Step: 1.2.2.3.2                             Q.E.D.
+--       Step: 1.2.2.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: collapse, height, numLeaves, treeSize, treeWeight
+-- [Proven] collapseNumLeaves :: Ɐt ∷ HTree → Bool
+collapseNumLeavesProof :: TP (Proof (Forall "t" HTree -> SBool))
+collapseNumLeavesProof = do
+   tsPos <- recall treeSizePosProof
+   hNN   <- recall heightNonNegProof
+   hpTS  <- recall heightPosTreeSizeProof
+
+   hzNL  <- lemma "heightZeroNumLeavesOne"
+                   (\(Forall @"t" t) -> height t .== 0 .=> numLeaves t .== 1)
+                   [proofOf hNN]
+
+   sInduct "collapseNumLeaves"
+       (\(Forall @"t" t) ->
+           treeSize t .>= 2 .=> numLeaves (collapse t) .== numLeaves t - 1)
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> [treeSize t .>= 2]
+         |- numLeaves (collapse t)
+         =: [pCase| t of
+               Tip{}   -> numLeaves (collapse t)
+                       =: numLeaves t - 1
+                       =: qed
+               Bin l r -> numLeaves (collapse t)
+                       =: cases
+                            [ height l .>= height r .&& height l .== 0
+                                ==> numLeaves (collapse t)
+                                 ?? hNN  `at` Inst @"t" l
+                                 ?? hNN  `at` Inst @"t" r
+                                 ?? hzNL `at` Inst @"t" l
+                                 ?? hzNL `at` Inst @"t" r
+                                 =: numLeaves t - 1
+                                 =: qed
+
+                            , height l .>= height r .&& sNot (height l .== 0)
+                                ==> numLeaves (collapse t)
+                                 ?? ih    `at` Inst @"t" l
+                                 ?? tsPos `at` Inst @"t" r
+                                 ?? hpTS  `at` Inst @"t" l
+                                 ?? hNN   `at` Inst @"t" l
+                                 =: numLeaves t - 1
+                                 =: qed
+
+                            , sNot (height l .>= height r)
+                                ==> numLeaves (collapse t)
+                                 ?? ih    `at` Inst @"t" r
+                                 ?? tsPos `at` Inst @"t" l
+                                 ?? hpTS  `at` Inst @"t" r
+                                 ?? hNN   `at` Inst @"t" l
+                                 ?? hNN   `at` Inst @"t" r
+                                 =: numLeaves t - 1
+                                 =: qed
+                            ]
+            |]
+
+-- | When the height is 0 (i.e., the tree is a tip), 'deepW' equals 'treeWeight'.
+--
+-- >>> runTPWith cvc5 deepWTipProof
+-- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: deepWTip
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: deepW, height, treeWeight
+-- [Proven] deepWTip :: Ɐt ∷ HTree → Bool
+deepWTipProof :: TP (Proof (Forall "t" HTree -> SBool))
+deepWTipProof = do
+   hNN <- recall heightNonNegProof
+
+   calc "deepWTip"
+       (\(Forall @"t" t) -> height t .== 0 .=> deepW t .== treeWeight t)
+       $ \t -> [height t .== 0]
+         |- deepW t
+         =: [pCase| t of
+               Tip{}   -> deepW t
+                       =: treeWeight t
+                       =: qed
+               Bin l r -> deepW t
+                       ?? hNN `at` Inst @"t" l
+                       ?? hNN `at` Inst @"t" r
+                       =: treeWeight t
+                       =: qed
+            |]
+
+-- | When both children are tips, the collapsed tip @sTip (treeWeight l + treeWeight r) 0@
+-- equals @sTip (deepW t + sibW t) 0@ where @l = getBin_1 t@ and @r = getBin_2 t@.
+--
+-- >>> runTPWith cvc5 deepWSibWSumTipProof
+-- Lemma: deepWTip                         Q.E.D.
+-- Lemma: deepWSibWSumTip
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: deepW, height, sibW, treeWeight
+-- [Proven] deepWSibWSumTip :: Ɐt ∷ HTree → Bool
+deepWSibWSumTipProof :: TP (Proof (Forall "t" HTree -> SBool))
+deepWSibWSumTipProof = do
+    dwTip <- recall deepWTipProof
+
+    let l t = getBin_1 t
+        r t = getBin_2 t
+
+    calc "deepWSibWSumTip"
+        (\(Forall @"t" t) ->
+               isBin t .&& isTip (l t) .&& isTip (r t)
+           .=> sTip (treeWeight (l t) + treeWeight (r t)) 0
+               .== sTip (deepW t + sibW t) 0)
+        $ \t -> [isBin t, isTip (l t), isTip (r t)]
+          |- sTip (treeWeight (l t) + treeWeight (r t)) 0
+          =: sTip (deepW (l t) + treeWeight (r t)) 0
+          =: sTip (deepW (l t) + deepW (r t)) 0
+          ?? dwTip `at` Inst @"t" (l t)
+          ?? dwTip `at` Inst @"t" (r t)
+          =: sTip (deepW (l t) + sibW t) 0
+          =: sTip (deepW t + sibW t) 0
+          =: qed
+
+-- | (Tip, Bin) case: @deepW + sibW@ passes through to the right child.
+--
+-- >>> runTPWith cvc5 deepWSibWBinRProof
+-- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: deepWSibWBinR
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: deepW, height, sibW
+-- [Proven] deepWSibWBinR :: Ɐl ∷ HTree → Ɐrl ∷ HTree → Ɐrr ∷ HTree → Bool
+deepWSibWBinRProof :: TP (Proof (Forall "l" HTree -> Forall "rl" HTree -> Forall "rr" HTree -> SBool))
+deepWSibWBinRProof = do
+    hNN <- recall heightNonNegProof
+
+    calc "deepWSibWBinR"
+        (\(Forall @"l" l) (Forall @"rl" rl) (Forall @"rr" rr) ->
+            let r = sBin rl rr; t = sBin l r
+            in     isTip l
+               .=> sTip (deepW r + sibW r) 0 .== sTip (deepW t + sibW t) 0)
+        $ \l rl rr -> let r = sBin rl rr; t = sBin l r in [isTip l]
+          |- sTip (deepW r + sibW r) 0
+          ?? hNN `at` Inst @"t" rl
+          ?? hNN `at` Inst @"t" rr
+          =: sTip (deepW t + sibW r) 0
+          ?? hNN `at` Inst @"t" rl
+          ?? hNN `at` Inst @"t" rr
+          =: sTip (deepW t + sibW t) 0
+          =: qed
+
+-- | (Bin, Tip) case: @deepW + sibW@ passes through to the left child.
+--
+-- >>> runTPWith cvc5 deepWSibWBinLProof
+-- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: deepWSibWBinL
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: deepW, height, sibW
+-- [Proven] deepWSibWBinL :: Ɐll ∷ HTree → Ɐlr ∷ HTree → Ɐr ∷ HTree → Bool
+deepWSibWBinLProof :: TP (Proof (Forall "ll" HTree -> Forall "lr" HTree -> Forall "r" HTree -> SBool))
+deepWSibWBinLProof = do
+    hNN <- recall heightNonNegProof
+
+    calc "deepWSibWBinL"
+        (\(Forall @"ll" ll) (Forall @"lr" lr) (Forall @"r" r) ->
+            let l = sBin ll lr; t = sBin l r
+            in     isTip r
+               .=> sTip (deepW l + sibW l) 0 .== sTip (deepW t + sibW t) 0)
+        $ \ll lr r -> let l = sBin ll lr; t = sBin l r in [isTip r]
+          |- sTip (deepW l + sibW l) 0
+          ?? hNN `at` Inst @"t" ll
+          ?? hNN `at` Inst @"t" lr
+          =: sTip (deepW t + sibW l) 0
+          ?? hNN `at` Inst @"t" ll
+          ?? hNN `at` Inst @"t" lr
+          =: sTip (deepW t + sibW t) 0
+          =: qed
+
+-- | (Bin, Bin, height l >= height r) case: @deepW + sibW@ passes through to the left child.
+--
+-- >>> runTPWith cvc5 deepWSibWBinBinLProof
+-- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: deepWSibWBinBinL
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: deepW, height, sibW
+-- [Proven] deepWSibWBinBinL :: Ɐll ∷ HTree → Ɐlr ∷ HTree → Ɐrl ∷ HTree → Ɐrr ∷ HTree → Bool
+deepWSibWBinBinLProof :: TP (Proof (Forall "ll" HTree -> Forall "lr" HTree
+                                 -> Forall "rl" HTree -> Forall "rr" HTree -> SBool))
+deepWSibWBinBinLProof = do
+    hNN <- recall heightNonNegProof
+
+    calc "deepWSibWBinBinL"
+        (\(Forall @"ll" ll) (Forall @"lr" lr) (Forall @"rl" rl) (Forall @"rr" rr) ->
+            let l = sBin ll lr; r = sBin rl rr; t = sBin l r
+            in     height l .>= height r
+               .=> sTip (deepW l + sibW l) 0 .== sTip (deepW t + sibW t) 0)
+        $ \ll lr rl rr -> let l = sBin ll lr; r = sBin rl rr; t = sBin l r in [height l .>= height r]
+          |- sTip (deepW l + sibW l) 0
+          ?? hNN `at` Inst @"t" ll
+          ?? hNN `at` Inst @"t" lr
+          =: sTip (deepW t + sibW l) 0
+          ?? hNN `at` Inst @"t" ll
+          ?? hNN `at` Inst @"t" lr
+          =: sTip (deepW t + sibW t) 0
+          =: qed
+
+-- | (Bin, Bin, height l < height r) case: @deepW + sibW@ passes through to the right child.
+--
+-- >>> runTPWith cvc5 deepWSibWBinBinRProof
+-- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: deepWSibWBinBinR
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: deepW, height, sibW
+-- [Proven] deepWSibWBinBinR :: Ɐll ∷ HTree → Ɐlr ∷ HTree → Ɐrl ∷ HTree → Ɐrr ∷ HTree → Bool
+deepWSibWBinBinRProof :: TP (Proof (Forall "ll" HTree -> Forall "lr" HTree
+                                 -> Forall "rl" HTree -> Forall "rr" HTree -> SBool))
+deepWSibWBinBinRProof = do
+    hNN <- recall heightNonNegProof
+
+    calc "deepWSibWBinBinR"
+        (\(Forall @"ll" ll) (Forall @"lr" lr) (Forall @"rl" rl) (Forall @"rr" rr) ->
+            let l = sBin ll lr; r = sBin rl rr; t = sBin l r
+            in     sNot (height l .>= height r)
+               .=> sTip (deepW r + sibW r) 0 .== sTip (deepW t + sibW t) 0)
+        $ \ll lr rl rr -> let l = sBin ll lr; r = sBin rl rr; t = sBin l r in [sNot (height l .>= height r)]
+          |- sTip (deepW r + sibW r) 0
+          ?? hNN `at` Inst @"t" rl
+          ?? hNN `at` Inst @"t" rr
+          =: sTip (deepW t + sibW r) 0
+          ?? hNN `at` Inst @"t" rl
+          ?? hNN `at` Inst @"t" rr
+          =: sTip (deepW t + sibW t) 0
+          =: qed
+
+-- | Collapse leaf correspondence: adding back the two merged leaf weights to @leavesOf(collapse t)@
+-- equals adding the combined weight to @leavesOf t@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) collapseLeavesOfProof
+-- TBD
+collapseLeavesOfProof :: TP (Proof (Forall "t" HTree -> SBool))
+collapseLeavesOfProof = do
+   tsPos  <- recall treeSizePosProof
+   hNN    <- recall heightNonNegProof
+   hpTS   <- recall heightPosTreeSizeProof
+   loAT   <- recall leavesOfAllTip0Proof
+   iaSIL  <- recall insertAllSortedInsertLProof
+   iaSI   <- recall insertAllSortedInsertProof
+   siAT   <- recall sortedInsertAllTip0Proof
+   siComm <- recall sortedInsertCommProof
+   dwsTip <- recall deepWSibWSumTipProof
+   dwsBR  <- recall deepWSibWBinRProof
+   dwsBL  <- recall deepWSibWBinLProof
+   dwsBBL <- recall deepWSibWBinBinLProof
+   dwsBBR <- recall deepWSibWBinBinRProof
+
+   sInduct "collapseLeavesOf"
+       (\(Forall @"t" t) ->
+              treeSize t .>= 2
+          .=> sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
+              .== sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t))
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> [treeSize t .>= 2]
+         |- sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
+         =: [pCase| t of
+               Tip{}   -> sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
+                       ?? "S1a"
+                       =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
+                       =: qed
+
+               Bin l r -> case tuple (l, r) of
+                             -- Both tips: base case, everything unfolds directly
+                             (Tip{}, Tip{}) ->
+                                 let wl0 = sTip (treeWeight l) 0
+                                     wr0 = sTip (treeWeight r) 0
+                                     ws0 = sTip (treeWeight l + treeWeight r) 0
+                                 in  sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
+                              ?? hNN `at` Inst @"t" l
+                              ?? hNN `at` Inst @"t" r
+                              ?? "S2a"
+                              =: sortedInsert wl0 (sortedInsert wr0 [ws0])
+                              ?? siComm `at` (Inst @"a" wr0, Inst @"b" ws0, Inst @"ys" (nil :: SList HTree))
+                              ?? "S2b"
+                              =: sortedInsert wl0 (sortedInsert ws0 [wr0])
+                              ?? siComm `at` (Inst @"a" wl0, Inst @"b" ws0, Inst @"ys" [wr0])
+                              ?? "S2c"
+                              =: sortedInsert ws0 (sortedInsert wl0 [wr0])
+                              ?? "S2d"
+                              =: sortedInsert ws0 (insertAll [wl0] [wr0])
+                              ?? "S2e"
+                              =: sortedInsert ws0 (insertAll (leavesOf l) (leavesOf r))
+                              ?? dwsTip `at` Inst @"t" t
+                              ?? "S2f"
+                              =: sortedInsert (sTip (deepW t + sibW t) 0) (insertAll (leavesOf l) (leavesOf r))
+                              ?? "S2g"
+                              =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
+                              =: qed
+
+                             -- l is Tip, r is Bin: height l = 0 < height r, collapse goes into r
+                             (Tip{}, Bin rl rr) ->
+                                 let dw0 = sTip (deepW r) 0
+                                     sw0 = sTip (sibW r) 0
+                                     dsw = sTip (deepW r + sibW r) 0
+                                     lo  = leavesOf l
+                                     lcr = leavesOf (collapse r)
+                                     lr  = leavesOf r
+                                 in  sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
+                                  ?? hNN `at` Inst @"t" rl
+                                  ?? hNN `at` Inst @"t" rr
+                                  ?? "S3a"
+                                  =: sortedInsert dw0 (sortedInsert sw0 (insertAll lo lcr))
+                                  ?? loAT `at` Inst @"t" l
+                                  ?? iaSI `at` (Inst @"a" sw0, Inst @"xs" lo, Inst @"ys" lcr)
+                                  ?? "S3b"
+                                  =: sortedInsert dw0 (insertAll lo (sortedInsert sw0 lcr))
+                                  ?? loAT `at` Inst @"t" l
+                                  ?? iaSI `at` (Inst @"a" dw0, Inst @"xs" lo, Inst @"ys" (sortedInsert sw0 lcr))
+                                  ?? "S3c"
+                                  =: insertAll lo (sortedInsert dw0 (sortedInsert sw0 lcr))
+                                  ?? tsPos `at` Inst @"t" l
+                                  ?? hpTS  `at` Inst @"t" r
+                                  ?? hNN   `at` Inst @"t" rl
+                                  ?? hNN   `at` Inst @"t" rr
+                                  ?? ih    `at` Inst @"t" r
+                                  ?? "S3d"
+                                  =: insertAll lo (sortedInsert dsw lr)
+                                  ?? loAT `at` Inst @"t" l
+                                  ?? iaSI `at` (Inst @"a" dsw, Inst @"xs" lo, Inst @"ys" lr)
+                                  ?? "S3e"
+                                  =: sortedInsert dsw (insertAll lo lr)
+                                  ?? dwsBR `at` (Inst @"l" l, Inst @"rl" rl, Inst @"rr" rr)
+                                  ?? hNN   `at` Inst @"t" rl
+                                  ?? hNN   `at` Inst @"t" rr
+                                  ?? "S3f"
+                                  =: sortedInsert (sTip (deepW t + sibW t) 0) (insertAll lo lr)
+                                  ?? "S3g"
+                                  =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
+                                  =: qed
+
+                             -- l is Bin, r is Tip: height l >= 1 > 0 = height r, collapse goes into l
+                             (Bin ll lr, Tip{}) ->
+                                 let dw0 = sTip (deepW l) 0
+                                     sw0 = sTip (sibW l) 0
+                                     dsw = sTip (deepW l + sibW l) 0
+                                     lc  = leavesOf (collapse l)
+                                     lo  = leavesOf l
+                                     ro  = leavesOf r
+                                 in  sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
+                                  ?? hNN `at` Inst @"t" ll
+                                  ?? hNN `at` Inst @"t" lr
+                                  ?? "S4a"
+                                  =: sortedInsert dw0 (sortedInsert sw0 (insertAll lc ro))
+                                  ?? loAT  `at` Inst @"t" (collapse l)
+                                  ?? iaSIL `at` (Inst @"a" sw0, Inst @"xs" lc, Inst @"ys" ro)
+                                  ?? "S4b"
+                                  =: sortedInsert dw0 (insertAll (sortedInsert sw0 lc) ro)
+                                  ?? loAT  `at` Inst @"t" (collapse l)
+                                  ?? siAT  `at` (Inst @"t" sw0, Inst @"ts" lc)
+                                  ?? iaSIL `at` (Inst @"a" dw0, Inst @"xs" (sortedInsert sw0 lc), Inst @"ys" ro)
+                                  ?? "S4c"
+                                  =: insertAll (sortedInsert dw0 (sortedInsert sw0 lc)) ro
+                                  ?? tsPos `at` Inst @"t" r
+                                  ?? hpTS  `at` Inst @"t" l
+                                  ?? hNN   `at` Inst @"t" ll
+                                  ?? hNN   `at` Inst @"t" lr
+                                  ?? ih    `at` Inst @"t" l
+                                  ?? "S4d"
+                                  =: insertAll (sortedInsert dsw lo) ro
+                                  ?? loAT  `at` Inst @"t" l
+                                  ?? iaSIL `at` (Inst @"a" dsw, Inst @"xs" lo, Inst @"ys" ro)
+                                  ?? "S4e"
+                                  =: sortedInsert dsw (insertAll lo ro)
+                                  ?? dwsBL `at` (Inst @"ll" ll, Inst @"lr" lr, Inst @"r" r)
+                                  ?? hNN   `at` Inst @"t" ll
+                                  ?? hNN   `at` Inst @"t" lr
+                                  ?? sorry
+                                  ?? "S4f"
+                                  =: sortedInsert (sTip (deepW t + sibW t) 0) (insertAll lo ro)
+                                  ?? "S4g"
+                                  =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
+                                  =: qed
+
+                             -- Both Bins: case split on height comparison
+                             (Bin ll lr, Bin rl rr) ->
+                                 sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
+                              =: cases
+                                   [ -- height l >= height r: collapse goes into l
+                                     height l .>= height r
+                                       ==> let dw0 = sTip (deepW l) 0
+                                               sw0 = sTip (sibW l) 0
+                                               dsw = sTip (deepW l + sibW l) 0
+                                               lc  = leavesOf (collapse l)
+                                               lo  = leavesOf l
+                                               ro  = leavesOf r
+                                           in  sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
+                                            ?? hNN `at` Inst @"t" ll
+                                            ?? hNN `at` Inst @"t" lr
+                                            ?? "S5a"
+                                            =: sortedInsert dw0 (sortedInsert sw0 (insertAll lc ro))
+                                            ?? loAT  `at` Inst @"t" (collapse l)
+                                            ?? iaSIL `at` (Inst @"a" sw0, Inst @"xs" lc, Inst @"ys" ro)
+                                            ?? "S5b"
+                                            =: sortedInsert dw0 (insertAll (sortedInsert sw0 lc) ro)
+                                            ?? loAT  `at` Inst @"t" (collapse l)
+                                            ?? siAT  `at` (Inst @"t" sw0, Inst @"ts" lc)
+                                            ?? iaSIL `at` (Inst @"a" dw0, Inst @"xs" (sortedInsert sw0 lc), Inst @"ys" ro)
+                                            ?? "S5c"
+                                            =: insertAll (sortedInsert dw0 (sortedInsert sw0 lc)) ro
+                                            ?? tsPos `at` Inst @"t" r
+                                            ?? hpTS  `at` Inst @"t" l
+                                            ?? hNN   `at` Inst @"t" ll
+                                            ?? hNN   `at` Inst @"t" lr
+                                            ?? ih    `at` Inst @"t" l
+                                            ?? "S5d"
+                                            =: insertAll (sortedInsert dsw lo) ro
+                                            ?? loAT  `at` Inst @"t" l
+                                            ?? iaSIL `at` (Inst @"a" dsw, Inst @"xs" lo, Inst @"ys" ro)
+                                            ?? "S5e"
+                                            =: sortedInsert dsw (insertAll lo ro)
+                                            ?? dwsBBL `at` (Inst @"ll" ll, Inst @"lr" lr, Inst @"rl" rl, Inst @"rr" rr)
+                                            ?? hNN    `at` Inst @"t" ll
+                                            ?? hNN    `at` Inst @"t" lr
+                                            ?? sorry
+                                            ?? "S5f"
+                                            =: sortedInsert (sTip (deepW t + sibW t) 0) (insertAll lo ro)
+                                            ?? "S5g"
+                                            =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
+                                            =: qed
+
+                                   -- height l < height r: collapse goes into r
+                                   , sNot (height l .>= height r)
+                                       ==> let dw0 = sTip (deepW r) 0
+                                               sw0 = sTip (sibW r) 0
+                                               dsw = sTip (deepW r + sibW r) 0
+                                               lo  = leavesOf l
+                                               lcr = leavesOf (collapse r)
+                                               lor = leavesOf r
+                                           in  sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
+                                            ?? hNN `at` Inst @"t" rl
+                                            ?? hNN `at` Inst @"t" rr
+                                            ?? "S6a"
+                                            =: sortedInsert dw0 (sortedInsert sw0 (insertAll lo lcr))
+                                            ?? loAT `at` Inst @"t" l
+                                            ?? iaSI `at` (Inst @"a" sw0, Inst @"xs" lo, Inst @"ys" lcr)
+                                            ?? "S6b"
+                                            =: sortedInsert dw0 (insertAll lo (sortedInsert sw0 lcr))
+                                            ?? loAT `at` Inst @"t" l
+                                            ?? iaSI `at` (Inst @"a" dw0, Inst @"xs" lo, Inst @"ys" (sortedInsert sw0 lcr))
+                                            ?? "S6c"
+                                            =: insertAll lo (sortedInsert dw0 (sortedInsert sw0 lcr))
+                                            ?? tsPos `at` Inst @"t" l
+                                            ?? hpTS  `at` Inst @"t" r
+                                            ?? hNN   `at` Inst @"t" rl
+                                            ?? hNN   `at` Inst @"t" rr
+                                            ?? ih    `at` Inst @"t" r
+                                            ?? "S6d"
+                                            =: insertAll lo (sortedInsert dsw lor)
+                                            ?? loAT `at` Inst @"t" l
+                                            ?? iaSI `at` (Inst @"a" dsw, Inst @"xs" lo, Inst @"ys" lor)
+                                            ?? "S6e"
+                                            =: sortedInsert dsw (insertAll lo lor)
+                                            ?? dwsBBR `at` (Inst @"ll" ll, Inst @"lr" lr, Inst @"rl" rl, Inst @"rr" rr)
+                                            ?? hNN    `at` Inst @"t" rl
+                                            ?? hNN    `at` Inst @"t" rr
+                                            ?? sorry
+                                            ?? "S6f"
+                                            =: sortedInsert (sTip (deepW t + sibW t) 0) (insertAll lo lor)
+                                            ?? "S6g"
+                                            =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
+                                            =: qed
+                                   ]
             |]
 
 -- * Part 3: Huffman construction and optimality
@@ -2633,3 +3134,1141 @@ buildHuffmanCostSubstProof = do
                  treeWeight t1 .== treeWeight t2
              .=> cost (buildHuffman (sortedInsert t1 ts)) .== cost (buildHuffman (sortedInsert t2 ts)) + cost t1 - cost t2)
           [proofOf additivity, proofOf tfComm, proofOf siCost, proofOf siLen]
+
+-- * Phase 3: Leaf extraction and optimality
+
+-- ** Function definitions
+
+-- | Insert each element of the first list into the second (sorted) list, one by one.
+insertAll :: SList HTree -> SList HTree -> SList HTree
+insertAll = smtFunction "insertAll"
+          $ \xs ys -> [sCase| xs of
+                         []       -> ys
+                         x : rest -> insertAll rest (sortedInsert x ys)
+                      |]
+
+-- | Extract a sorted, weight-only leaf list from a tree. Symbols are stripped to 0,
+-- so that same-weight leaves become identical, ensuring sorted lists are unique for
+-- a given weight multiset.
+leavesOf :: SHTree -> SList HTree
+leavesOf = smtFunction "leavesOf"
+         $ \t -> [sCase| t of
+                    Tip w _ -> [sTip w 0]
+                    Bin l r -> insertAll (leavesOf l) (leavesOf r)
+                 |]
+
+-- ** insertAll lemmas
+
+-- | @insertAll@ preserves total length: @length(insertAll xs ys) == length xs + length ys@.
+--
+-- >>> runTPWith cvc5 insertAllLengthProof
+-- Lemma: sortedInsertLength               Q.E.D.
+-- Inductive lemma (strong): insertAllLength
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: insertAll, sortedInsert, treeWeight
+-- [Proven] insertAllLength :: Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
+insertAllLengthProof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
+insertAllLengthProof = do
+    siLen <- recall sortedInsertLengthProof
+
+    sInduct "insertAllLength"
+        (\(Forall @"xs" xs) (Forall @"ys" ys) ->
+            length (insertAll xs ys) .== length xs + length ys)
+        (\xs _ -> length xs, []) $
+        \ih xs ys -> []
+          |- length (insertAll xs ys)
+          =: [pCase| xs of
+                [] -> length (insertAll xs ys)
+                   =: length xs + length ys
+                   =: qed
+                x : rest -> length (insertAll xs ys)
+                         =: length (insertAll rest (sortedInsert x ys))
+                         ?? siLen `at` (Inst @"t" x, Inst @"ts" ys)
+                         ?? ih `at` (Inst @"xs" rest, Inst @"ys" (sortedInsert x ys))
+                         =: length xs + length ys
+                         =: qed
+             |]
+
+-- | @insertAll@ preserves total forest weight: @forestWeight(insertAll xs ys) == forestWeight xs + forestWeight ys@.
+--
+-- >>> runTPWith cvc5 insertAllWeightProof
+-- Lemma: sortedInsertWeight               Q.E.D.
+-- Inductive lemma (strong): insertAllWeight
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: forestWeight, insertAll, sortedInsert, treeWeight
+-- [Proven] insertAllWeight :: Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
+insertAllWeightProof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
+insertAllWeightProof = do
+    siWeight <- recall sortedInsertWeightProof
+
+    sInduct "insertAllWeight"
+        (\(Forall @"xs" xs) (Forall @"ys" ys) ->
+            forestWeight (insertAll xs ys) .== forestWeight xs + forestWeight ys)
+        (\xs _ -> length xs, []) $
+        \ih xs ys -> []
+          |- forestWeight (insertAll xs ys)
+          =: [pCase| xs of
+                [] -> forestWeight (insertAll xs ys)
+                   =: forestWeight xs + forestWeight ys
+                   =: qed
+                x : rest -> forestWeight (insertAll xs ys)
+                         =: forestWeight (insertAll rest (sortedInsert x ys))
+                         ?? siWeight `at` (Inst @"t" x, Inst @"ts" ys)
+                         ?? ih `at` (Inst @"xs" rest, Inst @"ys" (sortedInsert x ys))
+                         =: forestWeight xs + forestWeight ys
+                         =: qed
+             |]
+
+-- | @insertAll@ preserves total forest cost: @forestCost(insertAll xs ys) == forestCost xs + forestCost ys@.
+--
+-- >>> runTPWith cvc5 insertAllCostProof
+-- Lemma: sortedInsertCost                 Q.E.D.
+-- Inductive lemma (strong): insertAllCost
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: cost, forestCost, insertAll, sortedInsert, treeWeight
+-- [Proven] insertAllCost :: Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
+insertAllCostProof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
+insertAllCostProof = do
+    siCost <- recall sortedInsertCostProof
+
+    sInduct "insertAllCost"
+        (\(Forall @"xs" xs) (Forall @"ys" ys) ->
+            forestCost (insertAll xs ys) .== forestCost xs + forestCost ys)
+        (\xs _ -> length xs, []) $
+        \ih xs ys -> []
+          |- forestCost (insertAll xs ys)
+          =: [pCase| xs of
+                [] -> forestCost (insertAll xs ys)
+                   =: forestCost xs + forestCost ys
+                   =: qed
+                x : rest -> forestCost (insertAll xs ys)
+                         =: forestCost (insertAll rest (sortedInsert x ys))
+                         ?? siCost `at` (Inst @"t" x, Inst @"ts" ys)
+                         ?? ih `at` (Inst @"xs" rest, Inst @"ys" (sortedInsert x ys))
+                         =: forestCost xs + forestCost ys
+                         =: qed
+             |]
+
+-- | @insertAll@ preserves countWS: @forestCountWS w s (insertAll xs ys) == forestCountWS w s xs + forestCountWS w s ys@.
+--
+-- >>> runTPWith cvc5 insertAllCountWSProof
+-- Lemma: sortedInsertCountWS              Q.E.D.
+-- Inductive lemma (strong): insertAllCountWS
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: countWS, forestCountWS, insertAll, sortedInsert, treeWeight
+-- [Proven] insertAllCountWS :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
+insertAllCountWSProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
+insertAllCountWSProof = do
+    siCountWS <- recall sortedInsertCountWSProof
+
+    sInduct "insertAllCountWS"
+        (\(Forall @"w" w) (Forall @"s" s) (Forall @"xs" xs) (Forall @"ys" ys) ->
+            forestCountWS w s (insertAll xs ys) .== forestCountWS w s xs + forestCountWS w s ys)
+        (\_ _ xs _ -> length xs, []) $
+        \ih w s xs ys -> []
+          |- forestCountWS w s (insertAll xs ys)
+          =: [pCase| xs of
+                [] -> forestCountWS w s (insertAll xs ys)
+                   =: forestCountWS w s xs + forestCountWS w s ys
+                   =: qed
+                x : rest -> forestCountWS w s (insertAll xs ys)
+                         =: forestCountWS w s (insertAll rest (sortedInsert x ys))
+                         ?? siCountWS `at` (Inst @"w" w, Inst @"s" s, Inst @"t" x, Inst @"ts" ys)
+                         ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"xs" rest, Inst @"ys" (sortedInsert x ys))
+                         =: forestCountWS w s xs + forestCountWS w s ys
+                         =: qed
+             |]
+
+-- ** leavesOf lemmas
+
+-- | @leavesOf@ produces as many elements as there are leaves: @length(leavesOf t) == numLeaves t@.
+--
+-- >>> runTPWith cvc5 leavesOfLengthProof
+-- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: insertAllLength                  Q.E.D.
+-- Inductive lemma (strong): leavesOfLength
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.2.5                         Q.E.D.
+--     Step: 1.2.6                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: insertAll, leavesOf, numLeaves, sortedInsert, treeSize, treeWeight
+-- [Proven] leavesOfLength :: Ɐt ∷ HTree → Bool
+leavesOfLengthProof :: TP (Proof (Forall "t" HTree -> SBool))
+leavesOfLengthProof = do
+    tsp   <- recall treeSizePosProof
+    iaLen <- recall insertAllLengthProof
+
+    sInduct "leavesOfLength"
+        (\(Forall @"t" t) -> length (leavesOf t) .== numLeaves t)
+        (treeSize, [proofOf tsp]) $
+        \ih t -> []
+          |- length (leavesOf t)
+          =: [pCase| t of
+                Tip{}   -> length (leavesOf t)
+                        =: numLeaves t
+                        =: qed
+                Bin l r -> length (leavesOf t)
+                        =: length (insertAll (leavesOf l) (leavesOf r))
+                        ?? iaLen `at` (Inst @"xs" (leavesOf l), Inst @"ys" (leavesOf r))
+                        =: length (leavesOf l) + length (leavesOf r)
+                        ?? tsp `at` Inst @"t" r
+                        ?? ih `at` Inst @"t" l
+                        =: numLeaves l + length (leavesOf r)
+                        ?? tsp `at` Inst @"t" l
+                        ?? ih `at` Inst @"t" r
+                        =: numLeaves l + numLeaves r
+                        =: numLeaves t
+                        =: qed
+             |]
+
+-- | @leavesOf@ preserves total weight: @forestWeight(leavesOf t) == treeWeight t@.
+--
+-- >>> runTPWith cvc5 leavesOfWeightProof
+-- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: insertAllWeight                  Q.E.D.
+-- Inductive lemma (strong): leavesOfWeight
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.2.5                         Q.E.D.
+--     Step: 1.2.6                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: forestWeight, insertAll, leavesOf, sortedInsert, treeSize, treeWeight
+-- [Proven] leavesOfWeight :: Ɐt ∷ HTree → Bool
+leavesOfWeightProof :: TP (Proof (Forall "t" HTree -> SBool))
+leavesOfWeightProof = do
+    tsp      <- recall treeSizePosProof
+    iaWeight <- recall insertAllWeightProof
+
+    sInduct "leavesOfWeight"
+        (\(Forall @"t" t) -> forestWeight (leavesOf t) .== treeWeight t)
+        (treeSize, [proofOf tsp]) $
+        \ih t -> []
+          |- forestWeight (leavesOf t)
+          =: [pCase| t of
+                Tip{}   -> forestWeight (leavesOf t)
+                        =: treeWeight t
+                        =: qed
+                Bin l r -> forestWeight (leavesOf t)
+                        =: forestWeight (insertAll (leavesOf l) (leavesOf r))
+                        ?? iaWeight `at` (Inst @"xs" (leavesOf l), Inst @"ys" (leavesOf r))
+                        =: forestWeight (leavesOf l) + forestWeight (leavesOf r)
+                        ?? tsp `at` Inst @"t" r
+                        ?? ih `at` Inst @"t" l
+                        =: treeWeight l + forestWeight (leavesOf r)
+                        ?? tsp `at` Inst @"t" l
+                        ?? ih `at` Inst @"t" r
+                        =: treeWeight l + treeWeight r
+                        =: treeWeight t
+                        =: qed
+             |]
+
+-- | All leaves have zero cost, so @forestCost(leavesOf t) == 0@.
+--
+-- >>> runTPWith cvc5 leavesOfCostZeroProof
+-- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: insertAllCost                    Q.E.D.
+-- Inductive lemma (strong): leavesOfCostZero
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.2.5                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: cost, forestCost, insertAll, leavesOf, sortedInsert, treeSize, treeWeight
+-- [Proven] leavesOfCostZero :: Ɐt ∷ HTree → Bool
+leavesOfCostZeroProof :: TP (Proof (Forall "t" HTree -> SBool))
+leavesOfCostZeroProof = do
+    tsp    <- recall treeSizePosProof
+    iaCost <- recall insertAllCostProof
+
+    sInduct "leavesOfCostZero"
+        (\(Forall @"t" t) -> forestCost (leavesOf t) .== 0)
+        (treeSize, [proofOf tsp]) $
+        \ih t -> []
+          |- forestCost (leavesOf t)
+          =: [pCase| t of
+                Tip{}   -> forestCost (leavesOf t)
+                        =: (0 :: SInteger)
+                        =: qed
+                Bin l r -> forestCost (leavesOf t)
+                        =: forestCost (insertAll (leavesOf l) (leavesOf r))
+                        ?? iaCost `at` (Inst @"xs" (leavesOf l), Inst @"ys" (leavesOf r))
+                        =: forestCost (leavesOf l) + forestCost (leavesOf r)
+                        ?? tsp `at` Inst @"t" r
+                        ?? ih `at` Inst @"t" l
+                        =: forestCost (leavesOf r)
+                        ?? tsp `at` Inst @"t" l
+                        ?? ih `at` Inst @"t" r
+                        =: (0 :: SInteger)
+                        =: qed
+             |]
+
+-- ** Swap preservation infrastructure
+
+-- | Swap preserves numLeaves: the Tip\/Bin skeleton is unchanged.
+--
+-- >>> runTPWith cvc5 swapPreservesNumLeavesProof
+-- Lemma: treeSizePos                      Q.E.D.
+-- Inductive lemma (strong): swapPreservesNumLeaves
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.2.5                         Q.E.D.
+--     Step: 1.2.6                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: numLeaves, swap, treeSize
+-- [Proven] swapPreservesNumLeaves :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+swapPreservesNumLeavesProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer
+                                      -> Forall "wb" Integer -> Forall "sb" Integer
+                                      -> Forall "t" HTree -> SBool))
+swapPreservesNumLeavesProof = do
+    tsp <- recall treeSizePosProof
+
+    sInduct "swapPreservesNumLeaves"
+        (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+            numLeaves (swap wa sa wb sb t) .== numLeaves t)
+        (\_ _ _ _ t -> treeSize t, [proofOf tsp]) $
+        \ih wa sa wb sb t -> []
+          |- numLeaves (swap wa sa wb sb t)
+          =: [pCase| t of
+                Tip{}   -> numLeaves (swap wa sa wb sb t)
+                        =: numLeaves t
+                        =: qed
+                Bin l r -> numLeaves (swap wa sa wb sb t)
+                        =: numLeaves (sBin (swap wa sa wb sb l) (swap wa sa wb sb r))
+                        =: numLeaves (swap wa sa wb sb l) + numLeaves (swap wa sa wb sb r)
+                        ?? tsp `at` Inst @"t" r
+                        ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                        =: numLeaves l + numLeaves (swap wa sa wb sb r)
+                        ?? tsp `at` Inst @"t" l
+                        ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                        =: numLeaves l + numLeaves r
+                        =: numLeaves t
+                        =: qed
+             |]
+
+-- | Commutativity of two sorted inserts, provided same-weight elements are identical.
+-- This holds for @Tip w 0@ elements produced by 'leavesOf'.
+--
+-- >>> runTPWith cvc5 sortedInsertCommProof
+-- Inductive lemma (strong): sortedInsertComm
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (4 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2                   Q.E.D.
+--       Step: 1.2.2.1.3                   Q.E.D.
+--       Step: 1.2.2.1.4                   Q.E.D.
+--       Step: 1.2.2.1.5                   Q.E.D.
+--       Step: 1.2.2.1.6                   Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2                   Q.E.D.
+--       Step: 1.2.2.3.1                   Q.E.D.
+--       Step: 1.2.2.3.2                   Q.E.D.
+--       Step: 1.2.2.4.1                   Q.E.D.
+--       Step: 1.2.2.4.2                   Q.E.D.
+--       Step: 1.2.2.4.3                   Q.E.D.
+--       Step: 1.2.2.4.4                   Q.E.D.
+--       Step: 1.2.2.4.5                   Q.E.D.
+--       Step: 1.2.2.4.6                   Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: sortedInsert, treeWeight
+-- [Proven] sortedInsertComm :: Ɐa ∷ HTree → Ɐb ∷ HTree → Ɐys ∷ [HTree] → Bool
+sortedInsertCommProof :: TP (Proof (Forall "a" HTree -> Forall "b" HTree -> Forall "ys" [HTree] -> SBool))
+sortedInsertCommProof =
+    sInduct "sortedInsertComm"
+        (\(Forall @"a" a) (Forall @"b" b) (Forall @"ys" ys) ->
+               (treeWeight a .== treeWeight b .=> a .== b)
+           .=> sortedInsert a (sortedInsert b ys) .== sortedInsert b (sortedInsert a ys))
+        (\_ _ ys -> length ys, []) $
+        \ih a b ys -> [treeWeight a .== treeWeight b .=> a .== b]
+          |- sortedInsert a (sortedInsert b ys)
+          =: [pCase| ys of
+                []      -> sortedInsert a (sortedInsert b ys)
+                        =: sortedInsert b (sortedInsert a ys)
+                        =: qed
+                y : ys' -> sortedInsert a (sortedInsert b ys)
+                        =: cases
+                             [ treeWeight a .> treeWeight y .&& treeWeight b .> treeWeight y
+                                 ==> sortedInsert a (sortedInsert b ys)
+                                  =: sortedInsert a (y .: sortedInsert b ys')
+                                  =: y .: sortedInsert a (sortedInsert b ys')
+                                  ?? ih `at` (Inst @"a" a, Inst @"b" b, Inst @"ys" ys')
+                                  =: y .: sortedInsert b (sortedInsert a ys')
+                                  =: sortedInsert b (y .: sortedInsert a ys')
+                                  =: sortedInsert b (sortedInsert a ys)
+                                  =: qed
+                             , treeWeight a .<= treeWeight y .&& treeWeight b .<= treeWeight y
+                                 ==> sortedInsert a (sortedInsert b ys)
+                                  =: sortedInsert b (sortedInsert a ys)
+                                  =: qed
+                             , treeWeight a .<= treeWeight y .&& treeWeight b .> treeWeight y
+                                 ==> sortedInsert a (sortedInsert b ys)
+                                  =: sortedInsert b (sortedInsert a ys)
+                                  =: qed
+                             , treeWeight a .> treeWeight y .&& treeWeight b .<= treeWeight y
+                                 ==> sortedInsert a (sortedInsert b ys)
+                                  =: sortedInsert a (b .: y .: ys')
+                                  =: b .: sortedInsert a (y .: ys')
+                                  =: b .: y .: sortedInsert a ys'
+                                  =: sortedInsert b (y .: sortedInsert a ys')
+                                  =: sortedInsert b (sortedInsert a ys)
+                                  =: qed
+                             ]
+             |]
+
+-- | Swap is the identity when neither (wa,sa) nor (wb,sb) exists in the tree.
+--
+-- >>> runTPWith cvc5 swapIdentityProof
+-- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: countWSNonNeg                    Q.E.D.
+-- Inductive lemma (strong): swapIdentity
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: countWS, swap, treeSize
+-- [Proven] swapIdentity :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+swapIdentityProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer
+                             -> Forall "wb" Integer -> Forall "sb" Integer
+                             -> Forall "t" HTree -> SBool))
+swapIdentityProof = do
+    tsp    <- recall treeSizePosProof
+    cwsNN  <- recall countWSNonNegProof
+
+    sInduct "swapIdentity"
+        (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+               countWS wa sa t .== 0 .&& countWS wb sb t .== 0
+           .=> swap wa sa wb sb t .== t)
+        (\_ _ _ _ t -> treeSize t, [proofOf tsp]) $
+        \ih wa sa wb sb t -> [countWS wa sa t .== 0, countWS wb sb t .== 0]
+          |- swap wa sa wb sb t
+          =: [pCase| t of
+                Tip{}   -> swap wa sa wb sb t
+                        =: t
+                        =: qed
+                Bin l r -> swap wa sa wb sb t
+                        =: sBin (swap wa sa wb sb l) (swap wa sa wb sb r)
+                        ?? cwsNN `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" l)
+                        ?? cwsNN `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" r)
+                        ?? cwsNN `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" l)
+                        ?? cwsNN `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" r)
+                        ?? tsp `at` Inst @"t" r
+                        ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                        ?? tsp `at` Inst @"t" l
+                        ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                        =: sBin l r
+                        =: t
+                        =: qed
+             |]
+
+-- | Predicate: all elements in the list are of the form @Tip w 0@.
+allTip0 :: SList HTree -> SBool
+allTip0 = smtFunction "allTip0"
+        $ \ts -> [sCase| ts of
+                    []       -> sTrue
+                    t : rest -> t .== sTip (treeWeight t) 0 .&& allTip0 rest
+                 |]
+
+-- | Sorted insertion preserves 'allTip0'.
+--
+-- >>> runTPWith cvc5 sortedInsertAllTip0Proof
+-- Inductive lemma (strong): sortedInsertAllTip0
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2                   Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2                   Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: allTip0, sortedInsert, treeWeight
+-- [Proven] sortedInsertAllTip0 :: Ɐt ∷ HTree → Ɐts ∷ [HTree] → Bool
+sortedInsertAllTip0Proof :: TP (Proof (Forall "t" HTree -> Forall "ts" [HTree] -> SBool))
+sortedInsertAllTip0Proof =
+    sInduct "sortedInsertAllTip0"
+        (\(Forall @"t" t) (Forall @"ts" ts) ->
+               t .== sTip (treeWeight t) 0 .&& allTip0 ts
+           .=> allTip0 (sortedInsert t ts))
+        (\_ ts -> length ts, []) $
+        \ih t ts -> [t .== sTip (treeWeight t) 0, allTip0 ts]
+          |- allTip0 (sortedInsert t ts)
+          =: [pCase| ts of
+                [] -> allTip0 (sortedInsert t ts)
+                   =: sTrue
+                   =: qed
+                u : us -> allTip0 (sortedInsert t ts)
+                       =: cases
+                            [ treeWeight t .<= treeWeight u
+                                ==> allTip0 (sortedInsert t ts)
+                                 =: sTrue
+                                 =: qed
+                            , sNot (treeWeight t .<= treeWeight u)
+                                ==> allTip0 (sortedInsert t ts)
+                                 ?? ih `at` (Inst @"t" t, Inst @"ts" us)
+                                 =: sTrue
+                                 =: qed
+                            ]
+             |]
+
+-- | 'insertAll' preserves 'allTip0'.
+--
+-- >>> runTPWith cvc5 insertAllAllTip0Proof
+-- Lemma: sortedInsertAllTip0              Q.E.D.
+-- Inductive lemma (strong): insertAllAllTip0
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: allTip0, insertAll, sortedInsert, treeWeight
+-- [Proven] insertAllAllTip0 :: Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
+insertAllAllTip0Proof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
+insertAllAllTip0Proof = do
+    siAT <- recall sortedInsertAllTip0Proof
+
+    sInduct "insertAllAllTip0"
+        (\(Forall @"xs" xs) (Forall @"ys" ys) ->
+               allTip0 xs .&& allTip0 ys .=> allTip0 (insertAll xs ys))
+        (\xs _ -> length xs, []) $
+        \ih xs ys -> [allTip0 xs, allTip0 ys]
+          |- allTip0 (insertAll xs ys)
+          =: [pCase| xs of
+                [] -> allTip0 (insertAll xs ys)
+                   =: sTrue
+                   =: qed
+                x : rest -> allTip0 (insertAll xs ys)
+                         =: allTip0 (insertAll rest (sortedInsert x ys))
+                         ?? siAT `at` (Inst @"t" x, Inst @"ts" ys)
+                         ?? ih `at` (Inst @"xs" rest, Inst @"ys" (sortedInsert x ys))
+                         =: sTrue
+                         =: qed
+             |]
+
+-- | 'leavesOf' always produces an 'allTip0' list.
+--
+-- >>> runTPWith cvc5 leavesOfAllTip0Proof
+-- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: insertAllAllTip0                 Q.E.D.
+-- Inductive lemma (strong): leavesOfAllTip0
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: allTip0, insertAll, leavesOf, sortedInsert, treeSize, treeWeight
+-- [Proven] leavesOfAllTip0 :: Ɐt ∷ HTree → Bool
+leavesOfAllTip0Proof :: TP (Proof (Forall "t" HTree -> SBool))
+leavesOfAllTip0Proof = do
+    tsp   <- recall treeSizePosProof
+    iaAT  <- recall insertAllAllTip0Proof
+
+    sInduct "leavesOfAllTip0"
+        (\(Forall @"t" t) -> allTip0 (leavesOf t))
+        (treeSize, [proofOf tsp]) $
+        \ih t -> []
+          |- allTip0 (leavesOf t)
+          =: [pCase| t of
+                Tip{}   -> allTip0 (leavesOf t)
+                        =: sTrue
+                        =: qed
+                Bin l r -> allTip0 (leavesOf t)
+                        =: allTip0 (insertAll (leavesOf l) (leavesOf r))
+                        ?? tsp `at` Inst @"t" r
+                        ?? ih `at` Inst @"t" l
+                        ?? tsp `at` Inst @"t" l
+                        ?? ih `at` Inst @"t" r
+                        ?? iaAT `at` (Inst @"xs" (leavesOf l), Inst @"ys" (leavesOf r))
+                        =: sTrue
+                        =: qed
+             |]
+
+-- | Moving an element from the second argument of 'insertAll' to a 'sortedInsert' outside:
+-- @sortedInsert a (insertAll xs ys) == insertAll xs (sortedInsert a ys)@, when all elements are @Tip w 0@.
+--
+-- >>> runTPWith cvc5 insertAllSortedInsertProof
+-- Lemma: sortedInsertComm                 Q.E.D.
+-- Inductive lemma (strong): insertAllSortedInsert
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.2.5                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: allTip0, insertAll, sortedInsert, treeWeight
+-- [Proven] insertAllSortedInsert :: Ɐa ∷ HTree → Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
+insertAllSortedInsertProof :: TP (Proof (Forall "a" HTree -> Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
+insertAllSortedInsertProof = do
+    siComm <- recall sortedInsertCommProof
+
+    sInduct "insertAllSortedInsert"
+        (\(Forall @"a" a) (Forall @"xs" xs) (Forall @"ys" ys) ->
+               a .== sTip (treeWeight a) 0 .&& allTip0 xs
+           .=> sortedInsert a (insertAll xs ys) .== insertAll xs (sortedInsert a ys))
+        (\_ xs _ -> length xs, []) $
+        \ih a xs ys -> [a .== sTip (treeWeight a) 0, allTip0 xs]
+          |- sortedInsert a (insertAll xs ys)
+          =: [pCase| xs of
+                [] -> sortedInsert a (insertAll xs ys)
+                   =: insertAll xs (sortedInsert a ys)
+                   =: qed
+                x : rest -> sortedInsert a (insertAll xs ys)
+                         =: sortedInsert a (insertAll rest (sortedInsert x ys))
+                         ?? ih `at` (Inst @"a" a, Inst @"xs" rest, Inst @"ys" (sortedInsert x ys))
+                         =: insertAll rest (sortedInsert a (sortedInsert x ys))
+                         ?? siComm `at` (Inst @"a" a, Inst @"b" x, Inst @"ys" ys)
+                         =: insertAll rest (sortedInsert x (sortedInsert a ys))
+                         =: insertAll xs (sortedInsert a ys)
+                         =: qed
+             |]
+
+-- | Moving an element from the first argument of 'insertAll' to a 'sortedInsert' outside:
+-- @insertAll (sortedInsert a xs) ys == sortedInsert a (insertAll xs ys)@, when all elements are @Tip w 0@.
+--
+-- >>> runTPWith cvc5 insertAllSortedInsertLProof
+-- Lemma: sortedInsertComm                 Q.E.D.
+-- Lemma: insertAllSortedInsert            Q.E.D.
+-- Inductive lemma (strong): insertAllSortedInsertL
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2                   Q.E.D.
+--       Step: 1.2.2.1.3                   Q.E.D.
+--       Step: 1.2.2.1.4                   Q.E.D.
+--       Step: 1.2.2.1.5                   Q.E.D.
+--       Step: 1.2.2.1.6                   Q.E.D.
+--       Step: 1.2.2.1.7                   Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2                   Q.E.D.
+--       Step: 1.2.2.2.3                   Q.E.D.
+--       Step: 1.2.2.2.4                   Q.E.D.
+--       Step: 1.2.2.2.5                   Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: allTip0, insertAll, sortedInsert, treeWeight
+-- [Proven] insertAllSortedInsertL :: Ɐa ∷ HTree → Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
+insertAllSortedInsertLProof :: TP (Proof (Forall "a" HTree -> Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
+insertAllSortedInsertLProof = do
+    siComm <- recall sortedInsertCommProof
+    iaSI   <- recall insertAllSortedInsertProof
+
+    sInduct "insertAllSortedInsertL"
+        (\(Forall @"a" a) (Forall @"xs" xs) (Forall @"ys" ys) ->
+               a .== sTip (treeWeight a) 0 .&& allTip0 xs
+           .=> insertAll (sortedInsert a xs) ys .== sortedInsert a (insertAll xs ys))
+        (\_ xs _ -> length xs, []) $
+        \ih a xs ys -> [a .== sTip (treeWeight a) 0, allTip0 xs]
+          |- insertAll (sortedInsert a xs) ys
+          =: [pCase| xs of
+                [] -> insertAll (sortedInsert a xs) ys
+                   =: sortedInsert a (insertAll xs ys)
+                   =: qed
+                x : rest -> insertAll (sortedInsert a xs) ys
+                         =: cases
+                              [ treeWeight a .<= treeWeight x
+                                  ==> insertAll (sortedInsert a xs) ys
+                                   =: insertAll (a .: x .: rest) ys
+                                   =: insertAll (x .: rest) (sortedInsert a ys)
+                                   =: insertAll rest (sortedInsert x (sortedInsert a ys))
+                                   ?? siComm `at` (Inst @"a" x, Inst @"b" a, Inst @"ys" ys)
+                                   =: insertAll rest (sortedInsert a (sortedInsert x ys))
+                                   ?? iaSI `at` (Inst @"a" a, Inst @"xs" rest, Inst @"ys" (sortedInsert x ys))
+                                   =: sortedInsert a (insertAll rest (sortedInsert x ys))
+                                   =: sortedInsert a (insertAll xs ys)
+                                   =: qed
+                              , sNot (treeWeight a .<= treeWeight x)
+                                  ==> insertAll (sortedInsert a xs) ys
+                                   =: insertAll (x .: sortedInsert a rest) ys
+                                   =: insertAll (sortedInsert a rest) (sortedInsert x ys)
+                                   ?? ih `at` (Inst @"a" a, Inst @"xs" rest, Inst @"ys" (sortedInsert x ys))
+                                   =: sortedInsert a (insertAll rest (sortedInsert x ys))
+                                   =: sortedInsert a (insertAll xs ys)
+                                   =: qed
+                              ]
+             |]
+
+-- | Sorted insertion is injective: @sortedInsert a xs == sortedInsert a ys → xs == ys@.
+--
+-- >>> runTPWith cvc5 sortedInsertInjectiveProof
+-- Inductive lemma (strong): sortedInsertInjective
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2                   Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2                   Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: sortedInsert, treeWeight
+-- [Proven] sortedInsertInjective :: Ɐa ∷ HTree → Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
+sortedInsertInjectiveProof :: TP (Proof (Forall "a" HTree -> Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
+sortedInsertInjectiveProof =
+    sInduct "sortedInsertInjective"
+        (\(Forall @"a" a) (Forall @"xs" xs) (Forall @"ys" ys) ->
+            sortedInsert a xs .== sortedInsert a ys .=> xs .== ys)
+        (\_ xs _ -> length xs, []) $
+        \ih a xs ys -> [sortedInsert a xs .== sortedInsert a ys]
+          |- xs .== ys
+          =: [pCase| xs of
+                [] -> xs .== ys
+                   =: sTrue
+                   =: qed
+                x : xs' -> xs .== ys
+                         =: cases
+                              [ treeWeight a .<= treeWeight x
+                                  ==> xs .== ys
+                                   =: sTrue
+                                   =: qed
+                              , sNot (treeWeight a .<= treeWeight x)
+                                  ==> xs .== ys
+                                   ?? ih `at` (Inst @"a" a, Inst @"xs" xs', Inst @"ys" (tail ys))
+                                   =: sTrue
+                                   =: qed
+                              ]
+             |]
+
+-- ** leavesOfSwap
+
+-- | Swap is symmetric in its two pairs: @swap wa sa wb sb t == swap wb sb wa sa t@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) swapSymmetricProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Inductive lemma (strong): swapSymmetric
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: swap, treeSize
+-- [Proven] swapSymmetric :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+swapSymmetricProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer
+                              -> Forall "wb" Integer -> Forall "sb" Integer
+                              -> Forall "t" HTree -> SBool))
+swapSymmetricProof = do
+    tsp <- recall treeSizePosProof
+
+    sInduct "swapSymmetric"
+        (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+            swap wa sa wb sb t .== swap wb sb wa sa t)
+        (\_ _ _ _ t -> treeSize t, [proofOf tsp]) $
+        \ih wa sa wb sb t -> []
+          |- swap wa sa wb sb t
+          =: [pCase| t of
+                Tip{}   -> swap wa sa wb sb t
+                        =: swap wb sb wa sa t
+                        =: qed
+                Bin l r -> swap wa sa wb sb t
+                        ?? tsp `at` Inst @"t" l
+                        ?? tsp `at` Inst @"t" r
+                        ?? ih  `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                        ?? ih  `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                        =: swap wb sb wa sa t
+                        =: qed
+             |]
+
+-- | Single-pair swap: when @countWS wa sa t == 1@ and @countWS wb sb t == 0@, swapping
+-- replaces one @Tip wa 0@ with @Tip wb 0@ in 'leavesOf'. Adding back @Tip wa 0@ to the swapped
+-- list equals adding @Tip wb 0@ to the original.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) leavesOfSwapSingleProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: countWSNonNeg                              Q.E.D.
+-- Lemma: countWSBin                                 Q.E.D.
+-- Lemma: swapIdentity                               Q.E.D.
+-- Lemma: leavesOfAllTip0                            Q.E.D.
+-- Lemma: insertAllSortedInsertL                     Q.E.D.
+-- Cached: insertAllSortedInsert                     Q.E.D.
+-- Inductive lemma (strong): leavesOfSwapSingle
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.2.3 (3 way case split)
+--       Step: 1.2.3.1.1                             Q.E.D.
+--       Step: 1.2.3.1.2                             Q.E.D.
+--       Step: 1.2.3.1.3                             Q.E.D.
+--       Step: 1.2.3.1.4                             Q.E.D.
+--       Step: 1.2.3.1.5                             Q.E.D.
+--       Step: 1.2.3.1.6                             Q.E.D.
+--       Step: 1.2.3.2.1                             Q.E.D.
+--       Step: 1.2.3.2.2                             Q.E.D.
+--       Step: 1.2.3.2.3                             Q.E.D.
+--       Step: 1.2.3.2.4                             Q.E.D.
+--       Step: 1.2.3.2.5                             Q.E.D.
+--       Step: 1.2.3.2.6                             Q.E.D.
+--       Step: 1.2.3.3.1                             Q.E.D.
+--       Step: 1.2.3.3.2                             Q.E.D.
+--       Step: 1.2.3.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: allTip0, countWS, insertAll, leavesOf, sortedInsert, swap, treeSize, treeWeight
+-- [Proven] leavesOfSwapSingle :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+leavesOfSwapSingleProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer
+                                   -> Forall "wb" Integer -> Forall "sb" Integer
+                                   -> Forall "t" HTree -> SBool))
+leavesOfSwapSingleProof = do
+    tsp    <- recall treeSizePosProof
+    cwsNN  <- recall countWSNonNegProof
+    cwsBin <- recall countWSBinProof
+    swapId <- recall swapIdentityProof
+    loAT   <- recall leavesOfAllTip0Proof
+    iaSIL  <- recall insertAllSortedInsertLProof
+    iaSI   <- recall insertAllSortedInsertProof
+
+    sInduct "leavesOfSwapSingle"
+        (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+               countWS wa sa t .== 1 .&& countWS wb sb t .== 0 .&& (wa ./= wb .|| sa ./= sb)
+           .=> sortedInsert (sTip wa 0) (leavesOf (swap wa sa wb sb t))
+               .== sortedInsert (sTip wb 0) (leavesOf t))
+        (\_ _ _ _ t -> treeSize t, [proofOf tsp]) $
+        \ih wa sa wb sb t -> [countWS wa sa t .== 1, countWS wb sb t .== 0, wa ./= wb .|| sa ./= sb]
+          |- sortedInsert (sTip wa 0) (leavesOf (swap wa sa wb sb t))
+          =: [pCase| t of
+                Tip{}   -> sortedInsert (sTip wa 0) (leavesOf (swap wa sa wb sb t))
+                        =: sortedInsert (sTip wb 0) (leavesOf t)
+                        =: qed
+                Bin l r -> sortedInsert (sTip wa 0) (leavesOf (swap wa sa wb sb t))
+                        =: sortedInsert (sTip wa 0) (insertAll (leavesOf (swap wa sa wb sb l)) (leavesOf (swap wa sa wb sb r)))
+                        =: cases
+                             [ -- Case: (wa,sa) in left subtree
+                               countWS wa sa l .== 1 .&& countWS wa sa r .== 0
+                                 ==> let wa0 = sTip wa 0
+                                         wb0 = sTip wb 0
+                                     in  sortedInsert wa0 (insertAll (leavesOf (swap wa sa wb sb l)) (leavesOf (swap wa sa wb sb r)))
+                                      ?? cwsNN  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" l)
+                                      ?? cwsNN  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" r)
+                                      ?? swapId `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                                      =: sortedInsert wa0 (insertAll (leavesOf (swap wa sa wb sb l)) (leavesOf r))
+                                      ?? loAT  `at` Inst @"t" (swap wa sa wb sb l)
+                                      ?? iaSIL `at` (Inst @"a" wa0, Inst @"xs" (leavesOf (swap wa sa wb sb l)), Inst @"ys" (leavesOf r))
+                                      =: insertAll (sortedInsert wa0 (leavesOf (swap wa sa wb sb l))) (leavesOf r)
+                                      ?? tsp   `at` Inst @"t" r
+                                      ?? cwsNN `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" l)
+                                      ?? cwsNN `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" r)
+                                      ?? ih    `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                                      =: insertAll (sortedInsert wb0 (leavesOf l)) (leavesOf r)
+                                      ?? loAT  `at` Inst @"t" l
+                                      ?? iaSIL `at` (Inst @"a" wb0, Inst @"xs" (leavesOf l), Inst @"ys" (leavesOf r))
+                                      =: sortedInsert wb0 (insertAll (leavesOf l) (leavesOf r))
+                                      =: sortedInsert wb0 (leavesOf t)
+                                      =: qed
+
+                             -- Case: (wa,sa) in right subtree
+                             , countWS wa sa l .== 0 .&& countWS wa sa r .== 1
+                                 ==> let wa0 = sTip wa 0
+                                         wb0 = sTip wb 0
+                                     in  sortedInsert wa0 (insertAll (leavesOf (swap wa sa wb sb l)) (leavesOf (swap wa sa wb sb r)))
+                                      ?? cwsNN  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" l)
+                                      ?? cwsNN  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" r)
+                                      ?? swapId `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                                      =: sortedInsert wa0 (insertAll (leavesOf l) (leavesOf (swap wa sa wb sb r)))
+                                      ?? loAT `at` Inst @"t" l
+                                      ?? iaSI  `at` (Inst @"a" wa0, Inst @"xs" (leavesOf l), Inst @"ys" (leavesOf (swap wa sa wb sb r)))
+                                      =: insertAll (leavesOf l) (sortedInsert wa0 (leavesOf (swap wa sa wb sb r)))
+                                      ?? tsp   `at` Inst @"t" l
+                                      ?? cwsNN `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" l)
+                                      ?? cwsNN `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" r)
+                                      ?? ih    `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                                      =: insertAll (leavesOf l) (sortedInsert wb0 (leavesOf r))
+                                      ?? loAT `at` Inst @"t" l
+                                      ?? iaSI `at` (Inst @"a" wb0, Inst @"xs" (leavesOf l), Inst @"ys" (leavesOf r))
+                                      =: sortedInsert wb0 (insertAll (leavesOf l) (leavesOf r))
+                                      =: sortedInsert wb0 (leavesOf t)
+                                      =: qed
+
+                             -- Impossible: countWS wa sa l + countWS wa sa r == 1 with both >= 0
+                             ,     sNot (countWS wa sa l .== 1 .&& countWS wa sa r .== 0)
+                               .&& sNot (countWS wa sa l .== 0 .&& countWS wa sa r .== 1)
+                                 ==> sortedInsert (sTip wa 0) (insertAll (leavesOf (swap wa sa wb sb l)) (leavesOf (swap wa sa wb sb r)))
+                                      ?? cwsNN  `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" l)
+                                      ?? cwsNN  `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" r)
+                                      ?? cwsBin `at` (Inst @"w" wa, Inst @"s" sa, Inst @"l" l, Inst @"r" r)
+                                      =: sortedInsert (sTip wb 0) (leavesOf t)
+                                      =: qed
+                             ]
+             |]
+
+-- | Swap preserves 'leavesOf': when both pairs have count 1 and are distinct,
+-- @leavesOf(swap wa sa wb sb t) == leavesOf t@.
+--
+-- >>> runTPWith (tpRibbon 50 cvc5) leavesOfSwapProof
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: countWSNonNeg                              Q.E.D.
+-- Lemma: countWSBin                                 Q.E.D.
+-- Lemma: swapIdentity                               Q.E.D.
+-- Lemma: leavesOfAllTip0                            Q.E.D.
+-- Lemma: insertAllSortedInsertL                     Q.E.D.
+-- Cached: insertAllSortedInsert                     Q.E.D.
+-- Lemma: sortedInsertInjective                      Q.E.D.
+-- Lemma: leavesOfSwapSingle                         Q.E.D.
+-- Lemma: swapSymmetric                              Q.E.D.
+-- Inductive lemma (strong): leavesOfSwap
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.2.3 (5 way case split)
+--       Step: 1.2.3.1.1                             Q.E.D.
+--       Step: 1.2.3.1.2                             Q.E.D.
+--       Step: 1.2.3.1.3                             Q.E.D.
+--       Step: 1.2.3.2.1                             Q.E.D.
+--       Step: 1.2.3.2.2                             Q.E.D.
+--       Step: 1.2.3.2.3                             Q.E.D.
+--       Step: 1.2.3.3.1                             Q.E.D.
+--       Step: 1.2.3.3.2                             Q.E.D.
+--       Step: 1.2.3.3.3                             Q.E.D.
+--       Step: 1.2.3.4.1                             Q.E.D.
+--       Step: 1.2.3.4.2                             Q.E.D.
+--       Step: 1.2.3.4.3                             Q.E.D.
+--       Step: 1.2.3.5.1                             Q.E.D.
+--       Step: 1.2.3.5.2                             Q.E.D.
+--       Step: 1.2.3.Completeness                    Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating: allTip0, countWS, insertAll, leavesOf, sortedInsert, swap, treeSize, treeWeight
+-- [Proven] leavesOfSwap :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
+leavesOfSwapProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer
+                             -> Forall "wb" Integer -> Forall "sb" Integer
+                             -> Forall "t" HTree -> SBool))
+leavesOfSwapProof = do
+    tsp     <- recall treeSizePosProof
+    cwsNN   <- recall countWSNonNegProof
+    cwsBin  <- recall countWSBinProof
+    swapId  <- recall swapIdentityProof
+    loAT    <- recall leavesOfAllTip0Proof
+    iaSIL   <- recall insertAllSortedInsertLProof
+    iaSI    <- recall insertAllSortedInsertProof
+    siInj   <- recall sortedInsertInjectiveProof
+    single  <- recall leavesOfSwapSingleProof
+    swapSym <- recall swapSymmetricProof
+
+    sInduct "leavesOfSwap"
+        (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+               countWS wa sa t .== 1 .&& countWS wb sb t .== 1 .&& (wa ./= wb .|| sa ./= sb)
+           .=> leavesOf (swap wa sa wb sb t) .== leavesOf t)
+        (\_ _ _ _ t -> treeSize t, [proofOf tsp]) $
+        \ih wa sa wb sb t -> [countWS wa sa t .== 1, countWS wb sb t .== 1, wa ./= wb .|| sa ./= sb]
+          |- leavesOf (swap wa sa wb sb t)
+          =: [pCase| t of
+                -- Tip: vacuously false (can't have two distinct pairs in one leaf)
+                Tip{}   -> leavesOf (swap wa sa wb sb t)
+                        =: leavesOf t
+                        =: qed
+                Bin l r -> leavesOf (swap wa sa wb sb t)
+                        =: insertAll (leavesOf (swap wa sa wb sb l)) (leavesOf (swap wa sa wb sb r))
+                        =: cases
+                             [ -- Case 1: Both pairs in left subtree
+                               countWS wa sa l .== 1 .&& countWS wb sb l .== 1
+                                 ==> insertAll (leavesOf (swap wa sa wb sb l)) (leavesOf (swap wa sa wb sb r))
+                                  ?? cwsNN  `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" r)
+                                  ?? cwsNN  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" r)
+                                  ?? swapId `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                                  ?? tsp    `at` Inst @"t" r
+                                  ?? ih     `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                                  =: insertAll (leavesOf l) (leavesOf r)
+                                  =: leavesOf t
+                                  =: qed
+
+                             -- Case 2: Both pairs in right subtree
+                             , countWS wa sa r .== 1 .&& countWS wb sb r .== 1
+                                 ==> insertAll (leavesOf (swap wa sa wb sb l)) (leavesOf (swap wa sa wb sb r))
+                                  ?? cwsNN  `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" l)
+                                  ?? cwsNN  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" l)
+                                  ?? swapId `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                                  ?? tsp    `at` Inst @"t" l
+                                  ?? ih     `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                                  =: insertAll (leavesOf l) (leavesOf r)
+                                  =: leavesOf t
+                                  =: qed
+
+                             -- Case 3: (wa,sa) in l, (wb,sb) in r
+                             -- Strategy: add sortedInsert wa0 to both sides, chain through
+                             -- single(l) + iaSIL + single(r) + iaSI, then cancel via siInj.
+                             , countWS wa sa l .== 1 .&& countWS wb sb r .== 1
+                                 ==> let wa0 = sTip wa 0
+                                         wb0 = sTip wb 0
+                                         lsl = leavesOf (swap wa sa wb sb l)
+                                         lsr = leavesOf (swap wa sa wb sb r)
+                                         ll  = leavesOf l
+                                         lr  = leavesOf r
+                                     in  insertAll lsl lsr
+                                      -- Derive countWS wb sb l == 0 and countWS wa sa r == 0
+                                      ?? cwsNN   `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" l)
+                                      ?? cwsBin  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"l" l, Inst @"r" r)
+                                      ?? cwsNN   `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" r)
+                                      ?? cwsBin  `at` (Inst @"w" wa, Inst @"s" sa, Inst @"l" l, Inst @"r" r)
+                                      -- single on l: sortedInsert wa0 lsl == sortedInsert wb0 ll
+                                      ?? single  `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                                      -- single on r: sortedInsert wb0 lsr == sortedInsert wa0 lr
+                                      ?? single  `at` (Inst @"wa" wb, Inst @"sa" sb, Inst @"wb" wa, Inst @"sb" sa, Inst @"t" r)
+                                      ?? swapSym `at` (Inst @"wa" wb, Inst @"sa" sb, Inst @"wb" wa, Inst @"sb" sa, Inst @"t" r)
+                                      -- allTip0 for iaSIL/iaSI preconditions
+                                      ?? loAT    `at` Inst @"t" (swap wa sa wb sb l)
+                                      ?? loAT    `at` Inst @"t" l
+                                      -- rearrangement: iaSIL pulls sortedInsert out of insertAll's left arg
+                                      ?? iaSIL   `at` (Inst @"a" wa0, Inst @"xs" lsl, Inst @"ys" lsr)
+                                      ?? iaSIL   `at` (Inst @"a" wb0, Inst @"xs" ll,  Inst @"ys" lsr)
+                                      -- rearrangement: iaSI moves sortedInsert into insertAll's right arg
+                                      ?? iaSI    `at` (Inst @"a" wb0, Inst @"xs" ll,  Inst @"ys" lsr)
+                                      ?? iaSI    `at` (Inst @"a" wa0, Inst @"xs" ll,  Inst @"ys" lr)
+                                      -- cancel: sortedInsert wa0 (insertAll lsl lsr) == sortedInsert wa0 (insertAll ll lr)
+                                      ?? siInj   `at` (Inst @"a" wa0, Inst @"xs" (insertAll lsl lsr), Inst @"ys" (insertAll ll lr))
+                                      =: insertAll ll lr
+                                      =: leavesOf t
+                                      =: qed
+
+                             -- Case 4: (wa,sa) in r, (wb,sb) in l (symmetric to case 3)
+                             -- Same strategy with wb0/wa0 roles swapped.
+                             , countWS wa sa r .== 1 .&& countWS wb sb l .== 1
+                                 ==> let wa0 = sTip wa 0
+                                         wb0 = sTip wb 0
+                                         lsl = leavesOf (swap wa sa wb sb l)
+                                         lsr = leavesOf (swap wa sa wb sb r)
+                                         ll  = leavesOf l
+                                         lr  = leavesOf r
+                                     in  insertAll lsl lsr
+                                      -- Derive countWS wa sa l == 0 and countWS wb sb r == 0
+                                      ?? cwsNN   `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" l)
+                                      ?? cwsBin  `at` (Inst @"w" wa, Inst @"s" sa, Inst @"l" l, Inst @"r" r)
+                                      ?? cwsNN   `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" r)
+                                      ?? cwsBin  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"l" l, Inst @"r" r)
+                                      -- single on l (reversed): sortedInsert wb0 lsl == sortedInsert wa0 ll
+                                      ?? single  `at` (Inst @"wa" wb, Inst @"sa" sb, Inst @"wb" wa, Inst @"sb" sa, Inst @"t" l)
+                                      ?? swapSym `at` (Inst @"wa" wb, Inst @"sa" sb, Inst @"wb" wa, Inst @"sb" sa, Inst @"t" l)
+                                      -- single on r: sortedInsert wa0 lsr == sortedInsert wb0 lr
+                                      ?? single  `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                                      -- allTip0 for iaSIL/iaSI preconditions
+                                      ?? loAT    `at` Inst @"t" (swap wa sa wb sb l)
+                                      ?? loAT    `at` Inst @"t" l
+                                      -- rearrangement: iaSIL pulls sortedInsert out of insertAll's left arg
+                                      ?? iaSIL   `at` (Inst @"a" wb0, Inst @"xs" lsl, Inst @"ys" lsr)
+                                      ?? iaSIL   `at` (Inst @"a" wa0, Inst @"xs" ll,  Inst @"ys" lsr)
+                                      -- rearrangement: iaSI moves sortedInsert into insertAll's right arg
+                                      ?? iaSI    `at` (Inst @"a" wa0, Inst @"xs" ll,  Inst @"ys" lsr)
+                                      ?? iaSI    `at` (Inst @"a" wb0, Inst @"xs" ll,  Inst @"ys" lr)
+                                      -- cancel: sortedInsert wb0 (insertAll lsl lsr) == sortedInsert wb0 (insertAll ll lr)
+                                      ?? siInj   `at` (Inst @"a" wb0, Inst @"xs" (insertAll lsl lsr), Inst @"ys" (insertAll ll lr))
+                                      =: insertAll ll lr
+                                      =: leavesOf t
+                                      =: qed
+
+                             -- Impossible: 4 cases above are exhaustive
+                             ,     sNot (countWS wa sa l .== 1 .&& countWS wb sb l .== 1)
+                               .&& sNot (countWS wa sa r .== 1 .&& countWS wb sb r .== 1)
+                               .&& sNot (countWS wa sa l .== 1 .&& countWS wb sb r .== 1)
+                               .&& sNot (countWS wa sa r .== 1 .&& countWS wb sb l .== 1)
+                                 ==> insertAll (leavesOf (swap wa sa wb sb l)) (leavesOf (swap wa sa wb sb r))
+                                      ?? cwsNN  `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" l)
+                                      ?? cwsNN  `at` (Inst @"w" wa, Inst @"s" sa, Inst @"t" r)
+                                      ?? cwsNN  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" l)
+                                      ?? cwsNN  `at` (Inst @"w" wb, Inst @"s" sb, Inst @"t" r)
+                                      ?? cwsBin `at` (Inst @"w" wa, Inst @"s" sa, Inst @"l" l, Inst @"r" r)
+                                      ?? cwsBin `at` (Inst @"w" wb, Inst @"s" sb, Inst @"l" l, Inst @"r" r)
+                                      =: leavesOf t
+                                      =: qed
+                             ]
+             |]
