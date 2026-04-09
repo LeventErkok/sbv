@@ -2109,7 +2109,7 @@ deepWTipProof = do
             |]
 
 -- | When both children are tips, the collapsed tip @sTip (treeWeight l + treeWeight r) 0@
--- equals @sTip (deepW t + sibW t) 0@ where @l = getBin_1 t@ and @r = getBin_2 t@.
+-- equals @sTip (deepW t + sibW t) 0@ where @l = left t@ and @r = right t@.
 --
 -- >>> runTPWith cvc5 deepWSibWSumTipProof
 -- Lemma: deepWTip                         Q.E.D.
@@ -2125,21 +2125,18 @@ deepWSibWSumTipProof :: TP (Proof (Forall "t" HTree -> SBool))
 deepWSibWSumTipProof = do
     dwTip <- recall deepWTipProof
 
-    let l t = getBin_1 t
-        r t = getBin_2 t
-
     calc "deepWSibWSumTip"
         (\(Forall @"t" t) ->
-               isBin t .&& isTip (l t) .&& isTip (r t)
-           .=> sTip (treeWeight (l t) + treeWeight (r t)) 0
+               isBin t .&& isTip (sleft t) .&& isTip (sright t)
+           .=> sTip (treeWeight (sleft t) + treeWeight (sright t)) 0
                .== sTip (deepW t + sibW t) 0)
-        $ \t -> [isBin t, isTip (l t), isTip (r t)]
-          |- sTip (treeWeight (l t) + treeWeight (r t)) 0
-          =: sTip (deepW (l t) + treeWeight (r t)) 0
-          =: sTip (deepW (l t) + deepW (r t)) 0
-          ?? dwTip `at` Inst @"t" (l t)
-          ?? dwTip `at` Inst @"t" (r t)
-          =: sTip (deepW (l t) + sibW t) 0
+        $ \t -> [isBin t, isTip (sleft t), isTip (sright t)]
+          |- sTip (treeWeight (sleft t) + treeWeight (sright t)) 0
+          =: sTip (deepW (sleft t) + treeWeight (sright t)) 0
+          =: sTip (deepW (sleft t) + deepW (sright t)) 0
+          ?? dwTip `at` Inst @"t" (sleft t)
+          ?? dwTip `at` Inst @"t" (sright t)
+          =: sTip (deepW (sleft t) + sibW t) 0
           =: sTip (deepW t + sibW t) 0
           =: qed
 
@@ -2206,66 +2203,149 @@ deepWSibWBinLProof = do
 -- >>> runTPWith cvc5 deepWSibWBinBinLProof
 -- Lemma: heightNonNeg                     Q.E.D.
 -- Lemma: deepWSibWBinBinL
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: deepW, height, sibW
--- [Proven] deepWSibWBinBinL :: Ɐll ∷ HTree → Ɐlr ∷ HTree → Ɐrl ∷ HTree → Ɐrr ∷ HTree → Bool
-deepWSibWBinBinLProof :: TP (Proof (Forall "ll" HTree -> Forall "lr" HTree
-                                 -> Forall "rl" HTree -> Forall "rr" HTree -> SBool))
+-- [Proven] deepWSibWBinBinL :: Ɐl ∷ HTree → Ɐr ∷ HTree → Bool
+deepWSibWBinBinLProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
 deepWSibWBinBinLProof = do
     hNN <- recall heightNonNegProof
 
     calc "deepWSibWBinBinL"
-        (\(Forall @"ll" ll) (Forall @"lr" lr) (Forall @"rl" rl) (Forall @"rr" rr) ->
-            let l = sBin ll lr; r = sBin rl rr; t = sBin l r
-            in     height l .>= height r
-               .=> sTip (deepW l + sibW l) 0 .== sTip (deepW t + sibW t) 0)
-        $ \ll lr rl rr -> let l = sBin ll lr; r = sBin rl rr; t = sBin l r in [height l .>= height r]
+        (\(Forall @"l" l) (Forall @"r" r) ->
+               isBin l .&& isBin r .&& height l .>= height r
+           .=> sTip (deepW l + sibW l) 0 .== sTip (deepW (sBin l r) + sibW (sBin l r)) 0)
+        $ \l r -> [isBin l, isBin r, height l .>= height r]
           |- sTip (deepW l + sibW l) 0
-          ?? hNN `at` Inst @"t" ll
-          ?? hNN `at` Inst @"t" lr
-          =: sTip (deepW t + sibW l) 0
-          ?? hNN `at` Inst @"t" ll
-          ?? hNN `at` Inst @"t" lr
-          =: sTip (deepW t + sibW t) 0
-          =: qed
+          =: [pCase| l of
+                Tip{} -> sTip (deepW l + sibW l) 0
+                      =: sTip (deepW (sBin l r) + sibW (sBin l r)) 0
+                      =: qed
+                Bin ll lr -> sTip (deepW l + sibW l) 0
+                      ?? hNN `at` Inst @"t" ll
+                      ?? hNN `at` Inst @"t" lr
+                      =: sTip (deepW (sBin l r) + sibW l) 0
+                      ?? hNN `at` Inst @"t" ll
+                      ?? hNN `at` Inst @"t" lr
+                      =: sTip (deepW (sBin l r) + sibW (sBin l r)) 0
+                      =: qed
+             |]
 
 -- | (Bin, Bin, height l < height r) case: @deepW + sibW@ passes through to the right child.
 --
 -- >>> runTPWith cvc5 deepWSibWBinBinRProof
 -- Lemma: heightNonNeg                     Q.E.D.
 -- Lemma: deepWSibWBinBinR
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: deepW, height, sibW
--- [Proven] deepWSibWBinBinR :: Ɐll ∷ HTree → Ɐlr ∷ HTree → Ɐrl ∷ HTree → Ɐrr ∷ HTree → Bool
-deepWSibWBinBinRProof :: TP (Proof (Forall "ll" HTree -> Forall "lr" HTree
-                                 -> Forall "rl" HTree -> Forall "rr" HTree -> SBool))
+-- [Proven] deepWSibWBinBinR :: Ɐl ∷ HTree → Ɐr ∷ HTree → Bool
+deepWSibWBinBinRProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
 deepWSibWBinBinRProof = do
     hNN <- recall heightNonNegProof
 
     calc "deepWSibWBinBinR"
-        (\(Forall @"ll" ll) (Forall @"lr" lr) (Forall @"rl" rl) (Forall @"rr" rr) ->
-            let l = sBin ll lr; r = sBin rl rr; t = sBin l r
-            in     sNot (height l .>= height r)
-               .=> sTip (deepW r + sibW r) 0 .== sTip (deepW t + sibW t) 0)
-        $ \ll lr rl rr -> let l = sBin ll lr; r = sBin rl rr; t = sBin l r in [sNot (height l .>= height r)]
+        (\(Forall @"l" l) (Forall @"r" r) ->
+               isBin l .&& isBin r .&& sNot (height l .>= height r)
+           .=> sTip (deepW r + sibW r) 0 .== sTip (deepW (sBin l r) + sibW (sBin l r)) 0)
+        $ \l r -> [isBin l, isBin r, sNot (height l .>= height r)]
           |- sTip (deepW r + sibW r) 0
-          ?? hNN `at` Inst @"t" rl
-          ?? hNN `at` Inst @"t" rr
-          =: sTip (deepW t + sibW r) 0
-          ?? hNN `at` Inst @"t" rl
-          ?? hNN `at` Inst @"t" rr
-          =: sTip (deepW t + sibW t) 0
-          =: qed
+          =: [pCase| r of
+                Tip{} -> sTip (deepW r + sibW r) 0
+                      =: sTip (deepW (sBin l r) + sibW (sBin l r)) 0
+                      =: qed
+                Bin rl rr -> sTip (deepW r + sibW r) 0
+                      ?? hNN `at` Inst @"t" rl
+                      ?? hNN `at` Inst @"t" rr
+                      =: sTip (deepW (sBin l r) + sibW r) 0
+                      ?? hNN `at` Inst @"t" rl
+                      ?? hNN `at` Inst @"t" rr
+                      =: sTip (deepW (sBin l r) + sibW (sBin l r)) 0
+                      =: qed
+             |]
 
 -- | Collapse leaf correspondence: adding back the two merged leaf weights to @leavesOf(collapse t)@
 -- equals adding the combined weight to @leavesOf t@.
 --
 -- >>> runTPWith (tpRibbon 50 cvc5) collapseLeavesOfProof
--- TBD
+-- Lemma: treeSizePos                                Q.E.D.
+-- Lemma: heightNonNeg                               Q.E.D.
+-- Lemma: heightPosTreeSize                          Q.E.D.
+-- Lemma: leavesOfAllTip0                            Q.E.D.
+-- Lemma: insertAllSortedInsertL                     Q.E.D.
+-- Cached: insertAllSortedInsert                     Q.E.D.
+-- Cached: sortedInsertAllTip0                       Q.E.D.
+-- Cached: sortedInsertComm                          Q.E.D.
+-- Lemma: deepWSibWSumTip                            Q.E.D.
+-- Lemma: deepWSibWBinR                              Q.E.D.
+-- Lemma: deepWSibWBinL                              Q.E.D.
+-- Lemma: deepWSibWBinBinL                           Q.E.D.
+-- Lemma: deepWSibWBinBinR                           Q.E.D.
+-- Inductive lemma (strong): collapseLeavesOf
+--   Step: Measure is non-negative                   Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.2 (4 way case split)
+--       Step: 1.2.1.1                               Q.E.D.
+--       Step: 1.2.1.2                               Q.E.D.
+--       Step: 1.2.1.3                               Q.E.D.
+--       Step: 1.2.1.4                               Q.E.D.
+--       Step: 1.2.1.5                               Q.E.D.
+--       Step: 1.2.1.6                               Q.E.D.
+--       Step: 1.2.1.7                               Q.E.D.
+--       Step: 1.2.1.8                               Q.E.D.
+--       Step: 1.2.2.1                               Q.E.D.
+--       Step: 1.2.2.2                               Q.E.D.
+--       Step: 1.2.2.3                               Q.E.D.
+--       Step: 1.2.2.4                               Q.E.D.
+--       Step: 1.2.2.5                               Q.E.D.
+--       Step: 1.2.2.6                               Q.E.D.
+--       Step: 1.2.2.7                               Q.E.D.
+--       Step: 1.2.2.8                               Q.E.D.
+--       Step: 1.2.3.1                               Q.E.D.
+--       Step: 1.2.3.2                               Q.E.D.
+--       Step: 1.2.3.3                               Q.E.D.
+--       Step: 1.2.3.4                               Q.E.D.
+--       Step: 1.2.3.5                               Q.E.D.
+--       Step: 1.2.3.6                               Q.E.D.
+--       Step: 1.2.3.7                               Q.E.D.
+--       Step: 1.2.3.8                               Q.E.D.
+--       Step: 1.2.4.1                               Q.E.D.
+--       Step: 1.2.4.2 (2 way case split)
+--         Step: 1.2.4.2.1.1                         Q.E.D.
+--         Step: 1.2.4.2.1.2                         Q.E.D.
+--         Step: 1.2.4.2.1.3                         Q.E.D.
+--         Step: 1.2.4.2.1.4                         Q.E.D.
+--         Step: 1.2.4.2.1.5                         Q.E.D.
+--         Step: 1.2.4.2.1.6                         Q.E.D.
+--         Step: 1.2.4.2.1.7                         Q.E.D.
+--         Step: 1.2.4.2.2.1                         Q.E.D.
+--         Step: 1.2.4.2.2.2                         Q.E.D.
+--         Step: 1.2.4.2.2.3                         Q.E.D.
+--         Step: 1.2.4.2.2.4                         Q.E.D.
+--         Step: 1.2.4.2.2.5                         Q.E.D.
+--         Step: 1.2.4.2.2.6                         Q.E.D.
+--         Step: 1.2.4.2.2.7                         Q.E.D.
+--         Step: 1.2.4.2.Completeness                Q.E.D.
+--       Step: 1.2.Completeness                      Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
+-- Functions proven terminating:
+--   allTip0, collapse, deepW, height, insertAll, leavesOf, sibW, sortedInsert, treeSize, treeWeight
+-- [Proven] collapseLeavesOf :: Ɐt ∷ HTree → Bool
 collapseLeavesOfProof :: TP (Proof (Forall "t" HTree -> SBool))
 collapseLeavesOfProof = do
    tsPos  <- recall treeSizePosProof
@@ -2292,7 +2372,6 @@ collapseLeavesOfProof = do
          |- sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
          =: [pCase| t of
                Tip{}   -> sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
-                       ?? "S1a"
                        =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
                        =: qed
 
@@ -2305,22 +2384,15 @@ collapseLeavesOfProof = do
                                  in  sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
                               ?? hNN `at` Inst @"t" l
                               ?? hNN `at` Inst @"t" r
-                              ?? "S2a"
                               =: sortedInsert wl0 (sortedInsert wr0 [ws0])
                               ?? siComm `at` (Inst @"a" wr0, Inst @"b" ws0, Inst @"ys" (nil :: SList HTree))
-                              ?? "S2b"
                               =: sortedInsert wl0 (sortedInsert ws0 [wr0])
                               ?? siComm `at` (Inst @"a" wl0, Inst @"b" ws0, Inst @"ys" [wr0])
-                              ?? "S2c"
                               =: sortedInsert ws0 (sortedInsert wl0 [wr0])
-                              ?? "S2d"
                               =: sortedInsert ws0 (insertAll [wl0] [wr0])
-                              ?? "S2e"
                               =: sortedInsert ws0 (insertAll (leavesOf l) (leavesOf r))
                               ?? dwsTip `at` Inst @"t" t
-                              ?? "S2f"
                               =: sortedInsert (sTip (deepW t + sibW t) 0) (insertAll (leavesOf l) (leavesOf r))
-                              ?? "S2g"
                               =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
                               =: qed
 
@@ -2335,33 +2407,26 @@ collapseLeavesOfProof = do
                                  in  sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
                                   ?? hNN `at` Inst @"t" rl
                                   ?? hNN `at` Inst @"t" rr
-                                  ?? "S3a"
                                   =: sortedInsert dw0 (sortedInsert sw0 (insertAll lo lcr))
                                   ?? loAT `at` Inst @"t" l
                                   ?? iaSI `at` (Inst @"a" sw0, Inst @"xs" lo, Inst @"ys" lcr)
-                                  ?? "S3b"
                                   =: sortedInsert dw0 (insertAll lo (sortedInsert sw0 lcr))
                                   ?? loAT `at` Inst @"t" l
                                   ?? iaSI `at` (Inst @"a" dw0, Inst @"xs" lo, Inst @"ys" (sortedInsert sw0 lcr))
-                                  ?? "S3c"
                                   =: insertAll lo (sortedInsert dw0 (sortedInsert sw0 lcr))
                                   ?? tsPos `at` Inst @"t" l
                                   ?? hpTS  `at` Inst @"t" r
                                   ?? hNN   `at` Inst @"t" rl
                                   ?? hNN   `at` Inst @"t" rr
                                   ?? ih    `at` Inst @"t" r
-                                  ?? "S3d"
                                   =: insertAll lo (sortedInsert dsw lr)
                                   ?? loAT `at` Inst @"t" l
                                   ?? iaSI `at` (Inst @"a" dsw, Inst @"xs" lo, Inst @"ys" lr)
-                                  ?? "S3e"
                                   =: sortedInsert dsw (insertAll lo lr)
                                   ?? dwsBR `at` (Inst @"l" l, Inst @"rl" rl, Inst @"rr" rr)
                                   ?? hNN   `at` Inst @"t" rl
                                   ?? hNN   `at` Inst @"t" rr
-                                  ?? "S3f"
                                   =: sortedInsert (sTip (deepW t + sibW t) 0) (insertAll lo lr)
-                                  ?? "S3g"
                                   =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
                                   =: qed
 
@@ -2376,35 +2441,27 @@ collapseLeavesOfProof = do
                                  in  sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
                                   ?? hNN `at` Inst @"t" ll
                                   ?? hNN `at` Inst @"t" lr
-                                  ?? "S4a"
                                   =: sortedInsert dw0 (sortedInsert sw0 (insertAll lc ro))
                                   ?? loAT  `at` Inst @"t" (collapse l)
                                   ?? iaSIL `at` (Inst @"a" sw0, Inst @"xs" lc, Inst @"ys" ro)
-                                  ?? "S4b"
                                   =: sortedInsert dw0 (insertAll (sortedInsert sw0 lc) ro)
                                   ?? loAT  `at` Inst @"t" (collapse l)
                                   ?? siAT  `at` (Inst @"t" sw0, Inst @"ts" lc)
                                   ?? iaSIL `at` (Inst @"a" dw0, Inst @"xs" (sortedInsert sw0 lc), Inst @"ys" ro)
-                                  ?? "S4c"
                                   =: insertAll (sortedInsert dw0 (sortedInsert sw0 lc)) ro
                                   ?? tsPos `at` Inst @"t" r
                                   ?? hpTS  `at` Inst @"t" l
                                   ?? hNN   `at` Inst @"t" ll
                                   ?? hNN   `at` Inst @"t" lr
                                   ?? ih    `at` Inst @"t" l
-                                  ?? "S4d"
                                   =: insertAll (sortedInsert dsw lo) ro
-                                  ?? loAT  `at` Inst @"t" l
-                                  ?? iaSIL `at` (Inst @"a" dsw, Inst @"xs" lo, Inst @"ys" ro)
-                                  ?? "S4e"
-                                  =: sortedInsert dsw (insertAll lo ro)
                                   ?? dwsBL `at` (Inst @"ll" ll, Inst @"lr" lr, Inst @"r" r)
                                   ?? hNN   `at` Inst @"t" ll
                                   ?? hNN   `at` Inst @"t" lr
-                                  ?? sorry
-                                  ?? "S4f"
+                                  =: insertAll (sortedInsert (sTip (deepW t + sibW t) 0) lo) ro
+                                  ?? loAT  `at` Inst @"t" l
+                                  ?? iaSIL `at` (Inst @"a" (sTip (deepW t + sibW t) 0), Inst @"xs" lo, Inst @"ys" ro)
                                   =: sortedInsert (sTip (deepW t + sibW t) 0) (insertAll lo ro)
-                                  ?? "S4g"
                                   =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
                                   =: qed
 
@@ -2416,42 +2473,30 @@ collapseLeavesOfProof = do
                                      height l .>= height r
                                        ==> let dw0 = sTip (deepW l) 0
                                                sw0 = sTip (sibW l) 0
-                                               dsw = sTip (deepW l + sibW l) 0
                                                lc  = leavesOf (collapse l)
                                                lo  = leavesOf l
                                                ro  = leavesOf r
                                            in  sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
                                             ?? hNN `at` Inst @"t" ll
                                             ?? hNN `at` Inst @"t" lr
-                                            ?? "S5a"
                                             =: sortedInsert dw0 (sortedInsert sw0 (insertAll lc ro))
                                             ?? loAT  `at` Inst @"t" (collapse l)
                                             ?? iaSIL `at` (Inst @"a" sw0, Inst @"xs" lc, Inst @"ys" ro)
-                                            ?? "S5b"
                                             =: sortedInsert dw0 (insertAll (sortedInsert sw0 lc) ro)
                                             ?? loAT  `at` Inst @"t" (collapse l)
                                             ?? siAT  `at` (Inst @"t" sw0, Inst @"ts" lc)
                                             ?? iaSIL `at` (Inst @"a" dw0, Inst @"xs" (sortedInsert sw0 lc), Inst @"ys" ro)
-                                            ?? "S5c"
                                             =: insertAll (sortedInsert dw0 (sortedInsert sw0 lc)) ro
-                                            ?? tsPos `at` Inst @"t" r
-                                            ?? hpTS  `at` Inst @"t" l
-                                            ?? hNN   `at` Inst @"t" ll
-                                            ?? hNN   `at` Inst @"t" lr
-                                            ?? ih    `at` Inst @"t" l
-                                            ?? "S5d"
-                                            =: insertAll (sortedInsert dsw lo) ro
-                                            ?? loAT  `at` Inst @"t" l
-                                            ?? iaSIL `at` (Inst @"a" dsw, Inst @"xs" lo, Inst @"ys" ro)
-                                            ?? "S5e"
-                                            =: sortedInsert dsw (insertAll lo ro)
-                                            ?? dwsBBL `at` (Inst @"ll" ll, Inst @"lr" lr, Inst @"rl" rl, Inst @"rr" rr)
+                                            ?? tsPos  `at` Inst @"t" r
+                                            ?? hpTS   `at` Inst @"t" l
                                             ?? hNN    `at` Inst @"t" ll
                                             ?? hNN    `at` Inst @"t" lr
-                                            ?? sorry
-                                            ?? "S5f"
+                                            ?? ih     `at` Inst @"t" l
+                                            ?? dwsBBL `at` (Inst @"l" l, Inst @"r" r)
+                                            =: insertAll (sortedInsert (sTip (deepW t + sibW t) 0) lo) ro
+                                            ?? loAT  `at` Inst @"t" l
+                                            ?? iaSIL `at` (Inst @"a" (sTip (deepW t + sibW t) 0), Inst @"xs" lo, Inst @"ys" ro)
                                             =: sortedInsert (sTip (deepW t + sibW t) 0) (insertAll lo ro)
-                                            ?? "S5g"
                                             =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
                                             =: qed
 
@@ -2459,41 +2504,29 @@ collapseLeavesOfProof = do
                                    , sNot (height l .>= height r)
                                        ==> let dw0 = sTip (deepW r) 0
                                                sw0 = sTip (sibW r) 0
-                                               dsw = sTip (deepW r + sibW r) 0
                                                lo  = leavesOf l
                                                lcr = leavesOf (collapse r)
                                                lor = leavesOf r
                                            in  sortedInsert (sTip (deepW t) 0) (sortedInsert (sTip (sibW t) 0) (leavesOf (collapse t)))
                                             ?? hNN `at` Inst @"t" rl
                                             ?? hNN `at` Inst @"t" rr
-                                            ?? "S6a"
                                             =: sortedInsert dw0 (sortedInsert sw0 (insertAll lo lcr))
                                             ?? loAT `at` Inst @"t" l
                                             ?? iaSI `at` (Inst @"a" sw0, Inst @"xs" lo, Inst @"ys" lcr)
-                                            ?? "S6b"
                                             =: sortedInsert dw0 (insertAll lo (sortedInsert sw0 lcr))
                                             ?? loAT `at` Inst @"t" l
                                             ?? iaSI `at` (Inst @"a" dw0, Inst @"xs" lo, Inst @"ys" (sortedInsert sw0 lcr))
-                                            ?? "S6c"
                                             =: insertAll lo (sortedInsert dw0 (sortedInsert sw0 lcr))
-                                            ?? tsPos `at` Inst @"t" l
-                                            ?? hpTS  `at` Inst @"t" r
-                                            ?? hNN   `at` Inst @"t" rl
-                                            ?? hNN   `at` Inst @"t" rr
-                                            ?? ih    `at` Inst @"t" r
-                                            ?? "S6d"
-                                            =: insertAll lo (sortedInsert dsw lor)
-                                            ?? loAT `at` Inst @"t" l
-                                            ?? iaSI `at` (Inst @"a" dsw, Inst @"xs" lo, Inst @"ys" lor)
-                                            ?? "S6e"
-                                            =: sortedInsert dsw (insertAll lo lor)
-                                            ?? dwsBBR `at` (Inst @"ll" ll, Inst @"lr" lr, Inst @"rl" rl, Inst @"rr" rr)
+                                            ?? tsPos  `at` Inst @"t" l
+                                            ?? hpTS   `at` Inst @"t" r
                                             ?? hNN    `at` Inst @"t" rl
                                             ?? hNN    `at` Inst @"t" rr
-                                            ?? sorry
-                                            ?? "S6f"
+                                            ?? ih     `at` Inst @"t" r
+                                            ?? dwsBBR `at` (Inst @"l" l, Inst @"r" r)
+                                            =: insertAll lo (sortedInsert (sTip (deepW t + sibW t) 0) lor)
+                                            ?? loAT `at` Inst @"t" l
+                                            ?? iaSI `at` (Inst @"a" (sTip (deepW t + sibW t) 0), Inst @"xs" lo, Inst @"ys" lor)
                                             =: sortedInsert (sTip (deepW t + sibW t) 0) (insertAll lo lor)
-                                            ?? "S6g"
                                             =: sortedInsert (sTip (deepW t + sibW t) 0) (leavesOf t)
                                             =: qed
                                    ]
