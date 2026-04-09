@@ -1,0 +1,31 @@
+SCase107.hs:(15,16)-(24,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      sCase
+      " e of\n\
+      \                Zero          -> 0\n\
+      \                Num _         -> 0\n\
+      \                Var _         -> 0\n\
+      \                Add (Num k) _ -> case m of\n\
+      \                                   Nothing -> let k = 42 in k\n\
+      \                                   Just v  -> k + v\n\
+      \                Add _ _       -> 0\n\
+      \                Let _ _ _     -> 0\n\
+      \       "
+  ======>
+    ite
+      (isZero e) 0
+      (ite
+         (isNum e) ((\ _ -> 0) (getNum_1 e))
+         (ite
+            (isVar e) ((\ _ -> 0) (getVar_1 e))
+            (ite
+               ((.&&)
+                  (isAdd e)
+                  ((\ _ _ -> isNum (getAdd_1 e)) (getAdd_1 e) (getAdd_2 e)))
+               ((\ _ _
+                   -> let k = getNum_1 (getAdd_1 e)
+                      in Data.SBV.Maybe.sCaseMaybe (let k = 42 in k) (\ v -> k + v) m)
+                  (getAdd_1 e) (getAdd_2 e))
+               (ite
+                  (isAdd e) ((\ _ _ -> 0) (getAdd_1 e) (getAdd_2 e))
+                  ((\ _ _ _ -> 0) (getLet_1 e) (getLet_2 e) (getLet_3 e))))))

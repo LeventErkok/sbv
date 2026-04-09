@@ -46,7 +46,7 @@ import Data.Maybe (isJust, fromMaybe, catMaybes)
 import Prelude hiding (fail)
 import qualified Prelude as P(fail)
 
-import Data.Generics
+import Data.Generics (everywhereM, mkM)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Set (Set)
@@ -1265,21 +1265,119 @@ negateAllGuards gs = AppE (VarE 'sNot) (foldl1 (\a b -> foldl1 AppE [VarE '(.||)
 
 -- * Standalone helpers
 
--- | Free variables = used – bound
+-- | Free variables of an expression, respecting lexical scope.
+-- A variable is free if it is used (VarE) and not bound by any enclosing
+-- LetE, LamE, or CaseE at its use site.
 freeVars :: Exp -> Set Name
-freeVars e = usedVars e Set.\\ boundVars e
- where boundVars :: Exp -> Set Name
-       boundVars = everything Set.union (mkQ Set.empty f)
-         where f :: Pat -> Set Name
-               f (VarP n)  = Set.singleton n
-               f (AsP n _) = Set.singleton n
-               f _         = Set.empty
+freeVars = go Set.empty
+ where
+   go :: Set Name -> Exp -> Set Name
+   go bound = \case
+     VarE n          -> if n `Set.member` bound then Set.empty else Set.singleton n
+     ConE {}         -> Set.empty
+     LitE {}         -> Set.empty
+     AppE f x        -> go bound f <> go bound x
+     AppTypeE e _    -> go bound e
+     InfixE ml o mr  -> maybe Set.empty (go bound) ml <> go bound o <> maybe Set.empty (go bound) mr
+     UInfixE l o r   -> go bound l <> go bound o <> go bound r
+     ParensE e       -> go bound e
+     CondE c t f     -> go bound c <> go bound t <> go bound f
+     TupE mes        -> foldMap (maybe Set.empty (go bound)) mes
+     UnboxedTupE mes -> foldMap (maybe Set.empty (go bound)) mes
+     ListE es        -> foldMap (go bound) es
+     SigE e _        -> go bound e
+     RecConE _ fes   -> foldMap (go bound . snd) fes
+     RecUpdE e fes   -> go bound e <> foldMap (go bound . snd) fes
+     -- Binding forms: extend the bound set in the appropriate scope
+     LamE ps body    -> go (bound <> patsNames ps) body
+     LetE ds body    -> let bound' = bound <> decsNames ds
+                        in foldMap (goDec bound') ds <> go bound' body
+     CaseE scr ms    -> go bound scr <> foldMap (goMatch bound) ms
+     -- Fallback for other expression forms: conservatively report all
+     -- VarE names minus known bound (may over-report, never under-report)
+     other           -> allVarE other Set.\\ bound
 
-       usedVars :: Exp -> Set Name
-       usedVars = everything Set.union (mkQ Set.empty f)
-         where f :: Exp -> Set Name
-               f (VarE n) = Set.singleton n
-               f _        = Set.empty
+   goMatch :: Set Name -> Match -> Set Name
+   goMatch bound (Match pat body ds) =
+     let bound' = bound <> patNames pat <> decsNames ds
+     in goBody bound' body <> foldMap (goDec bound') ds
+
+   goBody :: Set Name -> Body -> Set Name
+   goBody bound (NormalB e)   = go bound e
+   goBody bound (GuardedB gs) = foldMap (\(g, e) -> goGuard bound g <> go bound e) gs
+
+   goGuard :: Set Name -> Guard -> Set Name
+   goGuard bound (NormalG e) = go bound e
+   goGuard _     _           = Set.empty
+
+   goDec :: Set Name -> Dec -> Set Name
+   goDec bound (ValD _ body ds)       = goBody bound body <> foldMap (goDec bound) ds
+   goDec bound (FunD _ cs)            = foldMap (goClause bound) cs
+   goDec _     _                      = Set.empty
+
+   goClause :: Set Name -> Clause -> Set Name
+   goClause bound (Clause ps body ds) =
+     let bound' = bound <> patsNames ps <> decsNames ds
+     in goBody bound' body <> foldMap (goDec bound') ds
+
+   -- Extract bound names from patterns
+   patNames :: Pat -> Set Name
+   patNames (VarP n)          = Set.singleton n
+   patNames (AsP n p)         = Set.singleton n <> patNames p
+   patNames (ConP _ _ ps)     = patsNames ps
+   patNames (InfixP p1 _ p2)  = patNames p1 <> patNames p2
+   patNames (UInfixP p1 _ p2) = patNames p1 <> patNames p2
+   patNames (TupP ps)         = patsNames ps
+   patNames (UnboxedTupP ps)  = patsNames ps
+   patNames (ListP ps)        = patsNames ps
+   patNames (SigP p _)        = patNames p
+   patNames (ParensP p)       = patNames p
+   patNames (TildeP p)        = patNames p
+   patNames (BangP p)         = patNames p
+   patNames (ViewP _ p)       = patNames p
+   patNames WildP             = Set.empty
+   patNames (LitP _)          = Set.empty
+   patNames _                 = Set.empty
+
+   patsNames :: [Pat] -> Set Name
+   patsNames = foldMap patNames
+
+   -- Extract bound names from declarations
+   decsNames :: [Dec] -> Set Name
+   decsNames ds = Set.fromList $ [n | ValD (VarP n) _ _ <- ds] ++ [n | FunD n _ <- ds]
+
+   -- Collect all VarE names in an expression (scope-unaware, for fallback only)
+   allVarE :: Exp -> Set Name
+   allVarE = \case
+     VarE n          -> Set.singleton n
+     AppE f x        -> allVarE f <> allVarE x
+     AppTypeE e _    -> allVarE e
+     InfixE ml o mr  -> maybe Set.empty allVarE ml <> allVarE o <> maybe Set.empty allVarE mr
+     UInfixE l o r   -> allVarE l <> allVarE o <> allVarE r
+     ParensE e       -> allVarE e
+     CondE c t f     -> allVarE c <> allVarE t <> allVarE f
+     TupE mes        -> foldMap (maybe Set.empty allVarE) mes
+     UnboxedTupE mes -> foldMap (maybe Set.empty allVarE) mes
+     ListE es        -> foldMap allVarE es
+     SigE e _        -> allVarE e
+     RecConE _ fes   -> foldMap (allVarE . snd) fes
+     RecUpdE e fes   -> allVarE e <> foldMap (allVarE . snd) fes
+     LamE _ body     -> allVarE body
+     LetE ds body    -> foldMap allVarEDec ds <> allVarE body
+     CaseE scr ms    -> allVarE scr <> foldMap allVarEMatch ms
+     _               -> Set.empty
+
+   allVarEMatch :: Match -> Set Name
+   allVarEMatch (Match _ body ds) = allVarEBody body <> foldMap allVarEDec ds
+
+   allVarEBody :: Body -> Set Name
+   allVarEBody (NormalB e)   = allVarE e
+   allVarEBody (GuardedB gs) = foldMap (\(_, e) -> allVarE e) gs
+
+   allVarEDec :: Dec -> Set Name
+   allVarEDec (ValD _ body ds) = allVarEBody body <> foldMap allVarEDec ds
+   allVarEDec (FunD _ cs)      = foldMap (\(Clause _ body ds) -> allVarEBody body <> foldMap allVarEDec ds) cs
+   allVarEDec _                = Set.empty
 
 -- | Count the number of arguments in a constructor type by counting arrows.
 -- e.g., @Integer -> String -> Bool@ has 2 arguments.

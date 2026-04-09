@@ -1,0 +1,24 @@
+PCase77.hs:(22,15)-(30,9): Splicing expression
+    ghc-internal:GHC.Internal.TH.Quote.quoteExp
+      pCase
+      " e of\n\
+      \         Zero    -> e .== e =: qed\n\
+      \         Num k   -> case b of\n\
+      \                      True  -> let k = (0 :: SInteger) in k .== k =: e .== e =: qed\n\
+      \                      False -> k .>= 0 .|| e .== e =: sTrue =: qed\n\
+      \         Var _   -> e .== e =: qed\n\
+      \         Add _ _ -> e .== e =: qed\n\
+      \         Let _ _ _ -> e .== e =: qed\n\
+      \       "
+  ======>
+    cases
+      [(isZero e ==> (e .== e =: qed)),
+       (isNum e
+          ==>
+            (let k = getNum_1 e
+             in
+               cases
+                 [(b ==> (let k = (0 :: SInteger) in k .== k =: e .== e =: qed)),
+                  (sNot b ==> (k .>= 0 .|| e .== e =: sTrue =: qed))])),
+       (isVar e ==> (e .== e =: qed)), (isAdd e ==> (e .== e =: qed)),
+       (isLet e ==> (e .== e =: qed))]
