@@ -566,6 +566,12 @@ flattenPat off arg (AsP name subpat) = do
     (pat', guards, decs) <- flattenPat off arg subpat
     let asDec = ValD (VarP name) (NormalB arg) []
     pure (pat', guards, asDec : decs)
+-- Nested empty record pattern: Cstr{} — equivalent to Cstr with all wildcards
+flattenPat off arg (RecP conName []) = do
+    con <- getReference off conName
+    DataConI _ conType _ <- reify con
+    let arity = countArgs conType
+    flattenPat off arg (ConP con [] (replicate arity WildP))
 flattenPat o _ p = fail o $ unlines [ "sCase/pCase: Unsupported complex pattern match."
                                     , "        Saw: " <> pprint p
                                     , ""
