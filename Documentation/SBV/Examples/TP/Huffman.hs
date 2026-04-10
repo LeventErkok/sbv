@@ -4836,6 +4836,33 @@ lightWLeqLight2WProof = do
 
 -- ** Optimality theorem
 --
+-- | @insertAll@ is associative (when the third list is allTip0):
+-- @allTip0 zs => insertAll (insertAll xs ys) zs == insertAll xs (insertAll ys zs)@.
+--
+-- >>> runTPWith cvc5 insertAllAssocProof
+insertAllAssocProof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> Forall "zs" [HTree] -> SBool))
+insertAllAssocProof = do
+    iaSIL <- recall insertAllSortedInsertLProof
+
+    sInduct "insertAllAssoc"
+        (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"zs" zs) ->
+            allTip0 zs .=> insertAll (insertAll xs ys) zs .== insertAll xs (insertAll ys zs))
+        (\xs _ _ -> length xs, []) $
+        \ih xs ys zs -> [allTip0 zs]
+          |- insertAll (insertAll xs ys) zs
+          =: [pCase| xs of
+                [] -> insertAll (insertAll xs ys) zs
+                   =: insertAll xs (insertAll ys zs)
+                   =: qed
+                x : rest -> insertAll (insertAll xs ys) zs
+                         ?? iaSIL `at` (Inst @"a" x, Inst @"xs" ys, Inst @"ys" zs)
+                         ?? ih    `at` (Inst @"xs" rest, Inst @"ys" (sortedInsert x ys), Inst @"zs" zs)
+                         ?? sorry
+                         =: insertAll xs (insertAll ys zs)
+                         =: qed
+                         =: qed
+             |]
+
 -- | The minimum weight in a merged leaf list is the minimum of the two heads.
 -- Stated for @leavesOf@ outputs specifically, which are always sorted.
 --
@@ -4844,8 +4871,8 @@ leavesOfBinHeadProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool
 leavesOfBinHeadProof = do
     tsPos <- recall treeSizePosProof
     loLen <- recall leavesOfLengthProof
-    loAT  <- recall leavesOfAllTip0Proof
-    iaSIL <- recall insertAllSortedInsertLProof
+    loAT    <- recall leavesOfAllTip0Proof
+    iaAssoc <- recall insertAllAssocProof
     nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
 
     sInduct "leavesOfBinHead"
@@ -4880,12 +4907,15 @@ leavesOfBinHeadProof = do
                 -- By IH on ll: head (leavesOf (Bin ll r)) = min(head(leavesOf ll), head(leavesOf r))
                 -- By IH on lr: head (leavesOf (Bin lr r)) = min(head(leavesOf lr), head(leavesOf r))
                 Bin ll lr -> treeWeight (head (leavesOf (sBin l r)))
-                          -- Use insertAllSortedInsertL to rearrange:
-                          -- insertAll (insertAll (leavesOf ll) (leavesOf lr)) (leavesOf r)
-                          --   rearranges via repeated sortedInsert
-                          ?? ih    `at` (Inst @"l" ll, Inst @"r" r)
-                          ?? ih    `at` (Inst @"l" lr, Inst @"r" r)
-                          ?? ih    `at` (Inst @"l" ll, Inst @"r" lr)
+                          -- By insertAllAssoc: leavesOf (Bin (Bin ll lr) r) reassociates to leavesOf (Bin ll (Bin lr r))
+                          ?? loAT    `at` Inst @"t" r
+                          ?? iaAssoc `at` (Inst @"xs" (leavesOf ll), Inst @"ys" (leavesOf lr), Inst @"zs" (leavesOf r))
+                          -- IH at (ll, Bin lr r): head = min (head (leavesOf ll), head (leavesOf (Bin lr r)))
+                          ?? ih `at` (Inst @"l" ll, Inst @"r" (sBin lr r))
+                          -- IH at (lr, r): head (leavesOf (Bin lr r)) = min (head (leavesOf lr), head (leavesOf r))
+                          ?? ih `at` (Inst @"l" lr, Inst @"r" r)
+                          -- IH at (ll, lr): head (leavesOf l) = min (head (leavesOf ll), head (leavesOf lr))
+                          ?? ih `at` (Inst @"l" ll, Inst @"r" lr)
                           ?? tsPos `at` Inst @"t" ll
                           ?? tsPos `at` Inst @"t" lr
                           ?? loLen `at` Inst @"t" ll
@@ -4894,9 +4924,6 @@ leavesOfBinHeadProof = do
                           ?? nlPos `at` Inst @"t" ll
                           ?? nlPos `at` Inst @"t" lr
                           ?? nlPos `at` Inst @"t" r
-                          ?? loAT  `at` Inst @"t" r
-                          ?? iaSIL `at` (Inst @"a" (head (leavesOf ll)), Inst @"xs" (leavesOf lr), Inst @"ys" (leavesOf r))
-                          ?? sorry
                           =: ite (treeWeight (head (leavesOf l)) .<= treeWeight (head (leavesOf r)))
                                  (treeWeight (head (leavesOf l)))
                                  (treeWeight (head (leavesOf r)))
