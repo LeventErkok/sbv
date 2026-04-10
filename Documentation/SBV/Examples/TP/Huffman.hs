@@ -4994,6 +4994,7 @@ optimalityProof = do
    dCWS    <- recall deepCountWSProof
    sCWS    <- recall sibCountWSProof
    gs      <- recall greedyChoiceProof
+   loSwap  <- recall leavesOfSwapProof
    lwDeep  <- recall lightWLeqDeepWProof
    lCWS    <- recall lightCountWSProof
    lwHead  <- recall lightWIsHeadProof
@@ -5101,16 +5102,18 @@ optimalityProof = do
                                   ?? rlCost `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
                                   ?? rlDist `at` (Inst @"w" wa, Inst @"s" sa, Inst @"n" (0 :: SInteger), Inst @"t" t)
                                   ?? rlDist `at` (Inst @"w" dw, Inst @"s" ds, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                                  ?? dCWS  `at` Inst @"t" t'
-                                  ?? sCWS  `at` Inst @"t" t'
-                                  ?? lCWS  `at` Inst @"t" t'
+                                  ?? dCWS   `at` Inst @"t" t'
+                                  ?? sCWS   `at` Inst @"t" t'
+                                  ?? lCWS   `at` Inst @"t" t'
                                   ?? lwDeep `at` Inst @"t" t'
                                   ?? gs `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" t')
+                                  ?? loSwap `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
                                   ?? costDec `at` Inst @"t" t2
                                   ?? collTS  `at` Inst @"t" t2
                                   ?? tsPos   `at` Inst @"t" l
                                   ?? tsPos   `at` Inst @"t" r
                                   ?? ih `at` Inst @"t" (collapse t2)
+                                  ?? lwHead `at` Inst @"t" t'
                                   ?? sorry
                                   =: sTrue
                                   =: qed
