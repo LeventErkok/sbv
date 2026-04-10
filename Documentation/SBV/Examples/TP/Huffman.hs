@@ -4996,6 +4996,7 @@ optimalityProof = do
    gs      <- recall greedyChoiceProof
    lwDeep  <- recall lightWLeqDeepWProof
    lCWS    <- recall lightCountWSProof
+   lwHead  <- recall lightWIsHeadProof
 
    -- Base case: for two tips, buildHuffman cost equals tree cost.
    -- Broken into small steps so the solver can follow the unfolding chain.
@@ -5090,6 +5091,7 @@ optimalityProof = do
                                              ?? tsPos   `at` Inst @"t" l
                                              ?? tsPos   `at` Inst @"t" r
                                              ?? ih `at` Inst @"t" (collapse t2)
+                                             ?? lwHead `at` Inst @"t" t'
                                              ?? sorry
                                              =: sTrue
                                              =: qed
