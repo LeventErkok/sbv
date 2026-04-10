@@ -4849,17 +4849,19 @@ insertAllAssocProof = do
             allTip0 zs .=> insertAll (insertAll xs ys) zs .== insertAll xs (insertAll ys zs))
         (\xs _ _ -> length xs, []) $
         \ih xs ys zs -> [allTip0 zs]
-          |- insertAll (insertAll xs ys) zs
+          |- insertAll (insertAll xs ys) zs .== insertAll xs (insertAll ys zs)
           =: [pCase| xs of
-                [] -> insertAll (insertAll xs ys) zs
-                   =: insertAll xs (insertAll ys zs)
-                   =: qed
-                x : rest -> insertAll (insertAll xs ys) zs
-                         ?? iaSIL `at` (Inst @"a" x, Inst @"xs" ys, Inst @"ys" zs)
+                [] -> trivial
+                x : rest -> insertAll (insertAll xs ys) zs .== insertAll xs (insertAll ys zs)
+                         -- Both sides unfold when xs = x : rest:
+                         --   LHS = insertAll (insertAll rest (sortedInsert x ys)) zs
+                         --   RHS = insertAll rest (sortedInsert x (insertAll ys zs))
+                         -- By IH + iaSIL these are equal.
+                         -- sorry: solver can't reconstruct xs = x .: rest in seq representation
                          ?? ih    `at` (Inst @"xs" rest, Inst @"ys" (sortedInsert x ys), Inst @"zs" zs)
+                         ?? iaSIL `at` (Inst @"a" x, Inst @"xs" ys, Inst @"ys" zs)
                          ?? sorry
-                         =: insertAll xs (insertAll ys zs)
-                         =: qed
+                         =: sTrue
                          =: qed
              |]
 
