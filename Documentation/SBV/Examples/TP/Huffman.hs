@@ -4990,14 +4990,6 @@ optimalityProof = do
    collTS  <- recall collapseReducesTreeSizeProof
    rlCost  <- recall relabelCostProof
    rlLO    <- recall relabelLeavesOfProof
-   rlDist  <- recall relabelDistinctProof
-   dCWS    <- recall deepCountWSProof
-   sCWS    <- recall sibCountWSProof
-   gs      <- recall greedyChoiceProof
-   loSwap  <- recall leavesOfSwapProof
-   lwDeep  <- recall lightWLeqDeepWProof
-   lCWS    <- recall lightCountWSProof
-   lwHead  <- recall lightWIsHeadProof
 
    -- Base case: for two tips, buildHuffman cost equals tree cost.
    -- Broken into small steps so the solver can follow the unfolding chain.
@@ -5050,16 +5042,7 @@ optimalityProof = do
                        =: sTrue
                        =: qed
 
-               Bin l r -> let t'  = relabelFrom 0 t
-                              -- First swap: move lightest to deepest
-                              wa  = lightW t';  sa  = lightS t'
-                              dw  = deepW t';   ds  = deepS t'
-                              t1  = swap wa sa dw ds t'
-                              -- Second swap: move second-lightest to sibling
-                              wb  = light2W t'; sb  = light2S t'
-                              sw1 = sibW t1;    ss1 = sibS t1
-                              t2  = swap wb sb sw1 ss1 t1
-                          in cost (buildHuffman (leavesOf t)) .<= cost t
+               Bin l r -> cost (buildHuffman (leavesOf t)) .<= cost t
                        =: case l of
                             Tip{} -> case r of
                                        -- Base: Bin (Tip wl sl) (Tip wr sr), numLeaves == 2
@@ -5071,49 +5054,25 @@ optimalityProof = do
 
                                        -- l is Tip, r is Bin: numLeaves >= 3
                                        Bin{} -> cost (buildHuffman (leavesOf t)) .<= cost t
-                                             -- leavesOf t = leavesOf t' [relabel]
-                                             ?? rlLO `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-                                             -- cost t = cost t' [relabel]
+                                             ?? rlLO   `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
                                              ?? rlCost `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-                                             -- countWS <= 1 for swap pairs [relabelDistinct]
-                                             ?? rlDist `at` (Inst @"w" wa, Inst @"s" sa, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                                             ?? rlDist `at` (Inst @"w" dw, Inst @"s" ds, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                                             -- countWS >= 1 for deep/light
-                                             ?? dCWS  `at` Inst @"t" t'
-                                             ?? sCWS  `at` Inst @"t" t'
-                                             ?? lCWS  `at` Inst @"t" t'
-                                             -- lightW <= deepW
-                                             ?? lwDeep `at` Inst @"t" t'
-                                             -- greedyChoice: cost t2 <= cost t'
-                                             ?? gs `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" t')
-                                             -- costDecomp on t2 + IH on collapse t2
-                                             ?? costDec `at` Inst @"t" t2
-                                             ?? collTS  `at` Inst @"t" t2
+                                             ?? costDec `at` Inst @"t" t
+                                             ?? collTS  `at` Inst @"t" t
                                              ?? tsPos   `at` Inst @"t" l
                                              ?? tsPos   `at` Inst @"t" r
-                                             ?? ih `at` Inst @"t" (collapse t2)
-                                             ?? lwHead `at` Inst @"t" t'
+                                             ?? ih `at` Inst @"t" (collapse t)
                                              ?? sorry
                                              =: sTrue
                                              =: qed
 
                             Bin{} -> cost (buildHuffman (leavesOf t)) .<= cost t
-                                  ?? rlLO `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
+                                  ?? rlLO   `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
                                   ?? rlCost `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-                                  ?? rlDist `at` (Inst @"w" wa, Inst @"s" sa, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                                  ?? rlDist `at` (Inst @"w" dw, Inst @"s" ds, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                                  ?? dCWS   `at` Inst @"t" t'
-                                  ?? sCWS   `at` Inst @"t" t'
-                                  ?? lCWS   `at` Inst @"t" t'
-                                  ?? lwDeep `at` Inst @"t" t'
-                                  ?? gs `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" t')
-                                  ?? loSwap `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
-                                  ?? costDec `at` Inst @"t" t2
-                                  ?? collTS  `at` Inst @"t" t2
+                                  ?? costDec `at` Inst @"t" t
+                                  ?? collTS  `at` Inst @"t" t
                                   ?? tsPos   `at` Inst @"t" l
                                   ?? tsPos   `at` Inst @"t" r
-                                  ?? ih `at` Inst @"t" (collapse t2)
-                                  ?? lwHead `at` Inst @"t" t'
+                                  ?? ih `at` Inst @"t" (collapse t)
                                   ?? sorry
                                   =: sTrue
                                   =: qed
