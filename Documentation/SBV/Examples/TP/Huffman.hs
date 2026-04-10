@@ -4988,8 +4988,25 @@ optimalityProof = do
    tsPos   <- recall treeSizePosProof
    costDec <- recall costDecompProof
    collTS  <- recall collapseReducesTreeSizeProof
-   rlCost  <- recall relabelCostProof
-   rlLO    <- recall relabelLeavesOfProof
+   collNL  <- recall collapseNumLeavesProof
+   hNN     <- recall heightNonNegProof
+
+   nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+
+   -- The key step: for the relabeled tree, the swap chain gives
+   -- cost (BH (leavesOf t)) <= cost (BH (leavesOf (collapse t))) + deepW t + sibW t
+   -- This follows from greedyChoice + BH/collapse alignment on the relabeled swapped tree.
+   -- The sorry here encapsulates the entire swap chain (the mathematical heart of the proof).
+   splitStep <- calc "splitStep"
+       (\(Forall @"t" t) ->
+           treeSize t .>= 3 .=>
+               cost (buildHuffman (leavesOf t))
+                 .<= cost (buildHuffman (leavesOf (collapse t))) + deepW t + sibW t) $
+       \t -> [treeSize t .>= 3]
+         |- cost (buildHuffman (leavesOf t)) .<= cost (buildHuffman (leavesOf (collapse t))) + deepW t + sibW t
+         ?? sorry
+         =: sTrue
+         =: qed
 
    -- Base case: for two tips, buildHuffman cost equals tree cost.
    -- Broken into small steps so the solver can follow the unfolding chain.
@@ -5054,26 +5071,37 @@ optimalityProof = do
 
                                        -- l is Tip, r is Bin: numLeaves >= 3
                                        Bin{} -> cost (buildHuffman (leavesOf t)) .<= cost t
-                                             ?? rlLO   `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-                                             ?? rlCost `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
+                                             ?? splitStep `at` Inst @"t" t
                                              ?? costDec `at` Inst @"t" t
                                              ?? collTS  `at` Inst @"t" t
+                                             ?? collNL  `at` Inst @"t" t
+                                             ?? hNN     `at` Inst @"t" l
+                                             ?? hNN     `at` Inst @"t" r
                                              ?? tsPos   `at` Inst @"t" l
                                              ?? tsPos   `at` Inst @"t" r
+                                             ?? tsPos   `at` Inst @"t" (sleft r)
+                                             ?? tsPos   `at` Inst @"t" (sright r)
+                                             ?? nlPos   `at` Inst @"t" (sleft r)
+                                             ?? nlPos   `at` Inst @"t" (sright r)
                                              ?? ih `at` Inst @"t" (collapse t)
-                                             ?? sorry
                                              =: sTrue
                                              =: qed
 
                             Bin{} -> cost (buildHuffman (leavesOf t)) .<= cost t
-                                  ?? rlLO   `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-                                  ?? rlCost `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
+                                  ?? splitStep `at` Inst @"t" t
                                   ?? costDec `at` Inst @"t" t
                                   ?? collTS  `at` Inst @"t" t
+                                  ?? collNL  `at` Inst @"t" t
+                                  ?? hNN     `at` Inst @"t" l
+                                  ?? hNN     `at` Inst @"t" r
                                   ?? tsPos   `at` Inst @"t" l
                                   ?? tsPos   `at` Inst @"t" r
+                                  ?? tsPos   `at` Inst @"t" (sleft l)
+                                  ?? tsPos   `at` Inst @"t" (sright l)
+                                  ?? nlPos   `at` Inst @"t" (sleft l)
+                                  ?? nlPos   `at` Inst @"t" (sright l)
+                                  ?? nlPos   `at` Inst @"t" r
                                   ?? ih `at` Inst @"t" (collapse t)
-                                  ?? sorry
                                   =: sTrue
                                   =: qed
             |]
