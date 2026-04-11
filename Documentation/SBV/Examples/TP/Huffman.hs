@@ -5076,26 +5076,35 @@ optimalityProof = do
    hNN      <- recall heightNonNegProof
    rlCost   <- recall relabelCostProof
    rlLeaves <- recall relabelLeavesOfProof
+   _rlDist  <- recall relabelDistinctProof
    _gc      <- recall greedyChoiceProof
    _loSwap  <- recall leavesOfSwapProof
+   _lCWS    <- recall lightCountWSProof
+   _l2CWS   <- recall light2CountWSProof
+   _dCWS    <- recall deepCountWSProof
+   _sCWS    <- recall sibCountWSProof
+   _swpCWS  <- recall swapPreservesCountWSProof
+   _swpXCWS <- recall swapExchangesCountWSProof
 
    -- optSwap property: leavesOf preserved
-   osLeaves <- calc "optSwapLeavesOf"
-       (\(Forall @"t" t) -> leavesOf (optSwap t) .== leavesOf t) $
-       \t -> []
+   osLeaves <- sInduct "optSwapLeavesOf"
+       (\(Forall @"t" t) -> leavesOf (optSwap t) .== leavesOf t)
+       (treeSize, [proofOf tsPos]) $
+       \_ih t -> []
          |- leavesOf (optSwap t)
          ?? rlLeaves `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-         ?? sorry -- leavesOfSwap applications + preconditions
+         ?? sorry
          =: leavesOf t
          =: qed
 
    -- optSwap property: cost bound
-   osCost <- calc "optSwapCost"
-       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> cost (optSwap t) .<= cost t) $
-       \t -> [numLeaves t .>= 2]
+   osCost <- sInduct "optSwapCost"
+       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> cost (optSwap t) .<= cost t)
+       (treeSize, [proofOf tsPos]) $
+       \_ih t -> [numLeaves t .>= 2]
          |- cost (optSwap t) .<= cost t
          ?? rlCost `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-         ?? sorry -- greedyChoice + preconditions
+         ?? sorry
          =: sTrue
          =: qed
 
