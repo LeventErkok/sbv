@@ -5047,10 +5047,20 @@ lightWIsHeadProof = do
 -- | Optimal swap: relabel the tree to get distinct leaves, then swap the two lightest
 -- leaves to the deepest and sibling-of-deepest positions. The resulting tree has
 -- the same @leavesOf@, cost @<=@ the original, and the lightest pair at the deepest level.
+--
+-- Split into two stages to keep expressions manageable for the solver:
+
+-- | Stage 1: relabel then swap the lightest leaf to the deepest position.
+optSwap1 :: SHTree -> SHTree
+optSwap1 = smtFunction "optSwap1"
+         $ \t -> let t' = relabelFrom 0 t
+                 in swap (lightW t') (lightS t') (deepW t') (deepS t') t'
+
+-- | Stage 2: swap the second-lightest leaf to the sibling-of-deepest position.
 optSwap :: SHTree -> SHTree
 optSwap = smtFunction "optSwap"
         $ \t -> let t' = relabelFrom 0 t
-                    t1 = swap (lightW t') (lightS t') (deepW t') (deepS t') t'
+                    t1 = optSwap1 t
                 in swap (light2W t') (light2S t') (sibW t1) (sibS t1) t1
 
 -- | Huffman optimality: for any tree @t@ with at least two leaves,
@@ -5079,6 +5089,30 @@ optimalityProof = do
    _rlDist  <- recall relabelDistinctProof
    _gc      <- recall greedyChoiceProof
    _loSwap  <- recall leavesOfSwapProof
+
+   -- swap with identical pairs is identity
+   swapSelf <- sInduct "swapSelf"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) -> swap w s w s t .== t)
+       (\_ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih w s t -> []
+         |- swap w s w s t
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> swap w s w s t
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       =: t
+                       =: qed
+            |]
+
+   -- Generalized leavesOfSwap: no distinctness condition needed
+   loSwapGen <- lemma "leavesOfSwapGen"
+       (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+           countWS wa sa t .== 1 .&& countWS wb sb t .== 1
+           .=> leavesOf (swap wa sa wb sb t) .== leavesOf t)
+       [proofOf _loSwap, proofOf swapSelf]
    _lCWS    <- recall lightCountWSProof
    _l2CWS   <- recall light2CountWSProof
    _dCWS    <- recall deepCountWSProof
@@ -5086,22 +5120,66 @@ optimalityProof = do
    _swpCWS  <- recall swapPreservesCountWSProof
    _swpXCWS <- recall swapExchangesCountWSProof
 
-   -- optSwap property: leavesOf preserved
-   osLeaves <- sInduct "optSwapLeavesOf"
-       (\(Forall @"t" t) -> leavesOf (optSwap t) .== leavesOf t)
-       (treeSize, [proofOf tsPos]) $
-       \_ih t -> []
-         |- leavesOf (optSwap t)
+   -- optSwap1 property: leavesOf preserved through relabel + first swap
+   osLeaves1 <- calc "optSwap1LeavesOf"
+       (\(Forall @"t" t) -> leavesOf (optSwap1 t) .== leavesOf t) $
+       \t ->
+         let t' = relabelFrom 0 t
+             lw = lightW t'; ls = lightS t'
+             dw = deepW t';  ds = deepS t'
+         in []
+         |- leavesOf (optSwap1 t)
          ?? rlLeaves `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-         ?? sorry
+         ?? _rlDist `at` (Inst @"w" lw, Inst @"s" ls, Inst @"n" (0 :: SInteger), Inst @"t" t)
+         ?? _rlDist `at` (Inst @"w" dw, Inst @"s" ds, Inst @"n" (0 :: SInteger), Inst @"t" t)
+         ?? _lCWS `at` Inst @"t" t'
+         ?? _dCWS `at` Inst @"t" t'
+         ?? loSwapGen `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
          =: leavesOf t
          =: qed
 
+   -- After optSwap1, all (w,s) pairs still have count <= 1
+   osDistinct <- calc "optSwap1Distinct"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
+           countWS w s (optSwap1 t) .<= 1) $
+       \w s t -> []
+         |- countWS w s (optSwap1 t) .<= (1 :: SInteger)
+         ?? _rlDist `at` (Inst @"w" w, Inst @"s" s, Inst @"n" (0 :: SInteger), Inst @"t" t)
+         ?? _swpCWS `at` (Inst @"a" (tuple (lightW (relabelFrom 0 t), lightS (relabelFrom 0 t))),
+                          Inst @"b" (tuple (deepW (relabelFrom 0 t), deepS (relabelFrom 0 t))),
+                          Inst @"c" (tuple (w, s)),
+                          Inst @"t" (relabelFrom 0 t))
+         ?? _swpXCWS `at` (Inst @"wa" (lightW (relabelFrom 0 t)), Inst @"sa" (lightS (relabelFrom 0 t)),
+                           Inst @"wb" (deepW (relabelFrom 0 t)), Inst @"sb" (deepS (relabelFrom 0 t)),
+                           Inst @"t" (relabelFrom 0 t))
+         ?? sorry
+         =: sTrue
+         =: qed
+
+   -- optSwap property: leavesOf preserved through second swap
+   osLeaves <- calc "optSwapLeavesOf"
+       (\(Forall @"t" t) -> leavesOf (optSwap t) .== leavesOf t) $
+       \t ->
+         let t'  = relabelFrom 0 t
+             l2w = light2W t'; l2s = light2S t'
+             t1  = optSwap1 t
+             sw1 = sibW t1;    ss1 = sibS t1
+         in []
+         |- leavesOf (optSwap t)
+         ?? osLeaves1 `at` Inst @"t" t
+         ?? osDistinct `at` (Inst @"w" l2w, Inst @"s" l2s, Inst @"t" t)
+         ?? osDistinct `at` (Inst @"w" sw1, Inst @"s" ss1, Inst @"t" t)
+         ?? _l2CWS `at` Inst @"t" t'
+         ?? _sCWS  `at` Inst @"t" t1
+         ?? loSwapGen `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"wb" sw1, Inst @"sb" ss1, Inst @"t" t1)
+         =: leavesOf t
+         =: qed
+         =: qed
+
    -- optSwap property: cost bound
-   osCost <- sInduct "optSwapCost"
-       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> cost (optSwap t) .<= cost t)
-       (treeSize, [proofOf tsPos]) $
-       \_ih t -> [numLeaves t .>= 2]
+   osCost <- calc "optSwapCost"
+       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> cost (optSwap t) .<= cost t) $
+       \t -> [numLeaves t .>= 2]
          |- cost (optSwap t) .<= cost t
          ?? rlCost `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
          ?? sorry
