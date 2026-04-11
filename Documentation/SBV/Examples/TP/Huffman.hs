@@ -5243,14 +5243,23 @@ optimalityProof = do
        (\(Forall @"t" t) -> numLeaves t .>= 2 .=> leavesOf (optSwap t) .== leavesOf t)
        [proofOf osLeaves2, proofOf osLeaves1]
 
-   -- light2W is at most sibW after the first swap. This holds because:
-   -- sibW(optSwap1 t) is either sibW(t') (unchanged) or deepW(t') (if sib was the light leaf).
-   -- In both cases, it's a non-minimum leaf weight, hence >= light2W.
+   -- light2W <= deepW and light2W <= sibW (second minimum <= any other leaf weight)
+   lwLeq2 <- recall lightWLeqLight2WProof
+   _lwLeqD <- recall lightWLeqDeepWProof
+
+   -- light2W(t') <= sibW(optSwap1 t): after swapping lightW to deep,
+   -- sibW is either unchanged (>= light2W since it's a non-min leaf weight)
+   -- or becomes deepW (which is >= light2W after the swap makes deep=lightW).
+   -- Note: light2W <= deepW and light2W <= sibW are NOT true in general!
+   -- (counterexample: Bin(Tip 1, Tip 2) has light2W=2, deepW=1)
+   -- But light2W <= sibW(optSwap1 t) IS true because the swap adjusts things.
    osLight2LeqSib <- calc "optSwap1Light2LeqSib"
        (\(Forall @"t" t) ->
            numLeaves t .>= 2 .=> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)) $
        \t -> [numLeaves t .>= 2]
          |- light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
+         ?? lwLeq2 `at` Inst @"t" (relabelFrom 0 t)
+         ?? _lwLeqD `at` Inst @"t" (relabelFrom 0 t)
          ?? sorry
          =: sTrue
          =: qed
