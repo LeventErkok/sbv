@@ -5087,6 +5087,7 @@ optimalityProof = do
    rlCost   <- recall relabelCostProof
    rlLeaves <- recall relabelLeavesOfProof
    _rlDist  <- recall relabelDistinctProof
+   rlNL     <- recall relabelNumLeavesProof
    _gc      <- recall greedyChoiceProof
    _loSwap  <- recall leavesOfSwapProof
 
@@ -5181,18 +5182,50 @@ optimalityProof = do
                    =: qed
               ]
 
-   -- light2 count is exactly 1 in optSwap1 t
+   -- light2 count is exactly 1 in optSwap1 t (>= 1 transferred through swap, <= 1 from osDistinct)
    _osL2Count <- calc "optSwap1Light2Count"
        (\(Forall @"t" t) ->
            let t' = relabelFrom 0 t
            in numLeaves t .>= 2 .=> countWS (light2W t') (light2S t') (optSwap1 t) .== 1) $
-       \t -> [numLeaves t .>= 2]
-         |- countWS (light2W (relabelFrom 0 t)) (light2S (relabelFrom 0 t)) (optSwap1 t) .== (1 :: SInteger)
-         ?? osDistinct `at` (Inst @"w" (light2W (relabelFrom 0 t)), Inst @"s" (light2S (relabelFrom 0 t)), Inst @"t" t)
-         ?? _l2CWS `at` Inst @"t" (relabelFrom 0 t)
-         ?? sorry -- need to transfer >= 1 from t' to optSwap1 t
-         =: sTrue
-         =: qed
+       \t ->
+         let t'  = relabelFrom 0 t
+             lw  = lightW t';  ls  = lightS t'
+             dw  = deepW t';   ds  = deepS t'
+             l2w = light2W t'; l2s = light2S t'
+         in [numLeaves t .>= 2]
+         |- countWS l2w l2s (optSwap1 t) .== (1 :: SInteger)
+         -- <= 1 from osDistinct
+         ?? osDistinct `at` (Inst @"w" l2w, Inst @"s" l2s, Inst @"t" t)
+         -- >= 1 by transferring through the swap, using cases on whether light2 matches light or deep
+         =: cases
+              -- Case 1: light2 == deep pair → count = countWS(light, t') via swapExchanges
+              [ l2w .== dw .&& l2s .== ds
+                  ==> countWS l2w l2s (optSwap1 t) .== (1 :: SInteger)
+                   ?? _swpXCWS `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
+                   ?? _rlDist `at` (Inst @"w" lw, Inst @"s" ls, Inst @"n" (0 :: SInteger), Inst @"t" t)
+                   ?? _lCWS `at` Inst @"t" t'
+                   =: sTrue
+                   =: qed
+              -- Case 2: light2 == light pair → count = countWS(deep, t') via swap symmetric + exchanges
+              , l2w .== lw .&& l2s .== ls
+                  ==> countWS l2w l2s (optSwap1 t) .== (1 :: SInteger)
+                   ?? _swpSym `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
+                   ?? _swpXCWS `at` (Inst @"wa" dw, Inst @"sa" ds, Inst @"wb" lw, Inst @"sb" ls, Inst @"t" t')
+                   ?? _rlDist `at` (Inst @"w" dw, Inst @"s" ds, Inst @"n" (0 :: SInteger), Inst @"t" t)
+                   ?? _dCWS `at` Inst @"t" t'
+                   =: sTrue
+                   =: qed
+              -- Case 3: light2 is neither → count preserved by swapPreservesCountWS
+              , sNot (l2w .== dw .&& l2s .== ds) .&& sNot (l2w .== lw .&& l2s .== ls)
+                  ==> countWS l2w l2s (optSwap1 t) .== (1 :: SInteger)
+                   ?? _swpCWS `at` (Inst @"a" (tuple (lw, ls)), Inst @"b" (tuple (dw, ds)),
+                                    Inst @"c" (tuple (l2w, l2s)), Inst @"t" t')
+                   ?? _rlDist `at` (Inst @"w" l2w, Inst @"s" l2s, Inst @"n" (0 :: SInteger), Inst @"t" t)
+                   ?? rlNL `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
+                   ?? _l2CWS `at` Inst @"t" t'
+                   =: sTrue
+                   =: qed
+              ]
 
    -- leavesOf(optSwap t) == leavesOf(optSwap1 t): second swap preserves leavesOf
    -- TODO: solver struggles with nested function applications; needs different approach
