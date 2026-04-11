@@ -5253,17 +5253,36 @@ optimalityProof = do
    -- Note: light2W <= deepW and light2W <= sibW are NOT true in general!
    -- (counterexample: Bin(Tip 1, Tip 2) has light2W=2, deepW=1)
    -- But light2W <= sibW(optSwap1 t) IS true because the swap adjusts things.
-   osLight2LeqSib <- calc "optSwap1Light2LeqSib"
+   osLight2LeqSib <- sInduct "optSwap1Light2LeqSib"
        (\(Forall @"t" t) ->
-           numLeaves t .>= 2 .=> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)) $
-       \t -> [numLeaves t .>= 2]
+           numLeaves t .>= 2 .=> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t))
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> [numLeaves t .>= 2]
          |- light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
-         ?? lwLeq2 `at` Inst @"t" (relabelFrom 0 t)
-         ?? _lwLeqD `at` Inst @"t" (relabelFrom 0 t)
-         ?? _sCWS `at` Inst @"t" (relabelFrom 0 t)
-         ?? sorry
-         =: sTrue
-         =: qed
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
+                       ?? lwLeq2 `at` Inst @"t" (relabelFrom 0 t)
+                       ?? _lwLeqD `at` Inst @"t" (relabelFrom 0 t)
+                       ?? _sCWS `at` Inst @"t" (relabelFrom 0 t)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       =: case l of
+                            Tip{} -> case r of
+                                       Tip{} -> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
+                                             =: sTrue
+                                             =: qed
+                                       Bin{} -> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
+                                             ?? ih `at` Inst @"t" r
+                                             ?? sorry
+                                             =: sTrue
+                                             =: qed
+                            Bin{} -> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
+                                  ?? ih `at` Inst @"t" l
+                                  ?? sorry
+                                  =: sTrue
+                                  =: qed
+            |]
 
    -- optSwap property: cost bound via greedyChoice
    -- greedyChoice preconditions:
@@ -5273,31 +5292,11 @@ optimalityProof = do
    --   4. light2W t' <= sibW(optSwap1 t)  (second min <= sib after swap)
    --   5. countWS(light2W t')(light2S t') (optSwap1 t) == 1  (osL2Count)
    --   6. countWS(sibW(optSwap1 t))(sibS(optSwap1 t)) (optSwap1 t) == 1  (osSibCount)
-   osCost <- calc "optSwapCost"
-       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> cost (optSwap t) .<= cost t) $
-       \t ->
-         let t' = relabelFrom 0 t
-             lw = lightW t'; ls = lightS t'
-             dw = deepW t';  ds = deepS t'
-             l2w = light2W t'; l2s = light2S t'
-         in [numLeaves t .>= 2]
-         |- cost (optSwap t) .<= cost t
-         -- relabelCost: cost(relabelFrom 0 t) = cost t
-         ?? rlCost `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-         -- greedyChoice instantiated
-         ?? _gc `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" l2w, Inst @"sb" l2s, Inst @"t" t')
-         -- preconditions 2,3: countWS == 1 from rlDist + count >= 1
-         ?? _rlDist `at` (Inst @"w" lw, Inst @"s" ls, Inst @"n" (0 :: SInteger), Inst @"t" t)
-         ?? _rlDist `at` (Inst @"w" dw, Inst @"s" ds, Inst @"n" (0 :: SInteger), Inst @"t" t)
-         ?? _lCWS `at` Inst @"t" t'
-         ?? _dCWS `at` Inst @"t" t'
-         -- preconditions 5,6: from osL2Count and osSibCount
-         ?? osL2Count `at` Inst @"t" t
-         ?? osSibCount `at` Inst @"t" t
-         -- precondition 4: light2W <= sibW(optSwap1 t)
-         ?? osLight2LeqSib `at` Inst @"t" t
-         =: sTrue
-         =: qed
+   osCost <- lemma "optSwapCost"
+       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> cost (optSwap t) .<= cost t)
+       [proofOf _gc, proofOf rlCost, proofOf rlNL, proofOf _rlDist,
+        proofOf _lwLeqD, proofOf _lCWS, proofOf _dCWS,
+        proofOf osLight2LeqSib, proofOf osL2Count, proofOf osSibCount]
 
    nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
 
@@ -5387,7 +5386,7 @@ optimalityProof = do
                                              ?? hNN     `at` Inst @"t" l
                                              ?? hNN     `at` Inst @"t" r
                                              ?? ih `at` Inst @"t" (collapse (optSwap t))
-                                             ?? sorry -- BH unfolding: cost(BH(leavesOf t)) = deepW(optSwap t) + sibW(optSwap t) + cost(BH(leavesOf(collapse(optSwap t))))
+                                             ?? sorry
                                              =: sTrue
                                              =: qed
 
@@ -5405,7 +5404,7 @@ optimalityProof = do
                                   ?? hNN     `at` Inst @"t" r
                                   ?? nlPos   `at` Inst @"t" r
                                   ?? ih `at` Inst @"t" (collapse (optSwap t))
-                                  ?? sorry -- BH unfolding
+                                  ?? sorry
                                   =: sTrue
                                   =: qed
             |]
