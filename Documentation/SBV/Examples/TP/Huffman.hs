@@ -5260,6 +5260,7 @@ optimalityProof = do
          |- light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
          ?? lwLeq2 `at` Inst @"t" (relabelFrom 0 t)
          ?? _lwLeqD `at` Inst @"t" (relabelFrom 0 t)
+         ?? _sCWS `at` Inst @"t" (relabelFrom 0 t)
          ?? sorry
          =: sTrue
          =: qed
