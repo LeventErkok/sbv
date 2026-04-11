@@ -4720,6 +4720,52 @@ lightCountWSProof = do
 -- @numLeaves t >= 2 => countWS (light2W t) (light2S t) t >= 1@.
 --
 -- >>> runTPWith cvc5 light2CountWSProof
+-- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: countWSNonNeg                    Q.E.D.
+-- Lemma: lightCountWS                     Q.E.D.
+-- Lemma: numLeavesPos                     Q.E.D.
+-- Lemma: numLeavesBin                     Q.E.D.
+-- Lemma: countWSBin                       Q.E.D.
+-- Lemma: sumGe1                           Q.E.D.
+-- Inductive lemma (strong): light2CountWS
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (2 way case split)
+--       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.2 (2 way case split)
+--         Step: 1.2.2.1.2.1.1             Q.E.D.
+--         Step: 1.2.2.1.2.1.2             Q.E.D.
+--         Step: 1.2.2.1.2.2.1             Q.E.D.
+--         Step: 1.2.2.1.2.2.2 (2 way case split)
+--           Step: 1.2.2.1.2.2.2.1.1       Q.E.D.
+--           Step: 1.2.2.1.2.2.2.1.2       Q.E.D.
+--           Step: 1.2.2.1.2.2.2.1.3       Q.E.D.
+--           Step: 1.2.2.1.2.2.2.1.4       Q.E.D.
+--           Step: 1.2.2.1.2.2.2.2.1       Q.E.D.
+--           Step: 1.2.2.1.2.2.2.2.2       Q.E.D.
+--           Step: 1.2.2.1.2.2.2.CompletenessQ.E.D.
+--         Step: 1.2.2.1.2.Completeness    Q.E.D.
+--       Step: 1.2.2.2.1                   Q.E.D.
+--       Step: 1.2.2.2.2 (2 way case split)
+--         Step: 1.2.2.2.2.1.1             Q.E.D.
+--         Step: 1.2.2.2.2.1.2             Q.E.D.
+--         Step: 1.2.2.2.2.2.1             Q.E.D.
+--         Step: 1.2.2.2.2.2.2 (2 way case split)
+--           Step: 1.2.2.2.2.2.2.1.1       Q.E.D.
+--           Step: 1.2.2.2.2.2.2.1.2       Q.E.D.
+--           Step: 1.2.2.2.2.2.2.2.1       Q.E.D.
+--           Step: 1.2.2.2.2.2.2.2.2       Q.E.D.
+--           Step: 1.2.2.2.2.2.2.2.3       Q.E.D.
+--           Step: 1.2.2.2.2.2.2.2.4       Q.E.D.
+--           Step: 1.2.2.2.2.2.2.CompletenessQ.E.D.
+--         Step: 1.2.2.2.2.Completeness    Q.E.D.
+--       Step: 1.2.2.Completeness          Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: countWS, light2S, light2W, lightS, lightW, numLeaves, treeSize
+-- [Proven] light2CountWS :: Ɐt ∷ HTree → Bool
 light2CountWSProof :: TP (Proof (Forall "t" HTree -> SBool))
 light2CountWSProof = do
    tsPos <- recall treeSizePosProof
@@ -4733,6 +4779,9 @@ light2CountWSProof = do
        [proofOf nlPos]
 
    cwsBin <- recall countWSBinProof
+
+   sumGe1 <- lemma "sumGe1"
+       (\(Forall @"a" a) (Forall @"b" b) -> a .>= (1 :: SInteger) .&& b .>= 0 .=> a + b .>= 1) []
 
    sInduct "light2CountWS"
        (\(Forall @"t" t) -> numLeaves t .>= 2 .=> countWS (light2W t) (light2S t) t .>= 1)
@@ -4763,7 +4812,7 @@ light2CountWSProof = do
                                                        ?? tsPos  `at` Inst @"t" r
                                                        ?? ih     `at` Inst @"t" l
                                                        ?? cwsNN  `at` (Inst @"w" (light2W l), Inst @"s" (light2S l), Inst @"t" r)
-                                                       ?? sorry
+                                                       ?? sumGe1 `at` (Inst @"a" (countWS (light2W l) (light2S l) l), Inst @"b" (countWS (light2W l) (light2S l) r))
                                                        =: sTrue
                                                        =: qed
                                                  -- light2W t = lightW r, light2S t = lightS r
@@ -4796,8 +4845,8 @@ light2CountWSProof = do
                                                         ?? tsPos  `at` Inst @"t" l
                                                         ?? tsPos  `at` Inst @"t" r
                                                         ?? ih     `at` Inst @"t" r
-                                                        ?? countWS (light2W r) (light2S r) r .>= (1 :: SInteger)
                                                         ?? cwsNN  `at` (Inst @"w" (light2W r), Inst @"s" (light2S r), Inst @"t" l)
+                                                        ?? sumGe1 `at` (Inst @"a" (countWS (light2W r) (light2S r) r), Inst @"b" (countWS (light2W r) (light2S r) l))
                                                         =: sTrue
                                                         =: qed
             |]
@@ -4838,32 +4887,54 @@ lightWLeqLight2WProof = do
 
 -- ** Optimality theorem
 --
--- | @insertAll@ is associative (when the third list is allTip0):
--- @allTip0 zs => insertAll (insertAll xs ys) zs == insertAll xs (insertAll ys zs)@.
+-- | @insertAll@ is associative (when all lists are allTip0):
+-- @allTip0 xs && allTip0 ys && allTip0 zs => insertAll (insertAll xs ys) zs == insertAll xs (insertAll ys zs)@.
 --
 -- >>> runTPWith cvc5 insertAllAssocProof
+-- Lemma: insertAllSortedInsertL           Q.E.D.
+-- Lemma: sortedInsertAllTip0              Q.E.D.
+-- Lemma: insertAllUnfold                  Q.E.D.
+-- Inductive lemma (strong): insertAllAssoc
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2                         Q.E.D.
+--     Step: 1.2.3                         Q.E.D.
+--     Step: 1.2.4                         Q.E.D.
+--     Step: 1.2.5                         Q.E.D.
+--     Step: 1.2.6                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- Functions proven terminating: allTip0, insertAll, sortedInsert, treeWeight
+-- [Proven] insertAllAssoc :: Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Ɐzs ∷ [HTree] → Bool
 insertAllAssocProof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> Forall "zs" [HTree] -> SBool))
 insertAllAssocProof = do
-    iaSIL <- recall insertAllSortedInsertLProof
+    iaSIL  <- recall insertAllSortedInsertLProof
+    siAT   <- recall sortedInsertAllTip0Proof
+
+    iaUnfold <- lemma "insertAllUnfold"
+        (\(Forall @"x" x) (Forall @"rest" rest) (Forall @"ys" ys) ->
+            insertAll (x .: rest) ys .== insertAll rest (sortedInsert x ys)) []
 
     sInduct "insertAllAssoc"
         (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"zs" zs) ->
-            allTip0 zs .=> insertAll (insertAll xs ys) zs .== insertAll xs (insertAll ys zs))
+            allTip0 xs .&& allTip0 ys .&& allTip0 zs .=> insertAll (insertAll xs ys) zs .== insertAll xs (insertAll ys zs))
         (\xs _ _ -> length xs, []) $
-        \ih xs ys zs -> [allTip0 zs]
-          |- insertAll (insertAll xs ys) zs .== insertAll xs (insertAll ys zs)
+        \ih xs ys zs -> [allTip0 xs, allTip0 ys, allTip0 zs]
+          |- insertAll (insertAll xs ys) zs
           =: [pCase| xs of
                 [] -> trivial
-                x : rest -> insertAll (insertAll xs ys) zs .== insertAll xs (insertAll ys zs)
-                         -- Both sides unfold when xs = x : rest:
-                         --   LHS = insertAll (insertAll rest (sortedInsert x ys)) zs
-                         --   RHS = insertAll rest (sortedInsert x (insertAll ys zs))
-                         -- By IH + iaSIL these are equal.
-                         -- sorry: solver can't reconstruct xs = x .: rest in seq representation
-                         ?? ih    `at` (Inst @"xs" rest, Inst @"ys" (sortedInsert x ys), Inst @"zs" zs)
+                x : rest -> insertAll (insertAll xs ys) zs
+                         =: insertAll (insertAll rest (sortedInsert x ys)) zs
+                         ?? siAT `at` (Inst @"t" x, Inst @"ts" ys)
+                         ?? ih `at` (Inst @"xs" rest, Inst @"ys" (sortedInsert x ys), Inst @"zs" zs)
+                         =: insertAll rest (insertAll (sortedInsert x ys) zs)
                          ?? iaSIL `at` (Inst @"a" x, Inst @"xs" ys, Inst @"ys" zs)
-                         ?? sorry
-                         =: sTrue
+                         =: insertAll rest (sortedInsert x (insertAll ys zs))
+                         ?? iaUnfold `at` (Inst @"x" x, Inst @"rest" rest, Inst @"ys" (insertAll ys zs))
+                         =: insertAll (x .: rest) (insertAll ys zs)
+                         =: insertAll xs (insertAll ys zs)
                          =: qed
              |]
 
@@ -4913,6 +4984,8 @@ leavesOfBinHeadProof = do
                 Bin ll lr -> treeWeight (head (leavesOf (sBin l r)))
                           -- By insertAllAssoc: leavesOf (Bin (Bin ll lr) r) reassociates to leavesOf (Bin ll (Bin lr r))
                           ?? loAT    `at` Inst @"t" r
+                          ?? loAT    `at` Inst @"t" ll
+                          ?? loAT    `at` Inst @"t" lr
                           ?? iaAssoc `at` (Inst @"xs" (leavesOf ll), Inst @"ys" (leavesOf lr), Inst @"zs" (leavesOf r))
                           -- IH at (ll, Bin lr r): head = min (head (leavesOf ll), head (leavesOf (Bin lr r)))
                           ?? ih `at` (Inst @"l" ll, Inst @"r" (sBin lr r))
