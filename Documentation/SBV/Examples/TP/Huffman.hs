@@ -4759,11 +4759,11 @@ light2CountWSProof = do
                                                        ?? cwsBin `at` (Inst @"w" (light2W l), Inst @"s" (light2S l), Inst @"l" l, Inst @"r" r)
                                                        =: countWS (light2W l) (light2S l) l + countWS (light2W l) (light2S l) r .>= (1 :: SInteger)
                                                        ?? nlBin  `at` Inst @"t" l
+                                                       ?? tsPos  `at` Inst @"t" l
+                                                       ?? tsPos  `at` Inst @"t" r
                                                        ?? ih     `at` Inst @"t" l
                                                        ?? cwsNN  `at` (Inst @"w" (light2W l), Inst @"s" (light2S l), Inst @"t" r)
                                                        ?? sorry
-                                                       =: sTrue
-                                                       =: qed
                                                        =: sTrue
                                                        =: qed
                                                  -- light2W t = lightW r, light2S t = lightS r
@@ -4793,9 +4793,11 @@ light2CountWSProof = do
                                                         ?? cwsBin `at` (Inst @"w" (light2W r), Inst @"s" (light2S r), Inst @"l" l, Inst @"r" r)
                                                         =: countWS (light2W r) (light2S r) l + countWS (light2W r) (light2S r) r .>= (1 :: SInteger)
                                                         ?? nlBin  `at` Inst @"t" r
+                                                        ?? tsPos  `at` Inst @"t" l
+                                                        ?? tsPos  `at` Inst @"t" r
                                                         ?? ih     `at` Inst @"t" r
+                                                        ?? countWS (light2W r) (light2S r) r .>= (1 :: SInteger)
                                                         ?? cwsNN  `at` (Inst @"w" (light2W r), Inst @"s" (light2S r), Inst @"t" l)
-                                                        ?? sorry
                                                         =: sTrue
                                                         =: qed
             |]
