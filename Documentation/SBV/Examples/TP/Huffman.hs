@@ -5183,7 +5183,7 @@ optimalityProof = do
               ]
 
    -- light2 count is exactly 1 in optSwap1 t (>= 1 transferred through swap, <= 1 from osDistinct)
-   _osL2Count <- calc "optSwap1Light2Count"
+   osL2Count <- calc "optSwap1Light2Count"
        (\(Forall @"t" t) ->
            let t' = relabelFrom 0 t
            in numLeaves t .>= 2 .=> countWS (light2W t') (light2S t') (optSwap1 t) .== 1) $
@@ -5227,28 +5227,65 @@ optimalityProof = do
                    =: qed
               ]
 
+   -- sib count is exactly 1 in optSwap1 t (osDistinct <= 1, sibCountWS >= 1)
+   osSibCount <- lemma "optSwap1SibCount"
+       (\(Forall @"t" t) ->
+           countWS (sibW (optSwap1 t)) (sibS (optSwap1 t)) (optSwap1 t) .== 1)
+       [proofOf osDistinct, proofOf _sCWS]
+
    -- leavesOf(optSwap t) == leavesOf(optSwap1 t): second swap preserves leavesOf
-   -- TODO: solver struggles with nested function applications; needs different approach
-   osLeaves2 <- calc "optSwapLeavesOf2"
-       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> leavesOf (optSwap t) .== leavesOf (optSwap1 t)) $
-       \t -> [numLeaves t .>= 2]
-         |- leavesOf (optSwap t) .== leavesOf (optSwap1 t)
-         ?? sorry
-         =: sTrue
-         =: qed
+   osLeaves2 <- lemma "optSwapLeavesOf2"
+       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> leavesOf (optSwap t) .== leavesOf (optSwap1 t))
+       [proofOf loSwapGen, proofOf osL2Count, proofOf osSibCount]
 
    -- leavesOf(optSwap t) == leavesOf t: chain the two steps
    osLeaves <- lemma "optSwapLeavesOf"
        (\(Forall @"t" t) -> numLeaves t .>= 2 .=> leavesOf (optSwap t) .== leavesOf t)
        [proofOf osLeaves2, proofOf osLeaves1]
 
-   -- optSwap property: cost bound
+   -- light2W is at most sibW after the first swap. This holds because:
+   -- sibW(optSwap1 t) is either sibW(t') (unchanged) or deepW(t') (if sib was the light leaf).
+   -- In both cases, it's a non-minimum leaf weight, hence >= light2W.
+   osLight2LeqSib <- calc "optSwap1Light2LeqSib"
+       (\(Forall @"t" t) ->
+           numLeaves t .>= 2 .=> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)) $
+       \t -> [numLeaves t .>= 2]
+         |- light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
+         ?? sorry
+         =: sTrue
+         =: qed
+
+   -- optSwap property: cost bound via greedyChoice
+   -- greedyChoice preconditions:
+   --   1. lightW t' <= deepW t'  (min <= any)
+   --   2. countWS(lightW t')(lightS t') t' == 1  (rlDist + lCWS)
+   --   3. countWS(deepW t')(deepS t') t' == 1  (rlDist + dCWS)
+   --   4. light2W t' <= sibW(optSwap1 t)  (second min <= sib after swap)
+   --   5. countWS(light2W t')(light2S t') (optSwap1 t) == 1  (osL2Count)
+   --   6. countWS(sibW(optSwap1 t))(sibS(optSwap1 t)) (optSwap1 t) == 1  (osSibCount)
    osCost <- calc "optSwapCost"
        (\(Forall @"t" t) -> numLeaves t .>= 2 .=> cost (optSwap t) .<= cost t) $
-       \t -> [numLeaves t .>= 2]
+       \t ->
+         let t' = relabelFrom 0 t
+             lw = lightW t'; ls = lightS t'
+             dw = deepW t';  ds = deepS t'
+             l2w = light2W t'; l2s = light2S t'
+         in [numLeaves t .>= 2]
          |- cost (optSwap t) .<= cost t
+         -- relabelCost: cost(relabelFrom 0 t) = cost t
          ?? rlCost `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-         ?? sorry
+         -- greedyChoice instantiated
+         ?? _gc `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" l2w, Inst @"sb" l2s, Inst @"t" t')
+         -- preconditions 2,3: countWS == 1 from rlDist + count >= 1
+         ?? _rlDist `at` (Inst @"w" lw, Inst @"s" ls, Inst @"n" (0 :: SInteger), Inst @"t" t)
+         ?? _rlDist `at` (Inst @"w" dw, Inst @"s" ds, Inst @"n" (0 :: SInteger), Inst @"t" t)
+         ?? _lCWS `at` Inst @"t" t'
+         ?? _dCWS `at` Inst @"t" t'
+         -- preconditions 5,6: from osL2Count and osSibCount
+         ?? osL2Count `at` Inst @"t" t
+         ?? osSibCount `at` Inst @"t" t
+         -- precondition 4: light2W <= sibW(optSwap1 t)
+         ?? osLight2LeqSib `at` Inst @"t" t
          =: sTrue
          =: qed
 
