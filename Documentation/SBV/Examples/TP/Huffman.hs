@@ -5044,6 +5044,15 @@ lightWIsHeadProof = do
 -- @(weight, symbol)@ pairs. This enables the swap argument (via 'greedyChoice' and
 -- 'leavesOfSwap') without any precondition on the original tree.
 
+-- | Optimal swap: relabel the tree to get distinct leaves, then swap the two lightest
+-- leaves to the deepest and sibling-of-deepest positions. The resulting tree has
+-- the same @leavesOf@, cost @<=@ the original, and the lightest pair at the deepest level.
+optSwap :: SHTree -> SHTree
+optSwap = smtFunction "optSwap"
+        $ \t -> let t' = relabelFrom 0 t
+                    t1 = swap (lightW t') (lightS t') (deepW t') (deepS t') t'
+                in swap (light2W t') (light2S t') (sibW t1) (sibS t1) t1
+
 -- | Huffman optimality: for any tree @t@ with at least two leaves,
 -- the Huffman tree built from @leavesOf t@ has cost at most @cost t@.
 --
@@ -5060,28 +5069,48 @@ lightWIsHeadProof = do
 -- >>> runTPWith (tpRibbon 50 cvc5) optimalityProof
 optimalityProof :: TP (Proof (Forall "t" HTree -> SBool))
 optimalityProof = do
-   tsPos   <- recall treeSizePosProof
-   costDec <- recall costDecompProof
-   collTS  <- recall collapseReducesTreeSizeProof
-   collNL  <- recall collapseNumLeavesProof
-   hNN     <- recall heightNonNegProof
+   tsPos    <- recall treeSizePosProof
+   costDec  <- recall costDecompProof
+   collTS   <- recall collapseReducesTreeSizeProof
+   collNL   <- recall collapseNumLeavesProof
+   hNN      <- recall heightNonNegProof
+   rlCost   <- recall relabelCostProof
+   rlLeaves <- recall relabelLeavesOfProof
+   _gc      <- recall greedyChoiceProof
+   _loSwap  <- recall leavesOfSwapProof
+
+   -- optSwap property: leavesOf preserved
+   osLeaves <- calc "optSwapLeavesOf"
+       (\(Forall @"t" t) -> leavesOf (optSwap t) .== leavesOf t) $
+       \t -> []
+         |- leavesOf (optSwap t)
+         ?? rlLeaves `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
+         ?? sorry -- leavesOfSwap applications + preconditions
+         =: leavesOf t
+         =: qed
+
+   -- optSwap property: cost bound
+   osCost <- calc "optSwapCost"
+       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> cost (optSwap t) .<= cost t) $
+       \t -> [numLeaves t .>= 2]
+         |- cost (optSwap t) .<= cost t
+         ?? rlCost `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
+         ?? sorry -- greedyChoice + preconditions
+         =: sTrue
+         =: qed
 
    nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
 
-   -- The key step: for the relabeled tree, the swap chain gives
-   -- cost (BH (leavesOf t)) <= cost (BH (leavesOf (collapse t))) + deepW t + sibW t
-   -- This follows from greedyChoice + BH/collapse alignment on the relabeled swapped tree.
-   -- The sorry here encapsulates the entire swap chain (the mathematical heart of the proof).
-   splitStep <- calc "splitStep"
-       (\(Forall @"t" t) ->
-           treeSize t .>= 3 .=>
-               cost (buildHuffman (leavesOf t))
-                 .<= cost (buildHuffman (leavesOf (collapse t))) + deepW t + sibW t) $
-       \t -> [treeSize t .>= 3]
-         |- cost (buildHuffman (leavesOf t)) .<= cost (buildHuffman (leavesOf (collapse t))) + deepW t + sibW t
-         ?? sorry
-         =: sTrue
-         =: qed
+   -- The key step: prove cost(BH(leavesOf t)) <= cost t directly using the
+   -- relabel + swap + BH-unfolding + IH chain. No separate splitStep needed.
+   -- For a tree t with treeSize >= 3:
+   --   1. Relabel: t' = relabelFrom 0 t (same cost, same leavesOf, distinct leaves)
+   --   2. Double swap via greedyChoice: t'' with cost <= cost(t), leavesOf preserved
+   --   3. In t'', deepW = lightW(t), sibW = light2W(t) (lightest at deepest)
+   --   4. BH unfolding: cost(BH(leavesOf t)) = lightW+light2W + cost(BH(leavesOf(collapse t'')))
+   --   5. IH on collapse(t''): cost(BH(leavesOf(collapse t''))) <= cost(collapse(t''))
+   --   6. costDecomp: cost(t'') = cost(collapse(t'')) + lightW + light2W
+   --   7. Chain: cost(BH(leavesOf t)) <= cost(t'') <= cost(t)
 
    -- Base case: for two tips, buildHuffman cost equals tree cost.
    -- Broken into small steps so the solver can follow the unfolding chain.
@@ -5146,37 +5175,37 @@ optimalityProof = do
 
                                        -- l is Tip, r is Bin: numLeaves >= 3
                                        Bin{} -> cost (buildHuffman (leavesOf t)) .<= cost t
-                                             ?? splitStep `at` Inst @"t" t
-                                             ?? costDec `at` Inst @"t" t
-                                             ?? collTS  `at` Inst @"t" t
-                                             ?? collNL  `at` Inst @"t" t
-                                             ?? hNN     `at` Inst @"t" l
-                                             ?? hNN     `at` Inst @"t" r
+                                             -- leavesOf(optSwap t) = leavesOf t, cost(optSwap t) <= cost t
+                                             ?? osLeaves `at` Inst @"t" t
+                                             ?? osCost   `at` Inst @"t" t
+                                             -- IH on collapse(optSwap t)
+                                             ?? costDec `at` Inst @"t" (optSwap t)
+                                             ?? collTS  `at` Inst @"t" (optSwap t)
+                                             ?? collNL  `at` Inst @"t" (optSwap t)
                                              ?? tsPos   `at` Inst @"t" l
                                              ?? tsPos   `at` Inst @"t" r
-                                             ?? tsPos   `at` Inst @"t" (sleft r)
-                                             ?? tsPos   `at` Inst @"t" (sright r)
-                                             ?? nlPos   `at` Inst @"t" (sleft r)
-                                             ?? nlPos   `at` Inst @"t" (sright r)
-                                             ?? ih `at` Inst @"t" (collapse t)
+                                             ?? hNN     `at` Inst @"t" l
+                                             ?? hNN     `at` Inst @"t" r
+                                             ?? ih `at` Inst @"t" (collapse (optSwap t))
+                                             ?? sorry -- BH unfolding: cost(BH(leavesOf t)) = deepW(optSwap t) + sibW(optSwap t) + cost(BH(leavesOf(collapse(optSwap t))))
                                              =: sTrue
                                              =: qed
 
                             Bin{} -> cost (buildHuffman (leavesOf t)) .<= cost t
-                                  ?? splitStep `at` Inst @"t" t
-                                  ?? costDec `at` Inst @"t" t
-                                  ?? collTS  `at` Inst @"t" t
-                                  ?? collNL  `at` Inst @"t" t
-                                  ?? hNN     `at` Inst @"t" l
-                                  ?? hNN     `at` Inst @"t" r
+                                  -- leavesOf(optSwap t) = leavesOf t, cost(optSwap t) <= cost t
+                                  ?? osLeaves `at` Inst @"t" t
+                                  ?? osCost   `at` Inst @"t" t
+                                  -- IH on collapse(optSwap t)
+                                  ?? costDec `at` Inst @"t" (optSwap t)
+                                  ?? collTS  `at` Inst @"t" (optSwap t)
+                                  ?? collNL  `at` Inst @"t" (optSwap t)
                                   ?? tsPos   `at` Inst @"t" l
                                   ?? tsPos   `at` Inst @"t" r
-                                  ?? tsPos   `at` Inst @"t" (sleft l)
-                                  ?? tsPos   `at` Inst @"t" (sright l)
-                                  ?? nlPos   `at` Inst @"t" (sleft l)
-                                  ?? nlPos   `at` Inst @"t" (sright l)
+                                  ?? hNN     `at` Inst @"t" l
+                                  ?? hNN     `at` Inst @"t" r
                                   ?? nlPos   `at` Inst @"t" r
-                                  ?? ih `at` Inst @"t" (collapse t)
+                                  ?? ih `at` Inst @"t" (collapse (optSwap t))
+                                  ?? sorry -- BH unfolding
                                   =: sTrue
                                   =: qed
             |]
