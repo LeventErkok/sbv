@@ -5040,6 +5040,58 @@ lightWIsHeadProof = do
              |]
 
 
+-- | light2W = treeWeight of second element of sorted leaf list.
+--
+-- >>> runTPWith cvc5 light2WIsSecondProof
+light2WIsSecondProof :: TP (Proof (Forall "t" HTree -> SBool))
+light2WIsSecondProof = do
+    tsPos  <- recall treeSizePosProof
+    lwHead <- recall lightWIsHeadProof
+    loLen  <- recall leavesOfLengthProof
+    loAT   <- recall leavesOfAllTip0Proof
+    nlPos  <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+
+    sInduct "light2WIsSecond"
+        (\(Forall @"t" t) ->
+            numLeaves t .>= 2 .=> light2W t .== treeWeight (head (tail (leavesOf t))))
+        (treeSize, [proofOf tsPos]) $
+        \ih t -> [numLeaves t .>= 2]
+          |- light2W t
+          =: [pCase| t of
+                Tip{} -> trivial
+                Bin l r -> light2W t
+                        ?? ih     `at` Inst @"t" l
+                        ?? ih     `at` Inst @"t" r
+                        ?? lwHead `at` Inst @"t" l
+                        ?? lwHead `at` Inst @"t" r
+                        ?? tsPos  `at` Inst @"t" l
+                        ?? tsPos  `at` Inst @"t" r
+                        ?? loLen  `at` Inst @"t" l
+                        ?? loLen  `at` Inst @"t" r
+                        ?? nlPos  `at` Inst @"t" l
+                        ?? nlPos  `at` Inst @"t" r
+                        ?? loAT   `at` Inst @"t" l
+                        ?? loAT   `at` Inst @"t" r
+                        =: case l of
+                             Tip{} -> case r of
+                                        Tip{} -> light2W t
+                                              =: treeWeight (head (tail (leavesOf t)))
+                                              =: qed
+                                        Bin{} -> light2W t
+                                              ?? sorry
+                                              =: treeWeight (head (tail (leavesOf t)))
+                                              =: qed
+                             Bin{} -> case r of
+                                        Tip{} -> light2W t
+                                              ?? sorry
+                                              =: treeWeight (head (tail (leavesOf t)))
+                                              =: qed
+                                        Bin{} -> light2W t
+                                              ?? sorry
+                                              =: treeWeight (head (tail (leavesOf t)))
+                                              =: qed
+             |]
+
 -- ** Optimality theorem (Isabelle-style proof)
 --
 -- Following Blanchette's Isabelle/HOL formalization, the proof uses:
@@ -5112,48 +5164,7 @@ optimalityProof = do
    lwIsHead <- recall lightWIsHeadProof
    loLen    <- recall leavesOfLengthProof
    loAT     <- recall leavesOfAllTip0Proof
-
-   -- light2W = treeWeight of second element of sorted leaf list
-   l2wIsSecond <- sInduct "light2WIsSecond"
-       (\(Forall @"t" t) ->
-           numLeaves t .>= 2 .=> light2W t .== treeWeight (head (tail (leavesOf t))))
-       (treeSize, [proofOf tsPos]) $
-       \ih t -> [numLeaves t .>= 2]
-         |- light2W t
-         =: [pCase| t of
-               Tip{} -> trivial
-               Bin l r -> light2W t
-                       ?? ih    `at` Inst @"t" l
-                       ?? ih    `at` Inst @"t" r
-                       ?? lwIsHead `at` Inst @"t" l
-                       ?? lwIsHead `at` Inst @"t" r
-                       ?? tsPos `at` Inst @"t" l
-                       ?? tsPos `at` Inst @"t" r
-                       ?? loLen `at` Inst @"t" l
-                       ?? loLen `at` Inst @"t" r
-                       ?? nlPos `at` Inst @"t" l
-                       ?? nlPos `at` Inst @"t" r
-                       ?? loAT  `at` Inst @"t" l
-                       ?? loAT  `at` Inst @"t" r
-                       =: case l of
-                            Tip{} -> case r of
-                                       Tip{} -> light2W t
-                                             =: treeWeight (head (tail (leavesOf t)))
-                                             =: qed
-                                       Bin{} -> light2W t
-                                             ?? sorry
-                                             =: treeWeight (head (tail (leavesOf t)))
-                                             =: qed
-                            Bin{} -> case r of
-                                       Tip{} -> light2W t
-                                             ?? sorry
-                                             =: treeWeight (head (tail (leavesOf t)))
-                                             =: qed
-                                       Bin{} -> light2W t
-                                             ?? sorry
-                                             =: treeWeight (head (tail (leavesOf t)))
-                                             =: qed
-            |]
+   l2wIsSecond <- recall light2WIsSecondProof
 
    -- Properties of optMerge (each proved as a separate lemma for the solver)
 
