@@ -5247,42 +5247,65 @@ optimalityProof = do
    lwLeq2 <- recall lightWLeqLight2WProof
    _lwLeqD <- recall lightWLeqDeepWProof
 
-   -- light2W(t') <= sibW(optSwap1 t): after swapping lightW to deep,
-   -- sibW is either unchanged (>= light2W since it's a non-min leaf weight)
-   -- or becomes deepW (which is >= light2W after the swap makes deep=lightW).
-   -- Note: light2W <= deepW and light2W <= sibW are NOT true in general!
-   -- (counterexample: Bin(Tip 1, Tip 2) has light2W=2, deepW=1)
-   -- But light2W <= sibW(optSwap1 t) IS true because the swap adjusts things.
-   osLight2LeqSib <- sInduct "optSwap1Light2LeqSib"
+   -- Key helper: sibW > lightW implies light2W <= sibW (second min property)
+   _wGtMinGeL2_sib <- sInduct "wGtMinGeL2_sib"
        (\(Forall @"t" t) ->
-           numLeaves t .>= 2 .=> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t))
+           numLeaves t .>= 2 .=> sibW t .> lightW t .=> light2W t .<= sibW t)
        (treeSize, [proofOf tsPos]) $
-       \ih t -> [numLeaves t .>= 2]
-         |- light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
+       \ih t -> [numLeaves t .>= 2, sibW t .> lightW t]
+         |- light2W t .<= sibW t
          =: [pCase| t of
                Tip{} -> trivial
-               Bin l r -> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
-                       ?? lwLeq2 `at` Inst @"t" (relabelFrom 0 t)
-                       ?? _lwLeqD `at` Inst @"t" (relabelFrom 0 t)
-                       ?? _sCWS `at` Inst @"t" (relabelFrom 0 t)
-                       ?? tsPos `at` Inst @"t" l
-                       ?? tsPos `at` Inst @"t" r
-                       =: case l of
-                            Tip{} -> case r of
-                                       Tip{} -> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
-                                             =: sTrue
-                                             =: qed
-                                       Bin{} -> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
-                                             ?? ih `at` Inst @"t" r
-                                             ?? sorry
-                                             =: sTrue
-                                             =: qed
-                            Bin{} -> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
-                                  ?? ih `at` Inst @"t" l
-                                  ?? sorry
-                                  =: sTrue
-                                  =: qed
+               Bin l r -> light2W t .<= sibW t
+                       ?? ih `at` Inst @"t" l
+                       ?? ih `at` Inst @"t" r
+                       ?? lwLeq2 `at` Inst @"t" l
+                       ?? lwLeq2 `at` Inst @"t" r
+                       ?? tsPos  `at` Inst @"t" l
+                       ?? tsPos  `at` Inst @"t" r
+                       ?? sorry
+                       =: sTrue
+                       =: qed
             |]
+
+   -- Key helper: deepW > lightW implies light2W <= deepW
+   _wGtMinGeL2_deep <- sInduct "wGtMinGeL2_deep"
+       (\(Forall @"t" t) ->
+           numLeaves t .>= 2 .=> deepW t .> lightW t .=> light2W t .<= deepW t)
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> [numLeaves t .>= 2, deepW t .> lightW t]
+         |- light2W t .<= deepW t
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> light2W t .<= deepW t
+                       ?? ih `at` Inst @"t" l
+                       ?? ih `at` Inst @"t" r
+                       ?? lwLeq2 `at` Inst @"t" l
+                       ?? lwLeq2 `at` Inst @"t" r
+                       ?? tsPos  `at` Inst @"t" l
+                       ?? tsPos  `at` Inst @"t" r
+                       ?? sorry
+                       =: sTrue
+                       =: qed
+            |]
+
+   -- light2W(t') <= sibW(optSwap1 t): the swap adjusts sibW so it's >= light2W.
+   -- After swap(light→deep): sibW is either unchanged (non-light, hence >= light2W by wGtMinGeL2_sib)
+   -- or becomes deepW (was light leaf, hence deepW >= light2W by wGtMinGeL2_deep).
+   -- The lemma approach combines the helpers, but the solver still struggles with optSwap1 nesting.
+   osLight2LeqSib <- calc "optSwap1Light2LeqSib"
+       (\(Forall @"t" t) ->
+           numLeaves t .>= 2 .=> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)) $
+       \t -> [numLeaves t .>= 2]
+         |- light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
+         ?? _wGtMinGeL2_sib `at` Inst @"t" (relabelFrom 0 t)
+         ?? _wGtMinGeL2_deep `at` Inst @"t" (relabelFrom 0 t)
+         ?? lwLeq2 `at` Inst @"t" (relabelFrom 0 t)
+         ?? _lwLeqD `at` Inst @"t" (relabelFrom 0 t)
+         ?? rlNL `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
+         ?? sorry
+         =: sTrue
+         =: qed
 
    -- optSwap property: cost bound via greedyChoice
    -- greedyChoice preconditions:
