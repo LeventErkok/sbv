@@ -5039,313 +5039,46 @@ lightWIsHeadProof = do
                         =: qed
              |]
 
--- The proof uses the relabeling infrastructure: for any tree @t@, we consider
--- @relabelFrom 0 t@ which has the same cost, the same @leavesOf@, but all-distinct
--- @(weight, symbol)@ pairs. This enables the swap argument (via 'greedyChoice' and
--- 'leavesOfSwap') without any precondition on the original tree.
 
--- | Optimal swap: relabel the tree to get distinct leaves, then swap the two lightest
--- leaves to the deepest and sibling-of-deepest positions. The resulting tree has
--- the same @leavesOf@, cost @<=@ the original, and the lightest pair at the deepest level.
+-- ** Optimality theorem (Isabelle-style proof)
 --
--- Split into two stages to keep expressions manageable for the solver:
+-- Following Blanchette's Isabelle/HOL formalization, the proof uses:
+--
+-- 1. @splitLeaf@: split a leaf node into two children
+-- 2. @mergeSibling@: merge a symbol with its sibling leaf
+-- 3. Cost properties of these operations
+-- 4. Main theorem by induction on number of leaves
+--
+-- The key advantage over the optSwap approach: the swap is applied to the
+-- COMPARISON tree (not our specific tree), so we only need freq(min) <= freq(any)
+-- and depth(any) <= height — no light2W <= sibW needed.
 
--- | Stage 1: relabel then swap the lightest leaf to the deepest position.
-optSwap1 :: SHTree -> SHTree
-optSwap1 = smtFunction "optSwap1"
-         $ \t -> let t' = relabelFrom 0 t
-                 in swap (lightW t') (lightS t') (deepW t') (deepS t') t'
-
--- | Stage 2: swap the second-lightest leaf to the sibling-of-deepest position.
-optSwap :: SHTree -> SHTree
-optSwap = smtFunction "optSwap"
-        $ \t -> let t' = relabelFrom 0 t
-                    t1 = optSwap1 t
-                in swap (light2W t') (light2S t') (sibW t1) (sibS t1) t1
+-- TODO: Isabelle-style optimality proof to be implemented.
+-- Key lemmas needed:
+--   1. cost(splitLeaf t wa a wb b) = cost t + wa + wb
+--   2. cost(mergeSibling t a) + freq a + freq(sibling a) = cost t
+--   3. swapFourSyms cost bound (from existing swap infrastructure)
+--   4. optimum_splitLeaf: splitting preserves optimality
+--   5. splitLeaf commutes with buildHuffman
+--   6. Main theorem by induction on forest length
 
 -- | Huffman optimality: for any tree @t@ with at least two leaves,
 -- the Huffman tree built from @leavesOf t@ has cost at most @cost t@.
 --
 -- @numLeaves t >= 2 => cost (buildHuffman (leavesOf t)) <= cost t@
 --
--- The proof proceeds by strong induction on @treeSize t@:
---
--- * Base case (@Bin (Tip w1 s1) (Tip w2 s2)@): both sides equal @w1 + w2@.
---
--- * Inductive step (@numLeaves t >= 3@): we relabel @t@ to get distinct leaves,
---   apply the greedy swap to place the two lightest at the deepest position,
---   then use 'costDecomp' and the IH on the collapsed tree.
---
 -- >>> runTPWith (tpRibbon 50 cvc5) optimalityProof
 optimalityProof :: TP (Proof (Forall "t" HTree -> SBool))
 optimalityProof = do
-   tsPos    <- recall treeSizePosProof
-   costDec  <- recall costDecompProof
-   collTS   <- recall collapseReducesTreeSizeProof
-   collNL   <- recall collapseNumLeavesProof
-   hNN      <- recall heightNonNegProof
-   rlCost   <- recall relabelCostProof
-   rlLeaves <- recall relabelLeavesOfProof
-   _rlDist  <- recall relabelDistinctProof
-   rlNL     <- recall relabelNumLeavesProof
-   _gc      <- recall greedyChoiceProof
-   _loSwap  <- recall leavesOfSwapProof
+   tsPos   <- recall treeSizePosProof
+   _costDec <- recall costDecompProof
+   _collTS  <- recall collapseReducesTreeSizeProof
+   _collNL  <- recall collapseNumLeavesProof
+   _hNN     <- recall heightNonNegProof
 
-   -- swap with identical pairs is identity
-   swapSelf <- sInduct "swapSelf"
-       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) -> swap w s w s t .== t)
-       (\_ _ t -> treeSize t, [proofOf tsPos]) $
-       \ih w s t -> []
-         |- swap w s w s t
-         =: [pCase| t of
-               Tip{} -> trivial
-               Bin l r -> swap w s w s t
-                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
-                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
-                       ?? tsPos `at` Inst @"t" l
-                       ?? tsPos `at` Inst @"t" r
-                       =: t
-                       =: qed
-            |]
-
-   -- Generalized leavesOfSwap: no distinctness condition needed
-   loSwapGen <- lemma "leavesOfSwapGen"
-       (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
-           countWS wa sa t .== 1 .&& countWS wb sb t .== 1
-           .=> leavesOf (swap wa sa wb sb t) .== leavesOf t)
-       [proofOf _loSwap, proofOf swapSelf]
-   _lCWS    <- recall lightCountWSProof
-   _l2CWS   <- recall light2CountWSProof
-   _dCWS    <- recall deepCountWSProof
-   _sCWS    <- recall sibCountWSProof
-   _swpCWS  <- recall swapPreservesCountWSProof
-   _swpXCWS <- recall swapExchangesCountWSProof
-   _swpSym  <- recall swapSymmetricProof
-
-   -- optSwap1 property: leavesOf preserved through relabel + first swap
-   osLeaves1 <- calc "optSwap1LeavesOf"
-       (\(Forall @"t" t) -> leavesOf (optSwap1 t) .== leavesOf t) $
-       \t ->
-         let t' = relabelFrom 0 t
-             lw = lightW t'; ls = lightS t'
-             dw = deepW t';  ds = deepS t'
-         in []
-         |- leavesOf (optSwap1 t)
-         ?? rlLeaves `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-         ?? _rlDist `at` (Inst @"w" lw, Inst @"s" ls, Inst @"n" (0 :: SInteger), Inst @"t" t)
-         ?? _rlDist `at` (Inst @"w" dw, Inst @"s" ds, Inst @"n" (0 :: SInteger), Inst @"t" t)
-         ?? _lCWS `at` Inst @"t" t'
-         ?? _dCWS `at` Inst @"t" t'
-         ?? loSwapGen `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
-         =: leavesOf t
-         =: qed
-
-   -- After optSwap1, all (w,s) pairs still have count <= 1.
-   -- Proof: swap permutes counts. For the swapped-in pair, count = old count of swapped-out.
-   -- For other pairs, count is unchanged. All original counts <= 1 by relabelDistinct.
-   osDistinct <- calc "optSwap1Distinct"
-       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
-           countWS w s (optSwap1 t) .<= 1) $
-       \w s t ->
-         let t' = relabelFrom 0 t
-             lw = lightW t'; ls = lightS t'
-             dw = deepW t';  ds = deepS t'
-         in []
-         |- countWS w s (optSwap1 t) .<= (1 :: SInteger)
-         =: cases
-              -- Case 1: (w,s) matches the deep pair (swapped-in position)
-              [ w .== dw .&& s .== ds
-                  ==> countWS w s (optSwap1 t) .<= (1 :: SInteger)
-                   -- swapExchanges: countWS(deep, swap(light, deep, t')) = countWS(light, t')
-                   ?? _swpXCWS `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
-                   -- relabelDistinct: countWS(light, t') <= 1
-                   ?? _rlDist `at` (Inst @"w" lw, Inst @"s" ls, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                   =: sTrue
-                   =: qed
-              -- Case 2: (w,s) matches the light pair (swapped-out position)
-              , w .== lw .&& s .== ls
-                  ==> countWS w s (optSwap1 t) .<= (1 :: SInteger)
-                   -- swap(lw,ls,dw,ds,t') = swap(dw,ds,lw,ls,t') by swapSymmetric
-                   -- then swapExchanges: countWS(lw,ls, swap(dw,ds,lw,ls,t')) = countWS(dw,ds,t')
-                   ?? _swpSym `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
-                   ?? _swpXCWS `at` (Inst @"wa" dw, Inst @"sa" ds, Inst @"wb" lw, Inst @"sb" ls, Inst @"t" t')
-                   ?? _rlDist `at` (Inst @"w" dw, Inst @"s" ds, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                   =: sTrue
-                   =: qed
-              -- Case 3: (w,s) is neither — count preserved
-              , sNot (w .== dw .&& s .== ds) .&& sNot (w .== lw .&& s .== ls)
-                  ==> countWS w s (optSwap1 t) .<= (1 :: SInteger)
-                   ?? _swpCWS `at` (Inst @"a" (tuple (lw, ls)), Inst @"b" (tuple (dw, ds)),
-                                    Inst @"c" (tuple (w, s)), Inst @"t" t')
-                   ?? _rlDist `at` (Inst @"w" w, Inst @"s" s, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                   =: sTrue
-                   =: qed
-              ]
-
-   -- light2 count is exactly 1 in optSwap1 t (>= 1 transferred through swap, <= 1 from osDistinct)
-   osL2Count <- calc "optSwap1Light2Count"
-       (\(Forall @"t" t) ->
-           let t' = relabelFrom 0 t
-           in numLeaves t .>= 2 .=> countWS (light2W t') (light2S t') (optSwap1 t) .== 1) $
-       \t ->
-         let t'  = relabelFrom 0 t
-             lw  = lightW t';  ls  = lightS t'
-             dw  = deepW t';   ds  = deepS t'
-             l2w = light2W t'; l2s = light2S t'
-         in [numLeaves t .>= 2]
-         |- countWS l2w l2s (optSwap1 t) .== (1 :: SInteger)
-         -- <= 1 from osDistinct
-         ?? osDistinct `at` (Inst @"w" l2w, Inst @"s" l2s, Inst @"t" t)
-         -- >= 1 by transferring through the swap, using cases on whether light2 matches light or deep
-         =: cases
-              -- Case 1: light2 == deep pair → count = countWS(light, t') via swapExchanges
-              [ l2w .== dw .&& l2s .== ds
-                  ==> countWS l2w l2s (optSwap1 t) .== (1 :: SInteger)
-                   ?? _swpXCWS `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
-                   ?? _rlDist `at` (Inst @"w" lw, Inst @"s" ls, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                   ?? _lCWS `at` Inst @"t" t'
-                   =: sTrue
-                   =: qed
-              -- Case 2: light2 == light pair → count = countWS(deep, t') via swap symmetric + exchanges
-              , l2w .== lw .&& l2s .== ls
-                  ==> countWS l2w l2s (optSwap1 t) .== (1 :: SInteger)
-                   ?? _swpSym `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
-                   ?? _swpXCWS `at` (Inst @"wa" dw, Inst @"sa" ds, Inst @"wb" lw, Inst @"sb" ls, Inst @"t" t')
-                   ?? _rlDist `at` (Inst @"w" dw, Inst @"s" ds, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                   ?? _dCWS `at` Inst @"t" t'
-                   =: sTrue
-                   =: qed
-              -- Case 3: light2 is neither → count preserved by swapPreservesCountWS
-              , sNot (l2w .== dw .&& l2s .== ds) .&& sNot (l2w .== lw .&& l2s .== ls)
-                  ==> countWS l2w l2s (optSwap1 t) .== (1 :: SInteger)
-                   ?? _swpCWS `at` (Inst @"a" (tuple (lw, ls)), Inst @"b" (tuple (dw, ds)),
-                                    Inst @"c" (tuple (l2w, l2s)), Inst @"t" t')
-                   ?? _rlDist `at` (Inst @"w" l2w, Inst @"s" l2s, Inst @"n" (0 :: SInteger), Inst @"t" t)
-                   ?? rlNL `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-                   ?? _l2CWS `at` Inst @"t" t'
-                   =: sTrue
-                   =: qed
-              ]
-
-   -- sib count is exactly 1 in optSwap1 t (osDistinct <= 1, sibCountWS >= 1)
-   osSibCount <- lemma "optSwap1SibCount"
-       (\(Forall @"t" t) ->
-           countWS (sibW (optSwap1 t)) (sibS (optSwap1 t)) (optSwap1 t) .== 1)
-       [proofOf osDistinct, proofOf _sCWS]
-
-   -- leavesOf(optSwap t) == leavesOf(optSwap1 t): second swap preserves leavesOf
-   osLeaves2 <- lemma "optSwapLeavesOf2"
-       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> leavesOf (optSwap t) .== leavesOf (optSwap1 t))
-       [proofOf loSwapGen, proofOf osL2Count, proofOf osSibCount]
-
-   -- leavesOf(optSwap t) == leavesOf t: chain the two steps
-   osLeaves <- lemma "optSwapLeavesOf"
-       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> leavesOf (optSwap t) .== leavesOf t)
-       [proofOf osLeaves2, proofOf osLeaves1]
-
-   -- light2W <= deepW and light2W <= sibW (second minimum <= any other leaf weight)
-   lwLeq2 <- recall lightWLeqLight2WProof
-   _lwLeqD <- recall lightWLeqDeepWProof
-   _lwLeqS <- inductiveLemma "lightWLeqSibW"
-       (\(Forall @"t" t) -> lightW t .<= sibW t)
-       [proofOf _lwLeqD]
-
-   -- light2W is bounded by the max of the children's lightW values
-   _l2wLeqMax <- inductiveLemma "light2WLeqMaxLightW"
-       (\(Forall @"l" l) (Forall @"r" r) ->
-           light2W (sBin l r) .<= ite (lightW l .<= lightW r) (lightW r) (lightW l))
-       [proofOf lwLeq2]
-
-   -- Any weight present in the tree is >= lightW (the minimum)
-   lwLeqMember <- calc "lightWLeqMember"
-       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
-           countWS w s t .>= 1 .=> lightW t .<= w) $
-       \w s t -> [countWS w s t .>= 1]
-         |- lightW t .<= w
-         ?? sorry
-         =: sTrue
-         =: qed
-
-   -- Core second-minimum property: any leaf weight > lightW is >= light2W.
-   -- The key insight: abstract away from sibW/deepW and reason about countWS membership.
-   secondMin <- sInduct "secondMinProperty"
-       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
-           numLeaves t .>= 2 .&& countWS w s t .>= 1 .&& w .> lightW t .=> light2W t .<= w)
-       (\_ _ t -> treeSize t, [proofOf tsPos]) $
-       \ih w s t -> [numLeaves t .>= 2, countWS w s t .>= 1, w .> lightW t]
-         |- light2W t .<= w
-         =: [pCase| t of
-               Tip{} -> trivial
-               Bin l r -> light2W t .<= w
-                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
-                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
-                       ?? lwLeqMember `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
-                       ?? lwLeqMember `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
-                       ?? tsPos `at` Inst @"t" l
-                       ?? tsPos `at` Inst @"t" r
-                       =: sTrue
-                       =: qed
-            |]
-
-   -- Derived: sibW > lightW => light2W <= sibW
-   _wGtMinGeL2_sib <- lemma "wGtMinGeL2_sib"
-       (\(Forall @"t" t) ->
-           numLeaves t .>= 2 .=> sibW t .> lightW t .=> light2W t .<= sibW t)
-       [proofOf secondMin, proofOf _sCWS]
-
-   -- Derived: deepW > lightW => light2W <= deepW
-   _wGtMinGeL2_deep <- lemma "wGtMinGeL2_deep"
-       (\(Forall @"t" t) ->
-           numLeaves t .>= 2 .=> deepW t .> lightW t .=> light2W t .<= deepW t)
-       [proofOf secondMin, proofOf _dCWS]
-
-   -- light2W(t') <= sibW(optSwap1 t): the swap adjusts sibW so it's >= light2W.
-   -- After swap(light→deep): sibW is either unchanged (non-light, hence >= light2W by wGtMinGeL2_sib)
-   -- or becomes deepW (was light leaf, hence deepW >= light2W by wGtMinGeL2_deep).
-   -- The lemma approach combines the helpers, but the solver still struggles with optSwap1 nesting.
-   osLight2LeqSib <- calc "optSwap1Light2LeqSib"
-       (\(Forall @"t" t) ->
-           numLeaves t .>= 2 .=> light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)) $
-       \t -> [numLeaves t .>= 2]
-         |- light2W (relabelFrom 0 t) .<= sibW (optSwap1 t)
-         ?? _wGtMinGeL2_sib `at` Inst @"t" (relabelFrom 0 t)
-         ?? _wGtMinGeL2_deep `at` Inst @"t" (relabelFrom 0 t)
-         ?? lwLeq2 `at` Inst @"t" (relabelFrom 0 t)
-         ?? _lwLeqD `at` Inst @"t" (relabelFrom 0 t)
-         ?? rlNL `at` (Inst @"n" (0 :: SInteger), Inst @"t" t)
-         ?? sorry
-         =: sTrue
-         =: qed
-
-   -- optSwap property: cost bound via greedyChoice
-   -- greedyChoice preconditions:
-   --   1. lightW t' <= deepW t'  (min <= any)
-   --   2. countWS(lightW t')(lightS t') t' == 1  (rlDist + lCWS)
-   --   3. countWS(deepW t')(deepS t') t' == 1  (rlDist + dCWS)
-   --   4. light2W t' <= sibW(optSwap1 t)  (second min <= sib after swap)
-   --   5. countWS(light2W t')(light2S t') (optSwap1 t) == 1  (osL2Count)
-   --   6. countWS(sibW(optSwap1 t))(sibS(optSwap1 t)) (optSwap1 t) == 1  (osSibCount)
-   osCost <- lemma "optSwapCost"
-       (\(Forall @"t" t) -> numLeaves t .>= 2 .=> cost (optSwap t) .<= cost t)
-       [proofOf _gc, proofOf rlCost, proofOf rlNL, proofOf _rlDist,
-        proofOf _lwLeqD, proofOf _lCWS, proofOf _dCWS,
-        proofOf osLight2LeqSib, proofOf osL2Count, proofOf osSibCount]
-
-   nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
-
-   -- The key step: prove cost(BH(leavesOf t)) <= cost t directly using the
-   -- relabel + swap + BH-unfolding + IH chain. No separate splitStep needed.
-   -- For a tree t with treeSize >= 3:
-   --   1. Relabel: t' = relabelFrom 0 t (same cost, same leavesOf, distinct leaves)
-   --   2. Double swap via greedyChoice: t'' with cost <= cost(t), leavesOf preserved
-   --   3. In t'', deepW = lightW(t), sibW = light2W(t) (lightest at deepest)
-   --   4. BH unfolding: cost(BH(leavesOf t)) = lightW+light2W + cost(BH(leavesOf(collapse t'')))
-   --   5. IH on collapse(t''): cost(BH(leavesOf(collapse t''))) <= cost(collapse(t''))
-   --   6. costDecomp: cost(t'') = cost(collapse(t'')) + lightW + light2W
-   --   7. Chain: cost(BH(leavesOf t)) <= cost(t'') <= cost(t)
+   _nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
 
    -- Base case: for two tips, buildHuffman cost equals tree cost.
-   -- Broken into small steps so the solver can follow the unfolding chain.
    base <- calc "optBase"
        (\(Forall @"wl" wl) (Forall @"sl" sl) (Forall @"wr" wr) (Forall @"sr" sr) ->
            let t = sBin (sTip wl sl) (sTip wr sr)
@@ -5356,26 +5089,18 @@ optimalityProof = do
                wr0 = sTip wr 0
            in []
              |- cost (buildHuffman (leavesOf t)) .<= cost t
-             -- leavesOf (Bin l r) = insertAll (leavesOf l) (leavesOf r)
-             -- leavesOf (Tip w s) = [sTip w 0]
              =: cost (buildHuffman (insertAll [wl0] [wr0])) .<= cost t
-             -- insertAll [x] ys = sortedInsert x ys
              =: cost (buildHuffman (sortedInsert wl0 [wr0])) .<= cost t
-             -- case split on weight ordering for sortedInsert
              =: cases
                   [ wl .<= wr
                       ==> cost (buildHuffman (sortedInsert wl0 [wr0])) .<= cost t
-                       -- sortedInsert puts wl0 first
                        =: cost (buildHuffman [wl0, wr0]) .<= cost t
-                       -- buildHuffman [a, b] = buildHuffman (sortedInsert (sBin a b) [])
                        =: cost (buildHuffman [sBin wl0 wr0]) .<= cost t
-                       -- buildHuffman [x] = x
                        =: cost (sBin wl0 wr0) .<= cost t
                        =: sTrue
                        =: qed
                   , sNot (wl .<= wr)
                       ==> cost (buildHuffman (sortedInsert wl0 [wr0])) .<= cost t
-                       -- sortedInsert puts wr0 first
                        =: cost (buildHuffman [wr0, wl0]) .<= cost t
                        =: cost (buildHuffman [sBin wr0 wl0]) .<= cost t
                        =: cost (sBin wr0 wl0) .<= cost t
@@ -5387,7 +5112,7 @@ optimalityProof = do
        (\(Forall @"t" t) ->
            numLeaves t .>= 2 .=> cost (buildHuffman (leavesOf t)) .<= cost t)
        (treeSize, [proofOf tsPos]) $
-       \ih t -> [numLeaves t .>= 2]
+       \_ih t -> [numLeaves t .>= 2]
          |- cost (buildHuffman (leavesOf t)) .<= cost t
          =: [pCase| t of
                Tip{}   -> cost (buildHuffman (leavesOf t)) .<= cost t
@@ -5398,45 +5123,18 @@ optimalityProof = do
                Bin l r -> cost (buildHuffman (leavesOf t)) .<= cost t
                        =: case l of
                             Tip{} -> case r of
-                                       -- Base: Bin (Tip wl sl) (Tip wr sr), numLeaves == 2
                                        Tip{} -> cost (buildHuffman (leavesOf t)) .<= cost t
                                              ?? base `at` (Inst @"wl" (sweight l), Inst @"sl" (ssymbol l),
                                                            Inst @"wr" (sweight r), Inst @"sr" (ssymbol r))
                                              =: sTrue
                                              =: qed
 
-                                       -- l is Tip, r is Bin: numLeaves >= 3
                                        Bin{} -> cost (buildHuffman (leavesOf t)) .<= cost t
-                                             -- leavesOf(optSwap t) = leavesOf t, cost(optSwap t) <= cost t
-                                             ?? osLeaves `at` Inst @"t" t
-                                             ?? osCost   `at` Inst @"t" t
-                                             -- IH on collapse(optSwap t)
-                                             ?? costDec `at` Inst @"t" (optSwap t)
-                                             ?? collTS  `at` Inst @"t" (optSwap t)
-                                             ?? collNL  `at` Inst @"t" (optSwap t)
-                                             ?? tsPos   `at` Inst @"t" l
-                                             ?? tsPos   `at` Inst @"t" r
-                                             ?? hNN     `at` Inst @"t" l
-                                             ?? hNN     `at` Inst @"t" r
-                                             ?? ih `at` Inst @"t" (collapse (optSwap t))
                                              ?? sorry
                                              =: sTrue
                                              =: qed
 
                             Bin{} -> cost (buildHuffman (leavesOf t)) .<= cost t
-                                  -- leavesOf(optSwap t) = leavesOf t, cost(optSwap t) <= cost t
-                                  ?? osLeaves `at` Inst @"t" t
-                                  ?? osCost   `at` Inst @"t" t
-                                  -- IH on collapse(optSwap t)
-                                  ?? costDec `at` Inst @"t" (optSwap t)
-                                  ?? collTS  `at` Inst @"t" (optSwap t)
-                                  ?? collNL  `at` Inst @"t" (optSwap t)
-                                  ?? tsPos   `at` Inst @"t" l
-                                  ?? tsPos   `at` Inst @"t" r
-                                  ?? hNN     `at` Inst @"t" l
-                                  ?? hNN     `at` Inst @"t" r
-                                  ?? nlPos   `at` Inst @"t" r
-                                  ?? ih `at` Inst @"t" (collapse (optSwap t))
                                   ?? sorry
                                   =: sTrue
                                   =: qed
