@@ -5251,7 +5251,7 @@ optimalityProof = do
        [proofOf _lwLeqD]
 
    -- light2W is bounded by the max of the children's lightW values
-   l2wLeqMax <- inductiveLemma "light2WLeqMaxLightW"
+   _l2wLeqMax <- inductiveLemma "light2WLeqMaxLightW"
        (\(Forall @"l" l) (Forall @"r" r) ->
            light2W (sBin l r) .<= ite (lightW l .<= lightW r) (lightW r) (lightW l))
        [proofOf lwLeq2]
@@ -5277,13 +5277,12 @@ optimalityProof = do
          =: [pCase| t of
                Tip{} -> trivial
                Bin l r -> light2W t .<= w
-                       ?? l2wLeqMax `at` (Inst @"l" l, Inst @"r" r)
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
                        ?? lwLeqMember `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
                        ?? lwLeqMember `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
                        ?? tsPos `at` Inst @"t" l
                        ?? tsPos `at` Inst @"t" r
-                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
-                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
                        =: sTrue
                        =: qed
             |]
