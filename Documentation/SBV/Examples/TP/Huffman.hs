@@ -5110,21 +5110,70 @@ optimalityProof = do
    nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
 
    lwIsHead <- recall lightWIsHeadProof
+   loLen    <- recall leavesOfLengthProof
+   loAT     <- recall leavesOfAllTip0Proof
 
    -- light2W = treeWeight of second element of sorted leaf list
-   l2wIsSecond <- calc "light2WIsSecond"
+   l2wIsSecond <- sInduct "light2WIsSecond"
        (\(Forall @"t" t) ->
-           numLeaves t .>= 2 .=> light2W t .== treeWeight (head (tail (leavesOf t)))) $
-       \t -> [numLeaves t .>= 2]
+           numLeaves t .>= 2 .=> light2W t .== treeWeight (head (tail (leavesOf t))))
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> [numLeaves t .>= 2]
          |- light2W t
-         ?? sorry
-         =: treeWeight (head (tail (leavesOf t)))
-         =: qed
-
-   loAT   <- recall leavesOfAllTip0Proof
-   loLen  <- recall leavesOfLengthProof
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> light2W t
+                       ?? ih    `at` Inst @"t" l
+                       ?? ih    `at` Inst @"t" r
+                       ?? lwIsHead `at` Inst @"t" l
+                       ?? lwIsHead `at` Inst @"t" r
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       ?? loLen `at` Inst @"t" l
+                       ?? loLen `at` Inst @"t" r
+                       ?? nlPos `at` Inst @"t" l
+                       ?? nlPos `at` Inst @"t" r
+                       ?? loAT  `at` Inst @"t" l
+                       ?? loAT  `at` Inst @"t" r
+                       =: case l of
+                            Tip{} -> case r of
+                                       Tip{} -> light2W t
+                                             =: treeWeight (head (tail (leavesOf t)))
+                                             =: qed
+                                       Bin{} -> light2W t
+                                             ?? sorry
+                                             =: treeWeight (head (tail (leavesOf t)))
+                                             =: qed
+                            Bin{} -> case r of
+                                       Tip{} -> light2W t
+                                             ?? sorry
+                                             =: treeWeight (head (tail (leavesOf t)))
+                                             =: qed
+                                       Bin{} -> light2W t
+                                             ?? sorry
+                                             =: treeWeight (head (tail (leavesOf t)))
+                                             =: qed
+            |]
 
    -- Properties of optMerge (each proved as a separate lemma for the solver)
+
+   -- optMerge has smaller treeSize (needed for IH measure check)
+   _omTS <- calc "optMergeTreeSize"
+       (\(Forall @"t" t) -> numLeaves t .>= 3 .=> treeSize (optMerge t) .< treeSize t) $
+       \t -> [numLeaves t .>= 3]
+         |- treeSize (optMerge t) .< treeSize t
+         ?? sorry
+         =: sTrue
+         =: qed
+
+   -- optMerge has enough leaves for IH
+   _omNL <- calc "optMergeNumLeaves"
+       (\(Forall @"t" t) -> numLeaves t .>= 3 .=> numLeaves (optMerge t) .>= 2) $
+       \t -> [numLeaves t .>= 3]
+         |- numLeaves (optMerge t) .>= (2 :: SInteger)
+         ?? sorry
+         =: sTrue
+         =: qed
 
    -- optMerge cost bound: cost(optMerge t) + lightW + light2W <= cost t
    _omCost <- calc "optMergeCost"
@@ -5294,6 +5343,8 @@ optimalityProof = do
                                              ?? ih `at` Inst @"t" (optMerge t)
                                              ?? _omCost `at` Inst @"t" t
                                              ?? _omLeaves `at` Inst @"t" t
+                                             ?? _omTS `at` Inst @"t" t
+                                             ?? _omNL `at` Inst @"t" t
                                              =: sTrue
                                              =: qed
 
