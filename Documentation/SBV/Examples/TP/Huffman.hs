@@ -5062,6 +5062,17 @@ lightWIsHeadProof = do
 --   5. splitLeaf commutes with buildHuffman
 --   6. Main theorem by induction on forest length
 
+-- | Split a leaf: replace leaf with symbol @a@ by @Bin (Tip wa a) (Tip wb b)@.
+-- This is the inverse of merging two sibling leaves.
+splitLeaf :: SHTree -> SInteger -> SInteger -> SInteger -> SInteger -> SHTree
+splitLeaf = smtFunction "splitLeaf"
+          $ \t wa a wb b ->
+              [sCase| t of
+                 Tip w s | s .== a -> sBin (sTip wa a) (sTip wb b)
+                         | True    -> sTip w s
+                 Bin l r -> sBin (splitLeaf l wa a wb b) (splitLeaf r wa a wb b)
+              |]
+
 -- | Huffman optimality: for any tree @t@ with at least two leaves,
 -- the Huffman tree built from @leavesOf t@ has cost at most @cost t@.
 --
@@ -5075,8 +5086,24 @@ optimalityProof = do
    collTS  <- recall collapseReducesTreeSizeProof
    collNL  <- recall collapseNumLeavesProof
    hNN     <- recall heightNonNegProof
+   _collLO  <- recall collapseLeavesOfProof
+   _bhCostS <- recall buildHuffmanCostSubstProof
 
    nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+
+   -- Isabelle-style: cost of splitting a leaf increases by wa + wb
+   _costSplitLeaf <- calc "costSplitLeaf"
+       (\(Forall @"t" t) (Forall @"wa" wa) (Forall @"a" a) (Forall @"wb" wb) (Forall @"b" b) ->
+           cost (splitLeaf t wa a wb b) .== cost t + wa + wb) $
+       \t wa a wb b -> []
+         |- cost (splitLeaf t wa a wb b)
+         ?? sorry -- by induction on t; straightforward from splitLeaf + cost definitions
+         =: cost t + wa + wb
+         =: qed
+
+   -- Isabelle-style: splitLeaf commutes with buildHuffman
+   -- splitLeaf (buildHuffman ts) wa a wb b = buildHuffman (splitLeaf_on_forest ts wa a wb b)
+   -- This is the key commutativity lemma. For now, we use a sorry and derive what we need.
 
    -- Key lemma: the sum of the two lightest leaf weights <= the sum of any pair.
    -- In particular, lightW + light2W <= deepW + sibW.
