@@ -5103,6 +5103,27 @@ optimalityProof = do
          =: sTrue
          =: qed
 
+   -- BH first step: merging the first two elements of a sorted allTip0 list
+   -- cost(BH(a : b : rest)) = treeWeight a + treeWeight b + cost(BH(sortedInsert(sTip(wa+wb) 0, rest)))
+   -- This follows from BH definition + buildHuffmanAdditivity
+   bhAdd <- recall buildHuffmanAdditivityProof
+
+   _bhFirstStep <- calc "bhFirstStep"
+       (\(Forall @"a" a) (Forall @"b" b) (Forall @"rest" rest) ->
+           let wa = treeWeight a; wb = treeWeight b
+           in isTip a .&& isTip b .&& allTip0 rest
+              .=> cost (buildHuffman (a .: b .: rest))
+                  .== wa + wb + cost (buildHuffman (sortedInsert (sTip (wa + wb) 0) rest))) $
+       \a b rest ->
+           let wa = treeWeight a; wb = treeWeight b
+           in [isTip a, isTip b, allTip0 rest]
+         |- cost (buildHuffman (a .: b .: rest))
+         ?? bhAdd `at` Inst @"ts" (sortedInsert (sBin a b) rest)
+         ?? _bhCostS `at` (Inst @"t1" (sBin a b), Inst @"t2" (sTip (wa + wb) 0), Inst @"ts" rest)
+         ?? sorry
+         =: wa + wb + cost (buildHuffman (sortedInsert (sTip (wa + wb) 0) rest))
+         =: qed
+
    -- Isabelle-style: splitLeaf commutes with buildHuffman
    -- splitLeaf (buildHuffman ts) wa a wb b = buildHuffman (splitLeaf_on_forest ts wa a wb b)
    -- This is the key commutativity lemma. For now, we use a sorry and derive what we need.
