@@ -5092,13 +5092,15 @@ optimalityProof = do
    nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
 
    -- Isabelle-style: cost of splitting a leaf increases by wa + wb
+   -- Precondition: symbol a occurs in t with weight wa + wb (Isabelle: a ∈ alphabet t, freq t a = wa + wb)
    _costSplitLeaf <- calc "costSplitLeaf"
        (\(Forall @"t" t) (Forall @"wa" wa) (Forall @"a" a) (Forall @"wb" wb) (Forall @"b" b) ->
-           cost (splitLeaf t wa a wb b) .== cost t + wa + wb) $
-       \t wa a wb b -> []
-         |- cost (splitLeaf t wa a wb b)
-         ?? sorry -- by induction on t; straightforward from splitLeaf + cost definitions
-         =: cost t + wa + wb
+           countWS (wa + wb) a t .== 1
+           .=> cost (splitLeaf t wa a wb b) .== cost t + wa + wb) $
+       \t wa a wb b -> [countWS (wa + wb) a t .== 1]
+         |- cost (splitLeaf t wa a wb b) .== cost t + wa + wb
+         ?? sorry
+         =: sTrue
          =: qed
 
    -- Isabelle-style: splitLeaf commutes with buildHuffman
