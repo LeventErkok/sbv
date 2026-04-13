@@ -5180,13 +5180,26 @@ optimalityProof = do
          =: qed
 
    -- Combined: BH first step in terms of lightW/light2W
-   bhFirstStepLW <- lemma "bhFirstStepLW"
+   bhFirstStepLW <- calc "bhFirstStepLW"
        (\(Forall @"t" t) ->
            numLeaves t .>= 3
            .=> cost (buildHuffman (leavesOf t))
                .== lightW t + light2W t
-                 + cost (buildHuffman (sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t))))))
-       [proofOf bhFS, proofOf lwIsHead, proofOf l2wIsSecond, proofOf loAT, proofOf loLen, proofOf nlPos]
+                 + cost (buildHuffman (sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))))) $
+       \t -> [numLeaves t .>= 3]
+         |- cost (buildHuffman (leavesOf t))
+         ?? bhFS `at` (Inst @"a" (head (leavesOf t)),
+                       Inst @"b" (head (tail (leavesOf t))),
+                       Inst @"rest" (tail (tail (leavesOf t))))
+         ?? loAT `at` Inst @"t" t
+         ?? loLen `at` Inst @"t" t
+         ?? nlPos `at` Inst @"t" t
+         ?? lwIsHead `at` Inst @"t" t
+         ?? l2wIsSecond `at` Inst @"t" t
+         ?? sorry
+         =: lightW t + light2W t
+          + cost (buildHuffman (sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))))
+         =: qed
 
    -- Isabelle-style: splitLeaf commutes with buildHuffman
    -- splitLeaf (buildHuffman ts) wa a wb b = buildHuffman (splitLeaf_on_forest ts wa a wb b)
