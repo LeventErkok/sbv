@@ -5071,12 +5071,35 @@ lightWIsHeadProof = do
 optimalityProof :: TP (Proof (Forall "t" HTree -> SBool))
 optimalityProof = do
    tsPos   <- recall treeSizePosProof
-   _costDec <- recall costDecompProof
-   _collTS  <- recall collapseReducesTreeSizeProof
-   _collNL  <- recall collapseNumLeavesProof
-   _hNN     <- recall heightNonNegProof
+   costDec <- recall costDecompProof
+   collTS  <- recall collapseReducesTreeSizeProof
+   collNL  <- recall collapseNumLeavesProof
+   hNN     <- recall heightNonNegProof
 
-   _nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+   nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+
+   -- Key lemma: the sum of the two lightest leaf weights <= the sum of any pair.
+   -- In particular, lightW + light2W <= deepW + sibW.
+   -- This is the core property that connects BH's greedy merge to the cost decomposition.
+   minPairSum <- sInduct "minPairSum"
+       (\(Forall @"t" t) ->
+           numLeaves t .>= 2 .=> lightW t + light2W t .<= deepW t + sibW t)
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> [numLeaves t .>= 2]
+         |- lightW t + light2W t .<= deepW t + sibW t
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> lightW t + light2W t .<= deepW t + sibW t
+                       ?? ih `at` Inst @"t" l
+                       ?? ih `at` Inst @"t" r
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       ?? hNN `at` Inst @"t" l
+                       ?? hNN `at` Inst @"t" r
+                       ?? sorry
+                       =: sTrue
+                       =: qed
+            |]
 
    -- Base case: for two tips, buildHuffman cost equals tree cost.
    base <- calc "optBase"
@@ -5112,7 +5135,7 @@ optimalityProof = do
        (\(Forall @"t" t) ->
            numLeaves t .>= 2 .=> cost (buildHuffman (leavesOf t)) .<= cost t)
        (treeSize, [proofOf tsPos]) $
-       \_ih t -> [numLeaves t .>= 2]
+       \ih t -> [numLeaves t .>= 2]
          |- cost (buildHuffman (leavesOf t)) .<= cost t
          =: [pCase| t of
                Tip{}   -> cost (buildHuffman (leavesOf t)) .<= cost t
@@ -5130,11 +5153,34 @@ optimalityProof = do
                                              =: qed
 
                                        Bin{} -> cost (buildHuffman (leavesOf t)) .<= cost t
+                                             ?? costDec    `at` Inst @"t" t
+                                             ?? collTS     `at` Inst @"t" t
+                                             ?? collNL     `at` Inst @"t" t
+                                             ?? minPairSum `at` Inst @"t" t
+                                             ?? hNN   `at` Inst @"t" l
+                                             ?? hNN   `at` Inst @"t" r
+                                             ?? tsPos `at` Inst @"t" l
+                                             ?? tsPos `at` Inst @"t" r
+                                             ?? nlPos `at` Inst @"t" (sleft r)
+                                             ?? nlPos `at` Inst @"t" (sright r)
+                                             ?? ih `at` Inst @"t" (collapse t)
                                              ?? sorry
                                              =: sTrue
                                              =: qed
 
                             Bin{} -> cost (buildHuffman (leavesOf t)) .<= cost t
+                                  ?? costDec    `at` Inst @"t" t
+                                  ?? collTS     `at` Inst @"t" t
+                                  ?? collNL     `at` Inst @"t" t
+                                  ?? minPairSum `at` Inst @"t" t
+                                  ?? hNN   `at` Inst @"t" l
+                                  ?? hNN   `at` Inst @"t" r
+                                  ?? tsPos `at` Inst @"t" l
+                                  ?? tsPos `at` Inst @"t" r
+                                  ?? nlPos `at` Inst @"t" (sleft l)
+                                  ?? nlPos `at` Inst @"t" (sright l)
+                                  ?? nlPos `at` Inst @"t" r
+                                  ?? ih `at` Inst @"t" (collapse t)
                                   ?? sorry
                                   =: sTrue
                                   =: qed
