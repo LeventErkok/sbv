@@ -1,0 +1,7 @@
+echo "Proof count: "
+grep "TP (Proof" Documentation/SBV/Examples/TP/Huffman.hs | wc -l
+echo "Doctest count: (must be 2 + above)"
+fgrep ">>>" Documentation/SBV/Examples/TP/Huffman.hs| wc -l
+echo "Sorry count: (must be 0)"
+grep sorry Documentation/SBV/Examples/TP/Huffman.hs | wc -l
+grep sorry Documentation/SBV/Examples/TP/Huffman.hs
