@@ -5109,6 +5109,21 @@ optimalityProof = do
 
    nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
 
+   lwIsHead <- recall lightWIsHeadProof
+
+   -- light2W = treeWeight of second element of sorted leaf list
+   l2wIsSecond <- calc "light2WIsSecond"
+       (\(Forall @"t" t) ->
+           numLeaves t .>= 2 .=> light2W t .== treeWeight (head (tail (leavesOf t)))) $
+       \t -> [numLeaves t .>= 2]
+         |- light2W t
+         ?? sorry
+         =: treeWeight (head (tail (leavesOf t)))
+         =: qed
+
+   loAT   <- recall leavesOfAllTip0Proof
+   loLen  <- recall leavesOfLengthProof
+
    -- Properties of optMerge (each proved as a separate lemma for the solver)
 
    -- optMerge cost bound: cost(optMerge t) + lightW + light2W <= cost t
@@ -5149,7 +5164,7 @@ optimalityProof = do
    -- This follows from BH definition + buildHuffmanAdditivity
    bhAdd <- recall buildHuffmanAdditivityProof
 
-   _bhFirstStep <- calc "bhFirstStep"
+   bhFS <- calc "bhFirstStep"
        (\(Forall @"a" a) (Forall @"b" b) (Forall @"rest" rest) ->
            let wa = treeWeight a; wb = treeWeight b
            in isTip a .&& isTip b .&& allTip0 rest
@@ -5163,6 +5178,15 @@ optimalityProof = do
          ?? _bhCostS `at` (Inst @"t1" (sBin a b), Inst @"t2" (sTip (wa + wb) 0), Inst @"ts" rest)
          =: wa + wb + cost (buildHuffman (sortedInsert (sTip (wa + wb) 0) rest))
          =: qed
+
+   -- Combined: BH first step in terms of lightW/light2W
+   bhFirstStepLW <- lemma "bhFirstStepLW"
+       (\(Forall @"t" t) ->
+           numLeaves t .>= 3
+           .=> cost (buildHuffman (leavesOf t))
+               .== lightW t + light2W t
+                 + cost (buildHuffman (sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t))))))
+       [proofOf bhFS, proofOf lwIsHead, proofOf l2wIsSecond, proofOf loAT, proofOf loLen, proofOf nlPos]
 
    -- Isabelle-style: splitLeaf commutes with buildHuffman
    -- splitLeaf (buildHuffman ts) wa a wb b = buildHuffman (splitLeaf_on_forest ts wa a wb b)
@@ -5253,13 +5277,10 @@ optimalityProof = do
                                              ?? tsPos `at` Inst @"t" r
                                              ?? nlPos `at` Inst @"t" (sleft r)
                                              ?? nlPos `at` Inst @"t" (sright r)
-                                             ?? _bhFirstStep `at` (Inst @"a" (head (leavesOf t)),
-                                                                   Inst @"b" (head (tail (leavesOf t))),
-                                                                   Inst @"rest" (tail (tail (leavesOf t))))
+                                             ?? bhFirstStepLW `at` Inst @"t" t
                                              ?? ih `at` Inst @"t" (optMerge t)
                                              ?? _omCost `at` Inst @"t" t
                                              ?? _omLeaves `at` Inst @"t" t
-                                             ?? sorry
                                              =: sTrue
                                              =: qed
 
@@ -5275,11 +5296,10 @@ optimalityProof = do
                                   ?? nlPos `at` Inst @"t" (sleft l)
                                   ?? nlPos `at` Inst @"t" (sright l)
                                   ?? nlPos `at` Inst @"t" r
-                                  ?? _bhFirstStep `at` (Inst @"a" (head (leavesOf t)),
-                                                        Inst @"b" (head (tail (leavesOf t))),
-                                                        Inst @"rest" (tail (tail (leavesOf t))))
+                                  ?? bhFirstStepLW `at` Inst @"t" t
                                   ?? ih `at` Inst @"t" (optMerge t)
-                                  ?? sorry
+                                  ?? _omCost `at` Inst @"t" t
+                                  ?? _omLeaves `at` Inst @"t" t
                                   =: sTrue
                                   =: qed
             |]
