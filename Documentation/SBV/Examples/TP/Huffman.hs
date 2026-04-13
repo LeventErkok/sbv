@@ -5246,56 +5246,59 @@ optimalityProof = do
    -- light2W <= deepW and light2W <= sibW (second minimum <= any other leaf weight)
    lwLeq2 <- recall lightWLeqLight2WProof
    _lwLeqD <- recall lightWLeqDeepWProof
+   _lwLeqS <- inductiveLemma "lightWLeqSibW"
+       (\(Forall @"t" t) -> lightW t .<= sibW t)
+       [proofOf _lwLeqD]
 
-   -- Key helper: sibW > lightW implies light2W <= sibW (second min property)
-   _wGtMinGeL2_sib <- sInduct "wGtMinGeL2_sib"
+   -- light2W is bounded by the max of the children's lightW values
+   l2wLeqMax <- inductiveLemma "light2WLeqMaxLightW"
+       (\(Forall @"l" l) (Forall @"r" r) ->
+           light2W (sBin l r) .<= ite (lightW l .<= lightW r) (lightW r) (lightW l))
+       [proofOf lwLeq2]
+
+   -- Any weight present in the tree is >= lightW (the minimum)
+   lwLeqMember <- calc "lightWLeqMember"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
+           countWS w s t .>= 1 .=> lightW t .<= w) $
+       \w s t -> [countWS w s t .>= 1]
+         |- lightW t .<= w
+         ?? sorry
+         =: sTrue
+         =: qed
+
+   -- Core second-minimum property: any leaf weight > lightW is >= light2W.
+   -- The key insight: abstract away from sibW/deepW and reason about countWS membership.
+   secondMin <- sInduct "secondMinProperty"
+       (\(Forall @"w" w) (Forall @"s" s) (Forall @"t" t) ->
+           numLeaves t .>= 2 .&& countWS w s t .>= 1 .&& w .> lightW t .=> light2W t .<= w)
+       (\_ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih w s t -> [numLeaves t .>= 2, countWS w s t .>= 1, w .> lightW t]
+         |- light2W t .<= w
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> light2W t .<= w
+                       ?? l2wLeqMax `at` (Inst @"l" l, Inst @"r" r)
+                       ?? lwLeqMember `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                       ?? lwLeqMember `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" l)
+                       ?? ih `at` (Inst @"w" w, Inst @"s" s, Inst @"t" r)
+                       =: sTrue
+                       =: qed
+            |]
+
+   -- Derived: sibW > lightW => light2W <= sibW
+   _wGtMinGeL2_sib <- lemma "wGtMinGeL2_sib"
        (\(Forall @"t" t) ->
            numLeaves t .>= 2 .=> sibW t .> lightW t .=> light2W t .<= sibW t)
-       (treeSize, [proofOf tsPos]) $
-       \ih t -> [numLeaves t .>= 2, sibW t .> lightW t]
-         |- light2W t .<= sibW t
-         =: [pCase| t of
-               Tip{} -> trivial
-               Bin l r -> light2W t .<= sibW t
-                       ?? ih `at` Inst @"t" l
-                       ?? ih `at` Inst @"t" r
-                       ?? lwLeq2 `at` Inst @"t" l
-                       ?? lwLeq2 `at` Inst @"t" r
-                       ?? _lwLeqD `at` Inst @"t" l
-                       ?? _lwLeqD `at` Inst @"t" r
-                       ?? hNN `at` Inst @"t" l
-                       ?? hNN `at` Inst @"t" r
-                       ?? tsPos `at` Inst @"t" l
-                       ?? tsPos `at` Inst @"t" r
-                       ?? sorry
-                       =: sTrue
-                       =: qed
-            |]
+       [proofOf secondMin, proofOf _sCWS]
 
-   -- Key helper: deepW > lightW implies light2W <= deepW
-   _wGtMinGeL2_deep <- sInduct "wGtMinGeL2_deep"
+   -- Derived: deepW > lightW => light2W <= deepW
+   _wGtMinGeL2_deep <- lemma "wGtMinGeL2_deep"
        (\(Forall @"t" t) ->
            numLeaves t .>= 2 .=> deepW t .> lightW t .=> light2W t .<= deepW t)
-       (treeSize, [proofOf tsPos]) $
-       \ih t -> [numLeaves t .>= 2, deepW t .> lightW t]
-         |- light2W t .<= deepW t
-         =: [pCase| t of
-               Tip{} -> trivial
-               Bin l r -> light2W t .<= deepW t
-                       ?? ih `at` Inst @"t" l
-                       ?? ih `at` Inst @"t" r
-                       ?? lwLeq2 `at` Inst @"t" l
-                       ?? lwLeq2 `at` Inst @"t" r
-                       ?? _lwLeqD `at` Inst @"t" l
-                       ?? _lwLeqD `at` Inst @"t" r
-                       ?? hNN `at` Inst @"t" l
-                       ?? hNN `at` Inst @"t" r
-                       ?? tsPos `at` Inst @"t" l
-                       ?? tsPos `at` Inst @"t" r
-                       ?? sorry
-                       =: sTrue
-                       =: qed
-            |]
+       [proofOf secondMin, proofOf _dCWS]
 
    -- light2W(t') <= sibW(optSwap1 t): the swap adjusts sibW so it's >= light2W.
    -- After swap(light→deep): sibW is either unchanged (non-light, hence >= light2W by wGtMinGeL2_sib)
