@@ -5261,8 +5261,12 @@ optimalityProof = do
                        ?? ih `at` Inst @"t" r
                        ?? lwLeq2 `at` Inst @"t" l
                        ?? lwLeq2 `at` Inst @"t" r
-                       ?? tsPos  `at` Inst @"t" l
-                       ?? tsPos  `at` Inst @"t" r
+                       ?? _lwLeqD `at` Inst @"t" l
+                       ?? _lwLeqD `at` Inst @"t" r
+                       ?? hNN `at` Inst @"t" l
+                       ?? hNN `at` Inst @"t" r
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
                        ?? sorry
                        =: sTrue
                        =: qed
@@ -5282,8 +5286,12 @@ optimalityProof = do
                        ?? ih `at` Inst @"t" r
                        ?? lwLeq2 `at` Inst @"t" l
                        ?? lwLeq2 `at` Inst @"t" r
-                       ?? tsPos  `at` Inst @"t" l
-                       ?? tsPos  `at` Inst @"t" r
+                       ?? _lwLeqD `at` Inst @"t" l
+                       ?? _lwLeqD `at` Inst @"t" r
+                       ?? hNN `at` Inst @"t" l
+                       ?? hNN `at` Inst @"t" r
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
                        ?? sorry
                        =: sTrue
                        =: qed
