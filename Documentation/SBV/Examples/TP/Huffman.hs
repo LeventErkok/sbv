@@ -5073,6 +5073,24 @@ splitLeaf = smtFunction "splitLeaf"
                  Bin l r -> sBin (splitLeaf l wa a wb b) (splitLeaf r wa a wb b)
               |]
 
+-- | Optimal merge: relabel, swap the two lightest to the deepest positions (handling aliasing),
+-- then collapse. The result is a tree with one fewer leaf, smaller treeSize, and
+-- cost <= cost(t) - lightW - light2W. Used as the comparison tree for the IH.
+optMerge :: SHTree -> SHTree
+optMerge = smtFunction "optMerge"
+         $ \t -> let t' = relabelFrom 0 t
+                     lw = lightW t'; ls = lightS t'
+                     l2w = light2W t'; l2s = light2S t'
+                     cw = deepW t'; cs = deepS t'
+                     dw = sibW t'; ds = sibS t'
+                     -- swapFourSyms: handle aliasing
+                     swapped = ite (lw .== dw .&& ls .== ds)
+                                   (swap l2w l2s cw cs t')
+                                   (ite (l2w .== cw .&& l2s .== cs)
+                                        (swap lw ls dw ds t')
+                                        (swap l2w l2s dw ds (swap lw ls cw cs t')))
+                 in collapse swapped
+
 -- | Huffman optimality: for any tree @t@ with at least two leaves,
 -- the Huffman tree built from @leavesOf t@ has cost at most @cost t@.
 --
@@ -5090,6 +5108,29 @@ optimalityProof = do
    _bhCostS <- recall buildHuffmanCostSubstProof
 
    nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+
+   -- Properties of optMerge (each proved as a separate lemma for the solver)
+
+   -- optMerge cost bound: cost(optMerge t) + lightW + light2W <= cost t
+   _omCost <- calc "optMergeCost"
+       (\(Forall @"t" t) ->
+           numLeaves t .>= 3 .=> cost (optMerge t) + lightW t + light2W t .<= cost t) $
+       \t -> [numLeaves t .>= 3]
+         |- cost (optMerge t) + lightW t + light2W t .<= cost t
+         ?? sorry
+         =: sTrue
+         =: qed
+
+   -- optMerge leavesOf: leavesOf(optMerge t) = the BH-merged shorter list
+   _omLeaves <- calc "optMergeLeavesOf"
+       (\(Forall @"t" t) ->
+           numLeaves t .>= 3
+           .=> leavesOf (optMerge t) .== sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))) $
+       \t -> [numLeaves t .>= 3]
+         |- leavesOf (optMerge t) .== sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))
+         ?? sorry
+         =: sTrue
+         =: qed
 
    -- Isabelle-style: cost of splitting a leaf increases by wa + wb
    -- Precondition: symbol a occurs in t with weight wa + wb (Isabelle: a ∈ alphabet t, freq t a = wa + wb)
@@ -5212,7 +5253,12 @@ optimalityProof = do
                                              ?? tsPos `at` Inst @"t" r
                                              ?? nlPos `at` Inst @"t" (sleft r)
                                              ?? nlPos `at` Inst @"t" (sright r)
-                                             ?? ih `at` Inst @"t" (collapse t)
+                                             ?? _bhFirstStep `at` (Inst @"a" (head (leavesOf t)),
+                                                                   Inst @"b" (head (tail (leavesOf t))),
+                                                                   Inst @"rest" (tail (tail (leavesOf t))))
+                                             ?? ih `at` Inst @"t" (optMerge t)
+                                             ?? _omCost `at` Inst @"t" t
+                                             ?? _omLeaves `at` Inst @"t" t
                                              ?? sorry
                                              =: sTrue
                                              =: qed
@@ -5229,7 +5275,10 @@ optimalityProof = do
                                   ?? nlPos `at` Inst @"t" (sleft l)
                                   ?? nlPos `at` Inst @"t" (sright l)
                                   ?? nlPos `at` Inst @"t" r
-                                  ?? ih `at` Inst @"t" (collapse t)
+                                  ?? _bhFirstStep `at` (Inst @"a" (head (leavesOf t)),
+                                                        Inst @"b" (head (tail (leavesOf t))),
+                                                        Inst @"rest" (tail (tail (leavesOf t))))
+                                  ?? ih `at` Inst @"t" (optMerge t)
                                   ?? sorry
                                   =: sTrue
                                   =: qed
