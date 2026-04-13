@@ -5120,7 +5120,6 @@ optimalityProof = do
          |- cost (buildHuffman (a .: b .: rest))
          ?? bhAdd `at` Inst @"ts" (sortedInsert (sBin a b) rest)
          ?? _bhCostS `at` (Inst @"t1" (sBin a b), Inst @"t2" (sTip (wa + wb) 0), Inst @"ts" rest)
-         ?? sorry
          =: wa + wb + cost (buildHuffman (sortedInsert (sTip (wa + wb) 0) rest))
          =: qed
 
