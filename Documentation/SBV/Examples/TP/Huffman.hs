@@ -5114,16 +5114,6 @@ light2WIsSecondProof = do
 --   5. splitLeaf commutes with buildHuffman
 --   6. Main theorem by induction on forest length
 
--- | Split a leaf: replace leaf with symbol @a@ by @Bin (Tip wa a) (Tip wb b)@.
--- This is the inverse of merging two sibling leaves.
-splitLeaf :: SHTree -> SInteger -> SInteger -> SInteger -> SInteger -> SHTree
-splitLeaf = smtFunction "splitLeaf"
-          $ \t wa a wb b ->
-              [sCase| t of
-                 Tip w s | s .== a -> sBin (sTip wa a) (sTip wb b)
-                         | True    -> sTip w s
-                 Bin l r -> sBin (splitLeaf l wa a wb b) (splitLeaf r wa a wb b)
-              |]
 
 -- | Optimal merge: relabel, swap the two lightest to the deepest positions (handling aliasing),
 -- then collapse. The result is a tree with one fewer leaf, smaller treeSize, and
@@ -5207,17 +5197,7 @@ optimalityProof = do
          =: sTrue
          =: qed
 
-   -- Isabelle-style: cost of splitting a leaf increases by wa + wb
-   -- Precondition: symbol a occurs in t with weight wa + wb (Isabelle: a ∈ alphabet t, freq t a = wa + wb)
-   _costSplitLeaf <- calc "costSplitLeaf"
-       (\(Forall @"t" t) (Forall @"wa" wa) (Forall @"a" a) (Forall @"wb" wb) (Forall @"b" b) ->
-           countWS (wa + wb) a t .== 1
-           .=> cost (splitLeaf t wa a wb b) .== cost t + wa + wb) $
-       \t wa a wb b -> [countWS (wa + wb) a t .== 1]
-         |- cost (splitLeaf t wa a wb b) .== cost t + wa + wb
-         ?? sorry
-         =: sTrue
-         =: qed
+
 
    -- BH first step: merging the first two elements of a sorted allTip0 list
    -- cost(BH(a : b : rest)) = treeWeight a + treeWeight b + cost(BH(sortedInsert(sTip(wa+wb) 0, rest)))
