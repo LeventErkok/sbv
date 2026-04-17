@@ -165,11 +165,11 @@ class Calc a where
   {-# MINIMAL calcSteps #-}
   calcSteps :: (SymVal t, EqSymbolic (SBV t)) => a -> StepArgs a t -> Symbolic (SBool, CalcStrategy)
 
-  calc         nm p steps = getTPConfig >>= \cfg  -> calcWith          cfg                   nm p steps
-  calcWith cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric False (tpMergeCfg cfg cfg') nm p steps
+  calc         nm p steps = getTPConfig >>= \cfg  -> calcWith    cfg                   nm p steps
+  calcWith cfg nm p steps = getTPConfig >>= \cfg' -> calcGeneric (tpMergeCfg cfg cfg') nm p steps
 
-  calcGeneric :: (SymVal t, EqSymbolic (SBV t), Proposition a) => Bool -> SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
-  calcGeneric tagTheorem cfg nm result steps = do
+  calcGeneric :: (SymVal t, EqSymbolic (SBV t), Proposition a) => SMTConfig -> String -> a -> StepArgs a t -> TP (Proof a)
+  calcGeneric cfg nm result steps = do
       cached <- lookupProofCache result
       case cached of
         Just prf -> returnCachedProof cfg nm prf
@@ -183,7 +183,7 @@ class Calc a where
 
              qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
-             message cfg $ (if tagTheorem then "Theorem" else "Lemma") ++ ": " ++ nm ++ "\n"
+             message cfg $ "Lemma: " ++ nm ++ "\n"
 
              (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
 
@@ -563,8 +563,8 @@ class Inductive a where
    -- partial correctness is guaranteed if non-terminating functions are involved.
    inductWith :: (Proposition a, SymVal t, EqSymbolic (SBV t)) => SMTConfig -> String -> a -> (Proof (IHType a) -> IHArg a -> IStepArgs a t) -> TP (Proof a)
 
-   induct         nm p steps = getTPConfig >>= \cfg  -> inductWith                             cfg                   nm p steps
-   inductWith cfg nm p steps = getTPConfig >>= \cfg' -> inductionEngine RegularInduction False (tpMergeCfg cfg cfg') nm p (inductionStrategy p steps)
+   induct         nm p steps = getTPConfig >>= \cfg  -> inductWith                       cfg                   nm p steps
+   inductWith cfg nm p steps = getTPConfig >>= \cfg' -> inductionEngine RegularInduction (tpMergeCfg cfg cfg') nm p (inductionStrategy p steps)
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL inductionStrategy #-}
@@ -582,16 +582,16 @@ class SInductive a where
    -- partial correctness is guaranteed if non-terminating functions are involved.
    sInductWith :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => SMTConfig -> String -> a -> (MeasureArgs a m, [ProofObj]) -> (Proof a -> StepArgs a t) -> TP (Proof a)
 
-   sInduct         nm p mhs steps = getTPConfig >>= \cfg  -> sInductWith                            cfg                   nm p mhs steps
-   sInductWith cfg nm p mhs steps = getTPConfig >>= \cfg' -> inductionEngine GeneralInduction False (tpMergeCfg cfg cfg') nm p (sInductionStrategy p mhs steps)
+   sInduct         nm p mhs steps = getTPConfig >>= \cfg  -> sInductWith                      cfg                   nm p mhs steps
+   sInductWith cfg nm p mhs steps = getTPConfig >>= \cfg' -> inductionEngine GeneralInduction (tpMergeCfg cfg cfg') nm p (sInductionStrategy p mhs steps)
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL sInductionStrategy #-}
    sInductionStrategy :: (Proposition a, Zero m, SymVal t, EqSymbolic (SBV t)) => a -> (MeasureArgs a m, [ProofObj]) -> (Proof a -> StepArgs a t) -> Symbolic InductionStrategy
 
 -- | Do an inductive proof, based on the given strategy
-inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> TP (Proof a)
-inductionEngine style tagTheorem cfg nm result getStrategy = do
+inductionEngine :: Proposition a => InductionStyle -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> TP (Proof a)
+inductionEngine style cfg nm result getStrategy = do
    cached <- lookupProofCache result
    case cached of
      Just prf -> returnCachedProof cfg nm prf
@@ -607,7 +607,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
                        RegularInduction -> ""
                        GeneralInduction  -> " (strong)"
 
-          message cfg $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ qual ++ ": " ++ nm ++ "\n"
+          message cfg $ "Inductive lemma" ++ qual ++ ": " ++ nm ++ "\n"
 
           strategy@InductionStrategy { inductionIntros
                                      , inductionMeasure
