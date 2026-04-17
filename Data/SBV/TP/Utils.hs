@@ -23,7 +23,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.Utils (
-         TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof, noTermCheckProof
+         TP, runTP, runTPWith, tryTP, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof, noTermCheckProof
        , startTP, finishTP, getTPState, getTPConfig, setTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo, printLemmaResult
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML
@@ -32,8 +32,9 @@ module Data.SBV.TP.Utils (
        , measureLemma, measureLemmaWith
        ) where
 
+import Control.Exception    (Exception, try)
 import Control.Monad        (unless)
-import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
+import Control.Monad.Reader (ReaderT(..), runReaderT, MonadReader, ask, liftIO)
 import Control.Monad.Trans  (MonadIO)
 
 import Data.Generics (everywhere, mkT)
@@ -93,6 +94,10 @@ data TPState = TPState { stats               :: IORef TPStats
 -- | Monad for running TP proofs in.
 newtype TP a = TP (ReaderT TPState IO a)
             deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader TPState, MonadFail)
+
+-- | Run a TP action, catching exceptions.
+tryTP :: Exception e => TP a -> TP (Either e a)
+tryTP (TP act) = TP $ ReaderT $ \st -> try (runReaderT act st)
 
 -- | Extract the integer node ID from an SV.
 svIntId :: SV -> Int

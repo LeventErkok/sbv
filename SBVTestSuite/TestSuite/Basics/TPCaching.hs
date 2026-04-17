@@ -19,23 +19,25 @@ module TestSuite.Basics.TPCaching(tests) where
 
 import Utils.SBVTestFramework
 
-import Data.SBV.TP (runTPWith, lemma, calc, recall, tpStats, (|-), (=:), qed)
+import Data.SBV.TP (TP, Proof, runTPWith, lemma, calc, recall, tpStats, (|-), (=:), qed)
 
 import Control.Monad (void)
+import Control.Exception (try, SomeException)
 
 import Data.Char (isSpace)
 import Data.List (isPrefixOf, dropWhileEnd)
 
 import Control.DeepSeq (($!!))
 
--- | Strip timing info [0.05s] from the end of output lines.
+-- | Strip timing info like @[0.05s]@ from the end of output lines.
+-- Only matches brackets whose content looks like a time value (digits, dots, and 's').
+-- Handles multiple consecutive timings like @[0.001s][0.002s]@.
 stripTiming :: String -> String
-stripTiming s
-  | (_, rest@('[':_)) <- break (== '[') (dropWhileEnd isSpace s)
-  , last rest == ']'
-  = dropWhileEnd isSpace $ take (length s - length rest) s
-  | True
-  = s
+stripTiming s = reverse $ go $ reverse $ dropWhileEnd isSpace s
+ where go (']':rest) | (inner, '[':before) <- break (== '[') rest
+                     , all (`elem` ("0123456789.s" :: String)) inner
+                     = go $ dropWhile isSpace before
+       go xs = xs
 
 -- | Filter out the statistics summary line from verbose output.
 isStatsLine :: String -> Bool
@@ -135,4 +137,42 @@ tests = testGroup "Basics.TPCaching"
            recall (lemma "outer" sTrue [])
         contents <- readFile rf
         writeFile rf $!! cleanStatsOutput contents
+
+   -- Recall of a failing proof: the lemma is false (x > x), so the proof should fail.
+   , goldenCapturedIO "tpCache_recallFail" $ \rf -> do
+        let cfg = z3 { redirectVerbose = Just rf }
+        res <- try $ void $ runTPWith cfg $
+           recall bad
+        case res of
+           Left  (_ :: SomeException) -> pure ()
+           Right _                    -> appendFile rf "Unexpected success\n"
+
+   -- Direct proof of a false lemma.
+   , goldenCapturedIO "tpCache_fooFail" $ \rf -> do
+        let cfg = z3 { redirectVerbose = Just rf }
+        res <- try $ void $ runTPWith cfg foo
+        case res of
+           Left  (_ :: SomeException) -> pure ()
+           Right _                    -> appendFile rf "Unexpected success\n"
+
+   -- Recall of a failing lemma inside a larger proof.
+   , goldenCapturedIO "tpCache_barFail" $ \rf -> do
+        let cfg = z3 { redirectVerbose = Just rf }
+        res <- try $ void $ runTPWith cfg bar
+        case res of
+           Left  (_ :: SomeException) -> pure ()
+           Right _                    -> appendFile rf "Unexpected success\n"
    ]
+
+-- | A trivially false lemma, used to test recall of a failing proof.
+bad :: TP (Proof (Forall "x" Integer -> SBool))
+bad = lemma "bad" (\(Forall @"x" (x :: SInteger)) -> x .> x) []
+
+-- | A false lemma: x == x+1.
+foo :: TP (Proof (Forall "x" Integer -> SBool))
+foo = lemma "foo" (\(Forall @"x" (x :: SInteger)) -> x .== x + 1) []
+
+-- | Recalls foo (which fails), then tries to prove another false lemma.
+bar :: TP (Proof (Forall "x" Integer -> SBool))
+bar = do _f <- recall foo
+         lemma "bar" (\(Forall @"x" (x :: SInteger)) -> x .== x + 2) []
