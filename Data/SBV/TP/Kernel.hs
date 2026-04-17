@@ -341,13 +341,13 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
                   TPProofStep    False s _ ss ->                       intercalate "." (s : ss)
 
        unknown = do r <- getUnknownReason
-                    liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
-                                putStrLn $ "\n*** Solver reported: " ++ show r
+                    liftIO $ do message cfg $ "\n*** Failed to prove " ++ fullNm ++ ".\n"
+                                message cfg $ "\n*** Solver reported: " ++ show r ++ "\n"
                                 die
 
        -- What to do if the proof fails
        cex = do
-         liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
+         liftIO $ message cfg $ "\n*** Failed to prove " ++ fullNm ++ ".\n"
 
          res <- case ctx of
                   TPProofStep{} -> do mapM_ (uncurry sObserve) disps
@@ -366,6 +366,6 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
                                            pure $ skolemize (qNot prop)
                         pure res
 
-         liftIO $ print $ ThmResult res
+         liftIO $ message cfg $ show (ThmResult res) ++ "\n"
 
          die

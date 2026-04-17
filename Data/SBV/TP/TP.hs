@@ -56,6 +56,7 @@ import Data.SBV.TP.Utils
 
 import qualified Data.SBV.List as SL
 
+import Control.Exception (SomeException)
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 import Data.IORef (readIORef, writeIORef, modifyIORef')
@@ -1554,11 +1555,16 @@ recallWith cfgIn prf = do
                                     pure r
      else do let new = cfg{tpOptions = (tpOptions cfg) {quiet = True}}
              restoring new topCfg $ do
-                 r@Proof{proofOf = po@ProofObj{dependencies, aliases = aka, wasCached = cached}} <- prf
+                 res <- tryTP prf
                  cleanup
-                 let nm = proofName po
-                 liftIO $ printLemmaResult cfg (verbose cfg) nm dependencies cached aka
-                 pure r
+                 case res of
+                   Left (_ :: SomeException) ->
+                     -- Re-run with original config so failure details are visible
+                     restoring cfg topCfg prf >> pure (error "unreachable")
+                   Right r@Proof{proofOf = po@ProofObj{dependencies, aliases = aka, wasCached = cached}} -> do
+                     let nm = proofName po
+                     liftIO $ printLemmaResult cfg (verbose cfg) nm dependencies cached aka
+                     pure r
  where restoring new old act = do setTPConfig new
                                   res <- act
                                   setTPConfig old
