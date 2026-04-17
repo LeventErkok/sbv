@@ -25,7 +25,7 @@
 module Data.SBV.TP.Utils (
          TP, runTP, runTPWith, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof, noTermCheckProof
        , startTP, finishTP, getTPState, getTPConfig, setTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
-       , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo
+       , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo, printLemmaResult
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML
        , addToProofCache, lookupProofCache, returnCachedProof
        , tpQuiet, tpRibbon, tpAsms, tpStats
@@ -162,12 +162,9 @@ lookupProofCache prop = do
 -- | Return a cached proof, printing a brief "Q.E.D." line with optional "a.k.a." annotation.
 returnCachedProof :: SMTConfig -> String -> ProofObj -> TP (Proof a)
 returnCachedProof cfg nm prf = do
-   let aka    = filter (/= nm) $ nub $ proofName prf : aliases prf
-       prf'   = prf { proofName = nm, wasCached = True, aliases = aka }
-       akaStr | null aka  = ""
-              | True      = " (a.k.a. " ++ intercalate ", " aka ++ ")"
-   tab <- liftIO $ startTP cfg False "Cached" 0 (TPProofOneShot nm [])
-   liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo (dependencies prf) ++ akaStr) (tab, Nothing) []
+   let aka  = filter (/= nm) $ nub $ proofName prf : aliases prf
+       prf' = prf { proofName = nm, wasCached = True, aliases = aka }
+   liftIO $ printLemmaResult cfg False nm (dependencies prf) True aka
    pure $ Proof prf'
 
 -- | The context in which we make a check-sat call
@@ -594,6 +591,16 @@ rootOfTrust = rot True . proofOf
                   where reduce ps
                           | any (\o -> uniqId o == TPSorry) ps = [sorry]
                           | True                               = ps
+
+-- | Print a one-line lemma result: @Lemma: name  Q.E.D. [Modulo: ...] [Cached] (a.k.a. ...)@
+printLemmaResult :: SMTConfig -> Bool -> String -> [ProofObj] -> Bool -> [String] -> IO ()
+printLemmaResult cfg verboseFlag nm deps cached aka = do
+   tab <- startTP cfg verboseFlag "Lemma" 0 (TPProofOneShot nm [])
+   finishTP cfg ("Q.E.D." ++ concludeModulo deps ++ cacheStr ++ akaStr) (tab, Nothing) []
+ where cacheStr | cached = " [Cached]"
+                | True   = ""
+       akaStr   | null aka = ""
+                | True     = " (a.k.a. " ++ intercalate ", " aka ++ ")"
 
 -- | Calculate the modulo string for dependencies
 concludeModulo :: [ProofObj] -> String

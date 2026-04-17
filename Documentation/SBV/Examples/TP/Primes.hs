@@ -254,7 +254,7 @@ primeAtLeast2 = lemma "primeAtLeast2" (\(Forall p) -> isPrime p .=> p .>= 2) []
 -- === __Proof__
 -- >>> runTP leastDivisorIsPrime
 -- Lemma: leastDivisorTwice                Q.E.D.
--- Cached: leastDivisorDivides             Q.E.D.
+-- Lemma: leastDivisorDivides              Q.E.D. [Cached]
 -- Lemma: leastDivisorIsPrime
 --   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
@@ -416,7 +416,7 @@ greaterPrimeDivides = do
 -- Lemma: notDividesFactP1                 Q.E.D.
 -- Lemma: greaterPrimeDivides              Q.E.D.
 -- Lemma: leastDivisorIsPrime              Q.E.D.
--- Cached: factAtLeast1                    Q.E.D.
+-- Lemma: factAtLeast1                     Q.E.D. [Cached]
 -- Lemma: primeAtLeast2                    Q.E.D.
 -- Lemma: greaterPrimeGreater
 --   Step: 1                               Q.E.D.

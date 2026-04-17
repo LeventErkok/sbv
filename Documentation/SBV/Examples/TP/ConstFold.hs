@@ -1371,11 +1371,11 @@ simpCorrect = do
 -- >>> runTPWith cvc5 cfoldCorrect
 -- Lemma: measureNonNeg                    Q.E.D.
 -- Lemma: simpCorrect                      Q.E.D.
--- Cached: sqrCong                         Q.E.D.
--- Cached: sqrHelper                       Q.E.D.
--- Cached: mulCongL                        Q.E.D.
--- Cached: mulCongR                        Q.E.D.
--- Cached: mulHelper                       Q.E.D.
+-- Lemma: sqrCong                          Q.E.D. [Cached]
+-- Lemma: sqrHelper                        Q.E.D. [Cached]
+-- Lemma: mulCongL                         Q.E.D. [Cached]
+-- Lemma: mulCongR                         Q.E.D. [Cached]
+-- Lemma: mulHelper                        Q.E.D. [Cached]
 -- Inductive lemma (strong): cfoldCorrect
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (7 way case split)

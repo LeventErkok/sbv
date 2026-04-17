@@ -1,4 +1,4 @@
 Lemma: inner                            Q.E.D.
 Lemma: outer                            Q.E.D.
-Cached: inner                           Q.E.D. (a.k.a. outer)
-Cached: outer                           Q.E.D. (a.k.a. inner)
+Lemma: inner                            Q.E.D. [Cached] (a.k.a. outer)
+Lemma: outer                            Q.E.D. [Cached] (a.k.a. inner)

@@ -425,7 +425,7 @@ distribLeft = do
 -- Lemma: caseZero                         Q.E.D.
 -- Lemma: addAssoc                         Q.E.D.
 -- Lemma: addComm                          Q.E.D.
--- Cached: addSucc                         Q.E.D.
+-- Lemma: addSucc                          Q.E.D. [Cached]
 -- Lemma: caseSucc
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -478,7 +478,7 @@ distribRight = do
 -- Lemma: addLeftUnit                      Q.E.D.
 -- Lemma: distribLeft                      Q.E.D.
 -- Lemma: mulRightUnit                     Q.E.D.
--- Cached: addComm                         Q.E.D.
+-- Lemma: addComm                          Q.E.D. [Cached]
 -- Lemma: mulSucc
 --   Step: 1                               Q.E.D.
 --   Step: 2 (defn of +)                   Q.E.D.

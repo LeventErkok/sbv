@@ -778,7 +778,7 @@ gcdEvenEven = do
 -- >>> runTP gcdOddEven
 -- Lemma: gcdDivides                       Q.E.D.
 -- Lemma: gcdLargest                       Q.E.D.
--- Cached: dvdMul                          Q.E.D.
+-- Lemma: dvdMul                           Q.E.D. [Cached]
 -- Lemma: dvdOddThenOdd                    Q.E.D.
 -- Lemma: dvdEvenWhenOdd                   Q.E.D.
 -- Lemma: gcdOddEven
@@ -962,7 +962,7 @@ gcdBin a b = nGCDBin (abs a) (abs b)
 -- Lemma: gcdEvenEven                      Q.E.D.
 -- Lemma: gcdOddEven                       Q.E.D.
 -- Lemma: gcdAdd                           Q.E.D.
--- Cached: commutative                     Q.E.D.
+-- Lemma: commutative                      Q.E.D. [Cached]
 -- Inductive lemma (strong): nGCDBinEquiv
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (5 way case split)

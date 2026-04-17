@@ -1556,13 +1556,8 @@ recallWith cfgIn prf = do
              restoring new topCfg $ do
                  r@Proof{proofOf = po@ProofObj{dependencies, aliases = aka, wasCached = cached}} <- prf
                  cleanup
-                 let nm       = proofName po
-                     akaStr   | null aka  = ""
-                              | True      = " (a.k.a. " ++ intercalate ", " aka ++ ")"
-                     what     | cached    = "Cached"
-                              | True      = "Lemma"
-                 tab <- liftIO $ startTP cfg (verbose cfg) what 0 (TPProofOneShot nm [])
-                 liftIO $ finishTP cfg ("Q.E.D." ++ concludeModulo dependencies ++ akaStr) (tab, Nothing) []
+                 let nm = proofName po
+                 liftIO $ printLemmaResult cfg (verbose cfg) nm dependencies cached aka
                  pure r
  where restoring new old act = do setTPConfig new
                                   res <- act
