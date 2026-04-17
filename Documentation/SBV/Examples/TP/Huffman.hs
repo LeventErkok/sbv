@@ -5263,9 +5263,18 @@ optimalityProof = do
                        ?? tsPos `at` Inst @"t" r
                        ?? hNN `at` Inst @"t" l
                        ?? hNN `at` Inst @"t" r
-                       ?? sorry
-                       =: sTrue
-                       =: qed
+                       =: cases
+                            [ height l .== 0 .&& height r .== 0
+                                ==> lightW t + light2W t .<= deepW t + sibW t
+                                 =: sTrue
+                                 =: qed
+                            , height l .> 0 .|| height r .> 0
+                                ==> lightW t + light2W t .<= deepW t + sibW t
+                                 ?? ih `at` Inst @"t" l
+                                 ?? ih `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            ]
             |]
 
    -- Base case: for two tips, buildHuffman cost equals tree cost.
