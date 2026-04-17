@@ -248,6 +248,7 @@ Library
                   , Documentation.SBV.Examples.TP.Countdown
                   , Documentation.SBV.Examples.TP.Fibonacci
                   , Documentation.SBV.Examples.TP.GCD
+                  , Documentation.SBV.Examples.TP.Huffman
                   , Documentation.SBV.Examples.TP.InsertionSort
                   , Documentation.SBV.Examples.TP.Kadane
                   , Documentation.SBV.Examples.TP.Kleene
