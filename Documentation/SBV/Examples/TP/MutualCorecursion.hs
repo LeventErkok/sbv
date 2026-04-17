@@ -153,8 +153,8 @@ pingEqPong = do
 --
 -- >>> runTP pingElem
 -- Lemma: pingEqPong                       Q.E.D.
--- Cached: consIndex                       Q.E.D.
--- Cached: pongLen                         Q.E.D.
+-- Lemma: consIndex                        Q.E.D. [Cached]
+-- Lemma: pongLen                          Q.E.D. [Cached]
 -- Inductive lemma: pingElem
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.

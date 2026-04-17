@@ -57,7 +57,7 @@ tests = testGroup "Basics.TPCaching"
            recall (lemma "fact" sTrue [])
 
    -- Normal mode: direct proof then recall (cache hit).
-   -- The direct proof shows "Lemma:", the recall shows "Cached:".
+   -- The direct proof shows "Lemma:", the recall shows "Lemma: ... [Cached]".
    , goldenCapturedIO "tpCache_hit" $ \rf -> do
         let cfg = z3 { redirectVerbose = Just rf }
         void $ runTPWith cfg $ do
@@ -65,7 +65,7 @@ tests = testGroup "Basics.TPCaching"
            recall (lemma "fact" sTrue [])
 
    -- Normal mode: same proposition proved under two names, then recalled (aliases).
-   -- The recall shows "Cached:" with "(a.k.a. ...)" listing the other name.
+   -- The recall shows "Lemma: ... [Cached]" with "(a.k.a. ...)" listing the other name.
    , goldenCapturedIO "tpCache_alias" $ \rf -> do
         let cfg = z3 { redirectVerbose = Just rf }
         void $ runTPWith cfg $ do
@@ -110,7 +110,7 @@ tests = testGroup "Basics.TPCaching"
         writeFile rf $!! cleanStatsOutput contents
 
    -- Stats mode: direct proof then recall (cache hit).
-   -- Direct proof shows full steps; recall shows "Cached:" one-liner.
+   -- Direct proof shows full steps; recall shows "Lemma: ... [Cached]" one-liner.
    , goldenCapturedIO "tpCache_statsHit" $ \rf -> do
         let cfg = (tpStats z3) { redirectVerbose = Just rf }
         void $ runTPWith cfg $ do
@@ -125,7 +125,7 @@ tests = testGroup "Basics.TPCaching"
         writeFile rf $!! cleanStatsOutput contents
 
    -- Stats mode: nested recall showing inner cache dynamics.
-   -- First recall misses (shows full inner proofs). Second recall hits (shows "Cached:").
+   -- First recall misses (shows full inner proofs). Second recall hits (shows "Lemma: ... [Cached]").
    , goldenCapturedIO "tpCache_statsNested" $ \rf -> do
         let cfg = (tpStats z3) { redirectVerbose = Just rf }
         void $ runTPWith cfg $ do

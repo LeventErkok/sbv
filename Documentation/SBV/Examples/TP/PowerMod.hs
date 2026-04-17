@@ -214,7 +214,7 @@ modSubRight = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- Cached: modAddRight                     Q.E.D.
+-- Lemma: modAddRight                      Q.E.D. [Cached]
 -- Inductive lemma: modMulRightNonneg
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -326,7 +326,7 @@ modMulRightNeg = do
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- Cached: modAddRight                     Q.E.D.
+-- Lemma: modAddRight                      Q.E.D. [Cached]
 -- Inductive lemma: modMulRightNonneg
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -394,7 +394,7 @@ modMulLeft = do
 -- ==== __Proof__
 -- >>> runTP powerMod
 -- Lemma: modMulLeft                       Q.E.D.
--- Cached: modMulRight                     Q.E.D.
+-- Lemma: modMulRight                      Q.E.D. [Cached]
 -- Inductive lemma: powerModInduct
 --   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
