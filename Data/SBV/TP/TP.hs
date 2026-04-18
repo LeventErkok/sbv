@@ -183,7 +183,9 @@ class Calc a where
 
              qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
-             message cfg $ "Lemma: " ++ nm ++ "\n"
+             let header = "Lemma: " ++ nm
+             message cfg $ header ++ "\n"
+             liftIO $ modifyIORef' (maxRibbon tpSt) (max (length header))
 
              (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
 
@@ -607,7 +609,9 @@ inductionEngine style cfg nm result getStrategy = do
                        RegularInduction -> ""
                        GeneralInduction  -> " (strong)"
 
-          message cfg $ "Inductive lemma" ++ qual ++ ": " ++ nm ++ "\n"
+          let header = "Inductive lemma" ++ qual ++ ": " ++ nm
+          message cfg $ header ++ "\n"
+          liftIO $ modifyIORef' (maxRibbon tpSt) (max (length header))
 
           strategy@InductionStrategy { inductionIntros
                                      , inductionMeasure
