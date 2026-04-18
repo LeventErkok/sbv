@@ -137,7 +137,7 @@ mergeSort = smtFunction "mergeSort"
 -- Functions proven terminating: count, merge, mergeSort, nonDecreasing
 -- [Proven] mergeSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (OrdSymbolic (SBV a), SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
-correctness = runTPWith (tpRibbon 60 z3) $ do
+correctness = runTP $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions

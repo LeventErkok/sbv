@@ -108,7 +108,7 @@ inArray arr (low, high) elt = quantifiedBool $ \(Exists i) -> low .<= i .&& i .<
 -- Functions proven terminating: bsearch
 -- [Proven] bsearchCorrect :: Ɐarr ∷ (ArrayModel Integer Integer) → Ɐlo ∷ Integer → Ɐhi ∷ Integer → Ɐx ∷ Integer → Bool
 correctness :: IO (Proof (Forall "arr" (ArrayModel Integer Integer) -> Forall "lo" Integer -> Forall "hi" Integer -> Forall "x" Integer -> SBool))
-correctness = runTPWith (tpRibbon 50 cvc5) $ do
+correctness = runTPWith cvc5 $ do
 
   -- Helper: if a value is not in a range, then it isn't in any subrange of it:
   notInRange <- lemma "notInRange"

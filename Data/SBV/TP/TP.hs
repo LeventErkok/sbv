@@ -32,7 +32,7 @@ module Data.SBV.TP.TP (
        ,           induct,         inductWith
        ,          sInduct,        sInductWith
        , sorry
-       , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms
+       , TP, runTP, runTPWith, tpQuiet, tpStats, tpAsms
        , measureLemma, measureLemmaWith
        , (|-), (|->), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        , qc, qcWith

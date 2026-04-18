@@ -453,7 +453,7 @@ evalStable = do
 -- | Key soundness lemma: If a normalized formula is a tautology under bindings @b@,
 -- then it evaluates to true under @b ++ a@ for any @a@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) tautologyImpliesEval
+-- >>> runTPWith cvc5 tautologyImpliesEval
 -- Lemma: ifComplexityPos                            Q.E.D.
 -- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Lemma: lookUpStable                               Q.E.D.
@@ -605,7 +605,7 @@ tautologyImpliesEval = do
 --
 -- Normalization produces normalized formulas.
 --
--- >>> runTPWith (tpRibbon 50 z3) normalizeCorrect
+-- >>> runTP normalizeCorrect
 -- Lemma: ifComplexityPos                            Q.E.D.
 -- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Lemma: normalizePreservesComplexity               Q.E.D.
@@ -675,7 +675,7 @@ normalizeCorrect = do
 --
 -- Normalizing a normalized formula is the identity.
 --
--- >>> runTPWith (tpRibbon 50 z3) normalizeSame
+-- >>> runTP normalizeSame
 -- Lemma: ifComplexityPos                            Q.E.D.
 -- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Inductive lemma (strong): normalizeSame
@@ -719,7 +719,7 @@ normalizeSame = do
 --
 -- Normalization preserves semantics.
 --
--- >>> runTPWith (tpRibbon 50 z3) normalizeRespectsTruth
+-- >>> runTP normalizeRespectsTruth
 -- Lemma: ifComplexityPos                            Q.E.D.
 -- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Lemma: normalizePreservesComplexity               Q.E.D.
@@ -856,7 +856,7 @@ falsify f = falsify' (normalize f) []
 
 -- | If a normalized formula is not a tautology, then falsify' returns falsified = true.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) nonTautIsFalsified
+-- >>> runTPWith cvc5 nonTautIsFalsified
 -- Lemma: ifComplexityPos                            Q.E.D.
 -- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Inductive lemma (strong): nonTautIsFalsified
@@ -898,7 +898,7 @@ nonTautIsFalsified = do
 -- | If a variable is assigned in the input bindings and falsify' succeeds,
 -- the lookup value is preserved in the output bindings.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) falsifyExtendsBindings
+-- >>> runTPWith cvc5 falsifyExtendsBindings
 -- Lemma: ifComplexityPos                            Q.E.D.
 -- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Lemma: isAssignedExtends                          Q.E.D.
@@ -955,7 +955,7 @@ falsifyExtendsBindings = do
 -- | If falsify' returns falsified = true, then evaluating the formula
 -- with the returned bindings gives false.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) falsifyFalsifies
+-- >>> runTPWith cvc5 falsifyFalsifies
 -- Lemma: ifComplexityPos                            Q.E.D.
 -- Lemma: ifComplexitySmaller                        Q.E.D.
 -- Lemma: falsifyExtendsBindings                     Q.E.D.

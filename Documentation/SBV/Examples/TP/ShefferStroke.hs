@@ -351,7 +351,7 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \(For
 --   himp_eq         : [Proven] x ⇨ y = y ⊔ xᶜ :: Ɐx ∷ Stroke → Ɐy ∷ Stroke → Bool
 -- }
 shefferBooleanAlgebra :: IO BooleanAlgebraProof
-shefferBooleanAlgebra = runTPWith (tpRibbon 60 z3) $ do
+shefferBooleanAlgebra = runTP $ do
 
   -- shorthand
   let p = proofOf

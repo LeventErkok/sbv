@@ -103,7 +103,7 @@ oddSequence1 = runTP $ do
 -- Functions proven terminating: seq
 -- [Proven] oddSequence2 :: Ɐn ∷ Integer → Bool
 oddSequence2 :: IO (Proof (Forall "n" Integer -> SBool))
-oddSequence2 = runTPWith (tpRibbon 50 z3) $ do
+oddSequence2 = runTP $ do
   let s :: SInteger -> SInteger
       s = smtFunction "seq"
         $ \n -> [sCase| n of

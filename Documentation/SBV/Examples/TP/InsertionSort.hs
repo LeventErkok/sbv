@@ -122,7 +122,7 @@ isPermutation = smtFunction "isPermutation"
 -- Functions proven terminating: insert, insertionSort, isPermutation, nonDecreasing, removeFirst
 -- [Proven] insertionSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (OrdSymbolic (SBV a), Eq a, SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
-correctness = runTPWith (tpRibbon 45 cvc5) $ do
+correctness = runTPWith cvc5 $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions
