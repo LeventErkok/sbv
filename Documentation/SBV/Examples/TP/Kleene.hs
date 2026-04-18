@@ -69,20 +69,20 @@ x <= y = x + y .== y
 -- Axiom: ldistrib
 -- Axiom: unfold
 -- Axiom: least_fix
--- Lemma: par_lzero                        Q.E.D.
--- Lemma: par_monotone                     Q.E.D.
--- Lemma: seq_monotone                     Q.E.D.
+-- Lemma: par_lzero                     Q.E.D.
+-- Lemma: par_monotone                  Q.E.D.
+-- Lemma: seq_monotone                  Q.E.D.
 -- Lemma: star_star_1
---   Step: 1 (unfold)                      Q.E.D.
---   Step: 2 (factor out x * star x)       Q.E.D.
---   Step: 3 (par_idem)                    Q.E.D.
---   Step: 4 (unfold)                      Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: subset_eq                        Q.E.D.
--- Lemma: star_star_2_2                    Q.E.D.
--- Lemma: star_star_2_3                    Q.E.D.
--- Lemma: star_star_2_1                    Q.E.D.
--- Lemma: star_star_2                      Q.E.D.
+--   Step: 1 (unfold)                   Q.E.D.
+--   Step: 2 (factor out x * star x)    Q.E.D.
+--   Step: 3 (par_idem)                 Q.E.D.
+--   Step: 4 (unfold)                   Q.E.D.
+--   Result:                            Q.E.D.
+-- Lemma: subset_eq                     Q.E.D.
+-- Lemma: star_star_2_2                 Q.E.D.
+-- Lemma: star_star_2_3                 Q.E.D.
+-- Lemma: star_star_2_1                 Q.E.D.
+-- Lemma: star_star_2                   Q.E.D.
 kleeneProofs :: IO ()
 kleeneProofs = runTP $ do
 

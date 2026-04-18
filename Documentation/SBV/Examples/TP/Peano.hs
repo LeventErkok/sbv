@@ -115,7 +115,7 @@ i2n = smtFunction "i2n" $ \i -> [sCase| i of
 -- | \(\overline{n} \geq 0\)
 --
 -- >>> runTP n2iNonNeg
--- Lemma: n2iNonNeg                        Q.E.D.
+-- Lemma: n2iNonNeg    Q.E.D.
 -- Functions proven terminating: n2i
 -- [Proven] n2iNonNeg :: Ɐn ∷ Nat → Bool
 n2iNonNeg  :: TP (Proof (Forall "n" Nat -> SBool))
@@ -124,7 +124,7 @@ n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 -- | \(\overline{\underline{i}} = \max(i, 0)\).
 --
 -- >>> runTP i2n2i
--- Lemma: i2n2i                            Q.E.D.
+-- Lemma: i2n2i        Q.E.D.
 -- Functions proven terminating: i2n, n2i
 -- [Proven] i2n2i :: Ɐi ∷ Integer → Bool
 i2n2i :: TP (Proof (Forall "i" Integer -> SBool))
@@ -133,7 +133,7 @@ i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> n2i (i2n i) .== i `smax` 0) []
 -- | \(\underline{\overline{n}} = n\)
 --
 -- >>> runTP n2i2n
--- Lemma: n2i2n                            Q.E.D.
+-- Lemma: n2i2n        Q.E.D.
 -- Functions proven terminating: i2n, n2i
 -- [Proven] n2i2n :: Ɐn ∷ Nat → Bool
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
@@ -142,7 +142,7 @@ n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 -- | \(\overline{m + n} = \overline{m} + \overline{n}\)
 --
 -- >>> runTP n2iAdd
--- Lemma: n2iAdd                           Q.E.D.
+-- Lemma: n2iAdd       Q.E.D.
 -- Functions proven terminating: n2i, sNatPlus
 -- [Proven] n2iAdd :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 n2iAdd :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -155,7 +155,7 @@ n2iAdd = inductiveLemma "n2iAdd" (\(Forall m) (Forall n) -> n2i (m + n) .== n2i 
 -- | \(\overline{m + n} = \overline{m} + \overline{n}\)
 --
 -- >>> runTP addCorrect
--- Lemma: addCorrect                       Q.E.D.
+-- Lemma: addCorrect    Q.E.D.
 -- Functions proven terminating: n2i, sNatPlus
 -- [Proven] addCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 addCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -169,7 +169,7 @@ addCorrect = inductiveLemma
 -- | \(0 + m = m\)
 --
 -- >>> runTP addLeftUnit
--- Lemma: addLeftUnit                      Q.E.D.
+-- Lemma: addLeftUnit    Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] addLeftUnit :: Ɐm ∷ Nat → Bool
 addLeftUnit :: TP (Proof (Forall "m" Nat -> SBool))
@@ -178,7 +178,7 @@ addLeftUnit = lemma "addLeftUnit" (\(Forall m) -> 0 + m .== m) []
 -- | \(m + 0 = m\)
 --
 -- >>> runTP addRightUnit
--- Lemma: addRightUnit                     Q.E.D.
+-- Lemma: addRightUnit    Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] addRightUnit :: Ɐm ∷ Nat → Bool
 addRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
@@ -189,13 +189,13 @@ addRightUnit = inductiveLemma "addRightUnit" (\(Forall m) -> m + 0 .== m) []
 -- | \(m + \mathrm{Succ}\,n = \mathrm{Succ}\,(m + n)\)
 --
 -- >>> runTP addSucc
--- Lemma: caseZero                         Q.E.D.
+-- Lemma: caseZero     Q.E.D.
 -- Lemma: caseSucc
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: addSucc                          Q.E.D.
+--   Step: 1           Q.E.D.
+--   Step: 2           Q.E.D.
+--   Step: 3           Q.E.D.
+--   Result:           Q.E.D.
+-- Lemma: addSucc      Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] addSucc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 addSucc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -225,7 +225,7 @@ addSucc = do
 -- | \(m + (n + o) = (m + n) + o\)
 --
 -- >>> runTP addAssoc
--- Lemma: addAssoc                         Q.E.D.
+-- Lemma: addAssoc     Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] addAssoc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 addAssoc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
@@ -239,16 +239,16 @@ addAssoc = inductiveLemma
 -- | \(m + n = n + m\)
 --
 -- >>> runTP addComm
--- Lemma: addLeftUnit                      Q.E.D.
--- Lemma: addRightUnit                     Q.E.D.
--- Lemma: caseZero                         Q.E.D.
--- Lemma: addSucc                          Q.E.D.
+-- Lemma: addLeftUnit     Q.E.D.
+-- Lemma: addRightUnit    Q.E.D.
+-- Lemma: caseZero        Q.E.D.
+-- Lemma: addSucc         Q.E.D.
 -- Lemma: caseSucc
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: addComm                          Q.E.D.
+--   Step: 1              Q.E.D.
+--   Step: 2              Q.E.D.
+--   Step: 3              Q.E.D.
+--   Result:              Q.E.D.
+-- Lemma: addComm         Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] addComm :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 addComm :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -284,16 +284,16 @@ addComm = do
 -- | \(\overline{m * n} = \overline{m} * \overline{n}\)
 --
 -- >>> runTP mulCorrect
--- Lemma: caseZero                         Q.E.D.
--- Lemma: addCorrect                       Q.E.D.
+-- Lemma: caseZero       Q.E.D.
+-- Lemma: addCorrect     Q.E.D.
 -- Lemma: caseSucc
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: mullCorrect                      Q.E.D.
+--   Step: 1             Q.E.D.
+--   Step: 2             Q.E.D.
+--   Step: 3             Q.E.D.
+--   Step: 4             Q.E.D.
+--   Step: 5             Q.E.D.
+--   Result:             Q.E.D.
+-- Lemma: mullCorrect    Q.E.D.
 -- Functions proven terminating: n2i, sNatPlus, sNatTimes
 -- [Proven] mullCorrect :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulCorrect :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -328,7 +328,7 @@ mulCorrect = do
 -- | \(0 * m = 0\)
 --
 -- >>> runTP mulLeftAbsorb
--- Lemma: mulLeftAbsorb                    Q.E.D.
+-- Lemma: mulLeftAbsorb    Q.E.D.
 -- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulLeftAbsorb :: Ɐm ∷ Nat → Bool
 mulLeftAbsorb :: TP (Proof (Forall "m" Nat -> SBool))
@@ -337,7 +337,7 @@ mulLeftAbsorb = lemma "mulLeftAbsorb" (\(Forall m) -> 0 * m .== 0) []
 -- | \(m * 0 = 0\)
 --
 -- >>> runTP mulRightAbsorb
--- Lemma: mulRightAbsorb                   Q.E.D.
+-- Lemma: mulRightAbsorb    Q.E.D.
 -- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulRightAbsorb :: Ɐm ∷ Nat → Bool
 mulRightAbsorb :: TP (Proof (Forall "m" Nat -> SBool))
@@ -348,7 +348,7 @@ mulRightAbsorb = inductiveLemma "mulRightAbsorb" (\(Forall m) -> m * 0 .== 0) []
 -- | \(\mathrm{Succ\,0} * m = m\)
 --
 -- >>> runTP mulLeftUnit
--- Lemma: mulLeftUnit                      Q.E.D.
+-- Lemma: mulLeftUnit    Q.E.D.
 -- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulLeftUnit :: Ɐm ∷ Nat → Bool
 mulLeftUnit :: TP (Proof (Forall "m" Nat -> SBool))
@@ -357,7 +357,7 @@ mulLeftUnit = inductiveLemma "mulLeftUnit" (\(Forall m) -> sSucc 0 * m .== m) []
 -- | \(m * \mathrm{Succ\,0} = m\)
 --
 -- >>> runTP mulRightUnit
--- Lemma: mulRightUnit                     Q.E.D.
+-- Lemma: mulRightUnit    Q.E.D.
 -- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulRightUnit :: Ɐm ∷ Nat → Bool
 mulRightUnit :: TP (Proof (Forall "m" Nat -> SBool))
@@ -368,21 +368,21 @@ mulRightUnit = inductiveLemma "mulRightUnit" (\(Forall m) -> m * sSucc 0 .== m) 
 -- | \(m * (n + o) = m * n + m * o\)
 --
 -- >>> runTP distribLeft
--- Lemma: caseZero                         Q.E.D.
--- Lemma: addAssoc                         Q.E.D.
--- Lemma: addComm                          Q.E.D.
+-- Lemma: caseZero        Q.E.D.
+-- Lemma: addAssoc        Q.E.D.
+-- Lemma: addComm         Q.E.D.
 -- Lemma: caseSucc
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Step: 7                               Q.E.D.
---   Step: 8                               Q.E.D.
---   Step: 9                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: distribLeft                      Q.E.D.
+--   Step: 1              Q.E.D.
+--   Step: 2              Q.E.D.
+--   Step: 3              Q.E.D.
+--   Step: 4              Q.E.D.
+--   Step: 5              Q.E.D.
+--   Step: 6              Q.E.D.
+--   Step: 7              Q.E.D.
+--   Step: 8              Q.E.D.
+--   Step: 9              Q.E.D.
+--   Result:              Q.E.D.
+-- Lemma: distribLeft     Q.E.D.
 -- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] distribLeft :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 distribLeft :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
@@ -422,20 +422,20 @@ distribLeft = do
 -- | \((m + n) * o = m * o + n * o\)
 --
 -- >>> runTP distribRight
--- Lemma: caseZero                         Q.E.D.
--- Lemma: addAssoc                         Q.E.D.
--- Lemma: addComm                          Q.E.D.
--- Lemma: addSucc                          Q.E.D. [Cached]
+-- Lemma: caseZero        Q.E.D.
+-- Lemma: addAssoc        Q.E.D.
+-- Lemma: addComm         Q.E.D.
+-- Lemma: addSucc         Q.E.D. [Cached]
 -- Lemma: caseSucc
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Step: 7                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: distribRight                     Q.E.D.
+--   Step: 1              Q.E.D.
+--   Step: 2              Q.E.D.
+--   Step: 3              Q.E.D.
+--   Step: 4              Q.E.D.
+--   Step: 5              Q.E.D.
+--   Step: 6              Q.E.D.
+--   Step: 7              Q.E.D.
+--   Result:              Q.E.D.
+-- Lemma: distribRight    Q.E.D.
 -- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] distribRight :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 distribRight :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
@@ -475,17 +475,17 @@ distribRight = do
 -- | \(m * \mathrm{Succ}\,n = m * n + m\)
 --
 -- >>> runTP mulSucc
--- Lemma: addLeftUnit                      Q.E.D.
--- Lemma: distribLeft                      Q.E.D.
--- Lemma: mulRightUnit                     Q.E.D.
--- Lemma: addComm                          Q.E.D. [Cached]
+-- Lemma: addLeftUnit       Q.E.D.
+-- Lemma: distribLeft       Q.E.D.
+-- Lemma: mulRightUnit      Q.E.D.
+-- Lemma: addComm           Q.E.D. [Cached]
 -- Lemma: mulSucc
---   Step: 1                               Q.E.D.
---   Step: 2 (defn of +)                   Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                Q.E.D.
+--   Step: 2 (defn of +)    Q.E.D.
+--   Step: 3                Q.E.D.
+--   Step: 4                Q.E.D.
+--   Step: 5                Q.E.D.
+--   Result:                Q.E.D.
 -- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulSucc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulSucc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -515,15 +515,15 @@ mulSucc = do
 -- | \(m * (n * o) = (m * n) * o\)
 --
 -- >>> runTP mulAssoc
--- Lemma: caseZero                         Q.E.D.
--- Lemma: distribRight                     Q.E.D.
+-- Lemma: caseZero        Q.E.D.
+-- Lemma: distribRight    Q.E.D.
 -- Lemma: caseSucc
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: mulAssoc                         Q.E.D.
+--   Step: 1              Q.E.D.
+--   Step: 2              Q.E.D.
+--   Step: 3              Q.E.D.
+--   Step: 4              Q.E.D.
+--   Result:              Q.E.D.
+-- Lemma: mulAssoc        Q.E.D.
 -- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulAssoc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 mulAssoc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
@@ -557,19 +557,19 @@ mulAssoc = do
 -- | \(m * n = n * m\)
 --
 -- >>> runTP mulComm
--- Lemma: mulRightAbsorb                   Q.E.D.
--- Lemma: caseZero                         Q.E.D.
--- Lemma: mulRightUnit                     Q.E.D.
--- Lemma: distribLeft                      Q.E.D.
+-- Lemma: mulRightAbsorb    Q.E.D.
+-- Lemma: caseZero          Q.E.D.
+-- Lemma: mulRightUnit      Q.E.D.
+-- Lemma: distribLeft       Q.E.D.
 -- Lemma: caseSucc
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: mulComm                          Q.E.D.
+--   Step: 1                Q.E.D.
+--   Step: 2                Q.E.D.
+--   Step: 3                Q.E.D.
+--   Step: 4                Q.E.D.
+--   Step: 5                Q.E.D.
+--   Step: 6                Q.E.D.
+--   Result:                Q.E.D.
+-- Lemma: mulComm           Q.E.D.
 -- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulComm :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 mulComm :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -610,15 +610,15 @@ mulComm = do
 -- | \(m < n \;\wedge\; n < o \;\rightarrow\; m < o\)
 --
 -- >>> runTP ltTrans
--- Lemma: addAssoc                         Q.E.D.
+-- Lemma: addAssoc     Q.E.D.
 -- Lemma: ltTrans
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1           Q.E.D.
+--   Step: 2           Q.E.D.
+--   Step: 3           Q.E.D.
+--   Step: 4           Q.E.D.
+--   Step: 5           Q.E.D.
+--   Step: 6           Q.E.D.
+--   Result:           Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] ltTrans :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 ltTrans :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
@@ -645,11 +645,11 @@ ltTrans = do
 -- | \(\neg(m < m)\)
 --
 -- >>> runTP ltIrreflexive
--- Lemma: cancel                           Q.E.D.
+-- Lemma: cancel           Q.E.D.
 -- Lemma: ltIrreflexive
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1               Q.E.D.
+--   Step: 2               Q.E.D.
+--   Result:               Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] ltIrreflexive :: Ɐm ∷ Nat → Bool
 ltIrreflexive :: TP (Proof (Forall "m" Nat -> SBool))
@@ -672,37 +672,37 @@ ltIrreflexive = do
 -- | \(m \geq n = \overline{m} \geq \overline{n}\)
 --
 -- >>> runTP lteEquiv
--- Lemma: n2iAdd                           Q.E.D.
--- Lemma: n2iNonNeg                        Q.E.D.
--- Lemma: n2i2n                            Q.E.D.
--- Lemma: i2n2i                            Q.E.D.
--- Lemma: addRightUnit                     Q.E.D.
+-- Lemma: n2iAdd               Q.E.D.
+-- Lemma: n2iNonNeg            Q.E.D.
+-- Lemma: n2i2n                Q.E.D.
+-- Lemma: i2n2i                Q.E.D.
+-- Lemma: addRightUnit         Q.E.D.
 -- Lemma: lteEquiv_ltr
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.2.3             Q.E.D.
+--     Step: 1.2.4             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- Lemma: lteEquiv_rtl
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
+--   Step: 1                   Q.E.D.
+--   Step: 2                   Q.E.D.
+--   Step: 3                   Q.E.D.
+--   Step: 4                   Q.E.D.
+--   Step: 5                   Q.E.D.
+--   Step: 6                   Q.E.D.
 --   Step: 7 (2 way case split)
---     Step: 7.1                           Q.E.D.
---     Step: 7.2.1                         Q.E.D.
---     Step: 7.2.2                         Q.E.D.
---     Step: 7.2.3                         Q.E.D.
---     Step: 7.2.4                         Q.E.D.
---     Step: 7.2.5                         Q.E.D.
---     Step: 7.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: lteEquiv                         Q.E.D.
+--     Step: 7.1               Q.E.D.
+--     Step: 7.2.1             Q.E.D.
+--     Step: 7.2.2             Q.E.D.
+--     Step: 7.2.3             Q.E.D.
+--     Step: 7.2.4             Q.E.D.
+--     Step: 7.2.5             Q.E.D.
+--     Step: 7.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
+-- Lemma: lteEquiv             Q.E.D.
 -- Functions proven terminating: i2n, n2i, sNatPlus
 -- [Proven] lteEquiv :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 lteEquiv :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -762,11 +762,11 @@ lteEquiv = do
 -- | \(m \geq n \;\lor\; n \geq m\)
 --
 -- >>> runTP ordered
--- Lemma: lteEquiv                         Q.E.D.
+-- Lemma: lteEquiv             Q.E.D.
 -- Lemma: ordered
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                   Q.E.D.
+--   Step: 2                   Q.E.D.
+--   Result:                   Q.E.D.
 -- Functions proven terminating: i2n, n2i, sNatPlus
 -- [Proven] ordered :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 ordered :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -785,8 +785,8 @@ ordered = do
 -- | \(m < n \;\lor\; m = n \;\lor\; n < m\)
 --
 -- >>> runTP trichotomy
--- Lemma: ordered                          Q.E.D.
--- Lemma: trichotomy                       Q.E.D.
+-- Lemma: ordered              Q.E.D.
+-- Lemma: trichotomy           Q.E.D.
 -- Functions proven terminating: i2n, n2i, sNatPlus
 -- [Proven] trichotomy :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 trichotomy :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -802,15 +802,15 @@ trichotomy = do
 -- | \(m < n \;\rightarrow\; m + o < n + o\)
 --
 -- >>> runTP addOrder
--- Lemma: addAssoc                         Q.E.D.
--- Lemma: addComm                          Q.E.D.
+-- Lemma: addAssoc        Q.E.D.
+-- Lemma: addComm         Q.E.D.
 -- Lemma: addOrder
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1              Q.E.D.
+--   Step: 2              Q.E.D.
+--   Step: 3              Q.E.D.
+--   Step: 4              Q.E.D.
+--   Step: 5              Q.E.D.
+--   Result:              Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] addOrder :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 addOrder :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
@@ -838,15 +838,15 @@ addOrder = do
 -- | \(o > 0 \;\wedge\; m < n \;\rightarrow\; m * o < n * o\)
 --
 -- >>> runTP mulOrder
--- Lemma: distribRight                     Q.E.D.
+-- Lemma: distribRight    Q.E.D.
 -- Lemma: mulOrder
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1              Q.E.D.
+--   Step: 2              Q.E.D.
+--   Step: 3              Q.E.D.
+--   Step: 4              Q.E.D.
+--   Step: 5              Q.E.D.
+--   Step: 6              Q.E.D.
+--   Result:              Q.E.D.
 -- Functions proven terminating: sNatPlus, sNatTimes
 -- [Proven] mulOrder :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 mulOrder :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
@@ -873,7 +873,7 @@ mulOrder = do
 -- | \(m < n \;\rightarrow\; \exists o.\; m + o = n\)
 --
 -- >>> runTP orderSum
--- Lemma: orderSum                         Q.E.D.
+-- Lemma: orderSum     Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] orderSum :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 orderSum :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -886,7 +886,7 @@ orderSum = lemma "orderSum"
 -- | \(0 < 1\)
 --
 -- >>> runTP zeroLtOne
--- Lemma: zeroLtOne                        Q.E.D.
+-- Lemma: zeroLtOne    Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] zeroLtOne :: Bool
 zeroLtOne :: TP (Proof SBool)
@@ -895,7 +895,7 @@ zeroLtOne = lemma "zeroLtOne" (0 .< (1 :: SNat)) []
 -- | \(m > 0 \;\rightarrow\; m \geq 1\)
 --
 -- >>> runTP nothingBetweenZeroAndOne
--- Lemma: nothingBetweenZeroAndOne         Q.E.D.
+-- Lemma: nothingBetweenZeroAndOne    Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] nothingBetweenZeroAndOne :: Ɐm ∷ Nat → Bool
 nothingBetweenZeroAndOne :: TP (Proof (Forall "m" Nat -> SBool))
@@ -908,7 +908,7 @@ nothingBetweenZeroAndOne = lemma "nothingBetweenZeroAndOne"
 -- | \(m \geq 0\)
 --
 -- >>> runTP minimumElt
--- Lemma: minimumElt                       Q.E.D.
+-- Lemma: minimumElt    Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] minimumElt :: Ɐm ∷ Nat → Bool
 minimumElt :: TP (Proof (Forall "m" Nat -> SBool))
@@ -919,7 +919,7 @@ minimumElt = lemma "minimumElt" (\(Forall m) -> m .>= 0) []
 -- | \(\forall m \;\exists n \;.\; m < n\)
 --
 -- >>> runTP noMaximumElt
--- Lemma: noMaximumElt                     Q.E.D.
+-- Lemma: noMaximumElt    Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] noMaximumElt :: Ɐm ∷ Nat → ∃n ∷ Nat → Bool
 noMaximumElt :: TP (Proof (Forall "m" Nat -> Exists "n" Nat -> SBool))

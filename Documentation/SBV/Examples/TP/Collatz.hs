@@ -61,7 +61,7 @@ pow2 = smtFunction "pow2"
 -- | Doubling doesn't change the Collatz result.
 --
 -- >>> runTP doubling
--- Lemma: doubling                         Q.E.D. [Modulo: collatz termination]
+-- Lemma: doubling     Q.E.D. [Modulo: collatz termination]
 -- [Modulo: collatz termination] doubling :: Ɐn ∷ Integer → Bool
 doubling :: TP (Proof (Forall "n" Integer -> SBool))
 doubling = lemma "doubling" (\(Forall @"n" n) -> n .>= 1 .=> collatz (2 * n) .== collatz n) []
@@ -70,10 +70,10 @@ doubling = lemma "doubling" (\(Forall @"n" n) -> n .>= 1 .=> collatz (2 * n) .==
 --
 -- >>> runTP pow2pos
 -- Inductive lemma: pow2pos
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                Q.E.D.
+--   Step: 1                   Q.E.D.
+--   Step: 2                   Q.E.D.
+--   Result:                   Q.E.D.
 -- Functions proven terminating: pow2
 -- [Proven] pow2pos :: Ɐk ∷ Integer → Bool
 pow2pos :: TP (Proof (Forall "k" Integer -> SBool))
@@ -91,14 +91,14 @@ pow2pos = induct "pow2pos"
 -- | All powers of two reach 1 under the Collatz function.
 --
 -- >>> runTP collatzPow2
--- Lemma: doubling                         Q.E.D. [Modulo: collatz termination]
--- Lemma: pow2pos                          Q.E.D.
+-- Lemma: doubling                 Q.E.D. [Modulo: collatz termination]
+-- Lemma: pow2pos                  Q.E.D.
 -- Inductive lemma: collatzPow2
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D. [Modulo: collatz termination]
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D. [Modulo: collatz termination]
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D. [Modulo: collatz termination]
+--   Step: 3                       Q.E.D.
+--   Result:                       Q.E.D. [Modulo: collatz termination]
 -- Functions proven terminating: pow2
 -- [Modulo: collatz termination] collatzPow2 :: Ɐk ∷ Integer → Bool
 collatzPow2 :: TP (Proof (Forall "k" Integer -> SBool))

@@ -48,15 +48,15 @@ import Data.SBV.TP
 --
 -- >>> sqrt2IsIrrational
 -- Lemma: oddSquaredIsOdd
---   Step: 1                               Q.E.D.
---   Step: 2 (expand square)               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: squareEvenImpliesEven            Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2 (expand square)       Q.E.D.
+--   Result:                       Q.E.D.
+-- Lemma: squareEvenImpliesEven    Q.E.D.
 -- Lemma: evenSquaredIsMult4
---   Step: 1                               Q.E.D.
---   Step: 2 (expand square)               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: sqrt2IsIrrational                Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2 (expand square)       Q.E.D.
+--   Result:                       Q.E.D.
+-- Lemma: sqrt2IsIrrational        Q.E.D.
 -- [Proven] sqrt2IsIrrational :: Bool
 sqrt2IsIrrational :: IO (Proof SBool)
 sqrt2IsIrrational = runTP $ do

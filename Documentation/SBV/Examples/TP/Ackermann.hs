@@ -75,15 +75,15 @@ pet = smtFunction "pet"
 --
 -- >>> runTP ack_2_2_4
 -- Inductive lemma (strong): ack_2_2_4
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative        Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                          Q.E.D.
+--     Step: 1.2.1                        Q.E.D.
+--     Step: 1.2.2                        Q.E.D.
+--     Step: 1.2.3                        Q.E.D.
+--     Step: 1.2.4                        Q.E.D.
+--     Step: 1.Completeness               Q.E.D.
+--   Result:                              Q.E.D.
 -- Functions proven terminating: ack
 -- [Proven] ack_2_2_4 :: Ɐm ∷ Integer → Bool
 ack_2_2_4 :: TP (Proof (Forall "m" Integer -> SBool))
@@ -106,16 +106,16 @@ ack_2_2_4 = sInduct "ack_2_2_4"
 --
 -- >>> runTP ack_psd
 -- Inductive lemma (strong): ack_psd
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative      Q.E.D.
 --   Step: 1 (4 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3                           Q.E.D.
---     Step: 1.4.1                         Q.E.D.
---     Step: 1.4.2                         Q.E.D.
---     Step: 1.4.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                        Q.E.D.
+--     Step: 1.2                        Q.E.D.
+--     Step: 1.3                        Q.E.D.
+--     Step: 1.4.1                      Q.E.D.
+--     Step: 1.4.2                      Q.E.D.
+--     Step: 1.4.3                      Q.E.D.
+--     Step: 1.Completeness             Q.E.D.
+--   Result:                            Q.E.D.
 -- Functions proven terminating: ack
 -- [Proven] ack_psd :: Ɐm ∷ Integer → Ɐn ∷ Integer → Ɐa ∷ Integer → Bool
 ack_psd :: TP (Proof (Forall "m" Integer -> Forall "n" Integer -> Forall "a" Integer -> SBool))
@@ -142,17 +142,17 @@ ack_psd = sInduct "ack_psd"
 --
 -- >>> runTPWith cvc5 pet_psd
 -- Inductive lemma (strong): pet_psd
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative      Q.E.D.
 --   Step: 1 (3 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.3.1                         Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                        Q.E.D.
+--     Step: 1.2.1                      Q.E.D.
+--     Step: 1.2.2                      Q.E.D.
+--     Step: 1.2.3                      Q.E.D.
+--     Step: 1.3.1                      Q.E.D.
+--     Step: 1.3.2                      Q.E.D.
+--     Step: 1.3.3                      Q.E.D.
+--     Step: 1.Completeness             Q.E.D.
+--   Result:                            Q.E.D.
 -- Functions proven terminating: pet
 -- [Proven] pet_psd :: Ɐm ∷ Integer → Ɐn ∷ Integer → Bool
 pet_psd :: TP (Proof (Forall "m" Integer -> Forall "n" Integer -> SBool))
@@ -182,46 +182,46 @@ pet_psd = do
 --
 -- >>> runTPWith cvc5 petAck
 -- Inductive lemma (strong): ack_2_2_4
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative        Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                          Q.E.D.
+--     Step: 1.2.1                        Q.E.D.
+--     Step: 1.2.2                        Q.E.D.
+--     Step: 1.2.3                        Q.E.D.
+--     Step: 1.2.4                        Q.E.D.
+--     Step: 1.Completeness               Q.E.D.
+--   Result:                              Q.E.D.
 -- Inductive lemma (strong): pet_psd
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative        Q.E.D.
 --   Step: 1 (3 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.3.1                         Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                          Q.E.D.
+--     Step: 1.2.1                        Q.E.D.
+--     Step: 1.2.2                        Q.E.D.
+--     Step: 1.2.3                        Q.E.D.
+--     Step: 1.3.1                        Q.E.D.
+--     Step: 1.3.2                        Q.E.D.
+--     Step: 1.3.3                        Q.E.D.
+--     Step: 1.Completeness               Q.E.D.
+--   Result:                              Q.E.D.
 -- Inductive lemma (strong): petAck
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative        Q.E.D.
 --   Step: 1 (4 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.3.1                         Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.3.4                         Q.E.D.
---     Step: 1.3.5                         Q.E.D.
---     Step: 1.4.1                         Q.E.D.
---     Step: 1.4.2                         Q.E.D.
---     Step: 1.4.3                         Q.E.D.
---     Step: 1.4.4                         Q.E.D.
---     Step: 1.4.5                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                          Q.E.D.
+--     Step: 1.2.1                        Q.E.D.
+--     Step: 1.2.2                        Q.E.D.
+--     Step: 1.2.3                        Q.E.D.
+--     Step: 1.3.1                        Q.E.D.
+--     Step: 1.3.2                        Q.E.D.
+--     Step: 1.3.3                        Q.E.D.
+--     Step: 1.3.4                        Q.E.D.
+--     Step: 1.3.5                        Q.E.D.
+--     Step: 1.4.1                        Q.E.D.
+--     Step: 1.4.2                        Q.E.D.
+--     Step: 1.4.3                        Q.E.D.
+--     Step: 1.4.4                        Q.E.D.
+--     Step: 1.4.5                        Q.E.D.
+--     Step: 1.Completeness               Q.E.D.
+--   Result:                              Q.E.D.
 -- Functions proven terminating: ack, pet
 -- [Proven] petAck :: Ɐm ∷ Integer → Ɐn ∷ Integer → Bool
 petAck :: TP (Proof (Forall "m" Integer -> Forall "n" Integer -> SBool))

@@ -74,14 +74,14 @@ partition = smtFunction "partition"
 --
 -- >>> runTP $ partitionFstBound @Integer
 -- Inductive lemma (strong): partitionNotLongerFst
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2 (simplify)              Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                      Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2 (simplify)                         Q.E.D.
+--     Step: 1.2.3                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Functions proven terminating: partition
 -- [Proven] partitionNotLongerFst :: Ɐl ∷ [Integer] → Ɐpivot ∷ Integer → Bool
 partitionFstBound :: forall a. (OrdSymbolic (SBV a), SymVal a) => TP (Proof (Forall "l" [a] -> Forall "pivot" a -> SBool))
@@ -109,14 +109,14 @@ partitionFstBound = sInduct "partitionNotLongerFst"
 --
 -- >>> runTP $ partitionSndBound @Integer
 -- Inductive lemma (strong): partitionNotLongerSnd
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2 (simplify)              Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                      Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2 (simplify)                         Q.E.D.
+--     Step: 1.2.3                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Functions proven terminating: partition
 -- [Proven] partitionNotLongerSnd :: Ɐl ∷ [Integer] → Ɐpivot ∷ Integer → Bool
 partitionSndBound :: forall a. (OrdSymbolic (SBV a), SymVal a) => TP (Proof (Forall "l" [a] -> Forall "pivot" a -> SBool))
@@ -147,154 +147,154 @@ partitionSndBound = sInduct "partitionNotLongerSnd"
 --
 -- >>> correctness @Integer
 -- Inductive lemma: countAppend
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2 (unfold count)                                    Q.E.D.
---   Step: 3                                                   Q.E.D.
---   Step: 4 (simplify)                                        Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Step: 2 (unfold count)                           Q.E.D.
+--   Step: 3                                          Q.E.D.
+--   Step: 4 (simplify)                               Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma: countNonNeg
---   Step: Base                                                Q.E.D.
+--   Step: Base                                       Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                             Q.E.D.
---     Step: 1.1.2                                             Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--     Step: 1.1.1                                    Q.E.D.
+--     Step: 1.1.2                                    Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma: countElem
---   Step: Base                                                Q.E.D.
+--   Step: Base                                       Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                             Q.E.D.
---     Step: 1.1.2                                             Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--     Step: 1.1.1                                    Q.E.D.
+--     Step: 1.1.2                                    Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma: elemCount
---   Step: Base                                                Q.E.D.
+--   Step: Base                                       Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--     Step: 1.1                                      Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Lemma: sublistCorrect
---   Step: 1                                                   Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Result:                                          Q.E.D.
 -- Lemma: sublistElem
---   Step: 1                                                   Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: sublistTail                                          Q.E.D.
--- Lemma: sublistIfPerm                                        Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Result:                                          Q.E.D.
+-- Lemma: sublistTail                                 Q.E.D.
+-- Lemma: sublistIfPerm                               Q.E.D.
 -- Inductive lemma: lltCorrect
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma: lgeCorrect
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma: lltSublist
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2                                                   Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Step: 2                                          Q.E.D.
+--   Result:                                          Q.E.D.
 -- Lemma: lltPermutation
---   Step: 1                                                   Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma: lgeSublist
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2                                                   Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Step: 2                                          Q.E.D.
+--   Result:                                          Q.E.D.
 -- Lemma: lgePermutation
---   Step: 1                                                   Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma: partitionFstLT
---   Step: Base                                                Q.E.D.
---   Step: 1 (unroll partition)                                Q.E.D.
---   Step: 2 (push fst down, simplify)                         Q.E.D.
---   Step: 3 (push llt down)                                   Q.E.D.
---   Step: 4                                                   Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1 (unroll partition)                       Q.E.D.
+--   Step: 2 (push fst down, simplify)                Q.E.D.
+--   Step: 3 (push llt down)                          Q.E.D.
+--   Step: 4                                          Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma: partitionSndGE
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2 (push lge down)                                   Q.E.D.
---   Step: 3                                                   Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: partitionNotLongerFst                                Q.E.D.
--- Lemma: partitionNotLongerSnd                                Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Step: 2 (push lge down)                          Q.E.D.
+--   Step: 3                                          Q.E.D.
+--   Result:                                          Q.E.D.
+-- Lemma: partitionNotLongerFst                       Q.E.D.
+-- Lemma: partitionNotLongerSnd                       Q.E.D.
 -- Inductive lemma: countPartition
---   Step: Base                                                Q.E.D.
---   Step: 1 (expand partition)                                Q.E.D.
---   Step: 2 (push countTuple down)                            Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1 (expand partition)                       Q.E.D.
+--   Step: 2 (push countTuple down)                   Q.E.D.
 --   Step: 3 (2 way case split)
---     Step: 3.1.1                                             Q.E.D.
---     Step: 3.1.2 (simplify)                                  Q.E.D.
---     Step: 3.1.3                                             Q.E.D.
---     Step: 3.2.1                                             Q.E.D.
---     Step: 3.2.2 (simplify)                                  Q.E.D.
---     Step: 3.2.3                                             Q.E.D.
---     Step: 3.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--     Step: 3.1.1                                    Q.E.D.
+--     Step: 3.1.2 (simplify)                         Q.E.D.
+--     Step: 3.1.3                                    Q.E.D.
+--     Step: 3.2.1                                    Q.E.D.
+--     Step: 3.2.2 (simplify)                         Q.E.D.
+--     Step: 3.2.3                                    Q.E.D.
+--     Step: 3.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma (strong): sortCountsMatch
---   Step: Measure is non-negative                             Q.E.D.
+--   Step: Measure is non-negative                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2 (expand quickSort)                          Q.E.D.
---     Step: 1.2.3 (push count down)                           Q.E.D.
---     Step: 1.2.4                                             Q.E.D.
---     Step: 1.2.5                                             Q.E.D.
---     Step: 1.2.6 (IH on lo)                                  Q.E.D.
---     Step: 1.2.7 (IH on hi)                                  Q.E.D.
---     Step: 1.2.8                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: sortIsPermutation                                    Q.E.D.
+--     Step: 1.1                                      Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2 (expand quickSort)                 Q.E.D.
+--     Step: 1.2.3 (push count down)                  Q.E.D.
+--     Step: 1.2.4                                    Q.E.D.
+--     Step: 1.2.5                                    Q.E.D.
+--     Step: 1.2.6 (IH on lo)                         Q.E.D.
+--     Step: 1.2.7 (IH on hi)                         Q.E.D.
+--     Step: 1.2.8                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
+-- Lemma: sortIsPermutation                           Q.E.D.
 -- Inductive lemma: nonDecreasingMerge
---   Step: Base                                                Q.E.D.
+--   Step: Base                                       Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2                                             Q.E.D.
---     Step: 1.2.3                                             Q.E.D.
---     Step: 1.2.4                                             Q.E.D.
---     Step: 1.2.5                                             Q.E.D.
---     Step: 1.2.6                                             Q.E.D.
---     Step: 1.2.7                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--     Step: 1.1                                      Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2                                    Q.E.D.
+--     Step: 1.2.3                                    Q.E.D.
+--     Step: 1.2.4                                    Q.E.D.
+--     Step: 1.2.5                                    Q.E.D.
+--     Step: 1.2.6                                    Q.E.D.
+--     Step: 1.2.7                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma (strong): sortIsNonDecreasing
---   Step: Measure is non-negative                             Q.E.D.
+--   Step: Measure is non-negative                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2.1                                             Q.E.D.
---     Step: 1.2.2 (expand quickSort)                          Q.E.D.
---     Step: 1.2.3                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: quickSortIsCorrect                                   Q.E.D.
+--     Step: 1.1                                      Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2 (expand quickSort)                 Q.E.D.
+--     Step: 1.2.3                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
+-- Lemma: quickSortIsCorrect                          Q.E.D.
 -- Inductive lemma: partitionSortedLeft
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2                                                   Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Step: 2                                          Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma: partitionSortedRight
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2                                                   Q.E.D.
---   Result:                                                   Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Step: 2                                          Q.E.D.
+--   Result:                                          Q.E.D.
 -- Inductive lemma: unchangedIfNondecreasing
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2                                                   Q.E.D.
---   Step: 3                                                   Q.E.D.
---   Step: 4                                                   Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: ifChangedThenUnsorted                                Q.E.D.
+--   Step: Base                                       Q.E.D.
+--   Step: 1                                          Q.E.D.
+--   Step: 2                                          Q.E.D.
+--   Step: 3                                          Q.E.D.
+--   Step: 4                                          Q.E.D.
+--   Result:                                          Q.E.D.
+-- Lemma: ifChangedThenUnsorted                       Q.E.D.
 -- == Proof tree:
 -- quickSortIsCorrect
 --  ├╴sortIsPermutation
@@ -329,7 +329,7 @@ partitionSndBound = sInduct "partitionNotLongerSnd"
 -- Functions proven terminating: count, lge, llt, nonDecreasing, partition, quickSort
 -- [Proven] quickSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (Eq a, OrdSymbolic (SBV a), SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
-correctness = runTPWith (tpRibbon 60 z3) $ do
+correctness = runTP $ do
 
   --------------------------------------------------------------------------------------------
   -- Part I. Import helper lemmas, definitions
@@ -686,10 +686,12 @@ correctness = runTPWith (tpRibbon 60 z3) $ do
              [proofOf unchangedIfNondecreasing]
 
   --------------------------------------------------------------------------------------------
-  -- | We can display the dependencies in a proof
+  -- We can display the dependencies in a proof.
+  -- Note that we do avoid doing this during the
+  -- dry-run of the proof to avoid duplicate output.
   --------------------------------------------------------------------------------------------
-  liftIO $ do putStrLn "== Proof tree:"
-              putStr $ showProofTree True qs
+  unlessDryRun $ liftIO $ do putStrLn "== Proof tree:"
+                             putStr $ showProofTree True qs
 
   pure qs
 

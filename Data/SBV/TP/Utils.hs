@@ -23,17 +23,17 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.Utils (
-         TP, runTP, runTPWith, tryTP, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof, noTermCheckProof
+         TP, runTP, runTPWith, tryTP, whenDryRun, unlessDryRun, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof, noTermCheckProof
        , startTP, finishTP, getTPState, getTPConfig, setTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo, printLemmaResult
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML
        , addToProofCache, lookupProofCache, returnCachedProof
-       , tpQuiet, tpRibbon, tpAsms, tpStats
+       , tpQuiet, tpAsms, tpStats
        , measureLemma, measureLemmaWith
        ) where
 
 import Control.Exception    (Exception, try)
-import Control.Monad        (unless)
+import Control.Monad        (unless, when)
 import Control.Monad.Reader (ReaderT(..), runReaderT, MonadReader, ask, liftIO)
 import Control.Monad.Trans  (MonadIO)
 
@@ -89,6 +89,8 @@ data TPState = TPState { stats               :: IORef TPStats
                        , measuresVerified    :: IORef (Set String)
                        , productiveVerified  :: IORef (Set String)
                        , measuresEncountered :: IORef (Set String)
+                       , dryRun              :: IORef Bool    -- ^ If True, collecting ribbon widths (no proving)
+                       , maxRibbon           :: IORef Int     -- ^ Session-wide maximum ribbon length
                        }
 
 -- | Monad for running TP proofs in.
@@ -98,6 +100,19 @@ newtype TP a = TP (ReaderT TPState IO a)
 -- | Run a TP action, catching exceptions.
 tryTP :: Exception e => TP a -> TP (Either e a)
 tryTP (TP act) = TP $ ReaderT $ \st -> try (runReaderT act st)
+
+-- | Run an action only during the dry-run pass.
+whenDryRun :: TP () -> TP ()
+whenDryRun act = do st <- ask
+                    isDry <- liftIO $ readIORef (dryRun st)
+                    when isDry act
+
+-- | Run an action only during the real (non-dry-run) pass. Useful for guarding user-facing output
+-- (e.g., proof tree printing) that should be suppressed during ribbon calculation.
+unlessDryRun :: TP () -> TP ()
+unlessDryRun act = do st <- ask
+                      isDry <- liftIO $ readIORef (dryRun st)
+                      unless isDry act
 
 -- | Extract the integer node ID from an SV.
 svIntId :: SV -> Int
@@ -187,29 +202,48 @@ runTP = runTPWith defaultSMTCfg
 -- | Run a TP proof, using the given configuration.
 runTPWith :: SMTConfig -> TP a -> IO a
 runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
-   rStats       <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0, qcElapsed = 0 }
-   rCache       <- newIORef Map.empty
-   rCfg         <- newIORef cfg
-   rRecall      <- newIORef (0 :: Int)
-   rMeasures    <- newIORef Set.empty
-   rProductive  <- newIORef Set.empty
-   rEncountered <- newIORef Set.empty
-   (mbT, r) <- timeIf printStats $ runReaderT f TPState { config               = rCfg
-                                                         , stats               = rStats
-                                                         , proofCache          = rCache
-                                                         , inRecallContext     = rRecall
-                                                         , measuresVerified    = rMeasures
-                                                         , productiveVerified  = rProductive
-                                                         , measuresEncountered = rEncountered
-                                                         }
+   rDryRun    <- newIORef True
+   rMaxRibbon <- newIORef 0
+
+   let runPass c = do
+         rStats       <- newIORef $ TPStats { noOfCheckSats = 0, solverElapsed = 0, qcElapsed = 0 }
+         rCache       <- newIORef Map.empty
+         rCfg         <- newIORef c
+         rRecall      <- newIORef (0 :: Int)
+         rMeasures    <- newIORef Set.empty
+         rProductive  <- newIORef Set.empty
+         rEncountered <- newIORef Set.empty
+         let st = TPState { config               = rCfg
+                           , stats               = rStats
+                           , proofCache          = rCache
+                           , inRecallContext     = rRecall
+                           , measuresVerified    = rMeasures
+                           , productiveVerified  = rProductive
+                           , measuresEncountered = rEncountered
+                           , dryRun              = rDryRun
+                           , maxRibbon           = rMaxRibbon
+                           }
+         a <- runReaderT f st
+         pure (a, st)
+
+   -- Pass 1: Dry run to collect ribbon widths
+   _ <- runPass (tpQuiet True cfg)
+
+   -- Pass 2: Real run with computed ribbon
+   writeIORef rDryRun False
+   ribbon <- readIORef rMaxRibbon
+   let cfg' = cfg{tpOptions = (tpOptions cfg) { ribbonLength = max 20 (ribbon + 4) }}
+
+   (mbT, (r, TPState{stats = rStats, measuresVerified = rMeasures, productiveVerified = rProductive, measuresEncountered = rEncountered}))
+       <- timeIf printStats $ runPass cfg'
 
    -- Print verified measures and productive functions
    verified    <- readIORef rMeasures
    productive  <- readIORef rProductive
    encountered <- readIORef rEncountered
 
-   unless (Set.null verified)   $ printMeasures   cfg (Set.toAscList verified)
-   unless (Set.null productive) $ printProductive cfg (Set.toAscList productive)
+   unless (Set.null verified)   $ printMeasures   cfg' (Set.toAscList verified)
+   unless (Set.null productive) $ printProductive cfg' (Set.toAscList productive)
 
    -- Belt-and-suspenders: make sure all encountered measures have been verified.
    -- Exclude functions in measuresBeingVerified: those are being verified by an outer caller
@@ -232,7 +266,7 @@ runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
                                , ("Decisions", show noOfCheckSats)
                                ]
 
-                   message cfg $ '[' : intercalate ", " [k ++ ": " ++ v | (k, v) <- stats] ++ "]\n"
+                   message cfg' $ '[' : intercalate ", " [k ++ ": " ++ v | (k, v) <- stats] ++ "]\n"
    pure r
 
 -- | get the state
@@ -618,12 +652,6 @@ concludeModulo by = case foldMap (rootOfTrust . Proof) by of
 -- will inherit the quiet settings from the surrounding environment.
 tpQuiet :: Bool -> SMTConfig -> SMTConfig
 tpQuiet b cfg = cfg{tpOptions = (tpOptions cfg) { quiet = b }}
-
--- | Change the size of the ribbon for TP proofs. Note that this setting will be effective with the
--- call to 'runTP'\/'runTPWith', i.e., if you change the solver in a call to 'Data.SBV.TP.lemmaWith'\/'Data.SBV.TP.theoremWith', we
--- will inherit the ribbon settings from the surrounding environment.
-tpRibbon :: Int -> SMTConfig -> SMTConfig
-tpRibbon i cfg = cfg{tpOptions = (tpOptions cfg) { ribbonLength = i }}
 
 -- | Make TP proofs produce statistics. Note that this setting will be effective with the
 -- call to 'runTP'\/'runTPWith', i.e., if you change the solver in a call to 'Data.SBV.TP.lemmaWith'\/'Data.SBV.TP.theoremWith', we

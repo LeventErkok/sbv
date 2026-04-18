@@ -47,7 +47,7 @@ countdown = smtFunction "countdown"
 -- | Prove that @countdown n@ always starts with @n@, for positive @n@.
 --
 -- >>> runTP countdownHead
--- Lemma: countdownHead                    Q.E.D.
+-- Lemma: countdownHead    Q.E.D.
 -- Functions proven terminating: countdown
 -- [Proven] countdownHead :: Ɐn ∷ Integer → Bool
 countdownHead :: TP (Proof (Forall "n" Integer -> SBool))
@@ -57,10 +57,10 @@ countdownHead = lemma "countdownHead" (\(Forall @"n" n) -> n .> 0 .=> head (coun
 --
 -- >>> runTP countdownNonEmpty
 -- Inductive lemma: countdownNonEmpty
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Functions proven terminating: countdown
 -- [Proven] countdownNonEmpty :: Ɐn ∷ Integer → Bool
 countdownNonEmpty :: TP (Proof (Forall "n" Integer -> SBool))
@@ -77,11 +77,11 @@ countdownNonEmpty =
 --
 -- >>> runTP countdownLen
 -- Inductive lemma: countdownLen
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                     Q.E.D.
+--   Step: 1                        Q.E.D.
+--   Step: 2                        Q.E.D.
+--   Step: 3                        Q.E.D.
+--   Result:                        Q.E.D.
 -- Functions proven terminating: countdown
 -- [Proven] countdownLen :: Ɐn ∷ Integer → Bool
 countdownLen :: TP (Proof (Forall "n" Integer -> SBool))
@@ -105,13 +105,13 @@ countdownLen =
 -- covers the entire domain of the goal.
 --
 -- >>> runTP countdownElem
--- Lemma: countdownLen                     Q.E.D.
--- Lemma: elemOne                          Q.E.D.
+-- Lemma: countdownLen               Q.E.D.
+-- Lemma: elemOne                    Q.E.D.
 -- Inductive lemma: countdownElem
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                      Q.E.D.
+--   Step: 1                         Q.E.D.
+--   Step: 2                         Q.E.D.
+--   Result:                         Q.E.D.
 -- Functions proven terminating: countdown
 -- [Proven] countdownElem :: Ɐn ∷ Integer → Ɐk ∷ Integer → Bool
 countdownElem :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))

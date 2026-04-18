@@ -66,78 +66,78 @@ mergeSort = smtFunction "mergeSort"
 -- We have:
 --
 -- >>> correctness @Integer
--- Lemma: nonDecrInsert                                        Q.E.D.
+-- Lemma: nonDecrInsert                                      Q.E.D.
 -- Inductive lemma: countAppend
---   Step: Base                                                Q.E.D.
---   Step: 1                                                   Q.E.D.
---   Step: 2 (unfold count)                                    Q.E.D.
---   Step: 3                                                   Q.E.D.
---   Step: 4 (simplify)                                        Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: take_drop                                            Q.E.D.
+--   Step: Base                                              Q.E.D.
+--   Step: 1                                                 Q.E.D.
+--   Step: 2 (unfold count)                                  Q.E.D.
+--   Step: 3                                                 Q.E.D.
+--   Step: 4 (simplify)                                      Q.E.D.
+--   Result:                                                 Q.E.D.
+-- Lemma: take_drop                                          Q.E.D.
 -- Lemma: takeDropCount
---   Step: 1                                                   Q.E.D.
---   Step: 2                                                   Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: countOneStep                                         Q.E.D.
--- Lemma: mergeHead                                            Q.E.D.
--- Lemma: mergeUnfold                                          Q.E.D.
+--   Step: 1                                                 Q.E.D.
+--   Step: 2                                                 Q.E.D.
+--   Result:                                                 Q.E.D.
+-- Lemma: countOneStep                                       Q.E.D.
+-- Lemma: mergeHead                                          Q.E.D.
+-- Lemma: mergeUnfold                                        Q.E.D.
 -- Inductive lemma (strong): mergeKeepsSort
---   Step: Measure is non-negative                             Q.E.D.
+--   Step: Measure is non-negative                           Q.E.D.
 --   Step: 1 (3 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2                                               Q.E.D.
+--     Step: 1.1                                             Q.E.D.
+--     Step: 1.2                                             Q.E.D.
 --     Step: 1.3 (2 way case split)
---       Step: 1.3.1.1 (2 way case split)                      Q.E.D.
---       Step: 1.3.1.2                                         Q.E.D.
---       Step: 1.3.1.3                                         Q.E.D.
---       Step: 1.3.2.1 (2 way case split)                      Q.E.D.
---       Step: 1.3.2.2                                         Q.E.D.
---       Step: 1.3.2.3                                         Q.E.D.
---       Step: 1.3.Completeness                                Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--       Step: 1.3.1.1 (2 way case split)                    Q.E.D.
+--       Step: 1.3.1.2                                       Q.E.D.
+--       Step: 1.3.1.3                                       Q.E.D.
+--       Step: 1.3.2.1 (2 way case split)                    Q.E.D.
+--       Step: 1.3.2.2                                       Q.E.D.
+--       Step: 1.3.2.3                                       Q.E.D.
+--       Step: 1.3.Completeness                              Q.E.D.
+--     Step: 1.Completeness                                  Q.E.D.
+--   Result:                                                 Q.E.D.
 -- Inductive lemma (strong): sortNonDecreasing
---   Step: Measure is non-negative                             Q.E.D.
+--   Step: Measure is non-negative                           Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2.1 (unfold)                                    Q.E.D.
---     Step: 1.2.2 (push nonDecreasing down)                   Q.E.D.
---     Step: 1.2.3                                             Q.E.D.
---     Step: 1.2.4                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--     Step: 1.1                                             Q.E.D.
+--     Step: 1.2.1 (unfold)                                  Q.E.D.
+--     Step: 1.2.2 (push nonDecreasing down)                 Q.E.D.
+--     Step: 1.2.3                                           Q.E.D.
+--     Step: 1.2.4                                           Q.E.D.
+--     Step: 1.Completeness                                  Q.E.D.
+--   Result:                                                 Q.E.D.
 -- Inductive lemma (strong): mergeCount
---   Step: Measure is non-negative                             Q.E.D.
+--   Step: Measure is non-negative                           Q.E.D.
 --   Step: 1 (3 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2                                               Q.E.D.
---     Step: 1.3.1 (unfold merge)                              Q.E.D.
---     Step: 1.3.2 (push count inside)                         Q.E.D.
---     Step: 1.3.3 (unfold count, twice)                       Q.E.D.
---     Step: 1.3.4                                             Q.E.D.
---     Step: 1.3.5                                             Q.E.D.
---     Step: 1.3.6 (unfold count in reverse, twice)            Q.E.D.
---     Step: 1.3.7 (simplify)                                  Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
+--     Step: 1.1                                             Q.E.D.
+--     Step: 1.2                                             Q.E.D.
+--     Step: 1.3.1 (unfold merge)                            Q.E.D.
+--     Step: 1.3.2 (push count inside)                       Q.E.D.
+--     Step: 1.3.3 (unfold count, twice)                     Q.E.D.
+--     Step: 1.3.4                                           Q.E.D.
+--     Step: 1.3.5                                           Q.E.D.
+--     Step: 1.3.6 (unfold count in reverse, twice)          Q.E.D.
+--     Step: 1.3.7 (simplify)                                Q.E.D.
+--     Step: 1.Completeness                                  Q.E.D.
+--   Result:                                                 Q.E.D.
 -- Inductive lemma (strong): sortIsPermutation
---   Step: Measure is non-negative                             Q.E.D.
+--   Step: Measure is non-negative                           Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                               Q.E.D.
---     Step: 1.2.1 (unfold mergeSort)                          Q.E.D.
---     Step: 1.2.2 (push count down, simplify, rearrange)      Q.E.D.
---     Step: 1.2.3                                             Q.E.D.
---     Step: 1.2.4                                             Q.E.D.
---     Step: 1.2.5                                             Q.E.D.
---     Step: 1.2.6                                             Q.E.D.
---     Step: 1.Completeness                                    Q.E.D.
---   Result:                                                   Q.E.D.
--- Lemma: mergeSortIsCorrect                                   Q.E.D.
+--     Step: 1.1                                             Q.E.D.
+--     Step: 1.2.1 (unfold mergeSort)                        Q.E.D.
+--     Step: 1.2.2 (push count down, simplify, rearrange)    Q.E.D.
+--     Step: 1.2.3                                           Q.E.D.
+--     Step: 1.2.4                                           Q.E.D.
+--     Step: 1.2.5                                           Q.E.D.
+--     Step: 1.2.6                                           Q.E.D.
+--     Step: 1.Completeness                                  Q.E.D.
+--   Result:                                                 Q.E.D.
+-- Lemma: mergeSortIsCorrect                                 Q.E.D.
 -- Functions proven terminating: count, merge, mergeSort, nonDecreasing
 -- [Proven] mergeSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (OrdSymbolic (SBV a), SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
-correctness = runTPWith (tpRibbon 60 z3) $ do
+correctness = runTP $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions

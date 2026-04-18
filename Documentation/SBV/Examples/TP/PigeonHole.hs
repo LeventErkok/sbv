@@ -36,10 +36,10 @@ overflow = any (.> 1)
 --
 -- >>> runTP pigeonHole
 -- Inductive lemma: pigeonHole
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Functions proven terminating: sbv.foldr
 --[Proven] pigeonHole :: Ɐxs ∷ [Integer] → Bool
 pigeonHole :: TP (Proof (Forall "xs" [Integer] -> SBool))

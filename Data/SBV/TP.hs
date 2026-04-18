@@ -48,7 +48,10 @@ module Data.SBV.TP (
        , sorry
 
        -- * Running TP proofs
-       , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms
+       , TP, runTP, runTPWith, tpQuiet, tpStats, tpAsms
+
+       -- * Dry run guards
+       , whenDryRun, unlessDryRun
 
        -- * Measure helpers for smtFunctionWithMeasure
        , measureLemma, measureLemmaWith

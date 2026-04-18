@@ -41,12 +41,12 @@ x `dvd` y = ite (x .== 0) (y .== 0) (y `sEMod` x .== 0)
 -- >>> runTP dividesProduct
 -- Lemma: dividesProduct
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.2.3             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- [Proven] dividesProduct :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
 dividesProduct :: TP (Proof (Forall "x" Integer -> Forall "y" Integer -> Forall "z" Integer -> SBool))
 dividesProduct = calc "dividesProduct"
@@ -67,16 +67,16 @@ dividesProduct = calc "dividesProduct"
 --
 -- === __Proof__
 -- >>> runTP dividesTransitive
--- Lemma: dividesProduct                   Q.E.D.
+-- Lemma: dividesProduct       Q.E.D.
 -- Lemma: dividesTransitive
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.2.3             Q.E.D.
+--     Step: 1.2.4             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- [Proven] dividesTransitive :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
 dividesTransitive :: TP (Proof (Forall "x" Integer -> Forall "y" Integer -> Forall "z" Integer -> SBool))
 dividesTransitive = do
@@ -117,12 +117,12 @@ ld = smtFunctionWithMeasure "ld" (\k n -> (n - k) `smax` 0, [])
 -- === __Proof__
 -- >>> runTP leastDivisorDivides
 -- Inductive lemma (strong): leastDivisorDivides
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                    Q.E.D.
+--     Step: 1.2                                    Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: ld
 -- [Proven] leastDivisorDivides :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 leastDivisorDivides :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
@@ -148,12 +148,12 @@ leastDivisorDivides =
 -- === __Proof__
 -- >>> runTP leastDivisorIsLeast
 -- Inductive lemma (strong): leastDivisorisLeast
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                    Q.E.D.
+--     Step: 1.2                                    Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: ld
 -- [Proven] leastDivisorisLeast :: Ɐk ∷ Integer → Ɐn ∷ Integer → Ɐd ∷ Integer → Bool
 leastDivisorIsLeast :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> Forall "d" Integer -> SBool))
@@ -175,19 +175,19 @@ leastDivisorIsLeast =
 --
 -- === __Proof__
 -- >>> runTP leastDivisorTwice
--- Lemma: dividesTransitive                Q.E.D.
--- Lemma: leastDivisorDivides              Q.E.D.
--- Lemma: leastDivisorisLeast              Q.E.D.
--- Lemma: helper1                          Q.E.D.
--- Lemma: helper2                          Q.E.D.
+-- Lemma: dividesTransitive                         Q.E.D.
+-- Lemma: leastDivisorDivides                       Q.E.D.
+-- Lemma: leastDivisorisLeast                       Q.E.D.
+-- Lemma: helper1                                   Q.E.D.
+-- Lemma: helper2                                   Q.E.D.
 -- Lemma: helper3
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: helper4                          Q.E.D.
+--   Step: 1                                        Q.E.D.
+--   Result:                                        Q.E.D.
+-- Lemma: helper4                                   Q.E.D.
 -- Lemma: helper5
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: leastDivisorTwice                Q.E.D.
+--   Step: 1                                        Q.E.D.
+--   Result:                                        Q.E.D.
+-- Lemma: leastDivisorTwice                         Q.E.D.
 -- Functions proven terminating: ld
 -- [Proven] leastDivisorTwice :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 leastDivisorTwice :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
@@ -243,7 +243,7 @@ isPrime n = n .>= 2 .&& ld 2 n .== n
 --
 -- === __Proof__
 -- >>> runTP primeAtLeast2
--- Lemma: primeAtLeast2                    Q.E.D.
+-- Lemma: primeAtLeast2    Q.E.D.
 -- Functions proven terminating: ld
 -- [Proven] primeAtLeast2 :: Ɐp ∷ Integer → Bool
 primeAtLeast2 :: TP (Proof (Forall "p" Integer -> SBool))
@@ -253,11 +253,11 @@ primeAtLeast2 = lemma "primeAtLeast2" (\(Forall p) -> isPrime p .=> p .>= 2) []
 --
 -- === __Proof__
 -- >>> runTP leastDivisorIsPrime
--- Lemma: leastDivisorTwice                Q.E.D.
--- Lemma: leastDivisorDivides              Q.E.D. [Cached]
+-- Lemma: leastDivisorTwice                         Q.E.D.
+-- Lemma: leastDivisorDivides                       Q.E.D. [Cached]
 -- Lemma: leastDivisorIsPrime
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                        Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: ld
 -- [Proven] leastDivisorIsPrime :: Ɐn ∷ Integer → Bool
 leastDivisorIsPrime :: TP (Proof (Forall "n" Integer -> SBool))
@@ -292,13 +292,13 @@ fact = smtFunction "fact" $ \n -> [sCase| n of
 -- === __Proof__
 -- >>> runTP factAtLeast1
 -- Inductive lemma: factAtLeast1
---   Step: Base                            Q.E.D.
+--   Step: Base                     Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                    Q.E.D.
+--     Step: 1.2.1                  Q.E.D.
+--     Step: 1.2.2                  Q.E.D.
+--     Step: 1.Completeness         Q.E.D.
+--   Result:                        Q.E.D.
 -- Functions proven terminating: fact
 -- [Proven] factAtLeast1 :: Ɐn ∷ Integer → Bool
 factAtLeast1 :: TP (Proof (Forall "n" Integer -> SBool))
@@ -316,17 +316,17 @@ factAtLeast1 = inductWith cvc5 "factAtLeast1"
 --
 -- === __Proof__
 -- >>> runTP dividesFact
--- Lemma: dividesProduct                   Q.E.D.
+-- Lemma: dividesProduct           Q.E.D.
 -- Inductive lemma: dividesFact
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
 --   Step: 2 (2 way case split)
---     Step: 2.1.1                         Q.E.D.
---     Step: 2.1.2                         Q.E.D.
---     Step: 2.2.1                         Q.E.D.
---     Step: 2.2.2                         Q.E.D.
---     Step: 2.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 2.1.1                 Q.E.D.
+--     Step: 2.1.2                 Q.E.D.
+--     Step: 2.2.1                 Q.E.D.
+--     Step: 2.2.2                 Q.E.D.
+--     Step: 2.Completeness        Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: fact
 -- [Proven] dividesFact :: Ɐn ∷ Integer → Ɐk ∷ Integer → Bool
 dividesFact :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))
@@ -353,12 +353,12 @@ dividesFact = do
 --
 -- === __Proof__
 -- >>> runTP notDividesFactP1
--- Lemma: dividesFact                      Q.E.D.
+-- Lemma: dividesFact              Q.E.D.
 -- Lemma: notDividesFactP1
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: fact
 -- [Proven] notDividesFactP1 :: Ɐn ∷ Integer → Ɐk ∷ Integer → Bool
 notDividesFactP1 :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))
@@ -385,13 +385,13 @@ greaterPrime n = leastPrimeDivisor (1 + fact n)
 --
 -- === __Proof__
 -- >>> runTP greaterPrimeDivides
--- Lemma: leastDivisorDivides              Q.E.D.
--- Lemma: factAtLeast1                     Q.E.D.
+-- Lemma: leastDivisorDivides                       Q.E.D.
+-- Lemma: factAtLeast1                              Q.E.D.
 -- Lemma: greaterPrimeDivides
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                        Q.E.D.
+--   Step: 2                                        Q.E.D.
+--   Step: 3                                        Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: fact, ld
 -- [Proven] greaterPrimeDivides :: Ɐn ∷ Integer → Bool
 greaterPrimeDivides :: TP (Proof (Forall "n" Integer -> SBool))
@@ -413,19 +413,19 @@ greaterPrimeDivides = do
 --
 -- === __Proof__
 -- >>> runTP greaterPrimeGreater
--- Lemma: notDividesFactP1                 Q.E.D.
--- Lemma: greaterPrimeDivides              Q.E.D.
--- Lemma: leastDivisorIsPrime              Q.E.D.
--- Lemma: factAtLeast1                     Q.E.D. [Cached]
--- Lemma: primeAtLeast2                    Q.E.D.
+-- Lemma: notDividesFactP1                          Q.E.D.
+-- Lemma: greaterPrimeDivides                       Q.E.D.
+-- Lemma: leastDivisorIsPrime                       Q.E.D.
+-- Lemma: factAtLeast1                              Q.E.D. [Cached]
+-- Lemma: primeAtLeast2                             Q.E.D.
 -- Lemma: greaterPrimeGreater
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                        Q.E.D.
+--   Step: 2                                        Q.E.D.
+--   Step: 3                                        Q.E.D.
+--   Step: 4                                        Q.E.D.
+--   Step: 5                                        Q.E.D.
+--   Step: 6                                        Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: fact, ld
 -- [Proven] greaterPrimeGreater :: Ɐn ∷ Integer → Bool
 greaterPrimeGreater :: TP (Proof (Forall "n" Integer -> SBool))
@@ -461,14 +461,14 @@ greaterPrimeGreater = do
 --
 -- === __Proof__
 -- >>> runTP infinitudeOfPrimes
--- Lemma: leastDivisorIsPrime              Q.E.D.
--- Lemma: factAtLeast1                     Q.E.D.
--- Lemma: greaterPrimeGreater              Q.E.D.
+-- Lemma: leastDivisorIsPrime                       Q.E.D.
+-- Lemma: factAtLeast1                              Q.E.D.
+-- Lemma: greaterPrimeGreater                       Q.E.D.
 -- Lemma: infinitudeOfPrimes
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                        Q.E.D.
+--   Step: 2                                        Q.E.D.
+--   Step: 3                                        Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: fact, ld
 -- [Proven] infinitudeOfPrimes :: Ɐn ∷ Integer → Bool
 infinitudeOfPrimes :: TP (Proof (Forall "n" Integer -> SBool))
@@ -496,11 +496,11 @@ infinitudeOfPrimes = do
 --
 -- === __Proof__
 -- >>> runTP noLargestPrime
--- Lemma: infinitudeOfPrimes               Q.E.D.
+-- Lemma: infinitudeOfPrimes                        Q.E.D.
 -- Lemma: helper
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: noLargestPrime                   Q.E.D.
+--   Step: 1                                        Q.E.D.
+--   Result:                                        Q.E.D.
+-- Lemma: noLargestPrime                            Q.E.D.
 -- Functions proven terminating: fact, ld
 -- [Proven] noLargestPrime :: Ɐn ∷ Integer → ∃p ∷ Integer → Bool
 noLargestPrime :: TP (Proof (Forall "n" Integer -> Exists "p" Integer -> SBool))

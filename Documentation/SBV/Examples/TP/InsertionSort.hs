@@ -80,49 +80,49 @@ isPermutation = smtFunction "isPermutation"
 -- We have:
 --
 -- >>> correctness @Integer
--- Lemma: nonDecrTail                           Q.E.D.
+-- Lemma: nonDecrTail                          Q.E.D.
 -- Inductive lemma: insertNonDecreasing
---   Step: Base                                 Q.E.D.
---   Step: 1 (unfold insert)                    Q.E.D.
---   Step: 2 (push nonDecreasing down)          Q.E.D.
---   Step: 3 (unfold simplify)                  Q.E.D.
---   Step: 4                                    Q.E.D.
---   Step: 5                                    Q.E.D.
---   Result:                                    Q.E.D.
+--   Step: Base                                Q.E.D.
+--   Step: 1 (unfold insert)                   Q.E.D.
+--   Step: 2 (push nonDecreasing down)         Q.E.D.
+--   Step: 3 (unfold simplify)                 Q.E.D.
+--   Step: 4                                   Q.E.D.
+--   Step: 5                                   Q.E.D.
+--   Result:                                   Q.E.D.
 -- Inductive lemma: sortNonDecreasing
---   Step: Base                                 Q.E.D.
---   Step: 1 (unfold insertionSort)             Q.E.D.
---   Step: 2                                    Q.E.D.
---   Result:                                    Q.E.D.
+--   Step: Base                                Q.E.D.
+--   Step: 1 (unfold insertionSort)            Q.E.D.
+--   Step: 2                                   Q.E.D.
+--   Result:                                   Q.E.D.
 -- Inductive lemma: insertIsElem
---   Step: Base                                 Q.E.D.
---   Step: 1                                    Q.E.D.
---   Step: 2                                    Q.E.D.
---   Step: 3                                    Q.E.D.
---   Step: 4                                    Q.E.D.
---   Result:                                    Q.E.D.
+--   Step: Base                                Q.E.D.
+--   Step: 1                                   Q.E.D.
+--   Step: 2                                   Q.E.D.
+--   Step: 3                                   Q.E.D.
+--   Step: 4                                   Q.E.D.
+--   Result:                                   Q.E.D.
 -- Inductive lemma: removeAfterInsert
---   Step: Base                                 Q.E.D.
---   Step: 1 (expand insert)                    Q.E.D.
---   Step: 2 (push removeFirst down ite)        Q.E.D.
---   Step: 3 (unfold removeFirst on 'then')     Q.E.D.
---   Step: 4 (unfold removeFirst on 'else')     Q.E.D.
---   Step: 5                                    Q.E.D.
---   Step: 6 (simplify)                         Q.E.D.
---   Result:                                    Q.E.D.
+--   Step: Base                                Q.E.D.
+--   Step: 1 (expand insert)                   Q.E.D.
+--   Step: 2 (push removeFirst down ite)       Q.E.D.
+--   Step: 3 (unfold removeFirst on 'then')    Q.E.D.
+--   Step: 4 (unfold removeFirst on 'else')    Q.E.D.
+--   Step: 5                                   Q.E.D.
+--   Step: 6 (simplify)                        Q.E.D.
+--   Result:                                   Q.E.D.
 -- Inductive lemma: sortIsPermutation
---   Step: Base                                 Q.E.D.
---   Step: 1                                    Q.E.D.
---   Step: 2                                    Q.E.D.
---   Step: 3                                    Q.E.D.
---   Step: 4                                    Q.E.D.
---   Step: 5                                    Q.E.D.
---   Result:                                    Q.E.D.
--- Lemma: insertionSortIsCorrect                Q.E.D.
+--   Step: Base                                Q.E.D.
+--   Step: 1                                   Q.E.D.
+--   Step: 2                                   Q.E.D.
+--   Step: 3                                   Q.E.D.
+--   Step: 4                                   Q.E.D.
+--   Step: 5                                   Q.E.D.
+--   Result:                                   Q.E.D.
+-- Lemma: insertionSortIsCorrect               Q.E.D.
 -- Functions proven terminating: insert, insertionSort, isPermutation, nonDecreasing, removeFirst
 -- [Proven] insertionSortIsCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. (OrdSymbolic (SBV a), Eq a, SymVal a) => IO (Proof (Forall "xs" [a] -> SBool))
-correctness = runTPWith (tpRibbon 45 cvc5) $ do
+correctness = runTPWith cvc5 $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Import helper lemmas, definitions

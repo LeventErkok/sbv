@@ -32,7 +32,8 @@ module Data.SBV.TP.TP (
        ,           induct,         inductWith
        ,          sInduct,        sInductWith
        , sorry
-       , TP, runTP, runTPWith, tpQuiet, tpRibbon, tpStats, tpAsms
+       , TP, runTP, runTPWith, tpQuiet, tpStats, tpAsms
+       , whenDryRun, unlessDryRun
        , measureLemma, measureLemmaWith
        , (|-), (|->), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        , qc, qcWith
@@ -183,7 +184,10 @@ class Calc a where
 
              qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
-             message cfg $ "Lemma: " ++ nm ++ "\n"
+             let header = "Lemma: " ++ nm
+             message cfg $ header ++ "\n"
+             liftIO $ do isDry <- readIORef (dryRun tpSt)
+                         when isDry $ modifyIORef' (maxRibbon tpSt) (max (length header))
 
              (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
 
@@ -374,6 +378,8 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                         liftIO $ do
 
                            tab <- startTP cfg (verbose cfg) "Step" level (TPProofStep False nm (getHelperText hs') stepName)
+                           isDry <- readIORef (dryRun tpSt)
+                           when isDry $ modifyIORef' (maxRibbon tpSt) (max tab)
 
                            (mbT, r) <- timeIf printStats $ quickCheckWithResult qcArg{QC.chatty = verbose cfg} $ quickCheckInstance bn
 
@@ -607,7 +613,10 @@ inductionEngine style cfg nm result getStrategy = do
                        RegularInduction -> ""
                        GeneralInduction  -> " (strong)"
 
-          message cfg $ "Inductive lemma" ++ qual ++ ": " ++ nm ++ "\n"
+          let header = "Inductive lemma" ++ qual ++ ": " ++ nm
+          message cfg $ header ++ "\n"
+          liftIO $ do isDry <- readIORef (dryRun tpSt)
+                      when isDry $ modifyIORef' (maxRibbon tpSt) (max (length header))
 
           strategy@InductionStrategy { inductionIntros
                                      , inductionMeasure

@@ -305,12 +305,18 @@ smtProofStep :: (SolverContext m, MonadIO m, MonadQuery m, MonadSymbolic m, Prop
    -> m r
 smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState tag level ctx mbAssumptions prop disps unsat = do
 
-        case mbAssumptions of
-           Nothing  -> do queryDebug ["; smtProofStep: No context value to push."]
-                          check
-           Just asm -> do queryDebug ["; smtProofStep: Pushing in the context: " <> showText asm]
-                          inNewAssertionStack $ do constrain asm
-                                                   check
+        isDry <- liftIO $ readIORef (dryRun tpState)
+        if isDry
+           then do -- Dry run: record width, skip solver, report success
+                   tab <- liftIO $ startTP cfg verbose tag level ctx
+                   liftIO $ modifyIORef' (maxRibbon tpState) (max tab)
+                   liftIO $ unsat (tab, Nothing)
+           else case mbAssumptions of
+                   Nothing  -> do queryDebug ["; smtProofStep: No context value to push."]
+                                  check
+                   Just asm -> do queryDebug ["; smtProofStep: Pushing in the context: " <> showText asm]
+                                  inNewAssertionStack $ do constrain asm
+                                                           check
 
  where check = do
            tab <- liftIO $ startTP cfg verbose tag level ctx
