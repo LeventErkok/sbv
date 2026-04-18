@@ -129,16 +129,16 @@ kadaneHelper = smtFunction "kadaneHelper"
 --
 -- >>> runTPWith cvc5 correctness
 -- Inductive lemma: kadaneHelperInvariant
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                              Q.E.D.
+--   Step: 1                                 Q.E.D.
+--   Step: 2                                 Q.E.D.
+--   Result:                                 Q.E.D.
 -- Lemma: correctness
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                 Q.E.D.
+--   Step: 2                                 Q.E.D.
+--   Step: 3                                 Q.E.D.
+--   Step: 4                                 Q.E.D.
+--   Result:                                 Q.E.D.
 -- Functions proven terminating: kadaneHelper, mss, mssBegin
 -- [Proven] correctness :: Ɐxs ∷ [Integer] → Bool
 correctness :: TP (Proof (Forall "xs" [Integer] -> SBool))

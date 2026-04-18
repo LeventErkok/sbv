@@ -62,14 +62,14 @@ gcd a b = nGCD (abs a) (abs b)
 -- ==== __Proof__
 -- >>> runTP gcdNonNegative
 -- Inductive lemma (strong): nonNegativeNGCD
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: nonNegative                      Q.E.D.
+--     Step: 1.1                                Q.E.D.
+--     Step: 1.2.1                              Q.E.D.
+--     Step: 1.2.2                              Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
+-- Lemma: nonNegative                           Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] nonNegative :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdNonNegative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -96,14 +96,14 @@ gcdNonNegative = do
 -- ==== __Proof__
 -- >>> runTP gcdZero
 -- Inductive lemma (strong): nGCDZero
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative       Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: gcdZero                          Q.E.D.
+--     Step: 1.1                         Q.E.D.
+--     Step: 1.2.1                       Q.E.D.
+--     Step: 1.2.2                       Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
+-- Lemma: gcdZero                        Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] gcdZero :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdZero :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -132,12 +132,12 @@ gcdZero = do
 -- ==== __Proof__
 -- >>> runTP commutative
 -- Lemma: nGCDCommutative
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                 Q.E.D.
+--   Result:                 Q.E.D.
 -- Lemma: commutative
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                 Q.E.D.
+--   Step: 2                 Q.E.D.
+--   Result:                 Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] commutative :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 commutative :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -166,7 +166,7 @@ commutative = do
 --
 -- ==== __Proof__
 -- >>> runTP negGCD
--- Lemma: negGCD                           Q.E.D.
+-- Lemma: negGCD    Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] negGCD :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 negGCD :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -176,7 +176,7 @@ negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b
 --
 -- ==== __Proof__
 -- >>> runTP zeroGCD
--- Lemma: negGCD                           Q.E.D.
+-- Lemma: negGCD    Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] negGCD :: Ɐa ∷ Integer → Bool
 zeroGCD :: TP (Proof (Forall "a" Integer -> SBool))
@@ -204,11 +204,11 @@ a `dvd` b = ite (a .== 0) (b .== 0) (b `sEMod` a .== 0)
 -- >>> runTP dvdMul
 -- Lemma: dvdMul
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- [Proven] dvdMul :: Ɐd ∷ Integer → Ɐa ∷ Integer → Ɐk ∷ Integer → Bool
 dvdMul :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> Forall "k" Integer -> SBool))
 dvdMul = calc "dvdMul"
@@ -234,20 +234,20 @@ dvdMul = calc "dvdMul"
 --
 -- ==== __Proof__
 -- >>> runTP dvdAbs
--- Lemma: dvdMul                           Q.E.D.
+-- Lemma: dvdMul               Q.E.D.
 -- Lemma: dvdAbs_l2r
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2               Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- Lemma: dvdAbs_r2l
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: dvdAbs                           Q.E.D.
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2               Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
+-- Lemma: dvdAbs               Q.E.D.
 -- [Proven] dvdAbs :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 dvdAbs :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 dvdAbs = do
@@ -287,11 +287,11 @@ dvdAbs = do
 -- >>> runTP dvdOddThenOdd
 -- Lemma: dvdOddThenOdd
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- [Proven] dvdOddThenOdd :: Ɐd ∷ Integer → Ɐa ∷ Integer → Bool
 dvdOddThenOdd :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> SBool))
 dvdOddThenOdd = calc "dvdOddThenOdd"
@@ -308,14 +308,14 @@ dvdOddThenOdd = calc "dvdOddThenOdd"
 -- ==== __Proof__
 -- >>> runTP dvdEvenWhenOdd
 -- Lemma: dvdEvenWhenOdd
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Step: 7                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                Q.E.D.
+--   Step: 2                Q.E.D.
+--   Step: 3                Q.E.D.
+--   Step: 4                Q.E.D.
+--   Step: 5                Q.E.D.
+--   Step: 6                Q.E.D.
+--   Step: 7                Q.E.D.
+--   Result:                Q.E.D.
 -- [Proven] dvdEvenWhenOdd :: Ɐd ∷ Integer → Ɐa ∷ Integer → Bool
 dvdEvenWhenOdd :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> SBool))
 dvdEvenWhenOdd = calc "dvdEvenWhenOdd"
@@ -357,12 +357,12 @@ dvdEvenWhenOdd = calc "dvdEvenWhenOdd"
 -- >>> runTP dvdSum1
 -- Lemma: dvdSum1
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.2.3             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- [Proven] dvdSum1 :: Ɐd ∷ Integer → Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 dvdSum1 :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> Forall "b" Integer -> SBool))
 dvdSum1 =
@@ -383,12 +383,12 @@ dvdSum1 =
 -- >>> runTP dvdSum2
 -- Lemma: dvdSum2
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.2.3             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- [Proven] dvdSum2 :: Ɐd ∷ Integer → Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 dvdSum2 :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> Forall "b" Integer -> SBool))
 dvdSum2 =
@@ -414,19 +414,19 @@ dvdSum2 =
 --
 -- ==== __Proof__
 -- >>> runTP gcdDivides
--- Lemma: dvdAbs                           Q.E.D.
+-- Lemma: dvdAbs                        Q.E.D.
 -- Lemma: helper
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                            Q.E.D.
+--   Result:                            Q.E.D.
 -- Inductive lemma (strong): dvdNGCD
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative      Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: gcdDivides                       Q.E.D.
+--     Step: 1.1                        Q.E.D.
+--     Step: 1.2.1                      Q.E.D.
+--     Step: 1.2.2                      Q.E.D.
+--     Step: 1.Completeness             Q.E.D.
+--   Result:                            Q.E.D.
+-- Lemma: gcdDivides                    Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] gcdDivides :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdDivides :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -474,32 +474,32 @@ gcdDivides = do
 --
 -- ==== __Proof__
 -- >>> runTP gcdMaximal
--- Lemma: dvdAbs                           Q.E.D.
--- Lemma: commutative                      Q.E.D.
--- Lemma: eDiv                             Q.E.D.
+-- Lemma: dvdAbs                         Q.E.D.
+-- Lemma: commutative                    Q.E.D.
+-- Lemma: eDiv                           Q.E.D.
 -- Lemma: helper
---   Step: 1 (x `dvd` a && x `dvd` b)      Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1 (x `dvd` a && x `dvd` b)    Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Inductive lemma (strong): mNGCD
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative       Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                         Q.E.D.
+--     Step: 1.2.1                       Q.E.D.
+--     Step: 1.2.2                       Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: gcdMaximal
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                       Q.E.D.
+--     Step: 1.1.2                       Q.E.D.
+--     Step: 1.2.1                       Q.E.D.
+--     Step: 1.2.2                       Q.E.D.
+--     Step: 1.2.3                       Q.E.D.
+--     Step: 1.2.4                       Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] gcdMaximal :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐx ∷ Integer → Bool
 gcdMaximal :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
@@ -574,12 +574,12 @@ gcdMaximal = do
 --
 -- ==== __Proof__
 -- >>> runTP gcdCorrect
--- Lemma: gcdDivides                       Q.E.D.
--- Lemma: gcdMaximal                       Q.E.D.
+-- Lemma: gcdDivides                     Q.E.D.
+-- Lemma: gcdMaximal                     Q.E.D.
 -- Lemma: gcdCorrect
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] gcdCorrect :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdCorrect :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -613,13 +613,13 @@ gcdCorrect = do
 --
 -- ==== __Proof__
 -- >>> runTP gcdLargest
--- Lemma: gcdMaximal                       Q.E.D.
--- Lemma: gcdZero                          Q.E.D.
--- Lemma: nonNegative                      Q.E.D.
+-- Lemma: gcdMaximal                            Q.E.D.
+-- Lemma: gcdZero                               Q.E.D.
+-- Lemma: nonNegative                           Q.E.D.
 -- Lemma: gcdLargest
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] gcdLargest :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐx ∷ Integer → Bool
 gcdLargest :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "x" Integer -> SBool))
@@ -645,19 +645,19 @@ gcdLargest = do
 --
 -- ==== __Proof__
 -- >>> runTP gcdAdd
--- Lemma: dvdSum1                          Q.E.D.
--- Lemma: dvdSum2                          Q.E.D.
--- Lemma: gcdDivides                       Q.E.D.
--- Lemma: gcdLargest                       Q.E.D.
+-- Lemma: dvdSum1                               Q.E.D.
+-- Lemma: dvdSum2                               Q.E.D.
+-- Lemma: gcdDivides                            Q.E.D.
+-- Lemma: gcdLargest                            Q.E.D.
 -- Lemma: gcdAdd
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Step: 7                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Step: 3                                    Q.E.D.
+--   Step: 4                                    Q.E.D.
+--   Step: 5                                    Q.E.D.
+--   Step: 6                                    Q.E.D.
+--   Step: 7                                    Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] gcdAdd :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdAdd :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -706,28 +706,28 @@ gcdAdd = do
 --
 -- ==== __Proof__
 -- >>> runTP gcdEvenEven
--- Lemma: red2                             Q.E.D.
+-- Lemma: red2                               Q.E.D.
 -- Lemma: modEE
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                 Q.E.D.
+--   Step: 2                                 Q.E.D.
+--   Step: 3                                 Q.E.D.
+--   Result:                                 Q.E.D.
 -- Inductive lemma (strong): nGCDEvenEven
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative           Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                             Q.E.D.
+--     Step: 1.2.1                           Q.E.D.
+--     Step: 1.2.2                           Q.E.D.
+--     Step: 1.2.3                           Q.E.D.
+--     Step: 1.2.4                           Q.E.D.
+--     Step: 1.Completeness                  Q.E.D.
+--   Result:                                 Q.E.D.
 -- Lemma: gcdEvenEven
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                 Q.E.D.
+--   Step: 2                                 Q.E.D.
+--   Step: 3                                 Q.E.D.
+--   Step: 4                                 Q.E.D.
+--   Result:                                 Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] gcdEvenEven :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdEvenEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -776,21 +776,21 @@ gcdEvenEven = do
 --
 -- ==== __Proof__
 -- >>> runTP gcdOddEven
--- Lemma: gcdDivides                       Q.E.D.
--- Lemma: gcdLargest                       Q.E.D.
--- Lemma: dvdMul                           Q.E.D. [Cached]
--- Lemma: dvdOddThenOdd                    Q.E.D.
--- Lemma: dvdEvenWhenOdd                   Q.E.D.
+-- Lemma: gcdDivides                            Q.E.D.
+-- Lemma: gcdLargest                            Q.E.D.
+-- Lemma: dvdMul                                Q.E.D. [Cached]
+-- Lemma: dvdOddThenOdd                         Q.E.D.
+-- Lemma: dvdEvenWhenOdd                        Q.E.D.
 -- Lemma: gcdOddEven
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Step: 7                               Q.E.D.
---   Step: 8                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Step: 3                                    Q.E.D.
+--   Step: 4                                    Q.E.D.
+--   Step: 5                                    Q.E.D.
+--   Step: 6                                    Q.E.D.
+--   Step: 7                                    Q.E.D.
+--   Step: 8                                    Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] gcdOddEven :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdOddEven :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -866,29 +866,29 @@ gcdSub a b = nGCDSub (abs a) (abs b)
 --
 -- ==== __Proof__
 -- >>> runTP gcdSubEquiv
--- Lemma: commutative                      Q.E.D.
--- Lemma: gcdAdd                           Q.E.D.
+-- Lemma: commutative                           Q.E.D.
+-- Lemma: gcdAdd                                Q.E.D.
 -- Inductive lemma (strong): nGCDSubEquiv
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (5 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3                           Q.E.D.
---     Step: 1.4.1                         Q.E.D.
---     Step: 1.4.2                         Q.E.D.
---     Step: 1.4.3                         Q.E.D.
---     Step: 1.5.1                         Q.E.D.
---     Step: 1.5.2                         Q.E.D.
---     Step: 1.5.3                         Q.E.D.
---     Step: 1.5.4                         Q.E.D.
---     Step: 1.5.5                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                Q.E.D.
+--     Step: 1.2                                Q.E.D.
+--     Step: 1.3                                Q.E.D.
+--     Step: 1.4.1                              Q.E.D.
+--     Step: 1.4.2                              Q.E.D.
+--     Step: 1.4.3                              Q.E.D.
+--     Step: 1.5.1                              Q.E.D.
+--     Step: 1.5.2                              Q.E.D.
+--     Step: 1.5.3                              Q.E.D.
+--     Step: 1.5.4                              Q.E.D.
+--     Step: 1.5.5                              Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Lemma: gcdSubEquiv
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Step: 3                                    Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: nGCD, nGCDSub
 -- [Proven] gcdSubEquiv :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdSubEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -959,41 +959,41 @@ gcdBin a b = nGCDBin (abs a) (abs b)
 --
 -- ==== __Proof__
 -- >>> runTP gcdBinEquiv
--- Lemma: gcdEvenEven                      Q.E.D.
--- Lemma: gcdOddEven                       Q.E.D.
--- Lemma: gcdAdd                           Q.E.D.
--- Lemma: commutative                      Q.E.D. [Cached]
+-- Lemma: gcdEvenEven                           Q.E.D.
+-- Lemma: gcdOddEven                            Q.E.D.
+-- Lemma: gcdAdd                                Q.E.D.
+-- Lemma: commutative                           Q.E.D. [Cached]
 -- Inductive lemma (strong): nGCDBinEquiv
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (5 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3.1                         Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.4.1                         Q.E.D.
---     Step: 1.4.2                         Q.E.D.
---     Step: 1.4.3                         Q.E.D.
+--     Step: 1.1                                Q.E.D.
+--     Step: 1.2                                Q.E.D.
+--     Step: 1.3.1                              Q.E.D.
+--     Step: 1.3.2                              Q.E.D.
+--     Step: 1.3.3                              Q.E.D.
+--     Step: 1.4.1                              Q.E.D.
+--     Step: 1.4.2                              Q.E.D.
+--     Step: 1.4.3                              Q.E.D.
 --     Step: 1.5 (3 way case split)
---       Step: 1.5.1                       Q.E.D.
---       Step: 1.5.2.1                     Q.E.D.
---       Step: 1.5.2.2                     Q.E.D.
---       Step: 1.5.2.3                     Q.E.D.
---       Step: 1.5.2.4                     Q.E.D.
---       Step: 1.5.2.5                     Q.E.D.
---       Step: 1.5.2.6                     Q.E.D.
---       Step: 1.5.3.1                     Q.E.D.
---       Step: 1.5.3.2                     Q.E.D.
---       Step: 1.5.3.3                     Q.E.D.
---       Step: 1.5.3.4                     Q.E.D.
---       Step: 1.5.Completeness            Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.5.1                            Q.E.D.
+--       Step: 1.5.2.1                          Q.E.D.
+--       Step: 1.5.2.2                          Q.E.D.
+--       Step: 1.5.2.3                          Q.E.D.
+--       Step: 1.5.2.4                          Q.E.D.
+--       Step: 1.5.2.5                          Q.E.D.
+--       Step: 1.5.2.6                          Q.E.D.
+--       Step: 1.5.3.1                          Q.E.D.
+--       Step: 1.5.3.2                          Q.E.D.
+--       Step: 1.5.3.3                          Q.E.D.
+--       Step: 1.5.3.4                          Q.E.D.
+--       Step: 1.5.Completeness                 Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Lemma: gcdBinEquiv
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Step: 3                                    Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: nGCD, nGCDBin
 -- [Proven] gcdBinEquiv :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 gcdBinEquiv :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))

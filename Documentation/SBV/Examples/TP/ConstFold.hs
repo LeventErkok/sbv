@@ -140,7 +140,7 @@ cfold = smtFunction "cfold" $ \expr ->
 -- | The size measure is always non-negative.
 --
 -- >>> runTP measureNonNeg
--- Lemma: measureNonNeg                    Q.E.D.
+-- Lemma: measureNonNeg    Q.E.D.
 -- Functions proven terminating: exprSize
 -- [Proven] measureNonNeg :: Ɐe ∷ (Expr String Integer) → Bool
 measureNonNeg :: TP (Proof (Forall "e" Exp -> SBool))
@@ -151,7 +151,7 @@ measureNonNeg = inductiveLemma "measureNonNeg"
 -- | Congruence for squaring: if @a == b@ then @a*a == b*b@.
 --
 -- >>> runTP sqrCong
--- Lemma: sqrCong                          Q.E.D.
+-- Lemma: sqrCong    Q.E.D.
 -- [Proven] sqrCong :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 sqrCong :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 sqrCong = lemma "sqrCong"
@@ -161,7 +161,7 @@ sqrCong = lemma "sqrCong"
 -- | Congruence for addition on the left: if @a == b@ then @a+c == b+c@.
 --
 -- >>> runTP addCongL
--- Lemma: addCongL                         Q.E.D.
+-- Lemma: addCongL    Q.E.D.
 -- [Proven] addCongL :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐc ∷ Integer → Bool
 addCongL :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "c" Integer -> SBool))
 addCongL = lemma "addCongL"
@@ -171,7 +171,7 @@ addCongL = lemma "addCongL"
 -- | Congruence for addition on the right: if @b == c@ then @a+b == a+c@.
 --
 -- >>> runTP addCongR
--- Lemma: addCongR                         Q.E.D.
+-- Lemma: addCongR    Q.E.D.
 -- [Proven] addCongR :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐc ∷ Integer → Bool
 addCongR :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "c" Integer -> SBool))
 addCongR = lemma "addCongR"
@@ -181,7 +181,7 @@ addCongR = lemma "addCongR"
 -- | Congruence for multiplication on the left: if @a == b@ then @a*c == b*c@.
 --
 -- >>> runTP mulCongL
--- Lemma: mulCongL                         Q.E.D.
+-- Lemma: mulCongL    Q.E.D.
 -- [Proven] mulCongL :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐc ∷ Integer → Bool
 mulCongL :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "c" Integer -> SBool))
 mulCongL = lemma "mulCongL"
@@ -191,7 +191,7 @@ mulCongL = lemma "mulCongL"
 -- | Congruence for multiplication on the right: if @b == c@ then @a*b == a*c@.
 --
 -- >>> runTP mulCongR
--- Lemma: mulCongR                         Q.E.D.
+-- Lemma: mulCongR    Q.E.D.
 -- [Proven] mulCongR :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐc ∷ Integer → Bool
 mulCongR :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "c" Integer -> SBool))
 mulCongR = lemma "mulCongR"
@@ -201,7 +201,7 @@ mulCongR = lemma "mulCongR"
 -- | Unfolding @interpInEnv@ over @Sqr@.
 --
 -- >>> runTP sqrHelper
--- Lemma: sqrHelper                        Q.E.D.
+-- Lemma: sqrHelper    Q.E.D.
 -- Functions proven terminating: interpInEnv, sbv.lookup
 -- [Proven] sqrHelper :: Ɐenv ∷ [(String, Integer)] → Ɐa ∷ (Expr String Integer) → Bool
 sqrHelper :: TP (Proof (Forall "env" EL -> Forall "a" Exp -> SBool))
@@ -212,7 +212,7 @@ sqrHelper = lemma "sqrHelper"
 -- | Unfolding @interpInEnv@ over @Add@.
 --
 -- >>> runTP addHelper
--- Lemma: addHelper                        Q.E.D.
+-- Lemma: addHelper    Q.E.D.
 -- Functions proven terminating: interpInEnv, sbv.lookup
 -- [Proven] addHelper :: Ɐenv ∷ [(String, Integer)] → Ɐa ∷ (Expr String Integer) → Ɐb ∷ (Expr String Integer) → Bool
 addHelper :: TP (Proof (Forall "env" EL -> Forall "a" Exp -> Forall "b" Exp -> SBool))
@@ -223,7 +223,7 @@ addHelper = lemma "addHelper"
 -- | Unfolding @interpInEnv@ over @Mul@.
 --
 -- >>> runTP mulHelper
--- Lemma: mulHelper                        Q.E.D.
+-- Lemma: mulHelper    Q.E.D.
 -- Functions proven terminating: interpInEnv, sbv.lookup
 -- [Proven] mulHelper :: Ɐenv ∷ [(String, Integer)] → Ɐa ∷ (Expr String Integer) → Ɐb ∷ (Expr String Integer) → Bool
 mulHelper :: TP (Proof (Forall "env" EL -> Forall "a" Exp -> Forall "b" Exp -> SBool))
@@ -234,7 +234,7 @@ mulHelper = lemma "mulHelper"
 -- | Unfolding @interpInEnv@ over @Let@.
 --
 -- >>> runTP letHelper
--- Lemma: letHelper                        Q.E.D.
+-- Lemma: letHelper    Q.E.D.
 -- Functions proven terminating: interpInEnv, sbv.lookup
 -- [Proven] letHelper :: Ɐenv ∷ [(String, Integer)] → Ɐnm ∷ String → Ɐa ∷ (Expr String Integer) → Ɐb ∷ (Expr String Integer) → Bool
 letHelper :: TP (Proof (Forall "env" EL -> Forall "nm" String -> Forall "a" Exp -> Forall "b" Exp -> SBool))
@@ -249,11 +249,11 @@ letHelper = lemma "letHelper"
 -- >>> runTP lookupSwap
 -- Lemma: lookupSwap
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- Functions proven terminating: sbv.lookup
 -- [Proven] lookupSwap :: Ɐk ∷ String → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 lookupSwap :: TP (Proof (Forall "k" String -> Forall "b1" (String, Integer)
@@ -283,7 +283,7 @@ lookupSwap = calc "lookupSwap"
 -- @define-fun-rec@ but struggles to fold it back, so we provide this as a reusable hint.
 --
 -- >>> runTP lookupCons
--- Lemma: lookupCons                       Q.E.D.
+-- Lemma: lookupCons    Q.E.D.
 -- Functions proven terminating: sbv.lookup
 -- [Proven] lookupCons :: Ɐk ∷ String → Ɐb ∷ (String, Integer) → Ɐrest ∷ [(String, Integer)] → Bool
 lookupCons :: TP (Proof (Forall "k" String -> Forall "b" (String, Integer) -> Forall "rest" EL -> SBool))
@@ -297,19 +297,19 @@ lookupCons = lemma "lookupCons"
 -- a prefix does not affect lookup.
 --
 -- >>> runTP lookupSwapPfx
--- Lemma: lookupSwap                       Q.E.D.
--- Lemma: lookupCons                       Q.E.D.
+-- Lemma: lookupSwap                          Q.E.D.
+-- Lemma: lookupCons                          Q.E.D.
 -- Inductive lemma (strong): lookupSwapPfx
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1 (base)                    Q.E.D.
---     Step: 1.2.1 (cons)                  Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.2.5                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1 (base)                       Q.E.D.
+--     Step: 1.2.1 (cons)                     Q.E.D.
+--     Step: 1.2.2                            Q.E.D.
+--     Step: 1.2.3                            Q.E.D.
+--     Step: 1.2.4                            Q.E.D.
+--     Step: 1.2.5                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: sbv.lookup
 -- [Proven] lookupSwapPfx :: Ɐpfx ∷ [(String, Integer)] → Ɐk ∷ String → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 lookupSwapPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1" (String, Integer)
@@ -356,7 +356,7 @@ lookupSwapPfx = do
 -- | A shadowed binding does not affect lookup: if the same key appears first, the second is irrelevant.
 --
 -- >>> runTP lookupShadow
--- Lemma: lookupShadow                     Q.E.D.
+-- Lemma: lookupShadow    Q.E.D.
 -- Functions proven terminating: sbv.lookup
 -- [Proven] lookupShadow :: Ɐk ∷ String → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 lookupShadow :: TP (Proof (Forall "k" String -> Forall "b1" (String, Integer)
@@ -373,19 +373,19 @@ lookupShadow = lemma "lookupShadow"
 -- | Generalized shadow: a shadowed binding behind a prefix does not affect lookup.
 --
 -- >>> runTP lookupShadowPfx
--- Lemma: lookupShadow                     Q.E.D.
--- Lemma: lookupCons                       Q.E.D.
+-- Lemma: lookupShadow                          Q.E.D.
+-- Lemma: lookupCons                            Q.E.D.
 -- Inductive lemma (strong): lookupShadowPfx
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1 (base)                    Q.E.D.
---     Step: 1.2.1 (cons)                  Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.2.5                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1 (base)                         Q.E.D.
+--     Step: 1.2.1 (cons)                       Q.E.D.
+--     Step: 1.2.2                              Q.E.D.
+--     Step: 1.2.3                              Q.E.D.
+--     Step: 1.2.4                              Q.E.D.
+--     Step: 1.2.5                              Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: sbv.lookup
 -- [Proven] lookupShadowPfx :: Ɐpfx ∷ [(String, Integer)] → Ɐk ∷ String → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 lookupShadowPfx :: TP (Proof (Forall "pfx" EL -> Forall "k" String -> Forall "b1" (String, Integer)
@@ -433,40 +433,40 @@ lookupShadowPfx = do
 -- to happen at any depth in the environment.
 --
 -- >>> runTPWith cvc5 envSwap
--- Lemma: measureNonNeg                    Q.E.D.
--- Lemma: lookupSwapPfx                    Q.E.D.
--- Lemma: sqrCong                          Q.E.D.
--- Lemma: sqrHelper                        Q.E.D.
--- Lemma: addCongL                         Q.E.D.
--- Lemma: addCongR                         Q.E.D.
--- Lemma: addHelper                        Q.E.D.
--- Lemma: mulCongL                         Q.E.D.
--- Lemma: mulCongR                         Q.E.D.
--- Lemma: mulHelper                        Q.E.D.
--- Lemma: letHelper                        Q.E.D.
+-- Lemma: measureNonNeg                       Q.E.D.
+-- Lemma: lookupSwapPfx                       Q.E.D.
+-- Lemma: sqrCong                             Q.E.D.
+-- Lemma: sqrHelper                           Q.E.D.
+-- Lemma: addCongL                            Q.E.D.
+-- Lemma: addCongR                            Q.E.D.
+-- Lemma: addHelper                           Q.E.D.
+-- Lemma: mulCongL                            Q.E.D.
+-- Lemma: mulCongR                            Q.E.D.
+-- Lemma: mulHelper                           Q.E.D.
+-- Lemma: letHelper                           Q.E.D.
 -- Inductive lemma (strong): envSwap
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (7 way case split)
---     Step: 1.1 (Var)                     Q.E.D.
---     Step: 1.2 (Con)                     Q.E.D.
---     Step: 1.3.1 (Sqr)                   Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.4 (Inc)                     Q.E.D.
---     Step: 1.5.1 (Add)                   Q.E.D.
---     Step: 1.5.2                         Q.E.D.
---     Step: 1.5.3                         Q.E.D.
---     Step: 1.5.4                         Q.E.D.
---     Step: 1.6.1 (Mul)                   Q.E.D.
---     Step: 1.6.2                         Q.E.D.
---     Step: 1.6.3                         Q.E.D.
---     Step: 1.6.4                         Q.E.D.
---     Step: 1.7.1 (Let)                   Q.E.D.
---     Step: 1.7.2                         Q.E.D.
---     Step: 1.7.3                         Q.E.D.
---     Step: 1.7.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1 (Var)                        Q.E.D.
+--     Step: 1.2 (Con)                        Q.E.D.
+--     Step: 1.3.1 (Sqr)                      Q.E.D.
+--     Step: 1.3.2                            Q.E.D.
+--     Step: 1.3.3                            Q.E.D.
+--     Step: 1.4 (Inc)                        Q.E.D.
+--     Step: 1.5.1 (Add)                      Q.E.D.
+--     Step: 1.5.2                            Q.E.D.
+--     Step: 1.5.3                            Q.E.D.
+--     Step: 1.5.4                            Q.E.D.
+--     Step: 1.6.1 (Mul)                      Q.E.D.
+--     Step: 1.6.2                            Q.E.D.
+--     Step: 1.6.3                            Q.E.D.
+--     Step: 1.6.4                            Q.E.D.
+--     Step: 1.7.1 (Let)                      Q.E.D.
+--     Step: 1.7.2                            Q.E.D.
+--     Step: 1.7.3                            Q.E.D.
+--     Step: 1.7.4                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: exprSize, interpInEnv, sbv.lookup
 -- [Proven] envSwap :: Ɐe ∷ (Expr String Integer) → Ɐpfx ∷ [(String, Integer)] → Ɐenv ∷ [(String, Integer)] → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Bool
 envSwap :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
@@ -590,40 +590,40 @@ envSwap = do
 -- The @pfx@ parameter allows the shadow to occur at any depth.
 --
 -- >>> runTPWith cvc5 envShadow
--- Lemma: measureNonNeg                    Q.E.D.
--- Lemma: lookupShadowPfx                  Q.E.D.
--- Lemma: sqrCong                          Q.E.D.
--- Lemma: sqrHelper                        Q.E.D.
--- Lemma: addCongL                         Q.E.D.
--- Lemma: addCongR                         Q.E.D.
--- Lemma: addHelper                        Q.E.D.
--- Lemma: mulCongL                         Q.E.D.
--- Lemma: mulCongR                         Q.E.D.
--- Lemma: mulHelper                        Q.E.D.
--- Lemma: letHelper                        Q.E.D.
+-- Lemma: measureNonNeg                         Q.E.D.
+-- Lemma: lookupShadowPfx                       Q.E.D.
+-- Lemma: sqrCong                               Q.E.D.
+-- Lemma: sqrHelper                             Q.E.D.
+-- Lemma: addCongL                              Q.E.D.
+-- Lemma: addCongR                              Q.E.D.
+-- Lemma: addHelper                             Q.E.D.
+-- Lemma: mulCongL                              Q.E.D.
+-- Lemma: mulCongR                              Q.E.D.
+-- Lemma: mulHelper                             Q.E.D.
+-- Lemma: letHelper                             Q.E.D.
 -- Inductive lemma (strong): envShadow
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (7 way case split)
---     Step: 1.1 (Var)                     Q.E.D.
---     Step: 1.2 (Con)                     Q.E.D.
---     Step: 1.3.1 (Sqr)                   Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.4 (Inc)                     Q.E.D.
---     Step: 1.5.1 (Add)                   Q.E.D.
---     Step: 1.5.2                         Q.E.D.
---     Step: 1.5.3                         Q.E.D.
---     Step: 1.5.4                         Q.E.D.
---     Step: 1.6.1 (Mul)                   Q.E.D.
---     Step: 1.6.2                         Q.E.D.
---     Step: 1.6.3                         Q.E.D.
---     Step: 1.6.4                         Q.E.D.
---     Step: 1.7.1 (Let)                   Q.E.D.
---     Step: 1.7.2                         Q.E.D.
---     Step: 1.7.3                         Q.E.D.
---     Step: 1.7.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1 (Var)                          Q.E.D.
+--     Step: 1.2 (Con)                          Q.E.D.
+--     Step: 1.3.1 (Sqr)                        Q.E.D.
+--     Step: 1.3.2                              Q.E.D.
+--     Step: 1.3.3                              Q.E.D.
+--     Step: 1.4 (Inc)                          Q.E.D.
+--     Step: 1.5.1 (Add)                        Q.E.D.
+--     Step: 1.5.2                              Q.E.D.
+--     Step: 1.5.3                              Q.E.D.
+--     Step: 1.5.4                              Q.E.D.
+--     Step: 1.6.1 (Mul)                        Q.E.D.
+--     Step: 1.6.2                              Q.E.D.
+--     Step: 1.6.3                              Q.E.D.
+--     Step: 1.6.4                              Q.E.D.
+--     Step: 1.7.1 (Let)                        Q.E.D.
+--     Step: 1.7.2                              Q.E.D.
+--     Step: 1.7.3                              Q.E.D.
+--     Step: 1.7.4                              Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: exprSize, interpInEnv, sbv.lookup
 -- [Proven] envShadow :: Ɐe ∷ (Expr String Integer) → Ɐpfx ∷ [(String, Integer)] → Ɐenv ∷ [(String, Integer)] → Ɐb1 ∷ (String, Integer) → Ɐb2 ∷ (String, Integer) → Bool
 envShadow :: TP (Proof (Forall "e" Exp -> Forall "pfx" EL -> Forall "env" EL
@@ -748,7 +748,7 @@ envShadow = do
 -- | Unfolding @interpInEnv@ over @Var@.
 --
 -- >>> runTP varHelper
--- Lemma: varHelper                        Q.E.D.
+-- Lemma: varHelper    Q.E.D.
 -- Functions proven terminating: interpInEnv, sbv.lookup
 -- [Proven] varHelper :: Ɐenv ∷ [(String, Integer)] → Ɐnm ∷ String → Bool
 varHelper :: TP (Proof (Forall "env" EL -> Forall "nm" String -> SBool))
@@ -760,63 +760,63 @@ varHelper = lemma "varHelper"
 -- is the same as substituting and interpreting in the original environment.
 --
 -- >>> runTPWith cvc5 substCorrect
--- Lemma: measureNonNeg                    Q.E.D.
--- Lemma: sqrCong                          Q.E.D.
--- Lemma: sqrHelper                        Q.E.D.
--- Lemma: addHelper                        Q.E.D.
--- Lemma: mulCongL                         Q.E.D.
--- Lemma: mulCongR                         Q.E.D.
--- Lemma: mulHelper                        Q.E.D.
--- Lemma: letHelper                        Q.E.D.
--- Lemma: varHelper                        Q.E.D.
--- Lemma: envSwap                          Q.E.D.
--- Lemma: envShadow                        Q.E.D.
+-- Lemma: measureNonNeg                         Q.E.D.
+-- Lemma: sqrCong                               Q.E.D.
+-- Lemma: sqrHelper                             Q.E.D.
+-- Lemma: addHelper                             Q.E.D.
+-- Lemma: mulCongL                              Q.E.D.
+-- Lemma: mulCongR                              Q.E.D.
+-- Lemma: mulHelper                             Q.E.D.
+-- Lemma: letHelper                             Q.E.D.
+-- Lemma: varHelper                             Q.E.D.
+-- Lemma: envSwap                               Q.E.D.
+-- Lemma: envShadow                             Q.E.D.
 -- Inductive lemma (strong): substCorrect
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (7 way case split)
 --     Step: 1.1 (2 way case split)
---       Step: 1.1.1.1 (Var)               Q.E.D.
---       Step: 1.1.1.2                     Q.E.D.
---       Step: 1.1.1.3                     Q.E.D.
---       Step: 1.1.1.4                     Q.E.D.
---       Step: 1.1.1.5                     Q.E.D.
---       Step: 1.1.2.1 (Var)               Q.E.D.
---       Step: 1.1.2.2                     Q.E.D.
---       Step: 1.1.2.3                     Q.E.D.
---       Step: 1.1.2.4                     Q.E.D.
---       Step: 1.1.2.5                     Q.E.D.
---       Step: 1.1.Completeness            Q.E.D.
---     Step: 1.2 (Con)                     Q.E.D.
---     Step: 1.3.1 (Sqr)                   Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.3.4                         Q.E.D.
---     Step: 1.4 (Inc)                     Q.E.D.
---     Step: 1.5.1 (Add)                   Q.E.D.
---     Step: 1.5.2                         Q.E.D.
---     Step: 1.5.3                         Q.E.D.
---     Step: 1.5.4                         Q.E.D.
---     Step: 1.6.1 (Mul)                   Q.E.D.
---     Step: 1.6.2                         Q.E.D.
---     Step: 1.6.3                         Q.E.D.
---     Step: 1.6.4                         Q.E.D.
---     Step: 1.6.5                         Q.E.D.
---     Step: 1.7.1 (Let)                   Q.E.D.
+--       Step: 1.1.1.1 (Var)                    Q.E.D.
+--       Step: 1.1.1.2                          Q.E.D.
+--       Step: 1.1.1.3                          Q.E.D.
+--       Step: 1.1.1.4                          Q.E.D.
+--       Step: 1.1.1.5                          Q.E.D.
+--       Step: 1.1.2.1 (Var)                    Q.E.D.
+--       Step: 1.1.2.2                          Q.E.D.
+--       Step: 1.1.2.3                          Q.E.D.
+--       Step: 1.1.2.4                          Q.E.D.
+--       Step: 1.1.2.5                          Q.E.D.
+--       Step: 1.1.Completeness                 Q.E.D.
+--     Step: 1.2 (Con)                          Q.E.D.
+--     Step: 1.3.1 (Sqr)                        Q.E.D.
+--     Step: 1.3.2                              Q.E.D.
+--     Step: 1.3.3                              Q.E.D.
+--     Step: 1.3.4                              Q.E.D.
+--     Step: 1.4 (Inc)                          Q.E.D.
+--     Step: 1.5.1 (Add)                        Q.E.D.
+--     Step: 1.5.2                              Q.E.D.
+--     Step: 1.5.3                              Q.E.D.
+--     Step: 1.5.4                              Q.E.D.
+--     Step: 1.6.1 (Mul)                        Q.E.D.
+--     Step: 1.6.2                              Q.E.D.
+--     Step: 1.6.3                              Q.E.D.
+--     Step: 1.6.4                              Q.E.D.
+--     Step: 1.6.5                              Q.E.D.
+--     Step: 1.7.1 (Let)                        Q.E.D.
 --     Step: 1.7.2 (2 way case split)
---       Step: 1.7.2.1.1                   Q.E.D.
---       Step: 1.7.2.1.2 (shadow)          Q.E.D.
---       Step: 1.7.2.1.3                   Q.E.D.
---       Step: 1.7.2.1.4                   Q.E.D.
---       Step: 1.7.2.1.5                   Q.E.D.
---       Step: 1.7.2.2.1                   Q.E.D.
---       Step: 1.7.2.2.2 (swap)            Q.E.D.
---       Step: 1.7.2.2.3                   Q.E.D.
---       Step: 1.7.2.2.4                   Q.E.D.
---       Step: 1.7.2.2.5                   Q.E.D.
---       Step: 1.7.2.2.6                   Q.E.D.
---       Step: 1.7.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.7.2.1.1                        Q.E.D.
+--       Step: 1.7.2.1.2 (shadow)               Q.E.D.
+--       Step: 1.7.2.1.3                        Q.E.D.
+--       Step: 1.7.2.1.4                        Q.E.D.
+--       Step: 1.7.2.1.5                        Q.E.D.
+--       Step: 1.7.2.2.1                        Q.E.D.
+--       Step: 1.7.2.2.2 (swap)                 Q.E.D.
+--       Step: 1.7.2.2.3                        Q.E.D.
+--       Step: 1.7.2.2.4                        Q.E.D.
+--       Step: 1.7.2.2.5                        Q.E.D.
+--       Step: 1.7.2.2.6                        Q.E.D.
+--       Step: 1.7.2.Completeness               Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: exprSize, interpInEnv, sbv.lookup, subst
 -- [Proven] substCorrect :: Ɐe ∷ (Expr String Integer) → Ɐnm ∷ String → Ɐv ∷ Integer → Ɐenv ∷ [(String, Integer)] → Bool
 substCorrect :: TP (Proof (Forall "e" Exp -> Forall "nm" String -> Forall "v" Integer -> Forall "env" EL -> SBool))
@@ -967,130 +967,130 @@ substCorrect = do
 -- | Simplification preserves semantics.
 --
 -- >>> runTPWith cvc5 simpCorrect
--- Lemma: sqrCong                          Q.E.D.
--- Lemma: sqrHelper                        Q.E.D.
--- Lemma: addHelper                        Q.E.D.
--- Lemma: mulCongL                         Q.E.D.
--- Lemma: mulCongR                         Q.E.D.
--- Lemma: mulHelper                        Q.E.D.
--- Lemma: letHelper                        Q.E.D.
--- Lemma: substCorrect                     Q.E.D.
+-- Lemma: sqrCong                               Q.E.D.
+-- Lemma: sqrHelper                             Q.E.D.
+-- Lemma: addHelper                             Q.E.D.
+-- Lemma: mulCongL                              Q.E.D.
+-- Lemma: mulCongR                              Q.E.D.
+-- Lemma: mulHelper                             Q.E.D.
+-- Lemma: letHelper                             Q.E.D.
+-- Lemma: substCorrect                          Q.E.D.
 -- Lemma: simpCorrect
 --   Step: 1 (7 way case split)
---     Step: 1.1.1 (Var)                   Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.1.3                         Q.E.D.
---     Step: 1.2.1 (Con)                   Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.3.1 (Sqr)                   Q.E.D.
+--     Step: 1.1.1 (Var)                        Q.E.D.
+--     Step: 1.1.2                              Q.E.D.
+--     Step: 1.1.3                              Q.E.D.
+--     Step: 1.2.1 (Con)                        Q.E.D.
+--     Step: 1.2.2                              Q.E.D.
+--     Step: 1.2.3                              Q.E.D.
+--     Step: 1.3.1 (Sqr)                        Q.E.D.
 --     Step: 1.3.2 (2 way case split)
---       Step: 1.3.2.1.1                   Q.E.D.
---       Step: 1.3.2.1.2 (Sqr Con)         Q.E.D.
---       Step: 1.3.2.1.3                   Q.E.D.
---       Step: 1.3.2.1.4                   Q.E.D.
---       Step: 1.3.2.1.5                   Q.E.D.
---       Step: 1.3.2.2.1                   Q.E.D.
---       Step: 1.3.2.2.2 (Sqr _)           Q.E.D.
---       Step: 1.3.2.Completeness          Q.E.D.
---     Step: 1.4.1 (Inc)                   Q.E.D.
+--       Step: 1.3.2.1.1                        Q.E.D.
+--       Step: 1.3.2.1.2 (Sqr Con)              Q.E.D.
+--       Step: 1.3.2.1.3                        Q.E.D.
+--       Step: 1.3.2.1.4                        Q.E.D.
+--       Step: 1.3.2.1.5                        Q.E.D.
+--       Step: 1.3.2.2.1                        Q.E.D.
+--       Step: 1.3.2.2.2 (Sqr _)                Q.E.D.
+--       Step: 1.3.2.Completeness               Q.E.D.
+--     Step: 1.4.1 (Inc)                        Q.E.D.
 --     Step: 1.4.2 (2 way case split)
---       Step: 1.4.2.1.1                   Q.E.D.
---       Step: 1.4.2.1.2 (Inc Con)         Q.E.D.
---       Step: 1.4.2.1.3                   Q.E.D.
---       Step: 1.4.2.2.1                   Q.E.D.
---       Step: 1.4.2.2.2 (Inc _)           Q.E.D.
---       Step: 1.4.2.Completeness          Q.E.D.
---     Step: 1.5.1 (Add)                   Q.E.D.
+--       Step: 1.4.2.1.1                        Q.E.D.
+--       Step: 1.4.2.1.2 (Inc Con)              Q.E.D.
+--       Step: 1.4.2.1.3                        Q.E.D.
+--       Step: 1.4.2.2.1                        Q.E.D.
+--       Step: 1.4.2.2.2 (Inc _)                Q.E.D.
+--       Step: 1.4.2.Completeness               Q.E.D.
+--     Step: 1.5.1 (Add)                        Q.E.D.
 --     Step: 1.5.2 (6 way case split)
---       Step: 1.5.2.1.1                   Q.E.D.
---       Step: 1.5.2.1.2 (Add 0+b)         Q.E.D.
---       Step: 1.5.2.1.3                   Q.E.D.
---       Step: 1.5.2.2.1                   Q.E.D.
---       Step: 1.5.2.2.2 (Add a+0)         Q.E.D.
---       Step: 1.5.2.2.3                   Q.E.D.
---       Step: 1.5.2.3.1                   Q.E.D.
---       Step: 1.5.2.3.2 (Add Con)         Q.E.D.
---       Step: 1.5.2.3.3                   Q.E.D.
+--       Step: 1.5.2.1.1                        Q.E.D.
+--       Step: 1.5.2.1.2 (Add 0+b)              Q.E.D.
+--       Step: 1.5.2.1.3                        Q.E.D.
+--       Step: 1.5.2.2.1                        Q.E.D.
+--       Step: 1.5.2.2.2 (Add a+0)              Q.E.D.
+--       Step: 1.5.2.2.3                        Q.E.D.
+--       Step: 1.5.2.3.1                        Q.E.D.
+--       Step: 1.5.2.3.2 (Add Con)              Q.E.D.
+--       Step: 1.5.2.3.3                        Q.E.D.
 --       Step: 1.5.2.4 (2 way case split)
---         Step: 1.5.2.4.1.1               Q.E.D.
---         Step: 1.5.2.4.1.2 (Add 0,_)     Q.E.D.
---         Step: 1.5.2.4.1.3               Q.E.D.
---         Step: 1.5.2.4.2.1               Q.E.D.
---         Step: 1.5.2.4.2.2 (Add C,_)     Q.E.D.
---         Step: 1.5.2.4.Completeness      Q.E.D.
+--         Step: 1.5.2.4.1.1                    Q.E.D.
+--         Step: 1.5.2.4.1.2 (Add 0,_)          Q.E.D.
+--         Step: 1.5.2.4.1.3                    Q.E.D.
+--         Step: 1.5.2.4.2.1                    Q.E.D.
+--         Step: 1.5.2.4.2.2 (Add C,_)          Q.E.D.
+--         Step: 1.5.2.4.Completeness           Q.E.D.
 --       Step: 1.5.2.5 (2 way case split)
---         Step: 1.5.2.5.1.1               Q.E.D.
---         Step: 1.5.2.5.1.2 (Add _,0)     Q.E.D.
---         Step: 1.5.2.5.1.3               Q.E.D.
---         Step: 1.5.2.5.2.1               Q.E.D.
---         Step: 1.5.2.5.2.2 (Add _,C)     Q.E.D.
---         Step: 1.5.2.5.Completeness      Q.E.D.
---       Step: 1.5.2.6.1                   Q.E.D.
---       Step: 1.5.2.6.2 (Add _,_)         Q.E.D.
---       Step: 1.5.2.Completeness          Q.E.D.
---     Step: 1.6.1 (Mul)                   Q.E.D.
+--         Step: 1.5.2.5.1.1                    Q.E.D.
+--         Step: 1.5.2.5.1.2 (Add _,0)          Q.E.D.
+--         Step: 1.5.2.5.1.3                    Q.E.D.
+--         Step: 1.5.2.5.2.1                    Q.E.D.
+--         Step: 1.5.2.5.2.2 (Add _,C)          Q.E.D.
+--         Step: 1.5.2.5.Completeness           Q.E.D.
+--       Step: 1.5.2.6.1                        Q.E.D.
+--       Step: 1.5.2.6.2 (Add _,_)              Q.E.D.
+--       Step: 1.5.2.Completeness               Q.E.D.
+--     Step: 1.6.1 (Mul)                        Q.E.D.
 --     Step: 1.6.2 (8 way case split)
---       Step: 1.6.2.1.1                   Q.E.D.
---       Step: 1.6.2.1.2 (Mul 0*b)         Q.E.D.
---       Step: 1.6.2.1.3                   Q.E.D.
---       Step: 1.6.2.2.1                   Q.E.D.
---       Step: 1.6.2.2.2 (Mul a*0)         Q.E.D.
---       Step: 1.6.2.2.3                   Q.E.D.
---       Step: 1.6.2.3.1                   Q.E.D.
---       Step: 1.6.2.3.2 (Mul 1*b)         Q.E.D.
---       Step: 1.6.2.3.3                   Q.E.D.
---       Step: 1.6.2.3.4                   Q.E.D.
---       Step: 1.6.2.3.5                   Q.E.D.
---       Step: 1.6.2.4.1                   Q.E.D.
---       Step: 1.6.2.4.2 (Mul a*1)         Q.E.D.
---       Step: 1.6.2.4.3                   Q.E.D.
---       Step: 1.6.2.4.4                   Q.E.D.
---       Step: 1.6.2.4.5                   Q.E.D.
---       Step: 1.6.2.5.1                   Q.E.D.
---       Step: 1.6.2.5.2 (Mul Con)         Q.E.D.
---       Step: 1.6.2.5.3                   Q.E.D.
---       Step: 1.6.2.5.4                   Q.E.D.
---       Step: 1.6.2.5.5                   Q.E.D.
---       Step: 1.6.2.5.6                   Q.E.D.
+--       Step: 1.6.2.1.1                        Q.E.D.
+--       Step: 1.6.2.1.2 (Mul 0*b)              Q.E.D.
+--       Step: 1.6.2.1.3                        Q.E.D.
+--       Step: 1.6.2.2.1                        Q.E.D.
+--       Step: 1.6.2.2.2 (Mul a*0)              Q.E.D.
+--       Step: 1.6.2.2.3                        Q.E.D.
+--       Step: 1.6.2.3.1                        Q.E.D.
+--       Step: 1.6.2.3.2 (Mul 1*b)              Q.E.D.
+--       Step: 1.6.2.3.3                        Q.E.D.
+--       Step: 1.6.2.3.4                        Q.E.D.
+--       Step: 1.6.2.3.5                        Q.E.D.
+--       Step: 1.6.2.4.1                        Q.E.D.
+--       Step: 1.6.2.4.2 (Mul a*1)              Q.E.D.
+--       Step: 1.6.2.4.3                        Q.E.D.
+--       Step: 1.6.2.4.4                        Q.E.D.
+--       Step: 1.6.2.4.5                        Q.E.D.
+--       Step: 1.6.2.5.1                        Q.E.D.
+--       Step: 1.6.2.5.2 (Mul Con)              Q.E.D.
+--       Step: 1.6.2.5.3                        Q.E.D.
+--       Step: 1.6.2.5.4                        Q.E.D.
+--       Step: 1.6.2.5.5                        Q.E.D.
+--       Step: 1.6.2.5.6                        Q.E.D.
 --       Step: 1.6.2.6 (3 way case split)
---         Step: 1.6.2.6.1.1               Q.E.D.
---         Step: 1.6.2.6.1.2 (Mul 0,_)     Q.E.D.
---         Step: 1.6.2.6.1.3               Q.E.D.
---         Step: 1.6.2.6.2.1               Q.E.D.
---         Step: 1.6.2.6.2.2 (Mul 1,_)     Q.E.D.
---         Step: 1.6.2.6.2.3               Q.E.D.
---         Step: 1.6.2.6.2.4               Q.E.D.
---         Step: 1.6.2.6.2.5               Q.E.D.
---         Step: 1.6.2.6.3.1               Q.E.D.
---         Step: 1.6.2.6.3.2 (Mul C,_)     Q.E.D.
---         Step: 1.6.2.6.Completeness      Q.E.D.
+--         Step: 1.6.2.6.1.1                    Q.E.D.
+--         Step: 1.6.2.6.1.2 (Mul 0,_)          Q.E.D.
+--         Step: 1.6.2.6.1.3                    Q.E.D.
+--         Step: 1.6.2.6.2.1                    Q.E.D.
+--         Step: 1.6.2.6.2.2 (Mul 1,_)          Q.E.D.
+--         Step: 1.6.2.6.2.3                    Q.E.D.
+--         Step: 1.6.2.6.2.4                    Q.E.D.
+--         Step: 1.6.2.6.2.5                    Q.E.D.
+--         Step: 1.6.2.6.3.1                    Q.E.D.
+--         Step: 1.6.2.6.3.2 (Mul C,_)          Q.E.D.
+--         Step: 1.6.2.6.Completeness           Q.E.D.
 --       Step: 1.6.2.7 (3 way case split)
---         Step: 1.6.2.7.1.1               Q.E.D.
---         Step: 1.6.2.7.1.2 (Mul _,0)     Q.E.D.
---         Step: 1.6.2.7.1.3               Q.E.D.
---         Step: 1.6.2.7.2.1               Q.E.D.
---         Step: 1.6.2.7.2.2 (Mul _,1)     Q.E.D.
---         Step: 1.6.2.7.2.3               Q.E.D.
---         Step: 1.6.2.7.2.4               Q.E.D.
---         Step: 1.6.2.7.2.5               Q.E.D.
---         Step: 1.6.2.7.3.1               Q.E.D.
---         Step: 1.6.2.7.3.2 (Mul _,C)     Q.E.D.
---         Step: 1.6.2.7.Completeness      Q.E.D.
---       Step: 1.6.2.8.1                   Q.E.D.
---       Step: 1.6.2.8.2 (Mul _,_)         Q.E.D.
---       Step: 1.6.2.Completeness          Q.E.D.
---     Step: 1.7.1 (Let)                   Q.E.D.
+--         Step: 1.6.2.7.1.1                    Q.E.D.
+--         Step: 1.6.2.7.1.2 (Mul _,0)          Q.E.D.
+--         Step: 1.6.2.7.1.3                    Q.E.D.
+--         Step: 1.6.2.7.2.1                    Q.E.D.
+--         Step: 1.6.2.7.2.2 (Mul _,1)          Q.E.D.
+--         Step: 1.6.2.7.2.3                    Q.E.D.
+--         Step: 1.6.2.7.2.4                    Q.E.D.
+--         Step: 1.6.2.7.2.5                    Q.E.D.
+--         Step: 1.6.2.7.3.1                    Q.E.D.
+--         Step: 1.6.2.7.3.2 (Mul _,C)          Q.E.D.
+--         Step: 1.6.2.7.Completeness           Q.E.D.
+--       Step: 1.6.2.8.1                        Q.E.D.
+--       Step: 1.6.2.8.2 (Mul _,_)              Q.E.D.
+--       Step: 1.6.2.Completeness               Q.E.D.
+--     Step: 1.7.1 (Let)                        Q.E.D.
 --     Step: 1.7.2 (2 way case split)
---       Step: 1.7.2.1.1                   Q.E.D.
---       Step: 1.7.2.1.2 (Let Con)         Q.E.D.
---       Step: 1.7.2.1.3                   Q.E.D.
---       Step: 1.7.2.1.4                   Q.E.D.
---       Step: 1.7.2.2.1                   Q.E.D.
---       Step: 1.7.2.2.2 (Let _)           Q.E.D.
---       Step: 1.7.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.7.2.1.1                        Q.E.D.
+--       Step: 1.7.2.1.2 (Let Con)              Q.E.D.
+--       Step: 1.7.2.1.3                        Q.E.D.
+--       Step: 1.7.2.1.4                        Q.E.D.
+--       Step: 1.7.2.2.1                        Q.E.D.
+--       Step: 1.7.2.2.2 (Let _)                Q.E.D.
+--       Step: 1.7.2.Completeness               Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: exprSize, interpInEnv, sbv.lookup, simplify, subst
 -- [Proven] simpCorrect :: Ɐe ∷ (Expr String Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 simpCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))
@@ -1369,54 +1369,54 @@ simpCorrect = do
 -- is the same as constant-folding it first and then interpreting the result.
 --
 -- >>> runTPWith cvc5 cfoldCorrect
--- Lemma: measureNonNeg                    Q.E.D.
--- Lemma: simpCorrect                      Q.E.D.
--- Lemma: sqrCong                          Q.E.D. [Cached]
--- Lemma: sqrHelper                        Q.E.D. [Cached]
--- Lemma: mulCongL                         Q.E.D. [Cached]
--- Lemma: mulCongR                         Q.E.D. [Cached]
--- Lemma: mulHelper                        Q.E.D. [Cached]
+-- Lemma: measureNonNeg                         Q.E.D.
+-- Lemma: simpCorrect                           Q.E.D.
+-- Lemma: sqrCong                               Q.E.D. [Cached]
+-- Lemma: sqrHelper                             Q.E.D. [Cached]
+-- Lemma: mulCongL                              Q.E.D. [Cached]
+-- Lemma: mulCongR                              Q.E.D. [Cached]
+-- Lemma: mulHelper                             Q.E.D. [Cached]
 -- Inductive lemma (strong): cfoldCorrect
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (7 way case split)
---     Step: 1.1.1 (case Var)              Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.1.3                         Q.E.D.
---     Step: 1.2.1 (case Con)              Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.3.1 (case Sqr)              Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.3.4                         Q.E.D.
---     Step: 1.3.5                         Q.E.D.
---     Step: 1.3.6                         Q.E.D.
---     Step: 1.3.7                         Q.E.D.
---     Step: 1.4.1 (case Inc)              Q.E.D.
---     Step: 1.4.2                         Q.E.D.
---     Step: 1.4.3                         Q.E.D.
---     Step: 1.4.4                         Q.E.D.
---     Step: 1.4.5                         Q.E.D.
---     Step: 1.5.1 (case Add)              Q.E.D.
---     Step: 1.5.2                         Q.E.D.
---     Step: 1.5.3                         Q.E.D.
---     Step: 1.5.4                         Q.E.D.
---     Step: 1.5.5                         Q.E.D.
---     Step: 1.6.1 (case Mul)              Q.E.D.
---     Step: 1.6.2                         Q.E.D.
---     Step: 1.6.3                         Q.E.D.
---     Step: 1.6.4                         Q.E.D.
---     Step: 1.6.5                         Q.E.D.
---     Step: 1.6.6                         Q.E.D.
---     Step: 1.6.7                         Q.E.D.
---     Step: 1.6.8                         Q.E.D.
---     Step: 1.7.1 (case Let)              Q.E.D.
---     Step: 1.7.2                         Q.E.D.
---     Step: 1.7.3                         Q.E.D.
---     Step: 1.7.4                         Q.E.D.
---     Step: 1.7.5                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1 (case Var)                   Q.E.D.
+--     Step: 1.1.2                              Q.E.D.
+--     Step: 1.1.3                              Q.E.D.
+--     Step: 1.2.1 (case Con)                   Q.E.D.
+--     Step: 1.2.2                              Q.E.D.
+--     Step: 1.2.3                              Q.E.D.
+--     Step: 1.3.1 (case Sqr)                   Q.E.D.
+--     Step: 1.3.2                              Q.E.D.
+--     Step: 1.3.3                              Q.E.D.
+--     Step: 1.3.4                              Q.E.D.
+--     Step: 1.3.5                              Q.E.D.
+--     Step: 1.3.6                              Q.E.D.
+--     Step: 1.3.7                              Q.E.D.
+--     Step: 1.4.1 (case Inc)                   Q.E.D.
+--     Step: 1.4.2                              Q.E.D.
+--     Step: 1.4.3                              Q.E.D.
+--     Step: 1.4.4                              Q.E.D.
+--     Step: 1.4.5                              Q.E.D.
+--     Step: 1.5.1 (case Add)                   Q.E.D.
+--     Step: 1.5.2                              Q.E.D.
+--     Step: 1.5.3                              Q.E.D.
+--     Step: 1.5.4                              Q.E.D.
+--     Step: 1.5.5                              Q.E.D.
+--     Step: 1.6.1 (case Mul)                   Q.E.D.
+--     Step: 1.6.2                              Q.E.D.
+--     Step: 1.6.3                              Q.E.D.
+--     Step: 1.6.4                              Q.E.D.
+--     Step: 1.6.5                              Q.E.D.
+--     Step: 1.6.6                              Q.E.D.
+--     Step: 1.6.7                              Q.E.D.
+--     Step: 1.6.8                              Q.E.D.
+--     Step: 1.7.1 (case Let)                   Q.E.D.
+--     Step: 1.7.2                              Q.E.D.
+--     Step: 1.7.3                              Q.E.D.
+--     Step: 1.7.4                              Q.E.D.
+--     Step: 1.7.5                              Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: cfold, exprSize, interpInEnv, sbv.lookup, simplify, subst
 -- [Proven] cfoldCorrect :: Ɐe ∷ (Expr String Integer) → Ɐenv ∷ [(String, Integer)] → Bool
 cfoldCorrect :: TP (Proof (Forall "e" Exp -> Forall "env" EL -> SBool))

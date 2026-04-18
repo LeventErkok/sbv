@@ -40,15 +40,15 @@ import Data.SBV.TP
 --
 -- >>> oddSequence1
 -- Inductive lemma (strong): oddSequence1
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative           Q.E.D.
 --   Step: 1 (3 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3.1                         Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                             Q.E.D.
+--     Step: 1.2                             Q.E.D.
+--     Step: 1.3.1                           Q.E.D.
+--     Step: 1.3.2                           Q.E.D.
+--     Step: 1.3.3                           Q.E.D.
+--     Step: 1.Completeness                  Q.E.D.
+--   Result:                                 Q.E.D.
 -- Functions proven terminating: seq
 -- [Proven] oddSequence1 :: Ɐn ∷ Integer → Bool
 oddSequence1 :: IO (Proof (Forall "n" Integer -> SBool))
@@ -81,25 +81,25 @@ oddSequence1 = runTP $ do
 -- We have:
 --
 -- >>> oddSequence2
--- Lemma: oddSequence_0                              Q.E.D.
--- Lemma: oddSequence_1                              Q.E.D.
+-- Lemma: oddSequence_0                          Q.E.D.
+-- Lemma: oddSequence_1                          Q.E.D.
 -- Inductive lemma (strong): oddSequence_sNp2
---   Step: Measure is non-negative                   Q.E.D.
---   Step: 1                                         Q.E.D.
---   Step: 2                                         Q.E.D.
---   Step: 3 (simplify)                              Q.E.D.
---   Step: 4                                         Q.E.D.
---   Step: 5 (simplify)                              Q.E.D.
---   Step: 6                                         Q.E.D.
---   Result:                                         Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
+--   Step: 1                                     Q.E.D.
+--   Step: 2                                     Q.E.D.
+--   Step: 3 (simplify)                          Q.E.D.
+--   Step: 4                                     Q.E.D.
+--   Step: 5 (simplify)                          Q.E.D.
+--   Step: 6                                     Q.E.D.
+--   Result:                                     Q.E.D.
 -- Lemma: oddSequence2
 --   Step: 1 (3 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2                                     Q.E.D.
---     Step: 1.3.1                                   Q.E.D.
---     Step: 1.3.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                                 Q.E.D.
+--     Step: 1.2                                 Q.E.D.
+--     Step: 1.3.1                               Q.E.D.
+--     Step: 1.3.2                               Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: seq
 -- [Proven] oddSequence2 :: Ɐn ∷ Integer → Bool
 oddSequence2 :: IO (Proof (Forall "n" Integer -> SBool))
@@ -180,7 +180,7 @@ won'tProve1 = runTP $ do
 --
 -- >>> won'tProve2 `catch` (\(_ :: SomeException) -> pure ())
 -- Inductive lemma (strong): badLength
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative        Q.E.D.
 --   Step: 1
 -- *** Failed to prove badLength.1.
 -- Falsifiable. Counter-example:
@@ -271,24 +271,24 @@ won'tProve4 = runTP $ do
 --
 -- >>> sumHalves
 -- Inductive lemma: sumAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                           Q.E.D.
+--   Step: 1                              Q.E.D.
+--   Step: 2                              Q.E.D.
+--   Step: 3                              Q.E.D.
+--   Result:                              Q.E.D.
 -- Inductive lemma (strong): sumHalves
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative        Q.E.D.
 --   Step: 1 (3 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3.1                         Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.3.4                         Q.E.D.
---     Step: 1.3.5                         Q.E.D.
---     Step: 1.3.6 (simplify)              Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                          Q.E.D.
+--     Step: 1.2                          Q.E.D.
+--     Step: 1.3.1                        Q.E.D.
+--     Step: 1.3.2                        Q.E.D.
+--     Step: 1.3.3                        Q.E.D.
+--     Step: 1.3.4                        Q.E.D.
+--     Step: 1.3.5                        Q.E.D.
+--     Step: 1.3.6 (simplify)             Q.E.D.
+--     Step: 1.Completeness               Q.E.D.
+--   Result:                              Q.E.D.
 -- Functions proven terminating: halvingSum, sbv.foldr
 -- [Proven] sumHalves :: Ɐxs ∷ [Integer] → Bool
 sumHalves :: IO (Proof (Forall "xs" [Integer] -> SBool))

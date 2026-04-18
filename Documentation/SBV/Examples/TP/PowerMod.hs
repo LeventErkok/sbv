@@ -42,17 +42,17 @@ power = smtFunction "power" $ \b n -> [sCase| n of
 -- ==== __Proof__
 -- >>> runTP modAddMultiple
 -- Inductive lemma: modAddMultiplePos
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddMultiple
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                         Q.E.D.
+--     Step: 1.2                         Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
 -- [Proven] modAddMultiple :: Ɐk ∷ Integer → Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 modAddMultiple :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> Forall "m" Integer -> SBool))
 modAddMultiple = do
@@ -89,21 +89,21 @@ modAddMultiple = do
 -- ==== __Proof__
 -- >>> runTP modAddRight
 -- Inductive lemma: modAddMultiplePos
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddMultiple
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                         Q.E.D.
+--     Step: 1.2                         Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddRight
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Result:                             Q.E.D.
 -- [Proven] modAddRight :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modAddRight :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modAddRight = do
@@ -121,26 +121,26 @@ modAddRight = do
 -- ==== __Proof__
 -- >>> runTP modAddLeft
 -- Inductive lemma: modAddMultiplePos
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddMultiple
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                         Q.E.D.
+--     Step: 1.2                         Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddRight
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddLeft
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- [Proven] modAddLeft :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modAddLeft :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modAddLeft = do
@@ -159,22 +159,22 @@ modAddLeft = do
 -- ==== __Proof__
 -- >>> runTP modSubRight
 -- Inductive lemma: modAddMultiplePos
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddMultiple
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                         Q.E.D.
+--     Step: 1.2                         Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modSubRight
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- [Proven] modSubRight :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modSubRight :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modSubRight = do
@@ -194,36 +194,36 @@ modSubRight = do
 -- ==== __Proof__
 -- >>> runTP modMulRightNonneg
 -- Inductive lemma: modAddMultiplePos
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddMultiple
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                         Q.E.D.
+--     Step: 1.2                         Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddRight
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddLeft
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: modAddRight                      Q.E.D. [Cached]
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
+-- Lemma: modAddRight                    Q.E.D. [Cached]
 -- Inductive lemma: modMulRightNonneg
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Step: 4                             Q.E.D.
+--   Step: 5                             Q.E.D.
+--   Step: 6                             Q.E.D.
+--   Result:                             Q.E.D.
 -- [Proven] modMulRightNonneg :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modMulRightNonneg :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulRightNonneg = do
@@ -250,36 +250,36 @@ modMulRightNonneg = do
 -- ==== __Proof__
 -- >>> runTP modMulRightNeg
 -- Inductive lemma: modAddMultiplePos
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddMultiple
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                         Q.E.D.
+--     Step: 1.2                         Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddRight
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddLeft
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: modSubRight                      Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
+-- Lemma: modSubRight                    Q.E.D.
 -- Inductive lemma: modMulRightNeg
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Step: 4                             Q.E.D.
+--   Step: 5                             Q.E.D.
+--   Step: 6                             Q.E.D.
+--   Result:                             Q.E.D.
 -- [Proven] modMulRightNeg :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modMulRightNeg :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulRightNeg = do
@@ -306,45 +306,45 @@ modMulRightNeg = do
 -- ==== __Proof__
 -- >>> runTP modMulRight
 -- Inductive lemma: modAddMultiplePos
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddMultiple
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                         Q.E.D.
+--     Step: 1.2                         Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddRight
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Lemma: modAddLeft
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: modAddRight                      Q.E.D. [Cached]
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
+-- Lemma: modAddRight                    Q.E.D. [Cached]
 -- Inductive lemma: modMulRightNonneg
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: modMulRightNeg                   Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Step: 4                             Q.E.D.
+--   Step: 5                             Q.E.D.
+--   Step: 6                             Q.E.D.
+--   Result:                             Q.E.D.
+-- Lemma: modMulRightNeg                 Q.E.D.
 -- Lemma: modMulRight
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                         Q.E.D.
+--     Step: 1.2.1                       Q.E.D.
+--     Step: 1.2.2                       Q.E.D.
+--     Step: 1.2.3                       Q.E.D.
+--     Step: 1.Completeness              Q.E.D.
+--   Result:                             Q.E.D.
 -- [Proven] modMulRight :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modMulRight :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulRight = do
@@ -369,12 +369,12 @@ modMulRight = do
 --
 -- ==== __Proof__
 -- >>> runTP modMulLeft
--- Lemma: modMulRight                      Q.E.D.
+-- Lemma: modMulRight                    Q.E.D.
 -- Lemma: modMulLeft
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- [Proven] modMulLeft :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐm ∷ Integer → Bool
 modMulLeft :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "m" Integer -> SBool))
 modMulLeft = do
@@ -393,18 +393,18 @@ modMulLeft = do
 --
 -- ==== __Proof__
 -- >>> runTP powerMod
--- Lemma: modMulLeft                       Q.E.D.
--- Lemma: modMulRight                      Q.E.D. [Cached]
+-- Lemma: modMulLeft                     Q.E.D.
+-- Lemma: modMulRight                    Q.E.D. [Cached]
 -- Inductive lemma: powerModInduct
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: powerMod                         Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Step: 4                             Q.E.D.
+--   Step: 5                             Q.E.D.
+--   Step: 6                             Q.E.D.
+--   Result:                             Q.E.D.
+-- Lemma: powerMod                       Q.E.D.
 -- Functions proven terminating: power
 -- [Proven] powerMod :: Ɐb ∷ Integer → Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 powerMod :: TP (Proof (Forall "b" Integer -> Forall "n" Integer -> Forall "m" Integer -> SBool))
@@ -438,10 +438,10 @@ powerMod = do
 -- ==== __Proof__
 -- >>> runTP onePower
 -- Inductive lemma: onePower
---   Step: Base                            Q.E.D.
---   Step: 1 (unfold power)                Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                 Q.E.D.
+--   Step: 1 (unfold power)     Q.E.D.
+--   Step: 2                    Q.E.D.
+--   Result:                    Q.E.D.
 -- Functions proven terminating: power
 -- [Proven] onePower :: Ɐn ∷ Integer → Bool
 onePower :: TP (Proof (Forall "n" Integer -> SBool))
@@ -458,14 +458,14 @@ onePower = induct "onePower"
 --
 -- ==== __Proof__
 -- >>> runTP powerOf27
--- Lemma: onePower                         Q.E.D.
--- Lemma: powerMod                         Q.E.D.
+-- Lemma: onePower                       Q.E.D.
+-- Lemma: powerMod                       Q.E.D.
 -- Lemma: powerOf27
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Step: 4                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Functions proven terminating: power
 -- [Proven] powerOf27 :: Ɐn ∷ Integer → Bool
 powerOf27 :: TP (Proof (Forall "n" Integer -> SBool))
@@ -487,10 +487,10 @@ powerOf27 = do
 --
 -- ==== __Proof__
 -- >>> runTP powerOfThreeMod13VarDivisor
--- Lemma: powerOf27                        Q.E.D.
+-- Lemma: powerOf27                      Q.E.D.
 -- Lemma: powerOfThreeMod13VarDivisor
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Functions proven terminating: power
 -- [Proven] powerOfThreeMod13VarDivisor :: Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 powerOfThreeMod13VarDivisor :: TP (Proof (Forall "n" Integer -> Forall "m" Integer -> SBool))

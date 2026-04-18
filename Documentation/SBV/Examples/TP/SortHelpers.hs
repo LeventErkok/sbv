@@ -50,7 +50,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 -- | The tail of a non-decreasing list is non-decreasing. We have:
 --
 -- >>> runTP $ nonDecrTail @Integer
--- Lemma: nonDecrTail                      Q.E.D.
+-- Lemma: nonDecrTail    Q.E.D.
 -- Functions proven terminating: nonDecreasing
 -- [Proven] nonDecrTail :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 nonDecrTail :: forall a. (OrdSymbolic (SBV a), SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
@@ -61,7 +61,7 @@ nonDecrTail = lemma "nonDecrTail"
 -- | If we insert an element that is less than the head of a nonDecreasing list, it remains nondecreasing. We have:
 --
 -- >>> runTP $ nonDecrIns @Integer
--- Lemma: nonDecrInsert                    Q.E.D.
+-- Lemma: nonDecrInsert    Q.E.D.
 -- Functions proven terminating: nonDecreasing
 -- [Proven] nonDecrInsert :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 nonDecrIns :: forall a. (OrdSymbolic (SBV a), SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
@@ -77,34 +77,34 @@ sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e 
 --
 -- >>> runTP $ sublistCorrect @Integer
 -- Inductive lemma: countNonNeg
---   Step: Base                            Q.E.D.
+--   Step: Base                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                 Q.E.D.
+--     Step: 1.1.2                 Q.E.D.
+--     Step: 1.2.1                 Q.E.D.
+--     Step: 1.2.2                 Q.E.D.
+--     Step: 1.Completeness        Q.E.D.
+--   Result:                       Q.E.D.
 -- Inductive lemma: countElem
---   Step: Base                            Q.E.D.
+--   Step: Base                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                 Q.E.D.
+--     Step: 1.1.2                 Q.E.D.
+--     Step: 1.2.1                 Q.E.D.
+--     Step: 1.2.2                 Q.E.D.
+--     Step: 1.Completeness        Q.E.D.
+--   Result:                       Q.E.D.
 -- Inductive lemma: elemCount
---   Step: Base                            Q.E.D.
+--   Step: Base                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                   Q.E.D.
+--     Step: 1.2.1                 Q.E.D.
+--     Step: 1.2.2                 Q.E.D.
+--     Step: 1.Completeness        Q.E.D.
+--   Result:                       Q.E.D.
 -- Lemma: sublistCorrect
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: count
 -- [Proven] sublistCorrect :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Ɐx ∷ Integer → Bool
 sublistCorrect :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "x" a -> SBool))
@@ -126,37 +126,37 @@ sublistCorrect = do
 --
 -- >>> runTP $ sublistElem @Integer
 -- Inductive lemma: countNonNeg
---   Step: Base                            Q.E.D.
+--   Step: Base                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                 Q.E.D.
+--     Step: 1.1.2                 Q.E.D.
+--     Step: 1.2.1                 Q.E.D.
+--     Step: 1.2.2                 Q.E.D.
+--     Step: 1.Completeness        Q.E.D.
+--   Result:                       Q.E.D.
 -- Inductive lemma: countElem
---   Step: Base                            Q.E.D.
+--   Step: Base                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                 Q.E.D.
+--     Step: 1.1.2                 Q.E.D.
+--     Step: 1.2.1                 Q.E.D.
+--     Step: 1.2.2                 Q.E.D.
+--     Step: 1.Completeness        Q.E.D.
+--   Result:                       Q.E.D.
 -- Inductive lemma: elemCount
---   Step: Base                            Q.E.D.
+--   Step: Base                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                   Q.E.D.
+--     Step: 1.2.1                 Q.E.D.
+--     Step: 1.2.2                 Q.E.D.
+--     Step: 1.Completeness        Q.E.D.
+--   Result:                       Q.E.D.
 -- Lemma: sublistCorrect
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Lemma: sublistElem
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: count
 -- [Proven] sublistElem :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 sublistElem :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -174,7 +174,7 @@ sublistElem = do
 -- | If one list is a sublist of another so is its tail. We have:
 --
 -- >>> runTP $ sublistTail @Integer
--- Lemma: sublistTail                      Q.E.D.
+-- Lemma: sublistTail    Q.E.D.
 -- Functions proven terminating: count
 -- [Proven] sublistTail :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 sublistTail :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "x" a -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -186,7 +186,7 @@ sublistTail =
 -- | Permutation implies sublist. We have:
 --
 -- >>> runTP $ sublistIfPerm @Integer
--- Lemma: sublistIfPerm                    Q.E.D.
+-- Lemma: sublistIfPerm    Q.E.D.
 -- Functions proven terminating: count
 -- [Proven] sublistIfPerm :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 sublistIfPerm :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))

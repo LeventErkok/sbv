@@ -61,10 +61,10 @@ pong = smtProductiveFunction "pong"
 --
 -- >>> runTP pingLen
 -- Inductive lemma: pingLen
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                Q.E.D.
+--   Step: 1                   Q.E.D.
+--   Step: 2                   Q.E.D.
+--   Result:                   Q.E.D.
 -- Functions proven productive: ping, pong
 -- [Proven] pingLen :: Ɐm ∷ Integer → Ɐn ∷ Integer → Bool
 pingLen :: TP (Proof (Forall "m" Integer -> Forall "n" Integer -> SBool))
@@ -81,10 +81,10 @@ pingLen = inductWith cvc5 "pingLen"
 --
 -- >>> runTP pongLen
 -- Inductive lemma: pongLen
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                Q.E.D.
+--   Step: 1                   Q.E.D.
+--   Step: 2                   Q.E.D.
+--   Result:                   Q.E.D.
 -- Functions proven productive: ping, pong
 -- [Proven] pongLen :: Ɐm ∷ Integer → Ɐn ∷ Integer → Bool
 pongLen :: TP (Proof (Forall "m" Integer -> Forall "n" Integer -> SBool))
@@ -100,7 +100,7 @@ pongLen = inductWith cvc5 "pongLen"
 -- | Indexing past a cons: @(x .: y) !! k == y !! (k - 1)@ when @k > 0@ and in bounds.
 --
 -- >>> runTP consIndex
--- Lemma: consIndex                        Q.E.D.
+-- Lemma: consIndex    Q.E.D.
 -- [Proven] consIndex :: Ɐx ∷ Integer → Ɐy ∷ [Integer] → Ɐk ∷ Integer → Bool
 consIndex :: TP (Proof (Forall "x" Integer -> Forall "y" [Integer] -> Forall "k" Integer -> SBool))
 consIndex = lemma "consIndex"
@@ -114,17 +114,17 @@ consIndex = lemma "consIndex"
 -- elements are the same, by induction on @k@.
 --
 -- >>> runTP pingEqPong
--- Lemma: pingLen                          Q.E.D.
--- Lemma: pongLen                          Q.E.D.
--- Lemma: consIndex                        Q.E.D.
+-- Lemma: pingLen                 Q.E.D.
+-- Lemma: pongLen                 Q.E.D.
+-- Lemma: consIndex               Q.E.D.
 -- Inductive lemma: pingEqPong
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Step: 4                      Q.E.D.
+--   Step: 5                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Functions proven productive: ping, pong
 -- [Proven] pingEqPong :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 pingEqPong :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
@@ -152,17 +152,17 @@ pingEqPong = do
 -- | The @k@-th element of @ping n@ is @n + k@.
 --
 -- >>> runTP pingElem
--- Lemma: pingEqPong                       Q.E.D.
--- Lemma: consIndex                        Q.E.D. [Cached]
--- Lemma: pongLen                          Q.E.D. [Cached]
+-- Lemma: pingEqPong              Q.E.D.
+-- Lemma: consIndex               Q.E.D. [Cached]
+-- Lemma: pongLen                 Q.E.D. [Cached]
 -- Inductive lemma: pingElem
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Step: 4                      Q.E.D.
+--   Step: 5                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Functions proven productive: ping, pong
 -- [Proven] pingElem :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 pingElem :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))

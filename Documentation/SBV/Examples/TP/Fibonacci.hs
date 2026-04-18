@@ -51,15 +51,15 @@ fibTail = fib 1 1
 --
 -- >>> correctness
 -- Inductive lemma: helper
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2 (unfold fibonacci)            Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2 (unfold fibonacci)    Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Lemma: fibCorrect
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: fib, fibonacci
 -- [Proven] fibCorrect :: Ɐn ∷ Integer → Bool
 correctness :: IO (Proof (Forall "n" Integer -> SBool))

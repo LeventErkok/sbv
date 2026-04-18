@@ -69,7 +69,7 @@ ifDepth = smtFunction "ifDepth"
 -- | \(\mathit{ifDepth}(f) \geq 0\)
 --
 -- >>> runTP ifDepthNonNeg
--- Lemma: ifDepthNonNeg                    Q.E.D.
+-- Lemma: ifDepthNonNeg    Q.E.D.
 -- Functions proven terminating: ifDepth
 -- [Proven] ifDepthNonNeg :: Ɐf ∷ Formula → Bool
 ifDepthNonNeg :: TP (Proof (Forall "f" Formula -> SBool))
@@ -86,7 +86,7 @@ ifComplexity = smtFunction "ifComplexity"
 -- | \(\mathit{ifComplexity}(f) > 0\)
 --
 -- >>> runTP ifComplexityPos
--- Lemma: ifComplexityPos                  Q.E.D.
+-- Lemma: ifComplexityPos    Q.E.D.
 -- Functions proven terminating: ifComplexity
 -- [Proven] ifComplexityPos :: Ɐf ∷ Formula → Bool
 ifComplexityPos :: TP (Proof (Forall "f" Formula -> SBool))
@@ -97,10 +97,10 @@ ifComplexityPos = inductiveLemma "ifComplexityPos" (\(Forall f) -> ifComplexity 
 -- \(\mathit{ifComplexity}(c) < \mathit{ifComplexity}(\mathit{If}(c, l, r)) \land \mathit{ifComplexity}(l) < \mathit{ifComplexity}(\mathit{If}(c, l, r)) \land \mathit{ifComplexity}(r) < \mathit{ifComplexity}(\mathit{If}(c, l, r))\)
 --
 -- >>> runTP ifComplexitySmaller
--- Lemma: ifComplexityPos                  Q.E.D.
+-- Lemma: ifComplexityPos        Q.E.D.
 -- Lemma: ifComplexitySmaller
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                     Q.E.D.
+--   Result:                     Q.E.D.
 -- Functions proven terminating: ifComplexity
 -- [Proven] ifComplexitySmaller :: Ɐc ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
 ifComplexitySmaller :: TP (Proof (Forall "c" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
@@ -164,16 +164,16 @@ normalize = smtFunctionWithMeasure "normalize"
 -- \(\mathit{ifComplexity}(\mathit{If}(p, \mathit{If}(q, l, r), \mathit{If}(s, l, r))) = \mathit{ifComplexity}(\mathit{If}(\mathit{If}(p, q, s), l, r))\)
 --
 -- >>> runTP normalizePreservesComplexity
--- Lemma: helper                           Q.E.D.
+-- Lemma: helper                          Q.E.D.
 -- Lemma: normalizePreservesComplexity
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Step: 7                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                              Q.E.D.
+--   Step: 2                              Q.E.D.
+--   Step: 3                              Q.E.D.
+--   Step: 4                              Q.E.D.
+--   Step: 5                              Q.E.D.
+--   Step: 6                              Q.E.D.
+--   Step: 7                              Q.E.D.
+--   Result:                              Q.E.D.
 -- Functions proven terminating: ifComplexity
 -- [Proven] normalizePreservesComplexity :: Ɐp ∷ Formula → Ɐq ∷ Formula → Ɐs ∷ Formula → Ɐl ∷ Formula → Ɐr ∷ Formula → Bool
 normalizePreservesComplexity :: TP (Proof (Forall "p" Formula -> Forall "q" Formula -> Forall "s" Formula -> Forall "l" Formula -> Forall "r" Formula -> SBool))
@@ -244,7 +244,7 @@ assumeFalse vid bs = sBinding vid sFalse .: bs
 -- | Adding a binding preserves existing assignments.
 --
 -- >>> runTP isAssignedExtends
--- Lemma: isAssignedExtends                Q.E.D.
+-- Lemma: isAssignedExtends    Q.E.D.
 -- Functions proven terminating: isAssigned
 -- [Proven] isAssignedExtends :: Ɐi ∷ Integer → Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
 isAssignedExtends :: TP (Proof (Forall "i" Integer -> Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
@@ -255,7 +255,7 @@ isAssignedExtends = lemma "isAssignedExtends"
 -- | Looking up a variable in extended bindings: if already assigned, value is preserved.
 --
 -- >>> runTP lookUpExtends
--- Lemma: lookUpExtends                    Q.E.D.
+-- Lemma: lookUpExtends    Q.E.D.
 -- Functions proven terminating: isAssigned, lookUp
 -- [Proven] lookUpExtends :: Ɐi ∷ Integer → Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
 lookUpExtends :: TP (Proof (Forall "i" Integer -> Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
@@ -267,7 +267,7 @@ lookUpExtends = lemma "lookUpExtends"
 -- | Looking up a variable that was just added returns the added value.
 --
 -- >>> runTP lookUpSame
--- Lemma: lookUpSame                       Q.E.D.
+-- Lemma: lookUpSame    Q.E.D.
 -- Functions proven terminating: lookUp
 -- [Proven] lookUpSame :: Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
 lookUpSame :: TP (Proof (Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
@@ -276,7 +276,7 @@ lookUpSame = lemma "lookUpSame" (\(Forall n) (Forall v) (Forall bs) -> lookUp n 
 -- | Adding a binding for a variable makes it assigned.
 --
 -- >>> runTP isAssignedSame
--- Lemma: isAssignedSame                   Q.E.D.
+-- Lemma: isAssignedSame    Q.E.D.
 -- Functions proven terminating: isAssigned
 -- [Proven] isAssignedSame :: Ɐn ∷ Integer → Ɐv ∷ Bool → Ɐbs ∷ [Binding] → Bool
 isAssignedSame :: TP (Proof (Forall "n" Integer -> Forall "v" Bool -> Forall "bs" [Binding] -> SBool))
@@ -338,14 +338,14 @@ isTautology f = isTautology' (normalize f) []
 --
 -- >>> runTP lookUpStable
 -- Inductive lemma: lookUpStable
---   Step: Base                            Q.E.D.
+--   Step: Base                     Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                  Q.E.D.
+--     Step: 1.1.2                  Q.E.D.
+--     Step: 1.2.1                  Q.E.D.
+--     Step: 1.2.2                  Q.E.D.
+--     Step: 1.Completeness         Q.E.D.
+--   Result:                        Q.E.D.
 -- Functions proven terminating: isAssigned, lookUp
 -- [Proven] lookUpStable :: Ɐa ∷ [Binding] → Ɐx ∷ Integer → Ɐb ∷ [Binding] → Bool
 lookUpStable :: TP (Proof (Forall "a" [Binding] -> Forall "x" Integer -> Forall "b" [Binding] -> SBool))
@@ -369,13 +369,13 @@ lookUpStable =
 --
 -- >>> runTP trueIsAssigned
 -- Inductive lemma: trueIsAssigned
---   Step: Base                            Q.E.D.
+--   Step: Base                       Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                      Q.E.D.
+--     Step: 1.2.1                    Q.E.D.
+--     Step: 1.2.2                    Q.E.D.
+--     Step: 1.Completeness           Q.E.D.
+--   Result:                          Q.E.D.
 -- Functions proven terminating: isAssigned, lookUp
 -- [Proven] trueIsAssigned :: Ɐa ∷ [Binding] → Ɐx ∷ Integer → Bool
 trueIsAssigned :: TP (Proof (Forall "a" [Binding] -> Forall "x" Integer -> SBool))
@@ -606,27 +606,27 @@ tautologyImpliesEval = do
 -- Normalization produces normalized formulas.
 --
 -- >>> runTP normalizeCorrect
--- Lemma: ifComplexityPos                            Q.E.D.
--- Lemma: ifComplexitySmaller                        Q.E.D.
--- Lemma: normalizePreservesComplexity               Q.E.D.
--- Lemma: ifDepthNonNeg                              Q.E.D.
+-- Lemma: ifComplexityPos                        Q.E.D.
+-- Lemma: ifComplexitySmaller                    Q.E.D.
+-- Lemma: normalizePreservesComplexity           Q.E.D.
+-- Lemma: ifDepthNonNeg                          Q.E.D.
 -- Inductive lemma (strong): normalizeCorrect
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
 --   Step: 1 (4 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2                                     Q.E.D.
---     Step: 1.3                                     Q.E.D.
+--     Step: 1.1                                 Q.E.D.
+--     Step: 1.2                                 Q.E.D.
+--     Step: 1.3                                 Q.E.D.
 --     Step: 1.4 (2 way case split)
---       Step: 1.4.1.1                               Q.E.D.
---       Step: 1.4.1.2                               Q.E.D.
---       Step: 1.4.2.1                               Q.E.D.
---       Step: 1.4.2.2                               Q.E.D.
---       Step: 1.4.2.3                               Q.E.D.
---       Step: 1.4.2.4                               Q.E.D.
---       Step: 1.4.2.5                               Q.E.D.
---       Step: 1.4.Completeness                      Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.4.1.1                           Q.E.D.
+--       Step: 1.4.1.2                           Q.E.D.
+--       Step: 1.4.2.1                           Q.E.D.
+--       Step: 1.4.2.2                           Q.E.D.
+--       Step: 1.4.2.3                           Q.E.D.
+--       Step: 1.4.2.4                           Q.E.D.
+--       Step: 1.4.2.5                           Q.E.D.
+--       Step: 1.4.Completeness                  Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: ifComplexity, ifDepth, isNormal, normalize
 -- [Proven] normalizeCorrect :: Ɐf ∷ Formula → Bool
 normalizeCorrect :: TP (Proof (Forall "f" Formula -> SBool))
@@ -676,18 +676,18 @@ normalizeCorrect = do
 -- Normalizing a normalized formula is the identity.
 --
 -- >>> runTP normalizeSame
--- Lemma: ifComplexityPos                            Q.E.D.
--- Lemma: ifComplexitySmaller                        Q.E.D.
+-- Lemma: ifComplexityPos                     Q.E.D.
+-- Lemma: ifComplexitySmaller                 Q.E.D.
 -- Inductive lemma (strong): normalizeSame
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (4 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2                                     Q.E.D.
---     Step: 1.3                                     Q.E.D.
---     Step: 1.4.1                                   Q.E.D.
---     Step: 1.4.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2                              Q.E.D.
+--     Step: 1.3                              Q.E.D.
+--     Step: 1.4.1                            Q.E.D.
+--     Step: 1.4.2                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: ifComplexity, isNormal, normalize
 -- [Proven] normalizeSame :: Ɐf ∷ Formula → Bool
 normalizeSame :: TP (Proof (Forall "f" Formula -> SBool))
@@ -720,24 +720,24 @@ normalizeSame = do
 -- Normalization preserves semantics.
 --
 -- >>> runTP normalizeRespectsTruth
--- Lemma: ifComplexityPos                            Q.E.D.
--- Lemma: ifComplexitySmaller                        Q.E.D.
--- Lemma: normalizePreservesComplexity               Q.E.D.
--- Lemma: ifDepthNonNeg                              Q.E.D.
+-- Lemma: ifComplexityPos                              Q.E.D.
+-- Lemma: ifComplexitySmaller                          Q.E.D.
+-- Lemma: normalizePreservesComplexity                 Q.E.D.
+-- Lemma: ifDepthNonNeg                                Q.E.D.
 -- Inductive lemma (strong): normalizeRespectsTruth
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                     Q.E.D.
 --   Step: 1 (4 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2                                     Q.E.D.
---     Step: 1.3                                     Q.E.D.
+--     Step: 1.1                                       Q.E.D.
+--     Step: 1.2                                       Q.E.D.
+--     Step: 1.3                                       Q.E.D.
 --     Step: 1.4 (2 way case split)
---       Step: 1.4.1                                 Q.E.D.
---       Step: 1.4.2.1                               Q.E.D.
---       Step: 1.4.2.2                               Q.E.D.
---       Step: 1.4.2.3                               Q.E.D.
---       Step: 1.4.Completeness                      Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.4.1                                   Q.E.D.
+--       Step: 1.4.2.1                                 Q.E.D.
+--       Step: 1.4.2.2                                 Q.E.D.
+--       Step: 1.4.2.3                                 Q.E.D.
+--       Step: 1.4.Completeness                        Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating: eval, ifComplexity, ifDepth, lookUp, normalize
 -- [Proven] normalizeRespectsTruth :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
 normalizeRespectsTruth :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
@@ -787,13 +787,13 @@ normalizeRespectsTruth = do
 -- to true under any binding environment. This is the soundness theorem.
 --
 -- >>> runTP soundness
--- Lemma: tautologyImpliesEval             Q.E.D.
--- Lemma: normalizeRespectsTruth           Q.E.D.
--- Lemma: normalizeCorrect                 Q.E.D.
+-- Lemma: tautologyImpliesEval                         Q.E.D.
+-- Lemma: normalizeRespectsTruth                       Q.E.D.
+-- Lemma: normalizeCorrect                             Q.E.D.
 -- Lemma: soundness
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                           Q.E.D.
+--   Step: 2                                           Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating: eval, ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 -- [Proven] soundness :: Ɐf ∷ Formula → Ɐbindings ∷ [Binding] → Bool
 soundness :: TP (Proof (Forall "f" Formula -> Forall "bindings" [Binding] -> SBool))
@@ -857,17 +857,17 @@ falsify f = falsify' (normalize f) []
 -- | If a normalized formula is not a tautology, then falsify' returns falsified = true.
 --
 -- >>> runTPWith cvc5 nonTautIsFalsified
--- Lemma: ifComplexityPos                            Q.E.D.
--- Lemma: ifComplexitySmaller                        Q.E.D.
+-- Lemma: ifComplexityPos                          Q.E.D.
+-- Lemma: ifComplexitySmaller                      Q.E.D.
 -- Inductive lemma (strong): nonTautIsFalsified
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                 Q.E.D.
 --   Step: 1 (4 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2                                     Q.E.D.
---     Step: 1.3                                     Q.E.D.
---     Step: 1.4                                     Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                                   Q.E.D.
+--     Step: 1.2                                   Q.E.D.
+--     Step: 1.3                                   Q.E.D.
+--     Step: 1.4                                   Q.E.D.
+--     Step: 1.Completeness                        Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: eval, falsify', ifComplexity, isAssigned, isNormal, isTautology', lookUp
 -- [Proven] nonTautIsFalsified :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
 nonTautIsFalsified :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
@@ -899,19 +899,19 @@ nonTautIsFalsified = do
 -- the lookup value is preserved in the output bindings.
 --
 -- >>> runTPWith cvc5 falsifyExtendsBindings
--- Lemma: ifComplexityPos                            Q.E.D.
--- Lemma: ifComplexitySmaller                        Q.E.D.
--- Lemma: isAssignedExtends                          Q.E.D.
--- Lemma: lookUpExtends                              Q.E.D.
+-- Lemma: ifComplexityPos                              Q.E.D.
+-- Lemma: ifComplexitySmaller                          Q.E.D.
+-- Lemma: isAssignedExtends                            Q.E.D.
+-- Lemma: lookUpExtends                                Q.E.D.
 -- Inductive lemma (strong): falsifyExtendsBindings
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                     Q.E.D.
 --   Step: 1 (4 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2                                     Q.E.D.
---     Step: 1.3                                     Q.E.D.
---     Step: 1.4                                     Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                                       Q.E.D.
+--     Step: 1.2                                       Q.E.D.
+--     Step: 1.3                                       Q.E.D.
+--     Step: 1.4                                       Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating: eval, falsify', ifComplexity, isAssigned, lookUp
 -- [Proven] falsifyExtendsBindings :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Ɐi ∷ Integer → Bool
 falsifyExtendsBindings :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> Forall "i" Integer -> SBool))
@@ -956,40 +956,40 @@ falsifyExtendsBindings = do
 -- with the returned bindings gives false.
 --
 -- >>> runTPWith cvc5 falsifyFalsifies
--- Lemma: ifComplexityPos                            Q.E.D.
--- Lemma: ifComplexitySmaller                        Q.E.D.
--- Lemma: falsifyExtendsBindings                     Q.E.D.
--- Lemma: lookUpSame                                 Q.E.D.
--- Lemma: isAssignedSame                             Q.E.D.
+-- Lemma: ifComplexityPos                              Q.E.D.
+-- Lemma: ifComplexitySmaller                          Q.E.D.
+-- Lemma: falsifyExtendsBindings                       Q.E.D.
+-- Lemma: lookUpSame                                   Q.E.D.
+-- Lemma: isAssignedSame                               Q.E.D.
 -- Inductive lemma (strong): falsifyFalsifies
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                     Q.E.D.
 --   Step: 1 (4 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.1.3                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.2.3                                   Q.E.D.
---     Step: 1.3.1                                   Q.E.D.
---     Step: 1.3.2                                   Q.E.D.
---     Step: 1.3.3                                   Q.E.D.
+--     Step: 1.1.1                                     Q.E.D.
+--     Step: 1.1.2                                     Q.E.D.
+--     Step: 1.1.3                                     Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
+--     Step: 1.2.2                                     Q.E.D.
+--     Step: 1.2.3                                     Q.E.D.
+--     Step: 1.3.1                                     Q.E.D.
+--     Step: 1.3.2                                     Q.E.D.
+--     Step: 1.3.3                                     Q.E.D.
 --     Step: 1.4 (4 way case split)
---       Step: 1.4.1                                 Q.E.D.
---       Step: 1.4.2                                 Q.E.D.
+--       Step: 1.4.1                                   Q.E.D.
+--       Step: 1.4.2                                   Q.E.D.
 --       Step: 1.4.3 (2 way case split)
 --         Step: 1.4.3.1 (2 way case split)
---           Step: 1.4.3.1.1                         Q.E.D.
---           Step: 1.4.3.1.2                         Q.E.D.
---           Step: 1.4.3.1.Completeness              Q.E.D.
+--           Step: 1.4.3.1.1                           Q.E.D.
+--           Step: 1.4.3.1.2                           Q.E.D.
+--           Step: 1.4.3.1.Completeness                Q.E.D.
 --         Step: 1.4.3.2 (2 way case split)
---           Step: 1.4.3.2.1                         Q.E.D.
---           Step: 1.4.3.2.2                         Q.E.D.
---           Step: 1.4.3.2.Completeness              Q.E.D.
---         Step: 1.4.3.Completeness                  Q.E.D.
---       Step: 1.4.4                                 Q.E.D.
---       Step: 1.4.Completeness                      Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--           Step: 1.4.3.2.1                           Q.E.D.
+--           Step: 1.4.3.2.2                           Q.E.D.
+--           Step: 1.4.3.2.Completeness                Q.E.D.
+--         Step: 1.4.3.Completeness                    Q.E.D.
+--       Step: 1.4.4                                   Q.E.D.
+--       Step: 1.4.Completeness                        Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating: eval, falsify', ifComplexity, isAssigned, isNormal, lookUp
 -- [Proven] falsifyFalsifies :: Ɐf ∷ Formula → Ɐbs ∷ [Binding] → Bool
 falsifyFalsifies :: TP (Proof (Forall "f" Formula -> Forall "bs" [Binding] -> SBool))
@@ -1082,10 +1082,10 @@ falsifyFalsifies = do
 -- evaluating its normalization with falsify's bindings gives false.
 --
 -- >>> runTPWith cvc5 completenessHelper
--- Lemma: falsifyFalsifies                 Q.E.D.
--- Lemma: nonTautIsFalsified               Q.E.D.
--- Lemma: normalizeCorrect                 Q.E.D.
--- Lemma: completenessHelper               Q.E.D.
+-- Lemma: falsifyFalsifies                             Q.E.D.
+-- Lemma: nonTautIsFalsified                           Q.E.D.
+-- Lemma: normalizeCorrect                             Q.E.D.
+-- Lemma: completenessHelper                           Q.E.D.
 -- Functions proven terminating:
 --   eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 -- [Proven] completenessHelper :: Ɐf ∷ Formula → Bool
@@ -1108,9 +1108,9 @@ completenessHelper = do
 -- This is the completeness theorem.
 --
 -- >>> runTPWith cvc5 completeness
--- Lemma: completenessHelper               Q.E.D.
--- Lemma: normalizeRespectsTruth           Q.E.D.
--- Lemma: completeness                     Q.E.D.
+-- Lemma: completenessHelper                           Q.E.D.
+-- Lemma: normalizeRespectsTruth                       Q.E.D.
+-- Lemma: completeness                                 Q.E.D.
 -- Functions proven terminating:
 --   eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 -- [Proven] completeness :: Ɐf ∷ Formula → Bool

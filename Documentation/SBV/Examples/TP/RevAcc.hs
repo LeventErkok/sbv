@@ -52,13 +52,13 @@ rev = revAcc []
 --
 -- >>> correctness @Integer
 -- Inductive lemma: revAccCorrect
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: revCorrect                       Q.E.D.
+--   Step: Base                      Q.E.D.
+--   Step: 1                         Q.E.D.
+--   Step: 2                         Q.E.D.
+--   Step: 3                         Q.E.D.
+--   Step: 4                         Q.E.D.
+--   Result:                         Q.E.D.
+-- Lemma: revCorrect                 Q.E.D.
 -- Functions proven terminating: revAcc, sbv.reverse
 -- [Proven] revCorrect :: Ɐxs ∷ [Integer] → Bool
 correctness :: forall a. SymVal a => IO (Proof (Forall "xs" [a] -> SBool))

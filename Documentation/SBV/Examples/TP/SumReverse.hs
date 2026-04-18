@@ -37,21 +37,21 @@ import Data.SBV.List
 --
 -- >>> revSum @Integer
 -- Inductive lemma: sumAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4 (associativity)               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Step: 4 (associativity)      Q.E.D.
+--   Step: 5                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Inductive lemma: sumReverse
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4 (commutativity)               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Step: 4 (commutativity)      Q.E.D.
+--   Step: 5                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Functions proven terminating: sbv.foldr, sbv.reverse
 -- [Proven] sumReverse :: Ɐxs ∷ [Integer] → Bool
 revSum :: forall a. (SymVal a, Num (SBV a)) => IO (Proof (Forall "xs" [a] -> SBool))

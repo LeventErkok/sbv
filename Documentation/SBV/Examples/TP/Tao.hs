@@ -49,7 +49,7 @@ mkSymbolic [''T]
 -- We have:
 --
 -- >>> tao @T (uninterpret "op")
--- Lemma: tao                              Q.E.D.
+-- Lemma: tao    Q.E.D.
 -- [Proven] tao :: Bool
 tao :: forall a. SymVal a => (SBV a -> SBV a -> SBV a) -> IO (Proof SBool)
 tao op = runTP $

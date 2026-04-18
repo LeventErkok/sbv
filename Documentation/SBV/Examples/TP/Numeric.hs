@@ -40,12 +40,12 @@ import Data.SBV.List
 --
 -- >>> runTP $ sumConstProof (uninterpret "c")
 -- Inductive lemma: sumConst_correct
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                         Q.E.D.
+--   Step: 1                            Q.E.D.
+--   Step: 2                            Q.E.D.
+--   Step: 3                            Q.E.D.
+--   Step: 4                            Q.E.D.
+--   Result:                            Q.E.D.
 -- Functions proven terminating: sbv.foldr, sbv.replicate
 -- [Proven] sumConst_correct :: Ɐn ∷ Integer → Bool
 sumConstProof :: SInteger -> TP (Proof (Forall "n" Integer -> SBool))
@@ -71,11 +71,11 @@ sumConstProof c = induct "sumConst_correct"
 --
 -- >>> runTP sumProof
 -- Inductive lemma: sum_correct
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating:
 --   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up, sbv.foldr
 -- [Proven] sum_correct :: Ɐn ∷ Integer → Bool
@@ -95,14 +95,14 @@ sumProof = induct "sum_correct"
 --
 -- >>> runTP sumSquareProof
 -- Inductive lemma: sumSquare_correct
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Step: 4                             Q.E.D.
+--   Step: 5                             Q.E.D.
+--   Step: 6                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Functions proven terminating:
 --   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up,
 --   sbv.foldr, sbv.map
@@ -134,27 +134,27 @@ sumSquareProof = do
 --
 -- >>> runTP nicomachus
 -- Inductive lemma: sum_correct
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: evenHalfSquared                  Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Result:                       Q.E.D.
+-- Lemma: evenHalfSquared          Q.E.D.
 -- Inductive lemma: nn1IsEven
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Lemma: sum_squared
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Inductive lemma: nicomachus
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating:
 --   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up,
 --   sbv.foldr, sumCubed
@@ -224,18 +224,18 @@ nicomachus = do
 -- NB. As of Feb 2025, z3 struggles with the inductive step in this proof, but cvc5 performs just fine.
 --
 -- >>> runTP elevenMinusFour
--- Lemma: powN                             Q.E.D.
+-- Lemma: powN                         Q.E.D.
 -- Inductive lemma: elevenMinusFour
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Step: 7                               Q.E.D.
---   Step: 8                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                        Q.E.D.
+--   Step: 1                           Q.E.D.
+--   Step: 2                           Q.E.D.
+--   Step: 3                           Q.E.D.
+--   Step: 4                           Q.E.D.
+--   Step: 5                           Q.E.D.
+--   Step: 6                           Q.E.D.
+--   Step: 7                           Q.E.D.
+--   Step: 8                           Q.E.D.
+--   Result:                           Q.E.D.
 -- Functions proven terminating: pow
 -- [Proven] elevenMinusFour :: Ɐn ∷ Integer → Bool
 elevenMinusFour :: TP (Proof (Forall "n" Integer -> SBool))
@@ -276,21 +276,21 @@ elevenMinusFour = do
 --
 -- >>> runTP sumMulFactorial
 -- Lemma: fact (n+1)
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                           Q.E.D.
+--   Step: 2                           Q.E.D.
+--   Step: 3                           Q.E.D.
+--   Step: 4                           Q.E.D.
+--   Result:                           Q.E.D.
 -- Inductive lemma: sumMulFactorial
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Step: 7                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                        Q.E.D.
+--   Step: 1                           Q.E.D.
+--   Step: 2                           Q.E.D.
+--   Step: 3                           Q.E.D.
+--   Step: 4                           Q.E.D.
+--   Step: 5                           Q.E.D.
+--   Step: 6                           Q.E.D.
+--   Step: 7                           Q.E.D.
+--   Result:                           Q.E.D.
 -- Functions proven terminating:
 --   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up,
 --   sbv.foldr, sbv.map
@@ -330,14 +330,14 @@ sumMulFactorial = do
 --
 -- >>> runTP product0
 -- Inductive lemma: product0
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
+--   Step: Base                 Q.E.D.
+--   Step: 1                    Q.E.D.
 --   Step: 2 (2 way case split)
---     Step: 2.1                           Q.E.D.
---     Step: 2.2.1                         Q.E.D.
---     Step: 2.2.2                         Q.E.D.
---     Step: 2.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 2.1                Q.E.D.
+--     Step: 2.2.1              Q.E.D.
+--     Step: 2.2.2              Q.E.D.
+--     Step: 2.Completeness     Q.E.D.
+--   Result:                    Q.E.D.
 -- Functions proven terminating: sbv.foldr
 -- [Proven] product0 :: Ɐxs ∷ [Integer] → Bool
 product0 :: TP (Proof (Forall "xs" [Integer] -> SBool))
@@ -361,7 +361,7 @@ product0 =
 --
 -- >>> badNonNegative `catch` (\(_ :: SomeException) -> pure ())
 -- Inductive lemma: badNonNegative
---   Step: Base                            Q.E.D.
+--   Step: Base                       Q.E.D.
 --   Step: 1
 -- *** Failed to prove badNonNegative.1.
 -- Falsifiable. Counter-example:

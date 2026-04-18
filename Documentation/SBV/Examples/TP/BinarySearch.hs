@@ -63,48 +63,48 @@ inArray arr (low, high) elt = quantifiedBool $ \(Exists i) -> low .<= i .&& i .<
 -- We have:
 --
 -- >>> correctness
--- Lemma: notInRange                                 Q.E.D.
--- Lemma: inRangeHigh                                Q.E.D.
--- Lemma: inRangeLow                                 Q.E.D.
--- Lemma: nonDecreasing                              Q.E.D.
+-- Lemma: notInRange                            Q.E.D.
+-- Lemma: inRangeHigh                           Q.E.D.
+-- Lemma: inRangeLow                            Q.E.D.
+-- Lemma: nonDecreasing                         Q.E.D.
 -- Inductive lemma (strong): bsearchAbsent
---   Step: Measure is non-negative                   Q.E.D.
---   Step: 1 (unfold bsearch)                        Q.E.D.
---   Step: 2 (push isNothing down, simplify)         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
+--   Step: 1 (unfold bsearch)                   Q.E.D.
+--   Step: 2 (push isNothing down, simplify)    Q.E.D.
 --   Step: 3 (2 way case split)
---     Step: 3.1                                     Q.E.D.
---     Step: 3.2.1                                   Q.E.D.
---     Step: 3.2.2                                   Q.E.D.
---     Step: 3.2.3                                   Q.E.D.
---     Step: 3.2.4                                   Q.E.D.
---     Step: 3.2.5 (simplify)                        Q.E.D.
---     Step: 3.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 3.1                                Q.E.D.
+--     Step: 3.2.1                              Q.E.D.
+--     Step: 3.2.2                              Q.E.D.
+--     Step: 3.2.3                              Q.E.D.
+--     Step: 3.2.4                              Q.E.D.
+--     Step: 3.2.5 (simplify)                   Q.E.D.
+--     Step: 3.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Inductive lemma (strong): bsearchPresent
---   Step: Measure is non-negative                   Q.E.D.
---   Step: 1 (unfold bsearch)                        Q.E.D.
---   Step: 2 (simplify)                              Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
+--   Step: 1 (unfold bsearch)                   Q.E.D.
+--   Step: 2 (simplify)                         Q.E.D.
 --   Step: 3 (3 way case split)
---     Step: 3.1                                     Q.E.D.
---     Step: 3.2                                     Q.E.D.
---     Step: 3.3.1                                   Q.E.D.
+--     Step: 3.1                                Q.E.D.
+--     Step: 3.2                                Q.E.D.
+--     Step: 3.3.1                              Q.E.D.
 --     Step: 3.3.2 (3 way case split)
---       Step: 3.3.2.1                               Q.E.D.
---       Step: 3.3.2.2.1                             Q.E.D.
---       Step: 3.3.2.2.2                             Q.E.D.
---       Step: 3.3.2.3.1                             Q.E.D.
---       Step: 3.3.2.3.2                             Q.E.D.
---       Step: 3.3.2.Completeness                    Q.E.D.
---     Step: 3.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 3.3.2.1                          Q.E.D.
+--       Step: 3.3.2.2.1                        Q.E.D.
+--       Step: 3.3.2.2.2                        Q.E.D.
+--       Step: 3.3.2.3.1                        Q.E.D.
+--       Step: 3.3.2.3.2                        Q.E.D.
+--       Step: 3.3.2.Completeness               Q.E.D.
+--     Step: 3.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Lemma: bsearchCorrect
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1.1                              Q.E.D.
+--     Step: 1.1.2                              Q.E.D.
+--     Step: 1.2.1                              Q.E.D.
+--     Step: 1.2.2                              Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: bsearch
 -- [Proven] bsearchCorrect :: Ɐarr ∷ (ArrayModel Integer Integer) → Ɐlo ∷ Integer → Ɐhi ∷ Integer → Ɐx ∷ Integer → Bool
 correctness :: IO (Proof (Forall "arr" (ArrayModel Integer Integer) -> Forall "lo" Integer -> Forall "hi" Integer -> Forall "x" Integer -> SBool))

@@ -71,19 +71,19 @@ down = smtFunction "down"
 -- | Prove that @reverse (down n)@ is the same as @up n@
 --
 -- >>> runTP upDown
--- Lemma: n2iNonNeg                        Q.E.D.
--- Lemma: revCons                          Q.E.D.
+-- Lemma: n2iNonNeg                       Q.E.D.
+-- Lemma: revCons                         Q.E.D.
 -- Inductive lemma (strong): upDownGen
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative        Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: upDown                           Q.E.D.
+--     Step: 1.1                          Q.E.D.
+--     Step: 1.2.1                        Q.E.D.
+--     Step: 1.2.2                        Q.E.D.
+--     Step: 1.2.3                        Q.E.D.
+--     Step: 1.2.4                        Q.E.D.
+--     Step: 1.Completeness               Q.E.D.
+--   Result:                              Q.E.D.
+-- Lemma: upDown                          Q.E.D.
 -- Functions proven terminating: down, n2i, sbv.reverse, up
 -- [Proven] upDown :: Ɐn ∷ Nat → Bool
 upDown :: TP (Proof (Forall "n" Nat -> SBool))

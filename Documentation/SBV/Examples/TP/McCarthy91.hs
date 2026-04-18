@@ -49,20 +49,20 @@ spec91 n = ite (n .> 100) (n - 10) 91
 -- and strong induction. We have:
 --
 -- >>> correctness
--- Lemma: case1                            Q.E.D.
--- Lemma: case2                            Q.E.D.
+-- Lemma: case1                       Q.E.D.
+-- Lemma: case2                       Q.E.D.
 -- Inductive lemma (strong): case3
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1 (unfold)                      Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Measure is non-negative    Q.E.D.
+--   Step: 1 (unfold)                 Q.E.D.
+--   Step: 2                          Q.E.D.
+--   Result:                          Q.E.D.
 -- Lemma: mcCarthy91
 --   Step: 1 (3 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3                           Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                      Q.E.D.
+--     Step: 1.2                      Q.E.D.
+--     Step: 1.3                      Q.E.D.
+--     Step: 1.Completeness           Q.E.D.
+--   Result:                          Q.E.D.
 -- Functions proven terminating: mcCarthy91
 -- [Proven] mcCarthy91 :: Ɐn ∷ Integer → Bool
 correctness :: IO (Proof (Forall "n" Integer -> SBool))

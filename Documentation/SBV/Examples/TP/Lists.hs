@@ -95,7 +95,7 @@ import Data.SBV.TP
 -- | @xs ++ [] == xs@
 --
 -- >>> runTP $ appendNull @Integer
--- Lemma: appendNull                       Q.E.D.
+-- Lemma: appendNull    Q.E.D.
 -- [Proven] appendNull :: Ɐxs ∷ [Integer] → Bool
 appendNull :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
 appendNull = lemma "appendNull"
@@ -105,7 +105,7 @@ appendNull = lemma "appendNull"
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
 --
 -- >>> runTP $ consApp @Integer
--- Lemma: consApp                          Q.E.D.
+-- Lemma: consApp    Q.E.D.
 -- [Proven] consApp :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 consApp :: forall a. SymVal a => TP (Proof (Forall "x" a -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 consApp = lemma "consApp"
@@ -115,7 +115,7 @@ consApp = lemma "consApp"
 -- | @(xs ++ ys) ++ zs == xs ++ (ys ++ zs)@
 --
 -- >>> runTP $ appendAssoc @Integer
--- Lemma: appendAssoc                      Q.E.D.
+-- Lemma: appendAssoc    Q.E.D.
 -- [Proven] appendAssoc :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Ɐzs ∷ [Integer] → Bool
 --
 -- Surprisingly, z3 can prove this without any induction. (Since SBV's append translates directly to
@@ -131,9 +131,9 @@ appendAssoc =
 --
 -- >>> runTP $ initsLength @Integer
 -- Inductive lemma (strong): initsLength
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Measure is non-negative          Q.E.D.
+--   Step: 1                                Q.E.D.
+--   Result:                                Q.E.D.
 -- Functions proven terminating: sbv.inits
 -- [Proven] initsLength :: Ɐxs ∷ [Integer] → Bool
 initsLength :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
@@ -150,12 +150,12 @@ initsLength =
 --
 -- >>> runTP $ tailsLength @Integer
 -- Inductive lemma: tailsLength
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Step: 4                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: sbv.tails
 -- [Proven] tailsLength :: Ɐxs ∷ [Integer] → Bool
 tailsLength :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
@@ -180,22 +180,22 @@ tailsLength =
 --
 -- >>> runTPWith cvc5 $ tailsAppend @Integer
 -- Inductive lemma: base case
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Lemma: helper
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Inductive lemma: tailsAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Step: 4                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: sbv.closureMap, sbv.tails
 -- [Proven] tailsAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 tailsAppend :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -247,12 +247,12 @@ tailsAppend = do
 --
 -- >>> runTP $ revLen @Integer
 -- Inductive lemma: revLen
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base               Q.E.D.
+--   Step: 1                  Q.E.D.
+--   Step: 2                  Q.E.D.
+--   Step: 3                  Q.E.D.
+--   Step: 4                  Q.E.D.
+--   Result:                  Q.E.D.
 -- Functions proven terminating: sbv.reverse
 -- [Proven] revLen :: Ɐxs ∷ [Integer] → Bool
 revLen :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
@@ -270,13 +270,13 @@ revLen = induct "revLen"
 --
 -- >>> runTP $ revApp @Integer
 -- Inductive lemma: revApp
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base               Q.E.D.
+--   Step: 1                  Q.E.D.
+--   Step: 2                  Q.E.D.
+--   Step: 3                  Q.E.D.
+--   Step: 4                  Q.E.D.
+--   Step: 5                  Q.E.D.
+--   Result:                  Q.E.D.
 -- Functions proven terminating: sbv.reverse
 -- [Proven] revApp :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 revApp :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -294,7 +294,7 @@ revApp = induct "revApp"
 -- | @reverse (x:xs) == reverse xs ++ [x]@
 --
 -- >>> runTP $ revCons @Integer
--- Lemma: revCons                          Q.E.D.
+-- Lemma: revCons    Q.E.D.
 -- Functions proven terminating: sbv.reverse
 -- [Proven] revCons :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 revCons :: forall a. SymVal a => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
@@ -306,14 +306,14 @@ revCons = lemma "revCons"
 --
 -- >>> runTP $ revSnoc @Integer
 -- Inductive lemma: revApp
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: revSnoc                          Q.E.D.
+--   Step: Base               Q.E.D.
+--   Step: 1                  Q.E.D.
+--   Step: 2                  Q.E.D.
+--   Step: 3                  Q.E.D.
+--   Step: 4                  Q.E.D.
+--   Step: 5                  Q.E.D.
+--   Result:                  Q.E.D.
+-- Lemma: revSnoc             Q.E.D.
 -- Functions proven terminating: sbv.reverse
 -- [Proven] revSnoc :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 revSnoc :: forall a. SymVal a => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
@@ -328,20 +328,20 @@ revSnoc = do
 --
 -- >>> runTP $ revRev @Integer
 -- Inductive lemma: revApp
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base               Q.E.D.
+--   Step: 1                  Q.E.D.
+--   Step: 2                  Q.E.D.
+--   Step: 3                  Q.E.D.
+--   Step: 4                  Q.E.D.
+--   Step: 5                  Q.E.D.
+--   Result:                  Q.E.D.
 -- Inductive lemma: revRev
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base               Q.E.D.
+--   Step: 1                  Q.E.D.
+--   Step: 2                  Q.E.D.
+--   Step: 3                  Q.E.D.
+--   Step: 4                  Q.E.D.
+--   Result:                  Q.E.D.
 -- Functions proven terminating: sbv.reverse
 -- [Proven] revRev :: Ɐxs ∷ [Integer] → Bool
 revRev :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
@@ -366,15 +366,15 @@ revRev = do
 --
 -- >>> runTP enumLen
 -- Inductive lemma (strong): enumLen
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative      Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                        Q.E.D.
+--     Step: 1.2.1                      Q.E.D.
+--     Step: 1.2.2                      Q.E.D.
+--     Step: 1.2.3                      Q.E.D.
+--     Step: 1.2.4                      Q.E.D.
+--     Step: 1.Completeness             Q.E.D.
+--   Result:                            Q.E.D.
 -- Functions proven terminating: EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up
 -- [Proven] enumLen :: Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
 enumLen :: TP (Proof (Forall "n" Integer -> Forall "m" Integer -> SBool))
@@ -398,21 +398,21 @@ enumLen =
 --
 -- >>> runTP $ revNM
 -- Inductive lemma (strong): helper
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Measure is non-negative     Q.E.D.
+--   Step: 1                           Q.E.D.
+--   Step: 2                           Q.E.D.
+--   Step: 3                           Q.E.D.
+--   Result:                           Q.E.D.
 -- Inductive lemma (strong): revNM
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative     Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                       Q.E.D.
+--     Step: 1.2.1                     Q.E.D.
+--     Step: 1.2.2                     Q.E.D.
+--     Step: 1.2.3                     Q.E.D.
+--     Step: 1.2.4                     Q.E.D.
+--     Step: 1.Completeness            Q.E.D.
+--   Result:                           Q.E.D.
 -- Functions proven terminating:
 --   EnumSymbolic.Integer.enumFromThenTo.down, EnumSymbolic.Integer.enumFromThenTo.up, sbv.reverse
 -- [Proven] revNM :: Ɐn ∷ Integer → Ɐm ∷ Integer → Bool
@@ -447,7 +447,7 @@ revNM = do
 -- | @length (x : xs) == 1 + length xs@
 --
 -- >>> runTP $ lengthTail @Integer
--- Lemma: lengthTail                       Q.E.D.
+-- Lemma: lengthTail    Q.E.D.
 -- [Proven] lengthTail :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 lengthTail :: forall a. SymVal a => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
 lengthTail = lemma "lengthTail"
@@ -457,7 +457,7 @@ lengthTail = lemma "lengthTail"
 -- | @length (xs ++ ys) == length xs + length ys@
 --
 -- >>> runTP $ lenAppend @Integer
--- Lemma: lenAppend                        Q.E.D.
+-- Lemma: lenAppend    Q.E.D.
 -- [Proven] lenAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 lenAppend :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 lenAppend = lemma "lenAppend"
@@ -467,7 +467,7 @@ lenAppend = lemma "lenAppend"
 -- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
 --
 -- >>> runTP $ lenAppend2 @Integer
--- Lemma: lenAppend2                       Q.E.D.
+-- Lemma: lenAppend2    Q.E.D.
 -- [Proven] lenAppend2 :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 lenAppend2 :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 lenAppend2 = lemma "lenAppend2"
@@ -478,15 +478,15 @@ lenAppend2 = lemma "lenAppend2"
 --
 -- >>> runTP $ replicateLength @Integer
 -- Inductive lemma: replicateLength
---   Step: Base                            Q.E.D.
+--   Step: Base                        Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                       Q.E.D.
+--     Step: 1.2.1                     Q.E.D.
+--     Step: 1.2.2                     Q.E.D.
+--     Step: 1.2.3                     Q.E.D.
+--     Step: 1.2.4                     Q.E.D.
+--     Step: 1.Completeness            Q.E.D.
+--   Result:                           Q.E.D.
 -- Functions proven terminating: sbv.replicate
 -- [Proven] replicateLength :: Ɐk ∷ Integer → Ɐx ∷ Integer → Bool
 replicateLength :: forall a. SymVal a => TP (Proof (Forall "k" Integer -> Forall "x" a -> SBool))
@@ -508,12 +508,12 @@ replicateLength = induct "replicateLength"
 --
 -- >>> runTP allAny
 -- Inductive lemma: allAny
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base               Q.E.D.
+--   Step: 1                  Q.E.D.
+--   Step: 2                  Q.E.D.
+--   Step: 3                  Q.E.D.
+--   Step: 4                  Q.E.D.
+--   Result:                  Q.E.D.
 -- Functions proven terminating: sbv.foldr
 -- [Proven] allAny :: Ɐxs ∷ [Bool] → Bool
 allAny :: TP (Proof (Forall "xs" [Bool] -> SBool))
@@ -531,12 +531,12 @@ allAny = induct "allAny"
 --
 -- >>> runTP $ mapEquiv @Integer @Integer (uninterpret "f") (uninterpret "g")
 -- Inductive lemma: mapEquiv
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                 Q.E.D.
+--   Step: 1                    Q.E.D.
+--   Step: 2                    Q.E.D.
+--   Step: 3                    Q.E.D.
+--   Step: 4                    Q.E.D.
+--   Result:                    Q.E.D.
 -- Functions proven terminating: sbv.map
 -- [Proven] mapEquiv :: Ɐxs ∷ [Integer] → Bool
 mapEquiv :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -558,13 +558,13 @@ mapEquiv f g = do
 --
 -- >>> runTP $ mapAppend @Integer @Integer (uninterpret "f")
 -- Inductive lemma: mapAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                  Q.E.D.
+--   Step: 1                     Q.E.D.
+--   Step: 2                     Q.E.D.
+--   Step: 3                     Q.E.D.
+--   Step: 4                     Q.E.D.
+--   Step: 5                     Q.E.D.
+--   Result:                     Q.E.D.
 -- Functions proven terminating: sbv.map
 -- [Proven] mapAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 mapAppend :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -584,22 +584,22 @@ mapAppend f =
 --
 -- >>> runTP $ mapReverse @Integer @String (uninterpret "f")
 -- Inductive lemma: mapAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Step: 4                      Q.E.D.
+--   Step: 5                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Inductive lemma: mapReverse
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Step: 4                      Q.E.D.
+--   Step: 5                      Q.E.D.
+--   Step: 6                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Functions proven terminating: sbv.map, sbv.reverse
 -- [Proven] mapReverse :: Ɐxs ∷ [Integer] → Bool
 mapReverse :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -623,13 +623,13 @@ mapReverse f = do
 --
 -- >>> runTP $ mapCompose @Integer @Bool @String (uninterpret "f") (uninterpret "g")
 -- Inductive lemma: mapCompose
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Step: 4                      Q.E.D.
+--   Step: 5                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Functions proven terminating: sbv.map
 -- [Proven] mapCompose :: Ɐxs ∷ [Integer] → Bool
 mapCompose :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> (SBV b -> SBV c) -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -648,15 +648,15 @@ mapCompose f g =
 -- | @map f . concat = concat . map (map f)@
 --
 -- >>> runTP $ mapConcat @Integer @Bool (uninterpret "f")
--- Lemma: mapAppend                        Q.E.D.
+-- Lemma: mapAppend              Q.E.D.
 -- Inductive lemma: mapConcat
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                  Q.E.D.
+--   Step: 1                     Q.E.D.
+--   Step: 2                     Q.E.D.
+--   Step: 3                     Q.E.D.
+--   Step: 4                     Q.E.D.
+--   Step: 5                     Q.E.D.
+--   Result:                     Q.E.D.
 -- Functions proven terminating: sbv.foldr, sbv.map
 -- [Proven] mapConcat :: Ɐxs ∷ [[Integer]] → Bool
 mapConcat :: (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "xs" [[a]] -> SBool))
@@ -679,12 +679,12 @@ mapConcat f = do
 --
 -- >>> runTP $ foldrMapFusion @String @Bool @Integer (uninterpret "a") (uninterpret "b") (uninterpret "c")
 -- Inductive lemma: foldrMapFusion
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                       Q.E.D.
+--   Step: 1                          Q.E.D.
+--   Step: 2                          Q.E.D.
+--   Step: 3                          Q.E.D.
+--   Step: 4                          Q.E.D.
+--   Result:                          Q.E.D.
 -- Functions proven terminating: sbv.foldr, sbv.map
 -- [Proven] foldrMapFusion :: Ɐxs ∷ [String] → Bool
 foldrMapFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV c -> (SBV a -> SBV b) -> (SBV b -> SBV c -> SBV c) -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -708,12 +708,12 @@ foldrMapFusion a g f =
 --
 -- >>> runTP $ foldrFusion @String @Bool @Integer (uninterpret "a") (uninterpret "b") (uninterpret "f") (uninterpret "g") (uninterpret "h")
 -- Inductive lemma: foldrFusion
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Step: 4                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: sbv.foldr
 -- [Proven] foldrFusion :: Ɐxs ∷ [String] → Bool
 foldrFusion :: forall a b c. (SymVal a, SymVal b, SymVal c) => SBV c -> SBV b -> (SBV c -> SBV b) -> (SBV a -> SBV c -> SBV c) -> (SBV a -> SBV b -> SBV b) -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -736,12 +736,12 @@ foldrFusion a b f g h = do
 --
 -- >>> runTP $ foldrOverAppend @Integer (uninterpret "a") (uninterpret "f")
 -- Inductive lemma: foldrOverAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                        Q.E.D.
+--   Step: 1                           Q.E.D.
+--   Step: 2                           Q.E.D.
+--   Step: 3                           Q.E.D.
+--   Step: 4                           Q.E.D.
+--   Result:                           Q.E.D.
 -- Functions proven terminating: sbv.foldr
 -- [Proven] foldrOverAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 foldrOverAppend :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -760,11 +760,11 @@ foldrOverAppend a f =
 --
 -- >>> runTP $ foldlOverAppend @Integer @Bool (uninterpret "f")
 -- Inductive lemma: foldlOverAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                        Q.E.D.
+--   Step: 1                           Q.E.D.
+--   Step: 2                           Q.E.D.
+--   Step: 3                           Q.E.D.
+--   Result:                           Q.E.D.
 -- Functions proven terminating: sbv.foldl
 -- [Proven] foldlOverAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Ɐe ∷ Bool → Bool
 foldlOverAppend :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "e" b -> SBool))
@@ -784,20 +784,20 @@ foldlOverAppend f =
 --
 -- >>> runTP $ foldrFoldlDuality @Integer @String (uninterpret "f")
 -- Inductive lemma: foldlOverAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Inductive lemma: foldrFoldlDuality
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Step: 4                             Q.E.D.
+--   Step: 5                             Q.E.D.
+--   Step: 6                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Functions proven terminating: sbv.foldl, sbv.foldr, sbv.reverse
 -- [Proven] foldrFoldlDuality :: Ɐxs ∷ [Integer] → Ɐe ∷ String → Bool
 foldrFoldlDuality :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> TP (Proof (Forall "xs" [a] -> Forall "e" b -> SBool))
@@ -835,21 +835,21 @@ foldrFoldlDuality f = do
 --
 -- >>> runTP $ foldrFoldlDualityGeneralized @Integer (uninterpret "e") (uninterpret "|@|")
 -- Inductive lemma: helper
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Step: 4                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Inductive lemma: foldrFoldlDuality
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                          Q.E.D.
+--   Step: 1                             Q.E.D.
+--   Step: 2                             Q.E.D.
+--   Step: 3                             Q.E.D.
+--   Step: 4                             Q.E.D.
+--   Step: 5                             Q.E.D.
+--   Step: 6                             Q.E.D.
+--   Result:                             Q.E.D.
 -- Functions proven terminating: sbv.foldl, sbv.foldr
 -- [Proven] foldrFoldlDuality :: Ɐxs ∷ [Integer] → Bool
 foldrFoldlDualityGeneralized :: forall a. SymVal a => SBV a -> (SBV a -> SBV a -> SBV a) -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -905,20 +905,20 @@ foldrFoldlDualityGeneralized e (@) = do
 --
 -- >>> runTP $ foldrFoldl @Integer @String (uninterpret "<+>") (uninterpret "<*>") (uninterpret "e")
 -- Inductive lemma: foldl over <*>/<+>
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                           Q.E.D.
+--   Step: 1                              Q.E.D.
+--   Step: 2                              Q.E.D.
+--   Step: 3                              Q.E.D.
+--   Step: 4                              Q.E.D.
+--   Result:                              Q.E.D.
 -- Inductive lemma: foldrFoldl
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                           Q.E.D.
+--   Step: 1                              Q.E.D.
+--   Step: 2                              Q.E.D.
+--   Step: 3                              Q.E.D.
+--   Step: 4                              Q.E.D.
+--   Step: 5                              Q.E.D.
+--   Result:                              Q.E.D.
 -- Functions proven terminating: sbv.foldl, sbv.foldr
 -- [Proven] foldrFoldl :: Ɐxs ∷ [Integer] → Bool
 foldrFoldl :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> (SBV b -> SBV a -> SBV b) -> SBV b -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -965,28 +965,28 @@ foldrFoldl (<+>) (<*>) e = do
 --
 -- >>> runTP $ bookKeeping @Integer (uninterpret "a") (uninterpret "f")
 -- Inductive lemma: foldBase
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                        Q.E.D.
+--   Step: 1                           Q.E.D.
+--   Step: 2                           Q.E.D.
+--   Step: 3                           Q.E.D.
+--   Step: 4                           Q.E.D.
+--   Result:                           Q.E.D.
 -- Inductive lemma: foldrOverAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                        Q.E.D.
+--   Step: 1                           Q.E.D.
+--   Step: 2                           Q.E.D.
+--   Step: 3                           Q.E.D.
+--   Step: 4                           Q.E.D.
+--   Result:                           Q.E.D.
 -- Inductive lemma: bookKeeping
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                        Q.E.D.
+--   Step: 1                           Q.E.D.
+--   Step: 2                           Q.E.D.
+--   Step: 3                           Q.E.D.
+--   Step: 4                           Q.E.D.
+--   Step: 5                           Q.E.D.
+--   Step: 6                           Q.E.D.
+--   Result:                           Q.E.D.
 -- Functions proven terminating: sbv.foldr, sbv.map
 -- [Proven] bookKeeping :: Ɐxss ∷ [[Integer]] → Bool
 --
@@ -1047,13 +1047,13 @@ bookKeeping a f = do
 --
 -- >>> runTP $ filterAppend @Integer (uninterpret "p")
 -- Inductive lemma: filterAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                     Q.E.D.
+--   Step: 1                        Q.E.D.
+--   Step: 2                        Q.E.D.
+--   Step: 3                        Q.E.D.
+--   Step: 4                        Q.E.D.
+--   Step: 5                        Q.E.D.
+--   Result:                        Q.E.D.
 -- Functions proven terminating: sbv.filter
 -- [Proven] filterAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 filterAppend :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -1073,19 +1073,19 @@ filterAppend p =
 --
 -- >>> runTP $ filterConcat @Integer (uninterpret "f")
 -- Inductive lemma: filterAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                     Q.E.D.
+--   Step: 1                        Q.E.D.
+--   Step: 2                        Q.E.D.
+--   Step: 3                        Q.E.D.
+--   Step: 4                        Q.E.D.
+--   Step: 5                        Q.E.D.
+--   Result:                        Q.E.D.
 -- Inductive lemma: filterConcat
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                     Q.E.D.
+--   Step: 1                        Q.E.D.
+--   Step: 2                        Q.E.D.
+--   Step: 3                        Q.E.D.
+--   Result:                        Q.E.D.
 -- Functions proven terminating: sbv.filter, sbv.foldr, sbv.map
 -- [Proven] filterConcat :: Ɐxss ∷ [[Integer]] → Bool
 filterConcat :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xss" [[a]] -> SBool))
@@ -1106,14 +1106,14 @@ filterConcat p = do
 --
 -- >>> runTP $ takeDropWhile @Integer (uninterpret "f")
 -- Inductive lemma: takeDropWhile
---   Step: Base                            Q.E.D.
+--   Step: Base                      Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                   Q.E.D.
+--     Step: 1.1.2                   Q.E.D.
+--     Step: 1.2.1                   Q.E.D.
+--     Step: 1.2.2                   Q.E.D.
+--     Step: 1.Completeness          Q.E.D.
+--   Result:                         Q.E.D.
 -- Functions proven terminating: sbv.dropWhile, sbv.takeWhile
 -- [Proven] takeDropWhile :: Ɐxs ∷ [Integer] → Bool
 takeDropWhile :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -1143,32 +1143,32 @@ destutter = smtFunction "destutter"
 --
 -- >>> runTP $ destutterIdempotent @Integer
 -- Inductive lemma: helper1
---   Step: Base                            Q.E.D.
+--   Step: Base                         Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                        Q.E.D.
+--     Step: 1.2.1                      Q.E.D.
+--     Step: 1.2.2                      Q.E.D.
+--     Step: 1.Completeness             Q.E.D.
+--   Result:                            Q.E.D.
 -- Inductive lemma: helper2
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                         Q.E.D.
+--   Step: 1                            Q.E.D.
+--   Result:                            Q.E.D.
 -- Inductive lemma (strong): helper3
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative      Q.E.D.
 --   Step: 1 (3 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3.1                         Q.E.D.
+--     Step: 1.1                        Q.E.D.
+--     Step: 1.2                        Q.E.D.
+--     Step: 1.3.1                      Q.E.D.
 --     Step: 1.3.2 (2 way case split)
---       Step: 1.3.2.1.1                   Q.E.D.
---       Step: 1.3.2.1.2                   Q.E.D.
---       Step: 1.3.2.2.1                   Q.E.D.
---       Step: 1.3.2.2.2                   Q.E.D.
---       Step: 1.3.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: destutterIdempotent              Q.E.D.
+--       Step: 1.3.2.1.1                Q.E.D.
+--       Step: 1.3.2.1.2                Q.E.D.
+--       Step: 1.3.2.2.1                Q.E.D.
+--       Step: 1.3.2.2.2                Q.E.D.
+--       Step: 1.3.2.Completeness       Q.E.D.
+--     Step: 1.Completeness             Q.E.D.
+--   Result:                            Q.E.D.
+-- Lemma: destutterIdempotent           Q.E.D.
 -- Functions proven terminating: destutter, noAdd
 -- [Proven] destutterIdempotent :: Ɐxs ∷ [Integer] → Bool
 destutterIdempotent :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
@@ -1236,11 +1236,11 @@ destutterIdempotent = do
 --
 -- >>> runTP $ appendDiff @Integer
 -- Inductive lemma: appendDiff
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Functions proven terminating: sbv.diff
 -- [Proven] appendDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Ɐcs ∷ [Integer] → Bool
 appendDiff :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
@@ -1257,12 +1257,12 @@ appendDiff = induct "appendDiff"
 --
 -- >>> runTP $ diffAppend @Integer
 -- Inductive lemma: diffAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Step: 4                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Functions proven terminating: sbv.diff
 -- [Proven] diffAppend :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Ɐcs ∷ [Integer] → Bool
 diffAppend :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
@@ -1281,27 +1281,27 @@ diffAppend = induct "diffAppend"
 --
 -- >>> runTP $ diffDiff @Integer
 -- Inductive lemma: diffDiff
---   Step: Base                            Q.E.D.
+--   Step: Base                      Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
+--     Step: 1.1.1                   Q.E.D.
+--     Step: 1.1.2                   Q.E.D.
 --     Step: 1.1.3 (2 way case split)
---       Step: 1.1.3.1                     Q.E.D.
---       Step: 1.1.3.2.1                   Q.E.D.
---       Step: 1.1.3.2.2 (a ∉ cs)          Q.E.D.
---       Step: 1.1.3.Completeness          Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--       Step: 1.1.3.1               Q.E.D.
+--       Step: 1.1.3.2.1             Q.E.D.
+--       Step: 1.1.3.2.2 (a ∉ cs)    Q.E.D.
+--       Step: 1.1.3.Completeness    Q.E.D.
+--     Step: 1.2.1                   Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.1.3 (a ∈ cs)          Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.2.3 (a ∉ bs)          Q.E.D.
---       Step: 1.2.2.2.4 (a ∉ cs)          Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1             Q.E.D.
+--       Step: 1.2.2.1.2             Q.E.D.
+--       Step: 1.2.2.1.3 (a ∈ cs)    Q.E.D.
+--       Step: 1.2.2.2.1             Q.E.D.
+--       Step: 1.2.2.2.2             Q.E.D.
+--       Step: 1.2.2.2.3 (a ∉ bs)    Q.E.D.
+--       Step: 1.2.2.2.4 (a ∉ cs)    Q.E.D.
+--       Step: 1.2.2.Completeness    Q.E.D.
+--     Step: 1.Completeness          Q.E.D.
+--   Result:                         Q.E.D.
 -- Functions proven terminating: sbv.diff
 -- [Proven] diffDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Ɐcs ∷ [Integer] → Bool
 diffDiff :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> Forall "cs" [a] -> SBool))
@@ -1349,10 +1349,10 @@ disjoint = smtFunction "disjoint"
 --
 -- >>> runTP $ disjointDiff @Integer
 -- Inductive lemma: disjointDiff
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                     Q.E.D.
+--   Step: 1                        Q.E.D.
+--   Step: 2                        Q.E.D.
+--   Result:                        Q.E.D.
 -- Functions proven terminating: disjoint, sbv.diff
 -- [Proven] disjointDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Bool
 disjointDiff :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "as" [a] -> Forall "bs" [a] -> SBool))
@@ -1369,12 +1369,12 @@ disjointDiff = induct "disjointDiff"
 --
 -- >>> runTP $ partition1 @Integer (uninterpret "f")
 -- Inductive lemma: partition1
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Step: 4                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Functions proven terminating: sbv.filter, sbv.partition
 -- [Proven] partition1 :: Ɐxs ∷ [Integer] → Bool
 partition1 :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -1396,12 +1396,12 @@ partition1 f =
 --
 -- >>> runTP $ partition2 @Integer (uninterpret "f")
 -- Inductive lemma: partition2
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                   Q.E.D.
+--   Step: 1                      Q.E.D.
+--   Step: 2                      Q.E.D.
+--   Step: 3                      Q.E.D.
+--   Step: 4                      Q.E.D.
+--   Result:                      Q.E.D.
 -- Functions proven terminating: sbv.filter, sbv.partition
 -- [Proven] partition2 :: Ɐxs ∷ [Integer] → Bool
 partition2 :: forall a. SymVal a => (SBV a -> SBool) -> TP (Proof (Forall "xs" [a] -> SBool))
@@ -1422,7 +1422,7 @@ partition2 f =
 -- | @take n (take m xs) == take (n `smin` m) xs@
 --
 -- >>> runTP $ take_take @Integer
--- Lemma: take_take                        Q.E.D.
+-- Lemma: take_take    Q.E.D.
 -- [Proven] take_take :: Ɐm ∷ Integer → Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_take :: forall a. SymVal a => TP (Proof (Forall "m" Integer -> Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_take = lemma "take_take"
@@ -1432,7 +1432,7 @@ take_take = lemma "take_take"
 -- | @n >= 0 && m >= 0 ==> drop n (drop m xs) == drop (n + m) xs@
 --
 -- >>> runTP $ drop_drop @Integer
--- Lemma: drop_drop                        Q.E.D.
+-- Lemma: drop_drop    Q.E.D.
 -- [Proven] drop_drop :: Ɐm ∷ Integer → Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_drop :: forall a. SymVal a => TP (Proof (Forall "m" Integer -> Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_drop = lemma "drop_drop"
@@ -1442,7 +1442,7 @@ drop_drop = lemma "drop_drop"
 -- | @take n xs ++ drop n xs == xs@
 --
 -- >>> runTP $ take_drop @Integer
--- Lemma: take_drop                        Q.E.D.
+-- Lemma: take_drop    Q.E.D.
 -- [Proven] take_drop :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_drop :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_drop = lemma "take_drop"
@@ -1452,7 +1452,7 @@ take_drop = lemma "take_drop"
 -- | @n .> 0 ==> take n (x .: xs) == x .: take (n - 1) xs@
 --
 -- >>> runTP $ take_cons @Integer
--- Lemma: take_cons                        Q.E.D.
+-- Lemma: take_cons    Q.E.D.
 -- [Proven] take_cons :: Ɐn ∷ Integer → Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_cons :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "x" a -> Forall "xs" [a] -> SBool))
 take_cons = lemma "take_cons"
@@ -1462,20 +1462,20 @@ take_cons = lemma "take_cons"
 -- | @take n (map f xs) == map f (take n xs)@
 --
 -- >>> runTP $ take_map @Integer @Integer (uninterpret "f")
--- Lemma: take_cons                        Q.E.D.
--- Lemma: map1                             Q.E.D.
--- Lemma: take_map.n <= 0                  Q.E.D.
+-- Lemma: take_cons                   Q.E.D.
+-- Lemma: map1                        Q.E.D.
+-- Lemma: take_map.n <= 0             Q.E.D.
 -- Inductive lemma: take_map.n > 0
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                       Q.E.D.
+--   Step: 1                          Q.E.D.
+--   Step: 2                          Q.E.D.
+--   Step: 3                          Q.E.D.
+--   Step: 4                          Q.E.D.
+--   Step: 5                          Q.E.D.
+--   Result:                          Q.E.D.
 -- Lemma: take_map
---   Step: 1                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                          Q.E.D.
+--   Result:                          Q.E.D.
 -- Functions proven terminating: sbv.map
 -- [Proven] take_map :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
@@ -1514,7 +1514,7 @@ take_map f = do
 -- | @n .> 0 ==> drop n (x .: xs) == drop (n - 1) xs@
 --
 -- >>> runTP $ drop_cons @Integer
--- Lemma: drop_cons                        Q.E.D.
+-- Lemma: drop_cons    Q.E.D.
 -- [Proven] drop_cons :: Ɐn ∷ Integer → Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_cons :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "x" a -> Forall "xs" [a] -> SBool))
 drop_cons = lemma "drop_cons"
@@ -1524,22 +1524,22 @@ drop_cons = lemma "drop_cons"
 -- | @drop n (map f xs) == map f (drop n xs)@
 --
 -- >>> runTP $ drop_map @Integer @String (uninterpret "f")
--- Lemma: drop_cons                        Q.E.D.
--- Lemma: drop_cons                        Q.E.D.
--- Lemma: drop_map.n <= 0                  Q.E.D.
+-- Lemma: drop_cons                   Q.E.D.
+-- Lemma: drop_cons                   Q.E.D.
+-- Lemma: drop_map.n <= 0             Q.E.D.
 -- Inductive lemma: drop_map.n > 0
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                       Q.E.D.
+--   Step: 1                          Q.E.D.
+--   Step: 2                          Q.E.D.
+--   Step: 3                          Q.E.D.
+--   Step: 4                          Q.E.D.
+--   Result:                          Q.E.D.
 -- Lemma: drop_map
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                          Q.E.D.
+--   Step: 2                          Q.E.D.
+--   Step: 3                          Q.E.D.
+--   Step: 4                          Q.E.D.
+--   Result:                          Q.E.D.
 -- Functions proven terminating: sbv.map
 -- [Proven] drop_map :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
@@ -1580,7 +1580,7 @@ drop_map f = do
 -- | @n >= 0 ==> length (take n xs) == length xs \`min\` n@
 --
 -- >>> runTP $ length_take @Integer
--- Lemma: length_take                      Q.E.D.
+-- Lemma: length_take    Q.E.D.
 -- [Proven] length_take :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 length_take :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 length_take = lemma "length_take"
@@ -1590,7 +1590,7 @@ length_take = lemma "length_take"
 -- | @n >= 0 ==> length (drop n xs) == (length xs - n) \`max\` 0@
 --
 -- >>> runTP $ length_drop @Integer
--- Lemma: length_drop                      Q.E.D.
+-- Lemma: length_drop    Q.E.D.
 -- [Proven] length_drop :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 length_drop :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 length_drop = lemma "length_drop"
@@ -1600,7 +1600,7 @@ length_drop = lemma "length_drop"
 -- | @length xs \<= n ==\> take n xs == xs@
 --
 -- >>> runTP $ take_all @Integer
--- Lemma: take_all                         Q.E.D.
+-- Lemma: take_all    Q.E.D.
 -- [Proven] take_all :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_all :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_all = lemma "take_all"
@@ -1610,7 +1610,7 @@ take_all = lemma "take_all"
 -- | @length xs \<= n ==\> drop n xs == []@
 --
 -- >>> runTP $ drop_all @Integer
--- Lemma: drop_all                         Q.E.D.
+-- Lemma: drop_all    Q.E.D.
 -- [Proven] drop_all :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_all :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_all = lemma "drop_all"
@@ -1620,7 +1620,7 @@ drop_all = lemma "drop_all"
 -- | @take n (xs ++ ys) == (take n xs ++ take (n - length xs) ys)@
 --
 -- >>> runTP $ take_append @Integer
--- Lemma: take_append                      Q.E.D.
+-- Lemma: take_append    Q.E.D.
 -- [Proven] take_append :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 take_append :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 take_append = lemmaWith cvc5 "take_append"
@@ -1632,7 +1632,7 @@ take_append = lemmaWith cvc5 "take_append"
 -- NB. As of Feb 2025, z3 struggles to prove this, but cvc5 gets it out-of-the-box.
 --
 -- >>> runTP $ drop_append @Integer
--- Lemma: drop_append                      Q.E.D.
+-- Lemma: drop_append    Q.E.D.
 -- [Proven] drop_append :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 drop_append :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 drop_append = lemmaWith cvc5 "drop_append"
@@ -1643,12 +1643,12 @@ drop_append = lemmaWith cvc5 "drop_append"
 --
 -- >>> runTP $ map_fst_zip @Integer @Integer
 -- Inductive lemma: map_fst_zip
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Step: 4                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: sbv.map, sbv.zip
 -- [Proven] map_fst_zip :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_fst_zip :: forall a b. (SymVal a, SymVal b) => TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
@@ -1667,12 +1667,12 @@ map_fst_zip = induct "map_fst_zip"
 --
 -- >>> runTP $ map_snd_zip @Integer @Integer
 -- Inductive lemma: map_snd_zip
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Step: 4                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: sbv.map, sbv.zip
 -- [Proven] map_snd_zip :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_snd_zip :: forall a b. (SymVal a, SymVal b) => TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
@@ -1690,15 +1690,15 @@ map_snd_zip = induct "map_snd_zip"
 -- | @map fst (zip xs ys) == take (min (length xs) (length ys)) xs@
 --
 -- >>> runTP $ map_fst_zip_take @Integer @Integer
--- Lemma: take_cons                        Q.E.D.
+-- Lemma: take_cons                     Q.E.D.
 -- Inductive lemma: map_fst_zip_take
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                         Q.E.D.
+--   Step: 1                            Q.E.D.
+--   Step: 2                            Q.E.D.
+--   Step: 3                            Q.E.D.
+--   Step: 4                            Q.E.D.
+--   Step: 5                            Q.E.D.
+--   Result:                            Q.E.D.
 -- Functions proven terminating: sbv.map, sbv.zip
 -- [Proven] map_fst_zip_take :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_fst_zip_take :: forall a b. (SymVal a, SymVal b) => TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
@@ -1720,15 +1720,15 @@ map_fst_zip_take = do
 -- | @map snd (zip xs ys) == take (min (length xs) (length ys)) xs@
 --
 -- >>> runTP $ map_snd_zip_take @Integer @Integer
--- Lemma: take_cons                        Q.E.D.
+-- Lemma: take_cons                     Q.E.D.
 -- Inductive lemma: map_snd_zip_take
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                         Q.E.D.
+--   Step: 1                            Q.E.D.
+--   Step: 2                            Q.E.D.
+--   Step: 3                            Q.E.D.
+--   Step: 4                            Q.E.D.
+--   Step: 5                            Q.E.D.
+--   Result:                            Q.E.D.
 -- Functions proven terminating: sbv.map, sbv.zip
 -- [Proven] map_snd_zip_take :: (Ɐxs ∷ [Integer], Ɐys ∷ [Integer]) → Bool
 map_snd_zip_take :: forall a b. (SymVal a, SymVal b) => TP (Proof ((Forall "xs" [a], Forall "ys" [b]) -> SBool))
@@ -1760,7 +1760,7 @@ count = smtFunction "count"
 -- @define-fun-rec@ but struggles to fold it back, so we provide this as a reusable hint.
 --
 -- >>> runTP $ countOneStep @Integer
--- Lemma: countOneStep                     Q.E.D.
+-- Lemma: countOneStep    Q.E.D.
 -- Functions proven terminating: count
 -- [Proven] countOneStep :: Ɐe ∷ Integer → Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 countOneStep :: forall a. SymVal a => TP (Proof (Forall "e" a -> Forall "x" a -> Forall "xs" [a] -> SBool))
@@ -1784,14 +1784,14 @@ interleave = smtFunction "interleave"
 --
 -- >>> runTP $ interleaveLen @Integer
 -- Inductive lemma (strong): interleaveLen
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
+--     Step: 1.2.2                            Q.E.D.
+--     Step: 1.2.3                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: interleave
 -- [Proven] interleaveLen :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 interleaveLen :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -1828,26 +1828,26 @@ uninterleaveGen = smtFunction "uninterleave"
 -- We have:
 --
 -- >>> runTP $ interleaveRoundTrip @Integer
--- Lemma: revCons                          Q.E.D.
+-- Lemma: revCons                            Q.E.D.
 -- Inductive lemma (strong): roundTripGen
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative           Q.E.D.
 --   Step: 1 (3 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3.1                         Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
---     Step: 1.3.4                         Q.E.D.
---     Step: 1.3.5                         Q.E.D.
---     Step: 1.3.6                         Q.E.D.
---     Step: 1.3.7                         Q.E.D.
---     Step: 1.3.8                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                             Q.E.D.
+--     Step: 1.2                             Q.E.D.
+--     Step: 1.3.1                           Q.E.D.
+--     Step: 1.3.2                           Q.E.D.
+--     Step: 1.3.3                           Q.E.D.
+--     Step: 1.3.4                           Q.E.D.
+--     Step: 1.3.5                           Q.E.D.
+--     Step: 1.3.6                           Q.E.D.
+--     Step: 1.3.7                           Q.E.D.
+--     Step: 1.3.8                           Q.E.D.
+--     Step: 1.Completeness                  Q.E.D.
+--   Result:                                 Q.E.D.
 -- Lemma: interleaveRoundTrip
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                 Q.E.D.
+--   Step: 2                                 Q.E.D.
+--   Result:                                 Q.E.D.
 -- Functions proven terminating: interleave, sbv.reverse, uninterleave
 -- [Proven] interleaveRoundTrip :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 interleaveRoundTrip :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> SBool))
@@ -1897,12 +1897,12 @@ interleaveRoundTrip = do
 --
 -- >>> runTP $ countAppend @Integer
 -- Inductive lemma: countAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2 (unfold count)                Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4 (simplify)                    Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2 (unfold count)        Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Step: 4 (simplify)            Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: count
 -- [Proven] countAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Ɐe ∷ Integer → Bool
 countAppend :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "ys" [a] -> Forall "e" a -> SBool))
@@ -1923,17 +1923,17 @@ countAppend =
 --
 -- >>> runTP $ takeDropCount @Integer
 -- Inductive lemma: countAppend
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2 (unfold count)                Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4 (simplify)                    Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: take_drop                        Q.E.D.
+--   Step: Base                    Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2 (unfold count)        Q.E.D.
+--   Step: 3                       Q.E.D.
+--   Step: 4 (simplify)            Q.E.D.
+--   Result:                       Q.E.D.
+-- Lemma: take_drop                Q.E.D.
 -- Lemma: takeDropCount
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                       Q.E.D.
+--   Step: 2                       Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: count
 -- [Proven] takeDropCount :: Ɐxs ∷ [Integer] → Ɐn ∷ Integer → Ɐe ∷ Integer → Bool
 takeDropCount :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "n" Integer -> Forall "e" a -> SBool))
@@ -1954,14 +1954,14 @@ takeDropCount = do
 --
 -- >>> runTP $ countNonNeg @Integer
 -- Inductive lemma: countNonNeg
---   Step: Base                            Q.E.D.
+--   Step: Base                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                 Q.E.D.
+--     Step: 1.1.2                 Q.E.D.
+--     Step: 1.2.1                 Q.E.D.
+--     Step: 1.2.2                 Q.E.D.
+--     Step: 1.Completeness        Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: count
 -- [Proven] countNonNeg :: Ɐxs ∷ [Integer] → Ɐe ∷ Integer → Bool
 countNonNeg :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> Forall "e" a -> SBool))
@@ -1983,23 +1983,23 @@ countNonNeg =
 --
 -- >>> runTP $ countElem @Integer
 -- Inductive lemma: countNonNeg
---   Step: Base                            Q.E.D.
+--   Step: Base                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                 Q.E.D.
+--     Step: 1.1.2                 Q.E.D.
+--     Step: 1.2.1                 Q.E.D.
+--     Step: 1.2.2                 Q.E.D.
+--     Step: 1.Completeness        Q.E.D.
+--   Result:                       Q.E.D.
 -- Inductive lemma: countElem
---   Step: Base                            Q.E.D.
+--   Step: Base                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                 Q.E.D.
+--     Step: 1.1.2                 Q.E.D.
+--     Step: 1.2.1                 Q.E.D.
+--     Step: 1.2.2                 Q.E.D.
+--     Step: 1.Completeness        Q.E.D.
+--   Result:                       Q.E.D.
 -- Functions proven terminating: count
 -- [Proven] countElem :: Ɐxs ∷ [Integer] → Ɐe ∷ Integer → Bool
 countElem :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "xs" [a] -> Forall "e" a -> SBool))
@@ -2025,13 +2025,13 @@ countElem = do
 --
 -- >>> runTP $ elemCount @Integer
 -- Inductive lemma: elemCount
---   Step: Base                            Q.E.D.
+--   Step: Base                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                 Q.E.D.
+--     Step: 1.2.1               Q.E.D.
+--     Step: 1.2.2               Q.E.D.
+--     Step: 1.Completeness      Q.E.D.
+--   Result:                     Q.E.D.
 -- Functions proven terminating: count
 -- [Proven] elemCount :: Ɐxs ∷ [Integer] → Ɐe ∷ Integer → Bool
 elemCount :: forall a. (Eq a, SymVal a) => TP (Proof (Forall "xs" [a] -> Forall "e" a -> SBool))

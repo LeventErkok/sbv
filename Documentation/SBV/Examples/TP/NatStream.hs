@@ -50,7 +50,7 @@ nats = smtProductiveFunction "nats"
 -- NB. As of Mar 2026, z3 can't handle this but cvc5 can.
 --
 -- >>> runTP natsHead
--- Lemma: natsHead                         Q.E.D.
+-- Lemma: natsHead    Q.E.D.
 -- Functions proven productive: nats
 -- [Proven] natsHead :: Ɐn ∷ Integer → Bool
 natsHead :: TP (Proof (Forall "n" Integer -> SBool))
@@ -65,10 +65,10 @@ natsHead = lemmaWith cvc5 "natsHead"
 --
 -- >>> runTP natsLen
 -- Inductive lemma: natsLen
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                Q.E.D.
+--   Step: 1                   Q.E.D.
+--   Step: 2                   Q.E.D.
+--   Result:                   Q.E.D.
 -- Functions proven productive: nats
 -- [Proven] natsLen :: Ɐm ∷ Integer → Ɐn ∷ Integer → Bool
 natsLen :: TP (Proof (Forall "m" Integer -> Forall "n" Integer -> SBool))
@@ -87,15 +87,15 @@ natsLen =
 -- NB. As of Mar 2026, z3 can't handle this but cvc5 can.
 --
 -- >>> runTP natsElem
--- Lemma: natsLen                          Q.E.D.
--- Lemma: elemOne                          Q.E.D.
+-- Lemma: natsLen               Q.E.D.
+-- Lemma: elemOne               Q.E.D.
 -- Inductive lemma: natsElem
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                 Q.E.D.
+--   Step: 1                    Q.E.D.
+--   Step: 2                    Q.E.D.
+--   Step: 3                    Q.E.D.
+--   Step: 4                    Q.E.D.
+--   Result:                    Q.E.D.
 -- Functions proven productive: nats
 -- [Proven] natsElem :: Ɐk ∷ Integer → Ɐn ∷ Integer → Bool
 natsElem :: TP (Proof (Forall "k" Integer -> Forall "n" Integer -> SBool))
