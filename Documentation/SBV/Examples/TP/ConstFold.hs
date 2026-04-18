@@ -151,7 +151,7 @@ measureNonNeg = inductiveLemma "measureNonNeg"
 -- | Congruence for squaring: if @a == b@ then @a*a == b*b@.
 --
 -- >>> runTP sqrCong
--- Lemma: sqrCong    Q.E.D.
+-- Lemma: sqrCong      Q.E.D.
 -- [Proven] sqrCong :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 sqrCong :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
 sqrCong = lemma "sqrCong"
@@ -161,7 +161,7 @@ sqrCong = lemma "sqrCong"
 -- | Congruence for addition on the left: if @a == b@ then @a+c == b+c@.
 --
 -- >>> runTP addCongL
--- Lemma: addCongL    Q.E.D.
+-- Lemma: addCongL     Q.E.D.
 -- [Proven] addCongL :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐc ∷ Integer → Bool
 addCongL :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "c" Integer -> SBool))
 addCongL = lemma "addCongL"
@@ -171,7 +171,7 @@ addCongL = lemma "addCongL"
 -- | Congruence for addition on the right: if @b == c@ then @a+b == a+c@.
 --
 -- >>> runTP addCongR
--- Lemma: addCongR    Q.E.D.
+-- Lemma: addCongR     Q.E.D.
 -- [Proven] addCongR :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐc ∷ Integer → Bool
 addCongR :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "c" Integer -> SBool))
 addCongR = lemma "addCongR"
@@ -181,7 +181,7 @@ addCongR = lemma "addCongR"
 -- | Congruence for multiplication on the left: if @a == b@ then @a*c == b*c@.
 --
 -- >>> runTP mulCongL
--- Lemma: mulCongL    Q.E.D.
+-- Lemma: mulCongL     Q.E.D.
 -- [Proven] mulCongL :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐc ∷ Integer → Bool
 mulCongL :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "c" Integer -> SBool))
 mulCongL = lemma "mulCongL"
@@ -191,7 +191,7 @@ mulCongL = lemma "mulCongL"
 -- | Congruence for multiplication on the right: if @b == c@ then @a*b == a*c@.
 --
 -- >>> runTP mulCongR
--- Lemma: mulCongR    Q.E.D.
+-- Lemma: mulCongR     Q.E.D.
 -- [Proven] mulCongR :: Ɐa ∷ Integer → Ɐb ∷ Integer → Ɐc ∷ Integer → Bool
 mulCongR :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> Forall "c" Integer -> SBool))
 mulCongR = lemma "mulCongR"

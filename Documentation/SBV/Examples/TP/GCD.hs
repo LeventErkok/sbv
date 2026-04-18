@@ -166,7 +166,7 @@ commutative = do
 --
 -- ==== __Proof__
 -- >>> runTP negGCD
--- Lemma: negGCD    Q.E.D.
+-- Lemma: negGCD       Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] negGCD :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 negGCD :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
@@ -176,7 +176,7 @@ negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b
 --
 -- ==== __Proof__
 -- >>> runTP zeroGCD
--- Lemma: negGCD    Q.E.D.
+-- Lemma: negGCD       Q.E.D.
 -- Functions proven terminating: nGCD
 -- [Proven] negGCD :: Ɐa ∷ Integer → Bool
 zeroGCD :: TP (Proof (Forall "a" Integer -> SBool))

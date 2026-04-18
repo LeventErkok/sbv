@@ -61,7 +61,7 @@ pow2 = smtFunction "pow2"
 -- | Doubling doesn't change the Collatz result.
 --
 -- >>> runTP doubling
--- Lemma: doubling    Q.E.D. [Modulo: collatz termination]
+-- Lemma: doubling     Q.E.D. [Modulo: collatz termination]
 -- [Modulo: collatz termination] doubling :: Ɐn ∷ Integer → Bool
 doubling :: TP (Proof (Forall "n" Integer -> SBool))
 doubling = lemma "doubling" (\(Forall @"n" n) -> n .>= 1 .=> collatz (2 * n) .== collatz n) []

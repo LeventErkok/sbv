@@ -33,6 +33,7 @@ module Data.SBV.TP.TP (
        ,          sInduct,        sInductWith
        , sorry
        , TP, runTP, runTPWith, tpQuiet, tpStats, tpAsms
+       , whenDryRun, unlessDryRun
        , measureLemma, measureLemmaWith
        , (|-), (|->), (⊢), (=:), (≡), (??), (∵), split, split2, cases, (==>), (⟹), qed, trivial, contradiction
        , qc, qcWith
@@ -377,6 +378,8 @@ proveProofTree cfg tpSt nm (result, resultBool) initialHypotheses calcProofTree 
                         liftIO $ do
 
                            tab <- startTP cfg (verbose cfg) "Step" level (TPProofStep False nm (getHelperText hs') stepName)
+                           isDry <- readIORef (dryRun tpSt)
+                           when isDry $ modifyIORef' (maxRibbon tpSt) (max tab)
 
                            (mbT, r) <- timeIf printStats $ quickCheckWithResult qcArg{QC.chatty = verbose cfg} $ quickCheckInstance bn
 

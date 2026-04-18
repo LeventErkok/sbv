@@ -50,7 +50,7 @@ nats = smtProductiveFunction "nats"
 -- NB. As of Mar 2026, z3 can't handle this but cvc5 can.
 --
 -- >>> runTP natsHead
--- Lemma: natsHead    Q.E.D.
+-- Lemma: natsHead     Q.E.D.
 -- Functions proven productive: nats
 -- [Proven] natsHead :: Ɐn ∷ Integer → Bool
 natsHead :: TP (Proof (Forall "n" Integer -> SBool))

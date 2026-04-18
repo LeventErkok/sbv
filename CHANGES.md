@@ -4,10 +4,14 @@
 ### Version 14.0.5, Not yet released
 
   * [BACKWARDS COMPATIBILITY] Removed `tpRibbon`. The ribbon length for TP proof
-    output is now auto-computed from the proof structure. Users no longer need
-    to manually set it.
+    output is now auto-computed from the proof structure via a lightweight dry-run
+    pass. Users no longer need to manually set it.
 
-  * `pCase` now supports nested `case` expressions as proof case-splits,
+  * New TP combinators `whenDryRun` and `unlessDryRun` allow user code to guard
+    actions (e.g., proof tree printing) that should only run during the real pass of a TP
+    based proof.
+
+  * TP `pCase` now supports nested `case` expressions as proof case-splits,
     mirroring how `sCase` treats nested `case` as symbolic cases.
 
   * Consolidated internal solver IPC timeouts into named constants.

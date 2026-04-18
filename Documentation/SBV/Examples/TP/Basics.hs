@@ -44,7 +44,7 @@ import Control.Monad (void)
 -- We have:
 --
 -- >>> trueIsProvable
--- Lemma: true                             Q.E.D.
+-- Lemma: true         Q.E.D.
 -- [Proven] true :: Bool
 trueIsProvable :: IO (Proof SBool)
 trueIsProvable = runTP $ lemma "true" sTrue []
@@ -68,7 +68,7 @@ falseIsn'tProvable = runTP $ do
 --
 -- We have:
 -- >>> largerIntegerExists
--- Lemma: largerIntegerExists              Q.E.D.
+-- Lemma: largerIntegerExists    Q.E.D.
 -- [Proven] largerIntegerExists :: Ɐx ∷ Integer → ∃y ∷ Integer → Bool
 largerIntegerExists :: IO (Proof (Forall "x" Integer -> Exists "y" Integer -> SBool))
 largerIntegerExists = runTP $ lemma "largerIntegerExists"
@@ -80,7 +80,7 @@ largerIntegerExists = runTP $ lemma "largerIntegerExists"
 -- | Pushing a universal through conjunction. We have:
 --
 -- >>> forallConjunction @Integer (uninterpret "p") (uninterpret "q")
--- Lemma: forallConjunction                Q.E.D.
+-- Lemma: forallConjunction    Q.E.D.
 -- [Proven] forallConjunction :: Bool
 forallConjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO (Proof SBool)
 forallConjunction p q = runTP $ do
@@ -96,7 +96,7 @@ forallConjunction p q = runTP $ do
 -- | Pushing an existential through disjunction. We have:
 --
 -- >>> existsDisjunction @Integer (uninterpret "p") (uninterpret "q")
--- Lemma: existsDisjunction                Q.E.D.
+-- Lemma: existsDisjunction    Q.E.D.
 -- [Proven] existsDisjunction :: Bool
 existsDisjunction :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO (Proof SBool)
 existsDisjunction p q = runTP $ do
@@ -207,8 +207,8 @@ qcExample = calc "qcExample"
 --
 -- >>> runTP (qcFermat 3)
 -- Lemma: qcFermat 3
---   Step: 1 (qc: Running 1000 tests)      QC OK
---   Result:                               Q.E.D. [Modulo: quickCheck]
+--   Step: 1 (qc: Running 1000 tests)    QC OK
+--   Result:                             Q.E.D. [Modulo: quickCheck]
 -- [Modulo: quickCheck] qcFermat 3 :: Ɐx ∷ Integer → Ɐy ∷ Integer → Ɐz ∷ Integer → Bool
 qcFermat :: Integer -> TP (Proof (Forall "x" Integer -> Forall "y" Integer -> Forall "z" Integer -> SBool))
 qcFermat e = calc ("qcFermat " <> show e)
@@ -228,7 +228,7 @@ qcFermat e = calc ("qcFermat " <> show e)
 -- verified the termination of @sumToN@ before proceeding with the proof.
 --
 -- >>> terminationDemo
--- Lemma: sumToN_at_5                      Q.E.D.
+-- Lemma: sumToN_at_5    Q.E.D.
 -- Functions proven terminating: sumToN
 -- [Proven] sumToN_at_5 :: Ɐn ∷ Integer → Bool
 terminationDemo :: IO (Proof (Forall "n" Integer -> SBool))
@@ -308,8 +308,8 @@ badMeasure = do
 -- >>> axiomsAreDangerous
 -- Axiom: bad
 -- Lemma: axiomsCanBeInconsistent
---   Step: 1 (bad @ (n |-> 0 :: SInteger)) Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1 (bad @ (n |-> 0 :: SInteger))    Q.E.D.
+--   Result:                                  Q.E.D.
 -- [Proven] axiomsCanBeInconsistent :: Bool
 axiomsAreDangerous :: IO (Proof SBool)
 axiomsAreDangerous = runTP $ do
@@ -379,7 +379,7 @@ badLengthProof = runTP $ do
 -- 'lemma' proves from scratch and correctly fails:
 --
 -- >>> runTP duplicateNames `catch` (\(_ :: SomeException) -> pure ())
--- Lemma: evil                             Q.E.D.
+-- Lemma: evil         Q.E.D.
 -- Lemma: evil
 -- *** Failed to prove evil.
 -- Falsifiable

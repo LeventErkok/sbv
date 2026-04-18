@@ -23,7 +23,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.TP.Utils (
-         TP, runTP, runTPWith, tryTP, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof, noTermCheckProof
+         TP, runTP, runTPWith, tryTP, whenDryRun, unlessDryRun, Proof(..), ProofObj(..), assumptionFromProof, sorry, quickCheckProof, noTermCheckProof
        , startTP, finishTP, getTPState, getTPConfig, setTPConfig, tpGetNextUnique, TPState(..), TPStats(..), RootOfTrust(..)
        , TPProofContext(..), message, updStats, rootOfTrust, concludeModulo, printLemmaResult
        , ProofTree(..), TPUnique(..), showProofTree, showProofTreeHTML
@@ -33,7 +33,7 @@ module Data.SBV.TP.Utils (
        ) where
 
 import Control.Exception    (Exception, try)
-import Control.Monad        (unless)
+import Control.Monad        (unless, when)
 import Control.Monad.Reader (ReaderT(..), runReaderT, MonadReader, ask, liftIO)
 import Control.Monad.Trans  (MonadIO)
 
@@ -100,6 +100,19 @@ newtype TP a = TP (ReaderT TPState IO a)
 -- | Run a TP action, catching exceptions.
 tryTP :: Exception e => TP a -> TP (Either e a)
 tryTP (TP act) = TP $ ReaderT $ \st -> try (runReaderT act st)
+
+-- | Run an action only during the dry-run pass.
+whenDryRun :: TP () -> TP ()
+whenDryRun act = do st <- ask
+                    isDry <- liftIO $ readIORef (dryRun st)
+                    when isDry act
+
+-- | Run an action only during the real (non-dry-run) pass. Useful for guarding user-facing output
+-- (e.g., proof tree printing) that should be suppressed during ribbon calculation.
+unlessDryRun :: TP () -> TP ()
+unlessDryRun act = do st <- ask
+                      isDry <- liftIO $ readIORef (dryRun st)
+                      unless isDry act
 
 -- | Extract the integer node ID from an SV.
 svIntId :: SV -> Int
@@ -219,7 +232,7 @@ runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
    -- Pass 2: Real run with computed ribbon
    writeIORef rDryRun False
    ribbon <- readIORef rMaxRibbon
-   let cfg' = cfg{tpOptions = (tpOptions cfg) { ribbonLength = ribbon + 4 }}
+   let cfg' = cfg{tpOptions = (tpOptions cfg) { ribbonLength = max 20 (ribbon + 4) }}
 
    (mbT, (r, TPState{stats = rStats, measuresVerified = rMeasures, productiveVerified = rProductive, measuresEncountered = rEncountered}))
        <- timeIf printStats $ runPass cfg'

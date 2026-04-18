@@ -124,7 +124,7 @@ n2iNonNeg = inductiveLemma "n2iNonNeg" (\(Forall n) -> n2i n .>= 0) []
 -- | \(\overline{\underline{i}} = \max(i, 0)\).
 --
 -- >>> runTP i2n2i
--- Lemma: i2n2i    Q.E.D.
+-- Lemma: i2n2i        Q.E.D.
 -- Functions proven terminating: i2n, n2i
 -- [Proven] i2n2i :: Ɐi ∷ Integer → Bool
 i2n2i :: TP (Proof (Forall "i" Integer -> SBool))
@@ -133,7 +133,7 @@ i2n2i = inductiveLemma "i2n2i" (\(Forall i) -> n2i (i2n i) .== i `smax` 0) []
 -- | \(\underline{\overline{n}} = n\)
 --
 -- >>> runTP n2i2n
--- Lemma: n2i2n    Q.E.D.
+-- Lemma: n2i2n        Q.E.D.
 -- Functions proven terminating: i2n, n2i
 -- [Proven] n2i2n :: Ɐn ∷ Nat → Bool
 n2i2n :: TP (Proof (Forall "n" Nat -> SBool))
@@ -142,7 +142,7 @@ n2i2n = inductiveLemma "n2i2n" (\(Forall n) -> i2n (n2i n) .== n) []
 -- | \(\overline{m + n} = \overline{m} + \overline{n}\)
 --
 -- >>> runTP n2iAdd
--- Lemma: n2iAdd    Q.E.D.
+-- Lemma: n2iAdd       Q.E.D.
 -- Functions proven terminating: n2i, sNatPlus
 -- [Proven] n2iAdd :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 n2iAdd :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -189,13 +189,13 @@ addRightUnit = inductiveLemma "addRightUnit" (\(Forall m) -> m + 0 .== m) []
 -- | \(m + \mathrm{Succ}\,n = \mathrm{Succ}\,(m + n)\)
 --
 -- >>> runTP addSucc
--- Lemma: caseZero    Q.E.D.
+-- Lemma: caseZero     Q.E.D.
 -- Lemma: caseSucc
---   Step: 1          Q.E.D.
---   Step: 2          Q.E.D.
---   Step: 3          Q.E.D.
---   Result:          Q.E.D.
--- Lemma: addSucc     Q.E.D.
+--   Step: 1           Q.E.D.
+--   Step: 2           Q.E.D.
+--   Step: 3           Q.E.D.
+--   Result:           Q.E.D.
+-- Lemma: addSucc      Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] addSucc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 addSucc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))
@@ -225,7 +225,7 @@ addSucc = do
 -- | \(m + (n + o) = (m + n) + o\)
 --
 -- >>> runTP addAssoc
--- Lemma: addAssoc    Q.E.D.
+-- Lemma: addAssoc     Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] addAssoc :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 addAssoc :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
@@ -610,15 +610,15 @@ mulComm = do
 -- | \(m < n \;\wedge\; n < o \;\rightarrow\; m < o\)
 --
 -- >>> runTP ltTrans
--- Lemma: addAssoc    Q.E.D.
+-- Lemma: addAssoc     Q.E.D.
 -- Lemma: ltTrans
---   Step: 1          Q.E.D.
---   Step: 2          Q.E.D.
---   Step: 3          Q.E.D.
---   Step: 4          Q.E.D.
---   Step: 5          Q.E.D.
---   Step: 6          Q.E.D.
---   Result:          Q.E.D.
+--   Step: 1           Q.E.D.
+--   Step: 2           Q.E.D.
+--   Step: 3           Q.E.D.
+--   Step: 4           Q.E.D.
+--   Step: 5           Q.E.D.
+--   Step: 6           Q.E.D.
+--   Result:           Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] ltTrans :: Ɐm ∷ Nat → Ɐn ∷ Nat → Ɐo ∷ Nat → Bool
 ltTrans :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> Forall "o" Nat -> SBool))
@@ -873,7 +873,7 @@ mulOrder = do
 -- | \(m < n \;\rightarrow\; \exists o.\; m + o = n\)
 --
 -- >>> runTP orderSum
--- Lemma: orderSum    Q.E.D.
+-- Lemma: orderSum     Q.E.D.
 -- Functions proven terminating: sNatPlus
 -- [Proven] orderSum :: Ɐm ∷ Nat → Ɐn ∷ Nat → Bool
 orderSum :: TP (Proof (Forall "m" Nat -> Forall "n" Nat -> SBool))

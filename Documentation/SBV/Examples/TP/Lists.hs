@@ -105,7 +105,7 @@ appendNull = lemma "appendNull"
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
 --
 -- >>> runTP $ consApp @Integer
--- Lemma: consApp    Q.E.D.
+-- Lemma: consApp      Q.E.D.
 -- [Proven] consApp :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
 consApp :: forall a. SymVal a => TP (Proof (Forall "x" a -> Forall "xs" [a] -> Forall "ys" [a] -> SBool))
 consApp = lemma "consApp"
@@ -294,7 +294,7 @@ revApp = induct "revApp"
 -- | @reverse (x:xs) == reverse xs ++ [x]@
 --
 -- >>> runTP $ revCons @Integer
--- Lemma: revCons    Q.E.D.
+-- Lemma: revCons      Q.E.D.
 -- Functions proven terminating: sbv.reverse
 -- [Proven] revCons :: Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 revCons :: forall a. SymVal a => TP (Proof (Forall "x" a -> Forall "xs" [a] -> SBool))
@@ -1600,7 +1600,7 @@ length_drop = lemma "length_drop"
 -- | @length xs \<= n ==\> take n xs == xs@
 --
 -- >>> runTP $ take_all @Integer
--- Lemma: take_all    Q.E.D.
+-- Lemma: take_all     Q.E.D.
 -- [Proven] take_all :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 take_all :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 take_all = lemma "take_all"
@@ -1610,7 +1610,7 @@ take_all = lemma "take_all"
 -- | @length xs \<= n ==\> drop n xs == []@
 --
 -- >>> runTP $ drop_all @Integer
--- Lemma: drop_all    Q.E.D.
+-- Lemma: drop_all     Q.E.D.
 -- [Proven] drop_all :: Ɐn ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_all :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_all = lemma "drop_all"
