@@ -5390,8 +5390,111 @@ optimalityProof = do
    swDeepW <- recall swapDeepWProof
    swDeepS <- recall swapDeepSProof
 
+   -- BH first step: merging the first two elements of a sorted allTip0 list
+   bhAdd <- recall buildHuffmanAdditivityProof
+
+   bhFS <- calc "bhFirstStep"
+       (\(Forall @"a" a) (Forall @"b" b) (Forall @"rest" rest) ->
+           let wa = treeWeight a; wb = treeWeight b
+           in isTip a .&& isTip b .&& allTip0 rest
+              .=> cost (buildHuffman (a .: b .: rest))
+                  .== wa + wb + cost (buildHuffman (sortedInsert (sTip (wa + wb) 0) rest))) $
+       \a b rest ->
+           let wa = treeWeight a; wb = treeWeight b
+           in [isTip a, isTip b, allTip0 rest]
+         |- cost (buildHuffman (a .: b .: rest))
+         ?? bhAdd `at` Inst @"ts" (sortedInsert (sBin a b) rest)
+         ?? _bhCostS `at` (Inst @"t1" (sBin a b), Inst @"t2" (sTip (wa + wb) 0), Inst @"ts" rest)
+         =: wa + wb + cost (buildHuffman (sortedInsert (sTip (wa + wb) 0) rest))
+         =: qed
+
+   bhFirstStepLW <- calc "bhFirstStepLW"
+       (\(Forall @"t" t) ->
+           numLeaves t .>= 3
+           .=> cost (buildHuffman (leavesOf t))
+               .== lightW t + light2W t
+                 + cost (buildHuffman (sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))))) $
+       \t -> [numLeaves t .>= 3]
+         |- cost (buildHuffman (leavesOf t))
+         ?? bhFS `at` (Inst @"a" (head (leavesOf t)),
+                       Inst @"b" (head (tail (leavesOf t))),
+                       Inst @"rest" (tail (tail (leavesOf t))))
+         ?? loAT `at` Inst @"t" t
+         ?? loLen `at` Inst @"t" t
+         ?? nlPos `at` Inst @"t" t
+         ?? lwIsHead `at` Inst @"t" t
+         ?? l2wIsSecond `at` Inst @"t" t
+         =: lightW t + light2W t
+          + cost (buildHuffman (sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))))
+         =: qed
+
+   minPairSum <- sInduct "minPairSum"
+       (\(Forall @"t" t) ->
+           numLeaves t .>= 2 .=> lightW t + light2W t .<= deepW t + sibW t)
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> [numLeaves t .>= 2]
+         |- lightW t + light2W t .<= deepW t + sibW t
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> lightW t + light2W t .<= deepW t + sibW t
+                       ?? ih `at` Inst @"t" l
+                       ?? ih `at` Inst @"t" r
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       ?? hNN `at` Inst @"t" l
+                       ?? hNN `at` Inst @"t" r
+                       =: cases
+                            [ height l .== 0 .&& height r .== 0
+                                ==> lightW t + light2W t .<= deepW t + sibW t
+                                 =: sTrue
+                                 =: qed
+                            , height l .> 0 .|| height r .> 0
+                                ==> lightW t + light2W t .<= deepW t + sibW t
+                                 ?? ih `at` Inst @"t" l
+                                 ?? ih `at` Inst @"t" r
+                                 =: sTrue
+                                 =: qed
+                            ]
+            |]
+
+   base <- calc "optBase"
+       (\(Forall @"wl" wl) (Forall @"sl" sl) (Forall @"wr" wr) (Forall @"sr" sr) ->
+           let t = sBin (sTip wl sl) (sTip wr sr)
+           in cost (buildHuffman (leavesOf t)) .<= cost t) $
+       \wl sl wr sr ->
+           let t   = sBin (sTip wl sl) (sTip wr sr)
+               wl0 = sTip wl 0
+               wr0 = sTip wr 0
+           in []
+             |- cost (buildHuffman (leavesOf t)) .<= cost t
+             =: cost (buildHuffman (insertAll [wl0] [wr0])) .<= cost t
+             =: cost (buildHuffman (sortedInsert wl0 [wr0])) .<= cost t
+             =: cases
+                  [ wl .<= wr
+                      ==> cost (buildHuffman (sortedInsert wl0 [wr0])) .<= cost t
+                       =: cost (buildHuffman [wl0, wr0]) .<= cost t
+                       =: cost (buildHuffman [sBin wl0 wr0]) .<= cost t
+                       =: cost (sBin wl0 wr0) .<= cost t
+                       =: sTrue
+                       =: qed
+                  , sNot (wl .<= wr)
+                      ==> cost (buildHuffman (sortedInsert wl0 [wr0])) .<= cost t
+                       =: cost (buildHuffman [wr0, wl0]) .<= cost t
+                       =: cost (buildHuffman [sBin wr0 wl0]) .<= cost t
+                       =: cost (sBin wr0 wl0) .<= cost t
+                       =: sTrue
+                       =: qed
+                  ]
+
    -- Properties of optMerge: chain through relabel -> swap -> collapse
-   -- The solver can unfold optMerge and sees the ite; we provide hints for each step.
+   lwLeqDW   <- recall lightWLeqDeepWProof
+   lwLeqL2W  <- recall lightWLeqLight2WProof
+   lCWS      <- recall lightCountWSProof
+   l2CWS     <- recall light2CountWSProof
+   dCWS      <- recall deepCountWSProof
+   sCWS      <- recall sibCountWSProof
+   rlDist    <- recall relabelDistinctProof
+   loSwap    <- recall leavesOfSwapProof
 
    -- optMerge has smaller treeSize (needed for IH measure check)
    -- Key: relabel preserves treeSize, swap preserves treeSize, collapse reduces by 2
@@ -5455,150 +5558,146 @@ optimalityProof = do
          =: qed
 
    -- optMerge cost bound: cost(optMerge t) + lightW + light2W <= cost t
-   -- Chain: relabel preserves cost, greedy swap doesn't increase cost,
-   --        costDecomp gives cost(collapse(swapped)) = cost(swapped) - deepW(swapped) - sibW(swapped),
-   --        and after swap: deepW(swapped) >= lightW, sibW(swapped) >= light2W via minPairSum
+   --
+   -- The proof strategy:
+   --   1. After relabeling (preserves cost, lightW, light2W), all leaves are unique
+   --   2. The swap(s) don't increase cost (by greedySwap with uniqueness from relabeling)
+   --   3. costDecomp: cost(collapse(swapped)) = cost(swapped) - deepW(swapped) - sibW(swapped)
+   --   4. After swap: deepW(swapped) + sibW(swapped) = lightW + light2W
+   --   5. Therefore: cost(optMerge t) + lightW + light2W = cost(swapped) <= cost(t)
+   --
+   -- We case-split on the 3 aliasing conditions to help the solver handle
+   -- the ite branches in optMerge's definition.
+
+   -- Recall additional proved lemmas for the cost bound
+   lwLeqDW   <- recall lightWLeqDeepWProof
+   lwLeqL2W  <- recall lightWLeqLight2WProof
+   lCWS      <- recall lightCountWSProof
+   l2CWS     <- recall light2CountWSProof
+   dCWS      <- recall deepCountWSProof
+   sCWS      <- recall sibCountWSProof
+   rlDist    <- recall relabelDistinctProof
+   rlOOR     <- recall relabelOutOfRangeProof
+
    _omCost <- calc "optMergeCost"
        (\(Forall @"t" t) ->
            numLeaves t .>= 3 .=> cost (optMerge t) + lightW t + light2W t .<= cost t) $
        \t -> let t' = relabelFrom 0 t
+                 lw = lightW t'; ls = lightS t'
+                 l2w = light2W t'; l2s = light2S t'
+                 cw = deepW t'; cs = deepS t'
+                 dw = sibW t'; ds = sibS t'
              in [numLeaves t .>= 3]
          |- cost (optMerge t) + lightW t + light2W t .<= cost t
+         -- Relabeling preserves everything we need
          ?? rlCost `at` (Inst @"n" 0, Inst @"t" t)
          ?? rlLW   `at` (Inst @"n" 0, Inst @"t" t)
          ?? rlL2W  `at` (Inst @"n" 0, Inst @"t" t)
          ?? rlHt   `at` (Inst @"n" 0, Inst @"t" t)
          ?? rlNL   `at` (Inst @"n" 0, Inst @"t" t)
          ?? rlTS   `at` (Inst @"n" 0, Inst @"t" t)
-         ?? costDec `at` Inst @"t" t
+         -- Uniqueness from relabeling
+         ?? rlDist `at` (Inst @"n" 0, Inst @"t" t)
+         -- lightW <= deepW (for greedySwap1 precondition)
+         ?? lwLeqDW `at` Inst @"t" t'
+         ?? lwLeqL2W `at` Inst @"t" t'
+         -- countWS for light, light2, deep, sib in relabeled tree
+         ?? lCWS  `at` Inst @"t" t'
+         ?? l2CWS `at` Inst @"t" t'
+         ?? dCWS  `at` Inst @"t" t'
+         ?? sCWS  `at` Inst @"t" t'
+         -- Greedy swap doesn't increase cost
+         ?? gs1 `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"t" t')
+         ?? gs1 `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"t" t')
+         ?? gs2 `at` (Inst @"wb" l2w, Inst @"sb" l2s, Inst @"t" t')
+         ?? gs2 `at` (Inst @"wb" lw, Inst @"sb" ls, Inst @"t" t')
+         -- greedyChoice for the general (double-swap) case
+         ?? gc `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" l2w, Inst @"sb" l2s, Inst @"t" t')
+         -- swapDeepW: after swapping with deep, deepW changes to the swapped-in weight
+         ?? swDeepW `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"t" t')
+         ?? swDeepW `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"t" t')
+         -- swap structural: height, treeSize, numLeaves preserved
+         ?? swHt `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" cw, Inst @"sb" cs, Inst @"t" t')
+         ?? swHt `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
+         ?? swHt `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"wb" cw, Inst @"sb" cs, Inst @"t" t')
+         ?? swHt `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"wb" dw, Inst @"sb" ds,
+                        Inst @"t" (swap lw ls cw cs t'))
+         -- costDecomp on the swapped tree (in each ite branch)
+         ?? costDec `at` Inst @"t" (swap l2w l2s cw cs t')
+         ?? costDec `at` Inst @"t" (swap lw ls dw ds t')
+         ?? costDec `at` Inst @"t" (swap l2w l2s dw ds (swap lw ls cw cs t'))
+         -- minPairSum (lightW + light2W <= deepW + sibW)
+         ?? minPairSum `at` Inst @"t" t'
          ?? hNN `at` Inst @"t" t
          ?? sorry
          =: sTrue
          =: qed
 
    -- optMerge leavesOf: leavesOf(optMerge t) = the BH-merged shorter list
+   -- Chain: relabel preserves leavesOf, swap preserves leavesOf (when unique),
+   --        collapseLeavesOf relates collapse to removing deep/sib and adding their sum,
+   --        after swap deep/sib ARE light/light2 so removing them = tail(tail(leavesOf))
+
+   loSwap <- recall leavesOfSwapProof
+
    _omLeaves <- calc "optMergeLeavesOf"
        (\(Forall @"t" t) ->
            numLeaves t .>= 3
            .=> leavesOf (optMerge t) .== sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))) $
        \t -> let t' = relabelFrom 0 t
+                 lw = lightW t'; ls = lightS t'
+                 l2w = light2W t'; l2s = light2S t'
+                 cw = deepW t'; cs = deepS t'
+                 dw = sibW t'; ds = sibS t'
              in [numLeaves t .>= 3]
          |- leavesOf (optMerge t) .== sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))
-         ?? rlLO   `at` (Inst @"n" 0, Inst @"t" t)
-         ?? rlLW   `at` (Inst @"n" 0, Inst @"t" t)
-         ?? rlL2W  `at` (Inst @"n" 0, Inst @"t" t)
-         ?? rlHt   `at` (Inst @"n" 0, Inst @"t" t)
-         ?? rlNL   `at` (Inst @"n" 0, Inst @"t" t)
-         ?? collLO `at` Inst @"t" t
+         -- Relabeling preserves leavesOf, lightW, light2W
+         ?? rlLO  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlLW  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlL2W `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlHt  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlNL  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlTS  `at` (Inst @"n" 0, Inst @"t" t)
+         -- Uniqueness from relabeling
+         ?? rlDist `at` (Inst @"n" 0, Inst @"t" t)
+         -- countWS for swap preconditions
+         ?? lCWS  `at` Inst @"t" t'
+         ?? l2CWS `at` Inst @"t" t'
+         ?? dCWS  `at` Inst @"t" t'
+         ?? sCWS  `at` Inst @"t" t'
+         -- collapseLeavesOf: relates collapse to removing deep/sib and adding their sum
+         ?? collLO `at` Inst @"t" (swap l2w l2s cw cs t')
+         ?? collLO `at` Inst @"t" (swap lw ls dw ds t')
+         ?? collLO `at` Inst @"t" (swap l2w l2s dw ds (swap lw ls cw cs t'))
+         -- swapDeepW/swapDeepS: deepW/sibW after swap
+         ?? swDeepW `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"t" t')
+         ?? swDeepW `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"t" t')
+         ?? swDeepS `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"t" t')
+         ?? swDeepS `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"t" t')
+         -- swap structural preservation
+         ?? swHt `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" cw, Inst @"sb" cs, Inst @"t" t')
+         ?? swHt `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
+         ?? swHt `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"wb" cw, Inst @"sb" cs, Inst @"t" t')
+         ?? swHt `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"wb" dw, Inst @"sb" ds,
+                        Inst @"t" (swap lw ls cw cs t'))
+         -- leavesOfSwap: swap preserves leavesOf when leaves are unique
+         ?? loSwap `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"wb" cw, Inst @"sb" cs, Inst @"t" t')
+         ?? loSwap `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" dw, Inst @"sb" ds, Inst @"t" t')
+         ?? loSwap `at` (Inst @"wa" lw, Inst @"sa" ls, Inst @"wb" cw, Inst @"sb" cs, Inst @"t" t')
+         ?? loSwap `at` (Inst @"wa" l2w, Inst @"sa" l2s, Inst @"wb" dw, Inst @"sb" ds,
+                          Inst @"t" (swap lw ls cw cs t'))
+         -- lightWIsHead and light2WIsSecond (connect list to lightW/light2W)
+         ?? lwIsHead `at` Inst @"t" t'
+         ?? l2wIsSecond `at` Inst @"t" t'
+         ?? loLen `at` Inst @"t" t'
+         ?? loAT  `at` Inst @"t" t'
+         ?? nlPos `at` Inst @"t" t'
          ?? hNN `at` Inst @"t" t
          ?? sorry
          =: sTrue
          =: qed
 
 
-
-   -- BH first step: merging the first two elements of a sorted allTip0 list
-   -- cost(BH(a : b : rest)) = treeWeight a + treeWeight b + cost(BH(sortedInsert(sTip(wa+wb) 0, rest)))
-   -- This follows from BH definition + buildHuffmanAdditivity
-   bhAdd <- recall buildHuffmanAdditivityProof
-
-   bhFS <- calc "bhFirstStep"
-       (\(Forall @"a" a) (Forall @"b" b) (Forall @"rest" rest) ->
-           let wa = treeWeight a; wb = treeWeight b
-           in isTip a .&& isTip b .&& allTip0 rest
-              .=> cost (buildHuffman (a .: b .: rest))
-                  .== wa + wb + cost (buildHuffman (sortedInsert (sTip (wa + wb) 0) rest))) $
-       \a b rest ->
-           let wa = treeWeight a; wb = treeWeight b
-           in [isTip a, isTip b, allTip0 rest]
-         |- cost (buildHuffman (a .: b .: rest))
-         ?? bhAdd `at` Inst @"ts" (sortedInsert (sBin a b) rest)
-         ?? _bhCostS `at` (Inst @"t1" (sBin a b), Inst @"t2" (sTip (wa + wb) 0), Inst @"ts" rest)
-         =: wa + wb + cost (buildHuffman (sortedInsert (sTip (wa + wb) 0) rest))
-         =: qed
-
-   -- Combined: BH first step in terms of lightW/light2W
-   bhFirstStepLW <- calc "bhFirstStepLW"
-       (\(Forall @"t" t) ->
-           numLeaves t .>= 3
-           .=> cost (buildHuffman (leavesOf t))
-               .== lightW t + light2W t
-                 + cost (buildHuffman (sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))))) $
-       \t -> [numLeaves t .>= 3]
-         |- cost (buildHuffman (leavesOf t))
-         ?? bhFS `at` (Inst @"a" (head (leavesOf t)),
-                       Inst @"b" (head (tail (leavesOf t))),
-                       Inst @"rest" (tail (tail (leavesOf t))))
-         ?? loAT `at` Inst @"t" t
-         ?? loLen `at` Inst @"t" t
-         ?? nlPos `at` Inst @"t" t
-         ?? lwIsHead `at` Inst @"t" t
-         ?? l2wIsSecond `at` Inst @"t" t
-         =: lightW t + light2W t
-          + cost (buildHuffman (sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))))
-         =: qed
-
-   -- Key lemma: the sum of the two lightest leaf weights <= the sum of any pair.
-   -- In particular, lightW + light2W <= deepW + sibW.
-   -- This is the core property that connects BH's greedy merge to the cost decomposition.
-   minPairSum <- sInduct "minPairSum"
-       (\(Forall @"t" t) ->
-           numLeaves t .>= 2 .=> lightW t + light2W t .<= deepW t + sibW t)
-       (treeSize, [proofOf tsPos]) $
-       \ih t -> [numLeaves t .>= 2]
-         |- lightW t + light2W t .<= deepW t + sibW t
-         =: [pCase| t of
-               Tip{} -> trivial
-               Bin l r -> lightW t + light2W t .<= deepW t + sibW t
-                       ?? ih `at` Inst @"t" l
-                       ?? ih `at` Inst @"t" r
-                       ?? tsPos `at` Inst @"t" l
-                       ?? tsPos `at` Inst @"t" r
-                       ?? hNN `at` Inst @"t" l
-                       ?? hNN `at` Inst @"t" r
-                       =: cases
-                            [ height l .== 0 .&& height r .== 0
-                                ==> lightW t + light2W t .<= deepW t + sibW t
-                                 =: sTrue
-                                 =: qed
-                            , height l .> 0 .|| height r .> 0
-                                ==> lightW t + light2W t .<= deepW t + sibW t
-                                 ?? ih `at` Inst @"t" l
-                                 ?? ih `at` Inst @"t" r
-                                 =: sTrue
-                                 =: qed
-                            ]
-            |]
-
-   -- Base case: for two tips, buildHuffman cost equals tree cost.
-   base <- calc "optBase"
-       (\(Forall @"wl" wl) (Forall @"sl" sl) (Forall @"wr" wr) (Forall @"sr" sr) ->
-           let t = sBin (sTip wl sl) (sTip wr sr)
-           in cost (buildHuffman (leavesOf t)) .<= cost t) $
-       \wl sl wr sr ->
-           let t   = sBin (sTip wl sl) (sTip wr sr)
-               wl0 = sTip wl 0
-               wr0 = sTip wr 0
-           in []
-             |- cost (buildHuffman (leavesOf t)) .<= cost t
-             =: cost (buildHuffman (insertAll [wl0] [wr0])) .<= cost t
-             =: cost (buildHuffman (sortedInsert wl0 [wr0])) .<= cost t
-             =: cases
-                  [ wl .<= wr
-                      ==> cost (buildHuffman (sortedInsert wl0 [wr0])) .<= cost t
-                       =: cost (buildHuffman [wl0, wr0]) .<= cost t
-                       =: cost (buildHuffman [sBin wl0 wr0]) .<= cost t
-                       =: cost (sBin wl0 wr0) .<= cost t
-                       =: sTrue
-                       =: qed
-                  , sNot (wl .<= wr)
-                      ==> cost (buildHuffman (sortedInsert wl0 [wr0])) .<= cost t
-                       =: cost (buildHuffman [wr0, wl0]) .<= cost t
-                       =: cost (buildHuffman [sBin wr0 wl0]) .<= cost t
-                       =: cost (sBin wr0 wl0) .<= cost t
-                       =: sTrue
-                       =: qed
-                  ]
 
    sInduct "optimality"
        (\(Forall @"t" t) ->
