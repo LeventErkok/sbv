@@ -107,20 +107,20 @@ decode = smtFunction "decode"
 -- | Roundtrip property: for any symbol @s@ that is a member of tree @t@,
 -- decoding the encoded path yields @s@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) roundtrip
--- Lemma: treeSizePos                                Q.E.D.
+-- >>> runTPWith cvc5 roundtrip
+-- Lemma: treeSizePos                            Q.E.D.
 -- Inductive lemma (strong): huffmanRoundtrip
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
+--     Step: 1.1                                 Q.E.D.
 --     Step: 1.2 (2 way case split)
---       Step: 1.2.1.1                               Q.E.D.
---       Step: 1.2.1.2                               Q.E.D.
---       Step: 1.2.2.1                               Q.E.D.
---       Step: 1.2.2.2                               Q.E.D.
---       Step: 1.2.Completeness                      Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.1.1                           Q.E.D.
+--       Step: 1.2.1.2                           Q.E.D.
+--       Step: 1.2.2.1                           Q.E.D.
+--       Step: 1.2.2.2                           Q.E.D.
+--       Step: 1.2.Completeness                  Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: decode, findPath, member, treeSize
 -- [Proven] huffmanRoundtrip :: Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
 roundtrip :: TP (Proof (Forall "s" Integer -> Forall "t" HTree -> SBool))
@@ -225,37 +225,37 @@ countWS = smtFunction "countWS"
 -- the count of @(wb, sb)@ leaves. In particular, when each pair occurs exactly
 -- once, the changes cancel and weight is preserved.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapWeight
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: distFold                                   Q.E.D.
--- Lemma: countWSBin                                 Q.E.D.
--- Lemma: mulCong                                    Q.E.D.
--- Lemma: tipHelper                                  Q.E.D.
+-- >>> runTPWith cvc5 swapWeight
+-- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: distFold                         Q.E.D.
+-- Lemma: countWSBin                       Q.E.D.
+-- Lemma: mulCong                          Q.E.D.
+-- Lemma: tipHelper                        Q.E.D.
 -- Inductive lemma (strong): swapWeight
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1 (3 way case split)
---       Step: 1.1.1.1                               Q.E.D.
---       Step: 1.1.1.2                               Q.E.D.
---       Step: 1.1.1.3                               Q.E.D.
---       Step: 1.1.1.4                               Q.E.D.
---       Step: 1.1.2.1                               Q.E.D.
---       Step: 1.1.2.2                               Q.E.D.
---       Step: 1.1.2.3                               Q.E.D.
---       Step: 1.1.2.4                               Q.E.D.
---       Step: 1.1.3.1                               Q.E.D.
---       Step: 1.1.3.2                               Q.E.D.
---       Step: 1.1.3.3                               Q.E.D.
---       Step: 1.1.Completeness                      Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2 (apply IH for l)                  Q.E.D.
---     Step: 1.2.3 (apply IH for r)                  Q.E.D.
---     Step: 1.2.4 (regroup)                         Q.E.D.
---     Step: 1.2.5                                   Q.E.D.
---     Step: 1.2.6                                   Q.E.D.
---     Step: 1.2.7                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.1.1.1                     Q.E.D.
+--       Step: 1.1.1.2                     Q.E.D.
+--       Step: 1.1.1.3                     Q.E.D.
+--       Step: 1.1.1.4                     Q.E.D.
+--       Step: 1.1.2.1                     Q.E.D.
+--       Step: 1.1.2.2                     Q.E.D.
+--       Step: 1.1.2.3                     Q.E.D.
+--       Step: 1.1.2.4                     Q.E.D.
+--       Step: 1.1.3.1                     Q.E.D.
+--       Step: 1.1.3.2                     Q.E.D.
+--       Step: 1.1.3.3                     Q.E.D.
+--       Step: 1.1.Completeness            Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2 (apply IH for l)        Q.E.D.
+--     Step: 1.2.3 (apply IH for r)        Q.E.D.
+--     Step: 1.2.4 (regroup)               Q.E.D.
+--     Step: 1.2.5                         Q.E.D.
+--     Step: 1.2.6                         Q.E.D.
+--     Step: 1.2.7                         Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
 -- Functions proven terminating: countWS, swap, treeSize, treeWeight
 -- [Proven] swapWeight :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 swapWeight :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
@@ -395,37 +395,37 @@ depthSum = smtFunction "depthSum"
 -- combination of their depth sums, paralleling 'swapWeight'. This is the
 -- key algebraic fact underlying Huffman optimality.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapCost
--- Lemma: swapWeight                                 Q.E.D.
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: depthSumBin                                Q.E.D.
--- Lemma: factor4                                    Q.E.D.
--- Lemma: mulCong                                    Q.E.D.
+-- >>> runTPWith cvc5 swapCost
+-- Lemma: swapWeight                               Q.E.D.
+-- Lemma: treeSizePos                              Q.E.D.
+-- Lemma: depthSumBin                              Q.E.D.
+-- Lemma: factor4                                  Q.E.D.
+-- Lemma: mulCong                                  Q.E.D.
 -- Inductive lemma (strong): swapCost
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                 Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1 (3 way case split)
---       Step: 1.1.1.1                               Q.E.D.
---       Step: 1.1.1.2                               Q.E.D.
---       Step: 1.1.1.3                               Q.E.D.
---       Step: 1.1.2.1                               Q.E.D.
---       Step: 1.1.2.2                               Q.E.D.
---       Step: 1.1.2.3                               Q.E.D.
---       Step: 1.1.3.1                               Q.E.D.
---       Step: 1.1.3.2                               Q.E.D.
---       Step: 1.1.3.3                               Q.E.D.
---       Step: 1.1.Completeness                      Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2 (apply swapCost IH for l)         Q.E.D.
---     Step: 1.2.3 (apply swapCost IH for r)         Q.E.D.
---     Step: 1.2.4 (apply swapWeight for l)          Q.E.D.
---     Step: 1.2.5 (apply swapWeight for r)          Q.E.D.
---     Step: 1.2.6 (regroup)                         Q.E.D.
---     Step: 1.2.7 (fold depthSum for (wa, sa))      Q.E.D.
---     Step: 1.2.8 (fold depthSum for (wb, sb))      Q.E.D.
---     Step: 1.2.9                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.1.1.1                             Q.E.D.
+--       Step: 1.1.1.2                             Q.E.D.
+--       Step: 1.1.1.3                             Q.E.D.
+--       Step: 1.1.2.1                             Q.E.D.
+--       Step: 1.1.2.2                             Q.E.D.
+--       Step: 1.1.2.3                             Q.E.D.
+--       Step: 1.1.3.1                             Q.E.D.
+--       Step: 1.1.3.2                             Q.E.D.
+--       Step: 1.1.3.3                             Q.E.D.
+--       Step: 1.1.Completeness                    Q.E.D.
+--     Step: 1.2.1                                 Q.E.D.
+--     Step: 1.2.2 (apply swapCost IH for l)       Q.E.D.
+--     Step: 1.2.3 (apply swapCost IH for r)       Q.E.D.
+--     Step: 1.2.4 (apply swapWeight for l)        Q.E.D.
+--     Step: 1.2.5 (apply swapWeight for r)        Q.E.D.
+--     Step: 1.2.6 (regroup)                       Q.E.D.
+--     Step: 1.2.7 (fold depthSum for (wa, sa))    Q.E.D.
+--     Step: 1.2.8 (fold depthSum for (wb, sb))    Q.E.D.
+--     Step: 1.2.9                                 Q.E.D.
+--     Step: 1.Completeness                        Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: cost, countWS, depthSum, swap, treeSize, treeWeight
 -- [Proven] swapCost :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 swapCost :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
@@ -573,24 +573,24 @@ swapCost = do
 -- | Cost reduction: when @wb >= wa@ (b is at least as heavy) and b is at least
 -- as deep (@depthSum(wb,sb,t) >= depthSum(wa,sa,t)@), swapping does not increase cost.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapReducesCost
--- Lemma: swapCost                                   Q.E.D.
+-- >>> runTPWith cvc5 swapReducesCost
+-- Lemma: swapCost                                 Q.E.D.
 -- Inductive lemma (strong): signProd
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                 Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1.1                                 Q.E.D.
+--     Step: 1.1.2                                 Q.E.D.
+--     Step: 1.2.1                                 Q.E.D.
+--     Step: 1.2.2                                 Q.E.D.
+--     Step: 1.Completeness                        Q.E.D.
+--   Result:                                       Q.E.D.
 -- Lemma: swapReducesCost
---   Step: 1                                         Q.E.D.
---   Step: 2                                         Q.E.D.
---   Step: 3                                         Q.E.D.
---   Step: 4                                         Q.E.D.
---   Step: 5                                         Q.E.D.
---   Result:                                         Q.E.D.
+--   Step: 1                                       Q.E.D.
+--   Step: 2                                       Q.E.D.
+--   Step: 3                                       Q.E.D.
+--   Step: 4                                       Q.E.D.
+--   Step: 5                                       Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: cost, countWS, depthSum, swap, treeSize, treeWeight
 -- [Proven] swapReducesCost :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 swapReducesCost :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
@@ -689,7 +689,7 @@ sibS = smtFunction "sibS"
 -- | Every tree has at least one node: @treeSize t >= 1@.
 --
 -- >>> runTPWith cvc5 treeSizePosProof
--- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: treeSizePos    Q.E.D.
 -- Functions proven terminating: treeSize
 -- [Proven] treeSizePos :: Ɐt ∷ HTree → Bool
 treeSizePosProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -698,15 +698,15 @@ treeSizePosProof = inductiveLemma "treeSizePos" (\(Forall @"t" t) -> treeSize t 
 -- | Leaf counts are non-negative: @countWS w s t >= 0@.
 --
 -- >>> runTPWith cvc5 countWSNonNegProof
--- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: treeSizePos                         Q.E.D.
 -- Inductive lemma (strong): countWSNonNeg
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
+--     Step: 1.2.2                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: countWS, treeSize
 -- [Proven] countWSNonNeg :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
 countWSNonNegProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> SBool))
@@ -732,17 +732,17 @@ countWSNonNegProof = do
 -- | If a (weight, symbol) pair doesn't appear in the tree, its depth sum is zero:
 -- @countWS w s t == 0 => depthSum w s t == 0@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) depthSumZeroProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: countWSNonNeg                              Q.E.D.
+-- >>> runTPWith cvc5 depthSumZeroProof
+-- Lemma: treeSizePos                         Q.E.D.
+-- Lemma: countWSNonNeg                       Q.E.D.
 -- Inductive lemma (strong): depthSumZero
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
+--     Step: 1.2.2                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: countWS, depthSum, treeSize
 -- [Proven] depthSumZero :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
 depthSumZeroProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> SBool))
@@ -772,22 +772,22 @@ depthSumZeroProof = do
 -- | The deepest leaf always appears at least once in the tree:
 -- @countWS (deepW t) (deepS t) t >= 1@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) deepCountWSProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: countWSNonNeg                              Q.E.D.
+-- >>> runTPWith cvc5 deepCountWSProof
+-- Lemma: treeSizePos                         Q.E.D.
+-- Lemma: countWSNonNeg                       Q.E.D.
 -- Inductive lemma (strong): deepCountWS
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                      Q.E.D.
+--       Step: 1.2.2.1.2                      Q.E.D.
+--       Step: 1.2.2.2.1                      Q.E.D.
+--       Step: 1.2.2.2.2                      Q.E.D.
+--       Step: 1.2.2.Completeness             Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: countWS, deepS, deepW, height, treeSize
 -- [Proven] deepCountWS :: Ɐt ∷ HTree → Bool
 deepCountWSProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -825,55 +825,49 @@ deepCountWSProof = do
 -- | Tree height is non-negative: @height t >= 0@.
 --
 -- >>> runTPWith cvc5 heightNonNegProof
--- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: heightNonNeg    Q.E.D.
 -- Functions proven terminating: height
 -- [Proven] heightNonNeg :: Ɐt ∷ HTree → Bool
 heightNonNegProof :: TP (Proof (Forall "t" HTree -> SBool))
-heightNonNegProof = inductiveLemma "heightNonNeg"
-    (\(Forall @"t" t) -> height t .>= 0) []
+heightNonNegProof = inductiveLemma "heightNonNeg" (\(Forall @"t" t) -> height t .>= 0) []
 
 -- | The deepest leaf is always a member of the tree.
 --
 -- >>> runTPWith cvc5 deepMemberProof
--- Lemma: deepMember                       Q.E.D.
+-- Lemma: deepMember    Q.E.D.
 -- Functions proven terminating: deepS, height, member
 -- [Proven] deepMember :: Ɐt ∷ HTree → Bool
 deepMemberProof :: TP (Proof (Forall "t" HTree -> SBool))
-deepMemberProof = inductiveLemma "deepMember"
-    (\(Forall @"t" t) -> member (deepS t) t) []
+deepMemberProof = inductiveLemma "deepMember" (\(Forall @"t" t) -> member (deepS t) t) []
 
 -- | @max(a, b) >= a@.
 --
 -- >>> runTPWith cvc5 maxGeLProof
--- Lemma: maxGeL                           Q.E.D.
+-- Lemma: maxGeL       Q.E.D.
 -- [Proven] maxGeL :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 maxGeLProof :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
-maxGeLProof = lemma "maxGeL"
-    (\(Forall @"a" a) (Forall @"b" b) ->
-        a .<= ite (a .>= b) a (b :: SInteger)) []
+maxGeLProof = lemma "maxGeL" (\(Forall @"a" a) (Forall @"b" b) -> a .<= ite (a .>= b) a (b :: SInteger)) []
 
 -- | @max(a, b) >= b@.
 --
 -- >>> runTPWith cvc5 maxGeRProof
--- Lemma: maxGeR                           Q.E.D.
+-- Lemma: maxGeR       Q.E.D.
 -- [Proven] maxGeR :: Ɐa ∷ Integer → Ɐb ∷ Integer → Bool
 maxGeRProof :: TP (Proof (Forall "a" Integer -> Forall "b" Integer -> SBool))
-maxGeRProof = lemma "maxGeR"
-    (\(Forall @"a" a) (Forall @"b" b) ->
-        b .<= ite (a .>= b) a (b :: SInteger)) []
+maxGeRProof = lemma "maxGeR" (\(Forall @"a" a) (Forall @"b" b) -> b .<= ite (a .>= b) a (b :: SInteger)) []
 
 -- | @height t == 0 => depthSum w s t == 0@. A height-0 tree is a single
 -- leaf, so its depthSum is always 0.
 --
 -- >>> runTPWith cvc5 heightZeroDepthSumProof
--- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: heightNonNeg          Q.E.D.
 -- Lemma: heightZeroDepthSum
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                Q.E.D.
+--     Step: 1.2.1              Q.E.D.
+--     Step: 1.2.2              Q.E.D.
+--     Step: 1.Completeness     Q.E.D.
+--   Result:                    Q.E.D.
 -- Functions proven terminating: countWS, depthSum, height
 -- [Proven] heightZeroDepthSum :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
 heightZeroDepthSumProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> SBool))
@@ -898,7 +892,7 @@ heightZeroDepthSumProof = do
 -- sum of counts in its children.
 --
 -- >>> runTPWith cvc5 countWSBinProof
--- Lemma: countWSBin                       Q.E.D.
+-- Lemma: countWSBin    Q.E.D.
 -- Functions proven terminating: countWS
 -- [Proven] countWSBin :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐl ∷ HTree → Ɐr ∷ HTree → Bool
 countWSBinProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "l" HTree -> Forall "r" HTree -> SBool))
@@ -909,23 +903,23 @@ countWSBinProof = inductiveLemma "countWSBin"
 -- | The depth of any member symbol is bounded by the tree height:
 -- @member s t => depth s t <= height t@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) depthLeqHeightProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: maxGeL                                     Q.E.D.
--- Lemma: maxGeR                                     Q.E.D.
+-- >>> runTPWith cvc5 depthLeqHeightProof
+-- Lemma: treeSizePos                          Q.E.D.
+-- Lemma: maxGeL                               Q.E.D.
+-- Lemma: maxGeR                               Q.E.D.
 -- Inductive lemma (strong): depthLeqHeight
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative             Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1                               Q.E.D.
+--     Step: 1.2.1                             Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                       Q.E.D.
+--       Step: 1.2.2.1.2                       Q.E.D.
+--       Step: 1.2.2.2.1                       Q.E.D.
+--       Step: 1.2.2.2.2                       Q.E.D.
+--       Step: 1.2.2.Completeness              Q.E.D.
+--     Step: 1.Completeness                    Q.E.D.
+--   Result:                                   Q.E.D.
 -- Functions proven terminating: depth, height, member, treeSize
 -- [Proven] depthLeqHeight :: Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
 depthLeqHeightProof :: TP (Proof (Forall "s" Integer -> Forall "t" HTree -> SBool))
@@ -963,28 +957,28 @@ depthLeqHeightProof = do
 -- | A unique leaf's depth sum is bounded by the tree height:
 -- @countWS w s t == 1 => depthSum w s t <= height t@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) depthSumLeqHeightProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: countWSNonNeg                              Q.E.D.
--- Lemma: depthSumZero                               Q.E.D.
--- Lemma: maxGeL                                     Q.E.D.
--- Lemma: maxGeR                                     Q.E.D.
--- Lemma: countWSBin                                 Q.E.D.
+-- >>> runTPWith cvc5 depthSumLeqHeightProof
+-- Lemma: treeSizePos                             Q.E.D.
+-- Lemma: countWSNonNeg                           Q.E.D.
+-- Lemma: depthSumZero                            Q.E.D.
+-- Lemma: maxGeL                                  Q.E.D.
+-- Lemma: maxGeR                                  Q.E.D.
+-- Lemma: countWSBin                              Q.E.D.
 -- Inductive lemma (strong): depthSumLeqHeight
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1                                  Q.E.D.
+--     Step: 1.2.1                                Q.E.D.
 --     Step: 1.2.2 (3 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.3.1                             Q.E.D.
---       Step: 1.2.2.3.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                          Q.E.D.
+--       Step: 1.2.2.1.2                          Q.E.D.
+--       Step: 1.2.2.2.1                          Q.E.D.
+--       Step: 1.2.2.2.2                          Q.E.D.
+--       Step: 1.2.2.3.1                          Q.E.D.
+--       Step: 1.2.2.3.2                          Q.E.D.
+--       Step: 1.2.2.Completeness                 Q.E.D.
+--     Step: 1.Completeness                       Q.E.D.
+--   Result:                                      Q.E.D.
 -- Functions proven terminating: countWS, depthSum, height, treeSize
 -- [Proven] depthSumLeqHeight :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐt ∷ HTree → Bool
 depthSumLeqHeightProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> SBool))
@@ -1035,25 +1029,25 @@ depthSumLeqHeightProof = do
 
 -- | The deepest leaf's depthSum equals the height (when unique).
 --
--- >>> runTPWith (tpRibbon 50 cvc5) deepDepthSumProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: countWSNonNeg                              Q.E.D.
--- Lemma: depthSumZero                               Q.E.D.
--- Lemma: deepCountWS                                Q.E.D.
--- Lemma: countWSBin                                 Q.E.D.
+-- >>> runTPWith cvc5 deepDepthSumProof
+-- Lemma: treeSizePos                         Q.E.D.
+-- Lemma: countWSNonNeg                       Q.E.D.
+-- Lemma: depthSumZero                        Q.E.D.
+-- Lemma: deepCountWS                         Q.E.D.
+-- Lemma: countWSBin                          Q.E.D.
 -- Inductive lemma (strong): deepDepthSum
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                      Q.E.D.
+--       Step: 1.2.2.1.2                      Q.E.D.
+--       Step: 1.2.2.2.1                      Q.E.D.
+--       Step: 1.2.2.2.2                      Q.E.D.
+--       Step: 1.2.2.Completeness             Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: countWS, deepS, deepW, depthSum, height, treeSize
 -- [Proven] deepDepthSum :: Ɐt ∷ HTree → Bool
 deepDepthSumProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -1101,13 +1095,13 @@ deepDepthSumProof = do
 -- | First greedy swap: a leaf lighter than the deepest can be swapped
 -- to the deepest position without increasing cost.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) greedySwap1Proof
--- Lemma: swapReducesCost                            Q.E.D.
--- Lemma: deepDepthSum                               Q.E.D.
--- Lemma: depthSumLeqHeight                          Q.E.D.
+-- >>> runTPWith cvc5 greedySwap1Proof
+-- Lemma: swapReducesCost                          Q.E.D.
+-- Lemma: deepDepthSum                             Q.E.D.
+-- Lemma: depthSumLeqHeight                        Q.E.D.
 -- Lemma: greedySwap1
---   Step: 1                                         Q.E.D.
---   Result:                                         Q.E.D.
+--   Step: 1                                       Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: cost, countWS, deepS, deepW, depthSum, height, swap, treeSize, treeWeight
 -- [Proven] greedySwap1 :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐt ∷ HTree → Bool
 greedySwap1Proof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer -> Forall "t" HTree -> SBool))
@@ -1133,13 +1127,13 @@ greedySwap1Proof = do
 -- | Second greedy swap: a leaf lighter than the sibling can be swapped
 -- to the sibling position without increasing cost.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) greedySwap2Proof
--- Lemma: swapReducesCost                            Q.E.D.
--- Lemma: sibDepthSum                                Q.E.D.
--- Lemma: depthSumLeqHeight                          Q.E.D.
+-- >>> runTPWith cvc5 greedySwap2Proof
+-- Lemma: swapReducesCost                          Q.E.D.
+-- Lemma: sibDepthSum                              Q.E.D.
+-- Lemma: depthSumLeqHeight                        Q.E.D.
 -- Lemma: greedySwap2
---   Step: 1                                         Q.E.D.
---   Result:                                         Q.E.D.
+--   Step: 1                                       Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: cost, countWS, deepS, deepW, depthSum, height, sibS, sibW, swap, treeSize, treeWeight
 -- [Proven] greedySwap2 :: Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 greedySwap2Proof :: TP (Proof (Forall "wb" Integer -> Forall "sb" Integer -> Forall "t" HTree -> SBool))
@@ -1168,12 +1162,12 @@ greedySwap2Proof = do
 -- Conditions on the intermediate tree @t1 = swap wa sa (deepW t) (deepS t) t@ are
 -- stated directly as preconditions.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) greedyChoiceProof
--- Lemma: greedySwap1                                Q.E.D.
--- Lemma: greedySwap2                                Q.E.D.
+-- >>> runTPWith cvc5 greedyChoiceProof
+-- Lemma: greedySwap1                              Q.E.D.
+-- Lemma: greedySwap2                              Q.E.D.
 -- Lemma: greedyChoice
---   Step: 1                                         Q.E.D.
---   Result:                                         Q.E.D.
+--   Step: 1                                       Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: cost, countWS, deepS, deepW, depthSum, height, sibS, sibW, swap, treeSize, treeWeight
 -- [Proven] greedyChoice :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 greedyChoiceProof :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
@@ -1217,16 +1211,16 @@ greedyChoiceProof = do
 -- Since swap only relabels leaves without changing the Tip\/Bin skeleton,
 -- the height is invariant.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapPreservesHeightProof
--- Lemma: treeSizePos                                Q.E.D.
+-- >>> runTPWith cvc5 swapPreservesHeightProof
+-- Lemma: treeSizePos                               Q.E.D.
 -- Inductive lemma (strong): swapPreservesHeight
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                                    Q.E.D.
+--     Step: 1.2.1                                  Q.E.D.
+--     Step: 1.2.2                                  Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: height, swap, treeSize
 -- [Proven] swapPreservesHeight :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 swapPreservesHeightProof :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
@@ -1255,22 +1249,22 @@ swapPreservesHeightProof = do
 -- | Swapping @(wa, sa)@ with the deepest leaf places @wa@ at the deepest position:
 -- @deepW (swap wa sa (deepW t) (deepS t) t) == wa@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapDeepWProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: swapPreservesHeight                        Q.E.D.
+-- >>> runTPWith cvc5 swapDeepWProof
+-- Lemma: treeSizePos                               Q.E.D.
+-- Lemma: swapPreservesHeight                       Q.E.D.
 -- Inductive lemma (strong): swapDeepW
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1                                    Q.E.D.
+--     Step: 1.2.1                                  Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                            Q.E.D.
+--       Step: 1.2.2.1.2                            Q.E.D.
+--       Step: 1.2.2.2.1                            Q.E.D.
+--       Step: 1.2.2.2.2                            Q.E.D.
+--       Step: 1.2.2.Completeness                   Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: deepS, deepW, height, swap, treeSize
 -- [Proven] swapDeepW :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐt ∷ HTree → Bool
 swapDeepWProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer -> Forall "t" HTree -> SBool))
@@ -1310,22 +1304,22 @@ swapDeepWProof = do
 -- | Swapping @(wa, sa)@ with the deepest leaf places @sa@ at the deepest position:
 -- @deepS (swap wa sa (deepW t) (deepS t) t) == sa@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapDeepSProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: swapPreservesHeight                        Q.E.D.
+-- >>> runTPWith cvc5 swapDeepSProof
+-- Lemma: treeSizePos                               Q.E.D.
+-- Lemma: swapPreservesHeight                       Q.E.D.
 -- Inductive lemma (strong): swapDeepS
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1                                    Q.E.D.
+--     Step: 1.2.1                                  Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                            Q.E.D.
+--       Step: 1.2.2.1.2                            Q.E.D.
+--       Step: 1.2.2.2.1                            Q.E.D.
+--       Step: 1.2.2.2.2                            Q.E.D.
+--       Step: 1.2.2.Completeness                   Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: deepS, deepW, height, swap, treeSize
 -- [Proven] swapDeepS :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐt ∷ HTree → Bool
 swapDeepSProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer -> Forall "t" HTree -> SBool))
@@ -1365,7 +1359,7 @@ swapDeepSProof = do
 -- | Swap preserves countWS for unrelated (weight, symbol) pairs.
 -- Uses tuples to keep the arity within sInduct's limit.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapPreservesCountWSProof
+-- >>> runTPWith cvc5 swapPreservesCountWSProof
 -- Lemma: treeSizePos                                Q.E.D.
 -- Inductive lemma (strong): swapPreservesCountWS
 --   Step: Measure is non-negative                   Q.E.D.
@@ -1411,17 +1405,17 @@ swapPreservesCountWSProof = do
 
 -- | Swap preserves depthSum for unrelated (weight, symbol) pairs.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapPreservesDepthSumProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: swapPreservesCountWS                       Q.E.D.
+-- >>> runTPWith cvc5 swapPreservesDepthSumProof
+-- Lemma: treeSizePos                                 Q.E.D.
+-- Lemma: swapPreservesCountWS                        Q.E.D.
 -- Inductive lemma (strong): swapPreservesDepthSum
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                                      Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Functions proven terminating: countWS, depthSum, swap, treeSize
 -- [Proven] swapPreservesDepthSum :: Ɐa ∷ (Integer, Integer) → Ɐb ∷ (Integer, Integer) → Ɐc ∷ (Integer, Integer) → Ɐt ∷ HTree → Bool
 swapPreservesDepthSumProof :: TP (Proof (   Forall "a" (Integer, Integer)
@@ -1462,7 +1456,7 @@ swapPreservesDepthSumProof = do
 -- | Swap exchanges countWS: after swapping @(wa,sa)@ with @(wb,sb)@,
 -- the count of @(wb,sb)@ equals the old count of @(wa,sa)@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapExchangesCountWSProof
+-- >>> runTPWith cvc5 swapExchangesCountWSProof
 -- Lemma: treeSizePos                                Q.E.D.
 -- Inductive lemma (strong): swapExchangesCountWS
 --   Step: Measure is non-negative                   Q.E.D.
@@ -1501,17 +1495,17 @@ swapExchangesCountWSProof = do
 -- | Swap exchanges depthSum: after swapping, the depthSum of @(wb,sb)@
 -- equals the old depthSum of @(wa,sa)@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapExchangesDepthSumProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: swapExchangesCountWS                       Q.E.D.
+-- >>> runTPWith cvc5 swapExchangesDepthSumProof
+-- Lemma: treeSizePos                                 Q.E.D.
+-- Lemma: swapExchangesCountWS                        Q.E.D.
 -- Inductive lemma (strong): swapExchangesDepthSum
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                                      Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Functions proven terminating: countWS, depthSum, swap, treeSize
 -- [Proven] swapExchangesDepthSum :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 swapExchangesDepthSumProof :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
@@ -1548,26 +1542,26 @@ swapExchangesDepthSumProof = do
 
 -- | The sibling leaf is counted at least once.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) sibCountWSProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: countWSNonNeg                              Q.E.D.
--- Lemma: deepCountWS                                Q.E.D.
--- Lemma: heightNonNeg                               Q.E.D.
+-- >>> runTPWith cvc5 sibCountWSProof
+-- Lemma: treeSizePos                         Q.E.D.
+-- Lemma: countWSNonNeg                       Q.E.D.
+-- Lemma: deepCountWS                         Q.E.D.
+-- Lemma: heightNonNeg                        Q.E.D.
 -- Inductive lemma (strong): sibCountWS
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
 --     Step: 1.2.2 (3 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.3.1                             Q.E.D.
---       Step: 1.2.2.3.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                      Q.E.D.
+--       Step: 1.2.2.1.2                      Q.E.D.
+--       Step: 1.2.2.2.1                      Q.E.D.
+--       Step: 1.2.2.2.2                      Q.E.D.
+--       Step: 1.2.2.3.1                      Q.E.D.
+--       Step: 1.2.2.3.2                      Q.E.D.
+--       Step: 1.2.2.Completeness             Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: countWS, deepS, deepW, height, sibS, sibW, treeSize
 -- [Proven] sibCountWS :: Ɐt ∷ HTree → Bool
 sibCountWSProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -1612,30 +1606,30 @@ sibCountWSProof = do
 
 -- | The sibling leaf's depthSum equals the height (when unique).
 --
--- >>> runTPWith (tpRibbon 50 cvc5) sibDepthSumProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: countWSNonNeg                              Q.E.D.
--- Lemma: depthSumZero                               Q.E.D.
--- Lemma: deepCountWS                                Q.E.D.
--- Lemma: heightNonNeg                               Q.E.D.
--- Lemma: sibCountWS                                 Q.E.D.
--- Lemma: countWSBin                                 Q.E.D.
--- Lemma: heightZeroDepthSum                         Q.E.D.
+-- >>> runTPWith cvc5 sibDepthSumProof
+-- Lemma: treeSizePos                         Q.E.D.
+-- Lemma: countWSNonNeg                       Q.E.D.
+-- Lemma: depthSumZero                        Q.E.D.
+-- Lemma: deepCountWS                         Q.E.D.
+-- Lemma: heightNonNeg                        Q.E.D.
+-- Lemma: sibCountWS                          Q.E.D.
+-- Lemma: countWSBin                          Q.E.D.
+-- Lemma: heightZeroDepthSum                  Q.E.D.
 -- Inductive lemma (strong): sibDepthSum
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
 --     Step: 1.2.2 (3 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.3.1                             Q.E.D.
---       Step: 1.2.2.3.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                      Q.E.D.
+--       Step: 1.2.2.1.2                      Q.E.D.
+--       Step: 1.2.2.2.1                      Q.E.D.
+--       Step: 1.2.2.2.2                      Q.E.D.
+--       Step: 1.2.2.3.1                      Q.E.D.
+--       Step: 1.2.2.3.2                      Q.E.D.
+--       Step: 1.2.2.Completeness             Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: countWS, deepS, deepW, depthSum, height, sibS, sibW, treeSize
 -- [Proven] sibDepthSum :: Ɐt ∷ HTree → Bool
 sibDepthSumProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -1720,24 +1714,24 @@ collapse = smtFunction "collapse"
 
 -- | Collapsing preserves tree weight: @treeWeight (collapse t) == treeWeight t@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) collapsePreservesWeightProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: heightNonNeg                               Q.E.D.
+-- >>> runTPWith cvc5 collapsePreservesWeightProof
+-- Lemma: treeSizePos                                   Q.E.D.
+-- Lemma: heightNonNeg                                  Q.E.D.
 -- Inductive lemma (strong): collapsePreservesWeight
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                      Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1                                        Q.E.D.
+--     Step: 1.2.1                                      Q.E.D.
 --     Step: 1.2.2 (3 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.3.1                             Q.E.D.
---       Step: 1.2.2.3.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                                Q.E.D.
+--       Step: 1.2.2.1.2                                Q.E.D.
+--       Step: 1.2.2.2.1                                Q.E.D.
+--       Step: 1.2.2.2.2                                Q.E.D.
+--       Step: 1.2.2.3.1                                Q.E.D.
+--       Step: 1.2.2.3.2                                Q.E.D.
+--       Step: 1.2.2.Completeness                       Q.E.D.
+--     Step: 1.Completeness                             Q.E.D.
+--   Result:                                            Q.E.D.
 -- Functions proven terminating: collapse, height, treeSize, treeWeight
 -- [Proven] collapsePreservesWeight :: Ɐt ∷ HTree → Bool
 collapsePreservesWeightProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -1779,8 +1773,8 @@ collapsePreservesWeightProof = do
 -- with two children, each of size at least 1).
 --
 -- >>> runTPWith cvc5 heightPosTreeSizeProof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: heightPosTreeSize                Q.E.D.
+-- Lemma: treeSizePos          Q.E.D.
+-- Lemma: heightPosTreeSize    Q.E.D.
 -- Functions proven terminating: height, treeSize
 -- [Proven] heightPosTreeSize :: Ɐt ∷ HTree → Bool
 heightPosTreeSizeProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -1795,45 +1789,45 @@ heightPosTreeSizeProof = do
 -- the cost of its collapse plus the weights of the deepest sibling pair.
 -- @cost t == cost (collapse t) + deepW t + sibW t@ when @treeSize t >= 2@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) costDecompProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: collapsePreservesWeight                    Q.E.D.
--- Cached: heightNonNeg                              Q.E.D.
--- Lemma: heightPosTreeSize                          Q.E.D.
+-- >>> runTPWith cvc5 costDecompProof
+-- Lemma: treeSizePos                                   Q.E.D.
+-- Lemma: collapsePreservesWeight                       Q.E.D.
+-- Lemma: heightNonNeg                                  Q.E.D. [Cached]
+-- Lemma: heightPosTreeSize                             Q.E.D.
 -- Inductive lemma (strong): costDecomp
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                      Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1.1                                      Q.E.D.
+--     Step: 1.1.2                                      Q.E.D.
+--     Step: 1.2.1                                      Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
+--       Step: 1.2.2.1.1                                Q.E.D.
 --       Step: 1.2.2.1.2 (2 way case split)
---         Step: 1.2.2.1.2.1.1                       Q.E.D.
---         Step: 1.2.2.1.2.1.2                       Q.E.D.
---         Step: 1.2.2.1.2.2.1                       Q.E.D.
+--         Step: 1.2.2.1.2.1.1                          Q.E.D.
+--         Step: 1.2.2.1.2.1.2                          Q.E.D.
+--         Step: 1.2.2.1.2.2.1                          Q.E.D.
 --         Step: 1.2.2.1.2.2.2 (2 way case split)
---           Step: 1.2.2.1.2.2.2.1.1                 Q.E.D.
---           Step: 1.2.2.1.2.2.2.1.2                 Q.E.D.
---           Step: 1.2.2.1.2.2.2.2.1                 Q.E.D.
---           Step: 1.2.2.1.2.2.2.2.2                 Q.E.D.
---           Step: 1.2.2.1.2.2.2.Completeness        Q.E.D.
---         Step: 1.2.2.1.2.Completeness              Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
+--           Step: 1.2.2.1.2.2.2.1.1                    Q.E.D.
+--           Step: 1.2.2.1.2.2.2.1.2                    Q.E.D.
+--           Step: 1.2.2.1.2.2.2.2.1                    Q.E.D.
+--           Step: 1.2.2.1.2.2.2.2.2                    Q.E.D.
+--           Step: 1.2.2.1.2.2.2.Completeness           Q.E.D.
+--         Step: 1.2.2.1.2.Completeness                 Q.E.D.
+--       Step: 1.2.2.2.1                                Q.E.D.
 --       Step: 1.2.2.2.2 (2 way case split)
---         Step: 1.2.2.2.2.1.1                       Q.E.D.
+--         Step: 1.2.2.2.2.1.1                          Q.E.D.
 --         Step: 1.2.2.2.2.1.2 (2 way case split)
---           Step: 1.2.2.2.2.1.2.1.1                 Q.E.D.
---           Step: 1.2.2.2.2.1.2.1.2                 Q.E.D.
---           Step: 1.2.2.2.2.1.2.2.1                 Q.E.D.
---           Step: 1.2.2.2.2.1.2.2.2                 Q.E.D.
---           Step: 1.2.2.2.2.1.2.Completeness        Q.E.D.
---         Step: 1.2.2.2.2.2.1                       Q.E.D.
---         Step: 1.2.2.2.2.2.2                       Q.E.D.
---         Step: 1.2.2.2.2.Completeness              Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--           Step: 1.2.2.2.2.1.2.1.1                    Q.E.D.
+--           Step: 1.2.2.2.2.1.2.1.2                    Q.E.D.
+--           Step: 1.2.2.2.2.1.2.2.1                    Q.E.D.
+--           Step: 1.2.2.2.2.1.2.2.2                    Q.E.D.
+--           Step: 1.2.2.2.2.1.2.Completeness           Q.E.D.
+--         Step: 1.2.2.2.2.2.1                          Q.E.D.
+--         Step: 1.2.2.2.2.2.2                          Q.E.D.
+--         Step: 1.2.2.2.2.Completeness                 Q.E.D.
+--       Step: 1.2.2.Completeness                       Q.E.D.
+--     Step: 1.Completeness                             Q.E.D.
+--   Result:                                            Q.E.D.
 -- Functions proven terminating: collapse, cost, deepW, height, sibW, treeSize, treeWeight
 -- [Proven] costDecomp :: Ɐt ∷ HTree → Bool
 costDecompProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -1914,8 +1908,8 @@ costDecompProof = do
 -- | Height zero means the tree is a single leaf (treeSize 1).
 --
 -- >>> runTPWith cvc5 heightZeroTreeSizeOneProof
--- Lemma: heightNonNeg                     Q.E.D.
--- Lemma: heightZeroTreeSizeOne            Q.E.D.
+-- Lemma: heightNonNeg             Q.E.D.
+-- Lemma: heightZeroTreeSizeOne    Q.E.D.
 -- Functions proven terminating: height, treeSize
 -- [Proven] heightZeroTreeSizeOne :: Ɐt ∷ HTree → Bool
 heightZeroTreeSizeOneProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -1929,27 +1923,27 @@ heightZeroTreeSizeOneProof = do
 -- | Collapsing reduces tree size by exactly 2: the deepest sibling pair
 -- (a @Bin@ with two @Tip@ children) is replaced by a single @Tip@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) collapseReducesTreeSizeProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: heightNonNeg                               Q.E.D.
--- Lemma: heightPosTreeSize                          Q.E.D.
--- Lemma: heightZeroTreeSizeOne                      Q.E.D.
+-- >>> runTPWith cvc5 collapseReducesTreeSizeProof
+-- Lemma: treeSizePos                                   Q.E.D.
+-- Lemma: heightNonNeg                                  Q.E.D.
+-- Lemma: heightPosTreeSize                             Q.E.D.
+-- Lemma: heightZeroTreeSizeOne                         Q.E.D.
 -- Inductive lemma (strong): collapseReducesTreeSize
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                      Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1.1                                      Q.E.D.
+--     Step: 1.1.2                                      Q.E.D.
+--     Step: 1.2.1                                      Q.E.D.
 --     Step: 1.2.2 (3 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.3.1                             Q.E.D.
---       Step: 1.2.2.3.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                                Q.E.D.
+--       Step: 1.2.2.1.2                                Q.E.D.
+--       Step: 1.2.2.2.1                                Q.E.D.
+--       Step: 1.2.2.2.2                                Q.E.D.
+--       Step: 1.2.2.3.1                                Q.E.D.
+--       Step: 1.2.2.3.2                                Q.E.D.
+--       Step: 1.2.2.Completeness                       Q.E.D.
+--     Step: 1.Completeness                             Q.E.D.
+--   Result:                                            Q.E.D.
 -- Functions proven terminating: collapse, height, treeSize, treeWeight
 -- [Proven] collapseReducesTreeSize :: Ɐt ∷ HTree → Bool
 collapseReducesTreeSizeProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -2000,27 +1994,27 @@ collapseReducesTreeSizeProof = do
 
 -- | Collapse reduces the number of leaves by one.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) collapseNumLeavesProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: heightNonNeg                               Q.E.D.
--- Lemma: heightPosTreeSize                          Q.E.D.
--- Lemma: heightZeroNumLeavesOne                     Q.E.D.
+-- >>> runTPWith cvc5 collapseNumLeavesProof
+-- Lemma: treeSizePos                             Q.E.D.
+-- Lemma: heightNonNeg                            Q.E.D.
+-- Lemma: heightPosTreeSize                       Q.E.D.
+-- Lemma: heightZeroNumLeavesOne                  Q.E.D.
 -- Inductive lemma (strong): collapseNumLeaves
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1.1                                Q.E.D.
+--     Step: 1.1.2                                Q.E.D.
+--     Step: 1.2.1                                Q.E.D.
 --     Step: 1.2.2 (3 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.3.1                             Q.E.D.
---       Step: 1.2.2.3.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                          Q.E.D.
+--       Step: 1.2.2.1.2                          Q.E.D.
+--       Step: 1.2.2.2.1                          Q.E.D.
+--       Step: 1.2.2.2.2                          Q.E.D.
+--       Step: 1.2.2.3.1                          Q.E.D.
+--       Step: 1.2.2.3.2                          Q.E.D.
+--       Step: 1.2.2.Completeness                 Q.E.D.
+--     Step: 1.Completeness                       Q.E.D.
+--   Result:                                      Q.E.D.
 -- Functions proven terminating: collapse, height, numLeaves, treeSize, treeWeight
 -- [Proven] collapseNumLeaves :: Ɐt ∷ HTree → Bool
 collapseNumLeavesProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -2078,15 +2072,15 @@ collapseNumLeavesProof = do
 -- | When the height is 0 (i.e., the tree is a tip), 'deepW' equals 'treeWeight'.
 --
 -- >>> runTPWith cvc5 deepWTipProof
--- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: heightNonNeg         Q.E.D.
 -- Lemma: deepWTip
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1             Q.E.D.
+--     Step: 1.1.2             Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- Functions proven terminating: deepW, height, treeWeight
 -- [Proven] deepWTip :: Ɐt ∷ HTree → Bool
 deepWTipProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -2112,13 +2106,13 @@ deepWTipProof = do
 -- equals @sTip (deepW t + sibW t) 0@ where @l = left t@ and @r = right t@.
 --
 -- >>> runTPWith cvc5 deepWSibWSumTipProof
--- Lemma: deepWTip                         Q.E.D.
+-- Lemma: deepWTip             Q.E.D.
 -- Lemma: deepWSibWSumTip
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                   Q.E.D.
+--   Step: 2                   Q.E.D.
+--   Step: 3                   Q.E.D.
+--   Step: 4                   Q.E.D.
+--   Result:                   Q.E.D.
 -- Functions proven terminating: deepW, height, sibW, treeWeight
 -- [Proven] deepWSibWSumTip :: Ɐt ∷ HTree → Bool
 deepWSibWSumTipProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -2143,11 +2137,11 @@ deepWSibWSumTipProof = do
 -- | (Tip, Bin) case: @deepW + sibW@ passes through to the right child.
 --
 -- >>> runTPWith cvc5 deepWSibWBinRProof
--- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: heightNonNeg     Q.E.D.
 -- Lemma: deepWSibWBinR
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1               Q.E.D.
+--   Step: 2               Q.E.D.
+--   Result:               Q.E.D.
 -- Functions proven terminating: deepW, height, sibW
 -- [Proven] deepWSibWBinR :: Ɐl ∷ HTree → Ɐrl ∷ HTree → Ɐrr ∷ HTree → Bool
 deepWSibWBinRProof :: TP (Proof (Forall "l" HTree -> Forall "rl" HTree -> Forall "rr" HTree -> SBool))
@@ -2172,11 +2166,11 @@ deepWSibWBinRProof = do
 -- | (Bin, Tip) case: @deepW + sibW@ passes through to the left child.
 --
 -- >>> runTPWith cvc5 deepWSibWBinLProof
--- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: heightNonNeg     Q.E.D.
 -- Lemma: deepWSibWBinL
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1               Q.E.D.
+--   Step: 2               Q.E.D.
+--   Result:               Q.E.D.
 -- Functions proven terminating: deepW, height, sibW
 -- [Proven] deepWSibWBinL :: Ɐll ∷ HTree → Ɐlr ∷ HTree → Ɐr ∷ HTree → Bool
 deepWSibWBinLProof :: TP (Proof (Forall "ll" HTree -> Forall "lr" HTree -> Forall "r" HTree -> SBool))
@@ -2201,16 +2195,16 @@ deepWSibWBinLProof = do
 -- | (Bin, Bin, height l >= height r) case: @deepW + sibW@ passes through to the left child.
 --
 -- >>> runTPWith cvc5 deepWSibWBinBinLProof
--- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: heightNonNeg         Q.E.D.
 -- Lemma: deepWSibWBinBinL
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1             Q.E.D.
+--     Step: 1.1.2             Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.2.3             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- Functions proven terminating: deepW, height, sibW
 -- [Proven] deepWSibWBinBinL :: Ɐl ∷ HTree → Ɐr ∷ HTree → Bool
 deepWSibWBinBinLProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
@@ -2240,16 +2234,16 @@ deepWSibWBinBinLProof = do
 -- | (Bin, Bin, height l < height r) case: @deepW + sibW@ passes through to the right child.
 --
 -- >>> runTPWith cvc5 deepWSibWBinBinRProof
--- Lemma: heightNonNeg                     Q.E.D.
+-- Lemma: heightNonNeg         Q.E.D.
 -- Lemma: deepWSibWBinBinR
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1             Q.E.D.
+--     Step: 1.1.2             Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.2.3             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- Functions proven terminating: deepW, height, sibW
 -- [Proven] deepWSibWBinBinR :: Ɐl ∷ HTree → Ɐr ∷ HTree → Bool
 deepWSibWBinBinRProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
@@ -2279,70 +2273,70 @@ deepWSibWBinBinRProof = do
 -- | Collapse leaf correspondence: adding back the two merged leaf weights to @leavesOf(collapse t)@
 -- equals adding the combined weight to @leavesOf t@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) collapseLeavesOfProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: heightNonNeg                               Q.E.D.
--- Lemma: heightPosTreeSize                          Q.E.D.
--- Lemma: leavesOfAllTip0                            Q.E.D.
--- Lemma: insertAllSortedInsertL                     Q.E.D.
--- Cached: insertAllSortedInsert                     Q.E.D.
--- Cached: sortedInsertAllTip0                       Q.E.D.
--- Cached: sortedInsertComm                          Q.E.D.
--- Lemma: deepWSibWSumTip                            Q.E.D.
--- Lemma: deepWSibWBinR                              Q.E.D.
--- Lemma: deepWSibWBinL                              Q.E.D.
--- Lemma: deepWSibWBinBinL                           Q.E.D.
--- Lemma: deepWSibWBinBinR                           Q.E.D.
+-- >>> runTPWith cvc5 collapseLeavesOfProof
+-- Lemma: treeSizePos                                  Q.E.D.
+-- Lemma: heightNonNeg                                 Q.E.D.
+-- Lemma: heightPosTreeSize                            Q.E.D.
+-- Lemma: leavesOfAllTip0                              Q.E.D.
+-- Lemma: insertAllSortedInsertL                       Q.E.D.
+-- Lemma: insertAllSortedInsert                        Q.E.D. [Cached]
+-- Lemma: sortedInsertAllTip0                          Q.E.D. [Cached]
+-- Lemma: sortedInsertComm                             Q.E.D. [Cached]
+-- Lemma: deepWSibWSumTip                              Q.E.D.
+-- Lemma: deepWSibWBinR                                Q.E.D.
+-- Lemma: deepWSibWBinL                                Q.E.D.
+-- Lemma: deepWSibWBinBinL                             Q.E.D.
+-- Lemma: deepWSibWBinBinR                             Q.E.D.
 -- Inductive lemma (strong): collapseLeavesOf
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                     Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
+--     Step: 1.1.1                                     Q.E.D.
+--     Step: 1.1.2                                     Q.E.D.
 --     Step: 1.2 (4 way case split)
---       Step: 1.2.1.1                               Q.E.D.
---       Step: 1.2.1.2                               Q.E.D.
---       Step: 1.2.1.3                               Q.E.D.
---       Step: 1.2.1.4                               Q.E.D.
---       Step: 1.2.1.5                               Q.E.D.
---       Step: 1.2.1.6                               Q.E.D.
---       Step: 1.2.1.7                               Q.E.D.
---       Step: 1.2.1.8                               Q.E.D.
---       Step: 1.2.2.1                               Q.E.D.
---       Step: 1.2.2.2                               Q.E.D.
---       Step: 1.2.2.3                               Q.E.D.
---       Step: 1.2.2.4                               Q.E.D.
---       Step: 1.2.2.5                               Q.E.D.
---       Step: 1.2.2.6                               Q.E.D.
---       Step: 1.2.2.7                               Q.E.D.
---       Step: 1.2.2.8                               Q.E.D.
---       Step: 1.2.3.1                               Q.E.D.
---       Step: 1.2.3.2                               Q.E.D.
---       Step: 1.2.3.3                               Q.E.D.
---       Step: 1.2.3.4                               Q.E.D.
---       Step: 1.2.3.5                               Q.E.D.
---       Step: 1.2.3.6                               Q.E.D.
---       Step: 1.2.3.7                               Q.E.D.
---       Step: 1.2.3.8                               Q.E.D.
---       Step: 1.2.4.1                               Q.E.D.
+--       Step: 1.2.1.1                                 Q.E.D.
+--       Step: 1.2.1.2                                 Q.E.D.
+--       Step: 1.2.1.3                                 Q.E.D.
+--       Step: 1.2.1.4                                 Q.E.D.
+--       Step: 1.2.1.5                                 Q.E.D.
+--       Step: 1.2.1.6                                 Q.E.D.
+--       Step: 1.2.1.7                                 Q.E.D.
+--       Step: 1.2.1.8                                 Q.E.D.
+--       Step: 1.2.2.1                                 Q.E.D.
+--       Step: 1.2.2.2                                 Q.E.D.
+--       Step: 1.2.2.3                                 Q.E.D.
+--       Step: 1.2.2.4                                 Q.E.D.
+--       Step: 1.2.2.5                                 Q.E.D.
+--       Step: 1.2.2.6                                 Q.E.D.
+--       Step: 1.2.2.7                                 Q.E.D.
+--       Step: 1.2.2.8                                 Q.E.D.
+--       Step: 1.2.3.1                                 Q.E.D.
+--       Step: 1.2.3.2                                 Q.E.D.
+--       Step: 1.2.3.3                                 Q.E.D.
+--       Step: 1.2.3.4                                 Q.E.D.
+--       Step: 1.2.3.5                                 Q.E.D.
+--       Step: 1.2.3.6                                 Q.E.D.
+--       Step: 1.2.3.7                                 Q.E.D.
+--       Step: 1.2.3.8                                 Q.E.D.
+--       Step: 1.2.4.1                                 Q.E.D.
 --       Step: 1.2.4.2 (2 way case split)
---         Step: 1.2.4.2.1.1                         Q.E.D.
---         Step: 1.2.4.2.1.2                         Q.E.D.
---         Step: 1.2.4.2.1.3                         Q.E.D.
---         Step: 1.2.4.2.1.4                         Q.E.D.
---         Step: 1.2.4.2.1.5                         Q.E.D.
---         Step: 1.2.4.2.1.6                         Q.E.D.
---         Step: 1.2.4.2.1.7                         Q.E.D.
---         Step: 1.2.4.2.2.1                         Q.E.D.
---         Step: 1.2.4.2.2.2                         Q.E.D.
---         Step: 1.2.4.2.2.3                         Q.E.D.
---         Step: 1.2.4.2.2.4                         Q.E.D.
---         Step: 1.2.4.2.2.5                         Q.E.D.
---         Step: 1.2.4.2.2.6                         Q.E.D.
---         Step: 1.2.4.2.2.7                         Q.E.D.
---         Step: 1.2.4.2.Completeness                Q.E.D.
---       Step: 1.2.Completeness                      Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--         Step: 1.2.4.2.1.1                           Q.E.D.
+--         Step: 1.2.4.2.1.2                           Q.E.D.
+--         Step: 1.2.4.2.1.3                           Q.E.D.
+--         Step: 1.2.4.2.1.4                           Q.E.D.
+--         Step: 1.2.4.2.1.5                           Q.E.D.
+--         Step: 1.2.4.2.1.6                           Q.E.D.
+--         Step: 1.2.4.2.1.7                           Q.E.D.
+--         Step: 1.2.4.2.2.1                           Q.E.D.
+--         Step: 1.2.4.2.2.2                           Q.E.D.
+--         Step: 1.2.4.2.2.3                           Q.E.D.
+--         Step: 1.2.4.2.2.4                           Q.E.D.
+--         Step: 1.2.4.2.2.5                           Q.E.D.
+--         Step: 1.2.4.2.2.6                           Q.E.D.
+--         Step: 1.2.4.2.2.7                           Q.E.D.
+--         Step: 1.2.4.2.Completeness                  Q.E.D.
+--       Step: 1.2.Completeness                        Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating:
 --   allTip0, collapse, deepW, height, insertAll, leavesOf, sibW, sortedInsert, treeSize, treeWeight
 -- [Proven] collapseLeavesOf :: Ɐt ∷ HTree → Bool
@@ -2552,19 +2546,19 @@ sortedInsert = smtFunction "sortedInsert"
 --
 -- >>> runTPWith cvc5 sortedInsertLengthProof
 -- Inductive lemma (strong): sortedInsertLength
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                 Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1.1                                 Q.E.D.
+--     Step: 1.1.2                                 Q.E.D.
+--     Step: 1.2.1                                 Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1                           Q.E.D.
+--       Step: 1.2.2.1.2                           Q.E.D.
+--       Step: 1.2.2.2.1                           Q.E.D.
+--       Step: 1.2.2.2.2                           Q.E.D.
+--       Step: 1.2.2.Completeness                  Q.E.D.
+--     Step: 1.Completeness                        Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: sortedInsert, treeWeight
 -- [Proven] sortedInsertLength :: Ɐt ∷ HTree → Ɐts ∷ [HTree] → Bool
 sortedInsertLengthProof :: TP (Proof (Forall "t" HTree -> Forall "ts" [HTree] -> SBool))
@@ -2619,19 +2613,19 @@ forestWeight = smtFunction "forestWeight"
 --
 -- >>> runTPWith cvc5 sortedInsertWeightProof
 -- Inductive lemma (strong): sortedInsertWeight
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                 Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1.1                                 Q.E.D.
+--     Step: 1.1.2                                 Q.E.D.
+--     Step: 1.2.1                                 Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1                           Q.E.D.
+--       Step: 1.2.2.1.2                           Q.E.D.
+--       Step: 1.2.2.2.1                           Q.E.D.
+--       Step: 1.2.2.2.2                           Q.E.D.
+--       Step: 1.2.2.Completeness                  Q.E.D.
+--     Step: 1.Completeness                        Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: forestWeight, sortedInsert, treeWeight
 -- [Proven] sortedInsertWeight :: Ɐt ∷ HTree → Ɐts ∷ [HTree] → Bool
 sortedInsertWeightProof :: TP (Proof (Forall "t" HTree -> Forall "ts" [HTree] -> SBool))
@@ -2663,23 +2657,23 @@ sortedInsertWeightProof =
 -- | Building the Huffman tree preserves total weight: the resulting tree's
 -- weight equals the sum of all input tree weights.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) buildHuffmanWeightProof
--- Lemma: sortedInsertWeight                         Q.E.D.
--- Lemma: sortedInsertLength                         Q.E.D.
+-- >>> runTPWith cvc5 buildHuffmanWeightProof
+-- Lemma: sortedInsertWeight                       Q.E.D.
+-- Lemma: sortedInsertLength                       Q.E.D.
 -- Inductive lemma (strong): buildHuffmanWeight
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                 Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1.1                                 Q.E.D.
+--     Step: 1.1.2                                 Q.E.D.
+--     Step: 1.2.1                                 Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                           Q.E.D.
+--       Step: 1.2.2.1.2                           Q.E.D.
+--       Step: 1.2.2.2.1                           Q.E.D.
+--       Step: 1.2.2.2.2                           Q.E.D.
+--       Step: 1.2.2.Completeness                  Q.E.D.
+--     Step: 1.Completeness                        Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: buildHuffman, forestWeight, sortedInsert, treeWeight
 -- [Proven] buildHuffmanWeight :: Ɐts ∷ [HTree] → Bool
 buildHuffmanWeightProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
@@ -2732,19 +2726,19 @@ forestCountWS = smtFunction "forestCountWS"
 --
 -- >>> runTPWith cvc5 sortedInsertCostProof
 -- Inductive lemma (strong): sortedInsertCost
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1.1                               Q.E.D.
+--     Step: 1.1.2                               Q.E.D.
+--     Step: 1.2.1                               Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1                         Q.E.D.
+--       Step: 1.2.2.1.2                         Q.E.D.
+--       Step: 1.2.2.2.1                         Q.E.D.
+--       Step: 1.2.2.2.2                         Q.E.D.
+--       Step: 1.2.2.Completeness                Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: cost, forestCost, sortedInsert, treeWeight
 -- [Proven] sortedInsertCost :: Ɐt ∷ HTree → Ɐts ∷ [HTree] → Bool
 sortedInsertCostProof :: TP (Proof (Forall "t" HTree -> Forall "ts" [HTree] -> SBool))
@@ -2777,21 +2771,21 @@ sortedInsertCostProof =
 --
 -- >>> runTPWith cvc5 sortedInsertCountWSProof
 -- Inductive lemma (strong): sortedInsertCountWS
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1.1                                  Q.E.D.
+--     Step: 1.1.2                                  Q.E.D.
+--     Step: 1.2.1                                  Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.1.3                   Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.2.3                   Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1                            Q.E.D.
+--       Step: 1.2.2.1.2                            Q.E.D.
+--       Step: 1.2.2.1.3                            Q.E.D.
+--       Step: 1.2.2.2.1                            Q.E.D.
+--       Step: 1.2.2.2.2                            Q.E.D.
+--       Step: 1.2.2.2.3                            Q.E.D.
+--       Step: 1.2.2.Completeness                   Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: countWS, forestCountWS, sortedInsert, treeWeight
 -- [Proven] sortedInsertCountWS :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐt ∷ HTree → Ɐts ∷ [HTree] → Bool
 sortedInsertCountWSProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "t" HTree -> Forall "ts" [HTree] -> SBool))
@@ -2836,15 +2830,15 @@ tipForest = smtFunction "tipForest"
 --
 -- >>> runTPWith cvc5 tipForestLengthProof
 -- Inductive lemma (strong): tipForestLength
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                              Q.E.D.
+--     Step: 1.1.2                              Q.E.D.
+--     Step: 1.2.1                              Q.E.D.
+--     Step: 1.2.2                              Q.E.D.
+--     Step: 1.2.3                              Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: tipForest, treeWeight
 -- [Proven] tipForestLength :: Ɐts ∷ [HTree] → Bool
 tipForestLengthProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
@@ -2869,15 +2863,15 @@ tipForestLengthProof =
 --
 -- >>> runTPWith cvc5 tipForestCostZeroProof
 -- Inductive lemma (strong): tipForestCostZero
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                Q.E.D.
+--     Step: 1.1.2                                Q.E.D.
+--     Step: 1.2.1                                Q.E.D.
+--     Step: 1.2.2                                Q.E.D.
+--     Step: 1.2.3                                Q.E.D.
+--     Step: 1.Completeness                       Q.E.D.
+--   Result:                                      Q.E.D.
 -- Functions proven terminating: cost, forestCost, tipForest, treeWeight
 -- [Proven] tipForestCostZero :: Ɐts ∷ [HTree] → Bool
 tipForestCostZeroProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
@@ -2902,15 +2896,15 @@ tipForestCostZeroProof =
 --
 -- >>> runTPWith cvc5 tipForestWeightProof
 -- Inductive lemma (strong): tipForestWeight
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                              Q.E.D.
+--     Step: 1.1.2                              Q.E.D.
+--     Step: 1.2.1                              Q.E.D.
+--     Step: 1.2.2                              Q.E.D.
+--     Step: 1.2.3                              Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: forestWeight, tipForest, treeWeight
 -- [Proven] tipForestWeight :: Ɐts ∷ [HTree] → Bool
 tipForestWeightProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
@@ -2935,29 +2929,29 @@ tipForestWeightProof =
 --
 -- >>> runTPWith cvc5 tipForestCommuteProof
 -- Inductive lemma (strong): tipForestCommute
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.1.3                         Q.E.D.
---     Step: 1.1.4                         Q.E.D.
---     Step: 1.1.5                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1.1                               Q.E.D.
+--     Step: 1.1.2                               Q.E.D.
+--     Step: 1.1.3                               Q.E.D.
+--     Step: 1.1.4                               Q.E.D.
+--     Step: 1.1.5                               Q.E.D.
+--     Step: 1.2.1                               Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.1.3                   Q.E.D.
---       Step: 1.2.2.1.4                   Q.E.D.
---       Step: 1.2.2.1.5                   Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.2.3                   Q.E.D.
---       Step: 1.2.2.2.4                   Q.E.D.
---       Step: 1.2.2.2.5                   Q.E.D.
---       Step: 1.2.2.2.6                   Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1                         Q.E.D.
+--       Step: 1.2.2.1.2                         Q.E.D.
+--       Step: 1.2.2.1.3                         Q.E.D.
+--       Step: 1.2.2.1.4                         Q.E.D.
+--       Step: 1.2.2.1.5                         Q.E.D.
+--       Step: 1.2.2.2.1                         Q.E.D.
+--       Step: 1.2.2.2.2                         Q.E.D.
+--       Step: 1.2.2.2.3                         Q.E.D.
+--       Step: 1.2.2.2.4                         Q.E.D.
+--       Step: 1.2.2.2.5                         Q.E.D.
+--       Step: 1.2.2.2.6                         Q.E.D.
+--       Step: 1.2.2.Completeness                Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: sortedInsert, tipForest, treeWeight
 -- [Proven] tipForestCommute :: Ɐx ∷ HTree → Ɐts ∷ [HTree] → Bool
 tipForestCommuteProof :: TP (Proof (Forall "x" HTree -> Forall "ts" [HTree] -> SBool))
@@ -3000,15 +2994,15 @@ tipForestCommuteProof =
 --
 -- >>> runTPWith cvc5 tipForestIdempotentProof
 -- Inductive lemma (strong): tipForestIdempotent
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                  Q.E.D.
+--     Step: 1.1.2                                  Q.E.D.
+--     Step: 1.2.1                                  Q.E.D.
+--     Step: 1.2.2                                  Q.E.D.
+--     Step: 1.2.3                                  Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: tipForest, treeWeight
 -- [Proven] tipForestIdempotent :: Ɐts ∷ [HTree] → Bool
 tipForestIdempotentProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
@@ -3032,39 +3026,39 @@ tipForestIdempotentProof =
 -- | Cost additivity: the cost of building a Huffman tree from a forest equals
 -- the forest cost plus the cost of building from the tip-only version.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) buildHuffmanAdditivityProof
--- Lemma: tipForestCommute                           Q.E.D.
--- Lemma: tipForestCostZero                          Q.E.D.
--- Lemma: tipForestIdempotent                        Q.E.D.
--- Lemma: tipForestLength                            Q.E.D.
--- Lemma: sortedInsertCost                           Q.E.D.
--- Lemma: sortedInsertLength                         Q.E.D.
+-- >>> runTPWith cvc5 buildHuffmanAdditivityProof
+-- Lemma: tipForestCommute                             Q.E.D.
+-- Lemma: tipForestCostZero                            Q.E.D.
+-- Lemma: tipForestIdempotent                          Q.E.D.
+-- Lemma: tipForestLength                              Q.E.D.
+-- Lemma: sortedInsertCost                             Q.E.D.
+-- Lemma: sortedInsertLength                           Q.E.D.
 -- Inductive lemma (strong): buildHuffmanAdditivity
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                     Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
+--     Step: 1.1.1                                     Q.E.D.
+--     Step: 1.1.2                                     Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                             Q.E.D.
---       Step: 1.2.2.1.2                             Q.E.D.
---       Step: 1.2.2.1.3                             Q.E.D.
---       Step: 1.2.2.2.1                             Q.E.D.
---       Step: 1.2.2.2.2                             Q.E.D.
---       Step: 1.2.2.2.3                             Q.E.D.
---       Step: 1.2.2.2.4                             Q.E.D.
---       Step: 1.2.2.2.5                             Q.E.D.
---       Step: 1.2.2.2.6                             Q.E.D.
---       Step: 1.2.2.2.7                             Q.E.D.
---       Step: 1.2.2.2.8                             Q.E.D.
---       Step: 1.2.2.2.9                             Q.E.D.
---       Step: 1.2.2.2.10                            Q.E.D.
---       Step: 1.2.2.2.11                            Q.E.D.
---       Step: 1.2.2.2.12                            Q.E.D.
---       Step: 1.2.2.2.13                            Q.E.D.
---       Step: 1.2.2.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.2.1.1                               Q.E.D.
+--       Step: 1.2.2.1.2                               Q.E.D.
+--       Step: 1.2.2.1.3                               Q.E.D.
+--       Step: 1.2.2.2.1                               Q.E.D.
+--       Step: 1.2.2.2.2                               Q.E.D.
+--       Step: 1.2.2.2.3                               Q.E.D.
+--       Step: 1.2.2.2.4                               Q.E.D.
+--       Step: 1.2.2.2.5                               Q.E.D.
+--       Step: 1.2.2.2.6                               Q.E.D.
+--       Step: 1.2.2.2.7                               Q.E.D.
+--       Step: 1.2.2.2.8                               Q.E.D.
+--       Step: 1.2.2.2.9                               Q.E.D.
+--       Step: 1.2.2.2.10                              Q.E.D.
+--       Step: 1.2.2.2.11                              Q.E.D.
+--       Step: 1.2.2.2.12                              Q.E.D.
+--       Step: 1.2.2.2.13                              Q.E.D.
+--       Step: 1.2.2.Completeness                      Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating: buildHuffman, cost, forestCost, sortedInsert, tipForest, treeWeight
 -- [Proven] buildHuffmanAdditivity :: Ɐts ∷ [HTree] → Bool
 buildHuffmanAdditivityProof :: TP (Proof (Forall "ts" [HTree] -> SBool))
@@ -3147,12 +3141,12 @@ buildHuffmanAdditivityProof = do
 -- changes @buildHuffman@ cost by exactly the difference in individual costs.
 -- Derived as a corollary of 'buildHuffmanAdditivityProof'.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) buildHuffmanCostSubstProof
--- Lemma: buildHuffmanAdditivity                     Q.E.D.
--- Cached: tipForestCommute                          Q.E.D.
--- Cached: sortedInsertCost                          Q.E.D.
--- Cached: sortedInsertLength                        Q.E.D.
--- Lemma: buildHuffmanCostSubst                      Q.E.D.
+-- >>> runTPWith cvc5 buildHuffmanCostSubstProof
+-- Lemma: buildHuffmanAdditivity                       Q.E.D.
+-- Lemma: tipForestCommute                             Q.E.D. [Cached]
+-- Lemma: sortedInsertCost                             Q.E.D. [Cached]
+-- Lemma: sortedInsertLength                           Q.E.D. [Cached]
+-- Lemma: buildHuffmanCostSubst                        Q.E.D.
 -- Functions proven terminating: buildHuffman, cost, forestCost, sortedInsert, tipForest, treeWeight
 -- [Proven] buildHuffmanCostSubst :: Ɐt1 ∷ HTree → Ɐt2 ∷ HTree → Ɐts ∷ [HTree] → Bool
 buildHuffmanCostSubstProof :: TP (Proof (Forall "t1" HTree -> Forall "t2" HTree -> Forall "ts" [HTree] -> SBool))
@@ -3195,17 +3189,17 @@ leavesOf = smtFunction "leavesOf"
 -- | @insertAll@ preserves total length: @length(insertAll xs ys) == length xs + length ys@.
 --
 -- >>> runTPWith cvc5 insertAllLengthProof
--- Lemma: sortedInsertLength               Q.E.D.
+-- Lemma: sortedInsertLength                       Q.E.D.
 -- Inductive lemma (strong): insertAllLength
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                 Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                 Q.E.D.
+--     Step: 1.1.2                                 Q.E.D.
+--     Step: 1.2.1                                 Q.E.D.
+--     Step: 1.2.2                                 Q.E.D.
+--     Step: 1.2.3                                 Q.E.D.
+--     Step: 1.Completeness                        Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: insertAll, sortedInsert, treeWeight
 -- [Proven] insertAllLength :: Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
 insertAllLengthProof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
@@ -3233,17 +3227,17 @@ insertAllLengthProof = do
 -- | @insertAll@ preserves total forest weight: @forestWeight(insertAll xs ys) == forestWeight xs + forestWeight ys@.
 --
 -- >>> runTPWith cvc5 insertAllWeightProof
--- Lemma: sortedInsertWeight               Q.E.D.
+-- Lemma: sortedInsertWeight                       Q.E.D.
 -- Inductive lemma (strong): insertAllWeight
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                 Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                 Q.E.D.
+--     Step: 1.1.2                                 Q.E.D.
+--     Step: 1.2.1                                 Q.E.D.
+--     Step: 1.2.2                                 Q.E.D.
+--     Step: 1.2.3                                 Q.E.D.
+--     Step: 1.Completeness                        Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: forestWeight, insertAll, sortedInsert, treeWeight
 -- [Proven] insertAllWeight :: Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
 insertAllWeightProof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
@@ -3271,17 +3265,17 @@ insertAllWeightProof = do
 -- | @insertAll@ preserves total forest cost: @forestCost(insertAll xs ys) == forestCost xs + forestCost ys@.
 --
 -- >>> runTPWith cvc5 insertAllCostProof
--- Lemma: sortedInsertCost                 Q.E.D.
+-- Lemma: sortedInsertCost                       Q.E.D.
 -- Inductive lemma (strong): insertAllCost
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                               Q.E.D.
+--     Step: 1.1.2                               Q.E.D.
+--     Step: 1.2.1                               Q.E.D.
+--     Step: 1.2.2                               Q.E.D.
+--     Step: 1.2.3                               Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: cost, forestCost, insertAll, sortedInsert, treeWeight
 -- [Proven] insertAllCost :: Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
 insertAllCostProof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
@@ -3309,17 +3303,17 @@ insertAllCostProof = do
 -- | @insertAll@ preserves countWS: @forestCountWS w s (insertAll xs ys) == forestCountWS w s xs + forestCountWS w s ys@.
 --
 -- >>> runTPWith cvc5 insertAllCountWSProof
--- Lemma: sortedInsertCountWS              Q.E.D.
+-- Lemma: sortedInsertCountWS                       Q.E.D.
 -- Inductive lemma (strong): insertAllCountWS
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                  Q.E.D.
+--     Step: 1.1.2                                  Q.E.D.
+--     Step: 1.2.1                                  Q.E.D.
+--     Step: 1.2.2                                  Q.E.D.
+--     Step: 1.2.3                                  Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: countWS, forestCountWS, insertAll, sortedInsert, treeWeight
 -- [Proven] insertAllCountWS :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
 insertAllCountWSProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer -> Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
@@ -3349,21 +3343,21 @@ insertAllCountWSProof = do
 -- | @leavesOf@ produces as many elements as there are leaves: @length(leavesOf t) == numLeaves t@.
 --
 -- >>> runTPWith cvc5 leavesOfLengthProof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: insertAllLength                  Q.E.D.
+-- Lemma: treeSizePos                              Q.E.D.
+-- Lemma: insertAllLength                          Q.E.D.
 -- Inductive lemma (strong): leavesOfLength
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                 Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.2.5                         Q.E.D.
---     Step: 1.2.6                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                 Q.E.D.
+--     Step: 1.1.2                                 Q.E.D.
+--     Step: 1.2.1                                 Q.E.D.
+--     Step: 1.2.2                                 Q.E.D.
+--     Step: 1.2.3                                 Q.E.D.
+--     Step: 1.2.4                                 Q.E.D.
+--     Step: 1.2.5                                 Q.E.D.
+--     Step: 1.2.6                                 Q.E.D.
+--     Step: 1.Completeness                        Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: insertAll, leavesOf, numLeaves, sortedInsert, treeSize, treeWeight
 -- [Proven] leavesOfLength :: Ɐt ∷ HTree → Bool
 leavesOfLengthProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -3397,21 +3391,21 @@ leavesOfLengthProof = do
 -- | @leavesOf@ preserves total weight: @forestWeight(leavesOf t) == treeWeight t@.
 --
 -- >>> runTPWith cvc5 leavesOfWeightProof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: insertAllWeight                  Q.E.D.
+-- Lemma: treeSizePos                              Q.E.D.
+-- Lemma: insertAllWeight                          Q.E.D.
 -- Inductive lemma (strong): leavesOfWeight
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                 Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.2.5                         Q.E.D.
---     Step: 1.2.6                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                 Q.E.D.
+--     Step: 1.1.2                                 Q.E.D.
+--     Step: 1.2.1                                 Q.E.D.
+--     Step: 1.2.2                                 Q.E.D.
+--     Step: 1.2.3                                 Q.E.D.
+--     Step: 1.2.4                                 Q.E.D.
+--     Step: 1.2.5                                 Q.E.D.
+--     Step: 1.2.6                                 Q.E.D.
+--     Step: 1.Completeness                        Q.E.D.
+--   Result:                                       Q.E.D.
 -- Functions proven terminating: forestWeight, insertAll, leavesOf, sortedInsert, treeSize, treeWeight
 -- [Proven] leavesOfWeight :: Ɐt ∷ HTree → Bool
 leavesOfWeightProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -3445,20 +3439,20 @@ leavesOfWeightProof = do
 -- | All leaves have zero cost, so @forestCost(leavesOf t) == 0@.
 --
 -- >>> runTPWith cvc5 leavesOfCostZeroProof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: insertAllCost                    Q.E.D.
+-- Lemma: treeSizePos                            Q.E.D.
+-- Lemma: insertAllCost                          Q.E.D.
 -- Inductive lemma (strong): leavesOfCostZero
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.2.5                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                               Q.E.D.
+--     Step: 1.1.2                               Q.E.D.
+--     Step: 1.2.1                               Q.E.D.
+--     Step: 1.2.2                               Q.E.D.
+--     Step: 1.2.3                               Q.E.D.
+--     Step: 1.2.4                               Q.E.D.
+--     Step: 1.2.5                               Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: cost, forestCost, insertAll, leavesOf, sortedInsert, treeSize, treeWeight
 -- [Proven] leavesOfCostZero :: Ɐt ∷ HTree → Bool
 leavesOfCostZeroProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -3493,25 +3487,25 @@ leavesOfCostZeroProof = do
 -- | Swap preserves numLeaves: the Tip\/Bin skeleton is unchanged.
 --
 -- >>> runTPWith cvc5 swapPreservesNumLeavesProof
--- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: treeSizePos                                  Q.E.D.
 -- Inductive lemma (strong): swapPreservesNumLeaves
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                     Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.2.5                         Q.E.D.
---     Step: 1.2.6                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                     Q.E.D.
+--     Step: 1.1.2                                     Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
+--     Step: 1.2.2                                     Q.E.D.
+--     Step: 1.2.3                                     Q.E.D.
+--     Step: 1.2.4                                     Q.E.D.
+--     Step: 1.2.5                                     Q.E.D.
+--     Step: 1.2.6                                     Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating: numLeaves, swap, treeSize
 -- [Proven] swapPreservesNumLeaves :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 swapPreservesNumLeavesProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer
-                                      -> Forall "wb" Integer -> Forall "sb" Integer
-                                      -> Forall "t" HTree -> SBool))
+                                       -> Forall "wb" Integer -> Forall "sb" Integer
+                                       -> Forall "t" HTree -> SBool))
 swapPreservesNumLeavesProof = do
     tsp <- recall treeSizePosProof
 
@@ -3543,31 +3537,31 @@ swapPreservesNumLeavesProof = do
 --
 -- >>> runTPWith cvc5 sortedInsertCommProof
 -- Inductive lemma (strong): sortedInsertComm
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1.1                               Q.E.D.
+--     Step: 1.1.2                               Q.E.D.
+--     Step: 1.2.1                               Q.E.D.
 --     Step: 1.2.2 (4 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.1.3                   Q.E.D.
---       Step: 1.2.2.1.4                   Q.E.D.
---       Step: 1.2.2.1.5                   Q.E.D.
---       Step: 1.2.2.1.6                   Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.3.1                   Q.E.D.
---       Step: 1.2.2.3.2                   Q.E.D.
---       Step: 1.2.2.4.1                   Q.E.D.
---       Step: 1.2.2.4.2                   Q.E.D.
---       Step: 1.2.2.4.3                   Q.E.D.
---       Step: 1.2.2.4.4                   Q.E.D.
---       Step: 1.2.2.4.5                   Q.E.D.
---       Step: 1.2.2.4.6                   Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1                         Q.E.D.
+--       Step: 1.2.2.1.2                         Q.E.D.
+--       Step: 1.2.2.1.3                         Q.E.D.
+--       Step: 1.2.2.1.4                         Q.E.D.
+--       Step: 1.2.2.1.5                         Q.E.D.
+--       Step: 1.2.2.1.6                         Q.E.D.
+--       Step: 1.2.2.2.1                         Q.E.D.
+--       Step: 1.2.2.2.2                         Q.E.D.
+--       Step: 1.2.2.3.1                         Q.E.D.
+--       Step: 1.2.2.3.2                         Q.E.D.
+--       Step: 1.2.2.4.1                         Q.E.D.
+--       Step: 1.2.2.4.2                         Q.E.D.
+--       Step: 1.2.2.4.3                         Q.E.D.
+--       Step: 1.2.2.4.4                         Q.E.D.
+--       Step: 1.2.2.4.5                         Q.E.D.
+--       Step: 1.2.2.4.6                         Q.E.D.
+--       Step: 1.2.2.Completeness                Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: sortedInsert, treeWeight
 -- [Proven] sortedInsertComm :: Ɐa ∷ HTree → Ɐb ∷ HTree → Ɐys ∷ [HTree] → Bool
 sortedInsertCommProof :: TP (Proof (Forall "a" HTree -> Forall "b" HTree -> Forall "ys" [HTree] -> SBool))
@@ -3616,19 +3610,19 @@ sortedInsertCommProof =
 -- | Swap is the identity when neither (wa,sa) nor (wb,sb) exists in the tree.
 --
 -- >>> runTPWith cvc5 swapIdentityProof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: countWSNonNeg                    Q.E.D.
+-- Lemma: treeSizePos                         Q.E.D.
+-- Lemma: countWSNonNeg                       Q.E.D.
 -- Inductive lemma (strong): swapIdentity
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                            Q.E.D.
+--     Step: 1.1.2                            Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
+--     Step: 1.2.2                            Q.E.D.
+--     Step: 1.2.3                            Q.E.D.
+--     Step: 1.2.4                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: countWS, swap, treeSize
 -- [Proven] swapIdentity :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 swapIdentityProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer
@@ -3676,19 +3670,19 @@ allTip0 = smtFunction "allTip0"
 --
 -- >>> runTPWith cvc5 sortedInsertAllTip0Proof
 -- Inductive lemma (strong): sortedInsertAllTip0
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1.1                                  Q.E.D.
+--     Step: 1.1.2                                  Q.E.D.
+--     Step: 1.2.1                                  Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1                            Q.E.D.
+--       Step: 1.2.2.1.2                            Q.E.D.
+--       Step: 1.2.2.2.1                            Q.E.D.
+--       Step: 1.2.2.2.2                            Q.E.D.
+--       Step: 1.2.2.Completeness                   Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: allTip0, sortedInsert, treeWeight
 -- [Proven] sortedInsertAllTip0 :: Ɐt ∷ HTree → Ɐts ∷ [HTree] → Bool
 sortedInsertAllTip0Proof :: TP (Proof (Forall "t" HTree -> Forall "ts" [HTree] -> SBool))
@@ -3721,17 +3715,17 @@ sortedInsertAllTip0Proof =
 -- | 'insertAll' preserves 'allTip0'.
 --
 -- >>> runTPWith cvc5 insertAllAllTip0Proof
--- Lemma: sortedInsertAllTip0              Q.E.D.
+-- Lemma: sortedInsertAllTip0                       Q.E.D.
 -- Inductive lemma (strong): insertAllAllTip0
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                  Q.E.D.
+--     Step: 1.1.2                                  Q.E.D.
+--     Step: 1.2.1                                  Q.E.D.
+--     Step: 1.2.2                                  Q.E.D.
+--     Step: 1.2.3                                  Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: allTip0, insertAll, sortedInsert, treeWeight
 -- [Proven] insertAllAllTip0 :: Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
 insertAllAllTip0Proof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
@@ -3759,18 +3753,18 @@ insertAllAllTip0Proof = do
 -- | 'leavesOf' always produces an 'allTip0' list.
 --
 -- >>> runTPWith cvc5 leavesOfAllTip0Proof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: insertAllAllTip0                 Q.E.D.
+-- Lemma: treeSizePos                               Q.E.D.
+-- Lemma: insertAllAllTip0                          Q.E.D.
 -- Inductive lemma (strong): leavesOfAllTip0
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                  Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                  Q.E.D.
+--     Step: 1.1.2                                  Q.E.D.
+--     Step: 1.2.1                                  Q.E.D.
+--     Step: 1.2.2                                  Q.E.D.
+--     Step: 1.2.3                                  Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: allTip0, insertAll, leavesOf, sortedInsert, treeSize, treeWeight
 -- [Proven] leavesOfAllTip0 :: Ɐt ∷ HTree → Bool
 leavesOfAllTip0Proof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -3802,19 +3796,19 @@ leavesOfAllTip0Proof = do
 -- @sortedInsert a (insertAll xs ys) == insertAll xs (sortedInsert a ys)@, when all elements are @Tip w 0@.
 --
 -- >>> runTPWith cvc5 insertAllSortedInsertProof
--- Lemma: sortedInsertComm                 Q.E.D.
+-- Lemma: sortedInsertComm                            Q.E.D.
 -- Inductive lemma (strong): insertAllSortedInsert
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.2.5                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1.1                                    Q.E.D.
+--     Step: 1.1.2                                    Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
+--     Step: 1.2.2                                    Q.E.D.
+--     Step: 1.2.3                                    Q.E.D.
+--     Step: 1.2.4                                    Q.E.D.
+--     Step: 1.2.5                                    Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Functions proven terminating: allTip0, insertAll, sortedInsert, treeWeight
 -- [Proven] insertAllSortedInsert :: Ɐa ∷ HTree → Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
 insertAllSortedInsertProof :: TP (Proof (Forall "a" HTree -> Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
@@ -3846,30 +3840,30 @@ insertAllSortedInsertProof = do
 -- @insertAll (sortedInsert a xs) ys == sortedInsert a (insertAll xs ys)@, when all elements are @Tip w 0@.
 --
 -- >>> runTPWith cvc5 insertAllSortedInsertLProof
--- Lemma: sortedInsertComm                 Q.E.D.
--- Lemma: insertAllSortedInsert            Q.E.D.
+-- Lemma: sortedInsertComm                             Q.E.D.
+-- Lemma: insertAllSortedInsert                        Q.E.D.
 -- Inductive lemma (strong): insertAllSortedInsertL
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                     Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1.1                                     Q.E.D.
+--     Step: 1.1.2                                     Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.1.3                   Q.E.D.
---       Step: 1.2.2.1.4                   Q.E.D.
---       Step: 1.2.2.1.5                   Q.E.D.
---       Step: 1.2.2.1.6                   Q.E.D.
---       Step: 1.2.2.1.7                   Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.2.3                   Q.E.D.
---       Step: 1.2.2.2.4                   Q.E.D.
---       Step: 1.2.2.2.5                   Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1                               Q.E.D.
+--       Step: 1.2.2.1.2                               Q.E.D.
+--       Step: 1.2.2.1.3                               Q.E.D.
+--       Step: 1.2.2.1.4                               Q.E.D.
+--       Step: 1.2.2.1.5                               Q.E.D.
+--       Step: 1.2.2.1.6                               Q.E.D.
+--       Step: 1.2.2.1.7                               Q.E.D.
+--       Step: 1.2.2.2.1                               Q.E.D.
+--       Step: 1.2.2.2.2                               Q.E.D.
+--       Step: 1.2.2.2.3                               Q.E.D.
+--       Step: 1.2.2.2.4                               Q.E.D.
+--       Step: 1.2.2.2.5                               Q.E.D.
+--       Step: 1.2.2.Completeness                      Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating: allTip0, insertAll, sortedInsert, treeWeight
 -- [Proven] insertAllSortedInsertL :: Ɐa ∷ HTree → Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
 insertAllSortedInsertLProof :: TP (Proof (Forall "a" HTree -> Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
@@ -3916,19 +3910,19 @@ insertAllSortedInsertLProof = do
 --
 -- >>> runTPWith cvc5 sortedInsertInjectiveProof
 -- Inductive lemma (strong): sortedInsertInjective
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                    Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1.1                                    Q.E.D.
+--     Step: 1.1.2                                    Q.E.D.
+--     Step: 1.2.1                                    Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1                              Q.E.D.
+--       Step: 1.2.2.1.2                              Q.E.D.
+--       Step: 1.2.2.2.1                              Q.E.D.
+--       Step: 1.2.2.2.2                              Q.E.D.
+--       Step: 1.2.2.Completeness                     Q.E.D.
+--     Step: 1.Completeness                           Q.E.D.
+--   Result:                                          Q.E.D.
 -- Functions proven terminating: sortedInsert, treeWeight
 -- [Proven] sortedInsertInjective :: Ɐa ∷ HTree → Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Bool
 sortedInsertInjectiveProof :: TP (Proof (Forall "a" HTree -> Forall "xs" [HTree] -> Forall "ys" [HTree] -> SBool))
@@ -3961,17 +3955,17 @@ sortedInsertInjectiveProof =
 
 -- | Swap is symmetric in its two pairs: @swap wa sa wb sb t == swap wb sb wa sa t@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) swapSymmetricProof
--- Lemma: treeSizePos                                Q.E.D.
+-- >>> runTPWith cvc5 swapSymmetricProof
+-- Lemma: treeSizePos                         Q.E.D.
 -- Inductive lemma (strong): swapSymmetric
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1.1                            Q.E.D.
+--     Step: 1.1.2                            Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
+--     Step: 1.2.2                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: swap, treeSize
 -- [Proven] swapSymmetric :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 swapSymmetricProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer
@@ -4003,39 +3997,39 @@ swapSymmetricProof = do
 -- replaces one @Tip wa 0@ with @Tip wb 0@ in 'leavesOf'. Adding back @Tip wa 0@ to the swapped
 -- list equals adding @Tip wb 0@ to the original.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) leavesOfSwapSingleProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: countWSNonNeg                              Q.E.D.
--- Lemma: countWSBin                                 Q.E.D.
--- Lemma: swapIdentity                               Q.E.D.
--- Lemma: leavesOfAllTip0                            Q.E.D.
--- Lemma: insertAllSortedInsertL                     Q.E.D.
--- Cached: insertAllSortedInsert                     Q.E.D.
+-- >>> runTPWith cvc5 leavesOfSwapSingleProof
+-- Lemma: treeSizePos                                  Q.E.D.
+-- Lemma: countWSNonNeg                                Q.E.D.
+-- Lemma: countWSBin                                   Q.E.D.
+-- Lemma: swapIdentity                                 Q.E.D.
+-- Lemma: leavesOfAllTip0                              Q.E.D.
+-- Lemma: insertAllSortedInsertL                       Q.E.D.
+-- Lemma: insertAllSortedInsert                        Q.E.D. [Cached]
 -- Inductive lemma (strong): leavesOfSwapSingle
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                     Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.1.1                                     Q.E.D.
+--     Step: 1.1.2                                     Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
+--     Step: 1.2.2                                     Q.E.D.
 --     Step: 1.2.3 (3 way case split)
---       Step: 1.2.3.1.1                             Q.E.D.
---       Step: 1.2.3.1.2                             Q.E.D.
---       Step: 1.2.3.1.3                             Q.E.D.
---       Step: 1.2.3.1.4                             Q.E.D.
---       Step: 1.2.3.1.5                             Q.E.D.
---       Step: 1.2.3.1.6                             Q.E.D.
---       Step: 1.2.3.2.1                             Q.E.D.
---       Step: 1.2.3.2.2                             Q.E.D.
---       Step: 1.2.3.2.3                             Q.E.D.
---       Step: 1.2.3.2.4                             Q.E.D.
---       Step: 1.2.3.2.5                             Q.E.D.
---       Step: 1.2.3.2.6                             Q.E.D.
---       Step: 1.2.3.3.1                             Q.E.D.
---       Step: 1.2.3.3.2                             Q.E.D.
---       Step: 1.2.3.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.3.1.1                               Q.E.D.
+--       Step: 1.2.3.1.2                               Q.E.D.
+--       Step: 1.2.3.1.3                               Q.E.D.
+--       Step: 1.2.3.1.4                               Q.E.D.
+--       Step: 1.2.3.1.5                               Q.E.D.
+--       Step: 1.2.3.1.6                               Q.E.D.
+--       Step: 1.2.3.2.1                               Q.E.D.
+--       Step: 1.2.3.2.2                               Q.E.D.
+--       Step: 1.2.3.2.3                               Q.E.D.
+--       Step: 1.2.3.2.4                               Q.E.D.
+--       Step: 1.2.3.2.5                               Q.E.D.
+--       Step: 1.2.3.2.6                               Q.E.D.
+--       Step: 1.2.3.3.1                               Q.E.D.
+--       Step: 1.2.3.3.2                               Q.E.D.
+--       Step: 1.2.3.Completeness                      Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating: allTip0, countWS, insertAll, leavesOf, sortedInsert, swap, treeSize, treeWeight
 -- [Proven] leavesOfSwapSingle :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 leavesOfSwapSingleProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer
@@ -4126,42 +4120,42 @@ leavesOfSwapSingleProof = do
 -- | Swap preserves 'leavesOf': when both pairs have count 1 and are distinct,
 -- @leavesOf(swap wa sa wb sb t) == leavesOf t@.
 --
--- >>> runTPWith (tpRibbon 50 cvc5) leavesOfSwapProof
--- Lemma: treeSizePos                                Q.E.D.
--- Lemma: countWSNonNeg                              Q.E.D.
--- Lemma: countWSBin                                 Q.E.D.
--- Lemma: swapIdentity                               Q.E.D.
--- Lemma: leavesOfAllTip0                            Q.E.D.
--- Lemma: insertAllSortedInsertL                     Q.E.D.
--- Cached: insertAllSortedInsert                     Q.E.D.
--- Lemma: sortedInsertInjective                      Q.E.D.
--- Lemma: leavesOfSwapSingle                         Q.E.D.
--- Lemma: swapSymmetric                              Q.E.D.
+-- >>> runTPWith cvc5 leavesOfSwapProof
+-- Lemma: treeSizePos                                  Q.E.D.
+-- Lemma: countWSNonNeg                                Q.E.D.
+-- Lemma: countWSBin                                   Q.E.D.
+-- Lemma: swapIdentity                                 Q.E.D.
+-- Lemma: leavesOfAllTip0                              Q.E.D.
+-- Lemma: insertAllSortedInsertL                       Q.E.D.
+-- Lemma: insertAllSortedInsert                        Q.E.D. [Cached]
+-- Lemma: sortedInsertInjective                        Q.E.D.
+-- Lemma: leavesOfSwapSingle                           Q.E.D.
+-- Lemma: swapSymmetric                                Q.E.D.
 -- Inductive lemma (strong): leavesOfSwap
---   Step: Measure is non-negative                   Q.E.D.
+--   Step: Measure is non-negative                     Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.1.2                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
+--     Step: 1.1.1                                     Q.E.D.
+--     Step: 1.1.2                                     Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
+--     Step: 1.2.2                                     Q.E.D.
 --     Step: 1.2.3 (5 way case split)
---       Step: 1.2.3.1.1                             Q.E.D.
---       Step: 1.2.3.1.2                             Q.E.D.
---       Step: 1.2.3.1.3                             Q.E.D.
---       Step: 1.2.3.2.1                             Q.E.D.
---       Step: 1.2.3.2.2                             Q.E.D.
---       Step: 1.2.3.2.3                             Q.E.D.
---       Step: 1.2.3.3.1                             Q.E.D.
---       Step: 1.2.3.3.2                             Q.E.D.
---       Step: 1.2.3.3.3                             Q.E.D.
---       Step: 1.2.3.4.1                             Q.E.D.
---       Step: 1.2.3.4.2                             Q.E.D.
---       Step: 1.2.3.4.3                             Q.E.D.
---       Step: 1.2.3.5.1                             Q.E.D.
---       Step: 1.2.3.5.2                             Q.E.D.
---       Step: 1.2.3.Completeness                    Q.E.D.
---     Step: 1.Completeness                          Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.2.3.1.1                               Q.E.D.
+--       Step: 1.2.3.1.2                               Q.E.D.
+--       Step: 1.2.3.1.3                               Q.E.D.
+--       Step: 1.2.3.2.1                               Q.E.D.
+--       Step: 1.2.3.2.2                               Q.E.D.
+--       Step: 1.2.3.2.3                               Q.E.D.
+--       Step: 1.2.3.3.1                               Q.E.D.
+--       Step: 1.2.3.3.2                               Q.E.D.
+--       Step: 1.2.3.3.3                               Q.E.D.
+--       Step: 1.2.3.4.1                               Q.E.D.
+--       Step: 1.2.3.4.2                               Q.E.D.
+--       Step: 1.2.3.4.3                               Q.E.D.
+--       Step: 1.2.3.5.1                               Q.E.D.
+--       Step: 1.2.3.5.2                               Q.E.D.
+--       Step: 1.2.3.Completeness                      Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating: allTip0, countWS, insertAll, leavesOf, sortedInsert, swap, treeSize, treeWeight
 -- [Proven] leavesOfSwap :: Ɐwa ∷ Integer → Ɐsa ∷ Integer → Ɐwb ∷ Integer → Ɐsb ∷ Integer → Ɐt ∷ HTree → Bool
 leavesOfSwapProof :: TP (Proof (Forall "wa" Integer -> Forall "sa" Integer
@@ -4328,15 +4322,15 @@ relabelFrom = smtFunction "relabelFrom"
 -- | Relabeling preserves treeWeight: @treeWeight (relabelFrom n t) == treeWeight t@.
 --
 -- >>> runTPWith cvc5 relabelWeightProof
--- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: treeSizePos                         Q.E.D.
 -- Inductive lemma (strong): relabelWeight
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
+--     Step: 1.2.2                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: numLeaves, relabelFrom, treeSize, treeWeight
 -- [Proven] relabelWeight :: Ɐn ∷ Integer → Ɐt ∷ HTree → Bool
 relabelWeightProof :: TP (Proof (Forall "n" Integer -> Forall "t" HTree -> SBool))
@@ -4362,15 +4356,15 @@ relabelWeightProof = do
 -- | Relabeling preserves numLeaves: @numLeaves (relabelFrom n t) == numLeaves t@.
 --
 -- >>> runTPWith cvc5 relabelNumLeavesProof
--- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: treeSizePos                            Q.E.D.
 -- Inductive lemma (strong): relabelNumLeaves
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                 Q.E.D.
+--     Step: 1.2.1                               Q.E.D.
+--     Step: 1.2.2                               Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: numLeaves, relabelFrom, treeSize
 -- [Proven] relabelNumLeaves :: Ɐn ∷ Integer → Ɐt ∷ HTree → Bool
 relabelNumLeavesProof :: TP (Proof (Forall "n" Integer -> Forall "t" HTree -> SBool))
@@ -4397,16 +4391,16 @@ relabelNumLeavesProof = do
 -- Relies on 'relabelWeightProof' since the cost formula involves @treeWeight@.
 --
 -- >>> runTPWith cvc5 relabelCostProof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: relabelWeight                    Q.E.D.
+-- Lemma: treeSizePos                         Q.E.D.
+-- Lemma: relabelWeight                       Q.E.D.
 -- Inductive lemma (strong): relabelCost
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
+--     Step: 1.2.2                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: cost, numLeaves, relabelFrom, treeSize, treeWeight
 -- [Proven] relabelCost :: Ɐn ∷ Integer → Ɐt ∷ HTree → Bool
 relabelCostProof :: TP (Proof (Forall "n" Integer -> Forall "t" HTree -> SBool))
@@ -4436,15 +4430,15 @@ relabelCostProof = do
 -- Since @leavesOf@ strips all symbols to 0, the relabeling has no effect.
 --
 -- >>> runTPWith cvc5 relabelLeavesOfProof
--- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: treeSizePos                           Q.E.D.
 -- Inductive lemma (strong): relabelLeavesOf
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                Q.E.D.
+--     Step: 1.2.1                              Q.E.D.
+--     Step: 1.2.2                              Q.E.D.
+--     Step: 1.Completeness                     Q.E.D.
+--   Result:                                    Q.E.D.
 -- Functions proven terminating: insertAll, leavesOf, numLeaves, relabelFrom, sortedInsert, treeSize, treeWeight
 -- [Proven] relabelLeavesOf :: Ɐn ∷ Integer → Ɐt ∷ HTree → Bool
 relabelLeavesOfProof :: TP (Proof (Forall "n" Integer -> Forall "t" HTree -> SBool))
@@ -4471,23 +4465,23 @@ relabelLeavesOfProof = do
 -- @relabelFrom n t@: @s < n || s >= n + numLeaves t => countWS w s (relabelFrom n t) == 0@.
 --
 -- >>> runTPWith cvc5 relabelOutOfRangeProof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: relabelNumLeaves                 Q.E.D.
--- Lemma: countWSNonNeg                    Q.E.D.
--- Lemma: numLeavesPos                     Q.E.D.
+-- Lemma: treeSizePos                             Q.E.D.
+-- Lemma: relabelNumLeaves                        Q.E.D.
+-- Lemma: countWSNonNeg                           Q.E.D.
+-- Lemma: numLeavesPos                            Q.E.D.
 -- Inductive lemma (strong): relabelOutOfRange
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1                                  Q.E.D.
+--     Step: 1.2.1                                Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
---       Step: 1.2.2.1.2                   Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
---       Step: 1.2.2.2.2                   Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--       Step: 1.2.2.1.1                          Q.E.D.
+--       Step: 1.2.2.1.2                          Q.E.D.
+--       Step: 1.2.2.2.1                          Q.E.D.
+--       Step: 1.2.2.2.2                          Q.E.D.
+--       Step: 1.2.2.Completeness                 Q.E.D.
+--     Step: 1.Completeness                       Q.E.D.
+--   Result:                                      Q.E.D.
 -- Functions proven terminating: countWS, numLeaves, relabelFrom, treeSize
 -- [Proven] relabelOutOfRange :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐn ∷ Integer → Ɐt ∷ HTree → Bool
 relabelOutOfRangeProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer
@@ -4539,18 +4533,18 @@ relabelOutOfRangeProof = do
 -- @countWS w s (relabelFrom n t) <= 1@.
 --
 -- >>> runTPWith cvc5 relabelDistinctProof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: relabelNumLeaves                 Q.E.D.
--- Lemma: relabelOutOfRange                Q.E.D.
--- Cached: countWSNonNeg                   Q.E.D.
+-- Lemma: treeSizePos                             Q.E.D.
+-- Lemma: relabelNumLeaves                        Q.E.D.
+-- Lemma: relabelOutOfRange                       Q.E.D.
+-- Lemma: countWSNonNeg                           Q.E.D. [Cached]
 -- Inductive lemma (strong): relabelDistinct
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                  Q.E.D.
+--     Step: 1.2.1                                Q.E.D.
+--     Step: 1.2.2                                Q.E.D.
+--     Step: 1.Completeness                       Q.E.D.
+--   Result:                                      Q.E.D.
 -- Functions proven terminating: countWS, numLeaves, relabelFrom, treeSize
 -- [Proven] relabelDistinct :: Ɐw ∷ Integer → Ɐs ∷ Integer → Ɐn ∷ Integer → Ɐt ∷ HTree → Bool
 relabelDistinctProof :: TP (Proof (Forall "w" Integer -> Forall "s" Integer
@@ -4647,15 +4641,15 @@ light2S = smtFunction "light2S"
 -- | The lightest weight is at most the deepest weight: @lightW t <= deepW t@.
 --
 -- >>> runTPWith cvc5 lightWLeqDeepWProof
--- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: treeSizePos                          Q.E.D.
 -- Inductive lemma (strong): lightWLeqDeepW
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative             Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                               Q.E.D.
+--     Step: 1.2.1                             Q.E.D.
+--     Step: 1.2.2                             Q.E.D.
+--     Step: 1.Completeness                    Q.E.D.
+--   Result:                                   Q.E.D.
 -- Functions proven terminating: deepW, height, lightW, treeSize
 -- [Proven] lightWLeqDeepW :: Ɐt ∷ HTree → Bool
 lightWLeqDeepWProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -4681,16 +4675,16 @@ lightWLeqDeepWProof = do
 -- | The lightest leaf exists in the tree: @countWS (lightW t) (lightS t) t >= 1@.
 --
 -- >>> runTPWith cvc5 lightCountWSProof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: countWSNonNeg                    Q.E.D.
+-- Lemma: treeSizePos                         Q.E.D.
+-- Lemma: countWSNonNeg                       Q.E.D.
 -- Inductive lemma (strong): lightCountWS
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative            Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                              Q.E.D.
+--     Step: 1.2.1                            Q.E.D.
+--     Step: 1.2.2                            Q.E.D.
+--     Step: 1.Completeness                   Q.E.D.
+--   Result:                                  Q.E.D.
 -- Functions proven terminating: countWS, lightS, lightW, treeSize
 -- [Proven] lightCountWS :: Ɐt ∷ HTree → Bool
 lightCountWSProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -4720,50 +4714,50 @@ lightCountWSProof = do
 -- @numLeaves t >= 2 => countWS (light2W t) (light2S t) t >= 1@.
 --
 -- >>> runTPWith cvc5 light2CountWSProof
--- Lemma: treeSizePos                      Q.E.D.
--- Lemma: countWSNonNeg                    Q.E.D.
--- Lemma: lightCountWS                     Q.E.D.
--- Lemma: numLeavesPos                     Q.E.D.
--- Lemma: numLeavesBin                     Q.E.D.
--- Lemma: countWSBin                       Q.E.D.
--- Lemma: sumGe1                           Q.E.D.
+-- Lemma: treeSizePos                            Q.E.D.
+-- Lemma: countWSNonNeg                          Q.E.D.
+-- Lemma: lightCountWS                           Q.E.D.
+-- Lemma: numLeavesPos                           Q.E.D.
+-- Lemma: numLeavesBin                           Q.E.D.
+-- Lemma: countWSBin                             Q.E.D.
+-- Lemma: sumGe1                                 Q.E.D.
 -- Inductive lemma (strong): light2CountWS
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
+--     Step: 1.1                                 Q.E.D.
+--     Step: 1.2.1                               Q.E.D.
 --     Step: 1.2.2 (2 way case split)
---       Step: 1.2.2.1.1                   Q.E.D.
+--       Step: 1.2.2.1.1                         Q.E.D.
 --       Step: 1.2.2.1.2 (2 way case split)
---         Step: 1.2.2.1.2.1.1             Q.E.D.
---         Step: 1.2.2.1.2.1.2             Q.E.D.
---         Step: 1.2.2.1.2.2.1             Q.E.D.
+--         Step: 1.2.2.1.2.1.1                   Q.E.D.
+--         Step: 1.2.2.1.2.1.2                   Q.E.D.
+--         Step: 1.2.2.1.2.2.1                   Q.E.D.
 --         Step: 1.2.2.1.2.2.2 (2 way case split)
---           Step: 1.2.2.1.2.2.2.1.1       Q.E.D.
---           Step: 1.2.2.1.2.2.2.1.2       Q.E.D.
---           Step: 1.2.2.1.2.2.2.1.3       Q.E.D.
---           Step: 1.2.2.1.2.2.2.1.4       Q.E.D.
---           Step: 1.2.2.1.2.2.2.2.1       Q.E.D.
---           Step: 1.2.2.1.2.2.2.2.2       Q.E.D.
---           Step: 1.2.2.1.2.2.2.CompletenessQ.E.D.
---         Step: 1.2.2.1.2.Completeness    Q.E.D.
---       Step: 1.2.2.2.1                   Q.E.D.
+--           Step: 1.2.2.1.2.2.2.1.1             Q.E.D.
+--           Step: 1.2.2.1.2.2.2.1.2             Q.E.D.
+--           Step: 1.2.2.1.2.2.2.1.3             Q.E.D.
+--           Step: 1.2.2.1.2.2.2.1.4             Q.E.D.
+--           Step: 1.2.2.1.2.2.2.2.1             Q.E.D.
+--           Step: 1.2.2.1.2.2.2.2.2             Q.E.D.
+--           Step: 1.2.2.1.2.2.2.Completeness    Q.E.D.
+--         Step: 1.2.2.1.2.Completeness          Q.E.D.
+--       Step: 1.2.2.2.1                         Q.E.D.
 --       Step: 1.2.2.2.2 (2 way case split)
---         Step: 1.2.2.2.2.1.1             Q.E.D.
---         Step: 1.2.2.2.2.1.2             Q.E.D.
---         Step: 1.2.2.2.2.2.1             Q.E.D.
+--         Step: 1.2.2.2.2.1.1                   Q.E.D.
+--         Step: 1.2.2.2.2.1.2                   Q.E.D.
+--         Step: 1.2.2.2.2.2.1                   Q.E.D.
 --         Step: 1.2.2.2.2.2.2 (2 way case split)
---           Step: 1.2.2.2.2.2.2.1.1       Q.E.D.
---           Step: 1.2.2.2.2.2.2.1.2       Q.E.D.
---           Step: 1.2.2.2.2.2.2.2.1       Q.E.D.
---           Step: 1.2.2.2.2.2.2.2.2       Q.E.D.
---           Step: 1.2.2.2.2.2.2.2.3       Q.E.D.
---           Step: 1.2.2.2.2.2.2.2.4       Q.E.D.
---           Step: 1.2.2.2.2.2.2.CompletenessQ.E.D.
---         Step: 1.2.2.2.2.Completeness    Q.E.D.
---       Step: 1.2.2.Completeness          Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--           Step: 1.2.2.2.2.2.2.1.1             Q.E.D.
+--           Step: 1.2.2.2.2.2.2.1.2             Q.E.D.
+--           Step: 1.2.2.2.2.2.2.2.1             Q.E.D.
+--           Step: 1.2.2.2.2.2.2.2.2             Q.E.D.
+--           Step: 1.2.2.2.2.2.2.2.3             Q.E.D.
+--           Step: 1.2.2.2.2.2.2.2.4             Q.E.D.
+--           Step: 1.2.2.2.2.2.2.Completeness    Q.E.D.
+--         Step: 1.2.2.2.2.Completeness          Q.E.D.
+--       Step: 1.2.2.Completeness                Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: countWS, light2S, light2W, lightS, lightW, numLeaves, treeSize
 -- [Proven] light2CountWS :: Ɐt ∷ HTree → Bool
 light2CountWSProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -4854,15 +4848,15 @@ light2CountWSProof = do
 -- | The lightest weight is at most the second-lightest: @lightW t <= light2W t@.
 --
 -- >>> runTPWith cvc5 lightWLeqLight2WProof
--- Lemma: treeSizePos                      Q.E.D.
+-- Lemma: treeSizePos                            Q.E.D.
 -- Inductive lemma (strong): lightWLeqLight2W
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative               Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                 Q.E.D.
+--     Step: 1.2.1                               Q.E.D.
+--     Step: 1.2.2                               Q.E.D.
+--     Step: 1.Completeness                      Q.E.D.
+--   Result:                                     Q.E.D.
 -- Functions proven terminating: light2W, lightW, treeSize
 -- [Proven] lightWLeqLight2W :: Ɐt ∷ HTree → Bool
 lightWLeqLight2WProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -4891,21 +4885,21 @@ lightWLeqLight2WProof = do
 -- @allTip0 xs && allTip0 ys && allTip0 zs => insertAll (insertAll xs ys) zs == insertAll xs (insertAll ys zs)@.
 --
 -- >>> runTPWith cvc5 insertAllAssocProof
--- Lemma: insertAllSortedInsertL           Q.E.D.
--- Lemma: sortedInsertAllTip0              Q.E.D.
--- Lemma: insertAllUnfold                  Q.E.D.
+-- Lemma: insertAllSortedInsertL                       Q.E.D.
+-- Lemma: sortedInsertAllTip0                          Q.E.D.
+-- Lemma: insertAllUnfold                              Q.E.D.
 -- Inductive lemma (strong): insertAllAssoc
---   Step: Measure is non-negative         Q.E.D.
+--   Step: Measure is non-negative                     Q.E.D.
 --   Step: 1 (2 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
---     Step: 1.2.3                         Q.E.D.
---     Step: 1.2.4                         Q.E.D.
---     Step: 1.2.5                         Q.E.D.
---     Step: 1.2.6                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                       Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
+--     Step: 1.2.2                                     Q.E.D.
+--     Step: 1.2.3                                     Q.E.D.
+--     Step: 1.2.4                                     Q.E.D.
+--     Step: 1.2.5                                     Q.E.D.
+--     Step: 1.2.6                                     Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
 -- Functions proven terminating: allTip0, insertAll, sortedInsert, treeWeight
 -- [Proven] insertAllAssoc :: Ɐxs ∷ [HTree] → Ɐys ∷ [HTree] → Ɐzs ∷ [HTree] → Bool
 insertAllAssocProof :: TP (Proof (Forall "xs" [HTree] -> Forall "ys" [HTree] -> Forall "zs" [HTree] -> SBool))
@@ -4942,6 +4936,25 @@ insertAllAssocProof = do
 -- Stated for @leavesOf@ outputs specifically, which are always sorted.
 --
 -- >>> runTPWith cvc5 leavesOfBinHeadProof
+-- Lemma: treeSizePos                                  Q.E.D.
+-- Lemma: leavesOfLength                               Q.E.D.
+-- Lemma: leavesOfAllTip0                              Q.E.D.
+-- Lemma: insertAllAssoc                               Q.E.D.
+-- Lemma: numLeavesPos                                 Q.E.D.
+-- Inductive lemma (strong): leavesOfBinHead
+--   Step: Measure is non-negative                     Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                     Q.E.D.
+--     Step: 1.1.2                                     Q.E.D.
+--     Step: 1.1.3                                     Q.E.D.
+--     Step: 1.1.4                                     Q.E.D.
+--     Step: 1.1.5                                     Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
+--     Step: 1.2.2                                     Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
+-- Functions proven terminating: allTip0, insertAll, leavesOf, numLeaves, sortedInsert, treeSize, treeWeight
+-- [Proven] leavesOfBinHead :: Ɐl ∷ HTree → Ɐr ∷ HTree → Bool
 leavesOfBinHeadProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
 leavesOfBinHeadProof = do
     tsPos <- recall treeSizePosProof
@@ -5011,6 +5024,20 @@ leavesOfBinHeadProof = do
 -- @lightW t == treeWeight (head (leavesOf t))@.
 --
 -- >>> runTPWith cvc5 lightWIsHeadProof
+-- Lemma: treeSizePos                                  Q.E.D.
+-- Lemma: leavesOfLength                               Q.E.D.
+-- Lemma: numLeavesPos                                 Q.E.D.
+-- Lemma: leavesOfBinHead                              Q.E.D.
+-- Inductive lemma (strong): lightWIsHead
+--   Step: Measure is non-negative                     Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                       Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
+--     Step: 1.2.2                                     Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
+-- Functions proven terminating: allTip0, insertAll, leavesOf, lightW, numLeaves, sortedInsert, treeSize, treeWeight
+-- [Proven] lightWIsHead :: Ɐt ∷ HTree → Bool
 lightWIsHeadProof :: TP (Proof (Forall "t" HTree -> SBool))
 lightWIsHeadProof = do
     tsPos  <- recall treeSizePosProof
@@ -5138,7 +5165,7 @@ optMerge = smtFunction "optMerge"
 --
 -- @numLeaves t >= 2 => cost (buildHuffman (leavesOf t)) <= cost t@
 --
--- >>> runTPWith (tpRibbon 50 cvc5) optimalityProof
+-- >>> runTPWith cvc5 optimalityProof
 optimalityProof :: TP (Proof (Forall "t" HTree -> SBool))
 optimalityProof = do
    tsPos   <- recall treeSizePosProof
