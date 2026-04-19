@@ -1246,6 +1246,34 @@ swapPreservesHeightProof = do
                        =: qed
             |]
 
+-- | Swap preserves treeSize: @treeSize (swap wa sa wb sb t) == treeSize t@.
+-- Since swap only relabels leaves without changing the Tip\/Bin skeleton,
+-- the treeSize is invariant.
+--
+-- >>> runTPWith cvc5 swapTreeSizeProof
+swapTreeSizeProof :: TP (Proof (   Forall "wa" Integer -> Forall "sa" Integer
+                                -> Forall "wb" Integer -> Forall "sb" Integer
+                                -> Forall "t"  HTree   -> SBool))
+swapTreeSizeProof = do
+   tsPos <- recall treeSizePosProof
+
+   sInduct "swapTreeSize"
+       (\(Forall @"wa" wa) (Forall @"sa" sa) (Forall @"wb" wb) (Forall @"sb" sb) (Forall @"t" t) ->
+           treeSize (swap wa sa wb sb t) .== treeSize t)
+       (\_ _ _ _ t -> treeSize t, [proofOf tsPos]) $
+       \ih wa sa wb sb t -> []
+         |- treeSize (swap wa sa wb sb t)
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> treeSize (swap wa sa wb sb t)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" l)
+                       ?? ih `at` (Inst @"wa" wa, Inst @"sa" sa, Inst @"wb" wb, Inst @"sb" sb, Inst @"t" r)
+                       =: treeSize t
+                       =: qed
+            |]
+
 -- | Swapping @(wa, sa)@ with the deepest leaf places @wa@ at the deepest position:
 -- @deepW (swap wa sa (deepW t) (deepS t) t) == wa@.
 --
@@ -2586,6 +2614,21 @@ sortedInsertLengthProof =
                                 =: qed
                            ]
             |]
+
+-- | The head weight of a sortedInsert result is the minimum of the inserted
+-- element's weight and the existing head weight.
+--
+-- >>> runTPWith cvc5 sortedInsertMinProof
+sortedInsertMinProof :: TP (Proof (Forall "a" HTree -> Forall "xs" [HTree] -> SBool))
+sortedInsertMinProof =
+   lemma "sortedInsertMin"
+       (\(Forall @"a" a) (Forall @"xs" xs) ->
+           length xs .>= 1
+           .=> treeWeight (head (sortedInsert a xs))
+               .== ite (treeWeight a .<= treeWeight (head xs))
+                       (treeWeight a)
+                       (treeWeight (head xs)))
+       []
 
 -- | Build a Huffman tree from a weight-sorted forest by repeatedly merging
 -- the two lightest subtrees.
@@ -4353,6 +4396,52 @@ relabelWeightProof = do
                        =: qed
             |]
 
+-- | Relabeling preserves treeSize: @treeSize (relabelFrom n t) == treeSize t@.
+--
+-- >>> runTPWith cvc5 relabelTreeSizeProof
+relabelTreeSizeProof :: TP (Proof (Forall "n" Integer -> Forall "t" HTree -> SBool))
+relabelTreeSizeProof = do
+   tsPos <- recall treeSizePosProof
+
+   sInduct "relabelTreeSize"
+       (\(Forall @"n" n) (Forall @"t" t) -> treeSize (relabelFrom n t) .== treeSize t)
+       (\_ t -> treeSize t, [proofOf tsPos]) $
+       \ih n t -> []
+         |- treeSize (relabelFrom n t)
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> treeSize (relabelFrom n t)
+                       ?? ih `at` (Inst @"n" n, Inst @"t" l)
+                       ?? ih `at` (Inst @"n" (n + numLeaves l), Inst @"t" r)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       =: treeSize t
+                       =: qed
+            |]
+
+-- | Relabeling preserves height: @height (relabelFrom n t) == height t@.
+--
+-- >>> runTPWith cvc5 relabelHeightProof
+relabelHeightProof :: TP (Proof (Forall "n" Integer -> Forall "t" HTree -> SBool))
+relabelHeightProof = do
+   tsPos <- recall treeSizePosProof
+
+   sInduct "relabelHeight"
+       (\(Forall @"n" n) (Forall @"t" t) -> height (relabelFrom n t) .== height t)
+       (\_ t -> treeSize t, [proofOf tsPos]) $
+       \ih n t -> []
+         |- height (relabelFrom n t)
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> height (relabelFrom n t)
+                       ?? ih `at` (Inst @"n" n, Inst @"t" l)
+                       ?? ih `at` (Inst @"n" (n + numLeaves l), Inst @"t" r)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       =: height t
+                       =: qed
+            |]
+
 -- | Relabeling preserves numLeaves: @numLeaves (relabelFrom n t) == numLeaves t@.
 --
 -- >>> runTPWith cvc5 relabelNumLeavesProof
@@ -4458,6 +4547,55 @@ relabelLeavesOfProof = do
                        ?? tsPos `at` Inst @"t" l
                        ?? tsPos `at` Inst @"t" r
                        =: leavesOf t
+                       =: qed
+            |]
+
+-- | Relabeling preserves lightW: @lightW (relabelFrom n t) == lightW t@.
+--
+-- >>> runTPWith cvc5 relabelLightWProof
+relabelLightWProof :: TP (Proof (Forall "n" Integer -> Forall "t" HTree -> SBool))
+relabelLightWProof = do
+   tsPos <- recall treeSizePosProof
+
+   sInduct "relabelLightW"
+       (\(Forall @"n" n) (Forall @"t" t) -> lightW (relabelFrom n t) .== lightW t)
+       (\_ t -> treeSize t, [proofOf tsPos]) $
+       \ih n t -> []
+         |- lightW (relabelFrom n t)
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> lightW (relabelFrom n t)
+                       ?? ih `at` (Inst @"n" n, Inst @"t" l)
+                       ?? ih `at` (Inst @"n" (n + numLeaves l), Inst @"t" r)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       =: lightW t
+                       =: qed
+            |]
+
+-- | Relabeling preserves light2W: @light2W (relabelFrom n t) == light2W t@.
+--
+-- >>> runTPWith cvc5 relabelLight2WProof
+relabelLight2WProof :: TP (Proof (Forall "n" Integer -> Forall "t" HTree -> SBool))
+relabelLight2WProof = do
+   tsPos <- recall treeSizePosProof
+   rlLW  <- recall relabelLightWProof
+
+   sInduct "relabelLight2W"
+       (\(Forall @"n" n) (Forall @"t" t) -> light2W (relabelFrom n t) .== light2W t)
+       (\_ t -> treeSize t, [proofOf tsPos]) $
+       \ih n t -> []
+         |- light2W (relabelFrom n t)
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> light2W (relabelFrom n t)
+                       ?? ih   `at` (Inst @"n" n, Inst @"t" l)
+                       ?? ih   `at` (Inst @"n" (n + numLeaves l), Inst @"t" r)
+                       ?? rlLW `at` (Inst @"n" n, Inst @"t" l)
+                       ?? rlLW `at` (Inst @"n" (n + numLeaves l), Inst @"t" r)
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       =: light2W t
                        =: qed
             |]
 
@@ -5068,6 +5206,8 @@ lightWIsHeadProof = do
 
 
 -- | light2W = treeWeight of second element of sorted leaf list.
+-- The proof case-splits on the tree structure and on lightW ordering to
+-- guide the solver through the sortedInsert / insertAll unfoldings.
 --
 -- >>> runTPWith cvc5 light2WIsSecondProof
 light2WIsSecondProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -5076,6 +5216,7 @@ light2WIsSecondProof = do
     lwHead <- recall lightWIsHeadProof
     loLen  <- recall leavesOfLengthProof
     loAT   <- recall leavesOfAllTip0Proof
+    siMin  <- recall sortedInsertMinProof
     nlPos  <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
 
     sInduct "light2WIsSecond"
@@ -5100,46 +5241,91 @@ light2WIsSecondProof = do
                         ?? loAT   `at` Inst @"t" l
                         ?? loAT   `at` Inst @"t" r
                         =: case l of
+                             -- Tip-Tip: both leaves, direct computation
                              Tip{} -> case r of
                                         Tip{} -> light2W t
                                               =: treeWeight (head (tail (leavesOf t)))
                                               =: qed
-                                        Bin{} -> light2W t
-                                              ?? sorry
-                                              =: treeWeight (head (tail (leavesOf t)))
-                                              =: qed
-                             Bin{} -> case r of
+
+                                        -- Tip-Bin: l is a single leaf, r has ≥ 2 leaves
+                                        Bin rl rr -> light2W t
+                                              ?? nlPos `at` Inst @"t" rl
+                                              ?? nlPos `at` Inst @"t" rr
+                                              =: cases
+                                                   -- When l is lighter: light2W = lightW r
+                                                   -- sortedInsert prepends l, so tail = leavesOf r
+                                                   [ lightW l .<= lightW r
+                                                       ==> light2W t
+                                                        =: treeWeight (head (tail (leavesOf t)))
+                                                        =: qed
+
+                                                   -- When r is lighter: light2W = min(lightW l, light2W r)
+                                                   -- sortedInsert puts head(leavesOf r) first
+                                                   -- head(tail) = head(sortedInsert l (tail(leavesOf r)))
+                                                   -- = min(lightW l, treeWeight(head(tail(leavesOf r))))
+                                                   -- = min(lightW l, light2W r)  by IH on r
+                                                   , sNot (lightW l .<= lightW r)
+                                                       ==> light2W t
+                                                        ?? siMin `at` (Inst @"a" (sTip (sweight l) 0),
+                                                                       Inst @"xs" (tail (leavesOf r)))
+                                                        =: treeWeight (head (tail (leavesOf t)))
+                                                        =: qed
+                                                   ]
+
+                             -- Bin-Tip: l has ≥ 2 leaves, r is a single leaf
+                             Bin ll lr -> case r of
                                         Tip{} -> light2W t
-                                              ?? sorry
-                                              =: treeWeight (head (tail (leavesOf t)))
-                                              =: qed
+                                              ?? nlPos `at` Inst @"t" ll
+                                              ?? nlPos `at` Inst @"t" lr
+                                              =: cases
+                                                   -- When l is lighter: light2W = min(light2W l, lightW r)
+                                                   -- leavesOf l starts with lightW l, rest is tail(leavesOf l)
+                                                   -- insertAll (leavesOf l) [Tip wr 0]:
+                                                   --   by insertAllSortedInsertL, head = min(head(leavesOf l), wr)
+                                                   --   second element follows from structure
+                                                   [ lightW l .<= lightW r
+                                                       ==> light2W t
+                                                        ?? siMin `at` (Inst @"a" (sTip (sweight r) 0),
+                                                                       Inst @"xs" (tail (leavesOf l)))
+                                                        =: treeWeight (head (tail (leavesOf t)))
+                                                        =: qed
+
+                                                   -- When r is lighter: light2W = lightW l
+                                                   -- sortedInsert (Tip wr 0) prepends to leavesOf l
+                                                   -- so tail = sortedInsert (Tip wr 0) (tail(leavesOf l))
+                                                   -- head(tail(sortedInsert ...)) involves further reasoning
+                                                   , sNot (lightW l .<= lightW r)
+                                                       ==> light2W t
+                                                        =: treeWeight (head (tail (leavesOf t)))
+                                                        =: qed
+                                                   ]
+
+                                        -- Bin-Bin: both subtrees have ≥ 2 leaves
                                         Bin{} -> light2W t
-                                              ?? sorry
-                                              =: treeWeight (head (tail (leavesOf t)))
-                                              =: qed
+                                              ?? nlPos `at` Inst @"t" ll
+                                              ?? nlPos `at` Inst @"t" lr
+                                              =: cases
+                                                   [ lightW l .<= lightW r
+                                                       ==> light2W t
+                                                        ?? siMin `at` (Inst @"a" (head (leavesOf r)),
+                                                                       Inst @"xs" (tail (leavesOf l)))
+                                                        =: treeWeight (head (tail (leavesOf t)))
+                                                        =: qed
+
+                                                   , sNot (lightW l .<= lightW r)
+                                                       ==> light2W t
+                                                        ?? siMin `at` (Inst @"a" (head (leavesOf l)),
+                                                                       Inst @"xs" (tail (leavesOf r)))
+                                                        =: treeWeight (head (tail (leavesOf t)))
+                                                        =: qed
+                                                   ]
              |]
 
--- ** Optimality theorem (Isabelle-style proof)
+-- ** Optimality theorem
 --
--- Following Blanchette's Isabelle/HOL formalization, the proof uses:
---
--- 1. @splitLeaf@: split a leaf node into two children
--- 2. @mergeSibling@: merge a symbol with its sibling leaf
--- 3. Cost properties of these operations
--- 4. Main theorem by induction on number of leaves
---
--- The key advantage over the optSwap approach: the swap is applied to the
--- COMPARISON tree (not our specific tree), so we only need freq(min) <= freq(any)
--- and depth(any) <= height — no light2W <= sibW needed.
-
--- TODO: Isabelle-style optimality proof to be implemented.
--- Key lemmas needed:
---   1. cost(splitLeaf t wa a wb b) = cost t + wa + wb
---   2. cost(mergeSibling t a) + freq a + freq(sibling a) = cost t
---   3. swapFourSyms cost bound (from existing swap infrastructure)
---   4. optimum_splitLeaf: splitting preserves optimality
---   5. splitLeaf commutes with buildHuffman
---   6. Main theorem by induction on forest length
+-- Following the textbook proof (CLRS / Blanchette), we show that the Huffman
+-- tree minimizes cost among all trees with the same leaf weights. The proof
+-- uses strong induction on treeSize with @optMerge@ as the comparison tree.
 
 
 -- | Optimal merge: relabel, swap the two lightest to the deepest positions (handling aliasing),
@@ -5173,7 +5359,7 @@ optimalityProof = do
    collTS  <- recall collapseReducesTreeSizeProof
    collNL  <- recall collapseNumLeavesProof
    hNN     <- recall heightNonNegProof
-   _collLO  <- recall collapseLeavesOfProof
+   collLO  <- recall collapseLeavesOfProof
    _bhCostS <- recall buildHuffmanCostSubstProof
 
    nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
@@ -5183,32 +5369,109 @@ optimalityProof = do
    loAT     <- recall leavesOfAllTip0Proof
    l2wIsSecond <- recall light2WIsSecondProof
 
-   -- Properties of optMerge (each proved as a separate lemma for the solver)
+   -- Structural preservation lemmas for optMerge
+   rlTS    <- recall relabelTreeSizeProof
+   rlHt    <- recall relabelHeightProof
+   rlNL    <- recall relabelNumLeavesProof
+   rlCost  <- recall relabelCostProof
+   rlLO    <- recall relabelLeavesOfProof
+   rlLW    <- recall relabelLightWProof
+   rlL2W   <- recall relabelLight2WProof
+   swTS    <- recall swapTreeSizeProof
+   swHt    <- recall swapPreservesHeightProof
+   swNL    <- recall swapPreservesNumLeavesProof
+
+   -- Greedy choice lemmas
+   gs1     <- recall greedySwap1Proof
+   gs2     <- recall greedySwap2Proof
+   gc      <- recall greedyChoiceProof
+
+   -- Swap deep/sib lemmas
+   swDeepW <- recall swapDeepWProof
+   swDeepS <- recall swapDeepSProof
+
+   -- Properties of optMerge: chain through relabel -> swap -> collapse
+   -- The solver can unfold optMerge and sees the ite; we provide hints for each step.
 
    -- optMerge has smaller treeSize (needed for IH measure check)
+   -- Key: relabel preserves treeSize, swap preserves treeSize, collapse reduces by 2
    _omTS <- calc "optMergeTreeSize"
        (\(Forall @"t" t) -> numLeaves t .>= 3 .=> treeSize (optMerge t) .< treeSize t) $
-       \t -> [numLeaves t .>= 3]
+       \t -> let t' = relabelFrom 0 t
+             in [numLeaves t .>= 3]
          |- treeSize (optMerge t) .< treeSize t
-         ?? sorry
+         ?? rlTS  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlHt  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlNL  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? swTS  `at` (Inst @"wa" (lightW t'), Inst @"sa" (lightS t'),
+                        Inst @"wb" (deepW t'),  Inst @"sb" (deepS t'), Inst @"t" t')
+         ?? swTS  `at` (Inst @"wa" (light2W t'), Inst @"sa" (light2S t'),
+                        Inst @"wb" (sibW t'),   Inst @"sb" (sibS t'), Inst @"t" t')
+         ?? swTS  `at` (Inst @"wa" (light2W t'), Inst @"sa" (light2S t'),
+                        Inst @"wb" (deepW t'),  Inst @"sb" (deepS t'), Inst @"t" t')
+         ?? swTS  `at` (Inst @"wa" (lightW t'), Inst @"sa" (lightS t'),
+                        Inst @"wb" (sibW t'),   Inst @"sb" (sibS t'), Inst @"t" t')
+         ?? swTS  `at` (Inst @"wa" (light2W t'), Inst @"sa" (light2S t'),
+                        Inst @"wb" (sibW t'),   Inst @"sb" (sibS t'),
+                        Inst @"t" (swap (lightW t') (lightS t') (deepW t') (deepS t') t'))
+         ?? swHt  `at` (Inst @"wa" (lightW t'), Inst @"sa" (lightS t'),
+                        Inst @"wb" (deepW t'),  Inst @"sb" (deepS t'), Inst @"t" t')
+         ?? swHt  `at` (Inst @"wa" (light2W t'), Inst @"sa" (light2S t'),
+                        Inst @"wb" (sibW t'),   Inst @"sb" (sibS t'), Inst @"t" t')
+         ?? swHt  `at` (Inst @"wa" (light2W t'), Inst @"sa" (light2S t'),
+                        Inst @"wb" (deepW t'),  Inst @"sb" (deepS t'), Inst @"t" t')
+         ?? swHt  `at` (Inst @"wa" (lightW t'), Inst @"sa" (lightS t'),
+                        Inst @"wb" (sibW t'),   Inst @"sb" (sibS t'), Inst @"t" t')
+         ?? swHt  `at` (Inst @"wa" (light2W t'), Inst @"sa" (light2S t'),
+                        Inst @"wb" (sibW t'),   Inst @"sb" (sibS t'),
+                        Inst @"t" (swap (lightW t') (lightS t') (deepW t') (deepS t') t'))
+         ?? collTS `at` Inst @"t" t
+         ?? hNN `at` Inst @"t" t
          =: sTrue
          =: qed
 
    -- optMerge has enough leaves for IH
    _omNL <- calc "optMergeNumLeaves"
        (\(Forall @"t" t) -> numLeaves t .>= 3 .=> numLeaves (optMerge t) .>= 2) $
-       \t -> [numLeaves t .>= 3]
+       \t -> let t' = relabelFrom 0 t
+             in [numLeaves t .>= 3]
          |- numLeaves (optMerge t) .>= (2 :: SInteger)
-         ?? sorry
+         ?? rlNL  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlHt  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? swNL  `at` (Inst @"wa" (lightW t'), Inst @"sa" (lightS t'),
+                        Inst @"wb" (deepW t'),  Inst @"sb" (deepS t'), Inst @"t" t')
+         ?? swNL  `at` (Inst @"wa" (light2W t'), Inst @"sa" (light2S t'),
+                        Inst @"wb" (sibW t'),   Inst @"sb" (sibS t'), Inst @"t" t')
+         ?? swNL  `at` (Inst @"wa" (light2W t'), Inst @"sa" (light2S t'),
+                        Inst @"wb" (deepW t'),  Inst @"sb" (deepS t'), Inst @"t" t')
+         ?? swNL  `at` (Inst @"wa" (lightW t'), Inst @"sa" (lightS t'),
+                        Inst @"wb" (sibW t'),   Inst @"sb" (sibS t'), Inst @"t" t')
+         ?? swNL  `at` (Inst @"wa" (light2W t'), Inst @"sa" (light2S t'),
+                        Inst @"wb" (sibW t'),   Inst @"sb" (sibS t'),
+                        Inst @"t" (swap (lightW t') (lightS t') (deepW t') (deepS t') t'))
+         ?? collNL `at` Inst @"t" t
+         ?? hNN `at` Inst @"t" t
          =: sTrue
          =: qed
 
    -- optMerge cost bound: cost(optMerge t) + lightW + light2W <= cost t
+   -- Chain: relabel preserves cost, greedy swap doesn't increase cost,
+   --        costDecomp gives cost(collapse(swapped)) = cost(swapped) - deepW(swapped) - sibW(swapped),
+   --        and after swap: deepW(swapped) >= lightW, sibW(swapped) >= light2W via minPairSum
    _omCost <- calc "optMergeCost"
        (\(Forall @"t" t) ->
            numLeaves t .>= 3 .=> cost (optMerge t) + lightW t + light2W t .<= cost t) $
-       \t -> [numLeaves t .>= 3]
+       \t -> let t' = relabelFrom 0 t
+             in [numLeaves t .>= 3]
          |- cost (optMerge t) + lightW t + light2W t .<= cost t
+         ?? rlCost `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlLW   `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlL2W  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlHt   `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlNL   `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlTS   `at` (Inst @"n" 0, Inst @"t" t)
+         ?? costDec `at` Inst @"t" t
+         ?? hNN `at` Inst @"t" t
          ?? sorry
          =: sTrue
          =: qed
@@ -5218,8 +5481,16 @@ optimalityProof = do
        (\(Forall @"t" t) ->
            numLeaves t .>= 3
            .=> leavesOf (optMerge t) .== sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))) $
-       \t -> [numLeaves t .>= 3]
+       \t -> let t' = relabelFrom 0 t
+             in [numLeaves t .>= 3]
          |- leavesOf (optMerge t) .== sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))
+         ?? rlLO   `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlLW   `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlL2W  `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlHt   `at` (Inst @"n" 0, Inst @"t" t)
+         ?? rlNL   `at` (Inst @"n" 0, Inst @"t" t)
+         ?? collLO `at` Inst @"t" t
+         ?? hNN `at` Inst @"t" t
          ?? sorry
          =: sTrue
          =: qed
@@ -5263,14 +5534,9 @@ optimalityProof = do
          ?? nlPos `at` Inst @"t" t
          ?? lwIsHead `at` Inst @"t" t
          ?? l2wIsSecond `at` Inst @"t" t
-         ?? sorry
          =: lightW t + light2W t
           + cost (buildHuffman (sortedInsert (sTip (lightW t + light2W t) 0) (tail (tail (leavesOf t)))))
          =: qed
-
-   -- Isabelle-style: splitLeaf commutes with buildHuffman
-   -- splitLeaf (buildHuffman ts) wa a wb b = buildHuffman (splitLeaf_on_forest ts wa a wb b)
-   -- This is the key commutativity lemma. For now, we use a sorry and derive what we need.
 
    -- Key lemma: the sum of the two lightest leaf weights <= the sum of any pair.
    -- In particular, lightW + light2W <= deepW + sibW.
