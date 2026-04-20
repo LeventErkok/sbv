@@ -5486,16 +5486,6 @@ optimalityProof = do
                        =: qed
                   ]
 
-   -- Properties of optMerge: chain through relabel -> swap -> collapse
-   lwLeqDW   <- recall lightWLeqDeepWProof
-   lwLeqL2W  <- recall lightWLeqLight2WProof
-   lCWS      <- recall lightCountWSProof
-   l2CWS     <- recall light2CountWSProof
-   dCWS      <- recall deepCountWSProof
-   sCWS      <- recall sibCountWSProof
-   rlDist    <- recall relabelDistinctProof
-   loSwap    <- recall leavesOfSwapProof
-
    -- optMerge has smaller treeSize (needed for IH measure check)
    -- Key: relabel preserves treeSize, swap preserves treeSize, collapse reduces by 2
    _omTS <- calc "optMergeTreeSize"
@@ -5576,8 +5566,6 @@ optimalityProof = do
    l2CWS     <- recall light2CountWSProof
    dCWS      <- recall deepCountWSProof
    sCWS      <- recall sibCountWSProof
-   rlDist    <- recall relabelDistinctProof
-   rlOOR     <- recall relabelOutOfRangeProof
 
    _omCost <- calc "optMergeCost"
        (\(Forall @"t" t) ->
@@ -5596,8 +5584,6 @@ optimalityProof = do
          ?? rlHt   `at` (Inst @"n" 0, Inst @"t" t)
          ?? rlNL   `at` (Inst @"n" 0, Inst @"t" t)
          ?? rlTS   `at` (Inst @"n" 0, Inst @"t" t)
-         -- Uniqueness from relabeling
-         ?? rlDist `at` (Inst @"n" 0, Inst @"t" t)
          -- lightW <= deepW (for greedySwap1 precondition)
          ?? lwLeqDW `at` Inst @"t" t'
          ?? lwLeqL2W `at` Inst @"t" t'
@@ -5658,8 +5644,6 @@ optimalityProof = do
          ?? rlHt  `at` (Inst @"n" 0, Inst @"t" t)
          ?? rlNL  `at` (Inst @"n" 0, Inst @"t" t)
          ?? rlTS  `at` (Inst @"n" 0, Inst @"t" t)
-         -- Uniqueness from relabeling
-         ?? rlDist `at` (Inst @"n" 0, Inst @"t" t)
          -- countWS for swap preconditions
          ?? lCWS  `at` Inst @"t" t'
          ?? l2CWS `at` Inst @"t" t'
