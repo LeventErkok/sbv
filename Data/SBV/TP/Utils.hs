@@ -299,7 +299,7 @@ message SMTConfig{tpOptions = TPOptions{quiet}, redirectVerbose} s
   | Just f <- redirectVerbose
   = liftIO $ appendFile f s
   | True
-  = liftIO $ putStr s
+  = liftIO $ putStr s >> hFlush stdout
 
 -- | Print the list of functions whose termination measures have been verified.
 printMeasures :: SMTConfig -> [String] -> IO ()
