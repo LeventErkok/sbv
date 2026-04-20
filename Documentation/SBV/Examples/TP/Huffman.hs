@@ -5221,6 +5221,19 @@ leavesOfBinHeadProof = do
 -- | Inserting leavesOf into an empty list is the identity (leavesOf is already sorted).
 --
 -- >>> runTPWith cvc5 leavesOfInsertAllNilProof
+-- Lemma: treeSizePos                                  Q.E.D.
+-- Lemma: leavesOfAllTip0                              Q.E.D.
+-- Lemma: insertAllAssoc                               Q.E.D.
+-- Inductive lemma (strong): leavesOfInsertAllNil
+--   Step: Measure is non-negative                     Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                       Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
+--     Step: 1.2.2 (LIAN)                              Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
+-- Functions proven terminating: allTip0, insertAll, leavesOf, sortedInsert, treeSize, treeWeight
+-- [Proven] leavesOfInsertAllNil :: Ɐt ∷ HTree → Bool
 leavesOfInsertAllNilProof :: TP (Proof (Forall "t" HTree -> SBool))
 leavesOfInsertAllNilProof = do
    tsPos   <- recall treeSizePosProof
@@ -5249,20 +5262,49 @@ leavesOfInsertAllNilProof = do
 -- | When the right child is a Tip, leavesOf reduces to sortedInsert into leavesOf of the left.
 --
 -- >>> runTPWith cvc5 leavesOfBinTipProof
+-- Lemma: insertAllSortedInsert                        Q.E.D.
+-- Lemma: leavesOfAllTip0                              Q.E.D.
+-- Lemma: leavesOfInsertAllNil                         Q.E.D.
+-- Lemma: leavesOfBinTip
+--   Step: 1 (LBT1)                                    Q.E.D.
+--   Step: 2 (LBT2)                                    Q.E.D.
+--   Step: 3 (LBT3)                                    Q.E.D.
+--   Result:                                           Q.E.D.
+-- Functions proven terminating: allTip0, insertAll, leavesOf, sortedInsert, treeSize, treeWeight
+-- [Proven] leavesOfBinTip :: Ɐl ∷ HTree → Ɐr ∷ HTree → Bool
 leavesOfBinTipProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
 leavesOfBinTipProof = do
-   iaSI   <- recall insertAllSortedInsertProof
-   loAT   <- recall leavesOfAllTip0Proof
+   iaSI    <- recall insertAllSortedInsertProof
+   loAT    <- recall leavesOfAllTip0Proof
    loIANil <- recall leavesOfInsertAllNilProof
 
-   lemma "leavesOfBinTip"
+   calc "leavesOfBinTip"
        (\(Forall @"l" l) (Forall @"r" r) ->
            isTip r .=> leavesOf (sBin l r) .== sortedInsert (sTip (treeWeight r) 0) (leavesOf l))
-       [proofOf iaSI, proofOf loAT, proofOf loIANil]
+       $ \l r -> [isTip r]
+         |- leavesOf (sBin l r)
+         ?? "LBT1"
+         =: insertAll (leavesOf l) [sTip (treeWeight r) 0]
+         ?? iaSI `at` (Inst @"a" (sTip (treeWeight r) 0), Inst @"xs" (leavesOf l), Inst @"ys" ([] :: SList HTree))
+         ?? loAT `at` Inst @"t" l
+         ?? "LBT2"
+         =: sortedInsert (sTip (treeWeight r) 0) (insertAll (leavesOf l) ([] :: SList HTree))
+         ?? loIANil `at` Inst @"t" l
+         ?? "LBT3"
+         =: sortedInsert (sTip (treeWeight r) 0) (leavesOf l)
+         =: qed
 
 -- | When the right child is a Tip and lighter, leavesOf prepends it.
 --
 -- >>> runTPWith cvc5 leavesOfBinTipPrependProof
+-- Lemma: leavesOfBinTip                               Q.E.D.
+-- Lemma: sortedInsertPrepend                          Q.E.D.
+-- Lemma: lightWIsHead                                 Q.E.D.
+-- Lemma: leavesOfLength                               Q.E.D. [Cached]
+-- Lemma: numLeavesPos                                 Q.E.D.
+-- Lemma: leavesOfBinTipPrepend                        Q.E.D.
+-- Functions proven terminating: allTip0, insertAll, leavesOf, lightW, numLeaves, sortedInsert, treeSize, treeWeight
+-- [Proven] leavesOfBinTipPrepend :: Ɐl ∷ HTree → Ɐr ∷ HTree → Bool
 leavesOfBinTipPrependProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
 leavesOfBinTipPrependProof = do
    loBT  <- recall leavesOfBinTipProof
@@ -5276,6 +5318,75 @@ leavesOfBinTipPrependProof = do
               isTip r .&& numLeaves l .>= 1 .&& lightW r .<= lightW l
           .=> leavesOf (sBin l r) .== sTip (treeWeight r) 0 .: leavesOf l)
        [proofOf loBT, proofOf siPre, proofOf lwH, proofOf loLen, proofOf nlPos]
+
+-- | When the left child is a Tip and heavier than the right's lightest,
+-- the tail of leavesOf is sortedInsert into tail of leavesOf r.
+--
+-- >>> runTPWith cvc5 leavesOfTipBinTailProof
+leavesOfTipBinTailProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
+leavesOfTipBinTailProof = do
+   loTB  <- recall leavesOfTipBinProof
+   siNP  <- recall sortedInsertNotPrependProof
+   lwH   <- recall lightWIsHeadProof
+   loLen <- recall leavesOfLengthProof
+   nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+
+   lemma "leavesOfTipBinTail"
+       (\(Forall @"l" l) (Forall @"r" r) ->
+              isTip l .&& numLeaves r .>= 1 .&& sNot (lightW l .<= lightW r)
+          .=> tail (leavesOf (sBin l r)) .== sortedInsert (sTip (treeWeight l) 0) (tail (leavesOf r)))
+       [proofOf loTB, proofOf siNP, proofOf lwH, proofOf loLen, proofOf nlPos]
+
+-- | Symmetric: when right is Tip and heavier, tail of leavesOf is sortedInsert into tail of leavesOf l.
+--
+-- >>> runTPWith cvc5 leavesOfBinTipTailProof
+leavesOfBinTipTailProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
+leavesOfBinTipTailProof = do
+   loBT  <- recall leavesOfBinTipProof
+   siNP  <- recall sortedInsertNotPrependProof
+   lwH   <- recall lightWIsHeadProof
+   loLen <- recall leavesOfLengthProof
+   nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+
+   lemma "leavesOfBinTipTail"
+       (\(Forall @"l" l) (Forall @"r" r) ->
+              isTip r .&& numLeaves l .>= 1 .&& sNot (lightW r .<= lightW l)
+          .=> tail (leavesOf (sBin l r)) .== sortedInsert (sTip (treeWeight r) 0) (tail (leavesOf l)))
+       [proofOf loBT, proofOf siNP, proofOf lwH, proofOf loLen, proofOf nlPos]
+
+-- | Second element when l=Tip, r has ≥2 leaves, and l is heavier.
+--
+-- >>> runTPWith cvc5 leavesOfTipBinSecondProof
+leavesOfTipBinSecondProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
+leavesOfTipBinSecondProof = do
+   loTBTl <- recall leavesOfTipBinTailProof
+   siMin  <- recall sortedInsertMinProof
+   loLen  <- recall leavesOfLengthProof
+   nlPos  <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+
+   lemma "leavesOfTipBinSecond"
+       (\(Forall @"l" l) (Forall @"r" r) ->
+              isTip l .&& numLeaves r .>= 2 .&& sNot (lightW l .<= lightW r)
+          .=> treeWeight (head (tail (leavesOf (sBin l r))))
+              .== smin (treeWeight l) (treeWeight (head (tail (leavesOf r)))))
+       [proofOf loTBTl, proofOf siMin, proofOf loLen, proofOf nlPos]
+
+-- | Second element when r=Tip, l has ≥2 leaves, and r is heavier (symmetric).
+--
+-- >>> runTPWith cvc5 leavesOfBinTipSecondProof
+leavesOfBinTipSecondProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
+leavesOfBinTipSecondProof = do
+   loBTTl <- recall leavesOfBinTipTailProof
+   siMin  <- recall sortedInsertMinProof
+   loLen  <- recall leavesOfLengthProof
+   nlPos  <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+
+   lemma "leavesOfBinTipSecond"
+       (\(Forall @"l" l) (Forall @"r" r) ->
+              isTip r .&& numLeaves l .>= 2 .&& lightW l .<= lightW r
+          .=> treeWeight (head (tail (leavesOf (sBin l r))))
+              .== smin (treeWeight (head (tail (leavesOf l)))) (treeWeight r))
+       [proofOf loBTTl, proofOf siMin, proofOf loLen, proofOf nlPos]
 
 -- | The lightest weight in a tree equals the first element of its sorted leaf list:
 -- @lightW t == treeWeight (head (leavesOf t))@.
@@ -5341,6 +5452,8 @@ light2WIsSecondProof = do
     loTBP    <- recall leavesOfTipBinPrependProof
     loBT     <- recall leavesOfBinTipProof
     loBTP    <- recall leavesOfBinTipPrependProof
+    loTBSec  <- recall leavesOfTipBinSecondProof
+    loBTSec  <- recall leavesOfBinTipSecondProof
     iaAssoc  <- recall insertAllAssocProof
     loAT     <- recall leavesOfAllTip0Proof
     nlPos    <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
@@ -5396,14 +5509,15 @@ light2WIsSecondProof = do
                                               ==> light2W t
                                                ?? "TB2a"
                                                =: smin (sweight l) (light2W r)
+                                               ?? ih `at` Inst @"t" r
+                                               ?? nlPos `at` Inst @"t" rl
+                                               ?? nlPos `at` Inst @"t" rr
                                                ?? "TB2b"
                                                =: smin (sweight l) (treeWeight (head (tail (leavesOf r))))
-                                               ?? siMin `at` (Inst @"a" (sTip (sweight l) 0), Inst @"xs" (tail (leavesOf r)))
-                                               ?? siNP  `at` (Inst @"a" (sTip (sweight l) 0), Inst @"xs" (leavesOf r))
-                                               ?? loTB  `at` (Inst @"l" l, Inst @"r" r)
-                                               ?? (treeWeight (sTip (sweight l) 0) .== sweight l)
+                                               ?? loTBSec `at` (Inst @"l" l, Inst @"r" r)
                                                ?? "TB2c"
                                                =: treeWeight (head (tail (leavesOf t)))
+                                               =: qed
                                                =: qed
                                           ]
 
@@ -5417,12 +5531,12 @@ light2WIsSecondProof = do
                                               ==> light2W t
                                                ?? "BT1a"
                                                =: smin (light2W l) (sweight r)
+                                               ?? ih `at` Inst @"t" l
+                                               ?? nlPos `at` Inst @"t" ll
+                                               ?? nlPos `at` Inst @"t" lr
                                                ?? "BT1b"
                                                =: smin (treeWeight (head (tail (leavesOf l)))) (sweight r)
-                                               ?? siMin `at` (Inst @"a" (sTip (sweight r) 0), Inst @"xs" (tail (leavesOf l)))
-                                               ?? siNP  `at` (Inst @"a" (sTip (sweight r) 0), Inst @"xs" (leavesOf l))
-                                               ?? loBT  `at` (Inst @"l" l, Inst @"r" r)
-                                               ?? (treeWeight (sTip (sweight r) 0) .== sweight r)
+                                               ?? loBTSec `at` (Inst @"l" l, Inst @"r" r)
                                                ?? "BT1c"
                                                =: treeWeight (head (tail (leavesOf t)))
                                                =: qed
