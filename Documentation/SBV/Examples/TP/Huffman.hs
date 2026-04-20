@@ -5218,90 +5218,64 @@ leavesOfBinHeadProof = do
                           =: qed
              |]
 
--- | The second element of the merged sorted leaf list. Follows the same
--- insertAllAssoc reassociation strategy as 'leavesOfBinHead'.
+-- | Inserting leavesOf into an empty list is the identity (leavesOf is already sorted).
 --
--- >>> runTPWith cvc5 leavesOfBinSecondProof
-leavesOfBinSecondProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
-leavesOfBinSecondProof = do
-    tsPos   <- recall treeSizePosProof
-    loLen   <- recall leavesOfLengthProof
-    loAT    <- recall leavesOfAllTip0Proof
-    iaAssoc <- recall insertAllAssocProof
-    nlPos   <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
-    loHead  <- recall leavesOfBinHeadProof
-    loTB    <- recall leavesOfTipBinProof
-    loTBP   <- recall leavesOfTipBinPrependProof
-    siMin   <- recall sortedInsertMinProof
-    siNP    <- recall sortedInsertNotPrependProof
+-- >>> runTPWith cvc5 leavesOfInsertAllNilProof
+leavesOfInsertAllNilProof :: TP (Proof (Forall "t" HTree -> SBool))
+leavesOfInsertAllNilProof = do
+   tsPos   <- recall treeSizePosProof
+   loAT    <- recall leavesOfAllTip0Proof
+   iaAssoc <- recall insertAllAssocProof
 
-    sInduct "leavesOfBinSecond"
-        (\(Forall @"l" l) (Forall @"r" r) ->
-            numLeaves l + numLeaves r .>= 3
-            .=> treeWeight (head (tail (leavesOf (sBin l r))))
-                .== ite (treeWeight (head (leavesOf l)) .<= treeWeight (head (leavesOf r)))
-                        (ite (numLeaves l .== 1)
-                             (treeWeight (head (leavesOf r)))
-                             (smin (treeWeight (head (tail (leavesOf l)))) (treeWeight (head (leavesOf r)))))
-                        (ite (numLeaves r .== 1)
-                             (treeWeight (head (leavesOf l)))
-                             (smin (treeWeight (head (leavesOf l))) (treeWeight (head (tail (leavesOf r)))))))
-        (\l _ -> treeSize l, [proofOf tsPos]) $
-        \ih l r -> [numLeaves l + numLeaves r .>= 3]
-          |- treeWeight (head (tail (leavesOf (sBin l r))))
-          =: [pCase| l of
-                -- l = Tip: leavesOf (Bin l r) = sortedInsert (Tip wl 0) (leavesOf r)
-                Tip{} -> treeWeight (head (tail (leavesOf (sBin l r))))
-                      ?? loLen `at` Inst @"t" r
-                      ?? nlPos `at` Inst @"t" r
-                      ?? loTB  `at` (Inst @"l" l, Inst @"r" r)
-                      ?? loTBP `at` (Inst @"l" l, Inst @"r" r)
-                      ?? siMin `at` (Inst @"a" (sTip (sweight l) 0), Inst @"xs" (tail (leavesOf r)))
-                      ?? siNP  `at` (Inst @"a" (sTip (sweight l) 0), Inst @"xs" (leavesOf r))
-                      ?? (treeWeight (sTip (sweight l) 0) .== sweight l)
-                      ?? (sweight l .== lightW l)
-                      ?? loHead `at` (Inst @"l" l, Inst @"r" r)
-                      ?? "S-TB"
-                      =: ite (treeWeight (head (leavesOf l)) .<= treeWeight (head (leavesOf r)))
-                             (ite (numLeaves l .== 1)
-                                  (treeWeight (head (leavesOf r)))
-                                  (smin (treeWeight (head (tail (leavesOf l)))) (treeWeight (head (leavesOf r)))))
-                             (ite (numLeaves r .== 1)
-                                  (treeWeight (head (leavesOf l)))
-                                  (smin (treeWeight (head (leavesOf l))) (treeWeight (head (tail (leavesOf r))))))
-                      =: qed
+   sInduct "leavesOfInsertAllNil"
+       (\(Forall @"t" t) -> insertAll (leavesOf t) ([] :: SList HTree) .== leavesOf t)
+       (treeSize, [proofOf tsPos]) $
+       \ih t -> []
+         |- insertAll (leavesOf t) ([] :: SList HTree)
+         =: [pCase| t of
+               Tip{} -> trivial
+               Bin l r -> insertAll (leavesOf t) ([] :: SList HTree)
+                       ?? loAT  `at` Inst @"t" l
+                       ?? loAT  `at` Inst @"t" r
+                       ?? iaAssoc `at` (Inst @"xs" (leavesOf l), Inst @"ys" (leavesOf r), Inst @"zs" ([] :: SList HTree))
+                       ?? ih `at` Inst @"t" r
+                       ?? tsPos `at` Inst @"t" l
+                       ?? tsPos `at` Inst @"t" r
+                       ?? "LIAN"
+                       =: leavesOf t
+                       =: qed
+            |]
 
-                -- l = Bin ll lr: reassociate using insertAllAssoc
-                Bin ll lr -> treeWeight (head (tail (leavesOf (sBin l r))))
-                          ?? loAT    `at` Inst @"t" r
-                          ?? loAT    `at` Inst @"t" ll
-                          ?? loAT    `at` Inst @"t" lr
-                          ?? iaAssoc `at` (Inst @"xs" (leavesOf ll), Inst @"ys" (leavesOf lr), Inst @"zs" (leavesOf r))
-                          -- IH at (ll, Bin lr r)
-                          ?? ih `at` (Inst @"l" ll, Inst @"r" (sBin lr r))
-                          -- leavesOfBinHead at various instances
-                          ?? loHead `at` (Inst @"l" ll, Inst @"r" (sBin lr r))
-                          ?? loHead `at` (Inst @"l" lr, Inst @"r" r)
-                          ?? loHead `at` (Inst @"l" ll, Inst @"r" lr)
-                          ?? loHead `at` (Inst @"l" l, Inst @"r" r)
-                          ?? tsPos `at` Inst @"t" ll
-                          ?? tsPos `at` Inst @"t" lr
-                          ?? loLen `at` Inst @"t" ll
-                          ?? loLen `at` Inst @"t" lr
-                          ?? loLen `at` Inst @"t" r
-                          ?? nlPos `at` Inst @"t" ll
-                          ?? nlPos `at` Inst @"t" lr
-                          ?? nlPos `at` Inst @"t" r
-                          ?? "S-BB"
-                          =: ite (treeWeight (head (leavesOf l)) .<= treeWeight (head (leavesOf r)))
-                                 (ite (numLeaves l .== 1)
-                                      (treeWeight (head (leavesOf r)))
-                                      (smin (treeWeight (head (tail (leavesOf l)))) (treeWeight (head (leavesOf r)))))
-                                 (ite (numLeaves r .== 1)
-                                      (treeWeight (head (leavesOf l)))
-                                      (smin (treeWeight (head (leavesOf l))) (treeWeight (head (tail (leavesOf r))))))
-                          =: qed
-             |]
+-- | When the right child is a Tip, leavesOf reduces to sortedInsert into leavesOf of the left.
+--
+-- >>> runTPWith cvc5 leavesOfBinTipProof
+leavesOfBinTipProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
+leavesOfBinTipProof = do
+   iaSI   <- recall insertAllSortedInsertProof
+   loAT   <- recall leavesOfAllTip0Proof
+   loIANil <- recall leavesOfInsertAllNilProof
+
+   lemma "leavesOfBinTip"
+       (\(Forall @"l" l) (Forall @"r" r) ->
+           isTip r .=> leavesOf (sBin l r) .== sortedInsert (sTip (treeWeight r) 0) (leavesOf l))
+       [proofOf iaSI, proofOf loAT, proofOf loIANil]
+
+-- | When the right child is a Tip and lighter, leavesOf prepends it.
+--
+-- >>> runTPWith cvc5 leavesOfBinTipPrependProof
+leavesOfBinTipPrependProof :: TP (Proof (Forall "l" HTree -> Forall "r" HTree -> SBool))
+leavesOfBinTipPrependProof = do
+   loBT  <- recall leavesOfBinTipProof
+   siPre <- recall sortedInsertPrependProof
+   lwH   <- recall lightWIsHeadProof
+   loLen <- recall leavesOfLengthProof
+   nlPos <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
+
+   lemma "leavesOfBinTipPrepend"
+       (\(Forall @"l" l) (Forall @"r" r) ->
+              isTip r .&& numLeaves l .>= 1 .&& lightW r .<= lightW l
+          .=> leavesOf (sBin l r) .== sTip (treeWeight r) 0 .: leavesOf l)
+       [proofOf loBT, proofOf siPre, proofOf lwH, proofOf loLen, proofOf nlPos]
 
 -- | The lightest weight in a tree equals the first element of its sorted leaf list:
 -- @lightW t == treeWeight (head (leavesOf t))@.
@@ -5351,8 +5325,9 @@ lightWIsHeadProof = do
 
 
 -- | light2W = treeWeight of second element of sorted leaf list.
--- Uses 'leavesOfBinSecond' to handle the sorted-merge reasoning,
--- then connects via 'lightWIsHead' and the IH.
+-- Case-splits on (Tip/Bin, Tip/Bin) and lightW ordering.
+-- Uses leavesOfTipBin(Prepend) for Tip-Bin, leavesOfBinTip(Prepend) for Bin-Tip,
+-- sortedInsertMin/NotPrepend for the non-prepend cases, and IH on subtrees.
 --
 -- >>> runTPWith cvc5 light2WIsSecondProof
 light2WIsSecondProof :: TP (Proof (Forall "t" HTree -> SBool))
@@ -5360,7 +5335,14 @@ light2WIsSecondProof = do
     tsPos    <- recall treeSizePosProof
     lwHead   <- recall lightWIsHeadProof
     loLen    <- recall leavesOfLengthProof
-    loBinSec <- recall leavesOfBinSecondProof
+    siMin    <- recall sortedInsertMinProof
+    siNP     <- recall sortedInsertNotPrependProof
+    loTB     <- recall leavesOfTipBinProof
+    loTBP    <- recall leavesOfTipBinPrependProof
+    loBT     <- recall leavesOfBinTipProof
+    loBTP    <- recall leavesOfBinTipPrependProof
+    iaAssoc  <- recall insertAllAssocProof
+    loAT     <- recall leavesOfAllTip0Proof
     nlPos    <- inductiveLemma "numLeavesPos" (\(Forall @"t" t) -> numLeaves t .>= 1) []
 
     sInduct "light2WIsSecond"
@@ -5382,10 +5364,118 @@ light2WIsSecondProof = do
                         ?? loLen    `at` Inst @"t" r
                         ?? nlPos    `at` Inst @"t" l
                         ?? nlPos    `at` Inst @"t" r
-                        ?? loBinSec `at` (Inst @"l" l, Inst @"r" r)
-                        ?? "L2S"
-                        =: treeWeight (head (tail (leavesOf t)))
-                        =: qed
+                        =: case l of
+                             Tip{} -> case r of
+                               -- TT: both Tips. Case split on weight ordering.
+                               Tip{} -> light2W t
+                                     ?? loTBP `at` (Inst @"l" l, Inst @"r" r)
+                                     ?? loTB  `at` (Inst @"l" l, Inst @"r" r)
+                                     ?? siNP  `at` (Inst @"a" (sTip (sweight l) 0), Inst @"xs" [sTip (sweight r) 0])
+                                     ?? "TT"
+                                     =: treeWeight (head (tail (leavesOf t)))
+                                     =: qed
+
+                               -- TB: l=Tip, r=Bin. Case split on lightW ordering.
+                               Bin rl rr -> light2W t
+                                     ?? nlPos `at` Inst @"t" rl
+                                     ?? nlPos `at` Inst @"t" rr
+                                     =: cases
+                                          [ lightW l .<= lightW r
+                                              ==> light2W t
+                                               ?? "TB1a"
+                                               =: lightW r
+                                               ?? lwHead `at` Inst @"t" r
+                                               ?? "TB1b"
+                                               =: treeWeight (head (leavesOf r))
+                                               ?? loTBP `at` (Inst @"l" l, Inst @"r" r)
+                                               ?? "TB1c"
+                                               =: treeWeight (head (tail (leavesOf t)))
+                                               =: qed
+
+                                          , sNot (lightW l .<= lightW r)
+                                              ==> light2W t
+                                               ?? "TB2a"
+                                               =: smin (sweight l) (light2W r)
+                                               ?? "TB2b"
+                                               =: smin (sweight l) (treeWeight (head (tail (leavesOf r))))
+                                               ?? siMin `at` (Inst @"a" (sTip (sweight l) 0), Inst @"xs" (tail (leavesOf r)))
+                                               ?? siNP  `at` (Inst @"a" (sTip (sweight l) 0), Inst @"xs" (leavesOf r))
+                                               ?? loTB  `at` (Inst @"l" l, Inst @"r" r)
+                                               ?? (treeWeight (sTip (sweight l) 0) .== sweight l)
+                                               ?? "TB2c"
+                                               =: treeWeight (head (tail (leavesOf t)))
+                                               =: qed
+                                          ]
+
+                             Bin ll lr -> case r of
+                               -- BT: l=Bin, r=Tip. Symmetric to TB using leavesOfBinTip.
+                               Tip{} -> light2W t
+                                     ?? nlPos `at` Inst @"t" ll
+                                     ?? nlPos `at` Inst @"t" lr
+                                     =: cases
+                                          [ lightW l .<= lightW r
+                                              ==> light2W t
+                                               ?? "BT1a"
+                                               =: smin (light2W l) (sweight r)
+                                               ?? "BT1b"
+                                               =: smin (treeWeight (head (tail (leavesOf l)))) (sweight r)
+                                               ?? siMin `at` (Inst @"a" (sTip (sweight r) 0), Inst @"xs" (tail (leavesOf l)))
+                                               ?? siNP  `at` (Inst @"a" (sTip (sweight r) 0), Inst @"xs" (leavesOf l))
+                                               ?? loBT  `at` (Inst @"l" l, Inst @"r" r)
+                                               ?? (treeWeight (sTip (sweight r) 0) .== sweight r)
+                                               ?? "BT1c"
+                                               =: treeWeight (head (tail (leavesOf t)))
+                                               =: qed
+
+                                          , sNot (lightW l .<= lightW r)
+                                              ==> light2W t
+                                               ?? "BT2a"
+                                               =: lightW l
+                                               ?? lwHead `at` Inst @"t" l
+                                               ?? "BT2b"
+                                               =: treeWeight (head (leavesOf l))
+                                               ?? loBTP `at` (Inst @"l" l, Inst @"r" r)
+                                               ?? "BT2c"
+                                               =: treeWeight (head (tail (leavesOf t)))
+                                               =: qed
+                                          ]
+
+                               -- BB: l=Bin, r=Bin. Use insertAllAssoc to reassociate.
+                               Bin{} -> light2W t
+                                     ?? nlPos  `at` Inst @"t" ll
+                                     ?? nlPos  `at` Inst @"t" lr
+                                     ?? loAT   `at` Inst @"t" l
+                                     ?? loAT   `at` Inst @"t" r
+                                     ?? loAT   `at` Inst @"t" ll
+                                     ?? loAT   `at` Inst @"t" lr
+                                     ?? iaAssoc `at` (Inst @"xs" (leavesOf ll), Inst @"ys" (leavesOf lr), Inst @"zs" (leavesOf r))
+                                     =: cases
+                                          [ lightW l .<= lightW r
+                                              ==> light2W t
+                                               ?? "BB1a"
+                                               =: smin (light2W l) (lightW r)
+                                               ?? "BB1b"
+                                               =: smin (treeWeight (head (tail (leavesOf l)))) (treeWeight (head (leavesOf r)))
+                                               ?? siMin `at` (Inst @"a" (head (leavesOf r)), Inst @"xs" (tail (leavesOf l)))
+                                               ?? siNP  `at` (Inst @"a" (head (leavesOf r)), Inst @"xs" (leavesOf l))
+                                               ?? loBT  `at` (Inst @"l" l, Inst @"r" r)
+                                               ?? "BB1c"
+                                               =: treeWeight (head (tail (leavesOf t)))
+                                               =: qed
+
+                                          , sNot (lightW l .<= lightW r)
+                                              ==> light2W t
+                                               ?? "BB2a"
+                                               =: smin (lightW l) (light2W r)
+                                               ?? "BB2b"
+                                               =: smin (treeWeight (head (leavesOf l))) (treeWeight (head (tail (leavesOf r))))
+                                               ?? siMin `at` (Inst @"a" (head (leavesOf l)), Inst @"xs" (tail (leavesOf r)))
+                                               ?? siNP  `at` (Inst @"a" (head (leavesOf l)), Inst @"xs" (leavesOf r))
+                                               ?? loTB  `at` (Inst @"l" l, Inst @"r" r)
+                                               ?? "BB2c"
+                                               =: treeWeight (head (tail (leavesOf t)))
+                                               =: qed
+                                          ]
              |]
 
 -- ** Optimality theorem
