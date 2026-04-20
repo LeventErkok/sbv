@@ -5232,8 +5232,16 @@ light2WIsSecondProof = do
                              -- Tip-Tip: both leaves, direct computation
                              Tip{} -> case r of
                                         Tip{} -> light2W t
-                                              =: treeWeight (head (tail (leavesOf t)))
-                                              =: qed
+                                              =: cases
+                                                   [ sweight l .<= sweight r
+                                                       ==> light2W t
+                                                        =: treeWeight (head (tail (leavesOf t)))
+                                                        =: qed
+                                                   , sNot (sweight l .<= sweight r)
+                                                       ==> light2W t
+                                                        =: treeWeight (head (tail (leavesOf t)))
+                                                        =: qed
+                                                   ]
 
                                         -- Tip-Bin: l is a single leaf, r has ≥ 2 leaves
                                         Bin rl rr -> light2W t
