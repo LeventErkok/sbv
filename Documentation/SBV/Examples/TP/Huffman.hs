@@ -5228,18 +5228,6 @@ light2WIsSecondProof = do
           =: [pCase| t of
                 Tip{} -> trivial
                 Bin l r -> light2W t
-                        ?? ih     `at` Inst @"t" l
-                        ?? ih     `at` Inst @"t" r
-                        ?? lwHead `at` Inst @"t" l
-                        ?? lwHead `at` Inst @"t" r
-                        ?? tsPos  `at` Inst @"t" l
-                        ?? tsPos  `at` Inst @"t" r
-                        ?? loLen  `at` Inst @"t" l
-                        ?? loLen  `at` Inst @"t" r
-                        ?? nlPos  `at` Inst @"t" l
-                        ?? nlPos  `at` Inst @"t" r
-                        ?? loAT   `at` Inst @"t" l
-                        ?? loAT   `at` Inst @"t" r
                         =: case l of
                              -- Tip-Tip: both leaves, direct computation
                              Tip{} -> case r of
@@ -5249,25 +5237,26 @@ light2WIsSecondProof = do
 
                                         -- Tip-Bin: l is a single leaf, r has ≥ 2 leaves
                                         Bin rl rr -> light2W t
-                                              ?? nlPos `at` Inst @"t" rl
-                                              ?? nlPos `at` Inst @"t" rr
+                                              ?? ih     `at` Inst @"t" r
+                                              ?? lwHead `at` Inst @"t" l
+                                              ?? lwHead `at` Inst @"t" r
+                                              ?? tsPos  `at` Inst @"t" l
+                                              ?? tsPos  `at` Inst @"t" r
+                                              ?? loLen  `at` Inst @"t" r
+                                              ?? nlPos  `at` Inst @"t" r
+                                              ?? nlPos  `at` Inst @"t" rl
+                                              ?? nlPos  `at` Inst @"t" rr
+                                              ?? loAT   `at` Inst @"t" r
+                                              ?? siMin  `at` (Inst @"a" (sTip (sweight l) 0),
+                                                              Inst @"xs" (tail (leavesOf r)))
                                               =: cases
-                                                   -- When l is lighter: light2W = lightW r
-                                                   -- sortedInsert prepends l, so tail = leavesOf r
                                                    [ lightW l .<= lightW r
                                                        ==> light2W t
                                                         =: treeWeight (head (tail (leavesOf t)))
                                                         =: qed
 
-                                                   -- When r is lighter: light2W = min(lightW l, light2W r)
-                                                   -- sortedInsert puts head(leavesOf r) first
-                                                   -- head(tail) = head(sortedInsert l (tail(leavesOf r)))
-                                                   -- = min(lightW l, treeWeight(head(tail(leavesOf r))))
-                                                   -- = min(lightW l, light2W r)  by IH on r
                                                    , sNot (lightW l .<= lightW r)
                                                        ==> light2W t
-                                                        ?? siMin `at` (Inst @"a" (sTip (sweight l) 0),
-                                                                       Inst @"xs" (tail (leavesOf r)))
                                                         =: treeWeight (head (tail (leavesOf t)))
                                                         =: qed
                                                    ]
@@ -5275,25 +5264,24 @@ light2WIsSecondProof = do
                              -- Bin-Tip: l has ≥ 2 leaves, r is a single leaf
                              Bin ll lr -> case r of
                                         Tip{} -> light2W t
-                                              ?? nlPos `at` Inst @"t" ll
-                                              ?? nlPos `at` Inst @"t" lr
+                                              ?? ih     `at` Inst @"t" l
+                                              ?? lwHead `at` Inst @"t" l
+                                              ?? lwHead `at` Inst @"t" r
+                                              ?? tsPos  `at` Inst @"t" l
+                                              ?? tsPos  `at` Inst @"t" r
+                                              ?? loLen  `at` Inst @"t" l
+                                              ?? nlPos  `at` Inst @"t" l
+                                              ?? nlPos  `at` Inst @"t" ll
+                                              ?? nlPos  `at` Inst @"t" lr
+                                              ?? loAT   `at` Inst @"t" l
+                                              ?? siMin  `at` (Inst @"a" (sTip (sweight r) 0),
+                                                              Inst @"xs" (tail (leavesOf l)))
                                               =: cases
-                                                   -- When l is lighter: light2W = min(light2W l, lightW r)
-                                                   -- leavesOf l starts with lightW l, rest is tail(leavesOf l)
-                                                   -- insertAll (leavesOf l) [Tip wr 0]:
-                                                   --   by insertAllSortedInsertL, head = min(head(leavesOf l), wr)
-                                                   --   second element follows from structure
                                                    [ lightW l .<= lightW r
                                                        ==> light2W t
-                                                        ?? siMin `at` (Inst @"a" (sTip (sweight r) 0),
-                                                                       Inst @"xs" (tail (leavesOf l)))
                                                         =: treeWeight (head (tail (leavesOf t)))
                                                         =: qed
 
-                                                   -- When r is lighter: light2W = lightW l
-                                                   -- sortedInsert (Tip wr 0) prepends to leavesOf l
-                                                   -- so tail = sortedInsert (Tip wr 0) (tail(leavesOf l))
-                                                   -- head(tail(sortedInsert ...)) involves further reasoning
                                                    , sNot (lightW l .<= lightW r)
                                                        ==> light2W t
                                                         =: treeWeight (head (tail (leavesOf t)))
@@ -5302,20 +5290,32 @@ light2WIsSecondProof = do
 
                                         -- Bin-Bin: both subtrees have ≥ 2 leaves
                                         Bin{} -> light2W t
-                                              ?? nlPos `at` Inst @"t" ll
-                                              ?? nlPos `at` Inst @"t" lr
+                                              ?? ih     `at` Inst @"t" l
+                                              ?? ih     `at` Inst @"t" r
+                                              ?? lwHead `at` Inst @"t" l
+                                              ?? lwHead `at` Inst @"t" r
+                                              ?? tsPos  `at` Inst @"t" l
+                                              ?? tsPos  `at` Inst @"t" r
+                                              ?? loLen  `at` Inst @"t" l
+                                              ?? loLen  `at` Inst @"t" r
+                                              ?? nlPos  `at` Inst @"t" l
+                                              ?? nlPos  `at` Inst @"t" r
+                                              ?? nlPos  `at` Inst @"t" ll
+                                              ?? nlPos  `at` Inst @"t" lr
+                                              ?? loAT   `at` Inst @"t" l
+                                              ?? loAT   `at` Inst @"t" r
+                                              ?? siMin  `at` (Inst @"a" (head (leavesOf r)),
+                                                              Inst @"xs" (tail (leavesOf l)))
+                                              ?? siMin  `at` (Inst @"a" (head (leavesOf l)),
+                                                              Inst @"xs" (tail (leavesOf r)))
                                               =: cases
                                                    [ lightW l .<= lightW r
                                                        ==> light2W t
-                                                        ?? siMin `at` (Inst @"a" (head (leavesOf r)),
-                                                                       Inst @"xs" (tail (leavesOf l)))
                                                         =: treeWeight (head (tail (leavesOf t)))
                                                         =: qed
 
                                                    , sNot (lightW l .<= lightW r)
                                                        ==> light2W t
-                                                        ?? siMin `at` (Inst @"a" (head (leavesOf l)),
-                                                                       Inst @"xs" (tail (leavesOf r)))
                                                         =: treeWeight (head (tail (leavesOf t)))
                                                         =: qed
                                                    ]
