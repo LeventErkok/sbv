@@ -70,7 +70,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
-                              , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
+                              , SBVType(..), forceSVArg, (.=>)
                               , RCSet(..), QuantifiedBool(..), ArrayModel(..), SInfo(..), getSInfo
                               , OptimizeStyle(..), GeneralizedCV(..), ExtCV(..)
                               )
@@ -1680,8 +1680,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                                              reject = nm' <> "_reject"
 
-                                                             -- rounding mode doesn't matter here, just pick one
-                                                             scv = cvToSMTLib RoundNearestTiesToEven
+                                                             -- convert a constant
+                                                             scv = cvToSMTLib
 
                                                              (ats, rt) = (init ts, last ts)
 

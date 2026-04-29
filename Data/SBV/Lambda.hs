@@ -433,7 +433,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                constBindings :: [(SV, T.Text)]
                constBindings = map mkConst constants
                  where mkConst :: (SV, CV) -> (SV, T.Text)
-                       mkConst (sv, cv) = (sv, cvToSMTLib (roundingMode cfg) cv)
+                       mkConst (sv, cv) = (sv, cvToSMTLib cv)
 
                svBindings :: [((SV, T.Text), Maybe String)]
                svBindings = map mkAsgn assignments
@@ -455,7 +455,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                -- NB. The following is dead-code, since we ensure tbls is empty
                -- We used to support this, but there are issues, so dropping support
                -- See, for instance, https://github.com/LeventErkok/sbv/issues/664
-               (tableMap, constTables, nonConstTablesUnindexed) = constructTables rm consts tbls
+               (tableMap, constTables, nonConstTablesUnindexed) = constructTables consts tbls
 
                -- Index each non-const table with the largest index of SV it needs
                nonConstTables = [ (maximum ((0, 0) : [getLLI n | SV _ n <- elts]), nct)
@@ -463,7 +463,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
 
                lambdaTable :: T.Text -> Kind -> Kind -> [SV] -> T.Text
                lambdaTable extraSpace ak rk elts = "(lambda ((" <> lv <> " " <> smtType ak <> "))" <> space <> chain 0 elts <> ")"
-                 where cnst k i = cvtCV rm (mkConstCV k (i::Integer))
+                 where cnst k i = cvtCV (mkConstCV k (i::Integer))
 
                        lv = "idx"
 
