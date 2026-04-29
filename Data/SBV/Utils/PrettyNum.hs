@@ -359,7 +359,7 @@ showSMTFloat f
    | f == 0              = as "+zero"
    | True                = let w   = floatToWord f
                                b i = if w `testBit` i then '1' else '0'
-                               s   = T.pack [b i | i <- [31]]
+                               s   = T.pack [b 31]
                                e   = T.pack [b i | i <- [30, 29 .. 23]]
                                m   = T.pack [b i | i <- [22, 21 ..  0]]
                            in "(fp #b" <> s <> " #b" <> e <> " #b" <> m <> ")"
@@ -375,7 +375,7 @@ showSMTDouble d
    | d == 0              = as "+zero"
    | True                = let w   = doubleToWord d
                                b i = if w `testBit` i then '1' else '0'
-                               s   = T.pack [b i | i <- [63]]
+                               s   = T.pack [b 63]
                                e   = T.pack [b i | i <- [62, 61 .. 52]]
                                m   = T.pack [b i | i <- [51, 50 ..  0]]
                            in "(fp #b" <> s <> " #b" <> e <> " #b" <> m <> ")"
