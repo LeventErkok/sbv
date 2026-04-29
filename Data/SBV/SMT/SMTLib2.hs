@@ -151,15 +151,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                           ]
 
         -- Some cases require all, some require none.
-        setAll reason = ["(set-logic " <> T.pack (showLogic Logic_ALL) <> ") ; "  <> T.pack reason <> ", using catch-all."]
-
-        isCVC5 = case name (solver cfg) of
-                   CVC5 -> True
-                   _    -> False
-
-        -- If ALL is selected, use HO_ALL for CVC5 to get support for higher-order features. Yet another discrepancy.
-        showLogic Logic_ALL | isCVC5 = "HO_ALL"
-        showLogic l                  = show l
+        setAll reason = [logicString cfg Logic_ALL <> " ; "  <> T.pack reason <> ", using catch-all."]
 
         -- Determining the logic is surprisingly tricky!
         logic :: [Text]
@@ -174,7 +166,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                                                              ]
            = case l of
                Logic_NONE -> ["; NB. Not setting the logic per user request of Logic_NONE"]
-               _          -> ["(set-logic " <> T.pack (showLogic l) <> ") ; NB. User specified."]
+               _          -> [logicString cfg l <> " ; NB. User specified."]
 
            -- There's a reason why we can't handle this problem:
            | Just cantDo <- doesntHandle
@@ -212,26 +204,25 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
 
            | hasFP || hasRounding
            = if needsQuantifiers
-             then ["(set-logic ALL)"]
-             else if hasBVs
-                  then ["(set-logic QF_FPBV)"]
-                  else ["(set-logic QF_FP)"]
+             then [logicString cfg Logic_ALL]
+             else [logicString cfg (if hasBVs then QF_FPBV else QF_FP)]
 
            -- If we're in a user query context, we'll pick ALL, otherwise
            -- we'll stick to some bit-vector logic based on what we see in the problem.
            -- This is controversial, but seems to work well in practice.
            | True
            = case ctx of
-               QueryExternal -> ["(set-logic ALL) ; external query, using all logics."]
+               QueryExternal -> [logicString cfg Logic_ALL <> " ; external query, using all logics."]
                QueryInternal -> if supportsBitVectors solverCaps
-                                then ["(set-logic " <> qs <> as <> ufs <> "BV)"]
-                                else ["(set-logic ALL)"] -- fall-thru
-          where qs  | not needsQuantifiers  = "QF_"
-                    | True                  = ""
-                as  | not hasArrays         = ""
-                    | True                  = "A"
-                ufs | null uis && null tbls = ""     -- we represent tables as UFs
-                    | True                  = "UF"
+                                then [logicString cfg picked]
+                                else [logicString cfg Logic_ALL] -- fall-thru
+          where picked 
+                  | needsQuantifiers = Logic_ALL
+                  | True             = case (hasArrays, null uis && null tbls) of
+                                         (False, False) -> QF_UFBV
+                                         (False, True)  -> QF_BV
+                                         (True,  False) -> QF_AUFBV
+                                         (True,  True)  -> QF_ABV
 
         -- SBV always requires the production of models!
         getModels :: [Text]
@@ -1339,15 +1330,12 @@ setSMTOption cfg = set
         set (ReproducibleResourceLimit i) = opt   [":reproducible-resource-limit", showText i]
         set (SMTVerbosity              i) = opt   [":verbosity",                   showText i]
         set (OptionKeyword          k as) = opt   (T.pack k : map T.pack as)
-        set (SetLogic                  l) = logic l
+        set (SetLogic                  l) = logicString cfg l
         set (SetInfo                k as) = info  (T.pack k : map T.pack as)
         set (SetTimeOut                i) = opt   $ timeOut i
 
         opt   xs = "(set-option " <> T.unwords xs <> ")"
         info  xs = "(set-info "   <> T.unwords xs <> ")"
-
-        logic Logic_NONE = "; NB. not setting the logic per user request of Logic_NONE"
-        logic l          = "(set-logic " <> showText l <> ")"
 
         -- timeout is not standard. We distinguish between CVC/Z3. All else follows z3
         -- The value is in milliseconds, which is how z3/CVC interpret it
@@ -1360,5 +1348,25 @@ setSMTOption cfg = set
         smtBool :: Bool -> Text
         smtBool True  = "true"
         smtBool False = "false"
+
+-- | Set the logic, accounting for solver inconsistencies.
+logicString :: SMTConfig -> Logic -> Text
+logicString cfg = pick
+  where
+    slvr = name (solver cfg)
+
+    -- This is more or less showText, but with exceptions:
+    --
+    --    Logic_ALL : HO_ALL for CVC5 to get support for higher-order features.
+    --    QF_FPBV   : Bitwuzla calls it QF_BVFP. See: https://github.com/LeventErkok/sbv/issues/774
+    --    Logic_NONE: Sets nothing, just sets a comment
+    pick Logic_ALL | CVC5     <- slvr = wrap "HO_ALL"
+    pick QF_FPBV   | Bitwuzla <- slvr = wrap "QF_BVFP"
+    pick Logic_NONE                   = "; NB. not setting the logic per user request of Logic_NONE"
+
+    -- Fall thru
+    pick l = wrap (showText l)
+
+    wrap l = "(set-logic " <> l <> ")"
 
 {- HLint ignore module "Use record patterns" -}
