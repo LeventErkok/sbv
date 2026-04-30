@@ -4017,6 +4017,7 @@ class SMTDefinable a where
                                 modifyIORef' (rMeasureChecks st)
                                              ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st Nothing) :)
                               pure def
+
                             HasMeasure eval helpers -> do
                               when isSelfRec $
                                 modifyIORef' (rMeasureChecks st)
@@ -4025,6 +4026,7 @@ class SMTDefinable a where
                                 modifyIORef' (rMeasureChecks st)
                                              ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st (Just eval)) :)
                               pure def
+
                             HasContract eval ceval helpers -> do
                               when hasCrossRefs $
                                 modifyIORef' (rMeasureChecks st)
@@ -4032,6 +4034,7 @@ class SMTDefinable a where
                               modifyIORef' (rMeasureChecks st)
                                            ((funcNm, False, \cfg -> verifyMeasureWithContract cfg funcNm info eval ceval helpers) :)
                               pure def
+
                             Productive -> do
                               when isSelfRec $
                                 modifyIORef' (rMeasureChecks st)
@@ -4040,6 +4043,7 @@ class SMTDefinable a where
                                 modifyIORef' (rMeasureChecks st)
                                              ((funcNm, True, \cfg -> checkMutualProductiveFromState cfg funcNm st) :)
                               pure def
+
                             Unverified -> do modifyIORef' (rNoTermCheckFunctions st) (Set.insert nm)
                                              debug (stCfg st) ["[MEASURE] " <> T.pack funcNm <> ": no termination check (smtFunctionNoTermination)"]
                                              pure def)

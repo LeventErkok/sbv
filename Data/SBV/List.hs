@@ -1348,7 +1348,7 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
            z     = zIn + delta / 2
 
            up, down :: SReal -> SReal -> SReal -> SList AlgReal
-           up   = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.up" (\start _d end -> 0 `smax` (end - start + 1), [])
+           up   = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.up"   (\start _d end -> 0 `smax` (end - start + 1), [])
                 $ \start d end -> ite (start .> end .|| d .<= 0) [] (start .: up   (start + d) d end)
            down = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.down" (\start _d end -> 0 `smax` (start - end + 1), [])
                 $ \start d end -> ite (start .< end .|| d .>= 0) [] (start .: down (start + d) d end)
