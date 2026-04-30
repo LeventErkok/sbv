@@ -23,7 +23,9 @@
     was rounded twice, which is against the specification. Thanks to Ryan Scott for the report and the fix.
 
   * Simplify how floating-point literals are printed. The older method worked for Z3/CVC5, but not for Bitwuzla.
-    Thanks to Ryan Scott for the report and the fix idea.
+    Thanks to Ryan Scott for the report and the fix.
+
+  * Fix the definition of sRealToSIntegerTruncate to do proper truncation. Thanks to Ryan Scott for the report and the fix.
 
 ### Version 14.0, 2026-04-01
 

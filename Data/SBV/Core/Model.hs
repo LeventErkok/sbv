@@ -867,9 +867,10 @@ sRealToSInteger x
   where y st = do xsv <- sbvToSV st x
                   newExpr st KUnbounded (SBVApp (KindCast KReal KUnbounded) [xsv])
 
--- | Convert an SReal to an SInteger, truncating version.
+-- | Convert an SReal to an SInteger, truncating version. Truncate simply chops of the
+-- fractional part, essentially rounding towards zero.
 sRealToSIntegerTruncate :: SReal -> SInteger
-sRealToSIntegerTruncate x = ite (x .< 0) (sRealToSInteger x) (- (sRealToSInteger (- x)))
+sRealToSIntegerTruncate x = ite (x .>= 0) (sRealToSInteger x) (- sRealToSInteger (-x))
 
 -- | label: Label the result of an expression. This is essentially a no-op, but useful as it generates a comment in the generated C/SMT-Lib code.
 -- Note that if the argument is a constant, then the label is dropped completely, per the usual constant folding strategy. Compare this to 'observe'
