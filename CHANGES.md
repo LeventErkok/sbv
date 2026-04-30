@@ -17,6 +17,14 @@
   * Consolidated internal solver IPC timeouts into named constants.
     Set the environment variable `SBV_COMM_TIMEOUT_FACTOR` to scale them (e.g., `2` to double).
 
+  * Better handling of logic-strings, accommodating solver differences. Thanks to Ryan Scott for the report.
+
+  * Fixed a bug in fpRemH, which calculates the floating point reminder for concrete values. The result
+    was rounded twice, which is against the specification. Thanks to Ryan Scott for the report and the fix.
+
+  * Simplify how floating-point literals are printed. The older method worked for Z3/CVC5, but not for Bitwuzla.
+    Thanks to Ryan Scott for the report and the fix idea.
+
 ### Version 14.0, 2026-04-01
 
   * [BACKWARDS COMPATIBILITY] The most important change in this release is how SBV treats
