@@ -74,7 +74,7 @@ fpRemH x y
   | isInfinite x || isNaN x = 0 / 0
   | y == 0       || isNaN y = 0 / 0
   | isInfinite y            = x
-  | True                    = pSign (x - fromRational (fromInteger d * ry))
+  | True                    = pSign (fromRational (rx - fromInteger d * ry))
   where rx, ry, rd :: Rational
         rx = toRational x
         ry = toRational y

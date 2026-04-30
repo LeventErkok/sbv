@@ -22,7 +22,7 @@ module Data.SBV.Utils.PrettyNum (
       , showNegativeNumber
       ) where
 
-import Data.Bits  ((.&.), countTrailingZeros)
+import Data.Bits  ((.&.), countTrailingZeros, testBit)
 import Data.Char  (intToDigit, ord, chr)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
@@ -44,7 +44,7 @@ import Data.SBV.Core.AlgReals    (algRealToSMTLib2)
 import Data.SBV.Core.SizedFloats (fprToSMTLib2, bfToString)
 
 import Data.SBV.Utils.Lib     (stringToQFS, showText)
-import Data.SBV.Utils.Numeric (smtRoundingMode)
+import Data.SBV.Utils.Numeric (smtRoundingMode, floatToWord, doubleToWord)
 
 -- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
 class PrettyNum a where
@@ -350,51 +350,50 @@ showHDouble d
    | True                = show d
 
 -- | A version of show for floats that generates correct SMTLib literals using the rounding mode
-showSMTFloat :: RoundingMode -> Float -> Text
-showSMTFloat rm f
+showSMTFloat :: Float -> Text
+showSMTFloat f
    | isNaN f             = as "NaN"
    | isInfinite f, f < 0 = as "-oo"
    | isInfinite f        = as "+oo"
    | isNegativeZero f    = as "-zero"
    | f == 0              = as "+zero"
-   | True                = "((_ to_fp 8 24) " <> smtRoundingMode rm <> " " <> toSMTLibRational (toRational f) <> ")"
+   | True                = let w   = floatToWord f
+                               b i = if w `testBit` i then '1' else '0'
+                               s   = T.pack [b 31]
+                               e   = T.pack [b i | i <- [30, 29 .. 23]]
+                               m   = T.pack [b i | i <- [22, 21 ..  0]]
+                           in "(fp #b" <> s <> " #b" <> e <> " #b" <> m <> ")"
    where as s = "(_ " <> s <> " 8 24)"
 
-
 -- | A version of show for doubles that generates correct SMTLib literals using the rounding mode
-showSMTDouble :: RoundingMode -> Double -> Text
-showSMTDouble rm d
+showSMTDouble :: Double -> Text
+showSMTDouble d
    | isNaN d             = as "NaN"
    | isInfinite d, d < 0 = as "-oo"
    | isInfinite d        = as "+oo"
    | isNegativeZero d    = as "-zero"
    | d == 0              = as "+zero"
-   | True                = "((_ to_fp 11 53) " <> smtRoundingMode rm <> " " <> toSMTLibRational (toRational d) <> ")"
+   | True                = let w   = doubleToWord d
+                               b i = if w `testBit` i then '1' else '0'
+                               s   = T.pack [b 63]
+                               e   = T.pack [b i | i <- [62, 61 .. 52]]
+                               m   = T.pack [b i | i <- [51, 50 ..  0]]
+                           in "(fp #b" <> s <> " #b" <> e <> " #b" <> m <> ")"
    where as s = "(_ " <> s <> " 11 53)"
 
 -- | Show an SBV rational as an SMTLib value. This is used for faithful rationals.
 showSMTRational :: Rational -> Text
 showSMTRational r = "(SBV.Rational " <> showNegativeNumber (numerator r) <> " " <> showNegativeNumber (denominator r) <> ")"
 
--- | Show a rational in SMTLib format. This is used for conversions from regular rationals.
-toSMTLibRational :: Rational -> Text
-toSMTLibRational r
-   | n < 0
-   = "(- (/ "  <> showText (abs n) <> ".0 " <> showText d <> ".0))"
-   | True
-   = "(/ " <> showText n <> ".0 " <> showText d <> ".0)"
-  where n = numerator r
-        d = denominator r
-
 -- | Convert a CV to an SMTLib2 compliant value
-cvToSMTLib :: RoundingMode -> CV -> Text
-cvToSMTLib rm x
+cvToSMTLib :: CV -> Text
+cvToSMTLib x
   | isBoolean       x, CInteger  w      <- cvVal x = if w == 0 then "false" else "true"
   | isRoundingMode  x, CADT (s, [])     <- cvVal x = roundModeConvert s
   | isReal          x, CAlgReal  r      <- cvVal x = T.pack (algRealToSMTLib2 r)
-  | isFloat         x, CFloat    f      <- cvVal x = showSMTFloat  rm f
-  | isDouble        x, CDouble   d      <- cvVal x = showSMTDouble rm d
   | isRational      x, CRational r      <- cvVal x = showSMTRational r
+  | isFloat         x, CFloat    f      <- cvVal x = showSMTFloat  f
+  | isDouble        x, CDouble   d      <- cvVal x = showSMTDouble d
   | isFP            x, CFP       f      <- cvVal x = T.pack (fprToSMTLib2 f)
   | not (isBounded x), CInteger  w      <- cvVal x = if w >= 0 then showText w else "(- " <> showText (abs w) <> ")"
   | not (hasSign x)  , CInteger  w      <- cvVal x = smtLibHex (intSizeOf x) w
@@ -436,7 +435,7 @@ cvToSMTLib rm x
         smtLibSeq (KList ek) xs = let mkSeq  [e]   = e
                                       mkSeq  es    = "(seq.++ " <> T.unwords es <> ")"
                                       mkUnit inner = "(seq.unit " <> inner <> ")"
-                                  in mkSeq (mkUnit . cvToSMTLib rm . CV ek <$> xs)
+                                  in mkSeq (mkUnit . cvToSMTLib . CV ek <$> xs)
         smtLibSeq k _ = error $ "SBV.cvToSMTLib: Impossible case (smtLibSeq), received kind: " ++ show k
 
         smtLibSet :: Kind -> RCSet CVal -> Text
@@ -449,11 +448,11 @@ cvToSMTLib rm x
 
                 start def = "((as const " <> smtType k <> ") " <> def <> ")"
 
-                modify how e s = "(store " <> s <> " " <> cvToSMTLib rm (CV ke e) <> " " <> how <> ")"
+                modify how e s = "(store " <> s <> " " <> cvToSMTLib (CV ke e) <> " " <> how <> ")"
 
         smtLibTup :: Kind -> [CVal] -> Text
         smtLibTup (KTuple []) _  = "mkSBVTuple0"
-        smtLibTup (KTuple ks) xs = "(mkSBVTuple" <> showText (length ks) <> " " <> T.unwords (zipWith (\ek e -> cvToSMTLib rm (CV ek e)) ks xs) <> ")"
+        smtLibTup (KTuple ks) xs = "(mkSBVTuple" <> showText (length ks) <> " " <> T.unwords (zipWith (\ek e -> cvToSMTLib (CV ek e)) ks xs) <> ")"
         smtLibTup k           _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
 
         -- Remember that in an ArrayModel we keep a history; i.e., the earlier elements are written later. So, we reverse the assocs
@@ -462,12 +461,12 @@ cvToSMTLib rm x
         smtLibArray k              _                         = error $ "SBV.cvToSMTLib: Impossible case (smtLibArray), received non-matching kind: " ++ show k
 
         mkStoreChain k k1 k2 writes def = walk writes base
-          where base = "((as const " <> smtType k <> ") " <> cvToSMTLib rm (CV k2 def) <> ")"
+          where base = "((as const " <> smtType k <> ") " <> cvToSMTLib (CV k2 def) <> ")"
 
                 walk []                  sofar = sofar
                 walk ((key, val) : rest) sofar = walk rest (store key val sofar)
 
-                store key val sofar = "(store " <> sofar <> " " <> cvToSMTLib rm (CV k1 key) <> " " <> cvToSMTLib rm (CV k2 val) <> ")"
+                store key val sofar = "(store " <> sofar <> " " <> cvToSMTLib (CV k1 key) <> " " <> cvToSMTLib (CV k2 val) <> ")"
 
         -- anomaly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
@@ -477,7 +476,7 @@ cvToSMTLib rm x
         -- ADTs
         smtLibADT :: Kind -> (String,  [(Kind, CVal)]) -> Text
         smtLibADT knd (c, [])  = ascribe c knd
-        smtLibADT knd (c, kvs) = "(" <> ascribe c knd <> " " <> T.unwords (map (\(k, v) -> cvToSMTLib rm (CV  k v)) kvs) <> ")"
+        smtLibADT knd (c, kvs) = "(" <> ascribe c knd <> " " <> T.unwords (map (\(k, v) -> cvToSMTLib (CV  k v)) kvs) <> ")"
         ascribe nm k = "(as " <> T.pack nm <> " " <> smtType k <> ")"
 
 -- | Show a float as a binary
