@@ -867,9 +867,10 @@ sRealToSInteger x
   where y st = do xsv <- sbvToSV st x
                   newExpr st KUnbounded (SBVApp (KindCast KReal KUnbounded) [xsv])
 
--- | Convert an SReal to an SInteger, truncating version.
+-- | Convert an SReal to an SInteger, truncating version. Truncate simply chops of the
+-- fractional part, essentially rounding towards zero.
 sRealToSIntegerTruncate :: SReal -> SInteger
-sRealToSIntegerTruncate x = ite (x .< 0) (sRealToSInteger x) (- (sRealToSInteger (- x)))
+sRealToSIntegerTruncate x = ite (x .>= 0) (sRealToSInteger x) (- sRealToSInteger (-x))
 
 -- | label: Label the result of an expression. This is essentially a no-op, but useful as it generates a comment in the generated C/SMT-Lib code.
 -- Note that if the argument is a constant, then the label is dropped completely, per the usual constant folding strategy. Compare this to 'observe'
@@ -1688,10 +1689,10 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
               -- IH contract: for each recursive call, assume the contract holds on its result.
               -- This is sound because we also prove measure decrease at each call site.
               liftIO $ F.for_ recCalls $ \(rcSV, callArgSVs) -> do
-                let mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
-                    argSVals   = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
-                    freshCallSV = Map.findWithDefault rcSV rcSV svMap
-                    freshResult = SVal (kindOf rcSV) (Right (cache (const (pure freshCallSV))))
+                let mappedArgs    = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
+                    argSVals      = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
+                    freshCallSV   = Map.findWithDefault rcSV rcSV svMap
+                    freshResult   = SVal (kindOf rcSV) (Right (cache (const (pure freshCallSV))))
                     contractHolds = applyC argSVals freshResult
                 internalConstraint st False [] (unSBV contractHolds)
 
@@ -4016,6 +4017,7 @@ class SMTDefinable a where
                                 modifyIORef' (rMeasureChecks st)
                                              ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st Nothing) :)
                               pure def
+
                             HasMeasure eval helpers -> do
                               when isSelfRec $
                                 modifyIORef' (rMeasureChecks st)
@@ -4024,6 +4026,7 @@ class SMTDefinable a where
                                 modifyIORef' (rMeasureChecks st)
                                              ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st (Just eval)) :)
                               pure def
+
                             HasContract eval ceval helpers -> do
                               when hasCrossRefs $
                                 modifyIORef' (rMeasureChecks st)
@@ -4031,6 +4034,7 @@ class SMTDefinable a where
                               modifyIORef' (rMeasureChecks st)
                                            ((funcNm, False, \cfg -> verifyMeasureWithContract cfg funcNm info eval ceval helpers) :)
                               pure def
+
                             Productive -> do
                               when isSelfRec $
                                 modifyIORef' (rMeasureChecks st)
@@ -4039,6 +4043,7 @@ class SMTDefinable a where
                                 modifyIORef' (rMeasureChecks st)
                                              ((funcNm, True, \cfg -> checkMutualProductiveFromState cfg funcNm st) :)
                               pure def
+
                             Unverified -> do modifyIORef' (rNoTermCheckFunctions st) (Set.insert nm)
                                              debug (stCfg st) ["[MEASURE] " <> T.pack funcNm <> ": no termination check (smtFunctionNoTermination)"]
                                              pure def)
