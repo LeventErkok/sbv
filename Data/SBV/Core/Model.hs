@@ -1689,10 +1689,10 @@ checkMeasureWithContract cfgIn funcNm skipNonNeg LambdaInfo{liAssignments, liPar
               -- IH contract: for each recursive call, assume the contract holds on its result.
               -- This is sound because we also prove measure decrease at each call site.
               liftIO $ F.for_ recCalls $ \(rcSV, callArgSVs) -> do
-                let mappedArgs = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
-                    argSVals   = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
-                    freshCallSV = Map.findWithDefault rcSV rcSV svMap
-                    freshResult = SVal (kindOf rcSV) (Right (cache (const (pure freshCallSV))))
+                let mappedArgs    = map (\sv -> Map.findWithDefault sv sv svMap) callArgSVs
+                    argSVals      = map (\sv -> SVal (kindOf sv) (Right (cache (\_ -> pure sv)))) mappedArgs
+                    freshCallSV   = Map.findWithDefault rcSV rcSV svMap
+                    freshResult   = SVal (kindOf rcSV) (Right (cache (const (pure freshCallSV))))
                     contractHolds = applyC argSVals freshResult
                 internalConstraint st False [] (unSBV contractHolds)
 
