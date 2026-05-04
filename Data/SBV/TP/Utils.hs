@@ -227,7 +227,7 @@ runTPWith cfg@SMTConfig{tpOptions = TPOptions{printStats}} (TP f) = do
          pure (a, st)
 
    -- Pass 1: Dry run to collect ribbon widths
-   _ <- runPass (tpQuiet True cfg)
+   _ <- runPass ((tpQuiet True cfg){verbose = False})
 
    -- Pass 2: Real run with computed ribbon
    writeIORef rDryRun False

@@ -47,7 +47,7 @@ Lemma: ntc_at_5
 [GOOD] (assert s7)
 [SEND] (check-sat)
 [RECV] unsat
-                         Q.E.D. [Modulo: ntc28 termination]
+     Q.E.D. [Modulo: ntc28 termination]
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [Modulo: ntc28 termination] ntc_at_5 :: Ɐn ∷ Integer → Bool
