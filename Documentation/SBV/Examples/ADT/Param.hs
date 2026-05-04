@@ -155,9 +155,9 @@ genE = sat $ do e1 :: SExpr String Integer <- free "e1"
 -- | Query mode example.
 --
 -- >>> queryE
--- e1: (let p = (-3 * 1) in (-1 * p))
+-- e1: (let h = (-3 * -1) in (1 * h))
 -- e2: -2
--- e3: (let p = 314 % 315 in p)
+-- e3: (let d = 368 % 369 in d)
 queryE :: IO ()
 queryE = runSMT $ do
            e1 :: SExpr String Integer <- free "e1"
