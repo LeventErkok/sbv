@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 14.0.5, Not yet released
+### Version 14.1, 2026-05-04
 
   * [BACKWARDS COMPATIBILITY] Removed `tpRibbon`. The ribbon length for TP proof
     output is now auto-computed from the proof structure via a lightweight dry-run
@@ -25,7 +25,8 @@
   * Simplify how floating-point literals are printed. The older method worked for Z3/CVC5, but not for Bitwuzla.
     Thanks to Ryan Scott for the report and the fix.
 
-  * Fix the definition of sRealToSIntegerTruncate to do proper truncation. Thanks to Ryan Scott for the report and the fix.
+  * Fix the definition of sRealToSIntegerTruncate to do proper truncation. Thanks to Ryan Scott for the
+    report and the fix.
 
 ### Version 14.0, 2026-04-01
 

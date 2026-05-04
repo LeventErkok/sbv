@@ -207,8 +207,8 @@ is an example:
 Following proof obligation failed:
 ==================================
   Invariant for loop "i < n" is not maintained by the body:
-    Before: SumS {n = 2, i = 1, s = 1}
-    After : SumS {n = 2, i = 2, s = 3}
+    Before: SumS {n = 3, i = 1, s = 1}
+    After : SumS {n = 3, i = 2, s = 3}
 
 Here, we posed the extra incorrect invariant that @s <= i@ must be maintained, and SBV found us a reachable state that violates the invariant. The
 /before/ state indeed satisfies @s <= i@, but the /after/ state does not. Note that the proof fails in this case not because the program
@@ -224,8 +224,8 @@ The termination measure must always be non-negative:
 Following proof obligation failed:
 ==================================
   Measure for loop "i < n" is negative:
-    State  : SumS {n = 3, i = 2, s = 3}
-    Measure: -1
+    State  : SumS {n = 7, i = 6, s = 21}
+    Measure: -5
 
 The failure is pretty obvious in this case: Measure produces a negative value.
 

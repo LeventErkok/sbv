@@ -907,25 +907,25 @@ allSat $ do
    allSatPartition "p2" $ y .>= 0
 :}
 Solution #1:
-  x  =     0 :: Integer
-  y  =    -1 :: Integer
-  p1 =  True :: Bool
-  p2 = False :: Bool
-Solution #2:
   x  =    -1 :: Integer
   y  =     0 :: Integer
   p1 = False :: Bool
   p2 =  True :: Bool
-Solution #3:
-  x  =    -1 :: Integer
-  y  =    -1 :: Integer
-  p1 = False :: Bool
-  p2 = False :: Bool
-Solution #4:
+Solution #2:
   x  =    0 :: Integer
   y  =    0 :: Integer
   p1 = True :: Bool
   p2 = True :: Bool
+Solution #3:
+  x  =     0 :: Integer
+  y  =    -1 :: Integer
+  p1 =  True :: Bool
+  p2 = False :: Bool
+Solution #4:
+  x  =    -1 :: Integer
+  y  =    -1 :: Integer
+  p1 = False :: Bool
+  p2 = False :: Bool
 Found 4 different solutions.
 
 Without the call to 'allSatPartition' the above example, 'allSat' would return all possible combinations of @x@ and @y@ subject to the constraints. (Since we have none here,

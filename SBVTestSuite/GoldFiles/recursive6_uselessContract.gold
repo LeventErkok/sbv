@@ -112,21 +112,21 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s28))
-[RECV] ((s28 101))
+[RECV] ((s28 12))
 [SEND] (get-value (s31))
-[RECV] ((s31 90))
+[RECV] ((s31 1))
 [SEND] (get-value (s34))
-[RECV] ((s34 101))
+[RECV] ((s34 12))
 [SEND] (get-value (s0))
-[RECV] ((s0 0))
+[RECV] ((s0 89))
 [SEND] (get-value (s7))
-[RECV] ((s7 0))
+[RECV] ((s7 89))
 [SEND] (get-value (s8))
 [RECV] ((s8 0))
 [SEND] (get-value (s13))
 [RECV] ((s13 0))
 [SEND] (get-value (s14))
-[RECV] ((s14 0))
+[RECV] ((s14 89))
 [SEND] (get-value (s20))
 [RECV] ((s20 0))
 [SEND] (get-value (s21))
@@ -141,10 +141,10 @@ EXCEPTION:
 ***   Function: mc91triv :: SBV Integer -> SBV Integer
 ***
 ***   Falsifiable. Counter-example:
-***     arg     =   0 :: Integer
-***     before  = 101 :: Integer
-***     then[1] =  90 :: Integer
-***     then[2] = 101 :: Integer
+***     arg     = 89 :: Integer
+***     before  = 12 :: Integer
+***     then[1] =  1 :: Integer
+***     then[2] = 12 :: Integer
 ***
 *** The measure must strictly decrease at every recursive call,
 *** and the contract must hold for the function's output.
