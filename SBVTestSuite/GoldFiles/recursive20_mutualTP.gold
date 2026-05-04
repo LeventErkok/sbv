@@ -215,7 +215,7 @@ Lemma: mutual_at_0
 [GOOD] (assert s7)
 [SEND] (check-sat)
 [RECV] unsat
-                      Q.E.D.
+    Q.E.D.
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 Functions proven terminating: mf_tp, mg_tp

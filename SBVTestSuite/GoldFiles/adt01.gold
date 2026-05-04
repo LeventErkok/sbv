@@ -72,7 +72,7 @@
            (KRational (getKRational_1 SBVRational))
        ))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () ADT ((as APair ADT) ((as AInt64 ADT) #x0000000000000004) ((as AMaybe ADT) ((as Just (Maybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (Either Int (_ FloatingPoint  8 24)) (Seq Bool))))) (mkSBVTuple3 0.0 ((_ to_fp 8 24) roundNearestTiesToEven (/ 12.0 1.0)) (mkSBVTuple2 ((as Left (Either Int (_ FloatingPoint  8 24))) 3) (seq.++ (seq.unit false) (seq.unit true))))))))
+[GOOD] (define-fun s1 () ADT ((as APair ADT) ((as AInt64 ADT) #x0000000000000004) ((as AMaybe ADT) ((as Just (Maybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (Either Int (_ FloatingPoint  8 24)) (Seq Bool))))) (mkSBVTuple3 0.0 (fp #b0 #b10000010 #b10000000000000000000000) (mkSBVTuple2 ((as Left (Either Int (_ FloatingPoint  8 24))) 3) (seq.++ (seq.unit false) (seq.unit true))))))))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () ADT) ; tracks user variable "e"
 [GOOD] (assert (and (= 1 (str.len (getKChar_1 s0)))
