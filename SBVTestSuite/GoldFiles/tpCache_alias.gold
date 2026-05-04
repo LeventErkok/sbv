@@ -1,3 +1,3 @@
-Lemma: nameA                            Q.E.D.
-Lemma: nameB                            Q.E.D.
-Lemma: nameC                            Q.E.D. [Cached] (a.k.a. nameA, nameB)
+Lemma: nameA        Q.E.D.
+Lemma: nameB        Q.E.D.
+Lemma: nameC        Q.E.D. [Cached] (a.k.a. nameA, nameB)
