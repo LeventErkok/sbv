@@ -68,7 +68,7 @@
            (KRational (getKRational_1 SBVRational))
        ))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s4 () (_ FloatingPoint  8 24) ((_ to_fp 8 24) roundNearestTiesToEven (/ 4.0 1.0)))
+[GOOD] (define-fun s4 () (_ FloatingPoint  8 24) (fp #b0 #b10000001 #b00000000000000000000000))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () ADT) ; tracks user variable "a"
 [GOOD] (assert (and (= 1 (str.len (getKChar_1 s0)))
@@ -104,7 +104,7 @@ Fast allSat, Looking for solution 1
 [SEND] (get-value (s1))
 [RECV] ((s1 (AFloat (fp #b0 #b11111111 #b10000000000000000000000))))
 [GOOD] (push 1)
-[GOOD] (define-fun s11 () ADT ((as AFloat ADT) ((_ to_fp 8 24) roundNearestTiesToEven (/ 4.0 1.0))))
+[GOOD] (define-fun s11 () ADT ((as AFloat ADT) (fp #b0 #b10000001 #b00000000000000000000000)))
 [GOOD] (define-fun s12 () Bool (= s0 s11))
 [GOOD] (define-fun s13 () Bool (not s12))
 [GOOD] (assert s13)
