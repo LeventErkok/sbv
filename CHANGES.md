@@ -1,6 +1,11 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 14.2, Not yet released
+
+  * Fix a float to integer conversions, which were ignoring the rounding mode previously. Thanks to
+    Ryan Scott for the report.
+
 ### Version 14.1, 2026-05-04
 
   * [BACKWARDS COMPATIBILITY] Removed `tpRibbon`. The ribbon length for TP proof
