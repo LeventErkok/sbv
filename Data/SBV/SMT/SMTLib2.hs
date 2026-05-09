@@ -1210,7 +1210,7 @@ handleFPCast kFromIn kToIn rm input
 
         -- To go and back from Ints, we detour through reals
         cast KUnbounded (KFP eb sb) a = "(_ to_fp " <> size (eb, sb) <> ") "  <> rm <> " (to_real " <> a <> ")"
-        cast KFP{}      KUnbounded  a = "to_int (fp.to_real " <> a <> ")"
+        cast KFP{}      KUnbounded  a = "to_int (fp.to_real (fp.roundToIntegral " <> rm <> " " <> a <> "))"
 
         -- To floats
         cast (KBounded False _) (KFP eb sb) a = addRM a $ "(_ to_fp_unsigned " <> size (eb, sb) <> ")"
