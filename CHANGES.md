@@ -3,8 +3,11 @@
 
 ### Version 14.2, Not yet released
 
-  * Fix a float to integer conversions, which were ignoring the rounding mode previously. Thanks to
+  * Fix float to integer conversions, which were ignoring the rounding mode previously. Thanks to
     Ryan Scott for the report.
+
+  * Fix the implementation of properFraction for arbitrary-sized floats. Thanks to Ryan Scott
+    for the report and the fix.
 
 ### Version 14.1, 2026-05-04
 

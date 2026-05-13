@@ -370,7 +370,7 @@ instance Real FP where
 -- | Real-frac instance for big-floats. Beware, not that well tested!
 instance RealFrac FP where
   properFraction (FP eb sb r) = (getInt r', FP eb sb r - FP eb sb r')
-       where (r', _)  = BF.bfRoundInt BF.ToNegInf r
+       where (r', _)  = BF.bfRoundInt BF.ToZero r
              getInt x = case BF.bfToRep x of
                           BF.BFNaN     -> error $ "Data.SBV.FloatingPoint.properFraction: Failed to convert: " ++ show (r, x)
                           BF.BFRep s n -> case n of
