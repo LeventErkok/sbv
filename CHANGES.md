@@ -24,6 +24,8 @@
     Disable with `-f-compile_examples` when using SBV as a dependency to skip
     compiling the example modules. Thanks to Robin Webbers for the contribution.
 
+  * Add more floating-point operations to `Data.SBV.Dynamic`.
+
 ### Version 14.1, 2026-05-04
 
   * [BACKWARDS COMPATIBILITY] Removed `tpRibbon`. The ribbon length for TP proof

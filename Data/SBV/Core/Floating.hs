@@ -40,7 +40,7 @@ import Data.Proxy
 
 import Data.SBV.Core.AlgReals (isExactRational)
 import Data.SBV.Core.Sized
-import Data.SBV.Core.SizedFloats
+import Data.SBV.Core.SizedFloats hiding (fpIsNaN, fpIsZero)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
@@ -679,12 +679,7 @@ instance (BVIsNonZero (eb + sb), KnownNat (eb + sb), ValidFloat eb sb) => Metric
 
 -- Map SBV's rounding modes to LibBF's
 rmToRM :: SRoundingMode -> Maybe RoundMode
-rmToRM srm = cvt <$> unliteral srm
-  where cvt RoundNearestTiesToEven = NearEven
-        cvt RoundNearestTiesToAway = NearAway
-        cvt RoundTowardPositive    = ToPosInf
-        cvt RoundTowardNegative    = ToNegInf
-        cvt RoundTowardZero        = ToZero
+rmToRM srm = roundingModeToRoundMode <$> unliteral srm
 
 -- | Lift a 1 arg Big-float op
 lift1FP :: forall eb sb. ValidFloat eb sb =>

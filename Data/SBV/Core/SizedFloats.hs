@@ -23,13 +23,22 @@ module Data.SBV.Core.SizedFloats (
           FloatingPoint(..), FP(..), FPHalf, FPBFloat, FPSingle, FPDouble, FPQuad
 
         -- * Constructing values
-        , fpFromRawRep, fpFromBigFloat, fpNaN, fpInf, fpZero
+        , fpFromRawRep, fpFromBigFloat, fpFromBits, fpNaN, fpInf, fpZero
 
         -- * Operations
-        , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble, fpEncodeFloat
+        , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble
+        , fpToFloat, fpToDouble
+        , fpEncodeFloat
+        , fpIsFinite, fpIsInf, fpIsZero, fpIsNaN
+        , fpIsNormal, fpIsSubnormal, fpIsNeg, fpIsPos
+        , fpNeg, fpAbs, fpSignum
+        , fpAdd, fpSub, fpMul, fpDiv, fpPow, fpRem, fpSqrt, fpFMA
+        , fpRoundFloat, fpRoundInt
+        , fpMax, fpMin
 
         -- * Internal operations
        , arbFPIsEqualObjectH, arbFPCompareObjectH, fprToSMTLib2, mkBFOpts, bfToString, bfRemoveRedundantExp
+       , roundingModeToRoundMode
        ) where
 
 import Data.Char (intToDigit)
@@ -42,7 +51,7 @@ import Data.Bits
 import Numeric
 
 import Data.SBV.Core.Kind
-import Data.SBV.Utils.Numeric (floatToWord)
+import Data.SBV.Utils.Numeric (RoundingMode(..), floatToWord, fp2fp)
 
 import LibBF (BigFloat, BFOpts, RoundMode, Status, BFRep(..), BFNum(..), bfToRep, Sign(Neg))
 import qualified LibBF as BF
@@ -207,11 +216,15 @@ mkBFOpts eb sb rm = BF.allowSubnormal <> BF.rnd rm <> BF.expBits (fromIntegral e
 fpFromBigFloat :: Int -> Int -> BigFloat -> FP
 fpFromBigFloat eb sb r = FP eb sb $ fst $ BF.bfRoundFloat (mkBFOpts eb sb BF.NearEven) r
 
+-- | Convert an integer to a big-float, preserving the bit-correspondence.
+fpFromBits :: Int -> Int -> Integer -> FP
+fpFromBits eb sb val = FP eb sb $ BF.bfFromBits (mkBFOpts eb sb BF.NearEven) val
+
 -- | Convert from an sign/exponent/mantissa representation to a float. The values are the integers
 -- representing the bit-patterns of these values, i.e., the raw representation. We assume that these
 -- integers fit into the ranges given, i.e., no overflow checking is done here.
 fpFromRawRep :: Bool -> (Integer, Int) -> (Integer, Int) -> FP
-fpFromRawRep sign (e, eb) (s, sb) = FP eb sb $ BF.bfFromBits (mkBFOpts eb sb BF.NearEven) val
+fpFromRawRep sign (e, eb) (s, sb) = fpFromBits eb sb val
   where es, val :: Integer
         es = (e `shiftL` (sb - 1)) .|. s
         val | sign = (1 `shiftL` (eb + sb - 1)) .|. es
@@ -293,23 +306,23 @@ bfSignum r | BF.bfIsNaN  r = r
 
 -- | Num instance for big-floats
 instance Num FP where
-  (+)           = lift2 BF.bfAdd
-  (-)           = lift2 BF.bfSub
-  (*)           = lift2 BF.bfMul
-  abs           = lift1 BF.bfAbs
-  signum        = lift1 bfSignum
+  (+)           = fpAdd RoundNearestTiesToEven
+  (-)           = fpSub RoundNearestTiesToEven
+  (*)           = fpMul RoundNearestTiesToEven
+  abs           = fpAbs
+  signum        = fpSignum
   fromInteger i = error $ "FP.fromInteger: Not supported for arbitrary floats. Use fpFromInteger instead, specifying the precision. Called on: " ++ show i
-  negate        = lift1 BF.bfNeg
+  negate        = fpNeg
 
 -- | Fractional instance for big-floats
 instance Fractional FP where
   fromRational = error "FP.fromRational: Not supported for arbitrary floats. Use fpFromRational instead, specifying the precision"
-  (/)          = lift2 BF.bfDiv
+  (/)          = fpDiv RoundNearestTiesToEven
 
 -- | Floating instance for big-floats
 instance Floating FP where
-  sqrt (FP eb sb a)      = FP eb sb $ fst $ BF.bfSqrt (mkBFOpts eb sb BF.NearEven) a
-  FP eb sb a ** FP _ _ b = FP eb sb $ fst $ BF.bfPow  (mkBFOpts eb sb BF.NearEven) a b
+  sqrt = fpSqrt RoundNearestTiesToEven
+  (**) = fpPow RoundNearestTiesToEven
 
   pi    = unsupported "Floating.FP.pi"
   exp   = unsupported "Floating.FP.exp"
@@ -335,11 +348,11 @@ instance RealFloat FP where
      where v :: Integer
            v = 2 ^ ((fromIntegral eb :: Integer) - 1)
 
-  isNaN          (FP _ _   r) = BF.bfIsNaN r
-  isInfinite     (FP _ _   r) = BF.bfIsInf r
-  isDenormalized (FP eb sb r) = BF.bfIsSubnormal (mkBFOpts eb sb BF.NearEven) r
-  isNegativeZero (FP _  _  r) = BF.bfIsZero r && BF.bfIsNeg r
-  isIEEE         _            = True
+  isNaN            = fpIsNaN
+  isInfinite       = fpIsInf
+  isDenormalized   = fpIsSubnormal
+  isNegativeZero f = fpIsZero f && fpIsNeg f
+  isIEEE         _ = True
 
   decodeFloat i@(FP _ _ r) = case BF.bfToRep r of
                                BF.BFNaN     -> decodeFloat (0/0 :: Double)
@@ -359,6 +372,123 @@ fpEncodeFloat eb sb m n | n < 0 = fpFromRational eb sb (m      % n')
                         | True  = fpFromRational eb sb (m * n' % 1)
     where n' :: Integer
           n' = (2 :: Integer) ^ abs (fromIntegral n :: Integer)
+
+-- | Is a big-float finite?
+fpIsFinite :: FP -> Bool
+fpIsFinite (FP _ _ r) = BF.bfIsFinite r
+
+-- | Is a big-float infinite?
+fpIsInf :: FP -> Bool
+fpIsInf (FP _ _ r) = BF.bfIsInf r
+
+-- | Is a big-float a zero value?
+fpIsZero :: FP -> Bool
+fpIsZero (FP _ _ r) = BF.bfIsZero r
+
+-- | Is a big-float a NaN value?
+fpIsNaN :: FP -> Bool
+fpIsNaN (FP _ _ r) = BF.bfIsNaN r
+
+-- | Is a big-float \"normal\"? That is, is the value not zero, infinite, NaN,
+-- or subnormal?
+fpIsNormal :: FP -> Bool
+fpIsNormal (FP eb sb r) = BF.bfIsNormal (mkBFOpts eb sb BF.NearEven) r
+
+-- | Is a big-float subnormal (i.e., denormalized)?
+fpIsSubnormal :: FP -> Bool
+fpIsSubnormal (FP eb sb r) = BF.bfIsSubnormal (mkBFOpts eb sb BF.NearEven) r
+
+-- | Is a big-float negative?
+fpIsNeg :: FP -> Bool
+fpIsNeg (FP _ _ r) = BF.bfIsNeg r
+
+-- | Is a big-float positive?
+fpIsPos :: FP -> Bool
+fpIsPos (FP _ _ r) = BF.bfIsPos r
+
+-- | Big-float negation.
+fpNeg :: FP -> FP
+fpNeg = lift1 BF.bfNeg
+
+-- | Big-float absolute value.
+fpAbs :: FP -> FP
+fpAbs = lift1 BF.bfAbs
+
+-- | Big-float signum.
+fpSignum :: FP -> FP
+fpSignum = lift1 bfSignum
+
+-- | Big-float addition.
+fpAdd :: RoundingMode -> FP -> FP -> FP
+fpAdd = liftRM2 BF.bfAdd
+
+-- | Big-float subtraction.
+fpSub :: RoundingMode -> FP -> FP -> FP
+fpSub = liftRM2 BF.bfSub
+
+-- | Big-float multiplication.
+fpMul :: RoundingMode -> FP -> FP -> FP
+fpMul = liftRM2 BF.bfMul
+
+-- | Big-float division.
+fpDiv :: RoundingMode -> FP -> FP -> FP
+fpDiv = liftRM2 BF.bfDiv
+
+-- | Big-float exponentiation.
+fpPow :: RoundingMode -> FP -> FP -> FP
+fpPow = liftRM2 BF.bfPow
+
+-- | Big-float remainder.
+fpRem :: RoundingMode -> FP -> FP -> FP
+fpRem = liftRM2 BF.bfRem
+
+-- | Big-float square root.
+fpSqrt :: RoundingMode -> FP -> FP
+fpSqrt = liftRM1 BF.bfSqrt
+
+-- | Big-float fused-multiply-add (FMA).
+fpFMA :: RoundingMode -> FP -> FP -> FP -> FP
+fpFMA = liftRM3 BF.bfFMA
+
+-- | Round a big-float to a float of the given exponent and significand sizes
+-- using the given rounding mode.
+fpRoundFloat :: Int -> Int -> RoundingMode -> FP -> FP
+fpRoundFloat eb sb rm (FP _ _ r) = FP eb sb $ fst $ BF.bfRoundFloat (mkBFOpts eb sb (roundingModeToRoundMode rm)) r
+
+-- | Round a big-float to the nearest integer (represented as a big-float with
+-- a zero decimal component) using the given rounding mode.
+fpRoundInt :: RoundingMode -> FP -> FP
+fpRoundInt rm (FP eb sa a) = FP eb sa $ fst $ BF.bfRoundInt (roundingModeToRoundMode rm) a
+
+-- | SMTLib compliant definition for 'Data.SBV.fpMax'. This is very nearly
+-- identical to 'Data.SBV.Utils.Numeric.fpMaxH', except that this uses
+-- 'fpIsZero' instead of checking for equality against a @0@ literal. (The
+-- latter is not supported for 'FP' values as 'FP' does not implement
+-- 'fromInteger'.)
+fpMax :: FP -> FP -> FP
+fpMax x y
+   | isNaN x                                  = y
+   | isNaN y                                  = x
+   | (isN0 x && isP0 y) || (isN0 y && isP0 x) = error "fpMax: Called with alternating-sign 0's. Not supported"
+   | x > y                                    = x
+   | True                                     = y
+   where isN0   = isNegativeZero
+         isP0 a = fpIsZero a && not (isN0 a)
+
+-- | SMTLib compliant definition for 'Data.SBV.fpMin'. This is very nearly
+-- identical to 'Data.SBV.Utils.Numeric.fpMinH', except that this uses
+-- 'fpIsZero' instead of checking for equality against a @0@ literal. (The
+-- latter is not supported for 'FP' values as 'FP' does not implement
+-- 'fromInteger'.)
+fpMin :: FP -> FP -> FP
+fpMin x y
+   | isNaN x                                  = y
+   | isNaN y                                  = x
+   | (isN0 x && isP0 y) || (isN0 y && isP0 x) = error "fpMin: Called with alternating-sign 0's. Not supported"
+   | x < y                                    = x
+   | True                                     = y
+   where isN0   = isNegativeZero
+         isP0 a = fpIsZero a && not (isN0 a)
 
 -- | Real instance for big-floats. Beware, not that well tested!
 instance Real FP where
@@ -450,9 +580,17 @@ instance ValidFloat eb sb => Floating (FloatingPoint eb sb) where
 lift1 :: (BigFloat -> BigFloat) -> FP -> FP
 lift1 f (FP eb sb a) = fpFromBigFloat eb sb $ f a
 
--- Lift a binary operation. Here we don't call fpFromBigFloat, because the result is correctly rounded.
-lift2 :: (BFOpts -> BigFloat -> BigFloat -> (BigFloat, Status)) -> FP -> FP -> FP
-lift2 f (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (mkBFOpts eb sb BF.NearEven) a b
+-- | Lift a unary operation that returns a big-float and a status.
+liftRM1 :: (BFOpts -> BigFloat -> (BigFloat, Status)) -> RoundingMode -> FP -> FP
+liftRM1 f rm (FP eb sb a) = FP eb sb $ fst $ f (mkBFOpts eb sb (roundingModeToRoundMode rm)) a
+
+-- | Lift a binary operation that returns a big-float and a status.
+liftRM2 :: (BFOpts -> BigFloat -> BigFloat -> (BigFloat, Status)) -> RoundingMode -> FP -> FP -> FP
+liftRM2 f rm (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (mkBFOpts eb sb (roundingModeToRoundMode rm)) a b
+
+-- | Lift a trinary operation that returns a big-float and a status.
+liftRM3 :: (BFOpts -> BigFloat -> BigFloat -> BigFloat -> (BigFloat, Status)) -> RoundingMode -> FP -> FP -> FP -> FP
+liftRM3 f rm (FP eb sb a) (FP _ _ b) (FP _ _ c) = FP eb sb $ fst $ f (mkBFOpts eb sb (roundingModeToRoundMode rm)) a b c
 
 -- | Convert from a IEEE float.
 fpFromFloat :: Int -> Int -> Float -> FP
@@ -465,3 +603,19 @@ fpFromFloat eb sb f = error $ "SBV.fpFromFloat: Unexpected input: " ++ show (eb,
 fpFromDouble :: Int -> Int -> Double -> FP
 fpFromDouble 11 53 d = FP 11 54 $ BF.bfFromDouble d
 fpFromDouble eb sb d = error $ "SBV.fpFromDouble: Unexpected input: " ++ show (eb, sb, d)
+
+-- | Convert to a IEEE float using the given rounding mode.
+fpToFloat :: RoundingMode -> FP -> Float
+fpToFloat rm (FP _ _ r) = fp2fp $ fst $ BF.bfToDouble (roundingModeToRoundMode rm) r
+
+-- | Convert to a IEEE double using the given rounding mode.
+fpToDouble :: RoundingMode -> FP -> Double
+fpToDouble rm (FP _ _ r) = fst $ BF.bfToDouble (roundingModeToRoundMode rm) r
+
+-- | Map SBV's rounding modes to LibBF's.
+roundingModeToRoundMode :: RoundingMode -> RoundMode
+roundingModeToRoundMode RoundNearestTiesToEven = BF.NearEven
+roundingModeToRoundMode RoundNearestTiesToAway = BF.NearAway
+roundingModeToRoundMode RoundTowardPositive    = BF.ToPosInf
+roundingModeToRoundMode RoundTowardNegative    = BF.ToNegInf
+roundingModeToRoundMode RoundTowardZero        = BF.ToZero

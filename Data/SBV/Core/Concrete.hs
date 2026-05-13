@@ -444,6 +444,40 @@ mkConstCV k@KSet{}        a = error $ "Unexpected call to mkConstCV (" ++ show k
 mkConstCV k@KTuple{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KArray{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 
+-- | Create a constant value from a floating-point value.
+fpConstCV ::
+  -- | Must be 'KFloat', 'KDouble', or 'KFP'.
+  Kind ->
+  -- | The constant to use when the kind is 'KFloat'.
+  Float ->
+  -- | The constant to use when the kind is 'KDouble'.
+  Double ->
+  -- | The constant to make when the kind is 'KFP', where the 'Int's represent
+  -- the exponent and significand sizes.
+  (Int -> Int -> FP) ->
+  CV
+fpConstCV k cf cd cfp =
+  case k of
+    KFloat    -> CV k $ CFloat cf
+    KDouble   -> CV k $ CDouble cd
+    KFP eb sb -> CV k $ CFP $ cfp eb sb
+
+    KVar{} -> unexpected
+    KBool{} -> unexpected
+    KBounded{} -> unexpected
+    KUnbounded{} -> unexpected
+    KReal{} -> unexpected
+    KRational{} -> unexpected
+    KChar{} -> unexpected
+    KString{} -> unexpected
+    KApp{} -> unexpected
+    KADT{} -> unexpected
+    KList{} -> unexpected
+    KSet{} -> unexpected
+    KTuple{} -> unexpected
+    KArray{} -> unexpected
+  where unexpected = error $ "Data.SBV.fpConstCV: Unexpected kind: " ++ show k
+
 -- | Generate a random constant value ('CVal') of the correct kind. We error out for a completely uninterpreted type.
 randomCVal :: Kind -> IO CVal
 randomCVal k =
