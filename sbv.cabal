@@ -265,6 +265,7 @@ Library
                   , Documentation.SBV.Examples.TP.QuickSort
                   , Documentation.SBV.Examples.TP.RevAcc
                   , Documentation.SBV.Examples.TP.Reverse
+                  , Documentation.SBV.Examples.TP.RunLength
                   , Documentation.SBV.Examples.TP.ShefferStroke
                   , Documentation.SBV.Examples.TP.SortHelpers
                   , Documentation.SBV.Examples.TP.Sqrt2IsIrrational
