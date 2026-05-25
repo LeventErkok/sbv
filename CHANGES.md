@@ -12,6 +12,10 @@
   * New TP example: Run-length encoding roundtrip (`Documentation.SBV.Examples.TP.RunLength`).
     Proves that `decode (encode xs) == xs` for a run-length encode/decode pair.
 
+  * New TP example: Two-stack queue (`Documentation.SBV.Examples.TP.Queue`).
+    Proves that a queue implemented with two lists (front/back) correctly implements
+    FIFO semantics via an abstraction function.
+
 ### Version 14.1, 2026-05-04
 
   * [BACKWARDS COMPATIBILITY] Removed `tpRibbon`. The ribbon length for TP proof

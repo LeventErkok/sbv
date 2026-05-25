@@ -262,6 +262,7 @@ Library
                   , Documentation.SBV.Examples.TP.PigeonHole
                   , Documentation.SBV.Examples.TP.PowerMod
                   , Documentation.SBV.Examples.TP.Primes
+                  , Documentation.SBV.Examples.TP.Queue
                   , Documentation.SBV.Examples.TP.QuickSort
                   , Documentation.SBV.Examples.TP.RevAcc
                   , Documentation.SBV.Examples.TP.Reverse
