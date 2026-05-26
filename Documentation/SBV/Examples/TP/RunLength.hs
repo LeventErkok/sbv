@@ -158,7 +158,6 @@ correctness = do
                                                       =: x .: decode (tuple (e, c) .: ecs)
                                                       =: qed
                                             | True    -> decode (tuple (x, 1) .: ps)
-                                                      ?? ecs .== ecs
                                                       =: x .: decode ps
                                                       =: qed
                           |]

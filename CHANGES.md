@@ -9,6 +9,9 @@
   * Fix the implementation of properFraction for arbitrary-sized floats. Thanks to Ryan Scott
     for the report and the fix.
 
+  * Fix a bug in pCase, where SBV was over-approximating the bound variables, causing the
+    unused-variable warning checker to flag branches unnecessarily in generated code.
+
   * New TP example: Run-length encoding roundtrip (`Documentation.SBV.Examples.TP.RunLength`).
     Proves that `decode (encode xs) == xs` for a run-length encode/decode pair.
 

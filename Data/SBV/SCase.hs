@@ -47,7 +47,6 @@ import Prelude hiding (fail)
 import qualified Prelude as P(fail)
 
 import Data.Generics (everywhereM, mkM)
-import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Set (Set)
 
@@ -1042,7 +1041,7 @@ processProofCaseExp scrut0 matches0 = do
         allCases <- concat <$> zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
         loc <- location
         checkWildcard "pCase" loc allCases
-        allPairs <- processProofCases scrut [] Nothing Map.empty [] allCases
+        allPairs <- processProofCases scrut [] Nothing [] allCases
         let casesName   = mkName "cases"
             impliesName = mkName "==>"
             mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
@@ -1054,11 +1053,7 @@ processProofCaseExp scrut0 matches0 = do
         cstrs <- getCstrs mbt typ
         checkWildcard "pCase" loc cases
         checkArities  "pCase" typ cstrs cases
-        let allGrdVars :: Map.Map Name (Set Name)
-            allGrdVars = Map.fromListWith Set.union
-                           [ (nm, maybe Set.empty freeVars mbG)
-                           | CMatch _ nm _ mbG _ _ <- cases ]
-        allPairs <- processProofCases scrut cstrs mbt allGrdVars [] cases
+        allPairs <- processProofCases scrut cstrs mbt [] cases
         let casesName   = mkName "cases"
             impliesName = mkName "==>"
             mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
@@ -1104,7 +1099,7 @@ pCase = QuasiQuoter
               allCases <- concat <$> zipWithM (matchToPair scrut) (offsets ++ repeat Unknown) matches
               loc <- location
               checkWildcard "pCase" loc allCases
-              allPairs <- processProofCases scrut [] Nothing Map.empty [] allCases
+              allPairs <- processProofCases scrut [] Nothing [] allCases
               let casesName   = mkName "cases"
                   impliesName = mkName "==>"
                   mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
@@ -1168,13 +1163,7 @@ pCase = QuasiQuoter
     buildProofCase :: Exp -> String -> Maybe BuiltinType -> [Case] -> ExpQ
     buildProofCase scrut typ mbt cases = do
         cstrs <- getCstrs mbt typ
-        -- Collect guard variables for each constructor across all arms
-        -- (needed to suppress false "unused binding" warnings for guard-only variables)
-        let allGrdVars :: Map.Map Name (Set Name)
-            allGrdVars = Map.fromListWith Set.union
-                           [ (nm, maybe Set.empty freeVars mbG)
-                           | CMatch _ nm _ mbG _ _ <- cases ]
-        allPairs <- processProofCases scrut cstrs mbt allGrdVars [] cases
+        allPairs <- processProofCases scrut cstrs mbt [] cases
         let casesName   = mkName "cases"
             impliesName = mkName "==>"
             mkPair (g, r) = InfixE (Just g) (VarE impliesName) (Just r)
@@ -1192,9 +1181,9 @@ pCase = QuasiQuoter
 --   * fullGuard    = the complete guard expression (used for wildcard De Morgan negation)
 --   * userGuardOnly = Just the user guard part (used for same-constructor negation),
 --                     Nothing if unguarded (same-constructor arms don't negate unguarded matches)
-processProofCases :: Exp -> [(Name, [Type])] -> Maybe BuiltinType -> Map.Map Name (Set Name) -> [(Maybe Name, Exp, Maybe Exp)] -> [Case] -> Q [(Exp, Exp)]
-processProofCases _     _     _   _          _           []         = pure []
-processProofCases scrut cstrs mbt allGrdVars priorGuards (c:rest) = case c of
+processProofCases :: Exp -> [(Name, [Type])] -> Maybe BuiltinType -> [(Maybe Name, Exp, Maybe Exp)] -> [Case] -> Q [(Exp, Exp)]
+processProofCases _     _     _   _           []         = pure []
+processProofCases scrut cstrs mbt priorGuards (c:rest) = case c of
   CWild _ mbG rhs -> do
     -- Wildcard: negate the disjunction of ALL prior full guards (De Morgan)
     let allGuards  = [g | (_, g, _) <- priorGuards]
@@ -1202,7 +1191,7 @@ processProofCases scrut cstrs mbt allGrdVars priorGuards (c:rest) = case c of
         finalGuard = case mbG of
                        Nothing -> baseGuard
                        Just g  -> sAndAll [baseGuard, g]
-    rest' <- processProofCases scrut cstrs mbt allGrdVars (priorGuards ++ [(Nothing, finalGuard, Nothing)]) rest
+    rest' <- processProofCases scrut cstrs mbt (priorGuards ++ [(Nothing, finalGuard, Nothing)]) rest
     pure $ (finalGuard, rhs) : rest'
 
   CMatch _o nm mbp mbG rhs _allUsed -> do
@@ -1246,13 +1235,12 @@ processProofCases scrut cstrs mbt allGrdVars priorGuards (c:rest) = case c of
         guardParts  = [testerGuard] ++ destructEq ++ negPriors ++ maybe [] (pure . addLocals grdBindings) mbG
         finalGuard  = sAndAll guardParts
 
-        -- Wrap RHS with let-bindings; include all bindings except those
-        -- used in any guard of the same constructor but not in this RHS
-        -- (to avoid false "unused" warnings from GHC for guard-only variables)
-        cstrGrdVars = Map.findWithDefault Set.empty nm allGrdVars
+        -- Wrap RHS with let-bindings for pattern variables actually used in this RHS.
+        -- The guard handles its own variable bindings separately via 'grdBindings' above,
+        -- so we don't need to keep guard-only variables here.
         rhsVars = freeVars rhs
         rhs'    = addLocals (filter (\case
-                                        ValD (VarP v) _ _ -> not (v `Set.member` cstrGrdVars) || v `Set.member` rhsVars
+                                        ValD (VarP v) _ _ -> v `Set.member` rhsVars
                                         _                 -> True) bindings) rhs
 
         -- Track: full guard for wildcard negation, user guard for same-constructor negation
@@ -1261,7 +1249,7 @@ processProofCases scrut cstrs mbt allGrdVars priorGuards (c:rest) = case c of
                           Nothing -> Nothing
         priorGuards' = priorGuards ++ [(Just nm, finalGuard, userGuardOnly)]
 
-    rest' <- processProofCases scrut cstrs mbt allGrdVars priorGuards' rest
+    rest' <- processProofCases scrut cstrs mbt priorGuards' rest
     pure $ (finalGuard, rhs') : rest'
 
 -- | Negate the disjunction of all given guards using De Morgan: sNot (g1 .|| g2 .|| ...)
