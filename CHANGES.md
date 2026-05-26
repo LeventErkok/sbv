@@ -19,6 +19,11 @@
     Proves that a queue implemented with two lists (front/back) correctly implements
     FIFO semantics via an abstraction function.
 
+  * New cabal flag `compile_examples` (default: True) controls whether the
+    `Documentation.SBV.Examples.*` modules are built as part of the library.
+    Disable with `-f-compile_examples` when using SBV as a dependency to skip
+    compiling the example modules. Thanks to Robin Webbers for the contribution.
+
 ### Version 14.1, 2026-05-04
 
   * [BACKWARDS COMPATIBILITY] Removed `tpRibbon`. The ribbon length for TP proof

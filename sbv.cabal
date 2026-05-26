@@ -28,10 +28,10 @@ flag doctest_is_running
   default    : False
   manual     : True
 
-flag compile-examples
+flag compile_examples
   description: Compile examples for documentation.
   default    : True
-  manual     : False
+  manual     : True
 
 source-repository head
   type    : git
@@ -150,7 +150,8 @@ Library
                   , Data.SBV.Tools.WeakestPreconditions
                   , Data.SBV.Trans
                   , Data.SBV.Trans.Control
-  if flag(compile-examples)
+
+  if flag(compile_examples)
     Exposed-modules : Documentation.SBV.Examples.ADT.Expr
                     , Documentation.SBV.Examples.ADT.Param
                     , Documentation.SBV.Examples.ADT.Types
@@ -291,6 +292,7 @@ Library
                     , Documentation.SBV.Examples.Uninterpreted.Shannon
                     , Documentation.SBV.Examples.Uninterpreted.Sort
                     , Documentation.SBV.Examples.Uninterpreted.UISortAllSat
+
   other-modules   : Data.SBV.Client
                   , Data.SBV.Client.BaseIO
                   , Data.SBV.Core.AlgReals
