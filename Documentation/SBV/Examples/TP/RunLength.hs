@@ -53,8 +53,8 @@ import Data.SBV.TP
 decode :: forall a. SymVal a => SList (a, Integer) -> SList a
 decode = smtFunction "decode"
        $ \ps -> [sCase| ps of
-                   []       -> []
-                   p : rest -> replicate (snd p) (fst p) ++ decode rest
+                   []            -> []
+                   (e, c) : rest -> replicate c e ++ decode rest
                 |]
 
 -- | Prepend an element to a run-length encoded list. If the head run has the
@@ -100,13 +100,16 @@ encode = smtFunction "encode"
 -- >>> runTPWith cvc5 $ correctness @Integer
 -- Lemma: decodeEncodeCons
 --   Step: 1 (3 way case split)
---     Step: 1.1                           Q.E.D.
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.1.2                         Q.E.D.
+--     Step: 1.1.3                         Q.E.D.
+--     Step: 1.1.4                         Q.E.D.
 --     Step: 1.2.1                         Q.E.D.
 --     Step: 1.2.2                         Q.E.D.
 --     Step: 1.2.3                         Q.E.D.
 --     Step: 1.2.4                         Q.E.D.
---     Step: 1.2.5                         Q.E.D.
---     Step: 1.3                           Q.E.D.
+--     Step: 1.3.1                         Q.E.D.
+--     Step: 1.3.2                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Inductive lemma: encodeHeadPos
@@ -143,17 +146,22 @@ correctness = do
                       .=> decode (encodeCons x ps) .== x .: decode ps) $
                  \x ps -> [null ps .|| snd (head ps) .>= 1]
                        |- decode (encodeCons x ps)
-                       =: cases [ null ps ==> trivial
-                                , sNot (null ps) .&& x .== fst (head ps)
-                                   ==> decode (tuple (x, snd (head ps) + 1) .: tail ps)
-                                    =: replicate (snd (head ps) + 1) x ++ decode (tail ps)
-                                    =: (x .: replicate (snd (head ps)) x) ++ decode (tail ps)
-                                    =: x .: (replicate (snd (head ps)) x ++ decode (tail ps))
-                                    =: x .: decode ps
-                                    =: qed
-                                , sNot (null ps) .&& x ./= fst (head ps)
-                                   ==> trivial
-                                ]
+                       =: [pCase| ps of
+                             []                       -> decode [tuple (x, 1)]
+                                                      =: replicate 1 x ++ decode []
+                                                      =: [x] ++ decode []
+                                                      =: x .: decode []
+                                                      =: qed
+                             ((e, c) : ecs) | x .== e -> decode (tuple (x, c + 1) .: ecs)
+                                                      =: replicate (c + 1) x ++ decode ecs
+                                                      =: x .: replicate c x ++ decode ecs
+                                                      =: x .: decode (tuple (e, c) .: ecs)
+                                                      =: qed
+                                            | True    -> decode (tuple (x, 1) .: ps)
+                                                      ?? ecs .== ecs
+                                                      =: x .: decode ps
+                                                      =: qed
+                          |]
 
   -- encode always produces a list whose head (if any) has count >= 1
   -- (This is needed as a precondition for helper above.)
@@ -179,14 +187,13 @@ correctness = do
           (length @a, []) $
           \ih xs -> [] |- decode (encode xs)
                       =: [pCase| xs of
-                            [] -> trivial
-                            whole@(x : ys)
-                               -> decode (encode whole)
-                               =: decode (encodeCons x (encode ys))
-                               ?? helper `at` (Inst @"x" x, Inst @"ps" (encode ys))
-                               ?? encPos `at` Inst @"xs" ys
-                               =: x .: decode (encode ys)
-                               ?? ih `at` Inst @"xs" ys
-                               =: x .: ys
-                               =: qed
+                            []             -> trivial
+                            whole@(x : ys) -> decode (encode whole)
+                                           =: decode (encodeCons x (encode ys))
+                                           ?? helper `at` (Inst @"x" x, Inst @"ps" (encode ys))
+                                           ?? encPos `at` Inst @"xs" ys
+                                           =: x .: decode (encode ys)
+                                           ?? ih `at` Inst @"xs" ys
+                                           =: x .: ys
+                                           =: qed
                          |]
