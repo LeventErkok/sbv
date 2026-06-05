@@ -1341,7 +1341,7 @@ C and SMTLib are decidedly undefine this case, though that doesn't mean they do 
 same thing! Same goes for Haskell, which seems to convert via Int64, but we do
 not model that behavior in SBV as it doesn't seem to be intentional nor well documented.
 
-You can check for @NaN@, @oo@ and @-oo@, using the predicates 'fpIsNaN', 'fpIsInfinite',
+You can check for @NaN@, @oo@ and @-oo@, using the predicates 'Data.SBV.Core.Floating.fpIsNaN', 'Data.SBV.Core.Floating.fpIsInfinite',
 and 'fpIsPositive', 'fpIsNegative' predicates, respectively; and do the proper conversion
 based on your needs. (0 is a good choice, as are min/max bounds of the target type.)
 
