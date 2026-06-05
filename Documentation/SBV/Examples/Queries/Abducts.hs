@@ -23,9 +23,9 @@ import Data.SBV.Control
 --
 -- >>> example
 -- Got: (define-fun abd () Bool (= s1 2))
--- Got: (define-fun abd () Bool (and (= s1 1) (<= s1 s0)))
--- Got: (define-fun abd () Bool (and (<= 1 s0) (= s1 s0)))
--- Got: (define-fun abd () Bool (and (<= s1 (+ s0 s0)) (<= 1 s1)))
+-- Got: (define-fun abd () Bool (and (= s1 1) (= s1 s0)))
+-- Got: (define-fun abd () Bool (and (= s0 2) (= s1 1)))
+-- Got: (define-fun abd () Bool (and (<= 1 s0) (= s1 1)))
 --
 -- Note that @s0@ refers to @x@ and @s1@ refers to @y@ above. You can verify
 -- that adding any of these will ensure @x + y >= 2@.

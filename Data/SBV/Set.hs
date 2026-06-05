@@ -294,8 +294,8 @@ isEmpty = null
 --
 -- >>> prove $ \x -> isFull (observe "set" (x `delete` (full :: SSet Integer)))
 -- Falsifiable. Counter-example:
---   s0  =       2 :: Integer
---   set = U - {2} :: {Integer}
+--   s0  =       0 :: Integer
+--   set = U - {0} :: {Integer}
 --
 -- >>> isFull (full :: SSet Integer)
 -- True
