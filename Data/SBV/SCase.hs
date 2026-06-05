@@ -47,6 +47,7 @@ import Prelude hiding (fail)
 import qualified Prelude as P(fail)
 
 import Data.Generics (everywhereM, mkM)
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Set (Set)
 
@@ -1182,75 +1183,87 @@ pCase = QuasiQuoter
 --   * userGuardOnly = Just the user guard part (used for same-constructor negation),
 --                     Nothing if unguarded (same-constructor arms don't negate unguarded matches)
 processProofCases :: Exp -> [(Name, [Type])] -> Maybe BuiltinType -> [(Maybe Name, Exp, Maybe Exp)] -> [Case] -> Q [(Exp, Exp)]
-processProofCases _     _     _   _           []         = pure []
-processProofCases scrut cstrs mbt priorGuards (c:rest) = case c of
-  CWild _ mbG rhs -> do
-    -- Wildcard: negate the disjunction of ALL prior full guards (De Morgan)
-    let allGuards  = [g | (_, g, _) <- priorGuards]
-        baseGuard  = negateAllGuards allGuards
-        finalGuard = case mbG of
-                       Nothing -> baseGuard
-                       Just g  -> sAndAll [baseGuard, g]
-    rest' <- processProofCases scrut cstrs mbt (priorGuards ++ [(Nothing, finalGuard, Nothing)]) rest
-    pure $ (finalGuard, rhs) : rest'
+processProofCases scrut cstrs mbt priorGuards0 cases0 = go priorGuards0 cases0
+  where
+    -- Aggregate, per constructor, the variables used in any guard or RHS across all arms with that constructor.
+    -- A pattern var used in *some* same-constructor arm but not in *this* arm's RHS is dropped from the
+    -- RHS bindings (the guard handles its own bindings via 'grdBindings'), avoiding false unused-binding
+    -- warnings. A pattern var truly unused everywhere is kept so GHC can flag the user oversight.
+    cstrUsedVars :: Map.Map Name (Set Name)
+    cstrUsedVars = Map.fromListWith Set.union
+                     [ (nm, allUsed) | CMatch _ nm _ _ _ allUsed <- cases0 ]
 
-  CMatch _o nm mbp mbG rhs _allUsed -> do
-    let ts   = case lookupBase nm cstrs of
-                 Just t  -> t
-                 Nothing -> error $ "pCase: impossible: unknown constructor " ++ nameBase nm
-        pats = fromMaybe (map (const WildP) ts) mbp
+    go _           []         = pure []
+    go priorGuards (c:rest) = case c of
+      CWild _ mbG rhs -> do
+        -- Wildcard: negate the disjunction of ALL prior full guards (De Morgan)
+        let allGuards  = [g | (_, g, _) <- priorGuards]
+            baseGuard  = negateAllGuards allGuards
+            finalGuard = case mbG of
+                           Nothing -> baseGuard
+                           Just g  -> sAndAll [baseGuard, g]
+        rest' <- go (priorGuards ++ [(Nothing, finalGuard, Nothing)]) rest
+        pure $ (finalGuard, rhs) : rest'
 
-        -- Build let-bindings for pattern variables
-        args    = [(i, mkAccessorFor mbt nm i scrut) | (i, _) <- zip [(1 :: Int) ..] ts]
-        bindings = [ ValD (VarP v) (NormalB acc) []
-                   | (i, acc) <- args, VarP v <- [pats !! (i - 1)] ]
+      CMatch _o nm mbp mbG rhs _allUsed -> do
+        let ts   = case lookupBase nm cstrs of
+                     Just t  -> t
+                     Nothing -> error $ "pCase: impossible: unknown constructor " ++ nameBase nm
+            pats = fromMaybe (map (const WildP) ts) mbp
 
-        testerGuard = mkTesterFor mbt nm scrut
+            -- Build let-bindings for pattern variables
+            args    = [(i, mkAccessorFor mbt nm i scrut) | (i, _) <- zip [(1 :: Int) ..] ts]
+            bindings = [ ValD (VarP v) (NormalB acc) []
+                       | (i, acc) <- args, VarP v <- [pats !! (i - 1)] ]
 
-        -- For list cons patterns in pCase, add a destructuring equality:
-        --   scrut .=== head scrut .: tail scrut
-        -- Lists use SMT Seq (not declare-datatypes), so the solver doesn't automatically
-        -- know that xs = head xs .: tail xs from sNot (null xs). We must add an explicit
-        -- equality to give the solver this information, mirroring what 'split' does.
-        -- All other types (ADTs, Maybe, Either, Tuple) use declare-datatypes and get
-        -- these axioms for free.
-        -- NB. For nested list cons patterns, the same equality is added by 'flattenCons'.
-        destructEq
-          | Just BTList <- mbt, nameBase nm == ":"
-          = let hd = AppE (VarE (sbvName "Data.SBV.List" "head")) scrut
-                tl = AppE (VarE (sbvName "Data.SBV.List" "tail")) scrut
-            in [foldl1 AppE [VarE '(.===), scrut, InfixE (Just hd) (VarE '(.:)) (Just tl)]]
-          | True
-          = []
+            testerGuard = mkTesterFor mbt nm scrut
 
-        -- Only negate prior USER guards for the SAME constructor (others are mutually exclusive)
-        sameUserGuards = [ ug | (Just cn, _, Just ug) <- priorGuards, sameBase cn nm ]
-        negPriors      = map (AppE (VarE 'sNot)) sameUserGuards
+            -- For list cons patterns in pCase, add a destructuring equality:
+            --   scrut .=== head scrut .: tail scrut
+            -- Lists use SMT Seq (not declare-datatypes), so the solver doesn't automatically
+            -- know that xs = head xs .: tail xs from sNot (null xs). We must add an explicit
+            -- equality to give the solver this information, mirroring what 'split' does.
+            -- All other types (ADTs, Maybe, Either, Tuple) use declare-datatypes and get
+            -- these axioms for free.
+            -- NB. For nested list cons patterns, the same equality is added by 'flattenCons'.
+            destructEq
+              | Just BTList <- mbt, nameBase nm == ":"
+              = let hd = AppE (VarE (sbvName "Data.SBV.List" "head")) scrut
+                    tl = AppE (VarE (sbvName "Data.SBV.List" "tail")) scrut
+                in [foldl1 AppE [VarE '(.===), scrut, InfixE (Just hd) (VarE '(.:)) (Just tl)]]
+              | True
+              = []
 
-        -- Build the final guard (wrap user guard in bindings so pattern vars are in scope)
-        grdVars     = maybe Set.empty freeVars mbG
-        grdBindings = filter (\case
-                                 ValD (VarP v) _ _ -> v `Set.member` grdVars
-                                 _                 -> True) bindings
-        guardParts  = [testerGuard] ++ destructEq ++ negPriors ++ maybe [] (pure . addLocals grdBindings) mbG
-        finalGuard  = sAndAll guardParts
+            -- Only negate prior USER guards for the SAME constructor (others are mutually exclusive)
+            sameUserGuards = [ ug | (Just cn, _, Just ug) <- priorGuards, sameBase cn nm ]
+            negPriors      = map (AppE (VarE 'sNot)) sameUserGuards
 
-        -- Wrap RHS with let-bindings for pattern variables actually used in this RHS.
-        -- The guard handles its own variable bindings separately via 'grdBindings' above,
-        -- so we don't need to keep guard-only variables here.
-        rhsVars = freeVars rhs
-        rhs'    = addLocals (filter (\case
-                                        ValD (VarP v) _ _ -> v `Set.member` rhsVars
-                                        _                 -> True) bindings) rhs
+            -- Build the final guard (wrap user guard in bindings so pattern vars are in scope)
+            grdVars     = maybe Set.empty freeVars mbG
+            grdBindings = filter (\case
+                                     ValD (VarP v) _ _ -> v `Set.member` grdVars
+                                     _                 -> True) bindings
+            guardParts  = [testerGuard] ++ destructEq ++ negPriors ++ maybe [] (pure . addLocals grdBindings) mbG
+            finalGuard  = sAndAll guardParts
 
-        -- Track: full guard for wildcard negation, user guard for same-constructor negation
-        userGuardOnly = case mbG of
-                          Just g  -> Just (addLocals grdBindings g)
-                          Nothing -> Nothing
-        priorGuards' = priorGuards ++ [(Just nm, finalGuard, userGuardOnly)]
+            -- Wrap RHS with let-bindings. Keep a binding when the variable is used in this RHS, OR when
+            -- it isn't used in any same-constructor arm (so GHC can warn about a truly unused pattern var).
+            -- Drop it when used in some same-constructor arm but not here, to avoid spurious warnings.
+            cstrUsed = Map.findWithDefault Set.empty nm cstrUsedVars
+            rhsVars  = freeVars rhs
+            rhs'     = addLocals (filter (\case
+                                             ValD (VarP v) _ _ -> v `Set.member` rhsVars
+                                                               || not (v `Set.member` cstrUsed)
+                                             _                 -> True) bindings) rhs
 
-    rest' <- processProofCases scrut cstrs mbt priorGuards' rest
-    pure $ (finalGuard, rhs') : rest'
+            -- Track: full guard for wildcard negation, user guard for same-constructor negation
+            userGuardOnly = case mbG of
+                              Just g  -> Just (addLocals grdBindings g)
+                              Nothing -> Nothing
+            priorGuards' = priorGuards ++ [(Just nm, finalGuard, userGuardOnly)]
+
+        rest' <- go priorGuards' rest
+        pure $ (finalGuard, rhs') : rest'
 
 -- | Negate the disjunction of all given guards using De Morgan: sNot (g1 .|| g2 .|| ...)
 negateAllGuards :: [Exp] -> Exp
