@@ -24,7 +24,7 @@
     Disable with `-f-compile_examples` when using SBV as a dependency to skip
     compiling the example modules. Thanks to Robin Webbers for the contribution.
 
-  * Add more floating-point operations to `Data.SBV.Dynamic`.
+  * Add more floating-point operations to `Data.SBV.Dynamic`. Thanks to Ryan Scott for the patch.
 
 ### Version 14.1, 2026-05-04
 

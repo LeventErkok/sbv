@@ -150,17 +150,17 @@ svAsDouble :: SVal -> Maybe Double
 svAsDouble (SVal _ (Left (CV _ (CDouble d)))) = Just d
 svAsDouble _ = Nothing
 
--- | Extract an 'FP' from a concrete value.
+-- | Extract an t'FP' from a concrete value.
 svAsFP :: SVal -> Maybe FP
 svAsFP (SVal _ (Left (CV _ (CFP fp)))) = Just fp
 svAsFP _ = Nothing
 
--- | Extract a rounding mode from an 'SVal'.
+-- | Extract a rounding mode from an t'SVal'.
 svAsRoundingMode :: SVal -> Maybe RoundingMode
 svAsRoundingMode (SVal _ (Left cv)) = cvAsRoundingMode cv
 svAsRoundingMode _ = Nothing
 
--- | Extract a rounding mode from a 'CV'.
+-- | Extract a rounding mode from a t'CV'.
 cvAsRoundingMode :: CV -> Maybe RoundingMode
 cvAsRoundingMode (CV k (CADT (s, [])))
   | k == kRoundingMode
@@ -1166,7 +1166,7 @@ svFPMax = liftFPSym2 "max" (mkSymOp (IEEEFP FP_Max)) fpMaxH fpMaxH fpMax
 -- Note that this operation is defined somewhat unusually because Haskell lacks
 -- a native FMA operation to use for concrete evaluation of 'Float's and
 -- 'Double's. See https://github.com/LeventErkok/sbv/issues/777 for more
--- discussion. As such, concrete FMA evaluation is only supported for 'FP'
+-- discussion. As such, concrete FMA evaluation is only supported for t'FP'
 -- values.
 svFPFMA :: SVal -- ^ Rounding mode
         -> SVal -> SVal -> SVal -> SVal
@@ -1201,7 +1201,7 @@ svFPSqrt :: SVal -- ^ Rounding mode
          -> SVal -> SVal
 svFPSqrt = liftFPSymRM1 "sqrt" (mkSymOp (IEEEFP FP_Sqrt)) sqrt sqrt fpSqrt
 
--- | Cast an 'FP' value to a 'CV' of the given floating-point 'Kind' using the
+-- | Cast an t'FP' value to a t'CV' of the given floating-point 'Kind' using the
 -- given 'RoundingMode'. This will error if given a non-floating-point 'Kind'.
 cvCastFromFP :: Kind -> RoundingMode -> FP -> CV
 cvCastFromFP kindTo rm fp =
@@ -1211,7 +1211,7 @@ cvCastFromFP kindTo rm fp =
     (fpToDouble rm (fpRoundFloat 11 53 rm fp))
     (\eb sb -> fpRoundFloat eb sb rm fp)
 
--- | Cast a 'Rational' value to a 'CV' of the given floating-point 'Kind'. This
+-- | Cast a 'Rational' value to a t'CV' of the given floating-point 'Kind'. This
 -- will error if given a non-floating-point 'Kind'.
 cvCastFromRational :: Kind -> Rational -> CV
 cvCastFromRational kindTo r =
@@ -1221,7 +1221,7 @@ cvCastFromRational kindTo r =
     (fromRational r)
     (\eb sb -> fpFromRational eb sb r)
 
--- | Convert a 'CVal' to an 'FP' value of the appropriate size. This will error
+-- | Convert a 'CVal' to an t'FP' value of the appropriate size. This will error
 -- if the 'CVal' is not a floating-point value.
 cvalToFP :: CVal -> FP
 cvalToFP (CFloat f) = fpFromFloat 8 24 f
@@ -1667,7 +1667,7 @@ liftSym2 _   okCV opCR opCI opCF opCD opFP opRA (SVal k (Left a)) (SVal _ (Left 
 liftSym2 opS _    _    _    _    _    _  _      a@(SVal k _)      b                                           = SVal k $ Right $  liftSV2 opS k a b
 
 -- | Lift a unary floating-point operation that can work over 'Float',
--- 'Double', and 'FP' values.
+-- 'Double', and t'FP' values.
 liftFPSym1 :: String
            -> (State -> Kind -> SV -> IO SV)
            -> (Float -> Float)
@@ -1700,7 +1700,7 @@ liftFPSymRM1 _ opS _ _ _ rm a@(SVal k _) = SVal k $ Right $ cache c
                    opS st k svrm sva
 
 -- | Lift a binary floating-point operation that can work over 'Float',
--- 'Double', and 'FP' values.
+-- 'Double', and t'FP' values.
 liftFPSym2 :: String
            -> (State -> Kind -> SV -> SV -> IO SV)
            -> (Float -> Float -> Float)
@@ -1735,7 +1735,7 @@ liftFPSymRM2 _ opS _ _ _ rm a@(SVal k _) b = SVal k $ Right $ cache c
                    opS st k svrm sva svb
 
 -- | Lift a unary floating-point predicate that can work over 'Float',
--- 'Double', and 'FP' values.
+-- 'Double', and t'FP' values.
 liftFPPred :: (State -> Kind -> SV -> IO SV)
            -> (Float -> Bool)
            -> (Double -> Bool)
@@ -1846,7 +1846,7 @@ rationalSBVCheck _                     _                     = True
 -- this rounding mode when concretely evaluating 'Float's and 'Double's, so
 -- concrete evaluation is not supported for other rounding modes.
 --
--- Note that this check skips concrete 'FP' values, which support concrete
+-- Note that this check skips concrete t'FP' values, which support concrete
 -- evaluation with any rounding mode.
 floatDoubleRneCheck :: RoundingMode -> CV -> Bool
 floatDoubleRneCheck rm cv =

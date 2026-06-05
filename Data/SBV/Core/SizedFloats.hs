@@ -463,7 +463,7 @@ fpRoundInt rm (FP eb sa a) = FP eb sa $ fst $ BF.bfRoundInt (roundingModeToRound
 -- | SMTLib compliant definition for 'Data.SBV.fpMax'. This is very nearly
 -- identical to 'Data.SBV.Utils.Numeric.fpMaxH', except that this uses
 -- 'fpIsZero' instead of checking for equality against a @0@ literal. (The
--- latter is not supported for 'FP' values as 'FP' does not implement
+-- latter is not supported for t'FP' values as t'FP' does not implement
 -- 'fromInteger'.)
 fpMax :: FP -> FP -> FP
 fpMax x y
@@ -478,7 +478,7 @@ fpMax x y
 -- | SMTLib compliant definition for 'Data.SBV.fpMin'. This is very nearly
 -- identical to 'Data.SBV.Utils.Numeric.fpMinH', except that this uses
 -- 'fpIsZero' instead of checking for equality against a @0@ literal. (The
--- latter is not supported for 'FP' values as 'FP' does not implement
+-- latter is not supported for t'FP' values as t'FP' does not implement
 -- 'fromInteger'.)
 fpMin :: FP -> FP -> FP
 fpMin x y
