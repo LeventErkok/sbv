@@ -266,12 +266,11 @@ instance SymVal Double where
   isConcretely _ _ = False
 
 instance SymVal RoundingMode where
-  literal s = SBV $ SVal kRoundingMode $ Left $ CV kRoundingMode $ CADT (show s, [])
-  fromCV (CV k (CADT (s, [])))
-    | k == kRoundingMode
-    , Just mode <- s `lookup` [(show m, m) | m <- [minBound .. maxBound :: RoundingMode]]
-    = mode
-  fromCV c = error $ "SymVal.RoundingMode: Unexpected non-rounding mode value: " ++ show c
+  literal = SBV . svRoundingMode
+  fromCV c =
+    case cvAsRoundingMode c of
+      Just mode -> mode
+      Nothing   -> error $ "SymVal.RoundingMode: Unexpected non-rounding mode value: " ++ show c
 
 -- | Symbolic variant of 'RoundNearestTiesToEven'
 sRoundNearestTiesToEven :: SRoundingMode

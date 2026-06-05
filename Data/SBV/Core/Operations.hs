@@ -12,6 +12,7 @@
 {-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE ViewPatterns        #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -19,9 +20,12 @@ module Data.SBV.Core.Operations
   (
   -- ** Basic constructors
     svTrue, svFalse, svBool
-  , svInteger, svFloat, svDouble, svFloatingPoint, svReal, svEnumFromThenTo, svString, svChar
+  , svInteger, svFloat, svDouble, svFloatingPoint, svRoundingMode
+  , svReal, svEnumFromThenTo, svString, svChar
   -- ** Basic destructors
-  , svAsBool, svAsInteger, svNumerator, svDenominator
+  , svAsBool, svAsInteger
+  , svAsFloat, svAsDouble, svAsFP, svAsRoundingMode, cvAsRoundingMode
+  , svNumerator, svDenominator
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs, svSignum
   , svDivide, svQuot, svRem, svQuotRem, svDivides
@@ -34,6 +38,13 @@ module Data.SBV.Core.Operations
   , svSelect
   , svSign, svUnsign, svSetBit, svWordFromBE, svWordFromLE
   , svExp, svFromIntegral
+  , svFPNaN, svFPInf, svFPZero
+  , svFPFromIntegerLit, svFPFromRationalLit
+  , svFPIsZero, svFPIsInfinite, svFPIsNegative, svFPIsPositive
+  , svFPIsNaN, svFPIsNormal, svFPIsSubnormal
+  , svFPAdd, svFPSub, svFPMul, svFPDiv, svFPRem, svFPMin, svFPMax
+  , svFPFMA, svFPAbs, svFPNeg, svFPRoundToIntegral, svFPSqrt
+  , svCastToFP, svCastFromFP
   -- ** Overflows
   , svMkOverflow1, svMkOverflow2
   -- ** Derived operations
@@ -43,6 +54,7 @@ module Data.SBV.Core.Operations
   , svBarrelRotateLeft, svBarrelRotateRight
   , svBlastLE, svBlastBE
   , svAddConstant, svIncrement, svDecrement
+  , svSWord32AsFloat, svSWord64AsDouble, svSWordAsFloatingPoint
   , svFloatAsSWord32, svDoubleAsSWord64, svFloatingPointAsSWord
   -- Utils
   , mkSymOp
@@ -63,7 +75,7 @@ import Data.SBV.Core.SizedFloats
 
 import Data.Ratio
 
-import Data.SBV.Utils.Numeric (fpIsEqualObjectH, floatToWord, doubleToWord)
+import Data.SBV.Utils.Numeric (RoundingMode(..), {-fp2fp,-} fpIsEqualObjectH, fpIsNormalizedH, fpMaxH, fpMinH, fpRemH, fpRoundToIntegralH, floatToWord, doubleToWord, wordToFloat, wordToDouble)
 
 import LibBF
 
@@ -99,6 +111,10 @@ svFloatingPoint :: FP -> SVal
 svFloatingPoint f@(FP eb sb _) = SVal k (Left $! CV k (CFP f))
   where k  = KFP eb sb
 
+-- | Convert from a rounding mode
+svRoundingMode :: RoundingMode -> SVal
+svRoundingMode s = SVal kRoundingMode $ Left $ CV kRoundingMode $ CADT (show s, [])
+
 -- | Convert from a String
 svString :: String -> SVal
 svString s = SVal KString (Left $! CV KString (CString s))
@@ -123,6 +139,35 @@ svAsBool _                  = Nothing
 svAsInteger :: SVal -> Maybe Integer
 svAsInteger (SVal _ (Left (CV _ (CInteger n)))) = Just n
 svAsInteger _                                   = Nothing
+
+-- | Extract a float from a concrete value.
+svAsFloat :: SVal -> Maybe Float
+svAsFloat (SVal _ (Left (CV _ (CFloat f)))) = Just f
+svAsFloat _ = Nothing
+
+-- | Extract a double from a concrete value.
+svAsDouble :: SVal -> Maybe Double
+svAsDouble (SVal _ (Left (CV _ (CDouble d)))) = Just d
+svAsDouble _ = Nothing
+
+-- | Extract an 'FP' from a concrete value.
+svAsFP :: SVal -> Maybe FP
+svAsFP (SVal _ (Left (CV _ (CFP fp)))) = Just fp
+svAsFP _ = Nothing
+
+-- | Extract a rounding mode from an 'SVal'.
+svAsRoundingMode :: SVal -> Maybe RoundingMode
+svAsRoundingMode (SVal _ (Left cv)) = cvAsRoundingMode cv
+svAsRoundingMode _ = Nothing
+
+-- | Extract a rounding mode from a 'CV'.
+cvAsRoundingMode :: CV -> Maybe RoundingMode
+cvAsRoundingMode (CV k (CADT (s, [])))
+  | k == kRoundingMode
+  , mbMode <- s `lookup` [(show m, m) | m <- [minBound .. maxBound :: RoundingMode]]
+  = mbMode
+cvAsRoundingMode _
+  = Nothing
 
 -- | Grab the numerator of an SReal, if available
 svNumerator :: SVal -> Maybe Integer
@@ -1011,6 +1056,260 @@ svFromIntegral kTo x
         y st   = do xsw <- svToSV st x
                     newExpr st kTo (SBVApp (KindCast kFrom kTo) [xsw])
 
+-- | Create a NaN floating-point value of the given kind.
+svFPNaN :: Kind -> SVal
+svFPNaN k = SVal k $ Left $ fpConstCV k nan nan fpNaN
+  where
+    nan :: forall a. Floating a => a
+    nan = 0/0
+
+-- | Create an infinite floating-point value of the given kind. If the 'Bool'
+-- argument is 'True', then use negative infinity; otherwise, use positive
+-- infinity.
+svFPInf :: Kind -> Bool -> SVal
+svFPInf k neg = SVal k $ Left $ fpConstCV k signedInfinity signedInfinity (fpInf neg)
+  where
+    infinity :: forall a. Floating a => a
+    infinity = 1/0
+
+    signedInfinity :: forall a. Floating a => a
+    signedInfinity = if neg then -infinity else infinity
+
+-- | Create a NaN infinity value of the given kind. If the 'Bool' argument is
+-- 'True', then use negative infinity; otherwise, use positive infinity.
+svFPZero :: Kind -> Bool -> SVal
+svFPZero k neg = SVal k $ Left $ fpConstCV k signedZero signedZero (fpZero neg)
+  where
+    signedZero :: forall a. Num a => a
+    signedZero = if neg then -0 else 0
+
+-- | Create a float-point value of the given kind from an 'Integer' literal.
+svFPFromIntegerLit :: Kind -> Integer -> SVal
+svFPFromIntegerLit k r = SVal k $ Left $ fpConstCV k (fromInteger r) (fromInteger r) (\eb sb -> fpFromInteger eb sb r)
+
+-- | Create a float-point value of the given kind from a 'Rational' literal.
+svFPFromRationalLit :: Kind -> Rational -> SVal
+svFPFromRationalLit k r = SVal k $ Left $ fpConstCV k (fromRational r) (fromRational r) (\eb sb -> fpFromRational eb sb r)
+
+-- | Is the given floating-point value a zero value?
+svFPIsZero :: SVal -> SVal
+svFPIsZero = liftFPPred (mkSymOp1 (IEEEFP FP_IsZero)) isZero isZero fpIsZero
+  where
+    isZero :: forall a. RealFloat a => a -> Bool
+    isZero x = x == 0
+
+-- | Is the given floating-point value infinite?
+svFPIsInfinite :: SVal -> SVal
+svFPIsInfinite = liftFPPred (mkSymOp1 (IEEEFP FP_IsInfinite)) isInfinite isInfinite fpIsInf
+
+-- | Is the given floating-point value negative?
+svFPIsNegative :: SVal -> SVal
+svFPIsNegative = liftFPPred (mkSymOp1 (IEEEFP FP_IsNegative)) isNegative isNegative fpIsNeg
+  where
+    isNegative :: forall a. RealFloat a => a -> Bool
+    isNegative x = x < 0 || isNegativeZero x
+
+-- | Is the given floating-point value positive?
+svFPIsPositive :: SVal -> SVal
+svFPIsPositive = liftFPPred (mkSymOp1 (IEEEFP FP_IsPositive)) isPositive isPositive fpIsPos
+  where
+    isPositive :: forall a. RealFloat a => a -> Bool
+    isPositive x = x >= 0 && not (isNegativeZero x)
+
+-- | Is the given floating-point value a NaN value?
+svFPIsNaN :: SVal -> SVal
+svFPIsNaN = liftFPPred (mkSymOp1 (IEEEFP FP_IsNaN)) isNaN isNaN fpIsNaN
+
+-- | Is the given floating-point value \"normal\"? That is, is the value not
+-- zero, infinite, NaN, or subnormal?
+svFPIsNormal :: SVal -> SVal
+svFPIsNormal = liftFPPred (mkSymOp1 (IEEEFP FP_IsNormal)) fpIsNormalizedH fpIsNormalizedH fpIsNormal
+
+-- | Is the given floating-point value subnormal (i.e., denormalized)?
+svFPIsSubnormal :: SVal -> SVal
+svFPIsSubnormal = liftFPPred (mkSymOp1 (IEEEFP FP_IsSubnormal)) isDenormalized isDenormalized fpIsSubnormal
+
+-- | Floating-point addition.
+svFPAdd :: SVal -- ^ Rounding mode
+        -> SVal -> SVal -> SVal
+svFPAdd = liftFPSymRM2 "add" (mkSymOp3 (IEEEFP FP_Add)) (+) (+) fpAdd
+
+-- | Floating-point subtraction.
+svFPSub :: SVal -- ^ Rounding mode
+        -> SVal -> SVal -> SVal
+svFPSub = liftFPSymRM2 "sub" (mkSymOp3 (IEEEFP FP_Sub)) (-) (-) fpSub
+
+-- | Floating-point multiplication.
+svFPMul :: SVal -- ^ Rounding mode
+        -> SVal -> SVal -> SVal
+svFPMul = liftFPSymRM2 "mul" (mkSymOp3 (IEEEFP FP_Mul)) (*) (*) fpMul
+
+-- | Floating-point division.
+svFPDiv :: SVal -- ^ Rounding mode
+        -> SVal -> SVal -> SVal
+svFPDiv = liftFPSymRM2 "div" (mkSymOp3 (IEEEFP FP_Div)) (/) (/) fpDiv
+
+-- | Floating-point remainder.
+svFPRem :: SVal -> SVal -> SVal
+svFPRem = liftFPSym2 "rem" (mkSymOp (IEEEFP FP_Rem)) fpRemH fpRemH (fpRem RoundNearestTiesToEven)
+
+-- | Floating-point minimum.
+svFPMin :: SVal -> SVal -> SVal
+svFPMin = liftFPSym2 "min" (mkSymOp (IEEEFP FP_Min)) fpMinH fpMinH fpMin
+
+-- | Floating-point maximum.
+svFPMax :: SVal -> SVal -> SVal
+svFPMax = liftFPSym2 "max" (mkSymOp (IEEEFP FP_Max)) fpMaxH fpMaxH fpMax
+
+-- | Floating-point fused-multipy-add (FMA).
+
+-- Note that this operation is defined somewhat unusually because Haskell lacks
+-- a native FMA operation to use for concrete evaluation of 'Float's and
+-- 'Double's. See https://github.com/LeventErkok/sbv/issues/777 for more
+-- discussion. As such, concrete FMA evaluation is only supported for 'FP'
+-- values.
+svFPFMA :: SVal -- ^ Rounding mode
+        -> SVal -> SVal -> SVal -> SVal
+svFPFMA (svAsRoundingMode -> Just rm)
+        (SVal k (Left (cvVal -> CFP a)))
+        (SVal _ (Left (cvVal -> CFP b)))
+        (SVal _ (Left (cvVal -> CFP c))) =
+  SVal k $ Left $ CV k $ CFP $ fpFMA rm a b c
+svFPFMA rm a@(SVal k _) b c = SVal k $ Right $ cache ca
+   where ca st = do svrm <- svToSV st rm
+                    sva <- svToSV st a
+                    svb <- svToSV st b
+                    svc <- svToSV st c
+                    newExpr st k (SBVApp (IEEEFP FP_FMA) [svrm, sva, svb, svc])
+
+-- | Floating-point absolute value.
+svFPAbs :: SVal -> SVal
+svFPAbs = liftFPSym1 "abs" (mkSymOp1 (IEEEFP FP_Abs)) abs abs fpAbs
+
+-- | Floating-point negation.
+svFPNeg :: SVal -> SVal
+svFPNeg = liftFPSym1 "negate" (mkSymOp1 (IEEEFP FP_Neg)) negate negate fpNeg
+
+-- | Round the given floating-point value to the nearest integer (represented
+-- as a float with a zero decimal component) using the given rounding mode.
+svFPRoundToIntegral :: SVal -- ^ Rounding mode
+                    -> SVal -> SVal
+svFPRoundToIntegral = liftFPSymRM1 "roundToIntegral" (mkSymOp (IEEEFP FP_RoundToIntegral)) fpRoundToIntegralH fpRoundToIntegralH fpRoundInt
+
+-- | Floating-point square root.
+svFPSqrt :: SVal -- ^ Rounding mode
+         -> SVal -> SVal
+svFPSqrt = liftFPSymRM1 "sqrt" (mkSymOp (IEEEFP FP_Sqrt)) sqrt sqrt fpSqrt
+
+-- | Cast an 'FP' value to a 'CV' of the given floating-point 'Kind' using the
+-- given 'RoundingMode'. This will error if given a non-floating-point 'Kind'.
+cvCastFromFP :: Kind -> RoundingMode -> FP -> CV
+cvCastFromFP kindTo rm fp =
+  fpConstCV
+    kindTo
+    (fpToFloat rm (fpRoundFloat 8 24 rm fp))
+    (fpToDouble rm (fpRoundFloat 11 53 rm fp))
+    (\eb sb -> fpRoundFloat eb sb rm fp)
+
+-- | Cast a 'Rational' value to a 'CV' of the given floating-point 'Kind'. This
+-- will error if given a non-floating-point 'Kind'.
+cvCastFromRational :: Kind -> Rational -> CV
+cvCastFromRational kindTo r =
+  fpConstCV
+    kindTo
+    (fromRational r)
+    (fromRational r)
+    (\eb sb -> fpFromRational eb sb r)
+
+-- | Convert a 'CVal' to an 'FP' value of the appropriate size. This will error
+-- if the 'CVal' is not a floating-point value.
+cvalToFP :: CVal -> FP
+cvalToFP (CFloat f) = fpFromFloat 8 24 f
+cvalToFP (CDouble d) = fpFromDouble 11 53 d
+cvalToFP (CFP fp) = fp
+cvalToFP _ = error "cvalToFP: non-float value"
+
+-- | Convert a value to a floating-point value. The type being converted from
+-- must be one of 'KFloat', 'KDouble', 'KFP', 'KBounded', 'KUnbounded', or
+-- 'KReal'.
+--
+-- Note that converting from a 'KBounded' value returns a float with the same
+-- numeric value as the input bitvector. For a conversion that returns a float
+-- with the same bit pattern as the input bitvector, see 'svSWord32AsFloat',
+-- 'svSWord64AsDouble', and 'svSWordAsFloatingPoint'.
+svCastToFP :: Kind -- ^ The kind to cast to. Must be a floating-point kind.
+           -> SVal -- ^ Rounding mode
+           -> SVal -- ^ The value to be casted.
+           -> SVal
+svCastToFP kindTo (svAsRoundingMode -> Just rm) x@(SVal kindFrom (Left (CV _ x')))
+  | kindFrom == kindTo
+  = x
+
+  | KFloat {} <- kindFrom
+  = fpCastFromFloat
+  | KDouble {} <- kindFrom
+  = fpCastFromFloat
+  | KFP {} <- kindFrom
+  = fpCastFromFloat
+
+  | RoundNearestTiesToEven <- rm
+  , KBounded {} <- kindFrom
+  , CInteger w <- x'
+  = fpCastFromIntegral w
+  | RoundNearestTiesToEven <- rm
+  , KUnbounded {} <- kindFrom
+  , CInteger i <- x'
+  = fpCastFromIntegral i
+
+  | RoundNearestTiesToEven <- rm
+  , CAlgReal r <- x'
+  , isExactRational r
+  = SVal kindTo $ Left $ cvCastFromRational kindTo $ toRational r
+  where fpCastFromFloat :: SVal
+        fpCastFromFloat = SVal kindTo $ Left $ cvCastFromFP kindTo rm $ cvalToFP x'
+
+        fpCastFromIntegral :: forall a. Integral a => a -> SVal
+        fpCastFromIntegral =
+          SVal kindTo . Left . cvCastFromRational kindTo . fromIntegral
+svCastToFP kindTo rm x@(SVal kindFrom _)
+  = SVal kindTo $ Right $ cache y
+  where y st = do svrm <- svToSV st rm
+                  svx <- svToSV st x
+                  mkSymOp (IEEEFP (FP_Cast kindFrom kindTo svrm)) st kindTo svrm svx
+
+-- | Convert a floating-point value to a value of a different type. The type to
+-- convert to must be one of 'KFloat', 'KDouble', 'KFP', 'KBounded',
+-- 'KUnbounded', or 'KReal'.
+--
+-- Note that converting to 'KBounded' returns a bitvector with the same numeric
+-- value as the input float (appropriately rounded). For a lossless conversion
+-- that returns a bitvector with the same bit pattern as the input float, see
+-- 'svFloatAsSWord32', 'svDoubleAsSWord64', and 'svFloatingPointAsSWord'.
+svCastFromFP :: Kind -- ^ The kind to cast to.
+             -> SVal -- ^ Rounding mode
+             -> SVal -- ^ The value to be casted. Must be a floating-point value.
+             -> SVal
+svCastFromFP kindTo (svAsRoundingMode -> Just rm) x@(SVal kindFrom (Left (CV _ x')))
+  | kindFrom == kindTo
+  = x
+
+  | KFloat {} <- kindTo
+  = fpCastToFloat
+  | KDouble {} <- kindTo
+  = fpCastToFloat
+  | KFP {} <- kindTo
+  = fpCastToFloat
+  -- No constant-folding for KBounded, KUnbounded, or KReal, as each of these
+  -- conversions are partial. Rather than painstakingly check which inputs are
+  -- valid, we simply defer to the underlying SMT-LIB operations.
+  where fpCastToFloat :: SVal
+        fpCastToFloat = SVal kindTo $ Left $ cvCastFromFP kindTo rm $ cvalToFP x'
+svCastFromFP kindTo rm x@(SVal kindFrom _)
+  = SVal kindTo $ Right $ cache y
+  where y st = do svrm <- svToSV st rm
+                  svx <- svToSV st x
+                  mkSymOp (IEEEFP (FP_Cast kindFrom kindTo svrm)) st kindTo svrm svx
+
 --------------------------------------------------------------------------------
 -- Derived operations
 
@@ -1367,6 +1666,102 @@ liftSym2 :: (State -> Kind -> SV -> SV -> IO SV)
 liftSym2 _   okCV opCR opCI opCF opCD opFP opRA (SVal k (Left a)) (SVal _ (Left b)) | and [f a b | f <- okCV] = SVal k . Left  $! mapCV2 opCR opCI opCF opCD opFP opRA a b
 liftSym2 opS _    _    _    _    _    _  _      a@(SVal k _)      b                                           = SVal k $ Right $  liftSV2 opS k a b
 
+-- | Lift a unary floating-point operation that can work over 'Float',
+-- 'Double', and 'FP' values.
+liftFPSym1 :: String
+           -> (State -> Kind -> SV -> IO SV)
+           -> (Float -> Float)
+           -> (Double -> Double)
+           -> (FP -> FP)
+           -> SVal -> SVal
+liftFPSym1 o _ opCF opCD opFP (SVal k (Left a))
+  = SVal k . Left  $! mapCV (noRealUnary o) (noIntUnary o) opCF opCD opFP (noRatUnary o) a
+liftFPSym1 _ opS _ _ _ a@(SVal k _) = SVal k $ Right $ cache c
+   where c st = do sva <- svToSV st a
+                   opS st k sva
+
+-- | Like 'liftFPSym1', but with an explicit rounding mode. Note that concrete
+-- evaluation of 'Float's or 'Double's is only supported when the
+-- 'RoundNearestTiesToEven' rounding mode is used (see the Haddocks for
+-- 'floatDoubleRneCheck').
+liftFPSymRM1 :: String
+             -> (State -> Kind -> SV -> SV -> IO SV)
+             -> (Float -> Float)
+             -> (Double -> Double)
+             -> (RoundingMode -> FP -> FP)
+             -> SVal -> SVal -> SVal
+liftFPSymRM1 o _ opCF opCD opFP rm (SVal k (Left a))
+  | Just rm'@RoundNearestTiesToEven <- svAsRoundingMode rm
+  , floatDoubleRneCheck rm' a
+  = SVal k . Left $! mapCV (noRealUnary o) (noIntUnary o) opCF opCD (opFP rm') (noRatUnary o) a
+liftFPSymRM1 _ opS _ _ _ rm a@(SVal k _) = SVal k $ Right $ cache c
+   where c st = do svrm <- svToSV st rm
+                   sva <- svToSV st a
+                   opS st k svrm sva
+
+-- | Lift a binary floating-point operation that can work over 'Float',
+-- 'Double', and 'FP' values.
+liftFPSym2 :: String
+           -> (State -> Kind -> SV -> SV -> IO SV)
+           -> (Float -> Float -> Float)
+           -> (Double -> Double -> Double)
+           -> (FP -> FP -> FP)
+           -> SVal -> SVal -> SVal
+liftFPSym2 o _ opCF opCD opFP (SVal k (Left a)) (SVal _ (Left b))
+  = SVal k . Left $! mapCV2 (noReal o) (noInt o) opCF opCD opFP (noRat o) a b
+liftFPSym2 _ opS _ _ _ a@(SVal k _) b = SVal k $ Right $ cache c
+   where c st = do sva <- svToSV st a
+                   svb <- svToSV st b
+                   opS st k sva svb
+
+-- | Like 'liftFPSym2', but with an explicit rounding mode. Note that concrete
+-- evaluation of 'Float's or 'Double's is only supported when the
+-- 'RoundNearestTiesToEven' rounding mode is used (see the Haddocks for
+-- 'floatDoubleRneCheck').
+liftFPSymRM2 :: String
+             -> (State -> Kind -> SV -> SV -> SV -> IO SV)
+             -> (Float -> Float -> Float)
+             -> (Double -> Double -> Double)
+             -> (RoundingMode -> FP -> FP -> FP)
+             -> SVal -> SVal -> SVal -> SVal
+liftFPSymRM2 o _ opCF opCD opFP rm (SVal k (Left a)) (SVal _ (Left b))
+  | Just rm'@RoundNearestTiesToEven <- svAsRoundingMode rm
+  , floatDoubleRneCheck rm' a
+  = SVal k . Left $! mapCV2 (noReal o) (noInt o) opCF opCD (opFP rm') (noRat o) a b
+liftFPSymRM2 _ opS _ _ _ rm a@(SVal k _) b = SVal k $ Right $ cache c
+   where c st = do svrm <- svToSV st rm
+                   sva <- svToSV st a
+                   svb <- svToSV st b
+                   opS st k svrm sva svb
+
+-- | Lift a unary floating-point predicate that can work over 'Float',
+-- 'Double', and 'FP' values.
+liftFPPred :: (State -> Kind -> SV -> IO SV)
+           -> (Float -> Bool)
+           -> (Double -> Bool)
+           -> (FP -> Bool)
+           -> SVal -> SVal
+liftFPPred _ opCF opCD opFP (SVal k (Left a)) =
+  case cvVal a of
+    CFloat f -> svBool $ opCF f
+    CDouble d -> svBool $ opCD d
+    CFP fp -> svBool $ opFP fp
+
+    CAlgReal {} -> unexpected
+    CInteger {} -> unexpected
+    CRational {} -> unexpected
+    CChar {} -> unexpected
+    CString {} -> unexpected
+    CList {} -> unexpected
+    CSet {} -> unexpected
+    CADT {} -> unexpected
+    CTuple {} -> unexpected
+    CArray {} -> unexpected
+  where unexpected = error $ "Data.SBV.liftFPPred: Unexpected kind: " ++ show k
+liftFPPred opS _ _ _ a = SVal KBool $ Right $ cache c
+   where c st = do sva <- svToSV st a
+                   opS st KBool sva
+
 -- | Create a symbolic two argument operation; with shortcut optimizations
 mkSymOpSC :: (SV -> SV -> Maybe SV) -> Op -> State -> Kind -> SV -> SV -> IO SV
 mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) pure (shortCut a b)
@@ -1380,6 +1775,9 @@ mkSymOp1SC shortCut op st k a = maybe (newExpr st k (SBVApp op [a])) pure (short
 
 mkSymOp1 :: Op -> State -> Kind -> SV -> IO SV
 mkSymOp1 = mkSymOp1SC (const Nothing)
+
+mkSymOp3 :: Op -> State -> Kind -> SV -> SV -> SV -> IO SV
+mkSymOp3 op st k a b c = newExpr st k (SBVApp op [a, b, c])
 
 -- | Predicate to check if a value is concrete
 isConcrete :: SVal -> Bool
@@ -1443,6 +1841,26 @@ rationalSBVCheck :: SVal -> SVal -> Bool
 rationalSBVCheck (SVal KReal (Left a)) (SVal KReal (Left b)) = rationalCheck a b
 rationalSBVCheck _                     _                     = True
 
+-- | Predicate to check if a concrete 'Float' or 'Double' value uses the
+-- 'RoundNearestTiesToEven' rounding mode. This is necessary because we assume
+-- this rounding mode when concretely evaluating 'Float's and 'Double's, so
+-- concrete evaluation is not supported for other rounding modes.
+--
+-- Note that this check skips concrete 'FP' values, which support concrete
+-- evaluation with any rounding mode.
+floatDoubleRneCheck :: RoundingMode -> CV -> Bool
+floatDoubleRneCheck rm cv =
+  case cvKind cv of
+    KFloat -> rmIsRne
+    KDouble -> rmIsRne
+    _ -> True
+  where
+    rmIsRne | RoundNearestTiesToEven <- rm = True
+            | otherwise = False
+
+noInt :: String -> Integer -> Integer -> a
+noInt o a b = error $ "SBV.Integer." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
+
 noReal :: String -> AlgReal -> AlgReal -> a
 noReal o a b = error $ "SBV.AlgReal." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
 
@@ -1457,6 +1875,9 @@ noFP o a b = error $ "SBV.FPR." ++ o ++ ": Unexpected arguments: " ++ show (a, b
 
 noRat:: String -> Rational -> Rational -> a
 noRat o a b = error $ "SBV.Rational." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
+
+noIntUnary :: String -> Integer -> a
+noIntUnary o a = error $ "SBV.Integer." ++ o ++ ": Unexpected argument: " ++ show a
 
 noRealUnary :: String -> AlgReal -> a
 noRealUnary o a = error $ "SBV.AlgReal." ++ o ++ ": Unexpected argument: " ++ show a
@@ -1507,6 +1928,59 @@ tupleLT x y = SVal KBool $ Right $ cache res
                         walk ((lti, eqi) : rest) = lti `svOr` (eqi `svAnd` walk rest)
 
                     svToSV st $ walk $ zipWith chkElt [1..] ks
+
+-- | Convert an 'Data.SBV.SWord32' to an 'Data.SBV.SFloat', preserving the
+-- bit-correspondence. Note that since the representation for @NaN@s are not
+-- unique, there are multiple word values for which this function will return a
+-- single, distinguished @NaN@ value.
+svSWord32AsFloat :: SVal -> SVal
+svSWord32AsFloat w@(SVal kindFrom x)
+  | KBounded _ 32 <- kindFrom
+  = case x of
+      Left (CV _ (CInteger w'))
+        -> SVal kindTo $ Left $ CV kindTo $ CFloat $ wordToFloat $ fromInteger w'
+      _ -> SVal kindTo $ Right $ cache y
+  | otherwise
+  = error $ "svSWord32AsFloat: not a 32-bit word type: " ++ show kindFrom
+  where kindTo = KFloat
+        y st = do svw <- svToSV st w
+                  mkSymOp1 (IEEEFP (FP_Reinterpret kindFrom kindTo)) st kindTo svw
+
+-- | Convert an 'Data.SBV.SWord64' to an 'Data.SBV.SDouble', preserving the
+-- bit-correspondence. Note that since the representation for @NaN@s are not
+-- unique, there are multiple word values for which this function will return a
+-- single, distinguished @NaN@ value.
+svSWord64AsDouble :: SVal -> SVal
+svSWord64AsDouble w@(SVal kindFrom x)
+  | KBounded _ 64 <- kindFrom
+  = case x of
+      Left (CV _ (CInteger w'))
+        -> SVal kindTo $ Left $ CV kindTo $ CDouble $ wordToDouble $ fromInteger w'
+      _ -> SVal kindTo $ Right $ cache y
+  | otherwise
+  = error $ "svSWord64AsDouble: not a 64-bit word type: " ++ show kindFrom
+  where kindTo = KDouble
+        y st = do svw <- svToSV st w
+                  mkSymOp1 (IEEEFP (FP_Reinterpret kindFrom kindTo)) st kindTo svw
+
+-- | Convert a word to a float (using the given exponent and significand sizes)
+-- containing the word's corresponding bit pattern. Note that since the
+-- representation for @NaN@s are not unique, there are multiple word values for
+-- which this function will return a single, distinguished @NaN@ value.
+svSWordAsFloatingPoint :: Int -- ^ Exponent size
+                       -> Int -- ^ Significand size
+                       -> SVal -> SVal
+svSWordAsFloatingPoint eb sb w@(SVal kindFrom x)
+  | KBounded _ _ <- kindFrom
+  = case x of
+      Left (CV _ (CInteger w'))
+        -> SVal kindTo $ Left $ CV kindTo $ CFP $ fpFromBits eb sb $ fromInteger w'
+      _ -> SVal kindTo $ Right $ cache y
+  | otherwise
+  = error $ "svSWordAsFloatingPoint: non-word type: " ++ show kindFrom
+  where kindTo = KFP eb sb
+        y st = do svw <- svToSV st w
+                  mkSymOp1 (IEEEFP (FP_Reinterpret kindFrom kindTo)) st kindTo svw
 
 -- | Convert an 'Data.SBV.SFloat' to an 'Data.SBV.SWord32', preserving the bit-correspondence. Note that since the
 -- representation for @NaN@s are not unique, this function will return a symbolic value when given a

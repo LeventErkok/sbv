@@ -32,7 +32,9 @@ module Data.SBV.Dynamic
   -- *** Integer literals
   , svInteger, svAsInteger
   -- *** Float literals
-  , svFloat, svDouble, svFloatingPoint
+  , svFloat, svDouble, svFloatingPoint, svAsFloat, svAsDouble, svAsFP
+  -- *** Rounding mode literals
+  , svRoundingMode, svAsRoundingMode
   -- *** Algebraic reals (only from rationals)
   , svReal, svNumerator, svDenominator
   -- *** Symbolic equality
@@ -63,6 +65,16 @@ module Data.SBV.Dynamic
   , svBarrelRotateLeft, svBarrelRotateRight
   , svWordFromBE, svWordFromLE
   , svBlastLE, svBlastBE
+  -- *** Floating-point operations
+  , svFPNaN, svFPInf, svFPZero
+  , svFPFromIntegerLit, svFPFromRationalLit
+  , svFPIsZero, svFPIsInfinite, svFPIsNegative, svFPIsPositive
+  , svFPIsNaN, svFPIsNormal, svFPIsSubnormal
+  , svFPAdd, svFPSub, svFPMul, svFPDiv, svFPRem, svFPMin, svFPMax
+  , svFPFMA, svFPAbs, svFPNeg, svFPRoundToIntegral, svFPSqrt
+  , svCastToFP, svCastFromFP
+  , svSWord32AsFloat, svSWord64AsDouble, svSWordAsFloatingPoint
+  , svFloatAsSWord32, svDoubleAsSWord64, svFloatingPointAsSWord
   -- ** Conditionals: Mergeable values
   , svIte, svLazyIte, svSymbolicMerge
   -- * Uninterpreted sorts, constants, and functions
