@@ -57,7 +57,7 @@ module Data.SBV.Core.Symbolic
   , MonadQuery(..), QueryT(..), Query, QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), TPOptions(..), SMTEngine
   , validationRequested, outputSVal, ProgInfo(..), mustIgnoreVar, getRootState
-  , LambdaInfo(..)
+  , LambdaInfo(..), showNROp
   ) where
 
 import Control.DeepSeq             (NFData(..))
@@ -321,7 +321,8 @@ instance Show FPOp where
    show FP_IsNegative        = "fp.isNegative"
    show FP_IsPositive        = "fp.isPositive"
 
--- | Non-linear operations
+-- | Non-linear operations. We do *not* on purpose deriving Show here, nor give a show instance,
+-- since different solvers call these functions with different names.
 data NROp = NR_Sin
           | NR_Cos
           | NR_Tan
@@ -335,23 +336,40 @@ data NROp = NR_Sin
           | NR_Exp
           | NR_Log
           | NR_Pow
+          | NR_Pi
           deriving (Eq, Ord, G.Data, NFData, Generic)
 
--- | The show instance carefully arranges for these to be printed as it can be understood by dreal
-instance Show NROp where
-  show NR_Sin  = "sin"
-  show NR_Cos  = "cos"
-  show NR_Tan  = "tan"
-  show NR_ASin = "asin"
-  show NR_ACos = "acos"
-  show NR_ATan = "atan"
-  show NR_Sinh = "sinh"
-  show NR_Cosh = "cosh"
-  show NR_Tanh = "tanh"
-  show NR_Sqrt = "sqrt"
-  show NR_Exp  = "exp"
-  show NR_Log  = "log"
-  show NR_Pow  = "pow"
+-- | Show a non-linear op. Unfortunately this can't be generically done since different
+-- solvers use different names for some of these ops.
+showNROp :: Solver -> NROp -> String
+showNROp slvr = sh
+  where sh NR_Sin  = "sin"
+        sh NR_Cos  = "cos"
+        sh NR_Tan  = "tan"
+        sh NR_ASin = arc ++ "sin"
+        sh NR_ACos = arc ++ "cos"
+        sh NR_ATan = arc ++ "tan"
+        sh NR_Sinh = "sinh"
+        sh NR_Cosh = "cosh"
+        sh NR_Tanh = "tanh"
+        sh NR_Sqrt = "sqrt"
+        sh NR_Exp  = "exp"
+        sh NR_Log  = "log"
+        sh NR_Pow  = "pow"
+        sh NR_Pi   = mkPi
+
+        -- DReal uses asin/acos etc. CVC5 uses arcsin. Other solvers probably
+        -- don't even support these. But this isn't the right place to bail-out
+        -- about it; so we just put "arc" following CVC5 here.
+        arc = case slvr of
+                DReal -> "a"
+                _     -> "arc"
+
+        -- CVC5 supports pi as a constant, for others we just the double-value
+        -- as a constant; hopefully good enough!
+        mkPi = case slvr of
+                CVC5 -> "real.pi"
+                _    -> "3.141592653589793"
 
 -- | Pseudo-boolean operations
 data PBOp = PB_AtMost  Int        -- ^ At most k
@@ -583,7 +601,7 @@ instance Show Op where
 
   show (IEEEFP w)           = show w
 
-  show (NonLinear w)        = show w
+  show (NonLinear w)        = showNROp DReal w -- Just use DReal here, only used for debugging
 
   show (PseudoBoolean p)    = show p
 

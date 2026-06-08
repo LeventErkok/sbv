@@ -35,7 +35,7 @@ import Data.SBV.Control.Types
 
 import Data.SBV.SMT.Utils
 
-import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName, getUserName', getSV, regExpToSMTString, NROp(..)
+import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName, getUserName', getSV, regExpToSMTString, NROp(..), showNROp
                               , SMTDef(..), SMTLambda(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..), ADTOp(..)
                               )
 
@@ -917,7 +917,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (NonLinear NR_Pow)  [a, b]) | isZ3 || isCVC5  = "(^  " <> cvtSV a <> " " <> cvtSV b <> ")"
 
-        sh (SBVApp (NonLinear w) args) = "(" <> showText w <> " " <> T.unwords (map cvtSV args) <> ")"
+        sh (SBVApp (NonLinear w) [])   =        T.pack (showNROp (name (solver cfg)) w)
+        sh (SBVApp (NonLinear w) args) = "(" <> T.pack (showNROp (name (solver cfg)) w) <> " " <> T.unwords (map cvtSV args) <> ")"
 
         sh (SBVApp (PseudoBoolean pb) args)
           | hasPB = handlePB pb args'

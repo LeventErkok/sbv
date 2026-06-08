@@ -2882,7 +2882,7 @@ lift2FNS nm f sv1 sv2
 -- we do not constant fold these values (except for pi), as Haskell doesn't really have any means of computing
 -- them for arbitrary rationals.
 instance {-# OVERLAPPING #-} Floating SReal where
-  pi      = fromRational . toRational $ (pi :: Double)  -- Perhaps not good enough?
+  pi      = lift0SReal NR_Pi
   exp     = lift1SReal NR_Exp
   log     = lift1SReal NR_Log
   sqrt    = lift1SReal NR_Sqrt
@@ -2901,6 +2901,11 @@ instance {-# OVERLAPPING #-} Floating SReal where
   (**)    = lift2SReal NR_Pow
 
   logBase x y = log y  / log x
+
+-- | Lift an sreal constant
+lift0SReal :: NROp -> SReal
+lift0SReal w = SBV $ SVal KReal $ Right $ cache r
+  where r st = newExpr st KReal (SBVApp (NonLinear w) [])
 
 -- | Lift an sreal unary function
 lift1SReal :: NROp -> SReal -> SReal

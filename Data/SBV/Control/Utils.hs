@@ -934,6 +934,8 @@ recoverKindedValue si k e =
 
       KReal       | ENum (i, _, _) <- e   -> Just $ mkConstCV k i
                   | EReal i        <- e   -> Just $ CV KReal (CAlgReal i)
+                  | ECon "real.pi" <- e   -> let realPi = fromRational (toRational (pi :: Double)) -- good enough?
+                                             in Just $ CV KReal (CAlgReal realPi)
                   | True                  -> interpretInterval e
 
       KADT nm dict def                    -> let k' = KADT nm dict [(c, map (substituteADTVars nm dict) ks) | (c, ks) <- def]
