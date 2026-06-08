@@ -2,6 +2,9 @@
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
 ### Version 14.3, Not yet released
+
+  * Improve fpRoundToIntegralH to remove redundant internal check. Thanks to Ryan Scott for the report.
+
 ### Version 14.2, 2026-06-05
 
   * Fix float to integer conversions, which were ignoring the rounding mode previously. Thanks to

@@ -92,7 +92,7 @@ fpRoundToIntegralH x
   | isNaN x      = x
   | x == 0       = x
   | isInfinite x = x
-  | i == 0       = if x < 0 || isNegativeZero x then -0.0 else 0.0
+  | i == 0       = if x < 0 then -0.0 else 0.0
   | True         = fromInteger i
   where i :: Integer
         i = round x
