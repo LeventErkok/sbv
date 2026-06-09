@@ -2884,13 +2884,20 @@ lift2FNS nm f sv1 sv2
 instance {-# OVERLAPPING #-} Floating SReal where
   -- Should we support pi? It's a transcendental value, and our SReal type has no way of representing
   -- this quantity with the required fidelity. (SReal can only support roots of polynomials and rationals
-  -- correctly, not transcendentals.) So, one option is to say "nope" which is honest but useless. Another
-  -- option is to see if the solver has support for it, such as CVC5, which has the constant real.pi. Alas, that
-  -- has its problems: In models CVC5 uses real.pi as a model value, which we have no way of properly supporting
-  -- back as a Haskell value. Worse: It uses it in expressions like 1 + real.pi, which we don't have an
-  -- evaluator for. So, we compromise here. Below is a pi with 100 decimal digits, which is "close" enough?
-  -- If this turns out to be a mistake, we go back to not supported, or use solver specific incantations.
-  pi      = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679
+  -- correctly, not transcendentals.) One option is to use an approximation here. But that goes against the
+  -- whole idea of Real being infinitely precise. Another option is to see if the solver has support for it, such
+  -- as CVC5, which has the constant real.pi. Alas, that has its problems: In models CVC5 uses real.pi as a
+  -- model value, which we have no way of properly supporting back as a Haskell value. Worse: It uses it in
+  -- expressions like 1 + real.pi, which we don't have an evaluator for. So, we simply say not supported.
+  -- If you want it for reals, you'll have to plugin your own "approximation" for it, and thus be aware of the
+  -- limitations of that choice.
+  pi      = error $ unlines [ ""
+                            , "*** Data.SBV.SReal: Cannot represent pi as an SReal value."
+                            , "***"
+                            , "*** Usual trick is to use an approximation if that suits your purpose,"
+                            , "*** or use solver-specific constants when applicable. Please get in touch"
+                            , "*** if you'd like to explore ideas here."
+                            ]
 
   exp     = lift1SReal NR_Exp
   log     = lift1SReal NR_Log

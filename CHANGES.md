@@ -10,6 +10,12 @@
   * Improved backed-solver communication so that if a solver returns an error message SBV now makes
     sure it gets captured and displayed properly before the solver-process itselfs terminates.
 
+  * Drop support for pi as an SReal: The whole premise of SReal is it represents algebraic-reals
+    (i.e., those that are roots of polynomials) exactly. But pi is not representable as such, since
+    it's transcendental. Older versions of SBV used an approximation, but that's confusing to say
+    the least, and downright wrong. Note that you can still use pi at floating-point types, where
+    precision loss is built into the semantics.
+
 ### Version 14.2, 2026-06-05
 
   * Fix float to integer conversions, which were ignoring the rounding mode previously. Thanks to
