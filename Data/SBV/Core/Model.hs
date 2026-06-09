@@ -2882,7 +2882,16 @@ lift2FNS nm f sv1 sv2
 -- we do not constant fold these values (except for pi), as Haskell doesn't really have any means of computing
 -- them for arbitrary rationals.
 instance {-# OVERLAPPING #-} Floating SReal where
-  pi      = lift0SReal NR_Pi
+  -- Should we support pi? It's a transcendental value, and our SReal type has no way of representing
+  -- this quantity with the required fidelity. (SReal can only support roots of polynomials and rationals
+  -- correctly, not transcendentals.) So, one option is to say "nope" which is honest but useless. Another
+  -- option is to see if the solver has support for it, such as CVC5, which has the constant real.pi. Alas, that
+  -- has its problems: In models CVC5 uses real.pi as a model value, which we have no way of properly supporting
+  -- back as a Haskell value. Worse: It uses it in expressions like 1 + real.pi, which we don't have an
+  -- evaluator for. So, we compromise here. Below is a pi with 100 decimal digits, which is "close" enough?
+  -- If this turns out to be a mistake, we go back to not supported, or use solver specific incantations.
+  pi      = 3.1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679
+
   exp     = lift1SReal NR_Exp
   log     = lift1SReal NR_Log
   sqrt    = lift1SReal NR_Sqrt
@@ -2901,11 +2910,6 @@ instance {-# OVERLAPPING #-} Floating SReal where
   (**)    = lift2SReal NR_Pow
 
   logBase x y = log y  / log x
-
--- | Lift an sreal constant
-lift0SReal :: NROp -> SReal
-lift0SReal w = SBV $ SVal KReal $ Right $ cache r
-  where r st = newExpr st KReal (SBVApp (NonLinear w) [])
 
 -- | Lift an sreal unary function
 lift1SReal :: NROp -> SReal -> SReal

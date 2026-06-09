@@ -336,7 +336,6 @@ data NROp = NR_Sin
           | NR_Exp
           | NR_Log
           | NR_Pow
-          | NR_Pi
           deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Show a non-linear op. Unfortunately this can't be generically done since different
@@ -356,7 +355,6 @@ showNROp slvr = sh
         sh NR_Exp  = "exp"
         sh NR_Log  = "log"
         sh NR_Pow  = "pow"
-        sh NR_Pi   = mkPi
 
         -- DReal uses asin/acos etc. CVC5 uses arcsin. Other solvers probably
         -- don't even support these. But this isn't the right place to bail-out
@@ -364,12 +362,6 @@ showNROp slvr = sh
         arc = case slvr of
                 DReal -> "a"
                 _     -> "arc"
-
-        -- CVC5 supports pi as a constant, for others we just the double-value
-        -- as a constant; hopefully good enough!
-        mkPi = case slvr of
-                CVC5 -> "real.pi"
-                _    -> "3.141592653589793"
 
 -- | Pseudo-boolean operations
 data PBOp = PB_AtMost  Int        -- ^ At most k
