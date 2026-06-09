@@ -85,7 +85,7 @@ import Data.SBV.SMT.Utils     ( showTimeoutValue, alignPlain, debug, mergeSExpr,
                               )
 
 import Data.SBV.Utils.PrettyNum
-import Data.SBV.Utils.Lib       (joinArgs, splitArgs, needsBars, showText)
+import Data.SBV.Utils.Lib       (joinArgs, splitArgs, needsBars, showText, unQuote)
 import Data.SBV.Utils.SExpr     (parenDeficit, nameSupply)
 
 import qualified System.Timeout as Timeout (timeout)
@@ -773,17 +773,25 @@ runSolver cfg ctx execPath opts pgm continuation
           defaultLineTO = Just (scaler defaultLineTimeOut)
 
           -- Default SBVException with solver config baked in; callers override fields as needed
-          solverException desc = SBVException { sbvExceptionDescription = desc
-                                              , sbvExceptionSent        = Nothing
-                                              , sbvExceptionExpected    = Nothing
-                                              , sbvExceptionReceived    = Nothing
-                                              , sbvExceptionStdOut      = Nothing
-                                              , sbvExceptionStdErr      = Nothing
-                                              , sbvExceptionExitCode    = Nothing
-                                              , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
-                                              , sbvExceptionReason      = Nothing
-                                              , sbvExceptionHint        = Nothing
-                                              }
+          solverException desc =
+             let (errOut, description)
+                    | "(error" `isPrefixOf` desc
+                    = ( Just $ unQuote (dropWhile isSpace (dropWhile (not . isSpace) (init desc)))
+                      , "Unexpected solver error"
+                      )
+                    | True
+                    = (Nothing, desc)
+             in SBVException { sbvExceptionDescription = description
+                             , sbvExceptionSent        = Nothing
+                             , sbvExceptionExpected    = Nothing
+                             , sbvExceptionReceived    = Nothing
+                             , sbvExceptionStdOut      = Nothing
+                             , sbvExceptionStdErr      = errOut
+                             , sbvExceptionExitCode    = Nothing
+                             , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
+                             , sbvExceptionReason      = Nothing
+                             , sbvExceptionHint        = Nothing
+                             }
 
       (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
@@ -856,7 +864,11 @@ runSolver cfg ctx execPath opts pgm continuation
                                                               pure $ dropWhile isSpace <$> mbCts
 
                                          in case timeOutToUse of
-                                              Nothing -> SolverRegular <$> getFullLine
+                                              Nothing -> do l <- getFullLine
+                                                            -- If we see the line starting with error, we're about to die, so give up:
+                                                            pure $ if "(error" `isPrefixOf` l
+                                                                      then SolverException l
+                                                                      else SolverRegular   l
                                               Just t  -> do r <- Timeout.timeout t getFullLine
                                                             case r of
                                                               Just l  -> pure $ SolverRegular l
