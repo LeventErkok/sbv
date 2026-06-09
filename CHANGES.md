@@ -5,6 +5,11 @@
 
   * Improve fpRoundToIntegralH to remove redundant internal check. Thanks to Ryan Scott for the report.
 
+  * Add support for arctan/arcsin/arccos in CVC5. Thanks to Ryan Scott for pointing out support for it.
+
+  * Improved backed-solver communication so that if a solver returns an error message SBV now makes
+    sure it gets captured and displayed properly before the solver-process itselfs terminates.
+
 ### Version 14.2, 2026-06-05
 
   * Fix float to integer conversions, which were ignoring the rounding mode previously. Thanks to
