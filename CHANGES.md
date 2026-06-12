@@ -19,6 +19,14 @@
   * Fix the enumeration quasi-quoter for a zero step: `[sEnum| 1, 1 .. 5 |]` is now the
     (semantically infinite) list of 1's, instead of the empty list.
 
+  * Soundness fix for termination measures: a real-valued measure is now rejected at compile
+    time. The reals are not well-ordered (an infinite descending chain like 1, 1/2, 1/4, ...
+    never reaches a minimum), so a non-negative, strictly-decreasing real measure does not
+    imply termination. Use an integer-valued measure instead.
+
+  * Termination measures may now be given over the bounded bit-vector types (`Word8`..`Word64`,
+    `Int8`..`Int64`, `WordN n`, `IntN n`), in addition to the integer/float types supported before.
+
 ### Version 14.2, 2026-06-05
 
   * Fix float to integer conversions, which were ignoring the rounding mode previously. Thanks to

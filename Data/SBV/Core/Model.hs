@@ -1230,6 +1230,20 @@ class OrdSymbolic (SBV a) => Zero a where
 instance Zero Integer where
    zero = literal 0
 
+-- | Bounded bit-vectors as measures. These are all sound: each is a finite type, so a
+-- non-negative, strictly-decreasing chain of values is necessarily finite. (The default
+-- @nonNeg x = x .>= 0@ works for both the unsigned and signed cases.)
+instance Zero Word8  where zero = literal 0
+instance Zero Word16 where zero = literal 0
+instance Zero Word32 where zero = literal 0
+instance Zero Word64 where zero = literal 0
+instance Zero Int8   where zero = literal 0
+instance Zero Int16  where zero = literal 0
+instance Zero Int32  where zero = literal 0
+instance Zero Int64  where zero = literal 0
+instance (KnownNat n, BVIsNonZero n) => Zero (WordN n) where zero = literal 0
+instance (KnownNat n, BVIsNonZero n) => Zero (IntN  n) where zero = literal 0
+
 -- NB. We would like to use 'Data.SBV.Tuple.untuple' in the 'nonNeg' definitions below,
 -- but 'Data.SBV.Tuple' imports 'Data.SBV.Core.Model', creating a circular dependency.
 -- So we extract components at the SVal level using 'TupleAccess' directly.
@@ -1262,9 +1276,19 @@ instance Zero Float where
 instance Zero Double where
    zero = literal 0
 
--- | An algebraic real as a measure
-instance Zero AlgReal where
-   zero = literal 0
+-- | Algebraic reals are /not/ permitted as measures, and we reject them at compile time.
+-- The reals are dense, hence not well-ordered: a merely non-negative and strictly-decreasing
+-- real measure does not imply termination (e.g. the chain @1, 1\/2, 1\/4, ...@ descends forever
+-- without reaching a minimum). Use an integer-valued measure instead.
+instance TypeError (     'Text "A termination measure may not have a real-valued result."
+                   ':$$: 'Text ""
+                   ':$$: 'Text "The reals are not well-ordered: an infinite descending chain such as"
+                   ':$$: 'Text "1, 1/2, 1/4, ... has no least element, so a non-negative and strictly"
+                   ':$$: 'Text "decreasing real measure does not imply termination."
+                   ':$$: 'Text ""
+                   ':$$: 'Text "Use an integer-valued measure instead (e.g. a count of remaining steps)."
+                   ) => Zero AlgReal where
+   zero = error "Data.SBV.Zero(AlgReal): unreachable"
 
 -- | A floating-point as a measure
 instance ValidFloat eb sb => Zero (FloatingPoint eb sb) where

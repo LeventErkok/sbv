@@ -295,6 +295,37 @@ badMeasure = do
     r <- prove $ \x -> badM x .== badM x
     print r
 
+-- | A termination measure is only a valid argument for termination if it takes values in a
+-- /well-founded/ order: one with no infinite descending chains. Being non-negative and strictly
+-- decreasing then forces the recursion to stop. The integers (bounded below by @0@) are well-founded,
+-- but the reals are /not/: the chain @1, 1\/2, 1\/4, ...@ descends forever without ever reaching a
+-- minimum. So a real-valued measure proves nothing.
+--
+-- Consider this Zeno-style non-terminating recursion: for any @x > 0@, the argument @x \/ 2@ is
+-- again positive, so it never reaches the base case. Yet the measure @0 `smax` x@ is non-negative
+-- and strictly decreases at the recursive call (@x \/ 2 < x@). Accepting it would mean certifying a
+-- non-terminating function as terminating, which can be used to derive falsehoods.
+--
+-- @
+-- zeno :: SReal -> SReal
+-- zeno = smtFunctionWithMeasure \"zeno\" (\\x -> 0 \`smax\` x, [])
+--      $ \\x -> ite (x .<= 0) 0 (zeno (x \/ 2))
+-- @
+--
+-- SBV rules this out /at compile time/: the 'Data.SBV.Zero' class gates which types may be used as
+-- measures, and there is deliberately no instance for algebraic reals. So the definition above does
+-- not type-check, reporting:
+--
+-- @
+--     • A termination measure may not have a real-valued result.
+--
+--       The reals are not well-ordered: an infinite descending chain such as
+--       1, 1\/2, 1\/4, ... has no least element, so a non-negative and strictly
+--       decreasing real measure does not imply termination.
+--
+--       Use an integer-valued measure instead (e.g. a count of remaining steps).
+-- @
+
 -- * Axioms and consistency
 
 -- | SBV checks that recursive functions defined via 'smtFunction' terminate, verifying a termination measure, which

@@ -1245,6 +1245,10 @@ instance {-# OVERLAPPING #-} EnumSymbolic Integer where
                             $ ite (delta .>  0) (up x delta z) (down x delta z)
      where delta = y - x
 
+           -- The d==0 case is handled: 'up'/'down' are only *called* with d>0/d<0 (the d==0 case
+           -- is routed to the infinite-list branch above), and the guard's @d .<= 0@/@d .>= 0@ test
+           -- puts @d>0@/@d<0@ into the reaching condition, so measure verification never sees d==0.
+           -- (The integer measure does not divide by d, so there's no zero-denominator to worry about.)
            up, down :: SInteger -> SInteger -> SInteger -> SList Integer
            up    = smtFunctionWithMeasure "EnumSymbolic.Integer.enumFromThenTo.up"
                                           (\start _d end -> 0 `smax` (end - start + 1), [])
@@ -1277,10 +1281,20 @@ instance {-# OVERLAPPING #-} EnumSymbolic Float where
            delta = y - x
            z     = zIn + delta / 2
 
+           -- Unlike the Integer/AlgReal instances, these are NOT given a termination measure:
+           -- floating-point enumeration is genuinely partial. The step @k * d@ can saturate (once
+           -- @k * d@ falls below the ULP of @n@, or once the float @k@ itself stops incrementing),
+           -- so for some inputs @n + k * d@ never exceeds @end@ and the recursion does not terminate
+           -- -- exactly as Haskell's own float enumeration diverges in those cases. A termination
+           -- measure would therefore be unsound: no measure can certify termination of a function
+           -- that does not always terminate. Instead we mark these productive -- each recursive call
+           -- is guarded by a cons, so the definition is well-formed corecursion (finite when the
+           -- enumeration terminates, infinite when it saturates). The d==0 case never reaches here:
+           -- it is routed to the infinite-list branch above.
            up, down :: SFloat -> SFloat -> SFloat -> SFloat -> SList Float
-           up   = smtFunctionWithMeasure "EnumSymbolic.Float.enumFromThenTo.up" (\k n d end -> 0 `smax` (end - (n + k * d)), [])
+           up   = smtProductiveFunction "EnumSymbolic.Float.enumFromThenTo.up"
                 $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
-           down = smtFunctionWithMeasure "EnumSymbolic.Float.enumFromThenTo.down" (\k n d end -> 0 `smax` ((n + k * d) - end), [])
+           down = smtProductiveFunction "EnumSymbolic.Float.enumFromThenTo.down"
                 $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
 
 -- | 'EnumSymbolic instance for 'Double'
@@ -1304,10 +1318,14 @@ instance {-# OVERLAPPING #-} EnumSymbolic Double where
            delta = y - x
            z     = zIn + delta / 2
 
+           -- See the Float instance for why these are productive rather than measured:
+           -- floating-point enumeration is genuinely partial (the @k * d@ step can saturate), so a
+           -- termination measure would be unsound. Each recursive call is guarded by a cons, so the
+           -- definition is well-formed corecursion. The d==0 case is routed to the branch above.
            up, down :: SDouble -> SDouble -> SDouble -> SDouble -> SList Double
-           up   = smtFunctionWithMeasure "EnumSymbolic.Double.enumFromThenTo.up" (\k n d end -> 0 `smax` (end - (n + k * d)), [])
+           up   = smtProductiveFunction "EnumSymbolic.Double.enumFromThenTo.up"
                 $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
-           down = smtFunctionWithMeasure "EnumSymbolic.Double.enumFromThenTo.down" (\k n d end -> 0 `smax` ((n + k * d) - end), [])
+           down = smtProductiveFunction "EnumSymbolic.Double.enumFromThenTo.down"
                 $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
 
 -- | 'EnumSymbolic instance for arbitrary floats
@@ -1331,10 +1349,14 @@ instance {-# OVERLAPPING #-} ValidFloat eb sb => EnumSymbolic (FloatingPoint eb 
            delta = y - x
            z     = zIn + delta / 2
 
+           -- See the Float instance for why these are productive rather than measured:
+           -- floating-point enumeration is genuinely partial (the @k * d@ step can saturate), so a
+           -- termination measure would be unsound. Each recursive call is guarded by a cons, so the
+           -- definition is well-formed corecursion. The d==0 case is routed to the branch above.
            up, down :: SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SList (FloatingPoint eb sb)
-           up   = smtFunctionWithMeasure "EnumSymbolic.FloatingPoint.enumFromThenTo.up" (\k n d end -> 0 `smax` (end - (n + k * d)), [])
+           up   = smtProductiveFunction "EnumSymbolic.FloatingPoint.enumFromThenTo.up"
                 $ \k n d end -> let c = n + k * d in ite (c .> end) [] (c .: up   (k+1) n d end)
-           down = smtFunctionWithMeasure "EnumSymbolic.FloatingPoint.enumFromThenTo.down" (\k n d end -> 0 `smax` ((n + k * d) - end), [])
+           down = smtProductiveFunction "EnumSymbolic.FloatingPoint.enumFromThenTo.down"
                 $ \k n d end -> let c = n + k * d in ite (c .< end) [] (c .: down (k+1) n d end)
 
 -- | 'EnumSymbolic instance for arbitrary AlgReal. We don't have to use the multiplicative trick here
@@ -1359,10 +1381,22 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
            delta = y - x
            z     = zIn + delta / 2
 
+           -- The measure is the number of remaining recursive steps, which is an INTEGER:
+           -- @floor ((end - start) / d) + 1@ (clamped at 0). A real-valued measure would be
+           -- unsound here, since the reals are not well-ordered (an infinite descending chain
+           -- like 1, 1/2, 1/4, ... never reaches a minimum). 'sRealToSInteger' is @floor@, and
+           -- @(end - start) / d@ is non-negative in both the up (d>0) and down (d<0) regimes, so
+           -- the same expression serves both.
+           --
+           -- The d==0 case is handled: 'up'/'down' are only *called* with d>0/d<0 (the d==0 case is
+           -- routed to the infinite-list branch above), and for measure *verification* the guard's
+           -- @d .<= 0@/@d .>= 0@ test puts @d>0@/@d<0@ into the reaching condition, so the decrease
+           -- obligation never sees d==0; the @0 `smax`@ keeps non-negativity vacuously true even for
+           -- the unreachable zero-denominator value of @(end - start) / d@.
            up, down :: SReal -> SReal -> SReal -> SList AlgReal
-           up   = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.up"   (\start _d end -> 0 `smax` (end - start + 1), [])
+           up   = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.up"   (\start d end -> 0 `smax` (sRealToSInteger ((end - start) / d) + 1), [])
                 $ \start d end -> ite (start .> end .|| d .<= 0) [] (start .: up   (start + d) d end)
-           down = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.down" (\start _d end -> 0 `smax` (start - end + 1), [])
+           down = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.down" (\start d end -> 0 `smax` (sRealToSInteger ((end - start) / d) + 1), [])
                 $ \start d end -> ite (start .< end .|| d .>= 0) [] (start .: down (start + d) d end)
 
 -- | Lookup. If we can't find, then the result is unspecified.
