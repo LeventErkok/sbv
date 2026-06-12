@@ -1238,7 +1238,11 @@ instance {-# OVERLAPPING #-} EnumSymbolic Integer where
    enumFromThen x y = go x (y-x)
      where go = smtProductiveFunction "EnumSymbolic.Integer.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
-   enumFromThenTo x y z = ite (delta .>= 0) (up x delta z) (down x delta z)
+   -- When the step is 0 (i.e., y == x), Haskell produces an infinite list of x's
+   -- if x <= z, and the empty list otherwise. We mirror that here.
+   enumFromThenTo x y z = ite (delta .== 0)
+                              (ite (x .<= z) (enumFromThen x x) [])
+                            $ ite (delta .>  0) (up x delta z) (down x delta z)
      where delta = y - x
 
            up, down :: SInteger -> SInteger -> SInteger -> SList Integer
@@ -1266,7 +1270,9 @@ instance {-# OVERLAPPING #-} EnumSymbolic Float where
    enumFromThen x y = go 0 x (y-x)
      where go = smtProductiveFunction "EnumSymbolic.Float.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
-   enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
+   enumFromThenTo x y zIn = ite (delta .== 0)
+                                (ite (x .<= z) (enumFromThen x x) [])
+                              $ ite (delta .>  0) (up 0 x delta z) (down 0 x delta z)
      where delta, z :: SFloat
            delta = y - x
            z     = zIn + delta / 2
@@ -1291,7 +1297,9 @@ instance {-# OVERLAPPING #-} EnumSymbolic Double where
    enumFromThen x y = go 0 x (y-x)
      where go = smtProductiveFunction "EnumSymbolic.Double.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
-   enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
+   enumFromThenTo x y zIn = ite (delta .== 0)
+                                (ite (x .<= z) (enumFromThen x x) [])
+                              $ ite (delta .>  0) (up 0 x delta z) (down 0 x delta z)
      where delta, z :: SDouble
            delta = y - x
            z     = zIn + delta / 2
@@ -1316,7 +1324,9 @@ instance {-# OVERLAPPING #-} ValidFloat eb sb => EnumSymbolic (FloatingPoint eb 
    enumFromThen x y = go 0 x (y-x)
      where go = smtProductiveFunction "EnumSymbolic.FloatingPoint.enumFromThen" $ \k n d -> (n + k * d) .: go (k+1) n d
 
-   enumFromThenTo x y zIn = ite (delta .>= 0) (up 0 x delta z) (down 0 x delta z)
+   enumFromThenTo x y zIn = ite (delta .== 0)
+                                (ite (x .<= z) (enumFromThen x x) [])
+                              $ ite (delta .>  0) (up 0 x delta z) (down 0 x delta z)
      where delta, z :: SFloatingPoint eb sb
            delta = y - x
            z     = zIn + delta / 2
@@ -1342,7 +1352,9 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
    enumFromThen x y = go x (y-x)
      where go = smtProductiveFunction "EnumSymbolic.AlgReal.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
-   enumFromThenTo x y zIn = ite (delta .>= 0) (up x delta z) (down x delta z)
+   enumFromThenTo x y zIn = ite (delta .== 0)
+                                (ite (x .<= z) (enumFromThen x x) [])
+                              $ ite (delta .>  0) (up x delta z) (down x delta z)
      where delta, z :: SReal
            delta = y - x
            z     = zIn + delta / 2

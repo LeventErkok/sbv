@@ -16,6 +16,9 @@
     the least, and downright wrong. Note that you can still use pi at floating-point types, where
     precision loss is built into the semantics.
 
+  * Fix the enumeration quasi-quoter for a zero step: `[sEnum| 1, 1 .. 5 |]` is now the
+    (semantically infinite) list of 1's, instead of the empty list.
+
 ### Version 14.2, 2026-06-05
 
   * Fix float to integer conversions, which were ignoring the rounding mode previously. Thanks to
