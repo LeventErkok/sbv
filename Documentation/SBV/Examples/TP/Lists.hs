@@ -396,7 +396,7 @@ enumLen =
 --
 -- The proof uses the metric @|m-n|@.
 --
--- >>> runTP $ revNM
+-- >>> runTP revNM
 -- Inductive lemma (strong): helper
 --   Step: Measure is non-negative     Q.E.D.
 --   Step: 1                           Q.E.D.
