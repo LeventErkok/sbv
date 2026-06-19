@@ -1200,7 +1200,7 @@ class EnumSymbolic a where
    -- | @`enumFromThenTo` m n@. Symbolic version of @[m, m' .. n]@
    enumFromThenTo :: SymVal a => SBV a -> SBV a -> SBV a -> SList a
 
-   -- | @`enumFromThenTo`@ with an optionally statically-known integer step. The 'sEnum' quasiquoter
+   -- | @`enumFromThenTo`@ with an optionally statically-known integer step. The sEnum quasiquoter
    -- supplies @`Just` d@ for @[m, m' .. n]@ when @m'@ is @m@ shifted by a compile-time integer
    -- constant (e.g. @[m, m-1 .. n]@ gives @-1@); otherwise it supplies `Nothing`. Instances with
    -- exact arithmetic (integers, reals) use the hint to constant-fold the step, so the @step == 0@
