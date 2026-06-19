@@ -1232,30 +1232,31 @@ instance {-# OVERLAPPING #-} EnumSymbolic Integer where
    toEnum   = id
    fromEnum = id
 
-   enumFrom   n = enumFromThen   n (n+1)
-   enumFromTo n = enumFromThenTo n (n+1)
+   enumFrom   n   = enumFromThen          n (n+1)
+   enumFromTo n m = enumFromThenToInteger n m 1
 
    enumFromThen x y = go x (y-x)
      where go = smtProductiveFunction "EnumSymbolic.Integer.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
-   -- When the step is 0 (i.e., y == x), Haskell produces an infinite list of x's
-   -- if x <= z, and the empty list otherwise. We mirror that here.
-   enumFromThenTo x y z = ite (delta .== 0)
-                              (ite (x .<= z) (enumFromThen x x) [])
-                            $ ite (delta .>  0) (up x delta z) (down x delta z)
-     where delta = y - x
+   enumFromThenTo x y z = enumFromThenToInteger x z (y - x)
 
-           -- The d==0 case is handled: 'up'/'down' are only *called* with d>0/d<0 (the d==0 case
-           -- is routed to the infinite-list branch above), and the guard's @d .<= 0@/@d .>= 0@ test
-           -- puts @d>0@/@d<0@ into the reaching condition, so measure verification never sees d==0.
-           -- (The integer measure does not divide by d, so there's no zero-denominator to worry about.)
-           up, down :: SInteger -> SInteger -> SInteger -> SList Integer
-           up    = smtFunctionWithMeasure "EnumSymbolic.Integer.enumFromThenTo.up"
-                                          (\start _d end -> 0 `smax` (end - start + 1), [])
-                 $ \start d end -> ite (start .> end .|| d .<= 0) [] (start .: up   (start + d) d end)
-           down  = smtFunctionWithMeasure "EnumSymbolic.Integer.enumFromThenTo.down"
-                                          (\start _d end -> 0 `smax` (start - end + 1), [])
-                 $ \start d end -> ite (start .< end .|| d .>= 0) [] (start .: down (start + d) d end)
+-- When the step is 0 (i.e., y == x), Haskell produces an infinite list of x's
+-- if x <= z, and the empty list otherwise. We mirror that here.
+enumFromThenToInteger :: SInteger -> SInteger -> SInteger -> SList Integer
+enumFromThenToInteger x z delta = ite (delta .== 0)
+                                      (ite (x .<= z) (enumFromThen x x) [])
+                                $ ite (delta .>  0) (up x delta z) (down x delta z)
+  where -- The d==0 case is handled: 'up'/'down' are only *called* with d>0/d<0 (the d==0 case
+        -- is routed to the infinite-list branch above), and the guard's @d .<= 0@/@d .>= 0@ test
+        -- puts @d>0@/@d<0@ into the reaching condition, so measure verification never sees d==0.
+        -- (The integer measure does not divide by d, so there's no zero-denominator to worry about.)
+        up, down :: SInteger -> SInteger -> SInteger -> SList Integer
+        up    = smtFunctionWithMeasure "EnumSymbolic.Integer.enumFromThenTo.up"
+                                       (\start _d end -> 0 `smax` (end - start + 1), [])
+              $ \start d end -> ite (start .> end .|| d .<= 0) [] (start .: up   (start + d) d end)
+        down  = smtFunctionWithMeasure "EnumSymbolic.Integer.enumFromThenTo.down"
+                                       (\start _d end -> 0 `smax` (start - end + 1), [])
+              $ \start d end -> ite (start .< end .|| d .>= 0) [] (start .: down (start + d) d end)
 
 -- | 'EnumSymbolic instance for 'Float'. Note that the termination requirement as defined by the Haskell standard for floats state:
 --      > For Float and Double, the semantics of the enumFrom family is given by the rules for Int above,
