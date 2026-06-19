@@ -39,7 +39,7 @@ import qualified Language.Haskell.Meta.Syntax.Translate as Meta
 import Data.Char (isSpace)
 
 import Prelude hiding (enumFrom, enumFromThen, enumFromTo, enumFromThenTo)
-import Data.SBV.List  (enumFrom, enumFromThen, enumFromTo, enumFromThenTo)
+import Data.SBV.List  (enumFrom, enumFromThen, enumFromTo, enumFromThenToH)
 
 import Control.Monad (unless)
 import Data.List (isInfixOf, intercalate)
@@ -108,7 +108,13 @@ parseSEnumExpr input = do
     ([a],    Nothing) -> varE 'enumFrom       `appE` parseHaskellExpr loc a
     ([a, b], Nothing) -> varE 'enumFromThen   `appE` parseHaskellExpr loc a `appE` parseHaskellExpr loc b
     ([a],    Just c)  -> varE 'enumFromTo     `appE` parseHaskellExpr loc a `appE`                               parseHaskellExpr loc c
-    ([a, b], Just c)  -> varE 'enumFromThenTo `appE` parseHaskellExpr loc a `appE` parseHaskellExpr loc b `appE` parseHaskellExpr loc c
+    ([a, b], Just c)  -> do ea <- parseHaskellExpr loc a
+                            eb <- parseHaskellExpr loc b
+                            ec <- parseHaskellExpr loc c
+                            -- Pass the from/then step as a hint when it's a statically-known integer
+                            -- (e.g. @[m, m-1 .. n]@ => @-1@). Exact-arithmetic instances fold it; the
+                            -- rest ignore it. See 'constStep'.
+                            varE 'enumFromThenToH `appE` pure ea `appE` pure eb `appE` pure ec `appE` liftMStep (constStep ea eb)
 
     _ -> errorWithLoc loc $ unlines [ "Data.SBV.Enum: Invalid format. Use one of:"
                                     , ""
@@ -117,6 +123,50 @@ parseSEnumExpr input = do
                                     , "  [sEnum| a    .. c |]"
                                     , "  [sEnum| a, b .. c |]"
                                     ]
+
+-- | Read a parsed expression as @base + offset@: a single opaque atom plus an integer constant.
+-- @Nothing@ base means the whole thing is a pure integer constant. We only look through @+@ and @-@
+-- of integer literals; anything else is treated as an atom. This is intentionally a single-base
+-- peel, not a general linear normalizer -- it's exactly enough to recognize @m@, @m-1@, @m+k@, etc.
+peel :: Exp -> (Maybe Exp, Integer)
+peel (LitE (IntegerL n)) = (Nothing, n)
+peel (ParensE e)         = peel e
+peel (SigE e _)          = peel e
+peel (InfixE  (Just l)               (VarE op) (Just (LitE (IntegerL n)))) = shift op l n
+peel (UInfixE l                      (VarE op)       (LitE (IntegerL n)))   = shift op l n
+peel (InfixE  (Just (LitE (IntegerL n))) (VarE op) (Just r)) | base op == "+" = add (peel r) n
+peel (UInfixE (LitE (IntegerL n))        (VarE op)       r)  | base op == "+" = add (peel r) n
+peel e                   = (Just e, 0)
+
+-- | Helper for 'peel': fold a @base <op> lit@ where @op@ is @+@ or @-@.
+shift :: Name -> Exp -> Integer -> (Maybe Exp, Integer)
+shift op l n = case base op of
+                 "+" -> add (peel l) n
+                 "-" -> add (peel l) (negate n)
+                 _   -> (Just (UInfixE l (VarE op) (LitE (IntegerL n))), 0)
+
+-- | Add a constant to a peeled @(base, offset)@.
+add :: (Maybe Exp, Integer) -> Integer -> (Maybe Exp, Integer)
+add (b, k) n = (b, k + n)
+
+-- | Unqualified name of an operator (haskell-src-meta may leave it unqualified, so compare by base).
+base :: Name -> String
+base = nameBase
+
+-- | The from->then step @then - from@, when it's a statically-known integer (same atom on both
+-- sides, so the atoms cancel). Returns @Nothing@ for genuinely-symbolic steps (distinct atoms),
+-- in which case the quasiquoter falls back to the ordinary, hint-free behavior.
+constStep :: Exp -> Exp -> Maybe Integer
+constStep from thn
+  | bf == bt  = Just (kt - kf)
+  | otherwise = Nothing
+  where (bf, kf) = peel from
+        (bt, kt) = peel thn
+
+-- | Splice a @`Maybe` `Integer`@ step hint into the generated call.
+liftMStep :: Maybe Integer -> Q Exp
+liftMStep Nothing  = conE 'Nothing
+liftMStep (Just n) = conE 'Just `appE` litE (integerL n)
 
 -- | Parses a string into a Haskell TH Exp using haskell-src-meta
 parseHaskellExpr :: Loc -> String -> Q Exp

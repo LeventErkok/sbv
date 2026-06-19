@@ -1200,6 +1200,16 @@ class EnumSymbolic a where
    -- | @`enumFromThenTo` m n@. Symbolic version of @[m, m' .. n]@
    enumFromThenTo :: SymVal a => SBV a -> SBV a -> SBV a -> SList a
 
+   -- | @`enumFromThenTo`@ with an optionally statically-known integer step. The 'sEnum' quasiquoter
+   -- supplies @`Just` d@ for @[m, m' .. n]@ when @m'@ is @m@ shifted by a compile-time integer
+   -- constant (e.g. @[m, m-1 .. n]@ gives @-1@); otherwise it supplies `Nothing`. Instances with
+   -- exact arithmetic (integers, reals) use the hint to constant-fold the step, so the @step == 0@
+   -- infinite-list branch (and its productive helper) drops out; every other instance ignores the
+   -- hint and falls back to 'enumFromThenTo', preserving its exact semantics. Not meant to be called
+   -- directly; the default is correct for any instance.
+   enumFromThenToH :: SymVal a => SBV a -> SBV a -> SBV a -> Maybe Integer -> SList a
+   enumFromThenToH from thn to _ = enumFromThenTo from thn to
+
 -- | 'EnumSymbolic' instance for words
 instance {-# OVERLAPPABLE #-} (SymVal a, Bounded a, Integral a, Num a, Num (SBV a)) => EnumSymbolic a where
   succ = smtFunction "EnumSymbolic.succ" (\x -> ite (x .== maxBound) (some "EnumSymbolic.succ.maxBound" (const sTrue)) (x+1))
@@ -1239,6 +1249,8 @@ instance {-# OVERLAPPING #-} EnumSymbolic Integer where
      where go = smtProductiveFunction "EnumSymbolic.Integer.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y z = enumFromThenToInteger x z (y - x)
+
+   enumFromThenToH x y z mStep = enumFromThenToInteger x z (maybe (y - x) fromIntegral mStep)
 
 -- When the step is 0 (i.e., y == x), Haskell produces an infinite list of x's
 -- if x <= z, and the empty list otherwise. We mirror that here.
@@ -1388,6 +1400,8 @@ instance {-# OVERLAPPING #-} EnumSymbolic AlgReal where
      where go = smtProductiveFunction "EnumSymbolic.AlgReal.enumFromThen" $ \start delta -> start .: go (start+delta) delta
 
    enumFromThenTo x y zIn = enumFromThenToAlgReal x zIn (y - x)
+
+   enumFromThenToH x y zIn mStep = enumFromThenToAlgReal x zIn (maybe (y - x) fromIntegral mStep)
 
 -- When the step is 0 (i.e., y == x), Haskell produces an infinite list of x's
 -- if x <= z, and the empty list otherwise. We mirror that here.
