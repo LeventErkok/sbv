@@ -6,14 +6,23 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Prove a ripple-carry adder correct by induction, for /all/ widths at once.
+-- Prove binary adders correct by induction, for /all/ widths at once.
 --
 -- This is the inductive companion to
--- "Documentation.SBV.Examples.BitPrecise.Adders", which proves a fixed-width
--- adder correct automatically by bit-blasting. Here, instead, we model the
+-- "Documentation.SBV.Examples.BitPrecise.Adders", which proves fixed-width
+-- adders correct automatically by bit-blasting. Here, instead, we model the
 -- operands as arbitrary-length, little-endian symbolic bit lists and prove---by
--- induction on the list---that the adder agrees with the mathematical value of
--- the bits, with no bound on the width.
+-- induction on the list---properties that hold with no bound on the width:
+--
+--   * a ripple-carry adder agrees with the mathematical value of the bits
+--     (@correctness@);
+--
+--   * a parallel-prefix (carry-lookahead) tree computes the same carry as the
+--     ripple, because the generate\/propagate carry operator is associative
+--     (@lookaheadCorrect@); and
+--
+--   * that lookahead carry is exactly the carry the ripple adder threads
+--     (@lookaheadMatchesAdder@).
 --
 -- A number is represented by a little-endian list of bit pairs: one
 -- @(a, b)@ per position, least-significant first, where @a@ is a bit of the
@@ -33,10 +42,10 @@
 
 module Documentation.SBV.Examples.TP.Adder where
 
-import Prelude hiding (fst, snd, foldl, (++))
+import Prelude hiding (fst, snd, foldl, map, (++))
 
 import Data.SBV hiding (fullAdder)
-import Data.SBV.List (foldl, (++))
+import Data.SBV.List (foldl, map, (++))
 import Data.SBV.Tuple
 import Data.SBV.TP
 
@@ -46,7 +55,7 @@ import Documentation.SBV.Examples.TP.Lists (foldlOverAppend)
 -- companion proves correct---only the adder driver differs (a symbolic,
 -- inductive recursion here versus a metalevel one there). The 'Data.SBV.fullAdder'
 -- word-level operation is hidden above so 'fullAdder' refers to that gate.
-import Documentation.SBV.Examples.BitPrecise.Adders (Bit, fullAdder)
+import Documentation.SBV.Examples.BitPrecise.Adders (Bit, fullAdder, generatePropagate)
 
 #ifdef DOCTEST
 -- $setup
@@ -200,6 +209,23 @@ carry = smtFunction "carry"
                      b : rest -> carry (applyC b c) rest
                   |]
 
+-- | The @(generate, propagate)@ section of a single operand bit-pair @(a, b)@,
+-- using the very same 'generatePropagate' gate as the bit-blasted companion.
+gpOf :: SBV (Bool, Bool) -> SBV (Bool, Bool)
+gpOf p = tuple (generatePropagate (fst p) (snd p))
+
+-- | The carry-out actually threaded by the ripple adder 'rca': fold the
+-- incoming carry through the full-adder carry of each position. (This is 'rca'
+-- with the sum bits dropped---it threads the identical carry, via the same
+-- 'fullAdder'.)
+rcaCarry :: Bit -> SList (Bool, Bool) -> Bit
+rcaCarry = smtFunction "rcaCarry"
+         $ \c ps -> [sCase| ps of
+                       []     -> c
+                       p : qs -> let (_, co) = fullAdder (fst p) (snd p) c
+                                 in rcaCarry co qs
+                    |]
+
 -- | The headline lookahead result, in textbook parallel-prefix form: the ripple
 -- carry over a concatenation equals combining the two halves' sections
 -- /independently/ and then applying the result to the incoming carry. Since
@@ -326,5 +352,48 @@ lookaheadCorrect = do
                     ?? splitLaw `at` (Inst @"xs" xs, Inst @"ys" ys)
                     =: applyC (dot (foldl dot idSec xs) (foldl dot idSec ys)) c
                     =: qed
+
+-- | The capstone, tying the lookahead machinery back to the actual adder:
+-- running the (foldable, tree-groupable) section 'carry' over the operands'
+-- generate\/propagate signals reproduces exactly the carry that the ripple adder
+-- 'rca' threads. Combined with 'treeCarry', this says the adder's own carry can
+-- be computed by any balanced prefix tree.
+--
+-- >>> runTP lookaheadMatchesAdder
+-- Lemma: applyCgpOf                         Q.E.D.
+-- Inductive lemma: lookaheadMatchesAdder
+--   Step: Base                              Q.E.D.
+--   Step: 1                                 Q.E.D.
+--   Step: 2                                 Q.E.D.
+--   Step: 3                                 Q.E.D.
+--   Step: 4                                 Q.E.D.
+--   Step: 5                                 Q.E.D.
+--   Result:                                 Q.E.D.
+-- Functions proven terminating: carry, rcaCarry, sbv.map
+-- [Proven] lookaheadMatchesAdder :: Ɐps ∷ [(Bool, Bool)] → Ɐc ∷ Bool → Bool
+lookaheadMatchesAdder :: TP (Proof (Forall "ps" [(Bool, Bool)] -> Forall "c" Bool -> SBool))
+lookaheadMatchesAdder = do
+
+  -- Applying a position's generate/propagate section to a carry is exactly the
+  -- full-adder carry-out. A finite boolean fact.
+  applyGP <- lemma "applyCgpOf"
+                   (\(Forall @"p" p) (Forall @"c" c) ->
+                        let (_, co) = fullAdder (fst p) (snd p) c
+                        in applyC (gpOf p) c .== co) []
+
+  -- Induct on the operands; the carry is threaded, so the hypothesis applies at
+  -- the next carry-in.
+  induct "lookaheadMatchesAdder"
+         (\(Forall @"ps" ps) (Forall @"c" c) -> carry c (map gpOf ps) .== rcaCarry c ps) $
+         \ih (p, ps) c -> let (_, co) = fullAdder (fst p) (snd p) c
+                          in [] |- carry c (map gpOf (p .: ps))
+                                =: carry c (gpOf p .: map gpOf ps)
+                                =: carry (applyC (gpOf p) c) (map gpOf ps)
+                                ?? applyGP `at` (Inst @"p" p, Inst @"c" c)
+                                =: carry co (map gpOf ps)
+                                ?? ih `at` Inst @"c" co
+                                =: rcaCarry co ps
+                                =: rcaCarry c (p .: ps)
+                                =: qed
 
 
