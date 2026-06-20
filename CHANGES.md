@@ -8,6 +8,12 @@
     addition, equal to each other, and the carry-out equal to the overflow flag) fully
     automatically by bit-blasting.
 
+  * New example `Documentation.SBV.Examples.TP.Adder`, the inductive companion to the above:
+    it models the operands as arbitrary-length symbolic bit lists and proves, for all widths
+    at once, that a ripple-carry adder computes the integer value of the bits, and that a
+    parallel-prefix (carry-lookahead) tree computes the same carry as the ripple---resting on
+    the associativity of the generate/propagate carry operator.
+
 ### Version 14.3, 2026-06-19
 
   * Improve fpRoundToIntegralH to remove redundant internal check. Thanks to Ryan Scott for the report.
