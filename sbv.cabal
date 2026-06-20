@@ -155,6 +155,7 @@ Library
     Exposed-modules : Documentation.SBV.Examples.ADT.Expr
                     , Documentation.SBV.Examples.ADT.Param
                     , Documentation.SBV.Examples.ADT.Types
+                    , Documentation.SBV.Examples.BitPrecise.Adders
                     , Documentation.SBV.Examples.BitPrecise.BitTricks
                     , Documentation.SBV.Examples.BitPrecise.BrokenSearch
                     , Documentation.SBV.Examples.BitPrecise.Legato

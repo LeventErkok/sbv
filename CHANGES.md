@@ -3,7 +3,10 @@
 
 ### Version 14.4, Not yet released
 
-  * New development version
+  * New example `Documentation.SBV.Examples.BitPrecise.Adders`, building ripple-carry and
+    carry-lookahead adders out of logic gates and proving them correct (equal to bit-vector
+    addition, equal to each other, and the carry-out equal to the overflow flag) fully
+    automatically by bit-blasting.
 
 ### Version 14.3, 2026-06-19
 
