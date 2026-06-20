@@ -395,5 +395,3 @@ lookaheadMatchesAdder = do
                                 =: rcaCarry co ps
                                 =: rcaCarry c (p .: ps)
                                 =: qed
-
-
