@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 14.4, Not yet released
+
+  * New development version
+
 ### Version 14.3, 2026-06-19
 
   * Improve fpRoundToIntegralH to remove redundant internal check. Thanks to Ryan Scott for the report.
