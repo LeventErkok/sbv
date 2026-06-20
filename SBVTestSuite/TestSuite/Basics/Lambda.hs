@@ -76,7 +76,7 @@ tests =
       , goldenCapturedIO "lambda12" $ eval1 [1 .. 3 :: Integer] (map singleton, P.map (: []))
 
       , goldenCapturedIO "lambda13" $ eval1 [(x, y) | x <- [1..3], y <- [4..6 :: Integer]]
-                                            (map (\t -> t^._1 + t^._2), P.map (uncurry (+)))
+                                            (map (\t -> t^._1 + t^._2), P.map (P.uncurry (+)))
 
       , goldenCapturedIO "lambda14" $ eval1 [1 .. 5 :: Integer] (zipWithL (+) [sEnum|10..15|], P.zipWith (+) [10..15])
 
@@ -325,7 +325,7 @@ tests =
 
         rel, leq :: Relation Integer
         rel = uninterpret "R"
-        leq = uncurry $ smtFunction "leq" (.<=)
+        leq = P.uncurry $ smtFunction "leq" (.<=)
         po  = isPartialOrder "poR" rel
         poI = isPartialOrder "poI" leq
 

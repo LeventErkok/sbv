@@ -3,6 +3,9 @@
 
 ### Version 14.4, Not yet released
 
+  * Add `curry` and `uncurry` to `Data.SBV.Tuple`, for currying and uncurrying functions
+    over symbolic 2-tuples, mirroring `Prelude.curry`/`Prelude.uncurry`.
+
   * New example `Documentation.SBV.Examples.BitPrecise.Adders`, building ripple-carry and
     carry-lookahead adders out of logic gates and proving them correct (equal to bit-vector
     addition, equal to each other, and the carry-out equal to the overflow flag) fully

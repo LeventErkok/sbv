@@ -42,7 +42,7 @@
 
 module Documentation.SBV.Examples.TP.Adder where
 
-import Prelude hiding (fst, snd, foldl, map, (++))
+import Prelude hiding (fst, snd, foldl, map, curry, uncurry, (++))
 
 import Data.SBV hiding (fullAdder)
 import Data.SBV.List (foldl, map, (++))
@@ -104,7 +104,7 @@ rca :: Bit -> SList (Bool, Bool) -> SList Bool
 rca = smtFunction "rca"
     $ \c ps -> [sCase| ps of
                   []     -> [c]
-                  p : qs -> let (s, co) = fullAdder (fst p) (snd p) c
+                  p : qs -> let (s, co) = uncurry fullAdder p c
                             in s .: rca co qs
                |]
 
@@ -212,7 +212,7 @@ carry = smtFunction "carry"
 -- | The @(generate, propagate)@ section of a single operand bit-pair @(a, b)@,
 -- using the very same 'generatePropagate' gate as the bit-blasted companion.
 gpOf :: SBV (Bool, Bool) -> SBV (Bool, Bool)
-gpOf p = tuple (generatePropagate (fst p) (snd p))
+gpOf p = tuple (uncurry generatePropagate p)
 
 -- | The carry-out actually threaded by the ripple adder 'rca': fold the
 -- incoming carry through the full-adder carry of each position. (This is 'rca'
@@ -222,7 +222,7 @@ rcaCarry :: Bit -> SList (Bool, Bool) -> Bit
 rcaCarry = smtFunction "rcaCarry"
          $ \c ps -> [sCase| ps of
                        []     -> c
-                       p : qs -> let (_, co) = fullAdder (fst p) (snd p) c
+                       p : qs -> let (_, co) = uncurry fullAdder p c
                                  in rcaCarry co qs
                     |]
 
@@ -378,14 +378,14 @@ lookaheadMatchesAdder = do
   -- full-adder carry-out. A finite boolean fact.
   applyGP <- lemma "applyCgpOf"
                    (\(Forall @"p" p) (Forall @"c" c) ->
-                        let (_, co) = fullAdder (fst p) (snd p) c
+                        let (_, co) = uncurry fullAdder p c
                         in applyC (gpOf p) c .== co) []
 
   -- Induct on the operands; the carry is threaded, so the hypothesis applies at
   -- the next carry-in.
   induct "lookaheadMatchesAdder"
          (\(Forall @"ps" ps) (Forall @"c" c) -> carry c (map gpOf ps) .== rcaCarry c ps) $
-         \ih (p, ps) c -> let (_, co) = fullAdder (fst p) (snd p) c
+         \ih (p, ps) c -> let (_, co) = uncurry fullAdder p c
                           in [] |- carry c (map gpOf (p .: ps))
                                 =: carry c (gpOf p .: map gpOf ps)
                                 =: carry (applyC (gpOf p) c) (map gpOf ps)

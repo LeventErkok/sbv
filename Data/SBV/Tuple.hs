@@ -27,6 +27,8 @@ module Data.SBV.Tuple (
   , tuple, untuple
   -- * Swapping, only for 2-tuples
   , swap
+  -- * Currying and uncurrying, only for 2-tuples
+  , curry, uncurry
   -- * Extractors for 2-tuple
   , fst, snd
   -- * Extractors for 3-tuple
@@ -39,7 +41,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Model
 
-import Prelude hiding (fst, snd)
+import Prelude hiding (fst, snd, curry, uncurry)
 
 #ifdef DOCTEST
 -- $setup
@@ -59,6 +61,17 @@ infixl 8 ^.
 -- | Swap the elements of a 2-tuple
 swap :: (SymVal a, SymVal b) => STuple a b -> STuple b a
 swap t = tuple (b, a)
+  where (a, b) = untuple t
+
+-- | Symbolic currying: turn a function that takes a symbolic 2-tuple into one
+-- that takes its two components separately. The inverse of 'uncurry'.
+curry :: (SymVal a, SymVal b) => (STuple a b -> r) -> SBV a -> SBV b -> r
+curry f a b = f (tuple (a, b))
+
+-- | Symbolic uncurrying: turn a function of two arguments into one that takes a
+-- symbolic 2-tuple. The inverse of 'curry'.
+uncurry :: (SymVal a, SymVal b) => (SBV a -> SBV b -> r) -> STuple a b -> r
+uncurry f t = f a b
   where (a, b) = untuple t
 
 -- | First of a tuple

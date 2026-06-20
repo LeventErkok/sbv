@@ -92,7 +92,7 @@ module Data.SBV.List (
 import Prelude hiding (head, tail, init, last, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
                        all, any, and, or, replicate, fst, snd, sum, product, Enum(..), lookup,
-                       takeWhile, dropWhile, minimum, maximum)
+                       takeWhile, dropWhile, minimum, maximum, uncurry)
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
@@ -677,7 +677,7 @@ instance (SymVal a, SymVal b) => SFoldL (SBV b -> SBV a -> SBV b) a b where
     = literal concResult
     | True
     = sbvFoldl $ tuple (base, l)
-    where sbvFoldl = smtHOFunction "sbv.foldl" (uncurry f . untuple)
+    where sbvFoldl = smtHOFunction "sbv.foldl" (uncurry f)
                    $ \exs -> [sCase| exs of
                                 (e, [])    -> e
                                 (e, h : t) -> sbvFoldl (tuple (e `f` h, t))
@@ -729,7 +729,7 @@ instance (SymVal a, SymVal b) => SFoldR (SBV a -> SBV b -> SBV b) a b where
     = literal concResult
     | True
     = sbvFoldr $ tuple (base, l)
-    where sbvFoldr = smtHOFunction "sbv.foldr" (uncurry f . untuple)
+    where sbvFoldr = smtHOFunction "sbv.foldr" (uncurry f)
                    $ \exs -> [sCase| exs of
                                 (e, [])    -> e
                                 (e, h : t) -> h `f` sbvFoldr (tuple (e, t))
@@ -800,7 +800,7 @@ instance (SymVal a, SymVal b, SymVal c) => SZipWith (SBV a -> SBV b -> SBV c) a 
     = literal concResult
     | True
     = sbvZipWith $ tuple (xs, ys)
-    where sbvZipWith = smtHOFunction "sbv.zipWith" (uncurry f . untuple)
+    where sbvZipWith = smtHOFunction "sbv.zipWith" (uncurry f)
                      $ \asbs -> [sCase| asbs of
                                    ([],   _   ) -> []
                                    (_,    []  ) -> []
