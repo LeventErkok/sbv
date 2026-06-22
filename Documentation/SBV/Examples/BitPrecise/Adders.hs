@@ -122,8 +122,7 @@ lookaheadAdd cin ps = (sums, carryInto n)
 -- little-endian bit lists, feed them to the adder with no incoming carry, and
 -- reassemble the sum bits into a word. The carry-out is dropped, matching the
 -- wrap-around semantics of bit-vector @(+)@.
-addWith :: forall n. (KnownNat n, BVIsNonZero n)
-        => (Bit -> [(Bit, Bit)] -> ([Bit], Bit)) -> SWord n -> SWord n -> SWord n
+addWith :: forall n. (KnownNat n, BVIsNonZero n) => (Bit -> [(Bit, Bit)] -> ([Bit], Bit)) -> SWord n -> SWord n -> SWord n
 addWith adder x y = fromBitsLE ss
   where (ss, _) = adder sFalse (zip (blastLE x) (blastLE y))
 

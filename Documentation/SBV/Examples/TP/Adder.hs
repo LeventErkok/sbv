@@ -280,12 +280,9 @@ lookaheadCorrect = do
 
   -- 'dot' is an associative monoid with identity 'idSec'; 'applyC' is its
   -- action. All finite boolean facts.
-  assoc <- lemma "dotAssoc"
-                 (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> dot x (dot y z) .== dot (dot x y) z) []
-  lunit <- lemma "dotLeftUnit"  (\(Forall @"x" x) -> dot idSec x .== x) []
-  act   <- lemma "applyCDot"
-                 (\(Forall @"lo" lo) (Forall @"hi" hi) (Forall @"c" c) ->
-                      applyC (dot lo hi) c .== applyC hi (applyC lo c)) []
+  assoc <- lemma "dotAssoc"    (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> dot x (dot y z) .== dot (dot x y) z)                  []
+  lunit <- lemma "dotLeftUnit" (\(Forall @"x" x) -> dot idSec x .== x)                                                                    []
+  act   <- lemma "applyCDot"   (\(Forall @"lo" lo) (Forall @"hi" hi) (Forall @"c" c) -> applyC (dot lo hi) c .== applyC hi (applyC lo c)) []
 
   -- Folding with an initial section @s@ equals @s@ combined with the fold from
   -- the identity. (Accumulator reassociation, à la Lists.foldrFoldl.)
@@ -379,7 +376,8 @@ lookaheadMatchesAdder = do
   applyGP <- lemma "applyCgpOf"
                    (\(Forall @"p" p) (Forall @"c" c) ->
                         let (_, co) = uncurry fullAdder p c
-                        in applyC (gpOf p) c .== co) []
+                        in applyC (gpOf p) c .== co)
+                   []
 
   -- Induct on the operands; the carry is threaded, so the hypothesis applies at
   -- the next carry-in.
