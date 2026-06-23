@@ -21,7 +21,7 @@ import Data.SBV
 -- in the backend SMT solver.
 data Q
 
--- | Make 'Q' an uinterpreted sort. This will automatically introduce the
+-- | Make 'Q' an uninterpreted sort. This will automatically introduce the
 -- type 'SQ' into our environment, which is the symbolic version of the
 -- carrier type 'Q'.
 mkSymbolic [''Q]

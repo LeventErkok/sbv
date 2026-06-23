@@ -12,7 +12,7 @@
 -- computer with 4 integer registers (w, x, y, z), and 6 instructions (inp, add, mul, div, mod, eql).
 -- You are given a program (hilariously called "monad"), and your goal is to figure out what
 -- the maximum and minimum inputs you can provide to this program such that when it runs
--- register z ends up with the value 1. Please refer to the above link for the full description.
+-- register z ends up with the value 0. Please refer to the above link for the full description.
 --
 -- While there are multiple ways to solve this problem in SBV, the solution here demonstrates
 -- how to turn programs in this fictional language into actual Haskell/SBV programs, i.e.,

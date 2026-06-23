@@ -39,7 +39,7 @@ import GHC.Generics (Generic)
 
 -- * Program state
 
--- | The state for the sum program, parameterized over a base type @a@.
+-- | The state for the fibonacci program, parameterized over a base type @a@.
 data FibS a = FibS { n :: a    -- ^ The input value
                    , i :: a    -- ^ Loop counter
                    , k :: a    -- ^ tracks @fib (i+1)@

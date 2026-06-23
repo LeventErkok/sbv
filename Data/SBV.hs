@@ -690,7 +690,7 @@ Also see "Documentation.SBV.Examples.Misc.NoDiv0" for the classic div-by-zero ex
   Goals can be lexicographically (default), independently, or pareto-front optimized. The relevant functions are:
 
       * 'minimize': Minimize a given arithmetic goal
-      * 'maximize': Minimize a given arithmetic goal
+      * 'maximize': Maximize a given arithmetic goal
 
   Goals can be optimized at a regular or an extended value: An extended value is either positive or negative infinity
   (for unbounded integers and reals) or positive or negative epsilon differential from a real value (for reals).
@@ -836,7 +836,7 @@ The SBV library supports unbounded signed integers with the type 'SInteger', whi
 overflow/underflow as it is the case with the bounded types, such as 'SWord8', 'SInt16', etc. However,
 some bit-vector based operations are /not/ supported for the 'SInteger' type while in the verification mode. That
 is, you can use these operations on 'SInteger' values during normal programming/simulation.
-but the SMT translation will not support these operations since there corresponding operations are not supported in SMT-Lib.
+but the SMT translation will not support these operations since their corresponding operations are not supported in SMT-Lib.
 Note that this should rarely be a problem in practice, as these operations are mostly meaningful on fixed-size
 bit-vectors. The operations that are restricted to bounded word/int sizes are:
 
@@ -893,10 +893,10 @@ specialized type-signatures since Haskell insists on an 'Int' second argument fo
 -}
 
 {- $partitionIntro
-The function 'allSatPartition' one to restrict the results returned by calls to 'Data.SBV.allSat'.
+The function 'allSatPartition' allows one to restrict the results returned by calls to 'Data.SBV.allSat'.
 In certain cases, we might consider certain models to be "equivalent," i.e., we might want to
 create equivalence classes over the search space when it comes to what we consider all satisfying
-solutions. In these cases, we can use 'allSatPartition' tell SBV what classes of solutions to consider
+solutions. In these cases, we can use 'allSatPartition' to tell SBV what classes of solutions to consider
 as unique. Consider:
 
 >>> :{
@@ -929,8 +929,8 @@ Solution #4:
 Found 4 different solutions.
 
 Without the call to 'allSatPartition' the above example, 'allSat' would return all possible combinations of @x@ and @y@ subject to the constraints. (Since we have none here,
-the call would try to enumerate the infinite set of all integer tuples!) But 'allSatPartition' us to restrict our attention to the examples that satisfy the partitioning
-constraints. The first argument to 'allSatPartition' simply a name, for diagnostic purposes. Note that the conditions given by 'allSatPartition' /not/ imposed on the search
+the call would try to enumerate the infinite set of all integer tuples!) But 'allSatPartition' allows us to restrict our attention to the examples that satisfy the partitioning
+constraints. The first argument to 'allSatPartition' is simply a name, for diagnostic purposes. Note that the conditions given by 'allSatPartition' are /not/ imposed on the search
 space at all: They're only used when we construct the search space. In the above example, we pick one example from each quadrant. Furthermore, while it is typical to pass
 a boolean as a partitioning argument, it is not required: Any expression is OK, whose value creates the equivalence class:
 
@@ -966,7 +966,7 @@ example:
       ...
 @
 
-The first constraint requires @x@ to be larger than @y@. The scond one says that
+The first constraint requires @x@ to be larger than @y@. The second one says that
 sum of @x@ and @y@ must be at least @12@, and the final one says that @y@ to be at least @3@.
 Constraints provide an easy way to assert additional properties on the input domain, right at the point of
 the introduction of variables.
@@ -1312,7 +1312,7 @@ Capture convertability from/to FloatingPoint representations.
 Conversions to float: 'toSFloat' and 'toSDouble' simply return the
 nearest representable float from the given type based on the rounding
 mode provided. Similarly, 'toSFloatingPoint' converts to a generalized
-floating-point number with specified exponent and significand bith widths.
+floating-point number with specified exponent and significand bit widths.
 
 Conversions from float: 'fromSFloat', 'fromSDouble', 'fromSFloatingPoint' functions do
 the reverse conversion. However some care is needed when given values

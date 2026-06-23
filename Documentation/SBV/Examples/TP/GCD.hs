@@ -176,11 +176,11 @@ negGCD = lemma "negGCD" (\(Forall a) (Forall b) -> let g = gcd a b in gcd (-a) b
 --
 -- ==== __Proof__
 -- >>> runTP zeroGCD
--- Lemma: negGCD       Q.E.D.
+-- Lemma: zeroGCD      Q.E.D.
 -- Functions proven terminating: nGCD
--- [Proven] negGCD :: Ɐa ∷ Integer → Bool
+-- [Proven] zeroGCD :: Ɐa ∷ Integer → Bool
 zeroGCD :: TP (Proof (Forall "a" Integer -> SBool))
-zeroGCD = lemma "negGCD" (\(Forall a) -> gcd a 0 .== gcd 0 a .&& gcd 0 a .== abs a .&& gcd 0 0 .== 0) []
+zeroGCD = lemma "zeroGCD" (\(Forall a) -> gcd a 0 .== gcd 0 a .&& gcd 0 a .== abs a .&& gcd 0 0 .== 0) []
 
 -- * Even and odd
 

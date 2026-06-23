@@ -30,7 +30,7 @@ import Data.SBV
 d1 :: SInteger -> SInteger -> SInteger
 d1 x y = ite (y .< x - 2) 7 2
 
--- | Symbolic version of @d2 x y = if y > 3 then  10 else  50@
+-- | Symbolic version of @d2 y = if y > 3 then  10 else  50@
 d2 :: SInteger -> SInteger
 d2 y = ite (y .> 3) 10 50
 

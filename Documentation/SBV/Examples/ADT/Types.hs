@@ -66,7 +66,7 @@ tc = smtFunction "constraints" $ \m t ->
             -> tc b (srng t)
 
           -- Application case. In this case, we ask the solver to give us the type of the
-          -- function, and then ensure the whole thing is well-formedvx
+          -- function, and then ensure the whole thing is well-formed
           App f a -> let tf = typeOf f
                      in   isTArr tf      -- f must have an arrow type
                       .&& tc f tf        -- The function must type-check with that type

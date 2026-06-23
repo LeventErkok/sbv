@@ -45,7 +45,7 @@ import qualified Prelude as P (gcd)
 
 -- * Program state
 
--- | The state for the sum program, parameterized over a base type @a@.
+-- | The state for the GCD program, parameterized over a base type @a@.
 data GCDS a = GCDS { x :: a    -- ^ First value
                    , y :: a    -- ^ Second value
                    , i :: a    -- ^ Copy of x to be modified

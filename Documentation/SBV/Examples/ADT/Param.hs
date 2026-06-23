@@ -111,7 +111,7 @@ evalPlus5 :: IO ThmResult
 evalPlus5 = prove $ do e :: SExpr String Integer <- free "e"
                        pure $ eval (e + 5) .== 5 + eval e
 
--- | Is this a string identifier? Lowercase letter followed by any number of upeer-lower case letters nd digits.
+-- | Is this a string identifier? Lowercase letter followed by any number of upper-lower case letters and digits.
 isId :: SString -> SBool
 isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
 

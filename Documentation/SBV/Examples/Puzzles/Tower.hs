@@ -110,7 +110,7 @@ tower (top, left, bot, right, grid) = do
 -- * Example run
 -------------------------------------------------------------------
 
--- | Solve the puzzle descibed above. We get:
+-- | Solve the puzzle described above. We get:
 --
 -- >>> example
 --   1 2 3 2 2 4
