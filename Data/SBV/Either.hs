@@ -63,15 +63,15 @@ import Data.SBV.SCase      (sCase)
 -- True
 mkSymbolic [''Either]
 
--- | Declare a symbolic maybe.
+-- | Declare a symbolic either.
 sEither :: (SymVal a, SymVal b) => String -> Symbolic (SEither a b)
 sEither = free
 
--- | Declare a symbolic maybe, unnamed.
+-- | Declare a symbolic either, unnamed.
 sEither_ :: (SymVal a, SymVal b) => Symbolic (SEither a b)
 sEither_ = free_
 
--- | Declare a list of symbolic maybes.
+-- | Declare a list of symbolic eithers.
 sEithers :: (SymVal a, SymVal b) => [String] -> Symbolic [SEither a b]
 sEithers = symbolics
 

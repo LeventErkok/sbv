@@ -159,7 +159,7 @@ base = nameBase
 constStep :: Exp -> Exp -> Maybe Integer
 constStep from thn
   | bf == bt  = Just (kt - kf)
-  | otherwise = Nothing
+  | True      = Nothing
   where (bf, kf) = peel from
         (bt, kt) = peel thn
 

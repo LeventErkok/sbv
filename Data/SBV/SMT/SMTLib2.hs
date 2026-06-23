@@ -215,7 +215,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                QueryInternal -> if supportsBitVectors solverCaps
                                 then [logicString cfg picked]
                                 else [logicString cfg Logic_ALL] -- fall-thru
-          where picked 
+          where picked
                   | needsQuantifiers = Logic_ALL
                   | True             = case (hasArrays, null uis && null tbls) of
                                          (False, False) -> QF_UFBV

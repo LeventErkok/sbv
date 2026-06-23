@@ -61,7 +61,7 @@ data Defn = Defn [String]                        -- The uninterpreted names refe
                  (Maybe [(Quantifier, T.Text)])  -- Param declaration groups, if any
                  (Int -> T.Text)                 -- Body, given the tab amount.
 
--- | Maka a new substate from the incoming state, sharing parts as necessary
+-- | Make a new substate from the incoming state, sharing parts as necessary
 inSubState :: MonadIO m => LambdaScope -> State -> (State -> m b) -> m b
 inSubState scope inState comp = do
 
@@ -152,7 +152,7 @@ extractAllUniversals other      = error $ unlines [ ""
                                                   ]
 
 
--- | Generic creator for anonymous lamdas.
+-- | Generic creator for anonymous lambdas.
 lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> (Defn -> b) -> State -> Kind -> a -> m b
 lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$> convert st fk (mkLambda st f)
   where handle d@(Defn _ frees _ _)

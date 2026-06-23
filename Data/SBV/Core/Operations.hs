@@ -1075,8 +1075,8 @@ svFPInf k neg = SVal k $ Left $ fpConstCV k signedInfinity signedInfinity (fpInf
     signedInfinity :: forall a. Floating a => a
     signedInfinity = if neg then -infinity else infinity
 
--- | Create a NaN infinity value of the given kind. If the 'Bool' argument is
--- 'True', then use negative infinity; otherwise, use positive infinity.
+-- | Create a signed zero value of the given kind. If the 'Bool' argument is
+-- 'True', then use negative zero; otherwise, use positive zero.
 svFPZero :: Kind -> Bool -> SVal
 svFPZero k neg = SVal k $ Left $ fpConstCV k signedZero signedZero (fpZero neg)
   where
@@ -1856,7 +1856,7 @@ floatDoubleRneCheck rm cv =
     _ -> True
   where
     rmIsRne | RoundNearestTiesToEven <- rm = True
-            | otherwise = False
+            | True                         = False
 
 noInt :: String -> Integer -> Integer -> a
 noInt o a b = error $ "SBV.Integer." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
@@ -1940,7 +1940,7 @@ svSWord32AsFloat w@(SVal kindFrom x)
       Left (CV _ (CInteger w'))
         -> SVal kindTo $ Left $ CV kindTo $ CFloat $ wordToFloat $ fromInteger w'
       _ -> SVal kindTo $ Right $ cache y
-  | otherwise
+  | True
   = error $ "svSWord32AsFloat: not a 32-bit word type: " ++ show kindFrom
   where kindTo = KFloat
         y st = do svw <- svToSV st w
@@ -1957,7 +1957,7 @@ svSWord64AsDouble w@(SVal kindFrom x)
       Left (CV _ (CInteger w'))
         -> SVal kindTo $ Left $ CV kindTo $ CDouble $ wordToDouble $ fromInteger w'
       _ -> SVal kindTo $ Right $ cache y
-  | otherwise
+  | True
   = error $ "svSWord64AsDouble: not a 64-bit word type: " ++ show kindFrom
   where kindTo = KDouble
         y st = do svw <- svToSV st w
@@ -1976,7 +1976,7 @@ svSWordAsFloatingPoint eb sb w@(SVal kindFrom x)
       Left (CV _ (CInteger w'))
         -> SVal kindTo $ Left $ CV kindTo $ CFP $ fpFromBits eb sb $ fromInteger w'
       _ -> SVal kindTo $ Right $ cache y
-  | otherwise
+  | True
   = error $ "svSWordAsFloatingPoint: non-word type: " ++ show kindFrom
   where kindTo = KFP eb sb
         y st = do svw <- svToSV st w

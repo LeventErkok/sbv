@@ -709,7 +709,7 @@ class (SymVal a, SymVal b) => SFoldR func a b | func -> a b where
   -- [5,4,3,2,1] :: [SInteger]
   foldr :: func -> SBV b -> SList a -> SBV b
 
-  -- | Handle the concrete case for folding left. Used internally only.
+  -- | Handle the concrete case for folding right. Used internally only.
   concreteFoldr :: func -> (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> Maybe b
   concreteFoldr _ f sb sas
      | Just b <- unliteral sb, Just as <- unliteral sas
@@ -1033,7 +1033,7 @@ class SymVal a => SFilter func a | func -> a where
   -- [2,3,4,5,6,7,8,9,10] :: [SInteger]
   dropWhile :: func -> SList a -> SList a
 
-  -- | Handle the concrete case of take-while. Used internally only.
+  -- | Handle the concrete case of drop-while. Used internally only.
   concreteDropWhile :: func -> (SBV a -> SBool) -> SList a -> Maybe [a]
   concreteDropWhile _ f sas
    | Just as <- unliteral sas
