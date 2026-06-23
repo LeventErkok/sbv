@@ -2101,7 +2101,7 @@ uncacheGen getCache (Cached f) st = do
         case (h `IMap.lookup` stored) >>= (sn `lookup`) of
           Just r  -> pure r
           Nothing -> do r <- f st
-                        r `seq` R.modifyIORef' rCache (IMap.insertWith (++) h [(sn, r)])
+                        r `seq` R.modifyIORef' rCache (IMap.insertWith (\_ old -> (sn, r) : old) h [(sn, r)])
                         pure r
 
 -- | Representation of SMTLib Program versions. As of June 2015, we're dropping support

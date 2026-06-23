@@ -1791,7 +1791,7 @@ isGuardedRecursive barFuncNms LambdaInfo{liAssignments} = all isGuarded recCallS
     consumers :: Map.Map SV [(SV, Op)]
     consumers = foldl' addConsumers Map.empty dagList
       where addConsumers m (sv, SBVApp op args) =
-              foldl' (\m' a -> Map.insertWith (++) a [(sv, op)] m') m args
+              foldl' (\m' a -> Map.insertWith (\_ old -> (sv, op) : old) a [(sv, op)] m') m args
 
     -- A recursive call is guarded if at least one of its consumers is a constructor
     isGuarded sv = case Map.lookup sv consumers of

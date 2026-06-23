@@ -48,7 +48,7 @@ import Data.Proxy
 import Data.Typeable (typeOf, TypeRep)
 
 import Data.Char (isSpace)
-import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf, nub, nubBy, sort, dropWhileEnd)
+import Data.List (intercalate, isPrefixOf, isSuffixOf, isInfixOf, nub, sort, dropWhileEnd)
 import Data.Int  (Int64)
 
 import Data.SBV.Utils.Lib (unQuote)
@@ -365,7 +365,7 @@ data TPUnique = TPInternal        -- IH's
               | TPQC              -- qc (quick-check)
               | TPNoTermCheck     -- no termination check (smtFunctionNoTermination)
               | TPUser Int64      -- user given
-              deriving (NFData, Generic, Eq)
+              deriving (NFData, Generic, Eq, Ord)
 
 -- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
 -- call to lemma/theorem etc., ensuring soundness. (Note that the trusted-code base here
@@ -396,10 +396,20 @@ shortProofName p | " @ " `isInfixOf` s = reverse . dropWhile isSpace . reverse .
                  | True                = s
    where s = proofName p
 
+-- | Deduplicate proof objects by their unique id, keeping the first occurrence.
+-- Same result as @nubBy ((==) \`on\` uniqId)@, but O(n log n) instead of O(n^2).
+nubByUniqId :: [ProofObj] -> [ProofObj]
+nubByUniqId = go Set.empty
+  where go _    []     = []
+        go seen (p:ps)
+          | u `Set.member` seen =     go seen ps
+          | True                = p : go (Set.insert u seen) ps
+          where u = uniqId p
+
 -- | Nicely format a bunch of proof-names, shortened and uniquified. Note that if we get a dependency
 -- via multiple routes, they can get different uniqid's; so we do a bit of compression here.
 shortProofNames :: [ProofObj] -> String
-shortProofNames = intercalate ", " . map merge . compress . sort . map shortProofName . nubBy (\a b -> uniqId a == uniqId b)
+shortProofNames = intercalate ", " . map merge . compress . sort . map shortProofName . nubByUniqId
  where compress []     = []
        compress (a:as) = case span (a ==) as of
                            (same, other) -> (a, length same + 1) : compress other
@@ -417,7 +427,7 @@ instance Show RootOfTrust where
 
 -- | Trust forms a semigroup
 instance Semigroup RootOfTrust where
-   RootOfTrust as <> RootOfTrust bs = RootOfTrust $ nubBy (\a b -> uniqId a == uniqId b) <$> (as <> bs)
+   RootOfTrust as <> RootOfTrust bs = RootOfTrust $ nubByUniqId <$> (as <> bs)
 
 -- | Trust forms a monoid
 instance Monoid RootOfTrust where
