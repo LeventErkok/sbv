@@ -324,7 +324,7 @@
 
   * Replace internal SMT-lib program representation from plain String to Text. This
     should improve performance and memory behavior in certain cases. Since solver time
-    dominates for most cases, this is not going to be noticable by end-users, except
+    dominates for most cases, this is not going to be noticeable by end-users, except
     for very large programs. In any case, it should at least improve memory usage.
     NB. Historical note: Most of these transformations were done by Claude code; the
     era of AI coding had its first contributions to SBV. I' duly impressed by Claude's
@@ -409,7 +409,7 @@
   * Added Documentation.SBV.Examples.TP.Peano, modeling peano numbers using an ADT and demonstrating many proofs.
 
   * Added Documentation.SBV.Examples.TP.VM demonstrating the correctness of a simple interpreter over an expression
-    language with respect to a version that compiles the expression and runs the insturctions over a virtual machine.
+    language with respect to a version that compiles the expression and runs the instructions over a virtual machine.
 
   * [BACKWARDS COMPATIBILITY] The old functions 'mkSymbolicEnumeration' and 'mkUninterpretedSort' are now removed,
     since their functionality is subsumed by 'mkSymbolic'.
@@ -490,7 +490,7 @@
       - Documentation.SBV.Examples.TP.Majority:   Proof of Boyer-Moore's majority selection algorithm correct.
       - Documentation.SBV.Examples.TP.McCarthy91: Proof of correctness for McCarthy's 91 function.
       - Documentation.SBV.Examples.TP.PowerMod:   Proving arithmetic properties relating power operation and modular arithmetic.
-      - Documentation.SBV.Examples.TP.ReverseAcc: Proving the accummulating reverse definition is correct.
+      - Documentation.SBV.Examples.TP.ReverseAcc: Proving the accumulating reverse definition is correct.
       - Documentation.SBV.Examples.TP.Reverse:    Proving a definition of reverse that uses no auxiliary definitions is correct.
       - Documentation.SBV.Examples.TP.SumReverse: Proving summing a list and its reverse are equivalent.
 
@@ -551,7 +551,7 @@
 
 ### Version 11.4, 2025-03-12
 
-  * Generalize the strong-induction principle to use lexicographic order for simultanous
+  * Generalize the strong-induction principle to use lexicographic order for simultaneous
     induction over two lists.
 
   * Added a proof of correctness for the merge-sort algorithm using KnuckleDragger
@@ -585,11 +585,11 @@
     the SMT solver to find tricky proofs. See Documentation/SBV/Examples/KnuckleDragger directory for many
     examples demonstrating the new features.
 
-  * Generalize support for polyorphic and higher-order functions. These are still experimental, as SMTLib's
+  * Generalize support for polymorphic and higher-order functions. These are still experimental, as SMTLib's
     higher-order function support is nascent. (Version 3 of SMTLib will have proper support for such functions, which
     is not released yet.) Currently, SBV can handle polymorphic and higher-order usage of: 'reverse', 'any', 'all',
     'filter', 'map', 'foldl', 'foldr', 'zip', and 'zipWith'; all exported from the 'Data.SBV.List' module.
-    These functions are supported polymporphically, and (except reverse and zip) all take a function as
+    These functions are supported polymorphically, and (except reverse and zip) all take a function as
     an argument. SBV firstifies these functions, and the resulting code is compatible with Z3 and CVC5.
     (Firstification might change in the future, as SMTLib gains support for more higher-order
     features itself.) Proof-support in backend solvers for higher-order functions is still quite weak,
@@ -673,14 +673,14 @@
 
   * Fix a few custom-floating-point format conversion bugs. Thanks to Sirui Lu for the patch.
 
-  * Add a few OVERLAPPABLE pragms to generic Queriable instances to make them easily overridable by
+  * Add a few OVERLAPPABLE pragmas to generic Queriable instances to make them easily overridable by
     user programs. Thanks to Marco Zocca for reporting.
 
   * Add signedMulOverflow, which checks whether multiplication of two signed-bitvectors can overflow.
     SBV already had a method (bvMulO) that served this purpose, translating to the corresponding predicate
     in SMTLib. Unfortunately not all solvers support this predicate efficiently. In particular, as of Aug 2024,
     bitwuzla has a performant checker for this overflow, but z3 does not. In case you cannot use bitwuzla for
-    some reason, you might want to use the new signedMulOverflow funtion for better performance.
+    some reason, you might want to use the new signedMulOverflow function for better performance.
 
 ### Version 10.11, 2024-07-26
 
@@ -835,7 +835,7 @@
     ForallN and ExistsN for creating multiple variables at the same time.
 
     The new function skolemize can be used to skolemize quantified formulas: The skolemized version of a
-    formula has no existential (replaced by uninterpeted functions), and is equisatisfiable to the original.
+    formula has no existential (replaced by uninterpreted functions), and is equisatisfiable to the original.
 
     See the following files demonstrating reasoning with quantifiers:
 
@@ -856,7 +856,7 @@
   * Added new SList functions: map, mapi, foldl, foldr, foldli, foldri, zip, zipWith, filter, all, any.
     Note that these work on arbitrary--but finite--length lists, with all terminating elements, per
     usual SBV interpretation. These functions map to the underlying solver's fold and map functions,
-    via lambda-abtractions. Note that the SMT engines remain incomplete with respect to sequence
+    via lambda-abstractions. Note that the SMT engines remain incomplete with respect to sequence
     theories. (That is, any property that requires induction for its proof will cause unknown
     answers, or will not terminate.) However, basic properties, especially when the solver can determine the
     shape of the sequence arguments (i.e., number of elements), should go through.
@@ -1038,7 +1038,7 @@
     significand. This format is affectionately called "brain-float"
     because it's often used in modeling neural networks machine-learning
     applications, offering a wider-range than IEEE's half-float, at the
-    exponse of reduced precision. It has 8-exponent bits and 8-significand
+    expense of reduced precision. It has 8-exponent bits and 8-significand
     bits, including the hidden bit.
 
   * Add support for SRational type, rational values built out of the ratio
@@ -1052,7 +1052,7 @@
     use cases. (Essentially, when there are no uninterpreted values or sorts present.)
     The new algorithm has been measured to be at least an order of magnitude
     faster or more in common cases as it splits the search space into disjoint
-    models, reducing the burden of accummulated lemmas over multiple calls. (See
+    models, reducing the burden of accumulated lemmas over multiple calls. (See
     http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations
     for details.)
 
@@ -1115,7 +1115,7 @@
   * Use SMTLib's int2bv if supported by the backend solver. If not, we still
     do a manual translation. (CVC4 and z3 support it natively, Yices and
     MathSAT does not, for which we do the manual translation. ABC and dReal
-    doesn't support the coversion at all, since former doesn't support integers
+    doesn't support the conversion at all, since former doesn't support integers
     and the latter doesn't support bit-vectors.) Thanks to Martin Lundfall
     for the initial pull request.
 
@@ -1920,7 +1920,7 @@
     Note that currently only Z3 and CVC4 has support for this logic,
     and they do differ in some details. Various character/string
     operations are supported, including length, concatenation,
-    regular-expression matching, substrig operations, recognizers, etc.
+    regular-expression matching, substring operations, recognizers, etc.
     If you use this logic, you are likely to find bugs in solvers themselves
     as support is rather new: Please report.
 
