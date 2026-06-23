@@ -742,7 +742,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
           | True = lift2 "="     sgn sbvs
 
         -- Do not use distinct on floats; because +0/-0, and NaNs mess
-        -- up the meaning. Just go with reqular equals.
+        -- up the meaning. Just go with regular equals.
         notEqual sgn sbvs
           | fpOp || not hasDistinct = liftP sbvs
           | True                    = liftN "distinct" sgn sbvs
