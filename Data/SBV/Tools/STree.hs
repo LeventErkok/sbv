@@ -57,7 +57,7 @@ writeSTree :: (SFiniteBits i, SymVal e) => STree i e -> SBV i -> SBV e -> STree 
 writeSTree s i j = walk (blastBE i) s
   where walk []     _          = SLeaf j
         walk (b:bs) (SBin l r) = SBin (ite b l (walk bs l)) (ite b (walk bs r) r)
-        walk _      _          = error $ "SBV.STree.writeSTree: Impossible happened while reading: " ++ show i
+        walk _      _          = error $ "SBV.STree.writeSTree: Impossible happened while writing: " ++ show i
 
 -- | Construct the fully balanced initial tree using the given values.
 mkSTree :: forall i e. HasKind i => [SBV e] -> STree i e

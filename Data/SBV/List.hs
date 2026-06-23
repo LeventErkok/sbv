@@ -476,7 +476,7 @@ subList l offset len
   | True                                     -- either symbolic, or something is out-of-bounds
   = lift3 False (SeqSubseq (kindOf (Proxy @a))) Nothing l offset len
 
--- | @`replace` l src dst@. Replace the first occurrence of @src@ by @dst@ in @s@
+-- | @`replace` l src dst@. Replace the first occurrence of @src@ by @dst@ in @l@
 --
 -- >>> prove $ \l -> replace [sEnum|1..5|] l [sEnum|6..10|] .== [sEnum|6..10|] .=> l .== [sEnum|1..5::SWord8|]
 -- Q.E.D.
