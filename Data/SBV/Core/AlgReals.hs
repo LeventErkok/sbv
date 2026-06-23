@@ -130,8 +130,8 @@ instance Show AlgRealPoly where
 instance Show AlgReal where
   show (AlgRational exact a)         = showRat exact a
   show (AlgPolyRoot (i, p) mbApprox) = "root(" ++ show i ++ ", " ++ show p ++ ")" ++ maybe "" app mbApprox
-     where app v | last v == '?' = " = " ++ init v ++ "..."
-                 | True          = " = " ++ v
+     where app v | not (null v) && last v == '?' = " = " ++ init v ++ "..."
+                 | True                          = " = " ++ v
   show (AlgInterval a b)         = case (a, b) of
                                      (OpenPoint   l, OpenPoint   h) -> "(" ++ show l ++ ", " ++ show h ++ ")"
                                      (OpenPoint   l, ClosedPoint h) -> "(" ++ show l ++ ", " ++ show h ++ "]"

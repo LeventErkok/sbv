@@ -26,7 +26,7 @@ import Data.Bits  ((.&.), countTrailingZeros, testBit)
 import Data.Char  (intToDigit, ord, chr)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
-import Data.Maybe (fromJust, fromMaybe, listToMaybe)
+import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Ratio (numerator, denominator)
 import Data.Word  (Word8, Word16, Word32, Word64)
 import Data.Text  (Text)
@@ -300,7 +300,7 @@ pad l s = replicate (l - length s) '0' ++ s
 
 -- | Binary printer
 s2 :: (Show a, Integral a) => a -> String
-s2  v = showIntAtBase 2 dig v "" where dig = fromJust . flip lookup [(0, '0'), (1, '1')]
+s2  v = showIntAtBase 2 intToDigit v ""
 
 -- | Hex printer
 s16 :: (Show a, Integral a) => a -> String
