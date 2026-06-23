@@ -31,7 +31,7 @@ import GHC.Generics (Generic)
 
 -- * Program state
 
--- | The state of the length program, paramaterized over the element type @a@
+-- | The state of the length program, parameterized over the element type @a@
 data LenS a b = LenS { xs :: a  -- ^ The input list
                      , ys :: a  -- ^ Copy of input
                      , l  :: b  -- ^ Running length

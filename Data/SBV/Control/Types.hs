@@ -164,7 +164,7 @@ isOnlyOnceOption SetTimeOut{}                = False
 -- logics that might be supported on new solvers. See <https://smt-lib.org/logics.shtml> for the official list.
 data Logic
   = AUFLIA             -- ^ Formulas over the theory of linear integer arithmetic and arrays extended with free sort and function symbols but restricted to arrays with integer indices and values.
-  | AUFLIRA            -- ^ Linear formulas with free sort and function symbols over one- and two-dimentional arrays of integer index and real value.
+  | AUFLIRA            -- ^ Linear formulas with free sort and function symbols over one- and two-dimensional arrays of integer index and real value.
   | AUFNIRA            -- ^ Formulas with free function and predicate symbols over a theory of arrays of arrays of integer index and real value.
   | LRA                -- ^ Linear formulas in linear real arithmetic.
   | QF_ABV             -- ^ Quantifier-free formulas over the theory of bit-vectors and bit-vector arrays.

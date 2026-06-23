@@ -240,7 +240,7 @@ getProof = Trans.getProof
 -- for this call to not error out!
 --
 -- To get an interpolant for a pair of formulas @A@ and @B@, use a 'Data.SBV.constrainWithAttribute' call to attach
--- interplation groups to @A@ and @B@. Then call 'getInterpolantMathSAT' @[\"A\"]@, assuming those are the names
+-- interpolation groups to @A@ and @B@. Then call 'getInterpolantMathSAT' @[\"A\"]@, assuming those are the names
 -- you gave to the formulas in the @A@ group.
 --
 -- An interpolant for @A@ and @B@ is a formula @I@ such that:

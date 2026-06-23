@@ -168,7 +168,7 @@ correctness = runTPWith cvc5 $ do
                                  =: qed
 
     --------------------------------------------------------------------------------------------
-    -- Part III. Prove that the output of insertion sort is a permuation of its input
+    -- Part III. Prove that the output of insertion sort is a permutation of its input
     --------------------------------------------------------------------------------------------
 
     insertIsElem <-

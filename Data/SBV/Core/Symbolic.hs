@@ -179,7 +179,7 @@ swNodeId :: SV -> NodeId
 swNodeId (SV _ nid) = nid
 
 -- | Forcing an argument; this is a necessary evil to make sure all the arguments
--- to an uninterpreted function are evaluated before called; the semantics of uinterpreted
+-- to an uninterpreted function are evaluated before called; the semantics of uninterpreted
 -- functions is necessarily strict; deviating from Haskell's
 forceSVArg :: SV -> IO ()
 forceSVArg (SV k n) = k `seq` n `seq` pure ()
@@ -237,7 +237,7 @@ data Op = Plus
         | SetOp SetOp                           -- Set operations, categorized separately
         | TupleConstructor Int                  -- Construct an n-tuple
         | TupleAccess Int Int                   -- Access element i of an n-tuple; second argument is n
-        | RationalConstructor                   -- Construct a rational. Note that there's no access to numerator or denumerator, since we cannot store rationals in canonical form
+        | RationalConstructor                   -- Construct a rational. Note that there's no access to numerator or denominator, since we cannot store rationals in canonical form
         | ADTOp ADTOp                           -- ADT access/construction/testing
 
         -- Arrays
@@ -840,7 +840,7 @@ data Result = Result { progInfo       :: ProgInfo                               
                      , reskinds       :: Set.Set Kind                                 -- ^ kinds used in the program
                      , resTraces      :: [(String, CV)]                               -- ^ quick-check counter-example information (if any)
                      , resObservables :: [(String, CV -> Bool, SV)]                   -- ^ observable expressions (part of the model)
-                     , resUISegs      :: [(String, [String])]                         -- ^ uninterpeted code segments
+                     , resUISegs      :: [(String, [String])]                         -- ^ uninterpreted code segments
                      , resParams      :: ResultInp                                    -- ^ top-inputs or lambda params
                      , resConsts      :: (CnstMap, [(SV, CV)])                        -- ^ constants
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts

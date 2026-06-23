@@ -225,7 +225,7 @@ correctness = runTP $ do
                                 |]
 
     --------------------------------------------------------------------------------------------
-    -- Part III. Prove that the output of merge sort is a permuation of its input
+    -- Part III. Prove that the output of merge sort is a permutation of its input
     --------------------------------------------------------------------------------------------
     mergeCount <-
         sInduct "mergeCount"

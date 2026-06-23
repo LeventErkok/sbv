@@ -3889,7 +3889,7 @@ resKind :: Kind -> Kind
 resKind (KArray _ k) = resKind k
 resKind k            = k
 
--- | SMT definable constants and functions, which can also be uninterpeted.
+-- | SMT definable constants and functions, which can also be uninterpreted.
 -- This class captures functions that we can generate standalone-code for
 -- in the SMT solver. Note that we also allow uninterpreted constants and
 -- functions too. An uninterpreted constant is a value that is indexed by its name. The only
@@ -4004,10 +4004,10 @@ class SMTDefinable a where
   symWithKind :: String -> a
   symWithKind = sym
 
-  -- | Render an uninterpeted value as an SMTLib definition
+  -- | Render an uninterpreted value as an SMTLib definition
   sbv2smt :: ExtractIO m => a -> m String
 
-  -- | Render an uninterpeted value function as an SMTLib definition
+  -- | Render an uninterpreted value function as an SMTLib definition
   sbvFun2smt :: (SymVals as, ExtractIO m) => (SBVs as -> a) -> m String
 
   -- | Make this name a constructor, coming from an ADT. Only used internally
@@ -4577,7 +4577,7 @@ slet x f = SBV $ SVal k $ Right $ cache r
                         res  = f xsbv
                     sbvToSV st res
 
--- | Class of things that we can logically reduce to a boolean, by saturating and then asserting equivalance to itself
+-- | Class of things that we can logically reduce to a boolean, by saturating and then asserting equivalence to itself
 class QSaturate m a where
   qSaturate :: a -> m ()
 

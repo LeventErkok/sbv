@@ -146,7 +146,7 @@ instance Show ThmResult where
                                      "Falsifiable in an extension field:\n"
                                      r
 
--- User friendly way of printing satisfiablity results
+-- User friendly way of printing satisfiability results
 instance Show SatResult where
   show (SatResult r) = showSMTResult "Unsatisfiable"
                                      "Unknown"

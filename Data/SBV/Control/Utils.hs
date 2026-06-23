@@ -404,7 +404,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
                     nm    <- findName st uiMap
 
                     -- Read the uiMap again here. Why? Because the act of finding the name might've
-                    -- introduced it as an uninterperted name!
+                    -- introduced it as an uninterpreted name!
                     newUIMap <- liftIO $ readIORef rUIMap
                     case nm `Map.lookup` newUIMap of
                       Nothing                     -> cantFind newUIMap
@@ -1193,7 +1193,7 @@ extractValue mbi nm k = do
 getUICVal :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, (Bool, Maybe [String], SBVType)) -> m CV
 getUICVal mbi (nm, (_, _, t)) = case t of
                                  SBVType [k] -> extractValue mbi nm k
-                                 _           -> error $ "SBV.getUICVal: Expected to be called on an uninterpeted value of a base type, received something else: " ++ show (nm, t)
+                                 _           -> error $ "SBV.getUICVal: Expected to be called on an uninterpreted value of a base type, received something else: " ++ show (nm, t)
 
 -- | Generalization of 'Data.SBV.Control.getUIFunCVAssoc'
 getUIFunCVAssoc :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, (Bool, Maybe [String], SBVType)) -> m (Either String ([([CV], CV)], CV))
@@ -1929,7 +1929,7 @@ executeQuery queryContext originalQuery = do
                            Nothing                         -> pure ()
                            Just QueryState{queryTerminate} -> queryTerminate maybeForwardedException
 
-                  -- If this is an extrnal query and there are objectives, let's add those to the list before we run
+                  -- If this is an external query and there are objectives, let's add those to the list before we run
                   -- Here we only allow Lexicographic; we might want to make that configurable later.
                   let userQuery = case queryContext of
                                     QueryInternal -> originalQuery

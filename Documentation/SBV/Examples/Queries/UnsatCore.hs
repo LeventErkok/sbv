@@ -44,7 +44,7 @@ p = do a <- sInteger "a"
 -- >>> ucCore
 -- Unsat core is: ["less than 5","more than 10"]
 --
--- Demonstrating that the constraint @a .> b@ is /not/ needed for unsatisfiablity in this case.
+-- Demonstrating that the constraint @a .> b@ is /not/ needed for unsatisfiability in this case.
 ucCore :: IO ()
 ucCore = do mbCore <- runSMT p
             case mbCore of

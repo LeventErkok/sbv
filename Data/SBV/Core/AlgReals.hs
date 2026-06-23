@@ -197,7 +197,7 @@ instance Real AlgReal where
   toRational (AlgRational True v) = v
   toRational x                    = error $ "AlgReal.toRational: Argument cannot be represented as a rational value: " ++ algRealToHaskell x
 
--- | Random instance for rational needs to be careful to split the generator twice for numerator and denumerator
+-- | Random instance for rational needs to be careful to split the generator twice for numerator and denominator
 instance Random Rational where
   random g = (a % b', g'')
      where (a, g')  = random g

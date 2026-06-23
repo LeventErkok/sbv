@@ -1813,7 +1813,7 @@ interleaveLen = sInduct "interleaveLen"
 uninterleave :: SymVal a => SList a -> STuple [a] [a]
 uninterleave lst = uninterleaveGen lst (tuple ([], []))
 
--- | Generalized form of uninterleave with the auxilary lists made explicit.
+-- | Generalized form of uninterleave with the auxiliary lists made explicit.
 uninterleaveGen :: SymVal a => SList a -> STuple [a] [a] -> STuple [a] [a]
 uninterleaveGen = smtFunction "uninterleave"
                 $ \xs alts -> let (es, os) = untuple alts

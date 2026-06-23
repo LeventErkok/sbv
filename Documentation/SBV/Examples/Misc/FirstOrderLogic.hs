@@ -178,7 +178,7 @@ functions of the enclosing universals.
 -- >>> sat skolemEx1
 -- Satisfiable
 --
--- But this isn't really illimunating. We can first skolemize, and then ask to satisfy:
+-- But this isn't really illuminating. We can first skolemize, and then ask to satisfy:
 --
 -- >>> sat $ skolemize skolemEx1
 -- Satisfiable. Model:

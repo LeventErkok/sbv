@@ -315,7 +315,7 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
                 -- Condition 1: Invariant must hold prior to loop entry
                 invHoldsPrior <- wp start Skip (\st -> [(inv st, InvariantPre nm st)])
 
-                -- Condition 2: If we iterate, invariant must be maitained by the body
+                -- Condition 2: If we iterate, invariant must be maintained by the body
                 invMaintained <- wp st' body (\st -> [(iterates .=> inv st, InvariantMaintain nm st' st)])
 
                 -- Condition 3: If we terminate, invariant must be strong enough to establish the post condition

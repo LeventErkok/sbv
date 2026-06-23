@@ -42,7 +42,7 @@ guess input = do g <- sInteger "guess"
                             DSat{} -> error "Unexpected delta-sat result.."  -- Won't really happen
                             Unsat  ->
                                    -- This cannot happen! If it does, the input was
-                                   -- not properly constrainted. Note that we found this
+                                   -- not properly constrained. Note that we found this
                                    -- by getting an Unsat, not by checking the value!
                                    error $ unlines [ "There's no solution!"
                                                    , "Guess sequence: " ++ show (reverse sofar)

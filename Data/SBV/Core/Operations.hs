@@ -593,7 +593,7 @@ cCompare k op x y =
                 -> error $ "cCompare: Mismatching ADT field kinds in comparison: " ++ show (op, k, map fst fks, map fst fks')
                 | True
                 -> let fmatch    = zipWith (\(fk, v1) (_, v2) -> cCompare fk op v1 v2) fks fks'
-                       undecided = any isNothing fmatch   -- Field comparison undecive
+                       undecided = any isNothing fmatch   -- Field comparison undecided
                        allEq     = all (== Just EQ) fmatch -- All fields Equal
                    in if undecided
                       then Nothing
@@ -648,7 +648,7 @@ cCompare k op x y =
                defsMatch = def1 == def2
 
                -- Check if keys cover everything. Clearly, we can't do this for all kinds; but only finite ones
-               -- For the time being, we're retricting ourselves to bool only. Might want to extend this later.
+               -- For the time being, we're restricting ourselves to bool only. Might want to extend this later.
                complete  = case k1 of
                              KBool -> let bools       = map cvVal [falseCV, trueCV]
                                           covered asc = all (`elem` map fst asc) bools
@@ -1161,7 +1161,7 @@ svFPMin = liftFPSym2 "min" (mkSymOp (IEEEFP FP_Min)) fpMinH fpMinH fpMin
 svFPMax :: SVal -> SVal -> SVal
 svFPMax = liftFPSym2 "max" (mkSymOp (IEEEFP FP_Max)) fpMaxH fpMaxH fpMax
 
--- | Floating-point fused-multipy-add (FMA).
+-- | Floating-point fused-multiply-add (FMA).
 
 -- Note that this operation is defined somewhat unusually because Haskell lacks
 -- a native FMA operation to use for concrete evaluation of 'Float's and

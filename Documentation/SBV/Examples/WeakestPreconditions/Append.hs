@@ -37,7 +37,7 @@ import GHC.Generics (Generic)
 
 -- * Program state
 
--- | The state of the length program, paramaterized over the element type @a@
+-- | The state of the length program, parameterized over the element type @a@
 data AppS a = AppS { xs :: a  -- ^ The first input list
                    , ys :: a  -- ^ The second input list
                    , ts :: a  -- ^ Temporary variable

@@ -312,7 +312,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
 
                   tbls          -- Tables
 
-                  _uis          -- Uninterpeted constants: nothing to do with them
+                  _uis          -- Uninterpreted constants: nothing to do with them
                   _axs          -- Axioms definitions    : nothing to do with them
 
                   pgm           -- Assignments

@@ -79,7 +79,7 @@ import Data.Dynamic
 import qualified Test.QuickCheck as QC
 import Test.QuickCheck (quickCheckWithResult)
 
--- | Captures the steps for a calculationa proof
+-- | Captures the steps for a calculational proof
 data CalcStrategy = CalcStrategy { calcIntros     :: SBool
                                  , calcProofTree  :: TPProof
                                  , calcQCInstance :: [Int] -> Symbolic SBool

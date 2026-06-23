@@ -680,7 +680,7 @@ correctness = runTP $ do
                           =: x .: xs
                           =: qed
 
-  -- A nice corrollary to the above is that if quicksort changes its input, that implies the input was not non-decreasing:
+  -- A nice corollary to the above is that if quicksort changes its input, that implies the input was not non-decreasing:
   _ <- lemma "ifChangedThenUnsorted"
              (\(Forall @"xs" xs) -> quickSort xs ./= xs .=> sNot (nonDecreasing xs))
              [proofOf unchangedIfNondecreasing]

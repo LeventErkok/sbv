@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Implementation of Prince encryption and decrytion, following the spec
+-- Implementation of Prince encryption and decryption, following the spec
 -- <https://eprint.iacr.org/2012/529.pdf>
 -----------------------------------------------------------------------------
 

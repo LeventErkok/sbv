@@ -102,7 +102,7 @@ age d = syear today - syear d - 1 + oneIf (today `after` d)
 
 -- | We can let years to range over arbitrary integers. But that complicates the
 -- job of the solver. So, based on what we know from the problem, we restrict
--- our attention to years betweek 1900 and 2100. Note that there are only
+-- our attention to years between 1900 and 2100. Note that there are only
 -- two years that satisfy this in that range: 1936 and 2025. (Any other square
 -- year makes no sense for the setting of the problem.) To simplify the square-root
 -- computation, we also store the square root in this list as the second component:
@@ -155,7 +155,7 @@ puzzle = runSMT $ do
     -----------------------------------
     myBirthday <- symDate "My Birthday"
 
-    -- I was born in the last millenium
+    -- I was born in the last millennium
     constrain $ syear myBirthday .< 2000 .&& syear myBirthday .>= 1900
 
     -- My next birthday will be a square

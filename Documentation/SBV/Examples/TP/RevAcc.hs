@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proves that the accummulating version of reverse is equivalent to the
+-- Proves that the accumulating version of reverse is equivalent to the
 -- standard definition.
 -----------------------------------------------------------------------------
 
@@ -32,9 +32,9 @@ import Data.SBV.TP
 -- >>> :set -XTypeApplications
 #endif
 
--- * Reversing with an accummulator.
+-- * Reversing with an accumulator.
 
--- | Accummulating reverse.
+-- | Accumulating reverse.
 revAcc :: SymVal a => SList a -> SList a -> SList a
 revAcc = smtFunction "revAcc"
        $ \acc xs -> [sCase| xs of

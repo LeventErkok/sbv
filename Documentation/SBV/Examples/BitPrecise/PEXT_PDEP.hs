@@ -25,7 +25,7 @@
 --    OD
 -- @
 --
--- PDEP (parallel deposit) is similar, except the assigment is:
+-- PDEP (parallel deposit) is similar, except the assignment is:
 --
 -- @
 --    DEST[m] := TEMP[k]

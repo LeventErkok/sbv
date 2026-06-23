@@ -633,7 +633,7 @@ instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m 
 -- The following is a possible definition, but it lets us write properties that
 -- are not useful.. Such as: prove $ \x y -> (x::SInt8) == y
 -- Running that will throw an exception since Haskell's equality is not be supported by symbolic things. (Needs .==).
--- So, we avoid these insteances.
+-- So, we avoid these instances.
 instance ExtractIO m => ProvableM m Bool where
   proofArgReduce x  = proofArgReduce (if x then sTrue else sFalse :: SBool)
 

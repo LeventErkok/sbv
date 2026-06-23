@@ -749,7 +749,7 @@ instance (SymVal env, SymVal a, SymVal b) => SFoldR (Closure (SBV env) (SBV a ->
                                |]
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
--- the minumum of the lengths of the given lists.
+-- the minimum of the lengths of the given lists.
 --
 -- >>> zip [sEnum|1..10 :: SInteger|] [sEnum|11..20 :: SInteger|]
 -- [(1,11),(2,12),(3,13),(4,14),(5,15),(6,16),(7,17),(8,18),(9,19),(10,20)] :: [(SInteger, SInteger)]
@@ -773,7 +773,7 @@ zip xs ys
 -- functions, and we instantiate this class appropriately so it can handle both cases.
 class (SymVal a, SymVal b, SymVal c) => SZipWith func a b c | func -> a b c where
   -- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
-  -- The length of the final list is the minumum of the lengths of the given lists.
+  -- The length of the final list is the minimum of the lengths of the given lists.
    --
    -- >>> zipWith ((+) @SInteger) ([sEnum|1..10::SInteger|]) ([sEnum|11..20::SInteger|])
    -- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]

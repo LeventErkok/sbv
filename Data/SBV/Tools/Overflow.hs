@@ -325,7 +325,7 @@ signedMulOverflow x y = sNot zeroOut .&& overflow
         --
         -- The result is at most N-2 for an N-bit word. Later we add two of these, so the maximum
         -- value we need to represent is 2N-4. This will require 1 + lg(2N-4) = 2 + log(N-1) bits.
-        -- To suppor the case N=0, we return a (2 + log N) bit word.
+        -- To support the case N=0, we return a (2 + log N) bit word.
         --
         -- Example for 3 bits:
         --

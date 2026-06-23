@@ -842,7 +842,7 @@ gcdOddEven = do
 
 -- * GCD via subtraction
 
--- | @nGCDSub@ is the original verision of Euclid, which uses subtraction instead of modulus. This is the version that
+-- | @nGCDSub@ is the original version of Euclid, which uses subtraction instead of modulus. This is the version that
 -- works on non-negative numbers. It has the precondition that @a >= b >= 0@, and maintains this invariant in each
 -- recursive call.
 nGCDSub :: SInteger -> SInteger -> SInteger

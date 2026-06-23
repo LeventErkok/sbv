@@ -22,7 +22,7 @@
 -- Where @*@ stands for non-deterministic choice. For each program we try to prove that @y >= 1@ is an invariant.
 --
 -- It turns out that the property @y >= 1@ is indeed an invariant, but is
--- not inductive for either program. We proceed to strengten the invariant
+-- not inductive for either program. We proceed to strengthen the invariant
 -- and establish it for the first case. We then note that the same strengthening
 -- doesn't work for the second program, and find a further strengthening to
 -- establish that case as well. This example follows the introductory example

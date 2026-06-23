@@ -169,7 +169,7 @@ instance (SymVal x, SymVal at, SymVal bt, SymVal ct, SymVal dt, SymVal et) => Ha
                                   , quantifiedBool (\(Forall x) (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) -> pf xs a b c d e .=> pf (x .: xs) a b c d e)]
                              .=>    quantifiedBool (\(Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) -> pf xs a b c d e)
 
--- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
+-- | Accept the given definition as a fact. Usually used to introduce definitional axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.

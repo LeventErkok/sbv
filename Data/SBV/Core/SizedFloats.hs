@@ -109,7 +109,7 @@ type FPSingle = FloatingPoint 8 24
 -- | Abbreviation for IEEE double precision float, bit width 64 = 11 + 53.
 type FPDouble = FloatingPoint 11 53
 
--- | Abbreviation for IEEE quadruble precision float, bit width 128 = 15 + 113.
+-- | Abbreviation for IEEE quadruple precision float, bit width 128 = 15 + 113.
 type FPQuad = FloatingPoint 15 113
 
 -- | Show instance for Floats. By default we print in base 10, with standard scientific notation.
@@ -142,7 +142,7 @@ instance Arbitrary BigFloat where
 
 -- Manually implemented instance as GHC generated a non-IEEE 754 compliant instance.
 -- Note that we cannot pack the values in a tuple and then compare them as that will
--- also give non-IEEE 754 compilant results.
+-- also give non-IEEE 754 compliant results.
 --
 -- NB. Refrain from letting GHC derive @>@ and @>=@ and define
 -- it ourselves. Why? Because the default definition of @x > y@

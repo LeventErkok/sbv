@@ -114,7 +114,7 @@ basis _ mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim
 -- (k, 2+k', 2k+k')
 --
 -- That is, for arbitrary @k@ and @k'@, we have two different solutions. (An infinite family.)
--- You can verify these solutuions by substituting the values for @x@, @y@ and @z@ in the above, for each choice.
+-- You can verify these solutions by substituting the values for @x@, @y@ and @z@ in the above, for each choice.
 -- It's harder to see that they cover all possibilities, but a moments thought reveals that is indeed the case.
 test :: IO Solution
 test = ldn (Proxy @4) Nothing [([2,1,-1], 2)]
