@@ -3,8 +3,8 @@
 
 ### Version 14.4, Not yet released
 
-  * Add `curry` and `uncurry` to `Data.SBV.Tuple`, for currying and uncurrying functions
-    over symbolic 2-tuples, mirroring `Prelude.curry`/`Prelude.uncurry`.
+  * Add `curry` and `uncurry` (for symbolic 2-tuples) and `curry3` and `uncurry3` (for
+    symbolic 3-tuples) to `Data.SBV.Tuple`, mirroring `Prelude.curry`/`Prelude.uncurry`.
 
   * New example `Documentation.SBV.Examples.BitPrecise.Adders`, building ripple-carry and
     carry-lookahead adders out of logic gates and proving them correct (equal to bit-vector
@@ -23,8 +23,8 @@
 
   * Add support for arctan/arcsin/arccos in CVC5. Thanks to Ryan Scott for pointing out support for it.
 
-  * Improved backed-solver communication so that if a solver returns an error message SBV now makes
-    sure it gets captured and displayed properly before the solver-process itselfs terminates.
+  * Improved backend-solver communication so that if a solver returns an error message SBV now makes
+    sure it gets captured and displayed properly before the solver-process itself terminates.
 
   * Drop support for pi as an SReal: The whole premise of SReal is it represents algebraic-reals
     (i.e., those that are roots of polynomials) exactly. But pi is not representable as such, since

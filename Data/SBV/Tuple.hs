@@ -27,8 +27,8 @@ module Data.SBV.Tuple (
   , tuple, untuple
   -- * Swapping, only for 2-tuples
   , swap
-  -- * Currying and uncurrying, only for 2-tuples
-  , curry, uncurry
+  -- * Currying and uncurrying
+  , curry, uncurry, curry3, uncurry3
   -- * Extractors for 2-tuple
   , fst, snd
   -- * Extractors for 3-tuple
@@ -74,6 +74,18 @@ uncurry :: (SymVal a, SymVal b) => (SBV a -> SBV b -> r) -> STuple a b -> r
 uncurry f t = f a b
   where (a, b) = untuple t
 
+-- | Symbolic currying for 3-tuples: turn a function that takes a symbolic
+-- 3-tuple into one that takes its three components separately. The inverse of
+-- 'uncurry3'.
+curry3 :: (SymVal a, SymVal b, SymVal c) => (STuple3 a b c -> r) -> SBV a -> SBV b -> SBV c -> r
+curry3 f a b c = f (tuple (a, b, c))
+
+-- | Symbolic uncurrying for 3-tuples: turn a function of three arguments into
+-- one that takes a symbolic 3-tuple. The inverse of 'curry3'.
+uncurry3 :: (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c -> r) -> STuple3 a b c -> r
+uncurry3 f t = f a b c
+  where (a, b, c) = untuple t
+
 -- | First of a tuple
 fst :: (SymVal a, SymVal b) => STuple a b -> SBV a
 fst t = a where (a, _) = untuple t
@@ -90,7 +102,7 @@ fst3 t = a where (a, _, _) = untuple t
 snd3 :: (SymVal a, SymVal b, SymVal c) => STuple3 a b c -> SBV b
 snd3 t = b where (_, b, _) = untuple t
 
--- | Thirdd of a 3-tuple
+-- | Third of a 3-tuple
 thd3 :: (SymVal a, SymVal b, SymVal c) => STuple3 a b c -> SBV c
 thd3 t = c where (_, _, c) = untuple t
 
