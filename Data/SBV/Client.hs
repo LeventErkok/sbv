@@ -39,6 +39,7 @@ import Data.SBV.Core.TH (getConstructors, bad, report)
 import Data.Generics
 
 import Control.Monad (filterM, mapAndUnzipM, zipWithM)
+import Data.Function (fix)
 import Test.QuickCheck (Arbitrary(..), elements)
 
 import qualified Control.Exception as C
@@ -352,10 +353,17 @@ mkADT adtKind typeName params cstrs = do
                              (TH.normalB
                                    (TH.caseE [| sequenceA $(TH.listE [ [| unlitCV $(TH.varE a) |] | a <- as ]) |]
                                              [ TH.match [p|Just $(TH.varP c)|]
-                                                        (TH.normalB [| let k   = kindOf (undefined `asTypeOf` res)
-                                                                           res = SBV $ SVal k (Left (CV k (CADT (bnm, $(TH.varE c)))))
-                                                                       in res
-                                                                    |])
+                                                        -- We need the kind of the result type to build the value, but the
+                                                        -- result type can only be recovered from the (signature-pinned) result
+                                                        -- itself: a parametric type may carry the parameter in a phantom
+                                                        -- position (e.g. the @a@ in @Right :: b -> Either a b@) that no argument
+                                                        -- mentions. We tie the kind to the result via 'fix'. Crucially, 'fix'
+                                                        -- binds @res@ as a /lambda-bound/ variable, which is always monomorphic;
+                                                        -- a plain @let@ group would be generalized when the monomorphism
+                                                        -- restriction is off (as it is at the GHCi prompt), yielding a spurious
+                                                        -- ambiguous @HasKind@. ('kindOf' ignores its argument, so 'fix' is safe.)
+                                                        (TH.normalB [| fix (\res -> let k = kindOf res
+                                                                                    in SBV $ SVal k (Left (CV k (CADT (bnm, $(TH.varE c)))))) |])
                                                         []
                                              , TH.match [p|Nothing|]
                                                         (TH.normalB (foldl (\a b -> [| $a $b |]) [| mkADTConstructor bnm |] (map TH.varE as)))
