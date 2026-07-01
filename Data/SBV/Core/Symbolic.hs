@@ -466,7 +466,7 @@ regExpToSMTString = regExpToText (\s -> "\"" <> T.pack (stringToQFS s) <> "\"")
 
 -- | Convert a RegExp to text, parameterized by how strings are converted
 regExpToText :: (String -> Text) -> RegExp -> Text
-regExpToText fs (Literal s)       = "(str.to.re " <> fs s <> ")"
+regExpToText fs (Literal s)       = "(str.to_re " <> fs s <> ")"
 regExpToText _  All               = "re.all"
 regExpToText _  AllChar           = "re.allchar"
 regExpToText _  None              = "re.nostr"

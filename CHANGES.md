@@ -17,6 +17,9 @@
     parallel-prefix (carry-lookahead) tree computes the same carry as the ripple---resting on
     the associativity of the generate/propagate carry operator.
 
+  * Use str.to_re (instead of str.to.re) in regular-expression construction, which is the standard
+    naming in SMTLib2. Thanks to May Torrence for reporting the discrepancy.
+
 ### Version 14.3, 2026-06-19
 
   * Improve fpRoundToIntegralH to remove redundant internal check. Thanks to Ryan Scott for the report.

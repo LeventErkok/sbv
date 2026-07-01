@@ -166,7 +166,7 @@ oneOf xs = Union [exactly [x] | x <- xs]
 -- | Recognize a newline. Also includes carriage-return and form-feed.
 --
 -- >>> newline
--- (re.union (str.to.re "\n") (str.to.re "\r") (str.to.re "\f"))
+-- (re.union (str.to_re "\n") (str.to_re "\r") (str.to_re "\f"))
 -- >>> prove $ \c -> c `match` newline .=> isSpaceL1 c
 -- Q.E.D.
 newline :: RegExp
@@ -175,7 +175,7 @@ newline = oneOf "\n\r\f"
 -- | Recognize a tab.
 --
 -- >>> tab
--- (str.to.re "\t")
+-- (str.to_re "\t")
 -- >>> prove $ \c -> c `match` tab .=> c .== literal '\t'
 -- Q.E.D.
 tab :: RegExp
@@ -281,7 +281,7 @@ decimal = KPlus digit
 -- | Recognize an octal number. Must have a prefix of the form @0o@\/@0O@.
 --
 -- >>> octal
--- (re.++ (re.union (str.to.re "0o") (str.to.re "0O")) (re.+ (re.range "0" "7")))
+-- (re.++ (re.union (str.to_re "0o") (str.to_re "0O")) (re.+ (re.range "0" "7")))
 -- >>> prove $ \(s :: SString) -> s `match` octal .=> sAny (.== take 2 s) ["0o", "0O"]
 -- Q.E.D.
 octal :: RegExp
@@ -290,7 +290,7 @@ octal = ("0o" + "0O") * KPlus octDigit
 -- | Recognize a hexadecimal number. Must have a prefix of the form @0x@\/@0X@.
 --
 -- >>> hexadecimal
--- (re.++ (re.union (str.to.re "0x") (str.to.re "0X")) (re.+ (re.union (re.range "0" "9") (re.range "a" "f") (re.range "A" "F"))))
+-- (re.++ (re.union (str.to_re "0x") (str.to_re "0X")) (re.+ (re.union (re.range "0" "9") (re.range "a" "f") (re.range "A" "F"))))
 -- >>> prove $ \(s :: SString) -> s `match` hexadecimal .=> sAny (.== take 2 s) ["0x", "0X"]
 -- Q.E.D.
 hexadecimal :: RegExp
