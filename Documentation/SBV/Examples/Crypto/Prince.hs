@@ -6,8 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Implementation of Prince encryption and decryption, following the spec
--- <https://en.wikipedia.org/wiki/Prince_(cipher)>
+-- Implementation of Prince encryption and decryption.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP              #-}
