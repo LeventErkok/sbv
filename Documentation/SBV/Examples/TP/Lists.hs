@@ -1490,7 +1490,7 @@ take_map f = do
                  (\(Forall @"xs" xs) (Forall @"n" n) -> n .<= 0 .=> take n (map f xs) .== map f (take n xs))
                  []
 
-    h2 <- induct "take_map.n > 0"
+    h2 <- inductWith cvc5 "take_map.n > 0"
                  (\(Forall @"xs" xs) (Forall @"n" n) -> n .> 0 .=> take n (map f xs) .== map f (take n xs)) $
                  \ih (x, xs) n -> [n .> 0] |- take n (map f (x .: xs))
                                            =: take n (f x .: map f xs)
