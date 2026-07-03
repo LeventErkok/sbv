@@ -267,11 +267,11 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Let "l"
-            (Let "n" (Val (- 1)) (Mul (Val (- 2)) (Add (Var "n") (Var "n"))))
-            (Let "d" (Val 4) (Add (Add (Var "d") (Var "d")) (Var "d"))))))
+[RECV] ((s0 (Let "t"
+            (Val 4)
+            (Let "l" (Val 7) (Add (Val (- 28281)) (Let "x" (Val 28293) (Var "x")))))))
 
-Got: (let l = (let n = -1 in (-2 * (n + n))) in (let d = 4 in ((d + d) + d)))
+Got: (let t = 4 in (let l = 7 in (-28281 + (let x = 28293 in x))))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess
