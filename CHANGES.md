@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 14.4, Not yet released
+### Version 14.4, 2026-07-03
 
   * Add `curry` and `uncurry` (for symbolic 2-tuples) and `curry3` and `uncurry3` (for
     symbolic 3-tuples) to `Data.SBV.Tuple`, mirroring `Prelude.curry`/`Prelude.uncurry`.
