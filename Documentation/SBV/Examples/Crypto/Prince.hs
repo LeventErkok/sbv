@@ -7,7 +7,7 @@
 -- Stability : experimental
 --
 -- Implementation of Prince encryption and decryption, following the spec
--- <https://eprint.iacr.org/2012/529.pdf>
+-- <https://en.wikipedia.org/wiki/Prince_(cipher)>
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP              #-}
