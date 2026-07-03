@@ -182,8 +182,8 @@ correctness = do
 -- We prove that tree correct against the ripple as follows. 'dot' is an
 -- associative monoid with identity 'idSec', and applying a section to an
 -- incoming carry ('applyC') is its action. The ripple carry is the /linear/
--- fold of 'dot' over the sections ('carryIsFold'), and a balanced tree of 'dot's
--- computes that /same/ fold by associativity ('treeIsFold'). Hence the parallel
+-- fold of 'dot' over the sections (@carryIsFold@), and a balanced tree of 'dot's
+-- computes that /same/ fold by associativity (@treeIsFold@). Hence the parallel
 -- tree and the sequential ripple agree.
 
 -- | Combine two adjacent @(generate, propagate)@ sections, lower-order first.
@@ -233,8 +233,8 @@ rcaCarry = smtFunction "rcaCarry"
 -- the carries can be gathered by a balanced /tree/ of 'dot's instead of a linear
 -- ripple, and this says every such tree computes the same carry.
 --
--- The proof rests on two pieces: 'carryIsFold' (the ripple carry /is/ the linear
--- fold of 'dot'), kept as its own reusable lemma, and 'foldlDotSplit' (the fold
+-- The proof rests on two pieces: @carryIsFold@ (the ripple carry /is/ the linear
+-- fold of 'dot'), kept as its own reusable lemma, and @foldlDotSplit@ (the fold
 -- distributes over append---the associativity law that licenses any tree).
 --
 -- >>> runTP lookaheadCorrect
@@ -353,7 +353,7 @@ lookaheadCorrect = do
 -- | The capstone, tying the lookahead machinery back to the actual adder:
 -- running the (foldable, tree-groupable) section 'carry' over the operands'
 -- generate\/propagate signals reproduces exactly the carry that the ripple adder
--- 'rca' threads. Combined with 'treeCarry', this says the adder's own carry can
+-- 'rca' threads. Combined with @treeCarry@, this says the adder's own carry can
 -- be computed by any balanced prefix tree.
 --
 -- >>> runTP lookaheadMatchesAdder
