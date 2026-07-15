@@ -16,6 +16,7 @@
 
 module Data.SBV.Utils.Numeric (
            fpMaxH, fpMinH, fp2fp, fpRemH, fpRoundToIntegralH, fpIsEqualObjectH, fpCompareObjectH, fpIsNormalizedH
+         , roundAway
          , floatToWord, wordToFloat, doubleToWord, wordToDouble
          , RoundingMode(..), smtRoundingMode
          ) where
@@ -124,6 +125,22 @@ fpCompareObjectH a b
 -- and also this is not simply the negation of isDenormalized!
 fpIsNormalizedH :: RealFloat a => a -> Bool
 fpIsNormalizedH x = not (isDenormalized x || isInfinite x || isNaN x || x == 0)
+
+-- | @'roundAway' x@ returns the nearest integer to @x@; the integer furthest
+-- away from @0@ if @x@ is equidistant between two integers.
+
+-- This implementation is taken directly from the @fp-ieee@ library. Somewhat
+-- surprisingly, 'roundAway' is not a method of the 'RealFrac' class!
+roundAway :: (RealFrac a, Integral b) => a -> b
+roundAway x = case properFraction x of
+                -- x == n + f, signum x == signum f, 0 <= abs f < 1
+                (n,r) -> if abs r < 0.5 then
+                           n
+                         else
+                           if r < 0 then
+                             n - 1
+                           else
+                             n + 1
 
 -------------------------------------------------------------------------
 -- Reinterpreting float/double as word32/64 and back. Here, we use the

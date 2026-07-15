@@ -58,7 +58,8 @@ module Data.SBV.Core.Model (
   , sDivides
   , solve
   , slet
-  , sRealToSInteger, sRealToSIntegerTruncate, label, observe, observeIf, sObserve
+  , sRealToSInteger, sRealToSIntegerTruncate, sRealToSIntegerRM
+  , label, observe, observeIf, sObserve
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCV, genMkSymVar
@@ -133,7 +134,7 @@ import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), defs2smt, prove, 
 import Data.SBV.SMT.SMT        (ThmResult(..), showModel)
 import Data.SBV.SMT.Utils      (debug)
 
-import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
+import Data.SBV.Utils.Numeric (fpIsEqualObjectH, roundAway)
 
 import Data.IORef (readIORef, writeIORef, modifyIORef')
 import System.Mem.StableName (makeStableName, hashStableName)
@@ -875,24 +876,125 @@ sSets = symbolics
 solve :: MonadSymbolic m => [SBool] -> m SBool
 solve = pure . sAnd
 
--- | Convert an SReal to an SInteger. That is, it computes the
--- largest integer @n@ that satisfies @sIntegerToSReal n <= r@
--- essentially giving us the @floor@.
+-- | Convert an SReal to an SInteger, @floor@ version. That is, it computes the
+-- largest integer @n@ that satisfies @sIntegerToSReal n <= r@.
 --
 -- For instance, @1.3@ will be @1@, but @-1.3@ will be @-2@.
 sRealToSInteger :: SReal -> SInteger
 sRealToSInteger x
   | Just i <- unliteral x, isExactRational i
-  = literal $ floor (toRational i)
-  | True
+  = literal $ floor $ toRational i
+  | otherwise
   = SBV (SVal KUnbounded (Right (cache y)))
   where y st = do xsv <- sbvToSV st x
                   newExpr st KUnbounded (SBVApp (KindCast KReal KUnbounded) [xsv])
 
+-- | Convert an SReal to an SInteger, @ceiling@ version. That is, it computes
+-- the smallest integer @n@ that satisfies @r <= sIntegerToSReal n@.
+--
+-- For instance, @1.3@ will be @2@, but @-1.3@ will be @-1@.
+sRealToSIntegerCeiling :: SReal -> SInteger
+sRealToSIntegerCeiling x
+  | Just i <- unliteral x, isExactRational i
+  = literal $ ceiling $ toRational i
+  | otherwise
+  = - sRealToSInteger (-x)
+
 -- | Convert an SReal to an SInteger, truncating version. Truncate simply chops of the
 -- fractional part, essentially rounding towards zero.
+--
+-- For instance, @1.3@ will be @1@, and @-1.3@ will be @-1@.
 sRealToSIntegerTruncate :: SReal -> SInteger
-sRealToSIntegerTruncate x = ite (x .>= 0) (sRealToSInteger x) (- sRealToSInteger (-x))
+sRealToSIntegerTruncate x
+  | Just i <- unliteral x, isExactRational i
+  = literal $ truncate $ toRational i
+  | otherwise
+  = ite (x .>= 0) (sRealToSInteger x) (sRealToSIntegerCeiling x)
+
+-- | Convert an SReal to an SInteger by converting to the nearest integer. If
+-- there is a tie (i.e., if the fractional component of the SReal is equal to
+-- 0.5), then round away from zero.
+--
+-- For instance:
+--
+-- * @1.3@ will be @1@
+-- * @1.5@ will be @2@ (because @abs 1 < abs 2@)
+-- * @1.7@ will be @2@
+-- * @2.3@ will be @2@
+-- * @2.5@ will be @3@ (because @abs 2 < abs 3@)
+-- * @2.7@ will be @3@
+-- * @-1.3@ will be @-1@
+-- * @-1.5@ will be @-2@ (because @abs (-1) < abs (-2)@)
+-- * @-1.7@ will be @-2@
+-- * @-2.3@ will be @-2@
+-- * @-2.5@ will be @-3@ (because @abs (-2) < abs (-3)@)
+-- * @-2.7@ will be @-3@
+sRealToSIntegerRoundAway :: SReal -> SInteger
+sRealToSIntegerRoundAway x
+  | Just i <- unliteral x, isExactRational i
+  = literal $ roundAway (toRational i)
+  | otherwise
+  = ite
+      (x .>= 0)
+      (sRealToSInteger        (x + half))
+      (sRealToSIntegerCeiling (x - half))
+  where
+    half :: SReal
+    half = 0.5
+
+-- | Convert an SReal to an SInteger by converting to the nearest integer. If
+-- there is a tie (i.e., if the fractional component of the SReal is equal to
+-- 0.5), then round to the nearest even integer.
+--
+-- For instance:
+--
+-- * @1.3@ will be @1@
+-- * @1.5@ will be @2@ (because @2@ is even)
+-- * @1.7@ will be @2@
+-- * @2.3@ will be @2@
+-- * @2.5@ will be @2@ (because @2@ is even)
+-- * @2.7@ will be @3@
+-- * @-1.3@ will be @-1@
+-- * @-1.5@ will be @-2@ (because @-2@ is even)
+-- * @-1.7@ will be @-2@
+-- * @-2.3@ will be @-2@
+-- * @-2.5@ will be @-2@ (because @-2@) is even)
+-- * @-2.7@ will be @-3@
+sRealToSIntegerRoundToEven :: SReal -> SInteger
+sRealToSIntegerRoundToEven x
+  | Just i <- unliteral x, isExactRational i
+  = literal $ round $ toRational i
+  | otherwise
+  = ite (diff .< half) lo $
+    ite (diff .> half) hi $
+    ite (sDivides 2 lo) lo hi
+  where
+    half :: SReal
+    half = 0.5
+
+    lo, hi :: SInteger
+    lo = sRealToSInteger x
+    hi = lo+1
+
+    diff :: SReal
+    diff = x - sFromIntegral lo
+
+-- | Convert an 'SReal' to an 'SInteger' according to the supplied
+-- 'SRoundingMode'.
+--
+-- Note that we re-use the 'SRoundingMode' type here, even though
+-- 'SRoundingMode' is normally associated with floating-point operations. The
+-- floating-point resemblence is superficial, as this function does not use any
+-- floating-point functionality behind the scenes.
+sRealToSIntegerRM :: SRoundingMode -> SReal -> SInteger
+sRealToSIntegerRM rm x =
+  sCaseRoundingMode
+    (sRealToSIntegerRoundToEven x)
+    (sRealToSIntegerRoundAway x)
+    (sRealToSIntegerCeiling x)
+    (sRealToSInteger x)
+    (sRealToSIntegerTruncate x)
+    rm
 
 -- | label: Label the result of an expression. This is essentially a no-op, but useful as it generates a comment in the generated C/SMT-Lib code.
 -- Note that if the argument is a constant, then the label is dropped completely, per the usual constant folding strategy. Compare this to 'observe'
