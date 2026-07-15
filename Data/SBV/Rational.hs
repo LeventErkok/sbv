@@ -17,12 +17,15 @@
 module Data.SBV.Rational (
     -- * Constructing rationals
       (.%)
-  ) where
+    -- * Rounding rationals
+    , sRationalToSIntegerRM
+    ) where
 
 import qualified Data.Ratio as R
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
+import Data.SBV.Utils.Numeric (roundAway)
 
 infixl 7 .%
 
@@ -41,6 +44,122 @@ top .% bot
  where res st = do t <- sbvToSV st top
                    b <- sbvToSV st bot
                    newExpr st KRational $ SBVApp RationalConstructor [t, b]
+
+-- | Convert an SRational to an SInteger, @floor@ version. That is, it computes
+-- the largest integer @n@ that satisfies @(n .% 1) <= r@.
+--
+-- For instance, @1.3@ will be @1@, but @-1.3@ will be @-2@.
+sRationalToSIntegerFloor :: SRational -> SInteger
+-- NB: We use @sDiv@ below because it implements division that truncates
+-- towards negative infinity, which is exactly what @floor@ needs.
+sRationalToSIntegerFloor = lift1 floor (uncurry sDiv)
+
+-- | Convert an SRational to an SInteger, @ceiling@ version. That is, it
+-- computes the smallest integer @n@ that satisfies @r <= (n .% 1)@.
+--
+-- For instance, @1.3@ will be @2@, but @-1.3@ will be @-1@.
+sRationalToSIntegerCeiling :: SRational -> SInteger
+sRationalToSIntegerCeiling x
+  | Just i <- unliteral x
+  = literal $ ceiling i
+  | otherwise
+  = - (sRationalToSIntegerFloor (- x))
+
+-- | Convert an SRational to an SInteger, truncating version. Truncate simply
+-- chops of the fractional part, essentially rounding towards zero.
+--
+-- For instance, @1.3@ will be @1@, and @-1.3@ will be @-1@.
+sRationalToSIntegerTruncate :: SRational -> SInteger
+sRationalToSIntegerTruncate x
+  | Just i <- unliteral x
+  = literal $ truncate i
+  | otherwise
+  = ite (x .>= 0) (sRationalToSIntegerFloor x) (sRationalToSIntegerCeiling x)
+
+-- | Convert an SRational to an SInteger by converting to the nearest integer.
+-- If there is a tie (i.e., if the fractional component of the SRational is
+-- equal to 0.5), then round away from zero.
+--
+-- For instance:
+--
+-- * @1.3@ will be @1@
+-- * @1.5@ will be @2@ (because @abs 1 < abs 2@)
+-- * @1.7@ will be @2@
+-- * @2.3@ will be @2@
+-- * @2.5@ will be @3@ (because @abs 2 < abs 3@)
+-- * @2.7@ will be @3@
+-- * @-1.3@ will be @-1@
+-- * @-1.5@ will be @-2@ (because @abs (-1) < abs (-2)@)
+-- * @-1.7@ will be @-2@
+-- * @-2.3@ will be @-2@
+-- * @-2.5@ will be @-3@ (because @abs (-2) < abs (-3)@)
+-- * @-2.7@ will be @-3@
+sRationalToSIntegerRoundAway :: SRational -> SInteger
+sRationalToSIntegerRoundAway x
+  | Just i <- unliteral x
+  = literal $ roundAway i
+  | otherwise
+  = ite
+      (x .>= 0)
+      (sRationalToSIntegerFloor   (x + half))
+      (sRationalToSIntegerCeiling (x - half))
+  where
+    half :: SRational
+    half = 0.5
+
+-- | Convert an SRational to an SInteger by converting to the nearest integer.
+-- If there is a tie (i.e., if the fractional component of the SRational is
+-- equal to 0.5), then round to the nearest even integer.
+--
+-- For instance:
+--
+-- * @1.3@ will be @1@
+-- * @1.5@ will be @2@ (because @2@ is even)
+-- * @1.7@ will be @2@
+-- * @2.3@ will be @2@
+-- * @2.5@ will be @2@ (because @2@ is even)
+-- * @2.7@ will be @3@
+-- * @-1.3@ will be @-1@
+-- * @-1.5@ will be @-2@ (because @-2@ is even)
+-- * @-1.7@ will be @-2@
+-- * @-2.3@ will be @-2@
+-- * @-2.5@ will be @-2@ (because @-2@) is even)
+-- * @-2.7@ will be @-3@
+sRationalToSIntegerRoundToEven :: SRational -> SInteger
+sRationalToSIntegerRoundToEven x
+  | Just i <- unliteral x
+  = literal $ round i
+  | otherwise
+  = ite (diff .< half) lo $
+    ite (diff .> half) hi $
+    ite (sDivides 2 lo) lo hi
+  where
+    half :: SRational
+    half = 0.5
+
+    lo, hi :: SInteger
+    lo = sRationalToSIntegerFloor x
+    hi = lo+1
+
+    diff :: SRational
+    diff = x - (lo .% 1)
+
+-- | Convert an 'SRational' to an 'SInteger' according to the supplied
+-- 'SRoundingMode'.
+--
+-- Note that we re-use the 'SRoundingMode' type here, even though
+-- 'SRoundingMode' is normally associated with floating-point operations. The
+-- floating-point resemblence is superficial, as this function does not use any
+-- floating-point functionality behind the scenes.
+sRationalToSIntegerRM :: SRoundingMode -> SRational -> SInteger
+sRationalToSIntegerRM rm x =
+  sCaseRoundingMode
+    (sRationalToSIntegerRoundToEven x)
+    (sRationalToSIntegerRoundAway x)
+    (sRationalToSIntegerCeiling x)
+    (sRationalToSIntegerFloor x)
+    (sRationalToSIntegerTruncate x)
+    rm
 
 -- | Get the numerator. Note that this is always symbolic since we don't have a concrete representation.
 -- Furthermore this is only used internally and is not exported to the user, since it is not canonical.
