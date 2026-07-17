@@ -3250,7 +3250,18 @@ instance {-# OVERLAPPABLE #-} ToSizedCstr arg => ToSizedBV arg where toSized = e
 --
 -- Note that our instances implement this law even when @x@ is @0@ itself.
 --
--- NB. 'quot' truncates toward zero, while 'div' truncates toward negative infinity.
+-- NB. 'sQuot' truncates toward zero (i.e., it implements truncating division),
+-- while 'sDiv' truncates toward negative infinity (i.e., it implements
+-- flooring division). These match the conventions of Haskell's 'quot' and
+-- 'div' functions, respectively.
+--
+-- Similarly, 'sRem' and 'sMod' match the conventions of Haskell's 'rem' and
+-- 'mod' functions, respectively. That is:
+--
+-- @
+--      (x `sQuot` y)*y + (x `sRem` y) .== x
+--      (x `sDiv`  y)*y + (x `sMod` y) .== x
+-- @
 --
 -- === C code generation of division operations
 --
