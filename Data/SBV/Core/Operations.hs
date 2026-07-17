@@ -338,10 +338,17 @@ svQuot x y
 
 -- | Remainder: Overloaded operation whose meaning depends on the kind at which
 -- it is used: For unbounded integers, it corresponds to the SMT-Lib
--- "mod" operator (always non-negative). For unsigned bitvectors, it
--- is "bvurem"; and for signed bitvectors it is "bvsrem", which rounds
--- toward zero (sign of remainder matches that of @x@). Division by 0 is
--- defined s.t. @x/0 = 0@, which holds even when @x@ itself is @0@.
+-- "mod" operator ("Euclidean" modular division, which always has a
+-- non-negative remainder). For unsigned bitvectors, it is "bvurem"; and for
+-- signed bitvectors it is "bvsrem", which rounds toward zero (sign of
+-- remainder matches that of @x@). Division by 0 is defined s.t. @x/0 = 0@,
+-- which holds even when @x@ itself is @0@.
+--
+-- Note that despite the similarities in their names, the semantics of 'svRem'
+-- are different from those of the higher-level 'sRem' function when dealing
+-- with unbounded integers. 'svRem' implements Euclidean modular division
+-- (which always has a non-negative remainder), whereas 'sRem' implements
+-- truncating modular division (which may have a negative remainder).
 svRem :: SVal -> SVal -> SVal
 svRem x y
   | not isInteger && isConcreteZero x = x
