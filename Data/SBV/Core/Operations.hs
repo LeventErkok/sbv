@@ -363,7 +363,7 @@ svRem x y
     rem' a b | isInteger = mod a (abs b)
              | True      = rem a b
 
--- | Combination of quot and rem
+-- | Combination of 'svQuot' and 'svRem'
 svQuotRem :: SVal -> SVal -> (SVal, SVal)
 svQuotRem x y = (x `svQuot` y, x `svRem` y)
 
