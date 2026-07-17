@@ -316,6 +316,12 @@ svDecrement x = svAddConstant x (-1 :: Integer)
 -- non-negative remainder). For unsigned bitvectors, it is "bvudiv";
 -- and for signed bitvectors it is "bvsdiv", which rounds toward zero.
 -- Note that this variant does not respect the division/reminder by 0. That's handled at the SBV level.
+--
+-- Note that despite the similarities in their names, the semantics of 'svQuot'
+-- are different from those of the higher-level 'sQuot' function when dealing
+-- with unbounded integers. 'svQuot' implements Euclidean division (which
+-- always has a non-negative remainder), whereas 'sQuot' implements truncating
+-- division (which may have a negative remainder).
 svQuot :: SVal -> SVal -> SVal
 svQuot x y
   | not isInteger && isConcreteZero x = x
