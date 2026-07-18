@@ -242,7 +242,7 @@ svSignum a
 svDivide :: SVal -> SVal -> SVal
 svDivide = liftSym2 (mkSymOp Quot) [rationalCheck] (/) idiv (/) (/) (/) (/)
    where idiv x 0 = x
-         idiv x y = x `div` y
+         idiv x y = x `quot` y
 
 -- | Divides predicate
 svDivides :: Integer -> SVal -> SVal
