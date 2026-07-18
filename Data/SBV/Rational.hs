@@ -62,7 +62,7 @@ sRationalToSIntegerCeiling :: SRational -> SInteger
 sRationalToSIntegerCeiling x
   | Just i <- unliteral x
   = literal $ ceiling i
-  | otherwise
+  | True
   = - (sRationalToSIntegerFloor (- x))
 
 -- | Convert an SRational to an SInteger, truncating version. Truncate simply
@@ -73,7 +73,7 @@ sRationalToSIntegerTruncate :: SRational -> SInteger
 sRationalToSIntegerTruncate x
   | Just i <- unliteral x
   = literal $ truncate i
-  | otherwise
+  | True
   = ite (x .>= 0) (sRationalToSIntegerFloor x) (sRationalToSIntegerCeiling x)
 
 -- | Convert an SRational to an SInteger by converting to the nearest integer.
@@ -98,7 +98,7 @@ sRationalToSIntegerRoundAway :: SRational -> SInteger
 sRationalToSIntegerRoundAway x
   | Just i <- unliteral x
   = literal $ roundAway i
-  | otherwise
+  | True
   = ite
       (x .>= 0)
       (sRationalToSIntegerFloor   (x + half))
@@ -129,7 +129,7 @@ sRationalToSIntegerRoundToEven :: SRational -> SInteger
 sRationalToSIntegerRoundToEven x
   | Just i <- unliteral x
   = literal $ round i
-  | otherwise
+  | True
   = ite (diff .< half) lo $
     ite (diff .> half) hi $
     ite (sDivides 2 lo) lo hi

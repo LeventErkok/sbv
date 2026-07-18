@@ -884,7 +884,7 @@ sRealToSInteger :: SReal -> SInteger
 sRealToSInteger x
   | Just i <- unliteral x, isExactRational i
   = literal $ floor $ toRational i
-  | otherwise
+  | True
   = SBV (SVal KUnbounded (Right (cache y)))
   where y st = do xsv <- sbvToSV st x
                   newExpr st KUnbounded (SBVApp (KindCast KReal KUnbounded) [xsv])
@@ -897,7 +897,7 @@ sRealToSIntegerCeiling :: SReal -> SInteger
 sRealToSIntegerCeiling x
   | Just i <- unliteral x, isExactRational i
   = literal $ ceiling $ toRational i
-  | otherwise
+  | True
   = - sRealToSInteger (-x)
 
 -- | Convert an SReal to an SInteger, truncating version. Truncate simply chops of the
@@ -908,7 +908,7 @@ sRealToSIntegerTruncate :: SReal -> SInteger
 sRealToSIntegerTruncate x
   | Just i <- unliteral x, isExactRational i
   = literal $ truncate $ toRational i
-  | otherwise
+  | True
   = ite (x .>= 0) (sRealToSInteger x) (sRealToSIntegerCeiling x)
 
 -- | Convert an SReal to an SInteger by converting to the nearest integer. If
@@ -933,7 +933,7 @@ sRealToSIntegerRoundAway :: SReal -> SInteger
 sRealToSIntegerRoundAway x
   | Just i <- unliteral x, isExactRational i
   = literal $ roundAway (toRational i)
-  | otherwise
+  | True
   = ite
       (x .>= 0)
       (sRealToSInteger        (x + half))
@@ -964,7 +964,7 @@ sRealToSIntegerRoundToEven :: SReal -> SInteger
 sRealToSIntegerRoundToEven x
   | Just i <- unliteral x, isExactRational i
   = literal $ round $ toRational i
-  | otherwise
+  | True
   = ite (diff .< half) lo $
     ite (diff .> half) hi $
     ite (sDivides 2 lo) lo hi
