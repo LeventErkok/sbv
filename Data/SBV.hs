@@ -229,10 +229,12 @@ module Data.SBV (
   , SFPQuad, FPQuad
   , fpFromInteger
   -- ** Rationals
-  , SRational, (.%)
+  , SRational, (.%), sRationalToSIntegerRM
   -- ** Algebraic reals
   -- $algReals
-  , SReal, AlgReal(..), sRealToSInteger, algRealToRational, RealPoint(..), realPoint, RationalCV(..)
+  , SReal, AlgReal(..)
+  , sRealToSInteger, sRealToSIntegerRM
+  , algRealToRational, RealPoint(..), realPoint, RationalCV(..)
   -- ** Characters, Strings and Regular Expressions
   -- $strings
   , SChar, SString
@@ -329,7 +331,7 @@ module Data.SBV (
   -- * IEEE-floating point numbers
   , IEEEFloating(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
   -- ** Rounding modes
-  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero, sRNE, sRNA, sRTP, sRTN, sRTZ
+  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero, sRNE, sRNA, sRTP, sRTN, sRTZ, sCaseRoundingMode
   -- ** Conversion to/from floats
   -- $conversionNote
   , IEEEFloatConvertible(..)
