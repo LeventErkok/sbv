@@ -1,6 +1,20 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 14.5, Not yet released
+
+  * Add `sRealToSIntegerRM` and `sRationalToSIntegerRM`, which convert a real/rational to an
+    integer using a symbolic rounding-mode argument, along with the helper `sCaseRoundingMode`
+    for dispatching on a symbolic `SRoundingMode`. Thanks to Ryan Scott for the implementation.
+
+  * Fix `svQuot`/integer division in `Data.SBV.Dynamic`, which was using flooring (`div`)
+    instead of truncating (`quot`) division on concrete integers. Thanks to Ryan Scott for the report.
+
+  * Improve the Haddocks for `sQuot`, `sDiv`, `sRem`, `sMod`, and related functions, clarifying
+    the truncating- vs. flooring-division distinction and documenting that the `Data.SBV.Dynamic`
+    operations `svQuot`, `svRem`, and `svQuotRem` behave differently from their `s`-prefixed
+    counterparts on unbounded integers. Thanks to Ryan Scott for the implementation.
+
 ### Version 14.4, 2026-07-03
 
   * Add `curry` and `uncurry` (for symbolic 2-tuples) and `curry3` and `uncurry3` (for
