@@ -85,6 +85,7 @@ tests =
      ++ genLists
      ++ genEnums
      ++ misc
+     ++ realRatConvs
      )
 
 genExtends :: [TestTree]
@@ -921,6 +922,53 @@ misc = [ testCase "misc-t1" $ assertIsSat t1
  where -- https://stackoverflow.com/questions/69033969/trivial-rationals-problems-without-variables-in-sbv-solver-in-haskell
        t1 = do _xs <- sRationals []
                constrain $ (5.%1:: SRational) .<= (5.%1:: SRational)
+realRatConvs :: [TestTree]
+realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSIntegerRM
+               , testCase "realConv2" $ assertIsThm realFloorCorrect
+               , testCase "realConv3" $ assertIsThm realFloorCorrect2
+               , testCase "realConv4" $ assertIsThm realCeilingCorrect
+               , testCase "realConv5" $ assertIsThm realCeilingCorrect2
+               , testCase "ratConv1"  $ assertIsThm $ respectsLe sRationalToSIntegerRM
+               , testCase "ratConv2"  $ assertIsThm rationalFloorCorrect
+               , testCase "ratConv3"  $ assertIsThm rationalFloorCorrect2
+               , testCase "ratConv4"  $ assertIsThm rationalCeilingCorrect
+               , testCase "ratConv5"  $ assertIsThm rationalCeilingCorrect2
+               ]
+ where -- (x <= y) ==> (round x <= round y)
+       respectsLe :: OrdSymbolic a => (SRoundingMode -> a -> SInteger) -> SRoundingMode -> a -> a -> SBool
+       respectsLe rnd rm x y = (x .<= y) .=> (rnd rm x .<= rnd rm y)
+
+       -- floor x <= x
+       realFloorCorrect :: SReal -> SBool
+       realFloorCorrect x = sFromIntegral (sRealToSIntegerRM sRTN x) .<= x
+
+       -- (x <= y) ==> (x <= floor y) [where x is an Integer]
+       realFloorCorrect2 :: SInteger -> SReal -> SBool
+       realFloorCorrect2 x y = (sFromIntegral x .<= y) .=> (x .<= sRealToSIntegerRM sRTN y)
+
+       -- ceiling x >= x
+       realCeilingCorrect :: SReal -> SBool
+       realCeilingCorrect x = sFromIntegral (sRealToSIntegerRM sRTP x) .>= x
+
+       -- (x >= y) ==> (x >= ceiling y) [where x is an integer]
+       realCeilingCorrect2 :: SInteger -> SReal -> SBool
+       realCeilingCorrect2 x y = (sFromIntegral x .>= y) .=> (x .>= sRealToSIntegerRM sRTP y)
+
+       -- floor x <= x
+       rationalFloorCorrect :: SRational -> SBool
+       rationalFloorCorrect x = (sRationalToSIntegerRM sRTN x .% 1) .<= x
+
+       -- (x <= y) ==> (x <= floor y) [where x is an integer]
+       rationalFloorCorrect2 :: SInteger -> SRational -> SBool
+       rationalFloorCorrect2 x y = ((x .% 1) .<= y) .=> (x .<= sRationalToSIntegerRM sRTN y)
+
+       -- (x >= y) ==> (x >= ceiling y) [where x is an integer]
+       rationalCeilingCorrect2 :: SInteger -> SRational -> SBool
+       rationalCeilingCorrect2 x y = ((x .% 1) .>= y) .=> (x .>= sRationalToSIntegerRM sRTP y)
+
+       -- ceiling x >= x
+       rationalCeilingCorrect :: SRational -> SBool
+       rationalCeilingCorrect x = (sRationalToSIntegerRM sRTP x .% 1) .>= x
 
 -- Test these with make test TGT=sEnum_
 genEnums :: [TestTree]
