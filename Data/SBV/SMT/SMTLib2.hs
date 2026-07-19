@@ -1251,13 +1251,13 @@ handleADT caps op args = case args of
         ascribe nm k = "(as " <> nm <> " " <> smtType k <> ")"
 
 -- | Handle a kind-cast. This function only needs to cover the conversions that the type-safe API can actually
--- produce; the dynamic 'svFromIntegral' can request other combinations, which we reject with an error.
+-- produce; the dynamic 'Data.SBV.Dynamic.svFromIntegral' can request other combinations, which we reject with an error.
 --
 -- The type-safe generators of a 'KindCast' are:
 --
---     * 'sFromIntegral' : @Integral a => SBV a -> SBV b@. The source is 'Integral', so it is always 'KBounded'
+--     * 'Data.SBV.sFromIntegral' : @Integral a => SBV a -> SBV b@. The source is 'Integral', so it is always 'KBounded'
 --       or 'KUnbounded'; the target is any @Num@/@SymVal@ kind (bounded, unbounded, real, rational, or float/double/FP).
---     * 'sRealToSInteger': only ever emits @KReal -> KUnbounded@.
+--     * 'Data.SBV.sRealToSInteger': only ever emits @KReal -> KUnbounded@.
 --     * shift-amount adjustment: only ever emits @KBounded -> KBounded@.
 --
 -- So the reachable (from, to) pairs are exactly:
@@ -1266,8 +1266,8 @@ handleADT caps op args = case args of
 --     * @KUnbounded -> {KBounded, KUnbounded, KReal, KRational, KFloat/KDouble/KFP}@
 --     * @KReal      -> KUnbounded@
 --
--- All of these are handled below (float/double/FP targets are routed through 'handleFPCast' via 'tryFPCast'). Note
--- that a real or rational can never be a source (reals only appear via 'sRealToSInteger', which targets 'KUnbounded';
+-- All of these are handled below (float/double/FP targets are routed through 'handleFPCast' via @tryFPCast@). Note
+-- that a real or rational can never be a source (reals only appear via 'Data.SBV.sRealToSInteger', which targets 'KUnbounded';
 -- rationals are not 'Integral'), so those directions are unreachable and left to 'error'.
 handleKindCast :: Kind -> Kind -> Text -> Text
 handleKindCast kFrom kTo a

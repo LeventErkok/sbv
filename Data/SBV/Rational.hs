@@ -192,9 +192,8 @@ instance Num SRational where
 -- we flip the signs of both parts when needed. Following the SBV convention for reals,
 -- division by zero is defined to be zero.
 --
--- We mark this 'OVERLAPPING' as it takes precedence over the generic @'Fractional' ('SBV' a)@
--- instance in "Data.SBV.Core.Model", which would otherwise try to translate rational division
--- as an SMTLib @Quot@ (which doesn't exist for our rationals).
+-- We mark this @OVERLAPPING@ as it takes precedence over the generic instance in "Data.SBV.Core.Model",
+-- which would otherwise try to translate rational division as an SMTLib @Quot@ (which doesn't exist for our rationals).
 instance {-# OVERLAPPING #-} Fractional SRational where
   fromRational = literal . fromRational
   a / b        = ite (b .== 0) 0 (lift2 (/) divRat a b)

@@ -322,9 +322,9 @@ svDecrement x = svAddConstant x (-1 :: Integer)
 -- Note that this variant does not respect the division/reminder by 0. That's handled at the SBV level.
 --
 -- Note that despite the similarities in their names, the semantics of 'svQuot'
--- are different from those of the higher-level 'sQuot' function when dealing
+-- are different from those of the higher-level 'Data.SBV.sQuot' function when dealing
 -- with unbounded integers. 'svQuot' implements Euclidean division (which
--- always has a non-negative remainder), whereas 'sQuot' implements truncating
+-- always has a non-negative remainder), whereas 'Data.SBV.sQuot' implements truncating
 -- division (which may have a negative remainder).
 svQuot :: SVal -> SVal -> SVal
 svQuot x y
@@ -349,9 +349,9 @@ svQuot x y
 -- which holds even when @x@ itself is @0@.
 --
 -- Note that despite the similarities in their names, the semantics of 'svRem'
--- are different from those of the higher-level 'sRem' function when dealing
+-- are different from those of the higher-level 'Data.SBV.sRem' function when dealing
 -- with unbounded integers. 'svRem' implements Euclidean modular division
--- (which always has a non-negative remainder), whereas 'sRem' implements
+-- (which always has a non-negative remainder), whereas 'Data.SBV.sRem' implements
 -- truncating modular division (which may have a negative remainder).
 svRem :: SVal -> SVal -> SVal
 svRem x y
