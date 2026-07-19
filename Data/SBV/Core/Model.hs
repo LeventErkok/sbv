@@ -990,10 +990,10 @@ sRealToSIntegerRM :: SRoundingMode -> SReal -> SInteger
 sRealToSIntegerRM rm x =
   sCaseRoundingMode
     (sRealToSIntegerRoundToEven x)
-    (sRealToSIntegerRoundAway x)
-    (sRealToSIntegerCeiling x)
-    (sRealToSInteger x)
-    (sRealToSIntegerTruncate x)
+    (sRealToSIntegerRoundAway   x)
+    (sRealToSIntegerCeiling     x)
+    (sRealToSInteger            x)
+    (sRealToSIntegerTruncate    x)
     rm
 
 -- | label: Label the result of an expression. This is essentially a no-op, but useful as it generates a comment in the generated C/SMT-Lib code.
