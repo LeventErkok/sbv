@@ -238,11 +238,15 @@ svSignum a
         z = SVal k $ Left $ mkConstCV k (0 :: Integer)
         i = SVal k $ Left $ mkConstCV k (1 :: Integer)
 
--- | Division.
+-- | Division. For integers, this behaves like 'svQuot', except that this
+-- ensures @'svQuot' a 0 = a@.
 svDivide :: SVal -> SVal -> SVal
-svDivide = liftSym2 (mkSymOp Quot) [rationalCheck] (/) idiv (/) (/) (/) (/)
-   where idiv x 0 = x
-         idiv x y = x `quot` y
+svDivide x y = liftSym2 (mkSymOp Quot) [rationalCheck] (/) idiv (/) (/) (/) (/) x y
+   where isInteger = kindOf x == KUnbounded
+
+         idiv a 0 = a
+         idiv a b | isInteger = a `divEucl` b
+                  | True      = a `quot` b
 
 -- | Divides predicate
 svDivides :: Integer -> SVal -> SVal
