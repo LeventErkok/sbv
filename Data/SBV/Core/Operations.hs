@@ -75,7 +75,7 @@ import Data.SBV.Core.SizedFloats
 
 import Data.Ratio
 
-import Data.SBV.Utils.Numeric (RoundingMode(..), {-fp2fp,-} fpIsEqualObjectH, fpIsNormalizedH, fpMaxH, fpMinH, fpRemH, fpRoundToIntegralH, floatToWord, doubleToWord, wordToFloat, wordToDouble)
+import Data.SBV.Utils.Numeric (RoundingMode(..), divEucl, modEucl, {-fp2fp,-} fpIsEqualObjectH, fpIsNormalizedH, fpMaxH, fpMinH, fpRemH, fpRoundToIntegralH, floatToWord, doubleToWord, wordToFloat, wordToDouble)
 
 import LibBF
 
@@ -333,7 +333,7 @@ svQuot x y
   where
     isInteger = kindOf x == KUnbounded
 
-    quot' a b | isInteger = div a (abs b) * signum b
+    quot' a b | isInteger = divEucl a b
               | True      = quot a b
 
 -- | Remainder: Overloaded operation whose meaning depends on the kind at which
@@ -360,7 +360,7 @@ svRem x y
   where
     isInteger = kindOf x == KUnbounded
 
-    rem' a b | isInteger = mod a (abs b)
+    rem' a b | isInteger = modEucl a b
              | True      = rem a b
 
 -- | Combination of 'svQuot' and 'svRem'
