@@ -935,6 +935,10 @@ realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSInteger
                , testCase "ratConv4"  $ assertIsThm rationalCeilingCorrect
                , testCase "ratConv5"  $ assertIsThm rationalCeilingCorrect2
 
+               -- z3 struggles with this in the compliant mode so we turn compliance off for these two
+               , testCase "ratRealRoundTrip1" $ assert $ isTheoremWith z3{smtLib2Compliant = False} ratToRealToRat
+               , testCase "ratRealRoundTrip2" $ assert $ isTheoremWith z3{smtLib2Compliant = False} realToRatToReal
+
                , testCase "convertCov1" $ assertIsSat (\x y -> sFromIntegral @Word8   @Integer  x .== y)
                , testCase "convertCov2" $ assertIsSat (\x y -> sFromIntegral @Integer @Word8    x .== y)
                , testCase "convertCov3" $ assertIsSat (\x y -> sFromIntegral @Integer @AlgReal  x .== y)
@@ -980,6 +984,16 @@ realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSInteger
        -- ceiling x >= x
        rationalCeilingCorrect :: SRational -> SBool
        rationalCeilingCorrect x = (sRationalToSIntegerRM sRTP x .% 1) .>= x
+
+       -- rational -> real -> rational is the identity: no precision is lost.
+       ratToRealToRat :: SRational -> SBool
+       ratToRealToRat x = sRealToSRational (sRationalToSReal x) .== x
+
+       -- real -> rational -> real is the identity. Recall that sRealToSRational
+       -- implicitly asserts that its argument is rational, so this holds for
+       -- every (well-defined) real here.
+       realToRatToReal :: SReal -> SBool
+       realToRatToReal x = sRationalToSReal (sRealToSRational x) .== x
 
 -- Test these with make test TGT=sEnum_
 genEnums :: [TestTree]

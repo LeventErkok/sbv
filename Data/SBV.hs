@@ -230,6 +230,7 @@ module Data.SBV (
   , fpFromInteger
   -- ** Rationals
   , SRational, (.%), sRationalToSIntegerRM
+  , sRationalToSReal, sRealToSRational
   -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal(..)

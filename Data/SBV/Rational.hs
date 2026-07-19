@@ -19,12 +19,16 @@ module Data.SBV.Rational (
       (.%)
     -- * Rounding rationals
     , sRationalToSIntegerRM
+    -- * Converting between rationals and reals
+    , sRationalToSReal, sRealToSRational
     ) where
 
 import qualified Data.Ratio as R
 
+import Data.SBV.Core.AlgReals (isExactRational)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
+import Data.SBV.Core.Symbolic (newInternalVariable)
 import Data.SBV.Utils.Numeric (roundAway)
 
 infixl 7 .%
@@ -160,6 +164,35 @@ sRationalToSIntegerRM rm x =
     (sRationalToSIntegerFloor x)
     (sRationalToSIntegerTruncate x)
     rm
+
+-- | Convert an 'SRational' to an 'SReal'. This conversion is always exact: the
+-- rational @t .% b@ maps to the real @t \/ b@. (Recall that denominators are
+-- always positive, so no division-by-zero can arise here.)
+sRationalToSReal :: SRational -> SReal
+sRationalToSReal = lift1 fromRational (\(t, b) -> sFromIntegral t / sFromIntegral b)
+
+-- | Convert an 'SReal' to an 'SRational'. The conversion is /exact/ for reals
+-- that are rational: a concrete rational is converted directly, while a
+-- symbolic (or non-literal) real is handled by introducing a fresh symbolic
+-- rational @r@ and constraining @'sRationalToSReal' r '.==' x@. Thus, whenever
+-- the input real is representable as the ratio of two integers, the result
+-- denotes exactly that same value---no precision is lost.
+--
+-- Note the caveat implied by this encoding: if the input real is /irrational/
+-- (i.e., not expressible as a ratio of two integers), then the introduced
+-- equality constraint is unsatisfiable, which renders the entire problem
+-- @UNSAT@. In other words, using this function is an implicit assertion that
+-- its argument is a rational number.
+sRealToSRational :: SReal -> SRational
+sRealToSRational x
+  | Just v <- unliteral x, isExactRational v
+  = literal (toRational v)
+  | True
+  = SBV $ SVal KRational $ Right $ cache res
+  where res st = do n <- newInternalVariable st KRational
+                    let r = SBV (SVal KRational (Right (cache (const (pure n))))) :: SRational
+                    internalConstraint st False [] $ unSBV $ sRationalToSReal r .== x
+                    pure n
 
 -- | Get the numerator. Note that this is always symbolic since we don't have a concrete representation.
 -- Furthermore this is only used internally and is not exported to the user, since it is not canonical.

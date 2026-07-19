@@ -3,6 +3,11 @@
 
 ### Version 14.5, Not yet released
 
+  * Add `sRationalToSReal` and `sRealToSRational`, converting between symbolic rationals and
+    reals. The rational-to-real direction is always exact. The real-to-rational direction is
+    exact for reals that are rational (introducing a defining constraint for symbolic inputs);
+    note that applying it to an irrational value renders the problem unsatisfiable.
+
   * Add the `smtLib2Compliant` field to `SMTConfig` (default: `True`), controlling whether SBV
     asks the solver to be strictly SMTLib2 compliant. Turning it off can help with solvers (e.g.,
     z3) that otherwise mishandle overloaded operators when integers and reals are mixed in the
