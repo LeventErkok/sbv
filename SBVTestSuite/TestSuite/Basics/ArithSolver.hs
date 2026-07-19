@@ -928,11 +928,21 @@ realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSInteger
                , testCase "realConv3" $ assertIsThm realFloorCorrect2
                , testCase "realConv4" $ assertIsThm realCeilingCorrect
                , testCase "realConv5" $ assertIsThm realCeilingCorrect2
+
                , testCase "ratConv1"  $ assertIsThm $ respectsLe sRationalToSIntegerRM
                , testCase "ratConv2"  $ assertIsThm rationalFloorCorrect
                , testCase "ratConv3"  $ assertIsThm rationalFloorCorrect2
                , testCase "ratConv4"  $ assertIsThm rationalCeilingCorrect
                , testCase "ratConv5"  $ assertIsThm rationalCeilingCorrect2
+
+               , testCase "convertCov1" $ assertIsSat (\x y -> sFromIntegral @Word8   @Integer  x .== y)
+               , testCase "convertCov2" $ assertIsSat (\x y -> sFromIntegral @Integer @Word8    x .== y)
+               , testCase "convertCov3" $ assertIsSat (\x y -> sFromIntegral @Integer @AlgReal  x .== y)
+               , testCase "convertCov4" $ assertIsSat (\x y -> sFromIntegral @Integer @Float    x .== y)
+               , testCase "convertCov5" $ assertIsSat (\x y -> sFromIntegral @Word8   @Float    x .== y)
+               , testCase "convertCov6" $ assertIsSat (\x y -> sFromIntegral @Integer @Rational x .== y)
+               , testCase "convertCov7" $ assertIsSat (\x y -> sFromIntegral @Word8   @AlgReal  x .== y)
+               , testCase "convertCov8" $ assertIsSat (\x y -> sFromIntegral @Word8   @Rational x .== y)
                ]
  where -- (x <= y) ==> (round x <= round y)
        respectsLe :: OrdSymbolic a => (SRoundingMode -> a -> SInteger) -> SRoundingMode -> a -> a -> SBool
