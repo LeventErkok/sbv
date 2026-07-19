@@ -185,6 +185,24 @@ instance Num SRational where
   negate         = lift1 negate (\(t, b) -> negate t .% b)
   signum a       = ite (a .> 0) 1 $ ite (a .< 0) (-1) 0
 
+-- | Fractional instance for SRational. Just like the 'Num' instance, division is
+-- implemented at the SBV level via cross-multiplication, since SMTLib has no direct
+-- support for our rational representation. Note that we keep the denominator positive:
+-- dividing by @t2 .% b2@ multiplies the denominator by @t2@, which may be negative, so
+-- we flip the signs of both parts when needed. Following the SBV convention for reals,
+-- division by zero is defined to be zero.
+--
+-- We mark this 'OVERLAPPING' as it takes precedence over the generic @'Fractional' ('SBV' a)@
+-- instance in "Data.SBV.Core.Model", which would otherwise try to translate rational division
+-- as an SMTLib @Quot@ (which doesn't exist for our rationals).
+instance {-# OVERLAPPING #-} Fractional SRational where
+  fromRational = literal . fromRational
+  a / b        = ite (b .== 0) 0 (lift2 (/) divRat a b)
+    where divRat (t1, b1) (t2, b2) = ite (t2 .> 0) (        num .%         den)
+                                                   (negate  num .% negate  den)
+             where num = t1 * b2
+                   den = b1 * t2
+
 -- | Symbolic ordering for SRational. Note that denominators are always positive.
 instance OrdSymbolic SRational where
    (.<)  = lift2 (<)  (\(t1, b1) (t2, b2) -> (t1 * b2) .<  (b1 * t2))

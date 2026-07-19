@@ -389,7 +389,7 @@ genFloats = genIEEE754 "genFloats" fs
 genDoubles :: [TestTree]
 genDoubles = genIEEE754 "genDoubles" ds
 
-genIEEE754 :: (IEEEFloating a, OrdSymbolic (SBV a), Num (SBV a), Show a) => String -> [a] -> [TestTree]
+genIEEE754 :: (IEEEFloating a, OrdSymbolic (SBV a), Num (SBV a), Fractional (SBV a), Show a) => String -> [a] -> [TestTree]
 genIEEE754 origin vs =  [tst1 ("pred_"   ++ nm, x, y)    | (nm, x, y)    <- preds]
                      ++ [tst1 ("unary_"  ++ nm, x, y)    | (nm, x, y)    <- uns]
                      ++ [tst2 ("binary_" ++ nm, x, y, r) | (nm, x, y, r) <- bins]
@@ -943,6 +943,7 @@ realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSInteger
                , testCase "convertCov6" $ assertIsSat (\x y -> sFromIntegral @Integer @Rational x .== y)
                , testCase "convertCov7" $ assertIsSat (\x y -> sFromIntegral @Word8   @AlgReal  x .== y)
                , testCase "convertCov8" $ assertIsSat (\x y -> sFromIntegral @Word8   @Rational x .== y)
+               , testCase "convertCov9" $ assertIsSat $ \(x :: SRational) (y :: SRational) (r :: SRational) -> (x / y) .== r
                ]
  where -- (x <= y) ==> (round x <= round y)
        respectsLe :: OrdSymbolic a => (SRoundingMode -> a -> SInteger) -> SRoundingMode -> a -> a -> SBool
