@@ -2229,6 +2229,7 @@ data SMTConfig = SMTConfig {
        , extraArgs                   :: [String]            -- ^ Extra command line arguments to pass to the solver.
        , roundingMode                :: RoundingMode        -- ^ Rounding mode to use for floating-point calculations. Defaults to RNE.
        , solverSetOptions            :: [SMTOption]         -- ^ Options to set as we start the solver
+       , smtLib2Compliant            :: Bool                -- ^ Ask the solver to be strictly SMTLib2 compliant. (Default: True.)
        , ignoreExitCode              :: Bool                -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
        , redirectVerbose             :: Maybe FilePath      -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
        , firstifyUniqueLen           :: Int                 -- ^ Unique length used for firstified higher-order function names

@@ -3,6 +3,11 @@
 
 ### Version 14.5, Not yet released
 
+  * Add the `smtLib2Compliant` field to `SMTConfig` (default: `True`), controlling whether SBV
+    asks the solver to be strictly SMTLib2 compliant. Turning it off can help with solvers (e.g.,
+    z3) that otherwise mishandle overloaded operators when integers and reals are mixed in the
+    same problem.
+
   * Add `sRealToSIntegerRM` and `sRationalToSIntegerRM`, which convert a real/rational to an
     integer using a symbolic rounding-mode argument, along with the helper `sCaseRoundingMode`
     for dispatching on a symbolic `SRoundingMode`. Thanks to Ryan Scott for the implementation.

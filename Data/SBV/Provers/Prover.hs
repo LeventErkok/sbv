@@ -107,6 +107,7 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , optimizeValidateConstraints = False
                                             , roundingMode                = RoundNearestTiesToEven
                                             , solverSetOptions            = startOpts
+                                            , smtLib2Compliant            = True
                                             , ignoreExitCode              = False
                                             , redirectVerbose             = Nothing
                                             , firstifyUniqueLen           = 10

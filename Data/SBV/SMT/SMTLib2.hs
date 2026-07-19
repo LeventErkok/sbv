@@ -229,7 +229,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                     : concat [map T.pack flattenConfig | any needsFlattening kindInfo, Just flattenConfig <- [supportsFlattenedModels solverCaps]]
 
         -- process all other settings we're given. If an option cannot be repeated, we only take the last one.
-        userSettings = map (setSMTOption cfg) $ filter (not . isLogic) $ foldr comb [] $ solverSetOptions cfg
+        userSettings = filter (not . T.null) $ map (setSMTOption cfg) $ filter (not . isLogic) $ foldr comb [] $ solverSetOptions cfg
            where -- Logic is already processed, so drop it:
                  isLogic SetLogic{} = True
                  isLogic _          = False
@@ -1337,21 +1337,23 @@ reducePB op args = case op of
 -- | Translate an option setting to SMTLib. Note the SetLogic/SetInfo discrepancy.
 setSMTOption :: SMTConfig -> SMTOption -> Text
 setSMTOption cfg = set
-  where set (DiagnosticOutputChannel   f) = opt   [":diagnostic-output-channel",   showText f]
-        set (ProduceAssertions         b) = opt   [":produce-assertions",          smtBool b]
-        set (ProduceAssignments        b) = opt   [":produce-assignments",         smtBool b]
-        set (ProduceProofs             b) = opt   [":produce-proofs",              smtBool b]
-        set (ProduceInterpolants       b) = opt   [":produce-interpolants",        smtBool b]
-        set (ProduceUnsatAssumptions   b) = opt   [":produce-unsat-assumptions",   smtBool b]
-        set (ProduceUnsatCores         b) = opt   [":produce-unsat-cores",         smtBool b]
-        set (ProduceAbducts            b) = opt   [":produce-abducts",             smtBool b]
-        set (RandomSeed                i) = opt   [":random-seed",                 showText i]
-        set (ReproducibleResourceLimit i) = opt   [":reproducible-resource-limit", showText i]
-        set (SMTVerbosity              i) = opt   [":verbosity",                   showText i]
-        set (OptionKeyword          k as) = opt   (T.pack k : map T.pack as)
-        set (SetLogic                  l) = logicString cfg l
-        set (SetInfo                k as) = info  (T.pack k : map T.pack as)
-        set (SetTimeOut                i) = opt   $ timeOut i
+  where set (DiagnosticOutputChannel   f)           = opt [":diagnostic-output-channel",   showText f]
+        set (ProduceAssertions         b)           = opt [":produce-assertions",          smtBool b]
+        set (ProduceAssignments        b)           = opt [":produce-assignments",         smtBool b]
+        set (ProduceProofs             b)           = opt [":produce-proofs",              smtBool b]
+        set (ProduceInterpolants       b)           = opt [":produce-interpolants",        smtBool b]
+        set (ProduceUnsatAssumptions   b)           = opt [":produce-unsat-assumptions",   smtBool b]
+        set (ProduceUnsatCores         b)           = opt [":produce-unsat-cores",         smtBool b]
+        set (ProduceAbducts            b)           = opt [":produce-abducts",             smtBool b]
+        set (RandomSeed                i)           = opt [":random-seed",                 showText i]
+        set (ReproducibleResourceLimit i)           = opt [":reproducible-resource-limit", showText i]
+        set (SMTVerbosity              i)           = opt [":verbosity",                   showText i]
+        set (OptionKeyword ":smtlib2_compliant" _)
+          | not (smtLib2Compliant cfg)              = ""
+        set (OptionKeyword          k as)           = opt (T.pack k : map T.pack as)
+        set (SetLogic                  l)           = logicString cfg l
+        set (SetInfo                k as)           = info (T.pack k : map T.pack as)
+        set (SetTimeOut                i)           = opt $ timeOut i
 
         opt   xs = "(set-option " <> T.unwords xs <> ")"
         info  xs = "(set-info "   <> T.unwords xs <> ")"
