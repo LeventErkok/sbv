@@ -17,6 +17,7 @@
 module Data.SBV.Utils.Numeric (
            fpMaxH, fpMinH, fp2fp, fpRemH, fpRoundToIntegralH, fpIsEqualObjectH, fpCompareObjectH, fpIsNormalizedH
          , roundAway
+         , divEucl, modEucl
          , floatToWord, wordToFloat, doubleToWord, wordToDouble
          , RoundingMode(..), smtRoundingMode
          ) where
@@ -141,6 +142,17 @@ roundAway x = case properFraction x of
                              n - 1
                            else
                              n + 1
+
+-- | Euclidean division. @'divEucl' a b@ returns the integer @q@ satisfying the
+-- equations @a = (b * q) + r@ and @0 <= r < abs b@, where @'modEucl' a b = r@.
+divEucl :: Integral a => a -> a -> a
+divEucl a b = div a (abs b) * signum b
+
+-- | Euclidean modular division. @'modEucl' a b@ returns the integer @r@
+-- satisfying the equations @a = (b * q) + r@ and @0 <= r < abs b@, where
+-- @'divEucl' a b = q@.
+modEucl :: Integral a => a -> a -> a
+modEucl a b = mod a (abs b)
 
 -------------------------------------------------------------------------
 -- Reinterpreting float/double as word32/64 and back. Here, we use the

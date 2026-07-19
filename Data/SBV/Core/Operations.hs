@@ -75,7 +75,7 @@ import Data.SBV.Core.SizedFloats
 
 import Data.Ratio
 
-import Data.SBV.Utils.Numeric (RoundingMode(..), {-fp2fp,-} fpIsEqualObjectH, fpIsNormalizedH, fpMaxH, fpMinH, fpRemH, fpRoundToIntegralH, floatToWord, doubleToWord, wordToFloat, wordToDouble)
+import Data.SBV.Utils.Numeric (RoundingMode(..), divEucl, modEucl, {-fp2fp,-} fpIsEqualObjectH, fpIsNormalizedH, fpMaxH, fpMinH, fpRemH, fpRoundToIntegralH, floatToWord, doubleToWord, wordToFloat, wordToDouble)
 
 import LibBF
 
@@ -238,11 +238,15 @@ svSignum a
         z = SVal k $ Left $ mkConstCV k (0 :: Integer)
         i = SVal k $ Left $ mkConstCV k (1 :: Integer)
 
--- | Division.
+-- | Division. For integers, this behaves like 'svQuot', except that this
+-- ensures @'svQuot' a 0 = a@.
 svDivide :: SVal -> SVal -> SVal
-svDivide = liftSym2 (mkSymOp Quot) [rationalCheck] (/) idiv (/) (/) (/) (/)
-   where idiv x 0 = x
-         idiv x y = x `quot` y
+svDivide x y = liftSym2 (mkSymOp Quot) [rationalCheck] (/) idiv (/) (/) (/) (/) x y
+   where isInteger = kindOf x == KUnbounded
+
+         idiv a 0 = a
+         idiv a b | isInteger = a `divEucl` b
+                  | True      = a `quot` b
 
 -- | Divides predicate
 svDivides :: Integer -> SVal -> SVal
@@ -333,7 +337,7 @@ svQuot x y
   where
     isInteger = kindOf x == KUnbounded
 
-    quot' a b | isInteger = div a (abs b) * signum b
+    quot' a b | isInteger = divEucl a b
               | True      = quot a b
 
 -- | Remainder: Overloaded operation whose meaning depends on the kind at which
@@ -360,7 +364,7 @@ svRem x y
   where
     isInteger = kindOf x == KUnbounded
 
-    rem' a b | isInteger = mod a (abs b)
+    rem' a b | isInteger = modEucl a b
              | True      = rem a b
 
 -- | Combination of 'svQuot' and 'svRem'
