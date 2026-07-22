@@ -875,6 +875,8 @@ solve = pure . sAnd
 -- largest integer @n@ that satisfies @sIntegerToSReal n <= r@.
 --
 -- For instance, @1.3@ will be @1@, but @-1.3@ will be @-2@.
+--
+-- See 'sRealToSIntegerRM' to select the rounding mode with a symbolic 'SRoundingMode'.
 sRealToSIntegerFloor :: SReal -> SInteger
 sRealToSIntegerFloor x
   | Just i <- unliteral x, isExactRational i
@@ -888,6 +890,8 @@ sRealToSIntegerFloor x
 -- the smallest integer @n@ that satisfies @r <= sIntegerToSReal n@.
 --
 -- For instance, @1.3@ will be @2@, but @-1.3@ will be @-1@.
+--
+-- See 'sRealToSIntegerRM' to select the rounding mode with a symbolic 'SRoundingMode'.
 sRealToSIntegerCeiling :: SReal -> SInteger
 sRealToSIntegerCeiling x
   | Just i <- unliteral x, isExactRational i
@@ -899,6 +903,8 @@ sRealToSIntegerCeiling x
 -- fractional part, essentially rounding towards zero.
 --
 -- For instance, @1.3@ will be @1@, and @-1.3@ will be @-1@.
+--
+-- See 'sRealToSIntegerRM' to select the rounding mode with a symbolic 'SRoundingMode'.
 sRealToSIntegerTruncate :: SReal -> SInteger
 sRealToSIntegerTruncate x
   | Just i <- unliteral x, isExactRational i
@@ -924,6 +930,8 @@ sRealToSIntegerTruncate x
 -- * @-2.3@ will be @-2@
 -- * @-2.5@ will be @-3@ (because @abs (-2) < abs (-3)@)
 -- * @-2.7@ will be @-3@
+--
+-- See 'sRealToSIntegerRM' to select the rounding mode with a symbolic 'SRoundingMode'.
 sRealToSIntegerRoundAway :: SReal -> SInteger
 sRealToSIntegerRoundAway x
   | Just i <- unliteral x, isExactRational i
@@ -955,6 +963,8 @@ sRealToSIntegerRoundAway x
 -- * @-2.3@ will be @-2@
 -- * @-2.5@ will be @-2@ (because @-2@ is even)
 -- * @-2.7@ will be @-3@
+--
+-- See 'sRealToSIntegerRM' to select the rounding mode with a symbolic 'SRoundingMode'.
 sRealToSIntegerRoundToEven :: SReal -> SInteger
 sRealToSIntegerRoundToEven x
   | Just i <- unliteral x, isExactRational i
@@ -975,7 +985,11 @@ sRealToSIntegerRoundToEven x
     diff = x - sFromIntegral lo
 
 -- | Convert an 'SReal' to an 'SInteger' according to the supplied
--- 'SRoundingMode'.
+-- 'SRoundingMode'. This dispatches to 'sRealToSIntegerRoundToEven',
+-- 'sRealToSIntegerRoundAway', 'sRealToSIntegerCeiling', 'sRealToSIntegerFloor',
+-- and 'sRealToSIntegerTruncate' for the round-nearest-even, round-nearest-away,
+-- round-toward-positive, round-toward-negative, and round-toward-zero modes
+-- respectively.
 --
 -- Note that we re-use the 'SRoundingMode' type here, even though
 -- 'SRoundingMode' is normally associated with floating-point operations. The

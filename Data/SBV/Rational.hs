@@ -54,6 +54,8 @@ top .% bot
 -- the largest integer @n@ that satisfies @(n .% 1) <= r@.
 --
 -- For instance, @1.3@ will be @1@, but @-1.3@ will be @-2@.
+--
+-- See 'sRationalToSIntegerRM' to select the rounding mode with a symbolic 'SRoundingMode'.
 sRationalToSIntegerFloor :: SRational -> SInteger
 -- NB: We use @sDiv@ below because it implements division that truncates
 -- towards negative infinity, which is exactly what @floor@ needs.
@@ -63,6 +65,8 @@ sRationalToSIntegerFloor = lift1 floor (uncurry sDiv)
 -- computes the smallest integer @n@ that satisfies @r <= (n .% 1)@.
 --
 -- For instance, @1.3@ will be @2@, but @-1.3@ will be @-1@.
+--
+-- See 'sRationalToSIntegerRM' to select the rounding mode with a symbolic 'SRoundingMode'.
 sRationalToSIntegerCeiling :: SRational -> SInteger
 sRationalToSIntegerCeiling x
   | Just i <- unliteral x
@@ -74,6 +78,8 @@ sRationalToSIntegerCeiling x
 -- chops off the fractional part, essentially rounding towards zero.
 --
 -- For instance, @1.3@ will be @1@, and @-1.3@ will be @-1@.
+--
+-- See 'sRationalToSIntegerRM' to select the rounding mode with a symbolic 'SRoundingMode'.
 sRationalToSIntegerTruncate :: SRational -> SInteger
 sRationalToSIntegerTruncate x
   | Just i <- unliteral x
@@ -99,6 +105,8 @@ sRationalToSIntegerTruncate x
 -- * @-2.3@ will be @-2@
 -- * @-2.5@ will be @-3@ (because @abs (-2) < abs (-3)@)
 -- * @-2.7@ will be @-3@
+--
+-- See 'sRationalToSIntegerRM' to select the rounding mode with a symbolic 'SRoundingMode'.
 sRationalToSIntegerRoundAway :: SRational -> SInteger
 sRationalToSIntegerRoundAway x
   | Just i <- unliteral x
@@ -130,6 +138,8 @@ sRationalToSIntegerRoundAway x
 -- * @-2.3@ will be @-2@
 -- * @-2.5@ will be @-2@ (because @-2@ is even)
 -- * @-2.7@ will be @-3@
+--
+-- See 'sRationalToSIntegerRM' to select the rounding mode with a symbolic 'SRoundingMode'.
 sRationalToSIntegerRoundToEven :: SRational -> SInteger
 sRationalToSIntegerRoundToEven x
   | Just i <- unliteral x
@@ -150,7 +160,11 @@ sRationalToSIntegerRoundToEven x
     diff = x - (lo .% 1)
 
 -- | Convert an 'SRational' to an 'SInteger' according to the supplied
--- 'SRoundingMode'.
+-- 'SRoundingMode'. This dispatches to 'sRationalToSIntegerRoundToEven',
+-- 'sRationalToSIntegerRoundAway', 'sRationalToSIntegerCeiling',
+-- 'sRationalToSIntegerFloor', and 'sRationalToSIntegerTruncate' for the
+-- round-nearest-even, round-nearest-away, round-toward-positive,
+-- round-toward-negative, and round-toward-zero modes respectively.
 --
 -- Note that we re-use the 'SRoundingMode' type here, even though
 -- 'SRoundingMode' is normally associated with floating-point operations. The
