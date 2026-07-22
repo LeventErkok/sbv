@@ -17,8 +17,10 @@
     integer using a symbolic rounding-mode argument, along with the helper `sCaseRoundingMode`
     for dispatching on a symbolic `SRoundingMode`. Thanks to Ryan Scott for the implementation.
 
-  * Fix `svQuot`/integer division in `Data.SBV.Dynamic`, which was using flooring (`div`)
-    instead of truncating (`quot`) division on concrete integers. Thanks to Ryan Scott for the report.
+  * Fix `svDivide` (i.e., `/` on unbounded integers in `Data.SBV.Dynamic`), which used flooring
+    (`div`) on concrete integers instead of the Euclidean division that its symbolic counterpart
+    (and `svQuot`) implements. The two now agree, always yielding a non-negative remainder.
+    Thanks to Ryan Scott for the report.
 
   * Improve the Haddocks for `sQuot`, `sDiv`, `sRem`, `sMod`, and related functions, clarifying
     the truncating- vs. flooring-division distinction and documenting that the `Data.SBV.Dynamic`

@@ -922,6 +922,7 @@ misc = [ testCase "misc-t1" $ assertIsSat t1
  where -- https://stackoverflow.com/questions/69033969/trivial-rationals-problems-without-variables-in-sbv-solver-in-haskell
        t1 = do _xs <- sRationals []
                constrain $ (5.%1:: SRational) .<= (5.%1:: SRational)
+
 realRatConvs :: [TestTree]
 realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSIntegerRM
                , testCase "realConv2" $ assertIsThm realFloorCorrect

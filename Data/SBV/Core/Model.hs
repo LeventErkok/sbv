@@ -316,19 +316,13 @@ sRTZ = sRoundTowardZero
 
 -- | Case analyzer for the type 'RoundingMode'.
 sCaseRoundingMode ::
-  Mergeable r =>
-  -- | What to return in the 'sRoundNearestTiesToEven' case.
-  r ->
-  -- | What to return in the 'sRoundNearestTiesToAway' case.
-  r ->
-  -- | What to return in the 'sRoundTowardPositive' case.
-  r ->
-  -- | What to return in the 'sRoundTowardNegative' case.
-  r ->
-  -- | What to return in the 'sRoundTowardPositive' case.
-  r ->
-  SRoundingMode ->
-  r
+  Mergeable r => r              -- ^ What to return in the 'sRoundNearestTiesToEven' case.
+              -> r              -- ^ What to return in the 'sRoundNearestTiesToAway' case.
+              -> r              -- ^ What to return in the 'sRoundTowardPositive' case.
+              -> r              -- ^ What to return in the 'sRoundTowardNegative' case.
+              -> r              -- ^ What to return in the 'sRoundTowardZero' case.
+              -> SRoundingMode
+              -> r
 sCaseRoundingMode fRNE fRNA fRTP fRTN fRTZ rm =
   ite (rm .== sRNE) fRNE $
   ite (rm .== sRNA) fRNA $
@@ -900,7 +894,7 @@ sRealToSIntegerCeiling x
   | True
   = - sRealToSInteger (-x)
 
--- | Convert an SReal to an SInteger, truncating version. Truncate simply chops of the
+-- | Convert an SReal to an SInteger, truncating version. Truncate simply chops off the
 -- fractional part, essentially rounding towards zero.
 --
 -- For instance, @1.3@ will be @1@, and @-1.3@ will be @-1@.
@@ -958,7 +952,7 @@ sRealToSIntegerRoundAway x
 -- * @-1.5@ will be @-2@ (because @-2@ is even)
 -- * @-1.7@ will be @-2@
 -- * @-2.3@ will be @-2@
--- * @-2.5@ will be @-2@ (because @-2@) is even)
+-- * @-2.5@ will be @-2@ (because @-2@ is even)
 -- * @-2.7@ will be @-3@
 sRealToSIntegerRoundToEven :: SReal -> SInteger
 sRealToSIntegerRoundToEven x
@@ -984,7 +978,7 @@ sRealToSIntegerRoundToEven x
 --
 -- Note that we re-use the 'SRoundingMode' type here, even though
 -- 'SRoundingMode' is normally associated with floating-point operations. The
--- floating-point resemblence is superficial, as this function does not use any
+-- floating-point resemblance is superficial, as this function does not use any
 -- floating-point functionality behind the scenes.
 sRealToSIntegerRM :: SRoundingMode -> SReal -> SInteger
 sRealToSIntegerRM rm x =

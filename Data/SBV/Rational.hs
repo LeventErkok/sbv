@@ -70,7 +70,7 @@ sRationalToSIntegerCeiling x
   = - (sRationalToSIntegerFloor (- x))
 
 -- | Convert an SRational to an SInteger, truncating version. Truncate simply
--- chops of the fractional part, essentially rounding towards zero.
+-- chops off the fractional part, essentially rounding towards zero.
 --
 -- For instance, @1.3@ will be @1@, and @-1.3@ will be @-1@.
 sRationalToSIntegerTruncate :: SRational -> SInteger
@@ -127,7 +127,7 @@ sRationalToSIntegerRoundAway x
 -- * @-1.5@ will be @-2@ (because @-2@ is even)
 -- * @-1.7@ will be @-2@
 -- * @-2.3@ will be @-2@
--- * @-2.5@ will be @-2@ (because @-2@) is even)
+-- * @-2.5@ will be @-2@ (because @-2@ is even)
 -- * @-2.7@ will be @-3@
 sRationalToSIntegerRoundToEven :: SRational -> SInteger
 sRationalToSIntegerRoundToEven x
@@ -153,7 +153,7 @@ sRationalToSIntegerRoundToEven x
 --
 -- Note that we re-use the 'SRoundingMode' type here, even though
 -- 'SRoundingMode' is normally associated with floating-point operations. The
--- floating-point resemblence is superficial, as this function does not use any
+-- floating-point resemblance is superficial, as this function does not use any
 -- floating-point functionality behind the scenes.
 sRationalToSIntegerRM :: SRoundingMode -> SRational -> SInteger
 sRationalToSIntegerRM rm x =
