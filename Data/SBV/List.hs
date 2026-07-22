@@ -1415,7 +1415,7 @@ enumFromThenToAlgReal x zIn delta = ite (delta .== 0)
         -- The measure is the number of remaining recursive steps, which is an INTEGER:
         -- @floor ((end - start) / d) + 1@ (clamped at 0). A real-valued measure would be
         -- unsound here, since the reals are not well-ordered (an infinite descending chain
-        -- like 1, 1/2, 1/4, ... never reaches a minimum). 'sRealToSInteger' is @floor@, and
+        -- like 1, 1/2, 1/4, ... never reaches a minimum). 'sRealToSIntegerFloor' is @floor@, and
         -- @(end - start) / d@ is non-negative in both the up (d>0) and down (d<0) regimes, so
         -- the same expression serves both.
         --
@@ -1425,9 +1425,9 @@ enumFromThenToAlgReal x zIn delta = ite (delta .== 0)
         -- obligation never sees d==0; the @0 `smax`@ keeps non-negativity vacuously true even for
         -- the unreachable zero-denominator value of @(end - start) / d@.
         up, down :: SReal -> SReal -> SReal -> SList AlgReal
-        up   = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.up"   (\start d end -> 0 `smax` (sRealToSInteger ((end - start) / d) + 1), [])
+        up   = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.up"   (\start d end -> 0 `smax` (sRealToSIntegerFloor ((end - start) / d) + 1), [])
              $ \start d end -> ite (start .> end .|| d .<= 0) [] (start .: up   (start + d) d end)
-        down = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.down" (\start d end -> 0 `smax` (sRealToSInteger ((end - start) / d) + 1), [])
+        down = smtFunctionWithMeasure "EnumSymbolic.AlgReal.enumFromThenTo.down" (\start d end -> 0 `smax` (sRealToSIntegerFloor ((end - start) / d) + 1), [])
              $ \start d end -> ite (start .< end .|| d .>= 0) [] (start .: down (start + d) d end)
 
 -- | Lookup. If we can't find, then the result is unspecified.

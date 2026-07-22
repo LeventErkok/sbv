@@ -33,7 +33,9 @@ module Data.SBV.Trans (
   -- ** Floating point numbers
   , SFloat, SDouble, SFloatingPoint
   -- ** Algebraic reals
-  , SReal, AlgReal, sRealToSInteger
+  , SReal, AlgReal
+  , sRealToSIntegerFloor, sRealToSIntegerCeiling, sRealToSIntegerTruncate
+  , sRealToSIntegerRoundAway, sRealToSIntegerRoundToEven, sRealToSIntegerRM
   -- ** Characters, Strings and Regular Expressions
   , SChar, SString
   -- ** Symbolic lists

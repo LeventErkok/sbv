@@ -18,7 +18,8 @@ module Data.SBV.Rational (
     -- * Constructing rationals
       (.%)
     -- * Rounding rationals
-    , sRationalToSIntegerRM
+    , sRationalToSIntegerFloor, sRationalToSIntegerCeiling, sRationalToSIntegerTruncate
+    , sRationalToSIntegerRoundAway, sRationalToSIntegerRoundToEven, sRationalToSIntegerRM
     -- * Converting between rationals and reals
     , sRationalToSReal, sRealToSRational
     ) where

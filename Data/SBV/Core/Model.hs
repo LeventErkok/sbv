@@ -58,7 +58,8 @@ module Data.SBV.Core.Model (
   , sDivides
   , solve
   , slet
-  , sRealToSInteger, sRealToSIntegerTruncate, sRealToSIntegerRM
+  , sRealToSIntegerFloor, sRealToSIntegerCeiling, sRealToSIntegerTruncate
+  , sRealToSIntegerRoundAway, sRealToSIntegerRoundToEven, sRealToSIntegerRM
   , label, observe, observeIf, sObserve
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
@@ -874,8 +875,8 @@ solve = pure . sAnd
 -- largest integer @n@ that satisfies @sIntegerToSReal n <= r@.
 --
 -- For instance, @1.3@ will be @1@, but @-1.3@ will be @-2@.
-sRealToSInteger :: SReal -> SInteger
-sRealToSInteger x
+sRealToSIntegerFloor :: SReal -> SInteger
+sRealToSIntegerFloor x
   | Just i <- unliteral x, isExactRational i
   = literal $ floor $ toRational i
   | True
@@ -892,7 +893,7 @@ sRealToSIntegerCeiling x
   | Just i <- unliteral x, isExactRational i
   = literal $ ceiling $ toRational i
   | True
-  = - sRealToSInteger (-x)
+  = - sRealToSIntegerFloor (-x)
 
 -- | Convert an SReal to an SInteger, truncating version. Truncate simply chops off the
 -- fractional part, essentially rounding towards zero.
@@ -903,7 +904,7 @@ sRealToSIntegerTruncate x
   | Just i <- unliteral x, isExactRational i
   = literal $ truncate $ toRational i
   | True
-  = ite (x .>= 0) (sRealToSInteger x) (sRealToSIntegerCeiling x)
+  = ite (x .>= 0) (sRealToSIntegerFloor x) (sRealToSIntegerCeiling x)
 
 -- | Convert an SReal to an SInteger by converting to the nearest integer. If
 -- there is a tie (i.e., if the fractional component of the SReal is equal to
@@ -930,7 +931,7 @@ sRealToSIntegerRoundAway x
   | True
   = ite
       (x .>= 0)
-      (sRealToSInteger        (x + half))
+      (sRealToSIntegerFloor   (x + half))
       (sRealToSIntegerCeiling (x - half))
   where
     half :: SReal
@@ -967,7 +968,7 @@ sRealToSIntegerRoundToEven x
     half = 0.5
 
     lo, hi :: SInteger
-    lo = sRealToSInteger x
+    lo = sRealToSIntegerFloor x
     hi = lo+1
 
     diff :: SReal
@@ -986,7 +987,7 @@ sRealToSIntegerRM rm x =
     (sRealToSIntegerRoundToEven x)
     (sRealToSIntegerRoundAway   x)
     (sRealToSIntegerCeiling     x)
-    (sRealToSInteger            x)
+    (sRealToSIntegerFloor       x)
     (sRealToSIntegerTruncate    x)
     rm
 

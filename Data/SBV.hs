@@ -229,12 +229,15 @@ module Data.SBV (
   , SFPQuad, FPQuad
   , fpFromInteger
   -- ** Rationals
-  , SRational, (.%), sRationalToSIntegerRM
+  , SRational, (.%)
+  , sRationalToSIntegerFloor, sRationalToSIntegerCeiling, sRationalToSIntegerTruncate
+  , sRationalToSIntegerRoundAway, sRationalToSIntegerRoundToEven, sRationalToSIntegerRM
   , sRationalToSReal, sRealToSRational
   -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal(..)
-  , sRealToSInteger, sRealToSIntegerRM
+  , sRealToSIntegerFloor, sRealToSIntegerCeiling, sRealToSIntegerTruncate
+  , sRealToSIntegerRoundAway, sRealToSIntegerRoundToEven, sRealToSIntegerRM
   , algRealToRational, RealPoint(..), realPoint, RationalCV(..)
   -- ** Characters, Strings and Regular Expressions
   -- $strings

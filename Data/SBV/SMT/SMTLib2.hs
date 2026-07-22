@@ -1257,7 +1257,7 @@ handleADT caps op args = case args of
 --
 --     * 'Data.SBV.sFromIntegral' : @Integral a => SBV a -> SBV b@. The source is 'Integral', so it is always 'KBounded'
 --       or 'KUnbounded'; the target is any @Num@/@SymVal@ kind (bounded, unbounded, real, rational, or float/double/FP).
---     * 'Data.SBV.sRealToSInteger': only ever emits @KReal -> KUnbounded@.
+--     * 'Data.SBV.sRealToSIntegerFloor': only ever emits @KReal -> KUnbounded@.
 --     * shift-amount adjustment: only ever emits @KBounded -> KBounded@.
 --
 -- So the reachable (from, to) pairs are exactly:
@@ -1267,7 +1267,7 @@ handleADT caps op args = case args of
 --     * @KReal      -> KUnbounded@
 --
 -- All of these are handled below (float/double/FP targets are routed through 'handleFPCast' via @tryFPCast@). Note
--- that a real or rational can never be a source (reals only appear via 'Data.SBV.sRealToSInteger', which targets 'KUnbounded';
+-- that a real or rational can never be a source (reals only appear via 'Data.SBV.sRealToSIntegerFloor', which targets 'KUnbounded';
 -- rationals are not 'Integral'), so those directions are unreachable and left to 'error'.
 handleKindCast :: Kind -> Kind -> Text -> Text
 handleKindCast kFrom kTo a

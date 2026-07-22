@@ -17,6 +17,17 @@
     integer using a symbolic rounding-mode argument, along with the helper `sCaseRoundingMode`
     for dispatching on a symbolic `SRoundingMode`. Thanks to Ryan Scott for the implementation.
 
+  * [BACKWARDS COMPATIBILITY] The real-to-integer flooring function `sRealToSInteger` has been
+    renamed to `sRealToSIntegerFloor`, for consistency with the new `sRealToSIntegerCeiling`,
+    `sRealToSIntegerTruncate`, etc. (and with the rational counterparts below). If you use
+    `sRealToSInteger`, simply replace it with `sRealToSIntegerFloor`; the behavior is unchanged.
+
+  * Export the individual real-to-integer and rational-to-integer rounding functions, in addition
+    to the rounding-mode-dispatched versions above: `sRealToSIntegerFloor`, `sRealToSIntegerCeiling`,
+    `sRealToSIntegerTruncate`, `sRealToSIntegerRoundAway`, `sRealToSIntegerRoundToEven`, and the
+    rational counterparts `sRationalToSIntegerFloor`, `sRationalToSIntegerCeiling`,
+    `sRationalToSIntegerTruncate`, `sRationalToSIntegerRoundAway`, and `sRationalToSIntegerRoundToEven`.
+
   * Fix `svDivide` (i.e., `/` on unbounded integers in `Data.SBV.Dynamic`), which used flooring
     (`div`) on concrete integers instead of the Euclidean division that its symbolic counterpart
     (and `svQuot`) implements. The two now agree, always yielding a non-negative remainder.
