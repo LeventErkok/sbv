@@ -929,12 +929,20 @@ realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSInteger
                , testCase "realConv3" $ assertIsThm realFloorCorrect2
                , testCase "realConv4" $ assertIsThm realCeilingCorrect
                , testCase "realConv5" $ assertIsThm realCeilingCorrect2
+               , testCase "realConv6" $ assertIsThm $ realRoundNearest sRNE
+               , testCase "realConv7" $ assertIsThm $ realRoundNearest sRNA
+               , testCase "realConv8" $ assertIsThm realRneTieEven
+               , testCase "realConv9" $ assertIsThm realRnaTieAway
 
                , testCase "ratConv1"  $ assertIsThm $ respectsLe sRationalToSIntegerRM
                , testCase "ratConv2"  $ assertIsThm rationalFloorCorrect
                , testCase "ratConv3"  $ assertIsThm rationalFloorCorrect2
                , testCase "ratConv4"  $ assertIsThm rationalCeilingCorrect
                , testCase "ratConv5"  $ assertIsThm rationalCeilingCorrect2
+               , testCase "ratConv6"  $ assertIsThm $ ratRoundNearest sRNE
+               , testCase "ratConv7"  $ assertIsThm $ ratRoundNearest sRNA
+               , testCase "ratConv8"  $ assertIsThm ratRneTieEven
+               , testCase "ratConv9"  $ assertIsThm ratRnaTieAway
 
                -- z3 struggles with this in the compliant mode so we turn compliance off for these two
                , testCase "ratRealRoundTrip1" $ assert $ isTheoremWith z3{smtLib2Compliant = False} ratToRealToRat
@@ -949,6 +957,9 @@ realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSInteger
                , testCase "convertCov7" $ assertIsSat (\x y -> sFromIntegral @Word8   @AlgReal  x .== y)
                , testCase "convertCov8" $ assertIsSat (\x y -> sFromIntegral @Word8   @Rational x .== y)
                , testCase "convertCov9" $ assertIsSat $ \(x :: SRational) (y :: SRational) (r :: SRational) -> (x / y) .== r
+
+               , testCase "ratDiv1" $ assertIsThm ratDivCancels
+               , testCase "ratDiv2" $ assertIsThm ratDivByZero
                ]
  where -- (x <= y) ==> (round x <= round y)
        respectsLe :: OrdSymbolic a => (SRoundingMode -> a -> SInteger) -> SRoundingMode -> a -> a -> SBool
@@ -970,6 +981,20 @@ realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSInteger
        realCeilingCorrect2 :: SInteger -> SReal -> SBool
        realCeilingCorrect2 x y = (sFromIntegral x .>= y) .=> (x .>= sRealToSIntegerRM sRTP y)
 
+       -- Rounding to nearest is within 1/2 of the input (holds for both round-to-even and round-away).
+       realRoundNearest :: SRoundingMode -> SReal -> SBool
+       realRoundNearest rm x = abs (sFromIntegral (sRealToSIntegerRM rm x) - x) .<= 0.5
+
+       -- On a tie (x = k + 1/2), round-to-even produces an even integer.
+       realRneTieEven :: SInteger -> SBool
+       realRneTieEven k = sDivides 2 (sRealToSIntegerRM sRNE x)
+         where x = sFromIntegral k + 0.5 :: SReal
+
+       -- On a tie (x = k + 1/2), round-away picks the integer further from zero.
+       realRnaTieAway :: SInteger -> SBool
+       realRnaTieAway k = sRealToSIntegerRM sRNA x .== ite (x .>= 0) (k+1) k
+         where x = sFromIntegral k + 0.5 :: SReal
+
        -- floor x <= x
        rationalFloorCorrect :: SRational -> SBool
        rationalFloorCorrect x = (sRationalToSIntegerRM sRTN x .% 1) .<= x
@@ -985,6 +1010,28 @@ realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSInteger
        -- ceiling x >= x
        rationalCeilingCorrect :: SRational -> SBool
        rationalCeilingCorrect x = (sRationalToSIntegerRM sRTP x .% 1) .>= x
+
+       -- Rounding to nearest is within 1/2 of the input (holds for both round-to-even and round-away).
+       ratRoundNearest :: SRoundingMode -> SRational -> SBool
+       ratRoundNearest rm x = abs ((sRationalToSIntegerRM rm x .% 1) - x) .<= (1 .% 2)
+
+       -- On a tie (x = k + 1/2), round-to-even produces an even integer.
+       ratRneTieEven :: SInteger -> SBool
+       ratRneTieEven k = sDivides 2 (sRationalToSIntegerRM sRNE x)
+         where x = (2*k+1) .% 2
+
+       -- On a tie (x = k + 1/2), round-away picks the integer further from zero.
+       ratRnaTieAway :: SInteger -> SBool
+       ratRnaTieAway k = sRationalToSIntegerRM sRNA x .== ite (x .>= 0) (k+1) k
+         where x = (2*k+1) .% 2
+
+       -- Division cancels: for a non-zero divisor, (x / y) * y == x.
+       ratDivCancels :: SRational -> SRational -> SBool
+       ratDivCancels x y = (y ./= 0) .=> ((x / y) * y .== x)
+
+       -- Division by zero is defined to be zero, matching the SBV convention for reals.
+       ratDivByZero :: SRational -> SRational -> SBool
+       ratDivByZero x y = (y .== 0) .=> ((x / y) .== 0)
 
        -- rational -> real -> rational is the identity: no precision is lost.
        ratToRealToRat :: SRational -> SBool
