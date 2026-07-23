@@ -945,8 +945,8 @@ realRatConvs = [ testCase "realConv1" $ assertIsThm $ respectsLe sRealToSInteger
                , testCase "ratConv9"  $ assertIsThm ratRnaTieAway
 
                -- z3 struggles with this in the compliant mode so we turn compliance off for these two
-               , testCase "ratRealRoundTrip1" $ assert $ isTheoremWith z3{smtLib2Compliant = False} ratToRealToRat
-               , testCase "ratRealRoundTrip2" $ assert $ isTheoremWith z3{smtLib2Compliant = False} realToRatToReal
+               , testCase "ratRealRoundTrip1" $ assert $ isTheorem ratToRealToRat
+               , testCase "ratRealRoundTrip2" $ assert $ isTheorem realToRatToReal
 
                , testCase "convertCov1" $ assertIsSat (\x y -> sFromIntegral @Word8   @Integer  x .== y)
                , testCase "convertCov2" $ assertIsSat (\x y -> sFromIntegral @Integer @Word8    x .== y)
