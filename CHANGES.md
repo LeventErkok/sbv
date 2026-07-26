@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 14.5, Not yet released
+### Version 14.5, 2026-07-26
 
   * Add `sRationalToSReal` and `sRealToSRational`, converting between symbolic rationals and
     reals. The rational-to-real direction is always exact. The real-to-rational direction is
