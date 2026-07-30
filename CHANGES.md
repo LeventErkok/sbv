@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 14.6, Not yet released
+
+  * New development version
+
 ### Version 14.5, 2026-07-26
 
   * Add `sRationalToSReal` and `sRealToSRational`, converting between symbolic rationals and
