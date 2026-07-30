@@ -267,11 +267,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Let "l"
-            (Val 6)
-            (Let "a" (Val 0) (Add (Mul (Val 3) (Let "p" (Val 4) (Var "p"))) (Var "a"))))))
+[RECV] ((s0 (Let "m" (Val 4) (Let "c" (Val 1) (Add (Mul (Var "c") (Val 0)) (Val 12))))))
 
-Got: (let l = 6 in (let a = 0 in ((3 * (let p = 4 in p)) + a)))
+Got: (let m = 4 in (let c = 1 in ((c * 0) + 12)))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess
