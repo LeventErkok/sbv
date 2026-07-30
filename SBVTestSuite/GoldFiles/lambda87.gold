@@ -223,13 +223,13 @@
 [SEND] (get-value (s19))
 [RECV] ((s19 0))
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple2 0 (seq.unit 2))))
+[RECV] ((s0 (mkSBVTuple2 0 (seq.unit 4))))
 [SEND] (get-value (s14))
 [RECV] ((s14 (as seq.empty (Seq Int))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [MEASURE] sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_d8dc9e6fbd @(SBV (Integer,[Integer]) -> SBV [Integer]): abs arg1._1 failed strict decrease: Falsifiable. Counter-example:
-  arg    = (0,[2]) :: (Integer, [Integer])
+  arg    = (0,[4]) :: (Integer, [Integer])
   before =       0 :: Integer
   then   =       0 :: Integer
 [MEASURE] sbv.closureMap @(SBV Integer -> SBV Integer -> SBV Integer)_d8dc9e6fbd @(SBV (Integer,[Integer]) -> SBV [Integer]): trying next candidate..

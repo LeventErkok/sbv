@@ -105,15 +105,15 @@
 [SEND] (get-value (s16))
 [RECV] ((s16 1))
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple2 1 (seq.unit 1))))
+[RECV] ((s0 (mkSBVTuple2 1 (seq.unit (- 1)))))
 [SEND] (get-value (s12))
 [RECV] ((s12 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [MEASURE] sbv.foldl @(SBV (Integer,Integer) -> SBV Integer)_dd270bb7de @(SBV (Integer,[Integer]) -> SBV Integer): abs arg1._1 failed strict decrease: Falsifiable. Counter-example:
-  arg    = (1,[1]) :: (Integer, [Integer])
-  before =       1 :: Integer
-  then   =       1 :: Integer
+  arg    = (1,[-1]) :: (Integer, [Integer])
+  before =        1 :: Integer
+  then   =        1 :: Integer
 [MEASURE] sbv.foldl @(SBV (Integer,Integer) -> SBV Integer)_dd270bb7de @(SBV (Integer,[Integer]) -> SBV Integer): trying next candidate..
 [MEASURE] sbv.foldl @(SBV (Integer,Integer) -> SBV Integer)_dd270bb7de @(SBV (Integer,[Integer]) -> SBV Integer): trying length arg1._2
 [MEASURE] replayDAG {sbv.foldl @(SBV (Integer,Integer) -> SBV Integer)_dd270bb7de @(SBV (Integer,[Integer]) -> SBV Integer)}: replaying 11 node(s)

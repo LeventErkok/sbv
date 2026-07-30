@@ -107,13 +107,13 @@
 [SEND] (get-value (s17))
 [RECV] ((s17 0))
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple2 (as seq.empty (Seq Int)) (seq.unit 2))))
+[RECV] ((s0 (mkSBVTuple2 (as seq.empty (Seq Int)) (seq.unit 4))))
 [SEND] (get-value (s10))
 [RECV] ((s10 (as seq.empty (Seq Int))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [MEASURE] sbv.foldr @(SBV (Integer,[Integer]) -> SBV [Integer])_5c3e05abf3 @(SBV ([Integer],[Integer]) -> SBV [Integer]): length arg1._1 failed strict decrease: Falsifiable. Counter-example:
-  arg    = ([],[2]) :: ([Integer], [Integer])
+  arg    = ([],[4]) :: ([Integer], [Integer])
   before =        0 :: Integer
   then   =        0 :: Integer
 [MEASURE] sbv.foldr @(SBV (Integer,[Integer]) -> SBV [Integer])_5c3e05abf3 @(SBV ([Integer],[Integer]) -> SBV [Integer]): trying next candidate..

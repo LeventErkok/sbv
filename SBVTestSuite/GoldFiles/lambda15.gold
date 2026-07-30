@@ -101,19 +101,19 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s14))
-[RECV] ((s14 0))
+[RECV] ((s14 8946))
 [SEND] (get-value (s16))
-[RECV] ((s16 0))
+[RECV] ((s16 8946))
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple2 0 (seq.unit 0))))
+[RECV] ((s0 (mkSBVTuple2 8946 (seq.unit 0))))
 [SEND] (get-value (s12))
 [RECV] ((s12 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [MEASURE] sbv.foldl @(SBV (Integer,Integer) -> SBV Integer)_1fd06f7602 @(SBV (Integer,[Integer]) -> SBV Integer): abs arg1._1 failed strict decrease: Falsifiable. Counter-example:
-  arg    = (0,[0]) :: (Integer, [Integer])
-  before =       0 :: Integer
-  then   =       0 :: Integer
+  arg    = (8946,[0]) :: (Integer, [Integer])
+  before =       8946 :: Integer
+  then   =       8946 :: Integer
 [MEASURE] sbv.foldl @(SBV (Integer,Integer) -> SBV Integer)_1fd06f7602 @(SBV (Integer,[Integer]) -> SBV Integer): trying next candidate..
 [MEASURE] sbv.foldl @(SBV (Integer,Integer) -> SBV Integer)_1fd06f7602 @(SBV (Integer,[Integer]) -> SBV Integer): trying length arg1._2
 [MEASURE] replayDAG {sbv.foldl @(SBV (Integer,Integer) -> SBV Integer)_1fd06f7602 @(SBV (Integer,[Integer]) -> SBV Integer)}: replaying 11 node(s)
