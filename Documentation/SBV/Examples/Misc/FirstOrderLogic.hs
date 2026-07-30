@@ -127,26 +127,25 @@ We have:
 >>> prove $ (qe (\(Forall x) -> p x) .|| qe (\(Forall x) -> q x)) .<=> qe (\(Forall x) -> p x .|| q x)
 Falsifiable. Counter-example:
   P :: U -> Bool
+  P U_1 = False
   P U_2 = True
-  P U_0 = True
-  P _   = False
+  P _   = True
 <BLANKLINE>
   Q :: U -> Bool
+  Q U_1 = True
   Q U_2 = False
-  Q U_0 = False
   Q _   = True
 
 The solver found us a falsifying instance: Pick a domain with at least three elements. We'll call
-the first element @U_2@, and the second element @U_0@, without naming the others. (Unfortunately the solver picks nonintuitive names, but you can substitute better names if you like. They're just names of two distinct
-objects that belong to the domain \(U\) with no other meaning.)
+the first element @U_1@, and the second element @U_2@, without naming the others. 
 
-Arrange so that \(P\) is true on @U_2@ and @U_0@, but false for everything else.
-Also arrange so that \(Q\) is false on these two elements, but true for everything else.
+Arrange so that \(P\) is false on @U_1@ true everywhere else.
+Also arrange so that \(Q\) is false for @U_2@ but true for everything else.
 
 With this
 assignment, the right hand side of our conjecture
 is true no matter which element you pick, because either \(P\) or \(Q\) is true on any
-given element. (Actually, only one will be true on any element, but that is tangential.)
+given element, or both.
 But left-hand-side is not a tautology: Clearly neither \(P\) nor \(Q\) are true for all elements, and
 hence both disjuncts are false. Thus, the alleged conjecture is not an equivalence in first order logic.
 -}
@@ -202,18 +201,18 @@ skolemEx1 (Forall x) (Exists y) = x .>= y
 --   b _ = 0
 -- <BLANKLINE>
 --   d :: Word8 -> Word8 -> Word8
---   d a c = a + 255 * c
+--   d a c = 255 * c + a
 --
 -- Let's see what the solver said. It suggested we should use the value of @0@ for @b@, regardless of the
 -- choice of @a@. (Note how @b@ is a function of one variable, i.e., of @a@)
--- And it suggested using @a + (255 * c)@ for @d@,
+-- And it suggested using @255 * c + a@ for @d@,
 -- for whatever we choose for @a@ and @c@. Why does this work? Well, given
 -- arbitrary @a@ and @c@, we end up with:
 --
 -- @
 --     a + b >= c + d
---     --> substitute b = 0 and d = a + 255c as suggested by the solver
---     a + 0 >= c + a + 255c
+--     --> substitute b = 0 and d = 255c + a as suggested by the solver
+--     a + 0 >= c + 255c + a
 --     a >= 256c + a
 --     a >= a
 -- @

@@ -119,7 +119,7 @@ isId s = s `match` (asciiLower * KStar (asciiLetter + digit))
 --
 -- >>> evalSat
 -- Satisfiable. Model:
---   e = Let "h" (Val 1) (Var "h") :: Expr String Integer
+--   e = Let "p" (Val 1) (Var "p") :: Expr String Integer
 --   a =                         9 :: Integer
 --   b =                        10 :: Integer
 evalSat :: IO SatResult
@@ -138,8 +138,8 @@ evalSat = sat $ do e :: SExpr String Integer  <- free "e"
 --
 -- >>> genE
 -- Satisfiable. Model:
---   e1 = Let "h" (Val 5) (Val 3) :: Expr String Integer
---   e2 =                Val (-2) :: Expr String Integer
+--   e1 = Let "a" (Let "h" (Val (-7)) (Var "h")) (Add (Val 11) (Add (Val (-1)) (Var "a"))) :: Expr String Integer
+--   e2 =                                                                         Val (-2) :: Expr String Integer
 genE :: IO SatResult
 genE = sat $ do e1 :: SExpr String Integer <- free "e1"
                 e2 :: SExpr String Integer <- free "e2"
@@ -155,9 +155,9 @@ genE = sat $ do e1 :: SExpr String Integer <- free "e1"
 -- | Query mode example.
 --
 -- >>> queryE
--- e1: (let a = ((let x = 20 in 4) * -5) in (-1 * -3))
+-- e1: (let d = (3 * 1) in (1 * d))
 -- e2: -2
--- e3: (let h = 79 % 80 in h)
+-- e3: (let a = 128 % 129 in a)
 queryE :: IO ()
 queryE = runSMT $ do
            e1 :: SExpr String Integer <- free "e1"
