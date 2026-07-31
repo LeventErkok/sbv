@@ -919,8 +919,7 @@ st = [(1, 2), (-1, -5), (0, 9), (5, 5)]
 misc :: [TestTree]
 misc = [ testCase "misc-t1" $ assertIsSat t1
        ]
- where -- https://stackoverflow.com/questions/69033969/trivial-rationals-problems-without-variables-in-sbv-solver-in-haskell
-       t1 = do _xs <- sRationals []
+ where t1 = do _xs <- sRationals []
                constrain $ (5.%1:: SRational) .<= (5.%1:: SRational)
 
 realRatConvs :: [TestTree]
