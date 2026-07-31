@@ -131,7 +131,7 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   5.2268255e-34 :: Float
+--   a = 5.2268255e-34 :: Float
 --
 -- Indeed, we have:
 --
