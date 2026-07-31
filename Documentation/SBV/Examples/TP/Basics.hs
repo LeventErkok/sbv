@@ -368,7 +368,7 @@ axiomsAreDangerous = runTP $ do
 -- Lemma: badRevLen
 -- *** Failed to prove badRevLen.
 -- Falsifiable. Counter-example:
---   xs = [17,17,17] :: [Integer]
+--   xs = [20,20,20] :: [Integer]
 badRevLen :: IO ()
 badRevLen = runTP $
    void $ lemma "badRevLen"
@@ -384,7 +384,7 @@ badRevLen = runTP $
 -- Lemma: badLengthProof
 -- *** Failed to prove badLengthProof.
 -- Falsifiable. Counter-example:
---   xs   = [12,15,19,25,32,42] :: [Integer]
+--   xs   = [13,16,19,24,34,42] :: [Integer]
 --   imp  =                  42 :: Integer
 --   spec =                   6 :: Integer
 badLengthProof :: IO ()

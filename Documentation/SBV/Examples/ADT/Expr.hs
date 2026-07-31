@@ -129,8 +129,8 @@ evalSat = sat $ do e :: SExpr    <- free "e"
 --
 -- >>> genE
 -- Satisfiable. Model:
---  e1 = Let "b" (Mul (Val (-1)) (Mul (Val (-3)) (Let "n" (Val 7) (Add (Val 23) (Mul (Val 2) (Mul (Val 3) (Val (-4)))))))) (Mul (Val (-1)) (Var "b")) :: Expr
---  e2 =                                                                                                                                     Val (-2) :: Expr
+--   e1 = Let "b" (Mul (Val (-1)) (Mul (Val (-3)) (Let "n" (Val 7) (Add (Val 23) (Mul (Val 2) (Mul (Val 3) (Val (-4)))))))) (Mul (Val (-1)) (Var "b")) :: Expr
+--   e2 =                                                                                                                                     Val (-2) :: Expr
 genE :: IO SatResult
 genE = sat $ do e1 :: SExpr <- free "e1"
                 e2 :: SExpr <- free "e2"
