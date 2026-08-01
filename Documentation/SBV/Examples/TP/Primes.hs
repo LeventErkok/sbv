@@ -317,6 +317,9 @@ factAtLeast1 = inductWith cvc5 "factAtLeast1"
 -- === __Proof__
 -- >>> runTP dividesFact
 -- Lemma: dividesProduct           Q.E.D.
+-- Lemma: factUnfold               Q.E.D.
+-- Lemma: dvdCong                  Q.E.D.
+-- Lemma: dvdRefl                  Q.E.D.
 -- Inductive lemma: dividesFact
 --   Step: Base                    Q.E.D.
 --   Step: 1                       Q.E.D.
@@ -325,6 +328,7 @@ factAtLeast1 = inductWith cvc5 "factAtLeast1"
 --     Step: 2.1.2                 Q.E.D.
 --     Step: 2.2.1                 Q.E.D.
 --     Step: 2.2.2                 Q.E.D.
+--     Step: 2.2.3                 Q.E.D.
 --     Step: 2.Completeness        Q.E.D.
 --   Result:                       Q.E.D.
 -- Functions proven terminating: fact
@@ -333,21 +337,44 @@ dividesFact :: TP (Proof (Forall "n" Integer -> Forall "k" Integer -> SBool))
 dividesFact = do
    dvp <- recall dividesProduct
 
-   induct "dividesFact"
-          (\(Forall n) (Forall k) -> 1 .<= k .&& k .<= n .=> k `dvd` fact n) $
-          \ih n k -> [1 .<= k, k .<= n + 1]
-                  |- k `dvd` fact (n + 1)
-                  =: k `dvd` ((n + 1) * fact n)
-                  =: cases [ k .== n + 1 ==> k `dvd` ((n + 1) * fact n)
-                                          ?? dvp `at` (Inst @"x" k, Inst @"y" (n+1), Inst @"z" (fact n))
-                                          =: sTrue
-                                          =: qed
-                           , k ./= n + 1 ==> k `dvd` ((n + 1) * fact n)
-                                          ?? ih
-                                          ?? dvp `at` (Inst @"x" k, Inst @"y" (fact n), Inst @"z" (n+1))
-                                          =: sTrue
-                                          =: qed
-                           ]
+   -- Unfolding 'fact' underneath the mod that 'dvd' introduces is something no solver comes back
+   -- from. So, we split that step into two obligations, neither of which mentions both: 'factUnfold'
+   -- is the defining equation of 'fact' (no mod in sight), and 'dvdCong' is congruence of 'dvd'
+   -- over equal arguments (no recursion in sight). The step itself is then propositional.
+   --
+   -- Note that we phrase 'factUnfold' at @n+1@, matching the shape it is used at below exactly.
+   fu <- lemmaWith cvc5 "factUnfold"
+                   (\(Forall @"n" n) -> n .>= 0 .=> fact (n+1) .== (n+1) * fact n)
+                   []
+
+   dc <- lemma "dvdCong"
+               (\(Forall @"k" k) (Forall @"x" x) (Forall @"y" y) -> x .== y .=> (k `dvd` x .== k `dvd` y))
+               []
+
+   -- Every number divides itself. Isolated like this it is a one-liner for z3; buried inside the
+   -- case below (where 'fact' is also in scope) it is not.
+   dr <- lemma "dvdRefl" (\(Forall @"x" x) -> x `dvd` x) []
+
+   inductWith cvc5 "dividesFact"
+                   (\(Forall n) (Forall k) -> 1 .<= k .&& k .<= n .=> k `dvd` fact n) $
+                   \ih n k -> [1 .<= k, k .<= n + 1]
+                           |- k `dvd` fact (n + 1)
+                           ?? fu `at` Inst @"n" n
+                           ?? dc `at` (Inst @"k" k, Inst @"x" (fact (n+1)), Inst @"y" ((n + 1) * fact n))
+                           =: k `dvd` ((n + 1) * fact n)
+                           =: cases [ k .== n + 1 ==> k `dvd` ((n + 1) * fact n)
+                                                   ?? dr `at` Inst @"x" k
+                                                   ?? dvp `at` (Inst @"x" k, Inst @"y" (n+1), Inst @"z" (fact n))
+                                                   =: sTrue
+                                                   =: qed
+                                    , k ./= n + 1 ==> k `dvd` ((n + 1) * fact n)
+                                                   ?? dc `at` (Inst @"k" k, Inst @"x" ((n + 1) * fact n), Inst @"y" (fact n * (n + 1)))
+                                                   =: k `dvd` (fact n * (n + 1))
+                                                   ?? ih `at` Inst @"k" k
+                                                   ?? dvp `at` (Inst @"x" k, Inst @"y" (fact n), Inst @"z" (n+1))
+                                                   =: sTrue
+                                                   =: qed
+                                    ]
 
 -- | \(1 \leq k \land k \leq n \implies \neg (k \mid n! + 1)\)
 --

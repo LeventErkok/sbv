@@ -44,6 +44,9 @@ module Data.SBV.TP (
        -- * Creating instances of proofs
        , at, Inst(..)
 
+       -- * Naming proofs at specific types
+       , atProxy
+
        -- * Faking proofs
        , sorry
 
@@ -82,3 +85,4 @@ module Data.SBV.TP (
        ) where
 
 import Data.SBV.TP.TP
+import Data.SBV.Utils.Lib (atProxy)

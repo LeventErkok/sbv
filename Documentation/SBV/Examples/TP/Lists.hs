@@ -78,6 +78,8 @@ module Documentation.SBV.Examples.TP.Lists (
 
 import Prelude (Integer, Bool, Eq, ($), Num(..), id, (.), flip)
 
+import Data.Proxy (Proxy(..))
+
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tuple
@@ -130,21 +132,41 @@ appendAssoc =
 -- | @length (inits xs) == 1 + length xs@
 --
 -- >>> runTP $ initsLength @Integer
+-- Lemma: initLength                        Q.E.D.
 -- Inductive lemma (strong): initsLength
 --   Step: Measure is non-negative          Q.E.D.
---   Step: 1                                Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                            Q.E.D.
+--     Step: 1.2.1                          Q.E.D.
+--     Step: 1.2.2                          Q.E.D.
+--     Step: 1.2.3                          Q.E.D.
+--     Step: 1.2.4                          Q.E.D.
+--     Step: 1.Completeness                 Q.E.D.
 --   Result:                                Q.E.D.
 -- Functions proven terminating: sbv.inits
 -- [Proven] initsLength :: Ɐxs ∷ [Integer] → Bool
 initsLength :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
-initsLength =
+initsLength = do
+
+   initLength <- lemma "initLength"
+                       (\(Forall @"xs" (xs :: SList a)) -> sNot (null xs) .=> length (init xs) .== length xs - 1)
+                       []
+
    sInduct "initsLength"
            (\(Forall xs) -> length (inits xs) .== 1 + length xs)
            (length @a, []) $
-           \ih xs -> [] |- length (inits xs)
-                        ?? ih
-                        =: 1 + length xs
-                        =: qed
+           \ih xs -> [] |- length (inits xs) .== 1 + length xs
+                        =: [pCase| xs of
+                              []            -> trivial
+                              whole@(_ : _) ->
+                                   length (inits whole) .== 1 + length whole
+                                =: length (inits (init whole) ++ [whole]) .== 1 + length whole
+                                =: 1 + length (inits (init whole)) .== 1 + length whole
+                                ?? ih         `at` Inst @"xs" (init whole)
+                                ?? initLength `at` Inst @"xs" whole
+                                =: sTrue
+                                =: qed
+                           |]
 
 -- | @length (tails xs) == 1 + length xs@
 --
@@ -1513,19 +1535,23 @@ take_map f = do
 
 -- | @n .> 0 ==> drop n (x .: xs) == drop (n - 1) xs@
 --
+-- Note that we name the lemma with the type it is proven at, using 'atProxy'. This way, a
+-- proof that needs this lemma at several different types (as 'drop_map' does) gets a distinct
+-- name for each instance.
+--
 -- >>> runTP $ drop_cons @Integer
--- Lemma: drop_cons    Q.E.D.
--- [Proven] drop_cons :: Ɐn ∷ Integer → Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
+-- Lemma: drop_cons @Integer    Q.E.D.
+-- [Proven] drop_cons @Integer :: Ɐn ∷ Integer → Ɐx ∷ Integer → Ɐxs ∷ [Integer] → Bool
 drop_cons :: forall a. SymVal a => TP (Proof (Forall "n" Integer -> Forall "x" a -> Forall "xs" [a] -> SBool))
-drop_cons = lemma "drop_cons"
+drop_cons = lemma (atProxy (Proxy @a) "drop_cons")
                   (\(Forall n) (Forall x) (Forall xs) -> n .> 0 .=> drop n (x .: xs) .== drop (n - 1) xs)
                   []
 
 -- | @drop n (map f xs) == map f (drop n xs)@
 --
 -- >>> runTP $ drop_map @Integer @String (uninterpret "f")
--- Lemma: drop_cons                   Q.E.D.
--- Lemma: drop_cons                   Q.E.D.
+-- Lemma: drop_cons @Integer          Q.E.D.
+-- Lemma: drop_cons @[Char]           Q.E.D.
 -- Lemma: drop_map.n <= 0             Q.E.D.
 -- Inductive lemma: drop_map.n > 0
 --   Step: Base                       Q.E.D.
@@ -1545,7 +1571,13 @@ drop_cons = lemma "drop_cons"
 drop_map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> TP (Proof (Forall "n" Integer -> Forall "xs" [a] -> SBool))
 drop_map f = do
    dcA <- drop_cons @a
-   dcB <- drop_cons @b
+
+   -- We need 'drop_cons' at the result type as well. We can't simply use @drop_cons \@b@ here: if @b@ is
+   -- itself a sequence (as it is in the doctest above, where it is 'String'), then z3 gives up on the
+   -- resulting nested-sequence goal with an incompleteness report. So, we prove this instance with cvc5.
+   dcB <- lemmaWith cvc5 (atProxy (Proxy @b) "drop_cons")
+                    (\(Forall @"n" n) (Forall @"x" (x :: SBV b)) (Forall @"xs" xs) -> n .> 0 .=> drop n (x .: xs) .== drop (n - 1) xs)
+                    []
 
    h1 <- lemma "drop_map.n <= 0"
                (\(Forall @"xs" xs) (Forall @"n" n) -> n .<= 0 .=> drop n (map f xs) .== map f (drop n xs))

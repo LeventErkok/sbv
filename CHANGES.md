@@ -3,6 +3,11 @@
 
 ### Version 14.6, Not yet released
 
+  * `Data.SBV.TP` now exports `atProxy`, which annotates a proof name with the type it is being
+    run at: `atProxy (Proxy @a) "myLemma"` gives `myLemma @Integer` when `a` is `Integer`. Handy
+    for polymorphic lemmas that get used at several types within a single proof, so each instance
+    shows up under its own name in the transcript.
+
   * Add `(.**)`, integer exponentiation following SMT-LIB's `**` operator over the `Int` theory.
     Unlike `(.^)` (which mirrors Haskell's `^` and requires a non-negative, non-symbolic exponent),
     `(.**)` is total and places no restriction on the exponent: it may be negative or symbolic. When
