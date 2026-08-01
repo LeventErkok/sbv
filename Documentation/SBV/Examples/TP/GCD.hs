@@ -202,6 +202,7 @@ a `dvd` b = ite (a .== 0) (b .== 0) (b `sEMod` a .== 0)
 --
 -- ==== __Proof__
 -- >>> runTP dvdMul
+-- Lemma: mulMod0              Q.E.D.
 -- Lemma: dvdMul
 --   Step: 1 (2 way case split)
 --     Step: 1.1               Q.E.D.
@@ -211,21 +212,32 @@ a `dvd` b = ite (a .== 0) (b .== 0) (b `sEMod` a .== 0)
 --   Result:                   Q.E.D.
 -- [Proven] dvdMul :: Ɐd ∷ Integer → Ɐa ∷ Integer → Ɐk ∷ Integer → Bool
 dvdMul :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> Forall "k" Integer -> SBool))
-dvdMul = calc "dvdMul"
-              (\(Forall d) (Forall a) (Forall k) -> d `dvd` a .=> d `dvd` (k*a)) $
-              \d a k -> [d `dvd` a]
-                     |- cases [ d .== 0 ==> d `dvd` (k*a)
-                                         ?? a .== 0
-                                         =: sTrue
-                                         =: qed
-                              , d ./= 0 ==> d `dvd` (k*a)
-                                         =: (k*a) `sEMod` d .== 0
-                                         ?? a .== d * a `sEDiv` d
-                                         ?? k * a .== d * (k * a `sEDiv` d)
-                                         ?? (d * (k * a `sEDiv` d)) `sEMod` d .== 0
-                                         =: sTrue
-                                         =: qed
-                              ]
+dvdMul = do
+   -- The only genuinely nonlinear fact we need: any multiple of a nonzero @d@ leaves no
+   -- remainder modulo @d@. We prove it once, in isolation, so z3 sees the smallest possible
+   -- nonlinear goal. With this in hand, the divisibility argument below is pure substitution.
+   mulMod0 <- lemma "mulMod0"
+                    (\(Forall @"d" d) (Forall @"y" y) -> d ./= 0 .=> (d * y) `sEMod` d .== 0)
+                    []
+
+   calc "dvdMul"
+        (\(Forall d) (Forall a) (Forall k) -> d `dvd` a .=> d `dvd` (k*a)) $
+        \d a k -> [d `dvd` a]
+               |- cases [ d .== 0 ==> d `dvd` (k*a)
+                                   ?? a .== 0
+                                   =: sTrue
+                                   =: qed
+                        , d ./= 0 ==> let q = a `sEDiv` d
+                                   in d `dvd` (k*a)
+                                      =: (k*a) `sEMod` d .== 0
+                                      -- @d@ divides @a@ exactly, so @a = d*q@, hence @k*a = d*(k*q)@
+                                      ?? a     .== d * q
+                                      ?? k * a .== d * (k * q)
+                                      -- and @d*(k*q)@ is a multiple of @d@, so its remainder is @0@
+                                      ?? mulMod0 `at` (Inst @"d" d, Inst @"y" (k * q))
+                                      =: sTrue
+                                      =: qed
+                        ]
 
 -- | \(a \mid |b| \iff a \mid b\)
 --
@@ -307,49 +319,75 @@ dvdOddThenOdd = calc "dvdOddThenOdd"
 --
 -- ==== __Proof__
 -- >>> runTP dvdEvenWhenOdd
+-- Lemma: dvdMul               Q.E.D.
+-- Lemma: dvdSelf
+--   Step: 1 (2 way case split)
+--     Step: 1.1               Q.E.D.
+--     Step: 1.2.1             Q.E.D.
+--     Step: 1.2.2             Q.E.D.
+--     Step: 1.Completeness    Q.E.D.
+--   Result:                   Q.E.D.
 -- Lemma: dvdEvenWhenOdd
---   Step: 1                Q.E.D.
---   Step: 2                Q.E.D.
---   Step: 3                Q.E.D.
---   Step: 4                Q.E.D.
---   Step: 5                Q.E.D.
---   Step: 6                Q.E.D.
---   Step: 7                Q.E.D.
---   Result:                Q.E.D.
+--   Step: 1                   Q.E.D.
+--   Step: 2                   Q.E.D.
+--   Step: 3                   Q.E.D.
+--   Step: 4                   Q.E.D.
+--   Step: 5                   Q.E.D.
+--   Step: 6                   Q.E.D.
+--   Step: 7                   Q.E.D.
+--   Result:                   Q.E.D.
 -- [Proven] dvdEvenWhenOdd :: Ɐd ∷ Integer → Ɐa ∷ Integer → Bool
 dvdEvenWhenOdd :: TP (Proof (Forall "d" Integer -> Forall "a" Integer -> SBool))
-dvdEvenWhenOdd = calc "dvdEvenWhenOdd"
-                      (\(Forall d) (Forall a) -> isOdd d .&& d `dvd` (2*a) .=> d `dvd` a) $
-                      \d a ->  [isOdd d, d `dvd` (2*a)]
-                           |-  let t = (d - 1) `sEDiv` 2
-                                   m = (2*a)   `sEDiv` d
-                            in sTrue
+dvdEvenWhenOdd = do
+   dMul <- recall dvdMul
 
-                            -- Observe that d = 2t+1 and 2a = dm
-                            =: d .== 2*t + 1 .&& 2*a .== d*m
+   -- Every number divides itself. We could hand this to z3 directly, but as a raw fact it
+   -- forces it to reason about @d `sEMod` d@ with a symbolic divisor, which it is fickle at.
+   -- Spelling out the reduction keeps it robust.
+   dSelf <- calc "dvdSelf"
+                 (\(Forall @"d" d) -> d `dvd` d) $
+                 \d -> [] |- cases [ d .== 0 ==> trivial
+                                   , d ./= 0 ==> d `dvd` d
+                                              =: d `sEMod` d .== 0
+                                              =: sTrue
+                                              =: qed
+                                   ]
 
-                            -- So, 2a == (2t+1)m holds
-                            =: 2*a .== (2*t+1) * m
+   calc "dvdEvenWhenOdd"
+        (\(Forall d) (Forall a) -> isOdd d .&& d `dvd` (2*a) .=> d `dvd` a) $
+        \d a ->  [isOdd d, d `dvd` (2*a)]
+             |-  let t = (d - 1) `sEDiv` 2
+                     m = (2*a)   `sEDiv` d
+              in sTrue
 
-                            -- Arithmetic gives us
-                            =: 2*a .== 2*t*m + m .&& 2*(a-t*m) .== m
+              -- Observe that d = 2t+1 and 2a = dm
+              =: d .== 2*t + 1 .&& 2*a .== d*m
 
-                            -- So m = 2*(a-t*m), i.e., m is even
-                            =: m .== 2 * (a - t*m)
+              -- So, 2a == (2t+1)m holds
+              =: 2*a .== (2*t+1) * m
 
-                            -- Let n = a - t*m, so m = 2n. It follows that 2a = d(2n) = 2(dn)
-                            =: let n = a - t*m
-                            in 2*a .== d * (2 * n) .&& 2 * a .== 2 * (d * n)
+              -- Arithmetic gives us
+              =: 2*a .== 2*t*m + m .&& 2*(a-t*m) .== m
 
-                            -- From which we can conclude a = dn
-                            =: a .== d * n
+              -- So m = 2*(a-t*m), i.e., m is even
+              =: m .== 2 * (a - t*m)
 
-                            -- Thus we can deduce d must divide a
-                            ?? d `dvd` (d * n)
-                            =: d `dvd` a
+              -- Let n = a - t*m, so m = 2n. It follows that 2a = d(2n) = 2(dn)
+              =: let n = a - t*m
+              in 2*a .== d * (2 * n) .&& 2 * a .== 2 * (d * n)
 
-                            -- Done!
-                            =: qed
+              -- From which we can conclude a = dn
+              =: a .== d * n
+
+              -- Since d divides d (dSelf), it also divides any multiple of itself, in
+              -- particular d*n (dMul). As a == d*n, d divides a. We hand z3 these as
+              -- proven facts, so it doesn't have to rediscover the divisibility itself.
+              ?? dSelf `at` Inst @"d" d
+              ?? dMul  `at` (Inst @"d" d, Inst @"a" d, Inst @"k" n)
+              =: d `dvd` a
+
+              -- Done!
+              =: qed
 
 -- | \(d \mid a \land d \mid b \implies d \mid (a + b)\)
 --
