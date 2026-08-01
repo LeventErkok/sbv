@@ -906,6 +906,9 @@ gcdSub a b = nGCDSub (abs a) (abs b)
 -- >>> runTP gcdSubEquiv
 -- Lemma: commutative                           Q.E.D.
 -- Lemma: gcdAdd                                Q.E.D.
+-- Lemma: gcdNonNeg
+--   Step: 1                                    Q.E.D.
+--   Result:                                    Q.E.D.
 -- Inductive lemma (strong): nGCDSubEquiv
 --   Step: Measure is non-negative              Q.E.D.
 --   Step: 1 (5 way case split)
@@ -936,6 +939,20 @@ gcdSubEquiv = do
    comm <- recall commutative
    addG <- recall gcdAdd
 
+   -- Bridge from the general @gcd@ (used by @comm@/@addG@) to @nGCD@ on non-negative inputs.
+   -- Since @gcd x y = nGCD (abs x) (abs y)@, this is just @abs@ elimination -- but proving it
+   -- here, in isolation, lets z3 close it by congruence (equal args => equal @nGCD@) instead of
+   -- unfolding the recursive @nGCD@. Handed to the induction below as an opaque equality, it
+   -- keeps z3 from diverging when relating @gcd@-facts to @nGCD@.
+   nnB <- calc "gcdNonNeg"
+               (\(Forall @"x" x) (Forall @"y" y) -> x .>= 0 .&& y .>= 0 .=> gcd x y .== nGCD x y) $
+               \x y -> [x .>= 0, y .>= 0]
+                    |- gcd x y
+                    ?? abs x .== x
+                    ?? abs y .== y
+                    =: nGCD x y
+                    =: qed
+
    -- First prove over the non-negative numbers:
    nEq <- sInduct "nGCDSubEquiv"
                   (\(Forall @"a" a) (Forall @"b" b) -> a .>= 0 .&& b .>= 0 .=> nGCDSub a b .== nGCD a b)
@@ -949,16 +966,28 @@ gcdSubEquiv = do
                                                           ?? ih
                                                           =: nGCD (a - b) b
                                                           ?? addG `at` (Inst @"a" (a - b), Inst @"b" b)
+                                                          ?? nnB  `at` (Inst @"x" (a - b), Inst @"y" b)
+                                                          ?? nnB  `at` (Inst @"x" a,       Inst @"y" b)
                                                           =: nGCD a b
                                                           =: qed
                                    , a .< b  .&& a ./= 0 ==> nGCDSub a (b - a)
                                                           ?? ih
                                                           =: nGCD a (b - a)
                                                           ?? comm
+                                                          ?? nnB `at` (Inst @"x" a,       Inst @"y" (b - a))
+                                                          ?? nnB `at` (Inst @"x" (b - a), Inst @"y" a)
                                                           =: nGCD (b - a) a
+                                                          -- @addG@ is stated over @gcd@; hand z3 the
+                                                          -- @gcd = nGCD@ bridge (via @nnB@) as proven
+                                                          -- equalities so it closes this by chaining
+                                                          -- rather than unfolding the recursive @nGCD@.
                                                           ?? addG `at` (Inst @"a" (b - a), Inst @"b" a)
+                                                          ?? nnB  `at` (Inst @"x" (b - a), Inst @"y" a)
+                                                          ?? nnB  `at` (Inst @"x" b,       Inst @"y" a)
                                                           =: nGCD b a
                                                           ?? comm
+                                                          ?? nnB `at` (Inst @"x" b, Inst @"y" a)
+                                                          ?? nnB `at` (Inst @"x" a, Inst @"y" b)
                                                           =: nGCD a b
                                                           =: qed
                                    ]
