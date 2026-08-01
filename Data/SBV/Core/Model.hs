@@ -2924,7 +2924,7 @@ b .^ e
 infixr 8 .^
 
 -- | Integer exponentiation, emitted as SMT-LIB's @**@ over the @Int@ theory. Unlike '.^' (which
--- mirrors Haskell's '^'), @.**@ places no restriction on the exponent: it may be negative or
+-- mirrors Haskell's @^@), @.**@ places no restriction on the exponent: it may be negative or
 -- symbolic.
 --
 -- If both arguments are concrete and the exponent is non-negative, the result is computed and
