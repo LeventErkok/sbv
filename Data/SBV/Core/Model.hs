@@ -37,7 +37,7 @@ module Data.SBV.Core.Model (
   , checkMutualGroup
   , SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
-  , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
+  , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^), (.**)
   , some
   , oneIf, genVar, genVar_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
@@ -2922,6 +2922,47 @@ b .^ e
                           blasted
                           (iterate (\x -> x*x) b)
 infixr 8 .^
+
+-- | Integer exponentiation, emitted as SMT-LIB's @**@ over the @Int@ theory. Unlike '.^' (which
+-- mirrors Haskell's '^'), @.**@ places no restriction on the exponent: it may be negative or
+-- symbolic.
+--
+-- If both arguments are concrete and the exponent is non-negative, the result is computed and
+-- returned as a literal. Otherwise the application is emitted as SMT-LIB's @**@, whose @Int@-theory
+-- semantics are: for @n >= 0@, ordinary exponentiation (with @0 .** 0 == 1@); for @n < 0@, @0@ when
+-- @m == 0@ or @abs m > 1@, and @m .** abs n@ when @abs m == 1@.
+--
+-- N.B. Symbolic (or negative) integer exponentiation via @**@ is not supported by all solvers, so
+-- such a query may come back as @unknown@ (or the solver may reject it outright).
+--
+-- Concrete, non-negative exponents fold directly:
+--
+-- >>> 2 .** 3
+-- 8 :: SInteger
+-- >>> (-2) .** 3
+-- -8 :: SInteger
+-- >>> 0 .** 0
+-- 1 :: SInteger
+--
+-- Symbolic and negative exponents are handed to the solver, so they need a backend that
+-- implements SMT-LIB's @**@. No solver supports it yet (as of July 2026), so the following
+-- are illustrative only:
+--
+-- @
+-- prove $ \\x -> x .** 2 .== x * x     -- Q.E.D.
+-- prove $ 2 .** (-3) .== 0             -- Q.E.D.
+-- prove $ (-1) .** (-3) .== -1         -- Q.E.D.
+-- @
+(.**) :: SInteger -> SInteger -> SInteger
+m .** n
+  | Just b <- unliteral m, Just e <- unliteral n, e >= 0
+  = literal (b ^ e)
+  | True
+  = SBV $ SVal KUnbounded $ Right $ cache r
+  where r st = do sm <- sbvToSV st m
+                  sn <- sbvToSV st n
+                  newExpr st KUnbounded (SBVApp (NonLinear NR_IntPow) [sm, sn])
+infixr 8 .**
 
 instance (Ord a, Num (SBV a), SymVal a, Fractional a) => Fractional (SBV a) where
   fromRational  = literal . fromRational

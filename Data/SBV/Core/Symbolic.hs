@@ -336,25 +336,27 @@ data NROp = NR_Sin
           | NR_Exp
           | NR_Log
           | NR_Pow
+          | NR_IntPow
           deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Show a non-linear op. Unfortunately this can't be generically done since different
 -- solvers use different names for some of these ops.
 showNROp :: Solver -> NROp -> String
 showNROp slvr = sh
-  where sh NR_Sin  = "sin"
-        sh NR_Cos  = "cos"
-        sh NR_Tan  = "tan"
-        sh NR_ASin = arc ++ "sin"
-        sh NR_ACos = arc ++ "cos"
-        sh NR_ATan = arc ++ "tan"
-        sh NR_Sinh = "sinh"
-        sh NR_Cosh = "cosh"
-        sh NR_Tanh = "tanh"
-        sh NR_Sqrt = "sqrt"
-        sh NR_Exp  = "exp"
-        sh NR_Log  = "log"
-        sh NR_Pow  = "pow"
+  where sh NR_Sin    = "sin"
+        sh NR_Cos    = "cos"
+        sh NR_Tan    = "tan"
+        sh NR_ASin   = arc ++ "sin"
+        sh NR_ACos   = arc ++ "cos"
+        sh NR_ATan   = arc ++ "tan"
+        sh NR_Sinh   = "sinh"
+        sh NR_Cosh   = "cosh"
+        sh NR_Tanh   = "tanh"
+        sh NR_Sqrt   = "sqrt"
+        sh NR_Exp    = "exp"
+        sh NR_Log    = "log"
+        sh NR_Pow    = "pow"
+        sh NR_IntPow = "**"   -- SMT-LIB Int-theory exponentiation
 
         -- DReal uses asin/acos etc. CVC5 uses arcsin. Other solvers probably
         -- don't even support these. But this isn't the right place to bail-out

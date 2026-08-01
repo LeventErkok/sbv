@@ -3,7 +3,13 @@
 
 ### Version 14.6, Not yet released
 
-  * New development version
+  * Add `(.**)`, integer exponentiation following SMT-LIB's `**` operator over the `Int` theory.
+    Unlike `(.^)` (which mirrors Haskell's `^` and requires a non-negative, non-symbolic exponent),
+    `(.**)` is total and places no restriction on the exponent: it may be negative or symbolic. When
+    both arguments are concrete and the exponent is non-negative, the result is computed directly;
+    otherwise the application is emitted as SMT-LIB's `**` for the solver to interpret. Note that no
+    current solver supports `**`, so symbolic (or negative) exponentiation will typically come back
+    as `unknown` (or be rejected) until backend support arrives. Thanks to Ryan Scott for the pointer.
 
 ### Version 14.5, 2026-07-26
 

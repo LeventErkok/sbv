@@ -331,7 +331,7 @@ module Data.SBV (
   -- ** Splitting, joining, and extending bit-vectors
   , bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake, ByteConverter(..)
   -- ** Exponentiation
-  , (.^)
+  , (.^), (.**)
   -- * IEEE-floating point numbers
   , IEEEFloating(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
   -- ** Rounding modes

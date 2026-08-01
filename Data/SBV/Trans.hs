@@ -69,7 +69,7 @@ module Data.SBV.Trans (
   -- ** Splitting, joining, and extending bit-vectors
   , bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake
   -- ** Exponentiation
-  , (.^)
+  , (.^), (.**)
   -- * IEEE-floating point numbers
   , IEEEFloating(..), RoundingMode(..), SRoundingMode, nan, infinity, sNaN, sInfinity
   -- ** Rounding modes
