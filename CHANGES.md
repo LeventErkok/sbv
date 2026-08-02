@@ -3,6 +3,10 @@
 
 ### Version 14.6, Not yet released
 
+  * New TP example: Binary trees (`Documentation.SBV.Examples.TP.Tree`). Proves that mirroring
+    a tree is an involution, that it preserves the tree's size, and that the in-order traversal
+    of a mirrored tree is the reverse of the original's.
+
   * `Data.SBV.TP` now exports `atProxy`, which annotates a proof name with the type it is being
     run at: `atProxy (Proxy @a) "myLemma"` gives `myLemma @Integer` when `a` is `Integer`. Handy
     for polymorphic lemmas that get used at several types within a single proof, so each instance
