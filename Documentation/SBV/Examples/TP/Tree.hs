@@ -55,8 +55,8 @@ mkSymbolic [''Tree]
 
 -- | Mirror a tree by recursively swapping its left and right subtrees.
 --
--- >>> mirror (sNode (sNode sLeaf (1 :: SInteger) sLeaf) 2 sLeaf)
--- sNode sLeaf 2 (sNode sLeaf 1 sLeaf) :: STree Integer
+-- >>> mirror $ literal $ Node (Node Leaf (1::Integer) Leaf) 2 Leaf
+-- Node Leaf 2 (Node Leaf 1 Leaf) :: Tree Integer
 mirror :: SymVal a => STree a -> STree a
 mirror = smtFunction "mirror"
        $ \t -> [sCase| t of
