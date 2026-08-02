@@ -283,6 +283,7 @@ Library
                     , Documentation.SBV.Examples.TP.SumReverse
                     , Documentation.SBV.Examples.TP.Tao
                     , Documentation.SBV.Examples.TP.TautologyChecker
+                    , Documentation.SBV.Examples.TP.Tree
                     , Documentation.SBV.Examples.TP.UpDown
                     , Documentation.SBV.Examples.TP.VM
                     , Documentation.SBV.Examples.Transformers.SymbolicEval
