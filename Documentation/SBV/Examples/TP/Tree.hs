@@ -30,6 +30,8 @@ import Data.SBV
 import Data.SBV.List
 import Data.SBV.TP
 
+import qualified Documentation.SBV.Examples.TP.Lists as TP
+
 import Data.Proxy (Proxy(..))
 
 #ifdef DOCTEST
@@ -93,6 +95,34 @@ treeSize = smtFunction "treeSize"
 treeSizePos :: forall a. SymVal a => TP (Proof (Forall "t" (Tree a) -> SBool))
 treeSizePos = inductiveLemma (atProxy (Proxy @a) "treeSizePos") (\(Forall t) -> treeSize t .>= 0) []
 
+-- | Both subtrees of a node are strictly smaller than the node itself. This is the
+-- lemma that lets us discharge the guard on the induction hypothesis in the strong
+-- induction proofs below.
+--
+-- @treeSize l < treeSize (Node l x r) && treeSize r < treeSize (Node l x r)@
+--
+-- >>> runTP $ treeSizeSmaller @Integer
+-- Lemma: treeSizePos @Integer        Q.E.D.
+-- Lemma: treeSizeSmaller @Integer
+--   Step: 1                          Q.E.D.
+--   Result:                          Q.E.D.
+-- Functions proven terminating: treeSize
+-- [Proven] treeSizeSmaller @Integer :: Ɐl ∷ (Tree Integer) → Ɐx ∷ Integer → Ɐr ∷ (Tree Integer) → Bool
+treeSizeSmaller :: forall a. SymVal a => TP (Proof (Forall "l" (Tree a) -> Forall "x" a -> Forall "r" (Tree a) -> SBool))
+treeSizeSmaller = do
+  tsp <- recall $ treeSizePos @a
+
+  calc (atProxy (Proxy @a) "treeSizeSmaller")
+       (\(Forall l) (Forall x) (Forall r) ->
+           let n = treeSize (sNode l x r)
+           in treeSize l .< n .&& treeSize r .< n) $
+       \l x r -> let n = treeSize (sNode l x r)
+                 in [] |- treeSize l .< n .&& treeSize r .< n
+                        ?? tsp `at` Inst @"t" l
+                        ?? tsp `at` Inst @"t" r
+                        =: sTrue
+                        =: qed
+
 -- * Correctness proofs
 
 -- | Proves that mirroring a tree twice yields the original tree:
@@ -100,19 +130,25 @@ treeSizePos = inductiveLemma (atProxy (Proxy @a) "treeSizePos") (\(Forall t) -> 
 -- @mirror (mirror t) == t@
 --
 -- >>> runTP $ mirrorInvolution @Integer
--- Inductive lemma: mirrorInvolution
---   Step: Base                      Q.E.D.
---   Step: 1                         Q.E.D.
---   Step: 2                         Q.E.D.
---   Step: 3                         Q.E.D.
---   Step: 4                         Q.E.D.
---   Step: 5                         Q.E.D.
---   Result:                         Q.E.D.
--- Functions proven terminating: mirror
--- [Proven] mirrorInvolution :: Ɐt ∷ Tree Integer → Bool
+-- Lemma: treeSizePos @Integer                            Q.E.D.
+-- Lemma: treeSizeSmaller @Integer                        Q.E.D.
+-- Inductive lemma (strong): mirrorInvolution @Integer
+--   Step: Measure is non-negative                        Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                        Q.E.D.
+--     Step: 1.1.2                                        Q.E.D.
+--     Step: 1.2.1                                        Q.E.D.
+--     Step: 1.2.2                                        Q.E.D.
+--     Step: 1.2.3                                        Q.E.D.
+--     Step: 1.2.4                                        Q.E.D.
+--     Step: 1.Completeness                               Q.E.D.
+--   Result:                                              Q.E.D.
+-- Functions proven terminating: mirror, treeSize
+-- [Proven] mirrorInvolution @Integer :: Ɐt ∷ (Tree Integer) → Bool
 mirrorInvolution :: forall a. SymVal a => TP (Proof (Forall "t" (Tree a) -> SBool))
 mirrorInvolution = do
-  tsp <- recall $ treeSizePos @a
+  tsp <- recall $ treeSizePos     @a
+  tss <- recall $ treeSizeSmaller @a
 
   sInduct (atProxy (Proxy @a) "mirrorInvolution")
           (\(Forall @"t" t) -> mirror (mirror t) .== t)
@@ -125,9 +161,11 @@ mirrorInvolution = do
                             Node l x r -> mirror (mirror (sNode l x r))
                                        =: mirror (sNode (mirror r) x (mirror l))
                                        =: sNode (mirror (mirror l)) x (mirror (mirror r))
-                                       ?? ih `at` Inst @"t" l
+                                       ?? tss `at` (Inst @"l" l, Inst @"x" x, Inst @"r" r)
+                                       ?? ih  `at` Inst @"t" l
                                        =: sNode l x (mirror (mirror r))
-                                       ?? ih `at` Inst @"t" r
+                                       ?? tss `at` (Inst @"l" l, Inst @"x" x, Inst @"r" r)
+                                       ?? ih  `at` Inst @"t" r
                                        =: sNode l x r
                                        =: qed
                          |]
@@ -137,19 +175,25 @@ mirrorInvolution = do
 -- @treeSize (mirror t) == treeSize t@
 --
 -- >>> runTP $ sizeMirror @Integer
--- Inductive lemma: sizeMirror
---   Step: Base                      Q.E.D.
---   Step: 1                         Q.E.D.
---   Step: 2                         Q.E.D.
---   Step: 3                         Q.E.D.
---   Step: 4                         Q.E.D.
---   Step: 5                         Q.E.D.
---   Result:                         Q.E.D.
+-- Lemma: treeSizePos @Integer                      Q.E.D.
+-- Lemma: treeSizeSmaller @Integer                  Q.E.D.
+-- Inductive lemma (strong): sizeMirror @Integer
+--   Step: Measure is non-negative                  Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                    Q.E.D.
+--     Step: 1.2.1                                  Q.E.D.
+--     Step: 1.2.2                                  Q.E.D.
+--     Step: 1.2.3                                  Q.E.D.
+--     Step: 1.2.4                                  Q.E.D.
+--     Step: 1.2.5                                  Q.E.D.
+--     Step: 1.Completeness                         Q.E.D.
+--   Result:                                        Q.E.D.
 -- Functions proven terminating: mirror, treeSize
--- [Proven] sizeMirror :: Ɐt ∷ Tree Integer → Bool
+-- [Proven] sizeMirror @Integer :: Ɐt ∷ (Tree Integer) → Bool
 sizeMirror :: forall a. SymVal a => TP (Proof (Forall "t" (Tree a) -> SBool))
 sizeMirror = do
-  tsp <- recall $ treeSizePos @a
+  tsp <- recall $ treeSizePos     @a
+  tss <- recall $ treeSizeSmaller @a
 
   sInduct (atProxy (Proxy @a) "sizeMirror")
           (\(Forall @"t" t) -> treeSize (mirror t) .== treeSize t)
@@ -161,9 +205,11 @@ sizeMirror = do
                             Node l x r -> treeSize (mirror (sNode l x r))
                                        =: treeSize (sNode (mirror r) x (mirror l))
                                        =: 1 + treeSize (mirror r) + treeSize (mirror l)
-                                       ?? ih `at` Inst @"t" r
+                                       ?? tss `at` (Inst @"l" l, Inst @"x" x, Inst @"r" r)
+                                       ?? ih  `at` Inst @"t" r
                                        =: 1 + treeSize r + treeSize (mirror l)
-                                       ?? ih `at` Inst @"t" l
+                                       ?? tss `at` (Inst @"l" l, Inst @"x" x, Inst @"r" r)
+                                       ?? ih  `at` Inst @"t" l
                                        =: 1 + treeSize r + treeSize l
                                        =: treeSize (sNode l x r)
                                        =: qed
@@ -175,19 +221,37 @@ sizeMirror = do
 -- @flatten (mirror t) == reverse (flatten t)@
 --
 -- >>> runTP $ flattenMirror @Integer
--- Inductive lemma: flattenMirror
---   Step: Base                      Q.E.D.
---   Step: 1                         Q.E.D.
---   Step: 2                         Q.E.D.
---   Step: 3                         Q.E.D.
---   Step: 4                         Q.E.D.
---   Step: 5                         Q.E.D.
---   Result:                         Q.E.D.
--- Functions proven terminating: flatten, mirror, sbv.reverse
--- [Proven] flattenMirror :: Ɐt ∷ Tree Integer → Bool
+-- Lemma: treeSizePos @Integer                         Q.E.D.
+-- Lemma: treeSizeSmaller @Integer                     Q.E.D.
+-- Lemma: revApp                                       Q.E.D.
+-- Lemma: appendAssoc                                  Q.E.D.
+-- Inductive lemma (strong): flattenMirror @Integer
+--   Step: Measure is non-negative                     Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                     Q.E.D.
+--     Step: 1.1.2                                     Q.E.D.
+--     Step: 1.1.3                                     Q.E.D.
+--     Step: 1.1.4                                     Q.E.D.
+--     Step: 1.2.1                                     Q.E.D.
+--     Step: 1.2.2                                     Q.E.D.
+--     Step: 1.2.3                                     Q.E.D.
+--     Step: 1.2.4                                     Q.E.D.
+--     Step: 1.2.5                                     Q.E.D.
+--     Step: 1.2.6                                     Q.E.D.
+--     Step: 1.2.7                                     Q.E.D.
+--     Step: 1.2.8                                     Q.E.D.
+--     Step: 1.Completeness                            Q.E.D.
+--   Result:                                           Q.E.D.
+-- Functions proven terminating: flatten, mirror, sbv.reverse, treeSize
+-- [Proven] flattenMirror @Integer :: Ɐt ∷ (Tree Integer) → Bool
 flattenMirror :: forall a. SymVal a => TP (Proof (Forall "t" (Tree a) -> SBool))
 flattenMirror = do
-  tsp <- recall $ treeSizePos @a
+  tsp <- recall $ treeSizePos     @a
+  tss <- recall $ treeSizeSmaller @a
+
+  -- Quietly import a couple of list helpers from "Documentation.SBV.Examples.TP.Lists"
+  revApp <- recall $ TP.revApp      @a
+  aAssoc <- recall $ TP.appendAssoc @a
 
   sInduct (atProxy (Proxy @a) "flattenMirror")
           (\(Forall @"t" t) -> flatten (mirror t) .== reverse (flatten t))
@@ -202,10 +266,18 @@ flattenMirror = do
                             Node l x r -> flatten (mirror (sNode l x r))
                                        =: flatten (sNode (mirror r) x (mirror l))
                                        =: flatten (mirror r) ++ [x] ++ flatten (mirror l)
-                                       ?? ih `at` Inst @"t" r
+                                       ?? tss `at` (Inst @"l" l, Inst @"x" x, Inst @"r" r)
+                                       ?? ih  `at` Inst @"t" r
                                        =: reverse (flatten r) ++ [x] ++ flatten (mirror l)
-                                       ?? ih `at` Inst @"t" l
+                                       ?? tss `at` (Inst @"l" l, Inst @"x" x, Inst @"r" r)
+                                       ?? ih  `at` Inst @"t" l
                                        =: reverse (flatten r) ++ [x] ++ reverse (flatten l)
+                                       ?? aAssoc `at` (Inst @"xs" (reverse (flatten r)), Inst @"ys" [x], Inst @"zs" (reverse (flatten l)))
+                                       =: (reverse (flatten r) ++ [x]) ++ reverse (flatten l)
+                                       ?? revApp `at` (Inst @"xs" [x], Inst @"ys" (flatten r))
+                                       =: reverse ([x] ++ flatten r) ++ reverse (flatten l)
+                                       ?? revApp `at` (Inst @"xs" (flatten l), Inst @"ys" ([x] ++ flatten r))
+                                       =: reverse (flatten l ++ [x] ++ flatten r)
                                        =: reverse (flatten (sNode l x r))
                                        =: qed
                          |]
