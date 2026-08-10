@@ -10,7 +10,7 @@ veryclean:
 # corner case issues we could not deal with. Perhaps revisit one day!
 generateBounds: generateBounds.hs
 	@rm -f *.o *.hi
-	ghc -O2 -Wall -Werror --make -threaded $@
+	ghc -O2 -package async -Wall -Werror --make -threaded $@
 	@rm -f *.o *.hi
 # 	@echo "*** The following takes about 6 minutes to run, be patient!"
 # 	time ./generateBounds +RTS -N4 > ../Data/SBV/Utils/FloatConversionBounds.hs
