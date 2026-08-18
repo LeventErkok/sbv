@@ -26,7 +26,7 @@ import qualified Data.SBV.RegExp as R
 
 -- | Solve a given crossword, returning the corresponding rows
 solveCrossword :: [R.RegExp] -> [R.RegExp] -> IO [String]
-solveCrossword rowRegExps colRegExps = runSMT $ do
+solveCrossword rowRegExps colRegExps = runSMTWith cvc5 $ do
         let numRows = genericLength rowRegExps
             numCols = genericLength colRegExps
 
