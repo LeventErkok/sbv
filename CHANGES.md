@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 14.6, Not yet released
+### Version 14.6, 2026-08-18
 
   * New TP example: Binary trees (`Documentation.SBV.Examples.TP.Tree`). Proves that mirroring
     a tree is an involution, that it preserves the tree's size, and that the in-order traversal
