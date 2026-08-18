@@ -20,6 +20,13 @@
     current solver supports `**`, so symbolic (or negative) exponentiation will typically come back
     as `unknown` (or be rejected) until backend support arrives. Thanks to Ryan Scott for the pointer.
 
+  * [DEVELOPERS ONLY] SBV used to rely on latest z3 compiled from github master. While this was
+    important as tools matured, it also created extra-work to keep track of daily z3 changes. Starting
+    with this release, we'll track only officially released latest version of z3, which should bring
+    more stability to both the build process and end users who most likely download binaries of z3.
+    This is also true for other solvers we support, i.e., we'll track only the officially released
+    versions, instead of their latest source code.
+
 ### Version 14.5, 2026-07-26
 
   * Add `sRationalToSReal` and `sRealToSRational`, converting between symbolic rationals and
