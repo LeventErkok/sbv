@@ -31,9 +31,7 @@ import GHC.ST            (runST, ST)
 import Test.QuickCheck  (Arbitrary(..), elements)
 
 -- | The SMT-Lib (in particular Z3) implementation for min/max for floats does not agree with
--- Haskell's; and also it does not agree with what the hardware does. Sigh.. See:
---      <https://gitlab.haskell.org/ghc/ghc/-/issues/10378>
---      <http://github.com/Z3Prover/z3/issues/68>
+-- Haskell's; and also it does not agree with what the hardware does. Sigh..
 -- So, we codify here what the Z3 (SMTLib) is implementing for fpMax.
 -- The discrepancy with Haskell is that the NaN propagation doesn't work in Haskell
 -- The discrepancy with x86 is that given +0/-0, x86 returns the second argument; SMTLib is non-deterministic

@@ -6,9 +6,6 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- As of January 2026, to access the careers link at <http://math.inc>, you need to solve the following
--- puzzle:
---
 -- @
 -- Suppose that today is June 1, 2025. We call a date "square" if all of its components (day, month, and year) are
 -- perfect squares. I was born in the last millennium, and my next birthday (relative to that date) will be the last
