@@ -3211,18 +3211,13 @@ uninterpreted.
     hackage can no longer compile it due to some dependency mismatch.
   * Add forgotten Real class instance for the type 'AlgReal'
   * Stop putting bounds on hackage dependencies, as they cause
-    more trouble then they actually help. (See the discussion
-    here: <http://www.haskell.org/pipermail/haskell-cafe/2012-July/102352.html>.)
+    more trouble then they actually help.
 
 ### Version 2.3, 2012-07-20
 
   * Maintenance release, no new features.
   * Tweak cabal dependencies to avoid using packages that are newer
-    than those that come with ghc-7.4.2. Apparently this is a no-no
-    that breaks many things, see the discussion in this thread:
-      http://www.haskell.org/pipermail/haskell-cafe/2012-July/102352.html
-    In particular, the use of containers >= 0.5 is *not* OK until we have
-    a version of GHC that comes with that version.
+    than those that come with ghc-7.4.2.
 
 ### Version 2.2, 2012-07-17
 
