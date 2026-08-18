@@ -101,6 +101,7 @@ lintTest:
 
 testInterfaces:
 	@$(TIME) cabal test SBVConnections
+	@/bin/rm abc.history   # remove stale file that abc creates
 
 benchBuild:
 	@$(TIME) cabal build SBVBench
