@@ -267,9 +267,18 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (Let "t" (Val 13) (Let "r" (Var "t") (Add (Add (Val (- 1)) (Val 0)) (Var "r"))))))
+[RECV] ((s0 (Let "a"
+            (Let "t" (Val (- 3)) (Var "t"))
+            (Let "k"
+                 (Mul (Val 7) (Var "a"))
+                 (Add (Val 12)
+                      (Mul (Mul (Val 4) (Val 3))
+                           (Mul (Var "k")
+                                (Mul (Val 5)
+                                     (Add (Add (Val 6) (Var "k"))
+                                          (Let "l" (Var "k") (Val 15)))))))))))
 
-Got: (let t = 13 in (let r = t in ((-1 + 0) + r)))
+Got: (let a = (let t = -3 in t) in (let k = (7 * a) in (12 + ((4 * 3) * (k * (5 * ((6 + k) + (let l = k in 15))))))))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess
