@@ -4,36 +4,31 @@ report any issues you might see with newer releases.
 
   * ABC:
       * http://github.com/berkeley-abc/abc
-      * Version as downloaded from the above site on Apr 25, 2022
+      * Version as downloaded from the above site on Aug 18, 2026
   * Boolector:
       * https://boolector.github.io
-      * Version 3.2.2
+      * Version 3.2.4
   * Bitwuzla:
       * https://bitwuzla.github.io
-      * Version 0.5.0-dev, downloaded Aug 5, 2024
+      * Version 0.9.1
   * CVC4:
       * https://github.com/CVC4/CVC4
-      * Version installed via `brew tap cvc4/cvc4; brew rm cvc4; brew install cvc4/cvc4/cvc4 --HEAD`
-        on Jul 27, 2020.
+      * Version 1.8
   * CVC5:
       * https://github.com/cvc5/cvc5
       * Version 1.3.4
   * dReal:
       * http://dreal.github.io/
-      * Version installed via `brew tap dreal/dreal; brew rm dreal; brew install dreal --HEAD`
-        on Jul 25, 2020.
+      * Version 4.21.06.2
   * MathSAT:
       * http://mathsat.fbk.eu/
-      * Version 5.6.5
+      * Version 5.6.17
   * OpenSMT:
       * https://verify.inf.usi.ch/opensmt
-      * Version 2.5.3
+      * Version 2.9.2
   * Yices:
       * http://github.com/SRI-CSL/yices2
-      * Version 2.6.2 as downloaded from the above site on Apr 7, 2020
+      * Version 2.7.0
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on Jul 30th, 2026
-      * SBV typically relies on latest features of z3, so compiling directly
-        from the sources is recommended. If that's not possible, you should
-        always use their latest release.
+      * Version 5.1.0
