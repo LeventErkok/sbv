@@ -34,11 +34,11 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (F))
-[RECV] ((F (lambda ((x!1 Int) (x!2 Int)) (+ 3 (* 2 x!1) (* (- 1) x!2)))))
+[RECV] ((F (lambda ((x!1 Int) (x!2 Int)) (+ 3 (* (- 1) x!2) (* 2 x!1)))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 RESULT:
 Satisfiable. Model:
   F :: Integer -> Integer -> Integer
-  F x y = 3 + 2 * x + (-y)
+  F x y = 3 + (-y) + 2 * x
