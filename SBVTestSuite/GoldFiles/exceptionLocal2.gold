@@ -17,5 +17,5 @@ CAUGHT SMT EXCEPTION
 ***    Sent      : (declare-fun s0 () Real) ; tracks user variable "x"
 ***
 ***    Stderr    : line 8 column 23: logic does not support reals
-***    Executable: /usr/local/bin/z3
+***    Executable: /Users/lerkok/Projects/Solvers/bin/z3
 ***    Options   : -nw -in -smt2

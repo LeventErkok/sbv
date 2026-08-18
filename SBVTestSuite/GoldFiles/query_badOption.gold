@@ -29,6 +29,7 @@
 ***                  rlimit (unsigned int) (default: 0)
 ***                  smtlib2_compliant (bool) (default: false)
 ***                  stats (bool) (default: false)
+***                  suppress_platform_verbose (bool) (default: false)
 ***                  timeout (unsigned int) (default: 4294967295)
 ***                  trace (bool) (default: false)
 ***                  trace_file_name (string) (default: z3.log)
@@ -39,7 +40,7 @@
 ***                  well_sorted_check (bool) (default: false)")
 ***
 ***    Exit code : ExitFailure (-15)
-***    Executable: /usr/local/bin/z3
+***    Executable: /Users/lerkok/Projects/Solvers/bin/z3
 ***    Options   : -nw -in -smt2
 ***
 ***    Reason    : Backend solver reports it does not support this option.

@@ -27,7 +27,6 @@
 [RECV] ((s0 #x0))
 *** Solver   : ABC
 *** Exit code: ExitSuccess
-*** Std-err  : Cmd warning: redefining '%graft'
 [VALIDATE] Validating the model. Assignment:
 [VALIDATE]       x = 0 :: Word8
 [VALIDATE] There are no constraints to check.
