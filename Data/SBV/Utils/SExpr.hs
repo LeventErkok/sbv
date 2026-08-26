@@ -506,6 +506,7 @@ parseStoreAssociations e                                           = Right <$> (
     where vals :: SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
           vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"],            defVal]) = pure [Right defVal]
           vals (EApp [EApp [ECon "as", ECon "const", EApp (ECon "Array" : _)], defVal]) = pure [Right defVal]
+          vals (EApp [ECon "const", defVal])                                            = pure [Right defVal]
           vals (EApp (ECon "store" : prev : argsVal)) | length argsVal >= 2             = do rest <- vals prev
                                                                                              pure $ Left (init argsVal, last argsVal) : rest
           vals _                                                                        = Nothing
