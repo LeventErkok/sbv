@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 14.7, Not yet released
+
+  * New dev version
+
 ### Version 14.6, 2026-08-18
 
   * New TP example: Binary trees (`Documentation.SBV.Examples.TP.Tree`). Proves that mirroring
