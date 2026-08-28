@@ -142,7 +142,7 @@ checkExtensions:
 	@/bin/rm -f required_extensions
 
 tags:
-	@fast-tags -R --nomerge .
+	@ulimit -n 4096 2>/dev/null; fast-tags -R --nomerge .
 
 ci:
 	haskell-ci github sbv.cabal --no-tests --no-benchmarks
