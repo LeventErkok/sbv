@@ -624,6 +624,14 @@ toSBV typeName constructorName = go
             | nm == ''Ratio && i == ''Integer
             = pure KRational
 
+        -- sets
+        go (TH.AppT (TH.ConT nm) t)
+            | nm == ''RCSet = KSet <$> go t
+
+        -- arrays
+        go (TH.AppT (TH.AppT (TH.ConT nm) t1) t2)
+            | nm == ''ArrayModel = KArray <$> go t1 <*> go t2
+
         -- deal with base types
         go t@(TH.ConT constr)
             | Just base <- getBase constr

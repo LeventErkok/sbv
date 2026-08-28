@@ -3,12 +3,10 @@
 
 ### Version 14.7, Not yet released
 
-  * Fix a model-parsing bug: A set (or an array) stored in a field of an ADT could not be read
-    back, failing with a "Data.SBV.interpretSet: Unable to process solver output" error. The
-    culprit was the code that drops the `as` annotation off an ADT constructor, which was too
-    eager: It also stripped the annotations from the fields, where they can be load bearing.
-    (Sets and arrays are printed by the solver using the `((as const (Array A B)) v)` form.)
-    See issue #813. Thanks to David van Balen for reporting.
+  * Fix https://github.com/LeventErkok/sbv/issues/813. Thanks to David van Balen for reporting.
+
+  * Add support for sets and arrays as ADT fields: A type declared via `mkSymbolic` can now
+    have `RCSet` and `ArrayModel` valued constructor arguments.
 
 ### Version 14.6, 2026-08-18
 

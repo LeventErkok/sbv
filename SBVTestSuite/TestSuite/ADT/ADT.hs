@@ -55,14 +55,21 @@ data ADT  = AEmpty
           | APair     ADT ADT
           | KChar     Char
           | KRational Rational
-          {-
-          | KADT      String (Maybe [(String, [Kind])])
-          | KSet  Kind
-          | KArray  Kind Kind
-          -}
+          | KArray    (ArrayModel Integer Bool)
+          -- NB. KADT is covered by the APair constructor above. KSet is deliberately
+          -- absent: t05 has to run on cvc5 (z3 is buggy on it), and cvc5 doesn't
+          -- support sets; a single set field here would make every test over this
+          -- type require set support. Sets in ADT fields are covered by t08 instead.
           deriving Show
 
 mkSymbolic [''ADT]
+
+data Probe = PSet   (RCSet Integer)
+           | PArr   (ArrayModel Integer Bool)
+           | PInt   Integer
+           deriving Show
+
+mkSymbolic [''Probe]
 
 tests :: TestTree
 tests =
@@ -75,6 +82,7 @@ tests =
     , goldenCapturedIO "adt05" t05
     , goldenCapturedIO "adt06" t06
     , goldenCapturedIO "adt07" t07
+    , goldenCapturedIO "adt08" t08
     ]
 
 checkWith :: Symbolic () -> FilePath -> IO ()
@@ -145,5 +153,20 @@ t07 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
                         case cs of
                          Sat{} -> do v <- getValue a
                                      io $ do appendFile rf $ "\ngetValue: " ++ show v
+                                             appendFile rf   "\nDONE\n"
+                         _     -> error ("BAD RESULT: " ++ show cs)
+
+t08 :: FilePath -> IO ()
+t08 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+             a :: SProbe <- free "a"
+             b :: SProbe <- free "b"
+             constrain $ isPSet a .&& getPSet_1 a .== insert 2 empty
+             constrain $ isPArr b .&& readArray (getPArr_1 b) 3 .== sTrue
+             query $ do cs <- checkSat
+                        case cs of
+                         Sat{} -> do va <- getValue a
+                                     vb <- getValue b
+                                     io $ do appendFile rf $ "\ngetValue a: " ++ show va
+                                             appendFile rf $ "\ngetValue b: " ++ show vb
                                              appendFile rf   "\nDONE\n"
                          _     -> error ("BAD RESULT: " ++ show cs)

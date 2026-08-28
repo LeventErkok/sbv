@@ -70,6 +70,7 @@
            (APair (getAPair_1 ADT) (getAPair_2 ADT))
            (KChar (getKChar_1 String))
            (KRational (getKRational_1 SBVRational))
+           (KArray (getKArray_1 (Array Int Bool)))
        ))
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s1 () ADT ((as APair ADT) ((as AInt64 ADT) #x0000000000000004) ((as AMaybe ADT) ((as Just (Maybe (SBVTuple3 Real (_ FloatingPoint  8 24) (SBVTuple2 (Either Int (_ FloatingPoint  8 24)) (Seq Bool))))) (mkSBVTuple3 0.0 (fp #b0 #b10000010 #b10000000000000000000000) (mkSBVTuple2 ((as Left (Either Int (_ FloatingPoint  8 24))) 3) (seq.++ (seq.unit false) (seq.unit true))))))))

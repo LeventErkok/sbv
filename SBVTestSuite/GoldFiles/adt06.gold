@@ -70,6 +70,7 @@
            (APair (getAPair_1 ADT) (getAPair_2 ADT))
            (KChar (getKChar_1 String))
            (KRational (getKRational_1 SBVRational))
+           (KArray (getKArray_1 (Array Int Bool)))
        ))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
@@ -95,9 +96,9 @@
 [RECV] ((s0 (AMaybe (Just (mkSBVTuple3 2.0
                                   (fp #b0 #x00 #b00000000000000000000001)
                                   (mkSBVTuple2 (Right (fp #b0 #x00 #b00000000000000000100000))
-                                               (seq.unit true)))))))
+                                               (seq.unit false)))))))
 
-getValue: AMaybe (Just (2.0,1.0e-45,(Right 4.5e-44,[True])))
+getValue: AMaybe (Just (2.0,1.0e-45,(Right 4.5e-44,[False])))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess
