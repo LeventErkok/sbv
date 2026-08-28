@@ -1125,9 +1125,15 @@ recoverKindedValue si k e =
                                EApp (ECon c : cs) -> (c, cs)
                                _                  -> bad ["Unexpected expression value; does not start with a constructor."]
 
+                -- Drop the "as" annotation off the constructor, if we have one. Note that we
+                -- only strip in the head position: The fields are recovered by a recursive
+                -- call to 'recoverKindedValue', which deals with their own annotations. (Do
+                -- not be tempted to recurse into the fields here: That would corrupt values
+                -- whose annotation is load bearing, e.g., sets and arrays, which are printed
+                -- using the ((as const (Array A B)) v) form.)
                 removeAS :: SExpr -> SExpr
                 removeAS (EApp [ECon "as", i, _]) = removeAS i
-                removeAS (EApp xs)                = EApp $ map removeAS xs
+                removeAS (EApp (f@EApp{} : as))   = EApp (removeAS f : as)
                 removeAS ae                       = ae
 
                 bad :: [String] -> a
