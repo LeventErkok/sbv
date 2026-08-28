@@ -22,6 +22,9 @@ module TestSuite.ADT.ADT(tests) where
 import Utils.SBVTestFramework
 import Data.SBV.Control
 import Data.SBV.Maybe
+import Data.SBV.Either (sRight)
+import Data.SBV.Set    (insert, empty)
+import Data.SBV.Tuple  (tuple)
 
 data ADT  = AEmpty
           | ABool     Bool
@@ -71,6 +74,7 @@ tests =
     , goldenCapturedIO "adt04" t04
     , goldenCapturedIO "adt05" t05
     , goldenCapturedIO "adt06" t06
+    , goldenCapturedIO "adt07" t07
     ]
 
 checkWith :: Symbolic () -> FilePath -> IO ()
@@ -123,6 +127,20 @@ t06 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
              a :: SADT <- free "a"
              constrain $ isAMaybe a
              constrain $ isJust (getAMaybe_1 a)
+             query $ do cs <- checkSat
+                        case cs of
+                         Sat{} -> do v <- getValue a
+                                     io $ do appendFile rf $ "\ngetValue: " ++ show v
+                                             appendFile rf   "\nDONE\n"
+                         _     -> error ("BAD RESULT: " ++ show cs)
+
+-- Sets (and arrays) nested inside an ADT field: The model parser used to strip the
+-- (as const (Array Int Bool)) annotation off the field while looking for the constructor,
+-- which made the set unparseable. See interpretADT/removeAS in Data.SBV.Control.Utils.
+t07 :: FilePath -> IO ()
+t07 rf = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
+             a :: SEither Integer (Integer, RCSet Integer) <- free "a"
+             constrain $ a .== sRight (tuple (4, insert 2 empty))
              query $ do cs <- checkSat
                         case cs of
                          Sat{} -> do v <- getValue a
