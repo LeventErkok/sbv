@@ -155,7 +155,7 @@ SBV communicates with solvers via the standard SMT-Lib interface:
 
 | Solver | From | | Solver | From |
 |--------|------|-|--------|------|
-| [ABC](http://www.eecs.berkeley.edu/~alanmi/abc) | Berkeley | | [DReal](http://dreal.github.io/) | CMU |
+| [ABC](https://github.com/berkeley-abc/abc) | Berkeley | | [DReal](http://dreal.github.io/) | CMU |
 | [Bitwuzla](http://bitwuzla.github.io/) | Stanford | | [MathSAT](http://mathsat.fbk.eu/) | FBK / Trento |
 | [Boolector](http://boolector.github.io/) | JKU | | [OpenSMT](http://verify.inf.usi.ch/opensmt) | USI |
 | [CVC4](http://cvc4.github.io/) | Stanford / Iowa | | [Yices](http://github.com/SRI-CSL/yices2) | SRI |

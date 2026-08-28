@@ -125,7 +125,7 @@
 -- The SBV library is designed to work with any SMT-Lib compliant SMT-solver.
 -- Currently, we support the following SMT-Solvers out-of-the box:
 --
---   * ABC from University of Berkeley: <http://www.eecs.berkeley.edu/~alanmi/abc/>
+--   * ABC from University of Berkeley: <https://github.com/berkeley-abc/abc>
 --
 --   * CVC4, and CVC5 from Stanford University and the University of Iowa. <https://cvc4.github.io/> and <https://cvc5.github.io>
 --

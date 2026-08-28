@@ -7,7 +7,7 @@
 -- Stability : experimental
 --
 -- Shows that COAT (Count-out-and-transfer) trick preserves order of cards.
--- From pg. 35 of <http://graphics8.nytimes.com/packages/pdf/crossword/Mulcahy_Mathematical_Card_Magic-Sample2.pdf>:
+-- Quoting Colm Mulcahy's /Mathematical Card Magic: Fifty-Two New Effects/ (CRC Press, 2013):
 --
 -- /Given a packet of n cards, COATing k cards refers to counting out that many from the top into a pile, thus reversing their order, and transferring those as a unit to the bottom./
 --
