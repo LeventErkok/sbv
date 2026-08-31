@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 14.7, Not yet released
+### Version 14.7, 2026-08-31
 
   * Fix https://github.com/LeventErkok/sbv/issues/813. Thanks to David van Balen for reporting.
 
