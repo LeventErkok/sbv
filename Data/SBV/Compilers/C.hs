@@ -114,10 +114,10 @@ cgen cfg nm st sbvProg
    -- this is purely cosmetic, of course..
    = rnf (render sig) `seq` rnf (render (vcat body)) `seq` result
   where result = CgPgmBundle bundleKind
-                        $ filt [ ("Makefile",  (CgMakefile flags, [genMake (cgGenDriver cfg) nm nmd flags]))
-                               , (nm  ++ ".h", (CgHeader [wideTypes, sig], [genHeader bundleKind nm [sig] extProtos wideTypes]))
-                               , (nmd ++ ".c", (CgDriver,         genDriver cfg randVals nm ins outs mbRet))
-                               , (nm  ++ ".c", (CgSource,         body))
+                        $ filt [ ("Makefile"   , (CgMakefile flags          , [genMake (cgGenDriver cfg) nm nmd flags]))
+                               , (nm  ++ ".h"  , (CgHeader [wideTypes, sig] , [genHeader bundleKind nm [sig] extProtos wideTypes]))
+                               , (nmd ++ ".c"  , (CgDriver                  , genDriver cfg randVals nm ins outs mbRet))
+                               , (nm  ++ ".c"  , (CgSource                  , body))
                                ]
 
         (body, flagsNeeded) = genCProg cfg nm sig sbvProg ins outs mbRet extDecls
@@ -245,8 +245,9 @@ specifier cfg sv = case kindOf sv of
 --   There are many options here, using binary, decimal, etc. We simply use decimal for values 8-bits or less,
 --   and hex otherwise.
 mkConst :: CgConfig -> CV -> Doc
-mkConst _   (CV k (CInteger i)) | Just d <- wideBVConst k i = d
-mkConst cfg  (CV KReal (CAlgReal (AlgRational _ r))) = double (fromRational r :: Double) P.<> sRealSuffix (fromJust (cgReal cfg))
+mkConst _   (CV k (CInteger i))
+  | Just d <- wideBVConst k i = d
+mkConst cfg (CV KReal (CAlgReal (AlgRational _ r))) = double (fromRational r :: Double) P.<> sRealSuffix (fromJust (cgReal cfg))
   where sRealSuffix CgFloat      = text "F"
         sRealSuffix CgDouble     = empty
         sRealSuffix CgLongDouble = text "L"
@@ -445,24 +446,24 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
        mkOVal (n, CgAtomic{})      = text "&" P.<> text n
        mkOVal (n, CgArray{})       = text n
        display (n, CgAtomic sv)
-         | isWideBV (kindOf sv)         = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
-                                        $$ wideBVPrint (kindOf sv) (text n) P.<> semi
-                                        $$ text "printf(\"\\n\");"
-         | True                         = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier cfg sv
-                                                                                P.<> text "\\n") P.<> comma <+> text n) P.<> semi
+         | isWideBV (kindOf sv) = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
+                                $$ wideBVPrint (kindOf sv) (text n) P.<> semi
+                                $$ text "printf(\"\\n\");"
+         | True                 = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier cfg sv
+                                                                        P.<> text "\\n") P.<> comma <+> text n) P.<> semi
        display (n, CgArray [])         =  die $ "Unsupported empty array value for " ++ show n
        display (n, CgArray sws@(sv:_))
-         | isWideBV (kindOf sv)        =   text "int" <+> nctr P.<> semi
-                                        $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
-                                        $$ text "{"
-                                        $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=")) P.<> semi
-                                                $$ wideBVPrint (kindOf sv) entry P.<> semi
-                                                $$ text "printf(\"\\n\");")
-                                        $$ text "}"
-         | True                        =   text "int" <+> nctr P.<> semi
-                                        $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
-                                        $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=" <+> spec P.<> text "\\n")
-                                                                 P.<> comma <+> nctr <+> comma P.<> entry) P.<> semi)
+         | isWideBV (kindOf sv) = text "int" <+> nctr P.<> semi
+                                $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
+                                $$ text "{"
+                                $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=")) P.<> semi
+                                        $$ wideBVPrint (kindOf sv) entry P.<> semi
+                                        $$ text "printf(\"\\n\");")
+                                $$ text "}"
+         | True                 = text "int" <+> nctr P.<> semi
+                                $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
+                                $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=" <+> spec P.<> text "\\n")
+                                                         P.<> comma <+> nctr <+> comma P.<> entry) P.<> semi)
                   where nctr      = text n P.<> text "_ctr"
                         entry     = text n P.<> text "[" P.<> nctr P.<> text "]"
                         entrySpec = text n P.<> text "[%" P.<> int tab P.<> text "d]"
@@ -594,7 +595,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        isAlive (_, _)           = True
 
        genIO :: Bool -> (Bool, (String, CgVal)) -> [Doc]
-       genIO True  (alive, (cNm, CgAtomic sv)) = [declSV typeWidth sv  <+> text "=" <+> inputValue cNm sv P.<> semi     | alive]
+       genIO True  (alive, (cNm, CgAtomic sv)) = [declSV typeWidth sv <+> text "=" <+> inputValue cNm sv P.<> semi | alive]
        genIO False (alive, (cNm, CgAtomic sv)) = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg consts sv P.<> semi | alive]
        genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
          where genElt sv i
@@ -603,8 +604,9 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                  where entry = cNm ++ "[" ++ show i ++ "]"
 
        inputValue cNm sv
-         | isWideBV (kindOf sv) = wideBVNormalize (kindOf sv) (text cNm)
-         | True                 = text cNm
+         | isWideBV k = wideBVNormalize k (text cNm)
+         | True       = text cNm
+         where k = kindOf sv
 
        mkRet sv = text "return" <+> showSV cfg consts sv P.<> semi
 

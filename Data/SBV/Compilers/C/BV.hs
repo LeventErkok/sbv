@@ -72,21 +72,23 @@ wideBVTypeDecls ks = text . unlines $
 -- | Runtime routines for each used exact-width type, plus the cross-width
 -- helpers demanded by extracts, joins, extensions, and casts in the DAG.
 wideBVRuntime :: [Kind] -> [(SV, SBVExpr)] -> Doc
-wideBVRuntime [] _ = empty
+wideBVRuntime [] _     = empty
 wideBVRuntime ks asgns = text . unlines . map markUnused $
      ["/* Exact-width bit-vector runtime. All arithmetic is modulo the declared width. */", ""]
   ++ concatMap coreRuntime ks
   ++ concatMap specialRuntime (nub (concatMap specials asgns))
  where specials (sv, SBVApp op args) = case op of
-         Extract hi lo   -> [SpecialExtract (kindOf (headArg "Extract" args)) hi lo (kindOf sv)]
-         Join            -> case args of
-                              [a, b] -> [SpecialJoin (kindOf a) (kindOf b) (kindOf sv)]
-                              _      -> badArity "Join" args
-         ZeroExtend _    -> [SpecialConvert False (kindOf (headArg "ZeroExtend" args)) (kindOf sv)]
-         SignExtend _    -> [SpecialConvert True  (kindOf (headArg "SignExtend" args)) (kindOf sv)]
-         KindCast fr to  | isBounded fr && isBounded to -> [SpecialConvert (hasSign fr) fr to]
-         IEEEFP (FP_Reinterpret fr to) | isBounded fr && isBounded to -> [SpecialConvert False fr to]
-         _               -> []
+         Extract hi lo                  -> [SpecialExtract (kindOf (headArg "Extract" args)) hi lo (kindOf sv)]
+         Join                           -> case args of
+                                             [a, b] -> [SpecialJoin (kindOf a) (kindOf b) (kindOf sv)]
+                                             _      -> badArity "Join" args
+         ZeroExtend _                   -> [SpecialConvert False (kindOf (headArg "ZeroExtend" args)) (kindOf sv)]
+         SignExtend _                   -> [SpecialConvert True  (kindOf (headArg "SignExtend" args)) (kindOf sv)]
+         KindCast fr to
+           | isBounded fr && isBounded to -> [SpecialConvert (hasSign fr) fr to]
+         IEEEFP (FP_Reinterpret fr to)
+           | isBounded fr && isBounded to -> [SpecialConvert False fr to]
+         _                              -> []
 
        specialRuntime s = case s of
          SpecialExtract fr hi lo to -> conversionRuntime (extractName fr hi lo to) False lo fr to
@@ -103,50 +105,52 @@ wideBVConst k i
   | isWideBV k = Just . text $ "(" ++ cType k ++ "){{" ++ intercalate ", " (map word [0 .. limbs k - 1]) ++ "}}"
   | True       = Nothing
  where normalized = i `mod` (2 ^ intSizeOf k)
-       word n = u64 $ (normalized `shiftR` (64 * n)) .&. ((1 `shiftL` 64) - 1)
+       word n     = u64 $ (normalized `shiftR` (64 * n)) .&. ((1 `shiftL` 64) - 1)
 
 -- | Lower an operation involving a non-native bit-vector. A 'Nothing' result
 -- means that the legacy scalar lowering should handle the operation.
 wideBVExpr :: Op -> [SV] -> Kind -> [Doc] -> Maybe Doc
 wideBVExpr op svs resultKind args
-  | not (isWideBV resultKind || any (isWideBV . kindOf) svs) = Nothing
-  | True = Just $ case (op, args, svs) of
-      (Label _                        , [a]      , _)      -> a
-      (Plus                           , [a, b]   , _)      -> call "add" [a, b]
-      (Minus                          , [a, b]   , _)      -> call "sub" [a, b]
-      (Times                          , [a, b]   , _)      -> call "mul" [a, b]
-      (UNeg                           , [a]      , _)      -> call "neg" [a]
-      (Abs                            , [a]      , _)      -> call "abs" [a]
-      (And                            , [a, b]   , _)      -> call "and" [a, b]
-      (Or                             , [a, b]   , _)      -> call "or" [a, b]
-      (XOr                            , [a, b]   , _)      -> call "xor" [a, b]
-      (Not                            , [a]      , _)      -> call "not" [a]
-      (Equal _                        , [a, b]   , x:_)    -> argCall x "eq" [a, b]
-      (NotEqual                       , as       , x:_)    -> fsep $ punctuate (text " &&")
-                                                                  [text "!" P.<> parens (argCall x "eq" [a, b])
-                                                                  | (a:rest) <- tails as, b <- rest]
-      (LessThan                       , [a, b]   , x:_)    -> argCall x "lt" [a, b]
-      (GreaterThan                    , [a, b]   , x:_)    -> argCall x "lt" [b, a]
-      (LessEq                         , [a, b]   , x:_)    -> text "!" P.<> parens (argCall x "lt" [b, a])
-      (GreaterEq                      , [a, b]   , x:_)    -> text "!" P.<> parens (argCall x "lt" [a, b])
-      (Ite                            , [c, a, b], _)      -> c <+> text "?" <+> a <+> text ":" <+> b
-      (Quot                           , [a, b]   , _)      -> call "quot" [a, b]
-      (Rem                            , [a, b]   , _)      -> call "rem" [a, b]
-      (Shl                            , [a, n]   , x:_)    -> argCall x "shl" [a, argCall x "shift_amount" [n]]
-      (Shr                            , [a, n]   , x:_)    -> argCall x (if hasSign x then "ashr" else "lshr") [a, argCall x "shift_amount" [n]]
-      (Rol n                          , [a]      , _)      -> call "rotl" [a, integer (fromIntegral n)]
-      (Ror n                          , [a]      , _)      -> call "rotr" [a, integer (fromIntegral n)]
-      (Extract hi lo                  , [a]      , x:_)    -> namedCall (extractName (kindOf x) hi lo resultKind) [a]
-      (Join                           , [a, b]   , [x, y]) -> namedCall (joinName (kindOf x) (kindOf y) resultKind) [a, b]
-      (ZeroExtend _                   , [a]      , x:_)    -> namedCall (convertName False (kindOf x) resultKind) [a]
-      (SignExtend _                   , [a]      , x:_)    -> namedCall (convertName True  (kindOf x) resultKind) [a]
-      (KindCast fr to                 , [a]      , _)      -> namedCall (convertName (hasSign fr) fr to) [a]
-      (IEEEFP (FP_Reinterpret fr to)  , [a]      , _) | isBounded fr || isBounded to
-                                                         -> namedCall (convertName False fr to) [a]
-      _ -> error $ "SBV->C: exact bit-vector lowering does not yet support " ++ show op
-                ++ " with argument kinds " ++ show (map kindOf svs)
-                ++ " and result kind " ++ show resultKind
- where call suffix = namedCall (prefix resultKind ++ "_" ++ suffix)
+  | not (isWideBV resultKind || any (isWideBV . kindOf) svs)
+  = Nothing
+  | True
+  = Just $ case (op, args, svs) of
+      (Label _                       , [a]      , _)      -> a
+      (Plus                          , [a, b]   , _)      -> call "add" [a, b]
+      (Minus                         , [a, b]   , _)      -> call "sub" [a, b]
+      (Times                         , [a, b]   , _)      -> call "mul" [a, b]
+      (UNeg                          , [a]      , _)      -> call "neg" [a]
+      (Abs                           , [a]      , _)      -> call "abs" [a]
+      (And                           , [a, b]   , _)      -> call "and" [a, b]
+      (Or                            , [a, b]   , _)      -> call "or" [a, b]
+      (XOr                           , [a, b]   , _)      -> call "xor" [a, b]
+      (Not                           , [a]      , _)      -> call "not" [a]
+      (Equal _                       , [a, b]   , x:_)    -> argCall x "eq" [a, b]
+      (NotEqual                      , as       , x:_)    -> fsep $ punctuate (text " &&")
+                                                                 [text "!" P.<> parens (argCall x "eq" [a, b])
+                                                                 | (a:rest) <- tails as, b <- rest]
+      (LessThan                      , [a, b]   , x:_)    -> argCall x "lt" [a, b]
+      (GreaterThan                   , [a, b]   , x:_)    -> argCall x "lt" [b, a]
+      (LessEq                        , [a, b]   , x:_)    -> text "!" P.<> parens (argCall x "lt" [b, a])
+      (GreaterEq                     , [a, b]   , x:_)    -> text "!" P.<> parens (argCall x "lt" [a, b])
+      (Ite                           , [c, a, b], _)      -> c <+> text "?" <+> a <+> text ":" <+> b
+      (Quot                          , [a, b]   , _)      -> call "quot" [a, b]
+      (Rem                           , [a, b]   , _)      -> call "rem" [a, b]
+      (Shl                           , [a, n]   , x:_)    -> argCall x "shl" [a, argCall x "shift_amount" [n]]
+      (Shr                           , [a, n]   , x:_)    -> argCall x (if hasSign x then "ashr" else "lshr") [a, argCall x "shift_amount" [n]]
+      (Rol n                         , [a]      , _)      -> call "rotl" [a, integer (fromIntegral n)]
+      (Ror n                         , [a]      , _)      -> call "rotr" [a, integer (fromIntegral n)]
+      (Extract hi lo                 , [a]      , x:_)    -> namedCall (extractName (kindOf x) hi lo resultKind) [a]
+      (Join                          , [a, b]   , [x, y]) -> namedCall (joinName (kindOf x) (kindOf y) resultKind) [a, b]
+      (ZeroExtend _                  , [a]      , x:_)    -> namedCall (convertName False (kindOf x) resultKind) [a]
+      (SignExtend _                  , [a]      , x:_)    -> namedCall (convertName True  (kindOf x) resultKind) [a]
+      (KindCast fr to                , [a]      , _)      -> namedCall (convertName (hasSign fr) fr to) [a]
+      (IEEEFP (FP_Reinterpret fr to) , [a]      , _)
+          | isBounded fr || isBounded to                  -> namedCall (convertName False fr to) [a]
+      _                                                   -> error $ "SBV->C: exact bit-vector lowering does not yet support " ++ show op
+                                                                  ++ " with argument kinds " ++ show (map kindOf svs)
+                                                                  ++ " and result kind " ++ show resultKind
+ where call suffix       = namedCall (prefix resultKind ++ "_" ++ suffix)
        argCall sv suffix = namedCall (prefix (kindOf sv) ++ "_" ++ suffix)
 
 -- | Print a wide value without requiring a printf conversion specifier.
@@ -160,7 +164,7 @@ wideBVNormalize k value = namedCall (prefix k ++ "_norm") [value]
 
 -- | Cross-width helpers discovered while walking the symbolic DAG.
 data Special = SpecialExtract Kind Int Int Kind
-             | SpecialJoin Kind Kind Kind
+             | SpecialJoin    Kind Kind Kind
              | SpecialConvert Bool Kind Kind
              deriving (Eq)
 
@@ -410,7 +414,7 @@ conversionRuntime nm signExtend sourceOffset fr to =
        extension
          | signExtend && bitWidth to > copied =
              ["  if (" ++ getBit fr "a" (show (bitWidth fr - 1)) ++ ") for (i = " ++ show copied ++ "; i < " ++ show (bitWidth to) ++ "; ++i) { " ++ setBit to "r" "i" "true" ++ " }"]
-         | True = []
+         | True                                      = []
 
 -- | Emit concatenation code for a particular pair of operand kinds.
 joinRuntime :: Kind -> Kind -> Kind -> [String]
@@ -427,28 +431,28 @@ joinRuntime a b to =
 -- | Render a target-independent bit read from a scalar or limb value.
 getBit :: Kind -> String -> String -> String
 getBit k value bit
-  | isWideBV k = prefix k ++ "_get(" ++ value ++ ", " ++ bit ++ ")"
+  | isWideBV k                  = prefix k ++ "_get(" ++ value ++ ", " ++ bit ++ ")"
   | isBoolean k || isBounded k = "((((uint64_t) " ++ value ++ ") >> (" ++ bit ++ ")) & UINT64_C(1)) != 0"
   | otherwise                  = error $ "SBV->C: Cannot extract bits from " ++ show k
 
 -- | Render a target-independent bit update to a scalar or limb value.
 setBit :: Kind -> String -> String -> String -> String
 setBit k value bit bitValue
-  | isWideBV k = prefix k ++ "_set(&" ++ value ++ ", " ++ bit ++ ", " ++ bitValue ++ ");"
+  | isWideBV k                  = prefix k ++ "_set(&" ++ value ++ ", " ++ bit ++ ", " ++ bitValue ++ ");"
   | isBoolean k || isBounded k = value ++ " = (" ++ cType k ++ ") ((uint64_t) " ++ value ++ " | ((uint64_t) (" ++ bitValue ++ ") << (" ++ bit ++ ")));"
   | otherwise                  = error $ "SBV->C: Cannot set bits in " ++ show k
 
 -- | Render the zero value for a scalar or limb representation.
 zeroValue :: Kind -> String
 zeroValue k
-  | isWideBV k = prefix k ++ "_zero()"
+  | isWideBV k                  = prefix k ++ "_zero()"
   | isBoolean k || isBounded k = "(" ++ cType k ++ ") 0"
   | otherwise                  = error $ "SBV->C: Cannot construct a zero of " ++ show k
 
 -- | Render canonicalization for a scalar or limb representation.
 normalize :: Kind -> String -> String
 normalize k value
-  | isWideBV k = prefix k ++ "_norm(" ++ value ++ ")"
+  | isWideBV k                  = prefix k ++ "_norm(" ++ value ++ ")"
   | isBoolean k || isBounded k = value
   | otherwise                  = error $ "SBV->C: Cannot normalize " ++ show k
 
