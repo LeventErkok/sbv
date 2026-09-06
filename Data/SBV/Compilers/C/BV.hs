@@ -111,38 +111,38 @@ wideBVExpr :: Op -> [SV] -> Kind -> [Doc] -> Maybe Doc
 wideBVExpr op svs resultKind args
   | not (isWideBV resultKind || any (isWideBV . kindOf) svs) = Nothing
   | True = Just $ case (op, args, svs) of
-      (Label _, [a], _)                 -> a
-      (Plus, [a, b], _)                 -> call "add" [a, b]
-      (Minus, [a, b], _)                -> call "sub" [a, b]
-      (Times, [a, b], _)                -> call "mul" [a, b]
-      (UNeg, [a], _)                    -> call "neg" [a]
-      (Abs, [a], _)                     -> call "abs" [a]
-      (And, [a, b], _)                  -> call "and" [a, b]
-      (Or, [a, b], _)                   -> call "or" [a, b]
-      (XOr, [a, b], _)                  -> call "xor" [a, b]
-      (Not, [a], _)                     -> call "not" [a]
-      (Equal _, [a, b], x:_)            -> argCall x "eq" [a, b]
-      (NotEqual, as, x:_)               -> fsep $ punctuate (text " &&")
-                                                   [text "!" P.<> parens (argCall x "eq" [a, b])
-                                                   | (a:rest) <- tails as, b <- rest]
-      (LessThan, [a, b], x:_)           -> argCall x "lt" [a, b]
-      (GreaterThan, [a, b], x:_)        -> argCall x "lt" [b, a]
-      (LessEq, [a, b], x:_)             -> text "!" P.<> parens (argCall x "lt" [b, a])
-      (GreaterEq, [a, b], x:_)          -> text "!" P.<> parens (argCall x "lt" [a, b])
-      (Ite, [c, a, b], _)               -> c <+> text "?" <+> a <+> text ":" <+> b
-      (Quot, [a, b], _)                 -> call "quot" [a, b]
-      (Rem, [a, b], _)                  -> call "rem" [a, b]
-      (Shl, [a, n], x:_)                -> argCall x "shl" [a, argCall x "shift_amount" [n]]
-      (Shr, [a, n], x:_)                -> argCall x (if hasSign x then "ashr" else "lshr") [a, argCall x "shift_amount" [n]]
-      (Rol n, [a], _)                   -> call "rotl" [a, integer (fromIntegral n)]
-      (Ror n, [a], _)                   -> call "rotr" [a, integer (fromIntegral n)]
-      (Extract hi lo, [a], x:_)         -> namedCall (extractName (kindOf x) hi lo resultKind) [a]
-      (Join, [a, b], [x, y])            -> namedCall (joinName (kindOf x) (kindOf y) resultKind) [a, b]
-      (ZeroExtend _, [a], x:_)          -> namedCall (convertName False (kindOf x) resultKind) [a]
-      (SignExtend _, [a], x:_)          -> namedCall (convertName True  (kindOf x) resultKind) [a]
-      (KindCast fr to, [a], _)          -> namedCall (convertName (hasSign fr) fr to) [a]
-      (IEEEFP (FP_Reinterpret fr to), [a], _) | isBounded fr || isBounded to
-                                          -> namedCall (convertName False fr to) [a]
+      (Label _                        , [a]      , _)      -> a
+      (Plus                           , [a, b]   , _)      -> call "add" [a, b]
+      (Minus                          , [a, b]   , _)      -> call "sub" [a, b]
+      (Times                          , [a, b]   , _)      -> call "mul" [a, b]
+      (UNeg                           , [a]      , _)      -> call "neg" [a]
+      (Abs                            , [a]      , _)      -> call "abs" [a]
+      (And                            , [a, b]   , _)      -> call "and" [a, b]
+      (Or                             , [a, b]   , _)      -> call "or" [a, b]
+      (XOr                            , [a, b]   , _)      -> call "xor" [a, b]
+      (Not                            , [a]      , _)      -> call "not" [a]
+      (Equal _                        , [a, b]   , x:_)    -> argCall x "eq" [a, b]
+      (NotEqual                       , as       , x:_)    -> fsep $ punctuate (text " &&")
+                                                                  [text "!" P.<> parens (argCall x "eq" [a, b])
+                                                                  | (a:rest) <- tails as, b <- rest]
+      (LessThan                       , [a, b]   , x:_)    -> argCall x "lt" [a, b]
+      (GreaterThan                    , [a, b]   , x:_)    -> argCall x "lt" [b, a]
+      (LessEq                         , [a, b]   , x:_)    -> text "!" P.<> parens (argCall x "lt" [b, a])
+      (GreaterEq                      , [a, b]   , x:_)    -> text "!" P.<> parens (argCall x "lt" [a, b])
+      (Ite                            , [c, a, b], _)      -> c <+> text "?" <+> a <+> text ":" <+> b
+      (Quot                           , [a, b]   , _)      -> call "quot" [a, b]
+      (Rem                            , [a, b]   , _)      -> call "rem" [a, b]
+      (Shl                            , [a, n]   , x:_)    -> argCall x "shl" [a, argCall x "shift_amount" [n]]
+      (Shr                            , [a, n]   , x:_)    -> argCall x (if hasSign x then "ashr" else "lshr") [a, argCall x "shift_amount" [n]]
+      (Rol n                          , [a]      , _)      -> call "rotl" [a, integer (fromIntegral n)]
+      (Ror n                          , [a]      , _)      -> call "rotr" [a, integer (fromIntegral n)]
+      (Extract hi lo                  , [a]      , x:_)    -> namedCall (extractName (kindOf x) hi lo resultKind) [a]
+      (Join                           , [a, b]   , [x, y]) -> namedCall (joinName (kindOf x) (kindOf y) resultKind) [a, b]
+      (ZeroExtend _                   , [a]      , x:_)    -> namedCall (convertName False (kindOf x) resultKind) [a]
+      (SignExtend _                   , [a]      , x:_)    -> namedCall (convertName True  (kindOf x) resultKind) [a]
+      (KindCast fr to                 , [a]      , _)      -> namedCall (convertName (hasSign fr) fr to) [a]
+      (IEEEFP (FP_Reinterpret fr to)  , [a]      , _) | isBounded fr || isBounded to
+                                                         -> namedCall (convertName False fr to) [a]
       _ -> error $ "SBV->C: exact bit-vector lowering does not yet support " ++ show op
                 ++ " with argument kinds " ++ show (map kindOf svs)
                 ++ " and result kind " ++ show resultKind
