@@ -64,6 +64,7 @@ import qualified TestSuite.BitPrecise.PrefixSum
 import qualified TestSuite.CantTypeCheck.Misc
 import qualified TestSuite.Char.Char
 import qualified TestSuite.CodeGeneration.AddSub
+import qualified TestSuite.CodeGeneration.ArbitraryBits
 import qualified TestSuite.CodeGeneration.CgTests
 import qualified TestSuite.CodeGeneration.CRC_USB5
 import qualified TestSuite.CodeGeneration.Fibonacci
@@ -189,6 +190,7 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.CantTypeCheck.Misc.tests
                       , TestSuite.Char.Char.tests
                       , TestSuite.CodeGeneration.AddSub.tests
+                      , TestSuite.CodeGeneration.ArbitraryBits.tests
                       , TestSuite.CodeGeneration.CgTests.tests
                       , TestSuite.CodeGeneration.CRC_USB5.tests
                       , TestSuite.CodeGeneration.Fibonacci.tests
