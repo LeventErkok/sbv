@@ -29,6 +29,7 @@ import Data.SBV.Internals
 
 import Utils.SBVTestFramework hiding ((#), bvExtract)
 
+-- | Arbitrary-width C backend tests.
 tests :: TestTree
 tests = testGroup "CodeGeneration.ArbitraryBits"
   [ testCase "compile and execute 673-bit arithmetic" wide673
@@ -36,6 +37,7 @@ tests = testGroup "CodeGeneration.ArbitraryBits"
   , testCase "compile and execute non-aligned join/extract" joinExtract
   ]
 
+-- | Exercise unsigned 673-bit arithmetic, shifts, rotation, and division.
 wide673 :: Assertion
 wide673 = withSystemTempDirectory "sbv-wide673" $ \dir -> do
   let program = do
@@ -60,6 +62,7 @@ wide673 = withSystemTempDirectory "sbv-wide673" $ \dir -> do
        result   = expectedZ `quot` add y 1
        shiftLInteger a n = a * (2 ^ n)
 
+-- | Exercise signed 673-bit ordering, quotient, remainder, and arithmetic shift.
 signed673 :: Assertion
 signed673 = withSystemTempDirectory "sbv-signed673" $ \dir -> do
   let program = do
@@ -76,6 +79,7 @@ signed673 = withSystemTempDirectory "sbv-signed673" $ \dir -> do
        y          = -17
        expectedRaw = ((x `quot` y) + (x `rem` y)) `mod` modulus
 
+-- | Exercise non-aligned concatenation and extraction across limb boundaries.
 joinExtract :: Assertion
 joinExtract = withSystemTempDirectory "sbv-join-extract" $ \dir -> do
   let program = do
@@ -91,6 +95,7 @@ joinExtract = withSystemTempDirectory "sbv-join-extract" $ \dir -> do
        expectedJoined = hi * 2 ^ (336 :: Int) + lo
        expected = (expectedJoined `shiftR` 128) .&. (2 ^ (384 :: Int) - 1)
 
+-- | Generate, compile, and execute a C program, checking its encoded result.
 compileAndRun :: FilePath -> String -> SBVCodeGen () -> String -> Assertion
 compileAndRun dir functionName program expected = do
   (_, cfg, bundle) <- compileToC' functionName program
@@ -106,6 +111,7 @@ compileAndRun dir functionName program expected = do
   assertEqual runErr ExitSuccess runExit
   assertBool ("Expected generated output to contain " ++ expected ++ ", received:\n" ++ out) (expected `isInfixOf` out)
 
+-- | Render the fixed-limb hexadecimal form printed by generated drivers.
 asHex :: Int -> Integer -> String
 asHex limbCount value = "0x" ++ replicate (16 * limbCount - length h) '0' ++ h
  where h = showHex value ""
