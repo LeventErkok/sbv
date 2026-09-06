@@ -404,12 +404,12 @@ conversionRuntime nm signExtend sourceOffset fr to =
   ++ ["  return " ++ normalize to "r" ++ ";"
      , "}"
      , ""]
- where available = max 0 (intSizeOf fr - sourceOffset)
-       copied    = min available (intSizeOf to)
+ where available = max 0 (bitWidth fr - sourceOffset)
+       copied    = min available (bitWidth to)
        offset i  = if sourceOffset == 0 then i else i ++ " + " ++ show sourceOffset
        extension
-         | signExtend && intSizeOf to > copied =
-             ["  if (" ++ getBit fr "a" (show (intSizeOf fr - 1)) ++ ") for (i = " ++ show copied ++ "; i < " ++ show (intSizeOf to) ++ "; ++i) { " ++ setBit to "r" "i" "true" ++ " }"]
+         | signExtend && bitWidth to > copied =
+             ["  if (" ++ getBit fr "a" (show (bitWidth fr - 1)) ++ ") for (i = " ++ show copied ++ "; i < " ++ show (bitWidth to) ++ "; ++i) { " ++ setBit to "r" "i" "true" ++ " }"]
          | True = []
 
 -- | Emit concatenation code for a particular pair of operand kinds.
@@ -418,8 +418,8 @@ joinRuntime a b to =
   ["static inline " ++ cType to ++ " " ++ joinName a b to ++ "(" ++ cType a ++ " high, " ++ cType b ++ " low)"
   , "{"
   , "  " ++ cType to ++ " r = " ++ zeroValue to ++ "; uint64_t i;"
-  , "  for (i = 0; i < " ++ show (intSizeOf b) ++ "; ++i) { " ++ setBit to "r" "i" (getBit b "low" "i") ++ " }"
-  , "  for (i = 0; i < " ++ show (intSizeOf a) ++ "; ++i) { " ++ setBit to "r" ("i + " ++ show (intSizeOf b)) (getBit a "high" "i") ++ " }"
+  , "  for (i = 0; i < " ++ show (bitWidth b) ++ "; ++i) { " ++ setBit to "r" "i" (getBit b "low" "i") ++ " }"
+  , "  for (i = 0; i < " ++ show (bitWidth a) ++ "; ++i) { " ++ setBit to "r" ("i + " ++ show (bitWidth b)) (getBit a "high" "i") ++ " }"
   , "  return " ++ normalize to "r" ++ ";"
   , "}"
   , ""]
@@ -428,29 +428,29 @@ joinRuntime a b to =
 getBit :: Kind -> String -> String -> String
 getBit k value bit
   | isWideBV k = prefix k ++ "_get(" ++ value ++ ", " ++ bit ++ ")"
-  | isBounded k = "((((uint64_t) " ++ value ++ ") >> (" ++ bit ++ ")) & UINT64_C(1)) != 0"
-  | otherwise  = error $ "SBV->C: Cannot extract bits from " ++ show k
+  | isBoolean k || isBounded k = "((((uint64_t) " ++ value ++ ") >> (" ++ bit ++ ")) & UINT64_C(1)) != 0"
+  | otherwise                  = error $ "SBV->C: Cannot extract bits from " ++ show k
 
 -- | Render a target-independent bit update to a scalar or limb value.
 setBit :: Kind -> String -> String -> String -> String
 setBit k value bit bitValue
   | isWideBV k = prefix k ++ "_set(&" ++ value ++ ", " ++ bit ++ ", " ++ bitValue ++ ");"
-  | isBounded k = value ++ " = (" ++ cType k ++ ") ((uint64_t) " ++ value ++ " | ((uint64_t) (" ++ bitValue ++ ") << (" ++ bit ++ ")));"
-  | otherwise  = error $ "SBV->C: Cannot set bits in " ++ show k
+  | isBoolean k || isBounded k = value ++ " = (" ++ cType k ++ ") ((uint64_t) " ++ value ++ " | ((uint64_t) (" ++ bitValue ++ ") << (" ++ bit ++ ")));"
+  | otherwise                  = error $ "SBV->C: Cannot set bits in " ++ show k
 
 -- | Render the zero value for a scalar or limb representation.
 zeroValue :: Kind -> String
 zeroValue k
   | isWideBV k = prefix k ++ "_zero()"
-  | isBounded k = "(" ++ cType k ++ ") 0"
-  | otherwise  = error $ "SBV->C: Cannot construct a zero of " ++ show k
+  | isBoolean k || isBounded k = "(" ++ cType k ++ ") 0"
+  | otherwise                  = error $ "SBV->C: Cannot construct a zero of " ++ show k
 
 -- | Render canonicalization for a scalar or limb representation.
 normalize :: Kind -> String -> String
 normalize k value
   | isWideBV k = prefix k ++ "_norm(" ++ value ++ ")"
-  | isBounded k = value
-  | otherwise  = error $ "SBV->C: Cannot normalize " ++ show k
+  | isBoolean k || isBounded k = value
+  | otherwise                  = error $ "SBV->C: Cannot normalize " ++ show k
 
 -- | Construct the collision-free name of an extraction helper.
 extractName :: Kind -> Int -> Int -> Kind -> String
@@ -476,6 +476,13 @@ headArg nm []    = error $ "SBV->C: " ++ nm ++ " unexpectedly has no arguments"
 -- | Report an internal arity error for an operation.
 badArity :: String -> [a] -> b
 badArity nm _ = error $ "SBV->C: " ++ nm ++ " has an unexpected arity"
+
+-- | Return the logical bit width used by the C representation. Unlike
+-- 'intSizeOf', this is defined for 'KBool', which occupies one logical bit.
+bitWidth :: Kind -> Int
+bitWidth k
+  | isBoolean k = 1
+  | otherwise   = intSizeOf k
 
 -- | Return the number of 64-bit limbs needed by a kind.
 limbs :: Kind -> Int
