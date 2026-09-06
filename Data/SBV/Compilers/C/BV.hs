@@ -18,6 +18,8 @@ module Data.SBV.Compilers.C.BV
   , wideBVRuntime
   , wideBVConst
   , wideBVExpr
+  , wideBVLookupInRange
+  , wideBVLookupIndex
   , wideBVNormalize
   , wideBVPrint
   ) where
@@ -113,6 +115,10 @@ wideBVExpr :: Op -> [SV] -> Kind -> [Doc] -> Maybe Doc
 wideBVExpr op svs resultKind args
   | not (isWideBV resultKind || any (isWideBV . kindOf) svs)
   = Nothing
+  | LkUp{} <- op
+  = Nothing
+  | Uninterpreted{} <- op
+  = Nothing
   | True
   = Just $ case (op, args, svs) of
       (Label _                       , [a]      , _)      -> a
@@ -145,6 +151,7 @@ wideBVExpr op svs resultKind args
       (ZeroExtend _                  , [a]      , x:_)    -> namedCall (convertName False (kindOf x) resultKind) [a]
       (SignExtend _                  , [a]      , x:_)    -> namedCall (convertName True  (kindOf x) resultKind) [a]
       (KindCast fr to                , [a]      , _)      -> namedCall (convertName (hasSign fr) fr to) [a]
+      (OverflowOp ov                 , as       , x:_)    -> argCall x (overflowName ov) as
       (IEEEFP (FP_Reinterpret fr to) , [a]      , _)
           | isBounded fr || isBounded to                  -> namedCall (convertName False fr to) [a]
       _                                                   -> error $ "SBV->C: exact bit-vector lowering does not yet support " ++ show op
@@ -156,6 +163,15 @@ wideBVExpr op svs resultKind args
 -- | Print a wide value without requiring a printf conversion specifier.
 wideBVPrint :: Kind -> Doc -> Doc
 wideBVPrint k value = namedCall (prefix k ++ "_fprint") [text "stdout", value]
+
+-- | Test whether a wide bit-vector is a valid zero-based index below the
+-- supplied table length.
+wideBVLookupInRange :: Kind -> Int -> Doc -> Doc
+wideBVLookupInRange k len value = namedCall (prefix k ++ "_index_in_range") [value, integer (fromIntegral len)]
+
+-- | Convert a wide bit-vector known to be in range to a native C table index.
+wideBVLookupIndex :: Kind -> Doc -> Doc
+wideBVLookupIndex k value = namedCall (prefix k ++ "_index") [value]
 
 -- | Canonicalize an externally supplied wide value by clearing unused bits in
 -- its most-significant limb.
@@ -236,6 +252,18 @@ coreRuntime k =
      , "    r.limb[i] = t; carry = c1 | c2;"
      , "  }"
      , "  return " ++ p ++ "_norm(r);"
+     , "}"
+     , ""
+     , "static inline uint64_t " ++ p ++ "_index(" ++ ty ++ " a)"
+     , "{"
+     , "  return a.limb[0];"
+     , "}"
+     , ""
+     , "static inline bool " ++ p ++ "_index_in_range(" ++ ty ++ " a, uint64_t limit)"
+     , "{"
+     , "  size_t i;"
+     , "  for (i = 1; i < " ++ show n ++ "; ++i) if (a.limb[i] != UINT64_C(0)) return false;"
+     , "  return a.limb[0] < limit;"
      , "}"
      , ""
      , "static inline " ++ ty ++ " " ++ p ++ "_sub(" ++ ty ++ " a, " ++ ty ++ " b)"
@@ -350,6 +378,7 @@ coreRuntime k =
      , "}"
      , ""
      ]
+  ++ overflowRuntime
  where ty   = cType k
        p    = prefix k
        w    = intSizeOf k
@@ -394,6 +423,77 @@ coreRuntime k =
             , "static inline " ++ ty ++ " " ++ p ++ "_rem(" ++ ty ++ " a, " ++ ty ++ " b)"
             , "{ " ++ ty ++ " q, r; " ++ p ++ "_udivrem(a, b, &q, &r); return r; }"
             , ""]
+
+       overflowRuntime =
+         ["static inline bool " ++ p ++ "_is_min(" ++ ty ++ " a)"
+         , "{"
+         , "  " ++ ty ++ " m = " ++ p ++ "_zero();"
+         , "  " ++ p ++ "_set(&m, " ++ show (w - 1) ++ ", true);"
+         , "  return " ++ p ++ "_eq(a, m);"
+         , "}"
+         , ""
+         , "static inline bool " ++ p ++ "_uaddo(" ++ ty ++ " a, " ++ ty ++ " b)"
+         , "{"
+         , "  return " ++ p ++ "_cmpu(" ++ p ++ "_add(a, b), a) < 0;"
+         , "}"
+         , ""
+         , "static inline bool " ++ p ++ "_saddo(" ++ ty ++ " a, " ++ ty ++ " b)"
+         , "{"
+         , "  const " ++ ty ++ " r = " ++ p ++ "_add(a, b);"
+         , "  const bool sa = " ++ p ++ "_get(a, " ++ show (w - 1) ++ ");"
+         , "  const bool sb = " ++ p ++ "_get(b, " ++ show (w - 1) ++ ");"
+         , "  const bool sr = " ++ p ++ "_get(r, " ++ show (w - 1) ++ ");"
+         , "  return sa == sb && sa != sr;"
+         , "}"
+         , ""
+         , "static inline bool " ++ p ++ "_usubo(" ++ ty ++ " a, " ++ ty ++ " b)"
+         , "{"
+         , "  return " ++ p ++ "_cmpu(a, b) < 0;"
+         , "}"
+         , ""
+         , "static inline bool " ++ p ++ "_ssubo(" ++ ty ++ " a, " ++ ty ++ " b)"
+         , "{"
+         , "  const " ++ ty ++ " r = " ++ p ++ "_sub(a, b);"
+         , "  const bool sa = " ++ p ++ "_get(a, " ++ show (w - 1) ++ ");"
+         , "  const bool sb = " ++ p ++ "_get(b, " ++ show (w - 1) ++ ");"
+         , "  const bool sr = " ++ p ++ "_get(r, " ++ show (w - 1) ++ ");"
+         , "  return sa != sb && sa != sr;"
+         , "}"
+         , ""
+         , "static inline bool " ++ p ++ "_umulo(" ++ ty ++ " a, " ++ ty ++ " b)"
+         , "{"
+         , "  " ++ ty ++ " q, r;"
+         , "  if (" ++ p ++ "_is_zero(b)) return false;"
+         , "  " ++ p ++ "_udivrem(" ++ p ++ "_mul(a, b), b, &q, &r);"
+         , "  return !" ++ p ++ "_eq(q, a);"
+         , "}"
+         , ""
+         , "static inline bool " ++ p ++ "_smulo(" ++ ty ++ " a, " ++ ty ++ " b)"
+         , "{"
+         , "  " ++ ty ++ " q, r, limit = " ++ p ++ "_zero();"
+         , "  const bool sa = " ++ p ++ "_get(a, " ++ show (w - 1) ++ ");"
+         , "  const bool sb = " ++ p ++ "_get(b, " ++ show (w - 1) ++ ");"
+         , "  const bool negative = sa != sb;"
+         , "  uint64_t bit;"
+         , "  if (sa) a = " ++ p ++ "_neg(a);"
+         , "  if (sb) b = " ++ p ++ "_neg(b);"
+         , "  if (" ++ p ++ "_is_zero(a) || " ++ p ++ "_is_zero(b)) return false;"
+         , "  if (negative) " ++ p ++ "_set(&limit, " ++ show (w - 1) ++ ", true);"
+         , "  else for (bit = 0; bit < " ++ show (w - 1) ++ "; ++bit) " ++ p ++ "_set(&limit, bit, true);"
+         , "  " ++ p ++ "_udivrem(limit, b, &q, &r);"
+         , "  return " ++ p ++ "_cmpu(a, q) > 0;"
+         , "}"
+         , ""
+         , "static inline bool " ++ p ++ "_sdivo(" ++ ty ++ " a, " ++ ty ++ " b)"
+         , "{"
+         , "  return " ++ p ++ "_is_min(a) && " ++ p ++ "_eq(b, " ++ p ++ "_not(" ++ p ++ "_zero()));"
+         , "}"
+         , ""
+         , "static inline bool " ++ p ++ "_snego(" ++ ty ++ " a)"
+         , "{"
+         , "  return " ++ p ++ "_is_min(a);"
+         , "}"
+         , ""]
 
 -- | Emit a bit-preserving extraction, extension, or integral conversion.
 conversionRuntime :: String -> Bool -> Int -> Kind -> Kind -> [String]
@@ -480,6 +580,17 @@ headArg nm []    = error $ "SBV->C: " ++ nm ++ " unexpectedly has no arguments"
 -- | Report an internal arity error for an operation.
 badArity :: String -> [a] -> b
 badArity nm _ = error $ "SBV->C: " ++ nm ++ " has an unexpected arity"
+
+-- | Return the generated helper suffix for an overflow predicate.
+overflowName :: OvOp -> String
+overflowName (PlusOv False) = "uaddo"
+overflowName (PlusOv True)  = "saddo"
+overflowName (SubOv  False) = "usubo"
+overflowName (SubOv  True)  = "ssubo"
+overflowName (MulOv  False) = "umulo"
+overflowName (MulOv  True)  = "smulo"
+overflowName DivOv          = "sdivo"
+overflowName NegOv          = "snego"
 
 -- | Return the logical bit width used by the C representation. Unlike
 -- 'intSizeOf', this is defined for 'KBool', which occupies one logical bit.

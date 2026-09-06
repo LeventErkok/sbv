@@ -26,6 +26,7 @@ import System.Process            (readProcessWithExitCode)
 import Test.Tasty.HUnit          (assertBool, assertEqual)
 
 import Data.SBV.Internals
+import Data.SBV.Tools.Overflow
 
 import Utils.SBVTestFramework hiding ((#), bvExtract)
 
@@ -35,6 +36,10 @@ tests = testGroup "CodeGeneration.ArbitraryBits"
   [ testCase "compile and execute 673-bit arithmetic" wide673
   , testCase "compile and execute signed 673-bit arithmetic" signed673
   , testCase "compile and execute non-aligned join/extract" joinExtract
+  , testCase "compile and execute unsigned overflow predicates" unsignedOverflow
+  , testCase "compile and execute signed overflow predicates" signedOverflow
+  , testCase "compile and execute checked wide table lookup" wideLookup
+  , testCase "compile and execute arithmetic boundary cases" arithmeticBoundaries
   ]
 
 -- | Exercise unsigned 673-bit arithmetic, shifts, rotation, and division.
@@ -94,6 +99,63 @@ joinExtract = withSystemTempDirectory "sbv-join-extract" $ \dir -> do
        lo             = 2 ^ (335 :: Int) + 0xfedcba987654321
        expectedJoined = hi * 2 ^ (336 :: Int) + lo
        expected       = (expectedJoined `shiftR` 128) .&. (2 ^ (384 :: Int) - 1)
+
+-- | Exercise unsigned overflow and underflow predicates at a non-native width.
+unsignedOverflow :: Assertion
+unsignedOverflow = withSystemTempDirectory "sbv-unsigned-overflow" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [2 ^ (65 :: Int) - 1, 2]
+        a <- cgInput "a" :: SBVCodeGen (SWord 65)
+        b <- cgInput "b" :: SBVCodeGen (SWord 65)
+        cgReturn $ pack [bvAddO a b, bvSubO 0 b, bvMulO a b, bvMulO b 3]
+  compileAndRun dir "unsignedOverflow" program (asHex 2 7)
+ where pack :: [SBool] -> SWord 65
+       pack flags = sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4, 8])
+
+-- | Exercise signed overflow predicates, including both signed extrema.
+signedOverflow :: Assertion
+signedOverflow = withSystemTempDirectory "sbv-signed-overflow" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [2 ^ (64 :: Int) - 1, 1]
+        a <- cgInput "a" :: SBVCodeGen (SInt 65)
+        b <- cgInput "b" :: SBVCodeGen (SInt 65)
+        let minValue = fromInteger (negate (2 ^ (64 :: Int))) :: SInt 65
+        cgReturn $ pack [bvAddO a b, bvSubO minValue b, bvMulO a (b + b), bvDivO minValue (negate b), bvNegO minValue, bvMulO a b]
+  compileAndRun dir "signedOverflow" program (asHex 2 31)
+ where pack :: [SBool] -> SWord 65
+       pack flags = sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4, 8, 16, 32])
+
+-- | Exercise checked table lookup with both a wide index and wide elements.
+wideLookup :: Assertion
+wideLookup = withSystemTempDirectory "sbv-wide-lookup" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgPerformRTCs True
+        cgSetDriverValues [2 ^ (64 :: Int) + 1]
+        index <- cgInput "index" :: SBVCodeGen (SWord 65)
+        cgReturn (select [11, 22] 99 index :: SWord 673)
+  compileAndRun dir "wideLookup" program (asHex 11 99)
+
+-- | Exercise division-by-zero, extreme shifts, and signed-minimum division.
+arithmeticBoundaries :: Assertion
+arithmeticBoundaries = withSystemTempDirectory "sbv-arithmetic-boundaries" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [negate (2 ^ (64 :: Int))]
+        a <- cgInput "a" :: SBVCodeGen (SInt 65)
+        let z = 0 :: SInt 65
+        cgReturn $ pack [a `sQuot` z .== z
+                        , a `sRem` z .== a
+                        , shiftL a 65 .== z
+                        , shiftR a 65 .== (-1)
+                        , a `sQuot` (-1) .== a
+                        , a `sRem` (-1) .== z
+                        , rotateL a 66 .== 1]
+  compileAndRun dir "arithmeticBoundaries" program (asHex 2 127)
+ where pack :: [SBool] -> SWord 65
+       pack flags = sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4, 8, 16, 32, 64])
 
 -- | Generate, compile, and execute a C program, checking its encoded result.
 compileAndRun :: FilePath -> String -> SBVCodeGen () -> String -> Assertion

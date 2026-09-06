@@ -817,12 +817,22 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
           | True                       = lkUp
           where [index, defVal] = map (showSV cfg consts) [ind, def]
 
-                lkUp = text "table" P.<> int t P.<> brackets (showSV cfg consts ind)
+                lkUp = text "table" P.<> int t P.<> brackets renderedIndex
                 cndLkUp cnd = cnd <+> text "?" <+> defVal <+> text ":" <+> lkUp
 
-                checkLeft  = index <+> text "< 0"
-                checkRight = index <+> text ">=" <+> int len
+                checkLeft
+                  | isWideBV k = text "!" P.<> parens (wideBVLookupInRange k len index)
+                  | True       = index <+> text "< 0"
+
+                checkRight
+                  | isWideBV k = text "!" P.<> parens (wideBVLookupInRange k len index)
+                  | True       = index <+> text ">=" <+> int len
+
                 checkBoth  = parens (checkLeft <+> text "||" <+> checkRight)
+
+                renderedIndex
+                  | isWideBV k = wideBVLookupIndex k index
+                  | True       = index
 
                 canOverflow True  sz = (2::Integer)^(sz-1)-1 >= fromIntegral len
                 canOverflow False sz = (2::Integer)^sz    -1 >= fromIntegral len
@@ -830,7 +840,9 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
                 (needsCheckL, needsCheckR) = case k of
                                                KVar{}          -> die $ "array index with variable: " ++ show k
                                                KBool           -> (False, canOverflow False (1::Int))
-                                               KBounded sg sz  -> (sg, canOverflow sg sz)
+                                               KBounded sg sz
+                                                 | isWideBV k -> (sg, not sg)
+                                                 | True       -> (sg, canOverflow sg sz)
                                                KReal           -> die "array index with real value"
                                                KFloat          -> die "array index with float value"
                                                KDouble         -> die "array index with double value"
