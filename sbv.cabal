@@ -315,6 +315,7 @@ Library
                   , Data.SBV.Control.Utils
                   , Data.SBV.Compilers.C
                   , Data.SBV.Compilers.C.BV
+                  , Data.SBV.Compilers.C.FP
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.Lambda
                   , Data.SBV.SCase
@@ -424,6 +425,7 @@ Test-Suite SBVTest
                   , TestSuite.BitPrecise.PrefixSum
                   , TestSuite.CodeGeneration.AddSub
                   , TestSuite.CodeGeneration.ArbitraryBits
+                  , TestSuite.CodeGeneration.ArbitraryFloats
                   , TestSuite.CodeGeneration.CgTests
                   , TestSuite.CodeGeneration.CRC_USB5
                   , TestSuite.CodeGeneration.Fibonacci

@@ -34,6 +34,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind (kRoundingMode)
 import Data.SBV.Compilers.C.BV
+import Data.SBV.Compilers.C.FP
 import Data.SBV.Compilers.CodeGen
 
 import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
@@ -115,7 +116,7 @@ cgen cfg nm st sbvProg
    = rnf (render sig) `seq` rnf (render (vcat body)) `seq` result
   where result = CgPgmBundle bundleKind
                         $ filt [ ("Makefile"   , (CgMakefile flags          , [genMake (cgGenDriver cfg) nm nmd flags]))
-                               , (nm  ++ ".h"  , (CgHeader [wideTypes, sig] , [genHeader bundleKind nm [sig] extProtos wideTypes]))
+                               , (nm  ++ ".h"  , (CgHeader [extraTypes, sig] , [genHeader bundleKind nm [sig] extProtos extraTypes]))
                                , (nmd ++ ".c"  , (CgDriver                  , genDriver cfg randVals nm ins outs mbRet))
                                , (nm  ++ ".c"  , (CgSource                  , body))
                                ]
@@ -124,7 +125,8 @@ cgen cfg nm st sbvProg
 
         bundleKind = (cgInteger cfg, cgReal cfg)
 
-        wideTypes = wideBVTypeDecls (wideBVKinds (reskinds sbvProg))
+        extraTypes = wideBVTypeDecls (wideBVKinds kinds) $$ arbitraryFPTypeDecls (arbitraryFPKinds kinds)
+        kinds      = reskinds sbvProg
 
         randVals = cgDriverVals cfg
 
@@ -198,6 +200,7 @@ showCType i = case kindOf i of
                 KBounded False 1 -> "SBool"
                 KBounded False w -> "SWord" ++ show w
                 KBounded True  w -> "SInt"  ++ show w
+                k@KFP{}           -> arbitraryFPCType k
                 k                -> show k
 
 -- | The printf specifier for the type
@@ -256,6 +259,7 @@ mkConst cfg (CV (KBounded sg sz) (CInteger i)) = showSizedConst (cgShowU8InHex c
 mkConst cfg (CV KBool            (CInteger i)) = showSizedConst (cgShowU8InHex cfg) i (False, 1)
 mkConst _   (CV KFloat           (CFloat f))   = text $ showCFloat f
 mkConst _   (CV KDouble          (CDouble d))  = text $ showCDouble d
+mkConst _   (CV k@KFP{}          (CFP fp))     = fromJust (arbitraryFPConst k fp)
 mkConst _   (CV KString          (CString s))  = text $ show s
 mkConst _   (CV KChar            (CChar c))    = text $ show c
 mkConst _   cv                                 = die $ "mkConst: " ++ show cv
@@ -402,6 +406,10 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
                                       -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
                                       $$ wideBVPrint (kindOf sv) resultVar P.<> semi
                                       $$ text "printf(\"\\n\");"
+                              Just sv | isFP (kindOf sv)
+                                      -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
+                                      $$ arbitraryFPPrint (kindOf sv) resultVar P.<> semi
+                                      $$ text "printf(\"\\n\");"
                               Just sv -> text "printf" P.<> parens (printQuotes (fcall <+> text "=" <+> specifier cfg sv P.<> text "\\n")
                                                                               P.<> comma <+> resultVar) P.<> semi
                               Nothing -> text "printf" P.<> parens (printQuotes (fcall <+> text "->\\n")) P.<> semi)
@@ -449,17 +457,20 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
          | isWideBV (kindOf sv) = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
                                 $$ wideBVPrint (kindOf sv) (text n) P.<> semi
                                 $$ text "printf(\"\\n\");"
+         | isFP (kindOf sv)      = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
+                                $$ arbitraryFPPrint (kindOf sv) (text n) P.<> semi
+                                $$ text "printf(\"\\n\");"
          | True                 = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier cfg sv
                                                                         P.<> text "\\n") P.<> comma <+> text n) P.<> semi
        display (n, CgArray [])         =  die $ "Unsupported empty array value for " ++ show n
        display (n, CgArray sws@(sv:_))
-         | isWideBV (kindOf sv) = text "int" <+> nctr P.<> semi
-                                $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
-                                $$ text "{"
-                                $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=")) P.<> semi
-                                        $$ wideBVPrint (kindOf sv) entry P.<> semi
-                                        $$ text "printf(\"\\n\");")
-                                $$ text "}"
+         | isWideBV (kindOf sv) || isFP (kindOf sv) = text "int" <+> nctr P.<> semi
+                                                     $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
+                                                     $$ text "{"
+                                                     $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=")) P.<> semi
+                                                             $$ printAggregate (kindOf sv) entry P.<> semi
+                                                             $$ text "printf(\"\\n\");")
+                                                     $$ text "}"
          | True                 = text "int" <+> nctr P.<> semi
                                 $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
                                 $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=" <+> spec P.<> text "\\n")
@@ -470,6 +481,9 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
                         spec      = specifier cfg sv
                         len       = length sws
                         tab       = length $ show (len - 1)
+                        printAggregate k
+                          | isWideBV k = wideBVPrint k
+                          | True       = arbitraryFPPrint k
 
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], [String])
@@ -513,13 +527,16 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
               $$ text ""
 
        header = text "#include" <+> doubleQuotes (nm P.<> text ".h")
+             $$ if null fpKinds then empty else text "#include <libbf.h>"
 
        wideKinds = wideBVKinds kindInfo
+       fpKinds   = arbitraryFPKinds kindInfo
 
        post   = text ""
              $$ vcat (map codeSeg cgs)
              $$ extDecls
              $$ wideBVRuntime wideKinds assignments
+             $$ arbitraryFPRuntime fpKinds assignments
              $$ proto
              $$ text "{"
              $$ text ""
@@ -537,8 +554,11 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        assignments = F.toList asgns
 
        -- Do we need any linker flags for C?
-       flagsNeeded = nub $ concatMap (getLDFlag . opRes) assignments
+       flagsNeeded = nub $ fpFlags ++ concatMap (getLDFlag . opRes) assignments
           where opRes (sv, SBVApp o _) = (o, kindOf sv)
+                fpFlags
+                  | null fpKinds = []
+                  | True         = ["-lbf", "-lm"]
 
        codeSeg (fnm, ls) =  text "/* User specified custom code for" <+> doubleQuotes (text fnm) <+> text "*/"
                          $$ vcat (map text ls)
@@ -561,7 +581,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                       len (KBounded False n) = 5 + length (show n) -- SWordN
                       len (KBounded True  n) = 4 + length (show n) -- SIntN
                       len KRational{}        = die   "Rational."
-                      len KFP{}              = die   "Arbitrary float."
+                      len (KFP eb sb)         = 6 + length (show eb) + length (show sb)
                       len (KList s)          = die $ "List sort: "   ++ show s
                       len (KSet  s)          = die $ "Set sort: "    ++ show s
                       len (KTuple s)         = die $ "Tuple sort: "  ++ show s
@@ -605,7 +625,8 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        inputValue cNm sv
          | isWideBV k = wideBVNormalize k (text cNm)
-         | True       = text cNm
+         | isFP k      = arbitraryFPNormalize k (text cNm)
+         | True        = text cNm
          where k = kindOf sv
 
        mkRet sv = text "return" <+> showSV cfg consts sv P.<> semi
@@ -761,15 +782,18 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
   | True
   = lhs <+> text "=" <+> rhs
   where doNotAssign (IEEEFP FP_Reinterpret{})
-          | not (isWideBV (kindOf resultSV) || any (isWideBV . kindOf) opArgs)
+          | not (isFP (kindOf resultSV) || any (isFP . kindOf) opArgs)
+          , not (isWideBV (kindOf resultSV) || any (isWideBV . kindOf) opArgs)
           = True   -- generates a memcpy instead; no simple assignment
         doNotAssign _ = False
 
         renderedArgs = map (showSV cfg consts) opArgs
 
-        rhs = case wideBVExpr op opArgs (kindOf resultSV) renderedArgs of
+        rhs = case arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs of
                 Just e  -> e
-                Nothing -> p op renderedArgs
+                Nothing -> case wideBVExpr op opArgs (kindOf resultSV) renderedArgs of
+                             Just e  -> e
+                             Nothing -> p op renderedArgs
 
         rtc = cgRTC cfg
 

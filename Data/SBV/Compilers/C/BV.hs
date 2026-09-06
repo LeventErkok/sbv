@@ -51,10 +51,12 @@ wideBVTypeDecls :: [Kind] -> Doc
 wideBVTypeDecls [] = empty
 wideBVTypeDecls ks = text . unlines $
      ["/* Exact-width bit-vectors (least-significant limb first). */"
+     , "#ifndef SBV_CGEN_UNUSED"
      , "#if defined(__GNUC__) || defined(__clang__)"
      , "#define SBV_CGEN_UNUSED __attribute__((unused))"
      , "#else"
      , "#define SBV_CGEN_UNUSED"
+     , "#endif"
      , "#endif"]
   ++ concatMap decl ks
  where decl k = ["#ifndef " ++ guard k
