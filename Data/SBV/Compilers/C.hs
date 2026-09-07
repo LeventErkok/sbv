@@ -18,7 +18,7 @@ module Data.SBV.Compilers.C(compileToC, compileToCLib, compileToC', compileToCLi
 import Control.DeepSeq                (rnf)
 import Data.Char                      (isSpace)
 import Data.List                      (intercalate, intersperse, nub, nubBy)
-import Data.Maybe                     (isJust, fromJust)
+import Data.Maybe                     (fromJust, fromMaybe, isJust)
 import qualified Data.Foldable as F   (toList)
 import qualified Data.Set      as Set (member, union, unions, empty, toList, singleton, fromList)
 import qualified Data.Text     as T
@@ -36,6 +36,7 @@ import Data.SBV.Core.Kind (kRoundingMode)
 import Data.SBV.Compilers.C.BV
 import Data.SBV.Compilers.C.FP
 import Data.SBV.Compilers.C.GMP
+import Data.SBV.Compilers.C.Lowering
 import Data.SBV.Compilers.CodeGen
 
 import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
@@ -742,7 +743,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                                              | True      = n
 
        genAsgn :: (SV, SBVExpr) -> (Int, Doc)
-       genAsgn (sv, n) = (getNodeId sv, ppExpr cfg consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv) P.<> semi)
+       genAsgn (sv, n) = (getNodeId sv, ppExpr cfg consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv))
 
        -- merge tables intermixed with assignments and assertions, paying attention to putting tables as
        -- early as possible and tables right after.. Note that the assignment list (second argument) is sorted on its order
@@ -877,10 +878,9 @@ handleIEEE w consts as var = cvt w
 
 ppExpr :: CgConfig -> [(SV, CV)] -> SBVExpr -> SV -> Doc -> (Doc, Doc) -> Doc
 ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
-  | doNotAssign op
-  = typ <+> var P.<> semi <+> rhs
-  | True
-  = lhs <+> text "=" <+> rhs
+  = vcat $ loweringSetup selected
+        ++ [assignment]
+        ++ loweringCleanup selected
   where doNotAssign (IEEEFP FP_Reinterpret{})
           | not (isFP (kindOf resultSV) || any (isFP . kindOf) opArgs)
           , not (isWideBV (kindOf resultSV) || any (isWideBV . kindOf) opArgs)
@@ -889,13 +889,19 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         renderedArgs = map (showSV cfg consts) opArgs
 
-        rhs = case gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs of
-                Just e  -> e
-                Nothing -> case arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs of
-                             Just e  -> e
-                             Nothing -> case wideBVExpr op opArgs (kindOf resultSV) renderedArgs of
-                                          Just e  -> e
-                                          Nothing -> p op renderedArgs
+        selected = fromMaybe legacy $ chooseLowering
+          [ gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          , expressionLowering CByValue [CRequiresLibBF, CRequiresLibM] <$> arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs
+          , expressionLowering CByValue []                             <$> wideBVExpr op opArgs (kindOf resultSV) renderedArgs
+          ]
+
+        legacy = expressionLowering CByValue [] (p op renderedArgs)
+
+        rhs = loweringExpression selected
+
+        assignment
+          | doNotAssign op = typ <+> var P.<> semi <+> rhs P.<> semi
+          | True           = lhs <+> text "=" <+> rhs P.<> semi
 
         rtc = cgRTC cfg
 

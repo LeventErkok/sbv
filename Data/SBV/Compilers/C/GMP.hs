@@ -33,6 +33,7 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.CodeGen      (CgConfig(..))
 import Data.SBV.Core.Data
 
@@ -120,7 +121,7 @@ gmpConst _ _ = Nothing
 
 -- | Lower an operation involving an exact GMP value. A 'Nothing' result
 -- delegates the operation to another C lowering module.
-gmpExpr :: CgConfig -> Op -> [SV] -> Kind -> [Doc] -> Maybe Doc
+gmpExpr :: CgConfig -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 gmpExpr cfg op svs resultKind args
   | not (isExactGMPKind cfg resultKind || any (isExactGMPKind cfg . kindOf) svs)
   = Nothing
@@ -130,44 +131,50 @@ gmpExpr cfg op svs resultKind args
   = Nothing
   | True
   = case (op, args, svs) of
-      (Label _       , [a]      , _)      -> Just a
-      (Ite           , [c, a, b], _)      -> Just $ c <+> text "?" <+> a <+> text ":" <+> b
-      (Plus          , [a, b]   , x:_)    -> Just $ valueCall x "add" [a, b]
-      (Minus         , [a, b]   , x:_)    -> Just $ valueCall x "sub" [a, b]
-      (Times         , [a, b]   , x:_)    -> Just $ valueCall x "mul" [a, b]
-      (UNeg          , [a]      , x:_)    -> Just $ valueCall x "neg" [a]
-      (Abs           , [a]      , x:_)    -> Just $ valueCall x "abs" [a]
-      (Quot          , [a, b]   , x:_)    -> Just $ valueCall x "quot" [a, b]
+      (Label _       , [a]      , _)      -> lower a
+      (Ite           , [c, a, b], _)      -> lower $ c <+> text "?" <+> a <+> text ":" <+> b
+      (Plus          , [a, b]   , x:_)    -> lower $ valueCall x "add" [a, b]
+      (Minus         , [a, b]   , x:_)    -> lower $ valueCall x "sub" [a, b]
+      (Times         , [a, b]   , x:_)    -> lower $ valueCall x "mul" [a, b]
+      (UNeg          , [a]      , x:_)    -> lower $ valueCall x "neg" [a]
+      (Abs           , [a]      , x:_)    -> lower $ valueCall x "abs" [a]
+      (Quot          , [a, b]   , x:_)    -> lower $ valueCall x "quot" [a, b]
       (Rem           , [a, b]   , x:_)
-        | kindOf x == KUnbounded          -> Just $ valueCall x "rem" [a, b]
+        | kindOf x == KUnbounded          -> lower $ valueCall x "rem" [a, b]
       (And           , [a, b]   , x:_)
-        | kindOf x == KUnbounded          -> Just $ valueCall x "and" [a, b]
+        | kindOf x == KUnbounded          -> lower $ valueCall x "and" [a, b]
       (Or            , [a, b]   , x:_)
-        | kindOf x == KUnbounded          -> Just $ valueCall x "or" [a, b]
+        | kindOf x == KUnbounded          -> lower $ valueCall x "or" [a, b]
       (XOr           , [a, b]   , x:_)
-        | kindOf x == KUnbounded          -> Just $ valueCall x "xor" [a, b]
+        | kindOf x == KUnbounded          -> lower $ valueCall x "xor" [a, b]
       (Not           , [a]      , x:_)
-        | kindOf x == KUnbounded          -> Just $ valueCall x "com" [a]
+        | kindOf x == KUnbounded          -> lower $ valueCall x "com" [a]
       (Shl           , [a, n]   , x:_)
-        | kindOf x == KUnbounded          -> Just $ valueCall x "shl" [a, n]
+        | kindOf x == KUnbounded          -> lower $ valueCall x "shl" [a, n]
       (Shr           , [a, n]   , x:_)
-        | kindOf x == KUnbounded          -> Just $ valueCall x "shr" [a, n]
+        | kindOf x == KUnbounded          -> lower $ valueCall x "shr" [a, n]
       (Rol n         , [a]      , x:_)
-        | kindOf x == KUnbounded          -> Just $ valueCall x "shl" [a, integerValue n]
+        | kindOf x == KUnbounded          -> lower $ valueCall x "shl" [a, integerValue n]
       (Ror n         , [a]      , x:_)
-        | kindOf x == KUnbounded          -> Just $ valueCall x "shr" [a, integerValue n]
-      (Equal _       , [a, b]   , x:_)    -> Just $ comparison x "==" a b
-      (NotEqual      , as       , x:_)    -> Just $ distinctExpr x as
-      (LessThan      , [a, b]   , x:_)    -> Just $ comparison x "<"  a b
-      (GreaterThan   , [a, b]   , x:_)    -> Just $ comparison x ">"  a b
-      (LessEq        , [a, b]   , x:_)    -> Just $ comparison x "<=" a b
-      (GreaterEq     , [a, b]   , x:_)    -> Just $ comparison x ">=" a b
+        | kindOf x == KUnbounded          -> lower $ valueCall x "shr" [a, integerValue n]
+      (Equal _       , [a, b]   , x:_)    -> lower $ comparison x "==" a b
+      (NotEqual      , as       , x:_)    -> lower $ distinctExpr x as
+      (LessThan      , [a, b]   , x:_)    -> lower $ comparison x "<"  a b
+      (GreaterThan   , [a, b]   , x:_)    -> lower $ comparison x ">"  a b
+      (LessEq        , [a, b]   , x:_)    -> lower $ comparison x "<=" a b
+      (GreaterEq     , [a, b]   , x:_)    -> lower $ comparison x ">=" a b
       (Divides n     , [a]      , x:_)
-        | kindOf x == KUnbounded          -> Just $ namedCall "sbv_gmp_integer_divides"
-                                                       [namedCall "sbv_gmp_integer_const" [text "&__sbv_gmp_ctx", doubleQuotes (integer n)], a]
+        | kindOf x == KUnbounded          -> lower $ namedCall "sbv_gmp_integer_divides"
+                                                      [namedCall "sbv_gmp_integer_const" [text "&__sbv_gmp_ctx", doubleQuotes (integer n)], a]
       (KindCast fr to, [a]      , _)      -> gmpCast fr to a
       _                                   -> unsupported
- where valueCall sv suffix = namedCall (kindPrefix (kindOf sv) ++ suffix) . (text "&__sbv_gmp_ctx" :)
+ where storage
+         | isExactGMPKind cfg resultKind = CFunctionScoped
+         | True                          = CByValue
+
+       lower = Just . expressionLowering storage [CRequiresGMP]
+
+       valueCall sv suffix = namedCall (kindPrefix (kindOf sv) ++ suffix) . (text "&__sbv_gmp_ctx" :)
 
        comparison sv relation a b = parens $ namedCall (kindPrefix (kindOf sv) ++ "cmp") [a, b] <+> text relation <+> text "0"
 
@@ -178,21 +185,21 @@ gmpExpr cfg op svs resultKind args
                                   | (a:rest) <- tails as, b <- rest]
 
        gmpCast fr to a
-         | fr == to = Just a
+         | fr == to = lower a
          | fr == KUnbounded && to == KReal
-         = Just $ namedCall "sbv_gmp_real_from_integer" [text "&__sbv_gmp_ctx", a]
+         = lower $ namedCall "sbv_gmp_real_from_integer" [text "&__sbv_gmp_ctx", a]
          | fr == KReal && to == KUnbounded
-         = Just $ namedCall "sbv_gmp_integer_from_real" [text "&__sbv_gmp_ctx", a]
+         = lower $ namedCall "sbv_gmp_integer_from_real" [text "&__sbv_gmp_ctx", a]
          | isBounded fr && intSizeOf fr <= 64 && to == KUnbounded
-         = Just $ namedCall (if hasSign fr then "sbv_gmp_integer_from_s64" else "sbv_gmp_integer_from_u64")
-                            [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
+         = lower $ namedCall (if hasSign fr then "sbv_gmp_integer_from_s64" else "sbv_gmp_integer_from_u64")
+                             [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
          | fr == KUnbounded && isBounded to && intSizeOf to <= 64
-         = Just $ parens (text (boundedCType to)) <+> namedCall "sbv_gmp_integer_low_u64" [a]
+         = lower $ parens (text (boundedCType to)) <+> namedCall "sbv_gmp_integer_low_u64" [a]
          | isBounded fr && intSizeOf fr <= 64 && to == KReal
-         = Just $ namedCall (if hasSign fr then "sbv_gmp_real_from_s64" else "sbv_gmp_real_from_u64")
-                            [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
+         = lower $ namedCall (if hasSign fr then "sbv_gmp_real_from_s64" else "sbv_gmp_real_from_u64")
+                             [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
          | fr == KReal && isBounded to && intSizeOf to <= 64
-         = Just $ parens (text (boundedCType to)) <+> namedCall "sbv_gmp_real_low_u64" [a]
+         = lower $ parens (text (boundedCType to)) <+> namedCall "sbv_gmp_real_low_u64" [a]
          | otherwise
          = unsupportedCast fr to
 

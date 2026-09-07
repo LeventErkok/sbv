@@ -317,6 +317,7 @@ Library
                   , Data.SBV.Compilers.C.BV
                   , Data.SBV.Compilers.C.FP
                   , Data.SBV.Compilers.C.GMP
+                  , Data.SBV.Compilers.C.Lowering
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.Lambda
                   , Data.SBV.SCase
