@@ -17,7 +17,7 @@ module Data.SBV.Compilers.C(compileToC, compileToCLib, compileToC', compileToCLi
 
 import Control.DeepSeq                (rnf)
 import Data.Char                      (isSpace)
-import Data.List                      (nub, intercalate, intersperse)
+import Data.List                      (intercalate, intersperse, nub, nubBy)
 import Data.Maybe                     (isJust, fromJust)
 import qualified Data.Foldable as F   (toList)
 import qualified Data.Set      as Set (member, union, unions, empty, toList, singleton, fromList)
@@ -1136,7 +1136,7 @@ mergeToLib libName cfgBundles
                         []   -> error "Data.SBV.C: Impossible happened: mergeLibs: kinds ended up being empty!"
         files       = concat [fs | CgPgmBundle _ fs <- bundles]
         headerMeta  = [ss | (_, (CgHeader ss, _)) <- files]
-        typeDecls   = [t | t:_ <- headerMeta]
+        typeDecls   = nubBy sameDoc [t | t:_ <- headerMeta]
         sigs        = concat [ss | _:ss <- headerMeta]
         anyMake     = not (null [() | (_, (CgMakefile{}, _)) <- files])
         drivers     = [ds | (_, (CgDriver, ds)) <- files]
@@ -1145,12 +1145,15 @@ mergeToLib libName cfgBundles
         sources     = [(f, (CgSource, [pre, libHInclude, post])) | (f, (CgSource, [pre, _, post])) <- files]
         sourceNms   = map fst sources
         libHeader   = (libName ++ ".h", (CgHeader (vcat typeDecls : sigs), [genHeader bundleKind libName sigs empty (vcat typeDecls)]))
-        libHInclude = text "#include" <+> text (show (libName ++ ".h"))
+        libHInclude =  text "#include" <+> text (show (libName ++ ".h"))
+                    $$ if "-lbf" `elem` mkFlags then text "#include <libbf.h>" else empty
         libMake     = ("Makefile", (CgMakefile mkFlags, [genLibMake anyDriver libName sourceNms mkFlags]))
         libDriver   = (libName ++ "_driver.c", (CgDriver, mergeDrivers libName libHInclude (zip (map takeBaseName sourceNms) drivers)))
         finalCfg    = case cfgBundles of
                         []         -> defaultCgConfig
                         ((c, _):_) -> c
+
+        sameDoc left right = render left == render right
 
 -- | Create a Makefile for the library
 genLibMake :: Bool -> String -> [String] -> [String] -> Doc

@@ -83,14 +83,20 @@ arbitraryFPTypeDecls ks = text . unlines $
      , "#endif"
      , "#endif"]
   ++ concatMap decl ks
- where decl k = ["typedef struct { uint64_t limb[" ++ show (limbs k) ++ "]; } " ++ arbitraryFPCType k ++ ";"
+ where decl k = ["#ifndef " ++ typeGuard k
+                , "#define " ++ typeGuard k
+                , "typedef struct { uint64_t limb[" ++ show (limbs k) ++ "]; } " ++ arbitraryFPCType k ++ ";"
                 , "static inline SBV_CGEN_UNUSED void " ++ prefix k ++ "_fprint(FILE *stream, " ++ arbitraryFPCType k ++ " value)"
                 , "{"
                 , "  size_t i = " ++ show (limbs k) ++ ";"
                 , "  fputs(\"0x\", stream);"
                 , "  while (i-- > 0) fprintf(stream, \"%016\" PRIx64, value.limb[i]);"
                 , "}"
+                , "#endif"
                 , ""]
+
+       typeGuard (KFP eb sb) = "SBV_FP_E" ++ show eb ++ "_S" ++ show sb ++ "_DEFINED"
+       typeGuard k           = error $ "SBV->C: Expected an arbitrary floating-point kind, received " ++ show k
 
 -- | Emit the LibBF adapter and exact-format helpers for every used format.
 arbitraryFPRuntime :: [Kind] -> [(SV, SBVExpr)] -> Doc

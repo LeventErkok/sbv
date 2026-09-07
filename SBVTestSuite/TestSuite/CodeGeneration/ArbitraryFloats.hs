@@ -39,6 +39,8 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute rounding modes" arbitraryFloatRoundingModes
   , testCase "compile and execute symbolic rounding modes" arbitraryFloatSymbolicRoundingMode
   , testCase "compile and execute special arithmetic" arbitraryFloatSpecialArithmetic
+  , testCase "compile and execute a mixed repeated-type library" mixedRepeatedTypeLibrary
+  , testCase "compile a repeated-type library without a driver" repeatedTypeLibraryWithoutDriver
   ]
 
 -- | Exercise LibBF-backed quadruple arithmetic and floating-point predicates.
@@ -192,6 +194,120 @@ arbitraryFloatSpecialArithmetic = withSystemTempDirectory "sbv-arbitrary-float-s
   compileAndRunLibBF dir "arbitraryFloatSpecialArithmetic" program (asHex 2 expected)
  where rawHalf :: SFPHalf -> SWord 16
        rawHalf = sFloatingPointAsSWord
+
+-- | Exercise repeated declarations and dependencies in a mixed generated library.
+mixedRepeatedTypeLibrary :: Assertion
+mixedRepeatedTypeLibrary = withSystemTempDirectory "sbv-mixed-repeated-library" $ \dir -> do
+  let configure values = do
+        cgOverwriteFiles True
+        cgSetDriverValues values
+
+      wideAddProgram = do
+        configure [5]
+        value <- cgInput "value" :: SBVCodeGen (SWord 673)
+        cgReturn (value + 1)
+
+      wideXorProgram = do
+        configure [7]
+        value <- cgInput "value" :: SBVCodeGen (SWord 673)
+        cgReturn (value `xor` 3)
+
+      fpDivideProgram = do
+        configure [2, 1, 3]
+        mode  <- cgInput "mode"  :: SBVCodeGen SRoundingMode
+        value <- cgInput "value" :: SBVCodeGen SFPHalf
+        three <- cgInput "three" :: SBVCodeGen SFPHalf
+        cgReturn (fpDiv mode value three)
+
+      fpDivideAgainProgram = do
+        configure [3, 1, 3]
+        mode  <- cgInput "mode"  :: SBVCodeGen SRoundingMode
+        value <- cgInput "value" :: SBVCodeGen SFPHalf
+        three <- cgInput "three" :: SBVCodeGen SFPHalf
+        cgReturn (fpDiv mode value three)
+
+      integerAddProgram = do
+        configure [2 ^ (130 :: Int)]
+        value <- cgInput "value" :: SBVCodeGen SInteger
+        cgReturn (value + 7)
+
+      integerMulProgram = do
+        configure [9]
+        value <- cgInput "value" :: SBVCodeGen SInteger
+        cgReturn (value * 3)
+
+      realDivideProgram = do
+        configure [5]
+        value <- cgInput "value" :: SBVCodeGen SReal
+        cgReturn (value / 3)
+
+      realAddProgram = do
+        configure [2]
+        value <- cgInput "value" :: SBVCodeGen SReal
+        cgReturn (value + 1 / 7)
+
+      components = [ ("wideAdd",       wideAddProgram)
+                   , ("wideXor",       wideXorProgram)
+                   , ("fpDivide",      fpDivideProgram)
+                   , ("fpDivideAgain", fpDivideAgainProgram)
+                   , ("integerAdd",    integerAddProgram)
+                   , ("integerMul",    integerMulProgram)
+                   , ("realDivide",    realDivideProgram)
+                   , ("realAdd",       realAddProgram)
+                   ]
+
+  (includeDir, archive) <- locateLibBF
+  (_, cfg, bundle) <- compileToCLib' "mixedRepeatedTypeLibrary" components
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  writeFile (dir </> "libbf.mk") $ unlines
+    [ "CCFLAGS=-std=c11 -Wall -Werror -I" ++ includeDir ++ " ${GMP_CFLAGS}"
+    , "LDFLAGS=" ++ archive ++ " -lm ${GMP_LIBS}"
+    ]
+
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
+  assertEqual makeError ExitSuccess makeExit
+
+  let driverExecutable = dir </> "mixedRepeatedTypeLibrary_driver"
+  (runExit, stdoutText, runError) <- readProcessWithExitCode driverExecutable [] ""
+  assertEqual runError ExitSuccess runExit
+  mapM_ (assertOutput stdoutText)
+    [ asHex 11 6
+    , asHex 11 4
+    , "0x0000000000003556"
+    , "0x0000000000003555"
+    , show (2 ^ (130 :: Int) + 7 :: Integer)
+    , "27"
+    , "5/3"
+    , "15/7"
+    ]
+
+  makefile <- readFile (dir </> "Makefile")
+  assertBool "Mixed library Makefile lost the LibBF dependency" ("-lbf" `isInfixOf` makefile)
+  assertBool "Mixed library Makefile lost the GMP dependency" ("${GMP_LIBS}" `isInfixOf` makefile)
+ where assertOutput stdoutText fragment =
+         assertBool ("Expected generated library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText)
+
+-- | Exercise archive-only generation with a type shared across translation units.
+repeatedTypeLibraryWithoutDriver :: Assertion
+repeatedTypeLibraryWithoutDriver = withSystemTempDirectory "sbv-repeated-library-no-driver" $ \dir -> do
+  let component operation = do
+        cgOverwriteFiles True
+        cgGenerateDriver False
+        value <- cgInput "value" :: SBVCodeGen (SWord 673)
+        cgReturn (operation value)
+      components = [ ("increment", component (+ 1))
+                   , ("decrement", component (subtract 1))
+                   ]
+
+  (_, cfg, bundle) <- compileToCLib' "repeatedTypeLibraryWithoutDriver" components
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
+  assertEqual makeError ExitSuccess makeExit
+  archiveExists <- doesFileExist (dir </> "repeatedTypeLibraryWithoutDriver.a")
+  driverExists  <- doesFileExist (dir </> "repeatedTypeLibraryWithoutDriver_driver.c")
+  assertBool "Generated library archive is missing" archiveExists
+  assertBool "Driver generation was disabled, but a driver was emitted" (not driverExists)
 
 -- | Generate and execute a C program linked to the LibBF bundled with the
 -- Haskell @libBF@ package.

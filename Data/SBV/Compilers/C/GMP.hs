@@ -53,8 +53,8 @@ isExactGMPKind _   _          = False
 -- are caller-initialized mutable GMP pointers.
 gmpTypeDecls :: CgConfig -> Set.Set Kind -> Doc
 gmpTypeDecls cfg kinds
-  | not useInteger && not useReal = empty
-  | True                          = text . unlines $
+  | not needsExactInteger && not needsExactReal = empty
+  | True                                        = text . unlines $
       ["/* Exact integers and rational reals. Inputs are borrowed; outputs are caller-initialized. */"
       , "#include <gmp.h>"
       , "#ifndef SBV_CGEN_UNUSED"
@@ -64,25 +64,41 @@ gmpTypeDecls cfg kinds
       , "#define SBV_CGEN_UNUSED"
       , "#endif"
       , "#endif"]
-   ++ ["typedef mpz_srcptr SInteger;" | useInteger]
-   ++ ["typedef mpq_srcptr SReal;"    | useReal]
+   ++ integerDecls
+   ++ realDecls
    ++ [""]
- where useInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kinds
-       useReal    = isExactGMPKind cfg KReal      && KReal      `Set.member` kinds
+ where needsExactInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kinds
+       needsExactReal    = isExactGMPKind cfg KReal      && KReal      `Set.member` kinds
+
+       integerDecls
+         | needsExactInteger = [ "#ifndef SBV_GMP_INTEGER_DEFINED"
+                               , "#define SBV_GMP_INTEGER_DEFINED"
+                               , "typedef mpz_srcptr SInteger;"
+                               , "#endif"
+                               ]
+         | True              = []
+
+       realDecls
+         | needsExactReal = [ "#ifndef SBV_GMP_REAL_DEFINED"
+                            , "#define SBV_GMP_REAL_DEFINED"
+                            , "typedef mpq_srcptr SReal;"
+                            , "#endif"
+                            ]
+         | True           = []
 
 -- | Emit the per-call arena and the exact numeric helpers required by a
 -- program. Every temporary GMP value is released together at function exit.
 gmpRuntime :: CgConfig -> Set.Set Kind -> Doc
 gmpRuntime cfg kinds
-  | not useInteger && not useReal = empty
-  | True                          = text . unlines . map markUnused $
+  | not needsExactInteger && not needsExactReal = empty
+  | True                                        = text . unlines . map markUnused $
       commonRuntime
    ++ [""]
-   ++ concat [integerRuntime | useInteger]
-   ++ concat [realRuntime    | useReal]
-   ++ concat [crossRuntime   | useInteger && useReal]
- where useInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kinds
-       useReal    = isExactGMPKind cfg KReal      && KReal      `Set.member` kinds
+   ++ concat [integerRuntime | needsExactInteger]
+   ++ concat [realRuntime    | needsExactReal]
+   ++ concat [crossRuntime   | needsExactInteger && needsExactReal]
+ where needsExactInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kinds
+       needsExactReal    = isExactGMPKind cfg KReal      && KReal      `Set.member` kinds
 
        markUnused line = case stripPrefix "static " line of
                            Just rest -> "static SBV_CGEN_UNUSED " ++ rest
