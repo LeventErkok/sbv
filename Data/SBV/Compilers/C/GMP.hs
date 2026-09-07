@@ -1,0 +1,417 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module    : Data.SBV.Compilers.C.GMP
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
+--
+-- Exact GMP-backed lowering of unbounded integers and rational reals to C.
+-----------------------------------------------------------------------------
+
+{-# OPTIONS_GHC -Wall -Werror #-}
+
+module Data.SBV.Compilers.C.GMP
+  ( isExactGMPKind
+  , gmpTypeDecls
+  , gmpRuntime
+  , gmpConst
+  , gmpExpr
+  , gmpPrint
+  , gmpSet
+  , gmpOutputType
+  , gmpDriverInit
+  , gmpDriverClear
+  , gmpContextStart
+  , gmpContextEnd
+  ) where
+
+import Data.List                       (stripPrefix, tails)
+import Data.Ratio                      (denominator, numerator)
+import qualified Data.Set as Set
+
+import Text.PrettyPrint.HughesPJ
+import qualified Text.PrettyPrint.HughesPJ as P ((<>))
+
+import Data.SBV.Compilers.CodeGen      (CgConfig(..))
+import Data.SBV.Core.Data
+
+-- | Test whether a kind uses the exact GMP representation under this
+-- configuration. Supplying 'cgIntegerSize' or 'cgSRealType' selects the
+-- historical lossy representation instead.
+isExactGMPKind :: CgConfig -> Kind -> Bool
+isExactGMPKind cfg KUnbounded = case cgInteger cfg of
+                                  Nothing -> True
+                                  Just{}  -> False
+isExactGMPKind cfg KReal      = case cgReal cfg of
+                                  Nothing -> True
+                                  Just{}  -> False
+isExactGMPKind _   _          = False
+
+-- | Declare the GMP-backed public C types required by the supplied kinds.
+-- Inputs are borrowed read-only pointers. Outputs and exact return parameters
+-- are caller-initialized mutable GMP pointers.
+gmpTypeDecls :: CgConfig -> Set.Set Kind -> Doc
+gmpTypeDecls cfg kinds
+  | not useInteger && not useReal = empty
+  | True                          = text . unlines $
+      ["/* Exact integers and rational reals. Inputs are borrowed; outputs are caller-initialized. */"
+      , "#include <gmp.h>"
+      , "#ifndef SBV_CGEN_UNUSED"
+      , "#if defined(__GNUC__) || defined(__clang__)"
+      , "#define SBV_CGEN_UNUSED __attribute__((unused))"
+      , "#else"
+      , "#define SBV_CGEN_UNUSED"
+      , "#endif"
+      , "#endif"]
+   ++ ["typedef mpz_srcptr SInteger;" | useInteger]
+   ++ ["typedef mpq_srcptr SReal;"    | useReal]
+   ++ [""]
+ where useInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kinds
+       useReal    = isExactGMPKind cfg KReal      && KReal      `Set.member` kinds
+
+-- | Emit the per-call arena and the exact numeric helpers required by a
+-- program. Every temporary GMP value is released together at function exit.
+gmpRuntime :: CgConfig -> Set.Set Kind -> Doc
+gmpRuntime cfg kinds
+  | not useInteger && not useReal = empty
+  | True                          = text . unlines . map markUnused $
+      commonRuntime
+   ++ [""]
+   ++ concat [integerRuntime | useInteger]
+   ++ concat [realRuntime    | useReal]
+   ++ concat [crossRuntime   | useInteger && useReal]
+ where useInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kinds
+       useReal    = isExactGMPKind cfg KReal      && KReal      `Set.member` kinds
+
+       markUnused line = case stripPrefix "static " line of
+                           Just rest -> "static SBV_CGEN_UNUSED " ++ rest
+                           Nothing   -> line
+
+-- | Render an exact integer or rational-real constant as an arena allocation.
+gmpConst :: CgConfig -> CV -> Maybe Doc
+gmpConst cfg (CV KUnbounded (CInteger i))
+  | isExactGMPKind cfg KUnbounded
+  = Just $ namedCall "sbv_gmp_integer_const" [text "&__sbv_gmp_ctx", doubleQuotes (integer i)]
+gmpConst cfg (CV KReal (CAlgReal (AlgRational _ r)))
+  | isExactGMPKind cfg KReal
+  = Just $ namedCall "sbv_gmp_real_const" [text "&__sbv_gmp_ctx", doubleQuotes (text value)]
+  where value = show (numerator r) ++ "/" ++ show (denominator r)
+gmpConst cfg (CV KReal (CAlgReal r))
+  | isExactGMPKind cfg KReal
+  = error $ "SBV->C: GMP-backed SReal constants must be rational, received " ++ show r
+gmpConst _ _ = Nothing
+
+-- | Lower an operation involving an exact GMP value. A 'Nothing' result
+-- delegates the operation to another C lowering module.
+gmpExpr :: CgConfig -> Op -> [SV] -> Kind -> [Doc] -> Maybe Doc
+gmpExpr cfg op svs resultKind args
+  | not (isExactGMPKind cfg resultKind || any (isExactGMPKind cfg . kindOf) svs)
+  = Nothing
+  | LkUp{} <- op
+  = unsupported
+  | Uninterpreted{} <- op
+  = Nothing
+  | True
+  = case (op, args, svs) of
+      (Label _       , [a]      , _)      -> Just a
+      (Ite           , [c, a, b], _)      -> Just $ c <+> text "?" <+> a <+> text ":" <+> b
+      (Plus          , [a, b]   , x:_)    -> Just $ valueCall x "add" [a, b]
+      (Minus         , [a, b]   , x:_)    -> Just $ valueCall x "sub" [a, b]
+      (Times         , [a, b]   , x:_)    -> Just $ valueCall x "mul" [a, b]
+      (UNeg          , [a]      , x:_)    -> Just $ valueCall x "neg" [a]
+      (Abs           , [a]      , x:_)    -> Just $ valueCall x "abs" [a]
+      (Quot          , [a, b]   , x:_)    -> Just $ valueCall x "quot" [a, b]
+      (Rem           , [a, b]   , x:_)
+        | kindOf x == KUnbounded          -> Just $ valueCall x "rem" [a, b]
+      (And           , [a, b]   , x:_)
+        | kindOf x == KUnbounded          -> Just $ valueCall x "and" [a, b]
+      (Or            , [a, b]   , x:_)
+        | kindOf x == KUnbounded          -> Just $ valueCall x "or" [a, b]
+      (XOr           , [a, b]   , x:_)
+        | kindOf x == KUnbounded          -> Just $ valueCall x "xor" [a, b]
+      (Not           , [a]      , x:_)
+        | kindOf x == KUnbounded          -> Just $ valueCall x "com" [a]
+      (Shl           , [a, n]   , x:_)
+        | kindOf x == KUnbounded          -> Just $ valueCall x "shl" [a, n]
+      (Shr           , [a, n]   , x:_)
+        | kindOf x == KUnbounded          -> Just $ valueCall x "shr" [a, n]
+      (Rol n         , [a]      , x:_)
+        | kindOf x == KUnbounded          -> Just $ valueCall x "shl" [a, integerValue n]
+      (Ror n         , [a]      , x:_)
+        | kindOf x == KUnbounded          -> Just $ valueCall x "shr" [a, integerValue n]
+      (Equal _       , [a, b]   , x:_)    -> Just $ comparison x "==" a b
+      (NotEqual      , as       , x:_)    -> Just $ distinctExpr x as
+      (LessThan      , [a, b]   , x:_)    -> Just $ comparison x "<"  a b
+      (GreaterThan   , [a, b]   , x:_)    -> Just $ comparison x ">"  a b
+      (LessEq        , [a, b]   , x:_)    -> Just $ comparison x "<=" a b
+      (GreaterEq     , [a, b]   , x:_)    -> Just $ comparison x ">=" a b
+      (Divides n     , [a]      , x:_)
+        | kindOf x == KUnbounded          -> Just $ namedCall "sbv_gmp_integer_divides"
+                                                       [namedCall "sbv_gmp_integer_const" [text "&__sbv_gmp_ctx", doubleQuotes (integer n)], a]
+      (KindCast fr to, [a]      , _)      -> gmpCast fr to a
+      _                                   -> unsupported
+ where valueCall sv suffix = namedCall (kindPrefix (kindOf sv) ++ suffix) . (text "&__sbv_gmp_ctx" :)
+
+       comparison sv relation a b = parens $ namedCall (kindPrefix (kindOf sv) ++ "cmp") [a, b] <+> text relation <+> text "0"
+
+       integerValue value = namedCall "sbv_gmp_integer_const" [text "&__sbv_gmp_ctx", doubleQuotes (integer (fromIntegral value))]
+
+       distinctExpr sv as = fsep $ punctuate (text " &&")
+                                  [parens (namedCall (kindPrefix (kindOf sv) ++ "cmp") [a, b] <+> text "!= 0")
+                                  | (a:rest) <- tails as, b <- rest]
+
+       gmpCast fr to a
+         | fr == to = Just a
+         | fr == KUnbounded && to == KReal
+         = Just $ namedCall "sbv_gmp_real_from_integer" [text "&__sbv_gmp_ctx", a]
+         | fr == KReal && to == KUnbounded
+         = Just $ namedCall "sbv_gmp_integer_from_real" [text "&__sbv_gmp_ctx", a]
+         | isBounded fr && intSizeOf fr <= 64 && to == KUnbounded
+         = Just $ namedCall (if hasSign fr then "sbv_gmp_integer_from_s64" else "sbv_gmp_integer_from_u64")
+                            [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
+         | fr == KUnbounded && isBounded to && intSizeOf to <= 64
+         = Just $ parens (text (boundedCType to)) <+> namedCall "sbv_gmp_integer_low_u64" [a]
+         | isBounded fr && intSizeOf fr <= 64 && to == KReal
+         = Just $ namedCall (if hasSign fr then "sbv_gmp_real_from_s64" else "sbv_gmp_real_from_u64")
+                            [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
+         | fr == KReal && isBounded to && intSizeOf to <= 64
+         = Just $ parens (text (boundedCType to)) <+> namedCall "sbv_gmp_real_low_u64" [a]
+         | otherwise
+         = unsupportedCast fr to
+
+       unsupported = error $ "SBV->C: exact GMP lowering does not yet support " ++ show op
+                          ++ " with argument kinds " ++ show (map kindOf svs)
+                          ++ " and result kind " ++ show resultKind
+
+       unsupportedCast fr to = error $ "SBV->C: exact GMP lowering does not yet support a cast from " ++ show fr ++ " to " ++ show to
+
+       boundedCType (KBounded False 1) = "SBool"
+       boundedCType (KBounded False w) = "SWord" ++ show w
+       boundedCType (KBounded True  w) = "SInt"  ++ show w
+       boundedCType k                  = error $ "SBV->C: Expected a bounded kind, received " ++ show k
+
+-- | Print an exact GMP value in canonical decimal notation.
+gmpPrint :: Kind -> Doc -> Doc
+gmpPrint KUnbounded value = namedCall "gmp_printf" [doubleQuotes (text "%Zd"), value]
+gmpPrint KReal      value = namedCall "gmp_printf" [doubleQuotes (text "%Qd"), value]
+gmpPrint k          _     = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
+
+-- | Copy an internal immutable exact value into caller-owned GMP storage.
+gmpSet :: Kind -> Doc -> Doc -> Doc
+gmpSet KUnbounded target value = namedCall "mpz_set" [target, value]
+gmpSet KReal      target value = namedCall "mpq_set" [target, value]
+gmpSet k          _      _     = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
+
+-- | Return the mutable GMP pointer type used for an output parameter.
+gmpOutputType :: Kind -> String
+gmpOutputType KUnbounded = "mpz_ptr"
+gmpOutputType KReal      = "mpq_ptr"
+gmpOutputType k          = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
+
+-- | Initialize a caller-owned GMP value from an integer-valued driver sample.
+gmpDriverInit :: Kind -> Doc -> Doc -> Doc
+gmpDriverInit KUnbounded storage value = text "mpz_t" <+> storage P.<> semi
+                                      $$ namedCall "mpz_init_set_str" [storage, doubleQuotes value, text "10"] P.<> semi
+gmpDriverInit KReal      storage value = text "mpq_t" <+> storage P.<> semi
+                                      $$ namedCall "mpq_init" [storage] P.<> semi
+                                      $$ namedCall "mpq_set_str" [storage, doubleQuotes value, text "10"] P.<> semi
+                                      $$ namedCall "mpq_canonicalize" [storage] P.<> semi
+gmpDriverInit k          _       _     = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
+
+-- | Clear caller-owned GMP storage in a generated driver.
+gmpDriverClear :: Kind -> Doc -> Doc
+gmpDriverClear KUnbounded storage = namedCall "mpz_clear" [storage] P.<> semi
+gmpDriverClear KReal      storage = namedCall "mpq_clear" [storage] P.<> semi
+gmpDriverClear k          _       = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
+
+-- | Initialize the arena used by exact temporaries in a generated function.
+gmpContextStart :: Doc
+gmpContextStart = text "sbv_gmp_ctx __sbv_gmp_ctx = {NULL};"
+
+-- | Release all exact temporaries allocated by a generated function.
+gmpContextEnd :: Doc
+gmpContextEnd = namedCall "sbv_gmp_ctx_end" [text "&__sbv_gmp_ctx"] P.<> semi
+
+-- | Return the generated helper namespace for an exact numeric kind.
+kindPrefix :: Kind -> String
+kindPrefix KUnbounded = "sbv_gmp_integer_"
+kindPrefix KReal      = "sbv_gmp_real_"
+kindPrefix k          = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
+
+-- | Render a C function call.
+namedCall :: String -> [Doc] -> Doc
+namedCall nm args = text nm P.<> parens (fsep (punctuate comma args))
+
+-- | Runtime shared by exact integers and rational reals.
+commonRuntime :: [String]
+commonRuntime =
+  ["/* Per-call ownership arena for exact GMP temporaries. */"
+  , "typedef struct sbv_gmp_node {"
+  , "  struct sbv_gmp_node *next;"
+  , "  bool is_real;"
+  , "  union { mpz_t integer; mpq_t real; } value;"
+  , "} sbv_gmp_node;"
+  , ""
+  , "typedef struct { sbv_gmp_node *head; } sbv_gmp_ctx;"
+  , ""
+  , "static mpz_ptr sbv_gmp_new_integer(sbv_gmp_ctx *ctx)"
+  , "{"
+  , "  sbv_gmp_node *node = (sbv_gmp_node *) malloc(sizeof(*node));"
+  , "  if (node == NULL) abort();"
+  , "  node->next = ctx->head; node->is_real = false; ctx->head = node;"
+  , "  mpz_init(node->value.integer);"
+  , "  return node->value.integer;"
+  , "}"
+  , ""
+  , "static mpq_ptr sbv_gmp_new_real(sbv_gmp_ctx *ctx)"
+  , "{"
+  , "  sbv_gmp_node *node = (sbv_gmp_node *) malloc(sizeof(*node));"
+  , "  if (node == NULL) abort();"
+  , "  node->next = ctx->head; node->is_real = true; ctx->head = node;"
+  , "  mpq_init(node->value.real);"
+  , "  return node->value.real;"
+  , "}"
+  , ""
+  , "static void sbv_gmp_ctx_end(sbv_gmp_ctx *ctx)"
+  , "{"
+  , "  while (ctx->head != NULL) {"
+  , "    sbv_gmp_node *node = ctx->head; ctx->head = node->next;"
+  , "    if (node->is_real) mpq_clear(node->value.real); else mpz_clear(node->value.integer);"
+  , "    free(node);"
+  , "  }"
+  , "}"
+  ]
+
+-- | Runtime helpers for exact unbounded integers.
+integerRuntime :: [String]
+integerRuntime =
+  ["static SInteger sbv_gmp_integer_const(sbv_gmp_ctx *ctx, const char *value)"
+  , "{ mpz_ptr r = sbv_gmp_new_integer(ctx); if (mpz_set_str(r, value, 10) != 0) abort(); return r; }"
+  , ""
+  , "static SInteger sbv_gmp_integer_from_u64(sbv_gmp_ctx *ctx, uint64_t value)"
+  , "{ mpz_ptr r = sbv_gmp_new_integer(ctx); mpz_import(r, 1, -1, sizeof(value), 0, 0, &value); return r; }"
+  , ""
+  , "static SInteger sbv_gmp_integer_from_s64(sbv_gmp_ctx *ctx, int64_t value)"
+  , "{"
+  , "  const uint64_t magnitude = value < 0 ? UINT64_C(0) - (uint64_t) value : (uint64_t) value;"
+  , "  mpz_ptr r = sbv_gmp_new_integer(ctx); mpz_import(r, 1, -1, sizeof(magnitude), 0, 0, &magnitude);"
+  , "  if (value < 0) mpz_neg(r, r); return r;"
+  , "}"
+  , ""
+  , "static uint64_t sbv_gmp_integer_low_u64(SInteger value)"
+  , "{"
+  , "  uint64_t result = 0; size_t count; mpz_t reduced;"
+  , "  mpz_init(reduced); mpz_fdiv_r_2exp(reduced, value, 64);"
+  , "  mpz_export(&result, &count, -1, sizeof(result), 0, 0, reduced); mpz_clear(reduced); return result;"
+  , "}"
+  , ""
+  ]
+  ++ concatMap integerUnary [("neg", "mpz_neg"), ("abs", "mpz_abs"), ("com", "mpz_com")]
+  ++ concatMap integerBinary [("add", "mpz_add"), ("sub", "mpz_sub"), ("mul", "mpz_mul"), ("and", "mpz_and"), ("or", "mpz_ior"), ("xor", "mpz_xor")]
+  ++ ["static SInteger sbv_gmp_integer_quot(sbv_gmp_ctx *ctx, SInteger a, SInteger b)"
+     , "{"
+     , "  mpz_ptr r = sbv_gmp_new_integer(ctx); mpz_t divisor;"
+     , "  if (mpz_sgn(b) == 0) { mpz_set(r, a); return r; }"
+     , "  mpz_init(divisor); mpz_abs(divisor, b); mpz_fdiv_q(r, a, divisor);"
+     , "  if (mpz_sgn(b) < 0) mpz_neg(r, r); mpz_clear(divisor); return r;"
+     , "}"
+     , ""
+     , "static SInteger sbv_gmp_integer_rem(sbv_gmp_ctx *ctx, SInteger a, SInteger b)"
+     , "{"
+     , "  mpz_ptr r = sbv_gmp_new_integer(ctx); mpz_t divisor;"
+     , "  if (mpz_sgn(b) == 0) { mpz_set(r, a); return r; }"
+     , "  mpz_init(divisor); mpz_abs(divisor, b); mpz_fdiv_r(r, a, divisor); mpz_clear(divisor); return r;"
+     , "}"
+     , ""
+     , "static int sbv_gmp_integer_cmp(SInteger a, SInteger b) { return mpz_cmp(a, b); }"
+     , ""
+     , "static bool sbv_gmp_integer_divides(SInteger divisor, SInteger value)"
+     , "{ return mpz_sgn(divisor) != 0 && mpz_divisible_p(value, divisor) != 0; }"
+     , ""
+     , "static SInteger sbv_gmp_integer_shift(sbv_gmp_ctx *ctx, SInteger a, SInteger amount, bool left)"
+     , "{"
+     , "  mpz_ptr r = sbv_gmp_new_integer(ctx); mpz_t magnitude; bool effective_left = left;"
+     , "  mpz_init(magnitude); mpz_abs(magnitude, amount);"
+     , "  if (mpz_sgn(amount) < 0) effective_left = !effective_left;"
+     , "  if (!mpz_fits_ulong_p(magnitude)) {"
+     , "    if (effective_left) abort();"
+     , "    mpz_set_si(r, mpz_sgn(a) < 0 ? -1 : 0);"
+     , "  } else if (effective_left) {"
+     , "    mpz_mul_2exp(r, a, mpz_get_ui(magnitude));"
+     , "  } else {"
+     , "    mpz_fdiv_q_2exp(r, a, mpz_get_ui(magnitude));"
+     , "  }"
+     , "  mpz_clear(magnitude); return r;"
+     , "}"
+     , ""
+     , "static SInteger sbv_gmp_integer_shl(sbv_gmp_ctx *ctx, SInteger a, SInteger amount)"
+     , "{ return sbv_gmp_integer_shift(ctx, a, amount, true); }"
+     , ""
+     , "static SInteger sbv_gmp_integer_shr(sbv_gmp_ctx *ctx, SInteger a, SInteger amount)"
+     , "{ return sbv_gmp_integer_shift(ctx, a, amount, false); }"
+     , ""
+     ]
+ where integerUnary (suffix, operation) =
+         ["static SInteger sbv_gmp_integer_" ++ suffix ++ "(sbv_gmp_ctx *ctx, SInteger a)"
+         , "{ mpz_ptr r = sbv_gmp_new_integer(ctx); " ++ operation ++ "(r, a); return r; }"
+         , ""]
+
+       integerBinary (suffix, operation) =
+         ["static SInteger sbv_gmp_integer_" ++ suffix ++ "(sbv_gmp_ctx *ctx, SInteger a, SInteger b)"
+         , "{ mpz_ptr r = sbv_gmp_new_integer(ctx); " ++ operation ++ "(r, a, b); return r; }"
+         , ""]
+
+-- | Runtime helpers for exact rational reals.
+realRuntime :: [String]
+realRuntime =
+  ["static SReal sbv_gmp_real_const(sbv_gmp_ctx *ctx, const char *value)"
+  , "{ mpq_ptr r = sbv_gmp_new_real(ctx); if (mpq_set_str(r, value, 10) != 0) abort(); mpq_canonicalize(r); return r; }"
+  , ""
+  , "static SReal sbv_gmp_real_from_u64(sbv_gmp_ctx *ctx, uint64_t value)"
+  , "{ mpq_ptr r = sbv_gmp_new_real(ctx); mpz_import(mpq_numref(r), 1, -1, sizeof(value), 0, 0, &value); return r; }"
+  , ""
+  , "static SReal sbv_gmp_real_from_s64(sbv_gmp_ctx *ctx, int64_t value)"
+  , "{"
+  , "  const uint64_t magnitude = value < 0 ? UINT64_C(0) - (uint64_t) value : (uint64_t) value;"
+  , "  mpq_ptr r = sbv_gmp_new_real(ctx); mpz_import(mpq_numref(r), 1, -1, sizeof(magnitude), 0, 0, &magnitude);"
+  , "  if (value < 0) mpz_neg(mpq_numref(r), mpq_numref(r)); return r;"
+  , "}"
+  , ""
+  , "static uint64_t sbv_gmp_real_low_u64(SReal value)"
+  , "{"
+  , "  uint64_t result = 0; size_t count; mpz_t rounded, reduced;"
+  , "  mpz_init(rounded); mpz_init(reduced); mpz_fdiv_q(rounded, mpq_numref(value), mpq_denref(value));"
+  , "  mpz_fdiv_r_2exp(reduced, rounded, 64); mpz_export(&result, &count, -1, sizeof(result), 0, 0, reduced);"
+  , "  mpz_clear(reduced); mpz_clear(rounded); return result;"
+  , "}"
+  , ""
+  ]
+  ++ concatMap realUnary [("neg", "mpq_neg"), ("abs", "mpq_abs")]
+  ++ concatMap realBinary [("add", "mpq_add"), ("sub", "mpq_sub"), ("mul", "mpq_mul")]
+  ++ ["static SReal sbv_gmp_real_quot(sbv_gmp_ctx *ctx, SReal a, SReal b)"
+     , "{ mpq_ptr r = sbv_gmp_new_real(ctx); if (mpq_sgn(b) == 0) mpq_set_ui(r, 0, 1); else mpq_div(r, a, b); return r; }"
+     , ""
+     , "static int sbv_gmp_real_cmp(SReal a, SReal b) { return mpq_cmp(a, b); }"
+     , ""
+     ]
+ where realUnary (suffix, operation) =
+         ["static SReal sbv_gmp_real_" ++ suffix ++ "(sbv_gmp_ctx *ctx, SReal a)"
+         , "{ mpq_ptr r = sbv_gmp_new_real(ctx); " ++ operation ++ "(r, a); return r; }"
+         , ""]
+
+       realBinary (suffix, operation) =
+         ["static SReal sbv_gmp_real_" ++ suffix ++ "(sbv_gmp_ctx *ctx, SReal a, SReal b)"
+         , "{ mpq_ptr r = sbv_gmp_new_real(ctx); " ++ operation ++ "(r, a, b); return r; }"
+         , ""]
+
+-- | Runtime helpers that convert between exact integers and rational reals.
+crossRuntime :: [String]
+crossRuntime =
+  ["static SInteger sbv_gmp_integer_from_real(sbv_gmp_ctx *ctx, SReal a)"
+  , "{ mpz_ptr r = sbv_gmp_new_integer(ctx); mpz_fdiv_q(r, mpq_numref(a), mpq_denref(a)); return r; }"
+  , ""
+  , "static SReal sbv_gmp_real_from_integer(sbv_gmp_ctx *ctx, SInteger a)"
+  , "{ mpq_ptr r = sbv_gmp_new_real(ctx); mpq_set_z(r, a); return r; }"
+  , ""
+  ]

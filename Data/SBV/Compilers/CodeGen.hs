@@ -65,8 +65,8 @@ class CgTarget a where
 -- | Options for code-generation.
 data CgConfig = CgConfig {
           cgRTC                :: Bool               -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
-        , cgInteger            :: Maybe Int          -- ^ Bit-size to use for representing SInteger (if any)
-        , cgReal               :: Maybe CgSRealType  -- ^ Type to use for representing SReal (if any)
+        , cgInteger            :: Maybe Int          -- ^ Optional lossy bit-size for representing SInteger; 'Nothing' selects exact GMP integers
+        , cgReal               :: Maybe CgSRealType  -- ^ Optional lossy representation for SReal; 'Nothing' selects exact GMP rationals
         , cgDriverVals         :: [Integer]          -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
         , cgGenDriver          :: Bool               -- ^ If 'True', will generate a driver program
         , cgGenMakefile        :: Bool               -- ^ If 'True', will generate a makefile
@@ -75,7 +75,9 @@ data CgConfig = CgConfig {
         , cgShowU8InHex        :: Bool               -- ^ If 'True', then 8-bit unsigned values will be shown in hex as well, otherwise decimal. (Other types always shown in hex.)
         }
 
--- | Default options for code generation. The run-time checks are turned-off, and the driver values are completely random.
+-- | Default options for code generation. Run-time checks are disabled, driver
+-- values are random, and any 'SInteger' or rational 'SReal' values use exact
+-- GMP representations.
 defaultCgConfig :: CgConfig
 defaultCgConfig = CgConfig { cgRTC                = False
                            , cgInteger            = Nothing
@@ -135,7 +137,8 @@ cgPerformRTCs b = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgRTC =
 -- | Sets number of bits to be used for representing the 'SInteger' type in the generated C code.
 -- The argument must be one of @8@, @16@, @32@, or @64@. Note that this is essentially unsafe as
 -- the semantics of unbounded Haskell integers becomes reduced to the corresponding bit size, as
--- typical in most C implementations.
+-- typical in most C implementations. Without this setting, generated C uses
+-- exact GMP integers.
 cgIntegerSize :: Int -> SBVCodeGen ()
 cgIntegerSize i
   | i `notElem` [8, 16, 32, 64]
@@ -162,7 +165,8 @@ instance Show CgSRealType where
 -- The setting can be one of C's @"float"@, @"double"@, or @"long double"@, types, depending
 -- on the precision needed. Note that this is essentially unsafe as the semantics of
 -- infinite precision SReal values becomes reduced to the corresponding floating point type in
--- C, and hence it is subject to rounding errors.
+-- C, and hence it is subject to rounding errors. Without this setting,
+-- generated C uses exact GMP rationals for rational-valued computations.
 cgSRealType :: CgSRealType -> SBVCodeGen ()
 cgSRealType rt = modify' (\s -> s {cgFinalConfig = (cgFinalConfig s) { cgReal = Just rt }})
 

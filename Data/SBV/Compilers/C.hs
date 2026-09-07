@@ -18,7 +18,7 @@ module Data.SBV.Compilers.C(compileToC, compileToCLib, compileToC', compileToCLi
 import Control.DeepSeq                (rnf)
 import Data.Char                      (isSpace)
 import Data.List                      (nub, intercalate, intersperse)
-import Data.Maybe                     (isJust, isNothing, fromJust)
+import Data.Maybe                     (isJust, fromJust)
 import qualified Data.Foldable as F   (toList)
 import qualified Data.Set      as Set (member, union, unions, empty, toList, singleton, fromList)
 import qualified Data.Text     as T
@@ -35,6 +35,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Kind (kRoundingMode)
 import Data.SBV.Compilers.C.BV
 import Data.SBV.Compilers.C.FP
+import Data.SBV.Compilers.C.GMP
 import Data.SBV.Compilers.CodeGen
 
 import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
@@ -125,7 +126,9 @@ cgen cfg nm st sbvProg
 
         bundleKind = (cgInteger cfg, cgReal cfg)
 
-        extraTypes = wideBVTypeDecls (wideBVKinds kinds) $$ arbitraryFPTypeDecls (arbitraryFPKinds kinds)
+        extraTypes =  wideBVTypeDecls (wideBVKinds kinds)
+                   $$ arbitraryFPTypeDecls (arbitraryFPKinds kinds)
+                   $$ gmpTypeDecls cfg kinds
         kinds      = reskinds sbvProg
 
         randVals = cgDriverVals cfg
@@ -136,7 +139,7 @@ cgen cfg nm st sbvProg
                        | True           = True
 
         nmd      = nm ++ "_driver"
-        sig      = pprCFunHeader nm ins outs mbRet
+        sig      = pprCFunHeader cfg nm ins outs mbRet
         ins      = cgInputs st
         outs     = cgOutputs st
         mbRet    = case cgReturns st of
@@ -155,19 +158,34 @@ cgen cfg nm st sbvProg
 -- | Pretty print a functions type. If there is only one output, we compile it
 -- as a function that returns that value. Otherwise, we compile it as a void function
 -- that takes return values as pointers to be updated.
-pprCFunHeader :: String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc
-pprCFunHeader fn ins outs mbRet = retType <+> text fn P.<> parens (fsep (punctuate comma (map mkParam ins ++ map mkPParam outs)))
-  where retType = case mbRet of
-                   Nothing -> text "void"
-                   Just sv -> pprCWord False sv
+pprCFunHeader :: CgConfig -> String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc
+pprCFunHeader cfg fn ins outs mbRet = retType <+> text fn P.<> parens (fsep (punctuate comma params))
+  where params  = map (mkParam cfg) ins ++ map (mkPParam cfg) outs ++ exactResult
+        retType = case mbRet of
+                    Just sv | not (isExactGMPKind cfg (kindOf sv)) -> pprCWord False sv
+                    _                                             -> text "void"
 
-mkParam, mkPParam :: (String, CgVal) -> Doc
-mkParam  (n, CgAtomic sv)     = pprCWord True  sv <+> text n
-mkParam  (_, CgArray  [])     = die "mkParam: CgArray with no elements!"
-mkParam  (n, CgArray  (sv:_)) = pprCWord True  sv <+> text "*" P.<> text n
-mkPParam (n, CgAtomic sv)     = pprCWord False sv <+> text "*" P.<> text n
-mkPParam (_, CgArray  [])     = die "mPkParam: CgArray with no elements!"
-mkPParam (n, CgArray  (sv:_)) = pprCWord False sv <+> text "*" P.<> text n
+        exactResult = case mbRet of
+                        Just sv | isExactGMPKind cfg (kindOf sv) -> [text (gmpOutputType (kindOf sv)) <+> text "__result"]
+                        _                                        -> []
+
+-- | Render a generated C input parameter.
+mkParam :: CgConfig -> (String, CgVal) -> Doc
+mkParam _   (n, CgAtomic sv)     = pprCWord True sv <+> text n
+mkParam cfg (_, CgArray  (sv:_))
+  | isExactGMPKind cfg (kindOf sv) = die "mkParam: Exact GMP arrays are not yet supported"
+mkParam _   (_, CgArray  [])     = die "mkParam: CgArray with no elements!"
+mkParam _   (n, CgArray  (sv:_)) = pprCWord True sv <+> text "*" P.<> text n
+
+-- | Render a generated C output parameter.
+mkPParam :: CgConfig -> (String, CgVal) -> Doc
+mkPParam cfg (n, CgAtomic sv)
+  | isExactGMPKind cfg (kindOf sv) = text (gmpOutputType (kindOf sv)) <+> text n
+  | True                           = pprCWord False sv <+> text "*" P.<> text n
+mkPParam cfg (_, CgArray (sv:_))
+  | isExactGMPKind cfg (kindOf sv) = die "mkPParam: Exact GMP arrays are not yet supported"
+mkPParam _   (_, CgArray [])      = die "mkPParam: CgArray with no elements!"
+mkPParam _   (n, CgArray (sv:_))  = pprCWord False sv <+> text "*" P.<> text n
 
 -- | Renders as "const SWord8 s0", etc. the first parameter is the width of the typefield
 declSV :: Int -> SV -> Doc
@@ -248,6 +266,8 @@ specifier cfg sv = case kindOf sv of
 --   There are many options here, using binary, decimal, etc. We simply use decimal for values 8-bits or less,
 --   and hex otherwise.
 mkConst :: CgConfig -> CV -> Doc
+mkConst cfg cv
+  | Just d <- gmpConst cfg cv = d
 mkConst _   (CV k (CInteger i))
   | Just d <- wideBVConst k i = d
 mkConst cfg (CV KReal (CAlgReal (AlgRational _ r))) = double (fromRational r :: Double) P.<> sRealSuffix (fromJust (cgReal cfg))
@@ -282,8 +302,13 @@ showSizedConst _   i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " 
 genMake :: Bool -> String -> String -> [String] -> Doc
 genMake ifdr fn dn ldFlags = foldr1 ($$) [l | (True, l) <- lns]
  where ifld = not (null ldFlags)
+       gmp  = "-lgmp" `elem` ldFlags
        ld | ifld = text "${LDFLAGS}"
           | True = empty
+       renderedLDFlags = unwords $ filter (/= "-lgmp") ldFlags ++ ["${GMP_LIBS}" | gmp]
+       gmpCFlags
+         | gmp       = text " ${GMP_CFLAGS}"
+         | True      = empty
        lns = [ (True, text "# Makefile for" <+> nm P.<> text ". Automatically generated by SBV. Do not edit!")
              , (True, text "")
              , (True, text "# include any user-defined .mk file in the current directory.")
@@ -291,15 +316,17 @@ genMake ifdr fn dn ldFlags = foldr1 ($$) [l | (True, l) <- lns]
              , (True, text "")
              , (True, text "CC?=gcc")
              , (True, text "CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer")
-             , (ifld, text "LDFLAGS?=" P.<> text (unwords ldFlags))
+             , (gmp,  text "GMP_CFLAGS?=$(shell pkg-config --cflags gmp)")
+             , (gmp,  text "GMP_LIBS?=$(shell pkg-config --libs gmp)")
+             , (ifld, text "LDFLAGS?=" P.<> text renderedLDFlags)
              , (True, text "")
              , (ifdr, text "all:" <+> nmd)
              , (ifdr, text "")
              , (True, nmo P.<> text (": " ++ ppSameLine (hsep [nmc, nmh])))
-             , (True, text "\t${CC} ${CCFLAGS}" <+> text "-c $< -o $@")
+             , (True, text "\t${CC} ${CCFLAGS}" P.<> gmpCFlags <+> text "-c $< -o $@")
              , (True, text "")
              , (ifdr, nmdo P.<> text ":" <+> nmdc)
-             , (ifdr, text "\t${CC} ${CCFLAGS}" <+> text "-c $< -o $@")
+             , (ifdr, text "\t${CC} ${CCFLAGS}" P.<> gmpCFlags <+> text "-c $< -o $@")
              , (ifdr, text "")
              , (ifdr, nmd P.<> text (": " ++ ppSameLine (hsep [nmo, nmdo])))
              , (ifdr, text "\t${CC} ${CCFLAGS}" <+> text "$^ -o $@" <+> ld)
@@ -410,10 +437,15 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
                                       -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
                                       $$ arbitraryFPPrint (kindOf sv) resultVar P.<> semi
                                       $$ text "printf(\"\\n\");"
+                              Just sv | isExactGMPKind cfg (kindOf sv)
+                                      -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
+                                      $$ gmpPrint (kindOf sv) resultVar P.<> semi
+                                      $$ text "printf(\"\\n\");"
                               Just sv -> text "printf" P.<> parens (printQuotes (fcall <+> text "=" <+> specifier cfg sv P.<> text "\\n")
                                                                               P.<> comma <+> resultVar) P.<> semi
                               Nothing -> text "printf" P.<> parens (printQuotes (fcall <+> text "->\\n")) P.<> semi)
                       $$ vcat (map display outs)
+                      $$ driverCleanup
                       )
        post   =   text ""
               $+$ nest 2 (text "return 0" P.<> semi)
@@ -430,38 +462,57 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
           | True                                            = (map (mkRVal sv) frs, n, a) : matchRands srs cs
           where l          = length sws
                 (frs, srs) = splitAt l rs
-       mkRVal sv r = mkConst cfg $ mkConstCV (kindOf sv) r
-       mkInp (_,  _, CgAtomic{})         = empty  -- constant, no need to declare
-       mkInp (_,  n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
-       mkInp (vs, n, CgArray sws@(sv:_)) =  pprCWord True sv <+> text n P.<> brackets (int (length sws)) <+> text "= {"
+       mkRVal sv r
+         | isExactGMPKind cfg (kindOf sv) = integer r
+         | True                           = mkConst cfg $ mkConstCV (kindOf sv) r
+       mkInp ([v], n, CgAtomic sv)
+         | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text n) v
+       mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
+       mkInp (_,   n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
+       mkInp (vs,  n, CgArray sws@(sv:_)) =  pprCWord True sv <+> text n P.<> brackets (int (length sws)) <+> text "= {"
                                                       $$ nest 4 (fsep (punctuate comma (align vs)))
                                                       $$ text "};"
                                          $$ text ""
                                          $$ text "printf" P.<> parens (printQuotes (text "Contents of input array" <+> text n P.<> text ":\\n")) P.<> semi
                                          $$ display (n, CgArray sws)
                                          $$ text ""
-       mkOut (v, CgAtomic sv)            = pprCWord False sv <+> text v P.<> semi
+       mkOut (v, CgAtomic sv)
+         | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text v) (text "0")
+         | True                           = pprCWord False sv <+> text v P.<> semi
        mkOut (v, CgArray [])             = die $ "Unsupported empty array value for " ++ show v
        mkOut (v, CgArray sws@(sv:_))     = pprCWord False sv <+> text v P.<> brackets (int (length sws)) P.<> semi
        resultVar = text "__result"
        call = case mbRet of
                 Nothing -> fcall P.<> semi
-                Just sv -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
-       fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs)))
-       mkCVal ([v], _, CgAtomic{}) = v
+                Just sv
+                  | isExactGMPKind cfg (kindOf sv) -> gmpDriverInit (kindOf sv) resultVar (text "0")
+                                                   $$ fcall P.<> semi
+                  | True                           -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
+       fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs ++ exactResultArg)))
+       exactResultArg = case mbRet of
+                          Just sv | isExactGMPKind cfg (kindOf sv) -> [resultVar]
+                          _                                        -> []
+       mkCVal ([v], n, CgAtomic sv)
+         | isExactGMPKind cfg (kindOf sv) = text n
+         | True                           = v
        mkCVal (vs,  n, CgAtomic{}) = die $ "Unexpected driver value computed for " ++ show n ++ render (hcat vs)
        mkCVal (_,   n, CgArray{})  = text n
-       mkOVal (n, CgAtomic{})      = text "&" P.<> text n
+       mkOVal (n, CgAtomic sv)
+         | isExactGMPKind cfg (kindOf sv) = text n
+         | True                           = text "&" P.<> text n
        mkOVal (n, CgArray{})       = text n
        display (n, CgAtomic sv)
-         | isWideBV (kindOf sv) = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
-                                $$ wideBVPrint (kindOf sv) (text n) P.<> semi
-                                $$ text "printf(\"\\n\");"
-         | isFP (kindOf sv)      = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
-                                $$ arbitraryFPPrint (kindOf sv) (text n) P.<> semi
-                                $$ text "printf(\"\\n\");"
-         | True                 = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier cfg sv
-                                                                        P.<> text "\\n") P.<> comma <+> text n) P.<> semi
+         | isWideBV (kindOf sv)            = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
+                                           $$ wideBVPrint (kindOf sv) (text n) P.<> semi
+                                           $$ text "printf(\"\\n\");"
+         | isFP (kindOf sv)                = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
+                                           $$ arbitraryFPPrint (kindOf sv) (text n) P.<> semi
+                                           $$ text "printf(\"\\n\");"
+         | isExactGMPKind cfg (kindOf sv)  = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
+                                           $$ gmpPrint (kindOf sv) (text n) P.<> semi
+                                           $$ text "printf(\"\\n\");"
+         | True                            = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier cfg sv
+                                                                                    P.<> text "\\n") P.<> comma <+> text n) P.<> semi
        display (n, CgArray [])         =  die $ "Unsupported empty array value for " ++ show n
        display (n, CgArray sws@(sv:_))
          | isWideBV (kindOf sv) || isFP (kindOf sv) = text "int" <+> nctr P.<> semi
@@ -485,12 +536,18 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
                           | isWideBV k = wideBVPrint k
                           | True       = arbitraryFPPrint k
 
+       driverCleanup = vcat $ inputCleanup ++ outputCleanup ++ returnCleanup
+         where inputCleanup  = [gmpDriverClear (kindOf sv) (text n) | (_, n, CgAtomic sv) <- pairedInputs, isExactGMPKind cfg (kindOf sv)]
+               outputCleanup = [gmpDriverClear (kindOf sv) (text n) | (n, CgAtomic sv) <- outs, isExactGMPKind cfg (kindOf sv)]
+               returnCleanup = case mbRet of
+                                 Just sv | isExactGMPKind cfg (kindOf sv) -> [gmpDriverClear (kindOf sv) resultVar]
+                                 _                                        -> []
+
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], [String])
 genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
-  | isNothing (cgInteger cfg) && KUnbounded `Set.member` kindInfo
-  = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
-          ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
+  | any exactTable tbls
+  = error "SBV->C: Tables containing or indexed by exact GMP values are not yet supported."
   | KString `Set.member` kindInfo
   = notyet "Strings"
   | KChar `Set.member` kindInfo
@@ -501,9 +558,6 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
   = notyet "Lists (SList)"
   | any isTuple kindInfo
   = notyet "Tuples (STupleN)"
-  | isNothing (cgReal cfg) && KReal `Set.member` kindInfo
-  = error $ "SBV->C: SReal values are not supported by the C compiler."
-          ++ "\nUse 'cgSRealType' to specify a custom type for SReal representation."
   | not (null usorts)
   = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
   | hasQuants pinfo
@@ -521,6 +575,8 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        asserts | cgIgnoreAsserts cfg = []
                | True                = origAsserts
 
+       exactTable ((_, indexKind, resultKind), _) = isExactGMPKind cfg indexKind || isExactGMPKind cfg resultKind
+
        usorts = [s | k@(KADT s _ _) <- Set.toList kindInfo, isADT k && not (isRoundingMode k)] -- No support for any sorts other than RoundingMode!
 
        pre    =  text "/* File:" <+> doubleQuotes (nm P.<> text ".c") P.<> text ". Automatically generated by SBV. Do not edit! */"
@@ -537,14 +593,18 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
              $$ extDecls
              $$ wideBVRuntime wideKinds assignments
              $$ arbitraryFPRuntime fpKinds assignments
+             $$ gmpRuntime cfg kindInfo
              $$ proto
              $$ text "{"
              $$ text ""
-             $$ nest 2 (   vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
+             $$ nest 2 (   gmpStart
+                        $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
                         $$ vcat (merge (map genTbl tbls) (map genAsgn assignments) (map genAssert asserts))
                         $$ sepIf (not (null assignments) || not (null tbls))
                         $$ vcat (concatMap (genIO False . (True,)) outVars)
-                        $$ maybe empty mkRet mbRet
+                        $$ exactReturn
+                        $$ gmpEnd
+                        $$ normalReturn
                        )
              $$ text "}"
              $$ text ""
@@ -553,9 +613,29 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        assignments = F.toList asgns
 
+       usesGMP = any (isExactGMPKind cfg) kindInfo
+       gmpStart
+         | usesGMP   = gmpContextStart
+         | True      = empty
+       gmpEnd
+         | usesGMP   = gmpContextEnd
+         | True      = empty
+
+       exactReturn = case mbRet of
+                       Just sv | isExactGMPKind cfg (kindOf sv)
+                               -> gmpSet (kindOf sv) (text "__result") (showSV cfg consts sv) P.<> semi
+                       _       -> empty
+
+       normalReturn = case mbRet of
+                        Just sv | not (isExactGMPKind cfg (kindOf sv)) -> mkRet sv
+                        _                                             -> empty
+
        -- Do we need any linker flags for C?
-       flagsNeeded = nub $ fpFlags ++ concatMap (getLDFlag . opRes) assignments
+       flagsNeeded = nub $ gmpFlags ++ fpFlags ++ concatMap (getLDFlag . opRes) assignments
           where opRes (sv, SBVApp o _) = (o, kindOf sv)
+                gmpFlags
+                  | usesGMP   = ["-lgmp"]
+                  | True      = []
                 fpFlags
                   | null fpKinds = []
                   | True         = ["-lbf", "-lm"]
@@ -616,7 +696,9 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        genIO :: Bool -> (Bool, (String, CgVal)) -> [Doc]
        genIO True  (alive, (cNm, CgAtomic sv)) = [declSV typeWidth sv <+> text "=" <+> inputValue cNm sv P.<> semi | alive]
-       genIO False (alive, (cNm, CgAtomic sv)) = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg consts sv P.<> semi | alive]
+       genIO False (alive, (cNm, CgAtomic sv))
+         | isExactGMPKind cfg (kindOf sv) = [gmpSet (kindOf sv) (text cNm) (showSV cfg consts sv) P.<> semi | alive]
+         | True                           = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg consts sv P.<> semi | alive]
        genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
          where genElt sv i
                  | isInp = declSV typeWidth sv <+> text "=" <+> inputValue entry sv P.<> semi
@@ -789,11 +871,13 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         renderedArgs = map (showSV cfg consts) opArgs
 
-        rhs = case arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs of
+        rhs = case gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs of
                 Just e  -> e
-                Nothing -> case wideBVExpr op opArgs (kindOf resultSV) renderedArgs of
+                Nothing -> case arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs of
                              Just e  -> e
-                             Nothing -> p op renderedArgs
+                             Nothing -> case wideBVExpr op opArgs (kindOf resultSV) renderedArgs of
+                                          Just e  -> e
+                                          Nothing -> p op renderedArgs
 
         rtc = cgRTC cfg
 
@@ -1054,8 +1138,13 @@ mergeToLib libName cfgBundles
 genLibMake :: Bool -> String -> [String] -> [String] -> Doc
 genLibMake ifdr libName fs ldFlags = foldr1 ($$) [l | (True, l) <- lns]
  where ifld = not (null ldFlags)
+       gmp  = "-lgmp" `elem` ldFlags
        ld | ifld = text "${LDFLAGS}"
           | True = empty
+       renderedLDFlags = unwords $ filter (/= "-lgmp") ldFlags ++ ["${GMP_LIBS}" | gmp]
+       gmpCFlags
+         | gmp       = " ${GMP_CFLAGS}"
+         | True      = ""
        lns = [ (True, text "# Makefile for" <+> nm P.<> text ". Automatically generated by SBV. Do not edit!")
              , (True,  text "")
              , (True,  text "# include any user-defined .mk file in the current directory.")
@@ -1063,7 +1152,9 @@ genLibMake ifdr libName fs ldFlags = foldr1 ($$) [l | (True, l) <- lns]
              , (True,  text "")
              , (True,  text "CC?=gcc")
              , (True,  text "CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer")
-             , (ifld,  text "LDFLAGS?=" P.<> text (unwords ldFlags))
+             , (gmp,   text "GMP_CFLAGS?=$(shell pkg-config --cflags gmp)")
+             , (gmp,   text "GMP_LIBS?=$(shell pkg-config --libs gmp)")
+             , (ifld,  text "LDFLAGS?=" P.<> text renderedLDFlags)
              , (True,  text "AR?=ar")
              , (True,  text "ARFLAGS?=cr")
              , (True,  text "")
@@ -1074,7 +1165,7 @@ genLibMake ifdr libName fs ldFlags = foldr1 ($$) [l | (True, l) <- lns]
              , (True,  text "\t${AR} ${ARFLAGS} $@ $^")
              , (True,  text "")
              , (ifdr,  text libd P.<> text (": " ++ unwords [libd ++ ".c", libh]))
-             , (ifdr,  text ("\t${CC} ${CCFLAGS} $< -o $@ " ++ liba) <+> ld)
+             , (ifdr,  text ("\t${CC} ${CCFLAGS}" ++ gmpCFlags ++ " $< -o $@ " ++ liba) <+> ld)
              , (ifdr,  text "")
              , (True,  vcat (zipWith mkObj os fs))
              , (True,  text "clean:")
@@ -1091,7 +1182,7 @@ genLibMake ifdr libName fs ldFlags = foldr1 ($$) [l | (True, l) <- lns]
        libd = libName ++ "_driver"
        os   = map (`replaceExtension` ".o") fs
        mkObj o f =  text o P.<> text (": " ++ unwords [f, libh])
-                 $$ text "\t${CC} ${CCFLAGS} -c $< -o $@"
+                 $$ text ("\t${CC} ${CCFLAGS}" ++ gmpCFlags ++ " -c $< -o $@")
                  $$ text ""
 
 -- | Create a driver for a library

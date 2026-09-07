@@ -68,6 +68,7 @@ import qualified TestSuite.CodeGeneration.ArbitraryBits
 import qualified TestSuite.CodeGeneration.ArbitraryFloats
 import qualified TestSuite.CodeGeneration.CgTests
 import qualified TestSuite.CodeGeneration.CRC_USB5
+import qualified TestSuite.CodeGeneration.ExactNumbers
 import qualified TestSuite.CodeGeneration.Fibonacci
 import qualified TestSuite.CodeGeneration.Floats
 import qualified TestSuite.CodeGeneration.GCD
@@ -195,6 +196,7 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.CodeGeneration.ArbitraryFloats.tests
                       , TestSuite.CodeGeneration.CgTests.tests
                       , TestSuite.CodeGeneration.CRC_USB5.tests
+                      , TestSuite.CodeGeneration.ExactNumbers.tests
                       , TestSuite.CodeGeneration.Fibonacci.tests
                       , TestSuite.CodeGeneration.Floats.tests
                       , TestSuite.CodeGeneration.GCD.tests
