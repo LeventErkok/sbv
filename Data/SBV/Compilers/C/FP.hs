@@ -13,6 +13,9 @@
 
 module Data.SBV.Compilers.C.FP
   ( arbitraryFPKinds
+  , roundingModeTypeDecls
+  , roundingModeConst
+  , roundingModeDriverValue
   , arbitraryFPTypeDecls
   , arbitraryFPRuntime
   , arbitraryFPConst
@@ -44,6 +47,29 @@ arbitraryFPKinds = map validate . filter isFP . Set.toAscList
          | True     = error $ "SBV->C: LibBF supports arbitrary floating-point exponent widths only up to 61 bits, received " ++ show k
        validate k = error $ "SBV->C: Expected an arbitrary floating-point kind, received " ++ show k
 
+-- | Declare the public C enumeration used for symbolic rounding modes.
+roundingModeTypeDecls :: Bool -> Doc
+roundingModeTypeDecls required
+  | required = text . unlines $
+      ["/* IEEE-754 rounding modes. */"
+      , "#ifndef SBV_ROUNDING_MODE_DEFINED"
+      , "#define SBV_ROUNDING_MODE_DEFINED"
+      , "typedef enum { SBV_RM_RNE = 0, SBV_RM_RNA = 1, SBV_RM_RTP = 2, SBV_RM_RTN = 3, SBV_RM_RTZ = 4 } RoundingMode;"
+      , "#endif"
+      , ""]
+  | True     = empty
+
+-- | Render an SBV rounding-mode constant as a public C enumerator.
+roundingModeConst :: CV -> Maybe Doc
+roundingModeConst (CV k (CADT (constructorName, [])))
+  | isRoundingMode k = text . fst <$> lookup constructorName roundingModeNames
+roundingModeConst _ = Nothing
+
+-- | Select a deterministic rounding-mode enumerator for a generated driver.
+roundingModeDriverValue :: Integer -> Doc
+roundingModeDriverValue sample = text cName
+ where (cName, _) = map snd roundingModeNames !! fromInteger (sample `mod` toInteger (length roundingModeNames))
+
 -- | Declare the raw IEEE interchange representation used at the public C ABI.
 arbitraryFPTypeDecls :: [Kind] -> Doc
 arbitraryFPTypeDecls [] = empty
@@ -71,6 +97,18 @@ arbitraryFPRuntime :: [Kind] -> [(SV, SBVExpr)] -> Doc
 arbitraryFPRuntime [] _ = empty
 arbitraryFPRuntime ks asgns = text . unlines . map markUnused $
      ["/* LibBF-backed arbitrary floating-point runtime. */"
+     , "static inline bf_rnd_t sbv_bf_rounding_mode(int mode)"
+     , "{"
+     , "  switch (mode) {"
+     , "    case 0: return BF_RNDN;"
+     , "    case 1: return BF_RNDNA;"
+     , "    case 2: return BF_RNDU;"
+     , "    case 3: return BF_RNDD;"
+     , "    case 4: return BF_RNDZ;"
+     , "    default: abort();"
+     , "  }"
+     , "}"
+     , ""
      , "static void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)"
      , "{"
      , "  (void) opaque;"
@@ -135,14 +173,14 @@ arbitraryFPExpr consts op svs resultKind args
        fpExpr fpOp as fpArgs = case (fpOp, as, fpArgs) of
          (FP_Abs              , [a]           , x:_)    -> argCall x "abs" [a]
          (FP_Neg              , [a]           , x:_)    -> argCall x "neg" [a]
-         (FP_Add              , [_rm, a, b]   , r:x:_)  -> argCall x "add" [a, b, text (bfRoundingMode consts r)]
-         (FP_Sub              , [_rm, a, b]   , r:x:_)  -> argCall x "sub" [a, b, text (bfRoundingMode consts r)]
-         (FP_Mul              , [_rm, a, b]   , r:x:_)  -> argCall x "mul" [a, b, text (bfRoundingMode consts r)]
-         (FP_Div              , [_rm, a, b]   , r:x:_)  -> argCall x "div" [a, b, text (bfRoundingMode consts r)]
-         (FP_FMA              , [_rm, a, b, c], r:x:_)  -> argCall x "fma" [a, b, c, text (bfRoundingMode consts r)]
-         (FP_Sqrt             , [_rm, a]      , r:x:_)  -> argCall x "sqrt" [a, text (bfRoundingMode consts r)]
+         (FP_Add              , [_rm, a, b]   , r:x:_)  -> argCall x "add" [a, b, bfRoundingMode consts r]
+         (FP_Sub              , [_rm, a, b]   , r:x:_)  -> argCall x "sub" [a, b, bfRoundingMode consts r]
+         (FP_Mul              , [_rm, a, b]   , r:x:_)  -> argCall x "mul" [a, b, bfRoundingMode consts r]
+         (FP_Div              , [_rm, a, b]   , r:x:_)  -> argCall x "div" [a, b, bfRoundingMode consts r]
+         (FP_FMA              , [_rm, a, b, c], r:x:_)  -> argCall x "fma" [a, b, c, bfRoundingMode consts r]
+         (FP_Sqrt             , [_rm, a]      , r:x:_)  -> argCall x "sqrt" [a, bfRoundingMode consts r]
          (FP_Rem              , [a, b]        , x:_)    -> argCall x "rem" [a, b]
-         (FP_RoundToIntegral  , [_rm, a]      , r:x:_)  -> argCall x "round" [a, text (bfRoundingMode consts r)]
+         (FP_RoundToIntegral  , [_rm, a]      , r:x:_)  -> argCall x "round" [a, bfRoundingMode consts r]
          (FP_Min              , [a, b]        , x:_)    -> argCall x "min" [a, b]
          (FP_Max              , [a, b]        , x:_)    -> argCall x "max" [a, b]
          (FP_ObjEqual         , [a, b]        , x:_)    -> argCall x "obj_eq" [a, b]
@@ -154,7 +192,7 @@ arbitraryFPExpr consts op svs resultKind args
          (FP_IsNegative       , [a]           , x:_)    -> argCall x "is_negative" [a]
          (FP_IsPositive       , [a]           , x:_)    -> argCall x "is_positive" [a]
          (FP_Reinterpret fr to, [a]           , _)      -> namedCall (reinterpretName fr to) [a]
-         (FP_Cast fr to rm    , [a]           , _)      -> namedCall (castName fr to) [a, text (bfRoundingMode consts rm)]
+         (FP_Cast fr to rm    , [a]           , _)      -> namedCall (castName fr to) [a, bfRoundingMode consts rm]
          _                                              -> unsupported
 
        unsupported = error $ "SBV->C: arbitrary floating-point lowering does not yet support " ++ show op
@@ -621,19 +659,25 @@ arithmeticRuntime k@(KFP eb sb) =
          , ""]
 arithmeticRuntime k = error $ "SBV->C: Expected an arbitrary floating-point kind, received " ++ show k
 
--- | Return the LibBF rounding constant corresponding to an SBV literal.
-bfRoundingMode :: [(SV, CV)] -> SV -> String
+-- | Render the LibBF rounding mode corresponding to an SBV value.
+bfRoundingMode :: [(SV, CV)] -> SV -> Doc
 bfRoundingMode consts sv = case sv `lookup` consts of
   Just (CV k (CADT (rmName, [])))
-    | isRoundingMode k -> case rmName of
-        "RoundNearestTiesToEven" -> "BF_RNDN"
-        "RoundNearestTiesToAway" -> "BF_RNDNA"
-        "RoundTowardPositive"    -> "BF_RNDU"
-        "RoundTowardNegative"    -> "BF_RNDD"
-        "RoundTowardZero"        -> "BF_RNDZ"
-        _                        -> bad
-  _                             -> bad
- where bad = error $ "SBV->C: arbitrary floating-point operations require a concrete rounding mode, received " ++ show sv
+    | isRoundingMode k -> maybe bad (text . snd) (lookup rmName roundingModeNames)
+  Nothing
+    | isRoundingMode sv -> namedCall "sbv_bf_rounding_mode" [text (show sv)]
+  _                     -> bad
+ where bad = error $ "SBV->C: Expected a rounding mode, received " ++ show sv
+
+-- | Mapping from SBV constructor names to public C and LibBF constants.
+roundingModeNames :: [(String, (String, String))]
+roundingModeNames =
+  [ ("RoundNearestTiesToEven", ("SBV_RM_RNE", "BF_RNDN"))
+  , ("RoundNearestTiesToAway", ("SBV_RM_RNA", "BF_RNDNA"))
+  , ("RoundTowardPositive",    ("SBV_RM_RTP", "BF_RNDU"))
+  , ("RoundTowardNegative",    ("SBV_RM_RTN", "BF_RNDD"))
+  , ("RoundTowardZero",        ("SBV_RM_RTZ", "BF_RNDZ"))
+  ]
 
 -- | Render a C function call.
 namedCall :: String -> [Doc] -> Doc

@@ -37,6 +37,7 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute a nonstandard wide format" arbitraryFloatWideFormat
   , testCase "compile and execute classification" arbitraryFloatClassification
   , testCase "compile and execute rounding modes" arbitraryFloatRoundingModes
+  , testCase "compile and execute symbolic rounding modes" arbitraryFloatSymbolicRoundingMode
   , testCase "compile and execute special arithmetic" arbitraryFloatSpecialArithmetic
   ]
 
@@ -130,6 +131,37 @@ arbitraryFloatRoundingModes = withSystemTempDirectory "sbv-arbitrary-float-round
         cgReturn (rne # rna # rtp # rtn # rtz :: SWord 80)
       expected = foldl (\acc word -> acc * 2 ^ (16 :: Int) + word) 0 [0x3c00, 0x3c01, 0x3c01, 0x3c00, 0x3c00]
   compileAndRunLibBF dir "arbitraryFloatRoundingModes" program (asHex 2 expected)
+ where rawHalf :: SFPHalf -> SWord 16
+       rawHalf = sFloatingPointAsSWord
+
+-- | Exercise a runtime-selected rounding mode in arithmetic and conversion.
+arbitraryFloatSymbolicRoundingMode :: Assertion
+arbitraryFloatSymbolicRoundingMode = withSystemTempDirectory "sbv-arbitrary-float-symbolic-rounding" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 0, 1, 2, 3, 4, 2049, 2048, 1, 3]
+        choose    <- cgInput "chooseInputMode" :: SBVCodeGen SBool
+        modeRNE   <- cgInput "rne"             :: SBVCodeGen SRoundingMode
+        modeRNA   <- cgInput "rna"             :: SBVCodeGen SRoundingMode
+        modeRTP   <- cgInput "rtp"             :: SBVCodeGen SRoundingMode
+        modeRTN   <- cgInput "rtn"             :: SBVCodeGen SRoundingMode
+        modeRTZ   <- cgInput "rtz"             :: SBVCodeGen SRoundingMode
+        numValue  <- cgInput "numerator"       :: SBVCodeGen SFPQuad
+        denValue  <- cgInput "denominator"     :: SBVCodeGen SFPQuad
+        one       <- cgInput "one"             :: SBVCodeGen SFPHalf
+        three     <- cgInput "three"           :: SBVCodeGen SFPHalf
+        let runtimeMode mode = ite choose mode sRTZ
+            value            = fpDiv sRNE numValue denValue
+            rne              = rawHalf (toSFloatingPoint (runtimeMode modeRNE) value)
+            rna              = rawHalf (toSFloatingPoint (runtimeMode modeRNA) value)
+            rtp              = rawHalf (toSFloatingPoint (runtimeMode modeRTP) value)
+            rtn              = rawHalf (toSFloatingPoint (runtimeMode modeRTN) value)
+            rtz              = rawHalf (toSFloatingPoint (runtimeMode modeRTZ) value)
+            divided          = rawHalf (fpDiv (runtimeMode modeRTP) one three)
+        cgOutput "selectedMode" (runtimeMode modeRTP)
+        cgReturn (rne # rna # rtp # rtn # rtz # divided :: SWord 96)
+      expected = foldl (\acc word -> acc * 2 ^ (16 :: Int) + word) 0 [0x3c00, 0x3c01, 0x3c01, 0x3c00, 0x3c00, 0x3556]
+  compileAndRunLibBF dir "arbitraryFloatSymbolicRoundingMode" program (asHex 2 expected)
  where rawHalf :: SFPHalf -> SWord 16
        rawHalf = sFloatingPointAsSWord
 

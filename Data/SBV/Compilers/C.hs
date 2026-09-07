@@ -126,10 +126,21 @@ cgen cfg nm st sbvProg
 
         bundleKind = (cgInteger cfg, cgReal cfg)
 
-        extraTypes =  wideBVTypeDecls (wideBVKinds kinds)
+        extraTypes =  roundingModeTypeDecls usesRoundingModeType
+                   $$ wideBVTypeDecls (wideBVKinds kinds)
                    $$ arbitraryFPTypeDecls (arbitraryFPKinds kinds)
                    $$ gmpTypeDecls cfg kinds
         kinds      = reskinds sbvProg
+
+        usesRoundingModeType =  any (isRoundingMode . kindOf) roundingModeValues
+                             || any tableUsesRoundingMode (resTables sbvProg)
+          where roundingModeValues =  concatMap cgValSVs (map snd ins ++ map snd outs ++ cgReturns st)
+                                   ++ roundingModeAssignments
+                roundingModeAssignments = case resAsgns sbvProg of
+                                            SBVPgm asgns -> [sv | (sv, _) <- F.toList asgns]
+                cgValSVs (CgAtomic sv) = [sv]
+                cgValSVs (CgArray svs) = svs
+                tableUsesRoundingMode ((_, indexKind, resultKind), _) = isRoundingMode indexKind || isRoundingMode resultKind
 
         randVals = cgDriverVals cfg
 
@@ -238,7 +249,9 @@ specifier cfg sv = case kindOf sv of
                      KList k       -> die $ "list sort: "   ++ show k
                      KSet  k       -> die $ "set sort: "    ++ show k
                      KApp s _      -> die $ "ADT app: "     ++ s
-                     KADT s _ _    -> die $ "ADT: "         ++ s
+                     k@(KADT s _ _)
+                       | isRoundingMode k -> text "%d"
+                       | True             -> die $ "ADT: " ++ s
                      KTuple k      -> die $ "tuple sort: "  ++ show k
                      KArray  k1 k2 -> die $ "array sort: "  ++ show (k1, k2)
   where u8InHex = cgShowU8InHex cfg
@@ -266,6 +279,8 @@ specifier cfg sv = case kindOf sv of
 --   There are many options here, using binary, decimal, etc. We simply use decimal for values 8-bits or less,
 --   and hex otherwise.
 mkConst :: CgConfig -> CV -> Doc
+mkConst _   cv
+  | Just d <- roundingModeConst cv = d
 mkConst cfg cv
   | Just d <- gmpConst cfg cv = d
 mkConst _   (CV k (CInteger i))
@@ -463,8 +478,9 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
           where l          = length sws
                 (frs, srs) = splitAt l rs
        mkRVal sv r
-         | isExactGMPKind cfg (kindOf sv) = integer r
-         | True                           = mkConst cfg $ mkConstCV (kindOf sv) r
+         | isRoundingMode sv                 = roundingModeDriverValue r
+         | isExactGMPKind cfg (kindOf sv)    = integer r
+         | True                              = mkConst cfg $ mkConstCV (kindOf sv) r
        mkInp ([v], n, CgAtomic sv)
          | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text n) v
        mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
@@ -667,9 +683,11 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                       len (KTuple s)         = die $ "Tuple sort: "  ++ show s
                       len (KArray  k1 k2)    = die $ "Array sort:  " ++ show (k1, k2)
                       len (KApp s _)         = die $ "Uninterpreted ADT app: " ++ s
-                      len (KADT s _ _)       = die $ "Uninterpreted ADT: "     ++ s
+                      len k@(KADT s _ _)
+                        | isRoundingMode k = length (show k)
+                        | True             = die $ "Uninterpreted ADT: " ++ s
 
-                      getMax 8 _      = 8  -- 8 is the max we can get with SInteger, so don't bother looking any further
+                      getMax 8 _      = 8  -- Preserve the historical declaration layout once native-width alignment is reached.
                       getMax m []     = m
                       getMax m (x:xs) = getMax (m `max` x) xs
 
