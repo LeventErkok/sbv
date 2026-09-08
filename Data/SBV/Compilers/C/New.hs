@@ -183,7 +183,7 @@ pprCFunHeader :: CgConfig -> String -> [(String, CgVal)] -> [(String, CgVal)] ->
 pprCFunHeader cfg fn ins outs mbRet = retType <+> text fn P.<> parens (fsep (punctuate comma params))
   where params  = map (mkParam cfg) ins ++ map (mkPParam cfg) outs ++ exactResult
         retType = case mbRet of
-                    Just sv | isArray sv -> tbd "Array-valued C returns"
+                    Just sv | isArray sv -> text (arrayOutputCType (kindOf sv))
                     Just sv | not (isExactGMPKind cfg (kindOf sv)) -> pprCWord False sv
                     _                                             -> text "void"
 
@@ -203,8 +203,8 @@ mkParam _   (n, CgArray  (sv:_)) = pprCWord True sv <+> text "*" P.<> text n
 
 -- | Render a generated C output parameter.
 mkPParam :: CgConfig -> (String, CgVal) -> Doc
-mkPParam _   (_, CgAtomic sv)
-  | isArray sv = tbd "Array-valued C outputs"
+mkPParam _   (n, CgAtomic sv)
+  | isArray sv = text (arrayOutputCType (kindOf sv)) <+> text "*" P.<> text n
 mkPParam cfg (n, CgAtomic sv)
   | isExactGMPKind cfg (kindOf sv) = text (gmpOutputType (kindOf sv)) <+> text n
   | True                           = pprCWord False sv <+> text "*" P.<> text n
@@ -250,26 +250,30 @@ showCType i = case kindOf i of
 
 -- | The printf specifier for the type
 specifier :: CgConfig -> SV -> Doc
-specifier cfg sv = case kindOf sv of
-                     KVar{}        -> die $ "variable sort: " ++ show (kindOf sv)
-                     KBool         -> spec (False, 1)
-                     KBounded b i  -> spec (b, i)
-                     KUnbounded    -> spec (True, fromJust (cgInteger cfg))
-                     KReal         -> specF (fromJust (cgReal cfg))
-                     KFloat        -> specF CgFloat
-                     KDouble       -> specF CgDouble
-                     KString       -> text "%s"
-                     KChar         -> text "%c"
-                     KRational     -> die   "rational sort"
-                     KFP{}         -> die   "arbitrary float sort"
-                     KList k       -> die $ "list sort: "   ++ show k
-                     KSet  k       -> die $ "set sort: "    ++ show k
-                     KApp s _      -> die $ "ADT app: "     ++ s
-                     k@(KADT s _ _)
-                       | isRoundingMode k -> text "%d"
-                       | True             -> die $ "ADT: " ++ s
-                     KTuple k      -> die $ "tuple sort: "  ++ show k
-                     KArray  k1 k2 -> die $ "array sort: "  ++ show (k1, k2)
+specifier cfg = specifierKind cfg . kindOf
+
+-- | Return the @printf@ conversion for a supported scalar kind.
+specifierKind :: CgConfig -> Kind -> Doc
+specifierKind cfg kind = case kind of
+  KVar{}        -> die $ "variable sort: " ++ show kind
+  KBool         -> spec (False, 1)
+  KBounded b i  -> spec (b, i)
+  KUnbounded    -> spec (True, fromJust (cgInteger cfg))
+  KReal         -> specF (fromJust (cgReal cfg))
+  KFloat        -> specF CgFloat
+  KDouble       -> specF CgDouble
+  KString       -> text "%s"
+  KChar         -> text "%c"
+  KRational     -> die   "rational sort"
+  KFP{}         -> die   "arbitrary float sort"
+  KList k       -> die $ "list sort: "   ++ show k
+  KSet  k       -> die $ "set sort: "    ++ show k
+  KApp s _      -> die $ "ADT app: "     ++ s
+  k@(KADT s _ _)
+    | isRoundingMode k -> text "%d"
+    | True             -> die $ "ADT: " ++ s
+  KTuple k      -> die $ "tuple sort: "  ++ show k
+  KArray  k1 k2 -> die $ "array sort: "  ++ show (k1, k2)
   where u8InHex = cgShowU8InHex cfg
 
         spec :: (Bool, Int) -> Doc
@@ -469,6 +473,8 @@ genDriver cfg randVals fn inps outs mbRet
                            $$ call
                            $$ text ""
                            $$ (case mbRet of
+                              Just sv | isArray sv
+                                      -> displayArray "__result" fcall resultVar (kindOf sv)
                               Just sv | isWideBV (kindOf sv)
                                       -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
                                       $$ wideBVPrint (kindOf sv) resultVar P.<> semi
@@ -529,6 +535,7 @@ genDriver cfg randVals fn inps outs mbRet
                                          $$ display (n, CgArray sws)
                                          $$ text ""
        mkOut (v, CgAtomic sv)
+         | isArray sv                     = text (arrayOutputCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
          | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text v) (text "0")
          | True                           = pprCWord False sv <+> text v P.<> semi
        mkOut (v, CgArray [])             = die $ "Unsupported empty array value for " ++ show v
@@ -539,6 +546,7 @@ genDriver cfg randVals fn inps outs mbRet
                 Just sv
                   | isExactGMPKind cfg (kindOf sv) -> gmpDriverInit (kindOf sv) resultVar (text "0")
                                                    $$ fcall P.<> semi
+                  | isArray sv                     -> text (arrayOutputCType (kindOf sv)) <+> resultVar <+> text "=" <+> fcall P.<> semi
                   | True                           -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
        fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs ++ exactResultArg)))
        exactResultArg = case mbRet of
@@ -555,6 +563,7 @@ genDriver cfg randVals fn inps outs mbRet
          | True                           = text "&" P.<> text n
        mkOVal (n, CgArray{})       = text n
        display (n, CgAtomic sv)
+         | isArray sv                      = displayArray n (text n) (text n) (kindOf sv)
          | isWideBV (kindOf sv)            = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
                                            $$ wideBVPrint (kindOf sv) (text n) P.<> semi
                                            $$ text "printf(\"\\n\");"
@@ -589,6 +598,33 @@ genDriver cfg randVals fn inps outs mbRet
                           | isWideBV k = wideBVPrint k
                           | True       = arbitraryFPPrint k
 
+       displayArray stem label descriptor kind@(KArray keyKind valueKind)
+         = keySetup
+        $$ text "printf" P.<> parens (printQuotes (text " " <+> label P.<> text "[0] =")) P.<> semi
+        $$ printValue
+        $$ text "printf(\"\\n\");"
+        $$ keyCleanup
+        where keyName = text ("__sbv_array_key_" ++ stem)
+              key
+                | isExactGMPKind cfg keyKind = keyName
+                | True                       = mkConst cfg (mkConstCV keyKind (0 :: Integer))
+
+              keySetup
+                | isExactGMPKind cfg keyKind = gmpDriverInit keyKind keyName (text "0")
+                | True                       = empty
+
+              keyCleanup
+                | isExactGMPKind cfg keyKind = gmpDriverClear keyKind keyName
+                | True                       = empty
+
+              value = text (arrayOutputReadName kind) P.<> parens (fsep (punctuate comma [descriptor, key]))
+              printValue
+                | isWideBV valueKind           = wideBVPrint valueKind value P.<> semi
+                | isFP valueKind               = arbitraryFPPrint valueKind value P.<> semi
+                | isExactGMPKind cfg valueKind = gmpPrint valueKind value P.<> semi
+                | True                         = text "printf" P.<> parens (printQuotes (specifierKind cfg valueKind) P.<> comma <+> value) P.<> semi
+       displayArray _ _ _ kind = die $ "Expected an array output, received " ++ show kind
+
        driverCleanup = vcat $ inputCleanup ++ outputCleanup ++ returnCleanup
          where inputCleanup  = [gmpDriverClear (kindOf sv) (text n) | (_, n, CgAtomic sv) <- pairedInputs, isExactGMPKind cfg (kindOf sv)]
                               ++ [gmpDriverClear valueKind (text (n ++ "_default"))
@@ -597,8 +633,13 @@ genDriver cfg randVals fn inps outs mbRet
                                  , isExactGMPKind cfg valueKind
                                  ]
                outputCleanup = [gmpDriverClear (kindOf sv) (text n) | (n, CgAtomic sv) <- outs, isExactGMPKind cfg (kindOf sv)]
+                            ++ [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> text n) P.<> semi
+                               | (n, CgAtomic sv) <- outs
+                               , isArray sv
+                               ]
                returnCleanup = case mbRet of
                                  Just sv | isExactGMPKind cfg (kindOf sv) -> [gmpDriverClear (kindOf sv) resultVar]
+                                 Just sv | isArray sv                     -> [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> resultVar) P.<> semi]
                                  _                                        -> []
 
 -- | Generate the C program
@@ -661,6 +702,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                         $$ sepIf (not (null assignments) || not (null tbls))
                         $$ vcat (concatMap (genIO False . (True,)) outVars)
                         $$ exactReturn
+                        $$ arrayReturn
                         $$ gmpEnd
                         $$ normalReturn
                        )
@@ -714,7 +756,14 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                                -> gmpSet (kindOf sv) (text "__result") (showSV cfg consts sv) P.<> semi
                        _       -> empty
 
+       arrayReturn = case mbRet of
+                       Just sv | isArray sv
+                               -> text "const" <+> text (arrayOutputCType (kindOf sv)) <+> text "__result" <+> text "="
+                                  <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi
+                       _       -> empty
+
        normalReturn = case mbRet of
+                        Just sv | isArray sv                           -> text "return __result;"
                         Just sv | not (isExactGMPKind cfg (kindOf sv)) -> mkRet sv
                         _                                             -> empty
 
@@ -777,6 +826,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
          | isArray sv = [statement | alive, statement <- arrayInputSetup typeWidth sv cNm]
          | True       = [declSV typeWidth sv <+> text "=" <+> inputValue cNm sv P.<> semi | alive]
        genIO False (alive, (cNm, CgAtomic sv))
+         | isArray sv                     = [text "*" P.<> text cNm <+> text "=" <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
          | isExactGMPKind cfg (kindOf sv) = [gmpSet (kindOf sv) (text cNm) (showSV cfg consts sv) P.<> semi | alive]
          | True                           = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg consts sv P.<> semi | alive]
        genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]

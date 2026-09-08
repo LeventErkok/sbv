@@ -15,6 +15,10 @@ module Data.SBV.Compilers.C.Array
   ( arrayKinds
   , arrayCType
   , arrayInputCType
+  , arrayOutputCType
+  , arrayOutputReadName
+  , arrayOutputReleaseName
+  , arrayExportName
   , arrayTypeDecls
   , arrayRuntime
   , arrayInputSetup
@@ -77,30 +81,88 @@ arrayCType kind = error $ "SBV->C: Expected an array kind, received " ++ show ki
 arrayInputCType :: Kind -> String
 arrayInputCType kind = "SBVArrayInput_" ++ arraySuffix kind
 
+-- | Return the public owned-descriptor type produced for an array-valued C
+-- output or return value.
+arrayOutputCType :: Kind -> String
+arrayOutputCType kind = "SBVArrayOutput_" ++ arraySuffix kind
+
+-- | Return the public helper name used to read an owned array output.
+arrayOutputReadName :: Kind -> String
+arrayOutputReadName kind = "sbv_array_output_read_" ++ arraySuffix kind
+
+-- | Return the public helper name used to release an owned array output.
+arrayOutputReleaseName :: Kind -> String
+arrayOutputReleaseName kind = "sbv_array_output_release_" ++ arraySuffix kind
+
+-- | Return the public helper name used to retain an owned array output.
+arrayOutputRetainName :: Kind -> String
+arrayOutputRetainName kind = "sbv_array_output_retain_" ++ arraySuffix kind
+
+-- | Return the public helper name used to borrow an owned output as an input
+-- descriptor for another generated call.
+arrayOutputAsInputName :: Kind -> String
+arrayOutputAsInputName kind = "sbv_array_output_as_input_" ++ arraySuffix kind
+
+-- | Return the internal helper name used to export a function-scoped array.
+arrayExportName :: Kind -> String
+arrayExportName kind = "sbv_array_export_" ++ arraySuffix kind
+
 -- | Emit opaque public array types for every kind used by a generated
--- program. Array values are borrowed references whose nodes live for the
--- duration of the generated function call.
+-- program. Input descriptors are borrowed during a call. Output descriptors
+-- own retained contexts and must be released with their generated helper.
 arrayTypeDecls :: [Kind] -> Doc
 arrayTypeDecls [] = empty
 arrayTypeDecls kinds = text . unlines $
-     [ "/* Persistent functional arrays. References are valid for one generated call. */"
-     , "/* Input callbacks and contexts are borrowed for that call; pointer-backed */"
-     , "/* exact results returned by a callback must remain valid for the same period. */"
+     [ "/* Persistent functional arrays. Internal references are valid for one call. */"
+     , "/* Input contexts are borrowed unless an escaping result invokes their retain */"
+     , "/* callback. Owned outputs must be released with the generated release helper. */"
      , "#ifndef SBV_CGEN_UNUSED"
      , "#if defined(__GNUC__) || defined(__clang__)"
      , "#define SBV_CGEN_UNUSED __attribute__((unused))"
      , "#else"
      , "#define SBV_CGEN_UNUSED"
      , "#endif"
+     , "#endif"
+     , "#ifndef SBV_ARRAY_CONTEXT_LIFETIME_DEFINED"
+     , "#define SBV_ARRAY_CONTEXT_LIFETIME_DEFINED"
+     , "typedef const void *(*SBVArrayContextRetain)(const void *context);"
+     , "typedef void (*SBVArrayContextRelease)(const void *context);"
      , "#endif"]
   ++ concatMap declaration kinds
  where declaration kind@(KArray keyKind valueKind)
-         = [ "#ifndef " ++ arrayGuard kind
+         = let inputType       = arrayInputCType kind
+               outputType      = arrayOutputCType kind
+               lookupType      = arrayLookupType kind
+               readOutput      = arrayOutputReadName kind
+               retainOutput    = arrayOutputRetainName kind
+               releaseOutput   = arrayOutputReleaseName kind
+               asInput         = arrayOutputAsInputName kind
+               keyType         = scalarCType keyKind
+               valueType       = scalarCType valueKind
+           in [ "#ifndef " ++ arrayGuard kind
            , "#define " ++ arrayGuard kind
+           , "/* Owned descriptors carry one reference. Retain copied descriptors and release each owner. */"
+           , "/* The input adapter is borrowed; a generated callee retains it if the array escapes. */"
            , "typedef struct " ++ arrayNodeType kind ++ " " ++ arrayNodeType kind ++ ";"
            , "typedef const " ++ arrayNodeType kind ++ " *" ++ arrayCType kind ++ ";"
-           , "typedef " ++ scalarCType valueKind ++ " (*" ++ arrayLookupType kind ++ ")(const void *context, " ++ scalarCType keyKind ++ " key);"
-           , "typedef struct { " ++ arrayLookupType kind ++ " lookup; const void *context; } " ++ arrayInputCType kind ++ ";"
+           , "typedef " ++ valueType ++ " (*" ++ lookupType ++ ")(const void *context, " ++ keyType ++ " key);"
+           , "typedef struct { " ++ lookupType ++ " lookup; const void *context; SBVArrayContextRetain retain; SBVArrayContextRelease release; } " ++ inputType ++ ";"
+           , "typedef struct { " ++ lookupType ++ " lookup; const void *context; SBVArrayContextRetain retain; SBVArrayContextRelease release; } " ++ outputType ++ ";"
+           , "static inline " ++ valueType ++ " " ++ readOutput ++ "(" ++ outputType ++ " array, " ++ keyType ++ " key)"
+           , "{ if (array.lookup == NULL) abort(); return array.lookup(array.context, key); }"
+           , "static inline " ++ outputType ++ " " ++ retainOutput ++ "(" ++ outputType ++ " array)"
+           , "{"
+           , "  if (array.context != NULL) {"
+           , "    if (array.retain == NULL) abort();"
+           , "    array.context = array.retain(array.context);"
+           , "    if (array.context == NULL) abort();"
+           , "  }"
+           , "  return array;"
+           , "}"
+           , "static inline void " ++ releaseOutput ++ "(" ++ outputType ++ " *array)"
+           , "{ if (array == NULL) return; if (array->context != NULL) { if (array->release == NULL) abort(); array->release(array->context); } array->lookup = NULL; array->context = NULL; array->retain = NULL; array->release = NULL; }"
+           , "static inline " ++ inputType ++ " " ++ asInput ++ "(" ++ outputType ++ " array)"
+           , "{ " ++ inputType ++ " input = {array.lookup, array.context, array.retain, array.release}; return input; }"
            , "#endif"
            , ""
            ]
@@ -130,6 +192,8 @@ arrayRuntime cfg kinds = text . unlines $
             , "  " ++ valueType ++ " value;"
             , "  " ++ arrayLookupType kind ++ " lookup;"
             , "  const void *context;"
+            , "  SBVArrayContextRetain retain;"
+            , "  SBVArrayContextRelease release;"
             , "};"
             , ""
             , "static SBV_CGEN_UNUSED " ++ valueType ++ " " ++ readName ++ "(" ++ arrayType ++ " array, " ++ keyType ++ " key)"
@@ -143,7 +207,117 @@ arrayRuntime cfg kinds = text . unlines $
             , "}"
             , ""
             ]
+         ++ ownershipRuntime cfg kind
        runtime kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
+
+-- | Emit the heap owner used when an array escapes its generated call. Store
+-- chains are copied, exact keys and values are duplicated into a private GMP
+-- arena, and callback contexts are retained through their lifetime protocol.
+ownershipRuntime :: CgConfig -> Kind -> [String]
+ownershipRuntime cfg kind@(KArray keyKind valueKind) =
+  [ "typedef struct {"
+  , "  size_t references;"
+  , "  " ++ nodeType ++ " *nodes;"
+  ]
+  ++ ["  sbv_gmp_ctx exact_values;" | hasExact]
+  ++ [ "  const void *base_context;"
+     , "  SBVArrayContextRelease base_release;"
+     , "} " ++ ownerType ++ ";"
+     , ""
+     , "static SBV_CGEN_UNUSED " ++ valueType ++ " " ++ ownedLookup ++ "(const void *context, " ++ keyType ++ " key)"
+     , "{"
+     , "  const " ++ ownerType ++ " *owner = (const " ++ ownerType ++ " *) context;"
+     , "  return " ++ arrayReadName kind ++ "(&owner->nodes[0], key);"
+     , "}"
+     , ""
+     , "static SBV_CGEN_UNUSED const void *" ++ ownedRetain ++ "(const void *context)"
+     , "{"
+     , "  " ++ ownerType ++ " *owner = (" ++ ownerType ++ " *) context;"
+     , "  ++owner->references;"
+     , "  return context;"
+     , "}"
+     , ""
+     , "static SBV_CGEN_UNUSED void " ++ ownedRelease ++ "(const void *context)"
+     , "{"
+     , "  " ++ ownerType ++ " *owner = (" ++ ownerType ++ " *) context;"
+     , "  if (--owner->references != 0) return;"
+     , "  if (owner->base_release != NULL) owner->base_release(owner->base_context);"
+     ]
+  ++ ["  sbv_gmp_ctx_end(&owner->exact_values);" | hasExact]
+  ++ [ "  free(owner->nodes);"
+     , "  free(owner);"
+     , "}"
+     , ""
+     , "static SBV_CGEN_UNUSED " ++ outputType ++ " " ++ arrayExportName kind ++ "(" ++ arrayType ++ " array)"
+     , "{"
+     , "  size_t count = 1;"
+     , "  " ++ arrayType ++ " cursor = array;"
+     , "  if (cursor == NULL) abort();"
+     , "  while (cursor->kind == SBV_ARRAY_STORE) { if (cursor->parent == NULL) abort(); ++count; cursor = cursor->parent; }"
+     , "  " ++ ownerType ++ " *owner = (" ++ ownerType ++ " *) calloc(1, sizeof(*owner));"
+     , "  if (owner == NULL) abort();"
+     , "  owner->nodes = (" ++ nodeType ++ " *) calloc(count, sizeof(*owner->nodes));"
+     , "  if (owner->nodes == NULL) { free(owner); abort(); }"
+     , "  owner->references = 1;"
+     , "  " ++ arrayType ++ " source = array;"
+     , "  for (size_t i = 0; i < count; ++i) {"
+     , "    owner->nodes[i] = *source;"
+     , "    if (source->kind == SBV_ARRAY_STORE) {"
+     , "      owner->nodes[i].parent = &owner->nodes[i + 1];"
+     ]
+  ++ cloneExact "key" keyKind
+  ++ [ "    }"
+     , "    if (source->kind != SBV_ARRAY_CALLBACK) {"
+     ]
+  ++ cloneExact "value" valueKind
+  ++ [ "    }"
+     , "    if (source->kind == SBV_ARRAY_CALLBACK && source->context != NULL) {"
+     , "      if (source->retain == NULL || source->release == NULL) abort();"
+     , "      owner->base_context = source->retain(source->context);"
+     , "      if (owner->base_context == NULL) abort();"
+     , "      owner->base_release = source->release;"
+     , "      owner->nodes[i].context = owner->base_context;"
+     , "    }"
+     , "    if (source->kind == SBV_ARRAY_STORE) source = source->parent;"
+     , "  }"
+     , "  " ++ outputType ++ " output = {" ++ ownedLookup ++ ", owner, " ++ ownedRetain ++ ", " ++ ownedRelease ++ "};"
+     , "  return output;"
+     , "}"
+     , ""
+     ]
+ where nodeType     = arrayNodeType kind
+       arrayType    = arrayCType kind
+       inputSuffix  = arraySuffix kind
+       ownerType    = "sbv_array_owner_" ++ inputSuffix
+       outputType   = arrayOutputCType kind
+       ownedLookup  = "sbv_array_owned_lookup_" ++ inputSuffix
+       ownedRetain  = "sbv_array_owned_retain_" ++ inputSuffix
+       ownedRelease = "sbv_array_owned_release_" ++ inputSuffix
+       keyType      = scalarCType keyKind
+       valueType    = scalarCType valueKind
+       hasExact     = isExactGMPKind cfg keyKind || isExactGMPKind cfg valueKind
+
+       cloneExact field fieldKind
+         | isExactGMPKind cfg fieldKind
+         = [ "      " ++ mutableType fieldKind ++ " copy = " ++ allocation fieldKind ++ "(&owner->exact_values);"
+           , "      " ++ setter fieldKind ++ "(copy, source->" ++ field ++ ");"
+           , "      owner->nodes[i]." ++ field ++ " = copy;"
+           ]
+         | True
+         = []
+
+       mutableType KUnbounded = "mpz_ptr"
+       mutableType KReal      = "mpq_ptr"
+       mutableType other      = error $ "SBV->C: Expected an exact array field, received " ++ show other
+
+       allocation KUnbounded = "sbv_gmp_new_integer"
+       allocation KReal      = "sbv_gmp_new_real"
+       allocation other      = error $ "SBV->C: Expected an exact array field, received " ++ show other
+
+       setter KUnbounded = "mpz_set"
+       setter KReal      = "mpq_set"
+       setter other      = error $ "SBV->C: Expected an exact array field, received " ++ show other
+ownershipRuntime _ kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
 -- | Materialize a borrowed public callback descriptor as an internal array
 -- root. A null lookup callback is rejected before the symbolic program runs.
@@ -151,6 +325,7 @@ arrayInputSetup :: Int -> SV -> String -> [Doc]
 arrayInputSetup typeWidth sv externalName
   | kind@KArray{} <- kindOf sv
   = [ text "if" P.<> parens (external P.<> text ".lookup == NULL") <+> text "abort" P.<> parens empty P.<> semi
+    , text "if" P.<> parens (parens (external P.<> text ".retain == NULL") <+> text "!=" <+> parens (external P.<> text ".release == NULL")) <+> text "abort" P.<> parens empty P.<> semi
     , text "const" <+> text (arrayNodeType kind) <+> text nodeName <+> text "=" <+> braces (fsep (punctuate comma fields)) P.<> semi
     , text "const" <+> paddedType <+> text (show sv) <+> text "=" <+> text "&" P.<> text nodeName P.<> semi
     ]
@@ -160,6 +335,8 @@ arrayInputSetup typeWidth sv externalName
        fields     = [ text ".kind = SBV_ARRAY_CALLBACK"
                     , text ".lookup ="  <+> external P.<> text ".lookup"
                     , text ".context =" <+> external P.<> text ".context"
+                    , text ".retain ="  <+> external P.<> text ".retain"
+                    , text ".release =" <+> external P.<> text ".release"
                     ]
 arrayInputSetup _ sv _ = error $ "SBV->C: Expected an array input, received " ++ show (kindOf sv)
 
@@ -175,10 +352,59 @@ arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
                  $$ text "return" <+> result P.<> semi
                 )
       $$ text "}"
+      $$ text ""
+      $$ retainContext
+      $$ text ""
+      $$ releaseContext
  where callbackName = arrayDriverCallbackName functionName inputName
+       retainName   = arrayDriverRetainName functionName inputName
+       releaseName  = arrayDriverReleaseName functionName inputName
        result
          | isExactGMPKind cfg valueKind = parens (text (scalarCType valueKind)) <+> text "context"
          | True                          = text "*" P.<> parens (parens (text "const" <+> text (scalarCType valueKind) <+> text "*") <+> text "context")
+
+       retainContext
+         | isExactGMPKind cfg valueKind
+         = text "static const void *" P.<> text retainName P.<> parens (text "const void *context")
+           $$ text "{"
+           $$ nest 2 (   text mutableType <+> text "copy =" <+> parens (text mutableType) <+> text "malloc(sizeof(*copy));"
+                      $$ text "if (copy == NULL) abort();"
+                      $$ vcat (map text exactCopy)
+                      $$ text "return copy;"
+                     )
+           $$ text "}"
+         | True
+         = text "static const void *" P.<> text retainName P.<> parens (text "const void *context")
+           $$ text "{"
+           $$ nest 2 (   text (scalarCType valueKind) <+> text "*copy =" <+> parens (text (scalarCType valueKind) <+> text "*") <+> text "malloc(sizeof(*copy));"
+                      $$ text "if (copy == NULL) abort();"
+                      $$ text "*copy = *" P.<> parens (parens (text "const" <+> text (scalarCType valueKind) <+> text "*") <+> text "context") P.<> semi
+                      $$ text "return copy;"
+                     )
+           $$ text "}"
+
+       releaseContext
+         = text "static void" <+> text releaseName P.<> parens (text "const void *context")
+           $$ text "{"
+           $$ nest 2 (   exactClear
+                      $$ text "free" P.<> parens (text "(void *) context") P.<> semi
+                     )
+           $$ text "}"
+
+       mutableType
+         | KUnbounded <- valueKind = "mpz_ptr"
+         | KReal      <- valueKind = "mpq_ptr"
+         | True                     = error $ "SBV->C: Expected an exact callback value, received " ++ show valueKind
+
+       exactCopy
+         | KUnbounded <- valueKind = ["mpz_init_set(copy, (SInteger) context);"]
+         | KReal      <- valueKind = ["mpq_init(copy);", "mpq_set(copy, (SReal) context);"]
+         | True                     = error $ "SBV->C: Expected an exact callback value, received " ++ show valueKind
+
+       exactClear
+         | KUnbounded <- valueKind = text "mpz_clear((mpz_ptr) context);"
+         | KReal      <- valueKind = text "mpq_clear((mpq_ptr) context);"
+         | True                     = empty
 arrayDriverCallback _ kind _ _ = error $ "SBV->C: Expected an array input kind, received " ++ show kind
 
 -- | Construct an example-driver descriptor around a named default value and
@@ -193,6 +419,8 @@ arrayDriverInput cfg kind functionName inputName defaultName
     in text "const" <+> text (arrayInputCType kind) <+> text inputName <+> text "="
          <+> braces (fsep (punctuate comma [ text ".lookup ="  <+> text (arrayDriverCallbackName functionName inputName)
                                           , text ".context =" <+> context
+                                          , text ".retain ="  <+> text (arrayDriverRetainName functionName inputName)
+                                          , text ".release =" <+> text (arrayDriverReleaseName functionName inputName)
                                           ])) P.<> semi
   | True
   = error $ "SBV->C: Expected an array input kind, received " ++ show kind
@@ -230,10 +458,13 @@ arrayExpr cfg op svs resultSV args
              [text ".kind = SBV_ARRAY_CONSTANT", text ".value =" <+> defaultValue]
       (ArrayInit (Right lambdaDef), [], [])
         | Just lambdaInfo <- smtLambdaInfo lambdaDef
+        , let usesGMP = arrayLambdaUsesGMP cfg lambdaInfo
         -> nodeLowering resultKind
              [ text ".kind = SBV_ARRAY_CALLBACK"
              , text ".lookup ="  <+> text (arrayLambdaName resultSV)
-             , text ".context =" <+> if arrayLambdaUsesGMP cfg lambdaInfo then text "&__sbv_gmp_ctx" else text "NULL"
+             , text ".context =" <+> if usesGMP then text "&__sbv_gmp_ctx"            else text "NULL"
+             , text ".retain ="  <+> if usesGMP then text "sbv_gmp_ctx_retain_empty" else text "NULL"
+             , text ".release =" <+> if usesGMP then text "sbv_gmp_ctx_release_owned" else text "NULL"
              ]
         | True
         -> unsupported "lambda arrays without retained structured expressions"
@@ -308,8 +539,20 @@ arrayLookupType kind = "SBVArrayLookup_" ++ arraySuffix kind
 
 -- | Return the generated example-driver callback name for an input.
 arrayDriverCallbackName :: String -> String -> String
-arrayDriverCallbackName functionName inputName = "__sbv_array_lookup_f" ++ tagged functionName ++ "_i" ++ tagged inputName
- where tagged identifier = show (length identifier) ++ "_" ++ identifier
+arrayDriverCallbackName functionName inputName = "__sbv_array_lookup_f" ++ taggedIdentifier functionName ++ "_i" ++ taggedIdentifier inputName
+
+-- | Return the generated example-driver context-retain callback name.
+arrayDriverRetainName :: String -> String -> String
+arrayDriverRetainName functionName inputName = "__sbv_array_retain_f" ++ taggedIdentifier functionName ++ "_i" ++ taggedIdentifier inputName
+
+-- | Return the generated example-driver context-release callback name.
+arrayDriverReleaseName :: String -> String -> String
+arrayDriverReleaseName functionName inputName = "__sbv_array_release_f" ++ taggedIdentifier functionName ++ "_i" ++ taggedIdentifier inputName
+
+-- | Prefix an arbitrary identifier with its length for collision-free
+-- concatenation inside a generated helper name.
+taggedIdentifier :: String -> String
+taggedIdentifier identifier = show (length identifier) ++ "_" ++ identifier
 
 -- | Return the generated C lookup-helper name for a structured lambda array.
 arrayLambdaName :: SV -> String

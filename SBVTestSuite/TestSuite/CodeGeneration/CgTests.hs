@@ -44,6 +44,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute a structured lambda array" structuredLambdaArray
   , testCase "compile and execute structured lambda tables" structuredLambdaTables
   , testCase "compile and execute a free array with a C definition" definedFreeArray
+  , testCase "return and output owned arrays" ownedArrayResults
+  , testCase "retain an escaping callback array" escapingCallbackArray
   ]
  where thd (_, _, r) = r
 
@@ -189,8 +191,8 @@ nativeFloatArrayKeys = withSystemTempDirectory "sbv-native-float-array-keys" $ \
   stdoutText <- compileProgramAndRunGenerated dir "nativeFloatArrayKeys" program
   assertBool ("Expected all native array-key checks to pass, received:\n" ++ stdoutText) ("= 7" `isInfixOf` stdoutText)
 
--- | Exercise opaque array-type merging across generated library translation
--- units while keeping every public entry point scalar-valued.
+-- | Exercise array-type merging across generated library translation units,
+-- including an owned array returned through the public library ABI.
 persistentArrayLibrary :: Assertion
 persistentArrayLibrary = withSystemTempDirectory "sbv-persistent-array-library" $ \dir -> do
   let component increment = do
@@ -209,15 +211,25 @@ persistentArrayLibrary = withSystemTempDirectory "sbv-persistent-array-library" 
                      :: SArray Word16 Word32
         cgReturn (readArray source key)
 
+      ownedComponent = do
+        cgOverwriteFiles True
+        let source = lambdaArray (\index -> sFromIntegral index + 5) :: SArray Word16 Word32
+        cgReturn (writeArray source 0 55)
+
   (_, cfg, bundle) <- compileToCLib' "persistentArrayLibrary"
     [ ("increment",   component 1)
     , ("addTwo",      component 2)
     , ("lambdaValue", lambdaComponent)
+    , ("ownedArray",  ownedComponent)
     ]
   renderCgPgmBundle (Just dir) (cfg, bundle)
   stdoutText <- compileAndRunGenerated dir "persistentArrayLibrary"
   mapM_ (\fragment -> assertBool ("Expected generated library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
-    ["0x00000029UL", "0x0000002aUL", "0x00000005UL"]
+    [ "0x00000029UL"
+    , "0x0000002aUL"
+    , "0x00000005UL"
+    , "ownedArray()[0] =0x00000037UL"
+    ]
 
 -- | Exercise the borrowed callback descriptor used for a public array input,
 -- including local writes that shadow the callback only at matching keys.
@@ -294,6 +306,35 @@ definedFreeArray = withSystemTempDirectory "sbv-defined-free-array" $ \dir -> do
 
   stdoutText <- compileProgramAndRunGenerated dir "definedFreeArray" program
   assertBool ("Expected defined free-array output to contain 0x0000000eUL, received:\n" ++ stdoutText) ("0x0000000eUL" `isInfixOf` stdoutText)
+
+-- | Exercise independent owned descriptors for an array output parameter and
+-- an array return, including persistent stores above a structured callback.
+ownedArrayResults :: Assertion
+ownedArrayResults = withSystemTempDirectory "sbv-owned-array-results" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        let source = lambdaArray (\index -> sFromIntegral index + 5) :: SArray Word8 Word32
+        cgOutput "owned" (writeArray source 0 99)
+        cgReturn (writeArray source 0 42)
+
+  stdoutText <- compileProgramAndRunGenerated dir "ownedArrayResults" program
+  mapM_ (\fragment -> assertBool ("Expected owned-array output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "ownedArrayResults(&owned)[0] =0x0000002aUL"
+    , "owned[0] =0x00000063UL"
+    ]
+
+-- | Exercise retention of a borrowed input callback when a persistent array
+-- derived from it escapes through an owned return descriptor.
+escapingCallbackArray :: Assertion
+escapingCallbackArray = withSystemTempDirectory "sbv-escaping-callback-array" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [7]
+        source <- cgInput "source" :: SBVCodeGen (SArray Word8 Word32)
+        cgReturn (writeArray source 1 99)
+
+  stdoutText <- compileProgramAndRunGenerated dir "escapingCallbackArray" program
+  assertBool ("Expected retained callback output to contain 0x00000007UL, received:\n" ++ stdoutText) ("[0] =0x00000007UL" `isInfixOf` stdoutText)
 
 -- | Generate, compile, and execute one standalone C program.
 compileProgramAndRunGenerated :: FilePath -> String -> SBVCodeGen () -> IO String

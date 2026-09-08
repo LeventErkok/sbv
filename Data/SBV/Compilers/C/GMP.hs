@@ -438,6 +438,22 @@ commonRuntime =
   , "    free(node);"
   , "  }"
   , "}"
+  , ""
+  , "static const void *sbv_gmp_ctx_retain_empty(const void *context)"
+  , "{"
+  , "  (void) context;"
+  , "  sbv_gmp_ctx *owned = (sbv_gmp_ctx *) malloc(sizeof(*owned));"
+  , "  if (owned == NULL) abort();"
+  , "  owned->head = NULL;"
+  , "  return owned;"
+  , "}"
+  , ""
+  , "static void sbv_gmp_ctx_release_owned(const void *context)"
+  , "{"
+  , "  sbv_gmp_ctx *owned = (sbv_gmp_ctx *) context;"
+  , "  sbv_gmp_ctx_end(owned);"
+  , "  free(owned);"
+  , "}"
   ]
 
 -- | Runtime helpers for exact unbounded integers.

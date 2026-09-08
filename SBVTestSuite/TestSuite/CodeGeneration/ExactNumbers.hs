@@ -41,6 +41,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute an exact callback-backed array" exactArrayInput
   , testCase "compile and execute an exact structured lambda array" exactLambdaArray
   , testCase "compile and execute an exact structured lambda table" exactLambdaTable
+  , testCase "return and output owned exact arrays" ownedExactArrays
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
 
@@ -262,6 +263,18 @@ exactLambdaTable = withSystemTempDirectory "sbv-exact-lambda-table" $ \dir -> do
                      :: SArray Integer AlgReal
         cgReturn (readArray source key)
   compileAndRunGMP dir "exactLambdaTable" program ["1/5"]
+
+-- | Exercise exact store cloning and a structured callback that allocates
+-- after the generated function's original GMP arena has been released.
+ownedExactArrays :: Assertion
+ownedExactArrays = withSystemTempDirectory "sbv-owned-exact-arrays" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        let source = lambdaArray (\index -> sFromIntegral index / 3) :: SArray Integer AlgReal
+        cgOutput "stored" (writeArray source 0 (5 / 3))
+        cgReturn source
+
+  compileAndRunGMP dir "ownedExactArrays" program ["ownedExactArrays(&stored)[0] =0", "stored[0] =5/3"]
 
 -- | Exercise merged headers, archives, and drivers for exact-number libraries.
 exactNumberLibrary :: Assertion
