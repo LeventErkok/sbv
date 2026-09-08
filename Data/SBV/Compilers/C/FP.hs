@@ -25,6 +25,7 @@ module Data.SBV.Compilers.C.FP
   , arbitraryFPNormalize
   , arbitraryFPPrint
   , arbitraryFPCType
+  , arbitraryFPObjectEqual
   ) where
 
 import Data.Bits                       (shiftL, shiftR, (.&.))
@@ -355,6 +356,11 @@ arbitraryFPNormalize k value = namedCall (prefix k ++ "_norm") [value]
 -- | Print arbitrary floating-point interchange bits as fixed-width hexadecimal.
 arbitraryFPPrint :: Kind -> Doc -> Doc
 arbitraryFPPrint k value = namedCall (prefix k ++ "_fprint") [text "stdout", value]
+
+-- | Compare two arbitrary floating-point interchange values using SMT object
+-- equality: all NaNs compare equal and the two signed zeroes remain distinct.
+arbitraryFPObjectEqual :: Kind -> Doc -> Doc -> Doc
+arbitraryFPObjectEqual k left right = namedCall (prefix k ++ "_obj_eq") [left, right]
 
 -- | Return the public C type name for an arbitrary floating-point kind.
 arbitraryFPCType :: Kind -> String

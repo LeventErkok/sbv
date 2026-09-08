@@ -37,6 +37,9 @@ tests = testGroup "CodeGeneration.CgTests"
   , goldenVsStringShow "codeGen1"       foo
   , testCase "compile through the public legacy facade" legacyPublicFacade
   , testCase "collect C runtime requirements" dependencyRequirements
+  , testCase "compile and execute persistent arrays" persistentArrays
+  , testCase "preserve native floating-point array-key equality" nativeFloatArrayKeys
+  , testCase "compile repeated array types into a library" persistentArrayLibrary
   ]
  where thd (_, _, r) = r
 
@@ -126,6 +129,90 @@ dependencyRequirements = do
   assertEqual "exact integers should request GMP"                    [["-lgmp"]]        (linkerFlags integerBundle)
   assertEqual "native floating-point sqrt should request libm"       [["-lm"]]          (linkerFlags nativeFloatBundle)
   assertEqual "explicit native rounding should request LibBF and libm" [["-lbf", "-lm"]] (linkerFlags roundedNativeFloatBundle)
+
+-- | Exercise symbolic constant initialization, immutable writes, reads, and
+-- an array-valued conditional without exposing arrays at the public C ABI.
+persistentArrays :: Assertion
+persistentArrays = withSystemTempDirectory "sbv-persistent-arrays" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [11, 22, 7, 99, 1]
+        firstKey     <- cgInput "firstKey"     :: SBVCodeGen SWord8
+        secondKey    <- cgInput "secondKey"    :: SBVCodeGen SWord8
+        defaultValue <- cgInput "defaultValue" :: SBVCodeGen SWord32
+        storedValue  <- cgInput "storedValue"  :: SBVCodeGen SWord32
+        chooseNewest <- cgInput "chooseNewest" :: SBVCodeGen SBool
+        let base       = constArray defaultValue
+            firstWrite = writeArray base firstKey storedValue
+            newest     = writeArray firstWrite secondKey (storedValue + 1)
+            selected   = ite chooseNewest newest firstWrite
+            literalMap = listArray [(11, 42), (11, 43)] 44 :: SArray Word8 Word32
+        cgOutput "baseStillDefault" (readArray base firstKey)
+        cgOutput "oldVersionDefault" (readArray firstWrite secondKey)
+        cgOutput "literalMapValue" (readArray literalMap firstKey)
+        cgReturn (readArray selected secondKey)
+
+  stdoutText <- compileProgramAndRunGenerated dir "persistentArrays" program
+  mapM_ (\fragment -> assertBool ("Expected generated output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "0x00000064UL"
+    , "baseStillDefault = 0x00000007UL"
+    , "oldVersionDefault = 0x00000007UL"
+    , "literalMapValue = 0x0000002aUL"
+    ]
+
+-- | Check that native floating-point array keys use SMT object equality:
+-- NaNs match, while positive and negative zero remain distinct.
+nativeFloatArrayKeys :: Assertion
+nativeFloatArrayKeys = withSystemTempDirectory "sbv-native-float-array-keys" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [0x7fc00000, 0x00000000, 0x80000000]
+        nanBits      <- cgInput "nanBits"      :: SBVCodeGen SWord32
+        positiveBits <- cgInput "positiveBits" :: SBVCodeGen SWord32
+        negativeBits <- cgInput "negativeBits" :: SBVCodeGen SWord32
+        let nanKey       = sWord32AsSFloat nanBits
+            positiveZero = sWord32AsSFloat positiveBits
+            negativeZero = sWord32AsSFloat negativeBits
+            base         = constArray 3
+            withNaN      = writeArray base nanKey 11
+            withZero     = writeArray withNaN positiveZero 12
+            flags        = [ readArray withZero nanKey .== (11 :: SWord8)
+                           , readArray withZero positiveZero .== (12 :: SWord8)
+                           , readArray withZero negativeZero .== (3 :: SWord8)
+                           ]
+        cgReturn (sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4]) :: SWord8)
+
+  stdoutText <- compileProgramAndRunGenerated dir "nativeFloatArrayKeys" program
+  assertBool ("Expected all native array-key checks to pass, received:\n" ++ stdoutText) ("= 7" `isInfixOf` stdoutText)
+
+-- | Exercise opaque array-type merging across generated library translation
+-- units while keeping every public entry point scalar-valued.
+persistentArrayLibrary :: Assertion
+persistentArrayLibrary = withSystemTempDirectory "sbv-persistent-array-library" $ \dir -> do
+  let component increment = do
+        cgOverwriteFiles True
+        cgSetDriverValues [9, 40]
+        key   <- cgInput "key"   :: SBVCodeGen SWord16
+        value <- cgInput "value" :: SBVCodeGen SWord32
+        let base    = constArray 0
+            updated = writeArray base key (value + increment)
+        cgReturn (readArray updated key)
+
+  (_, cfg, bundle) <- compileToCLib' "persistentArrayLibrary"
+    [ ("increment", component 1)
+    , ("addTwo",    component 2)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "persistentArrayLibrary"
+  mapM_ (\fragment -> assertBool ("Expected generated library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    ["0x00000029UL", "0x0000002aUL"]
+
+-- | Generate, compile, and execute one standalone C program.
+compileProgramAndRunGenerated :: FilePath -> String -> SBVCodeGen () -> IO String
+compileProgramAndRunGenerated dir executableName program = do
+  (_, cfg, bundle) <- compileToC' executableName program
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  compileAndRunGenerated dir executableName
 
 -- | Extract linker-option lists from the Makefile entries in a generated C
 -- bundle.

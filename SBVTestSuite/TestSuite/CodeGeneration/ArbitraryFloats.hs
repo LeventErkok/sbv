@@ -41,6 +41,7 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute native rounding modes" nativeFloatRoundingModes
   , testCase "compile and execute special arithmetic" arbitraryFloatSpecialArithmetic
   , testCase "compile and execute arbitrary-float table lookup" arbitraryFloatTableLookup
+  , testCase "preserve arbitrary floating-point array-key equality" arbitraryFloatArrayKeys
   , testCase "compile and execute a mixed repeated-type library" mixedRepeatedTypeLibrary
   , testCase "compile a repeated-type library without a driver" repeatedTypeLibraryWithoutDriver
   ]
@@ -262,6 +263,29 @@ arbitraryFloatTableLookup = withSystemTempDirectory "sbv-arbitrary-float-table" 
       bias    = 2 ^ (14 :: Int) - 1 :: Integer
       fiveRaw = (bias + 2) * 2 ^ (112 :: Int) + 2 ^ (110 :: Int)
   compileAndRunLibBF dir "arbitraryFloatTableLookup" program (asHex 2 fiveRaw)
+
+-- | Check that LibBF-backed array keys use SMT object equality: NaNs match,
+-- while positive and negative zero remain distinct.
+arbitraryFloatArrayKeys :: Assertion
+arbitraryFloatArrayKeys = withSystemTempDirectory "sbv-arbitrary-float-array-keys" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [0x7e00, 0x0000, 0x8000]
+        nanBits      <- cgInput "nanBits"      :: SBVCodeGen (SWord 16)
+        positiveBits <- cgInput "positiveBits" :: SBVCodeGen (SWord 16)
+        negativeBits <- cgInput "negativeBits" :: SBVCodeGen (SWord 16)
+        let nanKey       = sWordAsSFloatingPoint nanBits :: SFPHalf
+            positiveZero = sWordAsSFloatingPoint positiveBits :: SFPHalf
+            negativeZero = sWordAsSFloatingPoint negativeBits :: SFPHalf
+            base         = constArray 3
+            withNaN      = writeArray base nanKey 11
+            withZero     = writeArray withNaN positiveZero 12
+            flags        = [ readArray withZero nanKey .== (11 :: SWord8)
+                           , readArray withZero positiveZero .== (12 :: SWord8)
+                           , readArray withZero negativeZero .== (3 :: SWord8)
+                           ]
+        cgReturn (sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4]) :: SWord8)
+  compileAndRunLibBF dir "arbitraryFloatArrayKeys" program "= 7"
 
 -- | Exercise repeated declarations and dependencies in a mixed generated library.
 mixedRepeatedTypeLibrary :: Assertion

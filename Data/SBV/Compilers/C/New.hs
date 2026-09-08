@@ -33,6 +33,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind (kRoundingMode)
+import Data.SBV.Compilers.C.Array
 import Data.SBV.Compilers.C.BV
 import Data.SBV.Compilers.C.FP
 import Data.SBV.Compilers.C.GMP
@@ -132,12 +133,15 @@ cgen cfg nm st sbvProg
                    $$ (if hasRequirement CRequiresWideBV then wideBVTypeDecls (wideBVKinds kinds) else empty)
                    $$ (if hasRequirement CRequiresLibBF  then arbitraryFPTypeDecls (arbitraryFPKinds kinds) else empty)
                    $$ (if hasRequirement CRequiresGMP    then gmpTypeDecls cfg kinds else empty)
+                   $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
         kinds      = reskinds sbvProg
+        arrays     = arrayKinds kinds
 
         hasRequirement requirement = requirement `Set.member` requirements
 
         usesRoundingModeType =  any (isRoundingMode . kindOf) roundingModeValues
                              || any tableUsesRoundingMode (resTables sbvProg)
+                             || any arrayUsesRoundingMode arrays
           where roundingModeValues =  concatMap cgValSVs (map snd ins ++ map snd outs ++ cgReturns st)
                                    ++ roundingModeAssignments
                 roundingModeAssignments = case resAsgns sbvProg of
@@ -145,6 +149,8 @@ cgen cfg nm st sbvProg
                 cgValSVs (CgAtomic sv) = [sv]
                 cgValSVs (CgArray svs) = svs
                 tableUsesRoundingMode ((_, indexKind, resultKind), _) = isRoundingMode indexKind || isRoundingMode resultKind
+                arrayUsesRoundingMode (KArray indexKind resultKind) = isRoundingMode indexKind || isRoundingMode resultKind
+                arrayUsesRoundingMode _                              = False
 
         randVals = cgDriverVals cfg
 
@@ -177,6 +183,7 @@ pprCFunHeader :: CgConfig -> String -> [(String, CgVal)] -> [(String, CgVal)] ->
 pprCFunHeader cfg fn ins outs mbRet = retType <+> text fn P.<> parens (fsep (punctuate comma params))
   where params  = map (mkParam cfg) ins ++ map (mkPParam cfg) outs ++ exactResult
         retType = case mbRet of
+                    Just sv | isArray sv -> tbd "Array-valued C returns"
                     Just sv | not (isExactGMPKind cfg (kindOf sv)) -> pprCWord False sv
                     _                                             -> text "void"
 
@@ -186,6 +193,8 @@ pprCFunHeader cfg fn ins outs mbRet = retType <+> text fn P.<> parens (fsep (pun
 
 -- | Render a generated C input parameter.
 mkParam :: CgConfig -> (String, CgVal) -> Doc
+mkParam _   (_, CgAtomic sv)
+  | isArray sv = tbd "Array-valued C inputs"
 mkParam _   (n, CgAtomic sv)     = pprCWord True sv <+> text n
 mkParam cfg (_, CgArray  (sv:_))
   | isExactGMPKind cfg (kindOf sv) = die "mkParam: Exact GMP arrays are not yet supported"
@@ -194,6 +203,8 @@ mkParam _   (n, CgArray  (sv:_)) = pprCWord True sv <+> text "*" P.<> text n
 
 -- | Render a generated C output parameter.
 mkPParam :: CgConfig -> (String, CgVal) -> Doc
+mkPParam _   (_, CgAtomic sv)
+  | isArray sv = tbd "Array-valued C outputs"
 mkPParam cfg (n, CgAtomic sv)
   | isExactGMPKind cfg (kindOf sv) = text (gmpOutputType (kindOf sv)) <+> text n
   | True                           = pprCWord False sv <+> text "*" P.<> text n
@@ -233,6 +244,7 @@ showCType i = case kindOf i of
                 KBounded False 1 -> "SBool"
                 KBounded False w -> "SWord" ++ show w
                 KBounded True  w -> "SInt"  ++ show w
+                k@KArray{}        -> arrayCType k
                 k@KFP{}           -> arbitraryFPCType k
                 k                -> show k
 
@@ -285,6 +297,8 @@ specifier cfg sv = case kindOf sv of
 mkConst :: CgConfig -> CV -> Doc
 mkConst _   cv
   | Just d <- roundingModeConst cv = d
+mkConst cfg cv
+  | Just d <- arrayConst (mkConst cfg) cv = d
 mkConst cfg cv
   | Just d <- gmpConst cfg cv = d
 mkConst _   (CV k (CInteger i))
@@ -603,6 +617,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        wideKinds = wideBVKinds kindInfo
        fpKinds   = arbitraryFPKinds kindInfo
+       arrays    = arrayKinds kindInfo
 
        post   = text ""
              $$ vcat (map codeSeg cgs)
@@ -611,6 +626,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
              $$ (if requires CRequiresLibBF  then arbitraryFPRuntime fpKinds assignments else empty)
              $$ (if requires CRequiresNativeFPRounding then nativeFPRuntime else empty)
              $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo assignments else empty)
+             $$ (if requires CRequiresArrays then arrayRuntime cfg arrays else empty)
              $$ proto
              $$ text "{"
              $$ text ""
@@ -644,6 +660,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
          ++ [CRequiresLibBF  | not (null fpKinds)]
          ++ [CRequiresLibM   | not (null fpKinds)]
          ++ [CRequiresGMP    | usesGMP]
+         ++ [CRequiresArrays | not (null arrays)]
 
        requires requirement = requirement `Set.member` requirements
 
@@ -689,7 +706,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                       len (KList s)          = die $ "List sort: "   ++ show s
                       len (KSet  s)          = die $ "Set sort: "    ++ show s
                       len (KTuple s)         = die $ "Tuple sort: "  ++ show s
-                      len (KArray  k1 k2)    = die $ "Array sort:  " ++ show (k1, k2)
+                      len k@KArray{}         = length (arrayCType k)
                       len (KApp s _)         = die $ "Uninterpreted ADT app: " ++ s
                       len k@(KADT s _ _)
                         | isRoundingMode k = length (show k)
@@ -902,7 +919,8 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
         renderedArgs = map (showSV cfg consts) opArgs
 
         selected = fromMaybe legacy $ chooseLowering
-          [ tableExpr cfg (showSV cfg consts) op (kindOf resultSV)
+          [ arrayExpr cfg op opArgs resultSV renderedArgs
+          , tableExpr cfg (showSV cfg consts) op (kindOf resultSV)
           , gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs
           , nativeFPExpr consts op opArgs (kindOf resultSV) renderedArgs

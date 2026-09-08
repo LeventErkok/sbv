@@ -21,6 +21,7 @@ module Data.SBV.Compilers.C.BV
   , nativeBVOverflowExpr
   , wideBVLookupInRange
   , wideBVLookupIndex
+  , wideBVEqual
   , wideBVNormalize
   , wideBVPrint
   ) where
@@ -225,6 +226,10 @@ wideBVLookupInRange k len value = namedCall (prefix k ++ "_index_in_range") [val
 -- | Convert a wide bit-vector known to be in range to a native C table index.
 wideBVLookupIndex :: Kind -> Doc -> Doc
 wideBVLookupIndex k value = namedCall (prefix k ++ "_index") [value]
+
+-- | Compare two wide bit-vectors for exact bit-pattern equality.
+wideBVEqual :: Kind -> Doc -> Doc -> Doc
+wideBVEqual k left right = namedCall (prefix k ++ "_eq") [left, right]
 
 -- | Canonicalize an externally supplied wide value by clearing unused bits in
 -- its most-significant limb.

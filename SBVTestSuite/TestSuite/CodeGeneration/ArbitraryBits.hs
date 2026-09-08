@@ -40,6 +40,7 @@ tests = testGroup "CodeGeneration.ArbitraryBits"
   , testCase "compile and execute signed overflow predicates" signedOverflow
   , testCase "compile and execute native overflow predicates" nativeOverflow
   , testCase "compile and execute checked wide table lookup" wideLookup
+  , testCase "compile and execute wide array keys and values" wideArray
   , testCase "compile and execute arithmetic boundary cases" arithmeticBoundaries
   ]
 
@@ -173,6 +174,23 @@ wideLookup = withSystemTempDirectory "sbv-wide-lookup" $ \dir -> do
         index <- cgInput "index" :: SBVCodeGen (SWord 65)
         cgReturn (select [11, 22] 99 index :: SWord 673)
   compileAndRun dir "wideLookup" program (asHex 11 99)
+
+-- | Exercise persistent arrays whose keys and values both use exact-width
+-- limb representations.
+wideArray :: Assertion
+wideArray = withSystemTempDirectory "sbv-wide-array" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [keySample, valueSample]
+        key   <- cgInput "key"   :: SBVCodeGen (SWord 673)
+        value <- cgInput "value" :: SBVCodeGen (SWord 257)
+        let base    = constArray 3
+            updated = writeArray base key value
+        cgOutput "defaultRead" (readArray updated (key + 1))
+        cgReturn (readArray updated key)
+      keySample   = 2 ^ (672 :: Int) + 17
+      valueSample = 2 ^ (256 :: Int) + 5
+  compileAndRun dir "wideArray" program (asHex 5 valueSample)
 
 -- | Exercise division-by-zero, extreme shifts, and signed-minimum division.
 arithmeticBoundaries :: Assertion

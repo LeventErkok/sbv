@@ -37,6 +37,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute wide real conversions" exactWideRealConversions
   , testCase "compile and execute rational arithmetic" exactRealArithmetic
   , testCase "compile and execute exact table lookup" exactTableLookup
+  , testCase "compile and execute exact array keys and values" exactArray
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
 
@@ -201,6 +202,22 @@ exactTableLookup = withSystemTempDirectory "sbv-exact-table" $ \dir -> do
         cgOutput "oversizedResult" oversizedResult
         cgReturn integerResult
   compileAndRunGMP dir "exactTableLookup" program [show (2 ^ (200 :: Int) + 7 :: Integer), "negativeResult =7/4", "oversizedResult =19"]
+
+-- | Exercise a persistent array with GMP-backed integer keys and rational
+-- values, including a read from the unchanged base version.
+exactArray :: Assertion
+exactArray = withSystemTempDirectory "sbv-exact-array" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [2 ^ (300 :: Int) + 9, 20]
+        key   <- cgInput "key"   :: SBVCodeGen SInteger
+        value <- cgInput "value" :: SBVCodeGen SInteger
+        let stored  = sFromIntegral value / 3 :: SReal
+            base    = constArray (1 / 3 :: SReal)
+            updated = writeArray base key stored
+        cgOutput "baseValue" (readArray base key)
+        cgReturn (readArray updated key)
+  compileAndRunGMP dir "exactArray" program ["20/3", "baseValue =1/3"]
 
 -- | Exercise merged headers, archives, and drivers for exact-number libraries.
 exactNumberLibrary :: Assertion
