@@ -6,7 +6,9 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Code-generation from SBV programs.
+-- Code-generation from SBV programs. This module selects the current C
+-- backend. Import "Data.SBV.Tools.CodeGen.Legacy" instead to use the original
+-- compatibility backend.
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -44,21 +46,25 @@ import Data.SBV.Compilers.C
 import Data.SBV.Compilers.CodeGen
 
 {- $cCodeGeneration
-The SBV library can generate straight-line executable code in C. (While other target languages are
-certainly possible, currently only C is supported.) The generated code will perform no run-time memory-allocations,
-(no calls to @malloc@), so its memory usage can be predicted ahead of time. Also, the functions will execute precisely the
-same instructions in all calls, so they have predictable timing properties as well. The generated code
-has no loops or jumps, and is typically quite fast. While the generated code can be large due to complete unrolling,
-these characteristics make them suitable for use in hard real-time systems, as well as in traditional computing.
+The SBV library can generate executable C code from symbolic programs. Native
+scalar programs remain straight-line code with predictable storage. Programs
+using arbitrary-width bit-vectors, arbitrary floating-point values, or exact
+numbers can additionally contain generated runtime helpers, loops, and managed
+temporary storage appropriate to those representations.
+
+The original, native-scalar-only implementation remains available from
+"Data.SBV.Tools.CodeGen.Legacy" for compatibility during the transition to the
+new backend.
 -}
 
 {- $unboundedCGen
-The types 'Data.SBV.SInteger' and 'Data.SBV.SReal' are unbounded quantities that have no direct counterparts in the C language. Therefore,
-it is not possible to generate standard C code for SBV programs using these types, unless custom libraries are available. To
-overcome this, SBV allows the user to explicitly set what the corresponding types should be for these two cases, using
-the functions below. Note that while these mappings will produce valid C code, the resulting code will be subject to
-overflow/underflows for 'Data.SBV.SInteger', and rounding for 'Data.SBV.SReal', so there is an implicit loss of precision.
+The types 'Data.SBV.SInteger' and 'Data.SBV.SReal' are represented exactly by
+GMP when no alternative mapping is selected. The functions below retain the
+option of mapping them to native C types when a smaller ABI or compatibility
+with historical generated code is more important than exactness. Such native
+mappings are subject to overflow for 'Data.SBV.SInteger' and rounding for
+'Data.SBV.SReal'.
 
-If the user does /not/ specify these mappings, then SBV will
-refuse to compile programs that involve these types.
+The compatibility backend in "Data.SBV.Tools.CodeGen.Legacy" retains the
+original requirement that these mappings be supplied explicitly.
 -}

@@ -1,23 +1,21 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Compilers.C
+-- Module    : Data.SBV.Compilers.C.Legacy
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Default SBV-to-C compiler. This module deliberately remains a thin facade
--- so the implementation can coexist with the compatibility backend in
--- "Data.SBV.Compilers.C.Legacy".
+-- Compatibility facade for the original SBV-to-C compiler.
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Compilers.C
+module Data.SBV.Compilers.C.Legacy
   ( compileToC
   , compileToCLib
   , compileToC'
   , compileToCLib'
   ) where
 
-import Data.SBV.Compilers.C.New (compileToC, compileToC', compileToCLib, compileToCLib')
+import Data.SBV.Compilers.C.Legacy.Internal (compileToC, compileToC', compileToCLib, compileToCLib')

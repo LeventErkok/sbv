@@ -16,9 +16,16 @@
 
 module TestSuite.CodeGeneration.CgTests(tests) where
 
+import Data.List (isInfixOf)
 import Data.SBV.Internals
+import qualified Data.SBV.Tools.CodeGen.Legacy as PublicLegacy
 
-import Test.Tasty.HUnit (assertEqual)
+import System.Exit     (ExitCode(..))
+import System.FilePath ((</>))
+import System.IO.Temp  (withSystemTempDirectory)
+import System.Process  (readProcessWithExitCode)
+
+import Test.Tasty.HUnit (assertBool, assertEqual)
 
 import Utils.SBVTestFramework
 
@@ -28,6 +35,7 @@ tests = testGroup "CodeGeneration.CgTests"
   [ goldenVsStringShow "selChecked"   $ genSelect True  "selChecked"
   , goldenVsStringShow "selUnchecked" $ genSelect False "selUnChecked"
   , goldenVsStringShow "codeGen1"       foo
+  , testCase "compile through the public legacy facade" legacyPublicFacade
   , testCase "collect C runtime requirements" dependencyRequirements
   ]
  where thd (_, _, r) = r
@@ -39,14 +47,55 @@ tests = testGroup "CodeGeneration.CgTests"
                              sel x = select [1, x+2] 3 x
                          x <- cgInput "x"
                          cgReturn $ sel x)
-       foo = thd <$> compileToC' "foo" (do
+       foo = thd <$> compileToC' "foo" fooProgram
+
+       fooProgram = do
                         cgSetDriverValues $ repeat 0
                         (x::SInt16)    <- cgInput "x"
                         (ys::[SInt64]) <- cgInputArr 45 "xArr"
                         cgOutput "z" (5 :: SWord16)
                         cgOutputArr "zArr" (replicate 7 (x+1))
                         cgOutputArr "yArr" ys
-                        cgReturn (x*2))
+                        cgReturn (x*2)
+
+-- | Compile and execute a scalar program using only the public compatibility
+-- module's code-generation interface.
+legacyPublicFacade :: Assertion
+legacyPublicFacade = withSystemTempDirectory "sbv-legacy-c-backend" $ \dir -> do
+  let programDir = dir </> "program"
+      libraryDir = dir </> "library"
+
+  PublicLegacy.compileToC (Just programDir) "legacyFacade" $ do
+    PublicLegacy.cgOverwriteFiles True
+    PublicLegacy.cgSetDriverValues [41]
+    value <- PublicLegacy.cgInput "value" :: PublicLegacy.SBVCodeGen SWord32
+    PublicLegacy.cgReturn (value + 1)
+
+  programOutput <- compileAndRunGenerated programDir "legacyFacade"
+  let expectedProgram = "0x0000002aUL"
+  assertBool ("Expected legacy generated output to contain " ++ expectedProgram ++ ", received:\n" ++ programOutput) (expectedProgram `isInfixOf` programOutput)
+
+  let component operation = do
+        PublicLegacy.cgOverwriteFiles True
+        PublicLegacy.cgSetDriverValues [41]
+        value <- PublicLegacy.cgInput "value" :: PublicLegacy.SBVCodeGen SWord32
+        PublicLegacy.cgReturn (operation value)
+  _ <- PublicLegacy.compileToCLib (Just libraryDir) "legacyLibrary"
+         [ ("increment", component (+ 1))
+         , ("twice", component (* 2))
+         ]
+  libraryOutput <- compileAndRunGenerated libraryDir "legacyLibrary"
+  let expectedLibrary = ["0x0000002aUL", "0x00000052UL"]
+  mapM_ (\expected -> assertBool ("Expected legacy library output to contain " ++ expected ++ ", received:\n" ++ libraryOutput) (expected `isInfixOf` libraryOutput)) expectedLibrary
+
+-- | Build and execute a generated C program or library driver.
+compileAndRunGenerated :: FilePath -> String -> IO String
+compileAndRunGenerated dir executableName = do
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
+  assertEqual makeError ExitSuccess makeExit
+  (runExit, outputText, runError) <- readProcessWithExitCode (dir </> executableName ++ "_driver") [] ""
+  assertEqual runError ExitSuccess runExit
+  pure outputText
 
 -- | Check that ABI kinds and scalar operations contribute the exact external
 -- runtime dependencies needed by their generated C bundles.

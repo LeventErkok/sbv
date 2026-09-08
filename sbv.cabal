@@ -142,6 +142,7 @@ Library
                   , Data.SBV.Tools.BVOptimize
                   , Data.SBV.Tools.Induction
                   , Data.SBV.Tools.CodeGen
+                  , Data.SBV.Tools.CodeGen.Legacy
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.Overflow
                   , Data.SBV.Tools.Polynomial
@@ -317,7 +318,10 @@ Library
                   , Data.SBV.Compilers.C.BV
                   , Data.SBV.Compilers.C.FP
                   , Data.SBV.Compilers.C.GMP
+                  , Data.SBV.Compilers.C.Legacy
+                  , Data.SBV.Compilers.C.Legacy.Internal
                   , Data.SBV.Compilers.C.Lowering
+                  , Data.SBV.Compilers.C.New
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.Lambda
                   , Data.SBV.SCase
