@@ -26,13 +26,16 @@ module Data.SBV.Compilers.C.GMP
   , gmpContextEnd
   ) where
 
-import Data.List                       (stripPrefix, tails)
+import Data.Bits                       (shiftL)
+import Data.List                       (nub, stripPrefix, tails)
 import Data.Ratio                      (denominator, numerator)
 import qualified Data.Set as Set
+import Numeric                         (showHex)
 
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.BV         (isWideBV)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.CodeGen      (CgConfig(..))
 import Data.SBV.Core.Data
@@ -89,8 +92,8 @@ gmpTypeDecls cfg kinds
 
 -- | Emit the per-call arena and the exact numeric helpers required by a
 -- program. Every temporary GMP value is released together at function exit.
-gmpRuntime :: CgConfig -> Set.Set Kind -> Doc
-gmpRuntime cfg kinds
+gmpRuntime :: CgConfig -> Set.Set Kind -> [(SV, SBVExpr)] -> Doc
+gmpRuntime cfg kinds assignments
   | not needsExactInteger && not needsExactReal = empty
   | True                                        = text . unlines . map markUnused $
       commonRuntime
@@ -98,8 +101,10 @@ gmpRuntime cfg kinds
    ++ concat [integerRuntime | needsExactInteger]
    ++ concat [realRuntime    | needsExactReal]
    ++ concat [crossRuntime   | needsExactInteger && needsExactReal]
+   ++ concat [concatMap wideIntegerRuntime conversions | needsExactInteger]
  where needsExactInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kinds
        needsExactReal    = isExactGMPKind cfg KReal      && KReal      `Set.member` kinds
+       conversions       = nub (concatMap wideIntegerConversions assignments)
 
        markUnused line = case stripPrefix "static " line of
                            Just rest -> "static SBV_CGEN_UNUSED " ++ rest
@@ -172,7 +177,9 @@ gmpExpr cfg op svs resultKind args
          | isExactGMPKind cfg resultKind = CFunctionScoped
          | True                          = CByValue
 
-       lower = Just . expressionLowering storage [CRequiresGMP]
+       lower = lowerWith [CRequiresGMP]
+
+       lowerWith requirements = Just . expressionLowering storage requirements
 
        valueCall sv suffix = namedCall (kindPrefix (kindOf sv) ++ suffix) . (text "&__sbv_gmp_ctx" :)
 
@@ -190,6 +197,10 @@ gmpExpr cfg op svs resultKind args
          = lower $ namedCall "sbv_gmp_real_from_integer" [text "&__sbv_gmp_ctx", a]
          | fr == KReal && to == KUnbounded
          = lower $ namedCall "sbv_gmp_integer_from_real" [text "&__sbv_gmp_ctx", a]
+         | isWideBV fr && to == KUnbounded
+         = lowerWith [CRequiresGMP, CRequiresWideBV] $ namedCall (integerFromWideName fr) [text "&__sbv_gmp_ctx", a]
+         | fr == KUnbounded && isWideBV to
+         = lowerWith [CRequiresGMP, CRequiresWideBV] $ namedCall (integerToWideName to) [a]
          | isBounded fr && intSizeOf fr <= 64 && to == KUnbounded
          = lower $ namedCall (if hasSign fr then "sbv_gmp_integer_from_s64" else "sbv_gmp_integer_from_u64")
                              [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
@@ -209,10 +220,87 @@ gmpExpr cfg op svs resultKind args
 
        unsupportedCast fr to = error $ "SBV->C: exact GMP lowering does not yet support a cast from " ++ show fr ++ " to " ++ show to
 
-       boundedCType (KBounded False 1) = "SBool"
-       boundedCType (KBounded False w) = "SWord" ++ show w
-       boundedCType (KBounded True  w) = "SInt"  ++ show w
-       boundedCType k                  = error $ "SBV->C: Expected a bounded kind, received " ++ show k
+-- | A generated conversion between a limb-backed bit-vector and an exact GMP
+-- integer.
+data WideIntegerConversion = IntegerFromWide Kind
+                           | IntegerToWide Kind
+                           deriving Eq
+
+-- | Discover wide bit-vector and exact-integer casts in one symbolic
+-- assignment.
+wideIntegerConversions :: (SV, SBVExpr) -> [WideIntegerConversion]
+wideIntegerConversions (_, SBVApp (KindCast fr to) _)
+  | isWideBV fr && to == KUnbounded = [IntegerFromWide fr]
+  | fr == KUnbounded && isWideBV to = [IntegerToWide to]
+wideIntegerConversions _ = []
+
+-- | Emit an exact conversion helper for one wide bit-vector kind.
+wideIntegerRuntime :: WideIntegerConversion -> [String]
+wideIntegerRuntime (IntegerFromWide k) =
+  [ "static SInteger " ++ integerFromWideName k ++ "(sbv_gmp_ctx *ctx, " ++ boundedCType k ++ " a)"
+  , "{"
+  , "  mpz_ptr r = sbv_gmp_new_integer(ctx);"
+  , "  mpz_import(r, " ++ show limbCount ++ ", -1, sizeof(a.limb[0]), 0, 0, a.limb);"
+  ]
+  ++ signedAdjustment
+  ++ [ "  return r;"
+     , "}"
+     , ""
+     ]
+ where limbCount = (intSizeOf k + 63) `div` 64
+       signedAdjustment
+         | hasSign k =
+             [ "  if ((a.limb[" ++ show topLimb ++ "] & " ++ u64 signMask ++ ") != 0) {"
+             , "    mpz_t modulus; mpz_init_set_ui(modulus, 1); mpz_mul_2exp(modulus, modulus, " ++ show width ++ ");"
+             , "    mpz_sub(r, r, modulus); mpz_clear(modulus);"
+             , "  }"
+             ]
+         | True = []
+       width    = intSizeOf k
+       topLimb  = (width - 1) `div` 64
+       signMask = 1 `shiftL` ((width - 1) `mod` 64)
+wideIntegerRuntime (IntegerToWide k) =
+  [ "static " ++ boundedCType k ++ " " ++ integerToWideName k ++ "(SInteger a)"
+  , "{"
+  , "  " ++ boundedCType k ++ " r = {{0}}; size_t count = 0; mpz_t reduced;"
+  , "  mpz_init(reduced); mpz_fdiv_r_2exp(reduced, a, " ++ show (intSizeOf k) ++ ");"
+  , "  mpz_export(r.limb, &count, -1, sizeof(r.limb[0]), 0, 0, reduced); mpz_clear(reduced);"
+  , "  r.limb[" ++ show (limbCount - 1) ++ "] &= " ++ u64 topMask ++ ";"
+  , "  return r;"
+  , "}"
+  , ""
+  ]
+ where limbCount = (intSizeOf k + 63) `div` 64
+       remainder = intSizeOf k `mod` 64
+       topMask
+         | remainder == 0 = (1 `shiftL` 64) - 1
+         | True           = (1 `shiftL` remainder) - 1
+
+-- | Construct the helper name for a wide bit-vector to exact-integer cast.
+integerFromWideName :: Kind -> String
+integerFromWideName k = "sbv_gmp_integer_from_" ++ boundedTag k
+
+-- | Construct the helper name for an exact-integer to wide bit-vector cast.
+integerToWideName :: Kind -> String
+integerToWideName k = "sbv_gmp_integer_to_" ++ boundedTag k
+
+-- | Return the C type used for a bounded SBV kind.
+boundedCType :: Kind -> String
+boundedCType (KBounded False 1) = "SBool"
+boundedCType (KBounded False w) = "SWord" ++ show w
+boundedCType (KBounded True  w) = "SInt"  ++ show w
+boundedCType k                  = error $ "SBV->C: Expected a bounded kind, received " ++ show k
+
+-- | Return the signedness-and-width suffix used in a conversion helper name.
+boundedTag :: Kind -> String
+boundedTag k
+  | isBounded k = (if hasSign k then "s" else "u") ++ show (intSizeOf k)
+  | True        = error $ "SBV->C: Expected a bounded kind, received " ++ show k
+
+-- | Render a padded, portable C @uint64_t@ literal.
+u64 :: Integer -> String
+u64 value = "UINT64_C(0x" ++ replicate (16 - length rendered) '0' ++ rendered ++ ")"
+ where rendered = showHex value ""
 
 -- | Print an exact GMP value in canonical decimal notation.
 gmpPrint :: Kind -> Doc -> Doc

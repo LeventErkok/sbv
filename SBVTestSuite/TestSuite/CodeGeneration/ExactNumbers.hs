@@ -9,11 +9,14 @@
 -- Compile-and-run tests for GMP-backed exact integer and real C lowering.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.CodeGeneration.ExactNumbers (tests) where
 
 import Data.List                 (isInfixOf)
+import Numeric                   (showHex)
 import System.Exit               (ExitCode(..))
 import System.FilePath           ((</>))
 import System.IO.Temp            (withSystemTempDirectory)
@@ -30,6 +33,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   [ testCase "compile and execute unbounded arithmetic" exactIntegerArithmetic
   , testCase "compile and execute Euclidean division" exactIntegerDivision
   , testCase "compile and execute native conversions" exactNativeConversions
+  , testCase "compile and execute wide conversions" exactWideConversions
   , testCase "compile and execute rational arithmetic" exactRealArithmetic
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
@@ -90,6 +94,40 @@ exactNativeConversions = withSystemTempDirectory "sbv-exact-native-conversions" 
       expected = 2 ^ (63 :: Int) - 1 :: Integer
   compileAndRunGMP dir "exactNativeConversions" program [show expected, "wrapped = 0x0000000000000000ULL", "asReal =-9223372036854775808"]
 
+-- | Exercise signed and unsigned conversions between GMP integers and
+-- limb-backed bit-vectors in both directions.
+exactWideConversions :: Assertion
+exactWideConversions = withSystemTempDirectory "sbv-exact-wide-conversions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [unsignedSample, signedSample, exactSample]
+        unsignedValue <- cgInput "unsignedValue" :: SBVCodeGen (SWord 673)
+        signedValue   <- cgInput "signedValue"   :: SBVCodeGen (SInt 673)
+        exactValue    <- cgInput "exactValue"    :: SBVCodeGen SInteger
+        let exactUnsigned     = sFromIntegral unsignedValue :: SInteger
+            exactSigned       = sFromIntegral signedValue :: SInteger
+            unsignedRoundTrip = (sFromIntegral exactUnsigned :: SWord 673) .== unsignedValue
+            signedRoundTrip   = (sFromIntegral exactSigned :: SInt 673) .== signedValue
+            wrappedUnsigned   = sFromIntegral exactValue :: SWord 673
+            wrappedSigned     = sFromIntegral exactValue :: SInt 673
+        cgOutput "unsignedRoundTrip" unsignedRoundTrip
+        cgOutput "signedRoundTrip" signedRoundTrip
+        cgOutput "wrappedUnsigned" wrappedUnsigned
+        cgOutput "wrappedSigned" wrappedSigned
+        cgReturn (exactUnsigned + exactSigned)
+      unsignedSample = 2 ^ (672 :: Int) + 0x123456789abcdef
+      signedSample   = negate (2 ^ (671 :: Int)) + 0xfedcba987654321
+      exactSample    = negate (2 ^ (700 :: Int)) + 0x112233445566778899
+      expected       = unsignedSample + signedSample
+      wrapped        = exactSample `mod` 2 ^ (673 :: Int)
+  compileAndRunGMP dir "exactWideConversions" program
+    [ show expected
+    , "unsignedRoundTrip = 1"
+    , "signedRoundTrip = 1"
+    , "wrappedUnsigned =" ++ asHex 11 wrapped
+    , "wrappedSigned =" ++ asHex 11 wrapped
+    ]
+
 -- | Exercise exact rational arithmetic and integer-to-real conversion.
 exactRealArithmetic :: Assertion
 exactRealArithmetic = withSystemTempDirectory "sbv-exact-real" $ \dir -> do
@@ -120,8 +158,18 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
         cgSetDriverValues [5]
         value <- cgInput "value" :: SBVCodeGen SReal
         cgReturn (value / 3)
+      wideProgram = do
+        cgOverwriteFiles True
+        cgSetDriverValues [wideSample]
+        value <- cgInput "value" :: SBVCodeGen (SInt 673)
+        cgReturn (sFromIntegral value :: SInteger)
+      wideSample = negate (2 ^ (670 :: Int)) + 12345
 
-  (_, cfg, bundle) <- compileToCLib' "exactNumberLibrary" [("integerPart", integerProgram), ("realPart", realProgram)]
+  (_, cfg, bundle) <- compileToCLib' "exactNumberLibrary"
+    [ ("integerPart", integerProgram)
+    , ("realPart", realProgram)
+    , ("widePart", wideProgram)
+    ]
   renderCgPgmBundle (Just dir) (cfg, bundle)
 
   (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
@@ -132,6 +180,7 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
   assertEqual runError ExitSuccess runExit
   assertOutput stdoutText (show (2 ^ (130 :: Int) + 7 :: Integer))
   assertOutput stdoutText "5/3"
+  assertOutput stdoutText (show wideSample)
 
 -- | Generate, compile, and execute a program against the system GMP package.
 compileAndRunGMP :: FilePath -> String -> SBVCodeGen () -> [String] -> Assertion
@@ -164,3 +213,8 @@ compileAndRunGMP dir functionName program expected = do
 assertOutput :: String -> String -> Assertion
 assertOutput stdoutText fragment =
   assertBool ("Expected generated output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText)
+
+-- | Render the fixed-limb hexadecimal form printed by generated drivers.
+asHex :: Int -> Integer -> String
+asHex limbCount value = "0x" ++ replicate (16 * limbCount - length rendered) '0' ++ rendered
+ where rendered = showHex value ""

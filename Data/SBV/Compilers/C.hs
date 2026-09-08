@@ -612,7 +612,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
              $$ extDecls
              $$ (if requires CRequiresWideBV then wideBVRuntime wideKinds assignments else empty)
              $$ (if requires CRequiresLibBF  then arbitraryFPRuntime fpKinds assignments else empty)
-             $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo else empty)
+             $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo assignments else empty)
              $$ proto
              $$ text "{"
              $$ text ""
