@@ -908,6 +908,7 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
           [ gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs
           , nativeFPExpr consts op opArgs (kindOf resultSV) renderedArgs
+          , nativeBVOverflowExpr op opArgs renderedArgs
           , wideBVExpr op opArgs (kindOf resultSV) renderedArgs
           ]
 

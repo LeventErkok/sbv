@@ -18,6 +18,7 @@ module Data.SBV.Compilers.C.BV
   , wideBVRuntime
   , wideBVConst
   , wideBVExpr
+  , nativeBVOverflowExpr
   , wideBVLookupInRange
   , wideBVLookupIndex
   , wideBVNormalize
@@ -162,6 +163,55 @@ wideBVExpr op svs resultKind args
                                                                   ++ " and result kind " ++ show resultKind
  where call suffix       = namedCall (prefix resultKind ++ "_" ++ suffix)
        argCall sv suffix = namedCall (prefix (kindOf sv) ++ "_" ++ suffix)
+
+-- | Lower overflow predicates for the native 8-, 16-, 32-, and 64-bit C
+-- representations. Each predicate avoids evaluating the overflowing
+-- operation itself, including signed division of the minimum value by -1.
+nativeBVOverflowExpr :: Op -> [SV] -> [Doc] -> Maybe CLowering
+nativeBVOverflowExpr (OverflowOp ov) svs args
+  | x:_ <- svs
+  , let k = kindOf x
+  , isBounded k
+  , not (isWideBV k)
+  , intSizeOf k `elem` [8, 16, 32, 64]
+  = Just . expressionLowering CByValue [] $ case (ov, args) of
+      (PlusOv False, [a, b]) -> a .>. (maximumValue k .-. b)
+      (PlusOv True , [a, b]) -> signedAdd k a b
+      (SubOv  False, [a, b]) -> a .<. b
+      (SubOv  True , [a, b]) -> signedSub k a b
+      (MulOv  False, [a, b]) -> (b ./=. zero) .&&. (a .>. (maximumValue k ./. b))
+      (MulOv  True , [a, b]) -> signedMul k a b
+      (DivOv        , [a, b]) -> (a .==. minimumValue k) .&&. (b .==. negativeOne)
+      (NegOv        , [a])    -> a .==. minimumValue k
+      _                       -> error $ "SBV->C: Overflow operation has an unexpected arity: " ++ show ov
+  | True = Nothing
+ where x .<.  y = parens (x <+> text "<"  <+> y)
+       x .>.  y = parens (x <+> text ">"  <+> y)
+       x .==. y = parens (x <+> text "==" <+> y)
+       x ./=. y = parens (x <+> text "!=" <+> y)
+       x .&&. y = parens (x <+> text "&&" <+> y)
+       x .||. y = parens (x <+> text "||" <+> y)
+       x .+.  y = parens (x <+> text "+"  <+> y)
+       x .-.  y = parens (x <+> text "-"  <+> y)
+       x ./.  y = parens (x <+> text "/"  <+> y)
+
+       zero        = text "0"
+       negativeOne = text "-1"
+
+       signedAdd k a b = ((b .>. zero) .&&. (a .>. (maximumValue k .-. b)))
+                      .||. ((b .<. zero) .&&. (a .<. (minimumValue k .-. b)))
+
+       signedSub k a b = ((b .<. zero) .&&. (a .>. (maximumValue k .+. b)))
+                      .||. ((b .>. zero) .&&. (a .<. (minimumValue k .+. b)))
+
+       signedMul k a b = ((a .>. zero) .&&. (((b .>. zero) .&&. (a .>. (maximumValue k ./. b)))
+                                         .||. ((b .<. zero) .&&. (b .<. (minimumValue k ./. a)))))
+                      .||. ((a .<. zero) .&&. (((b .>. zero) .&&. (a .<. (minimumValue k ./. b)))
+                                          .||. ((b .<. zero) .&&. (b .<. (maximumValue k ./. a)))))
+
+       minimumValue k = text $ "INT" ++ show (intSizeOf k) ++ "_MIN"
+       maximumValue k = text $ (if hasSign k then "INT" else "UINT") ++ show (intSizeOf k) ++ "_MAX"
+nativeBVOverflowExpr _ _ _ = Nothing
 
 -- | Print a wide value without requiring a printf conversion specifier.
 wideBVPrint :: Kind -> Doc -> Doc

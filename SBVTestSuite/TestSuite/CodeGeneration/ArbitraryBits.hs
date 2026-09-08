@@ -38,6 +38,7 @@ tests = testGroup "CodeGeneration.ArbitraryBits"
   , testCase "compile and execute non-aligned join/extract" joinExtract
   , testCase "compile and execute unsigned overflow predicates" unsignedOverflow
   , testCase "compile and execute signed overflow predicates" signedOverflow
+  , testCase "compile and execute native overflow predicates" nativeOverflow
   , testCase "compile and execute checked wide table lookup" wideLookup
   , testCase "compile and execute arithmetic boundary cases" arithmeticBoundaries
   ]
@@ -126,6 +127,41 @@ signedOverflow = withSystemTempDirectory "sbv-signed-overflow" $ \dir -> do
   compileAndRun dir "signedOverflow" program (asHex 2 31)
  where pack :: [SBool] -> SWord 65
        pack flags = sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4, 8, 16, 32])
+
+-- | Exercise every unsigned and signed overflow predicate at native C widths,
+-- including promotion-sensitive 8-bit and undefined-in-C 64-bit boundaries.
+nativeOverflow :: Assertion
+nativeOverflow = withSystemTempDirectory "sbv-native-overflow" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [maxWord, 2, maxInt, 1, minInt, minInt8]
+        unsignedMax <- cgInput "unsignedMax" :: SBVCodeGen SWord64
+        unsignedTwo <- cgInput "unsignedTwo" :: SBVCodeGen SWord64
+        signedMax   <- cgInput "signedMax"   :: SBVCodeGen SInt64
+        signedOne   <- cgInput "signedOne"   :: SBVCodeGen SInt64
+        signedMin   <- cgInput "signedMin"   :: SBVCodeGen SInt64
+        signedMin8  <- cgInput "signedMin8"  :: SBVCodeGen SInt8
+        let flags = [ bvAddO unsignedMax unsignedTwo
+                    , bvSubO 0 unsignedTwo
+                    , bvMulO unsignedMax unsignedTwo
+                    , bvMulO unsignedTwo 3
+                    , bvAddO signedMax signedOne
+                    , bvSubO signedMin signedOne
+                    , bvMulO signedMax 2
+                    , bvDivO signedMin (negate signedOne)
+                    , bvNegO signedMin
+                    , bvMulO signedMax signedOne
+                    , bvNegO signedMin8
+                    , bvMulO signedMin8 (-1)
+                    ]
+        cgReturn $ pack flags
+      maxWord = 2 ^ (64 :: Int) - 1
+      maxInt  = 2 ^ (63 :: Int) - 1
+      minInt  = negate (2 ^ (63 :: Int))
+      minInt8 = -128
+  compileAndRun dir "nativeOverflow" program "0x0df7U"
+ where pack :: [SBool] -> SWord16
+       pack flags = sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048])
 
 -- | Exercise checked table lookup with both a wide index and wide elements.
 wideLookup :: Assertion
