@@ -35,9 +35,10 @@ import qualified LibBF as BF
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.BV        (isWideBV)
+import Data.SBV.Compilers.C.Lowering  (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Core.Data
 import Data.SBV.Core.SizedFloats       (FP(..), mkBFOpts)
-import Data.SBV.Compilers.C.BV         (isWideBV)
 
 -- | The distinct arbitrary floating-point kinds used by a program.
 arbitraryFPKinds :: Set.Set Kind -> [Kind]
@@ -148,7 +149,7 @@ arbitraryFPConst _ _ = Nothing
 -- | Lower an operation involving an arbitrary floating-point value. A
 -- 'Nothing' result delegates operations such as table lookup and user-defined
 -- functions to the general C renderer.
-arbitraryFPExpr :: [(SV, CV)] -> Op -> [SV] -> Kind -> [Doc] -> Maybe Doc
+arbitraryFPExpr :: [(SV, CV)] -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 arbitraryFPExpr consts op svs resultKind args
   | not (isFP resultKind || any (isFP . kindOf) svs)
   = Nothing
@@ -157,7 +158,7 @@ arbitraryFPExpr consts op svs resultKind args
   | Uninterpreted{} <- op
   = Nothing
   | True
-  = Just $ case (op, args, svs) of
+  = Just . expressionLowering CByValue [CRequiresLibBF, CRequiresLibM] $ case (op, args, svs) of
       (Label _         , [a]         , _)            -> a
       (Ite             , [c, a, b]   , _)            -> c <+> text "?" <+> a <+> text ":" <+> b
       (UNeg            , [a]         , x:_)          -> argCall x "neg" [a]

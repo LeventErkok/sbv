@@ -20,7 +20,7 @@ import Data.Char                      (isSpace)
 import Data.List                      (intercalate, intersperse, nub, nubBy)
 import Data.Maybe                     (fromJust, fromMaybe, isJust)
 import qualified Data.Foldable as F   (toList)
-import qualified Data.Set      as Set (member, union, unions, empty, toList, singleton, fromList)
+import qualified Data.Set      as Set (Set, empty, fromList, member, singleton, toList, union, unions)
 import qualified Data.Text     as T
 import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
@@ -123,15 +123,17 @@ cgen cfg nm st sbvProg
                                , (nm  ++ ".c"  , (CgSource                  , body))
                                ]
 
-        (body, flagsNeeded) = genCProg cfg nm sig sbvProg ins outs mbRet extDecls
+        (body, requirements) = genCProg cfg nm sig sbvProg ins outs mbRet extDecls
 
         bundleKind = (cgInteger cfg, cgReal cfg)
 
         extraTypes =  roundingModeTypeDecls usesRoundingModeType
-                   $$ wideBVTypeDecls (wideBVKinds kinds)
-                   $$ arbitraryFPTypeDecls (arbitraryFPKinds kinds)
-                   $$ gmpTypeDecls cfg kinds
+                   $$ (if hasRequirement CRequiresWideBV then wideBVTypeDecls (wideBVKinds kinds) else empty)
+                   $$ (if hasRequirement CRequiresLibBF  then arbitraryFPTypeDecls (arbitraryFPKinds kinds) else empty)
+                   $$ (if hasRequirement CRequiresGMP    then gmpTypeDecls cfg kinds else empty)
         kinds      = reskinds sbvProg
+
+        hasRequirement requirement = requirement `Set.member` requirements
 
         usesRoundingModeType =  any (isRoundingMode . kindOf) roundingModeValues
                              || any tableUsesRoundingMode (resTables sbvProg)
@@ -165,7 +167,7 @@ cgen cfg nm st sbvProg
         extDecls  = case cgDecls st of
                      [] -> empty
                      xs -> vcat $ text "/* User given declarations: */" : map text xs
-        flags    = flagsNeeded ++ cgLDFlags st
+        flags    = requirementLDFlags requirements ++ cgLDFlags st
 
 -- | Pretty print a functions type. If there is only one output, we compile it
 -- as a function that returns that value. Otherwise, we compile it as a void function
@@ -561,7 +563,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
                                  _                                        -> []
 
 -- | Generate the C program
-genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], [String])
+genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], Set.Set CRequirement)
 genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
   | any exactTable tbls
   = error "SBV->C: Tables containing or indexed by exact GMP values are not yet supported."
@@ -586,7 +588,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
   | not (null cstrs)
   = tbd "Explicit constraints"
   | True
-  = ([pre, header, post], flagsNeeded)
+  = ([pre, header, post], requirements)
  where notyet m = error $ "SBV->C: " ++ m ++ " are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
 
        asserts | cgIgnoreAsserts cfg = []
@@ -600,7 +602,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
               $$ text ""
 
        header = text "#include" <+> doubleQuotes (nm P.<> text ".h")
-             $$ if null fpKinds then empty else text "#include <libbf.h>"
+             $$ (if requires CRequiresLibBF then text "#include <libbf.h>" else empty)
 
        wideKinds = wideBVKinds kindInfo
        fpKinds   = arbitraryFPKinds kindInfo
@@ -608,15 +610,15 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        post   = text ""
              $$ vcat (map codeSeg cgs)
              $$ extDecls
-             $$ wideBVRuntime wideKinds assignments
-             $$ arbitraryFPRuntime fpKinds assignments
-             $$ gmpRuntime cfg kindInfo
+             $$ (if requires CRequiresWideBV then wideBVRuntime wideKinds assignments else empty)
+             $$ (if requires CRequiresLibBF  then arbitraryFPRuntime fpKinds assignments else empty)
+             $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo else empty)
              $$ proto
              $$ text "{"
              $$ text ""
              $$ nest 2 (   gmpStart
                         $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
-                        $$ vcat (merge (map genTbl tbls) (map genAsgn assignments) (map genAssert asserts))
+                        $$ vcat (merge (map genTbl tbls) assignmentDocs (map genAssert asserts))
                         $$ sepIf (not (null assignments) || not (null tbls))
                         $$ vcat (concatMap (genIO False . (True,)) outVars)
                         $$ exactReturn
@@ -630,13 +632,30 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        assignments = F.toList asgns
 
+       generatedAssignments = map genAsgn assignments
+       assignmentDocs        = [(location, doc) | (location, doc, _) <- generatedAssignments]
+
+       requirements = Set.unions
+         [ kindRequirements
+         , Set.unions [needed | (_, _, needed) <- generatedAssignments]
+         , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
+         ]
+
+       kindRequirements = Set.fromList $
+            [CRequiresWideBV | not (null wideKinds)]
+         ++ [CRequiresLibBF  | not (null fpKinds)]
+         ++ [CRequiresLibM   | not (null fpKinds)]
+         ++ [CRequiresGMP    | usesGMP]
+
+       requires requirement = requirement `Set.member` requirements
+
        usesGMP = any (isExactGMPKind cfg) kindInfo
        gmpStart
-         | usesGMP   = gmpContextStart
-         | True      = empty
+         | requires CRequiresGMP = gmpContextStart
+         | True                     = empty
        gmpEnd
-         | usesGMP   = gmpContextEnd
-         | True      = empty
+         | requires CRequiresGMP = gmpContextEnd
+         | True                     = empty
 
        exactReturn = case mbRet of
                        Just sv | isExactGMPKind cfg (kindOf sv)
@@ -646,16 +665,6 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        normalReturn = case mbRet of
                         Just sv | not (isExactGMPKind cfg (kindOf sv)) -> mkRet sv
                         _                                             -> empty
-
-       -- Do we need any linker flags for C?
-       flagsNeeded = nub $ gmpFlags ++ fpFlags ++ concatMap (getLDFlag . opRes) assignments
-          where opRes (sv, SBVApp o _) = (o, kindOf sv)
-                gmpFlags
-                  | usesGMP   = ["-lgmp"]
-                  | True      = []
-                fpFlags
-                  | null fpKinds = []
-                  | True         = ["-lbf", "-lm"]
 
        codeSeg (fnm, ls) =  text "/* User specified custom code for" <+> doubleQuotes (text fnm) <+> text "*/"
                          $$ vcat (map text ls)
@@ -742,8 +751,9 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        getNodeId s@(SV _ (NodeId (_, _, n))) | isConst s = -1
                                              | True      = n
 
-       genAsgn :: (SV, SBVExpr) -> (Int, Doc)
-       genAsgn (sv, n) = (getNodeId sv, ppExpr cfg consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv))
+       genAsgn :: (SV, SBVExpr) -> (Int, Doc, Set.Set CRequirement)
+       genAsgn (sv, n) = (getNodeId sv, doc, needed)
+         where (doc, needed) = ppExpr cfg consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
 
        -- merge tables intermixed with assignments and assertions, paying attention to putting tables as
        -- early as possible and tables right after.. Note that the assignment list (second argument) is sorted on its order
@@ -876,11 +886,15 @@ handleIEEE w consts as var = cvt w
                         <+> text "&&" <+> parens (text "FP_ZERO == fpclassify" P.<> parens b)                                  -- b is zero
                         <+> text "&&" <+> parens (text "signbit" P.<> parens a <+> text "!=" <+> text "signbit" P.<> parens b) -- a and b differ in sign
 
-ppExpr :: CgConfig -> [(SV, CV)] -> SBVExpr -> SV -> Doc -> (Doc, Doc) -> Doc
+-- | Lower and render one symbolic assignment together with the facilities it
+-- requires from the generated C translation unit.
+ppExpr :: CgConfig -> [(SV, CV)] -> SBVExpr -> SV -> Doc -> (Doc, Doc) -> (Doc, Set.Set CRequirement)
 ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
-  = vcat $ loweringSetup selected
-        ++ [assignment]
-        ++ loweringCleanup selected
+  = ( vcat $ loweringSetup selected
+          ++ [assignment]
+          ++ loweringCleanup selected
+    , loweringRequirements selected
+    )
   where doNotAssign (IEEEFP FP_Reinterpret{})
           | not (isFP (kindOf resultSV) || any (isFP . kindOf) opArgs)
           , not (isWideBV (kindOf resultSV) || any (isWideBV . kindOf) opArgs)
@@ -891,8 +905,8 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         selected = fromMaybe legacy $ chooseLowering
           [ gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
-          , expressionLowering CByValue [CRequiresLibBF, CRequiresLibM] <$> arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs
-          , expressionLowering CByValue []                             <$> wideBVExpr op opArgs (kindOf resultSV) renderedArgs
+          , arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs
+          , wideBVExpr op opArgs (kindOf resultSV) renderedArgs
           ]
 
         legacy = expressionLowering CByValue [] (p op renderedArgs)
@@ -1242,15 +1256,22 @@ mergeDrivers libName inc ds = pre : concatMap mkDFun ds ++ [callDrivers (map fst
                  lsep = replicate (length tag) '='
                  psep = "printf(\"" ++ lsep ++ "\\n\");"
 
--- Does this operation with this result kind require an LD flag?
-getLDFlag :: (Op, Kind) -> [String]
-getLDFlag (o, k) = flag o
-  where math = ["-lm"]
+-- | Return the runtime requirements introduced by a legacy scalar operation.
+operationRequirements :: CgConfig -> (Op, Kind) -> Set.Set CRequirement
+operationRequirements cfg (o, k) = Set.fromList (required o)
+  where required (IEEEFP FP_Cast{}) = math
+        required (IEEEFP fop)
+          | fop `elem` requiresMath = math
+        required Abs
+          | usesNativeFloatingPoint k = math
+        required _ = []
 
-        flag (IEEEFP FP_Cast{})                                     = math
-        flag (IEEEFP fop)       | fop `elem` requiresMath           = math
-        flag Abs                | k `elem` [KFloat, KDouble, KReal] = math
-        flag _                                                      = []
+        math = [CRequiresLibM]
+
+        usesNativeFloatingPoint KFloat = True
+        usesNativeFloatingPoint KDouble = True
+        usesNativeFloatingPoint KReal   = not (isExactGMPKind cfg KReal)
+        usesNativeFloatingPoint _       = False
 
         requiresMath = [ FP_Abs
                        , FP_FMA
@@ -1268,5 +1289,16 @@ getLDFlag (o, k) = flag o
                        , FP_IsNormal
                        , FP_IsZero
                        ]
+
+-- | Translate collected runtime requirements to external C linker options.
+requirementLDFlags :: Set.Set CRequirement -> [String]
+requirementLDFlags requirements =
+  [ flag
+  | (requirement, flag) <- [ (CRequiresGMP, "-lgmp")
+                           , (CRequiresLibBF, "-lbf")
+                           , (CRequiresLibM, "-lm")
+                           ]
+  , requirement `Set.member` requirements
+  ]
 
 {- HLint ignore module "Redundant lambda" -}

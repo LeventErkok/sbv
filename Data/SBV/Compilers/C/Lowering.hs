@@ -24,12 +24,13 @@ import qualified Data.Set as Set
 
 import Text.PrettyPrint.HughesPJ      (Doc)
 
--- | External facilities required by a lowered C fragment. The program-level
+-- | Facilities required by a lowered C fragment. The program-level
 -- collector will ultimately turn these capabilities into includes, runtime
 -- helpers, compiler options, and linker options.
-data CRequirement = CRequiresGMP
-                  | CRequiresLibBF
-                  | CRequiresLibM
+data CRequirement = CRequiresGMP     -- ^ GMP-backed exact-number support.
+                  | CRequiresLibBF   -- ^ LibBF-backed arbitrary floating-point support.
+                  | CRequiresLibM    -- ^ The platform C mathematics library.
+                  | CRequiresWideBV  -- ^ Exact-width limb-backed bit-vector support.
                   deriving (Eq, Ord, Show)
 
 -- | Lifetime and ownership class of a lowered result.

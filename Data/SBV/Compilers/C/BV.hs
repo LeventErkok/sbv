@@ -33,6 +33,7 @@ import Numeric                    (showHex)
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.Lowering  (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Core.Data
 
 -- | True when a bit-vector cannot use the historical scalar C ABI. These
@@ -113,7 +114,7 @@ wideBVConst k i
 
 -- | Lower an operation involving a non-native bit-vector. A 'Nothing' result
 -- means that the legacy scalar lowering should handle the operation.
-wideBVExpr :: Op -> [SV] -> Kind -> [Doc] -> Maybe Doc
+wideBVExpr :: Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 wideBVExpr op svs resultKind args
   | not (isWideBV resultKind || any (isWideBV . kindOf) svs)
   = Nothing
@@ -122,7 +123,7 @@ wideBVExpr op svs resultKind args
   | Uninterpreted{} <- op
   = Nothing
   | True
-  = Just $ case (op, args, svs) of
+  = Just . expressionLowering CByValue [CRequiresWideBV] $ case (op, args, svs) of
       (Label _                       , [a]      , _)      -> a
       (Plus                          , [a, b]   , _)      -> call "add" [a, b]
       (Minus                         , [a, b]   , _)      -> call "sub" [a, b]
