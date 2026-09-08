@@ -38,6 +38,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute rational arithmetic" exactRealArithmetic
   , testCase "compile and execute exact table lookup" exactTableLookup
   , testCase "compile and execute exact array keys and values" exactArray
+  , testCase "compile and execute an exact callback-backed array" exactArrayInput
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
 
@@ -218,6 +219,21 @@ exactArray = withSystemTempDirectory "sbv-exact-array" $ \dir -> do
         cgOutput "baseValue" (readArray base key)
         cgReturn (readArray updated key)
   compileAndRunGMP dir "exactArray" program ["20/3", "baseValue =1/3"]
+
+-- | Exercise borrowed callback input and overlay semantics with GMP-backed
+-- integer keys and rational values.
+exactArrayInput :: Assertion
+exactArrayInput = withSystemTempDirectory "sbv-exact-array-input" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [7, 2 ^ (300 :: Int) + 9, 20]
+        source <- cgInput "source" :: SBVCodeGen (SArray Integer AlgReal)
+        key    <- cgInput "key"    :: SBVCodeGen SInteger
+        value  <- cgInput "value"  :: SBVCodeGen SInteger
+        let updated = writeArray source key (sFromIntegral value / 3)
+        cgOutput "sourceValue" (readArray source key)
+        cgReturn (readArray updated key)
+  compileAndRunGMP dir "exactArrayInput" program ["20/3", "sourceValue =7"]
 
 -- | Exercise merged headers, archives, and drivers for exact-number libraries.
 exactNumberLibrary :: Assertion

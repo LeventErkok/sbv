@@ -40,6 +40,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute persistent arrays" persistentArrays
   , testCase "preserve native floating-point array-key equality" nativeFloatArrayKeys
   , testCase "compile repeated array types into a library" persistentArrayLibrary
+  , testCase "compile and execute a callback-backed array input" callbackArrayInput
   ]
  where thd (_, _, r) = r
 
@@ -191,11 +192,10 @@ persistentArrayLibrary :: Assertion
 persistentArrayLibrary = withSystemTempDirectory "sbv-persistent-array-library" $ \dir -> do
   let component increment = do
         cgOverwriteFiles True
-        cgSetDriverValues [9, 40]
-        key   <- cgInput "key"   :: SBVCodeGen SWord16
-        value <- cgInput "value" :: SBVCodeGen SWord32
-        let base    = constArray 0
-            updated = writeArray base key (value + increment)
+        cgSetDriverValues [40, 9]
+        source <- cgInput "source" :: SBVCodeGen (SArray Word16 Word32)
+        key    <- cgInput "key"    :: SBVCodeGen SWord16
+        let updated = writeArray source key (readArray source key + increment)
         cgReturn (readArray updated key)
 
   (_, cfg, bundle) <- compileToCLib' "persistentArrayLibrary"
@@ -206,6 +206,27 @@ persistentArrayLibrary = withSystemTempDirectory "sbv-persistent-array-library" 
   stdoutText <- compileAndRunGenerated dir "persistentArrayLibrary"
   mapM_ (\fragment -> assertBool ("Expected generated library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
     ["0x00000029UL", "0x0000002aUL"]
+
+-- | Exercise the borrowed callback descriptor used for a public array input,
+-- including local writes that shadow the callback only at matching keys.
+callbackArrayInput :: Assertion
+callbackArrayInput = withSystemTempDirectory "sbv-callback-array-input" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [40, 9]
+        source <- cgInput "source" :: SBVCodeGen (SArray Word8 Word32)
+        key    <- cgInput "key"    :: SBVCodeGen SWord8
+        let updated = writeArray source key 99
+        cgOutput "sourceValue" (readArray source key)
+        cgOutput "unshadowedValue" (readArray updated (key + 1))
+        cgReturn (readArray updated key)
+
+  stdoutText <- compileProgramAndRunGenerated dir "callbackArrayInput" program
+  mapM_ (\fragment -> assertBool ("Expected callback-backed output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "0x00000063UL"
+    , "sourceValue = 0x00000028UL"
+    , "unshadowedValue = 0x00000028UL"
+    ]
 
 -- | Generate, compile, and execute one standalone C program.
 compileProgramAndRunGenerated :: FilePath -> String -> SBVCodeGen () -> IO String

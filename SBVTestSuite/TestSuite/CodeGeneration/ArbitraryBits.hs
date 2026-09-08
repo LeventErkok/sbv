@@ -41,6 +41,7 @@ tests = testGroup "CodeGeneration.ArbitraryBits"
   , testCase "compile and execute native overflow predicates" nativeOverflow
   , testCase "compile and execute checked wide table lookup" wideLookup
   , testCase "compile and execute wide array keys and values" wideArray
+  , testCase "compile and execute a wide callback-backed array" wideArrayInput
   , testCase "compile and execute arithmetic boundary cases" arithmeticBoundaries
   ]
 
@@ -191,6 +192,20 @@ wideArray = withSystemTempDirectory "sbv-wide-array" $ \dir -> do
       keySample   = 2 ^ (672 :: Int) + 17
       valueSample = 2 ^ (256 :: Int) + 5
   compileAndRun dir "wideArray" program (asHex 5 valueSample)
+
+-- | Exercise the public callback descriptor when both its key and returned
+-- value use multi-limb bit-vector representations.
+wideArrayInput :: Assertion
+wideArrayInput = withSystemTempDirectory "sbv-wide-array-input" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [valueSample, keySample]
+        source <- cgInput "source" :: SBVCodeGen (SArray (WordN 673) (WordN 257))
+        key    <- cgInput "key"    :: SBVCodeGen (SWord 673)
+        cgReturn (readArray source key)
+      keySample   = 2 ^ (672 :: Int) + 17
+      valueSample = 2 ^ (256 :: Int) + 5
+  compileAndRun dir "wideArrayInput" program (asHex 5 valueSample)
 
 -- | Exercise division-by-zero, extreme shifts, and signed-minimum division.
 arithmeticBoundaries :: Assertion

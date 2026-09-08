@@ -42,6 +42,7 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute special arithmetic" arbitraryFloatSpecialArithmetic
   , testCase "compile and execute arbitrary-float table lookup" arbitraryFloatTableLookup
   , testCase "preserve arbitrary floating-point array-key equality" arbitraryFloatArrayKeys
+  , testCase "compile and execute an arbitrary-float callback-backed array" arbitraryFloatArrayInput
   , testCase "compile and execute a mixed repeated-type library" mixedRepeatedTypeLibrary
   , testCase "compile a repeated-type library without a driver" repeatedTypeLibraryWithoutDriver
   ]
@@ -286,6 +287,20 @@ arbitraryFloatArrayKeys = withSystemTempDirectory "sbv-arbitrary-float-array-key
                            ]
         cgReturn (sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4]) :: SWord8)
   compileAndRunLibBF dir "arbitraryFloatArrayKeys" program "= 7"
+
+-- | Exercise a callback-backed array whose returned values use LibBF's raw
+-- arbitrary floating-point interchange representation.
+arbitraryFloatArrayInput :: Assertion
+arbitraryFloatArrayInput = withSystemTempDirectory "sbv-arbitrary-float-array-input" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [3, 7]
+        source <- cgInput "source" :: SBVCodeGen (SArray Word8 (FloatingPoint 15 113))
+        key    <- cgInput "key"    :: SBVCodeGen SWord8
+        cgReturn (sFloatingPointAsSWord (readArray source key) :: SWord 128)
+      bias     = 2 ^ (14 :: Int) - 1 :: Integer
+      threeRaw = (bias + 1) * 2 ^ (112 :: Int) + 2 ^ (111 :: Int)
+  compileAndRunLibBF dir "arbitraryFloatArrayInput" program (asHex 2 threeRaw)
 
 -- | Exercise repeated declarations and dependencies in a mixed generated library.
 mixedRepeatedTypeLibrary :: Assertion

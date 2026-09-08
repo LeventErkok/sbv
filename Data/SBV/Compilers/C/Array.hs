@@ -14,8 +14,12 @@
 module Data.SBV.Compilers.C.Array
   ( arrayKinds
   , arrayCType
+  , arrayInputCType
   , arrayTypeDecls
   , arrayRuntime
+  , arrayInputSetup
+  , arrayDriverCallback
+  , arrayDriverInput
   , arrayConst
   , arrayExpr
   ) where
@@ -63,13 +67,21 @@ arrayCType :: Kind -> String
 arrayCType (KArray keyKind valueKind) = "SBVArray_" ++ kindTag keyKind ++ "_" ++ kindTag valueKind
 arrayCType kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
+-- | Return the public callback-descriptor type accepted for an array-valued
+-- C input. The descriptor and its context are borrowed for the duration of
+-- the generated call.
+arrayInputCType :: Kind -> String
+arrayInputCType kind = "SBVArrayInput_" ++ arraySuffix kind
+
 -- | Emit opaque public array types for every kind used by a generated
 -- program. Array values are borrowed references whose nodes live for the
 -- duration of the generated function call.
 arrayTypeDecls :: [Kind] -> Doc
 arrayTypeDecls [] = empty
 arrayTypeDecls kinds = text . unlines $
-     ["/* Persistent functional arrays. References are valid for one generated call. */"
+     [ "/* Persistent functional arrays. References are valid for one generated call. */"
+     , "/* Input callbacks and contexts are borrowed for that call; pointer-backed */"
+     , "/* exact results returned by a callback must remain valid for the same period. */"
      , "#ifndef SBV_CGEN_UNUSED"
      , "#if defined(__GNUC__) || defined(__clang__)"
      , "#define SBV_CGEN_UNUSED __attribute__((unused))"
@@ -78,19 +90,28 @@ arrayTypeDecls kinds = text . unlines $
      , "#endif"
      , "#endif"]
   ++ concatMap declaration kinds
- where declaration kind = [ "#ifndef " ++ arrayGuard kind
-                          , "#define " ++ arrayGuard kind
-                          , "typedef struct " ++ arrayNodeType kind ++ " " ++ arrayNodeType kind ++ ";"
-                          , "typedef const " ++ arrayNodeType kind ++ " *" ++ arrayCType kind ++ ";"
-                          , "#endif"
-                          , ""
-                          ]
+ where declaration kind@(KArray keyKind valueKind)
+         = [ "#ifndef " ++ arrayGuard kind
+           , "#define " ++ arrayGuard kind
+           , "typedef struct " ++ arrayNodeType kind ++ " " ++ arrayNodeType kind ++ ";"
+           , "typedef const " ++ arrayNodeType kind ++ " *" ++ arrayCType kind ++ ";"
+           , "typedef " ++ scalarCType valueKind ++ " (*" ++ arrayLookupType kind ++ ")(const void *context, " ++ scalarCType keyKind ++ " key);"
+           , "typedef struct { " ++ arrayLookupType kind ++ " lookup; const void *context; } " ++ arrayInputCType kind ++ ";"
+           , "#endif"
+           , ""
+           ]
+       declaration kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
 -- | Emit the node layouts and newest-write-first lookup helpers for every
 -- array kind used by a generated program.
 arrayRuntime :: CgConfig -> [Kind] -> Doc
 arrayRuntime _   []    = empty
-arrayRuntime cfg kinds = text . unlines $ "/* Persistent functional-array runtime. */" : concatMap runtime kinds
+arrayRuntime cfg kinds = text . unlines $
+     [ "/* Persistent functional-array runtime. */"
+     , "typedef enum { SBV_ARRAY_CONSTANT, SBV_ARRAY_STORE, SBV_ARRAY_CALLBACK } SBVArrayNodeKind;"
+     , ""
+     ]
+  ++ concatMap runtime kinds
  where runtime kind@(KArray keyKind valueKind) =
          let nodeType    = arrayNodeType kind
              arrayType   = arrayCType kind
@@ -99,33 +120,88 @@ arrayRuntime cfg kinds = text . unlines $ "/* Persistent functional-array runtim
              readName    = arrayReadName kind
              keyEquality = P.render $ keyEqual cfg keyKind (text "array->key") (text "key")
          in [ "struct " ++ nodeType ++ " {"
-            , "  bool is_store;"
+            , "  SBVArrayNodeKind kind;"
             , "  " ++ arrayType ++ " parent;"
             , "  " ++ keyType ++ " key;"
             , "  " ++ valueType ++ " value;"
+            , "  " ++ arrayLookupType kind ++ " lookup;"
+            , "  const void *context;"
             , "};"
             , ""
             , "static SBV_CGEN_UNUSED " ++ valueType ++ " " ++ readName ++ "(" ++ arrayType ++ " array, " ++ keyType ++ " key)"
             , "{"
-            , "  while (array->is_store) {"
+            , "  while (array->kind == SBV_ARRAY_STORE) {"
             , "    if (" ++ keyEquality ++ ") return array->value;"
             , "    array = array->parent;"
             , "  }"
+            , "  if (array->kind == SBV_ARRAY_CALLBACK) return array->lookup(array->context, key);"
             , "  return array->value;"
             , "}"
             , ""
             ]
        runtime kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
+-- | Materialize a borrowed public callback descriptor as an internal array
+-- root. A null lookup callback is rejected before the symbolic program runs.
+arrayInputSetup :: Int -> SV -> String -> [Doc]
+arrayInputSetup typeWidth sv externalName
+  | kind@KArray{} <- kindOf sv
+  = [ text "if" P.<> parens (external P.<> text ".lookup == NULL") <+> text "abort" P.<> parens empty P.<> semi
+    , text "const" <+> text (arrayNodeType kind) <+> text nodeName <+> text "=" <+> braces (fsep (punctuate comma fields)) P.<> semi
+    , text "const" <+> paddedType <+> text (show sv) <+> text "=" <+> text "&" P.<> text nodeName P.<> semi
+    ]
+ where external   = text externalName
+       nodeName   = "__sbv_array_input_" ++ show sv
+       paddedType = text $ arrayCType (kindOf sv) ++ replicate (typeWidth - length (arrayCType (kindOf sv))) ' '
+       fields     = [ text ".kind = SBV_ARRAY_CALLBACK"
+                    , text ".lookup ="  <+> external P.<> text ".lookup"
+                    , text ".context =" <+> external P.<> text ".context"
+                    ]
+arrayInputSetup _ sv _ = error $ "SBV->C: Expected an array input, received " ++ show (kindOf sv)
+
+-- | Emit the default-only callback used by an example driver for an
+-- array-valued input. The generated body illustrates the borrowed-context
+-- protocol without pretending that a finite C object represents a total map.
+arrayDriverCallback :: CgConfig -> Kind -> String -> String -> Doc
+arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
+  = text "static" <+> text (scalarCType valueKind) <+> text callbackName
+      P.<> parens (fsep (punctuate comma [text "const void *context", text (scalarCType keyKind) <+> text "key"]))
+      $$ text "{"
+      $$ nest 2 (   parens (text "void") <+> text "key" P.<> semi
+                 $$ text "return" <+> result P.<> semi
+                )
+      $$ text "}"
+ where callbackName = arrayDriverCallbackName functionName inputName
+       result
+         | isExactGMPKind cfg valueKind = parens (text (scalarCType valueKind)) <+> text "context"
+         | True                          = text "*" P.<> parens (parens (text "const" <+> text (scalarCType valueKind) <+> text "*") <+> text "context")
+arrayDriverCallback _ kind _ _ = error $ "SBV->C: Expected an array input kind, received " ++ show kind
+
+-- | Construct an example-driver descriptor around a named default value and
+-- its generated callback. Exact GMP defaults already decay to pointers;
+-- ordinary values are passed to the callback by address.
+arrayDriverInput :: CgConfig -> Kind -> String -> String -> String -> Doc
+arrayDriverInput cfg kind functionName inputName defaultName
+  | KArray _ valueKind <- kind
+  = let context
+          | isExactGMPKind cfg valueKind = text defaultName
+          | True                          = text "&" P.<> text defaultName
+    in text "const" <+> text (arrayInputCType kind) <+> text inputName <+> text "="
+         <+> braces (fsep (punctuate comma [ text ".lookup ="  <+> text (arrayDriverCallbackName functionName inputName)
+                                          , text ".context =" <+> context
+                                          ])) P.<> semi
+  | True
+  = error $ "SBV->C: Expected an array input kind, received " ++ show kind
+
 -- | Render a concrete array model as a nested chain of C99 compound literals.
 -- Association-list entries retain SBV's newest-write-first ordering.
 arrayConst :: (CV -> Doc) -> CV -> Maybe Doc
 arrayConst renderValue (CV kind@(KArray keyKind valueKind) (CArray (ArrayModel associations defaultValue)))
   = Just $ foldr store base associations
- where base = nodeLiteral [text ".is_store = false", text ".value =" <+> renderValue (CV valueKind defaultValue)]
+ where base = nodeLiteral [text ".kind = SBV_ARRAY_CONSTANT", text ".value =" <+> renderValue (CV valueKind defaultValue)]
 
        store (key, value) parent = nodeLiteral
-         [ text ".is_store = true"
+         [ text ".kind = SBV_ARRAY_STORE"
          , text ".parent =" <+> parent
          , text ".key ="    <+> renderValue (CV keyKind key)
          , text ".value ="  <+> renderValue (CV valueKind value)
@@ -146,7 +222,7 @@ arrayExpr cfg op svs resultSV args
       (ArrayInit (Left pair), [_], [defaultValue])
         | resultKind == uncurry KArray pair
         -> nodeLowering resultKind
-             [text ".is_store = false", text ".value =" <+> defaultValue]
+             [text ".kind = SBV_ARRAY_CONSTANT", text ".value =" <+> defaultValue]
       (ArrayInit Right{}, [], [])
         -> unsupported "lambda-backed and free arrays"
       (ReadArray, [array, key], [renderedArray, renderedKey])
@@ -156,7 +232,7 @@ arrayExpr cfg op svs resultSV args
         | resultKind == kindOf array
         , resultKind == KArray (kindOf key) (kindOf value)
         -> nodeLowering resultKind
-             [ text ".is_store = true"
+             [ text ".kind = SBV_ARRAY_STORE"
              , text ".parent =" <+> renderedArray
              , text ".key ="    <+> renderedKey
              , text ".value ="  <+> renderedValue
@@ -208,11 +284,26 @@ arrayExpr cfg op svs resultSV args
 
 -- | Return the concrete node-structure name for an array kind.
 arrayNodeType :: Kind -> String
-arrayNodeType kind = "sbv_array_node_" ++ drop (length ("SBVArray_" :: String)) (arrayCType kind)
+arrayNodeType kind = "sbv_array_node_" ++ arraySuffix kind
 
 -- | Return the lookup-helper name for an array kind.
 arrayReadName :: Kind -> String
-arrayReadName kind = "sbv_array_read_" ++ drop (length ("SBVArray_" :: String)) (arrayCType kind)
+arrayReadName kind = "sbv_array_read_" ++ arraySuffix kind
+
+-- | Return the callback-function-pointer type for an array kind.
+arrayLookupType :: Kind -> String
+arrayLookupType kind = "SBVArrayLookup_" ++ arraySuffix kind
+
+-- | Return the generated example-driver callback name for an input.
+arrayDriverCallbackName :: String -> String -> String
+arrayDriverCallbackName functionName inputName = "__sbv_array_lookup_f" ++ tagged functionName ++ "_i" ++ tagged inputName
+ where tagged identifier = show (length identifier) ++ "_" ++ identifier
+
+-- | Return the key/value suffix shared by the generated names for an array
+-- kind.
+arraySuffix :: Kind -> String
+arraySuffix (KArray keyKind valueKind) = kindTag keyKind ++ "_" ++ kindTag valueKind
+arraySuffix kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
 -- | Return the preprocessor guard protecting an array type declaration.
 arrayGuard :: Kind -> String
