@@ -36,6 +36,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute wide conversions" exactWideConversions
   , testCase "compile and execute wide real conversions" exactWideRealConversions
   , testCase "compile and execute rational arithmetic" exactRealArithmetic
+  , testCase "compile and execute exact table lookup" exactTableLookup
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
 
@@ -180,6 +181,26 @@ exactRealArithmetic = withSystemTempDirectory "sbv-exact-real" $ \dir -> do
         cgOutput "base" base
         cgReturn result
   compileAndRunGMP dir "exactRealArithmetic" program ["83/7", "converted =2", "base =83/21"]
+
+-- | Exercise finite tables with an unbounded index and GMP-backed integer and
+-- rational results, including negative and oversized default cases.
+exactTableLookup :: Assertion
+exactTableLookup = withSystemTempDirectory "sbv-exact-table" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgPerformRTCs True
+        cgSetDriverValues [1, -1, 500, 2 ^ (200 :: Int)]
+        inRangeIndex   <- cgInput "inRangeIndex"   :: SBVCodeGen SInteger
+        negativeIndex  <- cgInput "negativeIndex"  :: SBVCodeGen SInteger
+        oversizedIndex <- cgInput "oversizedIndex" :: SBVCodeGen SInteger
+        tableValue     <- cgInput "tableValue"     :: SBVCodeGen SInteger
+        let integerResult   = select [2 ^ (130 :: Int), tableValue + 7] (-11) inRangeIndex :: SInteger
+            negativeResult  = select [3 / 2, 5 / 3] (7 / 4) negativeIndex :: SReal
+            oversizedResult = select [13, 17] 19 oversizedIndex :: SInteger
+        cgOutput "negativeResult" negativeResult
+        cgOutput "oversizedResult" oversizedResult
+        cgReturn integerResult
+  compileAndRunGMP dir "exactTableLookup" program [show (2 ^ (200 :: Int) + 7 :: Integer), "negativeResult =7/4", "oversizedResult =19"]
 
 -- | Exercise merged headers, archives, and drivers for exact-number libraries.
 exactNumberLibrary :: Assertion

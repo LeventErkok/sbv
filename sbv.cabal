@@ -322,6 +322,7 @@ Library
                   , Data.SBV.Compilers.C.Legacy.Internal
                   , Data.SBV.Compilers.C.Lowering
                   , Data.SBV.Compilers.C.New
+                  , Data.SBV.Compilers.C.Table
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.Lambda
                   , Data.SBV.SCase

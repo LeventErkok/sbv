@@ -133,7 +133,7 @@ gmpExpr cfg op svs resultKind args
   | not (isExactGMPKind cfg resultKind || any (isExactGMPKind cfg . kindOf) svs)
   = Nothing
   | LkUp{} <- op
-  = unsupported
+  = Nothing
   | Uninterpreted{} <- op
   = Nothing
   | True

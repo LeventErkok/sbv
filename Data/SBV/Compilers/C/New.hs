@@ -37,6 +37,7 @@ import Data.SBV.Compilers.C.BV
 import Data.SBV.Compilers.C.FP
 import Data.SBV.Compilers.C.GMP
 import Data.SBV.Compilers.C.Lowering
+import Data.SBV.Compilers.C.Table
 import Data.SBV.Compilers.CodeGen
 
 import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
@@ -565,8 +566,6 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], Set.Set CRequirement)
 genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
-  | any exactTable tbls
-  = error "SBV->C: Tables containing or indexed by exact GMP values are not yet supported."
   | KString `Set.member` kindInfo
   = notyet "Strings"
   | KChar `Set.member` kindInfo
@@ -593,8 +592,6 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        asserts | cgIgnoreAsserts cfg = []
                | True                = origAsserts
-
-       exactTable ((_, indexKind, resultKind), _) = isExactGMPKind cfg indexKind || isExactGMPKind cfg resultKind
 
        usorts = [s | k@(KADT s _ _) <- Set.toList kindInfo, isADT k && not (isRoundingMode k)] -- No support for any sorts other than RoundingMode!
 
@@ -746,7 +743,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        genTbl ((i, _, k), elts) =  (location, static <+> text "const" <+> text (showCType k) <+> text ("table" ++ show i) P.<> text "[] = {"
                                               $$ nest 4 (fsep (punctuate comma (align (map (showSV cfg consts) elts))))
                                               $$ text "};")
-         where static   = if location == -1 then text "static" else empty
+         where static   = if location == -1 && not (tableMustBeLocal cfg k) then text "static" else empty
                location = maximum (-1 : map getNodeId elts)
 
        getNodeId s@(SV _ (NodeId (_, _, n))) | isConst s = -1
@@ -905,7 +902,8 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
         renderedArgs = map (showSV cfg consts) opArgs
 
         selected = fromMaybe legacy $ chooseLowering
-          [ gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          [ tableExpr cfg (showSV cfg consts) op (kindOf resultSV)
+          , gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs
           , nativeFPExpr consts op opArgs (kindOf resultSV) renderedArgs
           , nativeBVOverflowExpr op opArgs renderedArgs

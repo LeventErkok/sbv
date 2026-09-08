@@ -40,6 +40,7 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute symbolic rounding modes" arbitraryFloatSymbolicRoundingMode
   , testCase "compile and execute native rounding modes" nativeFloatRoundingModes
   , testCase "compile and execute special arithmetic" arbitraryFloatSpecialArithmetic
+  , testCase "compile and execute arbitrary-float table lookup" arbitraryFloatTableLookup
   , testCase "compile and execute a mixed repeated-type library" mixedRepeatedTypeLibrary
   , testCase "compile a repeated-type library without a driver" repeatedTypeLibraryWithoutDriver
   ]
@@ -244,6 +245,23 @@ arbitraryFloatSpecialArithmetic = withSystemTempDirectory "sbv-arbitrary-float-s
   compileAndRunLibBF dir "arbitraryFloatSpecialArithmetic" program (asHex 2 expected)
  where rawHalf :: SFPHalf -> SWord 16
        rawHalf = sFloatingPointAsSWord
+
+-- | Exercise a finite table containing computed arbitrary-precision floating
+-- point values. The table is emitted after the computation on which it
+-- depends and its result remains an ordinary by-value interchange object.
+arbitraryFloatTableLookup :: Assertion
+arbitraryFloatTableLookup = withSystemTempDirectory "sbv-arbitrary-float-table" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgPerformRTCs True
+        cgSetDriverValues [1, 3]
+        index <- cgInput "index" :: SBVCodeGen SWord8
+        value <- cgInput "value" :: SBVCodeGen SFPQuad
+        let selected = select [value, fpAdd sRNE value 2] 99 index
+        cgReturn (sFloatingPointAsSWord selected :: SWord 128)
+      bias    = 2 ^ (14 :: Int) - 1 :: Integer
+      fiveRaw = (bias + 2) * 2 ^ (112 :: Int) + 2 ^ (110 :: Int)
+  compileAndRunLibBF dir "arbitraryFloatTableLookup" program (asHex 2 fiveRaw)
 
 -- | Exercise repeated declarations and dependencies in a mixed generated library.
 mixedRepeatedTypeLibrary :: Assertion
