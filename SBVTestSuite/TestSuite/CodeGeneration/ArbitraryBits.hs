@@ -43,6 +43,7 @@ tests = testGroup "CodeGeneration.ArbitraryBits"
   , testCase "compile and execute wide array keys and values" wideArray
   , testCase "compile and execute a wide callback-backed array" wideArrayInput
   , testCase "compile and execute a wide structured lambda array" wideLambdaArray
+  , testCase "compile and execute a wide structured lambda table" wideLambdaTable
   , testCase "compile and execute arithmetic boundary cases" arithmeticBoundaries
   ]
 
@@ -221,6 +222,18 @@ wideLambdaArray = withSystemTempDirectory "sbv-wide-lambda-array" $ \dir -> do
       keySample = 2 ^ (672 :: Int) + 17
       expected  = (keySample * 3 + 5) `mod` (2 ^ (673 :: Int))
   compileAndRun dir "wideLambdaArray" program (asHex 11 expected)
+
+-- | Exercise a parameter-dependent lookup table entirely within a structured
+-- lambda using arbitrary-width indices, elements, and results.
+wideLambdaTable :: Assertion
+wideLambdaTable = withSystemTempDirectory "sbv-wide-lambda-table" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        key <- cgInput "key" :: SBVCodeGen (SWord 673)
+        let source = lambdaArray (\index -> select [index + 1, index * 3] 99 index) :: SArray (WordN 673) (WordN 673)
+        cgReturn (readArray source key)
+  compileAndRun dir "wideLambdaTable" program (asHex 11 3)
 
 -- | Exercise division-by-zero, extreme shifts, and signed-minimum division.
 arithmeticBoundaries :: Assertion

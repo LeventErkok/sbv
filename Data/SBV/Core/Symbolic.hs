@@ -1187,18 +1187,20 @@ conflictError nm = error $ unlines [ ""
                                    , "*** Please use a unique name for each distinct function."
                                    ]
 
--- | Information about a compiled lambda body, used for measure verification.
+-- | Structured information about a compiled lambda body, used for measure
+-- verification and by backends that should not parse its SMT-Lib rendering.
 data LambdaInfo = LambdaInfo
-  { liAssignments :: S.Seq (SV, SBVExpr)  -- ^ The expression DAG
-  , liParams      :: [(Quantifier, SV)]    -- ^ Formal parameters with quantifier
-  , liOutput      :: SV                    -- ^ The output node
-  , liConsts      :: [(SV, CV)]            -- ^ Constants used
+  { liAssignments :: S.Seq (SV, SBVExpr)        -- ^ The expression DAG
+  , liParams      :: [(Quantifier, SV)]          -- ^ Formal parameters with quantifier
+  , liOutput      :: SV                          -- ^ The output node
+  , liConsts      :: [(SV, CV)]                  -- ^ Constants used
+  , liTables      :: [((Int, Kind, Kind), [SV])] -- ^ Finite lookup tables used by the body
   } deriving G.Data
 
 -- | Fully evaluate the retained pieces of a compiled lambda body.
 instance NFData LambdaInfo where
-  rnf LambdaInfo{liAssignments, liParams, liOutput, liConsts}
-    = rnf liAssignments `seq` rnf liParams `seq` rnf liOutput `seq` rnf liConsts
+  rnf LambdaInfo{liAssignments, liParams, liOutput, liConsts, liTables}
+    = rnf liAssignments `seq` rnf liParams `seq` rnf liOutput `seq` rnf liConsts `seq` rnf liTables
 
 -- | The state of the symbolic interpreter
 data State  = State { sbvContext            :: SBVContext

@@ -657,7 +657,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
              $$ text ""
              $$ nest 2 (   gmpStart
                         $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
-                        $$ vcat (merge (map genTbl tbls) assignmentDocs (map genAssert asserts))
+                        $$ vcat (merge (map (ppTable cfg True consts) tbls) assignmentDocs (map genAssert asserts))
                         $$ sepIf (not (null assignments) || not (null tbls))
                         $$ vcat (concatMap (genIO False . (True,)) outVars)
                         $$ exactReturn
@@ -755,8 +755,6 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        consts = (falseSV, falseCV) : (trueSV, trueCV) : preConsts
 
-       isConst s = isJust (lookup s consts)
-
        -- TODO: The following is brittle. We should really have a function elsewhere
        -- that walks the SBVExprs and collects the SWs together.
        usedVariables = Set.unions (retSWs : map usedCgVal outVars ++ map usedAsgn assignments)
@@ -795,31 +793,16 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        mkRet sv = text "return" <+> showSV cfg consts sv P.<> semi
 
-       genTbl :: ((Int, Kind, Kind), [SV]) -> (Int, Doc)
-       genTbl ((i, _, k), elts) =  (location, static <+> text "const" <+> text (showCType k) <+> text ("table" ++ show i) P.<> text "[] = {"
-                                              $$ nest 4 (fsep (punctuate comma (align (map (showSV cfg consts) elts))))
-                                              $$ text "};")
-         where static   = if location == -1 && not (tableMustBeLocal cfg k) then text "static" else empty
-               location = maximum (-1 : map getNodeId elts)
-
-       getNodeId s@(SV _ (NodeId (_, _, n))) | isConst s = -1
-                                             | True      = n
-
        genAsgn :: (SV, SBVExpr) -> (Int, Doc, Set.Set CRequirement)
-       genAsgn (sv, n) = (getNodeId sv, doc, needed)
+       genAsgn (sv, n) = (cLocation consts sv, doc, needed)
          where (doc, needed) = ppExpr cfg consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
 
        -- merge tables intermixed with assignments and assertions, paying attention to putting tables as
        -- early as possible and tables right after.. Note that the assignment list (second argument) is sorted on its order
        merge :: [(Int, Doc)] -> [(Int, Doc)] -> [(Int, Doc)] -> [Doc]
-       merge tables asgnments asrts = map snd $ merge2 asrts (merge2 tables asgnments)
-         where merge2 []               as                  = as
-               merge2 ts               []                  = ts
-               merge2 ts@((i, t):trest) as@((i', a):arest)
-                 | i < i'                                 = (i,  t)  : merge2 trest as
-                 | True                                   = (i', a) : merge2 ts arest
+       merge tables asgnments asrts = map snd $ mergeLocated asrts (mergeLocated tables asgnments)
 
-       genAssert (msg, cs, sv) = (getNodeId sv, doc)
+       genAssert (msg, cs, sv) = (cLocation consts sv, doc)
          where doc =     text "/* ASSERTION:" <+> text msg
                      $$  maybe empty (vcat . map text) (locInfo (getCallStack <$> cs))
                      $$  text " */"
@@ -835,11 +818,48 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                                          (f:rs) -> Just $ (" * SOURCE   : " ++ f) : map (" *            " ++)  rs
                locInfo _         = Nothing
 
+-- | Return the source-order location used to interleave a value's dependent
+-- declarations. Constants are available before every generated assignment.
+cLocation :: [(SV, CV)] -> SV -> Int
+cLocation constants sv@(SV _ (NodeId (_, _, nodeIndex)))
+  | isJust (lookup sv constants) = -1
+  | True                         = nodeIndex
+
+-- | Render one finite lookup table at the point where all its elements are
+-- available. Constant top-level tables may use static storage; lambda-local
+-- tables always use automatic storage so their entries may depend on parameters.
+ppTable :: CgConfig -> Bool -> [(SV, CV)] -> ((Int, Kind, Kind), [SV]) -> (Int, Doc)
+ppTable cfg allowStatic constants ((tableIndex, _, resultKind), elements)
+  = (location, storage <+> text "const" <+> text (showCType resultKind) <+> tableName P.<> text "[] = {"
+              $$ nest 4 (fsep (punctuate comma (align (map (showSV cfg constants) elements))))
+              $$ text "};")
+ where location = maximum (-1 : map (cLocation constants) elements)
+       storage
+         | allowStatic && location == -1 && not (tableMustBeLocal cfg resultKind) = text "static"
+         | True                                                                  = empty
+       tableName = text ("table" ++ show tableIndex)
+
+-- | Merge two source-ordered declaration streams. Entries from the right-hand
+-- stream precede left-hand entries at the same location, allowing a table to
+-- follow the assignment that computes its final element.
+mergeLocated :: [(Int, Doc)] -> [(Int, Doc)] -> [(Int, Doc)]
+mergeLocated []               right                       = right
+mergeLocated left             []                          = left
+mergeLocated left@((i, x):xs) right@((j, y):ys)
+  | i < j = (i, x) : mergeLocated xs right
+  | True  = (j, y) : mergeLocated left ys
+
 -- | Lower a retained one-argument array lambda into a C lookup callback. Its
 -- local DAG uses the ordinary scalar lowering pipeline, so wide bit-vectors,
--- floating-point values, and exact numbers retain their usual semantics.
+-- floating-point values, exact numbers, and finite tables retain their usual
+-- semantics.
 ppArrayLambda :: CgConfig -> SV -> LambdaInfo -> (Doc, Set.Set CRequirement)
-ppArrayLambda cfg arraySV lambdaInfo@(LambdaInfo lambdaPgm parameters lambdaOutput constants)
+ppArrayLambda cfg arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
+                                               , liParams      = parameters
+                                               , liOutput      = lambdaOutput
+                                               , liConsts      = constants
+                                               , liTables      = tables
+                                               }
   = case (kindOf arraySV, parameters) of
       (KArray keyKind valueKind, [(ALL, parameter)])
         | kindOf parameter /= keyKind
@@ -848,8 +868,6 @@ ppArrayLambda cfg arraySV lambdaInfo@(LambdaInfo lambdaPgm parameters lambdaOutp
         -> die $ "Array-lambda result kind " ++ show (kindOf lambdaOutput) ++ " does not match " ++ show valueKind
         | not (null nestedLambdas)
         -> tbd "Nested structured lambdas inside lambda arrays"
-        | not (null tableLookups)
-        -> tbd "Tables inside structured array lambdas"
         | True
         -> (helper keyKind valueKind parameter, requirements)
       (KArray{}, _) -> die $ "Expected exactly one universal array-lambda parameter, received " ++ show parameters
@@ -861,13 +879,18 @@ ppArrayLambda cfg arraySV lambdaInfo@(LambdaInfo lambdaPgm parameters lambdaOutp
        usesGMP      = arrayLambdaUsesGMP cfg lambdaInfo
 
        nestedLambdas = [sv | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments]
-       tableLookups  = [sv | (sv, SBVApp LkUp{} _) <- assignments]
 
-       generatedAssignments = [ppExpr cfg lambdaConsts expression sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
-                              | (sv, expression) <- assignments]
+       generatedTables = map (ppTable cfg False lambdaConsts) tables
+
+       generatedAssignments = [(cLocation lambdaConsts sv, doc, needed)
+                              | (sv, expression) <- assignments
+                              , let (doc, needed) = ppExpr cfg lambdaConsts expression sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
+                              ]
+
+       assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
 
        requirements = Set.unions
-         [ Set.unions (map snd generatedAssignments)
+         [ Set.unions [needed | (_, _, needed) <- generatedAssignments]
          , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
          , if usesGMP then Set.singleton CRequiresGMP else Set.empty
          ]
@@ -877,7 +900,7 @@ ppArrayLambda cfg arraySV lambdaInfo@(LambdaInfo lambdaPgm parameters lambdaOutp
              P.<> parens (fsep (punctuate comma [text "const void *context", text (showCType keyKind) <+> text (show parameter)]))
           $$ text "{"
           $$ nest 2 (   contextSetup
-                     $$ vcat (map fst generatedAssignments)
+                     $$ vcat (map snd (mergeLocated generatedTables assignmentDocs))
                      $$ text "const" <+> text (showCType valueKind) <+> text "__sbv_lambda_result" <+> text "=" <+> showSV cfg lambdaConsts lambdaOutput P.<> semi
                      $$ contextCommit
                      $$ text "return __sbv_lambda_result;"

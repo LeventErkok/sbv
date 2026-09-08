@@ -318,9 +318,14 @@ arrayLambdaName array = "sbv_array_lambda_" ++ show array
 -- | Check whether a structured lambda requires access to its enclosing
 -- function's exact-number allocation arena.
 arrayLambdaUsesGMP :: CgConfig -> LambdaInfo -> Bool
-arrayLambdaUsesGMP cfg (LambdaInfo assignments params lambdaOutput constants)
+arrayLambdaUsesGMP cfg LambdaInfo{ liAssignments = assignments
+                                 , liParams      = params
+                                 , liOutput      = lambdaOutput
+                                 , liConsts      = constants
+                                 , liTables      = tables
+                                 }
   = any (isExactGMPKind cfg . kindOf) values
- where values = lambdaOutput : map snd params ++ map fst (F.toList assignments) ++ map fst constants
+ where values = lambdaOutput : map snd params ++ map fst (F.toList assignments) ++ map fst constants ++ concatMap snd tables
 
 -- | Return the key/value suffix shared by the generated names for an array
 -- kind.

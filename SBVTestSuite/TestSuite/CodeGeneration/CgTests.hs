@@ -42,6 +42,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile repeated array types into a library" persistentArrayLibrary
   , testCase "compile and execute a callback-backed array input" callbackArrayInput
   , testCase "compile and execute a structured lambda array" structuredLambdaArray
+  , testCase "compile and execute structured lambda tables" structuredLambdaTables
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   ]
  where thd (_, _, r) = r
@@ -202,9 +203,10 @@ persistentArrayLibrary = withSystemTempDirectory "sbv-persistent-array-library" 
 
       lambdaComponent = do
         cgOverwriteFiles True
-        cgSetDriverValues [9]
+        cgSetDriverValues [1]
         key <- cgInput "key" :: SBVCodeGen SWord16
-        let source = lambdaArray (\index -> sFromIntegral index * 3 + 1) :: SArray Word16 Word32
+        let source = lambdaArray (\index -> select [sFromIntegral index * 3 + 1, sFromIntegral index * 3 + 2] 0 index :: SWord32)
+                     :: SArray Word16 Word32
         cgReturn (readArray source key)
 
   (_, cfg, bundle) <- compileToCLib' "persistentArrayLibrary"
@@ -215,7 +217,7 @@ persistentArrayLibrary = withSystemTempDirectory "sbv-persistent-array-library" 
   renderCgPgmBundle (Just dir) (cfg, bundle)
   stdoutText <- compileAndRunGenerated dir "persistentArrayLibrary"
   mapM_ (\fragment -> assertBool ("Expected generated library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
-    ["0x00000029UL", "0x0000002aUL", "0x0000001cUL"]
+    ["0x00000029UL", "0x0000002aUL", "0x00000005UL"]
 
 -- | Exercise the borrowed callback descriptor used for a public array input,
 -- including local writes that shadow the callback only at matching keys.
@@ -255,6 +257,27 @@ structuredLambdaArray = withSystemTempDirectory "sbv-structured-lambda-array" $ 
   mapM_ (\fragment -> assertBool ("Expected structured-lambda output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
     [ "0x00000063UL"
     , "nextValue = 0x0000001fUL"
+    ]
+
+-- | Exercise parameter-dependent tables in two structured lambdas, ensuring
+-- their independently numbered local table declarations do not collide.
+structuredLambdaTables :: Assertion
+structuredLambdaTables = withSystemTempDirectory "sbv-structured-lambda-tables" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        key <- cgInput "key" :: SBVCodeGen SWord8
+        let first  = lambdaArray (\index -> select [sFromIntegral index + 10, sFromIntegral index + 20] 99 index :: SWord32)
+                     :: SArray Word8 Word32
+            second = lambdaArray (\index -> select [sFromIntegral index * 2, sFromIntegral index * 3] 77 index :: SWord32)
+                     :: SArray Word8 Word32
+        cgOutput "firstValue" (readArray first key)
+        cgReturn (readArray second key)
+
+  stdoutText <- compileProgramAndRunGenerated dir "structuredLambdaTables" program
+  mapM_ (\fragment -> assertBool ("Expected structured-lambda table output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "0x00000003UL"
+    , "firstValue = 0x00000015UL"
     ]
 
 -- | Exercise 'freeArray' by supplying the corresponding total C function as

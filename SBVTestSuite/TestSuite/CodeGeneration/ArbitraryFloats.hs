@@ -44,6 +44,7 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "preserve arbitrary floating-point array-key equality" arbitraryFloatArrayKeys
   , testCase "compile and execute an arbitrary-float callback-backed array" arbitraryFloatArrayInput
   , testCase "compile and execute an arbitrary-float structured lambda array" arbitraryFloatLambdaArray
+  , testCase "compile and execute an arbitrary-float structured lambda table" arbitraryFloatLambdaTable
   , testCase "compile and execute a mixed repeated-type library" mixedRepeatedTypeLibrary
   , testCase "compile a repeated-type library without a driver" repeatedTypeLibraryWithoutDriver
   ]
@@ -317,6 +318,22 @@ arbitraryFloatLambdaArray = withSystemTempDirectory "sbv-arbitrary-float-lambda-
       bias     = 2 ^ (14 :: Int) - 1 :: Integer
       threeRaw = (bias + 1) * 2 ^ (112 :: Int) + 2 ^ (111 :: Int)
   compileAndRunLibBF dir "arbitraryFloatLambdaArray" program (asHex 2 threeRaw)
+
+-- | Exercise LibBF-valued table entries constructed from a structured
+-- lambda's parameter and selected entirely inside its retained DAG.
+arbitraryFloatLambdaTable :: Assertion
+arbitraryFloatLambdaTable = withSystemTempDirectory "sbv-arbitrary-float-lambda-table" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        key <- cgInput "key" :: SBVCodeGen SWord8
+        let source = lambdaArray (\index -> select [toFP index, fpAdd sRNE (toFP index) 1] 0 index)
+                     :: SArray Word8 (FloatingPoint 15 113)
+        cgReturn (sFloatingPointAsSWord (readArray source key) :: SWord 128)
+      toFP value = toSFloatingPoint sRNE value :: SFloatingPoint 15 113
+      bias       = 2 ^ (14 :: Int) - 1 :: Integer
+      twoRaw     = (bias + 1) * 2 ^ (112 :: Int)
+  compileAndRunLibBF dir "arbitraryFloatLambdaTable" program (asHex 2 twoRaw)
 
 -- | Exercise repeated declarations and dependencies in a mixed generated library.
 mixedRepeatedTypeLibrary :: Assertion

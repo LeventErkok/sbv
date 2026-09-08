@@ -34,7 +34,7 @@ import qualified Data.Text as T
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
 import Data.SBV.SMT.SMTLib2
-import Data.SBV.Utils.Lib       (showText)
+import Data.SBV.Utils.Lib       (mapToSortedList, showText)
 import Data.SBV.Utils.PrettyNum
 
 import           Data.SBV.Core.Symbolic hiding   (mkNewState)
@@ -226,6 +226,7 @@ extractLambdaInfo st = do
    linps        <- readIORef (rlambdaInps st)
    outs         <- readIORef (routs st)
    cmap         <- readIORef (rconstMap st)
+   tables       <- map arrange . mapToSortedList <$> readIORef (rtblMap st)
    let params = [(q, getSV nsv) | (q, nsv) <- F.toList linps]
        outSV  = case F.toList outs of
                   [o] -> o
@@ -234,8 +235,10 @@ extractLambdaInfo st = do
                    , liParams      = params
                    , liOutput      = outSV
                    , liConsts      = map swap $ Map.toList cmap
+                   , liTables      = tables
                    }
-   where swap (a, b) = (b, a)
+   where arrange (i, (indexKind, resultKind, elements)) = ((i, indexKind, resultKind), elements)
+         swap (a, b) = (b, a)
 
 -- | Create an anonymous lambda, rendered as n SMTLib string. The kind passed is the kind of the final result.
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTLambda
@@ -463,9 +466,9 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
 
                rm = roundingMode cfg
 
-               -- NB. The following is dead-code, since we ensure tbls is empty
-               -- We used to support this, but there are issues, so dropping support
-               -- See, for instance, https://github.com/LeventErkok/sbv/issues/664
+               -- Tables are local to this lambda. Constant tables can be bound
+               -- immediately, while tables containing symbolic elements must be
+               -- introduced after their last element has been defined.
                (tableMap, constTables, nonConstTablesUnindexed) = constructTables consts tbls
 
                -- Index each non-const table with the largest index of SV it needs
