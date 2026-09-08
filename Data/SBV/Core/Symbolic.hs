@@ -22,11 +22,13 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE PatternSynonyms            #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE ViewPatterns               #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
@@ -34,7 +36,7 @@ module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV
   , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..), ADTOp(..)
-  , RegExp(..), regExpToSMTString, SMTLambda(..)
+  , RegExp(..), regExpToSMTString, SMTLambda(SMTLambda), smtLambdaWithInfo, smtLambdaText, smtLambdaInfo
   , Quantifier(..), needsExistentials, SBVContext(..), globalSBVContext, VarContext(..)
   , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted
   , SVal(..)
@@ -506,15 +508,51 @@ instance Show RegExOp where
   show (RegExEq  r1 r2) = "(= "        ++ T.unpack (regExpToSMTString r1) ++ " " ++ T.unpack (regExpToSMTString r2) ++ ")"
   show (RegExNEq r1 r2) = "(distinct " ++ T.unpack (regExpToSMTString r1) ++ " " ++ T.unpack (regExpToSMTString r2) ++ ")"
 
--- | For now, we represent lambda functions in op with their SMTLib equivalent strings.
--- This might change in the future.
-newtype SMTLambda = SMTLambda T.Text
-                  deriving (Eq, Ord, G.Data, Generic)
-                  deriving newtype NFData
+-- | A lambda's canonical SMT-Lib representation, optionally accompanied by
+-- the expression DAG from which it was rendered. The structured form lets
+-- non-SMT backends consume lambdas without parsing SMT-Lib.
+data SMTLambda = SMTLambdaValue T.Text (Maybe LambdaInfo)
+               deriving (G.Data, Generic)
+
+-- | Compatibility constructor and pattern for an SMT-text-only lambda. The
+-- pattern also matches lambdas carrying retained backend metadata.
+pattern SMTLambda :: T.Text -> SMTLambda
+pattern SMTLambda textValue <- (smtLambdaText -> textValue)
+  where SMTLambda textValue = SMTLambdaValue textValue Nothing
+
+{-# COMPLETE SMTLambda #-}
+
+-- | Construct a lambda with both its canonical SMT-Lib text and retained
+-- expression DAG.
+smtLambdaWithInfo :: T.Text -> LambdaInfo -> SMTLambda
+smtLambdaWithInfo textValue lambdaInfo = SMTLambdaValue textValue (Just lambdaInfo)
+
+-- | Compare lambdas by their canonical SMT-Lib representation. The retained
+-- DAG is backend metadata and does not affect symbolic identity.
+instance Eq SMTLambda where
+  left == right = smtLambdaText left == smtLambdaText right
+
+-- | Order lambdas by their canonical SMT-Lib representation. The retained
+-- DAG is backend metadata and does not affect symbolic identity.
+instance Ord SMTLambda where
+  compare left right = compare (smtLambdaText left) (smtLambdaText right)
+
+-- | Fully evaluate both the canonical text and any retained expression DAG.
+instance NFData SMTLambda where
+  rnf (SMTLambdaValue textValue lambdaInfo) = rnf textValue `seq` rnf lambdaInfo
+
+-- | Return the canonical SMT-Lib rendering of a lambda.
+smtLambdaText :: SMTLambda -> T.Text
+smtLambdaText (SMTLambdaValue textValue _) = textValue
+
+-- | Return a lambda's retained expression DAG when it was constructed by
+-- SBV rather than directly from an SMT-Lib string.
+smtLambdaInfo :: SMTLambda -> Maybe LambdaInfo
+smtLambdaInfo (SMTLambdaValue _ lambdaInfo) = lambdaInfo
 
 -- | Simple show instance for SMTLambda
 instance Show SMTLambda where
-  show (SMTLambda s) = T.unpack s
+  show = T.unpack . smtLambdaText
 
 -- | Sequence operations. Indexed by the element kind.
 data SeqOp = SeqLen      Kind
@@ -1155,7 +1193,12 @@ data LambdaInfo = LambdaInfo
   , liParams      :: [(Quantifier, SV)]    -- ^ Formal parameters with quantifier
   , liOutput      :: SV                    -- ^ The output node
   , liConsts      :: [(SV, CV)]            -- ^ Constants used
-  }
+  } deriving G.Data
+
+-- | Fully evaluate the retained pieces of a compiled lambda body.
+instance NFData LambdaInfo where
+  rnf LambdaInfo{liAssignments, liParams, liOutput, liConsts}
+    = rnf liAssignments `seq` rnf liParams `seq` rnf liOutput `seq` rnf liConsts
 
 -- | The state of the symbolic interpreter
 data State  = State { sbvContext            :: SBVContext

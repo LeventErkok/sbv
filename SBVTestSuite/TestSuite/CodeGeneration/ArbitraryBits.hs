@@ -42,6 +42,7 @@ tests = testGroup "CodeGeneration.ArbitraryBits"
   , testCase "compile and execute checked wide table lookup" wideLookup
   , testCase "compile and execute wide array keys and values" wideArray
   , testCase "compile and execute a wide callback-backed array" wideArrayInput
+  , testCase "compile and execute a wide structured lambda array" wideLambdaArray
   , testCase "compile and execute arithmetic boundary cases" arithmeticBoundaries
   ]
 
@@ -206,6 +207,20 @@ wideArrayInput = withSystemTempDirectory "sbv-wide-array-input" $ \dir -> do
       keySample   = 2 ^ (672 :: Int) + 17
       valueSample = 2 ^ (256 :: Int) + 5
   compileAndRun dir "wideArrayInput" program (asHex 5 valueSample)
+
+-- | Exercise a structured array lambda whose parameter, local arithmetic,
+-- and result all use the 673-bit limb representation.
+wideLambdaArray :: Assertion
+wideLambdaArray = withSystemTempDirectory "sbv-wide-lambda-array" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [keySample]
+        key <- cgInput "key" :: SBVCodeGen (SWord 673)
+        let source = lambdaArray (\index -> index * 3 + 5) :: SArray (WordN 673) (WordN 673)
+        cgReturn (readArray source key)
+      keySample = 2 ^ (672 :: Int) + 17
+      expected  = (keySample * 3 + 5) `mod` (2 ^ (673 :: Int))
+  compileAndRun dir "wideLambdaArray" program (asHex 11 expected)
 
 -- | Exercise division-by-zero, extreme shifts, and signed-minimum division.
 arithmeticBoundaries :: Assertion

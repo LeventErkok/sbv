@@ -36,7 +36,7 @@ import Data.SBV.Control.Types
 import Data.SBV.SMT.Utils
 
 import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName, getUserName', getSV, regExpToSMTString, NROp(..), showNROp
-                              , SMTDef(..), SMTLambda(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..), ADTOp(..)
+                              , SMTDef(..), smtLambdaText, ResultInp(..), ProgInfo(..), SpecialRelOp(..), ADTOp(..)
                               )
 
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cvToSMTLib)
@@ -835,10 +835,10 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (KindCast f t) [a]) = handleKindCast f t (cvtSV a)
 
-        sh (SBVApp (ArrayInit (Left (f, t))) [a])        = "((as const (Array " <> smtType f <> " " <> smtType t <> ")) " <> cvtSV a <> ")"
-        sh (SBVApp (ArrayInit (Right (SMTLambda s))) []) = s
-        sh (SBVApp ReadArray             [a, i])         = "(select " <> cvtSV a <> " " <> cvtSV i <> ")"
-        sh (SBVApp WriteArray            [a, i, e])      = "(store "  <> cvtSV a <> " " <> cvtSV i <> " " <> cvtSV e <> ")"
+        sh (SBVApp (ArrayInit (Left (f, t))) [a])         = "((as const (Array " <> smtType f <> " " <> smtType t <> ")) " <> cvtSV a <> ")"
+        sh (SBVApp (ArrayInit (Right lambdaDef)) [])      = smtLambdaText lambdaDef
+        sh (SBVApp ReadArray                    [a, i])    = "(select " <> cvtSV a <> " " <> cvtSV i <> ")"
+        sh (SBVApp WriteArray                   [a, i, e]) = "(store "  <> cvtSV a <> " " <> cvtSV i <> " " <> cvtSV e <> ")"
 
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" <> nm <> " " <> T.unwords (map cvtSV args) <> ")"

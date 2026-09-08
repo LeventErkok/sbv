@@ -25,7 +25,7 @@ import qualified Data.Text     as T
 import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
 
-import Data.SBV.Core.Symbolic (ResultInp(..), ProgInfo(..))
+import Data.SBV.Core.Symbolic (LambdaInfo(..), ResultInp(..), ProgInfo(..), smtLambdaInfo)
 
 -- Work around the fact that GHC 8.4.1 started exporting <>.. Hmm..
 import Text.PrettyPrint.HughesPJ
@@ -646,11 +646,12 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        post   = text ""
              $$ vcat (map codeSeg cgs)
              $$ extDecls
-             $$ (if requires CRequiresWideBV then wideBVRuntime wideKinds assignments else empty)
-             $$ (if requires CRequiresLibBF  then arbitraryFPRuntime fpKinds assignments else empty)
+             $$ (if requires CRequiresWideBV then wideBVRuntime wideKinds allAssignments else empty)
+             $$ (if requires CRequiresLibBF  then arbitraryFPRuntime fpKinds allAssignments else empty)
              $$ (if requires CRequiresNativeFPRounding then nativeFPRuntime else empty)
-             $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo assignments else empty)
+             $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo allAssignments else empty)
              $$ (if requires CRequiresArrays then arrayRuntime cfg arrays else empty)
+             $$ vcat lambdaDocs
              $$ proto
              $$ text "{"
              $$ text ""
@@ -670,12 +671,24 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        assignments = F.toList asgns
 
+       lambdaDefinitions = [ (sv, lambdaInfo)
+                           | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- assignments
+                           , Just lambdaInfo <- [smtLambdaInfo lambdaDef]
+                           ]
+
+       lambdaAssignments = concatMap (F.toList . liAssignments . snd) lambdaDefinitions
+       allAssignments    = assignments ++ lambdaAssignments
+
+       generatedLambdas = map (uncurry (ppArrayLambda cfg)) lambdaDefinitions
+       lambdaDocs        = map fst generatedLambdas
+
        generatedAssignments = map genAsgn assignments
        assignmentDocs        = [(location, doc) | (location, doc, _) <- generatedAssignments]
 
        requirements = Set.unions
          [ kindRequirements
          , Set.unions [needed | (_, _, needed) <- generatedAssignments]
+         , Set.unions (map snd generatedLambdas)
          , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
          ]
 
@@ -821,6 +834,65 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                                          []     -> Nothing
                                          (f:rs) -> Just $ (" * SOURCE   : " ++ f) : map (" *            " ++)  rs
                locInfo _         = Nothing
+
+-- | Lower a retained one-argument array lambda into a C lookup callback. Its
+-- local DAG uses the ordinary scalar lowering pipeline, so wide bit-vectors,
+-- floating-point values, and exact numbers retain their usual semantics.
+ppArrayLambda :: CgConfig -> SV -> LambdaInfo -> (Doc, Set.Set CRequirement)
+ppArrayLambda cfg arraySV lambdaInfo@(LambdaInfo lambdaPgm parameters lambdaOutput constants)
+  = case (kindOf arraySV, parameters) of
+      (KArray keyKind valueKind, [(ALL, parameter)])
+        | kindOf parameter /= keyKind
+        -> die $ "Array-lambda parameter kind " ++ show (kindOf parameter) ++ " does not match " ++ show keyKind
+        | kindOf lambdaOutput /= valueKind
+        -> die $ "Array-lambda result kind " ++ show (kindOf lambdaOutput) ++ " does not match " ++ show valueKind
+        | not (null nestedLambdas)
+        -> tbd "Nested structured lambdas inside lambda arrays"
+        | not (null tableLookups)
+        -> tbd "Tables inside structured array lambdas"
+        | True
+        -> (helper keyKind valueKind parameter, requirements)
+      (KArray{}, _) -> die $ "Expected exactly one universal array-lambda parameter, received " ++ show parameters
+      (kind, _)     -> die $ "Expected an array-valued lambda node, received " ++ show kind
+ where assignments = F.toList lambdaPgm
+       lambdaConsts = (falseSV, falseCV) : (trueSV, trueCV) : constants
+       lambdaValues = lambdaOutput : map snd parameters ++ map fst assignments ++ map fst constants
+       typeWidth    = maximum (0 : map (length . showCType) lambdaValues)
+       usesGMP      = arrayLambdaUsesGMP cfg lambdaInfo
+
+       nestedLambdas = [sv | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments]
+       tableLookups  = [sv | (sv, SBVApp LkUp{} _) <- assignments]
+
+       generatedAssignments = [ppExpr cfg lambdaConsts expression sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
+                              | (sv, expression) <- assignments]
+
+       requirements = Set.unions
+         [ Set.unions (map snd generatedAssignments)
+         , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
+         , if usesGMP then Set.singleton CRequiresGMP else Set.empty
+         ]
+
+       helper keyKind valueKind parameter
+         = text "static" <+> text (showCType valueKind) <+> text (arrayLambdaName arraySV)
+             P.<> parens (fsep (punctuate comma [text "const void *context", text (showCType keyKind) <+> text (show parameter)]))
+          $$ text "{"
+          $$ nest 2 (   contextSetup
+                     $$ vcat (map fst generatedAssignments)
+                     $$ text "const" <+> text (showCType valueKind) <+> text "__sbv_lambda_result" <+> text "=" <+> showSV cfg lambdaConsts lambdaOutput P.<> semi
+                     $$ contextCommit
+                     $$ text "return __sbv_lambda_result;"
+                    )
+          $$ text "}"
+          $$ text ""
+
+       contextSetup
+         | usesGMP =  text "sbv_gmp_ctx *__sbv_gmp_parent_ctx = (sbv_gmp_ctx *) context;"
+                   $$ text "sbv_gmp_ctx __sbv_gmp_ctx = *__sbv_gmp_parent_ctx;"
+         | True    = parens (text "void") <+> text "context" P.<> semi
+
+       contextCommit
+         | usesGMP = text "*__sbv_gmp_parent_ctx = __sbv_gmp_ctx;"
+         | True    = empty
 
 handlePB :: PBOp -> [Doc] -> Doc
 handlePB o args = case o of

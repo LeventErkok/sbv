@@ -39,6 +39,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute exact table lookup" exactTableLookup
   , testCase "compile and execute exact array keys and values" exactArray
   , testCase "compile and execute an exact callback-backed array" exactArrayInput
+  , testCase "compile and execute an exact structured lambda array" exactLambdaArray
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
 
@@ -234,6 +235,19 @@ exactArrayInput = withSystemTempDirectory "sbv-exact-array-input" $ \dir -> do
         cgOutput "sourceValue" (readArray source key)
         cgReturn (readArray updated key)
   compileAndRunGMP dir "exactArrayInput" program ["20/3", "sourceValue =7"]
+
+-- | Exercise repeated reads from a structured array lambda whose arithmetic
+-- allocates exact rational results in the enclosing generated-call arena.
+exactLambdaArray :: Assertion
+exactLambdaArray = withSystemTempDirectory "sbv-exact-lambda-array" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [20]
+        key <- cgInput "key" :: SBVCodeGen SInteger
+        let source = lambdaArray (\index -> sFromIntegral index / 3) :: SArray Integer AlgReal
+        cgOutput "value" (readArray source key)
+        cgReturn (readArray source (key + 1))
+  compileAndRunGMP dir "exactLambdaArray" program ["7", "value =20/3"]
 
 -- | Exercise merged headers, archives, and drivers for exact-number libraries.
 exactNumberLibrary :: Assertion

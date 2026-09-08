@@ -2543,7 +2543,7 @@ replayDAG cfg st recFuncNames definedFuncs startMap dag = do
 mapOpSVs :: (SV -> SV) -> Op -> Op
 mapOpSVs f (LkUp p sv1 sv2)                  = LkUp p (f sv1) (f sv2)
 mapOpSVs f (IEEEFP (FP_Cast fk tk sv))       = IEEEFP (FP_Cast fk tk (f sv))
-mapOpSVs _ (ArrayInit (Right (SMTLambda s)))  = ArrayInit (Right (SMTLambda s))  -- Lambda strings don't contain SVs to map
+mapOpSVs _ (ArrayInit (Right lambdaDef))       = ArrayInit (Right lambdaDef)  -- Lambda-local SVs must not be mapped in the enclosing DAG.
 mapOpSVs _ op                                 = op
 
 -- | Compute the reaching condition for each SV: under what boolean condition
@@ -5011,8 +5011,8 @@ smtHOFunctionGen :: forall a b f.
                    -> (a -> SBV b)         -- ^ The ho-function we're modeling
                    ->  a -> SBV b          -- ^ The resulting function
 smtHOFunctionGen nm f measure hof arg = SBV $ SVal (kindOf (Proxy @(SBV b))) $ Right $ cache r
-  where r st = do SMTLambda lam <- lambdaStr st HigherOrderArg (arrayResultKind (kindOf (Proxy @f))) f
-                  let uniq = lambdaFingerprint st (T.unpack lam)
+  where r st = do lambdaDef <- lambdaStr st HigherOrderArg (arrayResultKind (kindOf (Proxy @f))) f
+                  let uniq = lambdaFingerprint st (T.unpack (smtLambdaText lambdaDef))
                   sbvToSV st (smtFunctionDef (atProxy (Proxy @f) nm <> "_" <> uniq) measure hof arg)
 
 -- | Chase through nested array kinds to find the final result kind. Higher-order
