@@ -215,7 +215,8 @@ arrayConst renderValue (CV kind@(KArray keyKind valueKind) (CArray (ArrayModel a
 arrayConst _ _ = Nothing
 
 -- | Lower array initialization, reads, writes, and array-valued conditionals.
--- Lambda-backed and free arrays, nested arrays, and general extensional array
+-- Structured lambda-backed arrays, including free arrays, become callback
+-- roots. Text-only lambdas, nested arrays, and general extensional array
 -- equality are rejected with focused diagnostics.
 arrayExpr :: CgConfig -> Op -> [SV] -> SV -> [Doc] -> Maybe CLowering
 arrayExpr cfg op svs resultSV args
