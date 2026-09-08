@@ -102,9 +102,11 @@ gmpRuntime cfg kinds assignments
    ++ concat [realRuntime    | needsExactReal]
    ++ concat [crossRuntime   | needsExactInteger && needsExactReal]
    ++ concat [concatMap wideIntegerRuntime conversions | needsExactInteger]
+   ++ concat [concatMap wideRealRuntime realConversions | needsExactReal]
  where needsExactInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kinds
        needsExactReal    = isExactGMPKind cfg KReal      && KReal      `Set.member` kinds
        conversions       = nub (concatMap wideIntegerConversions assignments)
+       realConversions   = nub (concatMap wideRealConversions assignments)
 
        markUnused line = case stripPrefix "static " line of
                            Just rest -> "static SBV_CGEN_UNUSED " ++ rest
@@ -197,6 +199,8 @@ gmpExpr cfg op svs resultKind args
          = lower $ namedCall "sbv_gmp_real_from_integer" [text "&__sbv_gmp_ctx", a]
          | fr == KReal && to == KUnbounded
          = lower $ namedCall "sbv_gmp_integer_from_real" [text "&__sbv_gmp_ctx", a]
+         | isWideBV fr && to == KReal
+         = lowerWith [CRequiresGMP, CRequiresWideBV] $ namedCall (realFromWideName fr) [text "&__sbv_gmp_ctx", a]
          | isWideBV fr && to == KUnbounded
          = lowerWith [CRequiresGMP, CRequiresWideBV] $ namedCall (integerFromWideName fr) [text "&__sbv_gmp_ctx", a]
          | fr == KUnbounded && isWideBV to
@@ -233,6 +237,18 @@ wideIntegerConversions (_, SBVApp (KindCast fr to) _)
   | isWideBV fr && to == KUnbounded = [IntegerFromWide fr]
   | fr == KUnbounded && isWideBV to = [IntegerToWide to]
 wideIntegerConversions _ = []
+
+-- | A generated conversion from a limb-backed bit-vector to an exact GMP
+-- rational real.
+newtype WideRealConversion = RealFromWide Kind
+                          deriving Eq
+
+-- | Discover limb-backed bit-vector to exact-real casts in one symbolic
+-- assignment.
+wideRealConversions :: (SV, SBVExpr) -> [WideRealConversion]
+wideRealConversions (_, SBVApp (KindCast fr KReal) _)
+  | isWideBV fr = [RealFromWide fr]
+wideRealConversions _ = []
 
 -- | Emit an exact conversion helper for one wide bit-vector kind.
 wideIntegerRuntime :: WideIntegerConversion -> [String]
@@ -276,6 +292,32 @@ wideIntegerRuntime (IntegerToWide k) =
          | remainder == 0 = (1 `shiftL` 64) - 1
          | True           = (1 `shiftL` remainder) - 1
 
+-- | Emit an exact-real conversion helper for one wide bit-vector kind.
+wideRealRuntime :: WideRealConversion -> [String]
+wideRealRuntime (RealFromWide k) =
+  [ "static SReal " ++ realFromWideName k ++ "(sbv_gmp_ctx *ctx, " ++ boundedCType k ++ " a)"
+  , "{"
+  , "  mpq_ptr r = sbv_gmp_new_real(ctx);"
+  , "  mpz_import(mpq_numref(r), " ++ show limbCount ++ ", -1, sizeof(a.limb[0]), 0, 0, a.limb);"
+  ]
+  ++ signedAdjustment
+  ++ [ "  return r;"
+     , "}"
+     , ""
+     ]
+ where limbCount = (intSizeOf k + 63) `div` 64
+       signedAdjustment
+         | hasSign k =
+             [ "  if ((a.limb[" ++ show topLimb ++ "] & " ++ u64 signMask ++ ") != 0) {"
+             , "    mpz_t modulus; mpz_init_set_ui(modulus, 1); mpz_mul_2exp(modulus, modulus, " ++ show width ++ ");"
+             , "    mpz_sub(mpq_numref(r), mpq_numref(r), modulus); mpz_clear(modulus);"
+             , "  }"
+             ]
+         | True = []
+       width    = intSizeOf k
+       topLimb  = (width - 1) `div` 64
+       signMask = 1 `shiftL` ((width - 1) `mod` 64)
+
 -- | Construct the helper name for a wide bit-vector to exact-integer cast.
 integerFromWideName :: Kind -> String
 integerFromWideName k = "sbv_gmp_integer_from_" ++ boundedTag k
@@ -283,6 +325,10 @@ integerFromWideName k = "sbv_gmp_integer_from_" ++ boundedTag k
 -- | Construct the helper name for an exact-integer to wide bit-vector cast.
 integerToWideName :: Kind -> String
 integerToWideName k = "sbv_gmp_integer_to_" ++ boundedTag k
+
+-- | Construct the helper name for a wide bit-vector to exact-real cast.
+realFromWideName :: Kind -> String
+realFromWideName k = "sbv_gmp_real_from_" ++ boundedTag k
 
 -- | Return the C type used for a bounded SBV kind.
 boundedCType :: Kind -> String

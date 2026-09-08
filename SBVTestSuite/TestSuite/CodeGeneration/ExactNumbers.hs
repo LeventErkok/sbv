@@ -34,6 +34,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute Euclidean division" exactIntegerDivision
   , testCase "compile and execute native conversions" exactNativeConversions
   , testCase "compile and execute wide conversions" exactWideConversions
+  , testCase "compile and execute wide real conversions" exactWideRealConversions
   , testCase "compile and execute rational arithmetic" exactRealArithmetic
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
@@ -126,6 +127,41 @@ exactWideConversions = withSystemTempDirectory "sbv-exact-wide-conversions" $ \d
     , "signedRoundTrip = 1"
     , "wrappedUnsigned =" ++ asHex 11 wrapped
     , "wrappedSigned =" ++ asHex 11 wrapped
+    ]
+
+-- | Exercise exact conversion of signed and unsigned limb-backed values to
+-- rational reals, followed by explicit floor and truncation back to wide
+-- bit-vectors through 'SInteger'.
+exactWideRealConversions :: Assertion
+exactWideRealConversions = withSystemTempDirectory "sbv-exact-wide-real-conversions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [unsignedSample, signedSample]
+        unsignedValue <- cgInput "unsignedValue" :: SBVCodeGen (SWord 673)
+        signedValue   <- cgInput "signedValue"   :: SBVCodeGen (SInt 673)
+        let unsignedReal = sFromIntegral unsignedValue :: SReal
+            signedReal   = sFromIntegral signedValue :: SReal
+            fraction     = signedReal / 3
+            floorWide    = sFromIntegral (sRealToSIntegerFloor fraction) :: SInt 673
+            truncateWide = sFromIntegral (sRealToSIntegerTruncate fraction) :: SInt 673
+        cgOutput "unsignedReal" unsignedReal
+        cgOutput "signedReal" signedReal
+        cgOutput "fraction" fraction
+        cgOutput "floorWide" floorWide
+        cgOutput "truncateWide" truncateWide
+        cgReturn (unsignedReal + signedReal)
+      unsignedSample = 2 ^ (672 :: Int) + 0x123456789abcdef
+      signedSample   = negate (2 ^ (671 :: Int)) + 0xfedcba987654321
+      floorResult    = signedSample `div` 3
+      truncateResult = signedSample `quot` 3
+      modulus        = 2 ^ (673 :: Int)
+  compileAndRunGMP dir "exactWideRealConversions" program
+    [ show (unsignedSample + signedSample)
+    , "unsignedReal =" ++ show unsignedSample
+    , "signedReal =" ++ show signedSample
+    , "fraction =" ++ show signedSample ++ "/3"
+    , "floorWide =" ++ asHex 11 (floorResult `mod` modulus)
+    , "truncateWide =" ++ asHex 11 (truncateResult `mod` modulus)
     ]
 
 -- | Exercise exact rational arithmetic and integer-to-real conversion.
