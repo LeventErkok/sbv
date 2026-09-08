@@ -20,6 +20,8 @@ module Data.SBV.Compilers.C.FP
   , arbitraryFPRuntime
   , arbitraryFPConst
   , arbitraryFPExpr
+  , nativeFPRuntime
+  , nativeFPExpr
   , arbitraryFPNormalize
   , arbitraryFPPrint
   , arbitraryFPCType
@@ -205,6 +207,146 @@ arbitraryFPExpr consts op svs resultKind args
        unsupported = error $ "SBV->C: arbitrary floating-point lowering does not yet support " ++ show op
                           ++ " with argument kinds " ++ show (map kindOf svs)
                           ++ " and result kind " ++ show resultKind
+
+-- | Emit LibBF adapters for native 'SFloat' and 'SDouble' operations whose
+-- rounding mode cannot safely be expressed as an ordinary C expression.
+nativeFPRuntime :: Doc
+nativeFPRuntime = text . unlines . map markUnused $
+     ["/* Exact rounding adapters for native floating-point operations. */"
+     , "#ifndef SBV_CGEN_UNUSED"
+     , "#if defined(__GNUC__) || defined(__clang__)"
+     , "#define SBV_CGEN_UNUSED __attribute__((unused))"
+     , "#else"
+     , "#define SBV_CGEN_UNUSED"
+     , "#endif"
+     , "#endif"
+     , ""
+     , "static inline bf_rnd_t sbv_native_bf_rounding_mode(int mode)"
+     , "{"
+     , "  switch (mode) {"
+     , "    case 0: return BF_RNDN;"
+     , "    case 1: return BF_RNDNA;"
+     , "    case 2: return BF_RNDU;"
+     , "    case 3: return BF_RNDD;"
+     , "    case 4: return BF_RNDZ;"
+     , "    default: abort();"
+     , "  }"
+     , "}"
+     , ""
+     , "static void *sbv_native_bf_realloc(void *opaque, void *ptr, size_t size)"
+     , "{"
+     , "  (void) opaque;"
+     , "  return realloc(ptr, size);"
+     , "}"
+     , ""
+     ]
+  ++ concatMap format [("SFloat", "float", 24, 8), ("SDouble", "double", 53, 11)]
+ where markUnused line = case splitAt 14 line of
+                           ("static inline ", rest) -> "static inline SBV_CGEN_UNUSED " ++ rest
+                           _                        -> line
+
+       format :: (String, String, Int, Int) -> [String]
+       format (cType, tag, precision, exponentBits) =
+            ["static inline bf_flags_t sbv_native_" ++ tag ++ "_flags(bf_rnd_t rnd)"
+            , "{ return (bf_flags_t) rnd | BF_FLAG_SUBNORMAL | bf_set_exp_bits(" ++ show exponentBits ++ "); }"
+            , ""
+            , "static inline " ++ cType ++ " sbv_native_" ++ tag ++ "_finish(bf_t *value, bf_rnd_t rnd)"
+            , "{"
+            , "  double result;"
+            , "  bf_get_float64(value, &result, rnd);"
+            , "  return (" ++ cType ++ ") result;"
+            , "}"
+            , ""
+            , "static inline " ++ cType ++ " sbv_native_" ++ tag ++ "_binary(" ++ cType ++ " a, " ++ cType ++ " b, bf_rnd_t rnd, int op)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x, y, r; " ++ cType ++ " result;"
+            , "  bf_context_init(&ctx, sbv_native_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &y); bf_init(&ctx, &r);"
+            , "  bf_set_float64(&x, (double) a); bf_set_float64(&y, (double) b);"
+            , "  if (op == 0) bf_add(&r, &x, &y, " ++ show precision ++ ", sbv_native_" ++ tag ++ "_flags(rnd));"
+            , "  else if (op == 1) bf_sub(&r, &x, &y, " ++ show precision ++ ", sbv_native_" ++ tag ++ "_flags(rnd));"
+            , "  else if (op == 2) bf_mul(&r, &x, &y, " ++ show precision ++ ", sbv_native_" ++ tag ++ "_flags(rnd));"
+            , "  else bf_div(&r, &x, &y, " ++ show precision ++ ", sbv_native_" ++ tag ++ "_flags(rnd));"
+            , "  result = sbv_native_" ++ tag ++ "_finish(&r, rnd);"
+            , "  bf_delete(&r); bf_delete(&y); bf_delete(&x); bf_context_end(&ctx); return result;"
+            , "}"
+            , ""
+            ]
+         ++ concatMap (binaryWrapper cType tag) [("add", 0), ("sub", 1), ("mul", 2), ("div", 3)]
+         ++ ["static inline " ++ cType ++ " sbv_native_" ++ tag ++ "_sqrt(" ++ cType ++ " a, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x, r; " ++ cType ++ " result;"
+            , "  bf_context_init(&ctx, sbv_native_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &r); bf_set_float64(&x, (double) a);"
+            , "  bf_sqrt(&r, &x, " ++ show precision ++ ", sbv_native_" ++ tag ++ "_flags(rnd)); result = sbv_native_" ++ tag ++ "_finish(&r, rnd);"
+            , "  bf_delete(&r); bf_delete(&x); bf_context_end(&ctx); return result;"
+            , "}"
+            , ""
+            , "static inline " ++ cType ++ " sbv_native_" ++ tag ++ "_round(" ++ cType ++ " a, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x; " ++ cType ++ " result;"
+            , "  bf_context_init(&ctx, sbv_native_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a);"
+            , "  bf_rint(&x, rnd); result = sbv_native_" ++ tag ++ "_finish(&x, rnd);"
+            , "  bf_delete(&x); bf_context_end(&ctx); return result;"
+            , "}"
+            , ""
+            , "static inline " ++ cType ++ " sbv_native_" ++ tag ++ "_fma(" ++ cType ++ " a, " ++ cType ++ " b, " ++ cType ++ " c, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x, y, z, r; " ++ cType ++ " result;"
+            , "  bf_context_init(&ctx, sbv_native_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &y); bf_init(&ctx, &z); bf_init(&ctx, &r);"
+            , "  bf_set_float64(&x, (double) a); bf_set_float64(&y, (double) b); bf_set_float64(&z, (double) c);"
+            , "  bf_mul(&r, &x, &y, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDN);"
+            , "  bf_add(&r, &r, &z, " ++ show precision ++ ", sbv_native_" ++ tag ++ "_flags(rnd)); result = sbv_native_" ++ tag ++ "_finish(&r, rnd);"
+            , "  bf_delete(&r); bf_delete(&z); bf_delete(&y); bf_delete(&x); bf_context_end(&ctx); return result;"
+            , "}"
+            , ""
+            ]
+
+       binaryWrapper :: String -> String -> (String, Int) -> [String]
+       binaryWrapper cType tag (suffix, operation) =
+         ["static inline " ++ cType ++ " sbv_native_" ++ tag ++ "_" ++ suffix ++ "(" ++ cType ++ " a, " ++ cType ++ " b, bf_rnd_t rnd)"
+         , "{ return sbv_native_" ++ tag ++ "_binary(a, b, rnd, " ++ show operation ++ "); }"
+         , ""]
+
+-- | Lower explicitly rounded native floating-point arithmetic. RNE remains a
+-- direct native C operation; other constants and symbolic modes use LibBF so
+-- all five SBV rounding modes have deterministic semantics.
+nativeFPExpr :: [(SV, CV)] -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
+nativeFPExpr consts (IEEEFP fpOp) svs resultKind args
+  | resultKind `elem` [KFloat, KDouble]
+  = case (fpOp, args, svs) of
+      (FP_Add             , [_rm, a, b]   , r:_) | needsAdapter r -> lower "add"   [a, b] r
+      (FP_Sub             , [_rm, a, b]   , r:_) | needsAdapter r -> lower "sub"   [a, b] r
+      (FP_Mul             , [_rm, a, b]   , r:_) | needsAdapter r -> lower "mul"   [a, b] r
+      (FP_Div             , [_rm, a, b]   , r:_) | needsAdapter r -> lower "div"   [a, b] r
+      (FP_FMA             , [_rm, a, b, c], r:_) | needsAdapter r -> lower "fma"   [a, b, c] r
+      (FP_Sqrt            , [_rm, a]      , r:_) | needsAdapter r -> lower "sqrt"  [a] r
+      (FP_RoundToIntegral , [_rm, a]      , r:_) | needsAdapter r -> lower "round" [a] r
+      _                                                           -> Nothing
+  | True = Nothing
+ where lower suffix values rm = Just . expressionLowering CByValue
+                                   [CRequiresLibBF, CRequiresLibM, CRequiresNativeFPRounding]
+                                 $ namedCall (nativePrefix resultKind ++ suffix)
+                                             (values ++ [nativeBFRoundingMode consts rm])
+
+       needsAdapter rm = case rm `lookup` consts of
+         Just (CV k (CADT ("RoundNearestTiesToEven", []))) | isRoundingMode k -> False
+         Just (CV k (CADT (_, [])))                        | isRoundingMode k -> True
+         Nothing                                           | isRoundingMode rm -> True
+         _ -> error $ "SBV->C: Expected a rounding mode, received " ++ show rm
+
+       nativePrefix KFloat  = "sbv_native_float_"
+       nativePrefix KDouble = "sbv_native_double_"
+       nativePrefix k       = error $ "SBV->C: Expected a native floating-point kind, received " ++ show k
+nativeFPExpr _ _ _ _ _ = Nothing
+
+-- | Render a LibBF rounding mode for a native floating-point adapter.
+nativeBFRoundingMode :: [(SV, CV)] -> SV -> Doc
+nativeBFRoundingMode consts sv = case sv `lookup` consts of
+  Just (CV k (CADT (rmName, [])))
+    | isRoundingMode k -> maybe bad (text . snd) (lookup rmName roundingModeNames)
+  Nothing
+    | isRoundingMode sv -> namedCall "sbv_native_bf_rounding_mode" [text (show sv)]
+  _                     -> bad
+ where bad = error $ "SBV->C: Expected a rounding mode, received " ++ show sv
 
 -- | Canonicalize externally supplied raw bits by clearing unused high bits.
 arbitraryFPNormalize :: Kind -> Doc -> Doc

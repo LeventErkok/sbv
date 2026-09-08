@@ -117,10 +117,15 @@ dependencyRequirements = do
     value <- cgInput "value" :: SBVCodeGen SFloat
     cgReturn (fpSqrt sRoundNearestTiesToEven value)
 
+  (_, _, roundedNativeFloatBundle) <- compileToC' "requirementsRoundedNativeFloat" $ do
+    value <- cgInput "value" :: SBVCodeGen SFloat
+    cgReturn (fpSqrt sRoundNearestTiesToAway value)
+
   assertEqual "wide bit-vectors should not add an external library" [[]]              (linkerFlags wideBundle)
   assertEqual "arbitrary floats should request LibBF and libm"       [["-lbf", "-lm"]] (linkerFlags fpBundle)
   assertEqual "exact integers should request GMP"                    [["-lgmp"]]        (linkerFlags integerBundle)
   assertEqual "native floating-point sqrt should request libm"       [["-lm"]]          (linkerFlags nativeFloatBundle)
+  assertEqual "explicit native rounding should request LibBF and libm" [["-lbf", "-lm"]] (linkerFlags roundedNativeFloatBundle)
 
 -- | Extract linker-option lists from the Makefile entries in a generated C
 -- bundle.

@@ -612,6 +612,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
              $$ extDecls
              $$ (if requires CRequiresWideBV then wideBVRuntime wideKinds assignments else empty)
              $$ (if requires CRequiresLibBF  then arbitraryFPRuntime fpKinds assignments else empty)
+             $$ (if requires CRequiresNativeFPRounding then nativeFPRuntime else empty)
              $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo assignments else empty)
              $$ proto
              $$ text "{"
@@ -906,6 +907,7 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
         selected = fromMaybe legacy $ chooseLowering
           [ gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs
+          , nativeFPExpr consts op opArgs (kindOf resultSV) renderedArgs
           , wideBVExpr op opArgs (kindOf resultSV) renderedArgs
           ]
 

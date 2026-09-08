@@ -38,6 +38,7 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute classification" arbitraryFloatClassification
   , testCase "compile and execute rounding modes" arbitraryFloatRoundingModes
   , testCase "compile and execute symbolic rounding modes" arbitraryFloatSymbolicRoundingMode
+  , testCase "compile and execute native rounding modes" nativeFloatRoundingModes
   , testCase "compile and execute special arithmetic" arbitraryFloatSpecialArithmetic
   , testCase "compile and execute a mixed repeated-type library" mixedRepeatedTypeLibrary
   , testCase "compile a repeated-type library without a driver" repeatedTypeLibraryWithoutDriver
@@ -166,6 +167,55 @@ arbitraryFloatSymbolicRoundingMode = withSystemTempDirectory "sbv-arbitrary-floa
   compileAndRunLibBF dir "arbitraryFloatSymbolicRoundingMode" program (asHex 2 expected)
  where rawHalf :: SFPHalf -> SWord 16
        rawHalf = sFloatingPointAsSWord
+
+-- | Exercise all constant rounding modes and runtime-selected modes while
+-- retaining native @float@ and @double@ values at the generated C boundary.
+nativeFloatRoundingModes :: Assertion
+nativeFloatRoundingModes = withSystemTempDirectory "sbv-native-float-rounding" $ \dir -> do
+  let floatProgram = do
+        cgOverwriteFiles True
+        cgSetDriverValues [0x3f800000, 0x33800000, 1, 2]
+        oneRaw   <- cgInput "oneBits"  :: SBVCodeGen SWord32
+        halfBits <- cgInput "halfBits" :: SBVCodeGen SWord32
+        modeRNA  <- cgInput "modeRNA"  :: SBVCodeGen SRoundingMode
+        modeRTP  <- cgInput "modeRTP"  :: SBVCodeGen SRoundingMode
+        let one     = sWord32AsSFloat oneRaw
+            halfUlp = sWord32AsSFloat halfBits
+            raw mode = sFromIntegral (sFloatAsSWord32 (fpAdd mode one halfUlp)) :: SWord 32
+        cgReturn (raw sRNE # raw sRNA # raw sRTP # raw sRTN # raw sRTZ # raw modeRNA # raw modeRTP :: SWord 224)
+
+      doubleProgram = do
+        cgOverwriteFiles True
+        cgSetDriverValues [0x3ff0000000000000, 0x3ca0000000000000, 1, 2]
+        oneRaw   <- cgInput "oneBits"  :: SBVCodeGen SWord64
+        halfBits <- cgInput "halfBits" :: SBVCodeGen SWord64
+        modeRNA  <- cgInput "modeRNA"  :: SBVCodeGen SRoundingMode
+        modeRTP  <- cgInput "modeRTP"  :: SBVCodeGen SRoundingMode
+        let one     = sWord64AsSDouble oneRaw
+            halfUlp = sWord64AsSDouble halfBits
+            raw mode = sFromIntegral (sDoubleAsSWord64 (fpAdd mode one halfUlp)) :: SWord 64
+        cgReturn (raw sRNE # raw sRNA # raw sRTP # raw sRTN # raw sRTZ # raw modeRNA # raw modeRTP :: SWord 448)
+
+      scalarProgram = do
+        cgOverwriteFiles True
+        cgSetDriverValues [0x3f800000, 0x33800000]
+        oneRaw   <- cgInput "oneBits"  :: SBVCodeGen SWord32
+        halfBits <- cgInput "halfBits" :: SBVCodeGen SWord32
+        let result = fpAdd sRNA (sWord32AsSFloat oneRaw) (sWord32AsSFloat halfBits)
+        cgOutput "resultBits" (sFloatAsSWord32 result)
+        cgReturn result
+
+      floatOne      = 0x3f800000
+      floatNext     = 0x3f800001
+      doubleOne     = 0x3ff0000000000000
+      doubleNext    = 0x3ff0000000000001
+      assemble width = foldl (\acc word -> acc * 2 ^ width + word) 0
+      floatExpected  = assemble (32 :: Int) [floatOne, floatNext, floatNext, floatOne, floatOne, floatNext, floatNext]
+      doubleExpected = assemble (64 :: Int) [doubleOne, doubleNext, doubleNext, doubleOne, doubleOne, doubleNext, doubleNext]
+
+  compileAndRunLibBF dir "nativeFloatRoundingModesFloat" floatProgram (asHex 4 floatExpected)
+  compileAndRunLibBF dir "nativeFloatRoundingModesDouble" doubleProgram (asHex 7 doubleExpected)
+  compileAndRunLibBF dir "nativeFloatRoundingScalar" scalarProgram "resultBits = 0x3f800001UL"
 
 -- | Exercise LibBF encoding of subnormal results, NaN, and signed zero.
 arbitraryFloatSpecialArithmetic :: Assertion
