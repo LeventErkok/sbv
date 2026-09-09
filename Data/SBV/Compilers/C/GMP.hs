@@ -137,6 +137,8 @@ gmpExpr :: CgConfig -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 gmpExpr cfg op svs resultKind args
   | not (isExactGMPKind cfg resultKind || any (isExactGMPKind cfg . kindOf) svs)
   = Nothing
+  | IEEEFP{} <- op
+  = Nothing
   | LkUp{} <- op
   = Nothing
   | Uninterpreted{} <- op

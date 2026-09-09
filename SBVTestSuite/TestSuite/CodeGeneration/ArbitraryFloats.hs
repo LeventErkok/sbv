@@ -40,12 +40,15 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute rounding modes" arbitraryFloatRoundingModes
   , testCase "compile and execute symbolic rounding modes" arbitraryFloatSymbolicRoundingMode
   , testCase "compile and execute native rounding modes" nativeFloatRoundingModes
+  , testCase "convert between native floats and bit-vectors" nativeFloatBitVectorConversions
+  , testCase "convert between native floats and exact numbers" nativeFloatExactConversions
   , testCase "compile and execute special arithmetic" arbitraryFloatSpecialArithmetic
   , testCase "compile and execute arbitrary-float table lookup" arbitraryFloatTableLookup
   , testCase "preserve arbitrary floating-point array-key equality" arbitraryFloatArrayKeys
   , testCase "compile and execute an arbitrary-float callback-backed array" arbitraryFloatArrayInput
   , testCase "compile and execute an arbitrary-float structured lambda array" arbitraryFloatLambdaArray
   , testCase "compile and execute an arbitrary-float structured lambda table" arbitraryFloatLambdaTable
+  , testCase "convert between arbitrary floats and exact numbers" arbitraryFloatExactConversions
   , testCase "compile and execute a mixed repeated-type library" mixedRepeatedTypeLibrary
   , testCase "compile a repeated-type library without a driver" repeatedTypeLibraryWithoutDriver
   , testCase "compile a wide arbitrary-float tuple" wideFloatingTuple
@@ -132,10 +135,12 @@ arbitraryFloatClassification = withSystemTempDirectory "sbv-arbitrary-float-clas
                         , fpIsPositive subnormal
                         , sNot (fpIsNormal subnormal)
                         , fpIsInfinite infValue
-                        , sNot (fpIsNormal infValue)]
-  compileAndRunLibBF dir "arbitraryFloatClassification" program "0x0fff"
+                        , sNot (fpIsNormal infValue)
+                        , distinct [nanValue, nanValue, positiveZero]
+                        , sNot (distinct [negativeZero, positiveZero])]
+  compileAndRunLibBF dir "arbitraryFloatClassification" program "0x3fff"
  where pack :: [SBool] -> SWord16
-       pack flags = sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048])
+       pack flags = sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192])
 
 -- | Exercise all IEEE rounding modes on an exactly halfway format conversion.
 arbitraryFloatRoundingModes :: Assertion
@@ -236,6 +241,65 @@ nativeFloatRoundingModes = withSystemTempDirectory "sbv-native-float-rounding" $
   compileAndRunLibBF dir "nativeFloatRoundingModesFloat" floatProgram (asHex 4 floatExpected)
   compileAndRunLibBF dir "nativeFloatRoundingModesDouble" doubleProgram (asHex 7 doubleExpected)
   compileAndRunLibBF dir "nativeFloatRoundingScalar" scalarProgram "resultBits = 0x3f800001UL"
+
+-- | Exercise all rounding directions between native floats and exact-width
+-- bit-vectors.
+nativeFloatBitVectorConversions :: Assertion
+nativeFloatBitVectorConversions = withSystemTempDirectory "sbv-native-float-bit-vector" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [16777217, 5, 2]
+        nativeInteger <- cgInput "nativeInteger" :: SBVCodeGen SInt32
+        five          <- cgInput "five"          :: SBVCodeGen SFloat
+        two           <- cgInput "two"           :: SBVCodeGen SFloat
+        let nativeRNE   = toSFloat sRNE nativeInteger
+            nativeRTP   = toSFloat sRTP nativeInteger
+            twoAndAHalf = fpDiv sRNE five two
+            nativeEven  = fromSFloat sRNE twoAndAHalf :: SInt32
+            nativeAway  = fromSFloat sRNA twoAndAHalf :: SInt32
+            nativeDown  = fromSFloat sRTN twoAndAHalf :: SInt32
+            nativeUp    = fromSFloat sRTP twoAndAHalf :: SInt32
+        cgReturn $ nativeRNE .== 16777216
+               .&& nativeRTP .== 16777218
+               .&& nativeEven .== 2
+               .&& nativeAway .== 3
+               .&& nativeDown .== 2
+               .&& nativeUp   .== 3
+  compileAndRunLibBF dir "nativeFloatBitVectorConversions" program "= 1"
+
+-- | Exercise LibBF-mediated conversion between native floats and GMP-backed
+-- exact numbers without introducing an arbitrary floating-point format.
+nativeFloatExactConversions :: Assertion
+nativeFloatExactConversions = withSystemTempDirectory "sbv-native-float-exact" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [16777217, 3, 2, 5, 2]
+        integer         <- cgInput "integer"         :: SBVCodeGen SInteger
+        realNumerator   <- cgInput "realNumerator"   :: SBVCodeGen SReal
+        realDenominator <- cgInput "realDenominator" :: SBVCodeGen SReal
+        five            <- cgInput "five"            :: SBVCodeGen SFloat
+        two             <- cgInput "two"             :: SBVCodeGen SFloat
+        let rational      = realNumerator / realDenominator
+            integerRNE    = toSFloat sRNE integer
+            integerRTP    = toSFloat sRTP integer
+            rationalValue = toSDouble sRNE rational
+            twoAndAHalf   = fpDiv sRNE five two
+            roundedEven   = fromSFloat sRNE twoAndAHalf :: SInteger
+            roundedAway   = fromSFloat sRNA twoAndAHalf :: SInteger
+            roundedUp     = fromSFloat sRTP twoAndAHalf :: SInteger
+            roundedDown   = fromSFloat sRTN twoAndAHalf :: SInteger
+            roundedZero   = fromSFloat sRTZ twoAndAHalf :: SInteger
+            exactRational = fromSDouble sRNE rationalValue :: SReal
+        cgReturn $ integerRNE .== 16777216
+               .&& integerRTP .== 16777218
+               .&& rationalValue .== 1.5
+               .&& roundedEven .== 2
+               .&& roundedAway .== 3
+               .&& roundedUp   .== 3
+               .&& roundedDown .== 2
+               .&& roundedZero .== 2
+               .&& exactRational .== 3 / 2
+  compileAndRunLibBFGMP dir "nativeFloatExactConversions" program "= 1"
 
 -- | Exercise LibBF encoding of subnormal results, NaN, and signed zero.
 arbitraryFloatSpecialArithmetic :: Assertion
@@ -349,6 +413,47 @@ arbitraryFloatLambdaTable = withSystemTempDirectory "sbv-arbitrary-float-lambda-
       bias       = 2 ^ (14 :: Int) - 1 :: Integer
       twoRaw     = (bias + 1) * 2 ^ (112 :: Int)
   compileAndRunLibBF dir "arbitraryFloatLambdaTable" program (asHex 2 twoRaw)
+
+-- | Exercise correctly rounded conversions between LibBF formats and
+-- GMP-backed unbounded integers and rational reals.
+arbitraryFloatExactConversions :: Assertion
+arbitraryFloatExactConversions = withSystemTempDirectory "sbv-arbitrary-float-exact" $ \dir -> do
+  let largeSample = negate (2 ^ (200 :: Int) + 2 ^ (100 :: Int))
+      program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [2049, largeSample, 7, 2, 5, 2]
+        integer         <- cgInput "integer"      :: SBVCodeGen SInteger
+        largeInteger    <- cgInput "largeInteger" :: SBVCodeGen SInteger
+        realNumerator   <- cgInput "numerator"    :: SBVCodeGen SReal
+        realDenominator <- cgInput "denominator"  :: SBVCodeGen SReal
+        five            <- cgInput "five"         :: SBVCodeGen SFPHalf
+        two             <- cgInput "two"          :: SBVCodeGen SFPHalf
+        let rational       = realNumerator / realDenominator
+            integerRNE     = toSFloatingPoint sRNE integer :: SFPHalf
+            integerRTP     = toSFloatingPoint sRTP integer :: SFPHalf
+            largeQuad      = toSFloatingPoint sRNE largeInteger :: SFPQuad
+            largeRoundTrip = fromSFloatingPoint sRNE largeQuad :: SInteger
+            rationalHalf   = toSFloatingPoint sRNE rational :: SFPHalf
+            twoAndAHalf    = fpDiv sRNE five two
+            roundedEven    = fromSFloatingPoint sRNE twoAndAHalf :: SInteger
+            roundedAway    = fromSFloatingPoint sRNA twoAndAHalf :: SInteger
+            roundedUp      = fromSFloatingPoint sRTP twoAndAHalf :: SInteger
+            roundedDown    = fromSFloatingPoint sRTN twoAndAHalf :: SInteger
+            roundedZero    = fromSFloatingPoint sRTZ twoAndAHalf :: SInteger
+            exactRational  = fromSFloatingPoint sRNE rationalHalf :: SReal
+            integerRNEBits = sFloatingPointAsSWord integerRNE :: SWord 16
+            integerRTPBits = sFloatingPointAsSWord integerRTP :: SWord 16
+        cgReturn $ integerRNEBits .== 0x6800
+               .&& integerRTPBits .== 0x6801
+               .&& largeRoundTrip .== largeInteger
+               .&& rationalHalf .== 3.5
+               .&& roundedEven .== 2
+               .&& roundedAway .== 3
+               .&& roundedUp   .== 3
+               .&& roundedDown .== 2
+               .&& roundedZero .== 2
+               .&& exactRational .== 7 / 2
+  compileAndRunLibBFGMP dir "arbitraryFloatExactConversions" program "= 1"
 
 -- | Exercise repeated declarations and dependencies in a mixed generated library.
 mixedRepeatedTypeLibrary :: Assertion
@@ -470,6 +575,14 @@ compileAndRunLibBF :: FilePath -> String -> SBVCodeGen () -> String -> Assertion
 compileAndRunLibBF dir functionName program expected = do
   (includeDir, archive) <- locateLibBF
   compileAndRunWith ["-I" ++ includeDir, archive, "-lm"] dir functionName program expected
+
+-- | Generate and execute a C program using both LibBF and GMP.
+compileAndRunLibBFGMP :: FilePath -> String -> SBVCodeGen () -> String -> Assertion
+compileAndRunLibBFGMP dir functionName program expected = do
+  (includeDir, archive) <- locateLibBF
+  (pkgExit, pkgOutput, pkgError) <- readProcessWithExitCode "pkg-config" ["--cflags", "--libs", "gmp"] ""
+  assertEqual pkgError ExitSuccess pkgExit
+  compileAndRunWith (["-I" ++ includeDir, archive, "-lm"] ++ words pkgOutput) dir functionName program expected
 
 -- | Generate, compile, and execute C with additional compiler/linker options.
 compileAndRunWith :: [String] -> FilePath -> String -> SBVCodeGen () -> String -> Assertion

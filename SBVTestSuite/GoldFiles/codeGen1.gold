@@ -120,6 +120,28 @@ int main(void)
 
 #include "foo.h"
 
+/* Exact bit-vector runtime. All arithmetic is modulo the declared width. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static inline SBV_CGEN_UNUSED SInt16 sbv_bv_s16_add(SInt16 a, SInt16 b)
+{
+  const SWord16 bits = (SWord16) ((((uint64_t) (SWord16) a) + ((uint64_t) (SWord16) b)) & UINT64_C(0x000000000000ffff));
+  SInt16 result; memcpy(&result, &bits, sizeof result); return result;
+}
+
+static inline SBV_CGEN_UNUSED SInt16 sbv_bv_s16_mul(SInt16 a, SInt16 b)
+{
+  const SWord16 bits = (SWord16) ((((uint64_t) (SWord16) a) * ((uint64_t) (SWord16) b)) & UINT64_C(0x000000000000ffff));
+  SInt16 result; memcpy(&result, &bits, sizeof result); return result;
+}
+
+
 SInt16 foo(const SInt16 x, const SInt64 *xArr, SWord16 *z,
            SInt16 *zArr, SInt64 *yArr)
 {
@@ -169,8 +191,8 @@ SInt16 foo(const SInt16 x, const SInt64 *xArr, SWord16 *z,
   const SInt64 s43 = xArr[42];
   const SInt64 s44 = xArr[43];
   const SInt64 s45 = xArr[44];
-  const SInt16 s48 = s0 + 0x0001;
-  const SInt16 s50 = s0 * 0x0002;
+  const SInt16 s48 = sbv_bv_s16_add(s0, 0x0001);
+  const SInt16 s50 = sbv_bv_s16_mul(s0, 0x0002);
 
   *z = 0x0005U;
   zArr[0] = s48;

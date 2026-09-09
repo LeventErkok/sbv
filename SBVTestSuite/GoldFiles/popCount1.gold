@@ -85,6 +85,35 @@ int main(void)
 
 #include "popCount.h"
 
+/* Exact bit-vector runtime. All arithmetic is modulo the declared width. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static inline SBV_CGEN_UNUSED SWord64 sbv_bv_u64_shl(SWord64 a, SWord64 amount)
+{
+  const uint64_t n = (uint64_t) (SWord64) amount;
+  const SWord64 result = n >= 64 ? (SWord64) 0 : (SWord64) ((uint64_t) (SWord64) a << n);
+  return result;
+}
+
+static inline SBV_CGEN_UNUSED SWord64 sbv_bv_u64_lshr(SWord64 a, SWord64 amount)
+{
+  const uint64_t n = (uint64_t) (SWord64) amount;
+  return n >= 64 ? (SWord64) 0 : (SWord64) ((uint64_t) (SWord64) a >> n);
+}
+
+static inline SBV_CGEN_UNUSED SWord8 sbv_bv_u8_add(SWord8 a, SWord8 b)
+{
+  const SWord8 bits = (SWord8) ((((uint64_t) (SWord8) a) + ((uint64_t) (SWord8) b)) & UINT64_C(0x00000000000000ff));
+  return (SWord8) bits;
+}
+
+
 SWord8 popCount(const SWord64 x)
 {
   const SWord64 s0 = x;
@@ -104,34 +133,34 @@ SWord8 popCount(const SWord64 x)
   };
   const SWord64 s11 = s0 & 0x00000000000000ffULL;
   const SWord8  s12 = table0[s11];
-  const SWord64 s14 = s0 >> 8;
+  const SWord64 s14 = sbv_bv_u64_lshr(s0, 0x0000000000000008ULL);
   const SWord64 s15 = 0x00000000000000ffULL & s14;
   const SWord8  s16 = table0[s15];
-  const SWord8  s17 = s12 + s16;
-  const SWord64 s18 = s14 >> 8;
+  const SWord8  s17 = sbv_bv_u8_add(s12, s16);
+  const SWord64 s18 = sbv_bv_u64_lshr(s14, 0x0000000000000008ULL);
   const SWord64 s19 = 0x00000000000000ffULL & s18;
   const SWord8  s20 = table0[s19];
-  const SWord8  s21 = s17 + s20;
-  const SWord64 s22 = s18 >> 8;
+  const SWord8  s21 = sbv_bv_u8_add(s17, s20);
+  const SWord64 s22 = sbv_bv_u64_lshr(s18, 0x0000000000000008ULL);
   const SWord64 s23 = 0x00000000000000ffULL & s22;
   const SWord8  s24 = table0[s23];
-  const SWord8  s25 = s21 + s24;
-  const SWord64 s26 = s22 >> 8;
+  const SWord8  s25 = sbv_bv_u8_add(s21, s24);
+  const SWord64 s26 = sbv_bv_u64_lshr(s22, 0x0000000000000008ULL);
   const SWord64 s27 = 0x00000000000000ffULL & s26;
   const SWord8  s28 = table0[s27];
-  const SWord8  s29 = s25 + s28;
-  const SWord64 s30 = s26 >> 8;
+  const SWord8  s29 = sbv_bv_u8_add(s25, s28);
+  const SWord64 s30 = sbv_bv_u64_lshr(s26, 0x0000000000000008ULL);
   const SWord64 s31 = 0x00000000000000ffULL & s30;
   const SWord8  s32 = table0[s31];
-  const SWord8  s33 = s29 + s32;
-  const SWord64 s34 = s30 >> 8;
+  const SWord8  s33 = sbv_bv_u8_add(s29, s32);
+  const SWord64 s34 = sbv_bv_u64_lshr(s30, 0x0000000000000008ULL);
   const SWord64 s35 = 0x00000000000000ffULL & s34;
   const SWord8  s36 = table0[s35];
-  const SWord8  s37 = s33 + s36;
-  const SWord64 s38 = s34 >> 8;
+  const SWord8  s37 = sbv_bv_u8_add(s33, s36);
+  const SWord64 s38 = sbv_bv_u64_lshr(s34, 0x0000000000000008ULL);
   const SWord64 s39 = 0x00000000000000ffULL & s38;
   const SWord8  s40 = table0[s39];
-  const SWord8  s41 = s37 + s40;
+  const SWord8  s41 = sbv_bv_u8_add(s37, s40);
 
   return s41;
 }

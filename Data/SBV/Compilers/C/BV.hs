@@ -15,9 +15,10 @@ module Data.SBV.Compilers.C.BV
   ( isWideBV
   , wideBVKinds
   , wideBVTypeDecls
-  , wideBVRuntime
+  , bitVectorRuntime
   , wideBVConst
   , wideBVExpr
+  , nativeBVExpr
   , nativeBVOverflowExpr
   , wideBVLookupInRange
   , wideBVLookupIndex
@@ -76,19 +77,49 @@ wideBVTypeDecls ks = text . unlines $
 
        guard k = "SBV_BV_" ++ map toUpper (tag k) ++ "_DEFINED"
 
--- | Runtime routines for each used exact-width type, plus the cross-width
--- helpers demanded by extracts, joins, extensions, and casts in the DAG.
-wideBVRuntime :: [Kind] -> [(SV, SBVExpr)] -> Doc
-wideBVRuntime [] _     = empty
-wideBVRuntime ks asgns = text . unlines . map markUnused $
-     ["/* Exact-width bit-vector runtime. All arithmetic is modulo the declared width. */", ""]
-  ++ concatMap coreRuntime ks
-  ++ concatMap specialRuntime (nub (concatMap specials asgns))
+-- | Runtime routines for each used exact-width type, together with the exact
+-- native arithmetic, bit-manipulation, and cross-width helpers demanded by
+-- the complete symbolic DAG. Native-only programs can require these helpers
+-- even when no limb-backed type occurs.
+bitVectorRuntime :: [Kind] -> [(SV, SBVExpr)] -> Doc
+bitVectorRuntime ks asgns
+  | null routines = empty
+  | True          = text . unlines . map markUnused $
+       [ "/* Exact bit-vector runtime. All arithmetic is modulo the declared width. */"
+       , "#ifndef SBV_CGEN_UNUSED"
+       , "#if defined(__GNUC__) || defined(__clang__)"
+       , "#define SBV_CGEN_UNUSED __attribute__((unused))"
+       , "#else"
+       , "#define SBV_CGEN_UNUSED"
+       , "#endif"
+       , "#endif"
+       , ""
+       ]
+    ++ routines
  where specials (sv, SBVApp op args) = case op of
          Extract hi lo                  -> [SpecialExtract (kindOf (headArg "Extract" args)) hi lo (kindOf sv)]
          Join                           -> case args of
                                              [a, b] -> [SpecialJoin (kindOf a) (kindOf b) (kindOf sv)]
                                              _      -> badArity "Join" args
+         Rol{}
+           | source : _ <- args
+           , isNativeBV source          -> [SpecialRotate (kindOf source)]
+         Ror{}
+           | source : _ <- args
+           , isNativeBV source          -> [SpecialRotate (kindOf source)]
+         Shl
+           | source : _ <- args
+           , isNativeBV source          -> [SpecialShift (kindOf source)]
+         Shr
+           | source : _ <- args
+           , isNativeBV source          -> [SpecialShift (kindOf source)]
+         Plus                           -> nativeArithmetic args SpecialAdd
+         Minus                          -> nativeArithmetic args SpecialSub
+         Times                          -> nativeArithmetic args SpecialMul
+         UNeg                           -> nativeArithmetic args SpecialNeg
+         Abs                            -> nativeArithmetic args SpecialAbs
+         Quot                           -> nativeArithmetic args SpecialQuot
+         Rem                            -> nativeArithmetic args SpecialRem
          ZeroExtend _                   -> [SpecialConvert False (kindOf (headArg "ZeroExtend" args)) (kindOf sv)]
          SignExtend _                   -> [SpecialConvert True  (kindOf (headArg "SignExtend" args)) (kindOf sv)]
          KindCast fr to
@@ -98,9 +129,20 @@ wideBVRuntime ks asgns = text . unlines . map markUnused $
          _                              -> []
 
        specialRuntime s = case s of
-         SpecialExtract fr hi lo to -> conversionRuntime (extractName fr hi lo to) False lo fr to
-         SpecialJoin a b to          -> joinRuntime a b to
-         SpecialConvert sign fr to   -> conversionRuntime (convertName sign fr to) sign 0 fr to
+         SpecialExtract fr hi lo to      -> conversionRuntime (extractName fr hi lo to) False lo fr to
+         SpecialJoin a b to              -> joinRuntime a b to
+         SpecialConvert sign fr to       -> conversionRuntime (convertName sign fr to) sign 0 fr to
+         SpecialRotate kind              -> rotationRuntime kind
+         SpecialShift kind               -> shiftRuntime kind
+         SpecialArithmetic arith kind    -> nativeArithmeticRuntime arith kind
+
+       routines = concatMap coreRuntime ks
+               ++ concatMap specialRuntime (nub (concatMap specials asgns))
+
+       nativeArithmetic args arith = case args of
+         source : _
+           | isNativeBV source -> [SpecialArithmetic arith (kindOf source)]
+         _                     -> []
 
        markUnused line
          | Just rest <- stripPrefix "static inline " line = "static inline SBV_CGEN_UNUSED " ++ rest
@@ -164,6 +206,83 @@ wideBVExpr op svs resultKind args
                                                                   ++ " and result kind " ++ show resultKind
  where call suffix       = namedCall (prefix resultKind ++ "_" ++ suffix)
        argCall sv suffix = namedCall (prefix (kindOf sv) ++ "_" ++ suffix)
+
+-- | Lower native-width arithmetic, conversion, and bit manipulation through
+-- exact bit-vector helpers. This avoids C's signed-overflow, promotion,
+-- signed-shift, and oversized-shift behavior while retaining the scalar
+-- public ABI.
+nativeBVExpr :: Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
+nativeBVExpr op svs resultKind args = case (op, svs, args) of
+  (Extract hi lo , [source]   , [renderedSource])
+    | isNativeBV source
+    , isNativeBVKind resultKind
+    -> lower $ namedCall (extractName (kindOf source) hi lo resultKind) [renderedSource]
+  (Join          , [high, low], [renderedHigh, renderedLow])
+    | isNativeBV high
+    , isNativeBV low
+    , isNativeBVKind resultKind
+    -> lower $ namedCall (joinName (kindOf high) (kindOf low) resultKind) [renderedHigh, renderedLow]
+  (ZeroExtend _  , [source]   , [renderedSource])
+    | isNativeBV source
+    , isNativeBVKind resultKind
+    -> lower $ namedCall (convertName False (kindOf source) resultKind) [renderedSource]
+  (SignExtend _  , [source]   , [renderedSource])
+    | isNativeBV source
+    , isNativeBVKind resultKind
+    -> lower $ namedCall (convertName True (kindOf source) resultKind) [renderedSource]
+  (KindCast fr to, [source]   , [renderedSource])
+    | isNativeBV source
+    , isNativeBVKind resultKind
+    , fr == kindOf source
+    , to == resultKind
+    -> lower $ namedCall (convertName (hasSign fr) fr to) [renderedSource]
+  (Plus            , [left, right]   , [renderedLeft, renderedRight])
+    | nativeBinary left right
+    -> arithmetic SpecialAdd [renderedLeft, renderedRight]
+  (Minus           , [left, right]   , [renderedLeft, renderedRight])
+    | nativeBinary left right
+    -> arithmetic SpecialSub [renderedLeft, renderedRight]
+  (Times           , [left, right]   , [renderedLeft, renderedRight])
+    | nativeBinary left right
+    -> arithmetic SpecialMul [renderedLeft, renderedRight]
+  (UNeg            , [source]        , [renderedSource])
+    | nativeUnary source
+    -> arithmetic SpecialNeg [renderedSource]
+  (Abs             , [source]        , [renderedSource])
+    | nativeUnary source
+    -> arithmetic SpecialAbs [renderedSource]
+  (Quot            , [left, right]   , [renderedLeft, renderedRight])
+    | nativeBinary left right
+    -> arithmetic SpecialQuot [renderedLeft, renderedRight]
+  (Rem             , [left, right]   , [renderedLeft, renderedRight])
+    | nativeBinary left right
+    -> arithmetic SpecialRem [renderedLeft, renderedRight]
+  (Shl             , [source, amount], [renderedSource, renderedAmount])
+    | isNativeBV source
+    , isNativeBV amount
+    , kindOf source == resultKind
+    -> lower $ namedCall (prefix resultKind ++ "_shl") [renderedSource, renderedAmount]
+  (Shr             , [source, amount], [renderedSource, renderedAmount])
+    | isNativeBV source
+    , isNativeBV amount
+    , kindOf source == resultKind
+    -> lower $ namedCall (prefix resultKind ++ if hasSign source then "_ashr" else "_lshr") [renderedSource, renderedAmount]
+  (Rol amount      , [source]        , [renderedSource])
+    | isNativeBV source
+    , kindOf source == resultKind
+    -> lower $ namedCall (prefix resultKind ++ "_rotl") [renderedSource, integer (fromIntegral amount)]
+  (Ror amount      , [source]        , [renderedSource])
+    | isNativeBV source
+    , kindOf source == resultKind
+    -> lower $ namedCall (prefix resultKind ++ "_rotr") [renderedSource, integer (fromIntegral amount)]
+  _ -> Nothing
+ where lower = Just . expressionLowering CByValue []
+
+       nativeUnary source = isNativeBV source && kindOf source == resultKind
+
+       nativeBinary left right = nativeUnary left && kindOf right == resultKind
+
+       arithmetic arith = lower . namedCall (prefix resultKind ++ "_" ++ arithmeticSuffix arith)
 
 -- | Lower overflow predicates for the native 8-, 16-, 32-, and 64-bit C
 -- representations. Each predicate avoids evaluating the overflowing
@@ -237,10 +356,169 @@ wideBVNormalize :: Kind -> Doc -> Doc
 wideBVNormalize k value = namedCall (prefix k ++ "_norm") [value]
 
 -- | Cross-width helpers discovered while walking the symbolic DAG.
-data Special = SpecialExtract Kind Int Int Kind
-             | SpecialJoin    Kind Kind Kind
-             | SpecialConvert Bool Kind Kind
+data Special = SpecialExtract    Kind Int Int Kind
+             | SpecialJoin       Kind Kind Kind
+             | SpecialConvert    Bool Kind Kind
+             | SpecialRotate     Kind
+             | SpecialShift      Kind
+             | SpecialArithmetic NativeArithmetic Kind
              deriving (Eq)
+
+-- | Native scalar arithmetic operations that require exact modular C
+-- helpers.
+data NativeArithmetic = SpecialAdd
+                      | SpecialSub
+                      | SpecialMul
+                      | SpecialNeg
+                      | SpecialAbs
+                      | SpecialQuot
+                      | SpecialRem
+                      deriving (Eq)
+
+-- | Emit one exact native-width arithmetic helper. Modular operations are
+-- evaluated through unsigned bits; signed division is guarded against both
+-- zero divisors and the otherwise undefined minimum-value quotient.
+nativeArithmeticRuntime :: NativeArithmetic -> Kind -> [String]
+nativeArithmeticRuntime arith kind =
+     ["static inline " ++ ty ++ " " ++ functionName ++ "(" ++ parameters ++ ")"
+     , "{"
+     ]
+  ++ body
+  ++ ["}", ""]
+ where ty           = cType kind
+       rawTy        = cType (KBounded False width)
+       width        = bitWidth kind
+       mask         = u64 (topMask kind)
+       signMask     = u64 (1 `shiftL` (width - 1))
+       functionName = prefix kind ++ "_" ++ arithmeticSuffix arith
+       parameters
+         | arith `elem` [SpecialNeg, SpecialAbs] = ty ++ " a"
+         | True                                   = ty ++ " a, " ++ ty ++ " b"
+
+       raw value = "((uint64_t) (" ++ rawTy ++ ") " ++ value ++ ")"
+
+       modular expression =
+         ("  const " ++ rawTy ++ " bits = (" ++ rawTy ++ ") ((" ++ expression ++ ") & " ++ mask ++ ");")
+         : returnBits "bits"
+
+       returnBits bits
+         | hasSign kind = ["  " ++ ty ++ " result; memcpy(&result, &" ++ bits ++ ", sizeof result); return result;"]
+         | True         = ["  return (" ++ ty ++ ") " ++ bits ++ ";"]
+
+       body = case arith of
+         SpecialAdd  -> modular (raw "a" ++ " + " ++ raw "b")
+         SpecialSub  -> modular (raw "a" ++ " - " ++ raw "b")
+         SpecialMul  -> modular (raw "a" ++ " * " ++ raw "b")
+         SpecialNeg  -> modular ("UINT64_C(0) - " ++ raw "a")
+         SpecialAbs
+           | hasSign kind -> modular ("(" ++ raw "a" ++ " & " ++ signMask ++ ") != 0 ? UINT64_C(0) - " ++ raw "a" ++ " : " ++ raw "a")
+           | True         -> modular (raw "a")
+         SpecialQuot -> divisionBody "/" ("(" ++ ty ++ ") 0") "a"
+         SpecialRem  -> divisionBody "%" "a" ("(" ++ ty ++ ") 0")
+
+       divisionBody operator zeroResult overflowResult =
+            ["  if (b == (" ++ ty ++ ") 0) return " ++ zeroResult ++ ";"]
+         ++ signedOverflow
+         ++ ["  return (" ++ ty ++ ") (a " ++ operator ++ " b);"]
+        where signedOverflow
+                | hasSign kind = ["  if (a == " ++ minimumValue ++ " && b == (" ++ ty ++ ") -1) return " ++ overflowResult ++ ";"]
+                | True         = []
+
+       minimumValue = "INT" ++ show width ++ "_MIN"
+
+-- | Return the generated helper suffix for exact native arithmetic.
+arithmeticSuffix :: NativeArithmetic -> String
+arithmeticSuffix SpecialAdd  = "add"
+arithmeticSuffix SpecialSub  = "sub"
+arithmeticSuffix SpecialMul  = "mul"
+arithmeticSuffix SpecialNeg  = "neg"
+arithmeticSuffix SpecialAbs  = "abs"
+arithmeticSuffix SpecialQuot = "quot"
+arithmeticSuffix SpecialRem  = "rem"
+
+-- | Emit exact native-width rotations through an unsigned representation so
+-- the result is independent of integer promotions and signed-shift rules.
+rotationRuntime :: Kind -> [String]
+rotationRuntime kind =
+     signedConversion
+  ++ ["static inline " ++ ty ++ " " ++ p ++ "_rotl(" ++ ty ++ " a, uint64_t amount)"
+  , "{"
+  , "  amount %= " ++ show width ++ ";"
+  , "  if (amount == 0) return a;"
+  , "  return " ++ finish ("(" ++ rawTy ++ ") ((((uint64_t) (" ++ rawTy ++ ") a) << amount) | (((uint64_t) (" ++ rawTy ++ ") a) >> (" ++ show width ++ " - amount)))") ++ ";"
+  , "}"
+  , ""
+  , "static inline " ++ ty ++ " " ++ p ++ "_rotr(" ++ ty ++ " a, uint64_t amount)"
+  , "{"
+  , "  amount %= " ++ show width ++ ";"
+  , "  if (amount == 0) return a;"
+  , "  return " ++ finish ("(" ++ rawTy ++ ") ((((uint64_t) (" ++ rawTy ++ ") a) >> amount) | (((uint64_t) (" ++ rawTy ++ ") a) << (" ++ show width ++ " - amount)))") ++ ";"
+  , "}"
+  , ""
+  ]
+ where ty               = cType kind
+       p                = prefix kind
+       width            = bitWidth kind
+       rawTy            = cType (KBounded False width)
+       conversionName   = p ++ "_rotate_from_bits"
+       signedConversion
+         | hasSign kind = ["static inline " ++ ty ++ " " ++ conversionName ++ "(" ++ rawTy ++ " bits)"
+                          , "{ " ++ ty ++ " result; memcpy(&result, &bits, sizeof result); return result; }"
+                          , ""]
+         | True         = []
+       finish value
+         | hasSign kind = conversionName ++ "(" ++ value ++ ")"
+         | True         = value
+
+-- | Emit exact native-width logical and arithmetic shifts. The shift amount
+-- is interpreted as an unsigned bit-vector, and amounts at least as large as
+-- the operand width produce SMT-Lib's defined zero or sign-filled result.
+shiftRuntime :: Kind -> [String]
+shiftRuntime kind =
+     signedConversion
+  ++ leftShift
+  ++ rightShift
+ where ty               = cType kind
+       p                = prefix kind
+       width            = bitWidth kind
+       rawTy            = cType (KBounded False width)
+       amountValue      = "(uint64_t) (" ++ rawTy ++ ") amount"
+       mask             = u64 (topMask kind)
+       signMask         = u64 (1 `shiftL` (width - 1))
+       conversionName   = p ++ "_shift_from_bits"
+       signedConversion
+         | hasSign kind = ["static inline " ++ ty ++ " " ++ conversionName ++ "(" ++ rawTy ++ " bits)"
+                          , "{ " ++ ty ++ " result; memcpy(&result, &bits, sizeof result); return result; }"
+                          , ""]
+         | True         = []
+       finish value
+         | hasSign kind = conversionName ++ "(" ++ value ++ ")"
+         | True         = value
+       leftShift = ["static inline " ++ ty ++ " " ++ p ++ "_shl(" ++ ty ++ " a, " ++ ty ++ " amount)"
+                   , "{"
+                   , "  const uint64_t n = " ++ amountValue ++ ";"
+                   , "  const " ++ rawTy ++ " result = n >= " ++ show width ++ " ? (" ++ rawTy ++ ") 0 : (" ++ rawTy ++ ") ((uint64_t) (" ++ rawTy ++ ") a << n);"
+                   , "  return " ++ finish "result" ++ ";"
+                   , "}"
+                   , ""]
+       rightShift
+         | hasSign kind = ["static inline " ++ ty ++ " " ++ p ++ "_ashr(" ++ ty ++ " a, " ++ ty ++ " amount)"
+                          , "{"
+                          , "  const uint64_t n = " ++ amountValue ++ ";"
+                          , "  const uint64_t raw = (uint64_t) (" ++ rawTy ++ ") a;"
+                          , "  const bool sign = (raw & " ++ signMask ++ ") != 0;"
+                          , "  " ++ rawTy ++ " result;"
+                          , "  if (n >= " ++ show width ++ ") result = sign ? (" ++ rawTy ++ ") " ++ mask ++ " : (" ++ rawTy ++ ") 0;"
+                          , "  else { result = (" ++ rawTy ++ ") (raw >> n); if (sign && n != 0) result = (" ++ rawTy ++ ") ((uint64_t) result | (" ++ mask ++ " << (" ++ show width ++ " - n))); }"
+                          , "  return " ++ finish "result" ++ ";"
+                          , "}"
+                          , ""]
+         | True = ["static inline " ++ ty ++ " " ++ p ++ "_lshr(" ++ ty ++ " a, " ++ ty ++ " amount)"
+                  , "{"
+                  , "  const uint64_t n = " ++ amountValue ++ ";"
+                  , "  return n >= " ++ show width ++ " ? (" ++ ty ++ ") 0 : (" ++ ty ++ ") ((uint64_t) (" ++ rawTy ++ ") a >> n);"
+                  , "}"
+                  , ""]
 
 -- | Emit the complete modular-arithmetic runtime for one bit-vector kind.
 coreRuntime :: Kind -> [String]
@@ -656,6 +934,15 @@ bitWidth :: Kind -> Int
 bitWidth k
   | isBoolean k = 1
   | otherwise   = intSizeOf k
+
+-- | Test whether a symbolic value uses one of the scalar C bit-vector
+-- representations, including the one-bit unsigned representation.
+isNativeBV :: HasKind a => a -> Bool
+isNativeBV value = isNativeBVKind (kindOf value)
+
+-- | Test whether a kind uses one of the scalar C bit-vector representations.
+isNativeBVKind :: Kind -> Bool
+isNativeBVKind kind = isBounded kind && not (isWideBV kind)
 
 -- | Return the number of 64-bit limbs needed by a kind.
 limbs :: Kind -> Int

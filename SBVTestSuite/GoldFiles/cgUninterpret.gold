@@ -98,6 +98,22 @@ int main(void)
 /* User specified custom code for "SBV_SHIFTLEFT" */
 #define SBV_SHIFTLEFT(x, y) ((x) << (y))
 
+/* Exact bit-vector runtime. All arithmetic is modulo the declared width. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static inline SBV_CGEN_UNUSED SWord32 sbv_bv_u32_add(SWord32 a, SWord32 b)
+{
+  const SWord32 bits = (SWord32) ((((uint64_t) (SWord32) a) + ((uint64_t) (SWord32) b)) & UINT64_C(0x00000000ffffffff));
+  return (SWord32) bits;
+}
+
+
 SWord32 tstShiftLeft(const SWord32 *vs)
 {
   const SWord32 s0 = vs[0];
@@ -107,7 +123,7 @@ SWord32 tstShiftLeft(const SWord32 *vs)
                                                                 s2);
   const SWord32 s4 = /* Uninterpreted function */ SBV_SHIFTLEFT(s1,
                                                                 s2);
-  const SWord32 s5 = s3 + s4;
+  const SWord32 s5 = sbv_bv_u32_add(s3, s4);
 
   return s5;
 }

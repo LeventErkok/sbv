@@ -31,7 +31,7 @@ module Data.SBV.Compilers.C.FP
   ) where
 
 import Data.Bits                       (shiftL, shiftR, (.&.))
-import Data.List                       (intercalate, nub)
+import Data.List                       (intercalate, nub, tails)
 import qualified Data.Set as Set
 import Numeric                         (showHex)
 
@@ -41,7 +41,9 @@ import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.BV        (isWideBV)
+import Data.SBV.Compilers.C.GMP       (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering  (CLowering, CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.SizedFloats       (FP(..), mkBFOpts)
 
@@ -104,11 +106,21 @@ arbitraryFPTypeDecls ks = text . unlines $
        typeGuard (KFP eb sb) = "SBV_FP_E" ++ show eb ++ "_S" ++ show sb ++ "_DEFINED"
        typeGuard k           = error $ "SBV->C: Expected an arbitrary floating-point kind, received " ++ show k
 
--- | Emit the LibBF adapter and exact-format helpers for every used format.
-arbitraryFPRuntime :: [Kind] -> [(SV, SBVExpr)] -> Doc
-arbitraryFPRuntime [] _ = empty
-arbitraryFPRuntime ks asgns = text . unlines . map markUnused $
+-- | Emit the LibBF adapter and helpers for arbitrary formats and conversions
+-- that require exact rounding.
+arbitraryFPRuntime :: CgConfig -> [Kind] -> [(SV, SBVExpr)] -> Doc
+arbitraryFPRuntime cfg ks asgns
+  | null ks && null floatCasts = empty
+  | True                       = text . unlines . map markUnused $
      ["/* LibBF-backed arbitrary floating-point runtime. */"
+     , "#ifndef SBV_CGEN_UNUSED"
+     , "#if defined(__GNUC__) || defined(__clang__)"
+     , "#define SBV_CGEN_UNUSED __attribute__((unused))"
+     , "#else"
+     , "#define SBV_CGEN_UNUSED"
+     , "#endif"
+     , "#endif"
+     , ""
      , "static inline bf_rnd_t sbv_bf_rounding_mode(int mode)"
      , "{"
      , "  switch (mode) {"
@@ -128,8 +140,9 @@ arbitraryFPRuntime ks asgns = text . unlines . map markUnused $
      , "}"
      , ""]
   ++ concatMap formatRuntime ks
+  ++ concat [exactBridgeRuntime | any castUsesExact floatCasts]
   ++ concatMap reinterpretRuntime (nub (concatMap reinterprets asgns))
-  ++ concatMap castRuntime (nub (concatMap casts asgns))
+  ++ concatMap (castRuntime cfg) floatCasts
  where markUnused line
          | Just rest <- stripStaticInline line = "static inline SBV_CGEN_UNUSED " ++ rest
          | otherwise                           = line
@@ -138,12 +151,25 @@ arbitraryFPRuntime ks asgns = text . unlines . map markUnused $
                                   ("static inline ", rest) -> Just rest
                                   _                        -> Nothing
 
-       reinterprets (_, SBVApp (IEEEFP (FP_Reinterpret fr to)) _) = [Reinterpret fr to]
-       reinterprets _                                             = []
+       reinterprets (_, SBVApp (IEEEFP (FP_Reinterpret fr to)) _)
+         | isFP fr || isFP to = [Reinterpret fr to]
+       reinterprets _ = []
 
        casts (_, SBVApp (IEEEFP (FP_Cast fr to _)) _)
-         | isFP fr || isFP to = [FloatCast fr to]
+         | isFP fr || isFP to || exactNativeCast fr to || nativeBitVectorCast fr to = [FloatCast fr to]
        casts _ = []
+
+       floatCasts = nub (concatMap casts asgns)
+
+       castUsesExact (FloatCast fr to) = isExactGMPKind cfg fr || isExactGMPKind cfg to
+
+       exactNativeCast fr to = (isExactGMPKind cfg fr && isNativeFloat to)
+                            || (isNativeFloat fr && isExactGMPKind cfg to)
+
+       nativeBitVectorCast fr to = (isBounded fr && isNativeFloat to)
+                                || (isNativeFloat fr && isBounded to)
+
+       isNativeFloat k = k == KFloat || k == KDouble
 
 -- | Render an arbitrary floating-point constant in raw interchange form.
 arbitraryFPConst :: Kind -> FP -> Maybe Doc
@@ -151,19 +177,19 @@ arbitraryFPConst k@(KFP eb sb) (FP _ _ value) = Just . text $ rawLiteral k bits
  where bits = BF.bfToBits (mkBFOpts eb sb BF.NearEven) value
 arbitraryFPConst _ _ = Nothing
 
--- | Lower an operation involving an arbitrary floating-point value. A
--- 'Nothing' result delegates operations such as table lookup and user-defined
--- functions to the general C renderer.
-arbitraryFPExpr :: [(SV, CV)] -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
-arbitraryFPExpr consts op svs resultKind args
-  | not (isFP resultKind || any (isFP . kindOf) svs)
+-- | Lower an operation requiring LibBF-backed floating-point semantics. A
+-- 'Nothing' result delegates native RNE operations, table lookup, and
+-- user-defined functions to the general C renderer.
+arbitraryFPExpr :: CgConfig -> [(SV, CV)] -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
+arbitraryFPExpr cfg consts op svs resultKind args
+  | not (isFP resultKind || any (isFP . kindOf) svs || isExactNativeCast || isNativeBitVectorCast)
   = Nothing
   | LkUp{} <- op
   = Nothing
   | Uninterpreted{} <- op
   = Nothing
   | True
-  = Just . expressionLowering CByValue [CRequiresLibBF, CRequiresLibM] $ case (op, args, svs) of
+  = Just . expressionLowering storage requirements $ case (op, args, svs) of
       (Label _         , [a]         , _)            -> a
       (Ite             , [c, a, b]   , _)            -> c <+> text "?" <+> a <+> text ":" <+> b
       (UNeg            , [a]         , x:_)          -> argCall x "neg" [a]
@@ -173,7 +199,7 @@ arbitraryFPExpr consts op svs resultKind args
       (Times           , [a, b]      , x:_)          -> argCall x "mul" [a, b, text "BF_RNDN"]
       (Equal False     , [a, b]      , x:_)          -> argCall x "eq" [a, b]
       (Equal True      , [a, b]      , x:_)          -> argCall x "obj_eq" [a, b]
-      (NotEqual        , [a, b]      , x:_)          -> text "!" P.<> parens (argCall x "eq" [a, b])
+      (NotEqual        , as          , x:_)          -> distinctExpr x as
       (LessThan        , [a, b]      , x:_)          -> argCall x "lt" [a, b]
       (GreaterThan     , [a, b]      , x:_)          -> argCall x "lt" [b, a]
       (LessEq          , [a, b]      , x:_)          -> argCall x "le" [a, b]
@@ -181,6 +207,10 @@ arbitraryFPExpr consts op svs resultKind args
       (IEEEFP fpOp     , as          , fpArgs)       -> fpExpr fpOp as fpArgs
       _                                              -> unsupported
  where argCall sv suffix = namedCall (prefix (kindOf sv) ++ "_" ++ suffix)
+
+       distinctExpr sv as = fsep $ punctuate (text " &&")
+                                  [text "!" P.<> parens (argCall sv "eq" [a, b])
+                                  | (a:rest) <- tails as, b <- rest]
 
        fpExpr fpOp as fpArgs = case (fpOp, as, fpArgs) of
          (FP_Abs              , [a]           , x:_)    -> argCall x "abs" [a]
@@ -204,8 +234,37 @@ arbitraryFPExpr consts op svs resultKind args
          (FP_IsNegative       , [a]           , x:_)    -> argCall x "is_negative" [a]
          (FP_IsPositive       , [a]           , x:_)    -> argCall x "is_positive" [a]
          (FP_Reinterpret fr to, [a]           , _)      -> namedCall (reinterpretName fr to) [a]
-         (FP_Cast fr to rm    , [a]           , _)      -> namedCall (castName fr to) [a, bfRoundingMode consts rm]
+         (FP_Cast fr to rm    , [a]           , _)      -> namedCall (castName fr to) (castArgs to a rm)
          _                                              -> unsupported
+
+       castArgs to a rm
+         | isExactGMPKind cfg to = [text "&__sbv_gmp_ctx", a, bfRoundingMode consts rm]
+         | True                  = [a, bfRoundingMode consts rm]
+
+       storage
+         | isExactGMPKind cfg resultKind = CFunctionScoped
+         | True                          = CByValue
+
+       requirements = [CRequiresLibBF, CRequiresLibM] ++ [CRequiresGMP | usesExact]
+
+       usesExact = isExactGMPKind cfg resultKind || any (isExactGMPKind cfg . kindOf) svs
+
+       isExactNativeCast = case op of
+         IEEEFP (FP_Cast fr to _) -> (isExactGMPKind cfg fr && isNativeFloat to)
+                                  || (isNativeFloat fr && isExactGMPKind cfg to)
+         _                         -> False
+
+       isNativeBitVectorCast = case op of
+         IEEEFP (FP_Cast fr to rm) -> needsAdapter rm
+                                  && ((isBounded fr && isNativeFloat to)
+                                   || (isNativeFloat fr && isBounded to))
+         _                          -> False
+
+       needsAdapter rm = case rm `lookup` consts of
+         Just (CV k (CADT ("RoundNearestTiesToEven", []))) | isRoundingMode k -> False
+         _                                                                     -> True
+
+       isNativeFloat k = k == KFloat || k == KDouble
 
        unsupported = error $ "SBV->C: arbitrary floating-point lowering does not yet support " ++ show op
                           ++ " with argument kinds " ++ show (map kindOf svs)
@@ -388,7 +447,7 @@ arbitraryFPCType k           = error $ "SBV->C: Expected an arbitrary floating-p
 -- and a bit-vector of the same width.
 data Reinterpret = Reinterpret Kind Kind deriving Eq
 
--- | A value conversion involving at least one arbitrary floating-point kind.
+-- | A value conversion implemented by the LibBF runtime.
 data FloatCast = FloatCast Kind Kind deriving Eq
 
 -- | Emit a bit-preserving conversion between raw C representations.
@@ -408,9 +467,9 @@ reinterpretRuntime (Reinterpret fr to)
 reinterpretName :: Kind -> Kind -> String
 reinterpretName fr to = "sbv_fp_reinterpret_" ++ reprTag fr ++ "_" ++ reprTag to
 
--- | Emit a LibBF-backed value conversion between supported floating formats.
-castRuntime :: FloatCast -> [String]
-castRuntime (FloatCast fr to) = case (fr, to) of
+-- | Emit a LibBF-backed value conversion between supported numeric formats.
+castRuntime :: CgConfig -> FloatCast -> [String]
+castRuntime cfg (FloatCast fr to) = case (fr, to) of
   (KFP{}, KFP{}) ->
     ["static inline " ++ reprCType to ++ " " ++ castName fr to ++ "(" ++ reprCType fr ++ " a, bf_rnd_t rnd)"
     , "{"
@@ -424,8 +483,12 @@ castRuntime (FloatCast fr to) = case (fr, to) of
   (KDouble, KFP{})    -> fromNative "SDouble"
   (KFP{}, KFloat)     -> toNative "SFloat" True
   (KFP{}, KDouble)    -> toNative "SDouble" False
-  (KBounded{}, KFP{}) -> integerToFP
-  (KFP{}, KBounded{}) -> fpToInteger
+  _ | isExactGMPKind cfg fr && isNativeFloat to -> exactToNative
+  _ | isNativeFloat fr && isExactGMPKind cfg to -> nativeToExact
+  _ | isExactGMPKind cfg fr && isFP to -> exactToFP
+  _ | isFP fr && isExactGMPKind cfg to -> fpToExact
+  _ | isBounded fr && isSomeFloat to -> integerToFP
+  _ | isSomeFloat fr && isBounded to -> fpToInteger
   _                   -> error $ "SBV->C: Unsupported arbitrary floating-point cast: " ++ show (fr, to)
  where fromNative sourceType =
          ["static inline " ++ reprCType to ++ " " ++ castName fr to ++ "(" ++ sourceType ++ " a, bf_rnd_t rnd)"
@@ -449,11 +512,11 @@ castRuntime (FloatCast fr to) = case (fr, to) of
             , ""]
 
        integerToFP =
-         ["static inline " ++ reprCType to ++ " " ++ castName fr to ++ "(" ++ reprCType fr ++ " a, bf_rnd_t rnd)"
+         ["static inline " ++ floatingCType to ++ " " ++ castName fr to ++ "(" ++ reprCType fr ++ " a, bf_rnd_t rnd)"
          , "{"
          , "  uint64_t words[" ++ show sourceWords ++ "]; uint64_t carry = 1; size_t i; limb_t j;"
          , "  const bool negative = " ++ (if hasSign fr then reprGetBit fr "a" (show (reprWidth fr - 1)) else "false") ++ ";"
-         , "  bf_context_t ctx; bf_t x, chunk; " ++ reprCType to ++ " raw;"
+         , "  bf_context_t ctx; bf_t x, chunk;" ++ integerResultDeclaration
          , "  for (i = 0; i < " ++ show sourceWords ++ "; ++i) {"
          , "    words[i] = 0;"
          , "    for (j = 0; j < 64 && i * 64 + j < " ++ show (reprWidth fr) ++ "; ++j)"
@@ -469,16 +532,16 @@ castRuntime (FloatCast fr to) = case (fr, to) of
          , "    bf_set_ui(&chunk, words[i]); bf_add(&x, &x, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);"
          , "  }"
          , "  if (negative) bf_neg(&x);"
-         , "  bf_round(&x, " ++ show (significandBits to) ++ ", " ++ prefix to ++ "_flags(rnd)); raw = " ++ prefix to ++ "_encode(&x);"
-         , "  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return raw;"
+         , "  bf_round(&x, " ++ show (significandBits to) ++ ", " ++ floatingFlags to ++ ");" ++ integerFinish
+         , "  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return " ++ integerResult ++ ";"
          , "}"
          , ""]
 
        fpToInteger =
-         ["static inline " ++ reprCType to ++ " " ++ castName fr to ++ "(" ++ reprCType fr ++ " a, bf_rnd_t rnd)"
+         ["static inline " ++ reprCType to ++ " " ++ castName fr to ++ "(" ++ floatingCType fr ++ " a, bf_rnd_t rnd)"
          , "{"
          , "  bf_context_t ctx; bf_t x; " ++ reprCType to ++ " raw = " ++ reprZero to ++ "; limb_t i;"
-         , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); " ++ prefix fr ++ "_decode(&ctx, &x, a); bf_rint(&x, rnd);"
+         , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); " ++ decodeFloating fr ++ " bf_rint(&x, rnd);"
          , "  if (bf_is_finite(&x) && !bf_is_zero(&x)) {"
          , "    const slimb_t base = (slimb_t) x.len * LIMB_BITS;"
          , "    for (i = 0; i < " ++ show (reprWidth to) ++ "; ++i) {"
@@ -491,8 +554,172 @@ castRuntime (FloatCast fr to) = case (fr, to) of
          , "}"
          , ""]
 
+       exactToFP
+         | fr == KUnbounded =
+            ["static inline " ++ reprCType to ++ " " ++ castName fr to ++ "(SInteger a, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x, chunk; " ++ reprCType to ++ " raw;"
+            , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &chunk);"
+            , "  sbv_bf_set_mpz(&x, &chunk, a); bf_round(&x, " ++ show (significandBits to) ++ ", " ++ prefix to ++ "_flags(rnd));"
+            , "  raw = " ++ prefix to ++ "_encode(&x); bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return raw;"
+            , "}"
+            , ""]
+         | fr == KReal =
+            ["static inline " ++ reprCType to ++ " " ++ castName fr to ++ "(SReal a, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x, numerator, denominator, chunk; " ++ reprCType to ++ " raw;"
+            , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &numerator); bf_init(&ctx, &denominator); bf_init(&ctx, &chunk);"
+            , "  sbv_bf_set_mpz(&numerator, &chunk, mpq_numref(a)); sbv_bf_set_mpz(&denominator, &chunk, mpq_denref(a));"
+            , "  bf_div(&x, &numerator, &denominator, " ++ show (significandBits to) ++ ", " ++ prefix to ++ "_flags(rnd)); raw = " ++ prefix to ++ "_encode(&x);"
+            , "  bf_delete(&chunk); bf_delete(&denominator); bf_delete(&numerator); bf_delete(&x); bf_context_end(&ctx); return raw;"
+            , "}"
+            , ""]
+         | otherwise = error $ "SBV->C: Expected an exact GMP source kind, received " ++ show fr
+
+       fpToExact
+         | to == KUnbounded =
+            ["static inline SInteger " ++ castName fr to ++ "(sbv_gmp_ctx *gmp_ctx, " ++ reprCType fr ++ " a, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x; mpz_ptr result = sbv_gmp_new_integer(gmp_ctx);"
+            , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); " ++ prefix fr ++ "_decode(&ctx, &x, a); bf_rint(&x, rnd);"
+            , "  sbv_bf_get_mpz(result, &x); bf_delete(&x); bf_context_end(&ctx); return result;"
+            , "}"
+            , ""]
+         | to == KReal =
+            ["static inline SReal " ++ castName fr to ++ "(sbv_gmp_ctx *gmp_ctx, " ++ reprCType fr ++ " a, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x; mpq_ptr result = sbv_gmp_new_real(gmp_ctx);"
+            , "  (void) rnd; bf_context_init(&ctx, sbv_bf_realloc, NULL); " ++ prefix fr ++ "_decode(&ctx, &x, a);"
+            , "  sbv_bf_get_mpq(result, &x); bf_delete(&x); bf_context_end(&ctx); return result;"
+            , "}"
+            , ""]
+         | otherwise = error $ "SBV->C: Expected an exact GMP target kind, received " ++ show to
+
+       exactToNative
+         | fr == KUnbounded =
+            ["static inline " ++ nativeCType to ++ " " ++ castName fr to ++ "(SInteger a, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x, chunk; double result;"
+            , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &chunk); sbv_bf_set_mpz(&x, &chunk, a);"
+            , "  bf_round(&x, " ++ show (significandBits to) ++ ", " ++ nativeFlags to ++ "); bf_get_float64(&x, &result, rnd);"
+            , "  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return (" ++ nativeCType to ++ ") result;"
+            , "}"
+            , ""]
+         | fr == KReal =
+            ["static inline " ++ nativeCType to ++ " " ++ castName fr to ++ "(SReal a, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x, numerator, denominator, chunk; double result;"
+            , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &numerator); bf_init(&ctx, &denominator); bf_init(&ctx, &chunk);"
+            , "  sbv_bf_set_mpz(&numerator, &chunk, mpq_numref(a)); sbv_bf_set_mpz(&denominator, &chunk, mpq_denref(a));"
+            , "  bf_div(&x, &numerator, &denominator, " ++ show (significandBits to) ++ ", " ++ nativeFlags to ++ "); bf_get_float64(&x, &result, rnd);"
+            , "  bf_delete(&chunk); bf_delete(&denominator); bf_delete(&numerator); bf_delete(&x); bf_context_end(&ctx); return (" ++ nativeCType to ++ ") result;"
+            , "}"
+            , ""]
+         | otherwise = error $ "SBV->C: Expected an exact GMP source kind, received " ++ show fr
+
+       nativeToExact
+         | to == KUnbounded =
+            ["static inline SInteger " ++ castName fr to ++ "(sbv_gmp_ctx *gmp_ctx, " ++ nativeCType fr ++ " a, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x; mpz_ptr result = sbv_gmp_new_integer(gmp_ctx);"
+            , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);"
+            , "  sbv_bf_get_mpz(result, &x); bf_delete(&x); bf_context_end(&ctx); return result;"
+            , "}"
+            , ""]
+         | to == KReal =
+            ["static inline SReal " ++ castName fr to ++ "(sbv_gmp_ctx *gmp_ctx, " ++ nativeCType fr ++ " a, bf_rnd_t rnd)"
+            , "{"
+            , "  bf_context_t ctx; bf_t x; mpq_ptr result = sbv_gmp_new_real(gmp_ctx);"
+            , "  (void) rnd; bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a);"
+            , "  sbv_bf_get_mpq(result, &x); bf_delete(&x); bf_context_end(&ctx); return result;"
+            , "}"
+            , ""]
+         | otherwise = error $ "SBV->C: Expected an exact GMP target kind, received " ++ show to
+
+       nativeFlags KFloat  = "BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd"
+       nativeFlags KDouble = "BF_FLAG_SUBNORMAL | bf_set_exp_bits(11) | (bf_flags_t) rnd"
+       nativeFlags k       = error $ "SBV->C: Expected a native floating-point kind, received " ++ show k
+
+       nativeCType KFloat  = "SFloat"
+       nativeCType KDouble = "SDouble"
+       nativeCType k       = error $ "SBV->C: Expected a native floating-point kind, received " ++ show k
+
+       isNativeFloat k = k == KFloat || k == KDouble
+
+       isSomeFloat k = isFP k || isNativeFloat k
+
+       floatingCType k
+         | isFP k          = reprCType k
+         | isNativeFloat k = nativeCType k
+         | otherwise       = error $ "SBV->C: Expected a floating-point kind, received " ++ show k
+
+       floatingFlags k
+         | isFP k          = prefix k ++ "_flags(rnd)"
+         | isNativeFloat k = nativeFlags k
+         | otherwise       = error $ "SBV->C: Expected a floating-point kind, received " ++ show k
+
+       decodeFloating k
+         | isFP k          = prefix k ++ "_decode(&ctx, &x, a);"
+         | isNativeFloat k = "bf_init(&ctx, &x); bf_set_float64(&x, (double) a);"
+         | otherwise       = error $ "SBV->C: Expected a floating-point kind, received " ++ show k
+
+       integerResultDeclaration
+         | isFP to          = " " ++ reprCType to ++ " raw;"
+         | isNativeFloat to = " double result;"
+         | otherwise        = error $ "SBV->C: Expected a floating-point target kind, received " ++ show to
+
+       integerFinish
+         | isFP to          = " raw = " ++ prefix to ++ "_encode(&x);"
+         | isNativeFloat to = " bf_get_float64(&x, &result, rnd);"
+         | otherwise        = error $ "SBV->C: Expected a floating-point target kind, received " ++ show to
+
+       integerResult
+         | isFP to          = "raw"
+         | isNativeFloat to = "(" ++ nativeCType to ++ ") result"
+         | otherwise        = error $ "SBV->C: Expected a floating-point target kind, received " ++ show to
+
        sourceWords   = (reprWidth fr + 63) `div` 64
        sourceTopBits = let r = reprWidth fr `mod` 64 in if r == 0 then 64 else r
+
+-- | Emit conversion primitives shared by LibBF/GMP value casts.
+exactBridgeRuntime :: [String]
+exactBridgeRuntime =
+  ["static void sbv_bf_set_mpz(bf_t *result, bf_t *chunk, mpz_srcptr value)"
+  , "{"
+  , "  const size_t count = (mpz_sizeinbase(value, 2) + 63) / 64; size_t written = 0, i;"
+  , "  uint64_t *words; bf_set_ui(result, 0);"
+  , "  if (mpz_sgn(value) == 0) return;"
+  , "  words = (uint64_t *) calloc(count, sizeof(*words)); if (words == NULL) abort();"
+  , "  mpz_export(words, &written, -1, sizeof(*words), 0, 0, value);"
+  , "  for (i = written; i-- > 0;) {"
+  , "    bf_mul_2exp(result, 64, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);"
+  , "    bf_set_ui(chunk, words[i]); bf_add(result, result, chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);"
+  , "  }"
+  , "  free(words); if (mpz_sgn(value) < 0) bf_neg(result);"
+  , "}"
+  , ""
+  , "static void sbv_bf_get_mpz(mpz_ptr result, const bf_t *value)"
+  , "{"
+  , "  slimb_t shift; mpz_set_ui(result, 0);"
+  , "  if (!bf_is_finite(value) || bf_is_zero(value)) return;"
+  , "  mpz_import(result, value->len, -1, sizeof(*value->tab), 0, 0, value->tab);"
+  , "  shift = value->expn - (slimb_t) value->len * LIMB_BITS;"
+  , "  if (shift >= 0) mpz_mul_2exp(result, result, (mp_bitcnt_t) shift);"
+  , "  else mpz_tdiv_q_2exp(result, result, (mp_bitcnt_t) -shift);"
+  , "  if (value->sign) mpz_neg(result, result);"
+  , "}"
+  , ""
+  , "static void sbv_bf_get_mpq(mpq_ptr result, const bf_t *value)"
+  , "{"
+  , "  slimb_t shift; mpq_set_ui(result, 0, 1);"
+  , "  if (!bf_is_finite(value) || bf_is_zero(value)) return;"
+  , "  mpz_import(mpq_numref(result), value->len, -1, sizeof(*value->tab), 0, 0, value->tab);"
+  , "  shift = value->expn - (slimb_t) value->len * LIMB_BITS;"
+  , "  if (shift >= 0) mpz_mul_2exp(mpq_numref(result), mpq_numref(result), (mp_bitcnt_t) shift);"
+  , "  else mpz_mul_2exp(mpq_denref(result), mpq_denref(result), (mp_bitcnt_t) -shift);"
+  , "  if (value->sign) mpz_neg(mpq_numref(result), mpq_numref(result)); mpq_canonicalize(result);"
+  , "}"
+  , ""]
 
 -- | Construct the collision-free name of a floating-point value conversion.
 castName :: Kind -> Kind -> String
@@ -500,10 +727,12 @@ castName fr to = "sbv_fp_cast_" ++ castTag fr ++ "_" ++ castTag to
 
 -- | Return the generated tag used in a floating-point value conversion.
 castTag :: Kind -> String
-castTag k@KFP{} = reprTag k
-castTag KFloat  = "float"
-castTag KDouble = "double"
-castTag k       = reprTag k
+castTag k@KFP{}    = reprTag k
+castTag KFloat     = "float"
+castTag KDouble    = "double"
+castTag KUnbounded = "integer"
+castTag KReal      = "real"
+castTag k          = reprTag k
 
 -- | Return the significand width of an arbitrary floating-point kind.
 significandBits :: Kind -> Int
