@@ -17,6 +17,8 @@ module Data.SBV.Compilers.C.Tuple
   , tupleFieldName
   , tupleTypeDecls
   , tupleOwnershipTypeDecls
+  , tupleOwnedInitName
+  , tupleOwnedSetName
   , tupleOwnedCloneName
   , tupleOwnedReleaseName
   , tupleDriverInit
@@ -87,7 +89,9 @@ tupleOwnershipTypeDecls cfg tuples
  where owned = filter (tupleUsesExact cfg) tuples
 
        declaration kind@(KTuple fields) =
-          [ "/* Owned exact-field helpers for " ++ tupleCType kind ++ ". */"
+          [ "#ifndef " ++ ownershipGuard
+          , "#define " ++ ownershipGuard
+          , "/* Owned exact-field helpers for " ++ tupleCType kind ++ ". */"
           , "/* Owned values have unique ownership; clone before copying and release every owner. */"
           , "static inline SBV_CGEN_UNUSED void " ++ tupleOwnedInitName kind ++ "(" ++ tupleCType kind ++ " *value)"
           , "{"
@@ -118,9 +122,12 @@ tupleOwnershipTypeDecls cfg tuples
           ++ concat (zipWith releaseField [1 :: Int ..] fields)
           ++ [ "  memset(value, 0, sizeof *value);"
           , "}"
+          , "#endif"
           , ""
          ]
-         where initializeField index fieldKind
+         where ownershipGuard = map toUpper (tupleCType kind) ++ "_OWNERSHIP_DEFINED"
+
+               initializeField index fieldKind
                   | isExactGMPKind cfg fieldKind
                   = let access  = "value->" ++ tupleFieldName index
                         mutable = exactMutableType fieldKind

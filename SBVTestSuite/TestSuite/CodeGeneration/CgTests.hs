@@ -73,7 +73,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute non-recursive ADTs" nonRecursiveADTs
   , testCase "compile repeated ADT types into a library" nonRecursiveADTLibrary
   , testCase "preserve ADT aggregate equality" adtAggregateEquality
-  , testCase "report unsupported ADT ownership and recursion" unsupportedADTBoundaries
+  , testCase "report unsupported recursive ADTs" unsupportedRecursiveADTs
   ]
  where thd (_, _, r) = r
 
@@ -503,20 +503,10 @@ adtAggregateEquality = withSystemTempDirectory "sbv-adt-aggregate-equality" $ \d
   assertBool "Expected a concrete arbitrary-float ADT declaration" ("SBVADT_CodeGenADT_9_fp_e7_s19" `isInfixOf` generated)
   assertBool "Expected arbitrary-float object equality in the ADT comparison" ("sbv_fp_e7_s19_obj_eq" `isInfixOf` generated)
 
--- | Check that unsupported public GMP ownership and recursive layouts fail
--- during generation with focused diagnostics.
-unsupportedADTBoundaries :: Assertion
-unsupportedADTBoundaries = do
-  exactResult <- try (do
-    (_, _, bundle) <- compileToC' "exactADTBoundary" $ do
-      value <- cgInput "value" :: SBVCodeGen (SCodeGenADT Integer)
-      cgReturn (isCGOne value)
-    evaluate bundle) :: IO (Either ErrorCall CgPgmBundle)
-  case exactResult of
-    Left exception -> assertBool ("Expected an owned-composite diagnostic, received:\n" ++ displayException exception)
-                                 ("owned composite ABI" `isInfixOf` displayException exception)
-    Right _        -> assertBool "Expected exact public ADT generation to fail" False
-
+-- | Check that unsupported recursive layouts fail during generation with a
+-- focused diagnostic.
+unsupportedRecursiveADTs :: Assertion
+unsupportedRecursiveADTs = do
   recursiveResult <- try (do
     (_, _, bundle) <- compileToC' "recursiveADTBoundary" $ do
       value <- cgInput "value" :: SBVCodeGen SCodeGenTree

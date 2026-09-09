@@ -15,6 +15,10 @@ module Data.SBV.Compilers.C.ADT
   ( adtKinds
   , adtCType
   , adtTypeDecls
+  , adtOwnershipTypeDecls
+  , adtOwnedCloneName
+  , adtOwnedReleaseName
+  , adtDriverInit
   , adtValue
   , adtConst
   , adtExpr
@@ -36,7 +40,14 @@ import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (gmpEqual, isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
-import Data.SBV.Compilers.C.Tuple      (elementCType, kindTag)
+import Data.SBV.Compilers.C.Tuple      ( elementCType
+                                       , kindTag
+                                       , tupleFieldName
+                                       , tupleOwnedInitName
+                                       , tupleOwnedReleaseName
+                                       , tupleOwnedSetName
+                                       , tupleUsesExact
+                                       )
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds, substituteADTVars)
@@ -86,6 +97,255 @@ adtTypeDecls adts = text . unlines $ "/* Non-recursive algebraic data types. */"
                 ++ zipWith fieldDeclaration [1 :: Int ..] fields
                 ++ ["    } " ++ adtConstructorMember constructorIndex ++ ";"]
               fieldDeclaration fieldIndex fieldKind = "      " ++ adtFieldCType fieldKind ++ " " ++ adtFieldName fieldIndex ++ ";"
+
+-- | Emit public ownership helpers for ADTs containing exact GMP-backed
+-- fields. Inputs borrow their field storage. Cloned values own the active
+-- constructor's exact fields and must be released with
+-- 'adtOwnedReleaseName'.
+adtOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
+adtOwnershipTypeDecls cfg adts
+  | null owned = empty
+  | True       = text . unlines $ concatMap declaration owned
+ where owned = filter (adtUsesExact cfg) adts
+
+       declaration kind =
+          [ "#ifndef " ++ ownershipGuard
+          , "#define " ++ ownershipGuard
+          , "/* Owned exact-field helpers for " ++ adtCType kind ++ ". */"
+          , "/* Owned values have unique ownership; clone before copying and release every owner. */"
+          , initSignature
+          , "{"
+          , "  if (value == NULL) abort();"
+          , "  memset(value, 0, sizeof *value);"
+          , "  value->tag = tag;"
+          , "  switch (tag) {"
+          ]
+          ++ concatMap (constructorCase initializeField kind) indexedConstructors
+          ++ [ "    default: abort();"
+          , "  }"
+          , "}"
+          , ""
+          , releaseSignature
+          , "{"
+          , "  if (value == NULL) return;"
+          , "  switch (value->tag) {"
+          ]
+          ++ concatMap (constructorCase releaseField kind) indexedConstructors
+          ++ [ "    default: abort();"
+          , "  }"
+          , "  memset(value, 0, sizeof *value);"
+          , "}"
+          , ""
+          , setSignature
+          , "{"
+          , "  if (target == NULL) abort();"
+          , "  if (target->tag != source.tag) {"
+          , "    " ++ adtOwnedReleaseName kind ++ "(target);"
+          , "    " ++ adtOwnedInitName kind ++ "(target, source.tag);"
+          , "  }"
+          , "  switch (source.tag) {"
+          ]
+          ++ concatMap (constructorCase setField kind) indexedConstructors
+          ++ [ "    default: abort();"
+          , "  }"
+          , "}"
+          , ""
+          , cloneSignature
+          , "{"
+          , "  " ++ adtCType kind ++ " result;"
+          , "  " ++ adtOwnedInitName kind ++ "(&result, source.tag);"
+          , "  " ++ adtOwnedSetName kind ++ "(&result, source);"
+          , "  return result;"
+          , "}"
+          , "#endif"
+          , ""
+         ]
+         where ownershipGuard = map toUpper (adtCType kind) ++ "_OWNERSHIP_DEFINED"
+
+               initSignature = "static inline SBV_CGEN_UNUSED void "
+                            ++ adtOwnedInitName kind
+                            ++ "(" ++ adtCType kind ++ " *value, " ++ adtTagCType kind ++ " tag)"
+
+               releaseSignature = "static inline SBV_CGEN_UNUSED void "
+                               ++ adtOwnedReleaseName kind
+                               ++ "(" ++ adtCType kind ++ " *value)"
+
+               setSignature = "static inline SBV_CGEN_UNUSED void "
+                           ++ adtOwnedSetName kind
+                           ++ "(" ++ adtCType kind ++ " *target, " ++ adtCType kind ++ " source)"
+
+               cloneSignature = "static inline SBV_CGEN_UNUSED "
+                             ++ adtCType kind ++ " " ++ adtOwnedCloneName kind
+                             ++ "(" ++ adtCType kind ++ " source)"
+
+               indexedConstructors = zip [1 :: Int ..] (adtConstructors kind)
+
+       constructorCase renderField kind (constructorIndex, (_, fields)) =
+          [ "    case " ++ adtTagName kind constructorIndex ++ ": {" ]
+          ++ concat (zipWith (renderField constructorIndex) [1 :: Int ..] fields)
+          ++ [ "      break;"
+          , "    }"
+          ]
+
+       initializeField constructorIndex fieldIndex fieldKind
+         | isExactGMPKind cfg fieldKind
+         = let access  = ownedField "value->" constructorIndex fieldIndex
+               mutable = exactMutableType fieldKind
+               local   = "field" ++ show constructorIndex ++ "_" ++ show fieldIndex
+           in [ "      " ++ mutable ++ " " ++ local ++ " = (" ++ mutable ++ ") malloc(sizeof(*" ++ local ++ "));"
+              , "      if (" ++ local ++ " == NULL) abort();"
+              , "      " ++ exactInit fieldKind ++ "(" ++ local ++ ");"
+              , "      " ++ access ++ " = " ++ local ++ ";"
+              ]
+         | tupleUsesExact cfg fieldKind
+         = [ "      " ++ tupleOwnedInitName fieldKind
+          ++ "(&" ++ ownedField "value->" constructorIndex fieldIndex ++ ");"
+           ]
+         | isConcreteADT fieldKind
+         , adtUsesExact cfg fieldKind
+         = [ "      " ++ adtOwnedInitName fieldKind
+          ++ "(&" ++ ownedField "value->" constructorIndex fieldIndex
+          ++ ", " ++ adtTagName fieldKind 1 ++ ");"
+           ]
+         | True
+         = []
+
+       setField constructorIndex fieldIndex fieldKind
+         | isExactGMPKind cfg fieldKind
+         = [ "      " ++ exactSet fieldKind
+          ++ "((" ++ exactMutableType fieldKind ++ ") " ++ target ++ ", " ++ source ++ ");"
+           ]
+         | tupleUsesExact cfg fieldKind
+         = ["      " ++ tupleOwnedSetName fieldKind ++ "(&" ++ target ++ ", " ++ source ++ ");"]
+         | isConcreteADT fieldKind
+         , adtUsesExact cfg fieldKind
+         = ["      " ++ adtOwnedSetName fieldKind ++ "(&" ++ target ++ ", " ++ source ++ ");"]
+         | True
+         = ["      " ++ target ++ " = " ++ source ++ ";"]
+        where target = ownedField "target->" constructorIndex fieldIndex
+              source = ownedField "source."  constructorIndex fieldIndex
+
+       releaseField constructorIndex fieldIndex fieldKind
+         | isExactGMPKind cfg fieldKind
+         = [ "      if (" ++ access ++ " != NULL) {"
+           , "        " ++ exactClear fieldKind ++ "((" ++ exactMutableType fieldKind ++ ") " ++ access ++ ");"
+           , "        free((void *) " ++ access ++ ");"
+           , "      }"
+           ]
+         | tupleUsesExact cfg fieldKind
+         = ["      " ++ tupleOwnedReleaseName fieldKind ++ "(&" ++ access ++ ");"]
+         | isConcreteADT fieldKind && adtUsesExact cfg fieldKind
+         = ["      " ++ adtOwnedReleaseName fieldKind ++ "(&" ++ access ++ ");"]
+         | True
+         = []
+        where access = ownedField "value->" constructorIndex fieldIndex
+
+       ownedField root constructorIndex fieldIndex = root
+                                                    ++ "payload."
+                                                    ++ adtConstructorMember constructorIndex
+                                                    ++ "."
+                                                    ++ adtFieldName fieldIndex
+
+       exactMutableType KUnbounded = "mpz_ptr"
+       exactMutableType KReal      = "mpq_ptr"
+       exactMutableType kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
+
+       exactInit KUnbounded = "mpz_init"
+       exactInit KReal      = "mpq_init"
+       exactInit kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
+
+       exactSet KUnbounded = "mpz_set"
+       exactSet KReal      = "mpq_set"
+       exactSet kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
+
+       exactClear KUnbounded = "mpz_clear"
+       exactClear KReal      = "mpq_clear"
+       exactClear kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
+
+-- | Return the helper name that initializes caller-owned storage for one ADT
+-- constructor.
+adtOwnedInitName :: Kind -> String
+adtOwnedInitName kind = "sbv_adt_owned_init_" ++ adtCType kind
+
+-- | Return the helper name that assigns into initialized owned ADT storage.
+adtOwnedSetName :: Kind -> String
+adtOwnedSetName kind = "sbv_adt_owned_set_" ++ adtCType kind
+
+-- | Return the public helper name that deep-copies an exact-field ADT.
+adtOwnedCloneName :: Kind -> String
+adtOwnedCloneName kind = "sbv_adt_owned_clone_" ++ adtCType kind
+
+-- | Return the public helper name that releases an owned exact-field ADT.
+adtOwnedReleaseName :: Kind -> String
+adtOwnedReleaseName kind = "sbv_adt_owned_release_" ++ adtCType kind
+
+-- | Initialize a generated-driver ADT and populate its active constructor
+-- from a seed. Exact fields use the public owned-ADT storage protocol; other
+-- fields use the supplied scalar renderer.
+adtDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
+adtDriverInit cfg renderValue kind externalName seed
+  | isConcreteADT kind
+  , adtUsesExact cfg kind
+  =  text (adtCType kind) <+> text externalName P.<> semi
+  $$ initialize kind (text externalName) constructorIndex
+  $$ vcat (assignConstructor kind (text externalName) constructorIndex fields seed)
+  | True
+  = error $ "SBV->C: Expected an exact-field ADT, received " ++ show kind
+ where constructors = adtConstructors kind
+       constructorIndex = fromInteger (mod seed (fromIntegral (length constructors))) + 1
+       fields = snd (constructors !! (constructorIndex - 1))
+
+       initialize fieldKind access index = text (adtOwnedInitName fieldKind)
+         P.<> parens (fsep (punctuate comma [text "&" P.<> parens access, text (adtTagName fieldKind index)]))
+         P.<> semi
+
+       release fieldKind access = text (adtOwnedReleaseName fieldKind)
+         P.<> parens (text "&" P.<> parens access)
+         P.<> semi
+
+       assignConstructor _ access index fieldKinds fieldSeed = concat
+         (zipWith (assignField access index) [1 :: Int ..] (zip fieldKinds [fieldSeed ..]))
+
+       assignField access constructor fieldIndex (nestedKind, nestedSeed) =
+         assignAt nestedKind (adtField access constructor fieldIndex) nestedSeed
+
+       assignAt fieldKind access fieldSeed
+         | isExactGMPKind cfg fieldKind
+         = exactAssignments fieldKind access fieldSeed
+         | KTuple fieldKinds <- fieldKind
+         , tupleUsesExact cfg fieldKind
+         = concat (zipWith assignTupleField [1 :: Int ..] (zip fieldKinds [fieldSeed ..]))
+         | isConcreteADT fieldKind
+         , adtUsesExact cfg fieldKind
+         = let nestedConstructors = adtConstructors fieldKind
+               nestedIndex = fromInteger (mod fieldSeed (fromIntegral (length nestedConstructors))) + 1
+               nestedFields = snd (nestedConstructors !! (nestedIndex - 1))
+           in release fieldKind access
+            : initialize fieldKind access nestedIndex
+            : assignConstructor fieldKind access nestedIndex nestedFields fieldSeed
+         | True
+         = [access <+> text "=" <+> renderValue fieldKind fieldSeed P.<> semi]
+        where assignTupleField fieldIndex (nestedKind, nestedSeed) = assignAt nestedKind
+                (access P.<> text "." P.<> text (tupleFieldName fieldIndex))
+                nestedSeed
+
+       exactAssignments KUnbounded access value =
+         [setFromString "mpz_set_str" "mpz_ptr" access value]
+       exactAssignments KReal access value =
+         [ setFromString "mpq_set_str" "mpq_ptr" access value
+         , text "mpq_canonicalize" P.<> parens (parens (text "mpq_ptr") <+> access) P.<> semi
+         ]
+       exactAssignments fieldKind _ _ = error $ "SBV->C: Expected an exact ADT field, received " ++ show fieldKind
+
+       setFromString functionName pointerType access value =
+         text "if"
+           <+> parens (text functionName
+                 P.<> parens (fsep (punctuate comma [ parens (text pointerType) <+> access
+                                                    , doubleQuotes (integer value)
+                                                    , text "10"
+                                                    ]))
+                 <+> text "!= 0")
+           <+> text "abort" P.<> parens empty P.<> semi
 
 -- | Render a concrete ADT value as a C99 compound literal.
 adtConst :: (CV -> Doc) -> CV -> Maybe Doc

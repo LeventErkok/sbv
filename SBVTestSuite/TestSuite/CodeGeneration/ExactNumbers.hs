@@ -9,7 +9,10 @@
 -- Compile-and-run tests for GMP-backed exact integer and real C lowering.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeApplications  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -28,6 +31,14 @@ import Data.SBV.Tuple (tuple, untuple)
 
 import Utils.SBVTestFramework
 
+-- | A sum type combining direct exact fields and tuple ownership.
+data ExactAggregate = ExactAbsent
+                    | ExactAggregate Integer AlgReal (Integer, AlgReal)
+                    deriving Show
+
+-- | Generate the symbolic interface for the exact-number ADT.
+mkSymbolic [''ExactAggregate]
+
 -- | GMP-backed exact-number C backend tests.
 tests :: TestTree
 tests = testGroup "CodeGeneration.ExactNumbers"
@@ -45,6 +56,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "return and output owned exact arrays" ownedExactArrays
   , testCase "use exact fields inside tuples" exactTupleFields
   , testCase "use owned exact tuples across the public ABI" ownedExactTuples
+  , testCase "use owned exact ADTs across the public ABI" ownedExactADTs
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
 
@@ -317,6 +329,34 @@ ownedExactTuples = withSystemTempDirectory "sbv-owned-exact-tuples" $ \dir -> do
 
   compileAndRunGMP dir "ownedExactTuples" program [expectedReturn, expectedOutput]
 
+-- | Exercise borrowed exact-field ADT inputs and independently owned outputs
+-- and returns, including exact fields nested through a tuple.
+ownedExactADTs :: Assertion
+ownedExactADTs = withSystemTempDirectory "sbv-owned-exact-adts" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        source <- cgInput "source" :: SBVCodeGen SExactAggregate
+        let integerValue              = getExactAggregate_1 source
+            realValue                 = getExactAggregate_2 source
+            values                    = getExactAggregate_3 source
+            (tupleInteger, tupleReal) = untuple values
+            outputValues              = tuple (tupleInteger + 2, tupleReal + 3)
+            outputAggregate           = sExactAggregate (integerValue + 1) (realValue / 7) outputValues
+            resultValues              = tuple (tupleInteger * 3, tupleReal / 5)
+            resultAggregate           = sExactAggregate (integerValue * 2) (realValue + 1) resultValues
+        cgOutput "output" outputAggregate
+        cgReturn resultAggregate
+      seed           = 2 ^ (130 :: Int) + 1
+      expectedOutput = "output =ExactAggregate(" ++ show (seed + 1)
+                    ++ ", " ++ show (seed + 1) ++ "/7, (" ++ show (seed + 4)
+                    ++ ", " ++ show (seed + 6) ++ "))"
+      expectedReturn = "ExactAggregate(" ++ show (seed * 2)
+                    ++ ", " ++ show (seed + 2) ++ ", (" ++ show (3 * (seed + 2))
+                    ++ ", " ++ show (seed + 3) ++ "/5))"
+
+  compileAndRunGMP dir "ownedExactADTs" program [expectedReturn, expectedOutput]
+
 -- | Exercise merged headers, archives, and drivers for exact-number libraries.
 exactNumberLibrary :: Assertion
 exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
@@ -341,8 +381,21 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
         source <- cgInput "source" :: SBVCodeGen (SBV (Integer, AlgReal))
         let (integerValue, realValue) = untuple source
         cgReturn (tuple (integerValue + fromInteger increment, realValue + fromInteger increment))
+      adtProgram increment = do
+        cgOverwriteFiles True
+        cgSetDriverValues [adtSeed]
+        source <- cgInput "source" :: SBVCodeGen SExactAggregate
+        let integerValue              = getExactAggregate_1 source
+            realValue                 = getExactAggregate_2 source
+            (tupleInteger, tupleReal) = untuple (getExactAggregate_3 source)
+            integerAmount             = fromInteger increment :: SInteger
+            realAmount                = fromInteger increment :: SReal
+        cgReturn (sExactAggregate (integerValue + integerAmount)
+                                  (realValue + realAmount)
+                                  (tuple (tupleInteger + integerAmount, tupleReal + realAmount)))
       wideSample = negate (2 ^ (670 :: Int)) + 12345
-      tupleSeed = 2 ^ (140 :: Int)
+      tupleSeed  = 2 ^ (140 :: Int)
+      adtSeed    = 2 ^ (150 :: Int) + 1
 
   (_, cfg, bundle) <- compileToCLib' "exactNumberLibrary"
     [ ("integerPart", integerProgram)
@@ -350,6 +403,8 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
     , ("widePart", wideProgram)
     , ("incrementTuple", tupleProgram 1)
     , ("addTwoTuple", tupleProgram 2)
+    , ("incrementADT", adtProgram 1)
+    , ("addTwoADT", adtProgram 2)
     ]
   renderCgPgmBundle (Just dir) (cfg, bundle)
 
@@ -364,6 +419,10 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
   assertOutput stdoutText (show wideSample)
   assertOutput stdoutText ("(" ++ show (tupleSeed + 1) ++ ", " ++ show (tupleSeed + 2) ++ ")")
   assertOutput stdoutText ("(" ++ show (tupleSeed + 2) ++ ", " ++ show (tupleSeed + 3) ++ ")")
+  assertOutput stdoutText ("ExactAggregate(" ++ show (adtSeed + 1) ++ ", " ++ show (adtSeed + 2)
+                         ++ ", (" ++ show (adtSeed + 3) ++ ", " ++ show (adtSeed + 4) ++ "))")
+  assertOutput stdoutText ("ExactAggregate(" ++ show (adtSeed + 2) ++ ", " ++ show (adtSeed + 3)
+                         ++ ", (" ++ show (adtSeed + 4) ++ ", " ++ show (adtSeed + 5) ++ "))")
 
 -- | Generate, compile, and execute a program against the system GMP package.
 compileAndRunGMP :: FilePath -> String -> SBVCodeGen () -> [String] -> Assertion
