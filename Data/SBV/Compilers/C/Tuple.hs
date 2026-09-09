@@ -16,6 +16,10 @@ module Data.SBV.Compilers.C.Tuple
   , tupleCType
   , tupleFieldName
   , tupleTypeDecls
+  , tupleOwnershipTypeDecls
+  , tupleOwnedCloneName
+  , tupleOwnedReleaseName
+  , tupleDriverInit
   , tupleValue
   , tupleConst
   , tupleExpr
@@ -73,6 +77,152 @@ tupleTypeDecls tuples = text . unlines $ "/* Structural tuple values. */" : conc
 
        fieldDeclaration index kind = "  " ++ elementCType kind ++ " " ++ tupleFieldName index ++ ";"
 
+-- | Emit public ownership helpers for tuples containing exact GMP-backed
+-- fields. Inputs may borrow an ordinary tuple value. Cloned values own their
+-- exact fields and must be released with 'tupleOwnedReleaseName'.
+tupleOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
+tupleOwnershipTypeDecls cfg tuples
+  | null owned = empty
+  | True       = text . unlines $ concatMap declaration owned
+ where owned = filter (tupleUsesExact cfg) tuples
+
+       declaration kind@(KTuple fields) =
+          [ "/* Owned exact-field helpers for " ++ tupleCType kind ++ ". */"
+          , "/* Owned values have unique ownership; clone before copying and release every owner. */"
+          , "static inline SBV_CGEN_UNUSED void " ++ tupleOwnedInitName kind ++ "(" ++ tupleCType kind ++ " *value)"
+          , "{"
+          , "  if (value == NULL) abort();"
+          , "  memset(value, 0, sizeof *value);"
+          ]
+          ++ concat (zipWith initializeField [1 :: Int ..] fields)
+          ++ [ "}"
+          , ""
+          , "static inline SBV_CGEN_UNUSED void " ++ tupleOwnedSetName kind ++ "(" ++ tupleCType kind ++ " *target, " ++ tupleCType kind ++ " source)"
+          , "{"
+          ]
+          ++ concat (zipWith setField [1 :: Int ..] fields)
+          ++ [ "}"
+          , ""
+          , "static inline SBV_CGEN_UNUSED " ++ tupleCType kind ++ " " ++ tupleOwnedCloneName kind ++ "(" ++ tupleCType kind ++ " source)"
+          , "{"
+          , "  " ++ tupleCType kind ++ " result;"
+          , "  " ++ tupleOwnedInitName kind ++ "(&result);"
+          , "  " ++ tupleOwnedSetName kind ++ "(&result, source);"
+          , "  return result;"
+          , "}"
+          , ""
+          , "static inline SBV_CGEN_UNUSED void " ++ tupleOwnedReleaseName kind ++ "(" ++ tupleCType kind ++ " *value)"
+          , "{"
+          , "  if (value == NULL) return;"
+          ]
+          ++ concat (zipWith releaseField [1 :: Int ..] fields)
+          ++ [ "  memset(value, 0, sizeof *value);"
+          , "}"
+          , ""
+         ]
+         where initializeField index fieldKind
+                  | isExactGMPKind cfg fieldKind
+                  = let access  = "value->" ++ tupleFieldName index
+                        mutable = exactMutableType fieldKind
+                        local   = "field" ++ show index
+                    in [ "  " ++ mutable ++ " " ++ local ++ " = (" ++ mutable ++ ") malloc(sizeof(*" ++ local ++ "));"
+                       , "  if (" ++ local ++ " == NULL) abort();"
+                       , "  " ++ exactInit fieldKind ++ "(" ++ local ++ ");"
+                       , "  " ++ access ++ " = " ++ local ++ ";"
+                       ]
+                  | isTuple fieldKind && tupleUsesExact cfg fieldKind
+                  = ["  " ++ tupleOwnedInitName fieldKind ++ "(&value->" ++ tupleFieldName index ++ ");"]
+                  | True
+                  = []
+
+               setField index fieldKind
+                  | isExactGMPKind cfg fieldKind
+                  = ["  " ++ exactSet fieldKind ++ "((" ++ exactMutableType fieldKind ++ ") target->" ++ field ++ ", source." ++ field ++ ");"]
+                  | isTuple fieldKind && tupleUsesExact cfg fieldKind
+                  = ["  " ++ tupleOwnedSetName fieldKind ++ "(&target->" ++ field ++ ", source." ++ field ++ ");"]
+                  | True
+                  = ["  target->" ++ field ++ " = source." ++ field ++ ";"]
+                  where field = tupleFieldName index
+
+               releaseField index fieldKind
+                  | isExactGMPKind cfg fieldKind
+                  = [ "  if (value->" ++ field ++ " != NULL) {"
+                    , "    " ++ exactClear fieldKind ++ "((" ++ exactMutableType fieldKind ++ ") value->" ++ field ++ ");"
+                    , "    free((void *) value->" ++ field ++ ");"
+                    , "  }"
+                    ]
+                  | isTuple fieldKind && tupleUsesExact cfg fieldKind
+                  = ["  " ++ tupleOwnedReleaseName fieldKind ++ "(&value->" ++ field ++ ");"]
+                  | True
+                  = []
+                  where field = tupleFieldName index
+       declaration kind = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
+
+       exactMutableType KUnbounded = "mpz_ptr"
+       exactMutableType KReal      = "mpq_ptr"
+       exactMutableType kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
+
+       exactInit KUnbounded = "mpz_init"
+       exactInit KReal      = "mpq_init"
+       exactInit kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
+
+       exactSet KUnbounded = "mpz_set"
+       exactSet KReal      = "mpq_set"
+       exactSet kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
+
+       exactClear KUnbounded = "mpz_clear"
+       exactClear KReal      = "mpq_clear"
+       exactClear kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
+
+-- | Return the helper name that initializes caller-owned storage for an exact
+-- tuple.
+tupleOwnedInitName :: Kind -> String
+tupleOwnedInitName kind = "sbv_tuple_owned_init_" ++ kindTag kind
+
+-- | Return the helper name that assigns into initialized owned tuple storage.
+tupleOwnedSetName :: Kind -> String
+tupleOwnedSetName kind = "sbv_tuple_owned_set_" ++ kindTag kind
+
+-- | Return the public helper name that deep-copies an exact-field tuple.
+tupleOwnedCloneName :: Kind -> String
+tupleOwnedCloneName kind = "sbv_tuple_owned_clone_" ++ kindTag kind
+
+-- | Return the public helper name that releases an owned exact-field tuple.
+tupleOwnedReleaseName :: Kind -> String
+tupleOwnedReleaseName kind = "sbv_tuple_owned_release_" ++ kindTag kind
+
+-- | Initialize a generated-driver tuple and populate its fields from a seed.
+-- Exact fields use the public owned-tuple storage protocol; other fields use
+-- the supplied scalar renderer.
+tupleDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
+tupleDriverInit cfg renderValue kind@(KTuple fields) externalName seed =
+     text (tupleCType kind) <+> text externalName P.<> semi
+  $$ text (tupleOwnedInitName kind) P.<> parens (text "&" P.<> text externalName) P.<> semi
+  $$ vcat (concat (zipWith assignField [1 :: Int ..] (zip fields [seed ..])))
+ where assignField index (fieldKind, fieldSeed) = assignAt fieldKind access fieldSeed
+        where access = text externalName P.<> text "." P.<> text (tupleFieldName index)
+
+       assignAt fieldKind access fieldSeed
+         | isExactGMPKind cfg fieldKind
+         = exactAssignments fieldKind access fieldSeed
+         | nested@(KTuple nestedFields) <- fieldKind
+         , tupleUsesExact cfg nested
+         = concat (zipWith assignNested [1 :: Int ..] (zip nestedFields [fieldSeed ..]))
+         | True
+         = [access <+> text "=" <+> renderValue fieldKind fieldSeed P.<> semi]
+        where assignNested nestedIndex (nestedKind, nestedSeed) = assignAt nestedKind
+                (access P.<> text "." P.<> text (tupleFieldName nestedIndex))
+                nestedSeed
+
+       exactAssignments KUnbounded access value =
+         [ text "if" <+> parens (text "mpz_set_str" P.<> parens (fsep (punctuate comma [parens (text "mpz_ptr") <+> access, doubleQuotes (integer value), text "10"])) <+> text "!= 0") <+> text "abort" P.<> parens empty P.<> semi]
+       exactAssignments KReal access value =
+         [ text "if" <+> parens (text "mpq_set_str" P.<> parens (fsep (punctuate comma [parens (text "mpq_ptr") <+> access, doubleQuotes (integer value), text "10"])) <+> text "!= 0") <+> text "abort" P.<> parens empty P.<> semi
+         , text "mpq_canonicalize" P.<> parens (parens (text "mpq_ptr") <+> access) P.<> semi
+         ]
+       exactAssignments fieldKind _ _ = error $ "SBV->C: Expected an exact tuple field, received " ++ show fieldKind
+tupleDriverInit _ _ kind _ _ = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
+
 -- | Render a concrete tuple value as a C99 compound literal.
 tupleConst :: (CV -> Doc) -> CV -> Maybe Doc
 tupleConst renderValue (CV kind@(KTuple fieldKinds) (CTuple fieldValues))
@@ -112,13 +262,15 @@ tupleExpr cfg op svs resultKind args
       _ -> Nothing
  where lower kind = Just . expressionLowering storage []
         where storage
+                | isExactGMPKind cfg kind = CFunctionScoped
                 | tupleUsesExact cfg kind = CFunctionScoped
                 | True                    = CByValue
 
 -- | Test whether a tuple contains an exact GMP-backed integer or real at any
 -- nesting depth under the active code-generation configuration.
 tupleUsesExact :: CgConfig -> Kind -> Bool
-tupleUsesExact cfg = any (isExactGMPKind cfg) . expandKinds
+tupleUsesExact cfg kind@KTuple{} = any (isExactGMPKind cfg) (expandKinds kind)
+tupleUsesExact _   _             = False
 
 -- | Render a tuple expression from its field expressions.
 tupleValue :: Kind -> [Doc] -> Doc

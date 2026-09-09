@@ -138,6 +138,7 @@ cgen cfg nm st sbvProg
                    $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
                    $$ tupleTypeDecls tuples
                    $$ adtTypeDecls adts
+                   $$ tupleOwnershipTypeDecls cfg tuples
         kinds           = Set.unions [reskinds sbvProg, interfaceKinds, assignmentKinds]
         interfaceKinds  = Set.fromList . concatMap expandKinds
                         $ concatMap cgValKinds (map snd ins ++ map snd outs ++ cgReturns st)
@@ -200,9 +201,6 @@ cgen cfg nm st sbvProg
                                      Nothing -> ()
 
                 validate role kind
-                  | isTuple kind && tupleUsesExact cfg kind
-                  = error $ "SBV->C: Exact Integer/Real fields in a public tuple " ++ role
-                         ++ " are not yet supported; their GMP storage requires an owned composite ABI."
                   | isADT kind && not (isRoundingMode kind) && adtUsesExact cfg kind
                   = error $ "SBV->C: Exact Integer/Real fields in a public ADT " ++ role
                          ++ " are not yet supported; their GMP storage requires an owned composite ABI."
@@ -551,6 +549,7 @@ genDriver cfg randVals fn inps outs mbRet
        nm           = text fn
        arrayInputs  = [(n, sv) | (n, CgAtomic sv) <- inps, isArray sv]
        pairedInputs = matchRands randVals inps
+       inputSeeds   = matchInputSeeds randVals inps
        matchRands _      []                                 = []
        matchRands []     _                                  = die "Run out of driver values!"
        matchRands (r:rs) ((n, CgAtomic sv)            : cs)
@@ -562,6 +561,18 @@ genDriver cfg randVals fn inps outs mbRet
           | True                                            = (map (mkRVal sv) frs, n, a) : matchRands srs cs
           where l          = length sws
                 (frs, srs) = splitAt l rs
+       matchInputSeeds _      []                            = []
+       matchInputSeeds []     _                             = die "Run out of driver values!"
+       matchInputSeeds (r:rs) ((n, CgAtomic{})        : cs) = (n, r) : matchInputSeeds rs cs
+       matchInputSeeds _      ((n, CgArray [])        : _ ) = die $ "Unsupported empty array input " ++ show n
+       matchInputSeeds rs     ((n, CgArray values@(_:_)) : cs)
+         | seed : _ <- seeds
+         , length seeds == length values                       = (n, seed) : matchInputSeeds rest cs
+         | True                                                = die "Run out of driver values!"
+        where (seeds, rest) = splitAt (length values) rs
+       inputSeed n = case lookup n inputSeeds of
+                       Just seed -> seed
+                       Nothing   -> die $ "Missing driver seed for tuple input " ++ show n
        mkRVal sv = mkRValKind (kindOf sv)
        mkRValKind kind r
          | isRoundingMode kind            = roundingModeDriverValue r
@@ -579,6 +590,7 @@ genDriver cfg randVals fn inps outs mbRet
            in defaultValue
               $$ arrayDriverInput cfg (kindOf sv) fn n defaultName
          | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text n) v
+         | tupleUsesExact cfg (kindOf sv) = tupleDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
        mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
        mkInp (_,   n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
        mkInp (vs,  n, CgArray sws@(sv:_)) =  pprCWord True sv <+> text n P.<> brackets (int (length sws)) <+> text "= {"
@@ -591,6 +603,7 @@ genDriver cfg randVals fn inps outs mbRet
        mkOut (v, CgAtomic sv)
          | isArray sv                     = text (arrayOutputCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
          | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text v) (text "0")
+         | tupleUsesExact cfg (kindOf sv) = text (tupleCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
          | True                           = pprCWord False sv <+> text v P.<> semi
        mkOut (v, CgArray [])             = die $ "Unsupported empty array value for " ++ show v
        mkOut (v, CgArray sws@(sv:_))     = pprCWord False sv <+> text v P.<> brackets (int (length sws)) P.<> semi
@@ -601,6 +614,7 @@ genDriver cfg randVals fn inps outs mbRet
                   | isExactGMPKind cfg (kindOf sv) -> gmpDriverInit (kindOf sv) resultVar (text "0")
                                                    $$ fcall P.<> semi
                   | isArray sv                     -> text (arrayOutputCType (kindOf sv)) <+> resultVar <+> text "=" <+> fcall P.<> semi
+                  | tupleUsesExact cfg (kindOf sv) -> text (tupleCType (kindOf sv)) <+> resultVar <+> text "=" <+> fcall P.<> semi
                   | True                           -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
        fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs ++ exactResultArg)))
        exactResultArg = case mbRet of
@@ -609,6 +623,7 @@ genDriver cfg randVals fn inps outs mbRet
        mkCVal ([v], n, CgAtomic sv)
          | isArray sv                     = text n
          | isExactGMPKind cfg (kindOf sv) = text n
+         | tupleUsesExact cfg (kindOf sv) = text n
          | True                           = v
        mkCVal (vs,  n, CgAtomic{}) = die $ "Unexpected driver value computed for " ++ show n ++ render (hcat vs)
        mkCVal (_,   n, CgArray{})  = text n
@@ -710,12 +725,20 @@ genDriver cfg randVals fn inps outs mbRet
 
        driverCleanup = vcat $ inputCleanup ++ outputCleanup ++ returnCleanup
          where inputCleanup  = [gmpDriverClear (kindOf sv) (text n) | (_, n, CgAtomic sv) <- pairedInputs, isExactGMPKind cfg (kindOf sv)]
+                              ++ [text (tupleOwnedReleaseName (kindOf sv)) P.<> parens (text "&" P.<> text n) P.<> semi
+                                 | (_, n, CgAtomic sv) <- pairedInputs
+                                 , tupleUsesExact cfg (kindOf sv)
+                                 ]
                               ++ [gmpDriverClear valueKind (text (n ++ "_default"))
                                  | (_, n, CgAtomic sv) <- pairedInputs
                                  , KArray _ valueKind <- [kindOf sv]
                                  , isExactGMPKind cfg valueKind
                                  ]
                outputCleanup = [gmpDriverClear (kindOf sv) (text n) | (n, CgAtomic sv) <- outs, isExactGMPKind cfg (kindOf sv)]
+                            ++ [text (tupleOwnedReleaseName (kindOf sv)) P.<> parens (text "&" P.<> text n) P.<> semi
+                               | (n, CgAtomic sv) <- outs
+                               , tupleUsesExact cfg (kindOf sv)
+                               ]
                             ++ [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> text n) P.<> semi
                                | (n, CgAtomic sv) <- outs
                                , isArray sv
@@ -723,6 +746,7 @@ genDriver cfg randVals fn inps outs mbRet
                returnCleanup = case mbRet of
                                  Just sv | isExactGMPKind cfg (kindOf sv) -> [gmpDriverClear (kindOf sv) resultVar]
                                  Just sv | isArray sv                     -> [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> resultVar) P.<> semi]
+                                 Just sv | tupleUsesExact cfg (kindOf sv) -> [text (tupleOwnedReleaseName (kindOf sv)) P.<> parens (text "&" P.<> resultVar) P.<> semi]
                                  _                                        -> []
 
 -- | Generate the C program
@@ -784,6 +808,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                         $$ vcat (concatMap (genIO False . (True,)) outVars)
                         $$ exactReturn
                         $$ arrayReturn
+                        $$ exactTupleReturn
                         $$ gmpEnd
                         $$ normalReturn
                        )
@@ -843,8 +868,15 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                                   <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi
                        _       -> empty
 
+       exactTupleReturn = case mbRet of
+                            Just sv | tupleUsesExact cfg (kindOf sv)
+                                    -> text "const" <+> text (tupleCType (kindOf sv)) <+> text "__result" <+> text "="
+                                       <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi
+                            _       -> empty
+
        normalReturn = case mbRet of
                         Just sv | isArray sv                           -> text "return __result;"
+                        Just sv | tupleUsesExact cfg (kindOf sv)       -> text "return __result;"
                         Just sv | not (isExactGMPKind cfg (kindOf sv)) -> mkRet sv
                         _                                             -> empty
 
@@ -910,6 +942,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        genIO False (alive, (cNm, CgAtomic sv))
          | isArray sv                     = [text "*" P.<> text cNm <+> text "=" <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
          | isExactGMPKind cfg (kindOf sv) = [gmpSet (kindOf sv) (text cNm) (showSV cfg consts sv) P.<> semi | alive]
+         | tupleUsesExact cfg (kindOf sv) = [text "*" P.<> text cNm <+> text "=" <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
          | True                           = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg consts sv P.<> semi | alive]
        genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
          where genElt sv i

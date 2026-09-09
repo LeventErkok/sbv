@@ -15,7 +15,6 @@
 
 module TestSuite.CodeGeneration.ExactNumbers (tests) where
 
-import Control.Exception        (ErrorCall, displayException, evaluate, try)
 import Data.List                 (isInfixOf)
 import Numeric                   (showHex)
 import System.Exit               (ExitCode(..))
@@ -45,7 +44,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute an exact structured lambda table" exactLambdaTable
   , testCase "return and output owned exact arrays" ownedExactArrays
   , testCase "use exact fields inside tuples" exactTupleFields
-  , testCase "reject an escaping exact tuple" escapingExactTupleRejected
+  , testCase "use owned exact tuples across the public ABI" ownedExactTuples
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
 
@@ -298,20 +297,25 @@ exactTupleFields = withSystemTempDirectory "sbv-exact-tuple-fields" $ \dir -> do
 
   compileAndRunGMP dir "exactTupleFields" program ["1/3", show (2 ^ (130 :: Int) :: Integer)]
 
--- | Ensure the compiler diagnoses the still-pending owned ABI for a tuple
--- that would otherwise expose function-scoped GMP pointers.
-escapingExactTupleRejected :: Assertion
-escapingExactTupleRejected = do
+-- | Exercise borrowed exact-tuple inputs and independently owned outputs and
+-- returns whose GMP fields survive the generated call's temporary arena.
+ownedExactTuples :: Assertion
+ownedExactTuples = withSystemTempDirectory "sbv-owned-exact-tuples" $ \dir -> do
   let program = do
         cgOverwriteFiles True
-        cgReturn (tuple (1 :: SInteger, 2 :: SWord8))
+        cgSetDriverValues [seed]
+        source <- cgInput "source" :: SBVCodeGen (SBV (Integer, (AlgReal, Integer)))
+        let (integerValue, nested)      = untuple source
+            (realValue, secondInteger) = untuple nested
+            outputTuple                = tuple (integerValue + 1, tuple (realValue / 3, secondInteger + 2))
+            result                     = tuple (integerValue * 2, tuple (realValue + 1, secondInteger * 3))
+        cgOutput "output" outputTuple
+        cgReturn result
+      seed           = 2 ^ (130 :: Int)
+      expectedOutput = "output =(" ++ show (seed + 1) ++ ", (" ++ show (seed + 1) ++ "/3, " ++ show (seed + 4) ++ "))"
+      expectedReturn = "(" ++ show (seed * 2) ++ ", (" ++ show (seed + 2) ++ ", " ++ show ((seed + 2) * 3) ++ "))"
 
-  result <- try (do (_, _, bundle) <- compileToC' "escapingExactTupleRejected" program
-                    evaluate bundle) :: IO (Either ErrorCall CgPgmBundle)
-  case result of
-    Left exception -> assertBool ("Expected an owned-composite diagnostic, received:\n" ++ displayException exception)
-                                 ("owned composite ABI" `isInfixOf` displayException exception)
-    Right{}        -> assertFailure "Expected the C compiler to reject an escaping exact tuple"
+  compileAndRunGMP dir "ownedExactTuples" program [expectedReturn, expectedOutput]
 
 -- | Exercise merged headers, archives, and drivers for exact-number libraries.
 exactNumberLibrary :: Assertion
@@ -331,12 +335,21 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
         cgSetDriverValues [wideSample]
         value <- cgInput "value" :: SBVCodeGen (SInt 673)
         cgReturn (sFromIntegral value :: SInteger)
+      tupleProgram increment = do
+        cgOverwriteFiles True
+        cgSetDriverValues [tupleSeed]
+        source <- cgInput "source" :: SBVCodeGen (SBV (Integer, AlgReal))
+        let (integerValue, realValue) = untuple source
+        cgReturn (tuple (integerValue + fromInteger increment, realValue + fromInteger increment))
       wideSample = negate (2 ^ (670 :: Int)) + 12345
+      tupleSeed = 2 ^ (140 :: Int)
 
   (_, cfg, bundle) <- compileToCLib' "exactNumberLibrary"
     [ ("integerPart", integerProgram)
     , ("realPart", realProgram)
     , ("widePart", wideProgram)
+    , ("incrementTuple", tupleProgram 1)
+    , ("addTwoTuple", tupleProgram 2)
     ]
   renderCgPgmBundle (Just dir) (cfg, bundle)
 
@@ -349,6 +362,8 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
   assertOutput stdoutText (show (2 ^ (130 :: Int) + 7 :: Integer))
   assertOutput stdoutText "5/3"
   assertOutput stdoutText (show wideSample)
+  assertOutput stdoutText ("(" ++ show (tupleSeed + 1) ++ ", " ++ show (tupleSeed + 2) ++ ")")
+  assertOutput stdoutText ("(" ++ show (tupleSeed + 2) ++ ", " ++ show (tupleSeed + 3) ++ ")")
 
 -- | Generate, compile, and execute a program against the system GMP package.
 compileAndRunGMP :: FilePath -> String -> SBVCodeGen () -> [String] -> Assertion
