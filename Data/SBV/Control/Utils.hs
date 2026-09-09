@@ -160,9 +160,12 @@ io :: MonadIO m => IO a -> m a
 io = liftIO
 
 -- | Sync-up the external solver with new context we have generated
-syncUpSolver :: (MonadIO m, MonadQuery m) => ProgInfo -> IORef CnstMap -> IncState -> m ()
-syncUpSolver progInfo rGlobalConsts is = do
+syncUpSolver :: (MonadIO m, MonadQuery m) => State -> ProgInfo -> IORef CnstMap -> IncState -> m ()
+syncUpSolver st progInfo rGlobalConsts is = do
         cfg <- getConfig
+
+        checks <- io $ readIORef (rNewMeasureChecks is)
+        io $ verifyMeasureChecks cfg st checks
 
         -- update global consts to have the new ones
         (newConsts, allConsts) <- liftIO $ do nc <- readIORef (rNewConsts is)
@@ -175,15 +178,33 @@ syncUpSolver progInfo rGlobalConsts is = do
                        inps        <- reverse <$> readIORef (rNewInps is)
                        ks          <- readIORef (rNewKinds is)
                        tbls        <- map arrange . mapToSortedList <$> readIORef (rNewTbls is)
-                       uis         <- Map.toAscList <$> readIORef (rNewUIs is)
+                       newUIs      <- readIORef (rNewUIs is)
+                       newDefns    <- readIORef (rNewDefns is)
                        as          <- readIORef (rNewAsgns is)
                        constraints <- readIORef (rNewConstraints is)
 
-                       let cnsts = mapToSortedList newConsts
+                       let cnsts       = mapToSortedList newConsts
+                           defineSet   = Map.keysSet newDefns
+                           uis         = Map.toAscList (Map.withoutKeys newUIs defineSet)
+                           definitions = Map.toAscList newDefns
 
-                       pure $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis as constraints cfg
+                       pure $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis definitions as constraints cfg
 
         mapM_ (send True) $ mergeSExpr ls
+
+-- | Run deferred termination and productivity checks before sending newly encountered definitions.
+verifyMeasureChecks :: SMTConfig -> State -> [(String, Bool, SMTConfig -> IO ())] -> IO ()
+verifyMeasureChecks cfg st checks = do
+        skip <- readIORef (rSkipMeasureChecks st)
+        unless (skip || null checks) $ do
+          let nms = map (\(n, _, _) -> n) checks
+          debug cfg ["[MEASURE] Verifying termination measures for: " <> T.pack (intercalate ", " nms)]
+          mapM_ (\(nm, isProductive, check) -> do
+                    debug cfg ["[MEASURE] Checking: " <> T.pack nm]
+                    check cfg
+                    let tag = if isProductive then "productive" else "terminating"
+                    debug cfg ["[MEASURE] Passed (" <> tag <> "): " <> T.pack nm]
+                ) checks
 
 -- | Retrieve the query context
 getQueryState :: (MonadIO m, MonadQuery m) => m QueryState
@@ -213,7 +234,7 @@ inNewContext :: (MonadIO m, MonadQuery m) => (State -> IO a) -> m a
 inNewContext act = do st@State{rconstMap, rProgInfo} <- queryState
                       (is, r)  <- io $ withNewIncState st act
                       progInfo <- io $ readIORef rProgInfo
-                      syncUpSolver progInfo rconstMap is
+                      syncUpSolver st progInfo rconstMap is
                       pure r
 
 -- | Generalization of 'Data.SBV.Control.freshVar_'
@@ -1301,7 +1322,7 @@ getObservables = do State{rObservables} <- queryState
 -- Generalization of 'Data.SBV.Control.getUIs'.
 getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, (Bool, Maybe [String], SBVType))]
 getUIs = do State{rUIMap, rDefns, rIncState} <- queryState
-            -- NB. no need to worry about new-defines, because we don't allow definitions once query mode starts
+            -- Definitions are tracked in the UI map as well, but they are not uninterpreted.
             defineSet <- Map.keysSet <$> io (readIORef rDefns)
 
             prior <- io $ readIORef rUIMap
@@ -1910,18 +1931,8 @@ executeQuery queryContext originalQuery = do
                   setOpts <- liftIO $ reverse <$> readIORef (rSMTOptions st)
 
                   -- Run any registered measure checks (termination/productivity verification)
-                  liftIO $ do skip <- readIORef (rSkipMeasureChecks st)
-                              unless skip $ do
-                                checks <- readIORef (rMeasureChecks st)
-                                unless (null checks) $ do
-                                  let nms = map (\(n, _, _) -> n) checks
-                                  debug cfg ["[MEASURE] Verifying termination measures for: " <> T.pack (intercalate ", " nms)]
-                                  mapM_ (\(nm, isProductive, check) -> do
-                                            debug cfg ["[MEASURE] Checking: " <> T.pack nm]
-                                            check cfg
-                                            let tag = if isProductive then "productive" else "terminating"
-                                            debug cfg ["[MEASURE] Passed (" <> tag <> "): " <> T.pack nm]
-                                        ) checks
+                  checks <- liftIO $ readIORef (rMeasureChecks st)
+                  liftIO $ verifyMeasureChecks cfg st checks
 
                   let SMTProblem{smtLibPgm} = runProofOn rm queryContext [] res
                       cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ setOpts }

@@ -444,7 +444,7 @@ declRationals = [ "(declare-datatype SBVRational ((SBV.Rational (sbv.rat.numerat
 -- for a list of what we include, in case something doesn't show up
 -- and you need it!
 cvtInc :: SMTLibIncConverter [Text]
-cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
+cvtInc curProgInfo inps newKs (_, consts) tbls uis defs (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
@@ -455,10 +455,12 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             <> concatMap (declConst cfg) consts
             -- inputs
             <> concatMap declInp inps
-            -- uninterpreteds
-            <> concatMap (declUI curProgInfo) uis
             -- table declarations
             <> tableDecls
+            -- uninterpreteds
+            <> concatMap (declUI curProgInfo) uis
+            -- user defined functions
+            <> concatMap T.lines (declUserFuns defs)
             -- expressions
             <> concatMap (declDef curProgInfo cfg tableMap) asgnsSeq
             -- table setups
