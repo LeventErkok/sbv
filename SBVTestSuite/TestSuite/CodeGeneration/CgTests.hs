@@ -10,12 +10,16 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.CodeGeneration.CgTests(tests) where
 
+import Control.Exception (ErrorCall, displayException, evaluate, try)
 import Data.List (isInfixOf)
 import Data.SBV.Internals
 import Data.SBV.Tuple (tuple, untuple)
@@ -29,6 +33,23 @@ import System.Process  (readProcessWithExitCode)
 import Test.Tasty.HUnit (assertBool, assertEqual)
 
 import Utils.SBVTestFramework
+
+-- | A non-recursive, parameterized sum type used to exercise C tagged-union
+-- generation with nullary, unary, and product constructors.
+data CodeGenADT a = CGEmpty
+                  | CGOne a
+                  | CGPair a Word16
+                  deriving Show
+
+-- | A finite enumeration used to check that constructor order is preserved by
+-- the C tag representation.
+data CodeGenEnum = CGRed | CGGreen | CGBlue deriving Show
+
+-- | A recursive type used to verify the current C ABI boundary.
+data CodeGenTree = CGLeaf Word8 | CGNode CodeGenTree CodeGenTree deriving Show
+
+-- | Generate the symbolic interfaces for the code-generation ADTs.
+mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenTree]
 
 -- | Code-generation tests.
 tests :: TestTree
@@ -49,6 +70,10 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "retain an escaping callback array" escapingCallbackArray
   , testCase "compile and execute structural tuples" structuralTuples
   , testCase "compile repeated tuple types into a library" structuralTupleLibrary
+  , testCase "compile and execute non-recursive ADTs" nonRecursiveADTs
+  , testCase "compile repeated ADT types into a library" nonRecursiveADTLibrary
+  , testCase "preserve ADT aggregate equality" adtAggregateEquality
+  , testCase "report unsupported ADT ownership and recursion" unsupportedADTBoundaries
   ]
  where thd (_, _, r) = r
 
@@ -389,6 +414,118 @@ structuralTupleLibrary = withSystemTempDirectory "sbv-structural-tuple-library" 
     [ "(5, 0x0006U)"
     , "(6, 0x0007U)"
     ]
+
+-- | Exercise parameter substitution, constructors, tests, accessors,
+-- structural equality, constants, tables, public outputs, and returns.
+nonRecursiveADTs :: Assertion
+nonRecursiveADTs = withSystemTempDirectory "sbv-non-recursive-adts" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [2, 1, 0, 1]
+        source   <- cgInput "source"   :: SBVCodeGen (SCodeGenADT Word8)
+        choose   <- cgInput "choose"   :: SBVCodeGen SBool
+        selector <- cgInput "selector" :: SBVCodeGen SWord8
+        color    <- cgInput "color"    :: SBVCodeGen SCodeGenEnum
+        let first       = getCGPair_1 source
+            second      = getCGPair_2 source
+            constructed = ite choose (sCGPair (first + 1) (second + 1)) (sCGOne first)
+            constant    = literal (CGPair 9 10)
+            selected    = select [source, constructed, constant] sCGEmpty selector
+        cgOutput "sourceCopy" source
+        cgOutput "constructed" constructed
+        cgOutput "constant" constant
+        cgOutput "isPair" (isCGPair source)
+        cgOutput "sameValue" (source .== literal (CGPair 2 3))
+        cgOutput "colorBeforeBlue" (color .< sCGBlue)
+        cgReturn selected
+
+  stdoutText <- compileProgramAndRunGenerated dir "nonRecursiveADTs" program
+  mapM_ (\fragment -> assertBool ("Expected ADT output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "CGPair(2, 0x0003U)"
+    , "constructed =CGPair(3, 0x0004U)"
+    , "constant =CGPair(9, 0x000aU)"
+    , "isPair = 1"
+    , "sameValue = 1"
+    , "colorBeforeBlue = 1"
+    ]
+
+-- | Exercise guarded ADT declarations shared by multiple generated library
+-- translation units and returned through the public by-value ABI.
+nonRecursiveADTLibrary :: Assertion
+nonRecursiveADTLibrary = withSystemTempDirectory "sbv-non-recursive-adt-library" $ \dir -> do
+  let component :: Word8 -> SBVCodeGen ()
+      component increment = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        source <- cgInput "source" :: SBVCodeGen (SCodeGenADT Word8)
+        cgReturn (ite (isCGOne source) (sCGOne (getCGOne_1 source + literal increment)) sCGEmpty)
+
+  (_, cfg, bundle) <- compileToCLib' "nonRecursiveADTLibrary"
+    [ ("incrementADT", component 1)
+    , ("addTwoADT",    component 2)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "nonRecursiveADTLibrary"
+  mapM_ (\fragment -> assertBool ("Expected ADT library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "CGOne(2)"
+    , "CGOne(3)"
+    ]
+
+-- | Exercise structural equality for ADTs instantiated with wide bit-vectors,
+-- arbitrary floating-point formats, and native floating-point values.
+adtAggregateEquality :: Assertion
+adtAggregateEquality = withSystemTempDirectory "sbv-adt-aggregate-equality" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 1, 1, 1, 9, 9]
+        wideLeft     <- cgInput "wideLeft"     :: SBVCodeGen (SCodeGenADT (WordN 673))
+        wideRight    <- cgInput "wideRight"    :: SBVCodeGen (SCodeGenADT (WordN 673))
+        floatLeft    <- cgInput "floatLeft"    :: SBVCodeGen (SCodeGenADT Float)
+        floatRight   <- cgInput "floatRight"   :: SBVCodeGen (SCodeGenADT Float)
+        integerLeft  <- cgInput "integerLeft"  :: SBVCodeGen SInteger
+        integerRight <- cgInput "integerRight" :: SBVCodeGen SInteger
+        cgOutput "wideEqual" (wideLeft .== wideRight)
+        cgOutput "exactEqual" (sCGOne integerLeft .== sCGOne integerRight)
+        cgReturn (floatLeft .=== floatRight)
+
+  stdoutText <- compileProgramAndRunGenerated dir "adtAggregateEquality" program
+  mapM_ (\fragment -> assertBool ("Expected aggregate equality output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "= 1"
+    , "wideEqual = 1"
+    , "exactEqual = 1"
+    ]
+
+  (_, _, arbitraryFPBundle) <- compileToC' "adtArbitraryFPEquality" $ do
+    left  <- cgInput "left"  :: SBVCodeGen (SCodeGenADT (FloatingPoint 7 19))
+    right <- cgInput "right" :: SBVCodeGen (SCodeGenADT (FloatingPoint 7 19))
+    cgReturn (left .=== right)
+  let generated = show arbitraryFPBundle
+  assertBool "Expected a concrete arbitrary-float ADT declaration" ("SBVADT_CodeGenADT_9_fp_e7_s19" `isInfixOf` generated)
+  assertBool "Expected arbitrary-float object equality in the ADT comparison" ("sbv_fp_e7_s19_obj_eq" `isInfixOf` generated)
+
+-- | Check that unsupported public GMP ownership and recursive layouts fail
+-- during generation with focused diagnostics.
+unsupportedADTBoundaries :: Assertion
+unsupportedADTBoundaries = do
+  exactResult <- try (do
+    (_, _, bundle) <- compileToC' "exactADTBoundary" $ do
+      value <- cgInput "value" :: SBVCodeGen (SCodeGenADT Integer)
+      cgReturn (isCGOne value)
+    evaluate bundle) :: IO (Either ErrorCall CgPgmBundle)
+  case exactResult of
+    Left exception -> assertBool ("Expected an owned-composite diagnostic, received:\n" ++ displayException exception)
+                                 ("owned composite ABI" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected exact public ADT generation to fail" False
+
+  recursiveResult <- try (do
+    (_, _, bundle) <- compileToC' "recursiveADTBoundary" $ do
+      value <- cgInput "value" :: SBVCodeGen SCodeGenTree
+      cgReturn (isCGLeaf value)
+    evaluate bundle) :: IO (Either ErrorCall CgPgmBundle)
+  case recursiveResult of
+    Left exception -> assertBool ("Expected a recursive-KApp diagnostic, received:\n" ++ displayException exception)
+                                 ("Recursive KApp fields" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected recursive ADT generation to fail" False
 
 -- | Generate, compile, and execute one standalone C program.
 compileProgramAndRunGenerated :: FilePath -> String -> SBVCodeGen () -> IO String

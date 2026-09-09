@@ -20,6 +20,8 @@ module Data.SBV.Compilers.C.Tuple
   , tupleConst
   , tupleExpr
   , tupleUsesExact
+  , elementCType
+  , kindTag
   ) where
 
 import Data.Char                       (toUpper)

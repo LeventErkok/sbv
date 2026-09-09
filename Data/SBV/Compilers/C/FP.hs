@@ -25,7 +25,9 @@ module Data.SBV.Compilers.C.FP
   , arbitraryFPNormalize
   , arbitraryFPPrint
   , arbitraryFPCType
+  , arbitraryFPEqual
   , arbitraryFPObjectEqual
+  , nativeFPObjectEqual
   ) where
 
 import Data.Bits                       (shiftL, shiftR, (.&.))
@@ -361,6 +363,21 @@ arbitraryFPPrint k value = namedCall (prefix k ++ "_fprint") [text "stdout", val
 -- equality: all NaNs compare equal and the two signed zeroes remain distinct.
 arbitraryFPObjectEqual :: Kind -> Doc -> Doc -> Doc
 arbitraryFPObjectEqual k left right = namedCall (prefix k ++ "_obj_eq") [left, right]
+
+-- | Compare two arbitrary floating-point values using IEEE equality.
+arbitraryFPEqual :: Kind -> Doc -> Doc -> Doc
+arbitraryFPEqual k left right = namedCall (prefix k ++ "_eq") [left, right]
+
+-- | Compare two native floating-point values using SMT object equality: all
+-- NaNs compare equal and the two signed zeroes remain distinct.
+nativeFPObjectEqual :: Doc -> Doc -> Doc
+nativeFPObjectEqual left right = choose (renderedIsNaN left) (renderedIsNaN right)
+                              $ choose (renderedIsNegativeZero left) (renderedIsNegativeZero right)
+                              $ choose (renderedIsNegativeZero right) (renderedIsNegativeZero left) (equal left right)
+ where choose condition ifTrue ifFalse = condition <+> text "?" <+> ifTrue <+> text ":" <+> ifFalse
+       renderedIsNaN value          = text "isnan" P.<> parens value
+       equal x y                    = parens (x <+> text "==" <+> y)
+       renderedIsNegativeZero value = parens (text "signbit" P.<> parens value <+> text "&&" <+> equal value (text "0"))
 
 -- | Return the public C type name for an arbitrary floating-point kind.
 arbitraryFPCType :: Kind -> String

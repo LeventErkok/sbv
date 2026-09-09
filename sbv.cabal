@@ -315,6 +315,7 @@ Library
                   , Data.SBV.Control.Types
                   , Data.SBV.Control.Utils
                   , Data.SBV.Compilers.C
+                  , Data.SBV.Compilers.C.ADT
                   , Data.SBV.Compilers.C.Array
                   , Data.SBV.Compilers.C.BV
                   , Data.SBV.Compilers.C.FP

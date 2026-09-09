@@ -13,6 +13,7 @@
 
 module Data.SBV.Compilers.C.GMP
   ( isExactGMPKind
+  , gmpEqual
   , gmpTypeDecls
   , gmpRuntime
   , gmpConst
@@ -51,6 +52,10 @@ isExactGMPKind cfg KReal      = case cgReal cfg of
                                   Nothing -> True
                                   Just{}  -> False
 isExactGMPKind _   _          = False
+
+-- | Compare two exact GMP-backed values for equality.
+gmpEqual :: Kind -> Doc -> Doc -> Doc
+gmpEqual kind left right = parens $ namedCall (kindPrefix kind ++ "cmp") [left, right] <+> text "==" <+> text "0"
 
 -- | Declare the GMP-backed public C types required by the supplied kinds.
 -- Inputs are borrowed read-only pointers. Outputs and exact return parameters

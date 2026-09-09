@@ -249,9 +249,9 @@ data Op = Plus
         deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | ADT operations
-data ADTOp = ADTConstructor T.Text Kind    -- Construct an ADT. Kind is the kind of the resulting ADT
-           | ADTTester      T.Text Kind    -- Check if top-level constructor matches. Kind is the kind of the argument
-           | ADTAccessor    T.Text Kind    -- Extract a field from an ADT value. Kind is the kind of the argument
+data ADTOp = ADTConstructor T.Text Kind    -- Construct an ADT. Kind is the kind of the result.
+           | ADTTester      T.Text Kind    -- Check if top-level constructor matches. Kind is the kind of the result.
+           | ADTAccessor    T.Text Kind    -- Extract a field from an ADT value. Kind is the kind of the result.
            deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | Special relations supported by z3
