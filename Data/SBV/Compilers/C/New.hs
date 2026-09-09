@@ -32,13 +32,14 @@ import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (kRoundingMode)
+import Data.SBV.Core.Kind (expandKinds, kRoundingMode)
 import Data.SBV.Compilers.C.Array
 import Data.SBV.Compilers.C.BV
 import Data.SBV.Compilers.C.FP
 import Data.SBV.Compilers.C.GMP
 import Data.SBV.Compilers.C.Lowering
 import Data.SBV.Compilers.C.Table
+import Data.SBV.Compilers.C.Tuple
 import Data.SBV.Compilers.CodeGen
 
 import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
@@ -117,7 +118,7 @@ cgen :: CgConfig -> String -> CgState -> Result -> CgPgmBundle
 cgen cfg nm st sbvProg
    -- we rnf the main pg and the sig to make sure any exceptions in type conversion pop-out early enough
    -- this is purely cosmetic, of course..
-   = rnf (render sig) `seq` rnf (render (vcat body)) `seq` result
+   = validateTupleABI `seq` rnf (render sig) `seq` rnf (render (vcat body)) `seq` result
   where result = CgPgmBundle bundleKind
                         $ filt [ ("Makefile"   , (CgMakefile flags          , [genMake (cgGenDriver cfg) nm nmd flags]))
                                , (nm  ++ ".h"  , (CgHeader [extraTypes, sig] , [genHeader bundleKind nm [sig] extProtos extraTypes]))
@@ -134,14 +135,17 @@ cgen cfg nm st sbvProg
                    $$ (if hasRequirement CRequiresLibBF  then arbitraryFPTypeDecls (arbitraryFPKinds kinds) else empty)
                    $$ (if hasRequirement CRequiresGMP    then gmpTypeDecls cfg kinds else empty)
                    $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
+                   $$ tupleTypeDecls tuples
         kinds      = reskinds sbvProg
         arrays     = arrayKinds kinds
+        tuples     = tupleKinds kinds
 
         hasRequirement requirement = requirement `Set.member` requirements
 
         usesRoundingModeType =  any (isRoundingMode . kindOf) roundingModeValues
                              || any tableUsesRoundingMode (resTables sbvProg)
                              || any arrayUsesRoundingMode arrays
+                             || any (any isRoundingMode . expandKinds) tuples
           where roundingModeValues =  concatMap cgValSVs (map snd ins ++ map snd outs ++ cgReturns st)
                                    ++ roundingModeAssignments
                 roundingModeAssignments = case resAsgns sbvProg of
@@ -168,6 +172,27 @@ cgen cfg nm st sbvProg
                      [CgAtomic o] -> Just o
                      [CgArray _]  -> tbd "Non-atomic return values"
                      _            -> tbd "Multiple return values"
+
+        validateTupleABI = inputOutputValidation `seq` returnValidation
+          where inputOutputValidation = foldr seq ()
+                  [ validate role (kindOf sv)
+                  | (role, values) <- [("input", ins), ("output", outs)]
+                  , (_, value) <- values
+                  , sv <- case value of
+                            CgAtomic atomic -> [atomic]
+                            CgArray atomics -> atomics
+                  ]
+
+                returnValidation = case mbRet of
+                                     Just sv -> validate "return" (kindOf sv)
+                                     Nothing -> ()
+
+                validate role kind
+                  | isTuple kind && tupleUsesExact cfg kind
+                  = error $ "SBV->C: Exact Integer/Real fields in a public tuple " ++ role
+                         ++ " are not yet supported; their GMP storage requires an owned composite ABI."
+                  | True
+                  = ()
         extProtos = case cgPrototypes st of
                      [] -> empty
                      xs -> vcat $ text "/* User given prototypes: */" : map text xs
@@ -245,6 +270,7 @@ showCType i = case kindOf i of
                 KBounded False w -> "SWord" ++ show w
                 KBounded True  w -> "SInt"  ++ show w
                 k@KArray{}        -> arrayCType k
+                k@KTuple{}        -> tupleCType k
                 k@KFP{}           -> arbitraryFPCType k
                 k                -> show k
 
@@ -303,6 +329,8 @@ mkConst _   cv
   | Just d <- roundingModeConst cv = d
 mkConst cfg cv
   | Just d <- arrayConst (mkConst cfg) cv = d
+mkConst cfg cv
+  | Just d <- tupleConst (mkConst cfg) cv = d
 mkConst cfg cv
   | Just d <- gmpConst cfg cv = d
 mkConst _   (CV k (CInteger i))
@@ -475,6 +503,8 @@ genDriver cfg randVals fn inps outs mbRet
                            $$ (case mbRet of
                               Just sv | isArray sv
                                       -> displayArray "__result" fcall resultVar (kindOf sv)
+                              Just sv | isTuple sv
+                                      -> displayTuple fcall resultVar (kindOf sv)
                               Just sv | isWideBV (kindOf sv)
                                       -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
                                       $$ wideBVPrint (kindOf sv) resultVar P.<> semi
@@ -515,7 +545,9 @@ genDriver cfg randVals fn inps outs mbRet
        mkRValKind kind r
          | isRoundingMode kind            = roundingModeDriverValue r
          | isExactGMPKind cfg kind         = integer r
+         | KTuple fieldKinds <- kind       = tupleValue kind (zipWith mkField fieldKinds [0 :: Integer ..])
          | True                            = mkConst cfg $ mkConstCV kind r
+         where mkField fieldKind offset = mkRValKind fieldKind (r + offset)
        mkInp ([v], n, CgAtomic sv)
          | KArray _ valueKind <- kindOf sv
          = let defaultName = n ++ "_default"
@@ -564,6 +596,7 @@ genDriver cfg randVals fn inps outs mbRet
        mkOVal (n, CgArray{})       = text n
        display (n, CgAtomic sv)
          | isArray sv                      = displayArray n (text n) (text n) (kindOf sv)
+         | isTuple sv                      = displayTuple (text n) (text n) (kindOf sv)
          | isWideBV (kindOf sv)            = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
                                            $$ wideBVPrint (kindOf sv) (text n) P.<> semi
                                            $$ text "printf(\"\\n\");"
@@ -599,11 +632,11 @@ genDriver cfg randVals fn inps outs mbRet
                           | True       = arbitraryFPPrint k
 
        displayArray stem label descriptor kind@(KArray keyKind valueKind)
-         = keySetup
-        $$ text "printf" P.<> parens (printQuotes (text " " <+> label P.<> text "[0] =")) P.<> semi
-        $$ printValue
-        $$ text "printf(\"\\n\");"
-        $$ keyCleanup
+         =  keySetup
+         $$ text "printf" P.<> parens (printQuotes (text " " <+> label P.<> text "[0] =")) P.<> semi
+         $$ printArrayValue
+         $$ text "printf(\"\\n\");"
+         $$ keyCleanup
         where keyName = text ("__sbv_array_key_" ++ stem)
               key
                 | isExactGMPKind cfg keyKind = keyName
@@ -618,12 +651,33 @@ genDriver cfg randVals fn inps outs mbRet
                 | True                       = empty
 
               value = text (arrayOutputReadName kind) P.<> parens (fsep (punctuate comma [descriptor, key]))
-              printValue
+              printArrayValue
                 | isWideBV valueKind           = wideBVPrint valueKind value P.<> semi
                 | isFP valueKind               = arbitraryFPPrint valueKind value P.<> semi
                 | isExactGMPKind cfg valueKind = gmpPrint valueKind value P.<> semi
                 | True                         = text "printf" P.<> parens (printQuotes (specifierKind cfg valueKind) P.<> comma <+> value) P.<> semi
        displayArray _ _ _ kind = die $ "Expected an array output, received " ++ show kind
+
+       displayTuple label value kind@KTuple{}
+         =  text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
+         $$ printTupleValue value kind
+         $$ text "printf(\"\\n\");"
+       displayTuple _ _ kind = die $ "Expected a tuple output, received " ++ show kind
+
+       printTupleValue _     (KTuple []) = text "printf(\"()\");"
+       printTupleValue value (KTuple fieldKinds)
+         =  text "printf(\"(\");"
+         $$ vcat (intersperse (text "printf(\", \");") (zipWith printField [1 :: Int ..] fieldKinds))
+         $$ text "printf(\")\");"
+        where printField index fieldKind = printValue fieldKind (parens value P.<> text "." P.<> text (tupleFieldName index))
+       printTupleValue _ kind = die $ "Expected a tuple value, received " ++ show kind
+
+       printValue kind value
+         | KTuple{} <- kind                  = printTupleValue value kind
+         | isWideBV kind                     = wideBVPrint kind value P.<> semi
+         | isFP kind                         = arbitraryFPPrint kind value P.<> semi
+         | isExactGMPKind cfg kind           = gmpPrint kind value P.<> semi
+         | True                              = text "printf" P.<> parens (printQuotes (specifierKind cfg kind) P.<> comma <+> value) P.<> semi
 
        driverCleanup = vcat $ inputCleanup ++ outputCleanup ++ returnCleanup
          where inputCleanup  = [gmpDriverClear (kindOf sv) (text n) | (_, n, CgAtomic sv) <- pairedInputs, isExactGMPKind cfg (kindOf sv)]
@@ -653,8 +707,6 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
   = notyet "Sets (SSet)"
   | any isList kindInfo
   = notyet "Lists (SList)"
-  | any isTuple kindInfo
-  = notyet "Tuples (STupleN)"
   | not (null usorts)
   = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
   | hasQuants pinfo
@@ -791,8 +843,8 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                       len (KFP eb sb)         = 6 + length (show eb) + length (show sb)
                       len (KList s)          = die $ "List sort: "   ++ show s
                       len (KSet  s)          = die $ "Set sort: "    ++ show s
-                      len (KTuple s)         = die $ "Tuple sort: "  ++ show s
                       len k@KArray{}         = length (arrayCType k)
+                      len k@KTuple{}         = length (tupleCType k)
                       len (KApp s _)         = die $ "Uninterpreted ADT app: " ++ s
                       len k@(KADT s _ _)
                         | isRoundingMode k = length (show k)
@@ -1091,6 +1143,7 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         selected = fromMaybe legacy $ chooseLowering
           [ arrayExpr cfg op opArgs resultSV renderedArgs
+          , tupleExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , tableExpr cfg (showSV cfg consts) op (kindOf resultSV)
           , gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , arbitraryFPExpr consts op opArgs (kindOf resultSV) renderedArgs

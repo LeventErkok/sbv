@@ -18,6 +18,7 @@ module TestSuite.CodeGeneration.CgTests(tests) where
 
 import Data.List (isInfixOf)
 import Data.SBV.Internals
+import Data.SBV.Tuple (tuple, untuple)
 import qualified Data.SBV.Tools.CodeGen.Legacy as PublicLegacy
 
 import System.Exit     (ExitCode(..))
@@ -46,6 +47,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
   , testCase "retain an escaping callback array" escapingCallbackArray
+  , testCase "compile and execute structural tuples" structuralTuples
+  , testCase "compile repeated tuple types into a library" structuralTupleLibrary
   ]
  where thd (_, _, r) = r
 
@@ -335,6 +338,57 @@ escapingCallbackArray = withSystemTempDirectory "sbv-escaping-callback-array" $ 
 
   stdoutText <- compileProgramAndRunGenerated dir "escapingCallbackArray" program
   assertBool ("Expected retained callback output to contain 0x00000007UL, received:\n" ++ stdoutText) ("[0] =0x00000007UL" `isInfixOf` stdoutText)
+
+-- | Exercise nested tuple inputs, construction, projection, conditionals,
+-- tuple constants in finite tables, public outputs, and returns.
+structuralTuples :: Assertion
+structuralTuples = withSystemTempDirectory "sbv-structural-tuples" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [3, 0]
+        source   <- cgInput "source"   :: SBVCodeGen (SBV (Word8, (Word16, Word32)))
+        selector <- cgInput "selector" :: SBVCodeGen SWord8
+        let (first, nested)   = untuple source
+            (second, third)  = untuple nested
+            rebuilt          = tuple (first + 1, tuple (second + 2, third + 3))
+            alternate        = tuple (9, tuple (10, 11))
+            selected         = select [rebuilt, alternate] alternate selector
+            conditional      = ite (selector .== 0) rebuilt alternate
+        cgOutput "selected" selected
+        cgOutput "rounding" (tuple (sRTN, first))
+        cgOutput "unit" (literal () :: SBV ())
+        cgReturn conditional
+
+  stdoutText <- compileProgramAndRunGenerated dir "structuralTuples" program
+  mapM_ (\fragment -> assertBool ("Expected tuple output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "(4, (0x0006U, 0x00000008UL))"
+    , "selected =(4, (0x0006U, 0x00000008UL))"
+    , "rounding =(3, 3)"
+    , "unit =()"
+    ]
+
+-- | Exercise guarded tuple declarations shared by multiple generated library
+-- translation units and returned through the public by-value ABI.
+structuralTupleLibrary :: Assertion
+structuralTupleLibrary = withSystemTempDirectory "sbv-structural-tuple-library" $ \dir -> do
+  let component :: Integer -> SBVCodeGen ()
+      component increment = do
+        cgOverwriteFiles True
+        cgSetDriverValues [4]
+        source <- cgInput "source" :: SBVCodeGen (SBV (Word8, Word16))
+        let (first, second) = untuple source
+        cgReturn (tuple (first + fromInteger increment, second + fromInteger increment))
+
+  (_, cfg, bundle) <- compileToCLib' "structuralTupleLibrary"
+    [ ("incrementTuple", component 1)
+    , ("addTwoTuple",    component 2)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "structuralTupleLibrary"
+  mapM_ (\fragment -> assertBool ("Expected tuple library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "(5, 0x0006U)"
+    , "(6, 0x0007U)"
+    ]
 
 -- | Generate, compile, and execute one standalone C program.
 compileProgramAndRunGenerated :: FilePath -> String -> SBVCodeGen () -> IO String

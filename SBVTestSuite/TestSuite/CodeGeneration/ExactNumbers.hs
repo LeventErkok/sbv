@@ -15,6 +15,7 @@
 
 module TestSuite.CodeGeneration.ExactNumbers (tests) where
 
+import Control.Exception        (ErrorCall, displayException, evaluate, try)
 import Data.List                 (isInfixOf)
 import Numeric                   (showHex)
 import System.Exit               (ExitCode(..))
@@ -24,6 +25,7 @@ import System.Process            (readProcessWithExitCode)
 import Test.Tasty.HUnit          (assertBool, assertEqual)
 
 import Data.SBV.Internals
+import Data.SBV.Tuple (tuple, untuple)
 
 import Utils.SBVTestFramework
 
@@ -42,6 +44,8 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute an exact structured lambda array" exactLambdaArray
   , testCase "compile and execute an exact structured lambda table" exactLambdaTable
   , testCase "return and output owned exact arrays" ownedExactArrays
+  , testCase "use exact fields inside tuples" exactTupleFields
+  , testCase "reject an escaping exact tuple" escapingExactTupleRejected
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
 
@@ -275,6 +279,39 @@ ownedExactArrays = withSystemTempDirectory "sbv-owned-exact-arrays" $ \dir -> do
         cgReturn source
 
   compileAndRunGMP dir "ownedExactArrays" program ["ownedExactArrays(&stored)[0] =0", "stored[0] =5/3"]
+
+-- | Exercise exact tuple construction, constants in a finite table,
+-- projection, and copying into scalar caller-owned results.
+exactTupleFields :: Assertion
+exactTupleFields = withSystemTempDirectory "sbv-exact-tuple-fields" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [0]
+        index <- cgInput "index" :: SBVCodeGen SWord8
+        let first, second             :: SBV (AlgReal, Integer)
+            first                     = tuple (1 / 3, 2 ^ (130 :: Int))
+            second                    = tuple (5 / 7, 9)
+            selected                  = select [first] second index
+            (realValue, integerValue) = untuple selected
+        cgOutput "integerValue" integerValue
+        cgReturn realValue
+
+  compileAndRunGMP dir "exactTupleFields" program ["1/3", show (2 ^ (130 :: Int) :: Integer)]
+
+-- | Ensure the compiler diagnoses the still-pending owned ABI for a tuple
+-- that would otherwise expose function-scoped GMP pointers.
+escapingExactTupleRejected :: Assertion
+escapingExactTupleRejected = do
+  let program = do
+        cgOverwriteFiles True
+        cgReturn (tuple (1 :: SInteger, 2 :: SWord8))
+
+  result <- try (do (_, _, bundle) <- compileToC' "escapingExactTupleRejected" program
+                    evaluate bundle) :: IO (Either ErrorCall CgPgmBundle)
+  case result of
+    Left exception -> assertBool ("Expected an owned-composite diagnostic, received:\n" ++ displayException exception)
+                                 ("owned composite ABI" `isInfixOf` displayException exception)
+    Right{}        -> assertFailure "Expected the C compiler to reject an escaping exact tuple"
 
 -- | Exercise merged headers, archives, and drivers for exact-number libraries.
 exactNumberLibrary :: Assertion

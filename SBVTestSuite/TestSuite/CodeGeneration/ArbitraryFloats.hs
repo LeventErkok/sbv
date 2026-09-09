@@ -27,6 +27,7 @@ import System.Process            (readProcessWithExitCode)
 import Test.Tasty.HUnit          (assertBool, assertEqual)
 
 import Data.SBV.Internals
+import Data.SBV.Tuple (tuple, untuple)
 
 import Utils.SBVTestFramework hiding ((#))
 
@@ -47,7 +48,21 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute an arbitrary-float structured lambda table" arbitraryFloatLambdaTable
   , testCase "compile and execute a mixed repeated-type library" mixedRepeatedTypeLibrary
   , testCase "compile a repeated-type library without a driver" repeatedTypeLibraryWithoutDriver
+  , testCase "compile a wide arbitrary-float tuple" wideFloatingTuple
   ]
+
+-- | Exercise tuple fields whose value representations are generated wide
+-- bit-vector and arbitrary floating-point structures.
+wideFloatingTuple :: Assertion
+wideFloatingTuple = withSystemTempDirectory "sbv-wide-floating-tuple" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [5]
+        source <- cgInput "source" :: SBVCodeGen (SBV (WordN 65, FloatingPoint 7 19))
+        let (word, float) = untuple source
+        cgReturn (tuple (word + 1, float + 1))
+
+  compileAndRunLibBF dir "wideFloatingTuple" program "(0x00000000000000000000000000000006, 0x"
 
 -- | Exercise LibBF-backed quadruple arithmetic and floating-point predicates.
 arbitraryFloatArithmetic :: Assertion

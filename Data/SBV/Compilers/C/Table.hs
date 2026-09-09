@@ -24,6 +24,7 @@ import Data.SBV.Compilers.C.GMP      (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.CodeGen    (CgConfig(..))
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind             (expandKinds)
 
 -- | Lower a finite SBV table lookup. Bounds are checked when requested by the
 -- code-generation configuration, and the default value is returned for every
@@ -97,4 +98,4 @@ tableExpr _ _ _ _ = Nothing
 -- function. Exact GMP constants allocate values in the function's ownership
 -- arena and therefore cannot appear in a static C initializer.
 tableMustBeLocal :: CgConfig -> Kind -> Bool
-tableMustBeLocal = isExactGMPKind
+tableMustBeLocal cfg = any (isExactGMPKind cfg) . expandKinds
