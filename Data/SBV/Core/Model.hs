@@ -4123,11 +4123,10 @@ class SMTDefinable a where
   -- You can also define higher-order functions, see 'smtHOFunction' for that purpose.
   smtFunctionDef :: (Typeable a, Lambda Symbolic a) => String -> Measure a -> a -> a
 
-  -- | Register a function. This function is typically not needed as SBV will register functions used
-  -- automatically upon first use. However, there are scenarios (in particular query contexts)
-  -- where the definition isn't used before query-mode starts, and SBV (for historical reasons)
-  -- requires functions to be known before query-mode starts executing. In such cases, use this function
-  -- to register them with the system.
+  -- | Register a function eagerly. This function is typically not needed, since SBV registers functions
+  -- automatically upon first use, including uses first encountered in query mode. It remains useful when
+  -- you want definition validation and any termination or productivity checks to happen before the function
+  -- is otherwise needed.
   registerFunction :: a -> Symbolic ()
 
   -- | Uninterpret a value, i.e., add this value as a completely undefined value/function that
@@ -4223,8 +4222,11 @@ class SMTDefinable a where
                           (def, info) <- lambdaWithInfo st TopLevel fk v
                           -- Record LambdaInfo for SCC-aware mutual recursion checking
                           modifyIORef' (rFuncLambdaInfos st) (Map.insert funcNm info)
-                          let barFuncNm    = barify funcNm
+                          let rootState    = getRootState st
+                              barFuncNm    = barify funcNm
                               tBarFuncNm   = T.pack barFuncNm
+                              addMeasureCheck check = modifyState rootState rMeasureChecks (check :)
+                                                                 $ modifyIncState rootState rNewMeasureChecks (check :)
                               isSelfRec    = any (\(_, SBVApp op _) -> case op of
                                                     Uninterpreted n -> n == tBarFuncNm
                                                     _               -> False)
@@ -4236,37 +4238,29 @@ class SMTDefinable a where
                           case msr of
                             AutoMeasure -> do
                               when isSelfRec $
-                                modifyIORef' (rMeasureChecks st)
-                                             ((funcNm, False, \cfg -> autoGuessOrFail cfg funcNm info) :)
+                                addMeasureCheck (funcNm, False, \cfg -> autoGuessOrFail cfg funcNm info)
                               when hasCrossRefs $
-                                modifyIORef' (rMeasureChecks st)
-                                             ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st Nothing) :)
+                                addMeasureCheck (funcNm, False, \cfg -> checkMutualFromState cfg funcNm st Nothing)
                               pure def
 
                             HasMeasure eval helpers -> do
                               when isSelfRec $
-                                modifyIORef' (rMeasureChecks st)
-                                             ((funcNm, False, \cfg -> verifyMeasure cfg funcNm info eval helpers) :)
+                                addMeasureCheck (funcNm, False, \cfg -> verifyMeasure cfg funcNm info eval helpers)
                               when hasCrossRefs $
-                                modifyIORef' (rMeasureChecks st)
-                                             ((funcNm, False, \cfg -> checkMutualFromState cfg funcNm st (Just eval)) :)
+                                addMeasureCheck (funcNm, False, \cfg -> checkMutualFromState cfg funcNm st (Just eval))
                               pure def
 
                             HasContract eval ceval helpers -> do
                               when hasCrossRefs $
-                                modifyIORef' (rMeasureChecks st)
-                                             ((funcNm, False, \cfg -> rejectMutualContractFromState cfg funcNm st) :)
-                              modifyIORef' (rMeasureChecks st)
-                                           ((funcNm, False, \cfg -> verifyMeasureWithContract cfg funcNm info eval ceval helpers) :)
+                                addMeasureCheck (funcNm, False, \cfg -> rejectMutualContractFromState cfg funcNm st)
+                              addMeasureCheck (funcNm, False, \cfg -> verifyMeasureWithContract cfg funcNm info eval ceval helpers)
                               pure def
 
                             Productive -> do
                               when isSelfRec $
-                                modifyIORef' (rMeasureChecks st)
-                                             ((funcNm, True, \cfg -> verifyGuardedness cfg funcNm info) :)
+                                addMeasureCheck (funcNm, True, \cfg -> verifyGuardedness cfg funcNm info)
                               when hasCrossRefs $
-                                modifyIORef' (rMeasureChecks st)
-                                             ((funcNm, True, \cfg -> checkMutualProductiveFromState cfg funcNm st) :)
+                                addMeasureCheck (funcNm, True, \cfg -> checkMutualProductiveFromState cfg funcNm st)
                               pure def
 
                             Unverified -> do modifyIORef' (rNoTermCheckFunctions st) (Set.insert nm)

@@ -1002,13 +1002,15 @@ isCodeGenMode State{runMode} = do rm <- readIORef runMode
                                            CodeGen     -> True
 
 -- | The state in query mode, i.e., additional context
-data IncState = IncState { rNewInps        :: IORef [NamedSymVar]   -- always existential!
-                         , rNewKinds       :: IORef KindSet
-                         , rNewConsts      :: IORef CnstMap
-                         , rNewTbls        :: IORef TableMap
-                         , rNewUIs         :: IORef UIMap
-                         , rNewAsgns       :: IORef SBVPgm
-                         , rNewConstraints :: IORef (S.Seq (Bool, [(String, String)], SV))
+data IncState = IncState { rNewInps          :: IORef [NamedSymVar]   -- always existential!
+                         , rNewKinds         :: IORef KindSet
+                         , rNewConsts        :: IORef CnstMap
+                         , rNewTbls          :: IORef TableMap
+                         , rNewUIs           :: IORef UIMap
+                         , rNewDefns         :: IORef (Map.Map String (SMTDef, SBVType))
+                         , rNewMeasureChecks :: IORef [(String, Bool, SMTConfig -> IO ())]
+                         , rNewAsgns         :: IORef SBVPgm
+                         , rNewConstraints   :: IORef (S.Seq (Bool, [(String, String)], SV))
                          }
 
 -- | Get a new IncState
@@ -1019,15 +1021,19 @@ newIncState = do
         nc    <- newIORef Map.empty
         tm    <- newIORef Map.empty
         ui    <- newIORef Map.empty
+        ds    <- newIORef Map.empty
+        ms    <- newIORef []
         pgm   <- newIORef (SBVPgm S.empty)
         cstrs <- newIORef S.empty
-        pure IncState { rNewInps        = is
-                      , rNewKinds       = ks
-                      , rNewConsts      = nc
-                      , rNewTbls        = tm
-                      , rNewUIs         = ui
-                      , rNewAsgns       = pgm
-                      , rNewConstraints = cstrs
+        pure IncState { rNewInps          = is
+                      , rNewKinds         = ks
+                      , rNewConsts        = nc
+                      , rNewTbls          = tm
+                      , rNewUIs           = ui
+                      , rNewDefns         = ds
+                      , rNewMeasureChecks = ms
+                      , rNewAsgns         = pgm
+                      , rNewConstraints   = cstrs
                       }
 
 -- | Get a new IncState
@@ -1326,7 +1332,9 @@ svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
 newUninterpreted :: State -> UIName -> Maybe [String] -> SBVType -> UICodeKind -> IO Op
 newUninterpreted st uiName mbArgNames t uiCode = do
 
-  let (adtOp, candName) = case uiName of
+  let rootState = getRootState st
+
+      (adtOp, candName) = case uiName of
                             UIGiven n -> (False, n)
                             UIADT   o -> case o of
                                            ADTConstructor n _ -> (True, T.unpack n)
@@ -1359,15 +1367,9 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                                   Just (oldDef, _)
                                     | not (smtDefEq d oldDef)
                                     -> conflictError nm
-                                  _ -> pure ()
-                                modifyState st rDefns (Map.insert nm (d, t))
-                                  $ noInteractive [ "Defined functions (smtFunction):"
-                                                  , "  Name: " ++ nm ++ extraComment
-                                                  , "  Type: " ++ show t
-                                                  , ""
-                                                  , "You should explicitly register these functions by calling"
-                                                  , "the function 'registerFunction' on them before starting the query section."
-                                                  ]
+                                  Just{}  -> pure ()
+                                  Nothing -> modifyState rootState rDefns (Map.insert nm (d, t))
+                                               $ modifyIncState rootState rNewDefns (Map.insert nm (d, t))
                                 pure True
                  UICgC c  -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
                              do modifyState st rCgMap (Map.insert nm c) (pure ())
@@ -1385,8 +1387,8 @@ newUninterpreted st uiName mbArgNames t uiCode = do
     uiMap <- readIORef (rUIMap st)
     case nm `Map.lookup` uiMap of
       Just (_, _, t') -> checkType t' (pure ())
-      Nothing         -> modifyState st rUIMap (Map.insert nm (isCurried, mbArgNames, t))
-                           $ modifyIncState st rNewUIs
+      Nothing         -> modifyState rootState rUIMap (Map.insert nm (isCurried, mbArgNames, t))
+                           $ modifyIncState rootState rNewUIs
                                               (\newUIs -> case nm `Map.lookup` newUIs of
                                                             Just (_, _, t') -> checkType t' newUIs
                                                             Nothing         -> Map.insert nm (isCurried, mbArgNames, t) newUIs)
@@ -1457,7 +1459,9 @@ registerKind st k
        --     * OR If it's a tuple-sort whose cardinality isn't already in the general state
        --     * OR If it's a list that's not already in the general state (so we can send the flatten commands)
 
-       existingKinds <- readIORef (rUsedKinds st)
+       let rootState = getRootState st
+
+       existingKinds <- readIORef (rUsedKinds rootState)
 
        -- For ADTs we need to make sure we haven't added it before
        let adtNameExists s = any (\case KADT s' _ _ -> s == s'; _ -> False) existingKinds
@@ -1467,7 +1471,7 @@ registerKind st k
                          _           -> False
 
        unless adtExists $
-          modifyState st rUsedKinds (Set.insert k) $ do
+          modifyState rootState rUsedKinds (Set.insert k) $ do
 
               -- Why do we discriminate here? Because the incremental context is sensitive to the
               -- order: In particular, if an uninterpreted kind is already in there, we don't
@@ -1478,7 +1482,7 @@ registerKind st k
                                   KTuple nks  -> not $ any (\case KTuple oks -> length nks == length oks; _ -> False) existingKinds
                                   _           -> False
 
-              when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
+              when needsAdding $ modifyIncState rootState rNewKinds (Set.insert k)
 
        -- Don't forget to register subkinds!
        case k of

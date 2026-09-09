@@ -1,6 +1,13 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 14.8, Not yet released
+
+  * Functions defined with `smtFunction` and its variants can now be first encountered after entering
+    query mode. SBV sends their definitions and dependencies incrementally, while retaining termination
+    and productivity checks. Calling `registerFunction` before the query is no longer required for this case.
+    Thanks to David Van Balen for reporting [issue #815](https://github.com/LeventErkok/sbv/issues/815).
+
 ### Version 14.7, 2026-08-31
 
   * Fix https://github.com/LeventErkok/sbv/issues/813. Thanks to David van Balen for reporting.
