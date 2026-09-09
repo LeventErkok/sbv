@@ -6,13 +6,14 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Non-recursive algebraic-data-type lowering for the SBV-to-C compiler.
+-- Acyclic algebraic-data-type lowering for the SBV-to-C compiler.
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Compilers.C.ADT
   ( adtKinds
+  , resolveADTReferences
   , adtCType
   , adtTypeDecls
   , adtOwnershipTypeDecls
@@ -28,7 +29,8 @@ module Data.SBV.Compilers.C.ADT
   ) where
 
 import Data.Char                       (isAlphaNum, isAscii, ord, toUpper)
-import Data.List                       (find, nub, sortOn)
+import qualified Data.Graph as DG
+import Data.List                       (find, nub)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Numeric                         (showHex)
@@ -53,9 +55,48 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds, substituteADTVars)
 import Data.SBV.Core.Symbolic          (ADTOp(..))
 
--- | Return the concrete, non-built-in ADT kinds used by a program.
-adtKinds :: Set.Set Kind -> [Kind]
-adtKinds = sortOn adtDepth . nub . filter isConcreteADT . Set.toAscList
+-- | Return the used concrete, non-built-in ADT kinds in dependency order.
+-- The first set supplies every registered ADT template and the second supplies
+-- the kinds actually reached by the program. References through 'KApp' are
+-- accepted when they form an acyclic C value layout; genuinely recursive
+-- groups are rejected with a focused diagnostic.
+adtKinds :: Set.Set Kind -> Set.Set Kind -> [Kind]
+adtKinds registeredKinds usedKinds = concatMap orderedComponent (DG.stronglyConnComp dependencyNodes)
+ where registeredADTs = nub (filter isConcreteADT (Set.toAscList registeredKinds))
+       usedADTs       = nub (filter isConcreteADT (Set.toAscList usedKinds))
+       adts           = closeRegistry usedADTs
+
+       dependencyNodes = [(kind, adtKey kind, dependencies kind) | kind <- adts]
+
+       closeRegistry current
+         | length expanded == length current = current
+         | True                              = closeRegistry expanded
+        where referenced = [ application
+                           | kind <- current
+                           , application@KApp{} <- referenceApplications kind
+                           ]
+              expanded = nub (current ++ map (resolveADTReferences registeredADTs) referenced)
+
+       referenceApplications (KADT typeName parameters constructors) =
+         [ application
+         | (_, fields) <- constructors
+         , field <- fields
+         , application@KApp{} <- expandKinds (substituteADTVars typeName parameters field)
+         ]
+       referenceApplications kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
+
+       dependencies kind =
+         [ (referencedName, referencedArguments)
+         | KApp referencedName referencedArguments <- referenceApplications kind
+         ]
+
+       orderedComponent (DG.AcyclicSCC kind) = [kind]
+       orderedComponent (DG.CyclicSCC recursiveKinds) =
+         error $ "SBV->C: Recursive ADT layouts are not yet supported: "
+              ++ unwords (map show recursiveKinds)
+
+       adtKey (KADT typeName parameters _) = (typeName, map snd parameters)
+       adtKey kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
 
 -- | Return the public C structure type used for an ADT kind.
 adtCType :: Kind -> String
@@ -69,13 +110,13 @@ adtCType kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
 -- | Emit public tagged-union declarations for all ADT kinds used by a program.
 adtTypeDecls :: [Kind] -> Doc
 adtTypeDecls []   = empty
-adtTypeDecls adts = text . unlines $ "/* Non-recursive algebraic data types. */" : concatMap declaration adts
+adtTypeDecls adts = text . unlines $ "/* Acyclic algebraic data types. */" : concatMap declaration adts
  where declaration kind =
             [ "#ifndef " ++ adtGuard kind
             , "#define " ++ adtGuard kind
             , "typedef enum {"
             ]
-         ++ zipWith (enumEntry kind) [1 :: Int ..] (adtConstructors kind)
+         ++ zipWith (enumEntry kind) [1 :: Int ..] (adtConstructors adts kind)
          ++ [ "} " ++ adtTagCType kind ++ ";"
             , "typedef struct {"
             , "  " ++ adtTagCType kind ++ " tag;"
@@ -86,12 +127,15 @@ adtTypeDecls adts = text . unlines $ "/* Non-recursive algebraic data types. */"
             , ""
             ]
        enumEntry kind index _ = "  " ++ adtTagName kind index ++ " = " ++ show (index - 1)
-                             ++ if index == length (adtConstructors kind) then "" else ","
+                             ++ if index == length (adtConstructors adts kind) then "" else ","
 
        payloadDeclaration kind
          | null populated = []
          | True           = ["  union {"] ++ concatMap constructorPayload populated ++ ["  } payload;"]
-        where populated = [(index, fields) | (index, (_, fields)) <- zip [1 :: Int ..] (adtConstructors kind), not (null fields)]
+        where populated = [ (index, fields)
+                          | (index, (_, fields)) <- zip [1 :: Int ..] (adtConstructors adts kind)
+                          , not (null fields)
+                          ]
               constructorPayload (constructorIndex, fields) =
                    ["    struct {"]
                 ++ zipWith fieldDeclaration [1 :: Int ..] fields
@@ -106,7 +150,7 @@ adtOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
 adtOwnershipTypeDecls cfg adts
   | null owned = empty
   | True       = text . unlines $ concatMap declaration owned
- where owned = filter (adtUsesExact cfg) adts
+ where owned = filter (adtUsesExact cfg adts) adts
 
        declaration kind =
           [ "#ifndef " ++ ownershipGuard
@@ -178,7 +222,7 @@ adtOwnershipTypeDecls cfg adts
                              ++ adtCType kind ++ " " ++ adtOwnedCloneName kind
                              ++ "(" ++ adtCType kind ++ " source)"
 
-               indexedConstructors = zip [1 :: Int ..] (adtConstructors kind)
+               indexedConstructors = zip [1 :: Int ..] (adtConstructors adts kind)
 
        constructorCase renderField kind (constructorIndex, (_, fields)) =
           [ "    case " ++ adtTagName kind constructorIndex ++ ": {" ]
@@ -202,7 +246,7 @@ adtOwnershipTypeDecls cfg adts
           ++ "(&" ++ ownedField "value->" constructorIndex fieldIndex ++ ");"
            ]
          | isConcreteADT fieldKind
-         , adtUsesExact cfg fieldKind
+         , adtUsesExact cfg adts fieldKind
          = [ "      " ++ adtOwnedInitName fieldKind
           ++ "(&" ++ ownedField "value->" constructorIndex fieldIndex
           ++ ", " ++ adtTagName fieldKind 1 ++ ");"
@@ -218,7 +262,7 @@ adtOwnershipTypeDecls cfg adts
          | tupleUsesExact cfg fieldKind
          = ["      " ++ tupleOwnedSetName fieldKind ++ "(&" ++ target ++ ", " ++ source ++ ");"]
          | isConcreteADT fieldKind
-         , adtUsesExact cfg fieldKind
+         , adtUsesExact cfg adts fieldKind
          = ["      " ++ adtOwnedSetName fieldKind ++ "(&" ++ target ++ ", " ++ source ++ ");"]
          | True
          = ["      " ++ target ++ " = " ++ source ++ ";"]
@@ -234,7 +278,7 @@ adtOwnershipTypeDecls cfg adts
            ]
          | tupleUsesExact cfg fieldKind
          = ["      " ++ tupleOwnedReleaseName fieldKind ++ "(&" ++ access ++ ");"]
-         | isConcreteADT fieldKind && adtUsesExact cfg fieldKind
+         | isConcreteADT fieldKind && adtUsesExact cfg adts fieldKind
          = ["      " ++ adtOwnedReleaseName fieldKind ++ "(&" ++ access ++ ");"]
          | True
          = []
@@ -282,16 +326,16 @@ adtOwnedReleaseName kind = "sbv_adt_owned_release_" ++ adtCType kind
 -- | Initialize a generated-driver ADT and populate its active constructor
 -- from a seed. Exact fields use the public owned-ADT storage protocol; other
 -- fields use the supplied scalar renderer.
-adtDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-adtDriverInit cfg renderValue kind externalName seed
+adtDriverInit :: CgConfig -> [Kind] -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
+adtDriverInit cfg adts renderValue kind externalName seed
   | isConcreteADT kind
-  , adtUsesExact cfg kind
+  , adtUsesExact cfg adts kind
   =  text (adtCType kind) <+> text externalName P.<> semi
   $$ initialize kind (text externalName) constructorIndex
   $$ vcat (assignConstructor kind (text externalName) constructorIndex fields seed)
   | True
   = error $ "SBV->C: Expected an exact-field ADT, received " ++ show kind
- where constructors = adtConstructors kind
+ where constructors = adtConstructors adts kind
        constructorIndex = fromInteger (mod seed (fromIntegral (length constructors))) + 1
        fields = snd (constructors !! (constructorIndex - 1))
 
@@ -316,8 +360,8 @@ adtDriverInit cfg renderValue kind externalName seed
          , tupleUsesExact cfg fieldKind
          = concat (zipWith assignTupleField [1 :: Int ..] (zip fieldKinds [fieldSeed ..]))
          | isConcreteADT fieldKind
-         , adtUsesExact cfg fieldKind
-         = let nestedConstructors = adtConstructors fieldKind
+         , adtUsesExact cfg adts fieldKind
+         = let nestedConstructors = adtConstructors adts fieldKind
                nestedIndex = fromInteger (mod fieldSeed (fromIntegral (length nestedConstructors))) + 1
                nestedFields = snd (nestedConstructors !! (nestedIndex - 1))
            in release fieldKind access
@@ -351,16 +395,19 @@ adtDriverInit cfg renderValue kind externalName seed
 adtConst :: (CV -> Doc) -> CV -> Maybe Doc
 adtConst renderValue cv@(CV kind (CADT (constructorName, fieldValues)))
   | isConcreteADT kind
-  , Just (constructorIndex, fieldKinds) <- findConstructor kind constructorName
+  , Just (constructorIndex, fieldKinds) <- findConstructor localADTs kind constructorName
   , map fst fieldValues == fieldKinds
-  = Just $ adtValue kind constructorIndex [renderValue (CV fieldKind fieldValue) | (fieldKind, fieldValue) <- fieldValues]
+  = Just $ adtValue localADTs kind constructorIndex
+        [renderValue (CV fieldKind fieldValue) | (fieldKind, fieldValue) <- fieldValues]
   | isConcreteADT kind
   = error $ "SBV->C: Malformed ADT constant " ++ show cv
+ where localKinds = Set.fromList $ kind : concatMap (expandKinds . fst) fieldValues
+       localADTs  = adtKinds localKinds localKinds
 adtConst _ _ = Nothing
 
 -- | Lower ADT construction, tests, accessors, equality, conditionals, and labels.
-adtExpr :: CgConfig -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
-adtExpr cfg op svs resultKind args
+adtExpr :: CgConfig -> [Kind] -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
+adtExpr cfg adts op svs resultKind args
   | not (isConcreteADT resultKind || any (isConcreteADT . kindOf) svs)
   = Nothing
   | LkUp{} <- op
@@ -371,26 +418,26 @@ adtExpr cfg op svs resultKind args
   = case (op, svs, args) of
       (ADTOp (ADTConstructor constructorName kind), fields, renderedFields)
         | kind == resultKind
-        , Just (constructorIndex, fieldKinds) <- findConstructor kind (T.unpack constructorName)
+        , Just (constructorIndex, fieldKinds) <- findConstructor adts kind (T.unpack constructorName)
         , map kindOf fields == fieldKinds
-        -> lower resultKind $ adtValue kind constructorIndex renderedFields
+        -> lower resultKind $ adtValue adts kind constructorIndex renderedFields
       (ADTOp (ADTTester testerName operationResultKind), [value], [renderedValue])
         | operationResultKind == resultKind
-        , Just constructorIndex <- findTester (kindOf value) (T.unpack testerName)
+        , Just constructorIndex <- findTester adts (kindOf value) (T.unpack testerName)
         -> lower resultKind $ adtTag renderedValue <+> text "==" <+> text (adtTagName (kindOf value) constructorIndex)
       (ADTOp (ADTAccessor accessorName operationResultKind), [value], [renderedValue])
         | operationResultKind == resultKind
-        , Just (constructorIndex, fieldIndex, fieldKind) <- findAccessor (kindOf value) (T.unpack accessorName)
+        , Just (constructorIndex, fieldIndex, fieldKind) <- findAccessor adts (kindOf value) (T.unpack accessorName)
         , fieldKind == resultKind
         -> lower resultKind $ adtField renderedValue constructorIndex fieldIndex
       (Equal strong, [left, right], [renderedLeft, renderedRight])
         | kindOf left == kindOf right
-        -> lower resultKind $ adtEqual cfg strong (kindOf left) renderedLeft renderedRight
+        -> lower resultKind $ adtEqual cfg adts strong (kindOf left) renderedLeft renderedRight
       (NotEqual, [left, right], [renderedLeft, renderedRight])
         | kindOf left == kindOf right
-        -> lower resultKind $ text "!" P.<> parens (adtEqual cfg False (kindOf left) renderedLeft renderedRight)
+        -> lower resultKind $ text "!" P.<> parens (adtEqual cfg adts False (kindOf left) renderedLeft renderedRight)
       (comparison, [left, right], [renderedLeft, renderedRight])
-        | adtIsEnumeration (kindOf left)
+        | adtIsEnumeration adts (kindOf left)
         , kindOf left == kindOf right
         , Just comparisonSymbol <- adtComparisonSymbol comparison
         -> lower resultKind $ adtTag renderedLeft <+> text comparisonSymbol <+> adtTag renderedRight
@@ -403,34 +450,35 @@ adtExpr cfg op svs resultKind args
       _ -> error $ "SBV->C: ADT lowering does not support " ++ adtOperationName op
                 ++ " with argument kinds " ++ show (map kindOf svs)
                 ++ " and result kind " ++ show resultKind
-                ++ "; constructors " ++ show [constructorName | (constructorName, _) <- adtConstructors (sourceADTKind resultKind svs)]
+                ++ "; constructors "
+                ++ show [constructorName | (constructorName, _) <- adtConstructors adts (sourceADTKind resultKind svs)]
  where lower kind = Just . expressionLowering storage []
         where storage
-                | isConcreteADT kind && adtUsesExact cfg kind = CFunctionScoped
-                | isExactGMPKind cfg kind                     = CFunctionScoped
-                | True                                        = CByValue
+                | isConcreteADT kind && adtUsesExact cfg adts kind = CFunctionScoped
+                | isExactGMPKind cfg kind                          = CFunctionScoped
+                | True                                             = CByValue
 
 -- | Test whether an ADT contains an exact GMP-backed integer or real field.
-adtUsesExact :: CgConfig -> Kind -> Bool
-adtUsesExact cfg = any constructorUsesExact . adtConstructors
+adtUsesExact :: CgConfig -> [Kind] -> Kind -> Bool
+adtUsesExact cfg adts = any constructorUsesExact . adtConstructors adts
  where constructorUsesExact (_, fields) = any fieldUsesExact fields
        fieldUsesExact = any (isExactGMPKind cfg) . expandKinds
 
 -- | Construct a deterministic driver value, choosing a constructor from the
 -- supplied integer and delegating field values to the caller.
-adtDriverValue :: (Kind -> Integer -> Doc) -> Kind -> Integer -> Doc
-adtDriverValue renderField kind seed
+adtDriverValue :: [Kind] -> (Kind -> Integer -> Doc) -> Kind -> Integer -> Doc
+adtDriverValue adts renderField kind seed
   | null constructors = error $ "SBV->C: Cannot construct an uninterpreted sort in the C driver: " ++ show kind
-  | True              = adtValue kind constructorIndex (zipWith renderField fields [seed ..])
- where constructors = adtConstructors kind
+  | True              = adtValue adts kind constructorIndex (zipWith renderField fields [seed ..])
+ where constructors = adtConstructors adts kind
        constructorIndex = fromInteger (mod seed (fromIntegral (length constructors))) + 1
        fields = snd (constructors !! (constructorIndex - 1))
 
 -- | Render C statements that print an ADT value by constructor name and fields.
-adtPrint :: (Kind -> Doc -> Doc) -> Kind -> Doc -> Doc
-adtPrint printField kind value
+adtPrint :: [Kind] -> (Kind -> Doc -> Doc) -> Kind -> Doc -> Doc
+adtPrint adts printField kind value
   = text "switch" <+> parens (adtTag value) <+> text "{"
- $$ nest 2 (vcat (zipWith printConstructor [1 :: Int ..] (adtConstructors kind))
+ $$ nest 2 (vcat (zipWith printConstructor [1 :: Int ..] (adtConstructors adts kind))
          $$ text "default: printf(\"<invalid ADT tag>\"); break;")
  $$ text "}"
  where printConstructor constructorIndex (constructorName, fields)
@@ -449,47 +497,64 @@ adtPrint printField kind value
          =  (if fieldIndex == 1 then empty else text "printf(\", \");")
          $$ printField fieldKind (adtField value constructorIndex fieldIndex)
 
--- | Return the constructors with all parameter variables replaced by their
--- concrete kinds, rejecting recursive type applications in this first slice.
-adtConstructors :: Kind -> [(String, [Kind])]
-adtConstructors kind@(KADT typeName parameters constructors)
+-- | Return constructors with parameter variables and acyclic 'KApp'
+-- references replaced by their concrete kinds.
+adtConstructors :: [Kind] -> Kind -> [(String, [Kind])]
+adtConstructors adts kind@(KADT typeName parameters constructors)
   | isConcreteADT kind = map substituteConstructor constructors
   | True               = error $ "SBV->C: Expected a concrete ADT kind, received " ++ show kind
  where substituteConstructor (constructorName, fields) = (constructorName, map substituteField fields)
-       substituteField field = validateField (substituteADTVars typeName parameters field)
-       validateField KApp{} = error $ "SBV->C: Recursive KApp fields are not yet supported in ADT " ++ show kind
-       validateField field  = field
-adtConstructors kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
+       substituteField = resolveADTReferences adts . substituteADTVars typeName parameters
+adtConstructors _ kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
+
+-- | Resolve concrete ADT applications occurring inside a supported composite
+-- field without recursively expanding the referenced declaration.
+resolveADTReferences :: [Kind] -> Kind -> Kind
+resolveADTReferences adts kind@(KApp typeName arguments) =
+  case [ (parameters, constructors)
+       | KADT candidateName parameters constructors <- adts
+       , candidateName == typeName
+       , length parameters == length arguments
+       ] of
+    ((parameters, constructors) : _) -> KADT typeName (zip (map fst parameters) arguments) constructors
+    [] -> error $ "SBV->C: Cannot resolve ADT reference " ++ show kind
+             ++ "; available concrete ADTs: " ++ show adts
+resolveADTReferences adts (KList elementKind) = KList (resolveADTReferences adts elementKind)
+resolveADTReferences adts (KSet elementKind) = KSet (resolveADTReferences adts elementKind)
+resolveADTReferences adts (KTuple fieldKinds) = KTuple (map (resolveADTReferences adts) fieldKinds)
+resolveADTReferences adts (KArray keyKind valueKind) =
+  KArray (resolveADTReferences adts keyKind) (resolveADTReferences adts valueKind)
+resolveADTReferences _ kind = kind
 
 -- | Render the field-level equality semantics used inside an ADT comparison.
-adtFieldEqual :: CgConfig -> Bool -> Kind -> Doc -> Doc -> Doc
-adtFieldEqual cfg strong kind left right
+adtFieldEqual :: CgConfig -> [Kind] -> Bool -> Kind -> Doc -> Doc -> Doc
+adtFieldEqual cfg adts strong kind left right
   | isWideBV kind                              = wideBVEqual kind left right
   | isFP kind && strong                        = arbitraryFPObjectEqual kind left right
   | isFP kind                                  = arbitraryFPEqual kind left right
   | strong && (isFloat kind || isDouble kind) = nativeFPObjectEqual left right
   | isExactGMPKind cfg kind                    = gmpEqual kind left right
-  | KTuple fields <- kind                      = tupleEqual cfg strong fields left right
-  | isConcreteADT kind                         = adtEqual cfg strong kind left right
+  | KTuple fields <- kind                      = tupleEqual cfg adts strong fields left right
+  | isConcreteADT kind                         = adtEqual cfg adts strong kind left right
   | True                                       = left <+> text "==" <+> right
 
 -- | Render structural equality for a tuple nested in an ADT field.
-tupleEqual :: CgConfig -> Bool -> [Kind] -> Doc -> Doc -> Doc
-tupleEqual cfg strong fields left right = andExpressions comparisons
+tupleEqual :: CgConfig -> [Kind] -> Bool -> [Kind] -> Doc -> Doc -> Doc
+tupleEqual cfg adts strong fields left right = andExpressions comparisons
  where comparisons = zipWith compareField [1 :: Int ..] fields
-       compareField index fieldKind = adtFieldEqual cfg strong fieldKind
+       compareField index fieldKind = adtFieldEqual cfg adts strong fieldKind
          (parens left  P.<> text ".field" P.<> int index)
          (parens right P.<> text ".field" P.<> int index)
 
 -- | Render tag-sensitive structural equality for two ADT values.
-adtEqual :: CgConfig -> Bool -> Kind -> Doc -> Doc -> Doc
-adtEqual cfg strong kind left right = parens $ tagEquality <+> text "&&" <+> constructorEquality
+adtEqual :: CgConfig -> [Kind] -> Bool -> Kind -> Doc -> Doc -> Doc
+adtEqual cfg adts strong kind left right = parens $ tagEquality <+> text "&&" <+> constructorEquality
  where tagEquality = parens (adtTag left <+> text "==" <+> adtTag right)
-       constructorEquality = parens . orExpressions $ zipWith constructorCase [1 :: Int ..] (adtConstructors kind)
+       constructorEquality = parens . orExpressions $ zipWith constructorCase [1 :: Int ..] (adtConstructors adts kind)
        constructorCase constructorIndex (_, fields) = andExpressions
          (parens (adtTag left <+> text "==" <+> text (adtTagName kind constructorIndex))
         : zipWith (fieldEquality constructorIndex) [1 :: Int ..] fields)
-       fieldEquality constructorIndex fieldIndex fieldKind = adtFieldEqual cfg strong fieldKind
+       fieldEquality constructorIndex fieldIndex fieldKind = adtFieldEqual cfg adts strong fieldKind
          (adtField left  constructorIndex fieldIndex)
          (adtField right constructorIndex fieldIndex)
 
@@ -504,22 +569,23 @@ orExpressions []          = text "false"
 orExpressions expressions = parens (fsep (punctuate (text " ||") expressions))
 
 -- | Locate a constructor and return its one-based tag and concrete fields.
-findConstructor :: Kind -> String -> Maybe (Int, [Kind])
-findConstructor kind constructorName = do
-  (index, (_, fields)) <- find ((== constructorName) . fst . snd) (zip [1 :: Int ..] (adtConstructors kind))
+findConstructor :: [Kind] -> Kind -> String -> Maybe (Int, [Kind])
+findConstructor adts kind constructorName = do
+  (index, (_, fields)) <- find ((== constructorName) . fst . snd)
+                               (zip [1 :: Int ..] (adtConstructors adts kind))
   pure (index, fields)
 
 -- | Locate the constructor named by a canonical @is-Constructor@ tester.
-findTester :: Kind -> String -> Maybe Int
-findTester kind testerName = fst <$> find matches (zip [1 :: Int ..] (adtConstructors kind))
+findTester :: [Kind] -> Kind -> String -> Maybe Int
+findTester adts kind testerName = fst <$> find matches (zip [1 :: Int ..] (adtConstructors adts kind))
  where matches (_, (constructorName, _)) = testerName == "is-" ++ constructorName
 
 -- | Locate the constructor field named by a canonical
 -- @getConstructor_fieldIndex@ accessor.
-findAccessor :: Kind -> String -> Maybe (Int, Int, Kind)
-findAccessor kind accessorName = findMatch candidates
+findAccessor :: [Kind] -> Kind -> String -> Maybe (Int, Int, Kind)
+findAccessor adts kind accessorName = findMatch candidates
  where candidates = [(constructorIndex, fieldIndex, fieldKind)
-                    | (constructorIndex, (constructorName, fields)) <- zip [1 :: Int ..] (adtConstructors kind)
+                    | (constructorIndex, (constructorName, fields)) <- zip [1 :: Int ..] (adtConstructors adts kind)
                     , (fieldIndex, fieldKind) <- zip [1 :: Int ..] fields
                     , accessorName == "get" ++ constructorName ++ "_" ++ show fieldIndex
                     ]
@@ -536,13 +602,6 @@ adtFieldCType kind = elementCType kind
 -- uninterpreted sort.
 isConcreteADT :: Kind -> Bool
 isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
-
--- | Return the nesting depth used to order dependent ADT declarations.
-adtDepth :: Kind -> Int
-adtDepth kind
-  | isConcreteADT kind = 1 + maximum (0 : map adtDepth (concatMap snd (adtConstructors kind)))
-  | KTuple fields <- kind = maximum (0 : map adtDepth fields)
-  | True                  = 0
 
 -- | Return a collision-free kind tag for an applied ADT parameter.
 adtKindTag :: Kind -> String
@@ -582,15 +641,15 @@ adtGuard :: Kind -> String
 adtGuard kind = map toUpper (adtCType kind) ++ "_DEFINED"
 
 -- | Render a C99 tagged-union compound literal.
-adtValue :: Kind -> Int -> [Doc] -> Doc
-adtValue kind constructorIndex fields
+adtValue :: [Kind] -> Kind -> Int -> [Doc] -> Doc
+adtValue adts kind constructorIndex fields
   | constructorIndex < 1 || constructorIndex > length constructors
   = error $ "SBV->C: Invalid ADT constructor index " ++ show constructorIndex ++ " for " ++ show kind
   | length fields /= length expectedFields
   = error $ "SBV->C: ADT literal field mismatch for " ++ show kind
   | True
   = parens (text (adtCType kind)) P.<> braces (fsep (punctuate comma initializers))
- where constructors = adtConstructors kind
+ where constructors = adtConstructors adts kind
        expectedFields = snd (constructors !! (constructorIndex - 1))
        initializers = text ".tag" <+> text "=" <+> text (adtTagName kind constructorIndex)
                     : zipWith initializer [1 :: Int ..] fields
@@ -628,8 +687,8 @@ sourceADTKind _ svs = case filter (isConcreteADT . kindOf) svs of
   []        -> error "SBV->C: Missing ADT kind in ADT lowering diagnostic"
 
 -- | Return whether every constructor of an ADT is nullary.
-adtIsEnumeration :: Kind -> Bool
-adtIsEnumeration = all (null . snd) . adtConstructors
+adtIsEnumeration :: [Kind] -> Kind -> Bool
+adtIsEnumeration adts = all (null . snd) . adtConstructors adts
 
 -- | Return the C comparison token supported for enumeration ADTs.
 adtComparisonSymbol :: Op -> Maybe String

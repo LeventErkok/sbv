@@ -31,13 +31,16 @@ import Data.SBV.Tuple (tuple, untuple)
 
 import Utils.SBVTestFramework
 
--- | A sum type combining direct exact fields and tuple ownership.
+-- | An exact-number ADT nested inside 'ExactAggregate'.
+data ExactLeaf = ExactLeaf Integer AlgReal deriving Show
+
+-- | A sum type combining nested ADT and tuple ownership.
 data ExactAggregate = ExactAbsent
-                    | ExactAggregate Integer AlgReal (Integer, AlgReal)
+                    | ExactAggregate ExactLeaf (Integer, AlgReal)
                     deriving Show
 
--- | Generate the symbolic interface for the exact-number ADT.
-mkSymbolic [''ExactAggregate]
+-- | Generate symbolic interfaces for the exact-number ADTs.
+mkSymbolic [''ExactLeaf, ''ExactAggregate]
 
 -- | GMP-backed exact-number C backend tests.
 tests :: TestTree
@@ -330,32 +333,36 @@ ownedExactTuples = withSystemTempDirectory "sbv-owned-exact-tuples" $ \dir -> do
   compileAndRunGMP dir "ownedExactTuples" program [expectedReturn, expectedOutput]
 
 -- | Exercise borrowed exact-field ADT inputs and independently owned outputs
--- and returns, including exact fields nested through a tuple.
+-- and returns, including exact fields nested through another ADT and a tuple.
 ownedExactADTs :: Assertion
 ownedExactADTs = withSystemTempDirectory "sbv-owned-exact-adts" $ \dir -> do
   let program = do
         cgOverwriteFiles True
         cgSetDriverValues [seed]
         source <- cgInput "source" :: SBVCodeGen SExactAggregate
-        let integerValue              = getExactAggregate_1 source
-            realValue                 = getExactAggregate_2 source
-            values                    = getExactAggregate_3 source
+        let leaf                      = getExactAggregate_1 source
+            values                    = getExactAggregate_2 source
+            integerValue              = getExactLeaf_1 leaf
+            realValue                 = getExactLeaf_2 leaf
             (tupleInteger, tupleReal) = untuple values
             outputValues              = tuple (tupleInteger + 2, tupleReal + 3)
-            outputAggregate           = sExactAggregate (integerValue + 1) (realValue / 7) outputValues
+            outputLeaf                = sExactLeaf (integerValue + 1) (realValue / 7)
+            outputAggregate           = sExactAggregate outputLeaf outputValues
             resultValues              = tuple (tupleInteger * 3, tupleReal / 5)
-            resultAggregate           = sExactAggregate (integerValue * 2) (realValue + 1) resultValues
+            resultLeaf                = sExactLeaf (integerValue * 2) (realValue + 1)
+            resultAggregate           = sExactAggregate resultLeaf resultValues
         cgOutput "output" outputAggregate
+        cgOutput "sameAsResult" (source .== resultAggregate)
         cgReturn resultAggregate
       seed           = 2 ^ (130 :: Int) + 1
-      expectedOutput = "output =ExactAggregate(" ++ show (seed + 1)
-                    ++ ", " ++ show (seed + 1) ++ "/7, (" ++ show (seed + 4)
-                    ++ ", " ++ show (seed + 6) ++ "))"
-      expectedReturn = "ExactAggregate(" ++ show (seed * 2)
-                    ++ ", " ++ show (seed + 2) ++ ", (" ++ show (3 * (seed + 2))
-                    ++ ", " ++ show (seed + 3) ++ "/5))"
+      expectedOutput = "output =ExactAggregate(ExactLeaf(" ++ show (seed + 1)
+                    ++ ", " ++ show (seed + 1) ++ "/7), (" ++ show (seed + 3)
+                    ++ ", " ++ show (seed + 5) ++ "))"
+      expectedReturn = "ExactAggregate(ExactLeaf(" ++ show (seed * 2)
+                    ++ ", " ++ show (seed + 2) ++ "), (" ++ show (3 * (seed + 1))
+                    ++ ", " ++ show (seed + 2) ++ "/5))"
 
-  compileAndRunGMP dir "ownedExactADTs" program [expectedReturn, expectedOutput]
+  compileAndRunGMP dir "ownedExactADTs" program [expectedReturn, expectedOutput, "sameAsResult = 0"]
 
 -- | Exercise merged headers, archives, and drivers for exact-number libraries.
 exactNumberLibrary :: Assertion
@@ -385,14 +392,15 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
         cgOverwriteFiles True
         cgSetDriverValues [adtSeed]
         source <- cgInput "source" :: SBVCodeGen SExactAggregate
-        let integerValue              = getExactAggregate_1 source
-            realValue                 = getExactAggregate_2 source
-            (tupleInteger, tupleReal) = untuple (getExactAggregate_3 source)
+        let leaf                      = getExactAggregate_1 source
+            integerValue              = getExactLeaf_1 leaf
+            realValue                 = getExactLeaf_2 leaf
+            (tupleInteger, tupleReal) = untuple (getExactAggregate_2 source)
             integerAmount             = fromInteger increment :: SInteger
             realAmount                = fromInteger increment :: SReal
-        cgReturn (sExactAggregate (integerValue + integerAmount)
-                                  (realValue + realAmount)
-                                  (tuple (tupleInteger + integerAmount, tupleReal + realAmount)))
+            resultLeaf                = sExactLeaf (integerValue + integerAmount) (realValue + realAmount)
+            resultValues              = tuple (tupleInteger + integerAmount, tupleReal + realAmount)
+        cgReturn (sExactAggregate resultLeaf resultValues)
       wideSample = negate (2 ^ (670 :: Int)) + 12345
       tupleSeed  = 2 ^ (140 :: Int)
       adtSeed    = 2 ^ (150 :: Int) + 1
@@ -419,10 +427,10 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
   assertOutput stdoutText (show wideSample)
   assertOutput stdoutText ("(" ++ show (tupleSeed + 1) ++ ", " ++ show (tupleSeed + 2) ++ ")")
   assertOutput stdoutText ("(" ++ show (tupleSeed + 2) ++ ", " ++ show (tupleSeed + 3) ++ ")")
-  assertOutput stdoutText ("ExactAggregate(" ++ show (adtSeed + 1) ++ ", " ++ show (adtSeed + 2)
-                         ++ ", (" ++ show (adtSeed + 3) ++ ", " ++ show (adtSeed + 4) ++ "))")
-  assertOutput stdoutText ("ExactAggregate(" ++ show (adtSeed + 2) ++ ", " ++ show (adtSeed + 3)
-                         ++ ", (" ++ show (adtSeed + 4) ++ ", " ++ show (adtSeed + 5) ++ "))")
+  assertOutput stdoutText ("ExactAggregate(ExactLeaf(" ++ show (adtSeed + 1) ++ ", " ++ show (adtSeed + 2)
+                         ++ "), (" ++ show (adtSeed + 2) ++ ", " ++ show (adtSeed + 3) ++ "))")
+  assertOutput stdoutText ("ExactAggregate(ExactLeaf(" ++ show (adtSeed + 2) ++ ", " ++ show (adtSeed + 3)
+                         ++ "), (" ++ show (adtSeed + 3) ++ ", " ++ show (adtSeed + 4) ++ "))")
 
 -- | Generate, compile, and execute a program against the system GMP package.
 compileAndRunGMP :: FilePath -> String -> SBVCodeGen () -> [String] -> Assertion

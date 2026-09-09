@@ -20,7 +20,7 @@ import Data.Char                      (isSpace)
 import Data.List                      (intercalate, intersperse, nub, nubBy)
 import Data.Maybe                     (fromJust, fromMaybe, isJust)
 import qualified Data.Foldable as F   (toList)
-import qualified Data.Set      as Set (Set, empty, fromList, member, singleton, toList, union, unions)
+import qualified Data.Set      as Set (Set, empty, fromList, map, member, singleton, toList, union, unions)
 import qualified Data.Text     as T
 import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
@@ -123,11 +123,11 @@ cgen cfg nm st sbvProg
   where result = CgPgmBundle bundleKind
                         $ filt [ ("Makefile"   , (CgMakefile flags          , [genMake (cgGenDriver cfg) nm nmd flags]))
                                , (nm  ++ ".h"  , (CgHeader [extraTypes, sig] , [genHeader bundleKind nm [sig] extProtos extraTypes]))
-                               , (nmd ++ ".c"  , (CgDriver                  , genDriver cfg randVals nm ins outs mbRet))
+                               , (nmd ++ ".c"  , (CgDriver                  , driver))
                                , (nm  ++ ".c"  , (CgSource                  , body))
                                ]
 
-        (body, requirements) = genCProg cfg nm sig sbvProg ins outs mbRet extDecls
+        (body, requirements) = genCProg cfg adts nm sig sbvProg ins outs mbRet extDecls
 
         bundleKind = (cgInteger cfg, cgReal cfg)
 
@@ -140,7 +140,8 @@ cgen cfg nm st sbvProg
                    $$ adtTypeDecls adts
                    $$ tupleOwnershipTypeDecls cfg tuples
                    $$ adtOwnershipTypeDecls cfg adts
-        kinds           = Set.unions [reskinds sbvProg, interfaceKinds, assignmentKinds]
+        kinds           = Set.unions [reskinds sbvProg, usedKinds]
+        usedKinds       = Set.union interfaceKinds assignmentKinds
         interfaceKinds  = Set.fromList . concatMap expandKinds
                         $ concatMap cgValKinds (map snd ins ++ map snd outs ++ cgReturns st)
           where cgValKinds (CgAtomic sv) = [kindOf sv]
@@ -150,8 +151,8 @@ cgen cfg nm st sbvProg
                                 SBVPgm programAssignments -> F.toList programAssignments
                 expressionKinds (resultSV, SBVApp _ arguments) = map kindOf (resultSV : arguments)
         arrays          = arrayKinds kinds
-        tuples          = tupleKinds kinds
-        adts            = adtKinds kinds
+        adts            = adtKinds kinds usedKinds
+        tuples          = tupleKinds (Set.map (resolveADTReferences adts) kinds)
 
         hasRequirement requirement = requirement `Set.member` requirements
 
@@ -171,6 +172,7 @@ cgen cfg nm st sbvProg
                 arrayUsesRoundingMode _                              = False
 
         randVals = cgDriverVals cfg
+        driver   = genDriver cfg adts randVals nm ins outs mbRet
 
         filt xs  = [c | c@(_, (k, _)) <- xs, need k]
           where need k | isCgDriver   k = cgGenDriver cfg
@@ -475,14 +477,14 @@ sepIf :: Bool -> Doc
 sepIf b = if b then text "" else empty
 
 -- | Test whether an ADT value needs the caller-owned exact-field ABI.
-isOwnedExactADT :: CgConfig -> SV -> Bool
-isOwnedExactADT cfg sv = isADT sv
-                      && not (isRoundingMode sv)
-                      && adtUsesExact cfg (kindOf sv)
+isOwnedExactADT :: CgConfig -> [Kind] -> SV -> Bool
+isOwnedExactADT cfg adts sv = isADT sv
+                           && not (isRoundingMode sv)
+                           && adtUsesExact cfg adts (kindOf sv)
 
 -- | Generate an example driver program
-genDriver :: CgConfig -> [Integer] -> String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> [Doc]
-genDriver cfg randVals fn inps outs mbRet
+genDriver :: CgConfig -> [Kind] -> [Integer] -> String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> [Doc]
+genDriver cfg adts randVals fn inps outs mbRet
   | null arrayInputs = [pre, plainHeader, body, post]
   | True             = [pre, include, callbacks, header, body, post]
  where pre         =  text "/* Example driver program for" <+> nm P.<> text ". */"
@@ -565,7 +567,7 @@ genDriver cfg randVals fn inps outs mbRet
          | isRoundingMode kind            = roundingModeDriverValue r
          | isExactGMPKind cfg kind         = integer r
          | KTuple fieldKinds <- kind       = tupleValue kind (zipWith mkField fieldKinds [0 :: Integer ..])
-         | isADT kind                      = adtDriverValue mkRValKind kind r
+         | isADT kind                      = adtDriverValue adts mkRValKind kind r
          | True                            = mkConst cfg $ mkConstCV kind r
          where mkField fieldKind offset = mkRValKind fieldKind (r + offset)
        mkInp ([v], n, CgAtomic sv)
@@ -578,7 +580,7 @@ genDriver cfg randVals fn inps outs mbRet
               $$ arrayDriverInput cfg (kindOf sv) fn n defaultName
          | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text n) v
          | tupleUsesExact cfg (kindOf sv) = tupleDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
-         | isOwnedExactADT cfg sv         = adtDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
+         | isOwnedExactADT cfg adts sv    = adtDriverInit cfg adts mkRValKind (kindOf sv) n (inputSeed n)
        mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
        mkInp (_,   n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
        mkInp (vs,  n, CgArray sws@(sv:_)) =  pprCWord True sv <+> text n P.<> brackets (int (length sws)) <+> text "= {"
@@ -593,7 +595,7 @@ genDriver cfg randVals fn inps outs mbRet
          | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text v) (text "0")
          | tupleUsesExact cfg (kindOf sv) = text (tupleCType (kindOf sv)) <+> text v
                                         <+> text "=" <+> braces (text "0") P.<> semi
-         | isOwnedExactADT cfg sv         = text (adtCType (kindOf sv)) <+> text v
+         | isOwnedExactADT cfg adts sv    = text (adtCType (kindOf sv)) <+> text v
                                         <+> text "=" <+> braces (text "0") P.<> semi
          | True                           = pprCWord False sv <+> text v P.<> semi
        mkOut (v, CgArray [])             = die $ "Unsupported empty array value for " ++ show v
@@ -608,7 +610,7 @@ genDriver cfg randVals fn inps outs mbRet
                                                   <+> text "=" <+> fcall P.<> semi
                   | tupleUsesExact cfg (kindOf sv) -> text (tupleCType (kindOf sv)) <+> resultVar
                                                   <+> text "=" <+> fcall P.<> semi
-                  | isOwnedExactADT cfg sv         -> text (adtCType (kindOf sv)) <+> resultVar
+                  | isOwnedExactADT cfg adts sv    -> text (adtCType (kindOf sv)) <+> resultVar
                                                   <+> text "=" <+> fcall P.<> semi
                   | True                           -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
        fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs ++ exactResultArg)))
@@ -619,7 +621,7 @@ genDriver cfg randVals fn inps outs mbRet
          | isArray sv                     = text n
          | isExactGMPKind cfg (kindOf sv) = text n
          | tupleUsesExact cfg (kindOf sv) = text n
-         | isOwnedExactADT cfg sv         = text n
+         | isOwnedExactADT cfg adts sv    = text n
          | True                           = v
        mkCVal (vs,  n, CgAtomic{}) = die $ "Unexpected driver value computed for " ++ show n ++ render (hcat vs)
        mkCVal (_,   n, CgArray{})  = text n
@@ -700,7 +702,7 @@ genDriver cfg randVals fn inps outs mbRet
 
        displayADT label value kind
          =  text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
-         $$ adtPrint printValue kind value
+         $$ adtPrint adts printValue kind value
          $$ text "printf(\"\\n\");"
 
        printTupleValue _     (KTuple []) = text "printf(\"()\");"
@@ -713,7 +715,7 @@ genDriver cfg randVals fn inps outs mbRet
 
        printValue kind value
          | KTuple{} <- kind                       = printTupleValue value kind
-         | isADT kind && not (isRoundingMode kind) = adtPrint printValue kind value
+         | isADT kind && not (isRoundingMode kind) = adtPrint adts printValue kind value
          | isWideBV kind                          = wideBVPrint kind value P.<> semi
          | isFP kind                              = arbitraryFPPrint kind value P.<> semi
          | isExactGMPKind cfg kind                = gmpPrint kind value P.<> semi
@@ -735,7 +737,7 @@ genDriver cfg randVals fn inps outs mbRet
                                  ]
                               ++ [releaseADT sv n
                                  | (_, n, CgAtomic sv) <- pairedInputs
-                                 , isOwnedExactADT cfg sv
+                                 , isOwnedExactADT cfg adts sv
                                  ]
                outputCleanup = [ gmpDriverClear (kindOf sv) (text n)
                                | (n, CgAtomic sv) <- outs
@@ -751,13 +753,13 @@ genDriver cfg randVals fn inps outs mbRet
                                ]
                             ++ [releaseADT sv n
                                | (n, CgAtomic sv) <- outs
-                               , isOwnedExactADT cfg sv
+                               , isOwnedExactADT cfg adts sv
                                ]
                returnCleanup = case mbRet of
                                  Just sv | isExactGMPKind cfg (kindOf sv) -> [gmpDriverClear (kindOf sv) resultVar]
                                  Just sv | isArray sv                     -> [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> resultVar) P.<> semi]
                                  Just sv | tupleUsesExact cfg (kindOf sv) -> [releaseTuple sv "__result"]
-                                 Just sv | isOwnedExactADT cfg sv         -> [releaseADT sv "__result"]
+                                 Just sv | isOwnedExactADT cfg adts sv    -> [releaseADT sv "__result"]
                                  _                                        -> []
 
                releaseTuple sv = releaseOwned (tupleOwnedReleaseName (kindOf sv))
@@ -768,8 +770,20 @@ genDriver cfg randVals fn inps outs mbRet
                                                  P.<> semi
 
 -- | Generate the C program
-genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], Set.Set CRequirement)
-genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
+genCProg :: CgConfig
+         -> [Kind]
+         -> String
+         -> Doc
+         -> Result
+         -> [(String, CgVal)]
+         -> [(String, CgVal)]
+         -> Maybe SV
+         -> Doc
+         -> ([Doc], Set.Set CRequirement)
+genCProg cfg adts fn proto
+         (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis axioms
+                 (SBVPgm asgns) cstrs origAsserts _)
+         inVars outVars mbRet extDecls
   | KString `Set.member` kindInfo
   = notyet "Strings"
   | KChar `Set.member` kindInfo
@@ -806,7 +820,6 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        wideKinds = wideBVKinds kindInfo
        fpKinds   = arbitraryFPKinds kindInfo
        arrays    = arrayKinds kindInfo
-
        post   = text ""
              $$ vcat (map codeSeg cgs)
              $$ extDecls
@@ -846,7 +859,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        lambdaAssignments = concatMap (F.toList . liAssignments . snd) lambdaDefinitions
        allAssignments    = assignments ++ lambdaAssignments
 
-       generatedLambdas = map (uncurry (ppArrayLambda cfg)) lambdaDefinitions
+       generatedLambdas = map (uncurry (ppArrayLambda cfg adts)) lambdaDefinitions
        lambdaDocs        = map fst generatedLambdas
 
        generatedAssignments = map genAsgn assignments
@@ -895,7 +908,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        exactADTReturn = case mbRet of
                           Just sv
-                            | isOwnedExactADT cfg sv
+                            | isOwnedExactADT cfg adts sv
                             -> text "const" <+> text (adtCType (kindOf sv)) <+> text "__result" <+> text "="
                            <+> text (adtOwnedCloneName (kindOf sv))
                                  P.<> parens (showSV cfg consts sv)
@@ -905,7 +918,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        normalReturn = case mbRet of
                         Just sv | isArray sv                           -> text "return __result;"
                         Just sv | tupleUsesExact cfg (kindOf sv)       -> text "return __result;"
-                        Just sv | isOwnedExactADT cfg sv               -> text "return __result;"
+                        Just sv | isOwnedExactADT cfg adts sv          -> text "return __result;"
                         Just sv | not (isExactGMPKind cfg (kindOf sv)) -> mkRet sv
                         _                                             -> empty
 
@@ -972,7 +985,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
          | isArray sv                     = [text "*" P.<> text cNm <+> text "=" <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
          | isExactGMPKind cfg (kindOf sv) = [gmpSet (kindOf sv) (text cNm) (showSV cfg consts sv) P.<> semi | alive]
          | tupleUsesExact cfg (kindOf sv) = [text "*" P.<> text cNm <+> text "=" <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
-         | isOwnedExactADT cfg sv         = [ text "*" P.<> text cNm <+> text "="
+         | isOwnedExactADT cfg adts sv    = [ text "*" P.<> text cNm <+> text "="
                                           <+> text (adtOwnedCloneName (kindOf sv))
                                                 P.<> parens (showSV cfg consts sv)
                                                 P.<> semi
@@ -995,7 +1008,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
 
        genAsgn :: (SV, SBVExpr) -> (Int, Doc, Set.Set CRequirement)
        genAsgn (sv, n) = (cLocation consts sv, doc, needed)
-         where (doc, needed) = ppExpr cfg consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
+         where (doc, needed) = ppExpr cfg adts consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
 
        -- merge tables intermixed with assignments and assertions, paying attention to putting tables as
        -- early as possible and tables right after.. Note that the assignment list (second argument) is sorted on its order
@@ -1053,13 +1066,13 @@ mergeLocated left@((i, x):xs) right@((j, y):ys)
 -- local DAG uses the ordinary scalar lowering pipeline, so wide bit-vectors,
 -- floating-point values, exact numbers, and finite tables retain their usual
 -- semantics.
-ppArrayLambda :: CgConfig -> SV -> LambdaInfo -> (Doc, Set.Set CRequirement)
-ppArrayLambda cfg arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
-                                               , liParams      = parameters
-                                               , liOutput      = lambdaOutput
-                                               , liConsts      = constants
-                                               , liTables      = tables
-                                               }
+ppArrayLambda :: CgConfig -> [Kind] -> SV -> LambdaInfo -> (Doc, Set.Set CRequirement)
+ppArrayLambda cfg adts arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
+                                                    , liParams      = parameters
+                                                    , liOutput      = lambdaOutput
+                                                    , liConsts      = constants
+                                                    , liTables      = tables
+                                                    }
   = case (kindOf arraySV, parameters) of
       (KArray keyKind valueKind, [(ALL, parameter)])
         | kindOf parameter /= keyKind
@@ -1084,7 +1097,8 @@ ppArrayLambda cfg arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
 
        generatedAssignments = [(cLocation lambdaConsts sv, doc, needed)
                               | (sv, expression) <- assignments
-                              , let (doc, needed) = ppExpr cfg lambdaConsts expression sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
+                              , let (doc, needed) = ppExpr cfg adts lambdaConsts expression sv
+                                                         (declSV typeWidth sv) (declSVNoConst typeWidth sv)
                               ]
 
        assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
@@ -1218,8 +1232,8 @@ handleIEEE w consts as var = cvt w
 
 -- | Lower and render one symbolic assignment together with the facilities it
 -- requires from the generated C translation unit.
-ppExpr :: CgConfig -> [(SV, CV)] -> SBVExpr -> SV -> Doc -> (Doc, Doc) -> (Doc, Set.Set CRequirement)
-ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
+ppExpr :: CgConfig -> [Kind] -> [(SV, CV)] -> SBVExpr -> SV -> Doc -> (Doc, Doc) -> (Doc, Set.Set CRequirement)
+ppExpr cfg adts consts (SBVApp op opArgs) resultSV lhs (typ, var)
   = ( vcat $ loweringSetup selected
           ++ [assignment]
           ++ loweringCleanup selected
@@ -1235,7 +1249,7 @@ ppExpr cfg consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         selected = fromMaybe legacy $ chooseLowering
           [ arrayExpr cfg op opArgs resultSV renderedArgs
-          , adtExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          , adtExpr cfg adts op opArgs (kindOf resultSV) renderedArgs
           , tupleExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , tableExpr cfg (showSV cfg consts) op (kindOf resultSV)
           , gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs

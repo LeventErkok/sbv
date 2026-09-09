@@ -45,11 +45,15 @@ data CodeGenADT a = CGEmpty
 -- the C tag representation.
 data CodeGenEnum = CGRed | CGGreen | CGBlue deriving Show
 
+-- | An acyclic parameterized ADT reference used to exercise 'KApp'
+-- resolution and dependency-ordered C declarations.
+data CodeGenEnvelope a = CGNoEnvelope | CGEnvelope (CodeGenADT a) deriving Show
+
 -- | A recursive type used to verify the current C ABI boundary.
 data CodeGenTree = CGLeaf Word8 | CGNode CodeGenTree CodeGenTree deriving Show
 
 -- | Generate the symbolic interfaces for the code-generation ADTs.
-mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenTree]
+mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree]
 
 -- | Code-generation tests.
 tests :: TestTree
@@ -71,6 +75,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute structural tuples" structuralTuples
   , testCase "compile repeated tuple types into a library" structuralTupleLibrary
   , testCase "compile and execute non-recursive ADTs" nonRecursiveADTs
+  , testCase "compile and execute nested ADTs" nestedADTs
   , testCase "compile repeated ADT types into a library" nonRecursiveADTLibrary
   , testCase "preserve ADT aggregate equality" adtAggregateEquality
   , testCase "report unsupported recursive ADTs" unsupportedRecursiveADTs
@@ -449,6 +454,32 @@ nonRecursiveADTs = withSystemTempDirectory "sbv-non-recursive-adts" $ \dir -> do
     , "colorBeforeBlue = 1"
     ]
 
+-- | Exercise an acyclic parameterized 'KApp' reference through construction,
+-- access, structural equality against a literal, and the public return ABI.
+nestedADTs :: Assertion
+nestedADTs = withSystemTempDirectory "sbv-nested-adts" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        source <- cgInput "source" :: SBVCodeGen (SCodeGenEnvelope Word8)
+        let inner  = getCGEnvelope_1 source
+            result = sCGEnvelope (sCGOne (getCGOne_1 inner + 3))
+        cgOutput "sameValue" (source .== literal (CGEnvelope (CGOne 1)))
+        cgReturn result
+
+  stdoutText <- compileProgramAndRunGenerated dir "nestedADTs" program
+  headerText <- readFile (dir </> "nestedADTs.h")
+  mapM_ (\fragment -> assertBool ("Expected nested ADT output to contain " ++ fragment
+                               ++ ", received:\n" ++ stdoutText)
+                               (fragment `isInfixOf` stdoutText))
+    [ "CGEnvelope(CGOne(4))"
+    , "sameValue = 1"
+    ]
+  assertBool "Expected the concrete Word8 inner ADT declaration"
+             ("SBVADT_CodeGenADT_2_u8" `isInfixOf` headerText)
+  assertBool "Unexpected placeholder Integer ADT declaration"
+             (not ("SBVADT_CodeGenADT_7_integer" `isInfixOf` headerText))
+
 -- | Exercise guarded ADT declarations shared by multiple generated library
 -- translation units and returned through the public by-value ABI.
 nonRecursiveADTLibrary :: Assertion
@@ -513,8 +544,8 @@ unsupportedRecursiveADTs = do
       cgReturn (isCGLeaf value)
     evaluate bundle) :: IO (Either ErrorCall CgPgmBundle)
   case recursiveResult of
-    Left exception -> assertBool ("Expected a recursive-KApp diagnostic, received:\n" ++ displayException exception)
-                                 ("Recursive KApp fields" `isInfixOf` displayException exception)
+    Left exception -> assertBool ("Expected a recursive-ADT diagnostic, received:\n" ++ displayException exception)
+                                 ("Recursive ADT layouts" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected recursive ADT generation to fail" False
 
 -- | Generate, compile, and execute one standalone C program.
