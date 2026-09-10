@@ -166,19 +166,23 @@ tupleOwnershipTypeDecls cfg tuples
        declaration kind = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
 
        exactMutableType KUnbounded = "mpz_ptr"
-       exactMutableType KReal      = "mpq_ptr"
+       exactMutableType fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_ptr"
        exactMutableType kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
 
        exactInit KUnbounded = "mpz_init"
-       exactInit KReal      = "mpq_init"
+       exactInit fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_init"
        exactInit kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
 
        exactSet KUnbounded = "mpz_set"
-       exactSet KReal      = "mpq_set"
+       exactSet fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_set"
        exactSet kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
 
        exactClear KUnbounded = "mpz_clear"
-       exactClear KReal      = "mpq_clear"
+       exactClear fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_clear"
        exactClear kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
 
 -- | Return the helper name that initializes caller-owned storage for an exact
@@ -223,10 +227,11 @@ tupleDriverInit cfg renderValue kind@(KTuple fields) externalName seed =
 
        exactAssignments KUnbounded access value =
          [ text "if" <+> parens (text "mpz_set_str" P.<> parens (fsep (punctuate comma [parens (text "mpz_ptr") <+> access, doubleQuotes (integer value), text "10"])) <+> text "!= 0") <+> text "abort" P.<> parens empty P.<> semi]
-       exactAssignments KReal access value =
-         [ text "if" <+> parens (text "mpq_set_str" P.<> parens (fsep (punctuate comma [parens (text "mpq_ptr") <+> access, doubleQuotes (integer value), text "10"])) <+> text "!= 0") <+> text "abort" P.<> parens empty P.<> semi
-         , text "mpq_canonicalize" P.<> parens (parens (text "mpq_ptr") <+> access) P.<> semi
-         ]
+       exactAssignments fieldKind access value
+         | isExactGMPKind cfg fieldKind =
+             [ text "if" <+> parens (text "mpq_set_str" P.<> parens (fsep (punctuate comma [parens (text "mpq_ptr") <+> access, doubleQuotes (integer value), text "10"])) <+> text "!= 0") <+> text "abort" P.<> parens empty P.<> semi
+             , text "mpq_canonicalize" P.<> parens (parens (text "mpq_ptr") <+> access) P.<> semi
+             ]
        exactAssignments fieldKind _ _ = error $ "SBV->C: Expected an exact tuple field, received " ++ show fieldKind
 tupleDriverInit _ _ kind _ _ = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
 
@@ -273,8 +278,8 @@ tupleExpr cfg op svs resultKind args
                 | tupleUsesExact cfg kind = CFunctionScoped
                 | True                    = CByValue
 
--- | Test whether a tuple contains an exact GMP-backed integer or real at any
--- nesting depth under the active code-generation configuration.
+-- | Test whether a tuple contains an exact GMP-backed integer, real, or
+-- rational at any nesting depth under the active code-generation configuration.
 tupleUsesExact :: CgConfig -> Kind -> Bool
 tupleUsesExact cfg kind@KTuple{} = any (isExactGMPKind cfg) (expandKinds kind)
 tupleUsesExact _   _             = False
@@ -304,6 +309,7 @@ elementCType (KBounded False w)  = "SWord" ++ show w
 elementCType (KBounded True  w)  = "SInt" ++ show w
 elementCType KUnbounded          = "SInteger"
 elementCType KReal               = "SReal"
+elementCType KRational           = "SRational"
 elementCType KFloat              = "SFloat"
 elementCType KDouble             = "SDouble"
 elementCType kind@KFP{}          = arbitraryFPCType kind
@@ -319,6 +325,7 @@ kindTag (KBounded False w) = "u" ++ show w
 kindTag (KBounded True  w) = "s" ++ show w
 kindTag KUnbounded         = "integer"
 kindTag KReal              = "real"
+kindTag KRational          = "rational"
 kindTag KFloat             = "float"
 kindTag KDouble            = "double"
 kindTag (KFP eb sb)        = "fp_e" ++ show eb ++ "_s" ++ show sb

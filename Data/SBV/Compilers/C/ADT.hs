@@ -419,19 +419,23 @@ adtOwnershipTypeDecls cfg adts
                                                     ++ adtFieldName fieldIndex
 
        exactMutableType KUnbounded = "mpz_ptr"
-       exactMutableType KReal      = "mpq_ptr"
+       exactMutableType fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_ptr"
        exactMutableType kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
 
        exactInit KUnbounded = "mpz_init"
-       exactInit KReal      = "mpq_init"
+       exactInit fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_init"
        exactInit kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
 
        exactSet KUnbounded = "mpz_set"
-       exactSet KReal      = "mpq_set"
+       exactSet fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_set"
        exactSet kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
 
        exactClear KUnbounded = "mpz_clear"
-       exactClear KReal      = "mpq_clear"
+       exactClear fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_clear"
        exactClear kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
 
 -- | Return the helper name that initializes caller-owned storage for one ADT
@@ -525,10 +529,11 @@ adtDriverInit cfg adts renderValue kind externalName seed
 
        exactAssignments KUnbounded access value =
          [setFromString "mpz_set_str" "mpz_ptr" access value]
-       exactAssignments KReal access value =
-         [ setFromString "mpq_set_str" "mpq_ptr" access value
-         , text "mpq_canonicalize" P.<> parens (parens (text "mpq_ptr") <+> access) P.<> semi
-         ]
+       exactAssignments fieldKind access value
+         | isExactGMPKind cfg fieldKind =
+             [ setFromString "mpq_set_str" "mpq_ptr" access value
+             , text "mpq_canonicalize" P.<> parens (parens (text "mpq_ptr") <+> access) P.<> semi
+             ]
        exactAssignments fieldKind _ _ = error $ "SBV->C: Expected an exact ADT field, received " ++ show fieldKind
 
        setFromString functionName pointerType access value =
@@ -611,7 +616,8 @@ adtExpr cfg adts op svs resultKind args
                 | isExactGMPKind cfg kind                               = CFunctionScoped
                 | True                                                  = CByValue
 
--- | Test whether an ADT contains an exact GMP-backed integer or real field.
+-- | Test whether an ADT contains an exact GMP-backed integer, real, or
+-- rational field.
 adtUsesExact :: CgConfig -> [Kind] -> Kind -> Bool
 adtUsesExact cfg adts = any constructorUsesExact . adtConstructors adts
  where constructorUsesExact (_, fields) = any fieldUsesExact fields
@@ -807,9 +813,11 @@ adtExactEqual :: Kind -> Doc -> Doc -> Doc
 adtExactEqual KUnbounded left right = text "mpz_cmp"
                                    P.<> parens (fsep (punctuate comma [left, right]))
                                    <+> text "== 0"
-adtExactEqual KReal left right = text "mpq_cmp"
-                              P.<> parens (fsep (punctuate comma [left, right]))
-                              <+> text "== 0"
+adtExactEqual exactKind left right
+  | exactKind `elem` [KReal, KRational]
+  = text "mpq_cmp"
+      P.<> parens (fsep (punctuate comma [left, right]))
+      <+> text "== 0"
 adtExactEqual kind _ _ = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
 
 -- | Render structural equality for a tuple nested in an ADT field.

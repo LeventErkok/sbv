@@ -64,6 +64,7 @@ arrayKinds = map validate . filter isArray . Set.toAscList
          KBounded{}  -> True
          KUnbounded  -> True
          KReal       -> True
+         KRational   -> True
          KFloat      -> True
          KDouble     -> True
          KFP{}       -> True
@@ -307,15 +308,18 @@ ownershipRuntime cfg kind@(KArray keyKind valueKind) =
          = []
 
        mutableType KUnbounded = "mpz_ptr"
-       mutableType KReal      = "mpq_ptr"
+       mutableType fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_ptr"
        mutableType other      = error $ "SBV->C: Expected an exact array field, received " ++ show other
 
        allocation KUnbounded = "sbv_gmp_new_integer"
-       allocation KReal      = "sbv_gmp_new_real"
+       allocation fieldKind
+         | isExactGMPKind cfg fieldKind = "sbv_gmp_new_real"
        allocation other      = error $ "SBV->C: Expected an exact array field, received " ++ show other
 
        setter KUnbounded = "mpz_set"
-       setter KReal      = "mpq_set"
+       setter fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_set"
        setter other      = error $ "SBV->C: Expected an exact array field, received " ++ show other
 ownershipRuntime _ kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
@@ -392,19 +396,20 @@ arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
            $$ text "}"
 
        mutableType
-         | KUnbounded <- valueKind = "mpz_ptr"
-         | KReal      <- valueKind = "mpq_ptr"
-         | True                     = error $ "SBV->C: Expected an exact callback value, received " ++ show valueKind
+         | KUnbounded <- valueKind            = "mpz_ptr"
+         | isExactGMPKind cfg valueKind        = "mpq_ptr"
+         | True                                = error $ "SBV->C: Expected an exact callback value, received " ++ show valueKind
 
        exactCopy
          | KUnbounded <- valueKind = ["mpz_init_set(copy, (SInteger) context);"]
-         | KReal      <- valueKind = ["mpq_init(copy);", "mpq_set(copy, (SReal) context);"]
-         | True                     = error $ "SBV->C: Expected an exact callback value, received " ++ show valueKind
+         | isExactGMPKind cfg valueKind
+         = ["mpq_init(copy);", "mpq_set(copy, (" ++ scalarCType valueKind ++ ") context);"]
+         | True = error $ "SBV->C: Expected an exact callback value, received " ++ show valueKind
 
        exactClear
-         | KUnbounded <- valueKind = text "mpz_clear((mpz_ptr) context);"
-         | KReal      <- valueKind = text "mpq_clear((mpq_ptr) context);"
-         | True                     = empty
+         | KUnbounded <- valueKind            = text "mpz_clear((mpz_ptr) context);"
+         | isExactGMPKind cfg valueKind        = text "mpq_clear((mpq_ptr) context);"
+         | True                                = empty
 arrayDriverCallback _ kind _ _ = error $ "SBV->C: Expected an array input kind, received " ++ show kind
 
 -- | Construct an example-driver descriptor around a named default value and
@@ -591,6 +596,7 @@ kindTag (KBounded False w) = "u" ++ show w
 kindTag (KBounded True  w) = "s" ++ show w
 kindTag KUnbounded         = "integer"
 kindTag KReal              = "real"
+kindTag KRational          = "rational"
 kindTag KFloat             = "float"
 kindTag KDouble            = "double"
 kindTag (KFP eb sb)        = "fp_e" ++ show eb ++ "_s" ++ show sb
@@ -606,6 +612,7 @@ scalarCType (KBounded False w)  = "SWord" ++ show w
 scalarCType (KBounded True  w)  = "SInt" ++ show w
 scalarCType KUnbounded          = "SInteger"
 scalarCType KReal               = "SReal"
+scalarCType KRational           = "SRational"
 scalarCType KFloat              = "SFloat"
 scalarCType KDouble             = "SDouble"
 scalarCType kind@KFP{}          = arbitraryFPCType kind
@@ -632,8 +639,8 @@ keyEqual cfg kind left right
                       )
   | True = parens $ left <+> text "==" <+> right
  where comparison
-         | kind == KUnbounded = "mpz_cmp"
-         | kind == KReal      = "mpq_cmp"
-         | True               = error $ "SBV->C: Expected an exact GMP array key, received " ++ show kind
+         | kind == KUnbounded             = "mpz_cmp"
+         | isExactGMPKind cfg kind         = "mpq_cmp"
+         | True                            = error $ "SBV->C: Expected an exact GMP array key, received " ++ show kind
 
        namedCall functionName callArgs = text functionName P.<> parens (fsep (punctuate comma callArgs))

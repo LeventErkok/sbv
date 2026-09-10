@@ -82,6 +82,9 @@ tests = testGroup "CodeGeneration.CgTests"
   , goldenVsStringShow "codeGen1"       foo
   , testCase "compile through the public legacy facade" legacyPublicFacade
   , testCase "collect C runtime requirements" dependencyRequirements
+  , testCase "compile exact symbolic rationals" exactSymbolicRationals
+  , testCase "compile rationals with mapped integers" mappedIntegerRationals
+  , testCase "compile repeated exact rationals into a library" exactRationalLibrary
   , testCase "compile and execute persistent arrays" persistentArrays
   , testCase "preserve native floating-point array-key equality" nativeFloatArrayKeys
   , testCase "compile repeated array types into a library" persistentArrayLibrary
@@ -683,6 +686,116 @@ exactGMPSets = do
                                  ("Sets with element kinds SInteger" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected exact GMP set elements to be rejected" False
 
+-- | Exercise exact symbolic-rational construction, decomposition, arithmetic,
+-- comparison, arbitrary-width conversion, and caller-owned results.
+exactSymbolicRationals :: Assertion
+exactSymbolicRationals = withSystemTempDirectory "sbv-exact-symbolic-rationals" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [2, 5, 3, 7, 1]
+        input    <- cgInput "input"       :: SBVCodeGen SRational
+        top      <- cgInput "numerator"   :: SBVCodeGen SInteger
+        bot      <- cgInput "denominator" :: SBVCodeGen SInteger
+        wide     <- cgInput "wide"        :: SBVCodeGen (SWord 673)
+        selector <- cgInput "selector"    :: SBVCodeGen SWord8
+        let constructed = top .% bot
+            summed      = input + constructed
+            multiplied  = input * constructed
+            divided     = constructed / input
+            converted   = sFromIntegral wide :: SRational
+            paired      = tuple (constructed, summed)
+            wrapped     = sCGOne constructed :: SCodeGenADT Rational
+            rationalMap = writeArray (constArray input :: SArray Word8 Rational) 1 constructed
+            stored      = readArray rationalMap 1
+            keyed       = readArray (writeArray (constArray (9 :: SWord8) :: SArray Rational Word8) constructed 7) constructed
+            fiveThirds  = 5 / 3 :: SRational
+            selected    = select [constructed, summed] input selector
+        cgOutput "constructed" constructed
+        cgOutput "summed"      summed
+        cgOutput "multiplied"  multiplied
+        cgOutput "divided"     divided
+        cgOutput "ordered"     (constructed .< summed)
+        cgOutput "converted"   converted
+        cgOutput "paired"      paired
+        cgOutput "wrapped"     wrapped
+        cgOutput "stored"      stored
+        cgOutput "rationalMap" rationalMap
+        cgOutput "keyed"       keyed
+        cgOutput "sameValue"   (constructed .== fiveThirds)
+        cgOutput "wrappedSame" (wrapped .== wrapped)
+        cgOutput "selected"    selected
+        cgReturn summed
+
+  stdoutText <- compileProgramAndRunGenerated dir "exactSymbolicRationals" program
+  headerText <- readFile (dir </> "exactSymbolicRationals.h")
+  mapM_ (\fragment -> assertBool ("Expected exact-rational output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") =11/3"
+    , "constructed =5/3"
+    , "summed =11/3"
+    , "multiplied =10/3"
+    , "divided =5/6"
+    , "ordered = 1"
+    , "converted =7"
+    , "paired =(5/3, 11/3)"
+    , "wrapped =CGOne(5/3)"
+    , "stored =5/3"
+    , "rationalMap[0] =2"
+    , "keyed = 7"
+    , "sameValue = 1"
+    , "wrappedSame = 1"
+    , "selected =11/3"
+    ]
+  assertBool "Expected a public exact-rational input type"
+             ("typedef mpq_srcptr SRational;" `isInfixOf` headerText)
+  assertBool "Expected caller-owned exact-rational output and return parameters"
+             ("mpq_ptr constructed" `isInfixOf` headerText && "mpq_ptr __result" `isInfixOf` headerText)
+
+-- | Exercise exact rationals when their symbolic numerator and denominator
+-- operations use an explicitly selected bounded SInteger representation.
+mappedIntegerRationals :: Assertion
+mappedIntegerRationals = withSystemTempDirectory "sbv-mapped-integer-rationals" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgIntegerSize 16
+        cgSetDriverValues [2, 5, 3]
+        input <- cgInput "input"       :: SBVCodeGen SRational
+        top   <- cgInput "numerator"   :: SBVCodeGen SInteger
+        bot   <- cgInput "denominator" :: SBVCodeGen SInteger
+        let constructed = top .% bot
+        cgOutput "constructed" constructed
+        cgOutput "converted"   (sFromIntegral top :: SRational)
+        cgOutput "asReal"      (sRationalToSReal constructed)
+        cgReturn (input + constructed)
+
+  stdoutText <- compileProgramAndRunGenerated dir "mappedIntegerRationals" program
+  mapM_ (\fragment -> assertBool ("Expected mapped-integer rational output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") =11/3"
+    , "constructed =5/3"
+    , "converted =5"
+    , "asReal =5/3"
+    ]
+
+-- | Exercise guarded rational declarations and caller-owned rational returns
+-- across multiple generated library translation units.
+exactRationalLibrary :: Assertion
+exactRationalLibrary = withSystemTempDirectory "sbv-exact-rational-library" $ \dir -> do
+  let component increment = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        value <- cgInput "value" :: SBVCodeGen SRational
+        cgReturn (value + literal increment)
+
+  (_, cfg, bundle) <- compileToCLib' "exactRationalLibrary"
+    [ ("addOneRational", component 1)
+    , ("addTwoRational", component 2)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "exactRationalLibrary"
+  assertBool ("Expected both exact-rational library results, received:\n" ++ stdoutText)
+             (") =2" `isInfixOf` stdoutText && ") =3" `isInfixOf` stdoutText)
+
 -- | Check that ABI kinds and scalar operations contribute the exact external
 -- runtime dependencies needed by their generated C bundles.
 dependencyRequirements :: Assertion
@@ -699,6 +812,10 @@ dependencyRequirements = do
     value <- cgInput "value" :: SBVCodeGen SInteger
     cgReturn value
 
+  (_, _, rationalBundle) <- compileToC' "requirementsRational" $ do
+    value <- cgInput "value" :: SBVCodeGen SRational
+    cgReturn value
+
   (_, _, nativeFloatBundle) <- compileToC' "requirementsNativeFloat" $ do
     value <- cgInput "value" :: SBVCodeGen SFloat
     cgReturn (fpSqrt sRoundNearestTiesToEven value)
@@ -710,6 +827,7 @@ dependencyRequirements = do
   assertEqual "wide bit-vectors should not add an external library" [[]]              (linkerFlags wideBundle)
   assertEqual "arbitrary floats should request LibBF and libm"       [["-lbf", "-lm"]] (linkerFlags fpBundle)
   assertEqual "exact integers should request GMP"                    [["-lgmp"]]        (linkerFlags integerBundle)
+  assertEqual "exact rationals should request GMP"                   [["-lgmp"]]        (linkerFlags rationalBundle)
   assertEqual "native floating-point sqrt should request libm"       [["-lm"]]          (linkerFlags nativeFloatBundle)
   assertEqual "explicit native rounding should request LibBF and libm" [["-lbf", "-lm"]] (linkerFlags roundedNativeFloatBundle)
 

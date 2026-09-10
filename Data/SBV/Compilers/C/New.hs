@@ -1121,7 +1121,7 @@ genCProg cfg adts lists sets fn proto
                       len KBool              = 5 -- SBool
                       len (KBounded False n) = 5 + length (show n) -- SWordN
                       len (KBounded True  n) = 4 + length (show n) -- SIntN
-                      len KRational{}        = die   "Rational."
+                      len KRational{}        = length "SRational"
                       len (KFP eb sb)         = 6 + length (show eb) + length (show sb)
                       len k@KArray{}         = length (arrayCType k)
                       len k@KTuple{}         = length (tupleCType k)
