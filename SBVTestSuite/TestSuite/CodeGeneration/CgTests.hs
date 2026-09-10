@@ -95,6 +95,13 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute characters and strings" characterStrings
   , testCase "compile strings with mapped integers" mappedIntegerStrings
   , testCase "return owned strings from a generated library" ownedStringLibrary
+  , testCase "compile and execute symbolic lists" symbolicLists
+  , testCase "compile arbitrary-width symbolic lists" wideSymbolicLists
+  , testCase "compile arbitrary floating-point symbolic lists" arbitraryFloatLists
+  , testCase "preserve native floating-point list equality" nativeFloatLists
+  , testCase "compile lists with mapped numeric elements" mappedNumericLists
+  , testCase "return owned lists from a generated library" ownedListLibrary
+  , testCase "reject lists of exact GMP values" exactGMPLists
   , testCase "compile and execute non-recursive ADTs" nonRecursiveADTs
   , testCase "compile and execute nested ADTs" nestedADTs
   , testCase "compile repeated ADT types into a library" nonRecursiveADTLibrary
@@ -261,6 +268,166 @@ ownedStringLibrary = withSystemTempDirectory "sbv-owned-string-library" $ \dir -
   stdoutText <- compileAndRunGenerated dir "ownedStringLibrary"
   assertBool ("Expected both owned string results, received:\n" ++ stdoutText)
              ("sbv4\955" `isInfixOf` stdoutText && "sbv5!" `isInfixOf` stdoutText)
+
+-- | Exercise the primitive symbolic-list operations, exact indices, borrowed
+-- inputs, and independently owned output and return values.
+symbolicLists :: Assertion
+symbolicLists = withSystemTempDirectory "sbv-symbolic-lists" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [10, 1]
+        values <- cgInput "values" :: SBVCodeGen (SList Word16)
+        index  <- cgInput "index"  :: SBVCodeGen SInteger
+        let suffix      = literal ([99, 100] :: [Word16])
+            joined      = values SL.++ suffix
+            contains    = suffix `SL.isInfixOf` joined
+            slice       = SL.subList joined 2 2
+            replaced    = SL.replace joined (literal ([11, 12] :: [Word16])) (SL.singleton 77)
+        cgOutput "length"      (SL.length joined)
+        cgOutput "selected"    (SL.elemAt joined index)
+        cgOutput "suffixIndex" (SL.indexOf joined suffix)
+        cgOutput "contains"    contains
+        cgOutput "prefix"      (values `SL.isPrefixOf` joined)
+        cgOutput "suffix"      (suffix `SL.isSuffixOf` joined)
+        cgOutput "sameObject"  (values .=== values)
+        cgOutput "different"   (values ./== suffix)
+        cgOutput "conditional" (ite contains joined values)
+        cgOutput "slice"       slice
+        cgOutput "replaced"    replaced
+        cgReturn joined
+
+  stdoutText <- compileProgramAndRunGenerated dir "symbolicLists" program
+  headerText <- readFile (dir </> "symbolicLists.h")
+  mapM_ (\fragment -> assertBool ("Expected generated list output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") =[0x000aU, 0x000bU, 0x000cU, 0x0063U, 0x0064U]"
+    , "length =5"
+    , "selected = 0x000bU"
+    , "suffixIndex =3"
+    , "contains = 1"
+    , "prefix = 1"
+    , "suffix = 1"
+    , "sameObject = 1"
+    , "different = 1"
+    , "conditional =[0x000aU, 0x000bU, 0x000cU, 0x0063U, 0x0064U]"
+    , "slice =[0x000cU, 0x0063U]"
+    , "replaced =[0x000aU, 0x004dU, 0x0063U, 0x0064U]"
+    ]
+  assertBool "Expected a typed public list descriptor"
+             ("typedef struct { const SWord16 *data; size_t length; } SBVList_u16;" `isInfixOf` headerText)
+  assertBool "Expected public list ownership helpers"
+             ("sbv_list_clone_u16" `isInfixOf` headerText && "sbv_list_release_u16" `isInfixOf` headerText)
+
+-- | Check that list descriptors remain agnostic to element width by compiling
+-- and executing a list whose elements use the arbitrary-width bit-vector ABI.
+wideSymbolicLists :: Assertion
+wideSymbolicLists = withSystemTempDirectory "sbv-wide-symbolic-lists" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        values <- cgInput "values" :: SBVCodeGen (SList (WordN 673))
+        cgOutput "length" (SL.length values)
+        cgReturn values
+
+  stdoutText <- compileProgramAndRunGenerated dir "wideSymbolicLists" program
+  headerText <- readFile (dir </> "wideSymbolicLists.h")
+  assertBool ("Expected the wide-list driver to report its three sample elements, received:\n" ++ stdoutText)
+             ("length =3" `isInfixOf` stdoutText)
+  assertBool "Expected an arbitrary-width typed list descriptor"
+             ("typedef struct { const SWord673 *data; size_t length; } SBVList_u673;" `isInfixOf` headerText)
+
+-- | Check that arbitrary floating-point elements retain their raw interchange
+-- representation and use the LibBF-backed object-equality semantics.
+arbitraryFloatLists :: Assertion
+arbitraryFloatLists = do
+  (_, _, bundle) <- compileToC' "arbitraryFloatLists" $ do
+    cgSetDriverValues [1]
+    values <- cgInput "values" :: SBVCodeGen (SList (FloatingPoint 7 19))
+    cgOutput "sameObject" (values .=== values)
+    cgReturn values
+  let generated = show bundle
+  assertBool "Expected a typed arbitrary-float list descriptor"
+             ("typedef struct { const SFP7_19 *data; size_t length; } SBVList_fp_e7_s19;" `isInfixOf` generated)
+  assertBool "Expected arbitrary-float list equality to use object equality"
+             ("sbv_fp_e7_s19_obj_eq(left, right)" `isInfixOf` generated)
+
+-- | Check that native floating-point list equality treats NaNs as identical
+-- objects while distinguishing positive and negative zero.
+nativeFloatLists :: Assertion
+nativeFloatLists = withSystemTempDirectory "sbv-native-float-lists" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [0x7fc00000, 0x00000000, 0x80000000]
+        nanBits      <- cgInput "nanBits"      :: SBVCodeGen SWord32
+        positiveBits <- cgInput "positiveBits" :: SBVCodeGen SWord32
+        negativeBits <- cgInput "negativeBits" :: SBVCodeGen SWord32
+        let nanList      = SL.singleton (sWord32AsSFloat nanBits)
+            positiveList = SL.singleton (sWord32AsSFloat positiveBits)
+            negativeList = SL.singleton (sWord32AsSFloat negativeBits)
+        cgOutput "nanSameObject" (nanList .=== nanList)
+        cgOutput "zeroObjectsDiffer" (positiveList ./== negativeList)
+        cgReturn (nanList SL.++ positiveList)
+
+  stdoutText <- compileProgramAndRunGenerated dir "nativeFloatLists" program
+  assertBool ("Expected native floating-point list object equality, received:\n" ++ stdoutText)
+             ("nanSameObject = 1" `isInfixOf` stdoutText && "zeroObjectsDiffer = 1" `isInfixOf` stdoutText)
+
+-- | Exercise lists after explicitly selecting the historical native mappings
+-- for unbounded integers and reals, including declaration dependency order.
+mappedNumericLists :: Assertion
+mappedNumericLists = withSystemTempDirectory "sbv-mapped-numeric-lists" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgIntegerSize 64
+        cgSRealType CgDouble
+        cgSetDriverValues [7, 9]
+        integers <- cgInput "integers" :: SBVCodeGen (SList Integer)
+        reals    <- cgInput "reals"    :: SBVCodeGen (SList AlgReal)
+        cgOutput "integerLength" (SL.length integers)
+        cgOutput "realSameObject" (reals .=== reals)
+        cgReturn integers
+
+  stdoutText <- compileProgramAndRunGenerated dir "mappedNumericLists" program
+  mapM_ (\fragment -> assertBool ("Expected mapped-numeric list output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "integerLength = 3LL"
+    , "realSameObject = 1"
+    , "[7LL, 8LL, 9LL]"
+    ]
+
+-- | Exercise guarded list declarations and independent owned returns from
+-- multiple generated library translation units.
+ownedListLibrary :: Assertion
+ownedListLibrary = withSystemTempDirectory "sbv-owned-list-library" $ \dir -> do
+  let component suffix seed = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        values <- cgInput "values" :: SBVCodeGen (SList Word16)
+        cgReturn (values SL.++ literal suffix)
+
+  (_, cfg, bundle) <- compileToCLib' "ownedListLibrary"
+    [ ("firstList",  component ([40] :: [Word16]) 4)
+    , ("secondList", component ([50] :: [Word16]) 5)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "ownedListLibrary"
+  assertBool ("Expected both owned list results, received:\n" ++ stdoutText)
+             ("[0x0004U, 0x0005U, 0x0006U, 0x0028U]" `isInfixOf` stdoutText
+           && "[0x0005U, 0x0006U, 0x0007U, 0x0032U]" `isInfixOf` stdoutText)
+
+-- | Report the current deep-ownership boundary explicitly when a list stores
+-- exact GMP-backed values.
+exactGMPLists :: Assertion
+exactGMPLists = do
+  result <- try (do
+    (_, _, bundle) <- compileToC' "exactGMPLists" $ do
+      values <- cgInput "values" :: SBVCodeGen (SList Integer)
+      cgReturn values
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+  case result of
+    Left exception -> assertBool ("Expected an exact-list ownership diagnostic, received:\n" ++ displayException exception)
+                                 ("Lists with element kinds SInteger" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected exact GMP list elements to be rejected" False
 
 -- | Check that ABI kinds and scalar operations contribute the exact external
 -- runtime dependencies needed by their generated C bundles.

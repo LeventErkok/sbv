@@ -34,6 +34,7 @@ data CRequirement = CRequiresGMP              -- ^ GMP-backed exact-number suppo
                   | CRequiresWideBV           -- ^ Exact-width limb-backed bit-vector support.
                   | CRequiresArrays           -- ^ Persistent functional-array support.
                   | CRequiresText             -- ^ Length-aware character and string support.
+                  | CRequiresLists            -- ^ Typed symbolic-list support.
                   deriving (Eq, Ord, Show)
 
 -- | Lifetime and ownership class of a lowered result.
