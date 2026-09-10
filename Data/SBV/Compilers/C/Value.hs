@@ -27,7 +27,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, gmpEqual, isExactGMPKind)
-import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleCType, tupleFieldName)
+import Data.SBV.Compilers.C.Types      (adtCType, elementCType, kindTag, tupleCType, tupleFieldName)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 
@@ -51,6 +51,7 @@ valueDriverNeedsInitialization cfg kind
 valueDriverNeedsInitialization cfg (KTuple fields)      = any (valueNeedsOwnership cfg) fields
 valueDriverNeedsInitialization cfg (KList elementKind)  = valueDriverNeedsInitialization cfg elementKind
 valueDriverNeedsInitialization cfg (KSet elementKind)   = valueDriverNeedsInitialization cfg elementKind
+valueDriverNeedsInitialization _   kind@KADT{}          = isConcreteADT kind
 valueDriverNeedsInitialization _   _                    = False
 
 -- | Render equality for a scalar or recursively nested aggregate. The Boolean
@@ -66,6 +67,7 @@ byValueEqual cfg strong kind left right
   | KList elementKind <- kind                  = call ("sbv_list_" ++ kindTag elementKind ++ "_equal") [left, right]
   | KSet elementKind <- kind                   = call ("sbv_set_" ++ kindTag elementKind ++ "_equal") [left, right]
   | KTuple fields <- kind                      = tupleEquality fields
+  | isConcreteADT kind                         = call (adtEqualityName strong kind) [left, right]
   | True                                       = left <+> text "==" <+> right
  where tupleEquality fields = parens . fsep . punctuate (text " &&") $
          zipWith equalField [1 :: Int ..] fields
@@ -74,6 +76,9 @@ byValueEqual cfg strong kind left right
          (parens left  P.<> text "." P.<> text (tupleFieldName index))
          (parens right P.<> text "." P.<> text (tupleFieldName index))
 
+       adtEqualityName objectEquality adtKind
+         = "sbv_adt_" ++ (if objectEquality then "object_" else "") ++ "equal_" ++ adtCType adtKind
+
 -- | Deep-copy one non-GMP managed value. Exact GMP values require initialized
 -- destination storage and are therefore handled by their aggregate owner.
 managedValueClone :: Kind -> Doc -> Doc
@@ -81,6 +86,8 @@ managedValueClone KString value             = call "sbv_string_clone" [value]
 managedValueClone (KList elementKind) value = call ("sbv_list_clone_" ++ kindTag elementKind) [value]
 managedValueClone (KSet elementKind) value  = call ("sbv_set_clone_" ++ kindTag elementKind) [value]
 managedValueClone kind@KTuple{} value       = call ("sbv_tuple_owned_clone_" ++ kindTag kind) [value]
+managedValueClone kind@KADT{} value
+  | isConcreteADT kind                       = call ("sbv_adt_owned_clone_" ++ adtCType kind) [value]
 managedValueClone kind _                    = error $ "SBV->C: Expected a non-GMP managed kind, received " ++ show kind
 
 -- | Release one non-GMP managed value through a pointer to its owned storage.
@@ -89,6 +96,8 @@ managedValueRelease KString address             = call "sbv_string_release" [add
 managedValueRelease (KList elementKind) address = call ("sbv_list_release_" ++ kindTag elementKind) [address] P.<> semi
 managedValueRelease (KSet elementKind) address  = call ("sbv_set_release_" ++ kindTag elementKind) [address] P.<> semi
 managedValueRelease kind@KTuple{} address       = call ("sbv_tuple_owned_release_" ++ kindTag kind) [address] P.<> semi
+managedValueRelease kind@KADT{} address
+  | isConcreteADT kind                          = call ("sbv_adt_owned_release_" ++ adtCType kind) [address] P.<> semi
 managedValueRelease kind _                      = error $ "SBV->C: Expected a non-GMP managed kind, received " ++ show kind
 
 -- | Declare and initialize one deterministic example-driver value. Managed
@@ -153,6 +162,9 @@ valueDriverClear cfg kind externalName
 valueDriverClear cfg kind@KTuple{} externalName
   | valueNeedsOwnership cfg kind
   = managedValueRelease kind (text "&" P.<> text externalName)
+valueDriverClear _   kind@KADT{}         externalName
+  | isConcreteADT kind
+  = managedValueRelease kind (text "&" P.<> text externalName)
 valueDriverClear cfg (KList elementKind) externalName
   = vcat [valueDriverClear cfg elementKind (collectionElementName externalName index) | index <- [0 :: Int .. collectionElementCount - 1]]
 valueDriverClear cfg (KSet elementKind)  externalName
@@ -192,3 +204,8 @@ tupleFields kind            = error $ "SBV->C: Expected a tuple kind, received "
 -- | Render a C helper call.
 call :: String -> [Doc] -> Doc
 call functionName arguments = text functionName P.<> parens (fsep (punctuate comma arguments))
+
+-- | Test whether a kind is a concrete user ADT rather than a built-in or
+-- uninterpreted sort.
+isConcreteADT :: Kind -> Bool
+isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)

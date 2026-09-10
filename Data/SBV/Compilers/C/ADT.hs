@@ -15,12 +15,16 @@ module Data.SBV.Compilers.C.ADT
   ( adtKinds
   , resolveADTReferences
   , adtCType
+  , adtForwardTypeDecls
   , adtTypeDecls
+  , adtEqualityRuntimeDecls
   , adtEqualityRuntime
   , adtOwnershipTypeDecls
   , adtOwnedCloneName
   , adtOwnedReleaseName
   , adtDriverInit
+  , adtCollectionDriverInit
+  , collectionUsesADT
   , adtValue
   , adtConst
   , adtExpr
@@ -32,12 +36,11 @@ module Data.SBV.Compilers.C.ADT
   , adtConstructors
   ) where
 
-import Data.Char                       (isAlphaNum, isAscii, ord, toUpper)
+import Data.Char                       (toUpper)
 import qualified Data.Graph as DG
 import Data.List                       (find, nub)
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import Numeric                         (showHex)
 
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
@@ -65,7 +68,7 @@ import Data.SBV.Compilers.C.Tuple      ( tupleOwnedInitName
                                        , tupleOwnedSetName
                                        , tupleNeedsOwnership
                                        )
-import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleFieldName)
+import Data.SBV.Compilers.C.Types      (adtCType, elementCType, tupleFieldName)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds, substituteADTVars)
@@ -116,14 +119,18 @@ adtKinds registeredKinds usedKinds = concatMap orderedComponent (DG.stronglyConn
        adtKey (KADT typeName parameters _) = (typeName, map snd parameters)
        adtKey kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
 
--- | Return the public C structure type used for an ADT kind.
-adtCType :: Kind -> String
-adtCType kind@(KADT typeName parameters _)
-  | isConcreteADT kind = "SBVADT_" ++ encodeIdentifier typeName ++ concatMap parameterTag parameters
-  | True               = error $ "SBV->C: Expected a concrete ADT kind, received " ++ show kind
- where parameterTag (_, parameterKind) = "_" ++ show (length tag) ++ "_" ++ tag
-         where tag = adtKindTag parameterKind
-adtCType kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
+-- | Emit forward declarations that permit collection descriptors to refer to
+-- ADT element types before their tagged-union layouts are complete.
+adtForwardTypeDecls :: [Kind] -> Doc
+adtForwardTypeDecls []   = empty
+adtForwardTypeDecls adts = text . unlines $ concatMap forwardDeclaration adts
+ where forwardDeclaration kind =
+         [ "#ifndef " ++ adtForwardGuard kind
+         , "#define " ++ adtForwardGuard kind
+         , "typedef struct " ++ adtCType kind ++ " " ++ adtCType kind ++ ";"
+         , "#endif"
+         , ""
+         ]
 
 -- | Emit public tagged-union declarations for all ADT kinds used by a program.
 adtTypeDecls :: CgConfig -> [Kind] -> Doc
@@ -201,23 +208,25 @@ adtTypeDecls _ adts = text . unlines $
          , ""
          ]
 
--- | Emit private structural-equality helpers for recursive ADTs. These
+-- | Emit forward declarations for the ADT equality helpers used by collection
+-- element comparisons.
+adtEqualityRuntimeDecls :: [Kind] -> Doc
+adtEqualityRuntimeDecls []   = empty
+adtEqualityRuntimeDecls adts = text . unlines $ concatMap prototypes [False, True]
+ where prototypes strong =
+         [ "static SBV_CGEN_UNUSED bool " ++ adtEqualName strong kind
+        ++ "(" ++ adtCType kind ++ " left, " ++ adtCType kind ++ " right);"
+         | kind <- adts
+         ] ++ [""]
+
+-- | Emit private structural-equality helpers for concrete ADTs. These
 -- definitions follow the collection runtimes so managed fields can reuse the
 -- same list and set equality semantics as top-level expressions.
 adtEqualityRuntime :: CgConfig -> [Kind] -> Doc
 adtEqualityRuntime cfg adts
-  | null recursiveKinds = empty
-  | True                = text . unlines $ concatMap prototypes [False, True]
-                                            ++ concatMap definitions [False, True]
- where recursiveKinds = filter (adtIsRecursive adts) adts
-
-       prototypes strong =
-         [ "static SBV_CGEN_UNUSED bool " ++ adtEqualName strong kind
-        ++ "(" ++ adtCType kind ++ " left, " ++ adtCType kind ++ " right);"
-         | kind <- recursiveKinds
-         ] ++ [""]
-
-       definitions strong = concatMap (definition strong) recursiveKinds
+  | null adts = empty
+  | True      = text . unlines $ concatMap definitions [False, True]
+ where definitions strong = concatMap (definition strong) adts
 
        definition strong kind =
           [ "static SBV_CGEN_UNUSED bool " ++ adtEqualName strong kind
@@ -253,17 +262,15 @@ adtEqualityRuntime cfg adts
                          (adtField (text "right") constructorIndex fieldIndex)
         where deref side = text "*" P.<> parens (adtField (text side) constructorIndex fieldIndex)
 
--- | Emit public ownership helpers for ADTs containing managed collection,
--- tuple, exact GMP-backed, nested ADT, or recursive-pointer fields. Inputs
--- borrow their field storage. Cloned values own the active constructor's
--- managed fields and must be released with 'adtOwnedReleaseName'.
+-- | Emit public ownership helpers for concrete ADTs. Inputs borrow their field
+-- storage. Cloned values own all managed fields of the active constructor and
+-- must be released with 'adtOwnedReleaseName'; by-value ADTs use the same
+-- uniform protocol so collections need no representation-specific branch.
 adtOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
 adtOwnershipTypeDecls cfg adts
-  | null owned = empty
-  | True       = text . unlines $ concatMap prototypes owned ++ concatMap declaration owned
- where owned = filter (adtNeedsOwnership cfg adts) adts
-
-       prototypes kind =
+  | null adts = empty
+  | True      = text . unlines $ concatMap prototypes adts ++ concatMap declaration adts
+ where prototypes kind =
          [ "static inline SBV_CGEN_UNUSED void " ++ adtOwnedInitName kind
         ++ "(" ++ adtCType kind ++ " *value, " ++ adtTagCType kind ++ " tag);"
          , "static inline SBV_CGEN_UNUSED void " ++ adtOwnedReleaseName kind
@@ -599,6 +606,47 @@ adtDriverInit cfg adts renderValue kind externalName seed
                                                     ]))
                  <+> text "!= 0")
            <+> text "abort" P.<> parens empty P.<> semi
+
+-- | Initialize a generated-driver list or set whose direct elements are ADTs.
+-- The descriptor borrows the independently initialized element variables.
+adtCollectionDriverInit :: CgConfig -> [Kind] -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
+adtCollectionDriverInit cfg adts renderValue kind externalName seed
+  | Just elementKind <- collectionADTElement kind
+  =  vcat (zipWith (initializeElement elementKind) elementNames [seed ..])
+  $$ text "const" <+> text (adtCType elementKind) <+> text dataName P.<> brackets (int elementCount)
+       <+> text "=" <+> braces (fsep (punctuate comma (map text elementNames))) P.<> semi
+  $$ text "const" <+> text (elementCType kind) <+> text externalName <+> text "="
+       <+> braces (fsep (punctuate comma descriptorFields)) P.<> semi
+  | True
+  = error $ "SBV->C: Expected a collection with direct ADT elements, received " ++ show kind
+ where elementCount     = 3
+       elementNames     = [externalName ++ "_element_" ++ show index | index <- [0 :: Int .. elementCount - 1]]
+       dataName         = externalName ++ "_data"
+       descriptorFields = [text dataName, int elementCount]
+                       ++ case kind of
+                            KSet{} -> [text (if odd seed then "true" else "false")]
+                            _      -> []
+
+       initializeElement elementKind elementName elementSeed
+         | adtNeedsOwnership cfg adts elementKind
+         = adtDriverInit cfg adts renderValue elementKind elementName elementSeed
+         | True
+         = text "const" <+> text (adtCType elementKind) <+> text elementName <+> text "="
+             <+> adtDriverValue adts renderValue elementKind elementSeed P.<> semi
+
+-- | Test whether a list or set has a concrete ADT as its direct element kind.
+collectionUsesADT :: Kind -> Bool
+collectionUsesADT kind = case collectionADTElement kind of
+                           Just{}  -> True
+                           Nothing -> False
+
+-- | Return the concrete direct ADT element of a collection kind.
+collectionADTElement :: Kind -> Maybe Kind
+collectionADTElement (KList elementKind)
+  | isConcreteADT elementKind = Just elementKind
+collectionADTElement (KSet elementKind)
+  | isConcreteADT elementKind = Just elementKind
+collectionADTElement _ = Nothing
 
 -- | Render a concrete ADT value as a C99 compound literal.
 adtConst :: (CV -> Doc) -> CV -> Maybe Doc
@@ -964,11 +1012,6 @@ adtFieldCType (ADTField kind False) = elementCType kind
 isConcreteADT :: Kind -> Bool
 isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
 
--- | Return a collision-free kind tag for an applied ADT parameter.
-adtKindTag :: Kind -> String
-adtKindTag kind@KADT{} = "adt_" ++ encodeIdentifier (adtCType kind)
-adtKindTag kind        = kindTag kind
-
 -- | Render the tag-selection expression for an ADT value.
 adtTag :: Doc -> Doc
 adtTag value = parens value P.<> text ".tag"
@@ -1029,13 +1072,6 @@ adtValue adts kind constructorIndex fields
                                               P.<> braces field)
                                       P.<> brackets (text "0")
                 | True      = field
-
--- | Encode an arbitrary Haskell type name as a valid C identifier component.
-encodeIdentifier :: String -> String
-encodeIdentifier = concatMap encode
- where encode character
-         | isAscii character && isAlphaNum character = [character]
-         | True                                      = "_x" ++ showHex (ord character) "" ++ "_"
 
 -- | Return a total diagnostic name for an operation involving an ADT.
 adtOperationName :: Op -> String

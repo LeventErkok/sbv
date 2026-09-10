@@ -76,7 +76,9 @@ listSupported _ (KList elementKind) = supportedElement elementKind
        supportedElement KReal          = True
        supportedElement KRational      = True
        supportedElement (KTuple kinds) = all supportedTupleField kinds
-       supportedElement kind           = isRoundingMode kind
+       supportedElement kind
+         | isConcreteADT kind = True
+         | True               = isRoundingMode kind
 
        supportedTupleField KString        = True
        supportedTupleField (KList kind)   = supportedElement kind
@@ -188,7 +190,7 @@ listOwnershipTypeDecls cfg kinds
          ++ [ "      copy[i] = element;"
             , "    }"
             ]
-         | valueNeedsOwnership cfg elementKind
+         | isConcreteADT elementKind || valueNeedsOwnership cfg elementKind
          = [ "    for (size_t i = 0; i < value.length; ++i)"
            , "      copy[i] = " ++ render (managedValueClone elementKind (text "value.data[i]")) ++ ";"
            ]
@@ -204,7 +206,7 @@ listOwnershipTypeDecls cfg kinds
            , "  }"
            , "  free(data);"
            ]
-         | valueNeedsOwnership cfg elementKind
+         | isConcreteADT elementKind || valueNeedsOwnership cfg elementKind
          = [ "  " ++ listElementCType elementKind ++ " *data = (" ++ listElementCType elementKind ++ " *) value->data;"
            , "  for (size_t i = 0; i < value->length; ++i)"
            , "    " ++ render (managedValueRelease elementKind (text "&data[i]"))
@@ -616,3 +618,8 @@ listKindRuntime cfg usesExactInteger kind@(KList elementKind) =
              ]
          | True = []
 listKindRuntime _ _ kind = error $ "SBV->C: Expected a list kind, received " ++ show kind
+
+-- | Test whether a kind is a concrete user ADT supported as a collection
+-- element.
+isConcreteADT :: Kind -> Bool
+isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)

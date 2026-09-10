@@ -47,14 +47,14 @@ data CodeGenADT a = CGEmpty
 
 -- | A finite enumeration used to check that constructor order is preserved by
 -- the C tag representation.
-data CodeGenEnum = CGRed | CGGreen | CGBlue deriving Show
+data CodeGenEnum = CGRed | CGGreen | CGBlue deriving (Eq, Ord, Show)
 
 -- | An acyclic parameterized ADT reference used to exercise 'KApp'
 -- resolution and dependency-ordered C declarations.
 data CodeGenEnvelope a = CGNoEnvelope | CGEnvelope (CodeGenADT a) deriving Show
 
 -- | A recursive type used to verify the current C ABI boundary.
-data CodeGenTree = CGLeaf Word8 | CGNode CodeGenTree CodeGenTree deriving Show
+data CodeGenTree = CGLeaf Word8 | CGNode CodeGenTree CodeGenTree deriving (Eq, Ord, Show)
 
 -- | An acyclic wrapper around a recursive value, used to check transitive
 -- ownership without changing its embedded by-value layout.
@@ -119,6 +119,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "return tuple-valued collections from a library" tupleValuedCollectionLibrary
   , testCase "compile managed tuple-valued collections" managedTupleValuedCollections
   , testCase "return managed tuple-valued collections from a library" managedTupleValuedCollectionLibrary
+  , testCase "compile ADT-valued collections" adtValuedCollections
+  , testCase "return ADT-valued collections from a library" adtValuedCollectionLibrary
   , testCase "compile and execute characters and strings" characterStrings
   , testCase "compile strings with mapped integers" mappedIntegerStrings
   , testCase "return owned strings from a generated library" ownedStringLibrary
@@ -1396,6 +1398,79 @@ managedTupleValuedCollectionLibrary = withSystemTempDirectory "sbv-managed-tuple
                                 (fragment `isInfixOf` stdoutText))
     [ "[(sbv1, 2), (sbv2, 3), (sbv3, 4), (first, 9)]"
     , "[(sbv2, 3), (sbv3, 4), (sbv4, 5), (second, 10)]"
+    ]
+
+-- | Exercise lists and sets whose elements are managed or recursive ADTs,
+-- including deep ownership and both symbolic equality modes.
+adtValuedCollections :: Assertion
+adtValuedCollections = withSystemTempDirectory "sbv-adt-valued-collections" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 2, 4]
+        values <- cgInput "values" :: SBVCodeGen (SList CodeGenCollections)
+        trees  <- cgInput "trees"  :: SBVCodeGen (SSet CodeGenTree)
+        colors <- cgInput "colors" :: SBVCodeGen (SSet CodeGenEnum)
+        let extraValue = sCGCollections
+                           (literal ([9, 10] :: [Integer]))
+                           (SS.singleton (literal 11 :: SRational))
+                           (tuple (literal ([12] :: [Integer]), SS.singleton (literal 13 :: SRational)))
+            extraTree  = sCGLeaf 99
+            joined     = values SL.++ SL.singleton extraValue
+            inserted   = SS.insert extraTree trees
+            colored    = SS.insert sCGBlue colors
+            allColors  = SS.fromList [CGRed, CGGreen, CGBlue]
+        cgOutput "sameValues" (values .=== values)
+        cgOutput "containsExtraTree" (extraTree `SS.member` inserted)
+        cgOutput "containsBlue" (sCGBlue `SS.member` colored)
+        cgOutput "sameColorUniverse" (allColors .== (SS.full :: SSet CodeGenEnum))
+        cgOutput "joined" joined
+        cgOutput "inserted" inserted
+        cgOutput "colored" colored
+        cgReturn (tuple (joined, inserted))
+
+  stdoutText <- compileProgramAndRunGenerated dir "adtValuedCollections" program
+  headerText <- readFile (dir </> "adtValuedCollections.h")
+  sourceText <- readFile (dir </> "adtValuedCollections.c")
+  mapM_ (\fragment -> assertBool ("Expected ADT-valued collection output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "sameValues = 1"
+    , "containsExtraTree = 1"
+    , "containsBlue = 1"
+    , "sameColorUniverse = 1"
+    , "CGCollections([9, 10], {11}, ([12], {13}))"
+    , "CGLeaf(99)"
+    , "CGBlue"
+    ]
+  assertBool "Expected ADT forward declarations before collection descriptors"
+             ("typedef struct SBVADT_CodeGenCollections SBVADT_CodeGenCollections;" `isInfixOf` headerText
+           && "const SBVADT_CodeGenCollections *data" `isInfixOf` headerText)
+  assertBool "Expected collection ownership and equality to dispatch through ADT helpers"
+             ("sbv_adt_owned_clone_SBVADT_CodeGenCollections" `isInfixOf` headerText
+           && "sbv_adt_owned_release_SBVADT_CodeGenTree" `isInfixOf` headerText
+           && "sbv_adt_object_equal_SBVADT_CodeGenCollections" `isInfixOf` sourceText
+           && "sbv_adt_equal_SBVADT_CodeGenTree" `isInfixOf` sourceText)
+
+-- | Exercise guarded recursive-ADT collection helpers shared by multiple
+-- generated library translation units.
+adtValuedCollectionLibrary :: Assertion
+adtValuedCollectionLibrary = withSystemTempDirectory "sbv-adt-valued-collection-library" $ \dir -> do
+  let component :: Integer -> Word8 -> SBVCodeGen ()
+      component seed extraValue = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        values <- cgInput "values" :: SBVCodeGen (SList CodeGenTree)
+        cgReturn (values SL.++ SL.singleton (sCGLeaf (literal extraValue)))
+
+  (_, cfg, bundle) <- compileToCLib' "adtValuedCollectionLibrary"
+    [ ("firstADTCollections",  component 1 98)
+    , ("secondADTCollections", component 2 99)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "adtValuedCollectionLibrary"
+  mapM_ (\fragment -> assertBool ("Expected ADT-valued collection library output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "CGLeaf(98)"
+    , "CGLeaf(99)"
     ]
 
 -- | Exercise parameter substitution, constructors, tests, accessors,

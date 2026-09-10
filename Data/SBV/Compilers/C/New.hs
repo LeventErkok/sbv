@@ -140,6 +140,7 @@ cgen cfg nm st sbvProg
                    $$ (if hasRequirement CRequiresGMP    then gmpTypeDecls cfg kinds else empty)
                    $$ (if hasRequirement CRequiresText   then textTypeDecls kinds else empty)
                    $$ tupleForwardTypeDecls tuples
+                   $$ adtForwardTypeDecls adts
                    $$ (if hasRequirement CRequiresLists  then listTypeDecls cfg lists else empty)
                    $$ (if hasRequirement CRequiresSets   then setTypeDecls cfg sets else empty)
                    $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
@@ -608,6 +609,7 @@ genDriver cfg adts randVals fn inps outs mbRet
            in defaultValue
               $$ arrayDriverInput cfg (kindOf sv) fn n defaultName
          | isExactGMPKind cfg (kindOf sv)      = gmpDriverInit (kindOf sv) (text n) v
+         | collectionUsesADT (kindOf sv)       = adtCollectionDriverInit cfg adts mkRValKind (kindOf sv) n (inputSeed n)
          | listNeedsDriverInit cfg (kindOf sv) = listDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
          | setNeedsDriverInit cfg (kindOf sv)  = setDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
          | tupleNeedsOwnership cfg (kindOf sv) = tupleDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
@@ -932,6 +934,7 @@ genCProg cfg adts lists sets fn proto
              $$ (if requires CRequiresLibBF  then arbitraryFPRuntime cfg fpKinds allAssignments else empty)
              $$ (if requires CRequiresNativeFPRounding then nativeFPRuntime else empty)
              $$ (if requires CRequiresText             then textRuntime cfg usesExactInteger else empty)
+             $$ adtEqualityRuntimeDecls adts
              $$ (if requires CRequiresLists            then listRuntimeDecls cfg lists else empty)
              $$ (if requires CRequiresSets             then setRuntimeDecls cfg sets else empty)
              $$ (if requires CRequiresLists            then listRuntime cfg usesExactInteger lists else empty)

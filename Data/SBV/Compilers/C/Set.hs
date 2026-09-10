@@ -75,7 +75,9 @@ setSupported _ (KSet elementKind) = supportedElement elementKind
        supportedElement KReal          = True
        supportedElement KRational      = True
        supportedElement (KTuple kinds) = all supportedTupleField kinds
-       supportedElement kind           = isRoundingMode kind
+       supportedElement kind
+         | isConcreteADT kind = True
+         | True               = isRoundingMode kind
 
        supportedTupleField KString        = True
        supportedTupleField (KList kind)   = supportedElement kind
@@ -186,7 +188,7 @@ setOwnershipTypeDecls cfg kinds
          ++ [ "      copy[i] = element;"
             , "    }"
             ]
-         | valueNeedsOwnership cfg elementKind
+         | isConcreteADT elementKind || valueNeedsOwnership cfg elementKind
          = [ "    for (size_t i = 0; i < value.length; ++i)"
            , "      copy[i] = " ++ render (managedValueClone elementKind (text "value.data[i]")) ++ ";"
            ]
@@ -202,7 +204,7 @@ setOwnershipTypeDecls cfg kinds
            , "  }"
            , "  free(data);"
            ]
-         | valueNeedsOwnership cfg elementKind
+         | isConcreteADT elementKind || valueNeedsOwnership cfg elementKind
          = [ "  " ++ setElementCType elementKind ++ " *data = (" ++ setElementCType elementKind ++ " *) value->data;"
            , "  for (size_t i = 0; i < value->length; ++i)"
            , "    " ++ render (managedValueRelease elementKind (text "&data[i]"))
@@ -611,6 +613,11 @@ setKindRuntime cfg kind@(KSet elementKind) =
          ]
 setKindRuntime _ kind = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
+-- | Test whether a kind is a concrete user ADT supported as a collection
+-- element.
+isConcreteADT :: Kind -> Bool
+isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
+
 -- | Return the number of distinct SMT objects when the domain cardinality fits
 -- in a C @uint64_t@. 'Nothing' means opposite finite/cofinite forms cannot be
 -- proven equal from a representable C descriptor.
@@ -629,6 +636,9 @@ elementDomainSize (KTuple kinds)     = do
   sizes <- mapM elementDomainSize kinds
   let total = product sizes
   if total <= 2 ^ (64 :: Int) - 1 then Just total else Nothing
+elementDomainSize kind@(KADT _ _ constructors)
+  | isConcreteADT kind
+  , all (null . snd) constructors     = Just (fromIntegral (length constructors))
 elementDomainSize kind
   | isRoundingMode kind              = Just 5
   | True                             = Nothing

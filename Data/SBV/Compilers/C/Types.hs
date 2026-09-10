@@ -13,18 +13,33 @@
 
 module Data.SBV.Compilers.C.Types
   ( tupleCType
+  , adtCType
   , tupleFieldName
   , elementCType
   , kindTag
   ) where
 
-import Data.SBV.Compilers.C.FP (arbitraryFPCType)
+import Data.Char                   (isAlphaNum, isAscii, ord)
+import Numeric                     (showHex)
+
+import Data.SBV.Compilers.C.FP         (arbitraryFPCType)
 import Data.SBV.Core.Data
 
 -- | Return the public C structure type used for a tuple kind.
 tupleCType :: Kind -> String
 tupleCType kind@KTuple{} = "SBVTuple_" ++ kindTag kind
 tupleCType kind          = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
+
+-- | Return the public C structure type used for a concrete ADT kind.
+adtCType :: Kind -> String
+adtCType kind@(KADT typeName parameters _)
+  | isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
+  = "SBVADT_" ++ encodeIdentifier typeName ++ concatMap parameterTag parameters
+  | True
+  = error $ "SBV->C: Expected a concrete ADT kind, received " ++ show kind
+ where parameterTag (_, parameterKind) = "_" ++ show (length tag) ++ "_" ++ tag
+         where tag = kindTag parameterKind
+adtCType kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
 
 -- | Return the public member name used for a one-based tuple field index.
 tupleFieldName :: Int -> String
@@ -47,11 +62,12 @@ elementCType KChar               = "SChar"
 elementCType KString             = "SString"
 elementCType kind@KFP{}          = arbitraryFPCType kind
 elementCType kind@KTuple{}       = tupleCType kind
+elementCType kind@KADT{}
+  | isRoundingMode kind          = "RoundingMode"
+  | True                         = adtCType kind
 elementCType (KList elementKind) = "SBVList_" ++ kindTag elementKind
 elementCType (KSet elementKind)  = "SBVSet_" ++ kindTag elementKind
-elementCType kind
-  | isRoundingMode kind = "RoundingMode"
-  | True                = error $ "SBV->C: Unsupported structural kind: " ++ show kind
+elementCType kind                = error $ "SBV->C: Unsupported structural kind: " ++ show kind
 
 -- | Return the collision-free suffix used by a generated structural C type.
 kindTag :: Kind -> String
@@ -67,13 +83,21 @@ kindTag KChar               = "char"
 kindTag KString             = "string"
 kindTag (KFP eb sb)         = "fp_e" ++ show eb ++ "_s" ++ show sb
 kindTag (KTuple fields)     = "t" ++ show (length fields) ++ concatMap (('_' :) . taggedKind . kindTag) fields
+kindTag kind@KADT{}
+  | isRoundingMode kind     = "rounding_mode"
+  | True                    = "adt_" ++ encodeIdentifier (adtCType kind)
 kindTag (KList elementKind) = "list_" ++ taggedKind (kindTag elementKind)
 kindTag (KSet elementKind)  = "set_"  ++ taggedKind (kindTag elementKind)
-kindTag kind
-  | isRoundingMode kind = "rounding_mode"
-  | True                = error $ "SBV->C: Unsupported structural kind: " ++ show kind
+kindTag kind                = error $ "SBV->C: Unsupported structural kind: " ++ show kind
 
 -- | Prefix a generated kind tag with its length so adjacent tags cannot
 -- collide.
 taggedKind :: String -> String
 taggedKind value = show (length value) ++ "_" ++ value
+
+-- | Encode an arbitrary Haskell type name as a valid C identifier component.
+encodeIdentifier :: String -> String
+encodeIdentifier = concatMap encode
+ where encode character
+         | isAscii character && isAlphaNum character = [character]
+         | True                                      = "_x" ++ showHex (ord character) "" ++ "_"
