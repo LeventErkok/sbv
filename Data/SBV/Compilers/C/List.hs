@@ -14,6 +14,7 @@
 module Data.SBV.Compilers.C.List
   ( listKinds
   , listSupported
+  , listUsesExact
   , listCType
   , listTypeDecls
   , listRuntime
@@ -22,6 +23,8 @@ module Data.SBV.Compilers.C.List
   , listClone
   , listRelease
   , listDriverValue
+  , listDriverInit
+  , listDriverClear
   , listPrint
   , listContextStart
   , listContextEnd
@@ -36,7 +39,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPObjectEqual, nativeFPObjectEqual)
-import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
+import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, gmpEqual, isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.C.Tuple      (elementCType, kindTag)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
@@ -50,21 +53,25 @@ listKinds = sortOn listDepth . nub . concatMap (filter isList . expandKinds) . S
        listDepth (KList elementKind) = 1 + listDepth elementKind
        listDepth _                   = 0
 
--- | Test whether a list element kind has a by-value C representation. Exact
--- GMP values and recursively owned aggregates require a later deep-ownership
--- layer and are deliberately rejected here.
+-- | Test whether a list element kind has a supported C representation.
 listSupported :: CgConfig -> Kind -> Bool
-listSupported cfg (KList elementKind) = supportedElement elementKind
+listSupported _ (KList elementKind) = supportedElement elementKind
  where supportedElement KBool        = True
        supportedElement KBounded{}   = True
        supportedElement KFloat       = True
        supportedElement KDouble      = True
        supportedElement KChar        = True
        supportedElement KFP{}        = True
-       supportedElement KUnbounded   = not (isExactGMPKind cfg KUnbounded)
-       supportedElement KReal        = not (isExactGMPKind cfg KReal)
+       supportedElement KUnbounded   = True
+       supportedElement KReal        = True
+       supportedElement KRational    = True
        supportedElement kind         = isRoundingMode kind
 listSupported _ _ = False
+
+-- | Test whether a list stores exact GMP-backed elements.
+listUsesExact :: CgConfig -> Kind -> Bool
+listUsesExact cfg (KList elementKind) = isExactGMPKind cfg elementKind
+listUsesExact _   _                   = False
 
 -- | Return the public C descriptor type for a symbolic-list kind.
 listCType :: Kind -> String
@@ -104,15 +111,17 @@ listTypeDecls cfg kinds
               , "    if (value.length > SIZE_MAX / sizeof(*copy)) abort();"
               , "    copy = (" ++ elementType ++ " *) malloc(value.length * sizeof(*copy));"
               , "    if (copy == NULL) abort();"
-              , "    memcpy(copy, value.data, value.length * sizeof(*copy));"
-              , "  }"
+              ]
+              ++ cloneElements elementKind
+              ++ [ "  }"
               , "  return (" ++ cType ++ ") {copy, value.length};"
               , "}"
               , "static inline SBV_CGEN_UNUSED void " ++ releaseName ++ "(" ++ cType ++ " *value)"
               , "{"
               , "  if (value == NULL) return;"
-              , "  free((void *) value->data);"
-              , "  *value = (" ++ cType ++ ") {NULL, 0};"
+              ]
+              ++ releaseElements elementKind
+              ++ [ "  *value = (" ++ cType ++ ") {NULL, 0};"
               , "}"
               , "#endif"
               , ""
@@ -120,6 +129,49 @@ listTypeDecls cfg kinds
          | True
          = error $ "SBV->C: Unsupported list element kind: " ++ show elementKind
        declaration kind = error $ "SBV->C: Expected a list kind, received " ++ show kind
+
+       cloneElements elementKind
+         | isExactGMPKind cfg elementKind
+         =  [ "    for (size_t i = 0; i < value.length; ++i) {"
+            , "      " ++ exactMutableType elementKind ++ " element = (" ++ exactMutableType elementKind ++ ") malloc(sizeof(*element));"
+            , "      if (element == NULL) abort();"
+            ]
+         ++ exactInitialize elementKind
+         ++ [ "      copy[i] = element;"
+            , "    }"
+            ]
+         | True
+         = ["    memcpy(copy, value.data, value.length * sizeof(*copy));"]
+
+       releaseElements elementKind
+         | isExactGMPKind cfg elementKind
+         = [ "  " ++ listElementCType elementKind ++ " *data = (" ++ listElementCType elementKind ++ " *) value->data;"
+           , "  for (size_t i = 0; i < value->length; ++i) {"
+           , "    " ++ exactMutableType elementKind ++ " element = (" ++ exactMutableType elementKind ++ ") data[i];"
+           , "    if (element != NULL) { " ++ exactClear elementKind ++ "(element); free(element); }"
+           , "  }"
+           , "  free(data);"
+           ]
+         | True
+         = ["  free((void *) value->data);"]
+
+       exactMutableType KUnbounded = "mpz_ptr"
+       exactMutableType fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_ptr"
+       exactMutableType fieldKind       = error $ "SBV->C: Expected an exact list element, received " ++ show fieldKind
+
+       exactInitialize KUnbounded = ["      mpz_init_set(element, value.data[i]);"]
+       exactInitialize fieldKind
+         | isExactGMPKind cfg fieldKind
+         = [ "      mpq_init(element);"
+           , "      mpq_set(element, value.data[i]);"
+           ]
+       exactInitialize fieldKind = error $ "SBV->C: Expected an exact list element, received " ++ show fieldKind
+
+       exactClear KUnbounded = "mpz_clear"
+       exactClear fieldKind
+         | isExactGMPKind cfg fieldKind = "mpq_clear"
+       exactClear fieldKind       = error $ "SBV->C: Expected an exact list element, received " ++ show fieldKind
 
 -- | Emit the shared list arena and specialized sequence operations for every
 -- list kind used by the generated program.
@@ -133,7 +185,7 @@ listRuntime cfg usesExactInteger kinds = text . unlines . map markUnused $
                            Nothing   -> line
 
        specializedRuntime kind
-         | listSupported cfg kind = listKindRuntime usesExactInteger kind
+         | listSupported cfg kind = listKindRuntime cfg usesExactInteger kind
          | True                   = error $ "SBV->C: Unsupported list kind: " ++ show kind
 
 -- | Render a list constant with a caller-supplied renderer for its elements.
@@ -177,7 +229,7 @@ listExpr cfg op svs resultKind args
                     kind:_ -> kind
                     []     -> error $ "SBV->C: Cannot determine list kind for " ++ show op
 
-       lower expression = Just $ expressionLowering storage [CRequiresLists] expression
+       lower expression = Just $ expressionLowering storage requirements expression
 
        lowerInteger signed expression
          | isExactGMPKind cfg resultKind
@@ -188,8 +240,13 @@ listExpr cfg op svs resultKind args
          = lower $ parens (text "SInteger") <+> expression
 
        storage
-         | isList resultKind = CFunctionScoped
-         | True              = CByValue
+         | isList resultKind             = CFunctionScoped
+         | isExactGMPKind cfg resultKind = CFunctionScoped
+         | True                          = CByValue
+
+       requirements = CRequiresLists : [CRequiresGMP | any (isExactGMPKind cfg) touchedKinds]
+
+       touchedKinds = concatMap expandKinds (resultKind : map kindOf svs)
 
        helper = helperName listKind
 
@@ -205,8 +262,11 @@ listExpr cfg op svs resultKind args
          where combine left right = call (helperFor elementKind "concat") [text "&__sbv_list_ctx", left, right]
 
        indexed elementKind suffix prefix index
-         | exactIndex = call (helperFor elementKind (suffix ++ "_mpz")) (prefix ++ [index])
-         | True       = call (helperFor elementKind suffix) (prefix ++ [parens (text "int64_t") <+> index])
+        | exactIndex = call (helperFor elementKind (suffix ++ "_mpz")) (context ++ prefix ++ [index])
+        | True       = call (helperFor elementKind suffix) (context ++ prefix ++ [parens (text "int64_t") <+> index])
+        where context
+                | suffix == "nth" && isExactGMPKind cfg elementKind = [text "&__sbv_gmp_ctx"]
+                | True                                               = []
 
        indexed2 elementKind suffix value offset count
          | exactIndex = call (helperFor elementKind (suffix ++ "_mpz")) [text "&__sbv_list_ctx", value, offset, count]
@@ -235,6 +295,31 @@ listDriverValue renderValue kind@(KList elementKind) seed
        P.<> fsep (punctuate comma [renderValue elementKind seed, renderValue elementKind (seed + 1), renderValue elementKind (seed + 2)])
        P.<> text "}, 3})"
 listDriverValue _ kind _ = error $ "SBV->C: Expected a list kind, received " ++ show kind
+
+-- | Initialize a generated-driver list whose elements use exact GMP storage.
+-- The resulting descriptor borrows three independently initialized elements;
+-- release them with 'listDriverClear' after the generated call completes.
+listDriverInit :: CgConfig -> Kind -> String -> Integer -> Doc
+listDriverInit cfg kind@(KList elementKind) externalName seed
+  | isExactGMPKind cfg elementKind
+  = vcat (zipWith initializeElement elementNames [seed ..])
+ $$ text "const" <+> text (listElementCType elementKind) <+> text dataName P.<> brackets (int elementCount)
+      <+> text "=" <+> braces (fsep (punctuate comma (map text elementNames))) P.<> semi
+ $$ text "const" <+> text (listCType kind) <+> text externalName <+> text "="
+      <+> braces (fsep (punctuate comma [text dataName, int elementCount])) P.<> semi
+ where elementCount = 3
+       elementNames = [externalName ++ "_element_" ++ show index | index <- [0 :: Int .. elementCount - 1]]
+       dataName     = externalName ++ "_data"
+
+       initializeElement elementName value = gmpDriverInit elementKind (text elementName) (integer value)
+listDriverInit _ kind _ _ = error $ "SBV->C: Expected an exact-element list kind, received " ++ show kind
+
+-- | Clear the exact GMP elements initialized by 'listDriverInit'.
+listDriverClear :: CgConfig -> Kind -> String -> Doc
+listDriverClear cfg (KList elementKind) externalName
+  | isExactGMPKind cfg elementKind
+  = vcat [gmpDriverClear elementKind (text (externalName ++ "_element_" ++ show index)) | index <- [0 :: Int .. 2]]
+listDriverClear _ kind _ = error $ "SBV->C: Expected an exact-element list kind, received " ++ show kind
 
 -- | Print a list value using the supplied element printer.
 listPrint :: (Kind -> Doc -> Doc) -> Kind -> Doc -> Doc
@@ -342,9 +427,9 @@ exactIndexRuntime =
   , "}"
   ]
 
--- | Emit all sequence helpers for one by-value list element kind.
-listKindRuntime :: Bool -> Kind -> [String]
-listKindRuntime usesExactInteger kind@(KList elementKind) =
+-- | Emit all sequence helpers for one supported list element kind.
+listKindRuntime :: CgConfig -> Bool -> Kind -> [String]
+listKindRuntime cfg usesExactInteger kind@(KList elementKind) =
   [ ""
   , "static bool " ++ equalElement ++ "(" ++ elementType ++ " left, " ++ elementType ++ " right)"
   , "{ return " ++ elementEqual ++ "; }"
@@ -369,10 +454,10 @@ listKindRuntime usesExactInteger kind@(KList elementKind) =
   , "  " ++ elementType ++ " *data = (" ++ elementType ++ " *) sbv_list_alloc(ctx, 1, sizeof(*data));"
   , "  data[0] = value; return (" ++ listType ++ ") {data, 1};"
   , "}"
-  , "static " ++ elementType ++ " " ++ helper "nth_size" ++ "(" ++ listType ++ " value, size_t index)"
-  , "{ return index < value.length ? value.data[index] : (" ++ elementType ++ ") {0}; }"
-  , "static " ++ elementType ++ " " ++ helper "nth" ++ "(" ++ listType ++ " value, int64_t index)"
-  , "{ return index < 0 ? (" ++ elementType ++ ") {0} : " ++ helper "nth_size" ++ "(value, (size_t) index); }"
+  , "static " ++ elementType ++ " " ++ helper "nth_size" ++ "(" ++ exactContextParam ++ listType ++ " value, size_t index)"
+  , "{ return index < value.length ? value.data[index] : " ++ defaultElement ++ "; }"
+  , "static " ++ elementType ++ " " ++ helper "nth" ++ "(" ++ exactContextParam ++ listType ++ " value, int64_t index)"
+  , "{ return index < 0 ? " ++ defaultElement ++ " : " ++ helper "nth_size" ++ "(" ++ exactContextArg ++ "value, (size_t) index); }"
   , "static " ++ listType ++ " " ++ helper "substring_size" ++ "(sbv_list_ctx *ctx, " ++ listType ++ " value, size_t offset, size_t count)"
   , "{"
   , "  if (offset >= value.length || count == 0) return (" ++ listType ++ ") {NULL, 0};"
@@ -420,7 +505,22 @@ listKindRuntime usesExactInteger kind@(KList elementKind) =
          | isWideBV elementKind                       = render $ wideBVEqual elementKind (text "left") (text "right")
          | isFP elementKind                           = render $ arbitraryFPObjectEqual elementKind (text "left") (text "right")
          | elementKind `elem` [KFloat, KDouble]       = render $ nativeFPObjectEqual (text "left") (text "right")
+         | isExactGMPKind cfg elementKind             = render $ gmpEqual elementKind (text "left") (text "right")
          | True                                       = "left == right"
+
+       exactContextParam
+         | isExactGMPKind cfg elementKind = "sbv_gmp_ctx *exact_ctx, "
+         | True                           = ""
+
+       exactContextArg
+         | isExactGMPKind cfg elementKind = "exact_ctx, "
+         | True                           = ""
+
+       defaultElement
+         | isExactGMPKind cfg elementKind
+         , elementKind == KUnbounded      = "sbv_gmp_integer_const(exact_ctx, \"0\")"
+         | isExactGMPKind cfg elementKind = "sbv_gmp_real_const(exact_ctx, \"0\")"
+         | True                           = "(" ++ elementType ++ ") {0}"
 
        matchRuntime =
          [ "static bool " ++ helper "match_at" ++ "(" ++ listType ++ " value, " ++ listType ++ " part, size_t offset)"
@@ -442,8 +542,8 @@ listKindRuntime usesExactInteger kind@(KList elementKind) =
 
        exactRuntime
          | usesExactInteger =
-             [ "static " ++ elementType ++ " " ++ helper "nth_mpz" ++ "(" ++ listType ++ " value, SInteger index)"
-             , "{ size_t converted; return sbv_list_mpz_to_size(index, &converted) ? " ++ helper "nth_size" ++ "(value, converted) : (" ++ elementType ++ ") {0}; }"
+             [ "static " ++ elementType ++ " " ++ helper "nth_mpz" ++ "(" ++ exactContextParam ++ listType ++ " value, SInteger index)"
+             , "{ size_t converted; return sbv_list_mpz_to_size(index, &converted) ? " ++ helper "nth_size" ++ "(" ++ exactContextArg ++ "value, converted) : " ++ defaultElement ++ "; }"
              , "static " ++ listType ++ " " ++ helper "substring_mpz" ++ "(sbv_list_ctx *ctx, " ++ listType ++ " value, SInteger offset, SInteger count)"
              , "{"
              , "  size_t converted_offset, converted_count;"
@@ -454,4 +554,4 @@ listKindRuntime usesExactInteger kind@(KList elementKind) =
              , "{ size_t converted; return sbv_list_mpz_to_size(start, &converted) ? " ++ helper "index_of_size" ++ "(value, part, converted) : -1; }"
              ]
          | True = []
-listKindRuntime _ kind = error $ "SBV->C: Expected a list kind, received " ++ show kind
+listKindRuntime _ _ kind = error $ "SBV->C: Expected a list kind, received " ++ show kind

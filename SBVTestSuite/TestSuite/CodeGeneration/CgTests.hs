@@ -105,7 +105,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "preserve native floating-point list equality" nativeFloatLists
   , testCase "compile lists with mapped numeric elements" mappedNumericLists
   , testCase "return owned lists from a generated library" ownedListLibrary
-  , testCase "reject lists of exact GMP values" exactGMPLists
+  , testCase "compile lists of exact GMP values" exactGMPLists
   , testCase "compile and execute symbolic sets" symbolicSets
   , testCase "compare finite and cofinite Boolean sets" finiteUniverseSets
   , testCase "compile arbitrary-width symbolic sets" wideSymbolicSets
@@ -428,19 +428,49 @@ ownedListLibrary = withSystemTempDirectory "sbv-owned-list-library" $ \dir -> do
              ("[0x0004U, 0x0005U, 0x0006U, 0x0028U]" `isInfixOf` stdoutText
            && "[0x0005U, 0x0006U, 0x0007U, 0x0032U]" `isInfixOf` stdoutText)
 
--- | Report the current deep-ownership boundary explicitly when a list stores
--- exact GMP-backed values.
+-- | Exercise borrowed exact elements, exact indexing and comparison, list
+-- operations, and deep-cloned list results across the generated C ABI.
 exactGMPLists :: Assertion
-exactGMPLists = do
-  result <- try (do
-    (_, _, bundle) <- compileToC' "exactGMPLists" $ do
-      values <- cgInput "values" :: SBVCodeGen (SList Integer)
-      cgReturn values
-    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
-  case result of
-    Left exception -> assertBool ("Expected an exact-list ownership diagnostic, received:\n" ++ displayException exception)
-                                 ("Lists with element kinds SInteger" `isInfixOf` displayException exception)
-    Right _        -> assertBool "Expected exact GMP list elements to be rejected" False
+exactGMPLists = withSystemTempDirectory "sbv-exact-gmp-lists" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [10, 20, 30, 1]
+        integers  <- cgInput "integers"  :: SBVCodeGen (SList Integer)
+        reals     <- cgInput "reals"     :: SBVCodeGen (SList AlgReal)
+        rationals <- cgInput "rationals" :: SBVCodeGen (SList Rational)
+        index     <- cgInput "index"     :: SBVCodeGen SInteger
+        let joinedIntegers  = integers  SL.++ literal ([13, 14] :: [Integer])
+            joinedReals     = reals     SL.++ literal ([23, 24] :: [AlgReal])
+            joinedRationals = rationals SL.++ literal ([33, 34] :: [Rational])
+        cgOutput "length"           (SL.length joinedIntegers)
+        cgOutput "selectedInteger"  (SL.elemAt joinedIntegers index)
+        cgOutput "selectedReal"     (SL.elemAt joinedReals index)
+        cgOutput "selectedRational" (SL.elemAt joinedRationals index)
+        cgOutput "outOfRange"       (SL.elemAt joinedRationals 99)
+        cgOutput "sameIntegers"     (joinedIntegers .== literal ([10, 11, 12, 13, 14] :: [Integer]))
+        cgOutput "realSlice"        (SL.subList joinedReals 1 3)
+        cgOutput "rationalResult"   joinedRationals
+        cgReturn joinedIntegers
+
+  stdoutText <- compileProgramAndRunGenerated dir "exactGMPLists" program
+  headerText <- readFile (dir </> "exactGMPLists.h")
+  mapM_ (\fragment -> assertBool ("Expected exact-list output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") =[10, 11, 12, 13, 14]"
+    , "length =5"
+    , "selectedInteger =11"
+    , "selectedReal =21"
+    , "selectedRational =31"
+    , "outOfRange =0"
+    , "sameIntegers = 1"
+    , "realSlice =[21, 22, 23]"
+    , "rationalResult =[30, 31, 32, 33, 34]"
+    ]
+  assertBool "Expected exact list ownership to clone and clear individual GMP elements"
+             ("mpz_init_set(element, value.data[i]);" `isInfixOf` headerText
+           && "mpz_clear(element); free(element);" `isInfixOf` headerText
+           && "mpq_set(element, value.data[i]);" `isInfixOf` headerText
+           && "mpq_clear(element); free(element);" `isInfixOf` headerText)
 
 -- | Exercise finite and cofinite symbolic sets, normalization, every primitive
 -- set operation, and independently owned outputs and returns.
