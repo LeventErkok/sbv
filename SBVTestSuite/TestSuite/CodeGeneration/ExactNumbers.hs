@@ -39,8 +39,12 @@ data ExactAggregate = ExactAbsent
                     | ExactAggregate ExactLeaf (Integer, AlgReal)
                     deriving Show
 
+-- | A recursive exact-number ADT used to exercise combined heap and GMP
+-- ownership.
+data ExactChain = ExactEnd Integer | ExactNext Integer ExactChain deriving Show
+
 -- | Generate symbolic interfaces for the exact-number ADTs.
-mkSymbolic [''ExactLeaf, ''ExactAggregate]
+mkSymbolic [''ExactLeaf, ''ExactAggregate, ''ExactChain]
 
 -- | GMP-backed exact-number C backend tests.
 tests :: TestTree
@@ -60,6 +64,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "use exact fields inside tuples" exactTupleFields
   , testCase "use owned exact tuples across the public ABI" ownedExactTuples
   , testCase "use owned exact ADTs across the public ABI" ownedExactADTs
+  , testCase "use owned recursive exact ADTs across the public ABI" ownedRecursiveExactADTs
   , testCase "compile and execute an exact-number library" exactNumberLibrary
   ]
 
@@ -363,6 +368,23 @@ ownedExactADTs = withSystemTempDirectory "sbv-owned-exact-adts" $ \dir -> do
                     ++ ", " ++ show (seed + 2) ++ "/5))"
 
   compileAndRunGMP dir "ownedExactADTs" program [expectedReturn, expectedOutput, "sameAsResult = 0"]
+
+-- | Exercise deep cloning and release for an ADT that combines recursive
+-- pointer nodes with GMP-backed fields.
+ownedRecursiveExactADTs :: Assertion
+ownedRecursiveExactADTs = withSystemTempDirectory "sbv-owned-recursive-exact-adts" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        source <- cgInput "source" :: SBVCodeGen SExactChain
+        cgOutput "sameChain" (source .== source)
+        cgOutput "chainCopy" source
+        cgReturn source
+
+  compileAndRunGMP dir "ownedRecursiveExactADTs" program
+    [ "sameChain = 1"
+    , "ExactNext(1, ExactEnd(2))"
+    ]
 
 -- | Exercise merged headers, archives, and drivers for exact-number libraries.
 exactNumberLibrary :: Assertion

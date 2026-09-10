@@ -52,8 +52,23 @@ data CodeGenEnvelope a = CGNoEnvelope | CGEnvelope (CodeGenADT a) deriving Show
 -- | A recursive type used to verify the current C ABI boundary.
 data CodeGenTree = CGLeaf Word8 | CGNode CodeGenTree CodeGenTree deriving Show
 
+-- | An acyclic wrapper around a recursive value, used to check transitive
+-- ownership without changing its embedded by-value layout.
+newtype CodeGenForest = CGForest CodeGenTree deriving Show
+
+-- | The even layer of a mutually recursive pair used to exercise C forward
+-- declarations and cross-type ownership helpers.
+data CodeGenEven = CGEvenEnd Word8 | CGEvenStep CodeGenOdd deriving Show
+
+-- | The odd layer of the mutually recursive code-generation test pair.
+newtype CodeGenOdd = CGOddStep CodeGenEven deriving Show
+
+-- | A recursive type with no finite inhabitant, used to check generated-driver
+-- diagnostics.
+newtype CodeGenLoop = CGLoop CodeGenLoop deriving Show
+
 -- | Generate the symbolic interfaces for the code-generation ADTs.
-mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree]
+mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop]
 
 -- | Code-generation tests.
 tests :: TestTree
@@ -78,7 +93,11 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute nested ADTs" nestedADTs
   , testCase "compile repeated ADT types into a library" nonRecursiveADTLibrary
   , testCase "preserve ADT aggregate equality" adtAggregateEquality
-  , testCase "report unsupported recursive ADTs" unsupportedRecursiveADTs
+  , testCase "compile and execute recursive ADTs" recursiveADTs
+  , testCase "embed recursive ADTs by value" wrappedRecursiveADTs
+  , testCase "compile and execute mutually recursive ADTs" mutuallyRecursiveADTs
+  , testCase "compile repeated recursive ADTs into a library" recursiveADTLibrary
+  , testCase "report recursive ADTs without finite samples" uninhabitedRecursiveADT
   ]
  where thd (_, _, r) = r
 
@@ -534,19 +553,115 @@ adtAggregateEquality = withSystemTempDirectory "sbv-adt-aggregate-equality" $ \d
   assertBool "Expected a concrete arbitrary-float ADT declaration" ("SBVADT_CodeGenADT_9_fp_e7_s19" `isInfixOf` generated)
   assertBool "Expected arbitrary-float object equality in the ADT comparison" ("sbv_fp_e7_s19_obj_eq" `isInfixOf` generated)
 
--- | Check that unsupported recursive layouts fail during generation with a
--- focused diagnostic.
-unsupportedRecursiveADTs :: Assertion
-unsupportedRecursiveADTs = do
+-- | Exercise a recursive input layout, including a pointer-backed accessor and
+-- a bounded generated-driver value.
+recursiveADTs :: Assertion
+recursiveADTs = withSystemTempDirectory "sbv-recursive-adts" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        value <- cgInput "value" :: SBVCodeGen SCodeGenTree
+        let left   = getCGNode_1 value
+            result = sCGNode left (sCGLeaf 99)
+        cgOutput "isNode" (isCGNode value)
+        cgOutput "sameTree" (value .== value)
+        cgOutput "sameTreeObject" (value .=== value)
+        cgOutput "treeCopy" value
+        cgReturn result
+
+  stdoutText <- compileProgramAndRunGenerated dir "recursiveADTs" program
+  headerText <- readFile (dir </> "recursiveADTs.h")
+  assertBool ("Expected the recursive driver to select a node, received:\n" ++ stdoutText)
+             ("isNode = 1" `isInfixOf` stdoutText)
+  assertBool ("Expected recursive structural equality, received:\n" ++ stdoutText)
+             ("sameTree = 1" `isInfixOf` stdoutText)
+  assertBool ("Expected recursive strong equality, received:\n" ++ stdoutText)
+             ("sameTreeObject = 1" `isInfixOf` stdoutText)
+  assertBool ("Expected a deeply owned recursive result, received:\n" ++ stdoutText)
+             ("CGLeaf(99)" `isInfixOf` stdoutText)
+  assertBool "Expected a forward-declared recursive ADT"
+             ("typedef struct SBVADT_CodeGenTree SBVADT_CodeGenTree;" `isInfixOf` headerText)
+  assertBool "Expected recursive fields to use pointers"
+             ("SBVADT_CodeGenTree * field1;" `isInfixOf` headerText)
+  assertBool "Expected recursive equality to reject null child pointers"
+             ("== NULL) abort();" `isInfixOf` headerText)
+
+-- | Exercise transitive ownership when an acyclic ADT embeds a recursive ADT
+-- by value.
+wrappedRecursiveADTs :: Assertion
+wrappedRecursiveADTs = withSystemTempDirectory "sbv-wrapped-recursive-adts" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        value <- cgInput "value" :: SBVCodeGen SCodeGenForest
+        cgOutput "sameForest" (value .== value)
+        cgReturn value
+
+  stdoutText <- compileProgramAndRunGenerated dir "wrappedRecursiveADTs" program
+  headerText <- readFile (dir </> "wrappedRecursiveADTs.h")
+  assertBool ("Expected the wrapped recursive value to survive an owned return, received:\n" ++ stdoutText)
+             ("CGForest(CGNode" `isInfixOf` stdoutText)
+  assertBool ("Expected wrapped recursive structural equality, received:\n" ++ stdoutText)
+             ("sameForest = 1" `isInfixOf` stdoutText)
+  assertBool "Expected an acyclic wrapper field to remain embedded by value"
+             ("SBVADT_CodeGenTree field1;" `isInfixOf` headerText)
+
+-- | Exercise mutually recursive layouts, bounded samples, equality, printing,
+-- accessors, and deep-owned outputs and returns.
+mutuallyRecursiveADTs :: Assertion
+mutuallyRecursiveADTs = withSystemTempDirectory "sbv-mutually-recursive-adts" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        value <- cgInput "value" :: SBVCodeGen SCodeGenOdd
+        cgOutput "sameValue" (value .== value)
+        cgOutput "valueCopy" value
+        cgReturn (getCGOddStep_1 value)
+
+  stdoutText <- compileProgramAndRunGenerated dir "mutuallyRecursiveADTs" program
+  headerText <- readFile (dir </> "mutuallyRecursiveADTs.h")
+  assertBool ("Expected mutually recursive structural equality, received:\n" ++ stdoutText)
+             ("sameValue = 1" `isInfixOf` stdoutText)
+  assertBool ("Expected mutually recursive values to print, received:\n" ++ stdoutText)
+             ("CGOddStep(CGEven" `isInfixOf` stdoutText)
+  assertBool "Expected the odd-to-even edge to use a pointer"
+             ("SBVADT_CodeGenEven * field1;" `isInfixOf` headerText)
+  assertBool "Expected the even-to-odd edge to use a pointer"
+             ("SBVADT_CodeGenOdd * field1;" `isInfixOf` headerText)
+
+-- | Exercise guarded recursive declarations and ownership helpers shared by
+-- multiple generated library components.
+recursiveADTLibrary :: Assertion
+recursiveADTLibrary = withSystemTempDirectory "sbv-recursive-adt-library" $ \dir -> do
+  let component :: Integer -> SBVCodeGen ()
+      component seed = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        value <- cgInput "value" :: SBVCodeGen SCodeGenTree
+        cgReturn value
+
+  (_, cfg, bundle) <- compileToCLib' "recursiveADTLibrary"
+    [ ("copyRecursiveLeaf", component 0)
+    , ("copyRecursiveTree", component 1)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "recursiveADTLibrary"
+  assertBool ("Expected recursive library results, received:\n" ++ stdoutText)
+             ("CGLeaf" `isInfixOf` stdoutText && "CGNode" `isInfixOf` stdoutText)
+
+-- | Check that bounded driver generation rejects recursive ADTs without any
+-- finite constructor path.
+uninhabitedRecursiveADT :: Assertion
+uninhabitedRecursiveADT = do
   recursiveResult <- try (do
-    (_, _, bundle) <- compileToC' "recursiveADTBoundary" $ do
-      value <- cgInput "value" :: SBVCodeGen SCodeGenTree
-      cgReturn (isCGLeaf value)
-    evaluate bundle) :: IO (Either ErrorCall CgPgmBundle)
+    (_, _, bundle) <- compileToC' "uninhabitedRecursiveADT" $ do
+      value <- cgInput "value" :: SBVCodeGen SCodeGenLoop
+      cgReturn (isCGLoop value)
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
   case recursiveResult of
-    Left exception -> assertBool ("Expected a recursive-ADT diagnostic, received:\n" ++ displayException exception)
-                                 ("Recursive ADT layouts" `isInfixOf` displayException exception)
-    Right _        -> assertBool "Expected recursive ADT generation to fail" False
+    Left exception -> assertBool ("Expected a finite-constructor diagnostic, received:\n" ++ displayException exception)
+                                 ("has no finite constructor" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected driver generation to reject an uninhabited recursive ADT" False
 
 -- | Generate, compile, and execute one standalone C program.
 compileProgramAndRunGenerated :: FilePath -> String -> SBVCodeGen () -> IO String
