@@ -37,10 +37,11 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>), render)
 
-import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
-import Data.SBV.Compilers.C.FP         (arbitraryFPCType, arbitraryFPObjectEqual)
+import Data.SBV.Compilers.C.BV         (isWideBV)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering(..), CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
+import Data.SBV.Compilers.C.Value      (byValueEqual, managedValueClone, managedValueRelease, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic          (LambdaInfo(..), smtLambdaInfo)
@@ -60,16 +61,21 @@ arrayKinds = map validate . filter isArray . Set.toAscList
        validate kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
        supported kind = case kind of
-         KBool       -> True
-         KBounded{}  -> True
-         KUnbounded  -> True
-         KReal       -> True
-         KRational   -> True
-         KFloat      -> True
-         KDouble     -> True
-         KFP{}       -> True
-         KADT{}      -> isRoundingMode kind
-         _           -> False
+         KBool               -> True
+         KBounded{}          -> True
+         KUnbounded          -> True
+         KReal               -> True
+         KRational           -> True
+         KFloat              -> True
+         KDouble             -> True
+         KFP{}               -> True
+         KChar               -> True
+         KString             -> True
+         KList elementKind   -> supported elementKind
+         KSet elementKind    -> supported elementKind
+         KTuple fields       -> all supported fields
+         KADT{}              -> isRoundingMode kind || isConcreteADT kind
+         _                   -> False
 
 -- | Return the public opaque-pointer type used for an SBV array kind.
 arrayCType :: Kind -> String
@@ -117,6 +123,7 @@ arrayTypeDecls kinds = text . unlines $
      [ "/* Persistent functional arrays. Internal references are valid for one call. */"
      , "/* Input contexts are borrowed unless an escaping result invokes their retain */"
      , "/* callback. Owned outputs must be released with the generated release helper. */"
+     , "/* Callback results borrow their context; aggregate reads borrow the array owner. */"
      , "#ifndef SBV_CGEN_UNUSED"
      , "#if defined(__GNUC__) || defined(__clang__)"
      , "#define SBV_CGEN_UNUSED __attribute__((unused))"
@@ -138,8 +145,8 @@ arrayTypeDecls kinds = text . unlines $
                retainOutput    = arrayOutputRetainName kind
                releaseOutput   = arrayOutputReleaseName kind
                asInput         = arrayOutputAsInputName kind
-               keyType         = scalarCType keyKind
-               valueType       = scalarCType valueKind
+               keyType         = elementCType keyKind
+               valueType       = elementCType valueKind
            in [ "#ifndef " ++ arrayGuard kind
            , "#define " ++ arrayGuard kind
            , "/* Owned descriptors carry one reference. Retain copied descriptors and release each owner. */"
@@ -182,8 +189,8 @@ arrayRuntime cfg kinds = text . unlines $
  where runtime kind@(KArray keyKind valueKind) =
          let nodeType    = arrayNodeType kind
              arrayType   = arrayCType kind
-             keyType     = scalarCType keyKind
-             valueType   = scalarCType valueKind
+             keyType     = elementCType keyKind
+             valueType   = elementCType valueKind
              readName    = arrayReadName kind
              keyEquality = P.render $ keyEqual cfg keyKind (text "array->key") (text "key")
          in [ "struct " ++ nodeType ++ " {"
@@ -213,11 +220,13 @@ arrayRuntime cfg kinds = text . unlines $
 
 -- | Emit the heap owner used when an array escapes its generated call. Store
 -- chains are copied, exact keys and values are duplicated into a private GMP
--- arena, and callback contexts are retained through their lifetime protocol.
+-- arena, managed aggregates are deep-copied, and callback contexts are
+-- retained through their lifetime protocol.
 ownershipRuntime :: CgConfig -> Kind -> [String]
 ownershipRuntime cfg kind@(KArray keyKind valueKind) =
   [ "typedef struct {"
   , "  size_t references;"
+  , "  size_t node_count;"
   , "  " ++ nodeType ++ " *nodes;"
   ]
   ++ ["  sbv_gmp_ctx exact_values;" | hasExact]
@@ -244,6 +253,7 @@ ownershipRuntime cfg kind@(KArray keyKind valueKind) =
      , "  if (--owner->references != 0) return;"
      , "  if (owner->base_release != NULL) owner->base_release(owner->base_context);"
      ]
+  ++ releaseManagedFields
   ++ ["  sbv_gmp_ctx_end(&owner->exact_values);" | hasExact]
   ++ [ "  free(owner->nodes);"
      , "  free(owner);"
@@ -260,6 +270,7 @@ ownershipRuntime cfg kind@(KArray keyKind valueKind) =
      , "  owner->nodes = (" ++ nodeType ++ " *) calloc(count, sizeof(*owner->nodes));"
      , "  if (owner->nodes == NULL) { free(owner); abort(); }"
      , "  owner->references = 1;"
+     , "  owner->node_count = count;"
      , "  " ++ arrayType ++ " source = array;"
      , "  for (size_t i = 0; i < count; ++i) {"
      , "    owner->nodes[i] = *source;"
@@ -267,10 +278,12 @@ ownershipRuntime cfg kind@(KArray keyKind valueKind) =
      , "      owner->nodes[i].parent = &owner->nodes[i + 1];"
      ]
   ++ cloneExact "key" keyKind
+  ++ cloneManaged "key" keyKind
   ++ [ "    }"
      , "    if (source->kind != SBV_ARRAY_CALLBACK) {"
      ]
   ++ cloneExact "value" valueKind
+  ++ cloneManaged "value" valueKind
   ++ [ "    }"
      , "    if (source->kind == SBV_ARRAY_CALLBACK && source->context != NULL) {"
      , "      if (source->retain == NULL || source->release == NULL) abort();"
@@ -286,23 +299,49 @@ ownershipRuntime cfg kind@(KArray keyKind valueKind) =
      , "}"
      , ""
      ]
- where nodeType     = arrayNodeType kind
-       arrayType    = arrayCType kind
-       inputSuffix  = arraySuffix kind
-       ownerType    = "sbv_array_owner_" ++ inputSuffix
-       outputType   = arrayOutputCType kind
-       ownedLookup  = "sbv_array_owned_lookup_" ++ inputSuffix
-       ownedRetain  = "sbv_array_owned_retain_" ++ inputSuffix
-       ownedRelease = "sbv_array_owned_release_" ++ inputSuffix
-       keyType      = scalarCType keyKind
-       valueType    = scalarCType valueKind
-       hasExact     = isExactGMPKind cfg keyKind || isExactGMPKind cfg valueKind
+ where nodeType      = arrayNodeType kind
+       arrayType     = arrayCType kind
+       inputSuffix   = arraySuffix kind
+       ownerType     = "sbv_array_owner_" ++ inputSuffix
+       outputType    = arrayOutputCType kind
+       ownedLookup   = "sbv_array_owned_lookup_" ++ inputSuffix
+       ownedRetain   = "sbv_array_owned_retain_" ++ inputSuffix
+       ownedRelease  = "sbv_array_owned_release_" ++ inputSuffix
+       keyType       = elementCType keyKind
+       valueType     = elementCType valueKind
+       hasExact      = isExactGMPKind cfg keyKind || isExactGMPKind cfg valueKind
+
+       releaseManagedFields
+         | keyManaged || valueManaged
+         = ["  for (size_t i = 0; owner->nodes != NULL && i < owner->node_count; ++i) {"]
+        ++ [ "    if (owner->nodes[i].kind == SBV_ARRAY_STORE) " ++ release "key" keyKind
+           | keyManaged
+           ]
+        ++ [ "    if (owner->nodes[i].kind != SBV_ARRAY_CALLBACK) " ++ release "value" valueKind
+           | valueManaged
+           ]
+        ++ ["  }"]
+         | True
+         = []
+
+       keyManaged   = arrayFieldNeedsOwnership cfg keyKind
+       valueManaged = arrayFieldNeedsOwnership cfg valueKind
+
+       release field fieldKind = P.render $ managedValueRelease fieldKind (text ("&owner->nodes[i]." ++ field))
 
        cloneExact field fieldKind
          | isExactGMPKind cfg fieldKind
          = [ "      " ++ mutableType fieldKind ++ " copy = " ++ allocation fieldKind ++ "(&owner->exact_values);"
            , "      " ++ setter fieldKind ++ "(copy, source->" ++ field ++ ");"
            , "      owner->nodes[i]." ++ field ++ " = copy;"
+           ]
+         | True
+         = []
+
+       cloneManaged field fieldKind
+         | arrayFieldNeedsOwnership cfg fieldKind
+         = [ "      owner->nodes[i]." ++ field ++ " = "
+          ++ P.render (managedValueClone fieldKind (text ("source->" ++ field))) ++ ";"
            ]
          | True
          = []
@@ -349,8 +388,8 @@ arrayInputSetup _ sv _ = error $ "SBV->C: Expected an array input, received " ++
 -- protocol without pretending that a finite C object represents a total map.
 arrayDriverCallback :: CgConfig -> Kind -> String -> String -> Doc
 arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
-  = text "static" <+> text (scalarCType valueKind) <+> text callbackName
-      P.<> parens (fsep (punctuate comma [text "const void *context", text (scalarCType keyKind) <+> text "key"]))
+  = text "static" <+> text (elementCType valueKind) <+> text callbackName
+      P.<> parens (fsep (punctuate comma [text "const void *context", text (elementCType keyKind) <+> text "key"]))
       $$ text "{"
       $$ nest 2 (   parens (text "void") <+> text "key" P.<> semi
                  $$ text "return" <+> result P.<> semi
@@ -364,8 +403,8 @@ arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
        retainName   = arrayDriverRetainName functionName inputName
        releaseName  = arrayDriverReleaseName functionName inputName
        result
-         | isExactGMPKind cfg valueKind = parens (text (scalarCType valueKind)) <+> text "context"
-         | True                          = text "*" P.<> parens (parens (text "const" <+> text (scalarCType valueKind) <+> text "*") <+> text "context")
+         | isExactGMPKind cfg valueKind = parens (text (elementCType valueKind)) <+> text "context"
+         | True                          = text "*" P.<> parens (parens (text "const" <+> text (elementCType valueKind) <+> text "*") <+> text "context")
 
        retainContext
          | isExactGMPKind cfg valueKind
@@ -377,12 +416,21 @@ arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
                       $$ text "return copy;"
                      )
            $$ text "}"
+         | arrayFieldNeedsOwnership cfg valueKind
+         = text "static const void *" P.<> text retainName P.<> parens (text "const void *context")
+           $$ text "{"
+           $$ nest 2 (   text (elementCType valueKind) <+> text "*copy =" <+> parens (text (elementCType valueKind) <+> text "*") <+> text "malloc(sizeof(*copy));"
+                      $$ text "if (copy == NULL) abort();"
+                      $$ text "*copy =" <+> managedValueClone valueKind managedContextValue P.<> semi
+                      $$ text "return copy;"
+                     )
+           $$ text "}"
          | True
          = text "static const void *" P.<> text retainName P.<> parens (text "const void *context")
            $$ text "{"
-           $$ nest 2 (   text (scalarCType valueKind) <+> text "*copy =" <+> parens (text (scalarCType valueKind) <+> text "*") <+> text "malloc(sizeof(*copy));"
+           $$ nest 2 (   text (elementCType valueKind) <+> text "*copy =" <+> parens (text (elementCType valueKind) <+> text "*") <+> text "malloc(sizeof(*copy));"
                       $$ text "if (copy == NULL) abort();"
-                      $$ text "*copy = *" P.<> parens (parens (text "const" <+> text (scalarCType valueKind) <+> text "*") <+> text "context") P.<> semi
+                      $$ text "*copy =" <+> managedContextValue P.<> semi
                       $$ text "return copy;"
                      )
            $$ text "}"
@@ -390,10 +438,20 @@ arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
        releaseContext
          = text "static void" <+> text releaseName P.<> parens (text "const void *context")
            $$ text "{"
-           $$ nest 2 (   exactClear
+           $$ nest 2 (   managedClear
+                      $$ exactClear
                       $$ text "free" P.<> parens (text "(void *) context") P.<> semi
                      )
            $$ text "}"
+
+       managedContextValue = text "*" P.<> parens (parens (text "const" <+> text (elementCType valueKind) <+> text "*") <+> text "context")
+
+       managedClear
+         | arrayFieldNeedsOwnership cfg valueKind
+         =  text (elementCType valueKind) <+> text "*value =" <+> parens (text (elementCType valueKind) <+> text "*") <+> text "context" P.<> semi
+         $$ managedValueRelease valueKind (text "value")
+         | True
+         = empty
 
        mutableType
          | KUnbounded <- valueKind            = "mpz_ptr"
@@ -403,7 +461,7 @@ arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
        exactCopy
          | KUnbounded <- valueKind = ["mpz_init_set(copy, (SInteger) context);"]
          | isExactGMPKind cfg valueKind
-         = ["mpq_init(copy);", "mpq_set(copy, (" ++ scalarCType valueKind ++ ") context);"]
+         = ["mpq_init(copy);", "mpq_set(copy, (" ++ elementCType valueKind ++ ") context);"]
          | True = error $ "SBV->C: Expected an exact callback value, received " ++ show valueKind
 
        exactClear
@@ -588,59 +646,20 @@ arrayGuard kind = map guardChar (arrayCType kind) ++ "_DEFINED"
          | isAsciiLower c = toUpper c
          | True           = c
 
--- | Return the compact identifier fragment used for one supported scalar
--- kind in generated array symbols.
-kindTag :: Kind -> String
-kindTag KBool              = "u1"
-kindTag (KBounded False w) = "u" ++ show w
-kindTag (KBounded True  w) = "s" ++ show w
-kindTag KUnbounded         = "integer"
-kindTag KReal              = "real"
-kindTag KRational          = "rational"
-kindTag KFloat             = "float"
-kindTag KDouble            = "double"
-kindTag (KFP eb sb)        = "fp_e" ++ show eb ++ "_s" ++ show sb
-kindTag kind
-  | isRoundingMode kind = "rounding_mode"
-  | True                = error $ "SBV->C: Unsupported scalar array kind: " ++ show kind
-
--- | Return the public C spelling for a scalar kind stored in an array node.
-scalarCType :: Kind -> String
-scalarCType KBool               = "SBool"
-scalarCType (KBounded False 1)  = "SBool"
-scalarCType (KBounded False w)  = "SWord" ++ show w
-scalarCType (KBounded True  w)  = "SInt" ++ show w
-scalarCType KUnbounded          = "SInteger"
-scalarCType KReal               = "SReal"
-scalarCType KRational           = "SRational"
-scalarCType KFloat              = "SFloat"
-scalarCType KDouble             = "SDouble"
-scalarCType kind@KFP{}          = arbitraryFPCType kind
-scalarCType kind
-  | isRoundingMode kind = "RoundingMode"
-  | True                = error $ "SBV->C: Unsupported scalar array kind: " ++ show kind
-
 -- | Render the strong equality used to match array keys. Unlike IEEE numeric
--- equality, this comparison identifies NaNs and distinguishes signed zeroes.
+-- equality, this recursively preserves object equality for aggregate fields.
 keyEqual :: CgConfig -> Kind -> Doc -> Doc -> Doc
-keyEqual cfg kind left right
-  | isWideBV kind           = wideBVEqual kind left right
-  | isExactGMPKind cfg kind = parens $ namedCall comparison [left, right] <+> text "== 0"
-  | isFP kind               = arbitraryFPObjectEqual kind left right
-  | kind `elem` [KFloat, KDouble]
-  = parens $    parens (namedCall "isnan" [left] <+> text "&&" <+> namedCall "isnan" [right])
-            <+> text "||"
-            <+> parens (   left <+> text "==" <+> right
-                       <+> text "&&"
-                       <+> parens (   left <+> text "!= 0"
-                                  <+> text "||"
-                                  <+> namedCall "signbit" [left] <+> text "==" <+> namedCall "signbit" [right]
-                                 )
-                      )
-  | True = parens $ left <+> text "==" <+> right
- where comparison
-         | kind == KUnbounded             = "mpz_cmp"
-         | isExactGMPKind cfg kind         = "mpq_cmp"
-         | True                            = error $ "SBV->C: Expected an exact GMP array key, received " ++ show kind
+keyEqual cfg = byValueEqual cfg True
 
-       namedCall functionName callArgs = text functionName P.<> parens (fsep (punctuate comma callArgs))
+-- | Test whether an array field needs an independent deep copy when its node
+-- escapes the generated call. Direct exact values use the owner's GMP arena.
+arrayFieldNeedsOwnership :: CgConfig -> Kind -> Bool
+arrayFieldNeedsOwnership cfg kind
+  | isExactGMPKind cfg kind = False
+  | isConcreteADT kind      = True
+  | True                    = valueNeedsOwnership cfg kind
+
+-- | Test whether a kind is a concrete user ADT rather than a built-in or
+-- uninterpreted sort.
+isConcreteADT :: Kind -> Bool
+isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)

@@ -109,6 +109,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
   , testCase "retain an escaping callback array" escapingCallbackArray
+  , testCase "compile arrays with managed aggregate fields" managedAggregateArrays
+  , testCase "return managed aggregate arrays from a library" managedAggregateArrayLibrary
   , testCase "compile and execute structural tuples" structuralTuples
   , testCase "compile repeated tuple types into a library" structuralTupleLibrary
   , testCase "compile and execute tuples containing strings" ownedTextTuples
@@ -1124,6 +1126,102 @@ escapingCallbackArray = withSystemTempDirectory "sbv-escaping-callback-array" $ 
 
   stdoutText <- compileProgramAndRunGenerated dir "escapingCallbackArray" program
   assertBool ("Expected retained callback output to contain 0x00000007UL, received:\n" ++ stdoutText) ("[0] =0x00000007UL" `isInfixOf` stdoutText)
+
+-- | Exercise structural object equality and deep ownership for array keys and
+-- values containing lists, sets, strings, tuples, and concrete ADTs.
+managedAggregateArrays :: Assertion
+managedAggregateArrays = withSystemTempDirectory "sbv-managed-aggregate-arrays" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [4, 10, 12]
+        source      <- cgInput "source"      :: SBVCodeGen (SArray [Word16] CodeGenNativeCollections)
+        key         <- cgInput "key"         :: SBVCodeGen (SList Word16)
+        exactSource <- cgInput "exactSource" :: SBVCodeGen (SArray Word8 (String, Integer))
+        let storedADT    = sCGNativeCollections
+                               (literal ([90, 91] :: [Word16]))
+                               (SS.fromList [92, 93])
+            updatedADT   = writeArray source key storedADT
+            stringKey    = literal "stored" :: SString
+            defaultTuple = tuple (literal "default" :: SString, literal ([1, 2] :: [Integer]))
+            storedTuple  = tuple (literal "stored-value" :: SString, literal ([7, 8] :: [Integer]))
+            tupleArray   = writeArray (constArray defaultTuple :: SArray String (String, [Integer])) stringKey storedTuple
+            setKey       = SS.fromList [5, 6] :: SSet Word16
+            storedList   = literal ([7, 8] :: [Word16])
+            setArray     = writeArray (constArray (literal ([1, 2] :: [Word16])) :: SArray (RCSet Word16) [Word16]) setKey storedList
+            enumArray    = writeArray (constArray 3 :: SArray CodeGenEnum Word8) sCGBlue 9
+        cgOutput "matchedADT" (readArray updatedADT key .=== storedADT)
+        cgOutput "matchedSet" (readArray setArray setKey .=== storedList)
+        cgOutput "matchedEnum" (readArray enumArray sCGBlue .== (9 :: SWord8))
+        cgOutput "storedADT" (readArray updatedADT key)
+        cgOutput "tupleArray" tupleArray
+        cgOutput "storedTuple" (readArray tupleArray stringKey)
+        cgOutput "setArray" setArray
+        cgOutput "enumArray" enumArray
+        cgOutput "exactSourceCopy" exactSource
+        cgReturn updatedADT
+
+  stdoutText <- compileProgramAndRunGenerated dir "managedAggregateArrays" program
+  headerText <- readFile (dir </> "managedAggregateArrays.h")
+  sourceText <- readFile (dir </> "managedAggregateArrays.c")
+  driverText <- readFile (dir </> "managedAggregateArrays_driver.c")
+  mapM_ (\fragment -> assertBool ("Expected managed aggregate-array output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "matchedADT = 1"
+    , "matchedSet = 1"
+    , "matchedEnum = 1"
+    , "storedADT =CGNativeCollections([0x005aU, 0x005bU], {0x005cU, 0x005dU})"
+    , "storedTuple =(stored-value, [7, 8])"
+    , "tupleArray[0] =(default, [1, 2])"
+    , "setArray[0] =[0x0001U, 0x0002U]"
+    , "enumArray[0] =3"
+    , "exactSourceCopy[0] =(sbv12, 13)"
+    ]
+  assertBool "Expected exported arrays to own aggregate keys and values"
+             ("sbv_list_clone_u16(source->key)" `isInfixOf` sourceText
+           && "sbv_adt_owned_clone_SBVADT_CodeGenNativeCollections(source->value)" `isInfixOf` sourceText
+           && "sbv_string_clone(source->key)" `isInfixOf` sourceText
+           && "sbv_tuple_owned_clone_" `isInfixOf` sourceText
+           && "sbv_set_clone_u16(source->key)" `isInfixOf` sourceText
+           && "sbv_list_clone_u16(source->value)" `isInfixOf` sourceText
+           && "sbv_adt_owned_clone_SBVADT_CodeGenEnum(source->key)" `isInfixOf` sourceText
+           && "sbv_adt_owned_release_SBVADT_CodeGenNativeCollections" `isInfixOf` sourceText)
+  assertBool "Expected managed callback defaults to use deep retain and release helpers"
+             ("sbv_adt_owned_clone_SBVADT_CodeGenNativeCollections" `isInfixOf` headerText
+           && "__sbv_array_retain_" `isInfixOf` driverText
+           && "__sbv_array_release_" `isInfixOf` driverText
+           && "sbv_tuple_owned_clone_" `isInfixOf` driverText
+           && "sbv_tuple_owned_release_" `isInfixOf` driverText)
+
+-- | Exercise guarded aggregate-array declarations and owned return values
+-- shared by multiple generated library translation units.
+managedAggregateArrayLibrary :: Assertion
+managedAggregateArrayLibrary = withSystemTempDirectory "sbv-managed-aggregate-array-library" $ \dir -> do
+  let component :: Integer -> Word16 -> SBVCodeGen ()
+      component seed keyValue = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        source <- cgInput "source" :: SBVCodeGen (SArray (RCSet Word16) CodeGenNativeCollections)
+        let key   = SS.singleton (literal keyValue)
+            value = sCGNativeCollections
+                      (literal ([keyValue, keyValue + 1] :: [Word16]))
+                      (SS.fromList [keyValue + 2, keyValue + 3])
+        cgReturn (writeArray source key value)
+
+  (_, cfg, bundle) <- compileToCLib' "managedAggregateArrayLibrary"
+    [ ("firstManagedArray",  component 1 20)
+    , ("secondManagedArray", component 4 30)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "managedAggregateArrayLibrary"
+  headerText <- readFile (dir </> "managedAggregateArrayLibrary.h")
+  mapM_ (\fragment -> assertBool ("Expected managed aggregate-array library output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "firstManagedArray(source)[0] =CGNativeCollections([0x0001U, 0x0002U, 0x0003U]"
+    , "secondManagedArray(source)[0] =CGNativeCollections([0x0004U, 0x0005U, 0x0006U]"
+    ]
+  assertBool "Expected one reusable guarded aggregate-array ABI"
+             ("SBVArrayOutput_set_3_u16_adt_" `isInfixOf` headerText
+           && "sbv_array_output_release_set_3_u16_adt_" `isInfixOf` headerText)
 
 -- | Exercise nested tuple inputs, construction, projection, conditionals,
 -- tuple constants in finite tables, public outputs, and returns.

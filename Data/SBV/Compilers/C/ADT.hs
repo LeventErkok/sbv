@@ -631,7 +631,7 @@ adtCollectionDriverInit cfg adts renderValue kind externalName seed
          | adtNeedsOwnership cfg adts elementKind
          = adtDriverInit cfg adts renderValue elementKind elementName elementSeed
          | True
-         = text "const" <+> text (adtCType elementKind) <+> text elementName <+> text "="
+         = text (adtCType elementKind) <+> text elementName <+> text "="
              <+> adtDriverValue adts renderValue elementKind elementSeed P.<> semi
 
 -- | Test whether a list or set has a concrete ADT as its direct element kind.

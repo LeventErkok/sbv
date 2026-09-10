@@ -143,13 +143,13 @@ cgen cfg nm st sbvProg
                    $$ adtForwardTypeDecls adts
                    $$ (if hasRequirement CRequiresLists  then listTypeDecls cfg lists else empty)
                    $$ (if hasRequirement CRequiresSets   then setTypeDecls cfg sets else empty)
-                   $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
                    $$ tupleTypeDecls tuples
                    $$ adtTypeDecls cfg adts
                    $$ tupleOwnershipTypeDecls cfg tuples
                    $$ adtOwnershipTypeDecls cfg adts
                    $$ (if hasRequirement CRequiresLists then listOwnershipTypeDecls cfg lists else empty)
                    $$ (if hasRequirement CRequiresSets  then setOwnershipTypeDecls cfg sets else empty)
+                   $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
         kinds           = Set.unions [reskinds sbvProg, usedKinds]
         usedKinds       = Set.union interfaceKinds assignmentKinds
         interfaceKinds  = Set.fromList . concatMap expandKinds
@@ -600,14 +600,30 @@ genDriver cfg adts randVals fn inps outs mbRet
          | isADT kind                      = adtDriverValue adts mkRValKind kind r
          | True                            = mkConst cfg $ mkConstCV kind r
          where mkField fieldKind offset = mkRValKind fieldKind (r + offset)
-       mkInp ([v], n, CgAtomic sv)
+       driverValueInit kind externalName seed
+         | isExactGMPKind cfg kind         = gmpDriverInit kind (text externalName) (integer seed)
+         | collectionUsesADT kind          = adtCollectionDriverInit cfg adts mkRValKind kind externalName seed
+         | listNeedsDriverInit cfg kind    = listDriverInit cfg mkRValKind kind externalName seed
+         | setNeedsDriverInit cfg kind     = setDriverInit cfg mkRValKind kind externalName seed
+         | tupleNeedsOwnership cfg kind    = tupleDriverInit cfg mkRValKind kind externalName seed
+         | isConcreteADTKind kind
+         , adtNeedsOwnership cfg adts kind = adtDriverInit cfg adts mkRValKind kind externalName seed
+         | True                            = text "const" <+> text (showCType kind) <+> text externalName <+> text "="
+                                           <+> mkRValKind kind seed P.<> semi
+       driverValueClear kind externalName
+         | isExactGMPKind cfg kind         = gmpDriverClear kind (text externalName)
+         | isList kind                     = listDriverClear cfg kind externalName
+         | isSet kind                      = setDriverClear cfg kind externalName
+         | tupleNeedsOwnership cfg kind    = text (tupleOwnedReleaseName kind) P.<> parens (text "&" P.<> text externalName) P.<> semi
+         | isConcreteADTKind kind
+         , adtNeedsOwnership cfg adts kind = text (adtOwnedReleaseName kind) P.<> parens (text "&" P.<> text externalName) P.<> semi
+         | True                            = empty
+       mkInp (_, n, CgAtomic sv)
          | KArray _ valueKind <- kindOf sv
          = let defaultName = n ++ "_default"
-               defaultValue
-                 | isExactGMPKind cfg valueKind = gmpDriverInit valueKind (text defaultName) v
-                 | True                          = text "const" <+> text (showCType valueKind) <+> text defaultName <+> text "=" <+> v P.<> semi
-           in defaultValue
+           in driverValueInit valueKind defaultName (inputSeed n)
               $$ arrayDriverInput cfg (kindOf sv) fn n defaultName
+       mkInp ([v], n, CgAtomic sv)
          | isExactGMPKind cfg (kindOf sv)      = gmpDriverInit (kindOf sv) (text n) v
          | collectionUsesADT (kindOf sv)       = adtCollectionDriverInit cfg adts mkRValKind (kindOf sv) n (inputSeed n)
          | listNeedsDriverInit cfg (kindOf sv) = listDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
@@ -721,25 +737,14 @@ genDriver cfg adts randVals fn inps outs mbRet
          $$ printArrayValue
          $$ text "printf(\"\\n\");"
          $$ keyCleanup
-        where keyName = text ("__sbv_array_key_" ++ stem)
-              key
-                | isExactGMPKind cfg keyKind = keyName
-                | True                       = mkConst cfg (mkConstCV keyKind (0 :: Integer))
+        where keyName = "__sbv_array_key_" ++ stem
+              key     = text keyName
 
-              keySetup
-                | isExactGMPKind cfg keyKind = gmpDriverInit keyKind keyName (text "0")
-                | True                       = empty
-
-              keyCleanup
-                | isExactGMPKind cfg keyKind = gmpDriverClear keyKind keyName
-                | True                       = empty
+              keySetup   = driverValueInit  keyKind keyName 0
+              keyCleanup = driverValueClear keyKind keyName
 
               value = text (arrayOutputReadName kind) P.<> parens (fsep (punctuate comma [descriptor, key]))
-              printArrayValue
-                | isWideBV valueKind           = wideBVPrint valueKind value P.<> semi
-                | isFP valueKind               = arbitraryFPPrint valueKind value P.<> semi
-                | isExactGMPKind cfg valueKind = gmpPrint valueKind value P.<> semi
-                | True                         = text "printf" P.<> parens (printQuotes (specifierKind cfg valueKind) P.<> comma <+> value) P.<> semi
+              printArrayValue = printValue valueKind value
        displayArray _ _ _ kind = die $ "Expected an array output, received " ++ show kind
 
        displayTuple label value kind@KTuple{}
@@ -803,10 +808,9 @@ genDriver cfg adts randVals fn inps outs mbRet
                                  | (_, n, CgAtomic sv) <- pairedInputs
                                  , tupleNeedsOwnership cfg (kindOf sv)
                                  ]
-                              ++ [gmpDriverClear valueKind (text (n ++ "_default"))
+                              ++ [driverValueClear valueKind (n ++ "_default")
                                  | (_, n, CgAtomic sv) <- pairedInputs
                                  , KArray _ valueKind <- [kindOf sv]
-                                 , isExactGMPKind cfg valueKind
                                  ]
                               ++ [releaseADT sv n
                                  | (_, n, CgAtomic sv) <- pairedInputs
@@ -1010,6 +1014,7 @@ genCProg cfg adts lists sets fn proto
        usesExactInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kindInfo
 
        containsNestedText (KTuple fields) = any containsNestedText fields
+       containsNestedText (KArray keyKind valueKind) = containsNestedText keyKind || containsNestedText valueKind
        containsNestedText KList{}         = False
        containsNestedText KSet{}          = False
        containsNestedText KChar           = False
@@ -1030,6 +1035,8 @@ genCProg cfg adts lists sets fn proto
                 = walk visited elementKind
               walk visited (KSet elementKind)
                 = walk visited elementKind
+              walk visited (KArray keyKind valueKind)
+                = walk visited keyKind || walk visited valueKind
               walk visited kind
                 | isADT kind
                 , not (isRoundingMode kind)
@@ -1303,6 +1310,8 @@ ppArrayLambda cfg adts arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
         -> die $ "Array-lambda result kind " ++ show (kindOf lambdaOutput) ++ " does not match " ++ show valueKind
         | not (null nestedLambdas)
         -> tbd "Nested structured lambdas inside lambda arrays"
+        | lambdaResultNeedsManagedStorage valueKind
+        -> tbd "Structured lambda arrays returning managed aggregate values"
         | True
         -> (helper keyKind valueKind parameter, requirements)
       (KArray{}, _) -> die $ "Expected exactly one universal array-lambda parameter, received " ++ show parameters
@@ -1314,6 +1323,14 @@ ppArrayLambda cfg adts arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
        usesGMP      = arrayLambdaUsesGMP cfg lambdaInfo
 
        nestedLambdas = [sv | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments]
+
+       lambdaResultNeedsManagedStorage KString         = True
+       lambdaResultNeedsManagedStorage KList{}         = True
+       lambdaResultNeedsManagedStorage KSet{}          = True
+       lambdaResultNeedsManagedStorage (KTuple fields) = any lambdaResultNeedsManagedStorage fields
+       lambdaResultNeedsManagedStorage kind
+         | isConcreteADTKind kind = adtNeedsOwnership cfg adts kind
+         | True                   = False
 
        generatedTables = map (ppTable cfg False lambdaConsts) tables
 
@@ -1352,6 +1369,11 @@ ppArrayLambda cfg adts arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
        contextCommit
          | usesGMP = text "*__sbv_gmp_parent_ctx = __sbv_gmp_ctx;"
          | True    = empty
+
+-- | Test whether a kind is a concrete user ADT rather than a built-in or
+-- uninterpreted sort.
+isConcreteADTKind :: Kind -> Bool
+isConcreteADTKind kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
 
 handlePB :: PBOp -> [Doc] -> Doc
 handlePB o args = case o of
