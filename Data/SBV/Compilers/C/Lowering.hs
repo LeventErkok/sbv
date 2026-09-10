@@ -33,6 +33,7 @@ data CRequirement = CRequiresGMP              -- ^ GMP-backed exact-number suppo
                   | CRequiresNativeFPRounding -- ^ LibBF adapters for explicitly rounded native floating-point operations.
                   | CRequiresWideBV           -- ^ Exact-width limb-backed bit-vector support.
                   | CRequiresArrays           -- ^ Persistent functional-array support.
+                  | CRequiresText             -- ^ Length-aware character and string support.
                   deriving (Eq, Ord, Show)
 
 -- | Lifetime and ownership class of a lowered result.

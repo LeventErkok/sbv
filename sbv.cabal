@@ -325,6 +325,7 @@ Library
                   , Data.SBV.Compilers.C.Lowering
                   , Data.SBV.Compilers.C.New
                   , Data.SBV.Compilers.C.Table
+                  , Data.SBV.Compilers.C.Text
                   , Data.SBV.Compilers.C.Tuple
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.Lambda

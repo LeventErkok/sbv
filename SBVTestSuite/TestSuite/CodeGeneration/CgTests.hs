@@ -11,6 +11,7 @@
 
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -22,6 +23,8 @@ module TestSuite.CodeGeneration.CgTests(tests) where
 import Control.Exception (ErrorCall, displayException, evaluate, try)
 import Data.List (isInfixOf)
 import Data.SBV.Internals
+import qualified Data.SBV.Char as SC
+import qualified Data.SBV.List as SL
 import Data.SBV.Tuple (tuple, untuple)
 import qualified Data.SBV.Tools.CodeGen.Legacy as PublicLegacy
 
@@ -89,6 +92,9 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "retain an escaping callback array" escapingCallbackArray
   , testCase "compile and execute structural tuples" structuralTuples
   , testCase "compile repeated tuple types into a library" structuralTupleLibrary
+  , testCase "compile and execute characters and strings" characterStrings
+  , testCase "compile strings with mapped integers" mappedIntegerStrings
+  , testCase "return owned strings from a generated library" ownedStringLibrary
   , testCase "compile and execute non-recursive ADTs" nonRecursiveADTs
   , testCase "compile and execute nested ADTs" nestedADTs
   , testCase "compile repeated ADT types into a library" nonRecursiveADTLibrary
@@ -157,6 +163,104 @@ compileAndRunGenerated dir executableName = do
   (runExit, outputText, runError) <- readProcessWithExitCode (dir </> executableName ++ "_driver") [] ""
   assertEqual runError ExitSuccess runExit
   pure outputText
+
+-- | Exercise Unicode and embedded-NUL literals, character-based indexing,
+-- string combinators, exact numeric conversions, printing, and owned results.
+characterStrings :: Assertion
+characterStrings = withSystemTempDirectory "sbv-character-strings" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [7, 1, 65]
+        value     <- cgInput "value"     :: SBVCodeGen SString
+        index     <- cgInput "index"     :: SBVCodeGen SInteger
+        character <- cgInput "character" :: SBVCodeGen SChar
+        let joined      = value SL.++ literal "\955\NUL"
+            numeric     = SL.replace value value (literal "123")
+            parsed      = SL.strToNat numeric
+            indexedChar = SL.elemAt joined index
+        cgOutput "length"         (SL.length joined)
+        cgOutput "lambdaIndex"    (SL.indexOf joined (literal "\955"))
+        cgOutput "contains"       (literal "v7" `SL.isInfixOf` joined)
+        cgOutput "prefix"         (literal "sbv" `SL.isPrefixOf` joined)
+        cgOutput "suffix"         (literal "\955\NUL" `SL.isSuffixOf` joined)
+        cgOutput "sameObject"     (value .=== value)
+        cgOutput "ordered"        (value .< joined)
+        cgOutput "slice"          (SL.subList joined 3 2)
+        cgOutput "replacement"    (SL.replace joined (literal "bv") (literal "X"))
+        cgOutput "indexedChar"    indexedChar
+        cgOutput "characterCode"  (SC.ord indexedChar)
+        cgOutput "roundTripChar"  (SC.chr (SC.ord indexedChar))
+        cgOutput "inputCharacter" character
+        cgOutput "parsed"         parsed
+        cgOutput "rendered"       (SL.natToStr (parsed + 1))
+        cgReturn joined
+
+  stdoutText <- compileProgramAndRunGenerated dir "characterStrings" program
+  headerText <- readFile (dir </> "characterStrings.h")
+  mapM_ (\fragment -> assertBool ("Expected generated text output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") =sbv7\955\NUL"
+    , "length =6"
+    , "lambdaIndex =4"
+    , "contains = 1"
+    , "prefix = 1"
+    , "suffix = 1"
+    , "sameObject = 1"
+    , "ordered = 1"
+    , "slice =7\955"
+    , "replacement =sX7\955\NUL"
+    , "indexedChar =b"
+    , "characterCode =98"
+    , "roundTripChar =b"
+    , "inputCharacter =a"
+    , "parsed =123"
+    , "rendered =124"
+    ]
+  assertBool "Expected a length-aware public string descriptor"
+             ("size_t byte_length;" `isInfixOf` headerText && "size_t length;" `isInfixOf` headerText)
+  assertBool "Expected public string ownership helpers"
+             ("sbv_string_clone" `isInfixOf` headerText && "sbv_string_release" `isInfixOf` headerText)
+
+-- | Exercise string indices and numeric conversions when the user explicitly
+-- selects the historical lossy native mapping for 'SInteger'.
+mappedIntegerStrings :: Assertion
+mappedIntegerStrings = withSystemTempDirectory "sbv-mapped-integer-strings" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgIntegerSize 64
+        cgSetDriverValues [42, 1]
+        value <- cgInput "value" :: SBVCodeGen SString
+        index <- cgInput "index" :: SBVCodeGen SInteger
+        cgOutput "selected" (SL.elemAt value index)
+        cgOutput "numeric"  (SL.strToNat (SL.replace value value (literal "99")))
+        cgReturn (SL.natToStr (SL.length value + 1))
+
+  stdoutText <- compileProgramAndRunGenerated dir "mappedIntegerStrings" program
+  mapM_ (\fragment -> assertBool ("Expected mapped-integer text output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") =6"
+    , "selected =b"
+    , "numeric = 99LL"
+    ]
+
+-- | Exercise guarded string declarations and independent owned returns from
+-- multiple generated library translation units.
+ownedStringLibrary :: Assertion
+ownedStringLibrary = withSystemTempDirectory "sbv-owned-string-library" $ \dir -> do
+  let component suffix seed = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        value <- cgInput "value" :: SBVCodeGen SString
+        cgReturn (value SL.++ suffix)
+
+  (_, cfg, bundle) <- compileToCLib' "ownedStringLibrary"
+    [ ("firstText",  component (literal "\955") 4)
+    , ("secondText", component (literal "!") 5)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "ownedStringLibrary"
+  assertBool ("Expected both owned string results, received:\n" ++ stdoutText)
+             ("sbv4\955" `isInfixOf` stdoutText && "sbv5!" `isInfixOf` stdoutText)
 
 -- | Check that ABI kinds and scalar operations contribute the exact external
 -- runtime dependencies needed by their generated C bundles.

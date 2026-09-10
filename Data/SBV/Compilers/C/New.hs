@@ -40,6 +40,7 @@ import Data.SBV.Compilers.C.FP
 import Data.SBV.Compilers.C.GMP
 import Data.SBV.Compilers.C.Lowering
 import Data.SBV.Compilers.C.Table
+import Data.SBV.Compilers.C.Text
 import Data.SBV.Compilers.C.Tuple
 import Data.SBV.Compilers.CodeGen
 
@@ -135,6 +136,7 @@ cgen cfg nm st sbvProg
                    $$ (if hasRequirement CRequiresWideBV then wideBVTypeDecls (wideBVKinds kinds) else empty)
                    $$ (if hasRequirement CRequiresLibBF  then arbitraryFPTypeDecls (arbitraryFPKinds kinds) else empty)
                    $$ (if hasRequirement CRequiresGMP    then gmpTypeDecls cfg kinds else empty)
+                   $$ (if hasRequirement CRequiresText   then textTypeDecls kinds else empty)
                    $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
                    $$ tupleTypeDecls tuples
                    $$ adtTypeDecls cfg adts
@@ -270,6 +272,8 @@ showCType i = case kindOf i of
                 k@KADT{}
                   | not (isRoundingMode k) && not (isUninterpreted k) -> adtCType k
                 k@KFP{}           -> arbitraryFPCType k
+                KString           -> "SString"
+                KChar             -> "SChar"
                 k                -> show k
 
 -- | The printf specifier for the type
@@ -345,8 +349,8 @@ mkConst cfg (CV KBool            (CInteger i)) = showSizedConst (cgShowU8InHex c
 mkConst _   (CV KFloat           (CFloat f))   = text $ showCFloat f
 mkConst _   (CV KDouble          (CDouble d))  = text $ showCDouble d
 mkConst _   (CV k@KFP{}          (CFP fp))     = fromJust (arbitraryFPConst k fp)
-mkConst _   (CV KString          (CString s))  = text $ show s
-mkConst _   (CV KChar            (CChar c))    = text $ show c
+mkConst _   cv@(CV KString       CString{})     = fromJust (textConst cv)
+mkConst _   cv@(CV KChar         CChar{})       = fromJust (textConst cv)
 mkConst _   cv                                 = die $ "mkConst: " ++ show cv
 
 showSizedConst :: Bool -> Integer -> (Bool, Int) -> Doc
@@ -524,6 +528,10 @@ genDriver cfg adts randVals fn inps outs mbRet
                                       -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
                                       $$ gmpPrint (kindOf sv) resultVar P.<> semi
                                       $$ text "printf(\"\\n\");"
+                              Just sv | kindOf sv `elem` [KChar, KString]
+                                      -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
+                                      $$ textPrint (kindOf sv) resultVar P.<> semi
+                                      $$ text "printf(\"\\n\");"
                               Just sv -> text "printf" P.<> parens (printQuotes (fcall <+> text "=" <+> specifier cfg sv P.<> text "\\n")
                                                                               P.<> comma <+> resultVar) P.<> semi
                               Nothing -> text "printf" P.<> parens (printQuotes (fcall <+> text "->\\n")) P.<> semi)
@@ -565,6 +573,7 @@ genDriver cfg adts randVals fn inps outs mbRet
        mkRValKind kind r
          | isRoundingMode kind            = roundingModeDriverValue r
          | isExactGMPKind cfg kind         = integer r
+         | kind `elem` [KChar, KString]    = textDriverValue kind r
          | KTuple fieldKinds <- kind       = tupleValue kind (zipWith mkField fieldKinds [0 :: Integer ..])
          | isADT kind                      = adtDriverValue adts mkRValKind kind r
          | True                            = mkConst cfg $ mkConstCV kind r
@@ -592,6 +601,7 @@ genDriver cfg adts randVals fn inps outs mbRet
        mkOut (v, CgAtomic sv)
          | isArray sv                     = text (arrayOutputCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
          | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text v) (text "0")
+         | kindOf sv == KString           = text "SString" <+> text v <+> text "=" <+> braces (text "0") P.<> semi
          | tupleUsesExact cfg (kindOf sv) = text (tupleCType (kindOf sv)) <+> text v
                                         <+> text "=" <+> braces (text "0") P.<> semi
          | isOwnedADT cfg adts sv         = text (adtCType (kindOf sv)) <+> text v
@@ -611,6 +621,7 @@ genDriver cfg adts randVals fn inps outs mbRet
                                                   <+> text "=" <+> fcall P.<> semi
                   | isOwnedADT cfg adts sv         -> text (adtCType (kindOf sv)) <+> resultVar
                                                   <+> text "=" <+> fcall P.<> semi
+                  | kindOf sv == KString           -> text "const SString" <+> resultVar <+> text "=" <+> fcall P.<> semi
                   | True                           -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
        fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs ++ exactResultArg)))
        exactResultArg = case mbRet of
@@ -640,6 +651,9 @@ genDriver cfg adts randVals fn inps outs mbRet
                                                 $$ text "printf(\"\\n\");"
          | isExactGMPKind cfg (kindOf sv)       = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
                                                 $$ gmpPrint (kindOf sv) (text n) P.<> semi
+                                                $$ text "printf(\"\\n\");"
+         | kindOf sv `elem` [KChar, KString]     = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
+                                                $$ textPrint (kindOf sv) (text n) P.<> semi
                                                 $$ text "printf(\"\\n\");"
          | True                                 = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier cfg sv
                                                                                          P.<> text "\\n") P.<> comma <+> text n) P.<> semi
@@ -720,6 +734,7 @@ genDriver cfg adts randVals fn inps outs mbRet
          | isWideBV kind                          = wideBVPrint kind value P.<> semi
          | isFP kind                              = arbitraryFPPrint kind value P.<> semi
          | isExactGMPKind cfg kind                = gmpPrint kind value P.<> semi
+         | kind `elem` [KChar, KString]            = textPrint kind value P.<> semi
          | True                                   = text "printf" P.<> parens (printQuotes (specifierKind cfg kind) P.<> comma <+> value) P.<> semi
 
        driverCleanup = vcat $ inputCleanup ++ outputCleanup ++ returnCleanup
@@ -756,11 +771,16 @@ genDriver cfg adts randVals fn inps outs mbRet
                                | (n, CgAtomic sv) <- outs
                                , isOwnedADT cfg adts sv
                                ]
+                            ++ [textRelease (text n)
+                               | (n, CgAtomic sv) <- outs
+                               , kindOf sv == KString
+                               ]
                returnCleanup = case mbRet of
                                  Just sv | isExactGMPKind cfg (kindOf sv) -> [gmpDriverClear (kindOf sv) resultVar]
                                  Just sv | isArray sv                     -> [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> resultVar) P.<> semi]
                                  Just sv | tupleUsesExact cfg (kindOf sv) -> [releaseTuple sv "__result"]
                                  Just sv | isOwnedADT cfg adts sv         -> [releaseADT sv "__result"]
+                                 Just sv | kindOf sv == KString           -> [textRelease resultVar]
                                  _                                        -> []
 
                releaseTuple sv = releaseOwned (tupleOwnedReleaseName (kindOf sv))
@@ -785,14 +805,16 @@ genCProg cfg adts fn proto
          (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis axioms
                  (SBVPgm asgns) cstrs origAsserts _)
          inVars outVars mbRet extDecls
-  | KString `Set.member` kindInfo
-  = notyet "Strings"
-  | KChar `Set.member` kindInfo
-  = notyet "Characters"
   | any isSet kindInfo
   = notyet "Sets (SSet)"
   | any isList kindInfo
   = notyet "Lists (SList)"
+  | any tableUsesText tbls
+  = notyet "Characters or strings in tables"
+  | any assignmentUsesText lambdaAssignments
+  = notyet "Characters or strings in array lambdas"
+  | any containsNestedText kindInfo
+  = notyet "Characters or strings nested in arrays, tuples, or algebraic data types"
   | not (null usorts)
   = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
   | hasQuants pinfo
@@ -828,12 +850,14 @@ genCProg cfg adts fn proto
              $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo allAssignments else empty)
              $$ (if requires CRequiresLibBF  then arbitraryFPRuntime cfg fpKinds allAssignments else empty)
              $$ (if requires CRequiresNativeFPRounding then nativeFPRuntime else empty)
-             $$ (if requires CRequiresArrays then arrayRuntime cfg arrays else empty)
+             $$ (if requires CRequiresText             then textRuntime cfg usesExactInteger else empty)
+             $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
              $$ vcat lambdaDocs
              $$ proto
              $$ text "{"
              $$ text ""
              $$ nest 2 (   gmpStart
+                        $$ textStart
                         $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
                         $$ vcat (merge (map (ppTable cfg True consts) tbls) assignmentDocs (map genAssert asserts))
                         $$ sepIf (not (null assignments) || not (null tbls))
@@ -842,6 +866,8 @@ genCProg cfg adts fn proto
                         $$ arrayReturn
                         $$ exactTupleReturn
                         $$ exactADTReturn
+                        $$ textReturn
+                        $$ textEnd
                         $$ gmpEnd
                         $$ normalReturn
                        )
@@ -878,17 +904,35 @@ genCProg cfg adts fn proto
          ++ [CRequiresLibBF  | not (null fpKinds)]
          ++ [CRequiresLibM   | not (null fpKinds)]
          ++ [CRequiresGMP    | usesGMP]
+         ++ [CRequiresText   | KString `Set.member` kindInfo || KChar `Set.member` kindInfo]
          ++ [CRequiresArrays | not (null arrays)]
 
        requires requirement = requirement `Set.member` requirements
 
-       usesGMP = any (isExactGMPKind cfg) kindInfo
+       usesGMP          = any (isExactGMPKind cfg) kindInfo
+       usesExactInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kindInfo
+
+       containsNestedText kind = kind `notElem` [KChar, KString]
+                              && any (`elem` [KChar, KString]) (expandKinds kind)
+
+       tableUsesText ((_, keyKind, valueKind), _) = keyKind `elem` [KChar, KString]
+                                                 || valueKind `elem` [KChar, KString]
+
+       assignmentUsesText (sv, SBVApp _ arguments) = any ((`elem` [KChar, KString]) . kindOf) (sv : arguments)
+
        gmpStart
          | requires CRequiresGMP = gmpContextStart
          | True                     = empty
        gmpEnd
          | requires CRequiresGMP = gmpContextEnd
          | True                     = empty
+
+       textStart
+         | requires CRequiresText = textContextStart
+         | True                    = empty
+       textEnd
+         | requires CRequiresText = textContextEnd
+         | True                    = empty
 
        exactReturn = case mbRet of
                        Just sv | isExactGMPKind cfg (kindOf sv)
@@ -916,10 +960,16 @@ genCProg cfg adts fn proto
                                  P.<> semi
                           _ -> empty
 
+       textReturn = case mbRet of
+                      Just sv | kindOf sv == KString
+                              -> text "const SString __result =" <+> textClone (showSV cfg consts sv) P.<> semi
+                      _       -> empty
+
        normalReturn = case mbRet of
                         Just sv | isArray sv                           -> text "return __result;"
                         Just sv | tupleUsesExact cfg (kindOf sv)       -> text "return __result;"
                         Just sv | isOwnedADT cfg adts sv               -> text "return __result;"
+                        Just sv | kindOf sv == KString                 -> text "return __result;"
                         Just sv | not (isExactGMPKind cfg (kindOf sv)) -> mkRet sv
                         _                                             -> empty
 
@@ -985,6 +1035,7 @@ genCProg cfg adts fn proto
        genIO False (alive, (cNm, CgAtomic sv))
          | isArray sv                     = [text "*" P.<> text cNm <+> text "=" <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
          | isExactGMPKind cfg (kindOf sv) = [gmpSet (kindOf sv) (text cNm) (showSV cfg consts sv) P.<> semi | alive]
+         | kindOf sv == KString           = [text "*" P.<> text cNm <+> text "=" <+> textClone (showSV cfg consts sv) P.<> semi | alive]
          | tupleUsesExact cfg (kindOf sv) = [text "*" P.<> text cNm <+> text "=" <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
          | isOwnedADT cfg adts sv         = [ text "*" P.<> text cNm <+> text "="
                                           <+> text (adtOwnedCloneName (kindOf sv))
@@ -1250,6 +1301,7 @@ ppExpr cfg adts consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         selected = fromMaybe legacy $ chooseLowering
           [ arrayExpr cfg op opArgs resultSV renderedArgs
+          , textExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , adtExpr cfg adts op opArgs (kindOf resultSV) renderedArgs
           , tupleExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , tableExpr cfg (showSV cfg consts) op (kindOf resultSV)
