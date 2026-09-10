@@ -20,6 +20,7 @@ module Data.SBV.Compilers.C.List
   , listRuntime
   , listConst
   , listExpr
+  , listEqual
   , listClone
   , listRelease
   , listDriverValue
@@ -208,6 +209,7 @@ listExpr :: CgConfig -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 listExpr cfg op svs resultKind args
   | not touchesList = Nothing
   | True            = case (op, args) of
+      (ADTOp{}                   , _        )                    -> Nothing
       (TupleConstructor{}        , _        )                    -> Nothing
       (TupleAccess{}             , _        )                    -> Nothing
       (Label _                   , [a]      )                    -> lower a
@@ -280,6 +282,10 @@ listExpr cfg op svs resultKind args
        unsupported = error $ "SBV->C: List lowering does not support " ++ show op
                           ++ " with argument kinds " ++ show (map kindOf svs)
                           ++ " and result kind " ++ show resultKind
+
+-- | Compare two list descriptors using symbolic sequence equality.
+listEqual :: Kind -> Doc -> Doc -> Doc
+listEqual kind left right = call (helperName kind "equal") [left, right]
 
 -- | Deep-copy a list across the generated function's ownership boundary.
 listClone :: Kind -> Doc -> Doc

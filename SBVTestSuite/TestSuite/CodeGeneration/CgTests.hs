@@ -71,8 +71,23 @@ newtype CodeGenOdd = CGOddStep CodeGenEven deriving Show
 -- diagnostics.
 newtype CodeGenLoop = CGLoop CodeGenLoop deriving Show
 
+-- | A managed aggregate used to exercise direct and tuple-nested collection
+-- fields in generated C ADTs.
+data CodeGenCollections = CGNoCollections
+                        | CGCollections [Integer] (RCSet Rational) ([Integer], RCSet Rational)
+                        deriving Show
+
+-- | A managed aggregate used to exercise native-width collection ownership
+-- without relying on exact-element storage to select the owned ABI.
+data CodeGenNativeCollections = CGNativeCollections [Word16] (RCSet Word16) deriving Show
+
+-- | A recursive managed aggregate whose leaf owns exact-element collections.
+data CodeGenCollectionTree = CGCollectionLeaf [Integer] (RCSet Rational)
+                           | CGCollectionBranch CodeGenCollectionTree
+                           deriving Show
+
 -- | Generate the symbolic interfaces for the code-generation ADTs.
-mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop]
+mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop, ''CodeGenCollections, ''CodeGenNativeCollections, ''CodeGenCollectionTree]
 
 -- | Code-generation tests.
 tests :: TestTree
@@ -122,6 +137,9 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute non-recursive ADTs" nonRecursiveADTs
   , testCase "compile and execute nested ADTs" nestedADTs
   , testCase "compile repeated ADT types into a library" nonRecursiveADTLibrary
+  , testCase "compile ADTs containing managed collections" collectionADTs
+  , testCase "compile recursive ADTs containing collections" recursiveCollectionADTs
+  , testCase "return collection ADTs from a generated library" collectionADTLibrary
   , testCase "preserve ADT aggregate equality" adtAggregateEquality
   , testCase "compile and execute recursive ADTs" recursiveADTs
   , testCase "embed recursive ADTs by value" wrappedRecursiveADTs
@@ -1336,6 +1354,88 @@ nonRecursiveADTLibrary = withSystemTempDirectory "sbv-non-recursive-adt-library"
     , "CGOne(3)"
     ]
 
+-- | Exercise direct and tuple-nested exact-element collections through ADT
+-- construction, access, equality, outputs, and an independently owned return.
+collectionADTs :: Assertion
+collectionADTs = withSystemTempDirectory "sbv-collection-adts" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        source <- cgInput "source" :: SBVCodeGen SCodeGenCollections
+        let values                   = getCGCollections_1 source
+            members                  = getCGCollections_2 source
+            nested                   = getCGCollections_3 source
+            (nestedValues, nestedSet) = untuple nested
+            result                   = sCGCollections
+                                         (values SL.++ literal ([4] :: [Integer]))
+                                         (SS.insert 5 members)
+                                         (tuple (nestedValues SL.++ literal ([6] :: [Integer]), SS.insert 7 nestedSet))
+        cgOutput "sourceCopy" source
+        cgOutput "sameValue" (source .== source)
+        cgOutput "result" result
+        cgReturn result
+
+  stdoutText <- compileProgramAndRunGenerated dir "collectionADTs" program
+  headerText <- readFile (dir </> "collectionADTs.h")
+  mapM_ (\fragment -> assertBool ("Expected collection ADT output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") =CGCollections([1, 2, 3, 4], {2, 3, 4, 5}, ([3, 4, 5, 6], {4, 5, 6, 7}))"
+    , "sourceCopy =CGCollections([1, 2, 3], {2, 3, 4}, ([3, 4, 5], {4, 5, 6}))"
+    , "sameValue = 1"
+    , "result =CGCollections([1, 2, 3, 4], {2, 3, 4, 5}, ([3, 4, 5, 6], {4, 5, 6, 7}))"
+    ]
+  assertBool "Expected direct and tuple-nested collection ownership in ADT helpers"
+             ("sbv_list_clone_integer(source.payload.constructor2.field1)" `isInfixOf` headerText
+           && "sbv_set_release_rational(&value->payload.constructor2.field2)" `isInfixOf` headerText
+           && "sbv_tuple_owned_set_" `isInfixOf` headerText)
+
+-- | Exercise recursive pointer ownership whose terminal constructor contains
+-- exact-element list and set fields, including recursive structural equality.
+recursiveCollectionADTs :: Assertion
+recursiveCollectionADTs = withSystemTempDirectory "sbv-recursive-collection-adts" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1]
+        source <- cgInput "source" :: SBVCodeGen SCodeGenCollectionTree
+        cgOutput "sameTree" (source .== source)
+        cgOutput "treeCopy" source
+        cgReturn source
+
+  stdoutText <- compileProgramAndRunGenerated dir "recursiveCollectionADTs" program
+  sourceText <- readFile (dir </> "recursiveCollectionADTs.c")
+  mapM_ (\fragment -> assertBool ("Expected recursive collection ADT output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "CGCollectionBranch(CGCollectionBranch("
+    , "CGCollectionLeaf([1, 2, 3], {2, 3, 4})"
+    , "sameTree = 1"
+    ]
+  assertBool "Expected private recursive equality to use collection semantics after their runtimes"
+             ("sbv_list_integer_equal" `isInfixOf` sourceText
+           && "sbv_set_rational_equal" `isInfixOf` sourceText)
+
+-- | Exercise guarded collection-owning ADT helpers shared by multiple
+-- generated library translation units.
+collectionADTLibrary :: Assertion
+collectionADTLibrary = withSystemTempDirectory "sbv-collection-adt-library" $ \dir -> do
+  let component :: Integer -> SBVCodeGen ()
+      component seed = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        source <- cgInput "source" :: SBVCodeGen SCodeGenNativeCollections
+        cgReturn source
+
+  (_, cfg, bundle) <- compileToCLib' "collectionADTLibrary"
+    [ ("firstCollectionADT",  component 1)
+    , ("secondCollectionADT", component 3)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "collectionADTLibrary"
+  mapM_ (\fragment -> assertBool ("Expected collection ADT library output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "CGNativeCollections([0x0001U, 0x0002U, 0x0003U], {0x0002U, 0x0003U, 0x0004U})"
+    , "CGNativeCollections([0x0003U, 0x0004U, 0x0005U], {0x0004U, 0x0005U, 0x0006U})"
+    ]
+
 -- | Exercise structural equality for ADTs instantiated with wide bit-vectors,
 -- arbitrary floating-point formats, and native floating-point values.
 adtAggregateEquality :: Assertion
@@ -1386,6 +1486,7 @@ recursiveADTs = withSystemTempDirectory "sbv-recursive-adts" $ \dir -> do
 
   stdoutText <- compileProgramAndRunGenerated dir "recursiveADTs" program
   headerText <- readFile (dir </> "recursiveADTs.h")
+  sourceText <- readFile (dir </> "recursiveADTs.c")
   assertBool ("Expected the recursive driver to select a node, received:\n" ++ stdoutText)
              ("isNode = 1" `isInfixOf` stdoutText)
   assertBool ("Expected recursive structural equality, received:\n" ++ stdoutText)
@@ -1399,7 +1500,7 @@ recursiveADTs = withSystemTempDirectory "sbv-recursive-adts" $ \dir -> do
   assertBool "Expected recursive fields to use pointers"
              ("SBVADT_CodeGenTree * field1;" `isInfixOf` headerText)
   assertBool "Expected recursive equality to reject null child pointers"
-             ("== NULL) abort();" `isInfixOf` headerText)
+             ("== NULL) abort();" `isInfixOf` sourceText)
 
 -- | Exercise transitive ownership when an acyclic ADT embeds a recursive ADT
 -- by value.

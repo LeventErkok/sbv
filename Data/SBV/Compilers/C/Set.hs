@@ -20,6 +20,7 @@ module Data.SBV.Compilers.C.Set
   , setRuntime
   , setConst
   , setExpr
+  , setEqual
   , setNormalize
   , setClone
   , setRelease
@@ -209,6 +210,7 @@ setExpr :: CgConfig -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 setExpr cfg op svs resultKind args
   | not touchesSet = Nothing
   | True           = case (op, args) of
+      (ADTOp{}                       , _        ) -> Nothing
       (TupleConstructor{}            , _        ) -> Nothing
       (TupleAccess{}                 , _        ) -> Nothing
       (Label _                       , [a]      ) -> lower a
@@ -252,6 +254,10 @@ setExpr cfg op svs resultKind args
        unsupported = error $ "SBV->C: Set lowering does not support " ++ show op
                           ++ " with argument kinds " ++ show (map kindOf svs)
                           ++ " and result kind " ++ show resultKind
+
+-- | Compare two set descriptors using finite/cofinite symbolic-set equality.
+setEqual :: Kind -> Doc -> Doc -> Doc
+setEqual kind left right = call (helperName kind "equal") [left, right]
 
 -- | Normalize a borrowed set descriptor into the generated function's arena.
 setNormalize :: Kind -> Doc -> Doc
@@ -425,7 +431,7 @@ setKindRuntime cfg kind@(KSet elementKind) =
   ++ domainRuntime
   ++ [ "static bool " ++ helper "equal" ++ "(" ++ setType ++ " left, " ++ setType ++ " right)"
      , "{"
-     , "  if (left.is_complement == right.is_complement) return left.length == right.length && " ++ helper "stored_subset" ++ "(left, right);"
+     , "  if (left.is_complement == right.is_complement) return " ++ helper "stored_subset" ++ "(left, right) && " ++ helper "stored_subset" ++ "(right, left);"
      , "  return " ++ helper "stored_disjoint" ++ "(left, right) && " ++ helper "domain_covered" ++ "(left, right);"
      , "}"
      , "static bool " ++ helper "member" ++ "(" ++ elementType ++ " element, " ++ setType ++ " value)"
@@ -496,13 +502,16 @@ setKindRuntime cfg kind@(KSet elementKind) =
               Just domainSize ->
                 [ "  const uint64_t domain_size = UINT64_C(" ++ show domainSize ++ ");"
                 , "  if (domain_size > (uint64_t) SIZE_MAX) return false;"
-                , "  size_t covered = left.length;"
-                , "  if ((uint64_t) covered > domain_size) return false;"
+                , "  size_t covered = 0;"
+                , "  for (size_t i = 0; i < left.length; ++i) {"
+                , "    bool duplicate = false;"
+                , "    for (size_t j = 0; j < i; ++j) if (" ++ equalElement ++ "(left.data[i], left.data[j])) { duplicate = true; break; }"
+                , "    if (!duplicate) ++covered;"
+                , "  }"
                 , "  for (size_t i = 0; i < right.length; ++i) {"
-                , "    if (!" ++ helper "stored_contains" ++ "(left, right.data[i])) {"
-                , "      if ((uint64_t) covered == domain_size) return false;"
-                , "      ++covered;"
-                , "    }"
+                , "    bool duplicate = " ++ helper "stored_contains" ++ "(left, right.data[i]);"
+                , "    for (size_t j = 0; !duplicate && j < i; ++j) duplicate = " ++ equalElement ++ "(right.data[i], right.data[j]);"
+                , "    if (!duplicate) ++covered;"
                 , "  }"
                 , "  return (uint64_t) covered == domain_size;"
                 ]

@@ -20,7 +20,7 @@ import Data.Char                      (isSpace)
 import Data.List                      (intercalate, intersperse, nub, nubBy)
 import Data.Maybe                     (fromJust, fromMaybe, isJust)
 import qualified Data.Foldable as F   (toList)
-import qualified Data.Set      as Set (Set, empty, fromList, map, member, singleton, toList, union, unions)
+import qualified Data.Set      as Set (Set, empty, fromList, insert, map, member, singleton, toList, union, unions)
 import qualified Data.Text     as T
 import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
@@ -876,7 +876,7 @@ genCProg cfg adts lists sets fn proto
   | any assignmentUsesSet lambdaAssignments
   = notyet "Sets in array lambdas"
   | any containsNestedSet kindInfo
-  = notyet "Sets nested in arrays or algebraic data types"
+  = notyet "Sets nested in arrays or unsupported aggregate types"
   | not (null unsupportedLists)
   = notyet $ "Lists with element kinds " ++ intercalate ", " (map (show . listElementKind) unsupportedLists)
   | any tableUsesList tbls
@@ -884,7 +884,7 @@ genCProg cfg adts lists sets fn proto
   | any assignmentUsesList lambdaAssignments
   = notyet "Lists in array lambdas"
   | any containsNestedList kindInfo
-  = notyet "Lists nested in arrays or algebraic data types"
+  = notyet "Lists nested in arrays or unsupported aggregate types"
   | any tableUsesText tbls
   = notyet "Characters or strings in tables"
   | any assignmentUsesText lambdaAssignments
@@ -932,6 +932,7 @@ genCProg cfg adts lists sets fn proto
              $$ (if requires CRequiresLists            then listRuntime cfg usesExactInteger lists else empty)
              $$ (if requires CRequiresSets             then setRuntime cfg sets else empty)
              $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
+             $$ adtEqualityRuntime cfg adts
              $$ vcat lambdaDocs
              $$ proto
              $$ text "{"
@@ -1007,13 +1008,24 @@ genCProg cfg adts lists sets fn proto
        containsNestedText KString         = False
        containsNestedText kind            = any (`elem` [KChar, KString]) (expandKinds kind)
 
-       containsNestedList (KTuple fields) = any containsNestedList fields
-       containsNestedList KList{}         = False
-       containsNestedList kind            = any isList (expandKinds kind)
+       containsNestedList = containsUnsupportedCollection isList
 
-       containsNestedSet (KTuple fields) = any containsNestedSet fields
-       containsNestedSet KSet{}          = False
-       containsNestedSet kind            = any isSet (expandKinds kind)
+       containsNestedSet = containsUnsupportedCollection isSet
+
+       containsUnsupportedCollection isCollection = walk Set.empty
+        where walk _ kind
+                | isCollection kind
+                = False
+              walk visited (KTuple fields)
+                = any (walk visited) fields
+              walk visited kind
+                | isADT kind
+                , not (isRoundingMode kind)
+                , not (isUninterpreted kind)
+                =    not (kind `Set.member` visited)
+                  && any (any (walk (Set.insert kind visited)) . snd) (adtConstructors adts kind)
+              walk _ kind
+                = any isCollection (expandKinds kind)
 
        tableUsesText ((_, keyKind, valueKind), _) = keyKind `elem` [KChar, KString]
                                                  || valueKind `elem` [KChar, KString]

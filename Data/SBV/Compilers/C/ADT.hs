@@ -16,6 +16,7 @@ module Data.SBV.Compilers.C.ADT
   , resolveADTReferences
   , adtCType
   , adtTypeDecls
+  , adtEqualityRuntime
   , adtOwnershipTypeDecls
   , adtOwnedCloneName
   , adtOwnedReleaseName
@@ -28,6 +29,7 @@ module Data.SBV.Compilers.C.ADT
   , adtDriverValue
   , adtPrint
   , adtPrintHelpers
+  , adtConstructors
   ) where
 
 import Data.Char                       (isAlphaNum, isAscii, ord, toUpper)
@@ -43,12 +45,14 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
+import Data.SBV.Compilers.C.List       (listClone, listDriverClear, listDriverInit, listEqual, listRelease, listUsesExact)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Set        (setClone, setDriverClear, setDriverInit, setEqual, setRelease, setUsesExact)
 import Data.SBV.Compilers.C.Tuple      ( tupleFieldName
                                        , tupleOwnedInitName
                                        , tupleOwnedReleaseName
                                        , tupleOwnedSetName
-                                       , tupleUsesExact
+                                       , tupleNeedsOwnership
                                        )
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
@@ -112,8 +116,8 @@ adtCType kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
 
 -- | Emit public tagged-union declarations for all ADT kinds used by a program.
 adtTypeDecls :: CgConfig -> [Kind] -> Doc
-adtTypeDecls _   []   = empty
-adtTypeDecls cfg adts = text . unlines $
+adtTypeDecls _ []   = empty
+adtTypeDecls _ adts = text . unlines $
      [ "/* Algebraic data types. Recursive fields form finite, acyclic pointer graphs. */"
      , "/* Inputs borrow these graphs; owned outputs and returns must be released. */"
      , "#ifndef SBV_CGEN_UNUSED"
@@ -128,7 +132,6 @@ adtTypeDecls cfg adts = text . unlines $
   ++ concatMap forwardDeclaration adts
   ++ concatMap declaration adts
   ++ dereferenceDeclarations
-  ++ equalityDeclarations
  where forwardDeclaration kind =
           [ "#ifndef " ++ adtForwardGuard kind
           , "#define " ++ adtForwardGuard kind
@@ -187,23 +190,26 @@ adtTypeDecls cfg adts = text . unlines $
          , ""
          ]
 
-       equalityDeclarations
-         | null recursiveKinds = []
-         | True                = concatMap equalityPrototypes [False, True]
-                              ++ concatMap equalityDefinitions [False, True]
+-- | Emit private structural-equality helpers for recursive ADTs. These
+-- definitions follow the collection runtimes so managed fields can reuse the
+-- same list and set equality semantics as top-level expressions.
+adtEqualityRuntime :: CgConfig -> [Kind] -> Doc
+adtEqualityRuntime cfg adts
+  | null recursiveKinds = empty
+  | True                = text . unlines $ concatMap prototypes [False, True]
+                                            ++ concatMap definitions [False, True]
+ where recursiveKinds = filter (adtIsRecursive adts) adts
 
-       equalityPrototypes strong =
-         [ "static inline SBV_CGEN_UNUSED bool " ++ adtEqualName strong kind
+       prototypes strong =
+         [ "static SBV_CGEN_UNUSED bool " ++ adtEqualName strong kind
         ++ "(" ++ adtCType kind ++ " left, " ++ adtCType kind ++ " right);"
          | kind <- recursiveKinds
          ] ++ [""]
 
-       equalityDefinitions strong = concatMap (equalityDefinition strong) recursiveKinds
+       definitions strong = concatMap (definition strong) recursiveKinds
 
-       equalityDefinition strong kind =
-          [ "#ifndef " ++ equalityGuard strong kind
-          , "#define " ++ equalityGuard strong kind
-          , "static inline SBV_CGEN_UNUSED bool " ++ adtEqualName strong kind
+       definition strong kind =
+          [ "static SBV_CGEN_UNUSED bool " ++ adtEqualName strong kind
          ++ "(" ++ adtCType kind ++ " left, " ++ adtCType kind ++ " right)"
           , "{"
           , "  if (left.tag != right.tag) return false;"
@@ -213,7 +219,6 @@ adtTypeDecls cfg adts = text . unlines $
         ++ [ "    default: abort();"
            , "  }"
            , "}"
-           , "#endif"
            , ""
            ]
 
@@ -221,7 +226,7 @@ adtTypeDecls cfg adts = text . unlines $
           ["    case " ++ adtTagName kind constructorIndex ++ ":"]
         ++ concatMap (nullChecks constructorIndex) (zip [1 :: Int ..] fields)
         ++ ["      return " ++ render (andExpressions comparisons) ++ ";"]
-        where comparisons = zipWith (compareField strong kind constructorIndex) [1 :: Int ..] fields
+        where comparisons = zipWith (compareField strong constructorIndex) [1 :: Int ..] fields
 
        nullChecks constructorIndex (fieldIndex, ADTField _ True) =
          [ "      if (" ++ render (adtField (text "left") constructorIndex fieldIndex) ++ " == NULL"
@@ -229,7 +234,7 @@ adtTypeDecls cfg adts = text . unlines $
          ]
        nullChecks _ _ = []
 
-       compareField strong _ constructorIndex fieldIndex (ADTField fieldKind recursive)
+       compareField strong constructorIndex fieldIndex (ADTField fieldKind recursive)
          | recursive = text (adtEqualName strong fieldKind)
                     P.<> parens (fsep (punctuate comma [deref "left", deref "right"]))
          | True      = adtFieldEqual cfg adts strong fieldKind
@@ -237,10 +242,10 @@ adtTypeDecls cfg adts = text . unlines $
                          (adtField (text "right") constructorIndex fieldIndex)
         where deref side = text "*" P.<> parens (adtField (text side) constructorIndex fieldIndex)
 
--- | Emit public ownership helpers for ADTs containing exact GMP-backed fields
--- or recursive pointers. Inputs borrow their field storage. Cloned values own
--- the active constructor's managed fields and must be released with
--- 'adtOwnedReleaseName'.
+-- | Emit public ownership helpers for ADTs containing managed collection,
+-- tuple, exact GMP-backed, nested ADT, or recursive-pointer fields. Inputs
+-- borrow their field storage. Cloned values own the active constructor's
+-- managed fields and must be released with 'adtOwnedReleaseName'.
 adtOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
 adtOwnershipTypeDecls cfg adts
   | null owned = empty
@@ -350,7 +355,15 @@ adtOwnershipTypeDecls cfg adts
               , "      " ++ exactInit fieldKind ++ "(" ++ local ++ ");"
               , "      " ++ access ++ " = " ++ local ++ ";"
               ]
-         | tupleUsesExact cfg fieldKind
+         | isList fieldKind
+         = [ "      " ++ ownedField "value->" constructorIndex fieldIndex
+          ++ " = (" ++ elementCType fieldKind ++ ") {NULL, 0};"
+           ]
+         | isSet fieldKind
+         = [ "      " ++ ownedField "value->" constructorIndex fieldIndex
+          ++ " = (" ++ elementCType fieldKind ++ ") {NULL, 0, false};"
+           ]
+         | tupleNeedsOwnership cfg fieldKind
          = [ "      " ++ tupleOwnedInitName fieldKind
           ++ "(&" ++ ownedField "value->" constructorIndex fieldIndex ++ ");"
            ]
@@ -379,7 +392,19 @@ adtOwnershipTypeDecls cfg adts
          = [ "      " ++ exactSet fieldKind
           ++ "((" ++ exactMutableType fieldKind ++ ") " ++ target ++ ", " ++ source ++ ");"
            ]
-         | tupleUsesExact cfg fieldKind
+         | isList fieldKind
+         = [ "      const " ++ elementCType fieldKind ++ " " ++ copy
+          ++ " = " ++ render (listClone fieldKind (text source)) ++ ";"
+           , "      " ++ render (listRelease fieldKind (text target))
+           , "      " ++ target ++ " = " ++ copy ++ ";"
+           ]
+         | isSet fieldKind
+         = [ "      const " ++ elementCType fieldKind ++ " " ++ copy
+          ++ " = " ++ render (setClone fieldKind (text source)) ++ ";"
+           , "      " ++ render (setRelease fieldKind (text target))
+           , "      " ++ target ++ " = " ++ copy ++ ";"
+           ]
+         | tupleNeedsOwnership cfg fieldKind
          = ["      " ++ tupleOwnedSetName fieldKind ++ "(&" ++ target ++ ", " ++ source ++ ");"]
          | isConcreteADT fieldKind
          , adtNeedsOwnership cfg adts fieldKind
@@ -403,7 +428,11 @@ adtOwnershipTypeDecls cfg adts
            , "        free((void *) " ++ access ++ ");"
            , "      }"
            ]
-         | tupleUsesExact cfg fieldKind
+         | isList fieldKind
+         = ["      " ++ render (listRelease fieldKind (text access))]
+         | isSet fieldKind
+         = ["      " ++ render (setRelease fieldKind (text access))]
+         | tupleNeedsOwnership cfg fieldKind
          = ["      " ++ tupleOwnedReleaseName fieldKind ++ "(&" ++ access ++ ");"]
          | isConcreteADT fieldKind && adtNeedsOwnership cfg adts fieldKind
          = ["      " ++ adtOwnedReleaseName fieldKind ++ "(&" ++ access ++ ");"]
@@ -463,7 +492,7 @@ adtDriverInit cfg adts renderValue kind externalName seed
   , adtNeedsOwnership cfg adts kind
   =  text (adtCType kind) <+> text externalName P.<> semi
   $$ initialize kind (text externalName) constructorIndex
-  $$ vcat (assignConstructor maximumDepth kind (text externalName) constructorIndex fields seed)
+  $$ vcat (assignConstructor maximumDepth kind (text externalName) externalName constructorIndex fields seed)
   | True
   = error $ "SBV->C: Expected an owned ADT, received " ++ show kind
  where maximumDepth = max 3 (length adts + 1)
@@ -477,13 +506,15 @@ adtDriverInit cfg adts renderValue kind externalName seed
          P.<> parens (text "&" P.<> parens access)
          P.<> semi
 
-       assignConstructor depth _ access index fieldKinds fieldSeed = concat
-         (zipWith (assignField depth access index) [1 :: Int ..] (zip fieldKinds [fieldSeed ..]))
+       assignConstructor depth _ access accessName index fieldKinds fieldSeed = concat
+         (zipWith (assignField depth access accessName index) [1 :: Int ..] (zip fieldKinds [fieldSeed ..]))
 
-       assignField depth access constructor fieldIndex (field, nestedSeed) =
-         assignAt depth field (adtField access constructor fieldIndex) nestedSeed
+       assignField depth access accessName constructor fieldIndex (field, nestedSeed) =
+         assignAt depth field fieldAccess fieldName nestedSeed
+        where fieldAccess = adtField access constructor fieldIndex
+              fieldName   = accessName ++ "_constructor_" ++ show constructor ++ "_field_" ++ show fieldIndex
 
-       assignAt depth (ADTField fieldKind recursive) access fieldSeed
+       assignAt depth (ADTField fieldKind recursive) access accessName fieldSeed
          | recursive
          = let nestedDepth                   = depth - 1
                (nestedIndex, nestedFields)  = chooseConstructor nestedDepth fieldKind fieldSeed
@@ -493,23 +524,36 @@ adtDriverInit cfg adts renderValue kind externalName seed
               , text "if" <+> parens (access <+> text "== NULL") <+> text "abort" P.<> parens empty P.<> semi
               , initialize fieldKind dereferenced nestedIndex
               ]
-           ++ assignConstructor nestedDepth fieldKind dereferenced nestedIndex nestedFields fieldSeed
+           ++ assignConstructor nestedDepth fieldKind dereferenced (accessName ++ "_recursive") nestedIndex nestedFields fieldSeed
          | isExactGMPKind cfg fieldKind
          = exactAssignments fieldKind access fieldSeed
+         | isList fieldKind
+         = collectionAssignment listUsesExact listDriverInit listDriverClear listClone
+         | isSet fieldKind
+         = collectionAssignment setUsesExact setDriverInit setDriverClear setClone
          | KTuple fieldKinds <- fieldKind
-         , tupleUsesExact cfg fieldKind
+         , tupleNeedsOwnership cfg fieldKind
          = concat (zipWith assignTupleField [1 :: Int ..] (zip fieldKinds [fieldSeed ..]))
          | isConcreteADT fieldKind
          , adtNeedsOwnership cfg adts fieldKind
          = let (nestedIndex, nestedFields) = chooseConstructor depth fieldKind fieldSeed
            in release fieldKind access
             : initialize fieldKind access nestedIndex
-            : assignConstructor depth fieldKind access nestedIndex nestedFields fieldSeed
+            : assignConstructor depth fieldKind access accessName nestedIndex nestedFields fieldSeed
          | True
          = [access <+> text "=" <+> renderValue fieldKind fieldSeed P.<> semi]
-        where assignTupleField fieldIndex (nestedKind, nestedSeed) = assignAt depth (ADTField nestedKind False)
-                (access P.<> text "." P.<> text (tupleFieldName fieldIndex))
-                nestedSeed
+        where assignTupleField fieldIndex (nestedKind, nestedSeed) = assignAt depth (ADTField nestedKind False) nestedAccess nestedName nestedSeed
+                where nestedAccess = access P.<> text "." P.<> text (tupleFieldName fieldIndex)
+                      nestedName   = accessName ++ "_field_" ++ show fieldIndex
+
+              collectionAssignment usesExact driverInit driverClear clone
+                | usesExact cfg fieldKind
+                = [ driverInit cfg fieldKind accessName fieldSeed
+                  , access <+> text "=" <+> clone fieldKind (text accessName) P.<> semi
+                  , driverClear cfg fieldKind accessName
+                  ]
+                | True
+                = [access <+> text "=" <+> clone fieldKind (renderValue fieldKind fieldSeed) P.<> semi]
 
        chooseConstructor depth fieldKind fieldSeed
          | null eligible = error $ "SBV->C: Recursive ADT " ++ show fieldKind
@@ -613,6 +657,9 @@ adtExpr cfg adts op svs resultKind args
         where storage
                 | isConcreteADT kind && adtNeedsOwnership cfg adts kind = CFunctionScoped
                 | isExactGMPKind cfg kind                               = CFunctionScoped
+                | tupleNeedsOwnership cfg kind                          = CFunctionScoped
+                | isList kind                                           = CFunctionScoped
+                | isSet kind                                            = CFunctionScoped
                 | True                                                  = CByValue
 
 -- | Test whether an ADT contains an exact GMP-backed integer, real, or
@@ -622,8 +669,8 @@ adtUsesExact cfg adts = any constructorUsesExact . adtConstructors adts
  where constructorUsesExact (_, fields) = any fieldUsesExact fields
        fieldUsesExact = any (isExactGMPKind cfg) . expandKinds
 
--- | Test whether an ADT needs deep ownership because it contains exact storage,
--- recursive pointers, or another ADT with either property.
+-- | Test whether an ADT needs deep ownership because it contains collection
+-- storage, exact storage, recursive pointers, or another managed aggregate.
 adtNeedsOwnership :: CgConfig -> [Kind] -> Kind -> Bool
 adtNeedsOwnership cfg adts = needsOwnership Set.empty
  where needsOwnership visited kind
@@ -633,13 +680,11 @@ adtNeedsOwnership cfg adts = needsOwnership Set.empty
         where next = Set.insert kind visited
               fieldNeedsOwnership (ADTField _         True)  = True
               fieldNeedsOwnership (ADTField fieldKind False)
-                | isConcreteADT fieldKind        = needsOwnership next fieldKind
-                | KTuple fieldKinds <- fieldKind = any compositeNeedsOwnership fieldKinds
-                | True                           = False
-              compositeNeedsOwnership nestedKind
-                | isConcreteADT nestedKind        = needsOwnership next nestedKind
-                | KTuple nestedKinds <- nestedKind = any compositeNeedsOwnership nestedKinds
-                | True                            = False
+                | isConcreteADT fieldKind           = needsOwnership next fieldKind
+                | tupleNeedsOwnership cfg fieldKind = True
+                | isList fieldKind                  = True
+                | isSet fieldKind                   = True
+                | True                              = False
 
 -- | Construct a deterministic driver value, choosing a constructor from the
 -- supplied integer and delegating field values to the caller.
@@ -802,12 +847,13 @@ adtFieldEqual cfg adts strong kind left right
   | isFP kind                                  = arbitraryFPEqual kind left right
   | strong && (isFloat kind || isDouble kind) = nativeFPObjectEqual left right
   | isExactGMPKind cfg kind                    = adtExactEqual kind left right
+  | isList kind                                = listEqual kind left right
+  | isSet kind                                 = setEqual kind left right
   | KTuple fields <- kind                      = tupleEqual cfg adts strong fields left right
   | isConcreteADT kind                         = adtEqual cfg adts strong kind left right
   | True                                       = left <+> text "==" <+> right
 
--- | Render exact equality directly with GMP's public comparison API so
--- recursive helpers remain self-contained in generated headers.
+-- | Render exact equality directly with GMP's public comparison API.
 adtExactEqual :: Kind -> Doc -> Doc -> Doc
 adtExactEqual KUnbounded left right = text "mpz_cmp"
                                    P.<> parens (fsep (punctuate comma [left, right]))
@@ -851,10 +897,6 @@ adtIsRecursive adts = any (any recursive . snd) . adtConstructorFields adts
 adtEqualName :: Bool -> Kind -> String
 adtEqualName strong kind = "sbv_adt_" ++ (if strong then "object_" else "")
                         ++ "equal_" ++ adtCType kind
-
--- | Return the guard protecting one recursive ADT equality-helper definition.
-equalityGuard :: Bool -> Kind -> String
-equalityGuard strong kind = map toUpper (adtEqualName strong kind) ++ "_DEFINED"
 
 -- | Return the generated checked-dereference helper for a recursive ADT edge.
 adtDereferenceName :: Kind -> String
