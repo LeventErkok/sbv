@@ -139,6 +139,7 @@ cgen cfg nm st sbvProg
                    $$ (if hasRequirement CRequiresLibBF  then arbitraryFPTypeDecls (arbitraryFPKinds kinds) else empty)
                    $$ (if hasRequirement CRequiresGMP    then gmpTypeDecls cfg kinds else empty)
                    $$ (if hasRequirement CRequiresText   then textTypeDecls kinds else empty)
+                   $$ tupleForwardTypeDecls tuples
                    $$ (if hasRequirement CRequiresLists  then listTypeDecls cfg lists else empty)
                    $$ (if hasRequirement CRequiresSets   then setTypeDecls cfg sets else empty)
                    $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
@@ -146,6 +147,8 @@ cgen cfg nm st sbvProg
                    $$ adtTypeDecls cfg adts
                    $$ tupleOwnershipTypeDecls cfg tuples
                    $$ adtOwnershipTypeDecls cfg adts
+                   $$ (if hasRequirement CRequiresLists then listOwnershipTypeDecls cfg lists else empty)
+                   $$ (if hasRequirement CRequiresSets  then setOwnershipTypeDecls cfg sets else empty)
         kinds           = Set.unions [reskinds sbvProg, usedKinds]
         usedKinds       = Set.union interfaceKinds assignmentKinds
         interfaceKinds  = Set.fromList . concatMap expandKinds

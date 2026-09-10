@@ -17,6 +17,7 @@ module Data.SBV.Compilers.C.List
   , listUsesExact
   , listCType
   , listTypeDecls
+  , listOwnershipTypeDecls
   , listRuntime
   , listConst
   , listExpr
@@ -38,11 +39,10 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
-import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
-import Data.SBV.Compilers.C.FP         (arbitraryFPObjectEqual, nativeFPObjectEqual)
-import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, gmpEqual, isExactGMPKind)
+import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
+import Data.SBV.Compilers.C.Value      (byValueEqual, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds)
@@ -56,17 +56,24 @@ listKinds = sortOn listDepth . nub . concatMap (filter isList . expandKinds) . S
 
 -- | Test whether a list element kind has a supported C representation.
 listSupported :: CgConfig -> Kind -> Bool
-listSupported _ (KList elementKind) = supportedElement elementKind
- where supportedElement KBool        = True
-       supportedElement KBounded{}   = True
-       supportedElement KFloat       = True
-       supportedElement KDouble      = True
-       supportedElement KChar        = True
-       supportedElement KFP{}        = True
-       supportedElement KUnbounded   = True
-       supportedElement KReal        = True
-       supportedElement KRational    = True
-       supportedElement kind         = isRoundingMode kind
+listSupported cfg (KList elementKind) = supportedElement elementKind
+ where supportedElement KBool          = True
+       supportedElement KBounded{}     = True
+       supportedElement KFloat         = True
+       supportedElement KDouble        = True
+       supportedElement KChar          = True
+       supportedElement KFP{}          = True
+       supportedElement KUnbounded     = True
+       supportedElement KReal          = True
+       supportedElement KRational      = True
+       supportedElement (KTuple kinds) = all supportedTupleField kinds
+       supportedElement kind           = isRoundingMode kind
+
+       supportedTupleField tupleKind@(KTuple kinds) = not (valueNeedsOwnership cfg tupleKind)
+                                                    && all supportedTupleField kinds
+       supportedTupleField kind
+         | valueNeedsOwnership cfg kind = False
+         | True                         = supportedElement kind
 listSupported _ _ = False
 
 -- | Test whether a list stores exact GMP-backed elements.
@@ -79,9 +86,10 @@ listCType :: Kind -> String
 listCType kind@KList{} = elementCType kind
 listCType kind         = error $ "SBV->C: Expected a list kind, received " ++ show kind
 
--- | Emit typed borrowed-list descriptors and their public ownership helpers.
--- Inputs borrow their element arrays; output and return values own a cloned
--- array and must be released with the corresponding generated helper.
+-- | Emit typed borrowed-list descriptors and ownership-helper prototypes.
+-- The element type may remain incomplete here because descriptors only carry
+-- pointers; definitions that inspect elements are emitted later by
+-- 'listOwnershipTypeDecls'.
 listTypeDecls :: CgConfig -> [Kind] -> Doc
 listTypeDecls cfg kinds
   | null kinds = empty
@@ -105,6 +113,30 @@ listTypeDecls cfg kinds
            in [ "#ifndef " ++ listGuard kind
               , "#define " ++ listGuard kind
               , "typedef struct { const " ++ elementType ++ " *data; size_t length; } " ++ cType ++ ";"
+              , "static inline SBV_CGEN_UNUSED " ++ cType ++ " " ++ cloneName ++ "(" ++ cType ++ " value);"
+              , "static inline SBV_CGEN_UNUSED void " ++ releaseName ++ "(" ++ cType ++ " *value);"
+              , "#endif"
+              , ""
+              ]
+         | True
+         = error $ "SBV->C: Unsupported list element kind: " ++ show elementKind
+       declaration kind = error $ "SBV->C: Expected a list kind, received " ++ show kind
+
+-- | Emit list clone and release definitions after aggregate element layouts
+-- are complete. Inputs borrow their element arrays; output and return values
+-- own a cloned array and must be released with the matching helper.
+listOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
+listOwnershipTypeDecls cfg kinds
+  | null kinds = empty
+  | True       = text . unlines $ concatMap declaration kinds
+ where declaration kind@(KList elementKind)
+         | listSupported cfg kind
+         = let cType       = listCType kind
+               elementType = listElementCType elementKind
+               cloneName    = listCloneName kind
+               releaseName  = listReleaseName kind
+           in [ "#ifndef " ++ listOwnershipGuard kind
+              , "#define " ++ listOwnershipGuard kind
               , "static inline SBV_CGEN_UNUSED " ++ cType ++ " " ++ cloneName ++ "(" ++ cType ++ " value)"
               , "{"
               , "  " ++ elementType ++ " *copy = NULL;"
@@ -378,6 +410,10 @@ listKindTag kind  = kindTag kind
 listGuard :: Kind -> String
 listGuard kind = "SBV_LIST_" ++ map toUpper (listKindTag (listElementKind kind)) ++ "_DEFINED"
 
+-- | Return the preprocessor guard for one list ownership-helper definition.
+listOwnershipGuard :: Kind -> String
+listOwnershipGuard kind = "SBV_LIST_" ++ map toUpper (listKindTag (listElementKind kind)) ++ "_OWNERSHIP_DEFINED"
+
 -- | Return the element kind of a symbolic-list kind.
 listElementKind :: Kind -> Kind
 listElementKind (KList elementKind) = elementKind
@@ -509,12 +545,7 @@ listKindRuntime cfg usesExactInteger kind@(KList elementKind) =
        helper       = helperName kind
        equalElement = helper "element_equal"
        equalList    = helper "equal"
-       elementEqual
-         | isWideBV elementKind                       = render $ wideBVEqual elementKind (text "left") (text "right")
-         | isFP elementKind                           = render $ arbitraryFPObjectEqual elementKind (text "left") (text "right")
-         | elementKind `elem` [KFloat, KDouble]       = render $ nativeFPObjectEqual (text "left") (text "right")
-         | isExactGMPKind cfg elementKind             = render $ gmpEqual elementKind (text "left") (text "right")
-         | True                                       = "left == right"
+       elementEqual = render $ byValueEqual cfg True elementKind (text "left") (text "right")
 
        exactContextParam
          | isExactGMPKind cfg elementKind = "sbv_gmp_ctx *exact_ctx, "

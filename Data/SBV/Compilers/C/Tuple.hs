@@ -15,6 +15,7 @@ module Data.SBV.Compilers.C.Tuple
   ( tupleKinds
   , tupleCType
   , tupleFieldName
+  , tupleForwardTypeDecls
   , tupleTypeDecls
   , tupleOwnershipTypeDecls
   , tupleOwnedInitName
@@ -43,7 +44,8 @@ import Data.SBV.Compilers.C.List       (listClone, listDriverClear, listDriverIn
 import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
 import Data.SBV.Compilers.C.Set        (setClone, setDriverClear, setDriverInit, setRelease, setUsesExact)
 import Data.SBV.Compilers.C.Text       (textClone)
-import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleCType)
+import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleCType, tupleFieldName)
+import Data.SBV.Compilers.C.Value      (valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds)
@@ -56,21 +58,40 @@ tupleKinds = sortOn tupleDepth . nub . concatMap (filter isTuple . expandKinds) 
        tupleDepth (KTuple fields) = 1 + maximum (0 : map tupleDepth fields)
        tupleDepth _               = 0
 
--- | Emit public structure declarations for all tuple kinds used by a program.
+-- | Emit forward declarations that permit collection descriptors to refer to
+-- tuple element types before their layouts are complete.
+tupleForwardTypeDecls :: [Kind] -> Doc
+tupleForwardTypeDecls []     = empty
+tupleForwardTypeDecls tuples = text . unlines $ "/* Forward declarations for structural tuples. */" : concatMap declaration tuples
+ where declaration kind@KTuple{} =
+         [ "#ifndef " ++ tupleForwardGuard kind
+         , "#define " ++ tupleForwardGuard kind
+         , "typedef struct " ++ tupleCType kind ++ " " ++ tupleCType kind ++ ";"
+         , "#endif"
+         , ""
+         ]
+       declaration kind = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
+
+-- | Emit public structure definitions for all tuple kinds used by a program.
 -- The unit tuple carries a private byte because ISO C does not permit empty
--- structures.
+-- structures. Each definition also provides its own guarded forward
+-- declaration so this function remains independently usable.
 tupleTypeDecls :: [Kind] -> Doc
 tupleTypeDecls []     = empty
 tupleTypeDecls tuples = text . unlines $ "/* Structural tuple values. */" : concatMap declaration tuples
  where declaration kind@(KTuple fields) =
             [ "#ifndef " ++ tupleGuard kind
             , "#define " ++ tupleGuard kind
-            , "typedef struct {"
+            , "#ifndef " ++ tupleForwardGuard kind
+            , "#define " ++ tupleForwardGuard kind
+            , "typedef struct " ++ tupleCType kind ++ " " ++ tupleCType kind ++ ";"
+            , "#endif"
+            , "struct " ++ tupleCType kind ++ " {"
             ]
          ++ (case fields of
                [] -> ["  uint8_t unit;"]
                _  -> zipWith fieldDeclaration [1 :: Int ..] fields)
-         ++ [ "} " ++ tupleCType kind ++ ";"
+         ++ [ "};"
             , "#endif"
             , ""
             ]
@@ -333,15 +354,8 @@ tupleUsesExact _   _             = False
 -- | Test whether a tuple contains a field that must be cloned when it crosses
 -- the generated function's ownership boundary.
 tupleNeedsOwnership :: CgConfig -> Kind -> Bool
-tupleNeedsOwnership cfg (KTuple fields) = any fieldNeedsOwnership fields
- where fieldNeedsOwnership fieldKind
-         | isExactGMPKind cfg fieldKind = True
-         | fieldKind == KString         = True
-         | isList fieldKind             = True
-         | isSet fieldKind              = True
-         | isTuple fieldKind            = tupleNeedsOwnership cfg fieldKind
-         | True                         = False
-tupleNeedsOwnership _ _ = False
+tupleNeedsOwnership cfg kind@KTuple{} = valueNeedsOwnership cfg kind
+tupleNeedsOwnership _   _             = False
 
 -- | Render a tuple expression from its field expressions.
 tupleValue :: Kind -> [Doc] -> Doc
@@ -354,12 +368,10 @@ tupleValue kind@(KTuple fieldKinds) fields
  where designatedFields = zipWith (\index field -> text "." P.<> text (tupleFieldName index) <+> text "=" <+> field) [1 :: Int ..] fields
 tupleValue kind _ = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
 
--- | Return the public member name used for a one-based tuple field index.
-tupleFieldName :: Int -> String
-tupleFieldName index
-  | index >= 1 = "field" ++ show index
-  | True       = error $ "SBV->C: Tuple fields are one-based, received " ++ show index
-
--- | Return the preprocessor guard protecting one tuple declaration.
+-- | Return the preprocessor guard protecting one tuple definition.
 tupleGuard :: Kind -> String
 tupleGuard kind = map toUpper (tupleCType kind) ++ "_DEFINED"
+
+-- | Return the preprocessor guard protecting one tuple forward declaration.
+tupleForwardGuard :: Kind -> String
+tupleForwardGuard kind = map toUpper (tupleCType kind) ++ "_FORWARD_DEFINED"

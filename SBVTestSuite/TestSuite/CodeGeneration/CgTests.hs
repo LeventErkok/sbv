@@ -115,6 +115,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "return string tuples from a generated library" ownedTextTupleLibrary
   , testCase "compile and execute tuples containing collections" ownedCollectionTuples
   , testCase "return collection tuples from a generated library" ownedCollectionTupleLibrary
+  , testCase "compile tuple-valued symbolic collections" tupleValuedCollections
+  , testCase "return tuple-valued collections from a library" tupleValuedCollectionLibrary
   , testCase "compile and execute characters and strings" characterStrings
   , testCase "compile strings with mapped integers" mappedIntegerStrings
   , testCase "return owned strings from a generated library" ownedStringLibrary
@@ -1270,6 +1272,62 @@ ownedCollectionTupleLibrary = withSystemTempDirectory "sbv-owned-collection-tupl
                                 (fragment `isInfixOf` stdoutText))
     [ "([3, 4, 5, 9], {4, 5, 6, 9})"
     , "([5, 6, 7, 10], {6, 7, 8, 10})"
+    ]
+
+-- | Exercise sequence and finite-set operations over recursively nested,
+-- by-value tuple elements and return both descriptors through an owned tuple.
+tupleValuedCollections :: Assertion
+tupleValuedCollections = withSystemTempDirectory "sbv-tuple-valued-collections" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 4]
+        values  <- cgInput "values"  :: SBVCodeGen (SList (Word16, Word8))
+        members <- cgInput "members" :: SBVCodeGen (SSet (Word16, Word8))
+        let extra    = tuple (literal 9 :: SWord16, literal 10 :: SWord8)
+            joined   = values SL.++ SL.singleton extra
+            inserted = SS.insert extra members
+        cgOutput "listSameObject" (values .=== values)
+        cgOutput "containsExtra" (extra `SS.member` inserted)
+        cgOutput "joined" joined
+        cgOutput "inserted" inserted
+        cgReturn (tuple (joined, inserted))
+
+  stdoutText <- compileProgramAndRunGenerated dir "tupleValuedCollections" program
+  headerText <- readFile (dir </> "tupleValuedCollections.h")
+  mapM_ (\fragment -> assertBool ("Expected tuple-valued collection output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "listSameObject = 1"
+    , "containsExtra = 1"
+    , "joined =[(0x0001U, 2), (0x0002U, 3), (0x0003U, 4), (0x0009U, 10)]"
+    , "inserted ={(0x0004U, 5), (0x0005U, 6), (0x0006U, 7), (0x0009U, 10)}"
+    ]
+  assertBool "Expected tuple forward declarations before collection descriptors"
+             ("typedef struct SBVTuple_" `isInfixOf` headerText
+           && "const SBVTuple_" `isInfixOf` headerText)
+
+-- | Exercise guarded tuple-element list and set descriptors shared by
+-- multiple generated library translation units.
+tupleValuedCollectionLibrary :: Assertion
+tupleValuedCollectionLibrary = withSystemTempDirectory "sbv-tuple-valued-collection-library" $ \dir -> do
+  let component :: Integer -> Word16 -> Word8 -> SBVCodeGen ()
+      component seed first second = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed, seed + 3]
+        values  <- cgInput "values"  :: SBVCodeGen (SList (Word16, Word8))
+        members <- cgInput "members" :: SBVCodeGen (SSet (Word16, Word8))
+        let extra = tuple (literal first, literal second)
+        cgReturn (tuple (values SL.++ SL.singleton extra, SS.insert extra members))
+
+  (_, cfg, bundle) <- compileToCLib' "tupleValuedCollectionLibrary"
+    [ ("firstTupleCollections",  component 1 9 10)
+    , ("secondTupleCollections", component 2 10 11)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "tupleValuedCollectionLibrary"
+  mapM_ (\fragment -> assertBool ("Expected tuple-valued collection library output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "[(0x0001U, 2), (0x0002U, 3), (0x0003U, 4), (0x0009U, 10)]"
+    , "[(0x0002U, 3), (0x0003U, 4), (0x0004U, 5), (0x000aU, 11)]"
     ]
 
 -- | Exercise parameter substitution, constructors, tests, accessors,

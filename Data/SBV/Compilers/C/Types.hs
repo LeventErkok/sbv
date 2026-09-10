@@ -13,6 +13,7 @@
 
 module Data.SBV.Compilers.C.Types
   ( tupleCType
+  , tupleFieldName
   , elementCType
   , kindTag
   ) where
@@ -24,6 +25,12 @@ import Data.SBV.Core.Data
 tupleCType :: Kind -> String
 tupleCType kind@KTuple{} = "SBVTuple_" ++ kindTag kind
 tupleCType kind          = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
+
+-- | Return the public member name used for a one-based tuple field index.
+tupleFieldName :: Int -> String
+tupleFieldName index
+  | index >= 1 = "field" ++ show index
+  | True       = error $ "SBV->C: Tuple fields are one-based, received " ++ show index
 
 -- | Return the public C type used for a structurally lowered field or element.
 elementCType :: Kind -> String

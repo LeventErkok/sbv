@@ -17,6 +17,7 @@ module Data.SBV.Compilers.C.Set
   , setUsesExact
   , setCType
   , setTypeDecls
+  , setOwnershipTypeDecls
   , setRuntime
   , setConst
   , setExpr
@@ -39,11 +40,10 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
-import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
-import Data.SBV.Compilers.C.FP         (arbitraryFPObjectEqual, nativeFPObjectEqual)
-import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, gmpEqual, isExactGMPKind)
+import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
+import Data.SBV.Compilers.C.Value      (byValueEqual, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds)
@@ -55,17 +55,24 @@ setKinds = nub . concatMap (filter isSet . expandKinds) . Set.toAscList
 
 -- | Test whether a set element kind has a supported C representation.
 setSupported :: CgConfig -> Kind -> Bool
-setSupported _ (KSet elementKind) = supportedElement elementKind
- where supportedElement KBool       = True
-       supportedElement KBounded{}  = True
-       supportedElement KFloat      = True
-       supportedElement KDouble     = True
-       supportedElement KChar       = True
-       supportedElement KFP{}       = True
-       supportedElement KUnbounded  = True
-       supportedElement KReal       = True
-       supportedElement KRational   = True
-       supportedElement kind        = isRoundingMode kind
+setSupported cfg (KSet elementKind) = supportedElement elementKind
+ where supportedElement KBool          = True
+       supportedElement KBounded{}     = True
+       supportedElement KFloat         = True
+       supportedElement KDouble        = True
+       supportedElement KChar          = True
+       supportedElement KFP{}          = True
+       supportedElement KUnbounded     = True
+       supportedElement KReal          = True
+       supportedElement KRational      = True
+       supportedElement (KTuple kinds) = all supportedTupleField kinds
+       supportedElement kind           = isRoundingMode kind
+
+       supportedTupleField tupleKind@(KTuple kinds) = not (valueNeedsOwnership cfg tupleKind)
+                                                    && all supportedTupleField kinds
+       supportedTupleField kind
+         | valueNeedsOwnership cfg kind = False
+         | True                         = supportedElement kind
 setSupported _ _ = False
 
 -- | Test whether a set stores exact GMP-backed elements.
@@ -78,9 +85,9 @@ setCType :: Kind -> String
 setCType kind@KSet{} = elementCType kind
 setCType kind        = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
--- | Emit finite/cofinite set descriptors and their public ownership helpers.
--- Inputs borrow their arrays and may contain duplicates; generated functions
--- normalize them. Output and return descriptors own their arrays.
+-- | Emit finite/cofinite set descriptors and ownership-helper prototypes.
+-- Aggregate element layouts may remain incomplete here; helper definitions
+-- are emitted later by 'setOwnershipTypeDecls'.
 setTypeDecls :: CgConfig -> [Kind] -> Doc
 setTypeDecls cfg kinds
   | null kinds = empty
@@ -104,6 +111,30 @@ setTypeDecls cfg kinds
            in [ "#ifndef " ++ setGuard kind
               , "#define " ++ setGuard kind
               , "typedef struct { const " ++ elementType ++ " *data; size_t length; bool is_complement; } " ++ cType ++ ";"
+              , "static inline SBV_CGEN_UNUSED " ++ cType ++ " " ++ cloneName ++ "(" ++ cType ++ " value);"
+              , "static inline SBV_CGEN_UNUSED void " ++ releaseName ++ "(" ++ cType ++ " *value);"
+              , "#endif"
+              , ""
+              ]
+         | True
+         = error $ "SBV->C: Unsupported set element kind: " ++ show elementKind
+       declaration kind = error $ "SBV->C: Expected a set kind, received " ++ show kind
+
+-- | Emit set clone and release definitions after aggregate element layouts
+-- are complete. Inputs borrow arrays that may contain duplicates; outputs and
+-- returns own their cloned arrays.
+setOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
+setOwnershipTypeDecls cfg kinds
+  | null kinds = empty
+  | True       = text . unlines $ concatMap declaration kinds
+ where declaration kind@(KSet elementKind)
+         | setSupported cfg kind
+         = let cType       = setCType kind
+               elementType = setElementCType elementKind
+               cloneName    = setCloneName kind
+               releaseName  = setReleaseName kind
+           in [ "#ifndef " ++ setOwnershipGuard kind
+              , "#define " ++ setOwnershipGuard kind
               , "static inline SBV_CGEN_UNUSED " ++ cType ++ " " ++ cloneName ++ "(" ++ cType ++ " value)"
               , "{"
               , "  " ++ elementType ++ " *copy = NULL;"
@@ -358,6 +389,10 @@ setElementTag kind  = kindTag kind
 setGuard :: Kind -> String
 setGuard kind = "SBV_SET_" ++ map toUpper (setElementTag (setElementKind kind)) ++ "_DEFINED"
 
+-- | Return the preprocessor guard for one set ownership-helper definition.
+setOwnershipGuard :: Kind -> String
+setOwnershipGuard kind = "SBV_SET_" ++ map toUpper (setElementTag (setElementKind kind)) ++ "_OWNERSHIP_DEFINED"
+
 -- | Return the generated clone-helper name for a set kind.
 setCloneName :: Kind -> String
 setCloneName kind = "sbv_set_clone_" ++ setElementTag (setElementKind kind)
@@ -486,12 +521,7 @@ setKindRuntime cfg kind@(KSet elementKind) =
        helper       = helperName kind
        equalElement = helper "element_equal"
 
-       elementEqual
-         | isWideBV elementKind                 = render $ wideBVEqual elementKind (text "left") (text "right")
-         | isFP elementKind                     = render $ arbitraryFPObjectEqual elementKind (text "left") (text "right")
-         | elementKind `elem` [KFloat, KDouble] = render $ nativeFPObjectEqual (text "left") (text "right")
-         | isExactGMPKind cfg elementKind       = render $ gmpEqual elementKind (text "left") (text "right")
-         | True                                 = "left == right"
+       elementEqual = render $ byValueEqual cfg True elementKind (text "left") (text "right")
 
        domainRuntime =
          [ "static bool " ++ helper "domain_covered" ++ "(" ++ setType ++ " left, " ++ setType ++ " right)"
@@ -573,6 +603,10 @@ elementDomainSize KChar              = Just 0x30000
 elementDomainSize (KFP eb sb)
   | eb + sb <= 64                    = Just (2 ^ (eb + sb) - 2 ^ sb + 3)
   | True                             = Nothing
+elementDomainSize (KTuple kinds)     = do
+  sizes <- mapM elementDomainSize kinds
+  let total = product sizes
+  if total <= 2 ^ (64 :: Int) - 1 then Just total else Nothing
 elementDomainSize kind
   | isRoundingMode kind              = Just 5
   | True                             = Nothing

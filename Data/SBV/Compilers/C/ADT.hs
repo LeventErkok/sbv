@@ -48,13 +48,12 @@ import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.List       (listClone, listDriverClear, listDriverInit, listEqual, listRelease, listUsesExact)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
 import Data.SBV.Compilers.C.Set        (setClone, setDriverClear, setDriverInit, setEqual, setRelease, setUsesExact)
-import Data.SBV.Compilers.C.Tuple      ( tupleFieldName
-                                       , tupleOwnedInitName
+import Data.SBV.Compilers.C.Tuple      ( tupleOwnedInitName
                                        , tupleOwnedReleaseName
                                        , tupleOwnedSetName
                                        , tupleNeedsOwnership
                                        )
-import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
+import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleFieldName)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds, substituteADTVars)
