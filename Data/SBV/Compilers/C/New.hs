@@ -892,8 +892,6 @@ genCProg cfg adts lists sets fn proto
   = notyet "Lists nested in arrays or unsupported aggregate types"
   | any assignmentUsesText lambdaAssignments
   = notyet "Characters or strings in array lambdas"
-  | any containsNestedText kindInfo
-  = notyet "Characters or strings nested in arrays, tuples, or algebraic data types"
   | not (null usorts)
   = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
   | hasQuants pinfo
@@ -1006,14 +1004,6 @@ genCProg cfg adts lists sets fn proto
 
        usesGMP          = any (isExactGMPKind cfg) kindInfo
        usesExactInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kindInfo
-
-       containsNestedText (KTuple fields) = any containsNestedText fields
-       containsNestedText (KArray keyKind valueKind) = containsNestedText keyKind || containsNestedText valueKind
-       containsNestedText KList{}         = False
-       containsNestedText KSet{}          = False
-       containsNestedText KChar           = False
-       containsNestedText KString         = False
-       containsNestedText kind            = any (`elem` [KChar, KString]) (expandKinds kind)
 
        containsNestedList = containsUnsupportedCollection isList
 

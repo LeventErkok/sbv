@@ -69,6 +69,7 @@ import Data.SBV.Compilers.C.Tuple      ( tupleOwnedInitName
                                        , tupleNeedsOwnership
                                        )
 import Data.SBV.Compilers.C.Types      (adtCType, elementCType, tupleFieldName)
+import Data.SBV.Compilers.C.Value      (byValueEqual, managedValueClone, managedValueRelease, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds, substituteADTVars)
@@ -373,6 +374,10 @@ adtOwnershipTypeDecls cfg adts
               , "      " ++ exactInit fieldKind ++ "(" ++ local ++ ");"
               , "      " ++ access ++ " = " ++ local ++ ";"
               ]
+         | fieldKind == KString
+         = [ "      " ++ ownedField "value->" constructorIndex fieldIndex
+          ++ " = (SString) {NULL, 0, 0};"
+           ]
          | isList fieldKind
          = [ "      " ++ ownedField "value->" constructorIndex fieldIndex
           ++ " = (" ++ elementCType fieldKind ++ ") {NULL, 0};"
@@ -410,6 +415,12 @@ adtOwnershipTypeDecls cfg adts
          = [ "      " ++ exactSet fieldKind
           ++ "((" ++ exactMutableType fieldKind ++ ") " ++ target ++ ", " ++ source ++ ");"
            ]
+         | fieldKind == KString
+         = [ "      const SString " ++ copy
+          ++ " = " ++ render (managedValueClone fieldKind (text source)) ++ ";"
+           , "      " ++ render (managedValueRelease fieldKind (text ("&" ++ target)))
+           , "      " ++ target ++ " = " ++ copy ++ ";"
+           ]
          | isList fieldKind
          = [ "      const " ++ elementCType fieldKind ++ " " ++ copy
           ++ " = " ++ render (listClone fieldKind (text source)) ++ ";"
@@ -446,6 +457,8 @@ adtOwnershipTypeDecls cfg adts
            , "        free((void *) " ++ access ++ ");"
            , "      }"
            ]
+         | fieldKind == KString
+         = ["      " ++ render (managedValueRelease fieldKind (text ("&" ++ access)))]
          | isList fieldKind
          = ["      " ++ render (listRelease fieldKind (text access))]
          | isSet fieldKind
@@ -545,6 +558,8 @@ adtDriverInit cfg adts renderValue kind externalName seed
            ++ assignConstructor nestedDepth fieldKind dereferenced (accessName ++ "_recursive") nestedIndex nestedFields fieldSeed
          | isExactGMPKind cfg fieldKind
          = exactAssignments fieldKind access fieldSeed
+         | fieldKind == KString
+         = [access <+> text "=" <+> managedValueClone fieldKind (renderValue fieldKind fieldSeed) P.<> semi]
          | isList fieldKind
          = collectionAssignment listNeedsDriverInit listDriverInit listDriverClear listClone
          | isSet fieldKind
@@ -739,11 +754,8 @@ adtNeedsOwnership cfg adts = needsOwnership Set.empty
         where next = Set.insert kind visited
               fieldNeedsOwnership (ADTField _         True)  = True
               fieldNeedsOwnership (ADTField fieldKind False)
-                | isConcreteADT fieldKind           = needsOwnership next fieldKind
-                | tupleNeedsOwnership cfg fieldKind = True
-                | isList fieldKind                  = True
-                | isSet fieldKind                   = True
-                | True                              = False
+                | isConcreteADT fieldKind = needsOwnership next fieldKind
+                | True                    = valueNeedsOwnership cfg fieldKind
 
 -- | Construct a deterministic driver value, choosing a constructor from the
 -- supplied integer and delegating field values to the caller.
@@ -906,6 +918,7 @@ adtFieldEqual cfg adts strong kind left right
   | isFP kind                                  = arbitraryFPEqual kind left right
   | strong && (isFloat kind || isDouble kind) = nativeFPObjectEqual left right
   | isExactGMPKind cfg kind                    = adtExactEqual kind left right
+  | kind == KString                            = byValueEqual cfg strong kind left right
   | isList kind                                = listEqual kind left right
   | isSet kind                                 = setEqual kind left right
   | KTuple fields <- kind                      = tupleEqual cfg adts strong fields left right

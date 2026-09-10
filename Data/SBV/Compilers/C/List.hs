@@ -71,6 +71,7 @@ listSupported _ (KList elementKind) = supportedElement elementKind
        supportedElement KFloat         = True
        supportedElement KDouble        = True
        supportedElement KChar          = True
+       supportedElement KString        = True
        supportedElement KFP{}          = True
        supportedElement KUnbounded     = True
        supportedElement KReal          = True

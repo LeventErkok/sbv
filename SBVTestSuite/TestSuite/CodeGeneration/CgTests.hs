@@ -81,13 +81,17 @@ data CodeGenCollections = CGNoCollections
 -- without relying on exact-element storage to select the owned ABI.
 data CodeGenNativeCollections = CGNativeCollections [Word16] (RCSet Word16) deriving Show
 
+-- | A managed aggregate used to exercise direct text fields and collections
+-- whose elements are strings.
+data CodeGenText = CGText String [String] (RCSet String) deriving Show
+
 -- | A recursive managed aggregate whose leaf owns exact-element collections.
 data CodeGenCollectionTree = CGCollectionLeaf [Integer] (RCSet Rational)
                            | CGCollectionBranch CodeGenCollectionTree
                            deriving Show
 
 -- | Generate the symbolic interfaces for the code-generation ADTs.
-mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop, ''CodeGenCollections, ''CodeGenNativeCollections, ''CodeGenCollectionTree]
+mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop, ''CodeGenCollections, ''CodeGenNativeCollections, ''CodeGenText, ''CodeGenCollectionTree]
 
 -- | Code-generation tests.
 tests :: TestTree
@@ -123,6 +127,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "return tuple-valued collections from a library" tupleValuedCollectionLibrary
   , testCase "compile managed tuple-valued collections" managedTupleValuedCollections
   , testCase "return managed tuple-valued collections from a library" managedTupleValuedCollectionLibrary
+  , testCase "compile string-valued collections and text ADTs" textAggregateCollections
+  , testCase "return text ADTs from a library" textAggregateLibrary
   , testCase "compile ADT-valued collections" adtValuedCollections
   , testCase "return ADT-valued collections from a library" adtValuedCollectionLibrary
   , testCase "compile and execute characters and strings" characterStrings
@@ -1572,6 +1578,80 @@ managedTupleValuedCollectionLibrary = withSystemTempDirectory "sbv-managed-tuple
                                 (fragment `isInfixOf` stdoutText))
     [ "[(sbv1, 2), (sbv2, 3), (sbv3, 4), (first, 9)]"
     , "[(sbv2, 3), (sbv3, 4), (sbv4, 5), (second, 10)]"
+    ]
+
+-- | Exercise string-valued symbolic collections and ADTs with direct string,
+-- list-of-string, and set-of-string fields through operations and owned ABI
+-- results.
+textAggregateCollections :: Assertion
+textAggregateCollections = withSystemTempDirectory "sbv-text-aggregate-collections" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 4, 6]
+        values  <- cgInput "values"  :: SBVCodeGen (SList String)
+        members <- cgInput "members" :: SBVCodeGen (SSet String)
+        source  <- cgInput "source"  :: SBVCodeGen SCodeGenText
+        let extra         = literal "extra" :: SString
+            sourceName    = getCGText_1 source
+            sourceValues  = getCGText_2 source
+            sourceMembers = getCGText_3 source
+            joined        = values SL.++ SL.singleton extra
+            inserted      = SS.insert extra members
+            result        = sCGText
+                              (sourceName SL.++ literal "!")
+                              (sourceValues SL.++ SL.singleton extra)
+                              (SS.insert extra sourceMembers)
+        cgOutput "sameValues" (values .=== values)
+        cgOutput "sameMembers" (members .=== members)
+        cgOutput "sameSource" (source .== source)
+        cgOutput "containsExtra" (extra `SS.member` inserted)
+        cgOutput "joined" joined
+        cgOutput "inserted" inserted
+        cgOutput "result" result
+        cgReturn result
+
+  stdoutText <- compileProgramAndRunGenerated dir "textAggregateCollections" program
+  headerText <- readFile (dir </> "textAggregateCollections.h")
+  mapM_ (\fragment -> assertBool ("Expected text-aggregate output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "sameValues = 1"
+    , "sameMembers = 1"
+    , "sameSource = 1"
+    , "containsExtra = 1"
+    , "joined =[sbv1, sbv2, sbv3, extra]"
+    , "inserted ={sbv4, sbv5, sbv6, extra}"
+    , "CGText(sbv6!, [sbv7, sbv8, sbv9, extra], {sbv8, sbv9, sbv10, extra})"
+    ]
+  assertBool "Expected ownership to recurse through direct and collection text fields"
+             (    "const SString *data; size_t length; } SBVList_string" `isInfixOf` headerText
+              && "const SString *data; size_t length; bool is_complement; } SBVSet_string" `isInfixOf` headerText
+              && "sbv_string_clone(source.payload.constructor1.field1)" `isInfixOf` headerText
+              && "sbv_string_release(&value->payload.constructor1.field1)" `isInfixOf` headerText
+              && "sbv_list_clone_string(source.payload.constructor1.field2)" `isInfixOf` headerText
+              && "sbv_set_clone_string(source.payload.constructor1.field3)" `isInfixOf` headerText
+             )
+
+-- | Exercise independently owned text-containing ADT results emitted by
+-- multiple generated library translation units.
+textAggregateLibrary :: Assertion
+textAggregateLibrary = withSystemTempDirectory "sbv-text-aggregate-library" $ \dir -> do
+  let component :: Integer -> SBVCodeGen ()
+      component seed = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        source <- cgInput "source" :: SBVCodeGen SCodeGenText
+        cgReturn source
+
+  (_, cfg, bundle) <- compileToCLib' "textAggregateLibrary"
+    [ ("firstTextAggregate",  component 2)
+    , ("secondTextAggregate", component 4)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "textAggregateLibrary"
+  mapM_ (\fragment -> assertBool ("Expected text-aggregate library output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "CGText(sbv2, [sbv3, sbv4, sbv5], {sbv4, sbv5, sbv6})"
+    , "CGText(sbv4, [sbv5, sbv6, sbv7], {sbv6, sbv7, sbv8})"
     ]
 
 -- | Exercise lists and sets whose elements are managed or recursive ADTs,
