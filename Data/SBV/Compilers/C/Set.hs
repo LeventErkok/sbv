@@ -42,7 +42,7 @@ import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, gmpEqual, isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
-import Data.SBV.Compilers.C.Tuple      (elementCType, kindTag)
+import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds)
@@ -74,8 +74,8 @@ setUsesExact _   _                  = False
 
 -- | Return the public C descriptor type for a symbolic-set kind.
 setCType :: Kind -> String
-setCType (KSet elementKind) = "SBVSet_" ++ setElementTag elementKind
-setCType kind               = error $ "SBV->C: Expected a set kind, received " ++ show kind
+setCType kind@KSet{} = elementCType kind
+setCType kind        = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
 -- | Emit finite/cofinite set descriptors and their public ownership helpers.
 -- Inputs borrow their arrays and may contain duplicates; generated functions
@@ -209,6 +209,8 @@ setExpr :: CgConfig -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 setExpr cfg op svs resultKind args
   | not touchesSet = Nothing
   | True           = case (op, args) of
+      (TupleConstructor{}            , _        ) -> Nothing
+      (TupleAccess{}                 , _        ) -> Nothing
       (Label _                       , [a]      ) -> lower a
       (Ite                           , [c, a, b]) -> lower $ c <+> text "?" <+> a <+> text ":" <+> b
       (Equal _                       , [a, b]   ) -> lower $ call (helper "equal") [a, b]

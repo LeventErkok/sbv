@@ -876,7 +876,7 @@ genCProg cfg adts lists sets fn proto
   | any assignmentUsesSet lambdaAssignments
   = notyet "Sets in array lambdas"
   | any containsNestedSet kindInfo
-  = notyet "Sets nested in arrays, tuples, or algebraic data types"
+  = notyet "Sets nested in arrays or algebraic data types"
   | not (null unsupportedLists)
   = notyet $ "Lists with element kinds " ++ intercalate ", " (map (show . listElementKind) unsupportedLists)
   | any tableUsesList tbls
@@ -884,7 +884,7 @@ genCProg cfg adts lists sets fn proto
   | any assignmentUsesList lambdaAssignments
   = notyet "Lists in array lambdas"
   | any containsNestedList kindInfo
-  = notyet "Lists nested in arrays, tuples, or algebraic data types"
+  = notyet "Lists nested in arrays or algebraic data types"
   | any tableUsesText tbls
   = notyet "Characters or strings in tables"
   | any assignmentUsesText lambdaAssignments
@@ -1007,11 +1007,13 @@ genCProg cfg adts lists sets fn proto
        containsNestedText KString         = False
        containsNestedText kind            = any (`elem` [KChar, KString]) (expandKinds kind)
 
-       containsNestedList KList{} = False
-       containsNestedList kind    = any isList (expandKinds kind)
+       containsNestedList (KTuple fields) = any containsNestedList fields
+       containsNestedList KList{}         = False
+       containsNestedList kind            = any isList (expandKinds kind)
 
-       containsNestedSet KSet{} = False
-       containsNestedSet kind   = any isSet (expandKinds kind)
+       containsNestedSet (KTuple fields) = any containsNestedSet fields
+       containsNestedSet KSet{}          = False
+       containsNestedSet kind            = any isSet (expandKinds kind)
 
        tableUsesText ((_, keyKind, valueKind), _) = keyKind `elem` [KChar, KString]
                                                  || valueKind `elem` [KChar, KString]

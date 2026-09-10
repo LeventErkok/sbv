@@ -98,6 +98,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile repeated tuple types into a library" structuralTupleLibrary
   , testCase "compile and execute tuples containing strings" ownedTextTuples
   , testCase "return string tuples from a generated library" ownedTextTupleLibrary
+  , testCase "compile and execute tuples containing collections" ownedCollectionTuples
+  , testCase "return collection tuples from a generated library" ownedCollectionTupleLibrary
   , testCase "compile and execute characters and strings" characterStrings
   , testCase "compile strings with mapped integers" mappedIntegerStrings
   , testCase "return owned strings from a generated library" ownedStringLibrary
@@ -1197,6 +1199,59 @@ ownedTextTupleLibrary = withSystemTempDirectory "sbv-owned-text-tuple-library" $
                                 (fragment `isInfixOf` stdoutText))
     [ "(sbv4!, 9)"
     , "(sbv5?, 8)"
+    ]
+
+-- | Exercise recursively nested tuple ownership across strings, exact-element
+-- lists, and exact-element finite sets.
+ownedCollectionTuples :: Assertion
+ownedCollectionTuples = withSystemTempDirectory "sbv-owned-collection-tuples" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [10]
+        source <- cgInput "source" :: SBVCodeGen (SBV (String, ([Integer], RCSet Rational)))
+        let (prefix, nested)  = untuple source
+            (values, members) = untuple nested
+            result            = tuple (prefix SL.++ literal "!", tuple (values SL.++ literal ([14] :: [Integer]), SS.insert 15 members))
+        cgOutput "sourceCopy" source
+        cgOutput "result" result
+        cgReturn result
+
+  stdoutText <- compileProgramAndRunGenerated dir "ownedCollectionTuples" program
+  headerText <- readFile (dir </> "ownedCollectionTuples.h")
+  mapM_ (\fragment -> assertBool ("Expected owned collection-tuple output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") =(sbv10!, ([11, 12, 13, 14], {12, 13, 14, 15}))"
+    , "sourceCopy =(sbv10, ([11, 12, 13], {12, 13, 14}))"
+    , "result =(sbv10!, ([11, 12, 13, 14], {12, 13, 14, 15}))"
+    ]
+  assertBool "Expected recursive collection ownership in generated tuple helpers"
+             ("sbv_list_clone_integer(source.field1)" `isInfixOf` headerText
+           && "sbv_list_release_integer(&value->field1)" `isInfixOf` headerText
+           && "sbv_set_clone_rational(source.field2)" `isInfixOf` headerText
+           && "sbv_set_release_rational(&value->field2)" `isInfixOf` headerText)
+
+-- | Exercise guarded collection-tuple declarations and exact-element
+-- ownership helpers shared by multiple generated library translation units.
+ownedCollectionTupleLibrary :: Assertion
+ownedCollectionTupleLibrary = withSystemTempDirectory "sbv-owned-collection-tuple-library" $ \dir -> do
+  let component :: Integer -> Integer -> SBVCodeGen ()
+      component seed extra = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        source <- cgInput "source" :: SBVCodeGen (SBV ([Integer], RCSet Rational))
+        let (values, members) = untuple source
+        cgReturn (tuple (values SL.++ literal [extra], SS.insert (fromInteger extra) members))
+
+  (_, cfg, bundle) <- compileToCLib' "ownedCollectionTupleLibrary"
+    [ ("firstCollectionTuple",  component 3 9)
+    , ("secondCollectionTuple", component 5 10)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "ownedCollectionTupleLibrary"
+  mapM_ (\fragment -> assertBool ("Expected collection-tuple library output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "([3, 4, 5, 9], {4, 5, 6, 9})"
+    , "([5, 6, 7, 10], {6, 7, 8, 10})"
     ]
 
 -- | Exercise parameter substitution, constructors, tests, accessors,

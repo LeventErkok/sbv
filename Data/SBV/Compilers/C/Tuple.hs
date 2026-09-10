@@ -38,10 +38,12 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
-import Data.SBV.Compilers.C.FP         (arbitraryFPCType)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
+import Data.SBV.Compilers.C.List       (listClone, listDriverClear, listDriverInit, listRelease, listUsesExact)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Set        (setClone, setDriverClear, setDriverInit, setRelease, setUsesExact)
 import Data.SBV.Compilers.C.Text       (textClone)
+import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleCType)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds)
@@ -53,11 +55,6 @@ tupleKinds = sortOn tupleDepth . nub . concatMap (filter isTuple . expandKinds) 
  where tupleDepth :: Kind -> Int
        tupleDepth (KTuple fields) = 1 + maximum (0 : map tupleDepth fields)
        tupleDepth _               = 0
-
--- | Return the public C structure type used for a tuple kind.
-tupleCType :: Kind -> String
-tupleCType kind@KTuple{} = "SBVTuple_" ++ kindTag kind
-tupleCType kind          = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
 
 -- | Emit public structure declarations for all tuple kinds used by a program.
 -- The unit tuple carries a private byte because ISO C does not permit empty
@@ -81,10 +78,10 @@ tupleTypeDecls tuples = text . unlines $ "/* Structural tuple values. */" : conc
 
        fieldDeclaration index kind = "  " ++ elementCType kind ++ " " ++ tupleFieldName index ++ ";"
 
--- | Emit public ownership helpers for tuples containing exact GMP-backed or
--- string fields. Inputs may borrow an ordinary tuple value. Cloned values own
--- their recursively managed fields and must be released with
--- 'tupleOwnedReleaseName'.
+-- | Emit public ownership helpers for tuples containing exact GMP-backed,
+-- string, list, or set fields. Inputs may borrow an ordinary tuple value.
+-- Cloned values own their recursively managed fields and must be released
+-- with 'tupleOwnedReleaseName'.
 tupleOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
 tupleOwnershipTypeDecls cfg tuples
   | null owned = empty
@@ -142,6 +139,10 @@ tupleOwnershipTypeDecls cfg tuples
                        ]
                   | fieldKind == KString
                   = ["  value->" ++ tupleFieldName index ++ " = (SString) {NULL, 0, 0};"]
+                  | isList fieldKind
+                  = ["  value->" ++ tupleFieldName index ++ " = (" ++ elementCType fieldKind ++ ") {NULL, 0};"]
+                  | isSet fieldKind
+                  = ["  value->" ++ tupleFieldName index ++ " = (" ++ elementCType fieldKind ++ ") {NULL, 0, false};"]
                   | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
                   = ["  " ++ tupleOwnedInitName fieldKind ++ "(&value->" ++ tupleFieldName index ++ ");"]
                   | True
@@ -153,6 +154,16 @@ tupleOwnershipTypeDecls cfg tuples
                   | fieldKind == KString
                   = [ "  const SString " ++ field ++ "_copy = sbv_string_clone(source." ++ field ++ ");"
                     , "  sbv_string_release(&target->" ++ field ++ ");"
+                    , "  target->" ++ field ++ " = " ++ field ++ "_copy;"
+                    ]
+                  | isList fieldKind
+                  = [ "  const " ++ elementCType fieldKind ++ " " ++ field ++ "_copy = " ++ render (listClone fieldKind (text ("source." ++ field))) ++ ";"
+                    , "  " ++ render (listRelease fieldKind (text ("target->" ++ field)))
+                    , "  target->" ++ field ++ " = " ++ field ++ "_copy;"
+                    ]
+                  | isSet fieldKind
+                  = [ "  const " ++ elementCType fieldKind ++ " " ++ field ++ "_copy = " ++ render (setClone fieldKind (text ("source." ++ field))) ++ ";"
+                    , "  " ++ render (setRelease fieldKind (text ("target->" ++ field)))
                     , "  target->" ++ field ++ " = " ++ field ++ "_copy;"
                     ]
                   | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
@@ -170,6 +181,10 @@ tupleOwnershipTypeDecls cfg tuples
                     ]
                   | fieldKind == KString
                   = ["  sbv_string_release(&value->" ++ field ++ ");"]
+                  | isList fieldKind
+                  = ["  " ++ render (listRelease fieldKind (text ("value->" ++ field)))]
+                  | isSet fieldKind
+                  = ["  " ++ render (setRelease fieldKind (text ("value->" ++ field)))]
                   | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
                   = ["  " ++ tupleOwnedReleaseName fieldKind ++ "(&value->" ++ field ++ ");"]
                   | True
@@ -197,8 +212,8 @@ tupleOwnershipTypeDecls cfg tuples
          | isExactGMPKind cfg fieldKind = "mpq_clear"
        exactClear kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
 
--- | Return the helper name that initializes caller-owned storage for an exact
--- tuple.
+-- | Return the helper name that initializes caller-owned storage for a tuple
+-- with recursively managed fields.
 tupleOwnedInitName :: Kind -> String
 tupleOwnedInitName kind = "sbv_tuple_owned_init_" ++ kindTag kind
 
@@ -206,11 +221,11 @@ tupleOwnedInitName kind = "sbv_tuple_owned_init_" ++ kindTag kind
 tupleOwnedSetName :: Kind -> String
 tupleOwnedSetName kind = "sbv_tuple_owned_set_" ++ kindTag kind
 
--- | Return the public helper name that deep-copies an exact-field tuple.
+-- | Return the public helper name that deep-copies a managed-field tuple.
 tupleOwnedCloneName :: Kind -> String
 tupleOwnedCloneName kind = "sbv_tuple_owned_clone_" ++ kindTag kind
 
--- | Return the public helper name that releases an owned exact-field tuple.
+-- | Return the public helper name that releases an owned managed-field tuple.
 tupleOwnedReleaseName :: Kind -> String
 tupleOwnedReleaseName kind = "sbv_tuple_owned_release_" ++ kindTag kind
 
@@ -222,22 +237,36 @@ tupleDriverInit cfg renderValue kind@(KTuple fields) externalName seed =
      text (tupleCType kind) <+> text externalName P.<> semi
   $$ text (tupleOwnedInitName kind) P.<> parens (text "&" P.<> text externalName) P.<> semi
   $$ vcat (concat (zipWith assignField [1 :: Int ..] (zip fields [seed ..])))
- where assignField index (fieldKind, fieldSeed) = assignAt fieldKind access fieldSeed
-        where access = text externalName P.<> text "." P.<> text (tupleFieldName index)
+ where assignField index (fieldKind, fieldSeed) = assignAt fieldKind access fieldName fieldSeed
+        where fieldName = externalName ++ "_field_" ++ show index
+              access    = text externalName P.<> text "." P.<> text (tupleFieldName index)
 
-       assignAt fieldKind access fieldSeed
+       assignAt fieldKind access fieldName fieldSeed
          | isExactGMPKind cfg fieldKind
          = exactAssignments fieldKind access fieldSeed
          | fieldKind == KString
          = [access <+> text "=" <+> textClone (renderValue fieldKind fieldSeed) P.<> semi]
+         | isList fieldKind
+         = collectionAssignment listUsesExact listDriverInit listDriverClear listClone
+         | isSet fieldKind
+         = collectionAssignment setUsesExact setDriverInit setDriverClear setClone
          | nested@(KTuple nestedFields) <- fieldKind
          , tupleNeedsOwnership cfg nested
          = concat (zipWith assignNested [1 :: Int ..] (zip nestedFields [fieldSeed ..]))
          | True
          = [access <+> text "=" <+> renderValue fieldKind fieldSeed P.<> semi]
-        where assignNested nestedIndex (nestedKind, nestedSeed) = assignAt nestedKind
-                (access P.<> text "." P.<> text (tupleFieldName nestedIndex))
-                nestedSeed
+        where assignNested nestedIndex (nestedKind, nestedSeed) = assignAt nestedKind nestedAccess nestedName nestedSeed
+                where nestedAccess = access P.<> text "." P.<> text (tupleFieldName nestedIndex)
+                      nestedName   = fieldName ++ "_field_" ++ show nestedIndex
+
+              collectionAssignment usesExact driverInit driverClear clone
+                | usesExact cfg fieldKind
+                = [ driverInit cfg fieldKind fieldName fieldSeed
+                  , access <+> text "=" <+> clone fieldKind (text fieldName) P.<> semi
+                  , driverClear cfg fieldKind fieldName
+                  ]
+                | True
+                = [access <+> text "=" <+> clone fieldKind (renderValue fieldKind fieldSeed) P.<> semi]
 
        exactAssignments KUnbounded access value =
          [ text "if" <+> parens (text "mpz_set_str" P.<> parens (fsep (punctuate comma [parens (text "mpz_ptr") <+> access, doubleQuotes (integer value), text "10"])) <+> text "!= 0") <+> text "abort" P.<> parens empty P.<> semi]
@@ -290,6 +319,9 @@ tupleExpr cfg op svs resultKind args
         where storage
                 | isExactGMPKind cfg kind      = CFunctionScoped
                 | tupleNeedsOwnership cfg kind = CFunctionScoped
+                | kind == KString              = CFunctionScoped
+                | isList kind                  = CFunctionScoped
+                | isSet kind                   = CFunctionScoped
                 | True                         = CByValue
 
 -- | Test whether a tuple contains an exact GMP-backed integer, real, or
@@ -305,6 +337,8 @@ tupleNeedsOwnership cfg (KTuple fields) = any fieldNeedsOwnership fields
  where fieldNeedsOwnership fieldKind
          | isExactGMPKind cfg fieldKind = True
          | fieldKind == KString         = True
+         | isList fieldKind             = True
+         | isSet fieldKind              = True
          | isTuple fieldKind            = tupleNeedsOwnership cfg fieldKind
          | True                         = False
 tupleNeedsOwnership _ _ = False
@@ -325,48 +359,6 @@ tupleFieldName :: Int -> String
 tupleFieldName index
   | index >= 1 = "field" ++ show index
   | True       = error $ "SBV->C: Tuple fields are one-based, received " ++ show index
-
--- | Return the public C type used for one tuple field.
-elementCType :: Kind -> String
-elementCType KBool               = "SBool"
-elementCType (KBounded False 1)  = "SBool"
-elementCType (KBounded False w)  = "SWord" ++ show w
-elementCType (KBounded True  w)  = "SInt" ++ show w
-elementCType KUnbounded          = "SInteger"
-elementCType KReal               = "SReal"
-elementCType KRational           = "SRational"
-elementCType KFloat              = "SFloat"
-elementCType KDouble             = "SDouble"
-elementCType KChar               = "SChar"
-elementCType KString             = "SString"
-elementCType kind@KFP{}          = arbitraryFPCType kind
-elementCType kind@KTuple{}       = tupleCType kind
-elementCType kind
-  | isRoundingMode kind = "RoundingMode"
-  | True                = error $ "SBV->C: Unsupported tuple field kind: " ++ show kind
-
--- | Return the collision-free suffix used by a generated tuple type.
-kindTag :: Kind -> String
-kindTag KBool              = "u1"
-kindTag (KBounded False w) = "u" ++ show w
-kindTag (KBounded True  w) = "s" ++ show w
-kindTag KUnbounded         = "integer"
-kindTag KReal              = "real"
-kindTag KRational          = "rational"
-kindTag KFloat             = "float"
-kindTag KDouble            = "double"
-kindTag KChar              = "char"
-kindTag KString            = "string"
-kindTag (KFP eb sb)        = "fp_e" ++ show eb ++ "_s" ++ show sb
-kindTag (KTuple fields)    = "t" ++ show (length fields) ++ concatMap (('_' :) . taggedKind . kindTag) fields
-kindTag kind
-  | isRoundingMode kind = "rounding_mode"
-  | True                = error $ "SBV->C: Unsupported tuple field kind: " ++ show kind
-
--- | Prefix a generated kind tag with its length so adjacent tags cannot
--- collide.
-taggedKind :: String -> String
-taggedKind value = show (length value) ++ "_" ++ value
 
 -- | Return the preprocessor guard protecting one tuple declaration.
 tupleGuard :: Kind -> String

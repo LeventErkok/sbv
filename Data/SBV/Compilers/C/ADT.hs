@@ -44,14 +44,13 @@ import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
-import Data.SBV.Compilers.C.Tuple      ( elementCType
-                                       , kindTag
-                                       , tupleFieldName
+import Data.SBV.Compilers.C.Tuple      ( tupleFieldName
                                        , tupleOwnedInitName
                                        , tupleOwnedReleaseName
                                        , tupleOwnedSetName
                                        , tupleUsesExact
                                        )
+import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds, substituteADTVars)

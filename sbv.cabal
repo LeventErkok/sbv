@@ -328,6 +328,7 @@ Library
                   , Data.SBV.Compilers.C.Set
                   , Data.SBV.Compilers.C.Table
                   , Data.SBV.Compilers.C.Text
+                  , Data.SBV.Compilers.C.Types
                   , Data.SBV.Compilers.C.Tuple
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.Lambda
