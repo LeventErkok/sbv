@@ -40,12 +40,11 @@ import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
-import Data.SBV.Compilers.C.List       (listClone, listDriverClear, listDriverInit, listRelease, listUsesExact)
+import Data.SBV.Compilers.C.List       (listClone, listRelease)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
-import Data.SBV.Compilers.C.Set        (setClone, setDriverClear, setDriverInit, setRelease, setUsesExact)
-import Data.SBV.Compilers.C.Text       (textClone)
+import Data.SBV.Compilers.C.Set        (setClone, setRelease)
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleCType, tupleFieldName)
-import Data.SBV.Compilers.C.Value      (valueNeedsOwnership)
+import Data.SBV.Compilers.C.Value      (valueDriverInit, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds)
@@ -254,50 +253,8 @@ tupleOwnedReleaseName kind = "sbv_tuple_owned_release_" ++ kindTag kind
 -- Recursively owned fields use the public owned-tuple storage protocol; other
 -- fields use the supplied scalar renderer.
 tupleDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-tupleDriverInit cfg renderValue kind@(KTuple fields) externalName seed =
-     text (tupleCType kind) <+> text externalName P.<> semi
-  $$ text (tupleOwnedInitName kind) P.<> parens (text "&" P.<> text externalName) P.<> semi
-  $$ vcat (concat (zipWith assignField [1 :: Int ..] (zip fields [seed ..])))
- where assignField index (fieldKind, fieldSeed) = assignAt fieldKind access fieldName fieldSeed
-        where fieldName = externalName ++ "_field_" ++ show index
-              access    = text externalName P.<> text "." P.<> text (tupleFieldName index)
-
-       assignAt fieldKind access fieldName fieldSeed
-         | isExactGMPKind cfg fieldKind
-         = exactAssignments fieldKind access fieldSeed
-         | fieldKind == KString
-         = [access <+> text "=" <+> textClone (renderValue fieldKind fieldSeed) P.<> semi]
-         | isList fieldKind
-         = collectionAssignment listUsesExact listDriverInit listDriverClear listClone
-         | isSet fieldKind
-         = collectionAssignment setUsesExact setDriverInit setDriverClear setClone
-         | nested@(KTuple nestedFields) <- fieldKind
-         , tupleNeedsOwnership cfg nested
-         = concat (zipWith assignNested [1 :: Int ..] (zip nestedFields [fieldSeed ..]))
-         | True
-         = [access <+> text "=" <+> renderValue fieldKind fieldSeed P.<> semi]
-        where assignNested nestedIndex (nestedKind, nestedSeed) = assignAt nestedKind nestedAccess nestedName nestedSeed
-                where nestedAccess = access P.<> text "." P.<> text (tupleFieldName nestedIndex)
-                      nestedName   = fieldName ++ "_field_" ++ show nestedIndex
-
-              collectionAssignment usesExact driverInit driverClear clone
-                | usesExact cfg fieldKind
-                = [ driverInit cfg fieldKind fieldName fieldSeed
-                  , access <+> text "=" <+> clone fieldKind (text fieldName) P.<> semi
-                  , driverClear cfg fieldKind fieldName
-                  ]
-                | True
-                = [access <+> text "=" <+> clone fieldKind (renderValue fieldKind fieldSeed) P.<> semi]
-
-       exactAssignments KUnbounded access value =
-         [ text "if" <+> parens (text "mpz_set_str" P.<> parens (fsep (punctuate comma [parens (text "mpz_ptr") <+> access, doubleQuotes (integer value), text "10"])) <+> text "!= 0") <+> text "abort" P.<> parens empty P.<> semi]
-       exactAssignments fieldKind access value
-         | isExactGMPKind cfg fieldKind =
-             [ text "if" <+> parens (text "mpq_set_str" P.<> parens (fsep (punctuate comma [parens (text "mpq_ptr") <+> access, doubleQuotes (integer value), text "10"])) <+> text "!= 0") <+> text "abort" P.<> parens empty P.<> semi
-             , text "mpq_canonicalize" P.<> parens (parens (text "mpq_ptr") <+> access) P.<> semi
-             ]
-       exactAssignments fieldKind _ _ = error $ "SBV->C: Expected an exact tuple field, received " ++ show fieldKind
-tupleDriverInit _ _ kind _ _ = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
+tupleDriverInit cfg renderValue kind@KTuple{} externalName seed = valueDriverInit cfg renderValue kind externalName seed
+tupleDriverInit _   _           kind         _            _    = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
 
 -- | Render a concrete tuple value as a C99 compound literal.
 tupleConst :: (CV -> Doc) -> CV -> Maybe Doc

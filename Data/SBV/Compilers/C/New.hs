@@ -608,8 +608,8 @@ genDriver cfg adts randVals fn inps outs mbRet
            in defaultValue
               $$ arrayDriverInput cfg (kindOf sv) fn n defaultName
          | isExactGMPKind cfg (kindOf sv)      = gmpDriverInit (kindOf sv) (text n) v
-         | listUsesExact cfg (kindOf sv)       = listDriverInit cfg (kindOf sv) n (inputSeed n)
-         | setUsesExact cfg (kindOf sv)        = setDriverInit cfg (kindOf sv) n (inputSeed n)
+         | listNeedsDriverInit cfg (kindOf sv) = listDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
+         | setNeedsDriverInit cfg (kindOf sv)  = setDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
          | tupleNeedsOwnership cfg (kindOf sv) = tupleDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
          | isOwnedADT cfg adts sv              = adtDriverInit cfg adts mkRValKind (kindOf sv) n (inputSeed n)
        mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
@@ -659,8 +659,8 @@ genDriver cfg adts randVals fn inps outs mbRet
        mkCVal ([v], n, CgAtomic sv)
          | isArray sv                          = text n
          | isExactGMPKind cfg (kindOf sv)      = text n
-         | listUsesExact cfg (kindOf sv)       = text n
-         | setUsesExact cfg (kindOf sv)        = text n
+         | listNeedsDriverInit cfg (kindOf sv) = text n
+         | setNeedsDriverInit cfg (kindOf sv)  = text n
          | tupleNeedsOwnership cfg (kindOf sv) = text n
          | isOwnedADT cfg adts sv              = text n
          | True                                = v
@@ -791,11 +791,11 @@ genDriver cfg adts randVals fn inps outs mbRet
                                ]
                               ++ [listDriverClear cfg (kindOf sv) n
                                  | (_, n, CgAtomic sv) <- pairedInputs
-                                 , listUsesExact cfg (kindOf sv)
+                                 , listNeedsDriverInit cfg (kindOf sv)
                                  ]
                               ++ [setDriverClear cfg (kindOf sv) n
                                  | (_, n, CgAtomic sv) <- pairedInputs
-                                 , setUsesExact cfg (kindOf sv)
+                                 , setNeedsDriverInit cfg (kindOf sv)
                                  ]
                               ++ [releaseTuple sv n
                                  | (_, n, CgAtomic sv) <- pairedInputs
@@ -932,6 +932,8 @@ genCProg cfg adts lists sets fn proto
              $$ (if requires CRequiresLibBF  then arbitraryFPRuntime cfg fpKinds allAssignments else empty)
              $$ (if requires CRequiresNativeFPRounding then nativeFPRuntime else empty)
              $$ (if requires CRequiresText             then textRuntime cfg usesExactInteger else empty)
+             $$ (if requires CRequiresLists            then listRuntimeDecls cfg lists else empty)
+             $$ (if requires CRequiresSets             then setRuntimeDecls cfg sets else empty)
              $$ (if requires CRequiresLists            then listRuntime cfg usesExactInteger lists else empty)
              $$ (if requires CRequiresSets             then setRuntime cfg sets else empty)
              $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
@@ -1021,6 +1023,10 @@ genCProg cfg adts lists sets fn proto
                 = False
               walk visited (KTuple fields)
                 = any (walk visited) fields
+              walk visited (KList elementKind)
+                = walk visited elementKind
+              walk visited (KSet elementKind)
+                = walk visited elementKind
               walk visited kind
                 | isADT kind
                 , not (isRoundingMode kind)

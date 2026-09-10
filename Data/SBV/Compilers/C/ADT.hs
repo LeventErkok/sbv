@@ -45,9 +45,21 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
-import Data.SBV.Compilers.C.List       (listClone, listDriverClear, listDriverInit, listEqual, listRelease, listUsesExact)
+import Data.SBV.Compilers.C.List       ( listClone
+                                       , listDriverClear
+                                       , listDriverInit
+                                       , listEqual
+                                       , listNeedsDriverInit
+                                       , listRelease
+                                       )
 import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
-import Data.SBV.Compilers.C.Set        (setClone, setDriverClear, setDriverInit, setEqual, setRelease, setUsesExact)
+import Data.SBV.Compilers.C.Set        ( setClone
+                                       , setDriverClear
+                                       , setDriverInit
+                                       , setEqual
+                                       , setNeedsDriverInit
+                                       , setRelease
+                                       )
 import Data.SBV.Compilers.C.Tuple      ( tupleOwnedInitName
                                        , tupleOwnedReleaseName
                                        , tupleOwnedSetName
@@ -527,9 +539,9 @@ adtDriverInit cfg adts renderValue kind externalName seed
          | isExactGMPKind cfg fieldKind
          = exactAssignments fieldKind access fieldSeed
          | isList fieldKind
-         = collectionAssignment listUsesExact listDriverInit listDriverClear listClone
+         = collectionAssignment listNeedsDriverInit listDriverInit listDriverClear listClone
          | isSet fieldKind
-         = collectionAssignment setUsesExact setDriverInit setDriverClear setClone
+         = collectionAssignment setNeedsDriverInit setDriverInit setDriverClear setClone
          | KTuple fieldKinds <- fieldKind
          , tupleNeedsOwnership cfg fieldKind
          = concat (zipWith assignTupleField [1 :: Int ..] (zip fieldKinds [fieldSeed ..]))
@@ -545,9 +557,9 @@ adtDriverInit cfg adts renderValue kind externalName seed
                 where nestedAccess = access P.<> text "." P.<> text (tupleFieldName fieldIndex)
                       nestedName   = accessName ++ "_field_" ++ show fieldIndex
 
-              collectionAssignment usesExact driverInit driverClear clone
-                | usesExact cfg fieldKind
-                = [ driverInit cfg fieldKind accessName fieldSeed
+              collectionAssignment needsDriverInit driverInit driverClear clone
+                | needsDriverInit cfg fieldKind
+                = [ driverInit cfg renderValue fieldKind accessName fieldSeed
                   , access <+> text "=" <+> clone fieldKind (text accessName) P.<> semi
                   , driverClear cfg fieldKind accessName
                   ]

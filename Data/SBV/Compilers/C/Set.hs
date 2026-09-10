@@ -15,9 +15,11 @@ module Data.SBV.Compilers.C.Set
   ( setKinds
   , setSupported
   , setUsesExact
+  , setNeedsDriverInit
   , setCType
   , setTypeDecls
   , setOwnershipTypeDecls
+  , setRuntimeDecls
   , setRuntime
   , setConst
   , setExpr
@@ -40,10 +42,17 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
-import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, isExactGMPKind)
+import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
-import Data.SBV.Compilers.C.Value      (byValueEqual, valueNeedsOwnership)
+import Data.SBV.Compilers.C.Value      ( byValueEqual
+                                       , managedValueClone
+                                       , managedValueRelease
+                                       , valueDriverClear
+                                       , valueDriverInit
+                                       , valueDriverNeedsInitialization
+                                       , valueNeedsOwnership
+                                       )
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds)
@@ -55,7 +64,7 @@ setKinds = nub . concatMap (filter isSet . expandKinds) . Set.toAscList
 
 -- | Test whether a set element kind has a supported C representation.
 setSupported :: CgConfig -> Kind -> Bool
-setSupported cfg (KSet elementKind) = supportedElement elementKind
+setSupported _ (KSet elementKind) = supportedElement elementKind
  where supportedElement KBool          = True
        supportedElement KBounded{}     = True
        supportedElement KFloat         = True
@@ -68,17 +77,23 @@ setSupported cfg (KSet elementKind) = supportedElement elementKind
        supportedElement (KTuple kinds) = all supportedTupleField kinds
        supportedElement kind           = isRoundingMode kind
 
-       supportedTupleField tupleKind@(KTuple kinds) = not (valueNeedsOwnership cfg tupleKind)
-                                                    && all supportedTupleField kinds
-       supportedTupleField kind
-         | valueNeedsOwnership cfg kind = False
-         | True                         = supportedElement kind
+       supportedTupleField KString        = True
+       supportedTupleField (KList kind)   = supportedElement kind
+       supportedTupleField (KSet kind)    = supportedElement kind
+       supportedTupleField (KTuple kinds) = all supportedTupleField kinds
+       supportedTupleField kind           = supportedElement kind
 setSupported _ _ = False
 
 -- | Test whether a set stores exact GMP-backed elements.
 setUsesExact :: CgConfig -> Kind -> Bool
 setUsesExact cfg (KSet elementKind) = isExactGMPKind cfg elementKind
 setUsesExact _   _                  = False
+
+-- | Test whether an example-driver set requires statement-based element
+-- initialization instead of a single compound literal.
+setNeedsDriverInit :: CgConfig -> Kind -> Bool
+setNeedsDriverInit cfg (KSet elementKind) = valueDriverNeedsInitialization cfg elementKind
+setNeedsDriverInit _   _                  = False
 
 -- | Return the public C descriptor type for a symbolic-set kind.
 setCType :: Kind -> String
@@ -171,6 +186,10 @@ setOwnershipTypeDecls cfg kinds
          ++ [ "      copy[i] = element;"
             , "    }"
             ]
+         | valueNeedsOwnership cfg elementKind
+         = [ "    for (size_t i = 0; i < value.length; ++i)"
+           , "      copy[i] = " ++ render (managedValueClone elementKind (text "value.data[i]")) ++ ";"
+           ]
          | True
          = ["    memcpy(copy, value.data, value.length * sizeof(*copy));"]
 
@@ -181,6 +200,12 @@ setOwnershipTypeDecls cfg kinds
            , "    " ++ exactMutableType elementKind ++ " element = (" ++ exactMutableType elementKind ++ ") data[i];"
            , "    if (element != NULL) { " ++ exactClear elementKind ++ "(element); free(element); }"
            , "  }"
+           , "  free(data);"
+           ]
+         | valueNeedsOwnership cfg elementKind
+         = [ "  " ++ setElementCType elementKind ++ " *data = (" ++ setElementCType elementKind ++ " *) value->data;"
+           , "  for (size_t i = 0; i < value->length; ++i)"
+           , "    " ++ render (managedValueRelease elementKind (text "&data[i]"))
            , "  free(data);"
            ]
          | True
@@ -203,6 +228,15 @@ setOwnershipTypeDecls cfg kinds
        exactClear fieldKind
          | isExactGMPKind cfg fieldKind = "mpq_clear"
        exactClear fieldKind = error $ "SBV->C: Expected an exact set element, received " ++ show fieldKind
+
+-- | Emit forward declarations for set equality helpers referenced by nested
+-- aggregate element comparisons.
+setRuntimeDecls :: CgConfig -> [Kind] -> Doc
+setRuntimeDecls cfg kinds = text . unlines $
+  [ "static SBV_CGEN_UNUSED bool " ++ helperName kind "equal" ++ "(" ++ setCType kind ++ " left, " ++ setCType kind ++ " right);"
+  | kind <- kinds
+  , setSupported cfg kind
+  ]
 
 -- | Emit the shared set arena and one operation family per element kind.
 setRuntime :: CgConfig -> [Kind] -> Doc
@@ -313,30 +347,17 @@ setDriverValue renderValue kind@(KSet elementKind) seed
        P.<> text "})"
 setDriverValue _ kind _ = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
--- | Initialize a generated-driver set whose elements use exact GMP storage.
--- The descriptor borrows three independently initialized elements and uses
--- the sample seed's parity to choose a finite or cofinite representation.
-setDriverInit :: CgConfig -> Kind -> String -> Integer -> Doc
-setDriverInit cfg kind@(KSet elementKind) externalName seed
-  | isExactGMPKind cfg elementKind
-  = vcat (zipWith initializeElement elementNames [seed ..])
- $$ text "const" <+> text (setElementCType elementKind) <+> text dataName P.<> brackets (int elementCount)
-      <+> text "=" <+> braces (fsep (punctuate comma (map text elementNames))) P.<> semi
- $$ text "const" <+> text (setCType kind) <+> text externalName <+> text "="
-      <+> braces (fsep (punctuate comma [text dataName, int elementCount, text (if odd seed then "true" else "false")])) P.<> semi
- where elementCount = 3
-       elementNames = [externalName ++ "_element_" ++ show index | index <- [0 :: Int .. elementCount - 1]]
-       dataName     = externalName ++ "_data"
+-- | Initialize a generated-driver set whose elements require statement-based
+-- setup. The descriptor borrows three independently initialized elements and
+-- uses the sample seed's parity to choose a finite or cofinite representation.
+setDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
+setDriverInit cfg renderValue kind@KSet{} externalName seed = valueDriverInit cfg renderValue kind externalName seed
+setDriverInit _   _           kind        _            _    = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
-       initializeElement elementName value = gmpDriverInit elementKind (text elementName) (integer value)
-setDriverInit _ kind _ _ = error $ "SBV->C: Expected an exact-element set kind, received " ++ show kind
-
--- | Clear the exact GMP elements initialized by 'setDriverInit'.
+-- | Clear managed element storage initialized by 'setDriverInit'.
 setDriverClear :: CgConfig -> Kind -> String -> Doc
-setDriverClear cfg (KSet elementKind) externalName
-  | isExactGMPKind cfg elementKind
-  = vcat [gmpDriverClear elementKind (text (externalName ++ "_element_" ++ show index)) | index <- [0 :: Int .. 2]]
-setDriverClear _ kind _ = error $ "SBV->C: Expected an exact-element set kind, received " ++ show kind
+setDriverClear cfg kind@KSet{} externalName = valueDriverClear cfg kind externalName
+setDriverClear _   kind        _            = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
 -- | Print a finite set as @{...}@ and a cofinite set as @U - {...}@.
 setPrint :: (Kind -> Doc -> Doc) -> Kind -> Doc -> Doc
@@ -346,15 +367,16 @@ setPrint printElement (KSet elementKind) value
  $$ text "{"
  $$ nest 2 (   text "if" P.<> parens (value P.<> text ".is_complement") <+> text "printf(\" - \");"
             $$ text "printf(\"{\");"
-            $$ text "for (size_t __sbv_set_print_index = 0; __sbv_set_print_index <" <+> value P.<> text ".length; ++__sbv_set_print_index)"
+            $$ text "for (size_t" <+> index <+> text "= 0;" <+> index <+> text "<" <+> value P.<> text ".length; ++" P.<> index P.<> text ")"
             $$ text "{"
-            $$ nest 2 (   text "if (__sbv_set_print_index != 0) printf(\", \");"
-                       $$ printElement elementKind (value P.<> text ".data[__sbv_set_print_index]")
+            $$ nest 2 (   text "if" <+> parens (index <+> text "!= 0") <+> text "printf(\", \");"
+                       $$ printElement elementKind (value P.<> text ".data[" P.<> index P.<> text "]")
                       )
             $$ text "}"
             $$ text "printf(\"}\");"
            )
  $$ text "}"
+ where index = text ("__sbv_set_print_index_" ++ kindTag elementKind)
 setPrint _ kind _ = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
 -- | Initialize the arena used by set temporaries in a generated function.

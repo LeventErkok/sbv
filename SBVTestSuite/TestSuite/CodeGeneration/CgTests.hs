@@ -117,6 +117,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "return collection tuples from a generated library" ownedCollectionTupleLibrary
   , testCase "compile tuple-valued symbolic collections" tupleValuedCollections
   , testCase "return tuple-valued collections from a library" tupleValuedCollectionLibrary
+  , testCase "compile managed tuple-valued collections" managedTupleValuedCollections
+  , testCase "return managed tuple-valued collections from a library" managedTupleValuedCollectionLibrary
   , testCase "compile and execute characters and strings" characterStrings
   , testCase "compile strings with mapped integers" mappedIntegerStrings
   , testCase "return owned strings from a generated library" ownedStringLibrary
@@ -1328,6 +1330,72 @@ tupleValuedCollectionLibrary = withSystemTempDirectory "sbv-tuple-valued-collect
                                 (fragment `isInfixOf` stdoutText))
     [ "[(0x0001U, 2), (0x0002U, 3), (0x0003U, 4), (0x0009U, 10)]"
     , "[(0x0002U, 3), (0x0003U, 4), (0x0004U, 5), (0x000aU, 11)]"
+    ]
+
+-- | Exercise deep ownership and structural equality for collection elements
+-- that are tuples containing strings, exact values, and nested collections.
+managedTupleValuedCollections :: Assertion
+managedTupleValuedCollections = withSystemTempDirectory "sbv-managed-tuple-valued-collections" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 4, 7]
+        values  <- cgInput "values"  :: SBVCodeGen (SList (String, Integer))
+        members <- cgInput "members" :: SBVCodeGen (SSet (String, Integer))
+        nested  <- cgInput "nested"  :: SBVCodeGen (SList ([Integer], RCSet Rational))
+        let extra       = tuple (literal "extra" :: SString, literal 9 :: SInteger)
+            nestedExtra = tuple (literal ([9, 10] :: [Integer]), SS.singleton (literal 11 :: SRational))
+            joined      = values SL.++ SL.singleton extra
+            inserted    = SS.insert extra members
+            nestedJoin  = nested SL.++ SL.singleton nestedExtra
+        cgOutput "listSameObject" (values .=== values)
+        cgOutput "nestedSameObject" (nested .=== nested)
+        cgOutput "containsExtra" (extra `SS.member` inserted)
+        cgOutput "joined" joined
+        cgOutput "inserted" inserted
+        cgOutput "nestedJoin" nestedJoin
+        cgReturn (tuple (joined, tuple (inserted, nestedJoin)))
+
+  stdoutText <- compileProgramAndRunGenerated dir "managedTupleValuedCollections" program
+  headerText <- readFile (dir </> "managedTupleValuedCollections.h")
+  mapM_ (\fragment -> assertBool ("Expected managed tuple-valued collection output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "listSameObject = 1"
+    , "nestedSameObject = 1"
+    , "containsExtra = 1"
+    , "joined =[(sbv1, 2), (sbv2, 3), (sbv3, 4), (extra, 9)]"
+    , "inserted ={(sbv4, 5), (sbv5, 6), (sbv6, 7), (extra, 9)}"
+    , "([9, 10], {11})"
+    ]
+  assertBool "Expected collection ownership to recurse through managed tuple elements"
+             ("sbv_tuple_owned_clone_" `isInfixOf` headerText
+           && "sbv_tuple_owned_release_" `isInfixOf` headerText
+           && "sbv_string_clone(source.field1)" `isInfixOf` headerText
+           && "sbv_list_clone_integer(source.field1)" `isInfixOf` headerText
+           && "sbv_set_clone_rational(source.field2)" `isInfixOf` headerText)
+
+-- | Exercise guarded ownership helpers for managed tuple-valued collections
+-- shared by multiple generated library translation units.
+managedTupleValuedCollectionLibrary :: Assertion
+managedTupleValuedCollectionLibrary = withSystemTempDirectory "sbv-managed-tuple-valued-collection-library" $ \dir -> do
+  let component :: Integer -> String -> Integer -> SBVCodeGen ()
+      component seed textValue extraValue = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed, seed + 3]
+        values  <- cgInput "values"  :: SBVCodeGen (SList (String, Integer))
+        members <- cgInput "members" :: SBVCodeGen (SSet (String, Integer))
+        let extra = tuple (literal textValue :: SString, literal extraValue :: SInteger)
+        cgReturn (tuple (values SL.++ SL.singleton extra, SS.insert extra members))
+
+  (_, cfg, bundle) <- compileToCLib' "managedTupleValuedCollectionLibrary"
+    [ ("firstManagedTupleCollections",  component 1 "first" 9)
+    , ("secondManagedTupleCollections", component 2 "second" 10)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "managedTupleValuedCollectionLibrary"
+  mapM_ (\fragment -> assertBool ("Expected managed tuple-valued collection library output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "[(sbv1, 2), (sbv2, 3), (sbv3, 4), (first, 9)]"
+    , "[(sbv2, 3), (sbv3, 4), (sbv4, 5), (second, 10)]"
     ]
 
 -- | Exercise parameter substitution, constructors, tests, accessors,
