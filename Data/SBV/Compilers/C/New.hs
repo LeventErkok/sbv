@@ -141,6 +141,8 @@ cgen cfg nm st sbvProg
                    $$ (if hasRequirement CRequiresText   then textTypeDecls kinds else empty)
                    $$ tupleForwardTypeDecls tuples
                    $$ adtForwardTypeDecls adts
+                   $$ listForwardTypeDecls lists
+                   $$ setForwardTypeDecls sets
                    $$ (if hasRequirement CRequiresLists  then listTypeDecls cfg lists else empty)
                    $$ (if hasRequirement CRequiresSets   then setTypeDecls cfg sets else empty)
                    $$ tupleTypeDecls tuples

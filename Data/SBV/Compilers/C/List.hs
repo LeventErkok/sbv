@@ -17,6 +17,7 @@ module Data.SBV.Compilers.C.List
   , listUsesExact
   , listNeedsDriverInit
   , listCType
+  , listForwardTypeDecls
   , listTypeDecls
   , listOwnershipTypeDecls
   , listRuntimeDecls
@@ -76,16 +77,12 @@ listSupported _ (KList elementKind) = supportedElement elementKind
        supportedElement KUnbounded     = True
        supportedElement KReal          = True
        supportedElement KRational      = True
-       supportedElement (KTuple kinds) = all supportedTupleField kinds
+       supportedElement (KList kind)   = supportedElement kind
+       supportedElement (KSet kind)    = supportedElement kind
+       supportedElement (KTuple kinds) = all supportedElement kinds
        supportedElement kind
          | isConcreteADT kind = True
          | True               = isRoundingMode kind
-
-       supportedTupleField KString        = True
-       supportedTupleField (KList kind)   = supportedElement kind
-       supportedTupleField (KSet kind)    = supportedElement kind
-       supportedTupleField (KTuple kinds) = all supportedTupleField kinds
-       supportedTupleField kind           = supportedElement kind
 listSupported _ _ = False
 
 -- | Test whether a list stores exact GMP-backed elements.
@@ -104,6 +101,21 @@ listCType :: Kind -> String
 listCType kind@KList{} = elementCType kind
 listCType kind         = error $ "SBV->C: Expected a list kind, received " ++ show kind
 
+-- | Emit guarded forward declarations for symbolic-list descriptor types.
+-- These declarations allow list and set descriptors to contain pointers to
+-- each other before either family has emitted its complete layouts.
+listForwardTypeDecls :: [Kind] -> Doc
+listForwardTypeDecls []    = empty
+listForwardTypeDecls kinds = text . unlines $ concatMap declaration kinds
+ where declaration kind@KList{} =
+         [ "#ifndef " ++ listForwardGuard kind
+         , "#define " ++ listForwardGuard kind
+         , "typedef struct " ++ listCType kind ++ " " ++ listCType kind ++ ";"
+         , "#endif"
+         , ""
+         ]
+       declaration kind = error $ "SBV->C: Expected a list kind, received " ++ show kind
+
 -- | Emit typed borrowed-list descriptors and ownership-helper prototypes.
 -- The element type may remain incomplete here because descriptors only carry
 -- pointers; definitions that inspect elements are emitted later by
@@ -111,7 +123,7 @@ listCType kind         = error $ "SBV->C: Expected a list kind, received " ++ sh
 listTypeDecls :: CgConfig -> [Kind] -> Doc
 listTypeDecls cfg kinds
   | null kinds = empty
-  | True       = text . unlines $
+  | True       = listForwardTypeDecls kinds $$ text (unlines $
       ["/* Typed symbolic lists. Inputs borrow their elements; outputs and returns own them. */"
       , "#ifndef SBV_CGEN_UNUSED"
       , "#if defined(__GNUC__) || defined(__clang__)"
@@ -122,6 +134,7 @@ listTypeDecls cfg kinds
       , "#endif"
       ]
       ++ concatMap declaration kinds
+      )
  where declaration kind@(KList elementKind)
          | listSupported cfg kind
          = let cType       = listCType kind
@@ -130,7 +143,7 @@ listTypeDecls cfg kinds
                releaseName  = listReleaseName kind
            in [ "#ifndef " ++ listGuard kind
               , "#define " ++ listGuard kind
-              , "typedef struct { const " ++ elementType ++ " *data; size_t length; } " ++ cType ++ ";"
+              , "struct " ++ cType ++ " { const " ++ elementType ++ " *data; size_t length; };"
               , "static inline SBV_CGEN_UNUSED " ++ cType ++ " " ++ cloneName ++ "(" ++ cType ++ " value);"
               , "static inline SBV_CGEN_UNUSED void " ++ releaseName ++ "(" ++ cType ++ " *value);"
               , "#endif"
@@ -430,6 +443,10 @@ listElementCType kind  = elementCType kind
 listKindTag :: Kind -> String
 listKindTag KChar = "char"
 listKindTag kind  = kindTag kind
+
+-- | Return the preprocessor guard for one list forward declaration.
+listForwardGuard :: Kind -> String
+listForwardGuard kind = "SBV_LIST_" ++ map toUpper (listKindTag (listElementKind kind)) ++ "_FORWARD_DEFINED"
 
 -- | Return the preprocessor guard for one list descriptor.
 listGuard :: Kind -> String

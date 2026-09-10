@@ -17,6 +17,7 @@ module Data.SBV.Compilers.C.Set
   , setUsesExact
   , setNeedsDriverInit
   , setCType
+  , setForwardTypeDecls
   , setTypeDecls
   , setOwnershipTypeDecls
   , setRuntimeDecls
@@ -75,16 +76,11 @@ setSupported _ (KSet elementKind) = supportedElement elementKind
        supportedElement KUnbounded     = True
        supportedElement KReal          = True
        supportedElement KRational      = True
-       supportedElement (KTuple kinds) = all supportedTupleField kinds
+       supportedElement (KList kind)   = supportedElement kind
+       supportedElement (KTuple kinds) = all supportedElement kinds
        supportedElement kind
          | isConcreteADT kind = True
          | True               = isRoundingMode kind
-
-       supportedTupleField KString        = True
-       supportedTupleField (KList kind)   = supportedElement kind
-       supportedTupleField (KSet kind)    = supportedElement kind
-       supportedTupleField (KTuple kinds) = all supportedTupleField kinds
-       supportedTupleField kind           = supportedElement kind
 setSupported _ _ = False
 
 -- | Test whether a set stores exact GMP-backed elements.
@@ -103,13 +99,28 @@ setCType :: Kind -> String
 setCType kind@KSet{} = elementCType kind
 setCType kind        = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
+-- | Emit guarded forward declarations for symbolic-set descriptor types.
+-- These declarations allow set and list descriptors to contain pointers to
+-- each other before either family has emitted its complete layouts.
+setForwardTypeDecls :: [Kind] -> Doc
+setForwardTypeDecls []    = empty
+setForwardTypeDecls kinds = text . unlines $ concatMap declaration kinds
+ where declaration kind@KSet{} =
+         [ "#ifndef " ++ setForwardGuard kind
+         , "#define " ++ setForwardGuard kind
+         , "typedef struct " ++ setCType kind ++ " " ++ setCType kind ++ ";"
+         , "#endif"
+         , ""
+         ]
+       declaration kind = error $ "SBV->C: Expected a set kind, received " ++ show kind
+
 -- | Emit finite/cofinite set descriptors and ownership-helper prototypes.
 -- Aggregate element layouts may remain incomplete here; helper definitions
 -- are emitted later by 'setOwnershipTypeDecls'.
 setTypeDecls :: CgConfig -> [Kind] -> Doc
 setTypeDecls cfg kinds
   | null kinds = empty
-  | True       = text . unlines $
+  | True       = setForwardTypeDecls kinds $$ text (unlines $
       ["/* Finite/cofinite symbolic sets. Inputs borrow elements; outputs and returns own them. */"
       , "#ifndef SBV_CGEN_UNUSED"
       , "#if defined(__GNUC__) || defined(__clang__)"
@@ -120,6 +131,7 @@ setTypeDecls cfg kinds
       , "#endif"
       ]
       ++ concatMap declaration kinds
+      )
  where declaration kind@(KSet elementKind)
          | setSupported cfg kind
          = let cType       = setCType kind
@@ -128,7 +140,7 @@ setTypeDecls cfg kinds
                releaseName  = setReleaseName kind
            in [ "#ifndef " ++ setGuard kind
               , "#define " ++ setGuard kind
-              , "typedef struct { const " ++ elementType ++ " *data; size_t length; bool is_complement; } " ++ cType ++ ";"
+              , "struct " ++ cType ++ " { const " ++ elementType ++ " *data; size_t length; bool is_complement; };"
               , "static inline SBV_CGEN_UNUSED " ++ cType ++ " " ++ cloneName ++ "(" ++ cType ++ " value);"
               , "static inline SBV_CGEN_UNUSED void " ++ releaseName ++ "(" ++ cType ++ " *value);"
               , "#endif"
@@ -409,6 +421,10 @@ setElementCType kind  = elementCType kind
 setElementTag :: Kind -> String
 setElementTag KChar = "char"
 setElementTag kind  = kindTag kind
+
+-- | Return the preprocessor guard for one set forward declaration.
+setForwardGuard :: Kind -> String
+setForwardGuard kind = "SBV_SET_" ++ map toUpper (setElementTag (setElementKind kind)) ++ "_FORWARD_DEFINED"
 
 -- | Return the preprocessor guard for one set descriptor.
 setGuard :: Kind -> String

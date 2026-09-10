@@ -129,6 +129,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "return managed tuple-valued collections from a library" managedTupleValuedCollectionLibrary
   , testCase "compile string-valued collections and text ADTs" textAggregateCollections
   , testCase "return text ADTs from a library" textAggregateLibrary
+  , testCase "compile directly nested collections" directlyNestedCollections
+  , testCase "return nested collections from a library" directlyNestedCollectionLibrary
   , testCase "compile ADT-valued collections" adtValuedCollections
   , testCase "return ADT-valued collections from a library" adtValuedCollectionLibrary
   , testCase "compile and execute characters and strings" characterStrings
@@ -365,7 +367,7 @@ symbolicLists = withSystemTempDirectory "sbv-symbolic-lists" $ \dir -> do
     , "replaced =[0x000aU, 0x004dU, 0x0063U, 0x0064U]"
     ]
   assertBool "Expected a typed public list descriptor"
-             ("typedef struct { const SWord16 *data; size_t length; } SBVList_u16;" `isInfixOf` headerText)
+             ("struct SBVList_u16 { const SWord16 *data; size_t length; };" `isInfixOf` headerText)
   assertBool "Expected public list ownership helpers"
              ("sbv_list_clone_u16" `isInfixOf` headerText && "sbv_list_release_u16" `isInfixOf` headerText)
 
@@ -385,7 +387,7 @@ wideSymbolicLists = withSystemTempDirectory "sbv-wide-symbolic-lists" $ \dir -> 
   assertBool ("Expected the wide-list driver to report its three sample elements, received:\n" ++ stdoutText)
              ("length =3" `isInfixOf` stdoutText)
   assertBool "Expected an arbitrary-width typed list descriptor"
-             ("typedef struct { const SWord673 *data; size_t length; } SBVList_u673;" `isInfixOf` headerText)
+             ("struct SBVList_u673 { const SWord673 *data; size_t length; };" `isInfixOf` headerText)
 
 -- | Check that arbitrary floating-point elements retain their raw interchange
 -- representation and use the LibBF-backed object-equality semantics.
@@ -398,7 +400,7 @@ arbitraryFloatLists = do
     cgReturn values
   let generated = show bundle
   assertBool "Expected a typed arbitrary-float list descriptor"
-             ("typedef struct { const SFP7_19 *data; size_t length; } SBVList_fp_e7_s19;" `isInfixOf` generated)
+             ("struct SBVList_fp_e7_s19 { const SFP7_19 *data; size_t length; };" `isInfixOf` generated)
   assertBool "Expected arbitrary-float list equality to use object equality"
              ("sbv_fp_e7_s19_obj_eq(left, right)" `isInfixOf` generated)
 
@@ -584,7 +586,7 @@ symbolicSets = withSystemTempDirectory "sbv-symbolic-sets" $ \dir -> do
     , "conditional ={0x000cU}"
     ]
   assertBool "Expected a finite/cofinite public set descriptor"
-             ("typedef struct { const SWord16 *data; size_t length; bool is_complement; } SBVSet_u16;" `isInfixOf` headerText)
+             ("struct SBVSet_u16 { const SWord16 *data; size_t length; bool is_complement; };" `isInfixOf` headerText)
   assertBool "Expected public set ownership helpers"
              ("sbv_set_clone_u16" `isInfixOf` headerText && "sbv_set_release_u16" `isInfixOf` headerText)
 
@@ -636,7 +638,7 @@ wideSymbolicSets = withSystemTempDirectory "sbv-wide-symbolic-sets" $ \dir -> do
   assertBool ("Expected arbitrary-width set membership to hold, received:\n" ++ stdoutText)
              ("contains = 1" `isInfixOf` stdoutText)
   assertBool "Expected an arbitrary-width typed set descriptor"
-             ("typedef struct { const SWord673 *data; size_t length; bool is_complement; } SBVSet_u673;" `isInfixOf` headerText)
+             ("struct SBVSet_u673 { const SWord673 *data; size_t length; bool is_complement; };" `isInfixOf` headerText)
 
 -- | Exercise character elements through the shared scalar text representation
 -- without requiring string ownership inside the set descriptor.
@@ -656,7 +658,7 @@ characterSets = withSystemTempDirectory "sbv-character-sets" $ \dir -> do
   assertBool ("Expected character-set membership to hold, received:\n" ++ stdoutText)
              ("contains = 1" `isInfixOf` stdoutText)
   assertBool "Expected a typed character set descriptor"
-             ("typedef struct { const SChar *data; size_t length; bool is_complement; } SBVSet_char;" `isInfixOf` headerText)
+             ("struct SBVSet_char { const SChar *data; size_t length; bool is_complement; };" `isInfixOf` headerText)
 
 -- | Check that arbitrary floating-point set elements retain their raw
 -- interchange representation and use LibBF-backed object equality.
@@ -669,7 +671,7 @@ arbitraryFloatSets = do
     cgReturn values
   let generated = show bundle
   assertBool "Expected a typed arbitrary-float set descriptor"
-             ("typedef struct { const SFP7_19 *data; size_t length; bool is_complement; } SBVSet_fp_e7_s19;" `isInfixOf` generated)
+             ("struct SBVSet_fp_e7_s19 { const SFP7_19 *data; size_t length; bool is_complement; };" `isInfixOf` generated)
   assertBool "Expected arbitrary-float set equality to use object equality"
              ("sbv_fp_e7_s19_obj_eq(left, right)" `isInfixOf` generated)
 
@@ -1623,8 +1625,8 @@ textAggregateCollections = withSystemTempDirectory "sbv-text-aggregate-collectio
     , "CGText(sbv6!, [sbv7, sbv8, sbv9, extra], {sbv8, sbv9, sbv10, extra})"
     ]
   assertBool "Expected ownership to recurse through direct and collection text fields"
-             (    "const SString *data; size_t length; } SBVList_string" `isInfixOf` headerText
-              && "const SString *data; size_t length; bool is_complement; } SBVSet_string" `isInfixOf` headerText
+             (    "struct SBVList_string { const SString *data; size_t length; };" `isInfixOf` headerText
+              && "struct SBVSet_string { const SString *data; size_t length; bool is_complement; };" `isInfixOf` headerText
               && "sbv_string_clone(source.payload.constructor1.field1)" `isInfixOf` headerText
               && "sbv_string_release(&value->payload.constructor1.field1)" `isInfixOf` headerText
               && "sbv_list_clone_string(source.payload.constructor1.field2)" `isInfixOf` headerText
@@ -1652,6 +1654,75 @@ textAggregateLibrary = withSystemTempDirectory "sbv-text-aggregate-library" $ \d
                                 (fragment `isInfixOf` stdoutText))
     [ "CGText(sbv2, [sbv3, sbv4, sbv5], {sbv4, sbv5, sbv6})"
     , "CGText(sbv4, [sbv5, sbv6, sbv7], {sbv6, sbv7, sbv8})"
+    ]
+
+-- | Exercise every direct list/set nesting pair admitted by SBV through
+-- symbolic operations, printing, and recursively owned tuple outputs and
+-- returns. Sets of sets are not SBV values because 'RCSet' has no 'Ord'
+-- instance.
+directlyNestedCollections :: Assertion
+directlyNestedCollections = withSystemTempDirectory "sbv-directly-nested-collections" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 2, 4]
+        nestedLists <- cgInput "nestedLists" :: SBVCodeGen (SList [Word16])
+        listOfSets  <- cgInput "listOfSets"  :: SBVCodeGen (SList (RCSet Word16))
+        setOfLists  <- cgInput "setOfLists"  :: SBVCodeGen (SSet [Word16])
+        let extraList     = literal ([90, 91] :: [Word16])
+            extraSet      = SS.fromList [92, 93] :: SSet Word16
+            joinedLists   = nestedLists SL.++ SL.singleton extraList
+            joinedSets    = listOfSets SL.++ SL.singleton extraSet
+            insertedLists = SS.insert extraList setOfLists
+            result        = tuple (joinedLists, tuple (joinedSets, insertedLists))
+        cgOutput "sameNestedLists" (nestedLists .=== nestedLists)
+        cgOutput "sameListOfSets" (listOfSets .=== listOfSets)
+        cgOutput "sameSetOfLists" (setOfLists .=== setOfLists)
+        cgOutput "joinedLists" joinedLists
+        cgOutput "joinedSets" joinedSets
+        cgOutput "insertedLists" insertedLists
+        cgReturn result
+
+  stdoutText <- compileProgramAndRunGenerated dir "directlyNestedCollections" program
+  headerText <- readFile (dir </> "directlyNestedCollections.h")
+  mapM_ (\fragment -> assertBool ("Expected directly nested collection output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "sameNestedLists = 1"
+    , "sameListOfSets = 1"
+    , "sameSetOfLists = 1"
+    , "[0x005aU, 0x005bU]"
+    , "{0x005cU, 0x005dU}"
+    ]
+  assertBool "Expected mutually forward-declared descriptors and recursive ownership helpers"
+             (    "typedef struct SBVList_u16 SBVList_u16;" `isInfixOf` headerText
+              && "typedef struct SBVSet_u16 SBVSet_u16;" `isInfixOf` headerText
+              && "struct SBVList_set_3_u16 { const SBVSet_u16 *data; size_t length; };" `isInfixOf` headerText
+              && "struct SBVSet_list_3_u16 { const SBVList_u16 *data; size_t length; bool is_complement; };" `isInfixOf` headerText
+              && "sbv_list_clone_list_3_u16" `isInfixOf` headerText
+              && "sbv_list_clone_set_3_u16" `isInfixOf` headerText
+              && "sbv_set_clone_list_3_u16" `isInfixOf` headerText
+             )
+
+-- | Exercise independently owned list-of-set results emitted by multiple
+-- generated library translation units.
+directlyNestedCollectionLibrary :: Assertion
+directlyNestedCollectionLibrary = withSystemTempDirectory "sbv-directly-nested-collection-library" $ \dir -> do
+  let component :: Integer -> Word16 -> SBVCodeGen ()
+      component seed extra = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        values <- cgInput "values" :: SBVCodeGen (SList (RCSet Word16))
+        cgReturn (values SL.++ SL.singleton (SS.fromList [extra, extra + 1]))
+
+  (_, cfg, bundle) <- compileToCLib' "directlyNestedCollectionLibrary"
+    [ ("firstNestedCollection",  component 2 90)
+    , ("secondNestedCollection", component 4 92)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "directlyNestedCollectionLibrary"
+  mapM_ (\fragment -> assertBool ("Expected nested-collection library output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "{0x005aU, 0x005bU}"
+    , "{0x005cU, 0x005dU}"
     ]
 
 -- | Exercise lists and sets whose elements are managed or recursive ADTs,
