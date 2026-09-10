@@ -52,6 +52,7 @@ valueDriverNeedsInitialization cfg kind
 valueDriverNeedsInitialization cfg (KTuple fields)      = any (valueNeedsOwnership cfg) fields
 valueDriverNeedsInitialization cfg (KList elementKind)  = valueDriverNeedsInitialization cfg elementKind
 valueDriverNeedsInitialization cfg (KSet elementKind)   = valueDriverNeedsInitialization cfg elementKind
+valueDriverNeedsInitialization _   KArray{}             = True
 valueDriverNeedsInitialization _   kind@KADT{}          = isConcreteADT kind
 valueDriverNeedsInitialization _   _                    = False
 
@@ -107,12 +108,14 @@ managedValueRelease kind _                      = error $ "SBV->C: Expected a no
 
 -- | Declare and initialize one deterministic example-driver value. Managed
 -- aggregates receive unique ownership; collection descriptors themselves
--- borrow the element variables declared alongside them.
-valueDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-valueDriverInit cfg _           kind                       externalName seed
+-- borrow the element variables declared alongside them. The supplied
+-- statement renderer constructs retained array descriptors without creating
+-- a module dependency on the array lowering implementation.
+valueDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
+valueDriverInit cfg _           _               kind                       externalName seed
   | isExactGMPKind cfg kind
   = gmpDriverInit kind (text externalName) (integer seed)
-valueDriverInit cfg renderValue kind@(KTuple fields)       externalName seed
+valueDriverInit cfg renderValue initializeArray kind@(KTuple fields)       externalName seed
   | valueNeedsOwnership cfg kind
   =  text (tupleCType kind) <+> text externalName P.<> semi
   $$ call ("sbv_tuple_owned_init_" ++ kindTag kind) [text "&" P.<> text externalName] P.<> semi
@@ -124,6 +127,9 @@ valueDriverInit cfg renderValue kind@(KTuple fields)       externalName seed
        initializeAt fieldKind access fieldName fieldSeed
          | isExactGMPKind cfg fieldKind = exactAssignment fieldKind access fieldSeed
          | fieldKind == KString         = [access <+> text "=" <+> managedValueClone fieldKind (renderValue fieldKind fieldSeed) P.<> semi]
+         | isArray fieldKind            = [ initializeArray fieldKind fieldName fieldSeed
+                                          , access <+> text "=" <+> text fieldName P.<> semi
+                                          ]
          | KList{}         <- fieldKind = collectionAssignment fieldKind access fieldName fieldSeed
          | KSet{}          <- fieldKind = collectionAssignment fieldKind access fieldName fieldSeed
          | nested@KTuple{} <- fieldKind
@@ -135,7 +141,7 @@ valueDriverInit cfg renderValue kind@(KTuple fields)       externalName seed
                      nestedName   = fieldName ++ "_field_" ++ show nestedIndex
 
        collectionAssignment fieldKind access fieldName fieldSeed =
-         [ valueDriverInit cfg renderValue fieldKind fieldName fieldSeed
+         [ valueDriverInit cfg renderValue initializeArray fieldKind fieldName fieldSeed
          , access <+> text "=" <+> managedValueClone fieldKind (text fieldName) P.<> semi
          , valueDriverClear cfg fieldKind fieldName
          ]
@@ -151,11 +157,13 @@ valueDriverInit cfg renderValue kind@(KTuple fields)       externalName seed
            , call "mpq_canonicalize" [parens (text "mpq_ptr") <+> access] P.<> semi
            ]
        exactAssignment fieldKind _ _ = error $ "SBV->C: Expected an exact tuple field, received " ++ show fieldKind
-valueDriverInit cfg renderValue kind@(KList elementKind)   externalName seed
-  = collectionDriverInit cfg renderValue kind elementKind externalName seed False
-valueDriverInit cfg renderValue kind@(KSet elementKind)    externalName seed
-  = collectionDriverInit cfg renderValue kind elementKind externalName seed (odd seed)
-valueDriverInit _   renderValue kind                       externalName seed
+valueDriverInit cfg renderValue initializeArray kind@(KList elementKind)   externalName seed
+  = collectionDriverInit cfg renderValue initializeArray kind elementKind externalName seed False
+valueDriverInit cfg renderValue initializeArray kind@(KSet elementKind)    externalName seed
+  = collectionDriverInit cfg renderValue initializeArray kind elementKind externalName seed (odd seed)
+valueDriverInit _   _           initializeArray kind@KArray{}              externalName seed
+  = initializeArray kind externalName seed
+valueDriverInit _   renderValue _               kind                       externalName seed
   = text "const" <+> text (elementCType kind) <+> text externalName <+> text "=" <+> renderValue kind seed P.<> semi
 
 -- | Release storage created by 'valueDriverInit'. Borrowed scalar and string
@@ -170,6 +178,8 @@ valueDriverClear cfg kind@KTuple{} externalName
 valueDriverClear _   kind@KADT{}         externalName
   | isConcreteADT kind
   = managedValueRelease kind (text "&" P.<> text externalName)
+valueDriverClear _   kind@KArray{}       externalName
+  = managedValueRelease kind (text "&" P.<> text externalName)
 valueDriverClear cfg (KList elementKind) externalName
   = vcat [valueDriverClear cfg elementKind (collectionElementName externalName index) | index <- [0 :: Int .. collectionElementCount - 1]]
 valueDriverClear cfg (KSet elementKind)  externalName
@@ -177,8 +187,8 @@ valueDriverClear cfg (KSet elementKind)  externalName
 valueDriverClear _   _                   _            = empty
 
 -- | Declare a deterministic borrowed list or set descriptor and its elements.
-collectionDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> Kind -> Kind -> String -> Integer -> Bool -> Doc
-collectionDriverInit cfg renderValue kind elementKind externalName seed isComplemented
+collectionDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> Kind -> String -> Integer -> Bool -> Doc
+collectionDriverInit cfg renderValue initializeArray kind elementKind externalName seed isComplemented
   =  vcat (zipWith initializeElement elementNames [seed ..])
   $$ text "const" <+> text (elementCType elementKind) <+> text dataName P.<> brackets (int collectionElementCount)
        <+> text "=" <+> braces (fsep (punctuate comma (map text elementNames))) P.<> semi
@@ -191,7 +201,7 @@ collectionDriverInit cfg renderValue kind elementKind externalName seed isComple
                             KSet{} -> [text (if isComplemented then "true" else "false")]
                             _      -> []
 
-       initializeElement = valueDriverInit cfg renderValue elementKind
+       initializeElement = valueDriverInit cfg renderValue initializeArray elementKind
 
 -- | Return the generated name of one deterministic collection element.
 collectionElementName :: String -> Int -> String

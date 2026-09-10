@@ -29,6 +29,7 @@ module Data.SBV.Compilers.C.Array
   , arrayInputSetup
   , arrayDriverCallback
   , arrayDriverInput
+  , arrayDriverStoredInput
   , arrayLambdaName
   , arrayLambdaUsesGMP
   , arrayConst
@@ -537,32 +538,35 @@ arrayInputSetup typeWidth sv externalName
                     ]
 arrayInputSetup _ sv _ = error $ "SBV->C: Expected an array input, received " ++ show (kindOf sv)
 
--- | Emit the default-only callback used by an example driver for an
--- array-valued input. The generated body illustrates the borrowed-context
--- protocol without pretending that a finite C object represents a total map.
-arrayDriverCallback :: CgConfig -> Kind -> String -> String -> Doc
-arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
-  = text "static" <+> text (elementCType valueKind) <+> text callbackName
+-- | Emit the per-kind default-only callback used by example-driver array
+-- values. Sharing one callback per array kind lets arrays appear at arbitrary
+-- depth inside driver aggregates without requiring path-specific functions.
+arrayDriverCallback :: CgConfig -> Kind -> Doc
+arrayDriverCallback cfg kind@(KArray keyKind valueKind)
+  = text "#ifndef" <+> text (arrayDriverGuard kind)
+  $$ text "#define" <+> text (arrayDriverGuard kind)
+  $$ text "static SBV_CGEN_UNUSED" <+> text (elementCType valueKind) <+> text callbackName
       P.<> parens (fsep (punctuate comma [text "const void *context", text (elementCType keyKind) <+> text "key"]))
-      $$ text "{"
-      $$ nest 2 (   parens (text "void") <+> text "key" P.<> semi
-                 $$ text "return" <+> result P.<> semi
-                )
-      $$ text "}"
-      $$ text ""
-      $$ retainContext
-      $$ text ""
-      $$ releaseContext
- where callbackName = arrayDriverCallbackName functionName inputName
-       retainName   = arrayDriverRetainName functionName inputName
-       releaseName  = arrayDriverReleaseName functionName inputName
+  $$ text "{"
+  $$ nest 2 (   parens (text "void") <+> text "key" P.<> semi
+             $$ text "return" <+> result P.<> semi
+            )
+  $$ text "}"
+  $$ text ""
+  $$ retainContext
+  $$ text ""
+  $$ releaseContext
+  $$ text "#endif"
+ where callbackName = arrayDriverCallbackName kind
+       retainName   = arrayDriverRetainName kind
+       releaseName  = arrayDriverReleaseName kind
        result
          | isExactGMPKind cfg valueKind = parens (text (elementCType valueKind)) <+> text "context"
          | True                          = text "*" P.<> parens (parens (text "const" <+> text (elementCType valueKind) <+> text "*") <+> text "context")
 
        retainContext
          | isExactGMPKind cfg valueKind
-         = text "static const void *" P.<> text retainName P.<> parens (text "const void *context")
+         = text "static SBV_CGEN_UNUSED const void *" P.<> text retainName P.<> parens (text "const void *context")
            $$ text "{"
            $$ nest 2 (   text mutableType <+> text "copy =" <+> parens (text mutableType) <+> text "malloc(sizeof(*copy));"
                       $$ text "if (copy == NULL) abort();"
@@ -571,7 +575,7 @@ arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
                      )
            $$ text "}"
          | arrayFieldNeedsOwnership cfg valueKind
-         = text "static const void *" P.<> text retainName P.<> parens (text "const void *context")
+         = text "static SBV_CGEN_UNUSED const void *" P.<> text retainName P.<> parens (text "const void *context")
            $$ text "{"
            $$ nest 2 (   text (elementCType valueKind) <+> text "*copy =" <+> parens (text (elementCType valueKind) <+> text "*") <+> text "malloc(sizeof(*copy));"
                       $$ text "if (copy == NULL) abort();"
@@ -580,7 +584,7 @@ arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
                      )
            $$ text "}"
          | True
-         = text "static const void *" P.<> text retainName P.<> parens (text "const void *context")
+         = text "static SBV_CGEN_UNUSED const void *" P.<> text retainName P.<> parens (text "const void *context")
            $$ text "{"
            $$ nest 2 (   text (elementCType valueKind) <+> text "*copy =" <+> parens (text (elementCType valueKind) <+> text "*") <+> text "malloc(sizeof(*copy));"
                       $$ text "if (copy == NULL) abort();"
@@ -590,7 +594,7 @@ arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
            $$ text "}"
 
        releaseContext
-         = text "static void" <+> text releaseName P.<> parens (text "const void *context")
+         = text "static SBV_CGEN_UNUSED void" <+> text releaseName P.<> parens (text "const void *context")
            $$ text "{"
            $$ nest 2 (   managedClear
                       $$ exactClear
@@ -622,25 +626,43 @@ arrayDriverCallback cfg (KArray keyKind valueKind) functionName inputName
          | KUnbounded <- valueKind            = text "mpz_clear((mpz_ptr) context);"
          | isExactGMPKind cfg valueKind        = text "mpq_clear((mpq_ptr) context);"
          | True                                = empty
-arrayDriverCallback _ kind _ _ = error $ "SBV->C: Expected an array input kind, received " ++ show kind
+arrayDriverCallback _ kind = error $ "SBV->C: Expected an array input kind, received " ++ show kind
 
 -- | Construct an example-driver descriptor around a named default value and
 -- its generated callback. Exact GMP defaults already decay to pointers;
 -- ordinary values are passed to the callback by address.
-arrayDriverInput :: CgConfig -> Kind -> String -> String -> String -> Doc
-arrayDriverInput cfg kind functionName inputName defaultName
+arrayDriverInput :: CgConfig -> Kind -> String -> String -> Doc
+arrayDriverInput cfg kind inputName defaultName
   | KArray _ valueKind <- kind
   = let context
           | isExactGMPKind cfg valueKind = text defaultName
           | True                          = text "&" P.<> text defaultName
     in text "const" <+> text (arrayInputCType kind) <+> text inputName <+> text "="
-         <+> braces (fsep (punctuate comma [ text ".lookup ="  <+> text (arrayDriverCallbackName functionName inputName)
+         <+> braces (fsep (punctuate comma [ text ".lookup ="  <+> text (arrayDriverCallbackName kind)
                                           , text ".context =" <+> context
-                                          , text ".retain ="  <+> text (arrayDriverRetainName functionName inputName)
-                                          , text ".release =" <+> text (arrayDriverReleaseName functionName inputName)
+                                          , text ".retain ="  <+> text (arrayDriverRetainName kind)
+                                          , text ".release =" <+> text (arrayDriverReleaseName kind)
                                           ])) P.<> semi
   | True
   = error $ "SBV->C: Expected an array input kind, received " ++ show kind
+
+-- | Retain a generated input descriptor into the pointer representation used
+-- by array-valued aggregate fields. The returned pointer owns both its heap
+-- descriptor and one retained callback-context reference.
+arrayDriverStoredInput :: Kind -> String -> String -> Doc
+arrayDriverStoredInput kind@KArray{} externalName inputName
+  =  text (arrayOutputCType kind) <+> text "*" P.<> text externalName <+> text "="
+       <+> parens (text (arrayOutputCType kind) <+> text "*") <+> text "malloc(sizeof(*" P.<> text externalName P.<> text "));"
+  $$ text "if" <+> parens (text externalName <+> text "== NULL") <+> text "abort();"
+  $$ text "*" P.<> text externalName <+> text "="
+       <+> text (arrayOutputRetainName kind)
+       P.<> parens (parens (text (arrayOutputCType kind))
+             <+> braces (fsep (punctuate comma [ text ".lookup ="  <+> text inputName P.<> text ".lookup"
+                                               , text ".context =" <+> text inputName P.<> text ".context"
+                                               , text ".retain ="  <+> text inputName P.<> text ".retain"
+                                               , text ".release =" <+> text inputName P.<> text ".release"
+                                               ]))) P.<> semi
+arrayDriverStoredInput kind _ _ = error $ "SBV->C: Expected an array input kind, received " ++ show kind
 
 -- | Render a concrete array model as a nested chain of C99 compound literals.
 -- Association-list entries retain SBV's newest-write-first ordering.
@@ -677,6 +699,7 @@ arrayExpr cfg op svs resultSV args
       (ADTOp{},            _, _) -> Nothing
       (SeqOp{},            _, _) -> Nothing
       (SetOp{},            _, _) -> Nothing
+      (LkUp{},             _, _) -> Nothing
       (ArrayInit (Left pair), [_], [defaultValue])
         | resultKind == uncurry KArray pair
         -> nodeLowering resultKind
@@ -774,22 +797,22 @@ arrayReadName kind = "sbv_array_read_" ++ arraySuffix kind
 arrayLookupType :: Kind -> String
 arrayLookupType kind = "SBVArrayLookup_" ++ arraySuffix kind
 
--- | Return the generated example-driver callback name for an input.
-arrayDriverCallbackName :: String -> String -> String
-arrayDriverCallbackName functionName inputName = "__sbv_array_lookup_f" ++ taggedIdentifier functionName ++ "_i" ++ taggedIdentifier inputName
+-- | Return the generated example-driver callback name for an array kind.
+arrayDriverCallbackName :: Kind -> String
+arrayDriverCallbackName kind = "__sbv_array_driver_lookup_" ++ arraySuffix kind
 
 -- | Return the generated example-driver context-retain callback name.
-arrayDriverRetainName :: String -> String -> String
-arrayDriverRetainName functionName inputName = "__sbv_array_retain_f" ++ taggedIdentifier functionName ++ "_i" ++ taggedIdentifier inputName
+arrayDriverRetainName :: Kind -> String
+arrayDriverRetainName kind = "__sbv_array_retain_driver_" ++ arraySuffix kind
 
 -- | Return the generated example-driver context-release callback name.
-arrayDriverReleaseName :: String -> String -> String
-arrayDriverReleaseName functionName inputName = "__sbv_array_release_f" ++ taggedIdentifier functionName ++ "_i" ++ taggedIdentifier inputName
+arrayDriverReleaseName :: Kind -> String
+arrayDriverReleaseName kind = "__sbv_array_release_driver_" ++ arraySuffix kind
 
--- | Prefix an arbitrary identifier with its length for collision-free
--- concatenation inside a generated helper name.
-taggedIdentifier :: String -> String
-taggedIdentifier identifier = show (length identifier) ++ "_" ++ identifier
+-- | Return the preprocessor guard that deduplicates a per-kind driver callback
+-- when independently generated library components share an array type.
+arrayDriverGuard :: Kind -> String
+arrayDriverGuard kind = "SBV_ARRAY_DRIVER_CALLBACK_" ++ map toUpper (arraySuffix kind) ++ "_DEFINED"
 
 -- | Return the generated C lookup-helper name for a structured lambda array.
 arrayLambdaName :: SV -> String

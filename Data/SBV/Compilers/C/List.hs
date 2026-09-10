@@ -414,10 +414,11 @@ listDriverValue _ kind _ = error $ "SBV->C: Expected a list kind, received " ++ 
 
 -- | Initialize a generated-driver list whose elements require statement-based
 -- setup. The descriptor borrows three independently initialized elements;
--- release their storage with 'listDriverClear' after the call completes.
-listDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-listDriverInit cfg renderValue kind@KList{} externalName seed = valueDriverInit cfg renderValue kind externalName seed
-listDriverInit _   _           kind         _            _    = error $ "SBV->C: Expected a list kind, received " ++ show kind
+-- release their storage with 'listDriverClear' after the call completes. The
+-- supplied statement renderer handles retained array elements.
+listDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
+listDriverInit cfg renderValue initializeArray kind@KList{} externalName seed = valueDriverInit cfg renderValue initializeArray kind externalName seed
+listDriverInit _   _           _               kind         _            _    = error $ "SBV->C: Expected a list kind, received " ++ show kind
 
 -- | Clear managed element storage initialized by 'listDriverInit'.
 listDriverClear :: CgConfig -> Kind -> String -> Doc

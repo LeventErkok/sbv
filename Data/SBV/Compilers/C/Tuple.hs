@@ -262,10 +262,11 @@ tupleOwnedReleaseName kind = "sbv_tuple_owned_release_" ++ kindTag kind
 
 -- | Initialize a generated-driver tuple and populate its fields from a seed.
 -- Recursively owned fields use the public owned-tuple storage protocol; other
--- fields use the supplied scalar renderer.
-tupleDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-tupleDriverInit cfg renderValue kind@KTuple{} externalName seed = valueDriverInit cfg renderValue kind externalName seed
-tupleDriverInit _   _           kind         _            _    = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
+-- fields use the supplied scalar renderer. Array fields delegate to the
+-- supplied retained-descriptor initializer.
+tupleDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
+tupleDriverInit cfg renderValue initializeArray kind@KTuple{} externalName seed = valueDriverInit cfg renderValue initializeArray kind externalName seed
+tupleDriverInit _   _           _               kind         _            _    = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
 
 -- | Render a concrete tuple value as a C99 compound literal.
 tupleConst :: (CV -> Doc) -> CV -> Maybe Doc

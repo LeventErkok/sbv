@@ -112,6 +112,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute arrays stored in tuples" tupleStoredArrays
   , testCase "compile and execute arrays stored in ADTs" adtStoredArrays
   , testCase "compile and execute arrays stored in lists" listStoredArrays
+  , testCase "initialize aggregate inputs containing arrays" aggregateArrayInputs
   , testCase "preserve native floating-point array-key equality" nativeFloatArrayKeys
   , testCase "compile repeated array types into a library" persistentArrayLibrary
   , testCase "compile and execute a callback-backed array input" callbackArrayInput
@@ -123,6 +124,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile arrays with managed aggregate fields" managedAggregateArrays
   , testCase "return managed aggregate arrays from a library" managedAggregateArrayLibrary
   , testCase "compile managed aggregate lookup tables" managedAggregateTables
+  , testCase "compile array-valued lookup tables" arrayValuedTables
   , testCase "return managed table values from a library" managedAggregateTableLibrary
   , testCase "compile and execute structural tuples" structuralTuples
   , testCase "compile repeated tuple types into a library" structuralTupleLibrary
@@ -1092,6 +1094,41 @@ listStoredArrays = withSystemTempDirectory "sbv-list-stored-arrays" $ \dir -> do
               && "__sbv_array_descriptor_" `isInfixOf` sourceText
              )
 
+-- | Exercise generated-driver initialization and cleanup for array fields in
+-- tuple, ADT, and list inputs that share a single per-kind callback family.
+aggregateArrayInputs :: Assertion
+aggregateArrayInputs = withSystemTempDirectory "sbv-aggregate-array-inputs" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [3, 7, 11]
+        tupleInput <- cgInput "tupleInput" :: SBVCodeGen (SBV (ArrayModel Word8 (ArrayModel Word8 Word32), Word8))
+        adtInput   <- cgInput "adtInput"   :: SBVCodeGen (SBV CodeGenArrayBox)
+        listInput  <- cgInput "listInput"  :: SBVCodeGen (SList (ArrayModel Word8 Word32))
+        let (tupleOuterArray, tupleKey) = untuple tupleInput
+            tupleInnerArray             = readArray tupleOuterArray tupleKey
+            adtArray                    = getCGArrayBox_1 adtInput
+            adtKey                      = getCGArrayBox_2 adtInput
+            listHeadArray               = SL.head listInput
+            tupleValue                  = readArray tupleInnerArray 0
+            adtValue                    = readArray adtArray adtKey
+            listValue                   = readArray listHeadArray 0
+        cgOutput "tupleValue" tupleValue
+        cgOutput "adtValue" adtValue
+        cgOutput "listValue" listValue
+        cgReturn (tupleValue + adtValue + listValue)
+
+  stdoutText <- compileProgramAndRunGenerated dir "aggregateArrayInputs" program
+  driverText <- readFile (dir </> "aggregateArrayInputs_driver.c")
+  mapM_ (\fragment -> assertBool ("Expected aggregate-array driver output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "= 0x00000015UL"
+    , "tupleValue = 0x00000003UL"
+    , "adtValue = 0x00000007UL"
+    , "listValue = 0x0000000bUL"
+    ]
+  assertBool ("Expected retained descriptors for all aggregate array inputs, received:\n" ++ driverText)
+             (length (filter (isInfixOf "sbv_array_output_retain_u8_u32") (lines driverText)) >= 5)
+
 -- | Check that native floating-point array keys use SMT object equality:
 -- NaNs match, while positive and negative zero remain distinct.
 nativeFloatArrayKeys :: Assertion
@@ -1405,6 +1442,34 @@ managedAggregateTables = withSystemTempDirectory "sbv-managed-aggregate-tables" 
               && not ("static const SString table" `isInfixOf` sourceText)
               && not ("static const SBVList_u16 table" `isInfixOf` sourceText)
               && not ("static const SBVSet_u16 table" `isInfixOf` sourceText)
+             )
+
+-- | Exercise finite tables whose cells and default are retained arrays.
+arrayValuedTables :: Assertion
+arrayValuedTables = withSystemTempDirectory "sbv-array-valued-tables" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgPerformRTCs True
+        cgSetDriverValues [1, 3]
+        selector <- cgInput "selector" :: SBVCodeGen SWord8
+        key      <- cgInput "key"      :: SBVCodeGen SWord8
+        let first     = writeArray (constArray 10) key 11 :: SArray Word8 Word32
+            second    = writeArray (constArray 20) key 21 :: SArray Word8 Word32
+            fallback  = constArray 30                  :: SArray Word8 Word32
+            selected  = select [first, second] fallback selector
+            defaulted = select [first, second] fallback (selector + 2)
+        cgOutput "selected" selected
+        cgOutput "defaultValue" (readArray defaulted key)
+        cgReturn (readArray selected key)
+
+  stdoutText <- compileProgramAndRunGenerated dir "arrayValuedTables" program
+  sourceText <- readFile (dir </> "arrayValuedTables.c")
+  assertBool ("Expected the selected array value, received:\n" ++ stdoutText) ("0x00000015UL" `isInfixOf` stdoutText)
+  assertBool ("Expected the out-of-range default array value, received:\n" ++ stdoutText) ("defaultValue = 0x0000001eUL" `isInfixOf` stdoutText)
+  assertBool ("Expected retained array-valued table storage, received:\n" ++ sourceText)
+             (    "const SBVArrayOutput_u8_u32 * table" `isInfixOf` sourceText
+              && "sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+              && "__sbv_array_descriptor_" `isInfixOf` sourceText
              )
 
 -- | Exercise managed finite-table results returned independently from

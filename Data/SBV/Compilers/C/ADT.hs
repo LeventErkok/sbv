@@ -527,9 +527,10 @@ adtOwnedReleaseName kind = "sbv_adt_owned_release_" ++ adtCType kind
 
 -- | Initialize a generated-driver ADT and populate its active constructor
 -- from a seed. Managed fields use the public owned-ADT storage protocol; other
--- fields use the supplied scalar renderer.
-adtDriverInit :: CgConfig -> [Kind] -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-adtDriverInit cfg adts renderValue kind externalName seed
+-- fields use the supplied scalar renderer. The statement renderer initializes
+-- retained descriptors for array-valued fields.
+adtDriverInit :: CgConfig -> [Kind] -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
+adtDriverInit cfg adts renderValue initializeArray kind externalName seed
   | isConcreteADT kind
   , adtNeedsOwnership cfg adts kind
   =  text (adtCType kind) <+> text externalName P.<> semi
@@ -571,6 +572,10 @@ adtDriverInit cfg adts renderValue kind externalName seed
          = exactAssignments fieldKind access fieldSeed
          | fieldKind == KString
          = [access <+> text "=" <+> managedValueClone fieldKind (renderValue fieldKind fieldSeed) P.<> semi]
+         | isArray fieldKind
+         = [ initializeArray fieldKind accessName fieldSeed
+           , access <+> text "=" <+> text accessName P.<> semi
+           ]
          | isList fieldKind
          = collectionAssignment listNeedsDriverInit listDriverInit listDriverClear listClone
          | isSet fieldKind
@@ -592,7 +597,7 @@ adtDriverInit cfg adts renderValue kind externalName seed
 
               collectionAssignment needsDriverInit driverInit driverClear clone
                 | needsDriverInit cfg fieldKind
-                = [ driverInit cfg renderValue fieldKind accessName fieldSeed
+                = [ driverInit cfg renderValue initializeArray fieldKind accessName fieldSeed
                   , access <+> text "=" <+> clone fieldKind (text accessName) P.<> semi
                   , driverClear cfg fieldKind accessName
                   ]
@@ -635,8 +640,8 @@ adtDriverInit cfg adts renderValue kind externalName seed
 
 -- | Initialize a generated-driver list or set whose direct elements are ADTs.
 -- The descriptor borrows the independently initialized element variables.
-adtCollectionDriverInit :: CgConfig -> [Kind] -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-adtCollectionDriverInit cfg adts renderValue kind externalName seed
+adtCollectionDriverInit :: CgConfig -> [Kind] -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
+adtCollectionDriverInit cfg adts renderValue initializeArray kind externalName seed
   | Just elementKind <- collectionADTElement kind
   =  vcat (zipWith (initializeElement elementKind) elementNames [seed ..])
   $$ text "const" <+> text (adtCType elementKind) <+> text dataName P.<> brackets (int elementCount)
@@ -655,7 +660,7 @@ adtCollectionDriverInit cfg adts renderValue kind externalName seed
 
        initializeElement elementKind elementName elementSeed
          | adtNeedsOwnership cfg adts elementKind
-         = adtDriverInit cfg adts renderValue elementKind elementName elementSeed
+         = adtDriverInit cfg adts renderValue initializeArray elementKind elementName elementSeed
          | True
          = text (adtCType elementKind) <+> text elementName <+> text "="
              <+> adtDriverValue adts renderValue elementKind elementSeed P.<> semi
