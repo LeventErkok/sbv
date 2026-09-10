@@ -203,6 +203,8 @@ textExpr cfg op svs resultKind args
       (StrOp StrStrToNat         , [a]      ) -> lowerNat a
       (StrOp StrNatToStr         , [a]      ) -> lower $ fromNat a
       (StrOp StrInRe{}           , _        ) -> unsupported "regular-expression membership"
+      (TupleConstructor{}        , _        ) -> Nothing
+      (TupleAccess{}             , _        ) -> Nothing
       _                                         -> unsupported (show op)
  where touchesText = resultKind `elem` [KChar, KString]
                   || any ((`elem` [KChar, KString]) . kindOf) svs

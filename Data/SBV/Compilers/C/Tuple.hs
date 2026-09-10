@@ -26,6 +26,7 @@ module Data.SBV.Compilers.C.Tuple
   , tupleConst
   , tupleExpr
   , tupleUsesExact
+  , tupleNeedsOwnership
   , elementCType
   , kindTag
   ) where
@@ -40,6 +41,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.FP         (arbitraryFPCType)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Text       (textClone)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds)
@@ -79,19 +81,20 @@ tupleTypeDecls tuples = text . unlines $ "/* Structural tuple values. */" : conc
 
        fieldDeclaration index kind = "  " ++ elementCType kind ++ " " ++ tupleFieldName index ++ ";"
 
--- | Emit public ownership helpers for tuples containing exact GMP-backed
--- fields. Inputs may borrow an ordinary tuple value. Cloned values own their
--- exact fields and must be released with 'tupleOwnedReleaseName'.
+-- | Emit public ownership helpers for tuples containing exact GMP-backed or
+-- string fields. Inputs may borrow an ordinary tuple value. Cloned values own
+-- their recursively managed fields and must be released with
+-- 'tupleOwnedReleaseName'.
 tupleOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
 tupleOwnershipTypeDecls cfg tuples
   | null owned = empty
   | True       = text . unlines $ concatMap declaration owned
- where owned = filter (tupleUsesExact cfg) tuples
+ where owned = filter (tupleNeedsOwnership cfg) tuples
 
        declaration kind@(KTuple fields) =
           [ "#ifndef " ++ ownershipGuard
           , "#define " ++ ownershipGuard
-          , "/* Owned exact-field helpers for " ++ tupleCType kind ++ ". */"
+          , "/* Recursive ownership helpers for " ++ tupleCType kind ++ ". */"
           , "/* Owned values have unique ownership; clone before copying and release every owner. */"
           , "static inline SBV_CGEN_UNUSED void " ++ tupleOwnedInitName kind ++ "(" ++ tupleCType kind ++ " *value)"
           , "{"
@@ -137,7 +140,9 @@ tupleOwnershipTypeDecls cfg tuples
                        , "  " ++ exactInit fieldKind ++ "(" ++ local ++ ");"
                        , "  " ++ access ++ " = " ++ local ++ ";"
                        ]
-                  | isTuple fieldKind && tupleUsesExact cfg fieldKind
+                  | fieldKind == KString
+                  = ["  value->" ++ tupleFieldName index ++ " = (SString) {NULL, 0, 0};"]
+                  | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
                   = ["  " ++ tupleOwnedInitName fieldKind ++ "(&value->" ++ tupleFieldName index ++ ");"]
                   | True
                   = []
@@ -145,7 +150,12 @@ tupleOwnershipTypeDecls cfg tuples
                setField index fieldKind
                   | isExactGMPKind cfg fieldKind
                   = ["  " ++ exactSet fieldKind ++ "((" ++ exactMutableType fieldKind ++ ") target->" ++ field ++ ", source." ++ field ++ ");"]
-                  | isTuple fieldKind && tupleUsesExact cfg fieldKind
+                  | fieldKind == KString
+                  = [ "  const SString " ++ field ++ "_copy = sbv_string_clone(source." ++ field ++ ");"
+                    , "  sbv_string_release(&target->" ++ field ++ ");"
+                    , "  target->" ++ field ++ " = " ++ field ++ "_copy;"
+                    ]
+                  | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
                   = ["  " ++ tupleOwnedSetName fieldKind ++ "(&target->" ++ field ++ ", source." ++ field ++ ");"]
                   | True
                   = ["  target->" ++ field ++ " = source." ++ field ++ ";"]
@@ -158,7 +168,9 @@ tupleOwnershipTypeDecls cfg tuples
                     , "    free((void *) value->" ++ field ++ ");"
                     , "  }"
                     ]
-                  | isTuple fieldKind && tupleUsesExact cfg fieldKind
+                  | fieldKind == KString
+                  = ["  sbv_string_release(&value->" ++ field ++ ");"]
+                  | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
                   = ["  " ++ tupleOwnedReleaseName fieldKind ++ "(&value->" ++ field ++ ");"]
                   | True
                   = []
@@ -203,8 +215,8 @@ tupleOwnedReleaseName :: Kind -> String
 tupleOwnedReleaseName kind = "sbv_tuple_owned_release_" ++ kindTag kind
 
 -- | Initialize a generated-driver tuple and populate its fields from a seed.
--- Exact fields use the public owned-tuple storage protocol; other fields use
--- the supplied scalar renderer.
+-- Recursively owned fields use the public owned-tuple storage protocol; other
+-- fields use the supplied scalar renderer.
 tupleDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
 tupleDriverInit cfg renderValue kind@(KTuple fields) externalName seed =
      text (tupleCType kind) <+> text externalName P.<> semi
@@ -216,8 +228,10 @@ tupleDriverInit cfg renderValue kind@(KTuple fields) externalName seed =
        assignAt fieldKind access fieldSeed
          | isExactGMPKind cfg fieldKind
          = exactAssignments fieldKind access fieldSeed
+         | fieldKind == KString
+         = [access <+> text "=" <+> textClone (renderValue fieldKind fieldSeed) P.<> semi]
          | nested@(KTuple nestedFields) <- fieldKind
-         , tupleUsesExact cfg nested
+         , tupleNeedsOwnership cfg nested
          = concat (zipWith assignNested [1 :: Int ..] (zip nestedFields [fieldSeed ..]))
          | True
          = [access <+> text "=" <+> renderValue fieldKind fieldSeed P.<> semi]
@@ -274,15 +288,26 @@ tupleExpr cfg op svs resultKind args
       _ -> Nothing
  where lower kind = Just . expressionLowering storage []
         where storage
-                | isExactGMPKind cfg kind = CFunctionScoped
-                | tupleUsesExact cfg kind = CFunctionScoped
-                | True                    = CByValue
+                | isExactGMPKind cfg kind      = CFunctionScoped
+                | tupleNeedsOwnership cfg kind = CFunctionScoped
+                | True                         = CByValue
 
 -- | Test whether a tuple contains an exact GMP-backed integer, real, or
 -- rational at any nesting depth under the active code-generation configuration.
 tupleUsesExact :: CgConfig -> Kind -> Bool
 tupleUsesExact cfg kind@KTuple{} = any (isExactGMPKind cfg) (expandKinds kind)
 tupleUsesExact _   _             = False
+
+-- | Test whether a tuple contains a field that must be cloned when it crosses
+-- the generated function's ownership boundary.
+tupleNeedsOwnership :: CgConfig -> Kind -> Bool
+tupleNeedsOwnership cfg (KTuple fields) = any fieldNeedsOwnership fields
+ where fieldNeedsOwnership fieldKind
+         | isExactGMPKind cfg fieldKind = True
+         | fieldKind == KString         = True
+         | isTuple fieldKind            = tupleNeedsOwnership cfg fieldKind
+         | True                         = False
+tupleNeedsOwnership _ _ = False
 
 -- | Render a tuple expression from its field expressions.
 tupleValue :: Kind -> [Doc] -> Doc
@@ -312,6 +337,8 @@ elementCType KReal               = "SReal"
 elementCType KRational           = "SRational"
 elementCType KFloat              = "SFloat"
 elementCType KDouble             = "SDouble"
+elementCType KChar               = "SChar"
+elementCType KString             = "SString"
 elementCType kind@KFP{}          = arbitraryFPCType kind
 elementCType kind@KTuple{}       = tupleCType kind
 elementCType kind
@@ -328,6 +355,8 @@ kindTag KReal              = "real"
 kindTag KRational          = "rational"
 kindTag KFloat             = "float"
 kindTag KDouble            = "double"
+kindTag KChar              = "char"
+kindTag KString            = "string"
 kindTag (KFP eb sb)        = "fp_e" ++ show eb ++ "_s" ++ show sb
 kindTag (KTuple fields)    = "t" ++ show (length fields) ++ concatMap (('_' :) . taggedKind . kindTag) fields
 kindTag kind

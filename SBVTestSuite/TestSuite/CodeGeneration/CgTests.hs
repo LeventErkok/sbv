@@ -96,6 +96,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "retain an escaping callback array" escapingCallbackArray
   , testCase "compile and execute structural tuples" structuralTuples
   , testCase "compile repeated tuple types into a library" structuralTupleLibrary
+  , testCase "compile and execute tuples containing strings" ownedTextTuples
+  , testCase "return string tuples from a generated library" ownedTextTupleLibrary
   , testCase "compile and execute characters and strings" characterStrings
   , testCase "compile strings with mapped integers" mappedIntegerStrings
   , testCase "return owned strings from a generated library" ownedStringLibrary
@@ -1146,6 +1148,55 @@ structuralTupleLibrary = withSystemTempDirectory "sbv-structural-tuple-library" 
   mapM_ (\fragment -> assertBool ("Expected tuple library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
     [ "(5, 0x0006U)"
     , "(6, 0x0007U)"
+    ]
+
+-- | Exercise borrowed nested tuple strings and independently owned tuple
+-- outputs and returns.
+ownedTextTuples :: Assertion
+ownedTextTuples = withSystemTempDirectory "sbv-owned-text-tuples" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [4]
+        source <- cgInput "source" :: SBVCodeGen (SBV (String, (String, Word8)))
+        let (first, nested)  = untuple source
+            (second, count) = untuple nested
+            result          = tuple (first SL.++ literal ":" SL.++ second, tuple (second SL.++ literal "!", count + 1))
+        cgOutput "sourceCopy" source
+        cgOutput "result" result
+        cgReturn result
+
+  stdoutText <- compileProgramAndRunGenerated dir "ownedTextTuples" program
+  headerText <- readFile (dir </> "ownedTextTuples.h")
+  mapM_ (\fragment -> assertBool ("Expected owned text-tuple output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") =(sbv4:sbv5, (sbv5!, 7))"
+    , "sourceCopy =(sbv4, (sbv5, 6))"
+    , "result =(sbv4:sbv5, (sbv5!, 7))"
+    ]
+  assertBool "Expected recursive string ownership in generated tuple helpers"
+             ("sbv_string_clone(source.field1)" `isInfixOf` headerText
+           && "sbv_string_release(&value->field1)" `isInfixOf` headerText)
+
+-- | Exercise guarded string-tuple ownership helpers shared by multiple
+-- generated library translation units.
+ownedTextTupleLibrary :: Assertion
+ownedTextTupleLibrary = withSystemTempDirectory "sbv-owned-text-tuple-library" $ \dir -> do
+  let component suffix resultValue seed = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        source <- cgInput "source" :: SBVCodeGen SString
+        cgReturn (tuple (source SL.++ suffix, literal resultValue :: SWord8))
+
+  (_, cfg, bundle) <- compileToCLib' "ownedTextTupleLibrary"
+    [ ("firstTextTuple",  component (literal "!") 9 4)
+    , ("secondTextTuple", component (literal "?") 8 5)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "ownedTextTupleLibrary"
+  mapM_ (\fragment -> assertBool ("Expected text-tuple library output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "(sbv4!, 9)"
+    , "(sbv5?, 8)"
     ]
 
 -- | Exercise parameter substitution, constructors, tests, accessors,

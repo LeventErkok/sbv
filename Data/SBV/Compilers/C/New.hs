@@ -604,11 +604,11 @@ genDriver cfg adts randVals fn inps outs mbRet
                  | True                          = text "const" <+> text (showCType valueKind) <+> text defaultName <+> text "=" <+> v P.<> semi
            in defaultValue
               $$ arrayDriverInput cfg (kindOf sv) fn n defaultName
-         | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text n) v
-         | listUsesExact cfg (kindOf sv)  = listDriverInit cfg (kindOf sv) n (inputSeed n)
-         | setUsesExact cfg (kindOf sv)   = setDriverInit cfg (kindOf sv) n (inputSeed n)
-         | tupleUsesExact cfg (kindOf sv) = tupleDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
-         | isOwnedADT cfg adts sv         = adtDriverInit cfg adts mkRValKind (kindOf sv) n (inputSeed n)
+         | isExactGMPKind cfg (kindOf sv)      = gmpDriverInit (kindOf sv) (text n) v
+         | listUsesExact cfg (kindOf sv)       = listDriverInit cfg (kindOf sv) n (inputSeed n)
+         | setUsesExact cfg (kindOf sv)        = setDriverInit cfg (kindOf sv) n (inputSeed n)
+         | tupleNeedsOwnership cfg (kindOf sv) = tupleDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
+         | isOwnedADT cfg adts sv              = adtDriverInit cfg adts mkRValKind (kindOf sv) n (inputSeed n)
        mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
        mkInp (_,   n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
        mkInp (vs,  n, CgArray sws@(sv:_)) =  pprCWord True sv <+> text n P.<> brackets (int (length sws)) <+> text "= {"
@@ -619,48 +619,48 @@ genDriver cfg adts randVals fn inps outs mbRet
                                          $$ display (n, CgArray sws)
                                          $$ text ""
        mkOut (v, CgAtomic sv)
-         | isArray sv                     = text (arrayOutputCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
-         | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text v) (text "0")
-         | kindOf sv == KString           = text "SString" <+> text v <+> text "=" <+> braces (text "0") P.<> semi
-         | isList sv                      = text (listCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
-         | isSet sv                       = text (setCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
-         | tupleUsesExact cfg (kindOf sv) = text (tupleCType (kindOf sv)) <+> text v
-                                        <+> text "=" <+> braces (text "0") P.<> semi
-         | isOwnedADT cfg adts sv         = text (adtCType (kindOf sv)) <+> text v
-                                        <+> text "=" <+> braces (text "0") P.<> semi
-         | True                           = pprCWord False sv <+> text v P.<> semi
+         | isArray sv                          = text (arrayOutputCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
+         | isExactGMPKind cfg (kindOf sv)      = gmpDriverInit (kindOf sv) (text v) (text "0")
+         | kindOf sv == KString                = text "SString" <+> text v <+> text "=" <+> braces (text "0") P.<> semi
+         | isList sv                           = text (listCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
+         | isSet sv                            = text (setCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
+         | tupleNeedsOwnership cfg (kindOf sv) = text (tupleCType (kindOf sv)) <+> text v
+                                             <+> text "=" <+> braces (text "0") P.<> semi
+         | isOwnedADT cfg adts sv              = text (adtCType (kindOf sv)) <+> text v
+                                             <+> text "=" <+> braces (text "0") P.<> semi
+         | True                                = pprCWord False sv <+> text v P.<> semi
        mkOut (v, CgArray [])             = die $ "Unsupported empty array value for " ++ show v
        mkOut (v, CgArray sws@(sv:_))     = pprCWord False sv <+> text v P.<> brackets (int (length sws)) P.<> semi
        resultVar = text "__result"
        call = case mbRet of
                 Nothing -> fcall P.<> semi
                 Just sv
-                  | isExactGMPKind cfg (kindOf sv) -> gmpDriverInit (kindOf sv) resultVar (text "0")
-                                                   $$ fcall P.<> semi
-                  | isArray sv                     -> text (arrayOutputCType (kindOf sv)) <+> resultVar
-                                                  <+> text "=" <+> fcall P.<> semi
-                  | tupleUsesExact cfg (kindOf sv) -> text (tupleCType (kindOf sv)) <+> resultVar
-                                                  <+> text "=" <+> fcall P.<> semi
-                  | isOwnedADT cfg adts sv         -> text (adtCType (kindOf sv)) <+> resultVar
-                                                  <+> text "=" <+> fcall P.<> semi
-                  | kindOf sv == KString           -> text "const SString" <+> resultVar <+> text "=" <+> fcall P.<> semi
-                  | isList sv                      -> text "const" <+> text (listCType (kindOf sv)) <+> resultVar
-                                                  <+> text "=" <+> fcall P.<> semi
-                  | isSet sv                       -> text "const" <+> text (setCType (kindOf sv)) <+> resultVar
-                                                  <+> text "=" <+> fcall P.<> semi
-                  | True                           -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
+                  | isExactGMPKind cfg (kindOf sv)      -> gmpDriverInit (kindOf sv) resultVar (text "0")
+                                                        $$ fcall P.<> semi
+                  | isArray sv                          -> text (arrayOutputCType (kindOf sv)) <+> resultVar
+                                                       <+> text "=" <+> fcall P.<> semi
+                  | tupleNeedsOwnership cfg (kindOf sv) -> text (tupleCType (kindOf sv)) <+> resultVar
+                                                       <+> text "=" <+> fcall P.<> semi
+                  | isOwnedADT cfg adts sv              -> text (adtCType (kindOf sv)) <+> resultVar
+                                                       <+> text "=" <+> fcall P.<> semi
+                  | kindOf sv == KString                -> text "const SString" <+> resultVar <+> text "=" <+> fcall P.<> semi
+                  | isList sv                           -> text "const" <+> text (listCType (kindOf sv)) <+> resultVar
+                                                       <+> text "=" <+> fcall P.<> semi
+                  | isSet sv                            -> text "const" <+> text (setCType (kindOf sv)) <+> resultVar
+                                                       <+> text "=" <+> fcall P.<> semi
+                  | True                                -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
        fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs ++ exactResultArg)))
        exactResultArg = case mbRet of
                           Just sv | isExactGMPKind cfg (kindOf sv) -> [resultVar]
                           _                                        -> []
        mkCVal ([v], n, CgAtomic sv)
-         | isArray sv                     = text n
-         | isExactGMPKind cfg (kindOf sv) = text n
-         | listUsesExact cfg (kindOf sv)  = text n
-         | setUsesExact cfg (kindOf sv)   = text n
-         | tupleUsesExact cfg (kindOf sv) = text n
-         | isOwnedADT cfg adts sv         = text n
-         | True                           = v
+         | isArray sv                          = text n
+         | isExactGMPKind cfg (kindOf sv)      = text n
+         | listUsesExact cfg (kindOf sv)       = text n
+         | setUsesExact cfg (kindOf sv)        = text n
+         | tupleNeedsOwnership cfg (kindOf sv) = text n
+         | isOwnedADT cfg adts sv              = text n
+         | True                                = v
        mkCVal (vs,  n, CgAtomic{}) = die $ "Unexpected driver value computed for " ++ show n ++ render (hcat vs)
        mkCVal (_,   n, CgArray{})  = text n
        mkOVal (n, CgAtomic sv)
@@ -796,7 +796,7 @@ genDriver cfg adts randVals fn inps outs mbRet
                                  ]
                               ++ [releaseTuple sv n
                                  | (_, n, CgAtomic sv) <- pairedInputs
-                                 , tupleUsesExact cfg (kindOf sv)
+                                 , tupleNeedsOwnership cfg (kindOf sv)
                                  ]
                               ++ [gmpDriverClear valueKind (text (n ++ "_default"))
                                  | (_, n, CgAtomic sv) <- pairedInputs
@@ -813,7 +813,7 @@ genDriver cfg adts randVals fn inps outs mbRet
                                ]
                             ++ [releaseTuple sv n
                                | (n, CgAtomic sv) <- outs
-                               , tupleUsesExact cfg (kindOf sv)
+                               , tupleNeedsOwnership cfg (kindOf sv)
                                ]
                             ++ [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> text n) P.<> semi
                                | (n, CgAtomic sv) <- outs
@@ -836,14 +836,14 @@ genDriver cfg adts randVals fn inps outs mbRet
                                , isSet sv
                                ]
                returnCleanup = case mbRet of
-                                 Just sv | isExactGMPKind cfg (kindOf sv) -> [gmpDriverClear (kindOf sv) resultVar]
-                                 Just sv | isArray sv                     -> [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> resultVar) P.<> semi]
-                                 Just sv | tupleUsesExact cfg (kindOf sv) -> [releaseTuple sv "__result"]
-                                 Just sv | isOwnedADT cfg adts sv         -> [releaseADT sv "__result"]
-                                 Just sv | kindOf sv == KString           -> [textRelease resultVar]
-                                 Just sv | isList sv                      -> [listRelease (kindOf sv) resultVar]
-                                 Just sv | isSet sv                       -> [setRelease (kindOf sv) resultVar]
-                                 _                                        -> []
+                                 Just sv | isExactGMPKind cfg (kindOf sv)      -> [gmpDriverClear (kindOf sv) resultVar]
+                                 Just sv | isArray sv                          -> [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> resultVar) P.<> semi]
+                                 Just sv | tupleNeedsOwnership cfg (kindOf sv) -> [releaseTuple sv "__result"]
+                                 Just sv | isOwnedADT cfg adts sv              -> [releaseADT sv "__result"]
+                                 Just sv | kindOf sv == KString                -> [textRelease resultVar]
+                                 Just sv | isList sv                           -> [listRelease (kindOf sv) resultVar]
+                                 Just sv | isSet sv                            -> [setRelease (kindOf sv) resultVar]
+                                 _                                             -> []
 
                releaseTuple sv = releaseOwned (tupleOwnedReleaseName (kindOf sv))
                releaseADT   sv = releaseOwned (adtOwnedReleaseName   (kindOf sv))
@@ -946,7 +946,7 @@ genCProg cfg adts lists sets fn proto
                         $$ vcat (concatMap (genIO False . (True,)) outVars)
                         $$ exactReturn
                         $$ arrayReturn
-                        $$ exactTupleReturn
+                        $$ ownedTupleReturn
                         $$ exactADTReturn
                         $$ textReturn
                         $$ listReturn
@@ -1000,10 +1000,12 @@ genCProg cfg adts lists sets fn proto
        usesGMP          = any (isExactGMPKind cfg) kindInfo
        usesExactInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kindInfo
 
-       containsNestedText KList{} = False
-       containsNestedText KSet{}  = False
-       containsNestedText kind    = kind `notElem` [KChar, KString]
-                                 && any (`elem` [KChar, KString]) (expandKinds kind)
+       containsNestedText (KTuple fields) = any containsNestedText fields
+       containsNestedText KList{}         = False
+       containsNestedText KSet{}          = False
+       containsNestedText KChar           = False
+       containsNestedText KString         = False
+       containsNestedText kind            = any (`elem` [KChar, KString]) (expandKinds kind)
 
        containsNestedList KList{} = False
        containsNestedList kind    = any isList (expandKinds kind)
@@ -1069,11 +1071,12 @@ genCProg cfg adts lists sets fn proto
                                   <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi
                        _       -> empty
 
-       exactTupleReturn = case mbRet of
-                            Just sv | tupleUsesExact cfg (kindOf sv)
-                                    -> text "const" <+> text (tupleCType (kindOf sv)) <+> text "__result" <+> text "="
-                                       <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi
-                            _       -> empty
+       ownedTupleReturn = case mbRet of
+                            Just sv
+                              | tupleNeedsOwnership cfg (kindOf sv)
+                              -> text "const" <+> text (tupleCType (kindOf sv)) <+> text "__result" <+> text "="
+                                 <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi
+                            _ -> empty
 
        exactADTReturn = case mbRet of
                           Just sv
@@ -1103,7 +1106,7 @@ genCProg cfg adts lists sets fn proto
 
        normalReturn = case mbRet of
                         Just sv | isArray sv                           -> text "return __result;"
-                        Just sv | tupleUsesExact cfg (kindOf sv)       -> text "return __result;"
+                        Just sv | tupleNeedsOwnership cfg (kindOf sv) -> text "return __result;"
                         Just sv | isOwnedADT cfg adts sv               -> text "return __result;"
                         Just sv | kindOf sv == KString                 -> text "return __result;"
                         Just sv | isList sv                            -> text "return __result;"
@@ -1172,19 +1175,19 @@ genCProg cfg adts lists sets fn proto
          | isSet sv   = [declSV typeWidth sv <+> text "=" <+> setNormalize (kindOf sv) (text cNm) P.<> semi | alive]
          | True       = [declSV typeWidth sv <+> text "=" <+> inputValue cNm sv P.<> semi | alive]
        genIO False (alive, (cNm, CgAtomic sv))
-         | isArray sv                     = [text "*" P.<> text cNm <+> text "=" <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
-         | isExactGMPKind cfg (kindOf sv) = [gmpSet (kindOf sv) (text cNm) (showSV cfg consts sv) P.<> semi | alive]
-         | kindOf sv == KString           = [text "*" P.<> text cNm <+> text "=" <+> textClone (showSV cfg consts sv) P.<> semi | alive]
-         | isList sv                      = [text "*" P.<> text cNm <+> text "=" <+> listClone (kindOf sv) (showSV cfg consts sv) P.<> semi | alive]
-         | isSet sv                       = [text "*" P.<> text cNm <+> text "=" <+> setClone (kindOf sv) (showSV cfg consts sv) P.<> semi | alive]
-         | tupleUsesExact cfg (kindOf sv) = [text "*" P.<> text cNm <+> text "=" <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
-         | isOwnedADT cfg adts sv         = [ text "*" P.<> text cNm <+> text "="
-                                          <+> text (adtOwnedCloneName (kindOf sv))
-                                                P.<> parens (showSV cfg consts sv)
-                                                P.<> semi
-                                            | alive
-                                            ]
-         | True                           = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg consts sv P.<> semi | alive]
+         | isArray sv                          = [text "*" P.<> text cNm <+> text "=" <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
+         | isExactGMPKind cfg (kindOf sv)      = [gmpSet (kindOf sv) (text cNm) (showSV cfg consts sv) P.<> semi | alive]
+         | kindOf sv == KString                = [text "*" P.<> text cNm <+> text "=" <+> textClone (showSV cfg consts sv) P.<> semi | alive]
+         | isList sv                           = [text "*" P.<> text cNm <+> text "=" <+> listClone (kindOf sv) (showSV cfg consts sv) P.<> semi | alive]
+         | isSet sv                            = [text "*" P.<> text cNm <+> text "=" <+> setClone (kindOf sv) (showSV cfg consts sv) P.<> semi | alive]
+         | tupleNeedsOwnership cfg (kindOf sv) = [text "*" P.<> text cNm <+> text "=" <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
+         | isOwnedADT cfg adts sv              = [ text "*" P.<> text cNm <+> text "="
+                                               <+> text (adtOwnedCloneName (kindOf sv))
+                                                     P.<> parens (showSV cfg consts sv)
+                                                     P.<> semi
+                                                 | alive
+                                                 ]
+         | True                                = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg consts sv P.<> semi | alive]
        genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
          where genElt sv i
                  | isInp = declSV typeWidth sv <+> text "=" <+> inputValue entry sv P.<> semi
