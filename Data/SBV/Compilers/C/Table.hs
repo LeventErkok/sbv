@@ -22,6 +22,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.BV       (isWideBV, wideBVLookupIndex, wideBVLookupInRange)
 import Data.SBV.Compilers.C.GMP      (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering (CLowering, CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Value    (valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen    (CgConfig(..))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind             (expandKinds)
@@ -40,11 +41,18 @@ tableExpr cfg renderSV (LkUp (tableId, indexKind, _, tableLength) index defaultV
        lookupValue     = text "table" P.<> int tableId P.<> brackets nativeIndex
 
        storage
-         | isExactGMPKind cfg resultKind = CFunctionScoped
-         | True                          = CByValue
+         | tableMustBeLocal cfg resultKind = CFunctionScoped
+         | True                            = CByValue
 
-       requirements =  [CRequiresGMP    | isExactGMPKind cfg indexKind || isExactGMPKind cfg resultKind]
-                    ++ [CRequiresWideBV | isWideBV indexKind || isWideBV resultKind]
+       requirements =  [CRequiresGMP    | any (isExactGMPKind cfg) touchedKinds]
+                    ++ [CRequiresWideBV | any isWideBV touchedKinds]
+                    ++ [CRequiresLibBF  | any isFP touchedKinds]
+                    ++ [CRequiresLibM   | any isFP touchedKinds]
+                    ++ [CRequiresText   | any (`elem` [KChar, KString]) touchedKinds]
+                    ++ [CRequiresLists  | any isList touchedKinds]
+                    ++ [CRequiresSets   | any isSet touchedKinds]
+
+       touchedKinds = concatMap expandKinds [indexKind, resultKind]
 
        nativeIndex
          | isWideBV indexKind              = wideBVLookupIndex indexKind renderedIndex
@@ -95,7 +103,12 @@ tableExpr cfg renderSV (LkUp (tableId, indexKind, _, tableLength) index defaultV
 tableExpr _ _ _ _ = Nothing
 
 -- | Test whether a table declaration must be emitted inside the generated
--- function. Exact GMP constants allocate values in the function's ownership
--- arena and therefore cannot appear in a static C initializer.
+-- function. Exact GMP values use the function's ownership arena, while
+-- managed descriptors point at compound-literal backing storage that is not
+-- a portable static C initializer. ADTs are conservatively local because
+-- their concrete ownership graph is resolved by the ADT lowering phase.
 tableMustBeLocal :: CgConfig -> Kind -> Bool
-tableMustBeLocal cfg = any (isExactGMPKind cfg) . expandKinds
+tableMustBeLocal cfg = any mustBeLocal . expandKinds
+ where mustBeLocal kind = isExactGMPKind cfg kind || valueNeedsOwnership cfg kind || isConcreteADT kind
+
+       isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)

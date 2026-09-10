@@ -111,6 +111,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "retain an escaping callback array" escapingCallbackArray
   , testCase "compile arrays with managed aggregate fields" managedAggregateArrays
   , testCase "return managed aggregate arrays from a library" managedAggregateArrayLibrary
+  , testCase "compile managed aggregate lookup tables" managedAggregateTables
+  , testCase "return managed table values from a library" managedAggregateTableLibrary
   , testCase "compile and execute structural tuples" structuralTuples
   , testCase "compile repeated tuple types into a library" structuralTupleLibrary
   , testCase "compile and execute tuples containing strings" ownedTextTuples
@@ -1222,6 +1224,80 @@ managedAggregateArrayLibrary = withSystemTempDirectory "sbv-managed-aggregate-ar
   assertBool "Expected one reusable guarded aggregate-array ABI"
              ("SBVArrayOutput_set_3_u16_adt_" `isInfixOf` headerText
            && "sbv_array_output_release_set_3_u16_adt_" `isInfixOf` headerText)
+
+-- | Exercise static and runtime-local finite tables containing text, lists,
+-- sets, and ADTs with managed collection fields.
+managedAggregateTables :: Assertion
+managedAggregateTables = withSystemTempDirectory "sbv-managed-aggregate-tables" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 5]
+        selector <- cgInput "selector" :: SBVCodeGen SWord8
+        source   <- cgInput "source"   :: SBVCodeGen (SList Word16)
+        let staticText :: SString
+            staticText  = select [literal "zero", literal "one"] (literal "other") selector
+            staticList  = select [literal ([1, 2] :: [Word16]), literal ([3, 4] :: [Word16])]
+                                 (literal ([9] :: [Word16])) selector
+            dynamicList = select [source, source SL.++ SL.singleton 9]
+                                 (literal ([10] :: [Word16])) selector
+            staticSet :: SSet Word16
+            staticSet   = select [SS.fromList [1, 2], SS.fromList [3, 4]]
+                                 (SS.singleton 9) selector
+            firstADT    = sCGNativeCollections source (SS.singleton 20)
+            secondADT   = sCGNativeCollections (source SL.++ SL.singleton 21) (SS.fromList [22, 23])
+            selectedADT = select [firstADT, secondADT] (sCGNativeCollections SL.nil SS.empty) selector
+        cgOutput "staticText" staticText
+        cgOutput "staticList" staticList
+        cgOutput "dynamicList" dynamicList
+        cgOutput "staticSet" staticSet
+        cgOutput "selectedADT" selectedADT
+        cgReturn selectedADT
+
+  stdoutText <- compileProgramAndRunGenerated dir "managedAggregateTables" program
+  sourceText <- readFile (dir </> "managedAggregateTables.c")
+  mapM_ (\fragment -> assertBool ("Expected managed aggregate-table output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") =CGNativeCollections([0x0005U, 0x0006U, 0x0007U, 0x0015U], {0x0016U, 0x0017U})"
+    , "staticText =one"
+    , "staticList =[0x0003U, 0x0004U]"
+    , "dynamicList =[0x0005U, 0x0006U, 0x0007U, 0x0009U]"
+    , "staticSet ={0x0003U, 0x0004U}"
+    , "selectedADT =CGNativeCollections([0x0005U, 0x0006U, 0x0007U, 0x0015U], {0x0016U, 0x0017U})"
+    ]
+  assertBool "Expected pointer-backed aggregate tables to use automatic storage"
+             (    "const SString table" `isInfixOf` sourceText
+              && "const SBVList_u16 table" `isInfixOf` sourceText
+              && "const SBVSet_u16 table" `isInfixOf` sourceText
+              && "const SBVADT_CodeGenNativeCollections table" `isInfixOf` sourceText
+              && not ("static const SString table" `isInfixOf` sourceText)
+              && not ("static const SBVList_u16 table" `isInfixOf` sourceText)
+              && not ("static const SBVSet_u16 table" `isInfixOf` sourceText)
+             )
+
+-- | Exercise managed finite-table results returned independently from
+-- multiple generated library translation units.
+managedAggregateTableLibrary :: Assertion
+managedAggregateTableLibrary = withSystemTempDirectory "sbv-managed-aggregate-table-library" $ \dir -> do
+  let component :: Integer -> Word16 -> SBVCodeGen ()
+      component driverSeed base = do
+        cgOverwriteFiles True
+        cgSetDriverValues [driverSeed]
+        selector <- cgInput "selector" :: SBVCodeGen SWord8
+        cgReturn (select [ literal ([base, base + 1] :: [Word16])
+                         , literal ([base + 2, base + 3] :: [Word16])
+                         ] (literal ([] :: [Word16])) selector)
+
+  (_, cfg, bundle) <- compileToCLib' "managedAggregateTableLibrary"
+    [ ("firstManagedTable",  component 0 10)
+    , ("secondManagedTable", component 1 20)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "managedAggregateTableLibrary"
+  mapM_ (\fragment -> assertBool ("Expected managed aggregate-table library output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "[0x000aU, 0x000bU]"
+    , "[0x0016U, 0x0017U]"
+    ]
 
 -- | Exercise nested tuple inputs, construction, projection, conditionals,
 -- tuple constants in finite tables, public outputs, and returns.

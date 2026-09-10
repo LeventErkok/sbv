@@ -880,22 +880,16 @@ genCProg cfg adts lists sets fn proto
          inVars outVars mbRet extDecls
   | not (null unsupportedSets)
   = notyet $ "Sets with element kinds " ++ intercalate ", " (map (show . setElementKind) unsupportedSets)
-  | any tableUsesSet tbls
-  = notyet "Sets in tables"
   | any assignmentUsesSet lambdaAssignments
   = notyet "Sets in array lambdas"
   | any containsNestedSet kindInfo
   = notyet "Sets nested in arrays or unsupported aggregate types"
   | not (null unsupportedLists)
   = notyet $ "Lists with element kinds " ++ intercalate ", " (map (show . listElementKind) unsupportedLists)
-  | any tableUsesList tbls
-  = notyet "Lists in tables"
   | any assignmentUsesList lambdaAssignments
   = notyet "Lists in array lambdas"
   | any containsNestedList kindInfo
   = notyet "Lists nested in arrays or unsupported aggregate types"
-  | any tableUsesText tbls
-  = notyet "Characters or strings in tables"
   | any assignmentUsesText lambdaAssignments
   = notyet "Characters or strings in array lambdas"
   | any containsNestedText kindInfo
@@ -1045,13 +1039,6 @@ genCProg cfg adts lists sets fn proto
                   && any (any (walk (Set.insert kind visited)) . snd) (adtConstructors adts kind)
               walk _ kind
                 = any isCollection (expandKinds kind)
-
-       tableUsesText ((_, keyKind, valueKind), _) = keyKind `elem` [KChar, KString]
-                                                 || valueKind `elem` [KChar, KString]
-
-       tableUsesList ((_, keyKind, valueKind), _) = isList keyKind || isList valueKind
-
-       tableUsesSet ((_, keyKind, valueKind), _) = isSet keyKind || isSet valueKind
 
        assignmentUsesText (sv, SBVApp _ arguments) = any ((`elem` [KChar, KString]) . kindOf) (sv : arguments)
 
@@ -1493,12 +1480,12 @@ ppExpr cfg adts consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         selected = fromMaybe legacy $ chooseLowering
           [ arrayExpr cfg op opArgs resultSV renderedArgs
+          , tableExpr cfg (showSV cfg consts) op (kindOf resultSV)
           , setExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , textExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , listExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , adtExpr cfg adts op opArgs (kindOf resultSV) renderedArgs
           , tupleExpr cfg op opArgs (kindOf resultSV) renderedArgs
-          , tableExpr cfg (showSV cfg consts) op (kindOf resultSV)
           , gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , arbitraryFPExpr cfg consts op opArgs (kindOf resultSV) renderedArgs
           , nativeFPExpr consts op opArgs (kindOf resultSV) renderedArgs
