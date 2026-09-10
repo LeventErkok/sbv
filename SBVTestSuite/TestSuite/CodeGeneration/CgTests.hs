@@ -114,7 +114,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "preserve native floating-point set equality" nativeFloatSets
   , testCase "compile sets with mapped numeric elements" mappedNumericSets
   , testCase "return owned sets from a generated library" ownedSetLibrary
-  , testCase "reject sets of exact GMP values" exactGMPSets
+  , testCase "compile sets of exact GMP values" exactGMPSets
   , testCase "compile and execute non-recursive ADTs" nonRecursiveADTs
   , testCase "compile and execute nested ADTs" nestedADTs
   , testCase "compile repeated ADT types into a library" nonRecursiveADTLibrary
@@ -702,19 +702,55 @@ ownedSetLibrary = withSystemTempDirectory "sbv-owned-set-library" $ \dir -> do
              ("{0x0004U, 0x0005U, 0x0006U, 0x0028U}" `isInfixOf` stdoutText
            && "{0x0006U, 0x0007U, 0x0008U, 0x0032U}" `isInfixOf` stdoutText)
 
--- | Report the current deep-ownership boundary explicitly when a set stores
--- exact GMP-backed values.
+-- | Exercise exact-value normalization and comparison, finite/cofinite set
+-- algebra, and deep-cloned exact set results across the generated C ABI.
 exactGMPSets :: Assertion
-exactGMPSets = do
-  result <- try (do
-    (_, _, bundle) <- compileToC' "exactGMPSets" $ do
-      values <- cgInput "values" :: SBVCodeGen (SSet Integer)
-      cgReturn values
-    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
-  case result of
-    Left exception -> assertBool ("Expected an exact-set ownership diagnostic, received:\n" ++ displayException exception)
-                                 ("Sets with element kinds SInteger" `isInfixOf` displayException exception)
-    Right _        -> assertBool "Expected exact GMP set elements to be rejected" False
+exactGMPSets = withSystemTempDirectory "sbv-exact-gmp-sets" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [10, 12, 11, 20, 30]
+        left      <- cgInput "left"      :: SBVCodeGen (SSet Integer)
+        right     <- cgInput "right"     :: SBVCodeGen (SSet Integer)
+        cofinite  <- cgInput "cofinite"  :: SBVCodeGen (SSet Integer)
+        reals     <- cgInput "reals"     :: SBVCodeGen (SSet AlgReal)
+        rationals <- cgInput "rationals" :: SBVCodeGen (SSet Rational)
+        let unioned        = SS.union left right
+            inserted       = SS.insert 13 left
+            intersected    = SS.intersection left right
+            mixedUnion     = SS.union left cofinite
+            realResult     = SS.insert 23 reals
+            rationalResult = SS.delete 31 rationals
+        cgOutput "sameIntegers"   (left .== SS.fromList [10, 11, 12])
+        cgOutput "member"         (13 `SS.member` unioned)
+        cgOutput "inserted"       inserted
+        cgOutput "intersected"    intersected
+        cgOutput "mixedUnion"     mixedUnion
+        cgOutput "realMember"     (21 `SS.member` reals)
+        cgOutput "rationalMember" (31 `SS.member` rationals)
+        cgOutput "realResult"     realResult
+        cgOutput "rationalResult" rationalResult
+        cgReturn unioned
+
+  stdoutText <- compileProgramAndRunGenerated dir "exactGMPSets" program
+  headerText <- readFile (dir </> "exactGMPSets.h")
+  mapM_ (\fragment -> assertBool ("Expected exact-set output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") ={10, 11, 12, 13, 14}"
+    , "sameIntegers = 1"
+    , "member = 1"
+    , "inserted ={10, 11, 12, 13}"
+    , "intersected ={12}"
+    , "mixedUnion =U - {13}"
+    , "realMember = 1"
+    , "rationalMember = 1"
+    , "realResult ={20, 21, 22, 23}"
+    , "rationalResult ={30, 32}"
+    ]
+  assertBool "Expected exact set ownership to clone and clear individual GMP elements"
+             ("mpz_init_set(element, value.data[i]);" `isInfixOf` headerText
+           && "mpz_clear(element); free(element);" `isInfixOf` headerText
+           && "mpq_set(element, value.data[i]);" `isInfixOf` headerText
+           && "mpq_clear(element); free(element);" `isInfixOf` headerText)
 
 -- | Exercise exact symbolic-rational construction, decomposition, arithmetic,
 -- comparison, arbitrary-width conversion, and caller-owned results.

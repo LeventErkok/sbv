@@ -606,6 +606,7 @@ genDriver cfg adts randVals fn inps outs mbRet
               $$ arrayDriverInput cfg (kindOf sv) fn n defaultName
          | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text n) v
          | listUsesExact cfg (kindOf sv)  = listDriverInit cfg (kindOf sv) n (inputSeed n)
+         | setUsesExact cfg (kindOf sv)   = setDriverInit cfg (kindOf sv) n (inputSeed n)
          | tupleUsesExact cfg (kindOf sv) = tupleDriverInit cfg mkRValKind (kindOf sv) n (inputSeed n)
          | isOwnedADT cfg adts sv         = adtDriverInit cfg adts mkRValKind (kindOf sv) n (inputSeed n)
        mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
@@ -656,6 +657,7 @@ genDriver cfg adts randVals fn inps outs mbRet
          | isArray sv                     = text n
          | isExactGMPKind cfg (kindOf sv) = text n
          | listUsesExact cfg (kindOf sv)  = text n
+         | setUsesExact cfg (kindOf sv)   = text n
          | tupleUsesExact cfg (kindOf sv) = text n
          | isOwnedADT cfg adts sv         = text n
          | True                           = v
@@ -787,6 +789,10 @@ genDriver cfg adts randVals fn inps outs mbRet
                               ++ [listDriverClear cfg (kindOf sv) n
                                  | (_, n, CgAtomic sv) <- pairedInputs
                                  , listUsesExact cfg (kindOf sv)
+                                 ]
+                              ++ [setDriverClear cfg (kindOf sv) n
+                                 | (_, n, CgAtomic sv) <- pairedInputs
+                                 , setUsesExact cfg (kindOf sv)
                                  ]
                               ++ [releaseTuple sv n
                                  | (_, n, CgAtomic sv) <- pairedInputs
