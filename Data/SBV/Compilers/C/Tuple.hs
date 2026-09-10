@@ -39,12 +39,13 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.Array      (arrayStoredLoad, arrayStoredValue)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.List       (listClone, listRelease)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
 import Data.SBV.Compilers.C.Set        (setClone, setRelease)
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleCType, tupleFieldName)
-import Data.SBV.Compilers.C.Value      (valueDriverInit, valueNeedsOwnership)
+import Data.SBV.Compilers.C.Value      (managedValueClone, managedValueRelease, valueDriverInit, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds)
@@ -99,7 +100,8 @@ tupleTypeDecls tuples = text . unlines $ "/* Structural tuple values. */" : conc
        fieldDeclaration index kind = "  " ++ elementCType kind ++ " " ++ tupleFieldName index ++ ";"
 
 -- | Emit public ownership helpers for tuples containing exact GMP-backed,
--- string, list, or set fields. Inputs may borrow an ordinary tuple value.
+-- string, collection, or retained-array fields. Inputs may borrow an ordinary
+-- tuple value.
 -- Cloned values own their recursively managed fields and must be released
 -- with 'tupleOwnedReleaseName'.
 tupleOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
@@ -163,6 +165,8 @@ tupleOwnershipTypeDecls cfg tuples
                   = ["  value->" ++ tupleFieldName index ++ " = (" ++ elementCType fieldKind ++ ") {NULL, 0};"]
                   | isSet fieldKind
                   = ["  value->" ++ tupleFieldName index ++ " = (" ++ elementCType fieldKind ++ ") {NULL, 0, false};"]
+                  | isArray fieldKind
+                  = ["  value->" ++ tupleFieldName index ++ " = NULL;"]
                   | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
                   = ["  " ++ tupleOwnedInitName fieldKind ++ "(&value->" ++ tupleFieldName index ++ ");"]
                   | True
@@ -186,6 +190,11 @@ tupleOwnershipTypeDecls cfg tuples
                     , "  " ++ render (setRelease fieldKind (text ("target->" ++ field)))
                     , "  target->" ++ field ++ " = " ++ field ++ "_copy;"
                     ]
+                  | isArray fieldKind
+                  = [ "  " ++ elementCType fieldKind ++ " " ++ field ++ "_copy = " ++ render (managedValueClone fieldKind (text ("source." ++ field))) ++ ";"
+                    , "  " ++ render (managedValueRelease fieldKind (text ("&target->" ++ field)))
+                    , "  target->" ++ field ++ " = " ++ field ++ "_copy;"
+                    ]
                   | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
                   = ["  " ++ tupleOwnedSetName fieldKind ++ "(&target->" ++ field ++ ", source." ++ field ++ ");"]
                   | True
@@ -205,6 +214,8 @@ tupleOwnershipTypeDecls cfg tuples
                   = ["  " ++ render (listRelease fieldKind (text ("value->" ++ field)))]
                   | isSet fieldKind
                   = ["  " ++ render (setRelease fieldKind (text ("value->" ++ field)))]
+                  | isArray fieldKind
+                  = ["  " ++ render (managedValueRelease fieldKind (text ("&value->" ++ field)))]
                   | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
                   = ["  " ++ tupleOwnedReleaseName fieldKind ++ "(&value->" ++ field ++ ");"]
                   | True
@@ -260,7 +271,7 @@ tupleDriverInit _   _           kind         _            _    = error $ "SBV->C
 tupleConst :: (CV -> Doc) -> CV -> Maybe Doc
 tupleConst renderValue (CV kind@(KTuple fieldKinds) (CTuple fieldValues))
   | length fieldKinds == length fieldValues
-  = Just $ tupleValue kind (zipWith (\fieldKind fieldValue -> renderValue (CV fieldKind fieldValue)) fieldKinds fieldValues)
+  = Just $ tupleValue kind (zipWith (\fieldKind fieldValue -> arrayStoredValue fieldKind (renderValue (CV fieldKind fieldValue))) fieldKinds fieldValues)
   | True
   = error $ "SBV->C: Malformed tuple constant " ++ show (CV kind (CTuple fieldValues))
 tupleConst _ _ = Nothing
@@ -268,8 +279,8 @@ tupleConst _ _ = Nothing
 -- | Lower tuple construction, projection, conditionals, and labels. Other
 -- operators are left to the scalar pipeline; SBV normally expands structural
 -- comparisons into field operations before code generation.
-tupleExpr :: CgConfig -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
-tupleExpr cfg op svs resultKind args
+tupleExpr :: CgConfig -> Op -> [SV] -> SV -> [Doc] -> Maybe CLowering
+tupleExpr cfg op svs resultSV args
   | not (isTuple resultKind || any isTuple svs)
   = Nothing
   | True
@@ -278,14 +289,15 @@ tupleExpr cfg op svs resultKind args
         | KTuple fieldKinds <- resultKind
         , arity == length fieldKinds
         , map kindOf fields == fieldKinds
-        -> lower resultKind $ tupleValue resultKind renderedFields
+        -> lower resultKind $ tupleValue resultKind (zipWith arrayStoredValue fieldKinds renderedFields)
       (TupleAccess fieldIndex arity, [tupleSV], [renderedTuple])
         | KTuple fieldKinds <- kindOf tupleSV
         , arity == length fieldKinds
         , fieldIndex >= 1
         , fieldIndex <= arity
         , resultKind == fieldKinds !! (fieldIndex - 1)
-        -> lower resultKind $ parens renderedTuple P.<> text "." P.<> text (tupleFieldName fieldIndex)
+        -> let field = parens renderedTuple P.<> text "." P.<> text (tupleFieldName fieldIndex)
+           in if isArray resultKind then Just (arrayStoredLoad resultSV field) else lower resultKind field
       (Ite, [_condition, left, right], [renderedCondition, renderedLeft, renderedRight])
         | resultKind == kindOf left
         , resultKind == kindOf right
@@ -293,13 +305,16 @@ tupleExpr cfg op svs resultKind args
       (Label label, [_], [renderedTuple])
         -> lower resultKind $ renderedTuple <+> text "/*" <+> text label <+> text "*/"
       _ -> Nothing
- where lower kind = Just . expressionLowering storage []
+ where resultKind = kindOf resultSV
+
+       lower kind = Just . expressionLowering storage []
         where storage
                 | isExactGMPKind cfg kind      = CFunctionScoped
                 | tupleNeedsOwnership cfg kind = CFunctionScoped
                 | kind == KString              = CFunctionScoped
                 | isList kind                  = CFunctionScoped
                 | isSet kind                   = CFunctionScoped
+                | isArray kind                 = CFunctionScoped
                 | True                         = CByValue
 
 -- | Test whether a tuple contains an exact GMP-backed integer, real, or

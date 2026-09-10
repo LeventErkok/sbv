@@ -27,7 +27,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, gmpEqual, isExactGMPKind)
-import Data.SBV.Compilers.C.Types      (adtCType, elementCType, kindTag, tupleCType, tupleFieldName)
+import Data.SBV.Compilers.C.Types      (adtCType, arrayStoredCloneName, arrayStoredReleaseName, elementCType, kindTag, tupleCType, tupleFieldName)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 
@@ -40,6 +40,7 @@ valueNeedsOwnership cfg kind
 valueNeedsOwnership _   KString        = True
 valueNeedsOwnership _   KList{}        = True
 valueNeedsOwnership _   KSet{}         = True
+valueNeedsOwnership _   KArray{}       = True
 valueNeedsOwnership cfg (KTuple kinds) = any (valueNeedsOwnership cfg) kinds
 valueNeedsOwnership _   _              = False
 
@@ -55,7 +56,8 @@ valueDriverNeedsInitialization _   kind@KADT{}          = isConcreteADT kind
 valueDriverNeedsInitialization _   _                    = False
 
 -- | Render equality for a scalar or recursively nested aggregate. The Boolean
--- flag selects object equality for floating-point values.
+-- flag selects object equality for floating-point values. Array-valued fields
+-- abort if reached because their extensional equality is not executable in C.
 byValueEqual :: CgConfig -> Bool -> Kind -> Doc -> Doc -> Doc
 byValueEqual cfg strong kind left right
   | isWideBV kind                              = wideBVEqual kind left right
@@ -66,6 +68,7 @@ byValueEqual cfg strong kind left right
   | kind == KString                            = parens $ call "sbv_text_compare" [left, right] <+> text "== 0"
   | KList elementKind <- kind                  = call ("sbv_list_" ++ kindTag elementKind ++ "_equal") [left, right]
   | KSet elementKind <- kind                   = call ("sbv_set_" ++ kindTag elementKind ++ "_equal") [left, right]
+  | isArray kind                               = text "(abort(), false)"
   | KTuple fields <- kind                      = tupleEquality fields
   | isConcreteADT kind                         = call (adtEqualityName strong kind) [left, right]
   | True                                       = left <+> text "==" <+> right
@@ -85,6 +88,7 @@ managedValueClone :: Kind -> Doc -> Doc
 managedValueClone KString value             = call "sbv_string_clone" [value]
 managedValueClone (KList elementKind) value = call ("sbv_list_clone_" ++ kindTag elementKind) [value]
 managedValueClone (KSet elementKind) value  = call ("sbv_set_clone_" ++ kindTag elementKind) [value]
+managedValueClone kind@KArray{} value       = call (arrayStoredCloneName kind) [value]
 managedValueClone kind@KTuple{} value       = call ("sbv_tuple_owned_clone_" ++ kindTag kind) [value]
 managedValueClone kind@KADT{} value
   | isConcreteADT kind                       = call ("sbv_adt_owned_clone_" ++ adtCType kind) [value]
@@ -95,6 +99,7 @@ managedValueRelease :: Kind -> Doc -> Doc
 managedValueRelease KString address             = call "sbv_string_release" [address] P.<> semi
 managedValueRelease (KList elementKind) address = call ("sbv_list_release_" ++ kindTag elementKind) [address] P.<> semi
 managedValueRelease (KSet elementKind) address  = call ("sbv_set_release_" ++ kindTag elementKind) [address] P.<> semi
+managedValueRelease kind@KArray{} address       = call (arrayStoredReleaseName kind) [address] P.<> semi
 managedValueRelease kind@KTuple{} address       = call ("sbv_tuple_owned_release_" ++ kindTag kind) [address] P.<> semi
 managedValueRelease kind@KADT{} address
   | isConcreteADT kind                          = call ("sbv_adt_owned_release_" ++ adtCType kind) [address] P.<> semi

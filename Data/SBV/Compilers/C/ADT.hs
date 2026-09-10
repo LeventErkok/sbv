@@ -45,6 +45,7 @@ import qualified Data.Text as T
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.Array      (arrayStoredLoad, arrayStoredValue)
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
@@ -386,6 +387,8 @@ adtOwnershipTypeDecls cfg adts
          = [ "      " ++ ownedField "value->" constructorIndex fieldIndex
           ++ " = (" ++ elementCType fieldKind ++ ") {NULL, 0, false};"
            ]
+         | isArray fieldKind
+         = ["      " ++ ownedField "value->" constructorIndex fieldIndex ++ " = NULL;"]
          | tupleNeedsOwnership cfg fieldKind
          = [ "      " ++ tupleOwnedInitName fieldKind
           ++ "(&" ++ ownedField "value->" constructorIndex fieldIndex ++ ");"
@@ -433,6 +436,12 @@ adtOwnershipTypeDecls cfg adts
            , "      " ++ render (setRelease fieldKind (text target))
            , "      " ++ target ++ " = " ++ copy ++ ";"
            ]
+         | isArray fieldKind
+         = [ "      " ++ elementCType fieldKind ++ " " ++ copy
+          ++ " = " ++ render (managedValueClone fieldKind (text source)) ++ ";"
+           , "      " ++ render (managedValueRelease fieldKind (text ("&" ++ target)))
+           , "      " ++ target ++ " = " ++ copy ++ ";"
+           ]
          | tupleNeedsOwnership cfg fieldKind
          = ["      " ++ tupleOwnedSetName fieldKind ++ "(&" ++ target ++ ", " ++ source ++ ");"]
          | isConcreteADT fieldKind
@@ -463,6 +472,8 @@ adtOwnershipTypeDecls cfg adts
          = ["      " ++ render (listRelease fieldKind (text access))]
          | isSet fieldKind
          = ["      " ++ render (setRelease fieldKind (text access))]
+         | isArray fieldKind
+         = ["      " ++ render (managedValueRelease fieldKind (text ("&" ++ access)))]
          | tupleNeedsOwnership cfg fieldKind
          = ["      " ++ tupleOwnedReleaseName fieldKind ++ "(&" ++ access ++ ");"]
          | isConcreteADT fieldKind && adtNeedsOwnership cfg adts fieldKind
@@ -670,7 +681,7 @@ adtConst renderValue cv@(CV kind (CADT (constructorName, fieldValues)))
   , Just (constructorIndex, fieldKinds) <- findConstructor localADTs kind constructorName
   , map fst fieldValues == fieldKinds
   = Just $ adtValue localADTs kind constructorIndex
-        [renderValue (CV fieldKind fieldValue) | (fieldKind, fieldValue) <- fieldValues]
+        [arrayStoredValue fieldKind (renderValue (CV fieldKind fieldValue)) | (fieldKind, fieldValue) <- fieldValues]
   | isConcreteADT kind
   = error $ "SBV->C: Malformed ADT constant " ++ show cv
  where localKinds = Set.fromList $ kind : concatMap (expandKinds . fst) fieldValues
@@ -678,8 +689,8 @@ adtConst renderValue cv@(CV kind (CADT (constructorName, fieldValues)))
 adtConst _ _ = Nothing
 
 -- | Lower ADT construction, tests, accessors, equality, conditionals, and labels.
-adtExpr :: CgConfig -> [Kind] -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
-adtExpr cfg adts op svs resultKind args
+adtExpr :: CgConfig -> [Kind] -> Op -> [SV] -> SV -> [Doc] -> Maybe CLowering
+adtExpr cfg adts op svs resultSV args
   | not (isConcreteADT resultKind || any (isConcreteADT . kindOf) svs)
   = Nothing
   | LkUp{} <- op
@@ -692,19 +703,21 @@ adtExpr cfg adts op svs resultKind args
         | kind == resultKind
         , Just (constructorIndex, fieldKinds) <- findConstructor adts kind (T.unpack constructorName)
         , map kindOf fields == fieldKinds
-        -> lower resultKind $ adtValue adts kind constructorIndex renderedFields
+        -> lower resultKind $ adtValue adts kind constructorIndex (zipWith arrayStoredValue fieldKinds renderedFields)
       (ADTOp (ADTTester testerName operationResultKind), [value], [renderedValue])
         | operationResultKind == resultKind
         , Just constructorIndex <- findTester adts (kindOf value) (T.unpack testerName)
         -> lower resultKind $ adtTag renderedValue <+> text "==" <+> text (adtTagName (kindOf value) constructorIndex)
-      (ADTOp (ADTAccessor accessorName operationResultKind), [value], [renderedValue])
-        | operationResultKind == resultKind
-        , Just (constructorIndex, fieldIndex, fieldKind, recursive) <- findAccessor adts (kindOf value) (T.unpack accessorName)
+      -- The operation records SBV's scalar result kind, which strips any
+      -- surrounding arrays. The accessor field and result SV retain the full kind.
+      (ADTOp (ADTAccessor accessorName _operationResultKind), [value], [renderedValue])
+        | Just (constructorIndex, fieldIndex, fieldKind, recursive) <- findAccessor adts (kindOf value) (T.unpack accessorName)
         , fieldKind == resultKind
-        -> lower resultKind $ if recursive
-                              then text (adtDereferenceName fieldKind)
-                                P.<> parens (adtField renderedValue constructorIndex fieldIndex)
-                              else adtField renderedValue constructorIndex fieldIndex
+        -> let field = if recursive
+                       then text (adtDereferenceName fieldKind)
+                         P.<> parens (adtField renderedValue constructorIndex fieldIndex)
+                       else adtField renderedValue constructorIndex fieldIndex
+           in if isArray resultKind then Just (arrayStoredLoad resultSV field) else lower resultKind field
       (Equal strong, [left, right], [renderedLeft, renderedRight])
         | kindOf left == kindOf right
         -> lower resultKind $ adtEqual cfg adts strong (kindOf left) renderedLeft renderedRight
@@ -727,13 +740,16 @@ adtExpr cfg adts op svs resultKind args
                 ++ " and result kind " ++ show resultKind
                 ++ "; constructors "
                 ++ show [constructorName | (constructorName, _) <- adtConstructors adts (sourceADTKind resultKind svs)]
- where lower kind = Just . expressionLowering storage []
+ where resultKind = kindOf resultSV
+
+       lower kind = Just . expressionLowering storage []
         where storage
                 | isConcreteADT kind && adtNeedsOwnership cfg adts kind = CFunctionScoped
                 | isExactGMPKind cfg kind                               = CFunctionScoped
                 | tupleNeedsOwnership cfg kind                          = CFunctionScoped
                 | isList kind                                           = CFunctionScoped
                 | isSet kind                                            = CFunctionScoped
+                | isArray kind                                          = CFunctionScoped
                 | True                                                  = CByValue
 
 -- | Test whether an ADT contains an exact GMP-backed integer, real, or
@@ -921,6 +937,7 @@ adtFieldEqual cfg adts strong kind left right
   | kind == KString                            = byValueEqual cfg strong kind left right
   | isList kind                                = listEqual kind left right
   | isSet kind                                 = setEqual kind left right
+  | isArray kind                               = byValueEqual cfg strong kind left right
   | KTuple fields <- kind                      = tupleEqual cfg adts strong fields left right
   | isConcreteADT kind                         = adtEqual cfg adts strong kind left right
   | True                                       = left <+> text "==" <+> right

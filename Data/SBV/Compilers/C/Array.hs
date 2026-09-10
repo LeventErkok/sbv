@@ -16,11 +16,16 @@ module Data.SBV.Compilers.C.Array
   , arrayCType
   , arrayInputCType
   , arrayOutputCType
+  , arrayForwardTypeDecls
   , arrayOutputReadName
   , arrayOutputReleaseName
   , arrayExportName
+  , arrayStoredValue
+  , arrayStoredLoad
   , arrayTypeDecls
   , arrayRuntime
+  , arrayContextStart
+  , arrayContextEnd
   , arrayInputSetup
   , arrayDriverCallback
   , arrayDriverInput
@@ -40,20 +45,25 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>), render)
 import Data.SBV.Compilers.C.BV         (isWideBV)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering(..), CRequirement(..), CStorage(..), expressionLowering)
-import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
+import Data.SBV.Compilers.C.Types      ( arrayKindTag
+                                       , arrayOutputCTypeName
+                                       , arrayStoredCloneName
+                                       , arrayStoredReleaseName
+                                       , elementCType
+                                       )
 import Data.SBV.Compilers.C.Value      (byValueEqual, managedValueClone, managedValueRelease, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic          (LambdaInfo(..), smtLambdaInfo)
 
--- | Return and validate the distinct array kinds used by a program. This
--- first implementation deliberately excludes nested arrays; their value
--- ownership needs an explicit public lifetime policy.
+-- | Return and validate the distinct array kinds used by a program. Arrays may
+-- occur as values, but not as keys: array-key matching would require general
+-- extensional equality, which the C backend cannot implement.
 arrayKinds :: Set.Set Kind -> [Kind]
 arrayKinds = map validate . filter isArray . Set.toAscList
  where validate k@(KArray keyKind valueKind)
-         | isArray keyKind || isArray valueKind
-         = error $ "SBV->C: Nested arrays are not yet supported: " ++ show k
+         | isArray keyKind
+         = error $ "SBV->C: Array-valued array keys require unsupported extensional equality: " ++ show k
          | supported keyKind && supported valueKind
          = k
          | True
@@ -61,26 +71,27 @@ arrayKinds = map validate . filter isArray . Set.toAscList
        validate kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
        supported kind = case kind of
-         KBool               -> True
-         KBounded{}          -> True
-         KUnbounded          -> True
-         KReal               -> True
-         KRational           -> True
-         KFloat              -> True
-         KDouble             -> True
-         KFP{}               -> True
-         KChar               -> True
-         KString             -> True
-         KList elementKind   -> supported elementKind
-         KSet elementKind    -> supported elementKind
-         KTuple fields       -> all supported fields
-         KADT{}              -> isRoundingMode kind || isConcreteADT kind
-         _                   -> False
+         KBool                    -> True
+         KBounded{}               -> True
+         KUnbounded               -> True
+         KReal                    -> True
+         KRational                -> True
+         KFloat                   -> True
+         KDouble                  -> True
+         KFP{}                    -> True
+         KChar                    -> True
+         KString                  -> True
+         KList elementKind        -> supported elementKind
+         KSet elementKind         -> supported elementKind
+         KTuple fields            -> all supported fields
+         KArray keyKind valueKind -> not (isArray keyKind) && supported keyKind && supported valueKind
+         KADT{}                   -> isRoundingMode kind || isConcreteADT kind
+         _                        -> False
 
 -- | Return the public opaque-pointer type used for an SBV array kind.
 arrayCType :: Kind -> String
-arrayCType (KArray keyKind valueKind) = "SBVArray_" ++ kindTag keyKind ++ "_" ++ kindTag valueKind
-arrayCType kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
+arrayCType kind@KArray{} = "SBVArray_" ++ arrayKindTag kind
+arrayCType kind          = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
 -- | Return the public callback-descriptor type accepted for an array-valued
 -- C input. The descriptor and its context are borrowed for the duration of
@@ -91,7 +102,7 @@ arrayInputCType kind = "SBVArrayInput_" ++ arraySuffix kind
 -- | Return the public owned-descriptor type produced for an array-valued C
 -- output or return value.
 arrayOutputCType :: Kind -> String
-arrayOutputCType kind = "SBVArrayOutput_" ++ arraySuffix kind
+arrayOutputCType = arrayOutputCTypeName
 
 -- | Return the public helper name used to read an owned array output.
 arrayOutputReadName :: Kind -> String
@@ -114,6 +125,85 @@ arrayOutputAsInputName kind = "sbv_array_output_as_input_" ++ arraySuffix kind
 arrayExportName :: Kind -> String
 arrayExportName kind = "sbv_array_export_" ++ arraySuffix kind
 
+-- | Return the internal helper name that exports an array into the generated
+-- function's temporary ownership arena.
+arrayStoredExportName :: Kind -> String
+arrayStoredExportName kind = "sbv_array_stored_export_" ++ arraySuffix kind
+
+-- | Convert an internal array expression to the retained descriptor pointer
+-- representation used when an array is stored inside another value. Other
+-- kinds are returned unchanged.
+arrayStoredValue :: Kind -> Doc -> Doc
+arrayStoredValue kind value
+  | isArray kind
+  = text (arrayStoredExportName kind)
+      P.<> parens (fsep (punctuate comma [text "&__sbv_array_ctx", value]))
+  | True
+  = value
+
+-- | Borrow a retained descriptor pointer as an internal array root for the
+-- remainder of a generated call.
+arrayStoredLoad :: SV -> Doc -> CLowering
+arrayStoredLoad resultSV descriptor = CLowering
+  { loweringExpression   = text "&" P.<> text nodeName
+  , loweringSetup        = [ text "const" <+> text (arrayOutputCType kind) <+> text "*" P.<> text descriptorName <+> text "=" <+> descriptor P.<> semi
+                           , text "if" P.<> parens (text descriptorName <+> text "== NULL" <+> text "||" <+> text descriptorName P.<> text "->lookup == NULL")
+                             <+> text "abort" P.<> parens empty P.<> semi
+                           , text "const" <+> text (arrayNodeType kind) <+> text nodeName <+> text "="
+                             <+> braces (fsep (punctuate comma descriptorFields)) P.<> semi
+                           ]
+  , loweringCleanup      = []
+  , loweringRequirements = Set.singleton CRequiresArrays
+  , loweringStorage      = CFunctionScoped
+  }
+ where kind             = kindOf resultSV
+       descriptorName   = "__sbv_array_descriptor_" ++ show resultSV
+       nodeName         = "__sbv_array_" ++ show resultSV
+       descriptorFields = [ text ".kind = SBV_ARRAY_CALLBACK"
+                          , text ".lookup ="  <+> text descriptorName P.<> text "->lookup"
+                          , text ".context =" <+> text descriptorName P.<> text "->context"
+                          , text ".retain ="  <+> text descriptorName P.<> text "->retain"
+                          , text ".release =" <+> text descriptorName P.<> text "->release"
+                          ]
+
+-- | Emit descriptor forward declarations needed by aggregate layouts that
+-- store arrays by pointer. The complete descriptor remains delayed until its
+-- key and value layouts are available.
+arrayForwardTypeDecls :: [Kind] -> Doc
+arrayForwardTypeDecls []    = empty
+arrayForwardTypeDecls kinds = text . unlines $
+     commonDeclarations
+  ++ concatMap declaration kinds
+ where commonDeclarations =
+         [ "/* Forward declarations for retained array descriptors. */"
+         , "#ifndef SBV_CGEN_UNUSED"
+         , "#if defined(__GNUC__) || defined(__clang__)"
+         , "#define SBV_CGEN_UNUSED __attribute__((unused))"
+         , "#else"
+         , "#define SBV_CGEN_UNUSED"
+         , "#endif"
+         , "#endif"
+         , "#ifndef SBV_ARRAY_CONTEXT_LIFETIME_DEFINED"
+         , "#define SBV_ARRAY_CONTEXT_LIFETIME_DEFINED"
+         , "typedef const void *(*SBVArrayContextRetain)(const void *context);"
+         , "typedef void (*SBVArrayContextRelease)(const void *context);"
+         , "#endif"
+         , ""
+         ]
+
+       declaration kind@KArray{} =
+         [ "#ifndef " ++ arrayForwardGuard kind
+         , "#define " ++ arrayForwardGuard kind
+         , "typedef struct " ++ arrayOutputCType kind ++ " " ++ arrayOutputCType kind ++ ";"
+         , "static inline SBV_CGEN_UNUSED " ++ arrayOutputCType kind ++ " *" ++ arrayStoredCloneName kind
+        ++   "(const " ++ arrayOutputCType kind ++ " *value);"
+         , "static inline SBV_CGEN_UNUSED void " ++ arrayStoredReleaseName kind
+        ++   "(" ++ arrayOutputCType kind ++ " **value);"
+         , "#endif"
+         , ""
+         ]
+       declaration kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
+
 -- | Emit opaque public array types for every kind used by a generated
 -- program. Input descriptors are borrowed during a call. Output descriptors
 -- own retained contexts and must be released with their generated helper.
@@ -124,18 +214,7 @@ arrayTypeDecls kinds = text . unlines $
      , "/* Input contexts are borrowed unless an escaping result invokes their retain */"
      , "/* callback. Owned outputs must be released with the generated release helper. */"
      , "/* Callback results borrow their context; aggregate reads borrow the array owner. */"
-     , "#ifndef SBV_CGEN_UNUSED"
-     , "#if defined(__GNUC__) || defined(__clang__)"
-     , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-     , "#else"
-     , "#define SBV_CGEN_UNUSED"
-     , "#endif"
-     , "#endif"
-     , "#ifndef SBV_ARRAY_CONTEXT_LIFETIME_DEFINED"
-     , "#define SBV_ARRAY_CONTEXT_LIFETIME_DEFINED"
-     , "typedef const void *(*SBVArrayContextRetain)(const void *context);"
-     , "typedef void (*SBVArrayContextRelease)(const void *context);"
-     , "#endif"]
+     ]
   ++ concatMap declaration kinds
  where declaration kind@(KArray keyKind valueKind)
          = let inputType       = arrayInputCType kind
@@ -145,17 +224,25 @@ arrayTypeDecls kinds = text . unlines $
                retainOutput    = arrayOutputRetainName kind
                releaseOutput   = arrayOutputReleaseName kind
                asInput         = arrayOutputAsInputName kind
+               cloneStored     = arrayStoredCloneName kind
+               releaseStored   = arrayStoredReleaseName kind
                keyType         = elementCType keyKind
                valueType       = elementCType valueKind
            in [ "#ifndef " ++ arrayGuard kind
            , "#define " ++ arrayGuard kind
            , "/* Owned descriptors carry one reference. Retain copied descriptors and release each owner. */"
            , "/* The input adapter is borrowed; a generated callee retains it if the array escapes. */"
+           , "#ifndef " ++ arrayForwardGuard kind
+           , "#define " ++ arrayForwardGuard kind
+           , "typedef struct " ++ outputType ++ " " ++ outputType ++ ";"
+           , "static inline SBV_CGEN_UNUSED " ++ outputType ++ " *" ++ cloneStored ++ "(const " ++ outputType ++ " *value);"
+           , "static inline SBV_CGEN_UNUSED void " ++ releaseStored ++ "(" ++ outputType ++ " **value);"
+           , "#endif"
            , "typedef struct " ++ arrayNodeType kind ++ " " ++ arrayNodeType kind ++ ";"
            , "typedef const " ++ arrayNodeType kind ++ " *" ++ arrayCType kind ++ ";"
            , "typedef " ++ valueType ++ " (*" ++ lookupType ++ ")(const void *context, " ++ keyType ++ " key);"
            , "typedef struct { " ++ lookupType ++ " lookup; const void *context; SBVArrayContextRetain retain; SBVArrayContextRelease release; } " ++ inputType ++ ";"
-           , "typedef struct { " ++ lookupType ++ " lookup; const void *context; SBVArrayContextRetain retain; SBVArrayContextRelease release; } " ++ outputType ++ ";"
+           , "struct " ++ outputType ++ " { " ++ lookupType ++ " lookup; const void *context; SBVArrayContextRetain retain; SBVArrayContextRelease release; };"
            , "static inline " ++ valueType ++ " " ++ readOutput ++ "(" ++ outputType ++ " array, " ++ keyType ++ " key)"
            , "{ if (array.lookup == NULL) abort(); return array.lookup(array.context, key); }"
            , "static inline " ++ outputType ++ " " ++ retainOutput ++ "(" ++ outputType ++ " array)"
@@ -171,6 +258,21 @@ arrayTypeDecls kinds = text . unlines $
            , "{ if (array == NULL) return; if (array->context != NULL) { if (array->release == NULL) abort(); array->release(array->context); } array->lookup = NULL; array->context = NULL; array->retain = NULL; array->release = NULL; }"
            , "static inline " ++ inputType ++ " " ++ asInput ++ "(" ++ outputType ++ " array)"
            , "{ " ++ inputType ++ " input = {array.lookup, array.context, array.retain, array.release}; return input; }"
+           , "static inline SBV_CGEN_UNUSED " ++ outputType ++ " *" ++ cloneStored ++ "(const " ++ outputType ++ " *value)"
+           , "{"
+           , "  if (value == NULL) abort();"
+           , "  " ++ outputType ++ " *copy = (" ++ outputType ++ " *) malloc(sizeof *copy);"
+           , "  if (copy == NULL) abort();"
+           , "  *copy = " ++ retainOutput ++ "(*value);"
+           , "  return copy;"
+           , "}"
+           , "static inline SBV_CGEN_UNUSED void " ++ releaseStored ++ "(" ++ outputType ++ " **value)"
+           , "{"
+           , "  if (value == NULL || *value == NULL) return;"
+           , "  " ++ releaseOutput ++ "(*value);"
+           , "  free(*value);"
+           , "  *value = NULL;"
+           , "}"
            , "#endif"
            , ""
            ]
@@ -183,6 +285,30 @@ arrayRuntime _   []    = empty
 arrayRuntime cfg kinds = text . unlines $
      [ "/* Persistent functional-array runtime. */"
      , "typedef enum { SBV_ARRAY_CONSTANT, SBV_ARRAY_STORE, SBV_ARRAY_CALLBACK } SBVArrayNodeKind;"
+     , "typedef struct sbv_array_temp sbv_array_temp;"
+     , "struct sbv_array_temp { sbv_array_temp *next; void *value; void (*release)(void *value); };"
+     , "typedef struct { sbv_array_temp *temporaries; } sbv_array_ctx;"
+     , ""
+     , "static SBV_CGEN_UNUSED void sbv_array_ctx_remember(sbv_array_ctx *ctx, void *value, void (*release)(void *value))"
+     , "{"
+     , "  if (ctx == NULL || value == NULL || release == NULL) abort();"
+     , "  sbv_array_temp *temporary = (sbv_array_temp *) malloc(sizeof *temporary);"
+     , "  if (temporary == NULL) abort();"
+     , "  temporary->next = ctx->temporaries;"
+     , "  temporary->value = value;"
+     , "  temporary->release = release;"
+     , "  ctx->temporaries = temporary;"
+     , "}"
+     , ""
+     , "static SBV_CGEN_UNUSED void sbv_array_ctx_end(sbv_array_ctx *ctx)"
+     , "{"
+     , "  while (ctx != NULL && ctx->temporaries != NULL) {"
+     , "    sbv_array_temp *temporary = ctx->temporaries;"
+     , "    ctx->temporaries = temporary->next;"
+     , "    temporary->release(temporary->value);"
+     , "    free(temporary);"
+     , "  }"
+     , "}"
      , ""
      ]
   ++ concatMap runtime kinds
@@ -216,7 +342,35 @@ arrayRuntime cfg kinds = text . unlines $
             , ""
             ]
          ++ ownershipRuntime cfg kind
+         ++ storedArrayRuntime kind
        runtime kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
+
+-- | Emit the per-kind bridge that turns a call-scoped array node into an
+-- owned descriptor pointer tracked by the function's temporary arena.
+storedArrayRuntime :: Kind -> [String]
+storedArrayRuntime kind@KArray{} =
+  [ "static SBV_CGEN_UNUSED void " ++ releaseVoid ++ "(void *value)"
+  , "{"
+  , "  " ++ outputType ++ " *array = (" ++ outputType ++ " *) value;"
+  , "  " ++ arrayOutputReleaseName kind ++ "(array);"
+  , "  free(array);"
+  , "}"
+  , ""
+  , "static SBV_CGEN_UNUSED " ++ outputType ++ " *" ++ exportStored
+ ++   "(sbv_array_ctx *ctx, " ++ arrayCType kind ++ " array)"
+  , "{"
+  , "  " ++ outputType ++ " *result = (" ++ outputType ++ " *) malloc(sizeof *result);"
+  , "  if (result == NULL) abort();"
+  , "  *result = " ++ arrayExportName kind ++ "(array);"
+  , "  sbv_array_ctx_remember(ctx, result, " ++ releaseVoid ++ ");"
+  , "  return result;"
+  , "}"
+  , ""
+  ]
+ where outputType   = arrayOutputCType kind
+       exportStored = arrayStoredExportName kind
+       releaseVoid  = "sbv_array_stored_release_void_" ++ arraySuffix kind
+storedArrayRuntime kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
 -- | Emit the heap owner used when an array escapes its generated call. Store
 -- chains are copied, exact keys and values are duplicated into a private GMP
@@ -493,32 +647,40 @@ arrayDriverInput cfg kind functionName inputName defaultName
 arrayConst :: (CV -> Doc) -> CV -> Maybe Doc
 arrayConst renderValue (CV kind@(KArray keyKind valueKind) (CArray (ArrayModel associations defaultValue)))
   = Just $ foldr store base associations
- where base = nodeLiteral [text ".kind = SBV_ARRAY_CONSTANT", text ".value =" <+> renderValue (CV valueKind defaultValue)]
+ where base = nodeLiteral [text ".kind = SBV_ARRAY_CONSTANT", text ".value =" <+> renderField valueKind defaultValue]
 
        store (key, value) parent = nodeLiteral
          [ text ".kind = SBV_ARRAY_STORE"
          , text ".parent =" <+> parent
          , text ".key ="    <+> renderValue (CV keyKind key)
-         , text ".value ="  <+> renderValue (CV valueKind value)
+         , text ".value ="  <+> renderField valueKind value
          ]
+
+       renderField fieldKind fieldValue
+         = arrayStoredValue fieldKind (renderValue (CV fieldKind fieldValue))
 
        nodeLiteral fields = parens $ text "&" P.<> parens (text (arrayNodeType kind)) P.<> braces (fsep (punctuate comma fields))
 arrayConst _ _ = Nothing
 
 -- | Lower array initialization, reads, writes, and array-valued conditionals.
 -- Structured lambda-backed arrays, including free arrays, become callback
--- roots. Text-only lambdas, nested arrays, and general extensional array
--- equality are rejected with focused diagnostics.
+-- roots. Array-valued elements cross node boundaries through retained
+-- descriptor pointers. General extensional array equality remains unsupported.
 arrayExpr :: CgConfig -> Op -> [SV] -> SV -> [Doc] -> Maybe CLowering
 arrayExpr cfg op svs resultSV args
   | not (isArray resultKind || any isArray svs)
   = Nothing
   | True
   = case (op, svs, args) of
+      (TupleConstructor{}, _, _) -> Nothing
+      (TupleAccess{},      _, _) -> Nothing
+      (ADTOp{},            _, _) -> Nothing
+      (SeqOp{},            _, _) -> Nothing
+      (SetOp{},            _, _) -> Nothing
       (ArrayInit (Left pair), [_], [defaultValue])
         | resultKind == uncurry KArray pair
         -> nodeLowering resultKind
-             [text ".kind = SBV_ARRAY_CONSTANT", text ".value =" <+> defaultValue]
+             [text ".kind = SBV_ARRAY_CONSTANT", text ".value =" <+> storedValue (snd pair) defaultValue]
       (ArrayInit (Right lambdaDef), [], [])
         | Just lambdaInfo <- smtLambdaInfo lambdaDef
         , let usesGMP = arrayLambdaUsesGMP cfg lambdaInfo
@@ -533,7 +695,8 @@ arrayExpr cfg op svs resultSV args
         -> unsupported "lambda arrays without retained structured expressions"
       (ReadArray, [array, key], [renderedArray, renderedKey])
         | kindOf array == KArray (kindOf key) resultKind
-        -> expression $ namedCall (arrayReadName (kindOf array)) [renderedArray, renderedKey]
+        -> let readResult = namedCall (arrayReadName (kindOf array)) [renderedArray, renderedKey]
+           in if isArray resultKind then Just (arrayStoredLoad resultSV readResult) else expression readResult
       (WriteArray, [array, key, value], [renderedArray, renderedKey, renderedValue])
         | resultKind == kindOf array
         , resultKind == KArray (kindOf key) (kindOf value)
@@ -541,7 +704,7 @@ arrayExpr cfg op svs resultSV args
              [ text ".kind = SBV_ARRAY_STORE"
              , text ".parent =" <+> renderedArray
              , text ".key ="    <+> renderedKey
-             , text ".value ="  <+> renderedValue
+             , text ".value ="  <+> storedValue (kindOf value) renderedValue
              ]
       (Ite, [_condition, left, right], [renderedCondition, renderedLeft, renderedRight])
         | resultKind == kindOf left
@@ -573,6 +736,8 @@ arrayExpr cfg op svs resultSV args
 
        nodeName = "__sbv_array_" ++ show resultSV
 
+       storedValue = arrayStoredValue
+
        requirements = CRequiresArrays : concatMap kindRequirements (resultKind : map kindOf svs)
 
        kindRequirements kind
@@ -587,6 +752,15 @@ arrayExpr cfg op svs resultSV args
        unsupported feature = error $ "SBV->C: Arrays do not yet support " ++ feature ++ "."
 
        namedCall functionName callArgs = text functionName P.<> parens (fsep (punctuate comma callArgs))
+
+-- | Initialize the arena that owns array descriptors embedded in temporary
+-- generated values.
+arrayContextStart :: Doc
+arrayContextStart = text "sbv_array_ctx __sbv_array_ctx = {NULL};"
+
+-- | Release the array descriptors embedded in temporary generated values.
+arrayContextEnd :: Doc
+arrayContextEnd = text "sbv_array_ctx_end" P.<> parens (text "&__sbv_array_ctx") P.<> semi
 
 -- | Return the concrete node-structure name for an array kind.
 arrayNodeType :: Kind -> String
@@ -636,15 +810,23 @@ arrayLambdaUsesGMP cfg LambdaInfo{ liAssignments = assignments
 -- | Return the key/value suffix shared by the generated names for an array
 -- kind.
 arraySuffix :: Kind -> String
-arraySuffix (KArray keyKind valueKind) = kindTag keyKind ++ "_" ++ kindTag valueKind
-arraySuffix kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
+arraySuffix = arrayKindTag
 
 -- | Return the preprocessor guard protecting an array type declaration.
 arrayGuard :: Kind -> String
-arrayGuard kind = map guardChar (arrayCType kind) ++ "_DEFINED"
- where guardChar c
-         | isAsciiLower c = toUpper c
-         | True           = c
+arrayGuard kind = map cGuardChar (arrayCType kind) ++ "_DEFINED"
+
+-- | Return the preprocessor guard protecting an array descriptor's forward
+-- declaration and stored-value helper prototypes.
+arrayForwardGuard :: Kind -> String
+arrayForwardGuard kind = map cGuardChar (arrayOutputCType kind) ++ "_FORWARD_DEFINED"
+
+-- | Convert a generated C identifier character to its preprocessor-guard
+-- spelling.
+cGuardChar :: Char -> Char
+cGuardChar character
+  | isAsciiLower character = toUpper character
+  | True                   = character
 
 -- | Render the strong equality used to match array keys. Unlike IEEE numeric
 -- equality, this recursively preserves object equality for aggregate fields.

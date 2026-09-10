@@ -42,6 +42,7 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.Array      (arrayStoredLoad, arrayStoredValue)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
@@ -64,22 +65,25 @@ listKinds = sortOn listDepth . nub . concatMap (filter isList . expandKinds) . S
        listDepth (KList elementKind) = 1 + listDepth elementKind
        listDepth _                   = 0
 
--- | Test whether a list element kind has a supported C representation.
+-- | Test whether a list element kind has a supported C representation. Array
+-- elements support structural movement and indexing, but operations requiring
+-- extensional element equality are rejected by 'listExpr'.
 listSupported :: CgConfig -> Kind -> Bool
 listSupported _ (KList elementKind) = supportedElement elementKind
- where supportedElement KBool          = True
-       supportedElement KBounded{}     = True
-       supportedElement KFloat         = True
-       supportedElement KDouble        = True
-       supportedElement KChar          = True
-       supportedElement KString        = True
-       supportedElement KFP{}          = True
-       supportedElement KUnbounded     = True
-       supportedElement KReal          = True
-       supportedElement KRational      = True
-       supportedElement (KList kind)   = supportedElement kind
-       supportedElement (KSet kind)    = supportedElement kind
-       supportedElement (KTuple kinds) = all supportedElement kinds
+ where supportedElement KBool                          = True
+       supportedElement KBounded{}                     = True
+       supportedElement KFloat                         = True
+       supportedElement KDouble                        = True
+       supportedElement KChar                          = True
+       supportedElement KString                        = True
+       supportedElement KFP{}                          = True
+       supportedElement KUnbounded                     = True
+       supportedElement KReal                          = True
+       supportedElement KRational                      = True
+       supportedElement (KList kind)                   = supportedElement kind
+       supportedElement (KSet kind)                    = supportedElement kind
+       supportedElement (KArray keyKind valueKind)     = supportedElement keyKind && supportedElement valueKind
+       supportedElement (KTuple kinds)                 = all supportedElement kinds
        supportedElement kind
          | isConcreteADT kind = True
          | True               = isRoundingMode kind
@@ -282,13 +286,13 @@ listConst renderElement (CV kind@(KList elementKind) (CList values))
  where elements
          | null values = text "NULL"
          | True        = text "(const" <+> text (listElementCType elementKind) P.<> text "[]) {"
-                      P.<> fsep (punctuate comma (map (renderElement . CV elementKind) values))
+                      P.<> fsep (punctuate comma (map (arrayStoredValue elementKind . renderElement . CV elementKind) values))
                       P.<> text "}"
 listConst _ _ = Nothing
 
 -- | Lower the core symbolic sequence operations for non-character lists.
-listExpr :: CgConfig -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
-listExpr cfg op svs resultKind args
+listExpr :: CgConfig -> Op -> [SV] -> SV -> [Doc] -> Maybe CLowering
+listExpr cfg op svs resultSV args
   | not touchesList = Nothing
   | True            = case (op, args) of
       (ADTOp{}                   , _        )                    -> Nothing
@@ -300,8 +304,8 @@ listExpr cfg op svs resultKind args
       (NotEqual                  , as       )                    -> lower $ distinctLists as
       (SeqOp (SeqLen kind)       , [a]      ) | kind /= KChar   -> lowerInteger False $ call (helperFor kind "length") [a]
       (SeqOp (SeqConcat kind)    , as       ) | kind /= KChar   -> lower $ foldLists kind as
-      (SeqOp (SeqNth kind)       , [a, i]   ) | kind /= KChar   -> lower $ indexed kind "nth" [a] i
-      (SeqOp (SeqUnit kind)      , [a]      ) | kind /= KChar   -> lower $ call (helperFor kind "unit") [text "&__sbv_list_ctx", a]
+      (SeqOp (SeqNth kind)       , [a, i]   ) | kind /= KChar   -> loadArray $ indexed kind "nth" [a] i
+      (SeqOp (SeqUnit kind)      , [a]      ) | kind /= KChar   -> lower $ call (helperFor kind "unit") [text "&__sbv_list_ctx", arrayStoredValue kind a]
       (SeqOp (SeqSubseq kind)    , [a, i, n]) | kind /= KChar   -> lower $ indexed2 kind "substring" a i n
       (SeqOp (SeqIndexOf kind)   , [a, b, i]) | kind /= KChar   -> lowerInteger True $ indexed kind "index_of" [a, b] i
       (SeqOp (SeqContains kind)  , [a, b]   ) | kind /= KChar   -> lower $ call (helperFor kind "contains") [a, b]
@@ -309,13 +313,19 @@ listExpr cfg op svs resultKind args
       (SeqOp (SeqSuffixOf kind)  , [a, b]   ) | kind /= KChar   -> lower $ call (helperFor kind "suffix_of") [a, b]
       (SeqOp (SeqReplace kind)   , [a, b, c]) | kind /= KChar   -> lower $ call (helperFor kind "replace") [text "&__sbv_list_ctx", a, b, c]
       _ -> unsupported
- where touchesList = isList resultKind || any (isList . kindOf) svs || isListOp op
+ where resultKind = kindOf resultSV
+
+       touchesList = isList resultKind || any (isList . kindOf) svs || isListOp op
 
        listKind = case [kind | value <- resultKind : map kindOf svs, kind@(KList _) <- [value]] of
                     kind:_ -> kind
                     []     -> error $ "SBV->C: Cannot determine list kind for " ++ show op
 
        lower expression = Just $ expressionLowering storage requirements expression
+
+       loadArray expression
+         | isArray resultKind = Just (arrayStoredLoad resultSV expression)
+         | True               = lower expression
 
        lowerInteger signed expression
          | isExactGMPKind cfg resultKind
@@ -328,6 +338,7 @@ listExpr cfg op svs resultKind args
        storage
          | isList resultKind             = CFunctionScoped
          | isExactGMPKind cfg resultKind = CFunctionScoped
+         | isArray resultKind            = CFunctionScoped
          | True                          = CByValue
 
        requirements = CRequiresLists : [CRequiresGMP | any (isExactGMPKind cfg) touchedKinds]
@@ -361,9 +372,24 @@ listExpr cfg op svs resultKind args
 
        exactIndex = any (isExactGMPKind cfg . kindOf) svs
 
-       unsupported = error $ "SBV->C: List lowering does not support " ++ show op
-                          ++ " with argument kinds " ++ show (map kindOf svs)
-                          ++ " and result kind " ++ show resultKind
+       requiresElementEquality Equal{}                 = True
+       requiresElementEquality NotEqual                = True
+       requiresElementEquality (SeqOp SeqIndexOf{})    = True
+       requiresElementEquality (SeqOp SeqContains{})   = True
+       requiresElementEquality (SeqOp SeqPrefixOf{})   = True
+       requiresElementEquality (SeqOp SeqSuffixOf{})   = True
+       requiresElementEquality (SeqOp SeqReplace{})    = True
+       requiresElementEquality _                       = False
+
+       unsupported
+         | requiresElementEquality op
+         , any isArray (expandKinds (listElementKind listKind))
+         = error $ "SBV->C: List operation " ++ show op
+                ++ " requires unsupported extensional equality for array-valued elements."
+         | True
+         = error $ "SBV->C: List lowering does not support " ++ show op
+                ++ " with argument kinds " ++ show (map kindOf svs)
+                ++ " and result kind " ++ show resultKind
 
 -- | Compare two list descriptors using symbolic sequence equality.
 listEqual :: Kind -> Doc -> Doc -> Doc

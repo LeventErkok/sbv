@@ -85,13 +85,16 @@ data CodeGenNativeCollections = CGNativeCollections [Word16] (RCSet Word16) deri
 -- whose elements are strings.
 data CodeGenText = CGText String [String] (RCSet String) deriving Show
 
+-- | An aggregate used to exercise retained array fields in generated C ADTs.
+data CodeGenArrayBox = CGArrayBox (ArrayModel Word8 Word32) Word8 deriving Show
+
 -- | A recursive managed aggregate whose leaf owns exact-element collections.
 data CodeGenCollectionTree = CGCollectionLeaf [Integer] (RCSet Rational)
                            | CGCollectionBranch CodeGenCollectionTree
                            deriving Show
 
 -- | Generate the symbolic interfaces for the code-generation ADTs.
-mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop, ''CodeGenCollections, ''CodeGenNativeCollections, ''CodeGenText, ''CodeGenCollectionTree]
+mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop, ''CodeGenCollections, ''CodeGenNativeCollections, ''CodeGenText, ''CodeGenArrayBox, ''CodeGenCollectionTree]
 
 -- | Code-generation tests.
 tests :: TestTree
@@ -105,6 +108,10 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile rationals with mapped integers" mappedIntegerRationals
   , testCase "compile repeated exact rationals into a library" exactRationalLibrary
   , testCase "compile and execute persistent arrays" persistentArrays
+  , testCase "compile and execute nested persistent arrays" nestedPersistentArrays
+  , testCase "compile and execute arrays stored in tuples" tupleStoredArrays
+  , testCase "compile and execute arrays stored in ADTs" adtStoredArrays
+  , testCase "compile and execute arrays stored in lists" listStoredArrays
   , testCase "preserve native floating-point array-key equality" nativeFloatArrayKeys
   , testCase "compile repeated array types into a library" persistentArrayLibrary
   , testCase "compile and execute a callback-backed array input" callbackArrayInput
@@ -966,6 +973,124 @@ persistentArrays = withSystemTempDirectory "sbv-persistent-arrays" $ \dir -> do
     , "oldVersionDefault = 0x00000007UL"
     , "literalMapValue = 0x0000002aUL"
     ]
+
+-- | Exercise array-valued initialization, immutable writes, and reads without
+-- exposing a call-scoped inner array through the generated C ABI.
+nestedPersistentArrays :: Assertion
+nestedPersistentArrays = withSystemTempDirectory "sbv-nested-persistent-arrays" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [5, 17, 7, 29, 2, 2, 1]
+        firstDefault  <- cgInput "firstDefault"  :: SBVCodeGen SWord32
+        firstStored   <- cgInput "firstStored"   :: SBVCodeGen SWord32
+        secondDefault <- cgInput "secondDefault" :: SBVCodeGen SWord32
+        secondStored  <- cgInput "secondStored"  :: SBVCodeGen SWord32
+        outerStoreKey <- cgInput "outerStoreKey" :: SBVCodeGen SWord16
+        outerReadKey  <- cgInput "outerReadKey"  :: SBVCodeGen SWord16
+        innerReadKey  <- cgInput "innerReadKey"  :: SBVCodeGen SWord8
+        let firstInner  = writeArray (constArray firstDefault :: SArray Word8 Word32) 1 firstStored
+            secondInner = writeArray (constArray secondDefault :: SArray Word8 Word32) 1 secondStored
+            outerBase   = constArray firstInner :: SArray Word16 (ArrayModel Word8 Word32)
+            outer       = writeArray outerBase outerStoreKey secondInner
+            selected    = readArray outer outerReadKey
+            original    = readArray outer (outerReadKey + 1)
+        cgOutput "selected" (readArray selected innerReadKey)
+        cgReturn (readArray original innerReadKey)
+
+  stdoutText <- compileProgramAndRunGenerated dir "nestedPersistentArrays" program
+  sourceText <- readFile (dir </> "nestedPersistentArrays.c")
+  mapM_ (\fragment -> assertBool ("Expected nested-array output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "0x00000011UL"
+    , "selected = 0x0000001dUL"
+    ]
+  assertBool ("Expected nested array values to use retained temporary descriptors, received:\n" ++ sourceText)
+             (    "sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+              && "sbv_array_ctx_end(&__sbv_array_ctx)" `isInfixOf` sourceText
+              && "__sbv_array_descriptor_" `isInfixOf` sourceText
+             )
+
+-- | Exercise retained array descriptors in tuple construction and projection.
+tupleStoredArrays :: Assertion
+tupleStoredArrays = withSystemTempDirectory "sbv-tuple-stored-arrays" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [5, 17, 1]
+        defaultValue <- cgInput "defaultValue" :: SBVCodeGen SWord32
+        storedValue  <- cgInput "storedValue"  :: SBVCodeGen SWord32
+        key          <- cgInput "key"          :: SBVCodeGen SWord8
+        let source                  = writeArray (constArray defaultValue :: SArray Word8 Word32) 1 storedValue
+            pair                    = tuple (source, key) :: SBV (ArrayModel Word8 Word32, Word8)
+            (restored, restoredKey) = untuple pair
+        cgOutput "restoredKey" restoredKey
+        cgOutput "pair" pair
+        cgReturn (readArray restored key)
+
+  stdoutText <- compileProgramAndRunGenerated dir "tupleStoredArrays" program
+  sourceText <- readFile (dir </> "tupleStoredArrays.c")
+  mapM_ (\fragment -> assertBool ("Expected tuple-stored array output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "0x00000011UL"
+    , "restoredKey = 1"
+    , "pair =([0] =0x00000005UL, 1)"
+    ]
+  assertBool ("Expected tuple construction and projection to bridge retained arrays, received:\n" ++ sourceText)
+             (    ".field1 = sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+              && "__sbv_array_descriptor_" `isInfixOf` sourceText
+             )
+
+-- | Exercise retained array descriptors in ADT construction and projection.
+adtStoredArrays :: Assertion
+adtStoredArrays = withSystemTempDirectory "sbv-adt-stored-arrays" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [5, 17, 1]
+        defaultValue <- cgInput "defaultValue" :: SBVCodeGen SWord32
+        storedValue  <- cgInput "storedValue"  :: SBVCodeGen SWord32
+        key          <- cgInput "key"          :: SBVCodeGen SWord8
+        let source = writeArray (constArray defaultValue :: SArray Word8 Word32) 1 storedValue
+            boxed  = sCGArrayBox source key
+        cgOutput "boxedKey" (getCGArrayBox_2 boxed)
+        cgOutput "boxed" boxed
+        cgReturn (readArray (getCGArrayBox_1 boxed) key)
+
+  stdoutText <- compileProgramAndRunGenerated dir "adtStoredArrays" program
+  sourceText <- readFile (dir </> "adtStoredArrays.c")
+  mapM_ (\fragment -> assertBool ("Expected ADT-stored array output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "0x00000011UL"
+    , "boxedKey = 1"
+    , "boxed =CGArrayBox([0] =0x00000005UL, 1)"
+    ]
+  assertBool ("Expected ADT construction and projection to bridge retained arrays, received:\n" ++ sourceText)
+             (    ".field1 = sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+              && "__sbv_array_descriptor_" `isInfixOf` sourceText
+             )
+
+-- | Exercise retained array descriptors in list construction, indexing, and
+-- owned list outputs.
+listStoredArrays :: Assertion
+listStoredArrays = withSystemTempDirectory "sbv-list-stored-arrays" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [5, 17, 1]
+        defaultValue <- cgInput "defaultValue" :: SBVCodeGen SWord32
+        storedValue  <- cgInput "storedValue"  :: SBVCodeGen SWord32
+        key          <- cgInput "key"          :: SBVCodeGen SWord8
+        let source   = writeArray (constArray defaultValue :: SArray Word8 Word32) 1 storedValue
+            arrays   = SL.singleton source :: SList (ArrayModel Word8 Word32)
+            restored = SL.elemAt arrays 0
+        cgOutput "arrays" arrays
+        cgReturn (readArray restored key)
+
+  stdoutText <- compileProgramAndRunGenerated dir "listStoredArrays" program
+  sourceText <- readFile (dir </> "listStoredArrays.c")
+  mapM_ (\fragment -> assertBool ("Expected list-stored array output to contain " ++ fragment ++ ", received:\n" ++ stdoutText) (fragment `isInfixOf` stdoutText))
+    [ "0x00000011UL"
+    , "arrays =[[0] =0x00000005UL]"
+    ]
+  assertBool ("Expected list construction and indexing to bridge retained arrays, received:\n" ++ sourceText)
+             (    "sbv_list_array_" `isInfixOf` sourceText
+              && "sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+              && "__sbv_array_descriptor_" `isInfixOf` sourceText
+             )
 
 -- | Check that native floating-point array keys use SMT object equality:
 -- NaNs match, while positive and negative zero remain distinct.

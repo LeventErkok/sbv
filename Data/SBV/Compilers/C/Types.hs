@@ -14,6 +14,10 @@
 module Data.SBV.Compilers.C.Types
   ( tupleCType
   , adtCType
+  , arrayKindTag
+  , arrayOutputCTypeName
+  , arrayStoredCloneName
+  , arrayStoredReleaseName
   , tupleFieldName
   , elementCType
   , kindTag
@@ -67,6 +71,7 @@ elementCType kind@KADT{}
   | True                         = adtCType kind
 elementCType (KList elementKind) = "SBVList_" ++ kindTag elementKind
 elementCType (KSet elementKind)  = "SBVSet_" ++ kindTag elementKind
+elementCType kind@KArray{}       = arrayOutputCTypeName kind ++ " *"
 elementCType kind                = error $ "SBV->C: Unsupported structural kind: " ++ show kind
 
 -- | Return the collision-free suffix used by a generated structural C type.
@@ -88,7 +93,30 @@ kindTag kind@KADT{}
   | True                    = "adt_" ++ encodeIdentifier (adtCType kind)
 kindTag (KList elementKind) = "list_" ++ taggedKind (kindTag elementKind)
 kindTag (KSet elementKind)  = "set_"  ++ taggedKind (kindTag elementKind)
+kindTag kind@KArray{}       = "array_" ++ taggedKind (arrayKindTag kind)
 kindTag kind                = error $ "SBV->C: Unsupported structural kind: " ++ show kind
+
+-- | Return the key/value suffix shared by generated names for an array kind.
+arrayKindTag :: Kind -> String
+arrayKindTag (KArray keyKind valueKind) = kindTag keyKind ++ "_" ++ kindTag valueKind
+arrayKindTag kind                       = error $ "SBV->C: Expected an array kind, received " ++ show kind
+
+-- | Return the public owned-output descriptor name for an array kind.
+arrayOutputCTypeName :: Kind -> String
+arrayOutputCTypeName kind@KArray{} = "SBVArrayOutput_" ++ arrayKindTag kind
+arrayOutputCTypeName kind          = error $ "SBV->C: Expected an array kind, received " ++ show kind
+
+-- | Return the helper name that clones an array descriptor stored by pointer
+-- inside another generated value.
+arrayStoredCloneName :: Kind -> String
+arrayStoredCloneName kind@KArray{} = "sbv_array_stored_clone_" ++ arrayKindTag kind
+arrayStoredCloneName kind          = error $ "SBV->C: Expected an array kind, received " ++ show kind
+
+-- | Return the helper name that releases an array descriptor stored by pointer
+-- inside another generated value.
+arrayStoredReleaseName :: Kind -> String
+arrayStoredReleaseName kind@KArray{} = "sbv_array_stored_release_" ++ arrayKindTag kind
+arrayStoredReleaseName kind          = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
 -- | Prefix a generated kind tag with its length so adjacent tags cannot
 -- collide.

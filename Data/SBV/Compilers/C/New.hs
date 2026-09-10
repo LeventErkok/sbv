@@ -139,6 +139,7 @@ cgen cfg nm st sbvProg
                    $$ (if hasRequirement CRequiresLibBF  then arbitraryFPTypeDecls (arbitraryFPKinds kinds) else empty)
                    $$ (if hasRequirement CRequiresGMP    then gmpTypeDecls cfg kinds else empty)
                    $$ (if hasRequirement CRequiresText   then textTypeDecls kinds else empty)
+                   $$ (if hasRequirement CRequiresArrays then arrayForwardTypeDecls arrays else empty)
                    $$ tupleForwardTypeDecls tuples
                    $$ adtForwardTypeDecls adts
                    $$ listForwardTypeDecls lists
@@ -786,12 +787,30 @@ genDriver cfg adts randVals fn inps outs mbRet
          | KTuple{} <- kind                        = printTupleValue value kind
          | KList{} <- kind                         = listPrint printValue kind value
          | KSet{} <- kind                          = setPrint printValue kind value
+         | KArray{} <- kind                        = printStoredArray value kind
          | isADT kind && not (isRoundingMode kind) = adtPrint adts printValue kind value
          | isWideBV kind                           = wideBVPrint kind value P.<> semi
          | isFP kind                               = arbitraryFPPrint kind value P.<> semi
          | isExactGMPKind cfg kind                 = gmpPrint kind value P.<> semi
          | kind `elem` [KChar, KString]             = textPrint kind value P.<> semi
          | True                                    = text "printf" P.<> parens (printQuotes (specifierKind cfg kind) P.<> comma <+> value) P.<> semi
+
+       printStoredArray descriptor kind@(KArray keyKind valueKind)
+         =  text "{"
+         $$ nest 2 (   text "if" P.<> parens (descriptor <+> text "== NULL") <+> text "abort" P.<> parens empty P.<> semi
+                    $$ keySetup
+                    $$ text "printf(\"[0] =\");"
+                    $$ printValue valueKind storedValue
+                    $$ keyCleanup
+                   )
+         $$ text "}"
+        where keyName     = "__sbv_array_stored_key_" ++ kindTag kind
+              key         = text keyName
+              keySetup    = driverValueInit keyKind keyName 0
+              keyCleanup  = driverValueClear keyKind keyName
+              storedValue = text (arrayOutputReadName kind)
+                         P.<> parens (fsep (punctuate comma [text "*" P.<> parens descriptor, key]))
+       printStoredArray _ kind = die $ "Expected a stored array, received " ++ show kind
 
        driverCleanup = vcat $ inputCleanup ++ outputCleanup ++ returnCleanup
          where inputCleanup  = [ gmpDriverClear (kindOf sv) (text n)
@@ -947,6 +966,7 @@ genCProg cfg adts lists sets fn proto
                         $$ textStart
                         $$ listStart
                         $$ setStart
+                        $$ arrayStart
                         $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
                         $$ vcat (merge (map (ppTable cfg True consts) tbls) assignmentDocs (map genAssert asserts))
                         $$ sepIf (not (null assignments) || not (null tbls))
@@ -958,6 +978,7 @@ genCProg cfg adts lists sets fn proto
                         $$ textReturn
                         $$ listReturn
                         $$ setReturn
+                        $$ arrayEnd
                         $$ setEnd
                         $$ listEnd
                         $$ textEnd
@@ -1071,6 +1092,14 @@ genCProg cfg adts lists sets fn proto
        setEnd
          | requires CRequiresSets = setContextEnd
          | True                   = empty
+
+       arrayStart
+         | requires CRequiresArrays = arrayContextStart
+         | True                     = empty
+
+       arrayEnd
+         | requires CRequiresArrays = arrayContextEnd
+         | True                     = empty
 
        exactReturn = case mbRet of
                        Just sv | isExactGMPKind cfg (kindOf sv)
@@ -1475,9 +1504,9 @@ ppExpr cfg adts consts (SBVApp op opArgs) resultSV lhs (typ, var)
           , tableExpr cfg (showSV cfg consts) op (kindOf resultSV)
           , setExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , textExpr cfg op opArgs (kindOf resultSV) renderedArgs
-          , listExpr cfg op opArgs (kindOf resultSV) renderedArgs
-          , adtExpr cfg adts op opArgs (kindOf resultSV) renderedArgs
-          , tupleExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          , listExpr cfg op opArgs resultSV renderedArgs
+          , adtExpr cfg adts op opArgs resultSV renderedArgs
+          , tupleExpr cfg op opArgs resultSV renderedArgs
           , gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , arbitraryFPExpr cfg consts op opArgs (kindOf resultSV) renderedArgs
           , nativeFPExpr consts op opArgs (kindOf resultSV) renderedArgs
