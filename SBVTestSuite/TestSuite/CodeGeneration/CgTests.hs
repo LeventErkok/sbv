@@ -25,6 +25,7 @@ import Data.List (isInfixOf)
 import Data.SBV.Internals
 import qualified Data.SBV.Char as SC
 import qualified Data.SBV.List as SL
+import qualified Data.SBV.Set as SS
 import Data.SBV.Tuple (tuple, untuple)
 import qualified Data.SBV.Tools.CodeGen.Legacy as PublicLegacy
 
@@ -102,6 +103,15 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile lists with mapped numeric elements" mappedNumericLists
   , testCase "return owned lists from a generated library" ownedListLibrary
   , testCase "reject lists of exact GMP values" exactGMPLists
+  , testCase "compile and execute symbolic sets" symbolicSets
+  , testCase "compare finite and cofinite Boolean sets" finiteUniverseSets
+  , testCase "compile arbitrary-width symbolic sets" wideSymbolicSets
+  , testCase "compile character symbolic sets" characterSets
+  , testCase "compile arbitrary floating-point symbolic sets" arbitraryFloatSets
+  , testCase "preserve native floating-point set equality" nativeFloatSets
+  , testCase "compile sets with mapped numeric elements" mappedNumericSets
+  , testCase "return owned sets from a generated library" ownedSetLibrary
+  , testCase "reject sets of exact GMP values" exactGMPSets
   , testCase "compile and execute non-recursive ADTs" nonRecursiveADTs
   , testCase "compile and execute nested ADTs" nestedADTs
   , testCase "compile repeated ADT types into a library" nonRecursiveADTLibrary
@@ -428,6 +438,250 @@ exactGMPLists = do
     Left exception -> assertBool ("Expected an exact-list ownership diagnostic, received:\n" ++ displayException exception)
                                  ("Lists with element kinds SInteger" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected exact GMP list elements to be rejected" False
+
+-- | Exercise finite and cofinite symbolic sets, normalization, every primitive
+-- set operation, and independently owned outputs and returns.
+symbolicSets :: Assertion
+symbolicSets = withSystemTempDirectory "sbv-symbolic-sets" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [10, 12, 11, 13]
+        left       <- cgInput "left"       :: SBVCodeGen (SSet Word16)
+        right      <- cgInput "right"      :: SBVCodeGen (SSet Word16)
+        cofinite   <- cgInput "cofinite"   :: SBVCodeGen (SSet Word16)
+        element    <- cgInput "element"    :: SBVCodeGen SWord16
+        let inserted             = SS.insert element left
+            deleted              = SS.delete 11 inserted
+            unioned              = SS.union left right
+            intersected          = SS.intersection left right
+            subtracted           = SS.difference left right
+            mixedUnion           = SS.union left cofinite
+            mixedIntersection    = SS.intersection left cofinite
+            cofiniteDifference   = SS.difference cofinite left
+            cofiniteInserted     = SS.insert 12 cofinite
+            cofiniteDeleted      = SS.delete 14 cofinite
+            otherCofinite        = SS.complement right
+            cofiniteUnion        = SS.union cofinite otherCofinite
+            cofiniteIntersection = SS.intersection cofinite otherCofinite
+            cofiniteSubtraction  = SS.difference cofinite otherCofinite
+            containsElement      = element `SS.member` unioned
+            conditional          = ite containsElement intersected subtracted
+        cgOutput "inserted"             inserted
+        cgOutput "deleted"              deleted
+        cgOutput "unioned"              unioned
+        cgOutput "intersected"          intersected
+        cgOutput "subtracted"           subtracted
+        cgOutput "mixedUnion"           mixedUnion
+        cgOutput "mixedIntersection"    mixedIntersection
+        cgOutput "cofiniteDifference"   cofiniteDifference
+        cgOutput "cofiniteInserted"     cofiniteInserted
+        cgOutput "cofiniteDeleted"      cofiniteDeleted
+        cgOutput "cofiniteUnion"        cofiniteUnion
+        cgOutput "cofiniteIntersection" cofiniteIntersection
+        cgOutput "cofiniteSubtraction"  cofiniteSubtraction
+        cgOutput "complemented"         (SS.complement left)
+        cgOutput "containsElement"      containsElement
+        cgOutput "subset"               (intersected `SS.isSubsetOf` left)
+        cgOutput "sameObject"           (left .=== left)
+        cgOutput "different"            (left ./== right)
+        cgOutput "conditional"          conditional
+        cgReturn unioned
+
+  stdoutText <- compileProgramAndRunGenerated dir "symbolicSets" program
+  headerText <- readFile (dir </> "symbolicSets.h")
+  mapM_ (\fragment -> assertBool ("Expected generated set output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") ={0x000aU, 0x000bU, 0x000cU, 0x000dU, 0x000eU}"
+    , "inserted ={0x000aU, 0x000bU, 0x000cU, 0x000dU}"
+    , "deleted ={0x000aU, 0x000cU, 0x000dU}"
+    , "unioned ={0x000aU, 0x000bU, 0x000cU, 0x000dU, 0x000eU}"
+    , "intersected ={0x000cU}"
+    , "subtracted ={0x000aU, 0x000bU}"
+    , "mixedUnion =U - {0x000dU}"
+    , "mixedIntersection ={0x000aU}"
+    , "cofiniteDifference =U - {0x000bU, 0x000cU, 0x000dU, 0x000aU}"
+    , "cofiniteInserted =U - {0x000bU, 0x000dU}"
+    , "cofiniteDeleted =U - {0x000bU, 0x000cU, 0x000dU, 0x000eU}"
+    , "cofiniteUnion =U - {0x000cU, 0x000dU}"
+    , "cofiniteIntersection =U - {0x000bU, 0x000cU, 0x000dU, 0x000eU}"
+    , "cofiniteSubtraction ={0x000eU}"
+    , "complemented =U - {0x000aU, 0x000bU, 0x000cU}"
+    , "containsElement = 1"
+    , "subset = 1"
+    , "sameObject = 1"
+    , "different = 1"
+    , "conditional ={0x000cU}"
+    ]
+  assertBool "Expected a finite/cofinite public set descriptor"
+             ("typedef struct { const SWord16 *data; size_t length; bool is_complement; } SBVSet_u16;" `isInfixOf` headerText)
+  assertBool "Expected public set ownership helpers"
+             ("sbv_set_clone_u16" `isInfixOf` headerText && "sbv_set_release_u16" `isInfixOf` headerText)
+
+-- | Check equality and subset relations when regular and complemented forms
+-- denote the same set over the complete Boolean universe.
+finiteUniverseSets :: Assertion
+finiteUniverseSets = withSystemTempDirectory "sbv-finite-universe-sets" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [0]
+        inputFull <- cgInput "inputFull" :: SBVCodeGen (SSet Bool)
+        let regularTrue   = SS.fromList [True]
+            cofiniteFalse = SS.complement (SS.fromList [False])
+            regularFull   = SS.fromList [False, True]
+            universal     = SS.full :: SSet Bool
+        cgOutput "sameSingleton"   (regularTrue .== cofiniteFalse)
+        cgOutput "sameUniverse"    (regularFull .== universal)
+        cgOutput "leftSubset"      (regularTrue `SS.isSubsetOf` cofiniteFalse)
+        cgOutput "rightSubset"     (cofiniteFalse `SS.isSubsetOf` regularTrue)
+        cgOutput "normalizedInput" (inputFull .== universal)
+        cgReturn (regularTrue .== cofiniteFalse .&& regularFull .== universal .&& inputFull .== universal)
+
+  stdoutText <- compileProgramAndRunGenerated dir "finiteUniverseSets" program
+  mapM_ (\fragment -> assertBool ("Expected finite-universe set output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ ") = 1"
+    , "sameSingleton = 1"
+    , "sameUniverse = 1"
+    , "leftSubset = 1"
+    , "rightSubset = 1"
+    , "normalizedInput = 1"
+    ]
+
+-- | Check that set descriptors remain agnostic to element width by compiling
+-- and executing insert and membership over 673-bit elements.
+wideSymbolicSets :: Assertion
+wideSymbolicSets = withSystemTempDirectory "sbv-wide-symbolic-sets" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [10, 13]
+        values  <- cgInput "values"  :: SBVCodeGen (SSet (WordN 673))
+        element <- cgInput "element" :: SBVCodeGen (SWord 673)
+        let updated = SS.insert element values
+        cgOutput "contains" (element `SS.member` updated)
+        cgReturn updated
+
+  stdoutText <- compileProgramAndRunGenerated dir "wideSymbolicSets" program
+  headerText <- readFile (dir </> "wideSymbolicSets.h")
+  assertBool ("Expected arbitrary-width set membership to hold, received:\n" ++ stdoutText)
+             ("contains = 1" `isInfixOf` stdoutText)
+  assertBool "Expected an arbitrary-width typed set descriptor"
+             ("typedef struct { const SWord673 *data; size_t length; bool is_complement; } SBVSet_u673;" `isInfixOf` headerText)
+
+-- | Exercise character elements through the shared scalar text representation
+-- without requiring string ownership inside the set descriptor.
+characterSets :: Assertion
+characterSets = withSystemTempDirectory "sbv-character-sets" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [64, 70]
+        values    <- cgInput "values"    :: SBVCodeGen (SSet Char)
+        character <- cgInput "character" :: SBVCodeGen SChar
+        let updated = SS.insert character values
+        cgOutput "contains" (character `SS.member` updated)
+        cgReturn updated
+
+  stdoutText <- compileProgramAndRunGenerated dir "characterSets" program
+  headerText <- readFile (dir </> "characterSets.h")
+  assertBool ("Expected character-set membership to hold, received:\n" ++ stdoutText)
+             ("contains = 1" `isInfixOf` stdoutText)
+  assertBool "Expected a typed character set descriptor"
+             ("typedef struct { const SChar *data; size_t length; bool is_complement; } SBVSet_char;" `isInfixOf` headerText)
+
+-- | Check that arbitrary floating-point set elements retain their raw
+-- interchange representation and use LibBF-backed object equality.
+arbitraryFloatSets :: Assertion
+arbitraryFloatSets = do
+  (_, _, bundle) <- compileToC' "arbitraryFloatSets" $ do
+    cgSetDriverValues [1]
+    values <- cgInput "values" :: SBVCodeGen (SSet (FloatingPoint 7 19))
+    cgOutput "sameObject" (values .=== values)
+    cgReturn values
+  let generated = show bundle
+  assertBool "Expected a typed arbitrary-float set descriptor"
+             ("typedef struct { const SFP7_19 *data; size_t length; bool is_complement; } SBVSet_fp_e7_s19;" `isInfixOf` generated)
+  assertBool "Expected arbitrary-float set equality to use object equality"
+             ("sbv_fp_e7_s19_obj_eq(left, right)" `isInfixOf` generated)
+
+-- | Check that native floating-point set operations treat NaNs as identical
+-- objects while distinguishing positive and negative zero.
+nativeFloatSets :: Assertion
+nativeFloatSets = withSystemTempDirectory "sbv-native-float-sets" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [0x7fc00000, 0x00000000, 0x80000000]
+        nanBits      <- cgInput "nanBits"      :: SBVCodeGen SWord32
+        positiveBits <- cgInput "positiveBits" :: SBVCodeGen SWord32
+        negativeBits <- cgInput "negativeBits" :: SBVCodeGen SWord32
+        let nanValue      = sWord32AsSFloat nanBits
+            positiveValue = sWord32AsSFloat positiveBits
+            negativeValue = sWord32AsSFloat negativeBits
+            nanSet        = SS.singleton nanValue
+            positiveSet   = SS.singleton positiveValue
+            negativeSet   = SS.singleton negativeValue
+        cgOutput "nanMember" (nanValue `SS.member` nanSet)
+        cgOutput "zeroObjectsDiffer" (positiveSet ./== negativeSet)
+        cgReturn (SS.union nanSet positiveSet)
+
+  stdoutText <- compileProgramAndRunGenerated dir "nativeFloatSets" program
+  assertBool ("Expected native floating-point set object equality, received:\n" ++ stdoutText)
+             ("nanMember = 1" `isInfixOf` stdoutText && "zeroObjectsDiffer = 1" `isInfixOf` stdoutText)
+
+-- | Exercise sets after explicitly selecting the historical native mappings
+-- for unbounded integers and reals.
+mappedNumericSets :: Assertion
+mappedNumericSets = withSystemTempDirectory "sbv-mapped-numeric-sets" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgIntegerSize 64
+        cgSRealType CgDouble
+        cgSetDriverValues [8, 10]
+        integers <- cgInput "integers" :: SBVCodeGen (SSet Integer)
+        reals    <- cgInput "reals"    :: SBVCodeGen (SSet AlgReal)
+        cgOutput "integerMember" (8 `SS.member` integers)
+        cgOutput "realSameObject" (reals .=== reals)
+        cgReturn integers
+
+  stdoutText <- compileProgramAndRunGenerated dir "mappedNumericSets" program
+  mapM_ (\fragment -> assertBool ("Expected mapped-numeric set output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "integerMember = 1"
+    , "realSameObject = 1"
+    , "{8LL, 9LL, 10LL}"
+    ]
+
+-- | Exercise guarded set declarations and independent owned returns from
+-- multiple generated library translation units.
+ownedSetLibrary :: Assertion
+ownedSetLibrary = withSystemTempDirectory "sbv-owned-set-library" $ \dir -> do
+  let component element seed = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        values <- cgInput "values" :: SBVCodeGen (SSet Word16)
+        cgReturn (SS.insert element values)
+
+  (_, cfg, bundle) <- compileToCLib' "ownedSetLibrary"
+    [ ("firstSet",  component 40 4)
+    , ("secondSet", component 50 6)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "ownedSetLibrary"
+  assertBool ("Expected both owned set results, received:\n" ++ stdoutText)
+             ("{0x0004U, 0x0005U, 0x0006U, 0x0028U}" `isInfixOf` stdoutText
+           && "{0x0006U, 0x0007U, 0x0008U, 0x0032U}" `isInfixOf` stdoutText)
+
+-- | Report the current deep-ownership boundary explicitly when a set stores
+-- exact GMP-backed values.
+exactGMPSets :: Assertion
+exactGMPSets = do
+  result <- try (do
+    (_, _, bundle) <- compileToC' "exactGMPSets" $ do
+      values <- cgInput "values" :: SBVCodeGen (SSet Integer)
+      cgReturn values
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+  case result of
+    Left exception -> assertBool ("Expected an exact-set ownership diagnostic, received:\n" ++ displayException exception)
+                                 ("Sets with element kinds SInteger" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected exact GMP set elements to be rejected" False
 
 -- | Check that ABI kinds and scalar operations contribute the exact external
 -- runtime dependencies needed by their generated C bundles.

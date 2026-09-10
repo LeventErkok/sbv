@@ -40,6 +40,7 @@ import Data.SBV.Compilers.C.FP
 import Data.SBV.Compilers.C.GMP
 import Data.SBV.Compilers.C.List
 import Data.SBV.Compilers.C.Lowering
+import Data.SBV.Compilers.C.Set
 import Data.SBV.Compilers.C.Table
 import Data.SBV.Compilers.C.Text
 import Data.SBV.Compilers.C.Tuple
@@ -129,7 +130,7 @@ cgen cfg nm st sbvProg
                                , (nm  ++ ".c"  , (CgSource                  , body))
                                ]
 
-        (body, requirements) = genCProg cfg adts lists nm sig sbvProg ins outs mbRet extDecls
+        (body, requirements) = genCProg cfg adts lists sets nm sig sbvProg ins outs mbRet extDecls
 
         bundleKind = (cgInteger cfg, cgReal cfg)
 
@@ -139,6 +140,7 @@ cgen cfg nm st sbvProg
                    $$ (if hasRequirement CRequiresGMP    then gmpTypeDecls cfg kinds else empty)
                    $$ (if hasRequirement CRequiresText   then textTypeDecls kinds else empty)
                    $$ (if hasRequirement CRequiresLists  then listTypeDecls cfg lists else empty)
+                   $$ (if hasRequirement CRequiresSets   then setTypeDecls cfg sets else empty)
                    $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
                    $$ tupleTypeDecls tuples
                    $$ adtTypeDecls cfg adts
@@ -156,6 +158,7 @@ cgen cfg nm st sbvProg
                 expressionKinds (resultSV, SBVApp _ arguments) = map kindOf (resultSV : arguments)
         arrays          = arrayKinds kinds
         lists           = listKinds kinds
+        sets            = setKinds kinds
         adts            = adtKinds kinds usedKinds
         tuples          = tupleKinds (Set.map (resolveADTReferences adts) kinds)
 
@@ -278,6 +281,7 @@ showCType i = case kindOf i of
                 KString           -> "SString"
                 KChar             -> "SChar"
                 k@KList{}         -> listCType k
+                k@KSet{}          -> setCType k
                 k                -> show k
 
 -- | The printf specifier for the type
@@ -341,6 +345,8 @@ mkConst cfg cv
   | Just d <- adtConst (mkConst cfg) cv = d
 mkConst cfg cv
   | Just d <- listConst (mkConst cfg) cv = d
+mkConst cfg cv
+  | Just d <- setConst (mkConst cfg) cv = d
 mkConst cfg cv
   | Just d <- gmpConst cfg cv = d
 mkConst _   (CV k (CInteger i))
@@ -524,6 +530,8 @@ genDriver cfg adts randVals fn inps outs mbRet
                                       -> displayADT fcall resultVar (kindOf sv)
                               Just sv | isList sv
                                       -> displayList fcall resultVar (kindOf sv)
+                              Just sv | isSet sv
+                                      -> displaySet fcall resultVar (kindOf sv)
                               Just sv | isWideBV (kindOf sv)
                                       -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
                                       $$ wideBVPrint (kindOf sv) resultVar P.<> semi
@@ -583,6 +591,7 @@ genDriver cfg adts randVals fn inps outs mbRet
          | isExactGMPKind cfg kind         = integer r
          | kind `elem` [KChar, KString]    = textDriverValue kind r
          | isList kind                     = listDriverValue mkRValKind kind r
+         | isSet kind                      = setDriverValue mkRValKind kind r
          | KTuple fieldKinds <- kind       = tupleValue kind (zipWith mkField fieldKinds [0 :: Integer ..])
          | isADT kind                      = adtDriverValue adts mkRValKind kind r
          | True                            = mkConst cfg $ mkConstCV kind r
@@ -612,6 +621,7 @@ genDriver cfg adts randVals fn inps outs mbRet
          | isExactGMPKind cfg (kindOf sv) = gmpDriverInit (kindOf sv) (text v) (text "0")
          | kindOf sv == KString           = text "SString" <+> text v <+> text "=" <+> braces (text "0") P.<> semi
          | isList sv                      = text (listCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
+         | isSet sv                       = text (setCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
          | tupleUsesExact cfg (kindOf sv) = text (tupleCType (kindOf sv)) <+> text v
                                         <+> text "=" <+> braces (text "0") P.<> semi
          | isOwnedADT cfg adts sv         = text (adtCType (kindOf sv)) <+> text v
@@ -633,6 +643,8 @@ genDriver cfg adts randVals fn inps outs mbRet
                                                   <+> text "=" <+> fcall P.<> semi
                   | kindOf sv == KString           -> text "const SString" <+> resultVar <+> text "=" <+> fcall P.<> semi
                   | isList sv                      -> text "const" <+> text (listCType (kindOf sv)) <+> resultVar
+                                                  <+> text "=" <+> fcall P.<> semi
+                  | isSet sv                       -> text "const" <+> text (setCType (kindOf sv)) <+> resultVar
                                                   <+> text "=" <+> fcall P.<> semi
                   | True                           -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
        fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs ++ exactResultArg)))
@@ -656,6 +668,7 @@ genDriver cfg adts randVals fn inps outs mbRet
          | isTuple sv                           = displayTuple (text n) (text n) (kindOf sv)
          | isADT sv && not (isRoundingMode sv) = displayADT (text n) (text n) (kindOf sv)
          | isList sv                            = displayList (text n) (text n) (kindOf sv)
+         | isSet sv                             = displaySet (text n) (text n) (kindOf sv)
          | isWideBV (kindOf sv)                 = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
                                                 $$ wideBVPrint (kindOf sv) (text n) P.<> semi
                                                 $$ text "printf(\"\\n\");"
@@ -737,6 +750,12 @@ genDriver cfg adts randVals fn inps outs mbRet
          $$ text "printf(\"\\n\");"
        displayList _ _ kind = die $ "Expected a list output, received " ++ show kind
 
+       displaySet label value kind@KSet{}
+         =  text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
+         $$ setPrint printValue kind value
+         $$ text "printf(\"\\n\");"
+       displaySet _ _ kind = die $ "Expected a set output, received " ++ show kind
+
        printHelpers = adtPrintHelpers adts printValue
 
        printTupleValue _     (KTuple []) = text "printf(\"()\");"
@@ -750,6 +769,7 @@ genDriver cfg adts randVals fn inps outs mbRet
        printValue kind value
          | KTuple{} <- kind                        = printTupleValue value kind
          | KList{} <- kind                         = listPrint printValue kind value
+         | KSet{} <- kind                          = setPrint printValue kind value
          | isADT kind && not (isRoundingMode kind) = adtPrint adts printValue kind value
          | isWideBV kind                           = wideBVPrint kind value P.<> semi
          | isFP kind                               = arbitraryFPPrint kind value P.<> semi
@@ -799,6 +819,10 @@ genDriver cfg adts randVals fn inps outs mbRet
                                | (n, CgAtomic sv) <- outs
                                , isList sv
                                ]
+                            ++ [setRelease (kindOf sv) (text n)
+                               | (n, CgAtomic sv) <- outs
+                               , isSet sv
+                               ]
                returnCleanup = case mbRet of
                                  Just sv | isExactGMPKind cfg (kindOf sv) -> [gmpDriverClear (kindOf sv) resultVar]
                                  Just sv | isArray sv                     -> [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> resultVar) P.<> semi]
@@ -806,6 +830,7 @@ genDriver cfg adts randVals fn inps outs mbRet
                                  Just sv | isOwnedADT cfg adts sv         -> [releaseADT sv "__result"]
                                  Just sv | kindOf sv == KString           -> [textRelease resultVar]
                                  Just sv | isList sv                      -> [listRelease (kindOf sv) resultVar]
+                                 Just sv | isSet sv                       -> [setRelease (kindOf sv) resultVar]
                                  _                                        -> []
 
                releaseTuple sv = releaseOwned (tupleOwnedReleaseName (kindOf sv))
@@ -819,6 +844,7 @@ genDriver cfg adts randVals fn inps outs mbRet
 genCProg :: CgConfig
          -> [Kind]
          -> [Kind]
+         -> [Kind]
          -> String
          -> Doc
          -> Result
@@ -827,12 +853,18 @@ genCProg :: CgConfig
          -> Maybe SV
          -> Doc
          -> ([Doc], Set.Set CRequirement)
-genCProg cfg adts lists fn proto
+genCProg cfg adts lists sets fn proto
          (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis axioms
                  (SBVPgm asgns) cstrs origAsserts _)
          inVars outVars mbRet extDecls
-  | any isSet kindInfo
-  = notyet "Sets (SSet)"
+  | not (null unsupportedSets)
+  = notyet $ "Sets with element kinds " ++ intercalate ", " (map (show . setElementKind) unsupportedSets)
+  | any tableUsesSet tbls
+  = notyet "Sets in tables"
+  | any assignmentUsesSet lambdaAssignments
+  = notyet "Sets in array lambdas"
+  | any containsNestedSet kindInfo
+  = notyet "Sets nested in arrays, tuples, or algebraic data types"
   | not (null unsupportedLists)
   = notyet $ "Lists with element kinds " ++ intercalate ", " (map (show . listElementKind) unsupportedLists)
   | any tableUsesList tbls
@@ -876,6 +908,7 @@ genCProg cfg adts lists fn proto
        fpKinds          = arbitraryFPKinds kindInfo
        arrays           = arrayKinds kindInfo
        unsupportedLists = filter (not . listSupported cfg) lists
+       unsupportedSets  = filter (not . setSupported cfg) sets
        post   = text ""
              $$ vcat (map codeSeg cgs)
              $$ extDecls
@@ -885,6 +918,7 @@ genCProg cfg adts lists fn proto
              $$ (if requires CRequiresNativeFPRounding then nativeFPRuntime else empty)
              $$ (if requires CRequiresText             then textRuntime cfg usesExactInteger else empty)
              $$ (if requires CRequiresLists            then listRuntime cfg usesExactInteger lists else empty)
+             $$ (if requires CRequiresSets             then setRuntime cfg sets else empty)
              $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
              $$ vcat lambdaDocs
              $$ proto
@@ -893,6 +927,7 @@ genCProg cfg adts lists fn proto
              $$ nest 2 (   gmpStart
                         $$ textStart
                         $$ listStart
+                        $$ setStart
                         $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
                         $$ vcat (merge (map (ppTable cfg True consts) tbls) assignmentDocs (map genAssert asserts))
                         $$ sepIf (not (null assignments) || not (null tbls))
@@ -903,6 +938,8 @@ genCProg cfg adts lists fn proto
                         $$ exactADTReturn
                         $$ textReturn
                         $$ listReturn
+                        $$ setReturn
+                        $$ setEnd
                         $$ listEnd
                         $$ textEnd
                         $$ gmpEnd
@@ -943,6 +980,7 @@ genCProg cfg adts lists fn proto
          ++ [CRequiresGMP    | usesGMP]
          ++ [CRequiresText   | KString `Set.member` kindInfo || KChar `Set.member` kindInfo]
          ++ [CRequiresLists  | not (null lists)]
+         ++ [CRequiresSets   | not (null sets)]
          ++ [CRequiresArrays | not (null arrays)]
 
        requires requirement = requirement `Set.member` requirements
@@ -951,23 +989,34 @@ genCProg cfg adts lists fn proto
        usesExactInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kindInfo
 
        containsNestedText KList{} = False
+       containsNestedText KSet{}  = False
        containsNestedText kind    = kind `notElem` [KChar, KString]
                                  && any (`elem` [KChar, KString]) (expandKinds kind)
 
        containsNestedList KList{} = False
        containsNestedList kind    = any isList (expandKinds kind)
 
+       containsNestedSet KSet{} = False
+       containsNestedSet kind   = any isSet (expandKinds kind)
+
        tableUsesText ((_, keyKind, valueKind), _) = keyKind `elem` [KChar, KString]
                                                  || valueKind `elem` [KChar, KString]
 
        tableUsesList ((_, keyKind, valueKind), _) = isList keyKind || isList valueKind
 
+       tableUsesSet ((_, keyKind, valueKind), _) = isSet keyKind || isSet valueKind
+
        assignmentUsesText (sv, SBVApp _ arguments) = any ((`elem` [KChar, KString]) . kindOf) (sv : arguments)
 
        assignmentUsesList (sv, SBVApp _ arguments) = any (isList . kindOf) (sv : arguments)
 
+       assignmentUsesSet (sv, SBVApp _ arguments) = any (isSet . kindOf) (sv : arguments)
+
        listElementKind (KList elementKind) = elementKind
        listElementKind kind                = die $ "Expected a list kind, received " ++ show kind
+
+       setElementKind (KSet elementKind) = elementKind
+       setElementKind kind               = die $ "Expected a set kind, received " ++ show kind
 
        gmpStart
          | requires CRequiresGMP = gmpContextStart
@@ -989,6 +1038,13 @@ genCProg cfg adts lists fn proto
        listEnd
          | requires CRequiresLists = listContextEnd
          | True                    = empty
+
+       setStart
+         | requires CRequiresSets = setContextStart
+         | True                   = empty
+       setEnd
+         | requires CRequiresSets = setContextEnd
+         | True                   = empty
 
        exactReturn = case mbRet of
                        Just sv | isExactGMPKind cfg (kindOf sv)
@@ -1027,12 +1083,19 @@ genCProg cfg adts lists fn proto
                               <+> listClone (kindOf sv) (showSV cfg consts sv) P.<> semi
                       _       -> empty
 
+       setReturn = case mbRet of
+                     Just sv | isSet sv
+                             -> text "const" <+> text (setCType (kindOf sv)) <+> text "__result ="
+                             <+> setClone (kindOf sv) (showSV cfg consts sv) P.<> semi
+                     _       -> empty
+
        normalReturn = case mbRet of
                         Just sv | isArray sv                           -> text "return __result;"
                         Just sv | tupleUsesExact cfg (kindOf sv)       -> text "return __result;"
                         Just sv | isOwnedADT cfg adts sv               -> text "return __result;"
                         Just sv | kindOf sv == KString                 -> text "return __result;"
                         Just sv | isList sv                            -> text "return __result;"
+                        Just sv | isSet sv                             -> text "return __result;"
                         Just sv | not (isExactGMPKind cfg (kindOf sv)) -> mkRet sv
                         _                                             -> empty
 
@@ -1053,13 +1116,13 @@ genCProg cfg adts lists fn proto
                       len KString{}          = 7 -- SString
                       len KChar{}            = 5 -- SChar
                       len k@KList{}          = length (listCType k)
+                      len k@KSet{}           = length (setCType k)
                       len KUnbounded{}       = 8
                       len KBool              = 5 -- SBool
                       len (KBounded False n) = 5 + length (show n) -- SWordN
                       len (KBounded True  n) = 4 + length (show n) -- SIntN
                       len KRational{}        = die   "Rational."
                       len (KFP eb sb)         = 6 + length (show eb) + length (show sb)
-                      len (KSet  s)          = die $ "Set sort: "    ++ show s
                       len k@KArray{}         = length (arrayCType k)
                       len k@KTuple{}         = length (tupleCType k)
                       len (KApp s _)         = die $ "Uninterpreted ADT app: " ++ s
@@ -1094,12 +1157,14 @@ genCProg cfg adts lists fn proto
        genIO :: Bool -> (Bool, (String, CgVal)) -> [Doc]
        genIO True  (alive, (cNm, CgAtomic sv))
          | isArray sv = [statement | alive, statement <- arrayInputSetup typeWidth sv cNm]
+         | isSet sv   = [declSV typeWidth sv <+> text "=" <+> setNormalize (kindOf sv) (text cNm) P.<> semi | alive]
          | True       = [declSV typeWidth sv <+> text "=" <+> inputValue cNm sv P.<> semi | alive]
        genIO False (alive, (cNm, CgAtomic sv))
          | isArray sv                     = [text "*" P.<> text cNm <+> text "=" <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
          | isExactGMPKind cfg (kindOf sv) = [gmpSet (kindOf sv) (text cNm) (showSV cfg consts sv) P.<> semi | alive]
          | kindOf sv == KString           = [text "*" P.<> text cNm <+> text "=" <+> textClone (showSV cfg consts sv) P.<> semi | alive]
          | isList sv                      = [text "*" P.<> text cNm <+> text "=" <+> listClone (kindOf sv) (showSV cfg consts sv) P.<> semi | alive]
+         | isSet sv                       = [text "*" P.<> text cNm <+> text "=" <+> setClone (kindOf sv) (showSV cfg consts sv) P.<> semi | alive]
          | tupleUsesExact cfg (kindOf sv) = [text "*" P.<> text cNm <+> text "=" <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg consts sv) P.<> semi | alive]
          | isOwnedADT cfg adts sv         = [ text "*" P.<> text cNm <+> text "="
                                           <+> text (adtOwnedCloneName (kindOf sv))
@@ -1365,6 +1430,7 @@ ppExpr cfg adts consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         selected = fromMaybe legacy $ chooseLowering
           [ arrayExpr cfg op opArgs resultSV renderedArgs
+          , setExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , textExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , listExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , adtExpr cfg adts op opArgs (kindOf resultSV) renderedArgs

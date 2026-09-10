@@ -35,9 +35,10 @@ import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
-import Data.SBV.Compilers.C.FP         (arbitraryFPCType, arbitraryFPObjectEqual, nativeFPObjectEqual)
+import Data.SBV.Compilers.C.FP         (arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Tuple      (elementCType, kindTag)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind              (expandKinds)
@@ -272,34 +273,13 @@ isListOp _                          = False
 
 -- | Return the C type used to store one supported list element.
 listElementCType :: Kind -> String
-listElementCType KBool              = "SBool"
-listElementCType (KBounded False 1) = "SBool"
-listElementCType (KBounded False w) = "SWord" ++ show w
-listElementCType (KBounded True  w) = "SInt" ++ show w
-listElementCType KUnbounded         = "SInteger"
-listElementCType KReal              = "SReal"
-listElementCType KFloat             = "SFloat"
-listElementCType KDouble            = "SDouble"
-listElementCType KChar              = "SChar"
-listElementCType kind@KFP{}         = arbitraryFPCType kind
-listElementCType kind
-  | isRoundingMode kind = "RoundingMode"
-  | True                = error $ "SBV->C: Unsupported list element kind: " ++ show kind
+listElementCType KChar = "SChar"
+listElementCType kind  = elementCType kind
 
 -- | Return the collision-free suffix used by a list descriptor and helpers.
 listKindTag :: Kind -> String
-listKindTag KBool              = "u1"
-listKindTag (KBounded False w) = "u" ++ show w
-listKindTag (KBounded True  w) = "s" ++ show w
-listKindTag KUnbounded         = "integer"
-listKindTag KReal              = "real"
-listKindTag KFloat             = "float"
-listKindTag KDouble            = "double"
-listKindTag KChar              = "char"
-listKindTag (KFP eb sb)        = "fp_e" ++ show eb ++ "_s" ++ show sb
-listKindTag kind
-  | isRoundingMode kind = "rounding_mode"
-  | True                = error $ "SBV->C: Unsupported list element kind: " ++ show kind
+listKindTag KChar = "char"
+listKindTag kind  = kindTag kind
 
 -- | Return the preprocessor guard for one list descriptor.
 listGuard :: Kind -> String
