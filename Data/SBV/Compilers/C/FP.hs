@@ -156,7 +156,7 @@ arbitraryFPRuntime cfg ks asgns
        reinterprets _ = []
 
        casts (_, SBVApp (IEEEFP (FP_Cast fr to _)) _)
-         | isFP fr || isFP to || exactNativeCast fr to || nativeBitVectorCast fr to = [FloatCast fr to]
+         | supportedCast fr to = [FloatCast fr to]
        casts _ = []
 
        floatCasts = nub (concatMap casts asgns)
@@ -168,6 +168,14 @@ arbitraryFPRuntime cfg ks asgns
 
        nativeBitVectorCast fr to = (isBounded fr && isNativeFloat to)
                                 || (isNativeFloat fr && isBounded to)
+
+       nativeFloatCast fr to = isNativeFloat fr && isNativeFloat to
+
+       supportedCast fr to = isFP fr
+                          || isFP to
+                          || exactNativeCast fr to
+                          || nativeBitVectorCast fr to
+                          || nativeFloatCast fr to
 
        isNativeFloat k = k == KFloat || k == KDouble
 
@@ -182,7 +190,11 @@ arbitraryFPConst _ _ = Nothing
 -- user-defined functions to the general C renderer.
 arbitraryFPExpr :: CgConfig -> [(SV, CV)] -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 arbitraryFPExpr cfg consts op svs resultKind args
-  | not (isFP resultKind || any (isFP . kindOf) svs || isExactNativeCast || isNativeBitVectorCast)
+  | not (isFP resultKind
+      || any (isFP . kindOf) svs
+      || isExactNativeCast
+      || isNativeBitVectorCast
+      || isRoundedNativeFloatCast)
   = Nothing
   | LkUp{} <- op
   = Nothing
@@ -235,6 +247,7 @@ arbitraryFPExpr cfg consts op svs resultKind args
          (FP_IsPositive       , [a]           , x:_)    -> argCall x "is_positive" [a]
          (FP_Reinterpret fr to, [a]           , _)      -> namedCall (reinterpretName fr to) [a]
          (FP_Cast fr to rm    , [a]           , _)      -> namedCall (castName fr to) (castArgs to a rm)
+         (FP_Cast fr to rm    , [_rm, a]      , _)      -> namedCall (castName fr to) (castArgs to a rm)
          _                                              -> unsupported
 
        castArgs to a rm
@@ -255,9 +268,13 @@ arbitraryFPExpr cfg consts op svs resultKind args
          _                         -> False
 
        isNativeBitVectorCast = case op of
-         IEEEFP (FP_Cast fr to rm) -> needsAdapter rm
-                                  && ((isBounded fr && isNativeFloat to)
+         IEEEFP (FP_Cast fr to rm) -> (needsAdapter rm || isWideBV fr || isWideBV to)
+                                  && ((isBounded fr     && isNativeFloat to)
                                    || (isNativeFloat fr && isBounded to))
+         _                          -> False
+
+       isRoundedNativeFloatCast = case op of
+         IEEEFP (FP_Cast fr to rm) -> needsAdapter rm && isNativeFloat fr && isNativeFloat to
          _                          -> False
 
        needsAdapter rm = case rm `lookup` consts of
@@ -483,6 +500,7 @@ castRuntime cfg (FloatCast fr to) = case (fr, to) of
   (KDouble, KFP{})    -> fromNative "SDouble"
   (KFP{}, KFloat)     -> toNative "SFloat" True
   (KFP{}, KDouble)    -> toNative "SDouble" False
+  _ | isNativeFloat fr && isNativeFloat to      -> nativeToNative
   _ | isExactGMPKind cfg fr && isNativeFloat to -> exactToNative
   _ | isNativeFloat fr && isExactGMPKind cfg to -> nativeToExact
   _ | isExactGMPKind cfg fr && isFP to -> exactToFP
@@ -510,6 +528,16 @@ castRuntime cfg (FloatCast fr to) = case (fr, to) of
          ++ ["  bf_get_float64(&x, &result, rnd); bf_delete(&x); bf_context_end(&ctx); return (" ++ targetType ++ ") result;"
             , "}"
             , ""]
+
+       nativeToNative =
+         ["static inline " ++ nativeCType to ++ " " ++ castName fr to ++ "(" ++ nativeCType fr ++ " a, bf_rnd_t rnd)"
+         , "{"
+         , "  bf_context_t ctx; bf_t x; double result;"
+         , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a);"
+         , "  bf_round(&x, " ++ show (significandBits to) ++ ", " ++ nativeFlags to ++ "); bf_get_float64(&x, &result, rnd);"
+         , "  bf_delete(&x); bf_context_end(&ctx); return (" ++ nativeCType to ++ ") result;"
+         , "}"
+         , ""]
 
        integerToFP =
          ["static inline " ++ floatingCType to ++ " " ++ castName fr to ++ "(" ++ reprCType fr ++ " a, bf_rnd_t rnd)"

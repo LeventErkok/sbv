@@ -26,6 +26,8 @@ import System.IO.Temp            (withSystemTempDirectory)
 import System.Process            (readProcessWithExitCode)
 import Test.Tasty.HUnit          (assertBool, assertEqual)
 
+import qualified Data.SBV.Dynamic as D
+
 import Data.SBV.Internals
 import Data.SBV.Tuple (tuple, untuple)
 
@@ -41,6 +43,7 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute symbolic rounding modes" arbitraryFloatSymbolicRoundingMode
   , testCase "compile and execute native rounding modes" nativeFloatRoundingModes
   , testCase "convert between native floats and bit-vectors" nativeFloatBitVectorConversions
+  , testCase "convert native floats across non-native widths" nativeFloatWidthConversions
   , testCase "convert between native floats and exact numbers" nativeFloatExactConversions
   , testCase "compile and execute special arithmetic" arbitraryFloatSpecialArithmetic
   , testCase "compile and execute arbitrary-float table lookup" arbitraryFloatTableLookup
@@ -266,6 +269,40 @@ nativeFloatBitVectorConversions = withSystemTempDirectory "sbv-native-float-bit-
                .&& nativeDown .== 2
                .&& nativeUp   .== 3
   compileAndRunLibBF dir "nativeFloatBitVectorConversions" program "= 1"
+
+-- | Exercise explicitly rounded native float-to-float conversion, RNE
+-- conversion to and from a limb-backed bit-vector, and the one-bit scalar
+-- fallback type.
+nativeFloatWidthConversions :: Assertion
+nativeFloatWidthConversions = withSystemTempDirectory "sbv-native-float-width-conversions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [halfwayBits, 42, 1, 1]
+        rawHalfway <- cgInput "rawHalfway" :: SBVCodeGen SWord64
+        wideValue  <- svCgInput wideKind "wideValue"
+        oneBit     <- svCgInput oneBitKind "oneBit"
+        runtimeRNA <- cgInput "runtimeRNA" :: SBVCodeGen SRoundingMode
+        let halfway      = sWord64AsSDouble rawHalfway
+            floatBits rm = sFloatAsSWord32 (toSFloat rm halfway)
+            nativeChecks = floatBits sRNE       .== floatOne
+                       .&& floatBits sRNA       .== floatNext
+                       .&& floatBits sRTP       .== floatNext
+                       .&& floatBits sRTN       .== floatOne
+                       .&& floatBits sRTZ       .== floatOne
+                       .&& floatBits runtimeRNA .== floatNext
+            wideAsDouble = D.svCastToFP KDouble rneValue wideValue
+            wideAgain    = D.svCastFromFP wideKind rneValue wideAsDouble
+            oneAsFloat   = D.svCastToFP KFloat rneValue oneBit
+            oneAgain     = D.svCastFromFP oneBitKind rneValue oneAsFloat
+            allChecks    = foldl D.svAnd (unSBV nativeChecks) [D.svEqual wideAgain wideValue, D.svEqual oneAgain oneBit]
+        svCgReturn allChecks
+      halfwayBits = 0x3ff0000010000000
+      floatOne    = 0x3f800000
+      floatNext   = 0x3f800001
+      rneValue    = unSBV sRNE
+      wideKind    = KBounded True 673
+      oneBitKind  = KBounded False 1
+  compileAndRunLibBF dir "nativeFloatWidthConversions" program "= 1"
 
 -- | Exercise LibBF-mediated conversion between native floats and GMP-backed
 -- exact numbers without introducing an arbitrary floating-point format.

@@ -1911,7 +1911,7 @@ handleIEEE w consts as var = cvt w
         named fnm dnm f          = (f fnm, f dnm)
 
         cvt (FP_Cast from to m)     = case checkRM (m `lookup` consts) of
-                                        Nothing          -> cast $ \[a] -> parens (text (show to)) <+> rnd a
+                                        Nothing          -> cast $ \[a] -> parens (text (showCType to)) <+> rnd a
                                         Just (Left  msg) -> die msg
                                         Just (Right msg) -> tbd msg
                                       where -- if we're converting from float to some integral like; first use rint/rintf to do the internal conversion and then cast.
@@ -2063,7 +2063,7 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
         p (IEEEFP w)         as = handleIEEE w  consts (zip opArgs as) var
         p (PseudoBoolean pb) as = handlePB pb as
         p OverflowOp{}      _   = die "Overflow operation escaped the exact bit-vector lowering pipeline"
-        p (KindCast _ to)   [a] = parens (text (show to)) <+> a
+        p (KindCast _ to)   [a] = parens (text (showCType to)) <+> a
         p (Uninterpreted s) []
           | isJust (lookup s functionNames)
           = text "/* Defined function */" <+> text (functionName s) P.<> parens (text "&__sbv_function_ctx")
