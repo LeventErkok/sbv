@@ -109,6 +109,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "collect C runtime requirements" dependencyRequirements
   , testCase "compile exact symbolic rationals" exactSymbolicRationals
   , testCase "compile rationals with mapped integers" mappedIntegerRationals
+  , testCase "compile divisibility with mapped integers" mappedIntegerDivisibility
   , testCase "compile repeated exact rationals into a library" exactRationalLibrary
   , testCase "compile and execute persistent arrays" persistentArrays
   , testCase "compile and execute nested persistent arrays" nestedPersistentArrays
@@ -909,6 +910,29 @@ mappedIntegerRationals = withSystemTempDirectory "sbv-mapped-integer-rationals" 
     , "converted =5"
     , "asReal =5/3"
     ]
+
+-- | Exercise mapped integer divisibility for an ordinary divisor, the
+-- absolute value of the minimum signed integer, and an unrepresentable
+-- divisor whose only representable multiple is zero.
+mappedIntegerDivisibility :: Assertion
+mappedIntegerDivisibility = withSystemTempDirectory "sbv-mapped-integer-divisibility" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgIntegerSize 8
+        cgSetDriverValues [-126, -128, 0, 127]
+        multiple  <- cgInput "multiple" :: SBVCodeGen SInteger
+        minValue  <- cgInput "minimum"  :: SBVCodeGen SInteger
+        zeroValue <- cgInput "zero"     :: SBVCodeGen SInteger
+        maxValue  <- cgInput "maximum"  :: SBVCodeGen SInteger
+        cgReturn $ sDivides 3 multiple
+               .&& sDivides 128 minValue
+               .&& sDivides 129 zeroValue
+               .&& sNot (sDivides 128 multiple)
+               .&& sNot (sDivides 129 maxValue)
+
+  stdoutText <- compileProgramAndRunGenerated dir "mappedIntegerDivisibility" program
+  assertBool ("Expected mapped integer divisibility to succeed, received:\n" ++ stdoutText)
+             (") = 1" `isInfixOf` stdoutText)
 
 -- | Exercise guarded rational declarations and caller-owned rational returns
 -- across multiple generated library translation units.

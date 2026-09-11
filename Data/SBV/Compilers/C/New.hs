@@ -2136,26 +2136,27 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
         -- NB: Quot is supposed to truncate toward 0; Not clear to me if C guarantees this behavior.
         -- Brief googling suggests C99 does indeed truncate toward 0, but other C compilers might differ.
-        p Quot [a, b] = let k = kindOf (hd "Quot" opArgs)
-                            z = mkConst cfg $ mkConstCV k (0::Integer)
-                        in protectDiv0 k "/" z a b
-        p Rem  [a, b] = protectDiv0 (kindOf (hd "Rem" opArgs)) "%" a a b
-        p UNeg [a]    = parens (text "-" <+> a)
-        p Abs  [a]    = let f KFloat             = text "fabsf" P.<> parens a
-                            f KDouble            = text "fabs"  P.<> parens a
-                            f (KBounded False _) = text "/* unsigned, skipping call to abs */" <+> a
-                            f (KBounded True 32) = text "labs"  P.<> parens a
-                            f (KBounded True 64) = text "llabs" P.<> parens a
-                            f KUnbounded         = case cgInteger cfg of
-                                                     Nothing -> f $ KBounded True 32 -- won't matter, it'll be rejected later
-                                                     Just i  -> f $ KBounded True i
-                            f KReal              = case cgReal cfg of
-                                                     Nothing           -> f KDouble -- won't matter, it'll be rejected later
-                                                     Just CgFloat      -> f KFloat
-                                                     Just CgDouble     -> f KDouble
-                                                     Just CgLongDouble -> text "fabsl" P.<> parens a
-                            f _                  = text "abs" P.<> parens a
-                        in f (kindOf (hd "Abs" opArgs))
+        p (Divides n) [a]    = mappedIntegerDivides n a
+        p Quot        [a, b] = let k = kindOf (hd "Quot" opArgs)
+                                   z = mkConst cfg $ mkConstCV k (0::Integer)
+                               in protectDiv0 k "/" z a b
+        p Rem         [a, b] = protectDiv0 (kindOf (hd "Rem" opArgs)) "%" a a b
+        p UNeg        [a]    = parens (text "-" <+> a)
+        p Abs         [a]    = let f KFloat             = text "fabsf" P.<> parens a
+                                   f KDouble            = text "fabs"  P.<> parens a
+                                   f (KBounded False _) = text "/* unsigned, skipping call to abs */" <+> a
+                                   f (KBounded True 32) = text "labs"  P.<> parens a
+                                   f (KBounded True 64) = text "llabs" P.<> parens a
+                                   f KUnbounded         = case cgInteger cfg of
+                                                            Nothing -> f $ KBounded True 32 -- won't matter, it'll be rejected later
+                                                            Just i  -> f $ KBounded True i
+                                   f KReal              = case cgReal cfg of
+                                                            Nothing           -> f KDouble -- won't matter, it'll be rejected later
+                                                            Just CgFloat      -> f KFloat
+                                                            Just CgDouble     -> f KDouble
+                                                            Just CgLongDouble -> text "fabsl" P.<> parens a
+                                   f _                  = text "abs" P.<> parens a
+                               in f (kindOf (hd "Abs" opArgs))
         -- for And/Or, translate to boolean versions if on boolean kind
         p And [a, b] | kindOf (hd "And" opArgs) == KBool = a <+> text "&&" <+> b
         p Or  [a, b] | kindOf (hd "Or"  opArgs) == KBool = a <+> text "||" <+> b
@@ -2167,6 +2168,20 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         p NotEqual xs = mkDistinct xs
         p o args = die $ "Received operator " ++ show o ++ " applied to " ++ show args
+
+        mappedIntegerDivides divisor value
+          | divisor > maximumMagnitude = parens (value <+> text "==" <+> text "0")
+          | True = parens $ magnitude <+> text "%" <+> uint64 divisor <+> text "==" <+> uint64 0
+          where width = case cgInteger cfg of
+                          Just w  -> w
+                          Nothing -> die "Exact integer divisibility escaped the GMP lowering pipeline"
+
+                maximumMagnitude = 2 ^ (width - 1)
+                magnitude        = parens $ value <+> text "< 0"
+                                         <+> text "?" <+> uint64 0 <+> text "-" <+> asUnsigned value
+                                         <+> text ":" <+> asUnsigned value
+                asUnsigned a     = parens (text "uint64_t") <+> a
+                uint64 n         = text "UINT64_C" P.<> parens (integer n)
 
         -- generate a pairwise inequality check
         mkDistinct args = fsep $ andAll $ walk args

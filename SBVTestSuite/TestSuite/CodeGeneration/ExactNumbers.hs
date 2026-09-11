@@ -51,6 +51,7 @@ tests :: TestTree
 tests = testGroup "CodeGeneration.ExactNumbers"
   [ testCase "compile and execute unbounded arithmetic" exactIntegerArithmetic
   , testCase "compile and execute Euclidean division" exactIntegerDivision
+  , testCase "compile and execute exact divisibility" exactIntegerDivisibility
   , testCase "compile and execute native conversions" exactNativeConversions
   , testCase "compile and execute wide conversions" exactWideConversions
   , testCase "compile and execute wide real conversions" exactWideRealConversions
@@ -104,6 +105,22 @@ exactIntegerDivision = withSystemTempDirectory "sbv-exact-integer-division" $ \d
         cgOutput "remainder" remainder
         cgReturn (quotient .== 4 .&& remainder .== 4)
   compileAndRunGMP dir "exactIntegerDivision" program ["= 1", "quotient =4", "remainder =4"]
+
+-- | Exercise exact divisibility with a divisor too large for any native C
+-- integer, positive and negative multiples, and a neighboring non-multiple.
+exactIntegerDivisibility :: Assertion
+exactIntegerDivisibility = withSystemTempDirectory "sbv-exact-integer-divisibility" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [divisor * 7, negate (divisor * 3), divisor * 5 + 1]
+        positive    <- cgInput "positive"    :: SBVCodeGen SInteger
+        negative    <- cgInput "negative"    :: SBVCodeGen SInteger
+        nonMultiple <- cgInput "nonMultiple" :: SBVCodeGen SInteger
+        cgReturn $ sDivides divisor positive
+               .&& sDivides divisor negative
+               .&& sNot (sDivides divisor nonMultiple)
+      divisor = 2 ^ (257 :: Int) + 93
+  compileAndRunGMP dir "exactIntegerDivisibility" program ["= 1"]
 
 -- | Exercise exact conversions to and from native signed and unsigned words.
 exactNativeConversions :: Assertion
