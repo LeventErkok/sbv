@@ -284,11 +284,22 @@ nativeBVExpr op svs resultKind args = case (op, svs, args) of
 
        arithmetic arith = lower . namedCall (prefix resultKind ++ "_" ++ arithmeticSuffix arith)
 
--- | Lower overflow predicates for the native 8-, 16-, 32-, and 64-bit C
--- representations. Each predicate avoids evaluating the overflowing
--- operation itself, including signed division of the minimum value by -1.
+-- | Lower overflow predicates for scalar C bit-vector representations. The
+-- one-bit unsigned case follows its Boolean truth table; wider native cases
+-- avoid evaluating the overflowing operation itself, including signed
+-- division of the minimum value by -1.
 nativeBVOverflowExpr :: Op -> [SV] -> [Doc] -> Maybe CLowering
 nativeBVOverflowExpr (OverflowOp ov) svs args
+  | x:_ <- svs
+  , let k = kindOf x
+  , k == KBounded False 1
+  = Just . expressionLowering CByValue [] $ case (ov, args) of
+      (PlusOv False, [a, b]) -> a .&&. b
+      (SubOv  False, [a, b]) -> parens (text "!" P.<> a) .&&. b
+      (MulOv  False, [_, _]) -> text "false"
+      (DivOv       , [_, _]) -> text "false"
+      (NegOv       , [_])    -> text "false"
+      _                      -> error $ "SBV->C: One-bit overflow operation is invalid or has an unexpected arity: " ++ show ov
   | x:_ <- svs
   , let k = kindOf x
   , isBounded k
@@ -301,9 +312,9 @@ nativeBVOverflowExpr (OverflowOp ov) svs args
       (SubOv  True , [a, b]) -> signedSub k a b
       (MulOv  False, [a, b]) -> (b ./=. zero) .&&. (a .>. (maximumValue k ./. b))
       (MulOv  True , [a, b]) -> signedMul k a b
-      (DivOv        , [a, b]) -> (a .==. minimumValue k) .&&. (b .==. negativeOne)
-      (NegOv        , [a])    -> a .==. minimumValue k
-      _                       -> error $ "SBV->C: Overflow operation has an unexpected arity: " ++ show ov
+      (DivOv       , [a, b]) -> (a .==. minimumValue k) .&&. (b .==. negativeOne)
+      (NegOv       , [a])    -> a .==. minimumValue k
+      _                      -> error $ "SBV->C: Overflow operation has an unexpected arity: " ++ show ov
   | True = Nothing
  where x .<.  y = parens (x <+> text "<"  <+> y)
        x .>.  y = parens (x <+> text ">"  <+> y)

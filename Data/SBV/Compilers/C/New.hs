@@ -2062,7 +2062,7 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
         p (Label s)        [a] = a <+> text "/*" <+> text s <+> text "*/"
         p (IEEEFP w)         as = handleIEEE w  consts (zip opArgs as) var
         p (PseudoBoolean pb) as = handlePB pb as
-        p (OverflowOp o) _      = tbd $ "Overflow operations" ++ show o
+        p OverflowOp{}      _   = die "Overflow operation escaped the exact bit-vector lowering pipeline"
         p (KindCast _ to)   [a] = parens (text (show to)) <+> a
         p (Uninterpreted s) []
           | isJust (lookup s functionNames)

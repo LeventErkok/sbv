@@ -39,6 +39,7 @@ tests = testGroup "CodeGeneration.ArbitraryBits"
   , testCase "compile and execute unsigned overflow predicates" unsignedOverflow
   , testCase "compile and execute signed overflow predicates" signedOverflow
   , testCase "compile and execute native overflow predicates" nativeOverflow
+  , testCase "compile and execute one-bit overflow predicates" oneBitOverflow
   , testCase "compile and execute exact native bit operations" nativeBitOperations
   , testCase "compile and execute exact native arithmetic" nativeArithmetic
   , testCase "compile and execute checked wide table lookup" wideLookup
@@ -168,6 +169,34 @@ nativeOverflow = withSystemTempDirectory "sbv-native-overflow" $ \dir -> do
   compileAndRun dir "nativeOverflow" program "0x0df7U"
  where pack :: [SBool] -> SWord16
        pack flags = sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048])
+
+-- | Exercise the Boolean truth tables for overflow and underflow on an
+-- unsigned one-bit vector, including the public constant-false predicates.
+oneBitOverflow :: Assertion
+oneBitOverflow = withSystemTempDirectory "sbv-one-bit-overflow" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 0]
+        oneBit  <- cgInput "oneBit"  :: SBVCodeGen (SWord 1)
+        zeroBit <- cgInput "zeroBit" :: SBVCodeGen (SWord 1)
+        cgReturn $ pack [ bvAddO oneBit oneBit
+                        , bvAddO oneBit zeroBit
+                        , bvAddO zeroBit oneBit
+                        , bvAddO zeroBit zeroBit
+                        , bvSubO zeroBit oneBit
+                        , bvSubO oneBit zeroBit
+                        , bvSubO oneBit oneBit
+                        , bvSubO zeroBit zeroBit
+                        , bvMulO oneBit oneBit
+                        , bvMulO oneBit zeroBit
+                        , bvMulO zeroBit oneBit
+                        , bvMulO zeroBit zeroBit
+                        , bvDivO oneBit oneBit
+                        , bvNegO oneBit
+                        ]
+  compileAndRun dir "oneBitOverflow" program "0x0011U"
+ where pack :: [SBool] -> SWord16
+       pack flags = sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192])
 
 -- | Exercise non-byte-aligned native extraction and signed rotations,
 -- including counts larger than the operand width and SBV's unchanged result
