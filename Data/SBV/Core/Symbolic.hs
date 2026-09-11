@@ -2065,12 +2065,8 @@ addNewSMTOption o = do st <- symbolicEnv
 -- | Generalization of 'Data.SBV.imposeConstraint'
 imposeConstraint :: MonadSymbolic m => Bool -> [(String, String)] -> SVal -> m ()
 imposeConstraint isSoft attrs c = do st <- symbolicEnv
-                                     rm <- liftIO $ readIORef (runMode st)
-
-                                     case rm of
-                                       CodeGen -> error "SBV: constraints are not allowed in code-generation"
-                                       _       -> liftIO $ do mapM_ (registerLabel "Constraint" st) [nm | (":named",  nm) <- attrs]
-                                                              internalConstraint st isSoft attrs c
+                                     liftIO $ do mapM_ (registerLabel "Constraint" st) [nm | (":named",  nm) <- attrs]
+                                                 internalConstraint st isSoft attrs c
 
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.
 internalConstraint :: State -> Bool -> [(String, String)] -> SVal -> IO ()

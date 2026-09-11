@@ -15,15 +15,18 @@
 
 module Data.SBV.Compilers.C.New(compileToC, compileToCLib, compileToC', compileToCLib') where
 
-import Control.DeepSeq                (rnf)
-import Data.Char                      (isSpace)
-import qualified Data.Graph    as DG
-import Data.List                      (intercalate, intersperse, nub, nubBy)
-import Data.Maybe                     (fromJust, fromMaybe, isJust)
-import qualified Data.Foldable as F   (toList)
-import qualified Data.Set      as Set (Set, empty, fromList, insert, map, member, singleton, toList, union, unions)
-import qualified Data.Text     as T
-import System.FilePath                (takeBaseName, replaceExtension)
+import Control.DeepSeq                 (rnf)
+import qualified Data.ByteString       as BS
+import Data.Char                       (chr, isSpace)
+import qualified Data.Foldable         as F (toList)
+import qualified Data.Graph            as DG
+import Data.List                       (intercalate, intersperse, nub, nubBy)
+import Data.Maybe                      (fromJust, fromMaybe, isJust)
+import qualified Data.Set              as Set (Set, empty, fromList, insert, map, member, singleton, toList, union, unions)
+import qualified Data.Text             as T
+import qualified Data.Text.Encoding    as TE
+import Numeric                         (showOct)
+import System.FilePath                 (replaceExtension, takeBaseName)
 import System.Random
 
 import Data.SBV.Core.Symbolic (LambdaInfo(..), ResultInp(..), ProgInfo(..), SMTDef(SMTDef), smtDefInfo, smtLambdaInfo)
@@ -986,8 +989,10 @@ genCProg cfg adts lists sets fn proto
   = error $ "SBV->C: Cannot compile SMT-text-only function definitions: " ++ intercalate ", " unstructuredDefinitions
   | not (null recursiveDefinitions)
   = tbd $ "Recursive or mutually recursive defined functions: " ++ intercalate ", " recursiveDefinitions
-  | not (null cstrs)
-  = tbd "Explicit constraints"
+  | not (null softConstraints)
+  = tbd "Soft constraints"
+  | not (null unsupportedConstraintAttributes)
+  = tbd $ "Constraint attributes: " ++ intercalate ", " unsupportedConstraintAttributes
   | True
   = ([pre, header, post], requirements)
  where notyet m = error $ "SBV->C: " ++ m ++ " are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
@@ -1039,7 +1044,7 @@ genCProg cfg adts lists sets fn proto
                         $$ functionResultStart
                         $$ functionContextStart
                         $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
-                        $$ vcat (merge (map (ppTable cfg True consts) tbls) assignmentDocs (map genAssert asserts))
+                        $$ vcat (merge (map (ppTable cfg True consts) tbls) assignmentDocs runtimeChecks)
                         $$ sepIf (not (null assignments) || not (null tbls))
                         $$ vcat (concatMap (genIO False . (True,)) outVars)
                         $$ exactReturn
@@ -1063,6 +1068,18 @@ genCProg cfg adts lists sets fn proto
        nm = text fn
 
        assignments = F.toList asgns
+
+       constraints = F.toList cstrs
+
+       softConstraints = [() | (True, _, _) <- constraints]
+
+       unsupportedConstraintAttributes = nub [attribute
+                                              | (_, attributes, _) <- constraints
+                                              , (attribute, _) <- attributes
+                                              , attribute /= ":named"
+                                              ]
+
+       runtimeChecks = map genAssert asserts ++ map genConstraint constraints
 
        functionNames = [(T.pack functionName, CTypes.definedFunctionCName functionName) | (functionName, _) <- definitions]
 
@@ -1315,8 +1332,9 @@ genCProg cfg adts lists sets fn proto
 
        -- TODO: The following is brittle. We should really have a function elsewhere
        -- that walks the SBVExprs and collects the SWs together.
-       usedVariables = Set.unions (retSWs : map usedCgVal outVars ++ map usedAsgn assignments)
-         where retSWs = maybe Set.empty Set.singleton mbRet
+       usedVariables = Set.unions (retSWs : checkSWs : map usedCgVal outVars ++ map usedAsgn assignments)
+         where retSWs   = maybe Set.empty Set.singleton mbRet
+               checkSWs = Set.fromList ([sv | (_, _, sv) <- constraints] ++ [sv | (_, _, sv) <- asserts])
 
                usedCgVal (_, CgAtomic s)  = Set.singleton s
                usedCgVal (_, CgArray ss)  = Set.fromList ss
@@ -1388,6 +1406,23 @@ genCProg cfg adts lists sets fn proto
                                          (f:rs) -> Just $ (" * SOURCE   : " ++ f) : map (" *            " ++)  rs
                locInfo _         = Nothing
 
+       genConstraint (_, attributes, sv) = (cLocation consts sv, doc)
+         where doc =  text "/* CONSTRAINT */"
+                   $$ text "if" P.<> parens (text "!" P.<> parens (showSV cfg consts sv))
+                   $$ text "{"
+                   $+$ nest 2 (vcat [errOut, text "exit(-1);"])
+                   $$ text "}"
+                   $$ text ""
+
+               description = fromMaybe "unnamed" (lookup ":named" attributes)
+
+               errOut = text "fprintf" P.<> parens (fsep (punctuate comma [ text "stderr"
+                                                                          , cStringLiteral "%s:%d:CONSTRAINT FAILED: %s\n"
+                                                                          , text "__FILE__"
+                                                                          , text "__LINE__"
+                                                                          , cStringLiteral description
+                                                                          ])) P.<> semi
+
 -- | Return the source-order location used to interleave a value's dependent
 -- declarations. Constants are available before every generated assignment.
 cLocation :: [(SV, CV)] -> SV -> Int
@@ -1422,6 +1457,18 @@ mergeLocated left             []                          = left
 mergeLocated left@((i, x):xs) right@((j, y):ys)
   | i < j = (i, x) : mergeLocated xs right
   | True  = (j, y) : mergeLocated left ys
+
+-- | Render arbitrary text as a UTF-8 C string literal, using fixed-width
+-- octal escapes where a byte cannot safely appear verbatim.
+cStringLiteral :: String -> Doc
+cStringLiteral = doubleQuotes . text . concatMap escapeByte . BS.unpack . TE.encodeUtf8 . T.pack
+ where escapeByte byte
+         | byte == 34              = "\\\""
+         | byte == 63              = "\\?"
+         | byte == 92              = "\\\\"
+         | 32 <= byte, byte <= 126 = [chr (fromIntegral byte)]
+         | True                    = '\\' : replicate (3 - length octal) '0' ++ octal
+         where octal = showOct byte ""
 
 -- | Declare the private bundle of ownership-arena pointers threaded through
 -- calls between generated SBV functions.

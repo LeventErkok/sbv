@@ -53,7 +53,7 @@ import           Text.PrettyPrint.HughesPJ      (Doc, vcat)
 import qualified Text.PrettyPrint.HughesPJ as P (render)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (MonadSymbolic(..), svToSymSV, svMkSymVar, outputSVal, VarContext(..))
+import Data.SBV.Core.Symbolic (MonadSymbolic(..), addNewSMTOption, imposeConstraint, newInternalVariable, outputSVal, svMkSymVar, svToSymSV, VarContext(..))
 
 import Data.SBV.Provers.Prover(defaultSMTCfg)
 
@@ -125,6 +125,22 @@ newtype SBVCodeGen a = SBVCodeGen (StateT CgState Symbolic a)
                             , MonadSymbolic
                             , MonadFail
                             )
+
+-- | Code-generation computations support hard symbolic constraints. Target
+-- backends decide which constraint variants have executable semantics.
+instance SolverContext SBVCodeGen where
+  constrain                    = imposeConstraint False []             . unSBV . quantifiedBool
+  softConstrain                = imposeConstraint True  []             . unSBV . quantifiedBool
+  namedConstraint        nm   = imposeConstraint False [(":named", nm)] . unSBV . quantifiedBool
+  constrainWithAttribute attrs = imposeConstraint False attrs          . unSBV . quantifiedBool
+
+  contextState = symbolicEnv
+  setOption    = addNewSMTOption
+
+  internalVariable kind = do
+    state <- contextState
+    sv    <- liftIO $ newInternalVariable state kind
+    pure $ SBV $ SVal kind $ Right $ cache $ const $ pure sv
 
 -- | Reach into symbolic monad from code-generation
 cgSym :: Symbolic a -> SBVCodeGen a

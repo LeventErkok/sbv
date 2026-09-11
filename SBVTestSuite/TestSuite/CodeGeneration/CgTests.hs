@@ -130,6 +130,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile persistent-array defined SBV functions" persistentArrayDefinedSBVFunctions
   , testCase "compile owned-ADT defined SBV functions" ownedADTDefinedSBVFunctions
   , testCase "reject recursive defined SBV functions" recursiveDefinedSBVFunction
+  , testCase "compile explicit hard constraints" explicitHardConstraints
+  , testCase "reject solver-only constraint features" unsupportedConstraintFeatures
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
   , testCase "retain an escaping callback array" escapingCallbackArray
@@ -1540,6 +1542,64 @@ recursiveDefinedSBVFunction = do
     Left exception -> assertBool ("Expected a recursive-function diagnostic, received:\n" ++ displayException exception)
                                  ("Recursive or mutually recursive defined functions" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected C generation to reject a recursive defined function" False
+
+-- | Exercise unnamed and named hard constraints as generated-C precondition
+-- checks, including a Boolean input used only by a constraint and an escaped
+-- UTF-8 diagnostic name.
+explicitHardConstraints :: Assertion
+explicitHardConstraints = withSystemTempDirectory "sbv-explicit-hard-constraints" $ \dir -> do
+  let constraintName = "value is \"seven\" (100%) \955"
+      program driverValues = do
+        cgOverwriteFiles True
+        cgSetDriverValues driverValues
+        enabled <- cgInput "enabled" :: SBVCodeGen SBool
+        value   <- cgInput "value"   :: SBVCodeGen SWord8
+        constrain enabled
+        namedConstraint constraintName (value .== 7)
+        cgReturn (value + 1)
+
+      validDir   = dir </> "valid"
+      invalidDir = dir </> "invalid"
+
+  validOutput <- compileProgramAndRunGenerated validDir "explicitHardConstraints" (program [1, 7])
+  assertBool ("Expected constrained output to contain 8, received:\n" ++ validOutput)
+             (") = 8" `isInfixOf` validOutput)
+
+  (_, invalidCfg, invalidBundle) <- compileToC' "explicitHardConstraints" (program [1, 6])
+  renderCgPgmBundle (Just invalidDir) (invalidCfg, invalidBundle)
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", invalidDir] ""
+  assertEqual makeError ExitSuccess makeExit
+  (runExit, _, runError) <- readProcessWithExitCode (invalidDir </> "explicitHardConstraints_driver") [] ""
+  assertBool "Expected a violated hard constraint to terminate the generated driver"
+             (case runExit of ExitFailure _ -> True; ExitSuccess -> False)
+  assertBool ("Expected the named constraint diagnostic, received:\n" ++ runError)
+             (("CONSTRAINT FAILED: " ++ constraintName) `isInfixOf` runError)
+
+-- | Check that constraint forms requiring solver optimization or SMT-only
+-- attributes receive focused diagnostics instead of being silently weakened.
+unsupportedConstraintFeatures :: Assertion
+unsupportedConstraintFeatures = do
+  softResult <- try (do
+    (_, _, bundle) <- compileToC' "softConstraint" $ do
+      value <- cgInput "value" :: SBVCodeGen SBool
+      softConstrain value
+      cgReturn value
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+  case softResult of
+    Left exception -> assertBool ("Expected a soft-constraint diagnostic, received:\n" ++ displayException exception)
+                                 ("Soft constraints" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected C generation to reject a soft constraint" False
+
+  attributeResult <- try (do
+    (_, _, bundle) <- compileToC' "attributedConstraint" $ do
+      value <- cgInput "value" :: SBVCodeGen SBool
+      constrainWithAttribute [(":weight", "2")] value
+      cgReturn value
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+  case attributeResult of
+    Left exception -> assertBool ("Expected a constraint-attribute diagnostic, received:\n" ++ displayException exception)
+                                 ("Constraint attributes: :weight" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected C generation to reject an SMT-only constraint attribute" False
 
 -- | Exercise 'freeArray' by supplying the corresponding total C function as
 -- a user declaration, preserving the existing uninterpreted-function escape hatch.
