@@ -123,6 +123,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute a structured lambda array" structuredLambdaArray
   , testCase "compile and execute structured lambda tables" structuredLambdaTables
   , testCase "compile and execute a defined SBV function" definedSBVFunction
+  , testCase "compose acyclic defined SBV functions" composedDefinedSBVFunctions
+  , testCase "reject recursive defined SBV functions" recursiveDefinedSBVFunction
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
   , testCase "retain an escaping callback array" escapingCallbackArray
@@ -1320,6 +1322,52 @@ definedSBVFunction = withSystemTempDirectory "sbv-defined-function" $ \dir -> do
   assertBool ("Expected a defined function body to contribute its wide-bit-vector runtime, received:\n" ++ sourceText)
              ("static SWord673 sbv_function_" `isInfixOf` sourceText
            && "sbv_bv_u673_add" `isInfixOf` sourceText)
+
+-- | Exercise an acyclic diamond of 'smtFunction' calls whose lexical name
+-- ordering requires prototypes for callees emitted after their caller.
+composedDefinedSBVFunctions :: Assertion
+composedDefinedSBVFunctions = withSystemTempDirectory "sbv-composed-defined-functions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [4]
+        input <- cgInput "input" :: SBVCodeGen SWord32
+        let base :: SWord32 -> SWord32
+            base = smtFunction "C function base" (+ 1)
+
+            twice :: SWord32 -> SWord32
+            twice = smtFunction "C function twice" $ \value -> base value * 2
+
+            plusThree :: SWord32 -> SWord32
+            plusThree = smtFunction "C function plus three" $ \value -> base value + 3
+
+            diamond :: SWord32 -> SWord32
+            diamond = smtFunction "C function diamond" $ \value -> twice value + plusThree value
+        cgReturn (diamond input)
+
+  stdoutText <- compileProgramAndRunGenerated dir "composedDefinedSBVFunctions" program
+  sourceText <- readFile (dir </> "composedDefinedSBVFunctions.c")
+  assertBool ("Expected composed defined-function output to contain 0x00000012UL, received:\n" ++ stdoutText)
+             ("0x00000012UL" `isInfixOf` stdoutText)
+  assertBool ("Expected private prototypes before the composed defined-function bodies, received:\n" ++ sourceText)
+             (length (filter ("static SWord32 sbv_function_" `isInfixOf`) (lines sourceText)) == 8)
+
+-- | Check that allowing acyclic composition does not admit recursive
+-- 'smtFunction' components, whose eager expression DAGs require control-flow
+-- reconstruction before they can be lowered safely.
+recursiveDefinedSBVFunction :: Assertion
+recursiveDefinedSBVFunction = do
+  recursiveResult <- try (do
+    (_, _, bundle) <- compileToC' "recursiveDefinedSBVFunction" $ do
+      input <- cgInput "input" :: SBVCodeGen SWord8
+      let countdown :: SWord8 -> SWord8
+          countdown = smtFunctionNoTermination "C recursive countdown" $ \value ->
+                        ite (value .== 0) 0 (1 + countdown (value - 1))
+      cgReturn (countdown input)
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+  case recursiveResult of
+    Left exception -> assertBool ("Expected a recursive-function diagnostic, received:\n" ++ displayException exception)
+                                 ("Recursive or mutually recursive defined functions" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected C generation to reject a recursive defined function" False
 
 -- | Exercise 'freeArray' by supplying the corresponding total C function as
 -- a user declaration, preserving the existing uninterpreted-function escape hatch.

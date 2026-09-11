@@ -984,6 +984,8 @@ genCProg cfg adts lists sets fn proto
   = error "SBV->C: Cannot compile in the presence of special relations."
   | not (null unstructuredDefinitions)
   = error $ "SBV->C: Cannot compile SMT-text-only function definitions: " ++ intercalate ", " unstructuredDefinitions
+  | not (null recursiveDefinitions)
+  = tbd $ "Recursive or mutually recursive defined functions: " ++ intercalate ", " recursiveDefinitions
   | not (null cstrs)
   = tbd "Explicit constraints"
   | True
@@ -1021,6 +1023,7 @@ genCProg cfg adts lists sets fn proto
              $$ (if requires CRequiresSets             then setRuntime cfg sets else empty)
              $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
              $$ adtEqualityRuntime cfg adts
+             $$ vcat functionPrototypes
              $$ vcat functionDocs
              $$ vcat arrayLambdaDocs
              $$ proto
@@ -1068,6 +1071,13 @@ genCProg cfg adts lists sets fn proto
                                  , Nothing <- [smtDefInfo definition]
                                  ]
 
+       definitionNames      = Set.fromList (map fst definitions)
+       definitionComponents = DG.stronglyConnComp
+                                [ (functionName, functionName, filter (`Set.member` definitionNames) dependencies)
+                                | (functionName, (SMTDef _ dependencies _ _, _)) <- definitions
+                                ]
+       recursiveDefinitions = concat [functionGroup | DG.CyclicSCC functionGroup <- definitionComponents]
+
        arrayLambdaDefinitions = [ (sv, lambdaInfo)
                                 | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- assignments
                                 , Just lambdaInfo <- [smtLambdaInfo lambdaDef]
@@ -1078,10 +1088,14 @@ genCProg cfg adts lists sets fn proto
        lambdaAssignments      = functionAssignments ++ arrayLambdaAssignments
        allAssignments         = assignments ++ lambdaAssignments
 
-       generatedFunctions = [ ppDefinedFunction cfg adts functionNames functionName resultKind dependencies functionType lambdaInfo
-                            | (functionName, resultKind, dependencies, functionType, lambdaInfo) <- structuredDefinitions
-                            ]
-       functionDocs       = map fst generatedFunctions
+       functionPrototypes  = [ definedFunctionSignature functionName resultKind (liParams lambdaInfo) P.<> semi
+                             | (functionName, resultKind, _, _, lambdaInfo) <- structuredDefinitions
+                             ]
+
+       generatedFunctions  = [ ppDefinedFunction cfg adts functionNames functionName resultKind functionType lambdaInfo
+                             | (functionName, resultKind, _, functionType, lambdaInfo) <- structuredDefinitions
+                             ]
+       functionDocs        = map fst generatedFunctions
 
        generatedArrayLambdas = map (uncurry (ppArrayLambda cfg adts functionNames)) arrayLambdaDefinitions
        arrayLambdaDocs        = map fst generatedArrayLambdas
@@ -1387,11 +1401,21 @@ mergeLocated left@((i, x):xs) right@((j, y):ys)
   | i < j = (i, x) : mergeLocated xs right
   | True  = (j, y) : mergeLocated left ys
 
+-- | Render the private C signature shared by a defined function's prototype
+-- and implementation.
+definedFunctionSignature :: String -> Kind -> [(Quantifier, SV)] -> Doc
+definedFunctionSignature originalName resultKind parameters
+  = text "static" <+> text (showCType resultKind) <+> text (CTypes.definedFunctionCName originalName)
+      P.<> parens renderedParameters
+ where renderedParameters
+         | null parameters = text "void"
+         | True            = fsep (punctuate comma [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters])
+
 -- | Lower one non-recursive, first-order SBV function definition from its
--- retained expression DAG. Managed values, nested lambdas, and references to
--- other defined functions are handled by later lowering stages.
-ppDefinedFunction :: CgConfig -> [Kind] -> [(T.Text, String)] -> String -> Kind -> [String] -> SBVType -> LambdaInfo -> (Doc, Set.Set CRequirement)
-ppDefinedFunction cfg adts functionNames originalName declaredResultKind dependencies (SBVType signatureKinds)
+-- retained expression DAG. Managed values and nested lambdas are handled by
+-- later lowering stages.
+ppDefinedFunction :: CgConfig -> [Kind] -> [(T.Text, String)] -> String -> Kind -> SBVType -> LambdaInfo -> (Doc, Set.Set CRequirement)
+ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVType signatureKinds)
                   LambdaInfo{ liAssignments = functionProgram
                             , liParams      = parameters
                             , liOutput      = functionOutput
@@ -1408,8 +1432,6 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind depende
   = die $ "Non-universal parameter in defined function " ++ show originalName
   | kindOf functionOutput /= resultKind
   = die $ "Output-kind mismatch in defined function " ++ show originalName
-  | not (null definedDependencies)
-  = tbd $ "Recursive or mutually dependent defined functions: " ++ intercalate ", " definedDependencies
   | not (null nestedLambdas)
   = tbd $ "Nested lambdas in defined function " ++ show originalName
   | not (null managedKinds)
@@ -1426,8 +1448,6 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind depende
        functionConsts               = (falseSV, falseCV) : (trueSV, trueCV) : constants
        functionValues               = functionOutput : map snd parameters ++ map fst assignments ++ map fst constants
        typeWidth                    = maximum (0 : map (length . showCType) functionValues)
-       definedNames                 = map (T.unpack . fst) functionNames
-       definedDependencies          = filter (`elem` definedNames) dependencies
        nestedLambdas                = [sv | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments]
        managedKinds                 = nub [ kind
                                           | value <- functionValues
@@ -1446,18 +1466,13 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind depende
        assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
 
        functionDoc
-         = text "static" <+> text (showCType resultKind) <+> text (CTypes.definedFunctionCName originalName)
-             P.<> parens renderedParameters
+         = definedFunctionSignature originalName resultKind parameters
           $$ text "{"
           $$ nest 2 (   vcat (map snd (mergeLocated generatedTables assignmentDocs))
                      $$ text "return" <+> showSV cfg functionConsts functionOutput P.<> semi
                     )
           $$ text "}"
           $$ text ""
-
-       renderedParameters
-         | null parameters = text "void"
-         | True            = fsep (punctuate comma [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters])
 
 -- | Lower a retained one-argument array lambda into a C lookup callback. Its
 -- local DAG uses the ordinary scalar lowering pipeline, so wide bit-vectors,
