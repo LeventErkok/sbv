@@ -14,6 +14,7 @@
 module Data.SBV.Compilers.C.Types
   ( tupleCType
   , adtCType
+  , definedFunctionCName
   , arrayKindTag
   , arrayOutputCTypeName
   , arrayStoredCloneName
@@ -44,6 +45,11 @@ adtCType kind@(KADT typeName parameters _)
   = error $ "SBV->C: Expected a concrete ADT kind, received " ++ show kind
 adtCType (KApp typeName arguments) = appliedType typeName arguments
 adtCType kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
+
+-- | Return the private C identifier used for an SBV-defined function. Encoding
+-- the complete SMT identifier keeps quoted and firstified names collision-free.
+definedFunctionCName :: String -> String
+definedFunctionCName functionName = "sbv_function_" ++ encodeIdentifier functionName
 
 -- | Render the common C type spelling shared by a concrete ADT and an
 -- unresolved application of that same registered ADT.

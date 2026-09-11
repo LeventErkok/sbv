@@ -122,6 +122,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute a callback-backed array input" callbackArrayInput
   , testCase "compile and execute a structured lambda array" structuredLambdaArray
   , testCase "compile and execute structured lambda tables" structuredLambdaTables
+  , testCase "compile and execute a defined SBV function" definedSBVFunction
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
   , testCase "retain an escaping callback array" escapingCallbackArray
@@ -1293,6 +1294,32 @@ structuredLambdaTables = withSystemTempDirectory "sbv-structured-lambda-tables" 
     [ "0x00000003UL"
     , "firstValue = 0x00000015UL"
     ]
+
+-- | Exercise structured lowering of a multi-argument 'smtFunction', including
+-- collision-free C encoding of a quoted SMT identifier.
+definedSBVFunction :: Assertion
+definedSBVFunction = withSystemTempDirectory "sbv-defined-function" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [3, 4, 5]
+        left  <- cgInput "left"  :: SBVCodeGen SWord32
+        right <- cgInput "right" :: SBVCodeGen SWord32
+        wide  <- cgInput "wide"  :: SBVCodeGen (SWord 673)
+        let combine  = smtFunction "defined function/@1" $ \x y -> ite (x .< y) (x + y) (x * y)
+            increment = smtFunction "wide defined function" (+ 1)
+        cgOutput "wideResult" (increment wide)
+        cgReturn (combine left right)
+
+  stdoutText <- compileProgramAndRunGenerated dir "definedSBVFunction" program
+  sourceText <- readFile (dir </> "definedSBVFunction.c")
+  assertBool ("Expected defined-function output to contain 0x00000007UL, received:\n" ++ stdoutText)
+             ("0x00000007UL" `isInfixOf` stdoutText)
+  assertBool ("Expected the quoted SMT function name to use a private encoded C identifier, received:\n" ++ sourceText)
+             ("static SWord32 sbv_function_" `isInfixOf` sourceText
+           && "/* Uninterpreted function */ sbv_function_" `isInfixOf` sourceText)
+  assertBool ("Expected a defined function body to contribute its wide-bit-vector runtime, received:\n" ++ sourceText)
+             ("static SWord673 sbv_function_" `isInfixOf` sourceText
+           && "sbv_bv_u673_add" `isInfixOf` sourceText)
 
 -- | Exercise 'freeArray' by supplying the corresponding total C function as
 -- a user declaration, preserving the existing uninterpreted-function escape hatch.

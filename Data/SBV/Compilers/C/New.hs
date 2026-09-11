@@ -26,7 +26,7 @@ import qualified Data.Text     as T
 import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
 
-import Data.SBV.Core.Symbolic (LambdaInfo(..), ResultInp(..), ProgInfo(..), smtLambdaInfo)
+import Data.SBV.Core.Symbolic (LambdaInfo(..), ResultInp(..), ProgInfo(..), SMTDef(SMTDef), smtDefInfo, smtLambdaInfo)
 
 -- Work around the fact that GHC 8.4.1 started exporting <>.. Hmm..
 import Text.PrettyPrint.HughesPJ
@@ -44,8 +44,9 @@ import Data.SBV.Compilers.C.Lowering
 import Data.SBV.Compilers.C.Set
 import Data.SBV.Compilers.C.Table
 import Data.SBV.Compilers.C.Text
-import qualified Data.SBV.Compilers.C.Types as CTypes (arrayStoredReleaseName, elementCType)
+import qualified Data.SBV.Compilers.C.Types as CTypes (arrayStoredReleaseName, definedFunctionCName, elementCType)
 import Data.SBV.Compilers.C.Tuple
+import Data.SBV.Compilers.C.Value (valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen
 
 import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
@@ -958,22 +959,22 @@ genCProg :: CgConfig
          -> Doc
          -> ([Doc], Set.Set CRequirement)
 genCProg cfg adts lists sets fn proto
-         (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis axioms
+         (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis definitions
                  (SBVPgm asgns) cstrs origAsserts _)
          inVars outVars mbRet extDecls
   | not (null unsupportedSets)
   = notyet $ "Sets with element kinds " ++ intercalate ", " (map (show . setElementKind) unsupportedSets)
-  | any assignmentUsesSet lambdaAssignments
+  | any assignmentUsesSet arrayLambdaAssignments
   = notyet "Sets in array lambdas"
   | any containsNestedSet kindInfo
   = notyet "Sets nested in arrays or unsupported aggregate types"
   | not (null unsupportedLists)
   = notyet $ "Lists with element kinds " ++ intercalate ", " (map (show . listElementKind) unsupportedLists)
-  | any assignmentUsesList lambdaAssignments
+  | any assignmentUsesList arrayLambdaAssignments
   = notyet "Lists in array lambdas"
   | any containsNestedList kindInfo
   = notyet "Lists nested in arrays or unsupported aggregate types"
-  | any assignmentUsesText lambdaAssignments
+  | any assignmentUsesText arrayLambdaAssignments
   = notyet "Characters or strings in array lambdas"
   | not (null usorts)
   = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
@@ -981,8 +982,8 @@ genCProg cfg adts lists sets fn proto
   = error "SBV->C: Cannot compile in the presence of quantified variables."
   | not $ null (progSpecialRels pinfo)
   = error "SBV->C: Cannot compile in the presence of special relations."
-  | not (null axioms)
-  = error "SBV->C: Cannot compile in the presence of 'smtFunction' definitions, use 'compileToCLib' instead."
+  | not (null unstructuredDefinitions)
+  = error $ "SBV->C: Cannot compile SMT-text-only function definitions: " ++ intercalate ", " unstructuredDefinitions
   | not (null cstrs)
   = tbd "Explicit constraints"
   | True
@@ -1020,7 +1021,8 @@ genCProg cfg adts lists sets fn proto
              $$ (if requires CRequiresSets             then setRuntime cfg sets else empty)
              $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
              $$ adtEqualityRuntime cfg adts
-             $$ vcat lambdaDocs
+             $$ vcat functionDocs
+             $$ vcat arrayLambdaDocs
              $$ proto
              $$ text "{"
              $$ text ""
@@ -1054,16 +1056,35 @@ genCProg cfg adts lists sets fn proto
 
        assignments = F.toList asgns
 
-       lambdaDefinitions = [ (sv, lambdaInfo)
-                           | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- assignments
-                           , Just lambdaInfo <- [smtLambdaInfo lambdaDef]
-                           ]
+       functionNames = [(T.pack functionName, CTypes.definedFunctionCName functionName) | (functionName, _) <- definitions]
 
-       lambdaAssignments = concatMap (F.toList . liAssignments . snd) lambdaDefinitions
-       allAssignments    = assignments ++ lambdaAssignments
+       structuredDefinitions = [ (functionName, resultKind, dependencies, functionType, lambdaInfo)
+                               | (functionName, (definition@(SMTDef resultKind dependencies _ _), functionType)) <- definitions
+                               , Just lambdaInfo <- [smtDefInfo definition]
+                               ]
 
-       generatedLambdas = map (uncurry (ppArrayLambda cfg adts)) lambdaDefinitions
-       lambdaDocs        = map fst generatedLambdas
+       unstructuredDefinitions = [ functionName
+                                 | (functionName, (definition, _)) <- definitions
+                                 , Nothing <- [smtDefInfo definition]
+                                 ]
+
+       arrayLambdaDefinitions = [ (sv, lambdaInfo)
+                                | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- assignments
+                                , Just lambdaInfo <- [smtLambdaInfo lambdaDef]
+                                ]
+
+       functionAssignments    = concatMap (\(_, _, _, _, lambdaInfo) -> F.toList (liAssignments lambdaInfo)) structuredDefinitions
+       arrayLambdaAssignments = concatMap (F.toList . liAssignments . snd) arrayLambdaDefinitions
+       lambdaAssignments      = functionAssignments ++ arrayLambdaAssignments
+       allAssignments         = assignments ++ lambdaAssignments
+
+       generatedFunctions = [ ppDefinedFunction cfg adts functionNames functionName resultKind dependencies functionType lambdaInfo
+                            | (functionName, resultKind, dependencies, functionType, lambdaInfo) <- structuredDefinitions
+                            ]
+       functionDocs       = map fst generatedFunctions
+
+       generatedArrayLambdas = map (uncurry (ppArrayLambda cfg adts functionNames)) arrayLambdaDefinitions
+       arrayLambdaDocs        = map fst generatedArrayLambdas
 
        generatedAssignments = map genAsgn assignments
        assignmentDocs        = [(location, doc) | (location, doc, _) <- generatedAssignments]
@@ -1071,7 +1092,8 @@ genCProg cfg adts lists sets fn proto
        requirements = Set.unions
          [ kindRequirements
          , Set.unions [needed | (_, _, needed) <- generatedAssignments]
-         , Set.unions (map snd generatedLambdas)
+         , Set.unions (map snd generatedFunctions)
+         , Set.unions (map snd generatedArrayLambdas)
          , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
          ]
 
@@ -1307,7 +1329,7 @@ genCProg cfg adts lists sets fn proto
 
        genAsgn :: (SV, SBVExpr) -> (Int, Doc, Set.Set CRequirement)
        genAsgn (sv, n) = (cLocation consts sv, doc, needed)
-         where (doc, needed) = ppExpr cfg adts consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
+         where (doc, needed) = ppExpr cfg adts functionNames consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
 
        -- merge tables intermixed with assignments and assertions, paying attention to putting tables as
        -- early as possible and tables right after.. Note that the assignment list (second argument) is sorted on its order
@@ -1365,17 +1387,89 @@ mergeLocated left@((i, x):xs) right@((j, y):ys)
   | i < j = (i, x) : mergeLocated xs right
   | True  = (j, y) : mergeLocated left ys
 
+-- | Lower one non-recursive, first-order SBV function definition from its
+-- retained expression DAG. Managed values, nested lambdas, and references to
+-- other defined functions are handled by later lowering stages.
+ppDefinedFunction :: CgConfig -> [Kind] -> [(T.Text, String)] -> String -> Kind -> [String] -> SBVType -> LambdaInfo -> (Doc, Set.Set CRequirement)
+ppDefinedFunction cfg adts functionNames originalName declaredResultKind dependencies (SBVType signatureKinds)
+                  LambdaInfo{ liAssignments = functionProgram
+                            , liParams      = parameters
+                            , liOutput      = functionOutput
+                            , liConsts      = constants
+                            , liTables      = tables
+                            }
+  | null signatureKinds
+  = die $ "Empty type for defined function " ++ show originalName
+  | declaredResultKind /= resultKind
+  = die $ "Result-kind mismatch in defined function " ++ show originalName
+  | map (kindOf . snd) parameters /= parameterKinds
+  = die $ "Parameter-kind mismatch in defined function " ++ show originalName
+  | any ((/= ALL) . fst) parameters
+  = die $ "Non-universal parameter in defined function " ++ show originalName
+  | kindOf functionOutput /= resultKind
+  = die $ "Output-kind mismatch in defined function " ++ show originalName
+  | not (null definedDependencies)
+  = tbd $ "Recursive or mutually dependent defined functions: " ++ intercalate ", " definedDependencies
+  | not (null nestedLambdas)
+  = tbd $ "Nested lambdas in defined function " ++ show originalName
+  | not (null managedKinds)
+  = tbd $ "Managed values in defined function " ++ show originalName ++ ": " ++ intercalate ", " (map show managedKinds)
+  | True
+  = ( functionDoc
+    , Set.unions
+        [ Set.unions [needed | (_, _, needed) <- generatedAssignments]
+        , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
+        ]
+    )
+ where (parameterKinds, resultKind) = (init signatureKinds, last signatureKinds)
+       assignments                  = F.toList functionProgram
+       functionConsts               = (falseSV, falseCV) : (trueSV, trueCV) : constants
+       functionValues               = functionOutput : map snd parameters ++ map fst assignments ++ map fst constants
+       typeWidth                    = maximum (0 : map (length . showCType) functionValues)
+       definedNames                 = map (T.unpack . fst) functionNames
+       definedDependencies          = filter (`elem` definedNames) dependencies
+       nestedLambdas                = [sv | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments]
+       managedKinds                 = nub [ kind
+                                          | value <- functionValues
+                                          , let kind = kindOf value
+                                          , isExactGMPKind cfg kind || valueNeedsOwnership cfg kind
+                                          ]
+
+       generatedTables = map (ppTable cfg False functionConsts) tables
+
+       generatedAssignments = [(cLocation functionConsts sv, doc, needed)
+                              | (sv, expression) <- assignments
+                              , let (doc, needed) = ppExpr cfg adts functionNames functionConsts expression sv
+                                                         (declSV typeWidth sv) (declSVNoConst typeWidth sv)
+                              ]
+
+       assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
+
+       functionDoc
+         = text "static" <+> text (showCType resultKind) <+> text (CTypes.definedFunctionCName originalName)
+             P.<> parens renderedParameters
+          $$ text "{"
+          $$ nest 2 (   vcat (map snd (mergeLocated generatedTables assignmentDocs))
+                     $$ text "return" <+> showSV cfg functionConsts functionOutput P.<> semi
+                    )
+          $$ text "}"
+          $$ text ""
+
+       renderedParameters
+         | null parameters = text "void"
+         | True            = fsep (punctuate comma [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters])
+
 -- | Lower a retained one-argument array lambda into a C lookup callback. Its
 -- local DAG uses the ordinary scalar lowering pipeline, so wide bit-vectors,
 -- floating-point values, exact numbers, and finite tables retain their usual
 -- semantics.
-ppArrayLambda :: CgConfig -> [Kind] -> SV -> LambdaInfo -> (Doc, Set.Set CRequirement)
-ppArrayLambda cfg adts arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
-                                                    , liParams      = parameters
-                                                    , liOutput      = lambdaOutput
-                                                    , liConsts      = constants
-                                                    , liTables      = tables
-                                                    }
+ppArrayLambda :: CgConfig -> [Kind] -> [(T.Text, String)] -> SV -> LambdaInfo -> (Doc, Set.Set CRequirement)
+ppArrayLambda cfg adts functionNames arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
+                                                                 , liParams      = parameters
+                                                                 , liOutput      = lambdaOutput
+                                                                 , liConsts      = constants
+                                                                 , liTables      = tables
+                                                                 }
   = case (kindOf arraySV, parameters) of
       (KArray keyKind valueKind, [(ALL, parameter)])
         | kindOf parameter /= keyKind
@@ -1410,7 +1504,7 @@ ppArrayLambda cfg adts arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
 
        generatedAssignments = [(cLocation lambdaConsts sv, doc, needed)
                               | (sv, expression) <- assignments
-                              , let (doc, needed) = ppExpr cfg adts lambdaConsts expression sv
+                              , let (doc, needed) = ppExpr cfg adts functionNames lambdaConsts expression sv
                                                          (declSV typeWidth sv) (declSVNoConst typeWidth sv)
                               ]
 
@@ -1551,8 +1645,8 @@ handleIEEE w consts as var = cvt w
 
 -- | Lower and render one symbolic assignment together with the facilities it
 -- requires from the generated C translation unit.
-ppExpr :: CgConfig -> [Kind] -> [(SV, CV)] -> SBVExpr -> SV -> Doc -> (Doc, Doc) -> (Doc, Set.Set CRequirement)
-ppExpr cfg adts consts (SBVApp op opArgs) resultSV lhs (typ, var)
+ppExpr :: CgConfig -> [Kind] -> [(T.Text, String)] -> [(SV, CV)] -> SBVExpr -> SV -> Doc -> (Doc, Doc) -> (Doc, Set.Set CRequirement)
+ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
   = ( vcat $ loweringSetup selected
           ++ [assignment]
           ++ loweringCleanup selected
@@ -1592,6 +1686,8 @@ ppExpr cfg adts consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         rtc = cgRTC cfg
 
+        functionName symbol = fromMaybe (T.unpack symbol) (lookup symbol functionNames)
+
         cBinOps = [ (Plus, "+"),  (Times, "*"), (Minus, "-")
                   , (Equal False, "==")  -- no strong equality!
                   , (NotEqual, "!="), (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
@@ -1615,8 +1711,8 @@ ppExpr cfg adts consts (SBVApp op opArgs) resultSV lhs (typ, var)
         p (PseudoBoolean pb) as = handlePB pb as
         p (OverflowOp o) _      = tbd $ "Overflow operations" ++ show o
         p (KindCast _ to)   [a] = parens (text (show to)) <+> a
-        p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text (T.unpack s)
-        p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text (T.unpack s) P.<> parens (fsep (punctuate comma as))
+        p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text (functionName s)
+        p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text (functionName s) P.<> parens (fsep (punctuate comma as))
         p Extract{} _          = die "Bit-vector extraction escaped the exact bit-vector lowering pipeline"
         p Join      _          = die "Bit-vector concatenation escaped the exact bit-vector lowering pipeline"
         p Rol{} _              = die "Left rotation escaped the exact bit-vector lowering pipeline"

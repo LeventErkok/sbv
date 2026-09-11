@@ -210,7 +210,7 @@ lambdaWithInfo :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope ->
 lambdaWithInfo inState scope fk f = inSubState scope inState $ \st -> do
    defn <- handleDefn <$> convert st fk (mkLambda st f)
    info <- liftIO $ extractLambdaInfo st
-   pure (defn, info)
+   pure (smtDefWithInfo defn info, info)
    where handleDefn d@(Defn _ frees _ _)
             | null frees = mkLam d
             | True       = error $ unlines [ ""

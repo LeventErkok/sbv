@@ -48,7 +48,7 @@ module Data.SBV.Core.Symbolic
   , getUserName', getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex, sObserve
-  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefEq, conflictError, withNewIncState, IncState(..), incrementInternalCounter, incrementFreshNameCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(SMTDef), smtDefWithInfo, smtDefInfo, smtDefEq, conflictError, withNewIncState, IncState(..), incrementInternalCounter, incrementFreshNameCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..), UIName(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, newInternalVariable, lambdaVar, quantVar
@@ -1154,16 +1154,36 @@ lookupInput f sv ns
                     -- we use the more expensive O (n) to find the index and the elem
     secondLookup = S.elemIndexL sv svs >>= flip S.lookup ns
 
--- | A defined function/value
-data SMTDef = SMTDef Kind             -- ^ Final kind of the definition (resulting kind, not the params)
-                     [String]         -- ^ other definitions it refers to
-                     (Maybe Text)     -- ^ parameter string
-                     (Int -> Text)    -- ^ Body, in SMTLib syntax, given the tab amount
+-- | A defined function/value, optionally retaining its structured expression
+-- DAG for consumers other than SMT-Lib.
+data SMTDef = SMTDefValue Kind               -- ^ Final kind of the definition (resulting kind, not the params)
+                          [String]           -- ^ other definitions it refers to
+                          (Maybe Text)       -- ^ parameter string
+                          (Int -> Text)      -- ^ Body, in SMTLib syntax, given the tab amount
+                          (Maybe LambdaInfo) -- ^ Structured function body, when constructed by SBV
             deriving G.Data
+
+-- | Compatibility constructor and pattern for an SMT-text definition. The
+-- pattern also matches definitions carrying retained backend metadata.
+pattern SMTDef :: Kind -> [String] -> Maybe Text -> (Int -> Text) -> SMTDef
+pattern SMTDef resultKind dependencies parameters body <- SMTDefValue resultKind dependencies parameters body _
+  where SMTDef resultKind dependencies parameters body = SMTDefValue resultKind dependencies parameters body Nothing
+
+{-# COMPLETE SMTDef #-}
+
+-- | Attach a structured expression DAG to an SMT definition.
+smtDefWithInfo :: SMTDef -> LambdaInfo -> SMTDef
+smtDefWithInfo (SMTDefValue resultKind dependencies parameters body _) lambdaInfo
+  = SMTDefValue resultKind dependencies parameters body (Just lambdaInfo)
+
+-- | Return a definition's retained expression DAG, when it was constructed by
+-- SBV rather than supplied only as SMT-Lib text.
+smtDefInfo :: SMTDef -> Maybe LambdaInfo
+smtDefInfo (SMTDefValue _ _ _ _ lambdaInfo) = lambdaInfo
 
 -- | For debug purposes
 instance Show SMTDef where
-  show (SMTDef fk frees p body) = unlines [ "-- User defined function:"
+  show (SMTDefValue fk frees p body _) = unlines [ "-- User defined function:"
                                                       , "-- Final return type    : " ++ show fk
                                                       , "-- Refers to            : " ++ intercalate ", " frees
                                                       , "-- Parameters           : " ++ maybe "NONE" T.unpack p
@@ -1173,12 +1193,13 @@ instance Show SMTDef where
 
 -- | NFData instance for SMTDef
 instance NFData SMTDef where
-  rnf (SMTDef fk frees params body) = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
+  rnf (SMTDefValue fk frees params body lambdaInfo)
+    = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body `seq` rnf lambdaInfo
 
 -- | Compare two SMTDef values for semantic equality.
 -- The body is @(Int -> Text)@ where @Int@ is indentation; we compare rendered output at indent 0.
 smtDefEq :: SMTDef -> SMTDef -> Bool
-smtDefEq (SMTDef k1 refs1 params1 body1) (SMTDef k2 refs2 params2 body2)
+smtDefEq (SMTDefValue k1 refs1 params1 body1 _) (SMTDefValue k2 refs2 params2 body2 _)
   = k1 == k2 && refs1 == refs2 && params1 == params2 && body1 0 == body2 0
 
 -- | Error for conflicting smtFunction definitions with the same name.
