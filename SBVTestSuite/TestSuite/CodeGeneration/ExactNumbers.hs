@@ -58,6 +58,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute exact table lookup" exactTableLookup
   , testCase "compile and execute exact array keys and values" exactArray
   , testCase "compile and execute an exact callback-backed array" exactArrayInput
+  , testCase "compile and execute fixed exact input arrays" exactFixedInputArrays
   , testCase "compile and execute an exact structured lambda array" exactLambdaArray
   , testCase "compile and execute an exact structured lambda table" exactLambdaTable
   , testCase "return and output owned exact arrays" ownedExactArrays
@@ -261,6 +262,40 @@ exactArrayInput = withSystemTempDirectory "sbv-exact-array-input" $ \dir -> do
         cgReturn (readArray updated key)
   compileAndRunGMP dir "exactArrayInput" program ["20/3", "sourceValue =7"]
 
+-- | Exercise borrowed fixed-size GMP input arrays for integers, reals, and
+-- rationals, including caller initialization and cleanup in the driver.
+exactFixedInputArrays :: Assertion
+exactFixedInputArrays = withSystemTempDirectory "sbv-exact-fixed-input-arrays" $ \dir -> do
+  let integerSeed = 2 ^ (300 :: Int) + 11
+      program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [integerSeed, -7, 5, 2, 9, 4]
+        [integerA, integerB]   <- cgInputArr 2 "integers"  :: SBVCodeGen [SInteger]
+        [realA, realB]         <- cgInputArr 2 "reals"     :: SBVCodeGen [SReal]
+        [rationalA, rationalB] <- cgInputArr 2 "rationals" :: SBVCodeGen [SRational]
+        cgOutput "integerResult"  (integerA + integerB)
+        cgOutput "realResult"     (realA / realB)
+        cgOutput "rationalResult" (rationalA / rationalB)
+        cgReturn (integerA .> integerB .&& realA .> realB .&& rationalA .> rationalB)
+
+  compileAndRunGMP dir "exactFixedInputArrays" program
+    [ show (integerSeed - 7)
+    , "realResult =5/2"
+    , "rationalResult =9/4"
+    , ") = 1"
+    ]
+  headerText <- readFile (dir </> "exactFixedInputArrays.h")
+  driverText <- readFile (dir </> "exactFixedInputArrays_driver.c")
+  assertBool "Expected fixed exact inputs to use borrowed GMP array parameters"
+             ("const mpz_t *integers" `isInfixOf` headerText
+           && "const mpq_t *reals" `isInfixOf` headerText
+           && "const mpq_t *rationals" `isInfixOf` headerText)
+  assertBool "Expected the generated driver to release every GMP input-array element"
+             ("mpz_clear(integers[0]);" `isInfixOf` driverText
+           && "mpz_clear(integers[1]);" `isInfixOf` driverText
+           && "mpq_clear(reals[0]);" `isInfixOf` driverText
+           && "mpq_clear(rationals[1]);" `isInfixOf` driverText)
+
 -- | Exercise repeated reads from a structured array lambda whose arithmetic
 -- allocates exact rational results in the enclosing generated-call arena.
 exactLambdaArray :: Assertion
@@ -404,6 +439,11 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
         cgSetDriverValues [wideSample]
         value <- cgInput "value" :: SBVCodeGen (SInt 673)
         cgReturn (sFromIntegral value :: SInteger)
+      arrayProgram = do
+        cgOverwriteFiles True
+        cgSetDriverValues [arraySeed, 3]
+        [first, second] <- cgInputArr 2 "values" :: SBVCodeGen [SInteger]
+        cgReturn (first - second)
       tupleProgram increment = do
         cgOverwriteFiles True
         cgSetDriverValues [tupleSeed]
@@ -424,6 +464,7 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
             resultValues              = tuple (tupleInteger + integerAmount, tupleReal + realAmount)
         cgReturn (sExactAggregate resultLeaf resultValues)
       wideSample = negate (2 ^ (670 :: Int)) + 12345
+      arraySeed  = 2 ^ (180 :: Int) + 9
       tupleSeed  = 2 ^ (140 :: Int)
       adtSeed    = 2 ^ (150 :: Int) + 1
 
@@ -431,6 +472,7 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
     [ ("integerPart", integerProgram)
     , ("realPart", realProgram)
     , ("widePart", wideProgram)
+    , ("arrayPart", arrayProgram)
     , ("incrementTuple", tupleProgram 1)
     , ("addTwoTuple", tupleProgram 2)
     , ("incrementADT", adtProgram 1)
@@ -447,6 +489,7 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
   assertOutput stdoutText (show (2 ^ (130 :: Int) + 7 :: Integer))
   assertOutput stdoutText "5/3"
   assertOutput stdoutText (show wideSample)
+  assertOutput stdoutText (show (arraySeed - 3))
   assertOutput stdoutText ("(" ++ show (tupleSeed + 1) ++ ", " ++ show (tupleSeed + 2) ++ ")")
   assertOutput stdoutText ("(" ++ show (tupleSeed + 2) ++ ", " ++ show (tupleSeed + 3) ++ ")")
   assertOutput stdoutText ("ExactAggregate(ExactLeaf(" ++ show (adtSeed + 1) ++ ", " ++ show (adtSeed + 2)

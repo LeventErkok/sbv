@@ -276,10 +276,11 @@ mkParam :: CgConfig -> (String, CgVal) -> Doc
 mkParam _   (n, CgAtomic sv)
   | isArray sv = text "const" <+> text (arrayInputCType (kindOf sv)) <+> text n
 mkParam _   (n, CgAtomic sv)     = pprCWord True sv <+> text n
-mkParam cfg (_, CgArray  (sv:_))
-  | isExactGMPKind cfg (kindOf sv) = die "mkParam: Exact GMP arrays are not yet supported"
-mkParam _   (_, CgArray  [])     = die "mkParam: CgArray with no elements!"
-mkParam _   (n, CgArray  (sv:_)) = pprCWord True sv <+> text "*" P.<> text n
+mkParam _   (_, CgArray [])        = die "mkParam: CgArray with no elements!"
+mkParam cfg (n, CgArray (sv:_))
+  | isExactGMPKind cfg kind = text "const" <+> text (gmpArrayType kind) <+> text "*" P.<> text n
+  | True                    = pprCWord True sv <+> text "*" P.<> text n
+  where kind = kindOf sv
 
 -- | Render a generated C output parameter.
 mkPParam :: CgConfig -> (String, CgVal) -> Doc
@@ -290,7 +291,7 @@ mkPParam cfg (n, CgAtomic sv)
   | True                           = pprCWord False sv <+> text "*" P.<> text n
 mkPParam _   (_, CgArray [])        = die "mkPParam: CgArray with no elements!"
 mkPParam cfg (n, CgArray (sv:_))
-  | isExactGMPKind cfg kind = text (gmpDriverArrayType kind) <+> text "*" P.<> text n
+  | isExactGMPKind cfg kind = text (gmpArrayType kind) <+> text "*" P.<> text n
   | isArray kind            = text (arrayOutputCType kind) <+> text "*" P.<> text n
   | True                    = pprCWord False sv <+> text "*" P.<> text n
   where kind = kindOf sv
@@ -715,13 +716,23 @@ genDriver cfg adts randVals fn inps outs mbRet
          | isOwnedADT cfg adts sv              = adtDriverInit cfg adts mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
        mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
        mkInp (_,   n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
-       mkInp (vs,  n, CgArray sws@(sv:_)) =  pprCWord True sv <+> text n P.<> brackets (int (length sws)) <+> text "= {"
-                                                      $$ nest 4 (fsep (punctuate comma (align vs)))
-                                                      $$ text "};"
-                                         $$ text ""
-                                         $$ text "printf" P.<> parens (printQuotes (text "Contents of input array" <+> text n P.<> text ":\\n")) P.<> semi
-                                         $$ display (n, CgArray sws)
-                                         $$ text ""
+       mkInp (vs, n, CgArray sws@(sv:_))
+         | isExactGMPKind cfg kind = text (gmpArrayType kind) <+> text n P.<> brackets (int lengthOfArray) P.<> semi
+                                  $$ vcat (zipWith initialize [0 :: Int ..] vs)
+                                  $$ displayInputArray
+         | True                    = pprCWord True sv <+> text n P.<> brackets (int lengthOfArray) <+> text "= {"
+                                  $$ nest 4 (fsep (punctuate comma (align vs)))
+                                  $$ text "};"
+                                  $$ displayInputArray
+         where kind          = kindOf sv
+               lengthOfArray = length sws
+
+               initialize index = gmpDriverInitialize kind (text n P.<> brackets (int index))
+
+               displayInputArray = text ""
+                                $$ text "printf" P.<> parens (printQuotes (text "Contents of input array" <+> text n P.<> text ":\\n")) P.<> semi
+                                $$ display (n, CgArray sws)
+                                $$ text ""
        mkOut (v, CgAtomic sv)
          | isArray sv                          = text (arrayOutputCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
          | isExactGMPKind cfg (kindOf sv)      = gmpDriverInit (kindOf sv) (text v) (text "0")
@@ -735,7 +746,7 @@ genDriver cfg adts randVals fn inps outs mbRet
          | True                                = pprCWord False sv <+> text v P.<> semi
        mkOut (v, CgArray [])         = die $ "Unsupported empty array value for " ++ show v
        mkOut (v, CgArray sws@(sv:_))
-         | isExactGMPKind cfg kind = text (gmpDriverArrayType kind) <+> text v P.<> brackets (int lengthOfArray) P.<> semi
+         | isExactGMPKind cfg kind = text (gmpArrayType kind) <+> text v P.<> brackets (int lengthOfArray) P.<> semi
                                   $$ vcat [gmpDriverInitialize kind (text v P.<> brackets (int index)) (text "0") | index <- [0 .. lengthOfArray - 1]]
          | isArray kind            = text (arrayOutputCType kind) <+> text v P.<> brackets (int lengthOfArray)
                                   <+> text "=" <+> braces (text "0") P.<> semi
@@ -933,6 +944,11 @@ genDriver cfg adts randVals fn inps outs mbRet
                               ++ [releaseADT sv n
                                  | (_, n, CgAtomic sv) <- pairedInputs
                                  , isOwnedADT cfg adts sv
+                                 ]
+                              ++ [gmpDriverClear (kindOf sv) (text n P.<> brackets (int index))
+                                 | (_, n, CgArray svs) <- pairedInputs
+                                 , (index, sv) <- zip [0 :: Int ..] svs
+                                 , isExactGMPKind cfg (kindOf sv)
                                  ]
                outputCleanup = [ gmpDriverClear (kindOf sv) (text n)
                                | (n, CgAtomic sv) <- outs

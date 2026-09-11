@@ -21,7 +21,7 @@ module Data.SBV.Compilers.C.GMP
   , gmpPrint
   , gmpSet
   , gmpOutputType
-  , gmpDriverArrayType
+  , gmpArrayType
   , gmpDriverInitialize
   , gmpDriverInit
   , gmpDriverClear
@@ -410,12 +410,12 @@ gmpOutputType KRational  = "mpq_ptr"
 gmpOutputType k          = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
 
 -- | Return the mutable GMP storage type used for one element of a generated
--- driver array.
-gmpDriverArrayType :: Kind -> String
-gmpDriverArrayType KUnbounded = "mpz_t"
-gmpDriverArrayType KReal      = "mpq_t"
-gmpDriverArrayType KRational  = "mpq_t"
-gmpDriverArrayType kind       = error $ "SBV->C: Expected an exact GMP kind, received " ++ show kind
+-- fixed-size array.
+gmpArrayType :: Kind -> String
+gmpArrayType KUnbounded = "mpz_t"
+gmpArrayType KReal      = "mpq_t"
+gmpArrayType KRational  = "mpq_t"
+gmpArrayType kind       = error $ "SBV->C: Expected an exact GMP kind, received " ++ show kind
 
 -- | Initialize already-declared caller-owned GMP storage from an
 -- integer-valued driver sample.
@@ -432,7 +432,7 @@ gmpDriverInitialize kind       _       _     = error $ "SBV->C: Expected an exac
 -- | Declare and initialize a caller-owned GMP value from an integer-valued
 -- driver sample.
 gmpDriverInit :: Kind -> Doc -> Doc -> Doc
-gmpDriverInit kind storage value = text (gmpDriverArrayType kind) <+> storage P.<> semi
+gmpDriverInit kind storage value = text (gmpArrayType kind) <+> storage P.<> semi
                                 $$ gmpDriverInitialize kind storage value
 
 -- | Clear caller-owned GMP storage in a generated driver.
