@@ -293,6 +293,7 @@ setExpr cfg op svs resultKind args
       (ADTOp{}                       , _        ) -> Nothing
       (TupleConstructor{}            , _        ) -> Nothing
       (TupleAccess{}                 , _        ) -> Nothing
+      (Uninterpreted{}               , _        ) -> Nothing
       (Label _                       , [a]      ) -> lower a
       (Ite                           , [c, a, b]) -> lower $ c <+> text "?" <+> a <+> text ":" <+> b
       (Equal _                       , [a, b]   ) -> lower $ call (helper "equal") [a, b]

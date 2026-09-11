@@ -126,6 +126,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compose acyclic defined SBV functions" composedDefinedSBVFunctions
   , testCase "compile structural defined SBV functions" structuralDefinedSBVFunctions
   , testCase "compile managed scalar defined SBV functions" managedScalarDefinedSBVFunctions
+  , testCase "compile collection defined SBV functions" collectionDefinedSBVFunctions
   , testCase "reject recursive defined SBV functions" recursiveDefinedSBVFunction
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
@@ -1412,6 +1413,39 @@ managedScalarDefinedSBVFunctions = withSystemTempDirectory "sbv-managed-scalar-d
   assertBool "Expected private defined-function calls to thread the shared ownership context"
              ("sbv_function_ctx *const __sbv_parent_function_ctx" `isInfixOf` sourceText
            && "(&__sbv_function_ctx," `isInfixOf` sourceText)
+
+-- | Exercise composed 'smtFunction' definitions over exact-element lists and
+-- sets, requiring coordinated list, set, and GMP ownership arenas.
+collectionDefinedSBVFunctions :: Assertion
+collectionDefinedSBVFunctions = withSystemTempDirectory "sbv-collection-defined-functions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        let addPrefix :: SList Integer -> SList Integer
+            addPrefix = smtFunction "C managed list prefix" $ \values -> literal [0] SL.++ values
+
+            finishList :: SList Integer -> SList Integer
+            finishList = smtFunction "C managed list finish" $ \values -> addPrefix values SL.++ literal [3]
+
+            addThree :: SSet Integer -> SSet Integer
+            addThree = smtFunction "C managed set three" $ SS.insert 3
+
+            finishSet :: SSet Integer -> SSet Integer
+            finishSet = smtFunction "C managed set finish" $ \values -> SS.insert 4 (addThree values)
+
+            finishCollections :: SBV ([Integer], RCSet Integer) -> SBV ([Integer], RCSet Integer)
+            finishCollections = smtFunction "C managed collection tuple" $ \collections ->
+                                  let (values, members) = untuple collections
+                                  in tuple (finishList values, finishSet members)
+
+        cgOutput "listResult" (finishList (literal [1, 2]))
+        cgReturn (finishCollections (tuple (literal [1, 2], SS.fromList [1, 2])))
+
+  stdoutText <- compileProgramAndRunGenerated dir "collectionDefinedSBVFunctions" program
+  mapM_ (\fragment -> assertBool ("Expected collection defined-function output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ ") =([0, 1, 2, 3], {1, 2, 3, 4})"
+    , "listResult =[0, 1, 2, 3]"
+    ]
 
 -- | Check that allowing acyclic composition does not admit recursive
 -- 'smtFunction' components, whose eager expression DAGs require control-flow

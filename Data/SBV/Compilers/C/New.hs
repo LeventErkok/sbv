@@ -1449,8 +1449,8 @@ definedFunctionSignature originalName resultKind parameters
          : [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters]
 
 -- | Lower one non-recursive, first-order SBV function definition from its
--- retained expression DAG. Collection-backed values, recursively owned ADTs,
--- and nested lambdas are handled by later lowering stages.
+-- retained expression DAG. Persistent arrays, recursively owned ADTs, and
+-- nested lambdas are handled by later lowering stages.
 ppDefinedFunction :: CgConfig -> [Kind] -> [(T.Text, String)] -> String -> Kind -> SBVType -> LambdaInfo -> (Doc, Set.Set CRequirement)
 ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVType signatureKinds)
                   LambdaInfo{ liAssignments = functionProgram
@@ -1490,6 +1490,8 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
        functionValueHasUnsupportedManagedStorage kind
          | isExactGMPKind cfg kind = False
          | kind == KString         = False
+         | isList kind             = False
+         | isSet kind              = False
          | KTuple fields <- kind   = any functionValueHasUnsupportedManagedStorage fields
          | isConcreteADTKind kind  = adtNeedsOwnership cfg adts kind
          | True                    = valueNeedsOwnership cfg kind
@@ -1505,8 +1507,10 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
        assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
 
        functionRequirements = Set.unions
-         [ Set.fromList $ [CRequiresGMP  | any (isExactGMPKind cfg) expandedFunctionKinds]
-                       ++ [CRequiresText | KString `elem` expandedFunctionKinds]
+         [ Set.fromList $ [CRequiresGMP   | any (isExactGMPKind cfg) expandedFunctionKinds]
+                       ++ [CRequiresText  | KString `elem` expandedFunctionKinds]
+                       ++ [CRequiresLists | any isList expandedFunctionKinds]
+                       ++ [CRequiresSets  | any isSet expandedFunctionKinds]
          , Set.unions [needed | (_, _, needed) <- generatedAssignments]
          , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
          ]
@@ -1514,11 +1518,15 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
        expandedFunctionKinds = concatMap (expandKinds . kindOf) functionValues
 
        contextSetup
-         =  setupContext CRequiresGMP  "sbv_gmp_ctx"  "gmp"
-         $$ setupContext CRequiresText "sbv_text_ctx" "text"
+         =  setupContext CRequiresGMP   "sbv_gmp_ctx"  "gmp"
+         $$ setupContext CRequiresText  "sbv_text_ctx" "text"
+         $$ setupContext CRequiresLists "sbv_list_ctx" "list"
+         $$ setupContext CRequiresSets  "sbv_set_ctx"  "set"
          $$ text "sbv_function_ctx __sbv_function_ctx = *__sbv_parent_function_ctx;"
-         $$ bindContext CRequiresGMP  "gmp"
-         $$ bindContext CRequiresText "text"
+         $$ bindContext CRequiresGMP   "gmp"
+         $$ bindContext CRequiresText  "text"
+         $$ bindContext CRequiresLists "list"
+         $$ bindContext CRequiresSets  "set"
 
        setupContext requirement contextType fieldName
          | requirement `Set.member` functionRequirements
@@ -1534,8 +1542,10 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
          = empty
 
        contextCommit
-         =  commitContext CRequiresGMP  "gmp"
-         $$ commitContext CRequiresText "text"
+         =  commitContext CRequiresGMP   "gmp"
+         $$ commitContext CRequiresText  "text"
+         $$ commitContext CRequiresLists "list"
+         $$ commitContext CRequiresSets  "set"
 
        commitContext requirement fieldName
          | requirement `Set.member` functionRequirements
