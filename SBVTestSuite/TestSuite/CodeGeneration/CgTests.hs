@@ -124,6 +124,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute structured lambda tables" structuredLambdaTables
   , testCase "compile and execute a defined SBV function" definedSBVFunction
   , testCase "compose acyclic defined SBV functions" composedDefinedSBVFunctions
+  , testCase "compile structural defined SBV functions" structuralDefinedSBVFunctions
   , testCase "reject recursive defined SBV functions" recursiveDefinedSBVFunction
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
@@ -1350,6 +1351,31 @@ composedDefinedSBVFunctions = withSystemTempDirectory "sbv-composed-defined-func
              ("0x00000012UL" `isInfixOf` stdoutText)
   assertBool ("Expected private prototypes before the composed defined-function bodies, received:\n" ++ sourceText)
              (length (filter ("static SWord32 sbv_function_" `isInfixOf`) (lines sourceText)) == 8)
+
+-- | Exercise private by-value C signatures for 'smtFunction' definitions over
+-- a tuple and a scalar-only ADT, including projection and reconstruction.
+structuralDefinedSBVFunctions :: Assertion
+structuralDefinedSBVFunctions = withSystemTempDirectory "sbv-structural-defined-functions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        let adjustTuple :: SBV (Word8, Word16) -> SBV (Word8, Word16)
+            adjustTuple = smtFunction "C structural tuple" $ \value ->
+                            let (first, second) = untuple value
+                            in tuple (first + 1, second + 2)
+
+            adjustADT :: SCodeGenADT Word8 -> SCodeGenADT Word8
+            adjustADT = smtFunction "C structural ADT" $ \value ->
+                          sCGPair (getCGPair_1 value + 1) (getCGPair_2 value + 2)
+
+        cgOutput "tupleResult" (adjustTuple (literal (4, 10)))
+        cgReturn (adjustADT (literal (CGPair 7 9)))
+
+  stdoutText <- compileProgramAndRunGenerated dir "structuralDefinedSBVFunctions" program
+  mapM_ (\fragment -> assertBool ("Expected structural defined-function output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ "CGPair(8, 0x000bU)"
+    , "tupleResult =(5, 0x000cU)"
+    ]
 
 -- | Check that allowing acyclic composition does not admit recursive
 -- 'smtFunction' components, whose eager expression DAGs require control-flow

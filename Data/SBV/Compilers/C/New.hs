@@ -1452,8 +1452,14 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
        managedKinds                 = nub [ kind
                                           | value <- functionValues
                                           , let kind = kindOf value
-                                          , isExactGMPKind cfg kind || valueNeedsOwnership cfg kind
+                                          , functionValueNeedsManagedStorage kind
                                           ]
+
+       functionValueNeedsManagedStorage kind
+         | isExactGMPKind cfg kind = True
+         | KTuple fields <- kind   = any functionValueNeedsManagedStorage fields
+         | isConcreteADTKind kind  = adtNeedsOwnership cfg adts kind
+         | True                    = valueNeedsOwnership cfg kind
 
        generatedTables = map (ppTable cfg False functionConsts) tables
 
