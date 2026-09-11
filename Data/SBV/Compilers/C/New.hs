@@ -1023,6 +1023,7 @@ genCProg cfg adts lists sets fn proto
              $$ (if requires CRequiresSets             then setRuntime cfg sets else empty)
              $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
              $$ adtEqualityRuntime cfg adts
+             $$ (if null structuredDefinitions then empty else definedFunctionContextType)
              $$ vcat functionPrototypes
              $$ vcat functionDocs
              $$ vcat arrayLambdaDocs
@@ -1034,6 +1035,7 @@ genCProg cfg adts lists sets fn proto
                         $$ listStart
                         $$ setStart
                         $$ arrayStart
+                        $$ functionContextStart
                         $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
                         $$ vcat (merge (map (ppTable cfg True consts) tbls) assignmentDocs (map genAssert asserts))
                         $$ sepIf (not (null assignments) || not (null tbls))
@@ -1198,6 +1200,10 @@ genCProg cfg adts lists sets fn proto
        arrayEnd
          | requires CRequiresArrays = arrayContextEnd
          | True                     = empty
+
+       functionContextStart
+         | null structuredDefinitions = empty
+         | True                       = definedFunctionContextInitialization requirements
 
        exactReturn = case mbRet of
                        Just sv | isExactGMPKind cfg (kindOf sv)
@@ -1401,19 +1407,50 @@ mergeLocated left@((i, x):xs) right@((j, y):ys)
   | i < j = (i, x) : mergeLocated xs right
   | True  = (j, y) : mergeLocated left ys
 
+-- | Declare the private bundle of ownership-arena pointers threaded through
+-- calls between generated SBV functions.
+definedFunctionContextType :: Doc
+definedFunctionContextType = text $ unlines
+  [ "typedef struct {"
+  , "  void *gmp;"
+  , "  void *text;"
+  , "  void *list;"
+  , "  void *set;"
+  , "  void *array;"
+  , "} sbv_function_ctx;"
+  , ""
+  ]
+
+-- | Initialize a private function-context bundle from the ownership arenas
+-- available in the surrounding generated function.
+definedFunctionContextInitialization :: Set.Set CRequirement -> Doc
+definedFunctionContextInitialization requirements
+  = text "sbv_function_ctx __sbv_function_ctx =" <+> braces (fsep (punctuate comma fields)) P.<> semi
+ where fields = [ field CRequiresGMP    "gmp"   "__sbv_gmp_ctx"
+                , field CRequiresText   "text"  "__sbv_text_ctx"
+                , field CRequiresLists  "list"  "__sbv_list_ctx"
+                , field CRequiresSets   "set"   "__sbv_set_ctx"
+                , field CRequiresArrays "array" "__sbv_array_ctx"
+                ]
+
+       field requirement fieldName contextName
+         = text ("." ++ fieldName ++ " =") <+> if requirement `Set.member` requirements
+                                                   then text ("&" ++ contextName)
+                                                   else text "NULL"
+
 -- | Render the private C signature shared by a defined function's prototype
 -- and implementation.
 definedFunctionSignature :: String -> Kind -> [(Quantifier, SV)] -> Doc
 definedFunctionSignature originalName resultKind parameters
   = text "static" <+> text (showCType resultKind) <+> text (CTypes.definedFunctionCName originalName)
       P.<> parens renderedParameters
- where renderedParameters
-         | null parameters = text "void"
-         | True            = fsep (punctuate comma [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters])
+ where renderedParameters = fsep . punctuate comma $
+           text "sbv_function_ctx *const __sbv_parent_function_ctx"
+         : [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters]
 
 -- | Lower one non-recursive, first-order SBV function definition from its
--- retained expression DAG. Managed values and nested lambdas are handled by
--- later lowering stages.
+-- retained expression DAG. Collection-backed values, recursively owned ADTs,
+-- and nested lambdas are handled by later lowering stages.
 ppDefinedFunction :: CgConfig -> [Kind] -> [(T.Text, String)] -> String -> Kind -> SBVType -> LambdaInfo -> (Doc, Set.Set CRequirement)
 ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVType signatureKinds)
                   LambdaInfo{ liAssignments = functionProgram
@@ -1434,30 +1471,26 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
   = die $ "Output-kind mismatch in defined function " ++ show originalName
   | not (null nestedLambdas)
   = tbd $ "Nested lambdas in defined function " ++ show originalName
-  | not (null managedKinds)
-  = tbd $ "Managed values in defined function " ++ show originalName ++ ": " ++ intercalate ", " (map show managedKinds)
+  | not (null unsupportedManagedKinds)
+  = tbd $ "Managed values in defined function " ++ show originalName ++ ": " ++ intercalate ", " (map show unsupportedManagedKinds)
   | True
-  = ( functionDoc
-    , Set.unions
-        [ Set.unions [needed | (_, _, needed) <- generatedAssignments]
-        , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
-        ]
-    )
+  = (functionDoc, functionRequirements)
  where (parameterKinds, resultKind) = (init signatureKinds, last signatureKinds)
        assignments                  = F.toList functionProgram
        functionConsts               = (falseSV, falseCV) : (trueSV, trueCV) : constants
        functionValues               = functionOutput : map snd parameters ++ map fst assignments ++ map fst constants
        typeWidth                    = maximum (0 : map (length . showCType) functionValues)
        nestedLambdas                = [sv | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments]
-       managedKinds                 = nub [ kind
+       unsupportedManagedKinds      = nub [ kind
                                           | value <- functionValues
                                           , let kind = kindOf value
-                                          , functionValueNeedsManagedStorage kind
+                                          , functionValueHasUnsupportedManagedStorage kind
                                           ]
 
-       functionValueNeedsManagedStorage kind
-         | isExactGMPKind cfg kind = True
-         | KTuple fields <- kind   = any functionValueNeedsManagedStorage fields
+       functionValueHasUnsupportedManagedStorage kind
+         | isExactGMPKind cfg kind = False
+         | kind == KString         = False
+         | KTuple fields <- kind   = any functionValueHasUnsupportedManagedStorage fields
          | isConcreteADTKind kind  = adtNeedsOwnership cfg adts kind
          | True                    = valueNeedsOwnership cfg kind
 
@@ -1471,11 +1504,53 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
 
        assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
 
+       functionRequirements = Set.unions
+         [ Set.fromList $ [CRequiresGMP  | any (isExactGMPKind cfg) expandedFunctionKinds]
+                       ++ [CRequiresText | KString `elem` expandedFunctionKinds]
+         , Set.unions [needed | (_, _, needed) <- generatedAssignments]
+         , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
+         ]
+
+       expandedFunctionKinds = concatMap (expandKinds . kindOf) functionValues
+
+       contextSetup
+         =  setupContext CRequiresGMP  "sbv_gmp_ctx"  "gmp"
+         $$ setupContext CRequiresText "sbv_text_ctx" "text"
+         $$ text "sbv_function_ctx __sbv_function_ctx = *__sbv_parent_function_ctx;"
+         $$ bindContext CRequiresGMP  "gmp"
+         $$ bindContext CRequiresText "text"
+
+       setupContext requirement contextType fieldName
+         | requirement `Set.member` functionRequirements
+         =  text contextType <+> text ("*__sbv_parent_" ++ fieldName ++ "_ctx = (" ++ contextType ++ " *) __sbv_parent_function_ctx->" ++ fieldName ++ ";")
+         $$ text contextType <+> text ("__sbv_" ++ fieldName ++ "_ctx = *__sbv_parent_" ++ fieldName ++ "_ctx;")
+         | True
+         = empty
+
+       bindContext requirement fieldName
+         | requirement `Set.member` functionRequirements
+         = text ("__sbv_function_ctx." ++ fieldName ++ " = &__sbv_" ++ fieldName ++ "_ctx;")
+         | True
+         = empty
+
+       contextCommit
+         =  commitContext CRequiresGMP  "gmp"
+         $$ commitContext CRequiresText "text"
+
+       commitContext requirement fieldName
+         | requirement `Set.member` functionRequirements
+         = text ("*__sbv_parent_" ++ fieldName ++ "_ctx = __sbv_" ++ fieldName ++ "_ctx;")
+         | True
+         = empty
+
        functionDoc
          = definedFunctionSignature originalName resultKind parameters
           $$ text "{"
-          $$ nest 2 (   vcat (map snd (mergeLocated generatedTables assignmentDocs))
-                     $$ text "return" <+> showSV cfg functionConsts functionOutput P.<> semi
+          $$ nest 2 (   contextSetup
+                     $$ vcat (map snd (mergeLocated generatedTables assignmentDocs))
+                     $$ text "const" <+> text (showCType resultKind) <+> text "__sbv_function_result =" <+> showSV cfg functionConsts functionOutput P.<> semi
+                     $$ contextCommit
+                     $$ text "return __sbv_function_result;"
                     )
           $$ text "}"
           $$ text ""
@@ -1542,6 +1617,7 @@ ppArrayLambda cfg adts functionNames arraySV lambdaInfo@LambdaInfo{ liAssignment
              P.<> parens (fsep (punctuate comma [text "const void *context", text (showCType keyKind) <+> text (show parameter)]))
           $$ text "{"
           $$ nest 2 (   contextSetup
+                     $$ functionContextSetup
                      $$ vcat (map snd (mergeLocated generatedTables assignmentDocs))
                      $$ text "const" <+> text (showCType valueKind) <+> text "__sbv_lambda_result" <+> text "=" <+> showSV cfg lambdaConsts lambdaOutput P.<> semi
                      $$ contextCommit
@@ -1558,6 +1634,11 @@ ppArrayLambda cfg adts functionNames arraySV lambdaInfo@LambdaInfo{ liAssignment
        contextCommit
          | usesGMP = text "*__sbv_gmp_parent_ctx = __sbv_gmp_ctx;"
          | True    = empty
+
+       functionContextSetup
+         | null functionNames = empty
+         | usesGMP            = definedFunctionContextInitialization (Set.singleton CRequiresGMP)
+         | True               = definedFunctionContextInitialization Set.empty
 
 -- | Test whether a kind is a concrete user ADT rather than a built-in or
 -- uninterpreted sort.
@@ -1709,6 +1790,10 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
 
         functionName symbol = fromMaybe (T.unpack symbol) (lookup symbol functionNames)
 
+        functionArguments symbol arguments
+          | isJust (lookup symbol functionNames) = text "&__sbv_function_ctx" : arguments
+          | True                                 = arguments
+
         cBinOps = [ (Plus, "+"),  (Times, "*"), (Minus, "-")
                   , (Equal False, "==")  -- no strong equality!
                   , (NotEqual, "!="), (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
@@ -1732,8 +1817,13 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
         p (PseudoBoolean pb) as = handlePB pb as
         p (OverflowOp o) _      = tbd $ "Overflow operations" ++ show o
         p (KindCast _ to)   [a] = parens (text (show to)) <+> a
-        p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text (functionName s)
-        p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text (functionName s) P.<> parens (fsep (punctuate comma as))
+        p (Uninterpreted s) []
+          | isJust (lookup s functionNames)
+          = text "/* Defined function */" <+> text (functionName s) P.<> parens (text "&__sbv_function_ctx")
+          | True
+          = text "/* Uninterpreted constant */" <+> text (functionName s)
+        p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text (functionName s)
+                                  P.<> parens (fsep (punctuate comma (functionArguments s as)))
         p Extract{} _          = die "Bit-vector extraction escaped the exact bit-vector lowering pipeline"
         p Join      _          = die "Bit-vector concatenation escaped the exact bit-vector lowering pipeline"
         p Rol{} _              = die "Left rotation escaped the exact bit-vector lowering pipeline"

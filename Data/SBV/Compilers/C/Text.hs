@@ -181,6 +181,7 @@ textExpr cfg op svs resultKind args
   | not touchesText = Nothing
   | True            = case (op, args) of
       (ADTOp{}                   , _        ) -> Nothing
+      (Uninterpreted{}           , _        ) -> Nothing
       (Label _                   , [a]      ) -> lower a
       (Ite                       , [c, a, b]) -> lower $ c <+> text "?" <+> a <+> text ":" <+> b
       (Equal _                   , [a, b]   ) -> lower $ equal a b

@@ -125,6 +125,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute a defined SBV function" definedSBVFunction
   , testCase "compose acyclic defined SBV functions" composedDefinedSBVFunctions
   , testCase "compile structural defined SBV functions" structuralDefinedSBVFunctions
+  , testCase "compile managed scalar defined SBV functions" managedScalarDefinedSBVFunctions
   , testCase "reject recursive defined SBV functions" recursiveDefinedSBVFunction
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
@@ -1376,6 +1377,41 @@ structuralDefinedSBVFunctions = withSystemTempDirectory "sbv-structural-defined-
     [ "CGPair(8, 0x000bU)"
     , "tupleResult =(5, 0x000cU)"
     ]
+
+-- | Exercise transitive ownership-arena threading through composed
+-- 'smtFunction' definitions producing strings and exact GMP integers.
+managedScalarDefinedSBVFunctions :: Assertion
+managedScalarDefinedSBVFunctions = withSystemTempDirectory "sbv-managed-scalar-defined-functions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [4, 5]
+        inputText    <- cgInput "inputText"    :: SBVCodeGen SString
+        inputInteger <- cgInput "inputInteger" :: SBVCodeGen SInteger
+        let addSuffix :: SString -> SString
+            addSuffix = smtFunction "C managed string suffix" $ \value -> value SL.++ literal "!"
+
+            decorate :: SString -> SString
+            decorate = smtFunction "C managed string decorate" $ \value -> literal "<" SL.++ addSuffix value SL.++ literal ">"
+
+            increment :: SInteger -> SInteger
+            increment = smtFunction "C managed integer increment" (+ 1)
+
+            squareIncrement :: SInteger -> SInteger
+            squareIncrement = smtFunction "C managed integer square" $ \value -> increment value * increment value
+
+        cgOutput "decorated" (decorate inputText)
+        cgReturn (squareIncrement inputInteger)
+
+  stdoutText <- compileProgramAndRunGenerated dir "managedScalarDefinedSBVFunctions" program
+  sourceText <- readFile (dir </> "managedScalarDefinedSBVFunctions.c")
+  mapM_ (\fragment -> assertBool ("Expected managed scalar defined-function output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ ") =36"
+    , "decorated =<sbv4!>"
+    ]
+  assertBool "Expected private defined-function calls to thread the shared ownership context"
+             ("sbv_function_ctx *const __sbv_parent_function_ctx" `isInfixOf` sourceText
+           && "(&__sbv_function_ctx," `isInfixOf` sourceText)
 
 -- | Check that allowing acyclic composition does not admit recursive
 -- 'smtFunction' components, whose eager expression DAGs require control-flow
