@@ -127,6 +127,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile structural defined SBV functions" structuralDefinedSBVFunctions
   , testCase "compile managed scalar defined SBV functions" managedScalarDefinedSBVFunctions
   , testCase "compile collection defined SBV functions" collectionDefinedSBVFunctions
+  , testCase "compile persistent-array defined SBV functions" persistentArrayDefinedSBVFunctions
   , testCase "reject recursive defined SBV functions" recursiveDefinedSBVFunction
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
@@ -1445,6 +1446,37 @@ collectionDefinedSBVFunctions = withSystemTempDirectory "sbv-collection-defined-
                                  (fragment `isInfixOf` stdoutText))
     [ ") =([0, 1, 2, 3], {1, 2, 3, 4})"
     , "listResult =[0, 1, 2, 3]"
+    ]
+
+-- | Exercise persistent array roots passed through composed 'smtFunction'
+-- calls and returned inside a tuple containing its eventual lookup key.
+persistentArrayDefinedSBVFunctions :: Assertion
+persistentArrayDefinedSBVFunctions = withSystemTempDirectory "sbv-persistent-array-defined-functions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        let storeAt :: SArray Word8 Word32 -> SWord8 -> SWord32 -> SArray Word8 Word32
+            storeAt = smtFunction "C managed array store" writeArray
+
+            storeTwice :: SArray Word8 Word32 -> SArray Word8 Word32
+            storeTwice = smtFunction "C managed array stores" $ \values ->
+                           storeAt (storeAt values 1 11) 2 22
+
+            package :: SArray Word8 Word32 -> SBV (ArrayModel Word8 Word32, Word8)
+            package = smtFunction "C managed array package" $ \values -> tuple (storeTwice values, literal 2)
+
+            base = constArray 5 :: SArray Word8 Word32
+            (updated, selectedKey) = untuple (package base)
+
+        cgOutput "atOne"    (readArray updated 1)
+        cgOutput "fallback" (readArray updated 7)
+        cgReturn (readArray updated selectedKey)
+
+  stdoutText <- compileProgramAndRunGenerated dir "persistentArrayDefinedSBVFunctions" program
+  mapM_ (\fragment -> assertBool ("Expected persistent-array defined-function output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ ") = 0x00000016UL"
+    , "atOne = 0x0000000bUL"
+    , "fallback = 0x00000005UL"
     ]
 
 -- | Check that allowing acyclic composition does not admit recursive

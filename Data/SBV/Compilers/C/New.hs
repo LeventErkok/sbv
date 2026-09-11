@@ -1492,6 +1492,7 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
          | kind == KString         = False
          | isList kind             = False
          | isSet kind              = False
+         | isArray kind            = False
          | KTuple fields <- kind   = any functionValueHasUnsupportedManagedStorage fields
          | isConcreteADTKind kind  = adtNeedsOwnership cfg adts kind
          | True                    = valueNeedsOwnership cfg kind
@@ -1507,10 +1508,11 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
        assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
 
        functionRequirements = Set.unions
-         [ Set.fromList $ [CRequiresGMP   | any (isExactGMPKind cfg) expandedFunctionKinds]
-                       ++ [CRequiresText  | KString `elem` expandedFunctionKinds]
-                       ++ [CRequiresLists | any isList expandedFunctionKinds]
-                       ++ [CRequiresSets  | any isSet expandedFunctionKinds]
+         [ Set.fromList $ [CRequiresGMP    | any (isExactGMPKind cfg) expandedFunctionKinds]
+                       ++ [CRequiresText   | KString `elem` expandedFunctionKinds]
+                       ++ [CRequiresLists  | any isList expandedFunctionKinds]
+                       ++ [CRequiresSets   | any isSet expandedFunctionKinds]
+                       ++ [CRequiresArrays | any isArray expandedFunctionKinds]
          , Set.unions [needed | (_, _, needed) <- generatedAssignments]
          , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
          ]
@@ -1518,15 +1520,17 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
        expandedFunctionKinds = concatMap (expandKinds . kindOf) functionValues
 
        contextSetup
-         =  setupContext CRequiresGMP   "sbv_gmp_ctx"  "gmp"
-         $$ setupContext CRequiresText  "sbv_text_ctx" "text"
-         $$ setupContext CRequiresLists "sbv_list_ctx" "list"
-         $$ setupContext CRequiresSets  "sbv_set_ctx"  "set"
+         =  setupContext CRequiresGMP    "sbv_gmp_ctx"   "gmp"
+         $$ setupContext CRequiresText   "sbv_text_ctx"  "text"
+         $$ setupContext CRequiresLists  "sbv_list_ctx"  "list"
+         $$ setupContext CRequiresSets   "sbv_set_ctx"   "set"
+         $$ setupContext CRequiresArrays "sbv_array_ctx" "array"
          $$ text "sbv_function_ctx __sbv_function_ctx = *__sbv_parent_function_ctx;"
-         $$ bindContext CRequiresGMP   "gmp"
-         $$ bindContext CRequiresText  "text"
-         $$ bindContext CRequiresLists "list"
-         $$ bindContext CRequiresSets  "set"
+         $$ bindContext CRequiresGMP    "gmp"
+         $$ bindContext CRequiresText   "text"
+         $$ bindContext CRequiresLists  "list"
+         $$ bindContext CRequiresSets   "set"
+         $$ bindContext CRequiresArrays "array"
 
        setupContext requirement contextType fieldName
          | requirement `Set.member` functionRequirements
@@ -1542,10 +1546,11 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
          = empty
 
        contextCommit
-         =  commitContext CRequiresGMP   "gmp"
-         $$ commitContext CRequiresText  "text"
-         $$ commitContext CRequiresLists "list"
-         $$ commitContext CRequiresSets  "set"
+         =  commitContext CRequiresGMP    "gmp"
+         $$ commitContext CRequiresText   "text"
+         $$ commitContext CRequiresLists  "list"
+         $$ commitContext CRequiresSets   "set"
+         $$ commitContext CRequiresArrays "array"
 
        commitContext requirement fieldName
          | requirement `Set.member` functionRequirements

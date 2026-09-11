@@ -700,6 +700,7 @@ arrayExpr cfg op svs resultSV args
       (SeqOp{},            _, _) -> Nothing
       (SetOp{},            _, _) -> Nothing
       (LkUp{},             _, _) -> Nothing
+      (Uninterpreted{},     _, _) -> Nothing
       (ArrayInit (Left pair), [_], [defaultValue])
         | resultKind == uncurry KArray pair
         -> nodeLowering resultKind
