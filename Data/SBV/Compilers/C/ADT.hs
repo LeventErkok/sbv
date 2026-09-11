@@ -17,8 +17,11 @@ module Data.SBV.Compilers.C.ADT
   , adtCType
   , adtForwardTypeDecls
   , adtTypeDecls
+  , adtTypeDeclsFor
+  , adtDeclarationDependencies
   , adtEqualityRuntimeDecls
   , adtEqualityRuntime
+  , adtOwnershipTypePrototypes
   , adtOwnershipTypeDecls
   , adtOwnedCloneName
   , adtOwnedReleaseName
@@ -136,8 +139,14 @@ adtForwardTypeDecls adts = text . unlines $ concatMap forwardDeclaration adts
 
 -- | Emit public tagged-union declarations for all ADT kinds used by a program.
 adtTypeDecls :: CgConfig -> [Kind] -> Doc
-adtTypeDecls _ []   = empty
-adtTypeDecls _ adts = text . unlines $
+adtTypeDecls cfg adts = adtTypeDeclsFor cfg adts adts
+
+-- | Emit selected public tagged-union declarations using the complete ADT
+-- registry to resolve constructor fields. This supports dependency-ordered
+-- interleaving with tuple declarations.
+adtTypeDeclsFor :: CgConfig -> [Kind] -> [Kind] -> Doc
+adtTypeDeclsFor _ _        []           = empty
+adtTypeDeclsFor _ registry declarations = text . unlines $
      [ "/* Algebraic data types. Recursive fields form finite, acyclic pointer graphs. */"
      , "/* Inputs borrow these graphs; owned outputs and returns must be released. */"
      , "#ifndef SBV_CGEN_UNUSED"
@@ -149,8 +158,8 @@ adtTypeDecls _ adts = text . unlines $
      , "#endif"
      , ""
      ]
-  ++ concatMap forwardDeclaration adts
-  ++ concatMap declaration adts
+  ++ concatMap forwardDeclaration declarations
+  ++ concatMap declaration declarations
   ++ dereferenceDeclarations
  where forwardDeclaration kind =
           [ "#ifndef " ++ adtForwardGuard kind
@@ -175,16 +184,16 @@ adtTypeDecls _ adts = text . unlines $
             , "#endif"
             , ""
             ]
-        where constructors = adtConstructorFields adts kind
+        where constructors = adtConstructorFields registry kind
 
        enumEntry kind index _ = "  " ++ adtTagName kind index ++ " = " ++ show (index - 1)
-                             ++ if index == length (adtConstructorFields adts kind) then "" else ","
+                             ++ if index == length (adtConstructorFields registry kind) then "" else ","
 
        payloadDeclaration kind
          | null populated = []
          | True           = ["  union {"] ++ concatMap constructorPayload populated ++ ["  } payload;"]
         where populated = [ (index, fields)
-                          | (index, (_, fields)) <- zip [1 :: Int ..] (adtConstructorFields adts kind)
+                          | (index, (_, fields)) <- zip [1 :: Int ..] (adtConstructorFields registry kind)
                           , not (null fields)
                           ]
               constructorPayload (constructorIndex, fields) =
@@ -193,7 +202,7 @@ adtTypeDecls _ adts = text . unlines $
                 ++ ["    } " ++ adtConstructorMember constructorIndex ++ ";"]
               fieldDeclaration fieldIndex field = "      " ++ adtFieldCType field ++ " " ++ adtFieldName fieldIndex ++ ";"
 
-       recursiveKinds = filter (adtIsRecursive adts) adts
+       recursiveKinds = filter (adtIsRecursive registry) declarations
 
        dereferenceDeclarations = concatMap dereferenceDeclaration recursiveKinds
 
@@ -209,6 +218,17 @@ adtTypeDecls _ adts = text . unlines $
          , "#endif"
          , ""
          ]
+
+-- | Return complete by-value tuple and ADT dependencies of one ADT layout.
+-- Recursive pointer fields need only a forward declaration and are excluded.
+adtDeclarationDependencies :: [Kind] -> Kind -> [Kind]
+adtDeclarationDependencies adts kind = nub
+  [ fieldKind
+  | (_, fields) <- adtConstructorFields adts kind
+  , ADTField fieldKind recursive <- fields
+  , not recursive
+  , isTuple fieldKind || isConcreteADT fieldKind
+  ]
 
 -- | Emit forward declarations for the ADT equality helpers used by collection
 -- element comparisons.
@@ -264,14 +284,12 @@ adtEqualityRuntime cfg adts
                          (adtField (text "right") constructorIndex fieldIndex)
         where deref side = text "*" P.<> parens (adtField (text side) constructorIndex fieldIndex)
 
--- | Emit public ownership helpers for concrete ADTs. Inputs borrow their field
--- storage. Cloned values own all managed fields of the active constructor and
--- must be released with 'adtOwnedReleaseName'; by-value ADTs use the same
--- uniform protocol so collections need no representation-specific branch.
-adtOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
-adtOwnershipTypeDecls cfg adts
-  | null adts = empty
-  | True      = text . unlines $ concatMap prototypes adts ++ concatMap declaration adts
+-- | Emit forward declarations for the uniform ADT ownership helpers. These
+-- precede tuple helper definitions so tuples and ADTs can contain one another
+-- without imposing an ownership-definition order.
+adtOwnershipTypePrototypes :: [Kind] -> Doc
+adtOwnershipTypePrototypes []   = empty
+adtOwnershipTypePrototypes adts = text . unlines $ concatMap prototypes adts
  where prototypes kind =
          [ "static inline SBV_CGEN_UNUSED void " ++ adtOwnedInitName kind
         ++ "(" ++ adtCType kind ++ " *value, " ++ adtTagCType kind ++ " tag);"
@@ -284,7 +302,16 @@ adtOwnershipTypeDecls cfg adts
          , ""
          ]
 
-       declaration kind =
+-- | Emit public ownership-helper definitions for concrete ADTs. Inputs borrow
+-- their field storage. Cloned values own all managed fields of the active
+-- constructor and must be released with 'adtOwnedReleaseName'; by-value ADTs
+-- use the same uniform protocol so collections need no representation-specific
+-- branch.
+adtOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
+adtOwnershipTypeDecls cfg adts
+  | null adts = empty
+  | True      = text . unlines $ concatMap declaration adts
+ where declaration kind =
           [ "#ifndef " ++ ownershipGuard
           , "#define " ++ ownershipGuard
           , "/* Deep-ownership helpers for " ++ adtCType kind ++ ". */"
@@ -528,9 +555,9 @@ adtOwnedReleaseName kind = "sbv_adt_owned_release_" ++ adtCType kind
 -- | Initialize a generated-driver ADT and populate its active constructor
 -- from a seed. Managed fields use the public owned-ADT storage protocol; other
 -- fields use the supplied scalar renderer. The statement renderer initializes
--- retained descriptors for array-valued fields.
+-- retained values that occur through nested aggregate fields.
 adtDriverInit :: CgConfig -> [Kind] -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-adtDriverInit cfg adts renderValue initializeArray kind externalName seed
+adtDriverInit cfg adts renderValue initializeValue kind externalName seed
   | isConcreteADT kind
   , adtNeedsOwnership cfg adts kind
   =  text (adtCType kind) <+> text externalName P.<> semi
@@ -573,7 +600,7 @@ adtDriverInit cfg adts renderValue initializeArray kind externalName seed
          | fieldKind == KString
          = [access <+> text "=" <+> managedValueClone fieldKind (renderValue fieldKind fieldSeed) P.<> semi]
          | isArray fieldKind
-         = [ initializeArray fieldKind accessName fieldSeed
+         = [ initializeValue fieldKind accessName fieldSeed
            , access <+> text "=" <+> text accessName P.<> semi
            ]
          | isList fieldKind
@@ -597,7 +624,7 @@ adtDriverInit cfg adts renderValue initializeArray kind externalName seed
 
               collectionAssignment needsDriverInit driverInit driverClear clone
                 | needsDriverInit cfg fieldKind
-                = [ driverInit cfg renderValue initializeArray fieldKind accessName fieldSeed
+                = [ driverInit cfg renderValue initializeValue fieldKind accessName fieldSeed
                   , access <+> text "=" <+> clone fieldKind (text accessName) P.<> semi
                   , driverClear cfg fieldKind accessName
                   ]
@@ -641,7 +668,7 @@ adtDriverInit cfg adts renderValue initializeArray kind externalName seed
 -- | Initialize a generated-driver list or set whose direct elements are ADTs.
 -- The descriptor borrows the independently initialized element variables.
 adtCollectionDriverInit :: CgConfig -> [Kind] -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-adtCollectionDriverInit cfg adts renderValue initializeArray kind externalName seed
+adtCollectionDriverInit cfg adts renderValue initializeValue kind externalName seed
   | Just elementKind <- collectionADTElement kind
   =  vcat (zipWith (initializeElement elementKind) elementNames [seed ..])
   $$ text "const" <+> text (adtCType elementKind) <+> text dataName P.<> brackets (int elementCount)
@@ -660,7 +687,7 @@ adtCollectionDriverInit cfg adts renderValue initializeArray kind externalName s
 
        initializeElement elementKind elementName elementSeed
          | adtNeedsOwnership cfg adts elementKind
-         = adtDriverInit cfg adts renderValue initializeArray elementKind elementName elementSeed
+         = adtDriverInit cfg adts renderValue initializeValue elementKind elementName elementSeed
          | True
          = text (adtCType elementKind) <+> text elementName <+> text "="
              <+> adtDriverValue adts renderValue elementKind elementSeed P.<> semi
@@ -699,6 +726,10 @@ adtExpr cfg adts op svs resultSV args
   | not (isConcreteADT resultKind || any (isConcreteADT . kindOf) svs)
   = Nothing
   | LkUp{} <- op
+  = Nothing
+  | TupleConstructor{} <- op
+  = Nothing
+  | TupleAccess{} <- op
   = Nothing
   | Uninterpreted{} <- op
   = Nothing

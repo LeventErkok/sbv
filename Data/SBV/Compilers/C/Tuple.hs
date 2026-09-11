@@ -100,8 +100,8 @@ tupleTypeDecls tuples = text . unlines $ "/* Structural tuple values. */" : conc
        fieldDeclaration index kind = "  " ++ elementCType kind ++ " " ++ tupleFieldName index ++ ";"
 
 -- | Emit public ownership helpers for tuples containing exact GMP-backed,
--- string, collection, or retained-array fields. Inputs may borrow an ordinary
--- tuple value.
+-- string, collection, retained-array, or concrete ADT fields. Inputs may
+-- borrow an ordinary tuple value.
 -- Cloned values own their recursively managed fields and must be released
 -- with 'tupleOwnedReleaseName'.
 tupleOwnershipTypeDecls :: CgConfig -> [Kind] -> Doc
@@ -197,6 +197,11 @@ tupleOwnershipTypeDecls cfg tuples
                     ]
                   | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
                   = ["  " ++ tupleOwnedSetName fieldKind ++ "(&target->" ++ field ++ ", source." ++ field ++ ");"]
+                  | valueNeedsOwnership cfg fieldKind
+                  = [ "  " ++ elementCType fieldKind ++ " " ++ field ++ "_copy = " ++ render (managedValueClone fieldKind (text ("source." ++ field))) ++ ";"
+                    , "  " ++ render (managedValueRelease fieldKind (text ("&target->" ++ field)))
+                    , "  target->" ++ field ++ " = " ++ field ++ "_copy;"
+                    ]
                   | True
                   = ["  target->" ++ field ++ " = source." ++ field ++ ";"]
                   where field = tupleFieldName index
@@ -218,6 +223,8 @@ tupleOwnershipTypeDecls cfg tuples
                   = ["  " ++ render (managedValueRelease fieldKind (text ("&value->" ++ field)))]
                   | isTuple fieldKind && tupleNeedsOwnership cfg fieldKind
                   = ["  " ++ tupleOwnedReleaseName fieldKind ++ "(&value->" ++ field ++ ");"]
+                  | valueNeedsOwnership cfg fieldKind
+                  = ["  " ++ render (managedValueRelease fieldKind (text ("&value->" ++ field)))]
                   | True
                   = []
                   where field = tupleFieldName index
@@ -262,10 +269,10 @@ tupleOwnedReleaseName kind = "sbv_tuple_owned_release_" ++ kindTag kind
 
 -- | Initialize a generated-driver tuple and populate its fields from a seed.
 -- Recursively owned fields use the public owned-tuple storage protocol; other
--- fields use the supplied scalar renderer. Array fields delegate to the
--- supplied retained-descriptor initializer.
+-- fields use the supplied scalar renderer. Array and ADT fields delegate to
+-- the supplied statement initializer.
 tupleDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-tupleDriverInit cfg renderValue initializeArray kind@KTuple{} externalName seed = valueDriverInit cfg renderValue initializeArray kind externalName seed
+tupleDriverInit cfg renderValue initializeValue kind@KTuple{} externalName seed = valueDriverInit cfg renderValue initializeValue kind externalName seed
 tupleDriverInit _   _           _               kind         _            _    = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
 
 -- | Render a concrete tuple value as a C99 compound literal.

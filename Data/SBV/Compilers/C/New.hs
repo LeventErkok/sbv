@@ -17,6 +17,7 @@ module Data.SBV.Compilers.C.New(compileToC, compileToCLib, compileToC', compileT
 
 import Control.DeepSeq                (rnf)
 import Data.Char                      (isSpace)
+import qualified Data.Graph    as DG
 import Data.List                      (intercalate, intersperse, nub, nubBy)
 import Data.Maybe                     (fromJust, fromMaybe, isJust)
 import qualified Data.Foldable as F   (toList)
@@ -147,8 +148,8 @@ cgen cfg nm st sbvProg
                    $$ setForwardTypeDecls sets
                    $$ (if hasRequirement CRequiresLists  then listTypeDecls cfg lists else empty)
                    $$ (if hasRequirement CRequiresSets   then setTypeDecls cfg sets else empty)
-                   $$ tupleTypeDecls tuples
-                   $$ adtTypeDecls cfg adts
+                   $$ structuralTypeDecls cfg adts tuples
+                   $$ adtOwnershipTypePrototypes adts
                    $$ tupleOwnershipTypeDecls cfg tuples
                    $$ adtOwnershipTypeDecls cfg adts
                    $$ (if hasRequirement CRequiresLists then listOwnershipTypeDecls cfg lists else empty)
@@ -212,6 +213,32 @@ cgen cfg nm st sbvProg
                      [] -> empty
                      xs -> vcat $ text "/* User given declarations: */" : map text xs
         flags    = requirementLDFlags requirements ++ cgLDFlags st
+
+-- | Emit tuple and ADT layouts in their joint by-value dependency order.
+-- Forward-declared recursive ADT pointers impose no ordering constraint.
+structuralTypeDecls :: CgConfig -> [Kind] -> [Kind] -> Doc
+structuralTypeDecls cfg adts tuples = vcat (map declaration orderedKinds)
+ where allKinds        = tuples ++ adts
+       availableKinds  = Set.fromList allKinds
+       dependencyNodes = [(kind, kind, filter (`Set.member` availableKinds) (dependencies kind)) | kind <- allKinds]
+       orderedKinds     = concatMap orderedComponent (DG.stronglyConnComp dependencyNodes)
+
+       dependencies (KTuple fieldKinds) = [ resolved
+                                           | fieldKind <- fieldKinds
+                                           , let resolved = resolveADTReferences adts fieldKind
+                                           , isTuple resolved || isConcreteADTKind resolved
+                                           ]
+       dependencies kind
+         | isConcreteADTKind kind = adtDeclarationDependencies adts kind
+         | True                   = []
+
+       orderedComponent (DG.AcyclicSCC kind) = [kind]
+       orderedComponent (DG.CyclicSCC kinds) = error $ "SBV->C: Recursive by-value tuple/ADT layout: " ++ show kinds
+
+       declaration kind
+         | isTuple kind           = tupleTypeDecls [kind]
+         | isConcreteADTKind kind = adtTypeDeclsFor cfg adts [kind]
+         | True                   = error $ "SBV->C: Expected a tuple or ADT layout, received " ++ show kind
 
 -- | Pretty print a functions type. If there is only one output, we compile it
 -- as a function that returns that value. Otherwise, we compile it as a void function
@@ -574,6 +601,8 @@ genDriver cfg adts randVals fn inps outs mbRet
        collectInputArrays = collect Set.empty
         where collect visited kind
                 | kind `Set.member` visited = []
+                | KApp{} <- kind
+                = collect nextVisited (resolveADTReferences adts kind)
                 | KArray keyKind valueKind <- kind
                 = kind : collect nextVisited keyKind ++ collect nextVisited valueKind
                 | KTuple fieldKinds <- kind
@@ -624,14 +653,17 @@ genDriver cfg adts randVals fn inps outs mbRet
          | True                            = mkConst cfg $ mkConstCV kind r
          where mkField fieldKind offset = mkRValKind fieldKind (r + offset)
        driverValueInit kind externalName seed
+         | KApp{} <- kind                   = driverValueInit (resolveADTReferences adts kind) externalName seed
          | isExactGMPKind cfg kind         = gmpDriverInit kind (text externalName) (integer seed)
          | isArray kind                    = initializeArray kind externalName seed
-         | collectionUsesADT kind          = adtCollectionDriverInit cfg adts mkRValKind initializeArray kind externalName seed
-         | listNeedsDriverInit cfg kind    = listDriverInit cfg mkRValKind initializeArray kind externalName seed
-         | setNeedsDriverInit cfg kind     = setDriverInit cfg mkRValKind initializeArray kind externalName seed
-         | tupleNeedsOwnership cfg kind    = tupleDriverInit cfg mkRValKind initializeArray kind externalName seed
+         | collectionUsesADT kind          = adtCollectionDriverInit cfg adts mkRValKind driverValueInit kind externalName seed
+         | listNeedsDriverInit cfg kind    = listDriverInit cfg mkRValKind driverValueInit kind externalName seed
+         | setNeedsDriverInit cfg kind     = setDriverInit cfg mkRValKind driverValueInit kind externalName seed
+         | tupleNeedsOwnership cfg kind    = tupleDriverInit cfg mkRValKind driverValueInit kind externalName seed
          | isConcreteADTKind kind
-         , adtNeedsOwnership cfg adts kind = adtDriverInit cfg adts mkRValKind initializeArray kind externalName seed
+         , adtNeedsOwnership cfg adts kind = adtDriverInit cfg adts mkRValKind driverValueInit kind externalName seed
+         | isConcreteADTKind kind          = text (adtCType kind) <+> text externalName <+> text "="
+                                           <+> adtDriverValue adts mkRValKind kind seed P.<> semi
          | True                            = text "const" <+> text (showCType kind) <+> text externalName <+> text "="
                                            <+> mkRValKind kind seed P.<> semi
        initializeArray kind@(KArray _ valueKind) externalName seed
@@ -658,11 +690,11 @@ genDriver cfg adts randVals fn inps outs mbRet
               $$ arrayDriverInput cfg (kindOf sv) n defaultName
        mkInp ([v], n, CgAtomic sv)
          | isExactGMPKind cfg (kindOf sv)      = gmpDriverInit (kindOf sv) (text n) v
-         | collectionUsesADT (kindOf sv)       = adtCollectionDriverInit cfg adts mkRValKind initializeArray (kindOf sv) n (inputSeed n)
-         | listNeedsDriverInit cfg (kindOf sv) = listDriverInit cfg mkRValKind initializeArray (kindOf sv) n (inputSeed n)
-         | setNeedsDriverInit cfg (kindOf sv)  = setDriverInit cfg mkRValKind initializeArray (kindOf sv) n (inputSeed n)
-         | tupleNeedsOwnership cfg (kindOf sv) = tupleDriverInit cfg mkRValKind initializeArray (kindOf sv) n (inputSeed n)
-         | isOwnedADT cfg adts sv              = adtDriverInit cfg adts mkRValKind initializeArray (kindOf sv) n (inputSeed n)
+         | collectionUsesADT (kindOf sv)       = adtCollectionDriverInit cfg adts mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
+         | listNeedsDriverInit cfg (kindOf sv) = listDriverInit cfg mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
+         | setNeedsDriverInit cfg (kindOf sv)  = setDriverInit cfg mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
+         | tupleNeedsOwnership cfg (kindOf sv) = tupleDriverInit cfg mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
+         | isOwnedADT cfg adts sv              = adtDriverInit cfg adts mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
        mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
        mkInp (_,   n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
        mkInp (vs,  n, CgArray sws@(sv:_)) =  pprCWord True sv <+> text n P.<> brackets (int (length sws)) <+> text "= {"
@@ -1415,7 +1447,8 @@ ppArrayLambda cfg adts arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
 -- | Test whether a kind is a concrete user ADT rather than a built-in or
 -- uninterpreted sort.
 isConcreteADTKind :: Kind -> Bool
-isConcreteADTKind kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
+isConcreteADTKind KApp{} = True
+isConcreteADTKind kind   = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
 
 handlePB :: PBOp -> [Doc] -> Doc
 handlePB o args = case o of

@@ -365,10 +365,9 @@ setDriverValue _ kind _ = error $ "SBV->C: Expected a set kind, received " ++ sh
 -- | Initialize a generated-driver set whose elements require statement-based
 -- setup. The descriptor borrows three independently initialized elements and
 -- uses the sample seed's parity to choose a finite or cofinite representation.
--- The supplied statement renderer handles retained array elements when the
--- element kind admits executable equality.
+-- The supplied statement renderer handles retained aggregate elements.
 setDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-setDriverInit cfg renderValue initializeArray kind@KSet{} externalName seed = valueDriverInit cfg renderValue initializeArray kind externalName seed
+setDriverInit cfg renderValue initializeValue kind@KSet{} externalName seed = valueDriverInit cfg renderValue initializeValue kind externalName seed
 setDriverInit _   _           _               kind        _            _    = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
 -- | Clear managed element storage initialized by 'setDriverInit'.

@@ -32,8 +32,8 @@ import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 
 -- | Test whether a value requires clone-and-release ownership when it crosses
--- a generated C ABI boundary. ADT ownership is resolved separately because it
--- depends on the complete registered type graph.
+-- a generated C ABI boundary. Concrete ADTs use a uniform ownership protocol,
+-- including those whose resolved fields do not themselves need deep storage.
 valueNeedsOwnership :: CgConfig -> Kind -> Bool
 valueNeedsOwnership cfg kind
   | isExactGMPKind cfg kind = True
@@ -42,6 +42,8 @@ valueNeedsOwnership _   KList{}        = True
 valueNeedsOwnership _   KSet{}         = True
 valueNeedsOwnership _   KArray{}       = True
 valueNeedsOwnership cfg (KTuple kinds) = any (valueNeedsOwnership cfg) kinds
+valueNeedsOwnership _   kind@KADT{}    = isConcreteADT kind
+valueNeedsOwnership _   KApp{}         = True
 valueNeedsOwnership _   _              = False
 
 -- | Test whether a deterministic example-driver value needs declarations or
@@ -54,6 +56,7 @@ valueDriverNeedsInitialization cfg (KList elementKind)  = valueDriverNeedsInitia
 valueDriverNeedsInitialization cfg (KSet elementKind)   = valueDriverNeedsInitialization cfg elementKind
 valueDriverNeedsInitialization _   KArray{}             = True
 valueDriverNeedsInitialization _   kind@KADT{}          = isConcreteADT kind
+valueDriverNeedsInitialization _   KApp{}               = True
 valueDriverNeedsInitialization _   _                    = False
 
 -- | Render equality for a scalar or recursively nested aggregate. The Boolean
@@ -91,7 +94,7 @@ managedValueClone (KList elementKind) value = call ("sbv_list_clone_" ++ kindTag
 managedValueClone (KSet elementKind) value  = call ("sbv_set_clone_" ++ kindTag elementKind) [value]
 managedValueClone kind@KArray{} value       = call (arrayStoredCloneName kind) [value]
 managedValueClone kind@KTuple{} value       = call ("sbv_tuple_owned_clone_" ++ kindTag kind) [value]
-managedValueClone kind@KADT{} value
+managedValueClone kind value
   | isConcreteADT kind                       = call ("sbv_adt_owned_clone_" ++ adtCType kind) [value]
 managedValueClone kind _                    = error $ "SBV->C: Expected a non-GMP managed kind, received " ++ show kind
 
@@ -102,20 +105,20 @@ managedValueRelease (KList elementKind) address = call ("sbv_list_release_" ++ k
 managedValueRelease (KSet elementKind) address  = call ("sbv_set_release_" ++ kindTag elementKind) [address] P.<> semi
 managedValueRelease kind@KArray{} address       = call (arrayStoredReleaseName kind) [address] P.<> semi
 managedValueRelease kind@KTuple{} address       = call ("sbv_tuple_owned_release_" ++ kindTag kind) [address] P.<> semi
-managedValueRelease kind@KADT{} address
+managedValueRelease kind address
   | isConcreteADT kind                          = call ("sbv_adt_owned_release_" ++ adtCType kind) [address] P.<> semi
 managedValueRelease kind _                      = error $ "SBV->C: Expected a non-GMP managed kind, received " ++ show kind
 
 -- | Declare and initialize one deterministic example-driver value. Managed
 -- aggregates receive unique ownership; collection descriptors themselves
 -- borrow the element variables declared alongside them. The supplied
--- statement renderer constructs retained array descriptors without creating
--- a module dependency on the array lowering implementation.
+-- statement renderer constructs retained arrays and registered ADTs without
+-- creating dependency cycles between the structural lowering modules.
 valueDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
 valueDriverInit cfg _           _               kind                       externalName seed
   | isExactGMPKind cfg kind
   = gmpDriverInit kind (text externalName) (integer seed)
-valueDriverInit cfg renderValue initializeArray kind@(KTuple fields)       externalName seed
+valueDriverInit cfg renderValue initializeValue kind@(KTuple fields)       externalName seed
   | valueNeedsOwnership cfg kind
   =  text (tupleCType kind) <+> text externalName P.<> semi
   $$ call ("sbv_tuple_owned_init_" ++ kindTag kind) [text "&" P.<> text externalName] P.<> semi
@@ -127,7 +130,10 @@ valueDriverInit cfg renderValue initializeArray kind@(KTuple fields)       exter
        initializeAt fieldKind access fieldName fieldSeed
          | isExactGMPKind cfg fieldKind = exactAssignment fieldKind access fieldSeed
          | fieldKind == KString         = [access <+> text "=" <+> managedValueClone fieldKind (renderValue fieldKind fieldSeed) P.<> semi]
-         | isArray fieldKind            = [ initializeArray fieldKind fieldName fieldSeed
+         | isArray fieldKind            = [ initializeValue fieldKind fieldName fieldSeed
+                                          , access <+> text "=" <+> text fieldName P.<> semi
+                                          ]
+         | isConcreteADT fieldKind      = [ initializeValue fieldKind fieldName fieldSeed
                                           , access <+> text "=" <+> text fieldName P.<> semi
                                           ]
          | KList{}         <- fieldKind = collectionAssignment fieldKind access fieldName fieldSeed
@@ -141,7 +147,7 @@ valueDriverInit cfg renderValue initializeArray kind@(KTuple fields)       exter
                      nestedName   = fieldName ++ "_field_" ++ show nestedIndex
 
        collectionAssignment fieldKind access fieldName fieldSeed =
-         [ valueDriverInit cfg renderValue initializeArray fieldKind fieldName fieldSeed
+         [ valueDriverInit cfg renderValue initializeValue fieldKind fieldName fieldSeed
          , access <+> text "=" <+> managedValueClone fieldKind (text fieldName) P.<> semi
          , valueDriverClear cfg fieldKind fieldName
          ]
@@ -157,12 +163,15 @@ valueDriverInit cfg renderValue initializeArray kind@(KTuple fields)       exter
            , call "mpq_canonicalize" [parens (text "mpq_ptr") <+> access] P.<> semi
            ]
        exactAssignment fieldKind _ _ = error $ "SBV->C: Expected an exact tuple field, received " ++ show fieldKind
-valueDriverInit cfg renderValue initializeArray kind@(KList elementKind)   externalName seed
-  = collectionDriverInit cfg renderValue initializeArray kind elementKind externalName seed False
-valueDriverInit cfg renderValue initializeArray kind@(KSet elementKind)    externalName seed
-  = collectionDriverInit cfg renderValue initializeArray kind elementKind externalName seed (odd seed)
-valueDriverInit _   _           initializeArray kind@KArray{}              externalName seed
-  = initializeArray kind externalName seed
+valueDriverInit cfg renderValue initializeValue kind@(KList elementKind)   externalName seed
+  = collectionDriverInit cfg renderValue initializeValue kind elementKind externalName seed False
+valueDriverInit cfg renderValue initializeValue kind@(KSet elementKind)    externalName seed
+  = collectionDriverInit cfg renderValue initializeValue kind elementKind externalName seed (odd seed)
+valueDriverInit _   _           initializeValue kind@KArray{}              externalName seed
+  = initializeValue kind externalName seed
+valueDriverInit _   _           initializeValue kind                       externalName seed
+  | isConcreteADT kind
+  = initializeValue kind externalName seed
 valueDriverInit _   renderValue _               kind                       externalName seed
   = text "const" <+> text (elementCType kind) <+> text externalName <+> text "=" <+> renderValue kind seed P.<> semi
 
@@ -175,7 +184,7 @@ valueDriverClear cfg kind externalName
 valueDriverClear cfg kind@KTuple{} externalName
   | valueNeedsOwnership cfg kind
   = managedValueRelease kind (text "&" P.<> text externalName)
-valueDriverClear _   kind@KADT{}         externalName
+valueDriverClear _   kind                externalName
   | isConcreteADT kind
   = managedValueRelease kind (text "&" P.<> text externalName)
 valueDriverClear _   kind@KArray{}       externalName
@@ -188,7 +197,7 @@ valueDriverClear _   _                   _            = empty
 
 -- | Declare a deterministic borrowed list or set descriptor and its elements.
 collectionDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> Kind -> String -> Integer -> Bool -> Doc
-collectionDriverInit cfg renderValue initializeArray kind elementKind externalName seed isComplemented
+collectionDriverInit cfg renderValue initializeValue kind elementKind externalName seed isComplemented
   =  vcat (zipWith initializeElement elementNames [seed ..])
   $$ text "const" <+> text (elementCType elementKind) <+> text dataName P.<> brackets (int collectionElementCount)
        <+> text "=" <+> braces (fsep (punctuate comma (map text elementNames))) P.<> semi
@@ -201,7 +210,7 @@ collectionDriverInit cfg renderValue initializeArray kind elementKind externalNa
                             KSet{} -> [text (if isComplemented then "true" else "false")]
                             _      -> []
 
-       initializeElement = valueDriverInit cfg renderValue initializeArray elementKind
+       initializeElement = valueDriverInit cfg renderValue initializeValue elementKind
 
 -- | Return the generated name of one deterministic collection element.
 collectionElementName :: String -> Int -> String
@@ -223,4 +232,5 @@ call functionName arguments = text functionName P.<> parens (fsep (punctuate com
 -- | Test whether a kind is a concrete user ADT rather than a built-in or
 -- uninterpreted sort.
 isConcreteADT :: Kind -> Bool
-isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
+isConcreteADT KApp{} = True
+isConcreteADT kind   = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)

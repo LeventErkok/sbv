@@ -34,16 +34,23 @@ tupleCType :: Kind -> String
 tupleCType kind@KTuple{} = "SBVTuple_" ++ kindTag kind
 tupleCType kind          = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
 
--- | Return the public C structure type used for a concrete ADT kind.
+-- | Return the public C structure type used for a concrete ADT kind or an
+-- unresolved application of a registered ADT.
 adtCType :: Kind -> String
 adtCType kind@(KADT typeName parameters _)
   | isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
-  = "SBVADT_" ++ encodeIdentifier typeName ++ concatMap parameterTag parameters
+  = appliedType typeName (map snd parameters)
   | True
   = error $ "SBV->C: Expected a concrete ADT kind, received " ++ show kind
- where parameterTag (_, parameterKind) = "_" ++ show (length tag) ++ "_" ++ tag
-         where tag = kindTag parameterKind
+adtCType (KApp typeName arguments) = appliedType typeName arguments
 adtCType kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
+
+-- | Render the common C type spelling shared by a concrete ADT and an
+-- unresolved application of that same registered ADT.
+appliedType :: String -> [Kind] -> String
+appliedType typeName arguments = "SBVADT_" ++ encodeIdentifier typeName ++ concatMap parameterTag arguments
+ where parameterTag parameterKind = "_" ++ show (length tag) ++ "_" ++ tag
+        where tag = kindTag parameterKind
 
 -- | Return the public member name used for a one-based tuple field index.
 tupleFieldName :: Int -> String
@@ -69,6 +76,7 @@ elementCType kind@KTuple{}       = tupleCType kind
 elementCType kind@KADT{}
   | isRoundingMode kind          = "RoundingMode"
   | True                         = adtCType kind
+elementCType kind@KApp{}         = adtCType kind
 elementCType (KList elementKind) = "SBVList_" ++ kindTag elementKind
 elementCType (KSet elementKind)  = "SBVSet_" ++ kindTag elementKind
 elementCType kind@KArray{}       = arrayOutputCTypeName kind ++ " *"
@@ -91,6 +99,7 @@ kindTag (KTuple fields)     = "t" ++ show (length fields) ++ concatMap (('_' :) 
 kindTag kind@KADT{}
   | isRoundingMode kind     = "rounding_mode"
   | True                    = "adt_" ++ encodeIdentifier (adtCType kind)
+kindTag kind@KApp{}         = "adt_" ++ encodeIdentifier (adtCType kind)
 kindTag (KList elementKind) = "list_" ++ taggedKind (kindTag elementKind)
 kindTag (KSet elementKind)  = "set_"  ++ taggedKind (kindTag elementKind)
 kindTag kind@KArray{}       = "array_" ++ taggedKind (arrayKindTag kind)

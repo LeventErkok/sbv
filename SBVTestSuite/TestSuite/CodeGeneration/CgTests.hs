@@ -88,13 +88,16 @@ data CodeGenText = CGText String [String] (RCSet String) deriving Show
 -- | An aggregate used to exercise retained array fields in generated C ADTs.
 data CodeGenArrayBox = CGArrayBox (ArrayModel Word8 Word32) Word8 deriving Show
 
+-- | An ADT that hides an array-owning ADT behind an intermediate tuple.
+newtype CodeGenArrayEnvelope = CGArrayEnvelope (CodeGenArrayBox, Word16) deriving Show
+
 -- | A recursive managed aggregate whose leaf owns exact-element collections.
 data CodeGenCollectionTree = CGCollectionLeaf [Integer] (RCSet Rational)
                            | CGCollectionBranch CodeGenCollectionTree
                            deriving Show
 
 -- | Generate the symbolic interfaces for the code-generation ADTs.
-mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop, ''CodeGenCollections, ''CodeGenNativeCollections, ''CodeGenText, ''CodeGenArrayBox, ''CodeGenCollectionTree]
+mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop, ''CodeGenCollections, ''CodeGenNativeCollections, ''CodeGenText, ''CodeGenArrayBox, ''CodeGenArrayEnvelope, ''CodeGenCollectionTree]
 
 -- | Code-generation tests.
 tests :: TestTree
@@ -113,6 +116,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute arrays stored in ADTs" adtStoredArrays
   , testCase "compile and execute arrays stored in lists" listStoredArrays
   , testCase "initialize aggregate inputs containing arrays" aggregateArrayInputs
+  , testCase "initialize transitively nested array inputs" transitiveAggregateArrayInputs
   , testCase "preserve native floating-point array-key equality" nativeFloatArrayKeys
   , testCase "compile repeated array types into a library" persistentArrayLibrary
   , testCase "compile and execute a callback-backed array input" callbackArrayInput
@@ -1128,6 +1132,41 @@ aggregateArrayInputs = withSystemTempDirectory "sbv-aggregate-array-inputs" $ \d
     ]
   assertBool ("Expected retained descriptors for all aggregate array inputs, received:\n" ++ driverText)
              (length (filter (isInfixOf "sbv_array_output_retain_u8_u32") (lines driverText)) >= 5)
+
+-- | Exercise transitive ownership when tuples, lists, and ADTs hide retained
+-- arrays behind one or more concrete ADT fields.
+transitiveAggregateArrayInputs :: Assertion
+transitiveAggregateArrayInputs = withSystemTempDirectory "sbv-transitive-array-inputs" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [3, 7, 11]
+        tupleInput    <- cgInput "tupleInput"    :: SBVCodeGen (SBV (CodeGenArrayBox, Word8))
+        listInput     <- cgInput "listInput"     :: SBVCodeGen (SList (CodeGenArrayBox, Word8))
+        envelopeInput <- cgInput "envelopeInput" :: SBVCodeGen (SBV CodeGenArrayEnvelope)
+        let (tupleBox, tupleKey) = untuple tupleInput
+            (listBox, listKey)   = untuple (SL.head listInput)
+            (envelopeBox, _)     = untuple (getCGArrayEnvelope_1 envelopeInput)
+            tupleValue           = readArray (getCGArrayBox_1 tupleBox) tupleKey
+            listValue            = readArray (getCGArrayBox_1 listBox) listKey
+            envelopeValue        = readArray (getCGArrayBox_1 envelopeBox) 0
+        cgOutput "tupleValue" tupleValue
+        cgOutput "listValue" listValue
+        cgOutput "envelopeValue" envelopeValue
+        cgReturn (tupleValue + listValue + envelopeValue)
+
+  stdoutText <- compileProgramAndRunGenerated dir "transitiveAggregateArrayInputs" program
+  headerText <- readFile (dir </> "transitiveAggregateArrayInputs.h")
+  mapM_ (\fragment -> assertBool ("Expected transitive aggregate-array output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                (fragment `isInfixOf` stdoutText))
+    [ "= 0x00000015UL"
+    , "tupleValue = 0x00000003UL"
+    , "listValue = 0x00000007UL"
+    , "envelopeValue = 0x0000000bUL"
+    ]
+  assertBool ("Expected tuple ownership to cross concrete ADT fields, received:\n" ++ headerText)
+             (    "sbv_adt_owned_clone_SBVADT_CodeGenArrayBox(source.field1)" `isInfixOf` headerText
+              && "sbv_adt_owned_release_SBVADT_CodeGenArrayBox(&value->field1)" `isInfixOf` headerText
+             )
 
 -- | Check that native floating-point array keys use SMT object equality:
 -- NaNs match, while positive and negative zero remain distinct.
