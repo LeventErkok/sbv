@@ -128,6 +128,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile managed scalar defined SBV functions" managedScalarDefinedSBVFunctions
   , testCase "compile collection defined SBV functions" collectionDefinedSBVFunctions
   , testCase "compile persistent-array defined SBV functions" persistentArrayDefinedSBVFunctions
+  , testCase "compile owned-ADT defined SBV functions" ownedADTDefinedSBVFunctions
   , testCase "reject recursive defined SBV functions" recursiveDefinedSBVFunction
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
@@ -1478,6 +1479,49 @@ persistentArrayDefinedSBVFunctions = withSystemTempDirectory "sbv-persistent-arr
     , "atOne = 0x0000000bUL"
     , "fallback = 0x00000005UL"
     ]
+
+-- | Exercise managed and recursive ADTs returned through composed
+-- 'smtFunction' calls, including stabilization of recursive stack literals.
+ownedADTDefinedSBVFunctions :: Assertion
+ownedADTDefinedSBVFunctions = withSystemTempDirectory "sbv-owned-adt-defined-functions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 1]
+        let extendCollections :: SCodeGenCollections -> SCodeGenCollections
+            extendCollections = smtFunction "C managed ADT collections" $ \value ->
+              let values                   = getCGCollections_1 value
+                  members                  = getCGCollections_2 value
+                  nested                   = getCGCollections_3 value
+                  (nestedValues, nestedSet) = untuple nested
+              in sCGCollections
+                   (values SL.++ literal [7])
+                   (SS.insert 8 members)
+                   (tuple (nestedValues SL.++ literal [9], SS.insert 10 nestedSet))
+
+            wrapTree :: SCodeGenTree -> SCodeGenTree
+            wrapTree = smtFunction "C managed ADT wrap" $ \tree -> sCGNode tree (sCGLeaf 99)
+
+            wrapTreeTwice :: SCodeGenTree -> SCodeGenTree
+            wrapTreeTwice = smtFunction "C managed ADT wrap twice" $ \tree -> wrapTree (wrapTree tree)
+
+        collections <- cgInput "collectionsInput" :: SBVCodeGen SCodeGenCollections
+        tree        <- cgInput "treeInput"        :: SBVCodeGen SCodeGenTree
+        cgOutput "collections" (extendCollections collections)
+        cgReturn (wrapTreeTwice tree)
+
+  stdoutText <- compileProgramAndRunGenerated dir "ownedADTDefinedSBVFunctions" program
+  sourceText <- readFile (dir </> "ownedADTDefinedSBVFunctions.c")
+  mapM_ (\fragment -> assertBool ("Expected owned-ADT defined-function output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ ") =CGNode(CGNode("
+    , "CGLeaf(99)), CGLeaf(99))"
+    , "collections =CGCollections([1, 2, 3, 7], {2, 3, 4, 8}, ([3, 4, 5, 9], {4, 5, 6, 10}))"
+    ]
+  assertBool ("Expected private owned ADT results to use stable arena clones, received:\n"
+           ++ unlines (filter ("sbv_function" `isInfixOf`) (lines sourceText)))
+             ("sbv_function_result_clone_" `isInfixOf` sourceText)
+  assertBool "Expected private owned ADT result storage to be released"
+             ("sbv_function_result_ctx_end(&__sbv_function_result_ctx);" `isInfixOf` sourceText)
 
 -- | Check that allowing acyclic composition does not admit recursive
 -- 'smtFunction' components, whose eager expression DAGs require control-flow

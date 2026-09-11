@@ -44,7 +44,7 @@ import Data.SBV.Compilers.C.Lowering
 import Data.SBV.Compilers.C.Set
 import Data.SBV.Compilers.C.Table
 import Data.SBV.Compilers.C.Text
-import qualified Data.SBV.Compilers.C.Types as CTypes (arrayStoredReleaseName, definedFunctionCName, elementCType)
+import qualified Data.SBV.Compilers.C.Types as CTypes (arrayStoredReleaseName, definedFunctionCName, elementCType, kindTag)
 import Data.SBV.Compilers.C.Tuple
 import Data.SBV.Compilers.C.Value (valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen
@@ -1023,6 +1023,7 @@ genCProg cfg adts lists sets fn proto
              $$ (if requires CRequiresSets             then setRuntime cfg sets else empty)
              $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
              $$ adtEqualityRuntime cfg adts
+             $$ definedFunctionResultRuntime functionResultKinds
              $$ (if null structuredDefinitions then empty else definedFunctionContextType)
              $$ vcat functionPrototypes
              $$ vcat functionDocs
@@ -1035,6 +1036,7 @@ genCProg cfg adts lists sets fn proto
                         $$ listStart
                         $$ setStart
                         $$ arrayStart
+                        $$ functionResultStart
                         $$ functionContextStart
                         $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
                         $$ vcat (merge (map (ppTable cfg True consts) tbls) assignmentDocs (map genAssert asserts))
@@ -1047,6 +1049,7 @@ genCProg cfg adts lists sets fn proto
                         $$ textReturn
                         $$ listReturn
                         $$ setReturn
+                        $$ functionResultEnd
                         $$ arrayEnd
                         $$ setEnd
                         $$ listEnd
@@ -1098,6 +1101,11 @@ genCProg cfg adts lists sets fn proto
                              | (functionName, resultKind, _, functionType, lambdaInfo) <- structuredDefinitions
                              ]
        functionDocs        = map fst generatedFunctions
+
+       functionResultKinds = nub [ resultKind
+                                 | (_, resultKind, _, _, _) <- structuredDefinitions
+                                 , definedFunctionResultNeedsClone cfg adts resultKind
+                                 ]
 
        generatedArrayLambdas = map (uncurry (ppArrayLambda cfg adts functionNames)) arrayLambdaDefinitions
        arrayLambdaDocs        = map fst generatedArrayLambdas
@@ -1204,6 +1212,14 @@ genCProg cfg adts lists sets fn proto
        functionContextStart
          | null structuredDefinitions = empty
          | True                       = definedFunctionContextInitialization requirements
+
+       functionResultStart
+         | requires CRequiresFunctionResults = text "sbv_function_result_ctx __sbv_function_result_ctx = {NULL};"
+         | True                               = empty
+
+       functionResultEnd
+         | requires CRequiresFunctionResults = text "sbv_function_result_ctx_end(&__sbv_function_result_ctx);"
+         | True                               = empty
 
        exactReturn = case mbRet of
                        Just sv | isExactGMPKind cfg (kindOf sv)
@@ -1417,6 +1433,7 @@ definedFunctionContextType = text $ unlines
   , "  void *list;"
   , "  void *set;"
   , "  void *array;"
+  , "  void *function_result;"
   , "} sbv_function_ctx;"
   , ""
   ]
@@ -1426,17 +1443,106 @@ definedFunctionContextType = text $ unlines
 definedFunctionContextInitialization :: Set.Set CRequirement -> Doc
 definedFunctionContextInitialization requirements
   = text "sbv_function_ctx __sbv_function_ctx =" <+> braces (fsep (punctuate comma fields)) P.<> semi
- where fields = [ field CRequiresGMP    "gmp"   "__sbv_gmp_ctx"
-                , field CRequiresText   "text"  "__sbv_text_ctx"
-                , field CRequiresLists  "list"  "__sbv_list_ctx"
-                , field CRequiresSets   "set"   "__sbv_set_ctx"
-                , field CRequiresArrays "array" "__sbv_array_ctx"
+ where fields = [ field CRequiresGMP             "gmp"             "__sbv_gmp_ctx"
+                , field CRequiresText            "text"            "__sbv_text_ctx"
+                , field CRequiresLists           "list"            "__sbv_list_ctx"
+                , field CRequiresSets            "set"             "__sbv_set_ctx"
+                , field CRequiresArrays          "array"           "__sbv_array_ctx"
+                , field CRequiresFunctionResults "function_result" "__sbv_function_result_ctx"
                 ]
 
        field requirement fieldName contextName
          = text ("." ++ fieldName ++ " =") <+> if requirement `Set.member` requirements
                                                    then text ("&" ++ contextName)
                                                    else text "NULL"
+
+-- | Test whether a private function result needs a stable deep copy because
+-- its by-value representation contains independently owned aggregate storage.
+definedFunctionResultNeedsClone :: CgConfig -> [Kind] -> Kind -> Bool
+definedFunctionResultNeedsClone cfg adts kind
+  | KTuple{} <- kind          = tupleNeedsOwnership cfg kind
+  | isConcreteADTKind kind    = adtNeedsOwnership cfg adts kind
+  | True                      = False
+
+-- | Return the generated helper name that clones one private aggregate result
+-- into the shared function-result arena.
+definedFunctionResultCloneName :: Kind -> String
+definedFunctionResultCloneName kind = "sbv_function_result_clone_" ++ CTypes.kindTag kind
+
+-- | Render a deep clone into the shared private function-result arena.
+definedFunctionResultClone :: Kind -> Doc -> Doc
+definedFunctionResultClone kind value
+  = text (definedFunctionResultCloneName kind)
+      P.<> parens (fsep (punctuate comma [text "&__sbv_function_result_ctx", value]))
+
+-- | Emit temporary ownership storage for aggregate values returned by private
+-- generated functions. The public boundary clones these values once more
+-- before this arena is released.
+definedFunctionResultRuntime :: [Kind] -> Doc
+definedFunctionResultRuntime []    = empty
+definedFunctionResultRuntime kinds = text . unlines $
+     [ "/* Stable storage for owned aggregate results of private SBV functions. */"
+     , "typedef void (*sbv_function_result_release)(void *);"
+     , "typedef struct sbv_function_result_node {"
+     , "  struct sbv_function_result_node *next;"
+     , "  void *value;"
+     , "  sbv_function_result_release release;"
+     , "} sbv_function_result_node;"
+     , "typedef struct { sbv_function_result_node *head; } sbv_function_result_ctx;"
+     , ""
+     , "static SBV_CGEN_UNUSED void sbv_function_result_ctx_remember(sbv_function_result_ctx *ctx, void *value, sbv_function_result_release release)"
+     , "{"
+     , "  sbv_function_result_node *node = (sbv_function_result_node *) malloc(sizeof(*node));"
+     , "  if (ctx == NULL || value == NULL || release == NULL || node == NULL) abort();"
+     , "  node->next = ctx->head;"
+     , "  node->value = value;"
+     , "  node->release = release;"
+     , "  ctx->head = node;"
+     , "}"
+     , ""
+     , "static SBV_CGEN_UNUSED void sbv_function_result_ctx_end(sbv_function_result_ctx *ctx)"
+     , "{"
+     , "  while (ctx->head != NULL) {"
+     , "    sbv_function_result_node *node = ctx->head;"
+     , "    ctx->head = node->next;"
+     , "    node->release(node->value);"
+     , "    free(node);"
+     , "  }"
+     , "}"
+     , ""
+     ]
+  ++ concatMap helpers kinds
+ where helpers kind =
+         [ "static SBV_CGEN_UNUSED void " ++ releaseName ++ "(void *opaque)"
+         , "{"
+         , "  " ++ cType ++ " *value = (" ++ cType ++ " *) opaque;"
+         , "  " ++ ownedReleaseName kind ++ "(value);"
+         , "  free(value);"
+         , "}"
+         , ""
+         , "static SBV_CGEN_UNUSED " ++ cType ++ " " ++ cloneName ++ "(sbv_function_result_ctx *ctx, " ++ cType ++ " value)"
+         , "{"
+         , "  " ++ cType ++ " *result = (" ++ cType ++ " *) malloc(sizeof(*result));"
+         , "  if (result == NULL) abort();"
+         , "  *result = " ++ ownedCloneName kind ++ "(value);"
+         , "  sbv_function_result_ctx_remember(ctx, result, " ++ releaseName ++ ");"
+         , "  return *result;"
+         , "}"
+         , ""
+         ]
+        where cType       = showCType kind
+              cloneName   = definedFunctionResultCloneName kind
+              releaseName = "sbv_function_result_release_" ++ CTypes.kindTag kind
+
+       ownedCloneName kind@KTuple{} = tupleOwnedCloneName kind
+       ownedCloneName kind
+         | isConcreteADTKind kind    = adtOwnedCloneName kind
+       ownedCloneName kind           = die $ "Expected an owned tuple or ADT result, received " ++ show kind
+
+       ownedReleaseName kind@KTuple{} = tupleOwnedReleaseName kind
+       ownedReleaseName kind
+         | isConcreteADTKind kind      = adtOwnedReleaseName kind
+       ownedReleaseName kind           = die $ "Expected an owned tuple or ADT result, received " ++ show kind
 
 -- | Render the private C signature shared by a defined function's prototype
 -- and implementation.
@@ -1449,8 +1555,8 @@ definedFunctionSignature originalName resultKind parameters
          : [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters]
 
 -- | Lower one non-recursive, first-order SBV function definition from its
--- retained expression DAG. Persistent arrays, recursively owned ADTs, and
--- nested lambdas are handled by later lowering stages.
+-- retained expression DAG. Nested lambdas and higher-order callbacks are
+-- handled by a later lowering stage.
 ppDefinedFunction :: CgConfig -> [Kind] -> [(T.Text, String)] -> String -> Kind -> SBVType -> LambdaInfo -> (Doc, Set.Set CRequirement)
 ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVType signatureKinds)
                   LambdaInfo{ liAssignments = functionProgram
@@ -1494,7 +1600,7 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
          | isSet kind              = False
          | isArray kind            = False
          | KTuple fields <- kind   = any functionValueHasUnsupportedManagedStorage fields
-         | isConcreteADTKind kind  = adtNeedsOwnership cfg adts kind
+         | isConcreteADTKind kind  = False
          | True                    = valueNeedsOwnership cfg kind
 
        generatedTables = map (ppTable cfg False functionConsts) tables
@@ -1508,11 +1614,12 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
        assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
 
        functionRequirements = Set.unions
-         [ Set.fromList $ [CRequiresGMP    | any (isExactGMPKind cfg) expandedFunctionKinds]
-                       ++ [CRequiresText   | KString `elem` expandedFunctionKinds]
-                       ++ [CRequiresLists  | any isList expandedFunctionKinds]
-                       ++ [CRequiresSets   | any isSet expandedFunctionKinds]
-                       ++ [CRequiresArrays | any isArray expandedFunctionKinds]
+         [ Set.fromList $ [CRequiresGMP             | any (isExactGMPKind cfg) expandedFunctionKinds]
+                       ++ [CRequiresText            | KString `elem` expandedFunctionKinds]
+                       ++ [CRequiresLists           | any isList expandedFunctionKinds]
+                       ++ [CRequiresSets            | any isSet expandedFunctionKinds]
+                       ++ [CRequiresArrays          | any isArray expandedFunctionKinds]
+                       ++ [CRequiresFunctionResults | definedFunctionResultNeedsClone cfg adts resultKind]
          , Set.unions [needed | (_, _, needed) <- generatedAssignments]
          , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
          ]
@@ -1520,17 +1627,19 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
        expandedFunctionKinds = concatMap (expandKinds . kindOf) functionValues
 
        contextSetup
-         =  setupContext CRequiresGMP    "sbv_gmp_ctx"   "gmp"
-         $$ setupContext CRequiresText   "sbv_text_ctx"  "text"
-         $$ setupContext CRequiresLists  "sbv_list_ctx"  "list"
-         $$ setupContext CRequiresSets   "sbv_set_ctx"   "set"
-         $$ setupContext CRequiresArrays "sbv_array_ctx" "array"
+         =  setupContext CRequiresGMP             "sbv_gmp_ctx"             "gmp"
+         $$ setupContext CRequiresText            "sbv_text_ctx"            "text"
+         $$ setupContext CRequiresLists           "sbv_list_ctx"            "list"
+         $$ setupContext CRequiresSets            "sbv_set_ctx"             "set"
+         $$ setupContext CRequiresArrays          "sbv_array_ctx"           "array"
+         $$ setupContext CRequiresFunctionResults "sbv_function_result_ctx" "function_result"
          $$ text "sbv_function_ctx __sbv_function_ctx = *__sbv_parent_function_ctx;"
-         $$ bindContext CRequiresGMP    "gmp"
-         $$ bindContext CRequiresText   "text"
-         $$ bindContext CRequiresLists  "list"
-         $$ bindContext CRequiresSets   "set"
-         $$ bindContext CRequiresArrays "array"
+         $$ bindContext CRequiresGMP             "gmp"
+         $$ bindContext CRequiresText            "text"
+         $$ bindContext CRequiresLists           "list"
+         $$ bindContext CRequiresSets            "set"
+         $$ bindContext CRequiresArrays          "array"
+         $$ bindContext CRequiresFunctionResults "function_result"
 
        setupContext requirement contextType fieldName
          | requirement `Set.member` functionRequirements
@@ -1546,11 +1655,12 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
          = empty
 
        contextCommit
-         =  commitContext CRequiresGMP    "gmp"
-         $$ commitContext CRequiresText   "text"
-         $$ commitContext CRequiresLists  "list"
-         $$ commitContext CRequiresSets   "set"
-         $$ commitContext CRequiresArrays "array"
+         =  commitContext CRequiresGMP             "gmp"
+         $$ commitContext CRequiresText            "text"
+         $$ commitContext CRequiresLists           "list"
+         $$ commitContext CRequiresSets            "set"
+         $$ commitContext CRequiresArrays          "array"
+         $$ commitContext CRequiresFunctionResults "function_result"
 
        commitContext requirement fieldName
          | requirement `Set.member` functionRequirements
@@ -1563,12 +1673,18 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
           $$ text "{"
           $$ nest 2 (   contextSetup
                      $$ vcat (map snd (mergeLocated generatedTables assignmentDocs))
-                     $$ text "const" <+> text (showCType resultKind) <+> text "__sbv_function_result =" <+> showSV cfg functionConsts functionOutput P.<> semi
+                     $$ text "const" <+> text (showCType resultKind) <+> text "__sbv_function_result =" <+> functionResult P.<> semi
                      $$ contextCommit
                      $$ text "return __sbv_function_result;"
                     )
           $$ text "}"
           $$ text ""
+
+       functionResult
+         | definedFunctionResultNeedsClone cfg adts resultKind
+         = definedFunctionResultClone resultKind (showSV cfg functionConsts functionOutput)
+         | True
+         = showSV cfg functionConsts functionOutput
 
 -- | Lower a retained one-argument array lambda into a C lookup callback. Its
 -- local DAG uses the ordinary scalar lowering pipeline, so wide bit-vectors,
@@ -1589,6 +1705,8 @@ ppArrayLambda cfg adts functionNames arraySV lambdaInfo@LambdaInfo{ liAssignment
         -> die $ "Array-lambda result kind " ++ show (kindOf lambdaOutput) ++ " does not match " ++ show valueKind
         | not (null nestedLambdas)
         -> tbd "Nested structured lambdas inside lambda arrays"
+        | not (null definedFunctionCalls)
+        -> tbd "Defined SBV functions inside structured lambda arrays"
         | lambdaResultNeedsManagedStorage valueKind
         -> tbd "Structured lambda arrays returning managed aggregate values"
         | True
@@ -1602,6 +1720,10 @@ ppArrayLambda cfg adts functionNames arraySV lambdaInfo@LambdaInfo{ liAssignment
        usesGMP      = arrayLambdaUsesGMP cfg lambdaInfo
 
        nestedLambdas = [sv | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments]
+       definedFunctionCalls = [ symbol
+                              | (_, SBVApp (Uninterpreted symbol) _) <- assignments
+                              , isJust (lookup symbol functionNames)
+                              ]
 
        lambdaResultNeedsManagedStorage KString         = True
        lambdaResultNeedsManagedStorage KList{}         = True
@@ -1632,7 +1754,6 @@ ppArrayLambda cfg adts functionNames arraySV lambdaInfo@LambdaInfo{ liAssignment
              P.<> parens (fsep (punctuate comma [text "const void *context", text (showCType keyKind) <+> text (show parameter)]))
           $$ text "{"
           $$ nest 2 (   contextSetup
-                     $$ functionContextSetup
                      $$ vcat (map snd (mergeLocated generatedTables assignmentDocs))
                      $$ text "const" <+> text (showCType valueKind) <+> text "__sbv_lambda_result" <+> text "=" <+> showSV cfg lambdaConsts lambdaOutput P.<> semi
                      $$ contextCommit
@@ -1649,11 +1770,6 @@ ppArrayLambda cfg adts functionNames arraySV lambdaInfo@LambdaInfo{ liAssignment
        contextCommit
          | usesGMP = text "*__sbv_gmp_parent_ctx = __sbv_gmp_ctx;"
          | True    = empty
-
-       functionContextSetup
-         | null functionNames = empty
-         | usesGMP            = definedFunctionContextInitialization (Set.singleton CRequiresGMP)
-         | True               = definedFunctionContextInitialization Set.empty
 
 -- | Test whether a kind is a concrete user ADT rather than a built-in or
 -- uninterpreted sort.
