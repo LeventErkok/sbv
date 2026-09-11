@@ -354,6 +354,7 @@ codeGen l cgConfig nm (SBVCodeGen comp) = do
    ((retVal, st'), res) <- runSymbolic defaultSMTCfg CodeGen $ runStateT comp initCgState { cgFinalConfig = cgConfig }
    let st = st' { cgInputs  = reverse (cgInputs st')
                 , cgOutputs = reverse (cgOutputs st')
+                , cgReturns = reverse (cgReturns st')
                 }
        allNamedVars = map fst (cgInputs st ++ cgOutputs st)
        dupNames = allNamedVars \\ nub allNamedVars

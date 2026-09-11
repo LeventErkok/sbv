@@ -132,6 +132,10 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "reject recursive defined SBV functions" recursiveDefinedSBVFunction
   , testCase "compile explicit hard constraints" explicitHardConstraints
   , testCase "reject solver-only constraint features" unsupportedConstraintFeatures
+  , testCase "return a non-atomic value group" nonAtomicReturnGroup
+  , testCase "return multiple value groups" multipleReturnGroups
+  , testCase "return managed non-atomic value groups" managedReturnGroups
+  , testCase "return grouped values from a library" groupedReturnLibrary
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
   , testCase "retain an escaping callback array" escapingCallbackArray
@@ -1600,6 +1604,127 @@ unsupportedConstraintFeatures = do
     Left exception -> assertBool ("Expected a constraint-attribute diagnostic, received:\n" ++ displayException exception)
                                  ("Constraint attributes: :weight" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected C generation to reject an SMT-only constraint attribute" False
+
+-- | Exercise a sole 'cgReturnArr' group through the generated output-parameter
+-- ABI while preserving the return elements' declaration order.
+nonAtomicReturnGroup :: Assertion
+nonAtomicReturnGroup = withSystemTempDirectory "sbv-non-atomic-return-group" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [4]
+        input <- cgInput "input" :: SBVCodeGen SWord16
+        cgReturnArr [input + 1, input + 2, input + 3]
+
+  stdoutText <- compileProgramAndRunGenerated dir "nonAtomicReturnGroup" program
+  headerText <- readFile (dir </> "nonAtomicReturnGroup.h")
+  mapM_ (\fragment -> assertBool ("Expected non-atomic return output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ "result_0[0] = 0x0005U"
+    , "result_0[1] = 0x0006U"
+    , "result_0[2] = 0x0007U"
+    ]
+  assertBool "Expected a sole array return group to use a void output-parameter ABI"
+             ("void nonAtomicReturnGroup(" `isInfixOf` headerText
+           && "SWord16 *result_0" `isInfixOf` headerText)
+
+-- | Exercise multiple ordered return groups containing a scalar, an owned
+-- symbolic list, and a fixed-size C array.
+multipleReturnGroups :: Assertion
+multipleReturnGroups = withSystemTempDirectory "sbv-multiple-return-groups" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [4]
+        input <- cgInput "input" :: SBVCodeGen SWord16
+        cgReturn (input + 1)
+        cgReturn (literal ([10, 11] :: [Word16]))
+        cgReturn (sFromIntegral input + 20 :: SInteger)
+        cgReturnArr [input + 2, input + 3]
+
+  stdoutText <- compileProgramAndRunGenerated dir "multipleReturnGroups" program
+  headerText <- readFile (dir </> "multipleReturnGroups.h")
+  mapM_ (\fragment -> assertBool ("Expected multiple-return output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ "result_0 = 0x0005U"
+    , "result_1 =[0x000aU, 0x000bU]"
+    , "result_2 =24"
+    , "result_3[0] = 0x0006U"
+    , "result_3[1] = 0x0007U"
+    ]
+  assertBool "Expected multiple return groups to use ordered output parameters"
+             ("void multipleReturnGroups(" `isInfixOf` headerText
+           && "SWord16 *result_0" `isInfixOf` headerText
+           && "SWord16 *result_3" `isInfixOf` headerText)
+
+-- | Exercise deep ownership and element-wise cleanup for non-atomic return
+-- groups containing lists, exact integers, and persistent arrays.
+managedReturnGroups :: Assertion
+managedReturnGroups = withSystemTempDirectory "sbv-managed-return-groups" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [4]
+        input <- cgInput "input" :: SBVCodeGen SWord16
+        let baseArray = constArray 5 :: SArray Word8 Word16
+        cgReturnArr [ literal ([1, 2] :: [Word16])
+                    , literal ([3, 4] :: [Word16])
+                    ]
+        cgReturnArr [ sFromIntegral input + 30 :: SInteger
+                    , sFromIntegral input + 31
+                    ]
+        cgReturnArr [baseArray, writeArray baseArray 0 9]
+
+  stdoutText <- compileProgramAndRunGenerated dir "managedReturnGroups" program
+  headerText <- readFile (dir </> "managedReturnGroups.h")
+  sourceText <- readFile (dir </> "managedReturnGroups.c")
+  driverText <- readFile (dir </> "managedReturnGroups_driver.c")
+  mapM_ (\fragment -> assertBool ("Expected managed return-group output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ "result_0[0] = [0x0001U, 0x0002U]"
+    , "result_0[1] = [0x0003U, 0x0004U]"
+    , "result_1[0] = 34"
+    , "result_1[1] = 35"
+    , "result_2[0][0] =0x0005U"
+    , "result_2[1][0] =0x0009U"
+    ]
+  assertBool "Expected exact and persistent-array groups to expose mutable output arrays"
+             ("mpz_t *result_1" `isInfixOf` headerText
+           && "SBVArrayOutput_u8_u16 *result_2" `isInfixOf` headerText)
+  assertBool ("Expected managed group elements to be cloned and released independently, received:\n"
+           ++ unlines (filter (\line -> "result_0" `isInfixOf` line || "result_2" `isInfixOf` line) (lines (sourceText ++ driverText))))
+             ("result_0[0] = sbv_list_clone_u16" `isInfixOf` sourceText
+           && "sbv_list_release_u16(&result_0[0]);" `isInfixOf` driverText
+           && "sbv_array_output_release_u8_u16(&result_2[0]);" `isInfixOf` driverText)
+
+-- | Exercise grouped return ABIs across multiple generated library
+-- translation units.
+groupedReturnLibrary :: Assertion
+groupedReturnLibrary = withSystemTempDirectory "sbv-grouped-return-library" $ \dir -> do
+  let component increment seed = do
+        cgOverwriteFiles True
+        cgSetDriverValues [seed]
+        input <- cgInput "input" :: SBVCodeGen SWord16
+        cgReturnArr [input + literal increment, input + literal increment + 1]
+        cgReturn (literal ([increment, increment + 1] :: [Word16]))
+
+  (_, cfg, bundle) <- compileToCLib' "groupedReturnLibrary"
+    [ ("firstGroups",  component 1 4)
+    , ("secondGroups", component 2 8)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "groupedReturnLibrary"
+  headerText <- readFile (dir </> "groupedReturnLibrary.h")
+  mapM_ (\fragment -> assertBool ("Expected grouped library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ "result_0[0] = 0x0005U"
+    , "result_0[1] = 0x0006U"
+    , "result_1 =[0x0001U, 0x0002U]"
+    , "result_0[0] = 0x000aU"
+    , "result_0[1] = 0x000bU"
+    , "result_1 =[0x0002U, 0x0003U]"
+    ]
+  assertBool "Expected both library components to publish grouped output parameters"
+             ("void firstGroups(" `isInfixOf` headerText
+           && "void secondGroups(" `isInfixOf` headerText
+           && length (filter ("SWord16 *result_0" `isInfixOf`) (lines headerText)) == 2)
 
 -- | Exercise 'freeArray' by supplying the corresponding total C function as
 -- a user declaration, preserving the existing uninterpreted-function escape hatch.

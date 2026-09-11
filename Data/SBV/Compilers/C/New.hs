@@ -136,7 +136,7 @@ cgen cfg nm st sbvProg
                                , (nm  ++ ".c"  , (CgSource                  , body))
                                ]
 
-        (body, requirements) = genCProg cfg adts lists sets nm sig sbvProg ins outs mbRet extDecls
+        (body, requirements) = genCProg cfg adts lists sets nm sig sbvProg ins allOuts mbRet extDecls
 
         bundleKind = (cgInteger cfg, cgReal cfg)
 
@@ -193,7 +193,7 @@ cgen cfg nm st sbvProg
                 arrayUsesRoundingMode _                              = False
 
         randVals = cgDriverVals cfg
-        driver   = genDriver cfg adts randVals nm ins outs mbRet
+        driver   = genDriver cfg adts randVals nm ins allOuts mbRet
 
         filt xs  = [c | c@(_, (k, _)) <- xs, need k]
           where need k | isCgDriver   k = cgGenDriver cfg
@@ -201,14 +201,26 @@ cgen cfg nm st sbvProg
                        | True           = True
 
         nmd      = nm ++ "_driver"
-        sig      = pprCFunHeader cfg nm ins outs mbRet
+        sig      = pprCFunHeader cfg nm ins allOuts mbRet
         ins      = cgInputs st
         outs     = cgOutputs st
+        allOuts  = outs ++ returnOuts
         mbRet    = case cgReturns st of
-                     []           -> Nothing
-                     [CgAtomic o] -> Just o
-                     [CgArray _]  -> tbd "Non-atomic return values"
-                     _            -> tbd "Multiple return values"
+                     [CgAtomic resultSV] -> Just resultSV
+                     _                   -> Nothing
+
+        returnOuts = case cgReturns st of
+                       []           -> []
+                       [CgAtomic{}] -> []
+                       results      -> zipWith (\index returnValue -> (returnName index, returnValue)) [0 :: Int ..] results
+
+        returnName index = availableName 0
+          where availableName prefixLength
+                  | candidate `elem` interfaceNames = availableName (prefixLength + 1)
+                  | True                            = candidate
+                  where candidate = replicate prefixLength '_' ++ "result_" ++ show index
+
+        interfaceNames = map fst (ins ++ outs)
 
         extProtos = case cgPrototypes st of
                      [] -> empty
@@ -244,16 +256,16 @@ structuralTypeDecls cfg adts tuples = vcat (map declaration orderedKinds)
          | isConcreteADTKind kind = adtTypeDeclsFor cfg adts [kind]
          | True                   = error $ "SBV->C: Expected a tuple or ADT layout, received " ++ show kind
 
--- | Pretty print a functions type. If there is only one output, we compile it
--- as a function that returns that value. Otherwise, we compile it as a void function
--- that takes return values as pointers to be updated.
+-- | Pretty print a function type. A single return value uses C's return
+-- position when its representation permits; aggregate return groups and
+-- multiple returns are passed as output parameters by the caller.
 pprCFunHeader :: CgConfig -> String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc
 pprCFunHeader cfg fn ins outs mbRet = retType <+> text fn P.<> parens (fsep (punctuate comma params))
   where params  = map (mkParam cfg) ins ++ map (mkPParam cfg) outs ++ exactResult
         retType = case mbRet of
-                    Just sv | isArray sv -> text (arrayOutputCType (kindOf sv))
+                    Just sv | isArray sv                           -> text (arrayOutputCType (kindOf sv))
                     Just sv | not (isExactGMPKind cfg (kindOf sv)) -> pprCWord False sv
-                    _                                             -> text "void"
+                    _                                              -> text "void"
 
         exactResult = case mbRet of
                         Just sv | isExactGMPKind cfg (kindOf sv) -> [text (gmpOutputType (kindOf sv)) <+> text "__result"]
@@ -276,10 +288,12 @@ mkPParam _   (n, CgAtomic sv)
 mkPParam cfg (n, CgAtomic sv)
   | isExactGMPKind cfg (kindOf sv) = text (gmpOutputType (kindOf sv)) <+> text n
   | True                           = pprCWord False sv <+> text "*" P.<> text n
-mkPParam cfg (_, CgArray (sv:_))
-  | isExactGMPKind cfg (kindOf sv) = die "mkPParam: Exact GMP arrays are not yet supported"
-mkPParam _   (_, CgArray [])      = die "mkPParam: CgArray with no elements!"
-mkPParam _   (n, CgArray (sv:_))  = pprCWord False sv <+> text "*" P.<> text n
+mkPParam _   (_, CgArray [])        = die "mkPParam: CgArray with no elements!"
+mkPParam cfg (n, CgArray (sv:_))
+  | isExactGMPKind cfg kind = text (gmpDriverArrayType kind) <+> text "*" P.<> text n
+  | isArray kind            = text (arrayOutputCType kind) <+> text "*" P.<> text n
+  | True                    = pprCWord False sv <+> text "*" P.<> text n
+  where kind = kindOf sv
 
 -- | Renders as "const SWord8 s0", etc. the first parameter is the width of the typefield
 declSV :: Int -> SV -> Doc
@@ -719,8 +733,15 @@ genDriver cfg adts randVals fn inps outs mbRet
          | isOwnedADT cfg adts sv              = text (adtCType (kindOf sv)) <+> text v
                                              <+> text "=" <+> braces (text "0") P.<> semi
          | True                                = pprCWord False sv <+> text v P.<> semi
-       mkOut (v, CgArray [])             = die $ "Unsupported empty array value for " ++ show v
-       mkOut (v, CgArray sws@(sv:_))     = pprCWord False sv <+> text v P.<> brackets (int (length sws)) P.<> semi
+       mkOut (v, CgArray [])         = die $ "Unsupported empty array value for " ++ show v
+       mkOut (v, CgArray sws@(sv:_))
+         | isExactGMPKind cfg kind = text (gmpDriverArrayType kind) <+> text v P.<> brackets (int lengthOfArray) P.<> semi
+                                  $$ vcat [gmpDriverInitialize kind (text v P.<> brackets (int index)) (text "0") | index <- [0 .. lengthOfArray - 1]]
+         | isArray kind            = text (arrayOutputCType kind) <+> text v P.<> brackets (int lengthOfArray)
+                                  <+> text "=" <+> braces (text "0") P.<> semi
+         | True                    = pprCWord False sv <+> text v P.<> brackets (int lengthOfArray) P.<> semi
+         where kind          = kindOf sv
+               lengthOfArray = length sws
        resultVar = text "__result"
        call = case mbRet of
                 Nothing -> fcall P.<> semi
@@ -777,28 +798,38 @@ genDriver cfg adts randVals fn inps outs mbRet
                                                 $$ text "printf(\"\\n\");"
          | True                                 = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier cfg sv
                                                                                          P.<> text "\\n") P.<> comma <+> text n) P.<> semi
-       display (n, CgArray [])         =  die $ "Unsupported empty array value for " ++ show n
-       display (n, CgArray sws@(sv:_))
-         | isWideBV (kindOf sv) || isFP (kindOf sv) = text "int" <+> nctr P.<> semi
-                                                     $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
-                                                     $$ text "{"
-                                                     $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=")) P.<> semi
-                                                             $$ printAggregate (kindOf sv) entry P.<> semi
-                                                             $$ text "printf(\"\\n\");")
-                                                     $$ text "}"
-         | True                 = text "int" <+> nctr P.<> semi
-                                $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
-                                $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=" <+> spec P.<> text "\\n")
-                                                         P.<> comma <+> nctr <+> comma P.<> entry) P.<> semi)
-                  where nctr      = text n P.<> text "_ctr"
-                        entry     = text n P.<> text "[" P.<> nctr P.<> text "]"
-                        entrySpec = text n P.<> text "[%" P.<> int tab P.<> text "d]"
-                        spec      = specifier cfg sv
-                        len       = length sws
-                        tab       = length $ show (len - 1)
-                        printAggregate k
-                          | isWideBV k = wideBVPrint k
-                          | True       = arbitraryFPPrint k
+       display (n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
+       display (n, CgArray sws@(sv:_)) = text "int" <+> nctr P.<> semi
+                                      $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
+                                      $$ text "{"
+                                      $$ nest 2 displayEntry
+                                      $$ text "}"
+         where nctr      = text n P.<> text "_ctr"
+               entry     = text n P.<> text "[" P.<> nctr P.<> text "]"
+               entrySpec = text n P.<> text "[%" P.<> int tab P.<> text "d]"
+               kind      = kindOf sv
+               len       = length sws
+               tab       = length $ show (len - 1)
+
+               displayEntry
+                 | isArray kind = displayArrayEntry kind
+                 | True         = text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "= ") P.<> comma <+> nctr) P.<> semi
+                               $$ printValue kind entry
+                               $$ text "printf(\"\\n\");"
+
+               displayArrayEntry arrayKind@(KArray keyKind valueKind)
+                 =  keySetup
+                 $$ text "printf" P.<> parens (printQuotes (text " " <+> (entrySpec P.<> text "[0] =")) P.<> comma <+> nctr) P.<> semi
+                 $$ printValue valueKind arrayValue
+                 $$ text "printf(\"\\n\");"
+                 $$ keyCleanup
+                where keyName    = "__sbv_array_key_" ++ n
+                      key        = text keyName
+                      keySetup   = driverValueInit keyKind keyName 0
+                      keyCleanup = driverValueClear keyKind keyName
+                      arrayValue  = text (arrayOutputReadName arrayKind)
+                                 P.<> parens (fsep (punctuate comma [entry, key]))
+               displayArrayEntry arrayKind = die $ "Expected an array return-group element, received " ++ show arrayKind
 
        displayArray stem label descriptor kind@(KArray keyKind valueKind)
          =  keySetup
@@ -931,6 +962,10 @@ genDriver cfg adts randVals fn inps outs mbRet
                                | (n, CgAtomic sv) <- outs
                                , isSet sv
                                ]
+                            ++ [outputArrayValueClear (kindOf sv) (n ++ "[" ++ show index ++ "]")
+                               | (n, CgArray svs) <- outs
+                               , (index, sv) <- zip [0 :: Int ..] svs
+                               ]
                returnCleanup = case mbRet of
                                  Just sv | isExactGMPKind cfg (kindOf sv)      -> [gmpDriverClear (kindOf sv) resultVar]
                                  Just sv | isArray sv                          -> [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> resultVar) P.<> semi]
@@ -947,6 +982,15 @@ genDriver cfg adts randVals fn inps outs mbRet
                releaseOwned helper externalName = text helper
                                                  P.<> parens (text "&" P.<> text externalName)
                                                  P.<> semi
+
+               outputArrayValueClear kind externalName
+                 | isArray kind    = text (arrayOutputReleaseName kind)
+                                  P.<> parens (text "&" P.<> text externalName)
+                                  P.<> semi
+                 | kind == KString = textRelease (text externalName)
+                 | isList kind     = listRelease kind (text externalName)
+                 | isSet kind      = setRelease kind (text externalName)
+                 | True            = driverValueClear kind externalName
 
 -- | Generate the C program
 genCProg :: CgConfig
@@ -1369,9 +1413,18 @@ genCProg cfg adts lists sets fn proto
          | True                                = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg consts sv P.<> semi | alive]
        genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
          where genElt sv i
-                 | isInp = declSV typeWidth sv <+> text "=" <+> inputValue entry sv P.<> semi
-                 | True  = text entry          <+> text "=" <+> showSV cfg consts sv P.<> semi
+                 | isInp                         = declSV typeWidth sv <+> text "=" <+> inputValue entry sv P.<> semi
+                 | isExactGMPKind cfg kind      = gmpSet kind (text entry) value P.<> semi
+                 | isArray kind                 = text entry <+> text "=" <+> text (arrayExportName kind) P.<> parens value P.<> semi
+                 | kind == KString              = text entry <+> text "=" <+> textClone value P.<> semi
+                 | isList kind                  = text entry <+> text "=" <+> listClone kind value P.<> semi
+                 | isSet kind                   = text entry <+> text "=" <+> setClone kind value P.<> semi
+                 | tupleNeedsOwnership cfg kind = text entry <+> text "=" <+> text (tupleOwnedCloneName kind) P.<> parens value P.<> semi
+                 | isOwnedADT cfg adts sv        = text entry <+> text "=" <+> text (adtOwnedCloneName kind) P.<> parens value P.<> semi
+                 | True                         = text entry <+> text "=" <+> value P.<> semi
                  where entry = cNm ++ "[" ++ show i ++ "]"
+                       kind  = kindOf sv
+                       value = showSV cfg consts sv
 
        inputValue cNm sv
          | isWideBV k = wideBVNormalize k (text cNm)

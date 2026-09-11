@@ -21,6 +21,8 @@ module Data.SBV.Compilers.C.GMP
   , gmpPrint
   , gmpSet
   , gmpOutputType
+  , gmpDriverArrayType
+  , gmpDriverInitialize
   , gmpDriverInit
   , gmpDriverClear
   , gmpContextStart
@@ -407,19 +409,31 @@ gmpOutputType KReal      = "mpq_ptr"
 gmpOutputType KRational  = "mpq_ptr"
 gmpOutputType k          = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
 
--- | Initialize a caller-owned GMP value from an integer-valued driver sample.
+-- | Return the mutable GMP storage type used for one element of a generated
+-- driver array.
+gmpDriverArrayType :: Kind -> String
+gmpDriverArrayType KUnbounded = "mpz_t"
+gmpDriverArrayType KReal      = "mpq_t"
+gmpDriverArrayType KRational  = "mpq_t"
+gmpDriverArrayType kind       = error $ "SBV->C: Expected an exact GMP kind, received " ++ show kind
+
+-- | Initialize already-declared caller-owned GMP storage from an
+-- integer-valued driver sample.
+gmpDriverInitialize :: Kind -> Doc -> Doc -> Doc
+gmpDriverInitialize KUnbounded storage value = namedCall "mpz_init_set_str" [storage, doubleQuotes value, text "10"] P.<> semi
+gmpDriverInitialize KReal      storage value = namedCall "mpq_init" [storage] P.<> semi
+                                             $$ namedCall "mpq_set_str" [storage, doubleQuotes value, text "10"] P.<> semi
+                                             $$ namedCall "mpq_canonicalize" [storage] P.<> semi
+gmpDriverInitialize KRational  storage value = namedCall "mpq_init" [storage] P.<> semi
+                                             $$ namedCall "mpq_set_str" [storage, doubleQuotes value, text "10"] P.<> semi
+                                             $$ namedCall "mpq_canonicalize" [storage] P.<> semi
+gmpDriverInitialize kind       _       _     = error $ "SBV->C: Expected an exact GMP kind, received " ++ show kind
+
+-- | Declare and initialize a caller-owned GMP value from an integer-valued
+-- driver sample.
 gmpDriverInit :: Kind -> Doc -> Doc -> Doc
-gmpDriverInit KUnbounded storage value = text "mpz_t" <+> storage P.<> semi
-                                      $$ namedCall "mpz_init_set_str" [storage, doubleQuotes value, text "10"] P.<> semi
-gmpDriverInit KReal      storage value = text "mpq_t" <+> storage P.<> semi
-                                      $$ namedCall "mpq_init" [storage] P.<> semi
-                                      $$ namedCall "mpq_set_str" [storage, doubleQuotes value, text "10"] P.<> semi
-                                      $$ namedCall "mpq_canonicalize" [storage] P.<> semi
-gmpDriverInit KRational  storage value = text "mpq_t" <+> storage P.<> semi
-                                      $$ namedCall "mpq_init" [storage] P.<> semi
-                                      $$ namedCall "mpq_set_str" [storage, doubleQuotes value, text "10"] P.<> semi
-                                      $$ namedCall "mpq_canonicalize" [storage] P.<> semi
-gmpDriverInit k          _       _     = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
+gmpDriverInit kind storage value = text (gmpDriverArrayType kind) <+> storage P.<> semi
+                                $$ gmpDriverInitialize kind storage value
 
 -- | Clear caller-owned GMP storage in a generated driver.
 gmpDriverClear :: Kind -> Doc -> Doc
