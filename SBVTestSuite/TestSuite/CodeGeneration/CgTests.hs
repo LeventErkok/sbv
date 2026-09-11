@@ -110,6 +110,9 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile exact symbolic rationals" exactSymbolicRationals
   , testCase "compile rationals with mapped integers" mappedIntegerRationals
   , testCase "compile divisibility with mapped integers" mappedIntegerDivisibility
+  , testCase "compile mapped real non-linear operations" mappedRealNonLinearOperations
+  , testCase "compile mapped integer exponentiation" mappedIntegerExponentiation
+  , testCase "reject non-linear exact real operations" exactRealNonLinearDiagnostic
   , testCase "compile repeated exact rationals into a library" exactRationalLibrary
   , testCase "compile and execute persistent arrays" persistentArrays
   , testCase "compile and execute nested persistent arrays" nestedPersistentArrays
@@ -933,6 +936,83 @@ mappedIntegerDivisibility = withSystemTempDirectory "sbv-mapped-integer-divisibi
   stdoutText <- compileProgramAndRunGenerated dir "mappedIntegerDivisibility" program
   assertBool ("Expected mapped integer divisibility to succeed, received:\n" ++ stdoutText)
              (") = 1" `isInfixOf` stdoutText)
+
+-- | Exercise every supported mapped-real transcendental operation across
+-- the @float@, @double@, and @long double@ C representations.
+mappedRealNonLinearOperations :: Assertion
+mappedRealNonLinearOperations = withSystemTempDirectory "sbv-mapped-real-non-linear" $ \dir -> do
+  let program realType = do
+        cgOverwriteFiles True
+        cgSRealType realType
+        cgSetDriverValues [0, 1, 2, 3, 4]
+        zeroValue  <- cgInput "zero"  :: SBVCodeGen SReal
+        oneValue   <- cgInput "one"   :: SBVCodeGen SReal
+        twoValue   <- cgInput "two"   :: SBVCodeGen SReal
+        threeValue <- cgInput "three" :: SBVCodeGen SReal
+        fourValue  <- cgInput "four"  :: SBVCodeGen SReal
+        cgReturn $ sin zeroValue  .== 0
+               .&& cos zeroValue  .== 1
+               .&& tan zeroValue  .== 0
+               .&& asin zeroValue .== 0
+               .&& acos oneValue  .== 0
+               .&& atan zeroValue .== 0
+               .&& sqrt fourValue .== 2
+               .&& sinh zeroValue .== 0
+               .&& cosh zeroValue .== 1
+               .&& tanh zeroValue .== 0
+               .&& exp zeroValue  .== 1
+               .&& log oneValue   .== 0
+               .&& twoValue ** threeValue .== 8
+
+      mappings = [("float", CgFloat), ("double", CgDouble), ("longDouble", CgLongDouble)]
+
+      runMapping (suffix, realType) = do
+        let executableName = "mappedRealNonLinear" ++ suffix
+        stdoutText <- compileProgramAndRunGenerated dir executableName (program realType)
+        assertBool ("Expected " ++ suffix ++ " non-linear operations to succeed, received:\n" ++ stdoutText)
+                   (") = 1" `isInfixOf` stdoutText)
+
+  mapM_ runMapping mappings
+
+-- | Exercise mapped integer exponentiation with modular overflow, negative
+-- exponents, signed units, and the @0 ** 0@ boundary.
+mappedIntegerExponentiation :: Assertion
+mappedIntegerExponentiation = withSystemTempDirectory "sbv-mapped-integer-exponentiation" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgIntegerSize 8
+        cgSetDriverValues [3, 5, -1, -3, 2, 0, 0]
+        base             <- cgInput "base"             :: SBVCodeGen SInteger
+        exponentValue    <- cgInput "exponent"         :: SBVCodeGen SInteger
+        negativeUnit     <- cgInput "negativeUnit"     :: SBVCodeGen SInteger
+        negativeExponent <- cgInput "negativeExponent" :: SBVCodeGen SInteger
+        positiveBase     <- cgInput "positiveBase"     :: SBVCodeGen SInteger
+        zeroBase         <- cgInput "zeroBase"         :: SBVCodeGen SInteger
+        zeroExponent     <- cgInput "zeroExponent"     :: SBVCodeGen SInteger
+        cgReturn $ base         .** exponentValue            .== -13
+               .&& negativeUnit .** negativeExponent         .== -1
+               .&& negativeUnit .** (negativeExponent + 1)   .== 1
+               .&& positiveBase .** negativeExponent         .== 0
+               .&& zeroBase     .** zeroExponent             .== 1
+
+  stdoutText <- compileProgramAndRunGenerated dir "mappedIntegerExponentiation" program
+  assertBool ("Expected mapped integer exponentiation to succeed, received:\n" ++ stdoutText)
+             (") = 1" `isInfixOf` stdoutText)
+
+-- | Check that transcendental operations over exact rational reals explain
+-- how to opt into an approximate native C representation.
+exactRealNonLinearDiagnostic :: Assertion
+exactRealNonLinearDiagnostic = do
+  result <- try (do
+    (_, _, bundle) <- compileToC' "exactRealNonLinear" $ do
+      value <- cgInput "value" :: SBVCodeGen SReal
+      cgReturn (sin value)
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+  case result of
+    Left exception -> assertBool ("Expected an exact-real non-linear diagnostic, received:\n" ++ displayException exception)
+                                 ("cannot represent sin" `isInfixOf` displayException exception
+                               && "cgSRealType" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected C generation to reject non-linear exact real arithmetic" False
 
 -- | Exercise guarded rational declarations and caller-owned rational returns
 -- across multiple generated library translation units.

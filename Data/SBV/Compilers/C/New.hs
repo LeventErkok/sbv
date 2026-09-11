@@ -44,6 +44,7 @@ import Data.SBV.Compilers.C.FP
 import Data.SBV.Compilers.C.GMP
 import Data.SBV.Compilers.C.List
 import Data.SBV.Compilers.C.Lowering
+import Data.SBV.Compilers.C.NonLinear
 import Data.SBV.Compilers.C.Set
 import Data.SBV.Compilers.C.Table
 import Data.SBV.Compilers.C.Text
@@ -1080,6 +1081,7 @@ genCProg cfg adts lists sets fn proto
              $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo allAssignments else empty)
              $$ (if requires CRequiresLibBF  then arbitraryFPRuntime cfg fpKinds allAssignments else empty)
              $$ (if requires CRequiresNativeFPRounding then nativeFPRuntime else empty)
+             $$ (if requires CRequiresIntegerPower     then mappedIntegerPowerRuntime cfg else empty)
              $$ (if requires CRequiresText             then textRuntime cfg usesExactInteger else empty)
              $$ adtEqualityRuntimeDecls adts
              $$ (if requires CRequiresLists            then listRuntimeDecls cfg lists else empty)
@@ -2013,6 +2015,7 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
           [ arrayExpr cfg op opArgs resultSV renderedArgs
           , tableExpr cfg (showSV cfg consts) op resultSV
           , setExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          , nonLinearExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , textExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , listExpr cfg op opArgs resultSV renderedArgs
           , adtExpr cfg adts op opArgs resultSV renderedArgs

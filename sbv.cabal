@@ -324,6 +324,7 @@ Library
                   , Data.SBV.Compilers.C.Legacy.Internal
                   , Data.SBV.Compilers.C.List
                   , Data.SBV.Compilers.C.Lowering
+                  , Data.SBV.Compilers.C.NonLinear
                   , Data.SBV.Compilers.C.New
                   , Data.SBV.Compilers.C.Set
                   , Data.SBV.Compilers.C.Table

@@ -43,6 +43,7 @@ import Data.SBV.Compilers.C.BV         (isWideBV)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.CodeGen      (CgConfig(..))
 import Data.SBV.Core.Data
+import Data.SBV.Core.Symbolic          (NROp(..))
 
 -- | Test whether a kind uses the exact GMP representation under this
 -- configuration. Supplying 'cgIntegerSize' or 'cgSRealType' selects the
@@ -174,6 +175,7 @@ gmpExpr cfg op svs resultKind args
       (Plus                 , [a, b]   , x:_) -> lower $ valueCall x "add" [a, b]
       (Minus                , [a, b]   , x:_) -> lower $ valueCall x "sub" [a, b]
       (Times                , [a, b]   , x:_) -> lower $ valueCall x "mul" [a, b]
+      (NonLinear NR_IntPow  , [a, b]   , x:_) -> lower $ valueCall x "pow" [a, b]
       (UNeg                 , [a]      , x:_) -> lower $ valueCall x "neg" [a]
       (Abs                  , [a]      , x:_) -> lower $ valueCall x "abs" [a]
       (Quot                 , [a, b]   , x:_) -> lower $ valueCall x "quot" [a, b]
@@ -562,6 +564,24 @@ integerRuntime =
      , ""
      , "static bool sbv_gmp_integer_divides(SInteger divisor, SInteger value)"
      , "{ return mpz_sgn(divisor) != 0 && mpz_divisible_p(value, divisor) != 0; }"
+     , ""
+     , "static SInteger sbv_gmp_integer_pow(sbv_gmp_ctx *ctx, SInteger base, SInteger exponent)"
+     , "{"
+     , "  mpz_ptr result = sbv_gmp_new_integer(ctx); mpz_t factor, power;"
+     , "  if (mpz_sgn(exponent) < 0) {"
+     , "    if (mpz_cmp_si(base, 1) == 0) mpz_set_ui(result, 1);"
+     , "    else if (mpz_cmp_si(base, -1) == 0) mpz_set_si(result, mpz_odd_p(exponent) ? -1 : 1);"
+     , "    else mpz_set_ui(result, 0);"
+     , "    return result;"
+     , "  }"
+     , "  mpz_set_ui(result, 1); mpz_init_set(factor, base); mpz_init_set(power, exponent);"
+     , "  while (mpz_sgn(power) != 0) {"
+     , "    if (mpz_odd_p(power)) mpz_mul(result, result, factor);"
+     , "    mpz_fdiv_q_2exp(power, power, 1);"
+     , "    if (mpz_sgn(power) != 0) mpz_mul(factor, factor, factor);"
+     , "  }"
+     , "  mpz_clear(power); mpz_clear(factor); return result;"
+     , "}"
      , ""
      , "static SInteger sbv_gmp_integer_shift(sbv_gmp_ctx *ctx, SInteger a, SInteger amount, bool left)"
      , "{"

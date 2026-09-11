@@ -37,6 +37,7 @@ data CRequirement = CRequiresGMP              -- ^ GMP-backed exact-number suppo
                   | CRequiresLists            -- ^ Typed symbolic-list support.
                   | CRequiresSets             -- ^ Finite/cofinite symbolic-set support.
                   | CRequiresFunctionResults  -- ^ Stable private storage for owned aggregate function results.
+                  | CRequiresIntegerPower     -- ^ Modular exponentiation for mapped unbounded integers.
                   deriving (Eq, Ord, Show)
 
 -- | Lifetime and ownership class of a lowered result.

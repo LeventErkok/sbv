@@ -52,6 +52,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   [ testCase "compile and execute unbounded arithmetic" exactIntegerArithmetic
   , testCase "compile and execute Euclidean division" exactIntegerDivision
   , testCase "compile and execute exact divisibility" exactIntegerDivisibility
+  , testCase "compile and execute exact integer exponentiation" exactIntegerExponentiation
   , testCase "compile and execute native conversions" exactNativeConversions
   , testCase "compile and execute wide conversions" exactWideConversions
   , testCase "compile and execute wide real conversions" exactWideRealConversions
@@ -121,6 +122,27 @@ exactIntegerDivisibility = withSystemTempDirectory "sbv-exact-integer-divisibili
                .&& sNot (sDivides divisor nonMultiple)
       divisor = 2 ^ (257 :: Int) + 93
   compileAndRunGMP dir "exactIntegerDivisibility" program ["= 1"]
+
+-- | Exercise symbolic exact integer exponentiation, including zero and
+-- negative exponents with the SMT-LIB integer-power semantics.
+exactIntegerExponentiation :: Assertion
+exactIntegerExponentiation = withSystemTempDirectory "sbv-exact-integer-exponentiation" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [2, 200, -1, -3, 0, 0]
+        base             <- cgInput "base"             :: SBVCodeGen SInteger
+        exponentValue    <- cgInput "exponent"         :: SBVCodeGen SInteger
+        negativeUnit     <- cgInput "negativeUnit"     :: SBVCodeGen SInteger
+        negativeExponent <- cgInput "negativeExponent" :: SBVCodeGen SInteger
+        zeroBase         <- cgInput "zeroBase"         :: SBVCodeGen SInteger
+        zeroExponent     <- cgInput "zeroExponent"     :: SBVCodeGen SInteger
+        cgReturn $ base         .** exponentValue            .== 2 ^ (200 :: Int)
+               .&& negativeUnit .** negativeExponent       .== -1
+               .&& negativeUnit .** (negativeExponent + 1) .== 1
+               .&& base         .** negativeExponent       .== 0
+               .&& zeroBase     .** negativeExponent       .== 0
+               .&& zeroBase     .** zeroExponent           .== 1
+  compileAndRunGMP dir "exactIntegerExponentiation" program ["= 1"]
 
 -- | Exercise exact conversions to and from native signed and unsigned words.
 exactNativeConversions :: Assertion
