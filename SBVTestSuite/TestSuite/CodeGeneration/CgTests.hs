@@ -25,6 +25,7 @@ import Data.List (isInfixOf)
 import Data.SBV.Internals
 import qualified Data.SBV.Char as SC
 import qualified Data.SBV.List as SL
+import qualified Data.SBV.RegExp as RE
 import qualified Data.SBV.Set as SS
 import Data.SBV.Tuple (tuple, untuple)
 import qualified Data.SBV.Tools.CodeGen.Legacy as PublicLegacy
@@ -136,6 +137,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "reject recursive defined SBV functions" recursiveDefinedSBVFunction
   , testCase "compile explicit hard constraints" explicitHardConstraints
   , testCase "reject solver-only constraint features" unsupportedConstraintFeatures
+  , testCase "reject solver-only expression operations" unsupportedExpressionFeatures
   , testCase "return a non-atomic value group" nonAtomicReturnGroup
   , testCase "return multiple value groups" multipleReturnGroups
   , testCase "return managed non-atomic value groups" managedReturnGroups
@@ -1708,6 +1710,31 @@ unsupportedConstraintFeatures = do
     Left exception -> assertBool ("Expected a constraint-attribute diagnostic, received:\n" ++ displayException exception)
                                  ("Constraint attributes: :weight" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected C generation to reject an SMT-only constraint attribute" False
+
+-- | Check that regular-expression membership and language equality receive
+-- focused solver-only diagnostics instead of reaching the generic renderer.
+unsupportedExpressionFeatures :: Assertion
+unsupportedExpressionFeatures = do
+  membershipResult <- try (do
+    (_, _, bundle) <- compileToC' "regularExpressionMembership" $ do
+      value <- cgInput "value" :: SBVCodeGen SString
+      cgReturn (value `RE.match` RE.exactly "abc")
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+  case membershipResult of
+    Left exception -> assertBool ("Expected a regular-expression membership diagnostic, received:\n" ++ displayException exception)
+                                 ("regular-expression membership" `isInfixOf` displayException exception
+                               && "solver-only semantics" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected C generation to reject regular-expression membership" False
+
+  equalityResult <- try (do
+    (_, _, bundle) <- compileToC' "regularExpressionEquality" $
+      cgReturn (RE.exactly "a" .== RE.exactly "a")
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+  case equalityResult of
+    Left exception -> assertBool ("Expected a regular-expression language-equality diagnostic, received:\n" ++ displayException exception)
+                                 ("regular-expression language equality" `isInfixOf` displayException exception
+                               && "solver-only semantics" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected C generation to reject regular-expression language equality" False
 
 -- | Exercise a sole 'cgReturnArr' group through the generated output-parameter
 -- ABI while preserving the return elements' declaration order.

@@ -2060,13 +2060,19 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
         hd w []    = error $ "Data.SBV.C.ppExpr: Impossible happened: " ++ w ++ ", received empty list!"
 
         p :: Op -> [Doc] -> Doc
-        p ReadArray{}       _  = tbd "User specified arrays (ReadArray)"
-        p WriteArray{}      _  = tbd "User specified arrays (WriteArray)"
-        p (Label s)        [a] = a <+> text "/*" <+> text s <+> text "*/"
-        p (IEEEFP w)         as = handleIEEE w  consts (zip opArgs as) var
-        p (PseudoBoolean pb) as = handlePB pb as
-        p OverflowOp{}      _   = die "Overflow operation escaped the exact bit-vector lowering pipeline"
-        p (KindCast _ to)   [a] = parens (text (showCType to)) <+> a
+        p ReadArray{}          _   = die "Array read escaped the persistent-array lowering pipeline"
+        p WriteArray{}         _   = die "Array write escaped the persistent-array lowering pipeline"
+        p ArrayInit{}          _   = die "Array initialization escaped the persistent-array lowering pipeline"
+        p QuantifiedBool{}     _   = solverOnly "quantified Boolean expressions"
+        p SpecialRelOp{}       _   = solverOnly "special relations"
+        p RegExOp{}            _   = solverOnly "regular-expression language equality"
+        p (StrOp StrInRe{})    _   = solverOnly "regular-expression membership"
+        p (Label s)           [a]  = a <+> text "/*" <+> text s <+> text "*/"
+        p (IEEEFP w)            as = handleIEEE w consts (zip opArgs as) var
+        p (PseudoBoolean pb)    as = handlePB pb as
+        p OverflowOp{}         _   = die "Overflow operation escaped the exact bit-vector lowering pipeline"
+        p NonLinear{}          _   = die "Non-linear operation escaped the dedicated lowering pipeline"
+        p (KindCast _ to)      [a]  = parens (text (showCType to)) <+> a
         p (Uninterpreted s) []
           | isJust (lookup s functionNames)
           = text "/* Defined function */" <+> text (functionName s) P.<> parens (text "&__sbv_function_ctx")
@@ -2074,13 +2080,15 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
           = text "/* Uninterpreted constant */" <+> text (functionName s)
         p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text (functionName s)
                                   P.<> parens (fsep (punctuate comma (functionArguments s as)))
-        p Extract{} _          = die "Bit-vector extraction escaped the exact bit-vector lowering pipeline"
-        p Join      _          = die "Bit-vector concatenation escaped the exact bit-vector lowering pipeline"
-        p Rol{} _              = die "Left rotation escaped the exact bit-vector lowering pipeline"
-        p Ror{} _              = die "Right rotation escaped the exact bit-vector lowering pipeline"
-        p Shl     [a, i]       = shift  True  (getShiftAmnt i opArgs) a -- The order of i/a being reversed here is
-        p Shr     [a, i]       = shift  False (getShiftAmnt i opArgs) a -- intentional and historical (from the days when Shl/Shr had a constant parameter.)
-        p Not [a]              = case kindOf (hd "Not" opArgs) of
+        p Extract{}       _      = die "Bit-vector extraction escaped the exact bit-vector lowering pipeline"
+        p Join            _      = die "Bit-vector concatenation escaped the exact bit-vector lowering pipeline"
+        p ZeroExtend{}    _      = die "Zero extension escaped the exact bit-vector lowering pipeline"
+        p SignExtend{}    _      = die "Sign extension escaped the exact bit-vector lowering pipeline"
+        p Rol{}           _      = die "Left rotation escaped the exact bit-vector lowering pipeline"
+        p Ror{}           _      = die "Right rotation escaped the exact bit-vector lowering pipeline"
+        p Shl          [a, i]    = shift  True  (getShiftAmnt i opArgs) a -- The order of i/a being reversed here is
+        p Shr          [a, i]    = shift  False (getShiftAmnt i opArgs) a -- intentional and historical (from the days when Shl/Shr had a constant parameter.)
+        p Not          [a]       = case kindOf (hd "Not" opArgs) of
                                    -- be careful about booleans, bitwise complement is not correct for them!
                                    KBool -> text "!" P.<> a
                                    _     -> text "~" P.<> a
@@ -2170,7 +2178,9 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
         p Implies [a, b] | kindOf (hd "Implies" opArgs) == KBool = parens (text "!" P.<> a <+> text "||" <+> b)
 
         p NotEqual xs = mkDistinct xs
-        p o args = die $ "Received operator " ++ show o ++ " applied to " ++ show args
+        p o args      = die $ "Received operator " ++ show o ++ " applied to " ++ show args
+
+        solverOnly feature = error $ "SBV->C: " ++ feature ++ " has solver-only semantics and cannot be compiled to executable C"
 
         mappedIntegerDivides divisor value
           | divisor > maximumMagnitude = parens (value <+> text "==" <+> text "0")

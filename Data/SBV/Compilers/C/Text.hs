@@ -204,7 +204,7 @@ textExpr cfg op svs resultKind args
       (StrOp StrFromCode         , [a]      ) -> lower $ fromCode a
       (StrOp StrStrToNat         , [a]      ) -> lowerNat a
       (StrOp StrNatToStr         , [a]      ) -> lower $ fromNat a
-      (StrOp StrInRe{}           , _        ) -> unsupported "regular-expression membership"
+      (StrOp StrInRe{}           , _        ) -> solverOnly "regular-expression membership"
       (TupleConstructor{}        , _        ) -> Nothing
       (TupleAccess{}             , _        ) -> Nothing
       _                                         -> unsupported (show op)
@@ -279,6 +279,8 @@ textExpr cfg op svs resultKind args
        unsupported what = error $ "SBV->C: text lowering does not yet support " ++ what
                                ++ " with argument kinds " ++ show (map kindOf svs)
                                ++ " and result kind " ++ show resultKind
+
+       solverOnly feature = error $ "SBV->C: " ++ feature ++ " has solver-only semantics and cannot be compiled to executable C"
 
 -- | Print a generated character or string value to standard output.
 textPrint :: Kind -> Doc -> Doc
