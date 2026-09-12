@@ -143,7 +143,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile recursive defined SBV functions" recursiveDefinedSBVFunctions
   , testCase "compile recursive defined SBV functions in a library" recursiveDefinedSBVFunctionLibrary
   , testCase "compile recursive persistent-array functions" recursivePersistentArrayFunctions
-  , testCase "reject recursive ADT construction" recursiveDefinedSBVFunctionDiagnostic
+  , testCase "compile recursive ADT functions" recursiveADTDefinedSBVFunctions
+  , testCase "compile recursive ADT functions in a library" recursiveADTDefinedSBVFunctionLibrary
   , testCase "compile explicit hard constraints" explicitHardConstraints
   , testCase "reject solver-only constraint features" unsupportedConstraintFeatures
   , testCase "reject solver-only expression operations" unsupportedExpressionFeatures
@@ -1964,22 +1965,89 @@ recursivePersistentArrayFunctions = withSystemTempDirectory "sbv-recursive-persi
              ("sbv_array_node_u8_u8 __sbv_array_s" `isInfixOf` sourceText
            && "sbv_array_stored_export_u8_u8(&__sbv_array_ctx" `isInfixOf` sourceText)
 
--- | Keep recursive ADT construction behind a focused diagnostic until its
--- automatic-storage lifetime can be reconstructed safely.
-recursiveDefinedSBVFunctionDiagnostic :: Assertion
-recursiveDefinedSBVFunctionDiagnostic = do
-  adtResult <- try (do
-    (_, _, bundle) <- compileToC' "recursiveADTFunction" $ do
-      input <- cgInput "input" :: SBVCodeGen SWord8
-      let build :: SWord8 -> SCodeGenTree
-          build = smtFunctionNoTermination "C recursive ADT function" $ \value ->
-                    ite (value .== 0) (sCGLeaf 0) (sCGNode (build (value - 1)) (sCGLeaf value))
-      cgReturn (build input)
-    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
-  case adtResult of
-    Left exception -> assertBool ("Expected a recursive-ADT function diagnostic, received:\n" ++ displayException exception)
-                                 ("Recursive ADTs in recursive defined function" `isInfixOf` displayException exception)
-    Right _        -> assertBool "Expected C generation to reject a recursive-ADT recursive function" False
+-- | Construct, traverse, and return a recursive ADT through private recursive
+-- functions after every child-producing C stack frame has unwound.
+recursiveADTDefinedSBVFunctions :: Assertion
+recursiveADTDefinedSBVFunctions = withSystemTempDirectory "sbv-recursive-adt-defined-functions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [3]
+        input <- cgInput "input" :: SBVCodeGen SWord8
+        let build :: SWord8 -> SCodeGenTree
+            build = smtFunctionNoTermination "C recursive ADT build" $ \value ->
+                      ite (value .== 0)
+                          (literal (CGNode (CGLeaf 4) (CGLeaf 5)))
+                          (sCGNode (build (value - 1)) (sCGLeaf value))
+
+            leftmost :: SCodeGenTree -> SWord8
+            leftmost = smtFunctionNoTermination "C recursive ADT leftmost" $ \tree ->
+                         ite (isCGLeaf tree)
+                             (getCGLeaf_1 tree)
+                             (leftmost (getCGNode_1 tree))
+
+            leafSum :: SCodeGenTree -> SWord16
+            leafSum = smtFunctionNoTermination "C recursive ADT leaf sum" $ \tree ->
+                        ite (isCGLeaf tree)
+                            (sFromIntegral (getCGLeaf_1 tree))
+                            (leafSum (getCGNode_1 tree) + leafSum (getCGNode_2 tree))
+
+            buildEven :: SWord8 -> SCodeGenEven
+            buildEven = smtFunctionNoTermination "C mutually recursive ADT even" $ \value ->
+                          ite (value .== 0)
+                              (sCGEvenEnd 0)
+                              (sCGEvenStep (buildOdd (value - 1)))
+
+            buildOdd :: SWord8 -> SCodeGenOdd
+            buildOdd = smtFunctionNoTermination "C mutually recursive ADT odd" $ sCGOddStep . buildEven
+
+            result = build input
+
+        cgOutput "leftmost" (leftmost result)
+        cgOutput "leafSum"  (leafSum result)
+        cgOutput "mutual"   (buildEven input)
+        cgReturn result
+
+  stdoutText <- compileProgramAndRunGenerated dir "recursiveADTDefinedSBVFunctions" program
+  sourceText <- readFile (dir </> "recursiveADTDefinedSBVFunctions.c")
+  mapM_ (\fragment -> assertBool ("Expected recursive-ADT function output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ ") =CGNode(CGNode(CGNode(CGNode(CGLeaf(4), CGLeaf(5)), CGLeaf(1)), CGLeaf(2)), CGLeaf(3))"
+    , "leftmost = 4"
+    , "leafSum = 0x000fU"
+    , "mutual =CGEvenStep(CGOddStep(CGEvenStep(CGOddStep(CGEvenStep(CGOddStep(CGEvenEnd(0)))))))"
+    ]
+  assertBool ("Expected recursive ADT fields to use function-scoped backing values, received:\n" ++ sourceText)
+             ("SBVADT_CodeGenTree __sbv_adt_recursive_" `isInfixOf` sourceText
+           && "sbv_function_result_clone_adt_" `isInfixOf` sourceText
+           && any (\line -> "const SBVADT_CodeGenTree l1_s" `isInfixOf` line
+                          && "= (SBVADT_CodeGenTree)" `isInfixOf` line)
+                  (lines sourceText))
+
+-- | Exercise private recursive ADT builders in independent translation units
+-- of a generated static library.
+recursiveADTDefinedSBVFunctionLibrary :: Assertion
+recursiveADTDefinedSBVFunctionLibrary = withSystemTempDirectory "sbv-recursive-adt-defined-function-library" $ \dir -> do
+  let component :: Word8 -> SBVCodeGen ()
+      component offset = do
+        cgOverwriteFiles True
+        let build :: SWord8 -> SCodeGenTree
+            build = smtFunctionNoTermination "C library recursive ADT build" $ \value ->
+                      ite (value .== 0)
+                          (sCGLeaf (literal offset))
+                          (sCGNode (build (value - 1)) (sCGLeaf (literal offset + value)))
+        cgReturn (build 2)
+
+  (_, cfg, bundle) <- compileToCLib' "recursiveADTDefinedSBVFunctionLibrary"
+    [ ("firstRecursiveADT", component 10)
+    , ("secondRecursiveADT", component 20)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "recursiveADTDefinedSBVFunctionLibrary"
+  mapM_ (\fragment -> assertBool ("Expected recursive-ADT library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ "firstRecursiveADT() =CGNode(CGNode(CGLeaf(10), CGLeaf(11)), CGLeaf(12))"
+    , "secondRecursiveADT() =CGNode(CGNode(CGLeaf(20), CGLeaf(21)), CGLeaf(22))"
+    ]
 
 -- | Exercise unnamed and named hard constraints as generated-C precondition
 -- checks, including a Boolean input used only by a constraint and an escaped

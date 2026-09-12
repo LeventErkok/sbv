@@ -60,7 +60,7 @@ import Data.SBV.Compilers.C.List       ( listClone
                                        , listNeedsDriverInit
                                        , listRelease
                                        )
-import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering   (CLowering(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.C.Set        ( setClone
                                        , setDriverClear
                                        , setDriverInit
@@ -740,7 +740,7 @@ adtExpr cfg adts op svs resultSV args
         | kind == resultKind
         , Just (constructorIndex, fieldKinds) <- findConstructor adts kind (T.unpack constructorName)
         , map kindOf fields == fieldKinds
-        -> lower resultKind $ adtValue adts kind constructorIndex (zipWith arrayStoredValue fieldKinds renderedFields)
+        -> lowerConstructor kind constructorIndex (zipWith arrayStoredValue fieldKinds renderedFields)
       (ADTOp (ADTTester testerName operationResultKind), [value], [renderedValue])
         | operationResultKind == resultKind
         , Just constructorIndex <- findTester adts (kindOf value) (T.unpack testerName)
@@ -788,6 +788,32 @@ adtExpr cfg adts op svs resultSV args
                 | isSet kind                                            = CFunctionScoped
                 | isArray kind                                          = CFunctionScoped
                 | True                                                  = CByValue
+
+       lowerConstructor kind constructorIndex renderedFields
+         | null recursiveFields
+         = lower kind (adtValue adts kind constructorIndex renderedFields)
+         | True
+         = Just CLowering
+             { loweringExpression   = adtValueWithStorage adts kind constructorIndex storeField renderedFields
+             , loweringDeclarations = [text (adtCType fieldKind) <+> text (backingName fieldIndex) P.<> semi
+                                      | (fieldIndex, fieldKind, _) <- recursiveFields
+                                      ]
+             , loweringSetup        = [text (backingName fieldIndex) <+> text "=" <+> field P.<> semi
+                                      | (fieldIndex, _, field) <- recursiveFields
+                                      ]
+             , loweringCleanup      = []
+             , loweringRequirements = Set.empty
+             , loweringStorage      = CFunctionScoped
+             }
+        where fieldInfo = snd (adtConstructorFields adts kind !! (constructorIndex - 1))
+              recursiveFields = [ (fieldIndex, fieldKind, field)
+                                | (fieldIndex, (ADTField fieldKind True, field)) <- zip [1 :: Int ..] (zip fieldInfo renderedFields)
+                                ]
+
+              backingName fieldIndex = "__sbv_adt_recursive_" ++ show resultSV ++ "_" ++ show fieldIndex
+
+              storeField fieldIndex _ True  _     = text "&" P.<> text (backingName fieldIndex)
+              storeField _          _ False field = field
 
 -- | Test whether an ADT contains an exact GMP-backed integer, real, or
 -- rational field.
@@ -1117,7 +1143,19 @@ adtForwardGuard kind = map toUpper (adtCType kind) ++ "_DECLARED"
 
 -- | Render a C99 tagged-union compound literal.
 adtValue :: [Kind] -> Kind -> Int -> [Doc] -> Doc
-adtValue adts kind constructorIndex fields
+adtValue adts kind constructorIndex = adtValueWithStorage adts kind constructorIndex storeField
+ where storeField _ fieldKind True field
+         = text "&"
+        P.<> parens (   parens (text (adtCType fieldKind) P.<> brackets (text "1"))
+                    P.<> braces field
+                   )
+        P.<> brackets (text "0")
+       storeField _ _ False field = field
+
+-- | Render a C99 tagged-union compound literal while allowing the caller to
+-- choose how each recursive pointer field receives its backing storage.
+adtValueWithStorage :: [Kind] -> Kind -> Int -> (Int -> Kind -> Bool -> Doc -> Doc) -> [Doc] -> Doc
+adtValueWithStorage adts kind constructorIndex storeField fields
   | constructorIndex < 1 || constructorIndex > length constructors
   = error $ "SBV->C: Invalid ADT constructor index " ++ show constructorIndex ++ " for " ++ show kind
   | length fields /= length expectedFields
@@ -1133,12 +1171,7 @@ adtValue adts kind constructorIndex fields
                                                                     P.<> text (adtConstructorMember constructorIndex)
                                                                     P.<> text "."
                                                                     P.<> text (adtFieldName fieldIndex)
-                                                                    <+> text "=" <+> storedField
-        where storedField
-                | recursive = text "&" P.<> parens (parens (text (adtCType fieldKind) P.<> brackets (text "1"))
-                                              P.<> braces field)
-                                      P.<> brackets (text "0")
-                | True      = field
+                                                                    <+> text "=" <+> storeField fieldIndex fieldKind recursive field
 
 -- | Return a total diagnostic name for an operation involving an ADT.
 adtOperationName :: Op -> String

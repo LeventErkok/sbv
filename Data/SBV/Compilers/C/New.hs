@@ -1747,8 +1747,6 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
   = die $ "Output-kind mismatch in defined function " ++ show originalName
   | not (null nestedLambdas)
   = tbd $ "Nested lambdas in defined function " ++ show originalName
-  | isRecursive && any recursiveADTKind expandedFunctionKinds
-  = tbd $ "Recursive ADTs in recursive defined function " ++ show originalName
   | not (null unsupportedManagedKinds)
   = tbd $ "Managed values in defined function " ++ show originalName ++ ": " ++ intercalate ", " (map show unsupportedManagedKinds)
   | True
@@ -1756,6 +1754,12 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
  where (parameterKinds, resultKind) = (init signatureKinds, last signatureKinds)
        assignments                  = F.toList functionProgram
        functionConsts               = (falseSV, falseCV) : (trueSV, trueCV) : constants
+       stabilizedConstantValues     = Set.fromList (map fst stabilizedConstants)
+       renderingConsts              = filter ((`Set.notMember` stabilizedConstantValues) . fst) functionConsts
+       stabilizedConstants          = [ (sv, cv)
+                                      | (sv, cv) <- constants
+                                      , isArray sv || definedFunctionResultNeedsClone cfg adts (kindOf sv)
+                                      ]
        functionValues               = functionOutput : map snd parameters ++ map fst assignments ++ map fst constants
        typeWidth                    = maximum (0 : map (length . showCType) functionValues)
        nestedLambdas                = [sv | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments]
@@ -1775,15 +1779,11 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          | isConcreteADTKind kind  = False
          | True                    = valueNeedsOwnership cfg kind
 
-       recursiveADTKind kind
-         | isConcreteADTKind kind = adtIsRecursive adts (resolveADTReferences adts kind)
-         | True                   = False
-
-       generatedTables = map (ppTable cfg False functionConsts) tables
+       generatedTables = map (ppTable cfg False renderingConsts) tables
 
        generatedAssignments = [(cLocation functionConsts sv, doc, needed)
                               | (sv, expression) <- assignments
-                              , let (doc, needed, _) = ppExpr cfg adts functionNames functionConsts expression sv
+                              , let (doc, needed, _) = ppExpr cfg adts functionNames renderingConsts expression sv
                                                             (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
                               ]
 
@@ -1851,6 +1851,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          = definedFunctionSignature originalName resultKind parameters
           $$ text "{"
           $$ nest 2 (   contextSetup
+                     $$ vcat [declSV typeWidth sv <+> text "=" <+> mkConst cfg cv P.<> semi | (sv, cv) <- stabilizedConstants]
                      $$ functionAssignments
                      $$ text "const" <+> text functionResultType <+> text "__sbv_function_result =" <+> functionResult P.<> semi
                      $$ contextCommit
@@ -1909,7 +1910,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
                                                                                                            (operationDependencies op arguments)
                       (withTable, tableDocs) = emitTable withArguments op
                       (assignmentDoc, assignmentRequirements, assignmentDeclarations) =
-                        ppExpr cfg adts functionNames functionConsts expression sv (text (show sv))
+                        ppExpr cfg adts functionNames renderingConsts expression sv (text (show sv))
                                (declSVNoConst typeWidth sv) False
                   in ( insertAvailableValue sv withTable
                      , argumentDocs $$ tableDocs $$ assignmentDoc
@@ -1933,7 +1934,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          | LkUp (tableIndex, _, _, _) _ _ <- op
          , tableIndex `Set.notMember` availableTables
          = case [table | table@((candidateIndex, _, _), _) <- tables, candidateIndex == tableIndex] of
-             [table] -> (insertAvailableTable tableIndex available, snd (ppTable cfg False functionConsts table))
+             [table] -> (insertAvailableTable tableIndex available, snd (ppTable cfg False renderingConsts table))
              _       -> die $ "Missing table while lowering recursive defined function " ++ show originalName
          | True
          = (available, empty)
@@ -1946,9 +1947,9 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
                                                 $$ text "{"
                                                 $$ nest 2 (branchDocs $$ assign branchValue)
                                                 $$ text "}"
-             assign value = text (show result) <+> text "=" <+> showSV cfg functionConsts value P.<> semi
+             assign value = text (show result) <+> text "=" <+> showSV cfg renderingConsts value P.<> semi
              docs = conditionDocs
-                 $$ text "if" P.<> parens (showSV cfg functionConsts condition)
+                 $$ text "if" P.<> parens (showSV cfg renderingConsts condition)
                  $$ branch "" trueDocs trueValue
                  $$ branch "else" falseDocs falseValue
              needed = Set.unions [conditionRequirements, trueRequirements, falseRequirements]
@@ -1977,11 +1978,11 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
 
        functionResult
          | isArray resultKind
-         = arrayStoredValue resultKind (showSV cfg functionConsts functionOutput)
+         = arrayStoredValue resultKind (showSV cfg renderingConsts functionOutput)
          | definedFunctionResultNeedsClone cfg adts resultKind
-         = definedFunctionResultClone resultKind (showSV cfg functionConsts functionOutput)
+         = definedFunctionResultClone resultKind (showSV cfg renderingConsts functionOutput)
          | True
-         = showSV cfg functionConsts functionOutput
+         = showSV cfg renderingConsts functionOutput
 
        functionResultType
          | isArray resultKind = CTypes.elementCType resultKind
