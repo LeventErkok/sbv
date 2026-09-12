@@ -54,6 +54,8 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute exact divisibility" exactIntegerDivisibility
   , testCase "compile and execute exact integer exponentiation" exactIntegerExponentiation
   , testCase "compile and execute native conversions" exactNativeConversions
+  , testCase "reduce exact integers into native bit patterns" exactNativeBitPatterns
+  , testCase "floor exact reals into mapped integers" exactRealMappedIntegers
   , testCase "compile and execute wide conversions" exactWideConversions
   , testCase "compile and execute wide real conversions" exactWideRealConversions
   , testCase "compile and execute rational arithmetic" exactRealArithmetic
@@ -163,6 +165,39 @@ exactNativeConversions = withSystemTempDirectory "sbv-exact-native-conversions" 
       minInt   = negate (2 ^ (63 :: Int))
       expected = 2 ^ (63 :: Int) - 1 :: Integer
   compileAndRunGMP dir "exactNativeConversions" program [show expected, "wrapped = 0x0000000000000000ULL", "asReal =-9223372036854775808"]
+
+-- | Narrowing an exact integer preserves low bits, including the one-bit
+-- representation. Signed results interpret those bits as two's complement.
+exactNativeBitPatterns :: Assertion
+exactNativeBitPatterns = mapM_ check [2, 3, -2, -129, 2 ^ (180 :: Int) + 32768]
+ where check sample = withSystemTempDirectory "sbv-exact-native-bits" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               cgSetDriverValues [sample]
+               value <- cgInput "value" :: SBVCodeGen SInteger
+               cgReturn $ sAnd
+                 [ (sFromIntegral value :: SWord 1) .== fromInteger sample
+                 , (sFromIntegral value :: SInt8)   .== fromInteger sample
+                 , (sFromIntegral value :: SInt16)  .== fromInteger sample
+                 , (sFromIntegral value :: SInt32)  .== fromInteger sample
+                 , (sFromIntegral value :: SInt64)  .== fromInteger sample
+                 ]
+         compileAndRunGMP dir "exactNativeBits" program ["= 1"]
+
+-- | Flooring a GMP real into a mapped integer first rounds exactly, then
+-- reduces modulo the requested width, even far outside the native range.
+exactRealMappedIntegers :: Assertion
+exactRealMappedIntegers = mapM_ check [(width, sample) | width <- [8, 16, 32, 64], sample <- [-huge, huge]]
+ where huge = 2 ^ (180 :: Int) + 5
+
+       check (width, sample) = withSystemTempDirectory "sbv-exact-real-mapped-integer" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               cgIntegerSize width
+               cgSetDriverValues [sample]
+               value <- cgInput "value" :: SBVCodeGen SReal
+               cgReturn (sRealToSIntegerFloor (value / 3) .== fromInteger (sample `div` 3))
+         compileAndRunGMP dir "exactRealMappedInteger" program ["= 1"]
 
 -- | Exercise signed and unsigned conversions between GMP integers and
 -- limb-backed bit-vectors in both directions.

@@ -39,7 +39,7 @@ import Numeric                         (showHex)
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
-import Data.SBV.Compilers.C.BV         (isWideBV)
+import Data.SBV.Compilers.C.BV         (isWideBV, mappedIntegerKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
 import Data.SBV.Compilers.CodeGen      (CgConfig(..))
 import Data.SBV.Core.Data
@@ -126,6 +126,7 @@ gmpRuntime cfg kinds assignments
    ++ concat [realRuntime     | needsExactQuotient]
    ++ concat [rationalRuntime cfg | needsRational]
    ++ concat [crossRuntime    | needsExactInteger && needsExactQuotient]
+   ++ concatMap nativeGMPResultRuntime (nativeGMPResultKinds cfg assignments)
    ++ concat [concatMap wideIntegerRuntime conversions | needsExactInteger]
    ++ concat [concatMap wideQuotientRuntime quotientConversions | needsExactQuotient]
  where needsExactInteger   = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kinds
@@ -240,7 +241,9 @@ gmpExpr cfg op svs resultKind args
            else lower $ namedCall "sbv_gmp_real_from_s64"
                                   [text "&__sbv_gmp_ctx", parens (text "int64_t") <+> a]
          | fr == KReal && to == KUnbounded
-         = lower $ namedCall "sbv_gmp_integer_from_real" [text "&__sbv_gmp_ctx", a]
+         = if isExactGMPKind cfg to
+           then lower $ namedCall "sbv_gmp_integer_from_real" [text "&__sbv_gmp_ctx", a]
+           else lower $ nativeResult to (namedCall "sbv_gmp_real_low_u64" [a])
          | isWideBV fr && to `elem` [KReal, KRational]
          = lowerWith [CRequiresGMP, CRequiresWideBV] $ namedCall (quotientFromWideName fr) [text "&__sbv_gmp_ctx", a]
          | isWideBV fr && to == KUnbounded
@@ -250,21 +253,57 @@ gmpExpr cfg op svs resultKind args
          | isBounded fr && intSizeOf fr <= 64 && to == KUnbounded
          = lower $ namedCall (if hasSign fr then "sbv_gmp_integer_from_s64" else "sbv_gmp_integer_from_u64")
                              [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
-         | fr == KUnbounded && isBounded to && intSizeOf to <= 64
-         = lower $ parens (text (boundedCType to)) <+> namedCall "sbv_gmp_integer_low_u64" [a]
+         | fr == KUnbounded && isBounded to && not (isWideBV to)
+         = lower $ nativeResult to (namedCall "sbv_gmp_integer_low_u64" [a])
          | isBounded fr && intSizeOf fr <= 64 && to `elem` [KReal, KRational]
          = lower $ namedCall (if hasSign fr then "sbv_gmp_real_from_s64" else "sbv_gmp_real_from_u64")
                              [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
-         | fr == KReal && isBounded to && intSizeOf to <= 64
-         = lower $ parens (text (boundedCType to)) <+> namedCall "sbv_gmp_real_low_u64" [a]
+         | fr == KReal && isBounded to && not (isWideBV to)
+         = lower $ nativeResult to (namedCall "sbv_gmp_real_low_u64" [a])
          | otherwise
          = unsupportedCast fr to
+
+       nativeResult to value = namedCall (nativeGMPResultName (mappedIntegerKind (cgInteger cfg) to)) [value]
 
        unsupported = error $ "SBV->C: exact GMP lowering does not yet support " ++ show op
                           ++ " with argument kinds " ++ show (map kindOf svs)
                           ++ " and result kind " ++ show resultKind
 
        unsupportedCast fr to = error $ "SBV->C: exact GMP lowering does not yet support a cast from " ++ show fr ++ " to " ++ show to
+
+-- | Discover native result representations for exact GMP casts. Explicitly
+-- mapped integers use the same low-bit conversion as signed bit-vectors.
+nativeGMPResultKinds :: CgConfig -> [(SV, SBVExpr)] -> [Kind]
+nativeGMPResultKinds cfg = nub . concatMap resultKind
+ where resultKind (_, SBVApp (KindCast fr to) _)
+         | isExactGMPKind cfg fr
+         , let target = mappedIntegerKind (cgInteger cfg) to
+         , isBounded target
+         , not (isWideBV target) = [target]
+       resultKind _ = []
+
+-- | Name a helper that interprets low integer bits in a native representation.
+nativeGMPResultName :: Kind -> String
+nativeGMPResultName kind = "sbv_gmp_low_bits_" ++ boundedTag kind
+
+-- | Convert reduced unsigned bits without implementation-defined signed
+-- narrowing or C's nonzero-to-Boolean conversion. A one-bit vector uses bit 0.
+nativeGMPResultRuntime :: Kind -> [String]
+nativeGMPResultRuntime kind =
+  [ "static " ++ boundedCType kind ++ " " ++ nativeGMPResultName kind ++ "(uint64_t value)"
+  , "{"
+  ]
+  ++ result
+  ++ ["}", ""]
+ where result
+         | kind == KBounded False 1
+         = ["  return (value & UINT64_C(1)) != 0;"]
+         | hasSign kind
+         = [ "  const SWord" ++ show (intSizeOf kind) ++ " bits = (SWord" ++ show (intSizeOf kind) ++ ") value;"
+           , "  " ++ boundedCType kind ++ " result; memcpy(&result, &bits, sizeof result); return result;"
+           ]
+         | True
+         = ["  return (" ++ boundedCType kind ++ ") value;"]
 
 -- | A generated conversion between a limb-backed bit-vector and an exact GMP
 -- integer.

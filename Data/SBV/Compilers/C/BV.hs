@@ -19,6 +19,7 @@ module Data.SBV.Compilers.C.BV
   , wideBVConst
   , wideBVExpr
   , nativeBVExpr
+  , mappedIntegerKind
   , nativeBVOverflowExpr
   , wideBVLookupInRange
   , wideBVLookupIndex
@@ -142,7 +143,7 @@ bitVectorRuntime integerWidth ks asgns
 
        nativeArithmetic args arith = case args of
          source : _
-           | let kind = nativeArithmeticKind integerWidth (kindOf source)
+           | let kind = mappedIntegerKind integerWidth (kindOf source)
            , isNativeBVKind kind -> [SpecialArithmetic (integerArithmetic (kindOf source) arith) kind]
          _                        -> []
 
@@ -281,7 +282,7 @@ nativeBVExpr integerWidth op svs resultKind args = case (op, svs, args) of
   _ -> Nothing
  where lower = Just . expressionLowering CByValue []
 
-       arithmeticKind = nativeArithmeticKind integerWidth resultKind
+       arithmeticKind = mappedIntegerKind integerWidth resultKind
 
        nativeUnary source = isNativeBVKind arithmeticKind && kindOf source == resultKind
 
@@ -289,11 +290,11 @@ nativeBVExpr integerWidth op svs resultKind args = case (op, svs, args) of
 
        arithmetic arith = lower . namedCall (prefix arithmeticKind ++ "_" ++ arithmeticSuffix (integerArithmetic resultKind arith))
 
--- | Select the scalar representation used for arithmetic without changing the
--- symbolic graph or treating mapped integers as bit-vectors for other operations.
-nativeArithmeticKind :: Maybe Int -> Kind -> Kind
-nativeArithmeticKind (Just bits) KUnbounded = KBounded True bits
-nativeArithmeticKind _           kind       = kind
+-- | Select the integer representation used by arithmetic and conversion
+-- helpers without changing the symbolic graph or its operation semantics.
+mappedIntegerKind :: Maybe Int -> Kind -> Kind
+mappedIntegerKind (Just bits) KUnbounded = KBounded True bits
+mappedIntegerKind _           kind       = kind
 
 -- | Integer division in the symbolic graph is Euclidean, even when a native
 -- representation is selected. Bit-vector division remains truncating.
