@@ -115,6 +115,27 @@ their storage for the call; owned outputs must be released with the appropriate
 generated helper. Escaping callback contexts additionally require retain and
 release callbacks. See each generated header for its representation contract.
 
+=== Floating-point calling convention
+
+Callers must enter generated code with the hardware rounding mode set to
+round-to-nearest, ties-to-even: @FE_TONEAREST@ from @<fenv.h>@. This requirement
+applies to standalone generated functions and library entry points. Callbacks
+and supplied C implementations must preserve this mode, or restore it before
+returning to or re-entering generated code.
+
+Generated code does not check, save, change, or restore the hardware rounding
+mode. Violating this precondition is unsupported and need not produce a
+diagnostic. Ordinary 'Data.SBV.SFloat' and 'Data.SBV.SDouble' RNE arithmetic
+therefore stays native, without a rounding-mode guard or a LibBF fallback.
+Explicit non-RNE and symbolic SBV rounding modes still use the rounding-aware
+adapters; they do not require the caller to change the hardware mode. The
+conversion bridges' independence from hardware rounding does not relax the
+entry-point precondition.
+
+Compile generated code with settings that preserve IEEE floating-point
+semantics; this precondition does not permit fast-math transformations that
+discard NaNs, signed zeros, or required rounding steps.
+
 === Calling and owning generated values
 
 Input storage, including reachable aggregate fields and callback contexts, must

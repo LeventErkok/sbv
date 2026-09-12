@@ -41,6 +41,9 @@
     Native floating casts use the rounding-aware LibBF bridge even for round-to-nearest,
     independently of the caller's rounding mode, without changing the native C ABI;
     provably exact native conversions retain direct C casts.
+    Generated C requires callers and callbacks to preserve FE_TONEAREST hardware rounding.
+    This documented, unchecked precondition keeps ordinary native RNE arithmetic free of
+    rounding-mode guards and LibBF fallbacks; explicit SBV rounding modes remain supported.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

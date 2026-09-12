@@ -353,6 +353,9 @@ nativeFloatWidthConversions = withSystemTempDirectory "sbv-native-float-width-co
 -- | A separately compiled caller changes the hardware rounding mode around
 -- explicitly rounded casts. Check halfway values at native and non-native
 -- bit widths, large signed/unsigned integers, and binary64-to-binary32 narrowing.
+-- This deliberately tests a stronger property of the conversion bridges than
+-- the public FE_TONEAREST entry-point precondition; it is not a supported
+-- calling convention for general generated arithmetic.
 nativeFloatCastEnvironment :: Assertion
 nativeFloatCastEnvironment = withSystemTempDirectory "sbv-native-float-cast-environment" $ \dir -> do
   let program = do

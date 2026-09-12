@@ -2607,6 +2607,12 @@ SBool d_FP_IsPositive(const SDouble sbv_input_0)
 #include <string.h>
 #include <math.h>
 
+/* Floating-point calling convention:
+ * Enter generated code in FE_TONEAREST (round-to-nearest, ties-to-even).
+ * Callbacks must preserve this mode before returning or re-entering.
+ * Generated code does not check or change the hardware rounding mode.
+ */
+
 /* The boolean type */
 typedef bool SBool;
 

@@ -414,8 +414,9 @@ nativeFPRuntime = text . unlines . map markUnused $
          , ""]
 
 -- | Lower explicitly rounded native floating-point arithmetic. RNE remains a
--- direct native C operation; other constants and symbolic modes use LibBF so
--- all five SBV rounding modes have deterministic semantics.
+-- direct native C operation under the public FE_TONEAREST calling convention;
+-- other constants and symbolic modes use LibBF without changing hardware
+-- rounding. The caller precondition is not checked at runtime.
 nativeFPExpr :: [(SV, CV)] -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 nativeFPExpr consts (IEEEFP fpOp) svs resultKind args
   | resultKind `elem` [KFloat, KDouble]

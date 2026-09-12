@@ -1489,7 +1489,8 @@ exactRationalLibrary = withSystemTempDirectory "sbv-exact-rational-library" $ \d
              (") =2" `isInfixOf` stdoutText && ") =3" `isInfixOf` stdoutText)
 
 -- | Check that ABI kinds and scalar operations contribute the exact external
--- runtime dependencies needed by their generated C bundles.
+-- runtime dependencies needed by their generated C bundles. The documented
+-- RNE precondition must not introduce hardware-mode guards or LibBF fallbacks.
 dependencyRequirements :: Assertion
 dependencyRequirements = do
   (_, _, wideBundle) <- compileToC' "requirementsWide" $ do
@@ -1516,12 +1517,24 @@ dependencyRequirements = do
     value <- cgInput "value" :: SBVCodeGen SFloat
     cgReturn (fpSqrt sRoundNearestTiesToAway value)
 
+  (_, _, nativeLibraryBundle) <- compileToCLib' "requirementsNativeLibrary"
+    [("addOne", do value <- cgInput "value" :: SBVCodeGen SFloat
+                   cgReturn (fpAdd sRNE value 1))]
+
   assertEqual "wide bit-vectors should not add an external library" [[]]              (linkerFlags wideBundle)
   assertEqual "arbitrary floats should request LibBF and libm"       [["-lbf", "-lm"]] (linkerFlags fpBundle)
   assertEqual "exact integers should request GMP"                    [["-lgmp"]]        (linkerFlags integerBundle)
   assertEqual "exact rationals should request GMP"                   [["-lgmp"]]        (linkerFlags rationalBundle)
   assertEqual "native floating-point sqrt should request libm"       [["-lm"]]          (linkerFlags nativeFloatBundle)
   assertEqual "explicit native rounding should request LibBF and libm" [["-lbf", "-lm"]] (linkerFlags roundedNativeFloatBundle)
+  assertEqual "native RNE arithmetic should not add an external library" [[]] (linkerFlags nativeLibraryBundle)
+  let checkConvention bundle = do
+        let rendered = show bundle
+        assertBool "Generated header must document the RNE calling convention"
+                   ("Enter generated code in FE_TONEAREST" `isInfixOf` rendered)
+        assertBool "The RNE precondition must not add runtime mode checks or changes"
+                   (not (any (`isInfixOf` rendered) ["fegetround(", "fesetround("]))
+  mapM_ checkConvention [nativeFloatBundle, nativeLibraryBundle]
 
 -- | Exercise symbolic constant initialization, immutable writes, reads, and
 -- an array-valued conditional without exposing arrays at the public C ABI.

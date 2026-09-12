@@ -81,6 +81,8 @@ import GHC.Stack
 -- Detected runtime failures in the generated code terminate the calling process;
 -- there is no recoverable error-return interface. See the runtime contract in
 -- "Data.SBV.Tools.CodeGen".
+-- Callers must enter generated code in @FE_TONEAREST@ hardware rounding mode;
+-- generated code does not check or change that mode.
 compileToC :: Maybe FilePath -> String -> SBVCodeGen a -> IO a
 compileToC mbDirName nm f = do (retVal, cfg, bundle) <- compileToC' nm f
                                renderCgPgmBundle mbDirName (cfg, bundle)
@@ -571,6 +573,12 @@ genHeader (ik, rk) fn sigs protos extraTypes =
   $$ text "#include <stdbool.h>"
   $$ text "#include <string.h>"
   $$ text "#include <math.h>"
+  $$ text ""
+  $$ text "/* Floating-point calling convention:"
+  $$ text " * Enter generated code in FE_TONEAREST (round-to-nearest, ties-to-even)."
+  $$ text " * Callbacks must preserve this mode before returning or re-entering."
+  $$ text " * Generated code does not check or change the hardware rounding mode."
+  $$ text " */"
   $$ text ""
   $$ text "/* The boolean type */"
   $$ text "typedef bool SBool;"
