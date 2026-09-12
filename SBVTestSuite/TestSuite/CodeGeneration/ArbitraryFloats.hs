@@ -16,10 +16,11 @@
 
 module TestSuite.CodeGeneration.ArbitraryFloats (tests) where
 
-import Control.Exception         (IOException, catch)
+import Control.Exception         (ErrorCall, IOException, catch, displayException, try)
 import Data.List                 (isInfixOf, isPrefixOf, isSuffixOf)
 import Numeric                   (showHex)
 import System.Directory          (doesDirectoryExist, doesFileExist, listDirectory)
+import System.Environment        (lookupEnv)
 import System.Exit               (ExitCode(..))
 import System.FilePath           ((</>), takeDirectory)
 import System.IO.Temp            (withSystemTempDirectory)
@@ -45,6 +46,9 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "convert between native floats and bit-vectors" nativeFloatBitVectorConversions
   , testCase "convert native floats across non-native widths" nativeFloatWidthConversions
   , testCase "convert between native floats and exact numbers" nativeFloatExactConversions
+  , testCase "convert mapped integers with explicit float rounding" mappedIntegerFloatConversions
+  , testCase "convert mapped reals across numeric representations" mappedRealConversions
+  , testCase "reject unsupported long-double numeric bridges before rendering" longDoubleNumericBoundaries
   , testCase "compile and execute special arithmetic" arbitraryFloatSpecialArithmetic
   , testCase "compile and execute arbitrary-float table lookup" arbitraryFloatTableLookup
   , testCase "preserve arbitrary floating-point array-key equality" arbitraryFloatArrayKeys
@@ -377,6 +381,88 @@ nativeFloatExactConversions = withSystemTempDirectory "sbv-native-float-exact" $
                .&& exactRational .== 3 / 2
   compileAndRunLibBFGMP dir "nativeFloatExactConversions" program "= 1"
 
+-- | Mapped integer casts must use the selected width in both directions while
+-- preserving every explicit rounding mode, including halfway negative values.
+mappedIntegerFloatConversions :: Assertion
+mappedIntegerFloatConversions = mapM_ check [(width, exposeChecks, arbitraryResult) | width <- [8, 16, 32, 64], exposeChecks <- [True, False], arbitraryResult <- [False, True]]
+ where check (width, exposeChecks, arbitraryResult) = withSystemTempDirectory "sbv-mapped-integer-float" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               cgIntegerSize width
+               cgSetDriverValues [sample, -5, 65539]
+               value <- cgInput "value" :: SBVCodeGen SInteger
+               five  <- cgInput "five"  :: SBVCodeGen SDouble
+               large <- cgInput "large" :: SBVCodeGen SDouble
+               let fraction = fpDiv sRNE five 2
+                   half rm = toSFloatingPoint rm value :: SFPHalf
+                   halfFraction = fpDiv sRNE (toSFloatingPoint sRNE five :: SFPHalf) 2
+                   reference rm
+                     | width == 8 = 5
+                     | True       = ite (rm .== sRNA .|| rm .== sRTP) 2050 2048 :: SFPHalf
+                   checks (rm, expected) =
+                     [ sFloatingPointAsSWord (half rm) .== sFloatingPointAsSWord (reference rm)
+                     , (fromSDouble rm fraction :: SInteger) .== expected
+                     , toSDouble rm value .== fromInteger sample
+                     ]
+                     ++ [(fromSFloatingPoint rm halfFraction :: SInteger) .== expected | arbitraryResult]
+                   allChecks = ((fromSDouble sRNE large :: SInteger) .== 65539)
+                             : concatMap checks [(sRNE, -2), (sRNA, -3), (sRTP, -2), (sRTN, -3), (sRTZ, -2)]
+               if exposeChecks
+                  then do cgOutputArr "checks" allChecks
+                          cgOutputArr "actual" (map (sFloatingPointAsSWord . half) [sRNE, sRNA, sRTP, sRTN, sRTZ])
+                          cgOutputArr "expected" (map (sFloatingPointAsSWord . reference) [sRNE, sRNA, sRTP, sRTN, sRTZ])
+                  else pure ()
+               cgReturn (sAnd allChecks)
+             sample = if width == 8 then 5 else 2049
+         compileAndRunLibBF dir "mappedIntegerFloat" program ") = 1"
+
+-- | Native real mappings still require representation-aware conversion:
+-- exact integers round to the selected real format, real-to-integer casts
+-- floor, and explicit floating casts honor their requested rounding mode.
+mappedRealConversions :: Assertion
+mappedRealConversions = mapM_ check [(realType, mappedInteger) | realType <- [CgFloat, CgDouble], mappedInteger <- [False, True]]
+ where check (realType, mappedInteger) = withSystemTempDirectory "sbv-mapped-real-conversions" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               cgSRealType realType
+               if mappedInteger then cgIntegerSize 32 else pure ()
+               cgSetDriverValues [16777217, -5, 7]
+               value <- cgInput "value" :: SBVCodeGen SInteger
+               real  <- cgInput "real"  :: SBVCodeGen SReal
+               seven <- cgInput "seven" :: SBVCodeGen SFPHalf
+               let expected = case realType of
+                                CgFloat -> 16777216
+                                _       -> 16777217
+                   half = toSFloatingPoint sRTP real :: SFPHalf
+               cgReturn $ (sFromIntegral value :: SReal) .== expected
+                      .&& sRealToSIntegerFloor (real / 2) .== -3
+                      .&& (fromSFloatingPoint sRNE seven :: SReal) .== 7
+                      .&& half .== -5
+                      .&& toSDouble sRNE real .== -5
+         compileAndRunLibBFGMP dir "mappedRealConversions" program "= 1"
+
+-- | Long double retains its native ABI, but cannot be silently treated as an
+-- IEEE binary64 value when crossing an exact or arbitrary-float boundary.
+longDoubleNumericBoundaries :: Assertion
+longDoubleNumericBoundaries = mapM_ check
+  [ do value <- cgInput "value" :: SBVCodeGen SInteger
+       cgReturn (sFromIntegral value :: SReal)
+  , do value <- cgInput "value" :: SBVCodeGen SReal
+       cgReturn (sRealToSIntegerFloor value)
+  , do value <- cgInput "value" :: SBVCodeGen SFPHalf
+       cgReturn (fromSFloatingPoint sRNE value :: SReal)
+  , do value <- cgInput "value" :: SBVCodeGen SReal
+       cgReturn (toSFloatingPoint sRNE value :: SFPHalf)
+  ]
+ where check program = withSystemTempDirectory "sbv-long-double-boundary" $ \dir -> do
+         result <- try (D.compileToC (Just dir) "longDoubleBoundary" $ do
+                          cgSRealType CgLongDouble
+                          program) :: IO (Either ErrorCall ())
+         case result of
+           Left exception -> assertBool (displayException exception) ("CgLongDouble" `isInfixOf` displayException exception)
+           Right _        -> assertBool "Expected an unsupported long-double bridge diagnostic" False
+         assertEqual "Unsupported bridges must not write files" [] =<< listDirectory dir
+
 -- | Exercise LibBF encoding of subnormal results, NaN, and signed zero.
 arbitraryFloatSpecialArithmetic :: Assertion
 arbitraryFloatSpecialArithmetic = withSystemTempDirectory "sbv-arbitrary-float-special" $ \dir -> do
@@ -661,6 +747,7 @@ compileAndRunLibBFGMP dir functionName program expected = do
   compileAndRunWith (["-I" ++ includeDir, archive, "-lm"] ++ words pkgOutput) dir functionName program expected
 
 -- | Generate, compile, and execute C with additional compiler/linker options.
+-- @SBV_C_TEST_FLAGS@ supplies extra flags for optimization and sanitizer runs.
 compileAndRunWith :: [String] -> FilePath -> String -> SBVCodeGen () -> String -> Assertion
 compileAndRunWith ccOptions dir functionName program expected = do
   (_, cfg, bundle) <- compileToC' functionName program
@@ -669,7 +756,8 @@ compileAndRunWith ccOptions dir functionName program expected = do
   let source = dir </> functionName ++ ".c"
       driver = dir </> functionName ++ "_driver.c"
       exe    = dir </> functionName ++ "_driver"
-  (ccExit, _, ccErr) <- readProcessWithExitCode "cc" (["-std=c11", "-Wall", "-Werror", source, driver, "-o", exe] ++ ccOptions) ""
+  extraFlags <- maybe [] words <$> lookupEnv "SBV_C_TEST_FLAGS"
+  (ccExit, _, ccErr) <- readProcessWithExitCode "cc" (["-std=c11", "-Wall", "-Werror", source, driver, "-o", exe] ++ extraFlags ++ ccOptions) ""
   assertEqual ccErr ExitSuccess ccExit
 
   (runExit, out, runErr) <- readProcessWithExitCode exe [] ""

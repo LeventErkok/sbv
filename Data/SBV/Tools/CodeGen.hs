@@ -170,6 +170,14 @@ transcendental values. Select 'cgSRealType' for native approximations and
 @libm@ transcendental operations when rounding is acceptable. The fixed-size
 input/output/return group APIs require at least one element; symbolic lists
 can be empty.
+
+Numeric conversions honor 'cgIntegerSize' and the @CgFloat@/@CgDouble@ real
+mappings. Converting a mapped real to an integer still floors; explicitly
+rounded floating casts retain their requested rounding mode. @CgLongDouble@
+retains native arithmetic and native floating casts, but bridges to exact GMP
+numbers or arbitrary floating-point formats are rejected during generation.
+They require a representation-aware long-double conversion, not narrowing
+through binary64.
 -}
 
 {- $unboundedCGen

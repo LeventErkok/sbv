@@ -33,6 +33,9 @@
     outputs, and documents borrowed array reads, callback lifetimes, and non-overlapping output storage.
     Exact-to-native integer conversions preserve low bits, including one-bit results, and exact-real
     flooring supports explicitly mapped integers without intermediate native overflow.
+    Floating conversions honor mapped integer widths and float/double real mappings, including
+    explicit rounding and flooring back to integers. Unsupported long-double GMP/LibBF bridges
+    fail during generation; native long-double arithmetic and native casts remain available.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

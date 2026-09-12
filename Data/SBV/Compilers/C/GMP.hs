@@ -41,7 +41,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.BV         (isWideBV, mappedIntegerKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
-import Data.SBV.Compilers.CodeGen      (CgConfig(..))
+import Data.SBV.Compilers.CodeGen      (CgConfig(..), CgSRealType(..))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic          (NROp(..))
 
@@ -164,6 +164,14 @@ gmpExpr cfg op svs resultKind args
   | not (isExactGMPKind cfg resultKind || any (isExactGMPKind cfg . kindOf) svs)
   = Nothing
   | IEEEFP{} <- op
+  = Nothing
+  | KindCast fr to <- op
+  , Just CgLongDouble <- cgReal cfg
+  , KReal `elem` [fr, to]
+  = error "SBV->C: Exact numeric conversions involving cgSRealType CgLongDouble are not yet supported; use CgFloat, CgDouble, or exact GMP reals."
+  | KindCast fr to <- op
+  , Just{} <- cgReal cfg
+  , KReal `elem` [fr, to]
   = Nothing
   | LkUp{} <- op
   = Nothing
