@@ -59,7 +59,7 @@ import Data.SBV.Compilers.C.List       ( listClone
                                        , listNeedsDriverInit
                                        , listRelease
                                        )
-import Data.SBV.Compilers.C.Lowering   (CLowering(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering   (CLowering(..), expressionLowering)
 import Data.SBV.Compilers.C.Set        ( setClone
                                        , setDriverClear
                                        , setDriverInit
@@ -743,7 +743,7 @@ adtExpr cfg adts op svs resultSV args
       (ADTOp (ADTTester testerName operationResultKind), [value], [renderedValue])
         | operationResultKind == resultKind
         , Just constructorIndex <- findTester adts (kindOf value) (T.unpack testerName)
-        -> lower resultKind $ adtTag renderedValue <+> text "==" <+> text (adtTagName (kindOf value) constructorIndex)
+        -> lower $ adtTag renderedValue <+> text "==" <+> text (adtTagName (kindOf value) constructorIndex)
       -- The operation records SBV's scalar result kind, which strips any
       -- surrounding arrays. The accessor field and result SV retain the full kind.
       (ADTOp (ADTAccessor accessorName _operationResultKind), [value], [renderedValue])
@@ -753,24 +753,24 @@ adtExpr cfg adts op svs resultSV args
                        then text (adtDereferenceName fieldKind)
                          P.<> parens (adtField renderedValue constructorIndex fieldIndex)
                        else adtField renderedValue constructorIndex fieldIndex
-           in if isArray resultKind then Just (arrayStoredLoad resultSV field) else lower resultKind field
+           in if isArray resultKind then Just (arrayStoredLoad resultSV field) else lower field
       (Equal strong, [left, right], [renderedLeft, renderedRight])
         | kindOf left == kindOf right
-        -> lower resultKind $ adtEqual cfg adts strong (kindOf left) renderedLeft renderedRight
+        -> lower $ adtEqual cfg adts strong (kindOf left) renderedLeft renderedRight
       (NotEqual, [left, right], [renderedLeft, renderedRight])
         | kindOf left == kindOf right
-        -> lower resultKind $ text "!" P.<> parens (adtEqual cfg adts False (kindOf left) renderedLeft renderedRight)
+        -> lower $ text "!" P.<> parens (adtEqual cfg adts False (kindOf left) renderedLeft renderedRight)
       (comparison, [left, right], [renderedLeft, renderedRight])
         | adtIsEnumeration adts (kindOf left)
         , kindOf left == kindOf right
         , Just comparisonSymbol <- adtComparisonSymbol comparison
-        -> lower resultKind $ adtTag renderedLeft <+> text comparisonSymbol <+> adtTag renderedRight
+        -> lower $ adtTag renderedLeft <+> text comparisonSymbol <+> adtTag renderedRight
       (Ite, [_condition, left, right], [renderedCondition, renderedLeft, renderedRight])
         | resultKind == kindOf left
         , resultKind == kindOf right
-        -> lower resultKind $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
+        -> lower $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
       (Label label, [_], [renderedValue])
-        -> lower resultKind $ renderedValue <+> text "/*" <+> text label <+> text "*/"
+        -> lower $ renderedValue <+> text "/*" <+> text label <+> text "*/"
       _ -> error $ "SBV->C: ADT lowering does not support " ++ adtOperationName op
                 ++ " with argument kinds " ++ show (map kindOf svs)
                 ++ " and result kind " ++ show resultKind
@@ -778,19 +778,11 @@ adtExpr cfg adts op svs resultSV args
                 ++ show [constructorName | (constructorName, _) <- adtConstructors adts (sourceADTKind resultKind svs)]
  where resultKind = kindOf resultSV
 
-       lower kind = Just . expressionLowering storage []
-        where storage
-                | isConcreteADT kind && adtNeedsOwnership cfg adts kind = CFunctionScoped
-                | isExactGMPKind cfg kind                               = CFunctionScoped
-                | tupleNeedsOwnership cfg kind                          = CFunctionScoped
-                | isList kind                                           = CFunctionScoped
-                | isSet kind                                            = CFunctionScoped
-                | isArray kind                                          = CFunctionScoped
-                | True                                                  = CByValue
+       lower = Just . expressionLowering []
 
        lowerConstructor kind constructorIndex renderedFields
          | null recursiveFields
-         = lower kind (adtValue adts kind constructorIndex renderedFields)
+         = lower (adtValue adts kind constructorIndex renderedFields)
          | True
          = Just CLowering
              { loweringExpression   = adtValueWithStorage adts kind constructorIndex storeField renderedFields
@@ -800,9 +792,7 @@ adtExpr cfg adts op svs resultSV args
              , loweringSetup        = [text (backingName fieldIndex) <+> text "=" <+> field P.<> semi
                                       | (fieldIndex, _, field) <- recursiveFields
                                       ]
-             , loweringCleanup      = []
              , loweringRequirements = Set.empty
-             , loweringStorage      = CFunctionScoped
              }
         where fieldInfo = snd (adtConstructorFields adts kind !! (constructorIndex - 1))
               recursiveFields = [ (fieldIndex, fieldKind, field)

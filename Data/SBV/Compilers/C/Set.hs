@@ -43,7 +43,7 @@ import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
-import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
 import Data.SBV.Compilers.C.Value      ( byValueEqual
                                        , managedValueClone
@@ -313,15 +313,11 @@ setExpr cfg op svs resultKind args
                    kind : _ -> kind
                    []       -> error $ "SBV->C: Cannot determine set kind for " ++ show op
 
-       lower expression = Just $ expressionLowering storage requirements expression
+       lower expression = Just $ expressionLowering requirements expression
 
        requirements = CRequiresSets : [CRequiresGMP | any (isExactGMPKind cfg) touchedKinds]
 
        touchedKinds = concatMap expandKinds (resultKind : map kindOf svs)
-
-       storage
-         | isSet resultKind = CFunctionScoped
-         | True             = CByValue
 
        helper = helperName setKind
 

@@ -19,7 +19,7 @@ module Data.SBV.Compilers.C.NonLinear
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
-import Data.SBV.Compilers.C.Lowering (CLowering, CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering (CLowering, CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.CodeGen    (CgConfig(..), CgSRealType(..))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic        (NROp(..))
@@ -42,7 +42,7 @@ nonLinearExpr cfg (NonLinear nonLinearOp) svs resultKind args
          , [base, powerValue] <- args
          = case cgInteger cfg of
              Nothing    -> Nothing
-             Just width -> Just $ expressionLowering CByValue [CRequiresIntegerPower]
+             Just width -> Just $ expressionLowering [CRequiresIntegerPower]
                                 $ namedCall ("sbv_integer_pow_s" ++ show width) [base, powerValue]
          | True
          = unsupported
@@ -51,7 +51,7 @@ nonLinearExpr cfg (NonLinear nonLinearOp) svs resultKind args
          Nothing       -> error $ "SBV->C: The exact GMP-rational SReal representation cannot represent "
                                 ++ nonLinearName nonLinearOp
                                 ++ ". Select a native approximation with cgSRealType to compile this operation."
-         Just realType -> Just $ expressionLowering CByValue [CRequiresLibM] (renderReal realType)
+         Just realType -> Just $ expressionLowering [CRequiresLibM] (renderReal realType)
 
        renderReal realType = case (nonLinearOp, args) of
          (NR_Pow   , [left, right]) -> namedCall (realFunction realType "pow") [left, right]

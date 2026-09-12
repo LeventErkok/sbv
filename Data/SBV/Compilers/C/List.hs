@@ -43,7 +43,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.Array      (arrayStoredLoad, arrayStoredValue)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
-import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.C.Types      (constElementCType, elementCType, kindTag)
 import Data.SBV.Compilers.C.Value      ( byValueEqual
                                        , managedValueClone
@@ -321,7 +321,7 @@ listExpr cfg op svs resultSV args
                     kind:_ -> kind
                     []     -> error $ "SBV->C: Cannot determine list kind for " ++ show op
 
-       lower expression = Just $ expressionLowering storage requirements expression
+       lower expression = Just $ expressionLowering requirements expression
 
        loadArray expression
          | isArray resultKind = Just (arrayStoredLoad resultSV expression)
@@ -329,17 +329,11 @@ listExpr cfg op svs resultSV args
 
        lowerInteger signed expression
          | isExactGMPKind cfg resultKind
-         = Just $ expressionLowering CFunctionScoped [CRequiresLists, CRequiresGMP]
+         = Just $ expressionLowering [CRequiresLists, CRequiresGMP]
                 $ call (if signed then "sbv_gmp_integer_from_s64" else "sbv_gmp_integer_from_u64")
                        [text "&__sbv_gmp_ctx", expression]
          | True
          = lower $ parens (text "SInteger") <+> expression
-
-       storage
-         | isList resultKind             = CFunctionScoped
-         | isExactGMPKind cfg resultKind = CFunctionScoped
-         | isArray resultKind            = CFunctionScoped
-         | True                          = CByValue
 
        requirements = CRequiresLists : [CRequiresGMP | any (isExactGMPKind cfg) touchedKinds]
 

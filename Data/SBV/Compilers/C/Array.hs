@@ -43,7 +43,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>), render)
 
 import Data.SBV.Compilers.C.BV         (isWideBV)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
-import Data.SBV.Compilers.C.Lowering   (CLowering(..), CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering   (CLowering(..), CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.C.Types      ( constElementCType
                                        , arrayKindTag
                                        , arrayOutputCTypeName
@@ -155,9 +155,7 @@ arrayStoredLoad resultSV descriptor = CLowering
                            , text nodeName <+> text "=" <+> parens (text (arrayNodeType kind))
                              <+> braces (fsep (punctuate comma descriptorFields)) P.<> semi
                            ]
-  , loweringCleanup      = []
   , loweringRequirements = Set.singleton CRequiresArrays
-  , loweringStorage      = CFunctionScoped
   }
  where kind             = kindOf resultSV
        descriptorName   = "__sbv_array_descriptor_" ++ show resultSV
@@ -762,21 +760,14 @@ arrayExpr cfg definedFunctionName structuredLambdaName op svs resultSV args
                            ++ " and result kind " ++ show resultKind
  where resultKind = kindOf resultSV
 
-       expression = Just . expressionLowering storage requirements
-
-       storage
-         | isExactGMPKind cfg resultKind = CFunctionScoped
-         | isArray resultKind            = CFunctionScoped
-         | True                          = CByValue
+       expression = Just . expressionLowering requirements
 
        nodeLowering kind fields = Just CLowering
          { loweringExpression   = text "&" P.<> text nodeName
          , loweringDeclarations = [text (arrayNodeType kind) <+> text nodeName P.<> semi]
          , loweringSetup        = [text nodeName <+> text "=" <+> parens (text (arrayNodeType kind))
                                                     <+> braces (fsep (punctuate comma fields)) P.<> semi]
-         , loweringCleanup      = []
          , loweringRequirements = Set.fromList requirements
-         , loweringStorage      = CFunctionScoped
          }
 
        nodeName = "__sbv_array_" ++ show resultSV

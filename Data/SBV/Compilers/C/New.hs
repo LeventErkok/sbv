@@ -2553,7 +2553,6 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
   = ( vcat $ declarations
           ++ loweringSetup selected
           ++ [assignment]
-          ++ loweringCleanup selected
     , loweringRequirements selected
     , loweringDeclarations selected
     )
@@ -2577,7 +2576,7 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
           , textExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , listExpr cfg op opArgs resultSV renderedArgs
           , adtExpr cfg adts op opArgs resultSV renderedArgs
-          , tupleExpr cfg op opArgs resultSV renderedArgs
+          , tupleExpr op opArgs resultSV renderedArgs
           , gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , bitVectorCastExpr (cgInteger cfg) op opArgs (kindOf resultSV) renderedArgs
           , arbitraryFPExpr cfg consts op opArgs (kindOf resultSV) renderedArgs
@@ -2587,7 +2586,7 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
           , wideBVExpr op opArgs (kindOf resultSV) renderedArgs
           ]
 
-        legacy = expressionLowering CByValue [] (p op renderedArgs)
+        legacy = expressionLowering [] (p op renderedArgs)
 
         rhs = loweringExpression selected
 

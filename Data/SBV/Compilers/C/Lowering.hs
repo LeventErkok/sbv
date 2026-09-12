@@ -14,7 +14,6 @@
 module Data.SBV.Compilers.C.Lowering
   ( CLowering(..)
   , CRequirement(..)
-  , CStorage(..)
   , expressionLowering
   , chooseLowering
   ) where
@@ -40,33 +39,23 @@ data CRequirement = CRequiresGMP              -- ^ GMP-backed exact-number suppo
                   | CRequiresIntegerPower     -- ^ Modular exponentiation for mapped unbounded integers.
                   deriving (Eq, Ord, Show)
 
--- | Lifetime and ownership class of a lowered result.
-data CStorage = CByValue         -- ^ An ordinary C value.
-              | CFunctionScoped  -- ^ A reference valid until the generated function returns.
-              | CCallerOwned     -- ^ Storage initialized and owned by the generated function's caller.
-              deriving (Eq, Ord, Show)
-
 -- | A C expression together with statements and capabilities needed around
--- its evaluation. Setup statements execute in list order; cleanup statements
--- execute in list order after the result has been consumed.
+-- its evaluation. Declarations may be hoisted for function-wide backing
+-- storage, but setup statements execute in order only when the value is demanded.
 data CLowering = CLowering
   { loweringExpression   :: Doc                     -- ^ Expression producing the lowered result.
   , loweringDeclarations :: [Doc]                   -- ^ Declarations that may be hoisted above guarded control flow.
   , loweringSetup        :: [Doc]                   -- ^ Statements required before evaluation.
-  , loweringCleanup      :: [Doc]                   -- ^ Statements required after consumption.
   , loweringRequirements :: Set.Set CRequirement    -- ^ Runtime and external capabilities used.
-  , loweringStorage      :: CStorage                -- ^ Lifetime and ownership of the result.
   }
 
 -- | Construct a statement-free expression lowering.
-expressionLowering :: CStorage -> [CRequirement] -> Doc -> CLowering
-expressionLowering storage requirements expression = CLowering
+expressionLowering :: [CRequirement] -> Doc -> CLowering
+expressionLowering requirements expression = CLowering
   { loweringExpression   = expression
   , loweringDeclarations = []
   , loweringSetup        = []
-  , loweringCleanup      = []
   , loweringRequirements = Set.fromList requirements
-  , loweringStorage      = storage
   }
 
 -- | Select the first backend that accepts an operation.

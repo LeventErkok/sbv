@@ -25,7 +25,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.Array    (arrayStoredLoad, arrayStoredValue)
 import Data.SBV.Compilers.C.BV       (isWideBV, wideBVLookupIndex, wideBVLookupInRange)
 import Data.SBV.Compilers.C.GMP      (isExactGMPKind)
-import Data.SBV.Compilers.C.Lowering (CLowering(..), CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering (CLowering(..), CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.C.Value    (valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen    (CgConfig(..))
 import Data.SBV.Core.Data
@@ -41,7 +41,7 @@ tableExpr cfg renderSV (LkUp (tableId, indexKind, _, tableLength) index defaultV
   = let lowering = arrayStoredLoad resultSV selectedValue
     in Just lowering {loweringRequirements = Set.fromList requirements}
   | True
-  = Just $ expressionLowering storage requirements selectedValue
+  = Just $ expressionLowering requirements selectedValue
  where renderedIndex   = renderSV index
        renderedDefault = arrayStoredValue resultKind (renderSV defaultValue)
        lookupValue     = text "table" P.<> int tableId P.<> brackets nativeIndex
@@ -50,10 +50,6 @@ tableExpr cfg renderSV (LkUp (tableId, indexKind, _, tableLength) index defaultV
                            _                      -> lookupValue
 
        resultKind = kindOf resultSV
-
-       storage
-         | tableMustBeLocal cfg resultKind = CFunctionScoped
-         | True                            = CByValue
 
        requirements =  [CRequiresGMP    | any (isExactGMPKind cfg) touchedKinds]
                     ++ [CRequiresWideBV | any isWideBV touchedKinds]

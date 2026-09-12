@@ -40,7 +40,7 @@ import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.BV         (isWideBV, mappedIntegerKind)
-import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.CodeGen      (CgConfig(..), CgSRealType(..))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic          (NROp(..))
@@ -223,13 +223,9 @@ gmpExpr cfg op svs resultKind args
                                                                [namedCall "sbv_gmp_integer_const" [text "&__sbv_gmp_ctx", doubleQuotes (integer n)], a]
       (KindCast fr to       , [a]      , _)   -> gmpCast fr to a
       _ -> unsupported
- where storage
-         | isExactGMPKind cfg resultKind = CFunctionScoped
-         | True                          = CByValue
+ where lower = lowerWith [CRequiresGMP]
 
-       lower = lowerWith [CRequiresGMP]
-
-       lowerWith requirements = Just . expressionLowering storage requirements
+       lowerWith requirements = Just . expressionLowering requirements
 
        valueCall sv suffix = namedCall (kindPrefix (kindOf sv) ++ suffix) . (text "&__sbv_gmp_ctx" :)
 

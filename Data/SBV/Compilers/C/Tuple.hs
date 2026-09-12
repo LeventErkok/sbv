@@ -41,7 +41,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.Array      (arrayStoredLoad, arrayStoredValue)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.List       (listClone, listRelease)
-import Data.SBV.Compilers.C.Lowering   (CLowering, CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering   (CLowering, expressionLowering)
 import Data.SBV.Compilers.C.Set        (setClone, setRelease)
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleCType, tupleFieldName)
 import Data.SBV.Compilers.C.Value      (managedValueClone, managedValueRelease, valueDriverInit, valueNeedsOwnership)
@@ -286,8 +286,8 @@ tupleConst _ _ = Nothing
 -- | Lower tuple construction, projection, conditionals, and labels. Other
 -- operators are left to the scalar pipeline; SBV normally expands structural
 -- comparisons into field operations before code generation.
-tupleExpr :: CgConfig -> Op -> [SV] -> SV -> [Doc] -> Maybe CLowering
-tupleExpr cfg op svs resultSV args
+tupleExpr :: Op -> [SV] -> SV -> [Doc] -> Maybe CLowering
+tupleExpr op svs resultSV args
   | not (isTuple resultKind || any isTuple svs)
   = Nothing
   | True
@@ -296,7 +296,7 @@ tupleExpr cfg op svs resultSV args
         | KTuple fieldKinds <- resultKind
         , arity == length fieldKinds
         , map kindOf fields == fieldKinds
-        -> lower resultKind $ tupleValue resultKind (zipWith arrayStoredValue fieldKinds renderedFields)
+        -> lower $ tupleValue resultKind (zipWith arrayStoredValue fieldKinds renderedFields)
       (TupleAccess fieldIndex arity, [tupleSV], [renderedTuple])
         | KTuple fieldKinds <- kindOf tupleSV
         , arity == length fieldKinds
@@ -304,25 +304,17 @@ tupleExpr cfg op svs resultSV args
         , fieldIndex <= arity
         , resultKind == fieldKinds !! (fieldIndex - 1)
         -> let field = parens renderedTuple P.<> text "." P.<> text (tupleFieldName fieldIndex)
-           in if isArray resultKind then Just (arrayStoredLoad resultSV field) else lower resultKind field
+           in if isArray resultKind then Just (arrayStoredLoad resultSV field) else lower field
       (Ite, [_condition, left, right], [renderedCondition, renderedLeft, renderedRight])
         | resultKind == kindOf left
         , resultKind == kindOf right
-        -> lower resultKind $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
+        -> lower $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
       (Label label, [_], [renderedTuple])
-        -> lower resultKind $ renderedTuple <+> text "/*" <+> text label <+> text "*/"
+        -> lower $ renderedTuple <+> text "/*" <+> text label <+> text "*/"
       _ -> Nothing
  where resultKind = kindOf resultSV
 
-       lower kind = Just . expressionLowering storage []
-        where storage
-                | isExactGMPKind cfg kind      = CFunctionScoped
-                | tupleNeedsOwnership cfg kind = CFunctionScoped
-                | kind == KString              = CFunctionScoped
-                | isList kind                  = CFunctionScoped
-                | isSet kind                   = CFunctionScoped
-                | isArray kind                 = CFunctionScoped
-                | True                         = CByValue
+       lower = Just . expressionLowering []
 
 -- | Test whether a tuple contains an exact GMP-backed integer, real, or
 -- rational at any nesting depth under the active code-generation configuration.

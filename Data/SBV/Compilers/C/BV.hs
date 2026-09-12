@@ -38,7 +38,7 @@ import Numeric                    (showHex)
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
-import Data.SBV.Compilers.C.Lowering  (CLowering, CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering  (CLowering, CRequirement(..), expressionLowering)
 import Data.SBV.Core.Data
 
 -- | True when a bit-vector cannot use the historical scalar C ABI. These
@@ -173,7 +173,7 @@ wideBVExpr op svs resultKind args
   | Uninterpreted{} <- op
   = Nothing
   | True
-  = Just . expressionLowering CByValue [CRequiresWideBV] $ case (op, args, svs) of
+  = Just . expressionLowering [CRequiresWideBV] $ case (op, args, svs) of
       (Label _                       , [a]      , _)      -> a
       (Plus                          , [a, b]   , _)      -> call "add" [a, b]
       (Minus                         , [a, b]   , _)      -> call "sub" [a, b]
@@ -221,7 +221,7 @@ bitVectorCastExpr integerWidth (KindCast fr to) [source] resultKind [value]
   , to == resultKind
   , isBounded from
   , isBounded target
-  = Just $ expressionLowering CByValue [CRequiresWideBV | isWideBV from || isWideBV target]
+  = Just $ expressionLowering [CRequiresWideBV | isWideBV from || isWideBV target]
          $ namedCall (convertName (hasSign from) from target) [value]
  where from   = mappedIntegerKind integerWidth fr
        target = mappedIntegerKind integerWidth to
@@ -291,7 +291,7 @@ nativeBVExpr integerWidth op svs resultKind args = case (op, svs, args) of
     , kindOf source == resultKind
     -> lower $ namedCall (prefix resultKind ++ "_rotr") [renderedSource, integer (fromIntegral amount)]
   _ -> Nothing
- where lower = Just . expressionLowering CByValue []
+ where lower = Just . expressionLowering []
 
        arithmeticKind = mappedIntegerKind integerWidth resultKind
 
@@ -323,7 +323,7 @@ nativeBVOverflowExpr (OverflowOp ov) svs args
   | x:_ <- svs
   , let k = kindOf x
   , k == KBounded False 1
-  = Just . expressionLowering CByValue [] $ case (ov, args) of
+  = Just . expressionLowering [] $ case (ov, args) of
       (PlusOv False, [a, b]) -> a .&&. b
       (SubOv  False, [a, b]) -> parens (text "!" P.<> a) .&&. b
       (MulOv  False, [_, _]) -> text "false"
@@ -335,7 +335,7 @@ nativeBVOverflowExpr (OverflowOp ov) svs args
   , isBounded k
   , not (isWideBV k)
   , intSizeOf k `elem` [8, 16, 32, 64]
-  = Just . expressionLowering CByValue [] $ case (ov, args) of
+  = Just . expressionLowering [] $ case (ov, args) of
       (PlusOv False, [a, b]) -> a .>. (maximumValue k .-. b)
       (PlusOv True , [a, b]) -> signedAdd k a b
       (SubOv  False, [a, b]) -> a .<. b

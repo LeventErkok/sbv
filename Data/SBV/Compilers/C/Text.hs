@@ -34,7 +34,7 @@ import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
-import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 
@@ -212,25 +212,21 @@ textExpr cfg op svs resultKind args
                   || any ((`elem` [KChar, KString]) . kindOf) svs
                   || isTextOp op
 
-       lower expression = Just $ expressionLowering storage [CRequiresText] expression
+       lower expression = Just $ expressionLowering [CRequiresText] expression
 
        lowerNat value
          | isExactGMPKind cfg resultKind
-         = Just $ expressionLowering CFunctionScoped [CRequiresText, CRequiresGMP] (toNat value)
+         = Just $ expressionLowering [CRequiresText, CRequiresGMP] (toNat value)
          | True
          = lower $ parens (text "SInteger") <+> toNat value
 
        lowerInteger signed expression
          | isExactGMPKind cfg resultKind
-         = Just $ expressionLowering CFunctionScoped [CRequiresText, CRequiresGMP]
+         = Just $ expressionLowering [CRequiresText, CRequiresGMP]
                 $ call (if signed then "sbv_gmp_integer_from_s64" else "sbv_gmp_integer_from_u64")
                        [text "&__sbv_gmp_ctx", expression]
          | True
          = lower $ parens (text "SInteger") <+> expression
-
-       storage
-         | resultKind == KString = CFunctionScoped
-         | True                  = CByValue
 
        usesString = any ((== KString) . kindOf) svs
 

@@ -43,7 +43,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.BV        (isWideBV, mappedIntegerKind)
 import Data.SBV.Compilers.C.GMP       (isExactGMPKind)
-import Data.SBV.Compilers.C.Lowering  (CLowering, CRequirement(..), CStorage(..), expressionLowering)
+import Data.SBV.Compilers.C.Lowering  (CLowering, CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.CodeGen      (CgConfig(..), CgSRealType(..))
 import Data.SBV.Core.Data
 import Data.SBV.Core.SizedFloats       (FP(..), mkBFOpts)
@@ -215,7 +215,7 @@ arbitraryFPExpr cfg consts op svs resultKind args
   , value:_ <- reverse args
   , let ignored = maybe [text (show rm)] (const []) (lookup rm consts)
   , let cast = parens (text (if isFloat target then "SFloat" else "SDouble")) <+> value
-  = Just . expressionLowering CByValue [] $ case ignored of
+  = Just . expressionLowering [] $ case ignored of
       [] -> cast
       _  -> parens $ fsep (punctuate comma (map (text "(void)" <+>) ignored ++ [cast]))
   | not (isFP resultKind
@@ -230,7 +230,7 @@ arbitraryFPExpr cfg consts op svs resultKind args
   | Uninterpreted{} <- op
   = Nothing
   | True
-  = Just . expressionLowering storage requirements $ case (op, args, svs) of
+  = Just . expressionLowering requirements $ case (op, args, svs) of
       (Label _         , [a]         , _)            -> a
       (Ite             , [c, a, b]   , _)            -> c <+> text "?" <+> a <+> text ":" <+> b
       (UNeg            , [a]         , x:_)          -> argCall x "neg" [a]
@@ -285,10 +285,6 @@ arbitraryFPExpr cfg consts op svs resultKind args
        castArgs to a rm
          | isExactGMPKind cfg to = [text "&__sbv_gmp_ctx", a, bfRoundingMode consts rm]
          | True                  = [a, bfRoundingMode consts rm]
-
-       storage
-         | isExactGMPKind cfg resultKind = CFunctionScoped
-         | True                          = CByValue
 
        requirements = [CRequiresLibBF, CRequiresLibM] ++ [CRequiresGMP | usesExact]
 
@@ -446,7 +442,7 @@ nativeFPExpr consts (IEEEFP fpOp) svs resultKind args
       (FP_RoundToIntegral , [_rm, a]      , r:_) | needsAdapter r -> lower "round" [a] r
       _                                                           -> Nothing
   | True = Nothing
- where lower suffix values rm = Just . expressionLowering CByValue
+ where lower suffix values rm = Just . expressionLowering
                                    [CRequiresLibBF, CRequiresLibM, CRequiresNativeFPRounding]
                                  $ namedCall (nativePrefix resultKind ++ suffix)
                                              (values ++ [nativeBFRoundingMode consts rm])
