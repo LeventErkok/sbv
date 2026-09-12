@@ -142,7 +142,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile owned-ADT defined SBV functions" ownedADTDefinedSBVFunctions
   , testCase "compile recursive defined SBV functions" recursiveDefinedSBVFunctions
   , testCase "compile recursive defined SBV functions in a library" recursiveDefinedSBVFunctionLibrary
-  , testCase "reject deferred recursive function storage" recursiveDefinedSBVFunctionDiagnostics
+  , testCase "compile recursive persistent-array functions" recursivePersistentArrayFunctions
+  , testCase "reject recursive ADT construction" recursiveDefinedSBVFunctionDiagnostic
   , testCase "compile explicit hard constraints" explicitHardConstraints
   , testCase "reject solver-only constraint features" unsupportedConstraintFeatures
   , testCase "reject solver-only expression operations" unsupportedExpressionFeatures
@@ -1920,23 +1921,53 @@ recursiveDefinedSBVFunctionLibrary = withSystemTempDirectory "sbv-recursive-defi
     , "secondRecursive() = 0x001eU"
     ]
 
--- | Keep recursive arrays and recursive ADTs behind focused diagnostics until
--- their automatic-storage lifetimes can be reconstructed safely.
-recursiveDefinedSBVFunctionDiagnostics :: Assertion
-recursiveDefinedSBVFunctionDiagnostics = do
-  arrayResult <- try (do
-    (_, _, bundle) <- compileToC' "recursiveArrayFunction" $ do
-      input <- cgInput "input" :: SBVCodeGen SWord8
-      let build :: SWord8 -> SArray Word8 Word8
-          build = smtFunctionNoTermination "C recursive array" $ \value ->
-                    ite (value .== 0) (constArray 0) (writeArray (build (value - 1)) value value)
-      cgReturn (readArray (build input) input)
-    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
-  case arrayResult of
-    Left exception -> assertBool ("Expected a recursive-array diagnostic, received:\n" ++ displayException exception)
-                                 ("Arrays in recursive defined function" `isInfixOf` displayException exception)
-    Right _        -> assertBool "Expected C generation to reject an array-valued recursive function" False
+-- | Construct and update persistent arrays recursively, then use the returned
+-- arrays after their defining C stack frames have unwound.
+recursivePersistentArrayFunctions :: Assertion
+recursivePersistentArrayFunctions = withSystemTempDirectory "sbv-recursive-persistent-array-functions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [3]
+        input <- cgInput "input" :: SBVCodeGen SWord8
+        let build :: SWord8 -> SArray Word8 Word8
+            build = smtFunctionNoTermination "C recursive array build" $ \value ->
+                      ite (value .== 0)
+                          (constArray 7)
+                          (writeArray (build (value - 1)) value (value + 10))
 
+            fill :: SWord8 -> SArray Word8 Word8 -> SArray Word8 Word8
+            fill = smtFunctionNoTermination "C recursive array fill" $ \value array ->
+                     ite (value .== 0)
+                         array
+                         (fill (value - 1) (writeArray array value (value + 20)))
+
+            built  = build input
+            filled = fill input built
+
+        cgOutput "builtAtOne"   (readArray built 1)
+        cgOutput "builtAtInput" (readArray built input)
+        cgOutput "filledAtOne"  (readArray filled 1)
+        cgOutput "fallback"     (readArray filled 9)
+        cgReturn filled
+
+  stdoutText <- compileProgramAndRunGenerated dir "recursivePersistentArrayFunctions" program
+  sourceText <- readFile (dir </> "recursivePersistentArrayFunctions.c")
+  mapM_ (\fragment -> assertBool ("Expected recursive persistent-array output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ ")[0] =7"
+    , "builtAtOne = 11"
+    , "builtAtInput = 13"
+    , "filledAtOne = 21"
+    , "fallback = 7"
+    ]
+  assertBool ("Expected recursive array nodes to be declared outside guarded branches, received:\n" ++ sourceText)
+             ("sbv_array_node_u8_u8 __sbv_array_s" `isInfixOf` sourceText
+           && "sbv_array_stored_export_u8_u8(&__sbv_array_ctx" `isInfixOf` sourceText)
+
+-- | Keep recursive ADT construction behind a focused diagnostic until its
+-- automatic-storage lifetime can be reconstructed safely.
+recursiveDefinedSBVFunctionDiagnostic :: Assertion
+recursiveDefinedSBVFunctionDiagnostic = do
   adtResult <- try (do
     (_, _, bundle) <- compileToC' "recursiveADTFunction" $ do
       input <- cgInput "input" :: SBVCodeGen SWord8

@@ -51,6 +51,7 @@ data CStorage = CByValue         -- ^ An ordinary C value.
 -- execute in list order after the result has been consumed.
 data CLowering = CLowering
   { loweringExpression   :: Doc                     -- ^ Expression producing the lowered result.
+  , loweringDeclarations :: [Doc]                   -- ^ Declarations that may be hoisted above guarded control flow.
   , loweringSetup        :: [Doc]                   -- ^ Statements required before evaluation.
   , loweringCleanup      :: [Doc]                   -- ^ Statements required after consumption.
   , loweringRequirements :: Set.Set CRequirement    -- ^ Runtime and external capabilities used.
@@ -61,6 +62,7 @@ data CLowering = CLowering
 expressionLowering :: CStorage -> [CRequirement] -> Doc -> CLowering
 expressionLowering storage requirements expression = CLowering
   { loweringExpression   = expression
+  , loweringDeclarations = []
   , loweringSetup        = []
   , loweringCleanup      = []
   , loweringRequirements = Set.fromList requirements

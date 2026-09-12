@@ -146,10 +146,13 @@ arrayStoredValue kind value
 arrayStoredLoad :: SV -> Doc -> CLowering
 arrayStoredLoad resultSV descriptor = CLowering
   { loweringExpression   = text "&" P.<> text nodeName
-  , loweringSetup        = [ text "const" <+> text (arrayOutputCType kind) <+> text "*" P.<> text descriptorName <+> text "=" <+> descriptor P.<> semi
+  , loweringDeclarations = [ text "const" <+> text (arrayOutputCType kind) <+> text "*" P.<> text descriptorName P.<> semi
+                           , text (arrayNodeType kind) <+> text nodeName P.<> semi
+                           ]
+  , loweringSetup        = [ text descriptorName <+> text "=" <+> descriptor P.<> semi
                            , text "if" P.<> parens (text descriptorName <+> text "== NULL" <+> text "||" <+> text descriptorName P.<> text "->lookup == NULL")
                              <+> text "abort" P.<> parens empty P.<> semi
-                           , text "const" <+> text (arrayNodeType kind) <+> text nodeName <+> text "="
+                           , text nodeName <+> text "=" <+> parens (text (arrayNodeType kind))
                              <+> braces (fsep (punctuate comma descriptorFields)) P.<> semi
                            ]
   , loweringCleanup      = []
@@ -758,7 +761,9 @@ arrayExpr cfg definedFunctionName op svs resultSV args
 
        nodeLowering kind fields = Just CLowering
          { loweringExpression   = text "&" P.<> text nodeName
-         , loweringSetup        = [text "const" <+> text (arrayNodeType kind) <+> text nodeName <+> text "=" <+> braces (fsep (punctuate comma fields)) P.<> semi]
+         , loweringDeclarations = [text (arrayNodeType kind) <+> text nodeName P.<> semi]
+         , loweringSetup        = [text nodeName <+> text "=" <+> parens (text (arrayNodeType kind))
+                                                    <+> braces (fsep (punctuate comma fields)) P.<> semi]
          , loweringCleanup      = []
          , loweringRequirements = Set.fromList requirements
          , loweringStorage      = CFunctionScoped

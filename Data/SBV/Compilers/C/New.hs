@@ -1450,7 +1450,7 @@ genCProg cfg adts lists sets fn proto
 
        genAsgn :: (SV, SBVExpr) -> (Int, Doc, Set.Set CRequirement)
        genAsgn (sv, n) = (cLocation consts sv, doc, needed)
-         where (doc, needed) = ppExpr cfg adts functionNames consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
+         where (doc, needed, _) = ppExpr cfg adts functionNames consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
 
        -- merge tables intermixed with assignments and assertions, paying attention to putting tables as
        -- early as possible and tables right after.. Note that the assignment list (second argument) is sorted on its order
@@ -1747,8 +1747,6 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
   = die $ "Output-kind mismatch in defined function " ++ show originalName
   | not (null nestedLambdas)
   = tbd $ "Nested lambdas in defined function " ++ show originalName
-  | isRecursive && any isArray expandedFunctionKinds
-  = tbd $ "Arrays in recursive defined function " ++ show originalName
   | isRecursive && any recursiveADTKind expandedFunctionKinds
   = tbd $ "Recursive ADTs in recursive defined function " ++ show originalName
   | not (null unsupportedManagedKinds)
@@ -1785,13 +1783,13 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
 
        generatedAssignments = [(cLocation functionConsts sv, doc, needed)
                               | (sv, expression) <- assignments
-                              , let (doc, needed) = ppExpr cfg adts functionNames functionConsts expression sv
-                                                         (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
+                              , let (doc, needed, _) = ppExpr cfg adts functionNames functionConsts expression sv
+                                                            (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
                               ]
 
        assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
 
-       (scheduledAssignments, scheduledRequirements) = schedule functionOutput
+       (scheduledAssignments, scheduledRequirements, scheduledDeclarations) = schedule functionOutput
 
        functionRequirements = Set.unions
          [ Set.fromList $ [CRequiresGMP             | any (isExactGMPKind cfg) expandedFunctionKinds]
@@ -1868,6 +1866,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
                  , sv `Set.member` reachableValues
                  , let (typ, var) = declSVNoConst typeWidth sv
                  ]
+         $$ vcat (nubBy sameDeclaration scheduledDeclarations)
          $$ scheduledAssignments
          | True
          = vcat (map snd (mergeLocated generatedTables assignmentDocs))
@@ -1885,14 +1884,14 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          | True
          = visited
 
-       schedule resultValue = let (_, docs, needed) = emit initialAvailability resultValue
-                              in (docs, needed)
+       schedule resultValue = let (_, docs, needed, declarations) = emit initialAvailability resultValue
+                              in (docs, needed, declarations)
 
        initialAvailability = (Set.fromList (map fst functionConsts ++ map snd parameters), Set.empty)
 
        emit available@(availableValues, _) sv
          | sv `Set.member` availableValues
-         = (available, empty, Set.empty)
+         = (available, empty, Set.empty, [])
          | Just expression@(SBVApp op arguments) <- lookup sv assignments
          = case (op, arguments) of
              (Ite, [condition, trueValue, falseValue])
@@ -1906,24 +1905,29 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
              (Implies, [left, right])
                | kindOf sv == KBool
                -> conditional available sv left right trueSV
-             _ -> let (withArguments, argumentDocs, argumentRequirements) = emitMany available
-                                                                                            (operationDependencies op arguments)
+             _ -> let (withArguments, argumentDocs, argumentRequirements, argumentDeclarations) = emitMany available
+                                                                                                           (operationDependencies op arguments)
                       (withTable, tableDocs) = emitTable withArguments op
-                      (assignmentDoc, assignmentRequirements) = ppExpr cfg adts functionNames functionConsts
-                                                                       expression sv (text (show sv))
-                                                                       (declSVNoConst typeWidth sv) False
+                      (assignmentDoc, assignmentRequirements, assignmentDeclarations) =
+                        ppExpr cfg adts functionNames functionConsts expression sv (text (show sv))
+                               (declSVNoConst typeWidth sv) False
                   in ( insertAvailableValue sv withTable
                      , argumentDocs $$ tableDocs $$ assignmentDoc
                      , Set.union argumentRequirements assignmentRequirements
+                     , argumentDeclarations ++ assignmentDeclarations
                      )
          | True
          = die $ "Missing assignment while lowering recursive defined function " ++ show originalName ++ ": " ++ show sv
 
-       emitMany available [] = (available, empty, Set.empty)
+       emitMany available [] = (available, empty, Set.empty, [])
        emitMany available (sv:svs) =
-         let (withValue, valueDocs, valueRequirements) = emit available sv
-             (withRest, restDocs, restRequirements) = emitMany withValue svs
-         in (withRest, valueDocs $$ restDocs, Set.union valueRequirements restRequirements)
+         let (withValue, valueDocs, valueRequirements, valueDeclarations) = emit available sv
+             (withRest, restDocs, restRequirements, restDeclarations) = emitMany withValue svs
+         in ( withRest
+            , valueDocs $$ restDocs
+            , Set.union valueRequirements restRequirements
+            , valueDeclarations ++ restDeclarations
+            )
 
        emitTable available@(_, availableTables) op
          | LkUp (tableIndex, _, _, _) _ _ <- op
@@ -1935,9 +1939,9 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          = (available, empty)
 
        conditional available result condition trueValue falseValue =
-         let (withCondition, conditionDocs, conditionRequirements) = emit available condition
-             (withTrue, trueDocs, trueRequirements) = emit withCondition trueValue
-             (withFalse, falseDocs, falseRequirements) = emit withCondition falseValue
+         let (withCondition, conditionDocs, conditionRequirements, conditionDeclarations) = emit available condition
+             (withTrue, trueDocs, trueRequirements, trueDeclarations) = emit withCondition trueValue
+             (withFalse, falseDocs, falseRequirements, falseDeclarations) = emit withCondition falseValue
              branch label branchDocs branchValue = text label
                                                 $$ text "{"
                                                 $$ nest 2 (branchDocs $$ assign branchValue)
@@ -1953,7 +1957,8 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
              availableAfter = ( Set.intersection (fst withTrue) (fst withFalse)
                               , snd withCondition
                               )
-         in (insertAvailableValue result availableAfter, docs, needed)
+             declarations = conditionDeclarations ++ trueDeclarations ++ falseDeclarations
+         in (insertAvailableValue result availableAfter, docs, needed, declarations)
 
        operationDependencies op arguments = arguments ++ case op of
          LkUp (tableIndex, _, _, _) index defaultValue
@@ -1967,6 +1972,8 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
        insertAvailableValue value (values, availableTables) = (Set.insert value values, availableTables)
 
        insertAvailableTable tableIndex (values, availableTables) = (values, Set.insert tableIndex availableTables)
+
+       sameDeclaration left right = render left == render right
 
        functionResult
          | isArray resultKind
@@ -2018,8 +2025,8 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
 
        generatedAssignments = [(cLocation lambdaConsts sv, doc, needed)
                               | (sv, expression) <- assignments
-                              , let (doc, needed) = ppExpr cfg adts functionNames lambdaConsts expression sv
-                                                         (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
+                              , let (doc, needed, _) = ppExpr cfg adts functionNames lambdaConsts expression sv
+                                                            (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
                               ]
 
        assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
@@ -2228,14 +2235,20 @@ ppExpr :: CgConfig
        -> Doc
        -> (Doc, Doc)
        -> Bool
-       -> (Doc, Set.Set CRequirement)
+       -> (Doc, Set.Set CRequirement, [Doc])
 ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var) declareResult
-  = ( vcat $ loweringSetup selected
+  = ( vcat $ declarations
+          ++ loweringSetup selected
           ++ [assignment]
           ++ loweringCleanup selected
     , loweringRequirements selected
+    , loweringDeclarations selected
     )
-  where doNotAssign (IEEEFP FP_Reinterpret{})
+  where declarations
+          | declareResult = loweringDeclarations selected
+          | True          = []
+
+        doNotAssign (IEEEFP FP_Reinterpret{})
           | not (isFP (kindOf resultSV) || any (isFP . kindOf) opArgs)
           , not (isWideBV (kindOf resultSV) || any (isWideBV . kindOf) opArgs)
           = True   -- generates a memcpy instead; no simple assignment
