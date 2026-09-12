@@ -44,6 +44,9 @@
     Generated C requires callers and callbacks to preserve FE_TONEAREST hardware rounding.
     This documented, unchecked precondition keeps ordinary native RNE arithmetic free of
     rounding-mode guards and LibBF fallbacks; explicit SBV rounding modes remain supported.
+    Generated builds disable implicit floating-point contraction, including during LTO,
+    while preserving explicit FMA. Headers reject detectable fast-math and finite-math-only
+    compiler modes instead of silently changing IEEE semantics.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

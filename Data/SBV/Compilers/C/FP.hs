@@ -22,6 +22,7 @@ module Data.SBV.Compilers.C.FP
   , arbitraryFPExpr
   , nativeFPRuntime
   , nativeFPExpr
+  , nativeFPCompilePragmas
   , arbitraryFPNormalize
   , arbitraryFPPrint
   , arbitraryFPCType
@@ -46,6 +47,21 @@ import Data.SBV.Compilers.C.Lowering  (CLowering, CRequirement(..), CStorage(..)
 import Data.SBV.Compilers.CodeGen      (CgConfig(..), CgSRealType(..))
 import Data.SBV.Core.Data
 import Data.SBV.Core.SizedFloats       (FP(..), mkBFOpts)
+
+-- | Disable implicit contraction in generated translation units without
+-- changing the caller's compilation state through a public header. The
+-- Makefiles also pass @-ffp-contract=off@: Clang can ignore these pragmas when
+-- contraction is explicitly enabled on the command line. Explicit FMA calls
+-- retain their single-rounding semantics.
+nativeFPCompilePragmas :: Doc
+nativeFPCompilePragmas = text . unlines $
+  ["/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */"
+  , "#if defined(__GNUC__) && !defined(__clang__)"
+  , "#pragma GCC optimize (\"fp-contract=off\")"
+  , "#else"
+  , "#pragma STDC FP_CONTRACT OFF"
+  , "#endif"
+  , ""]
 
 -- | The distinct arbitrary floating-point kinds used by a program.
 arbitraryFPKinds :: Set.Set Kind -> [Kind]

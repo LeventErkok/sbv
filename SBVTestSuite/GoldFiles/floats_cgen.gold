@@ -4,6 +4,14 @@
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat toFP_Int8_ToFloat(const SInt8 sbv_input_0)
 {
   const SInt8  s0 = sbv_input_0;
@@ -18,6 +26,14 @@ SFloat toFP_Int8_ToFloat(const SInt8 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat toFP_Int16_ToFloat(const SInt16 sbv_input_0)
 {
   const SInt16 s0 = sbv_input_0;
@@ -31,6 +47,14 @@ SFloat toFP_Int16_ToFloat(const SInt16 sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -98,6 +122,14 @@ SFloat toFP_Int32_ToFloat(const SInt32 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -164,6 +196,14 @@ SFloat toFP_Int64_ToFloat(const SInt64 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat toFP_Word8_ToFloat(const SWord8 sbv_input_0)
 {
   const SWord8 s0 = sbv_input_0;
@@ -178,6 +218,14 @@ SFloat toFP_Word8_ToFloat(const SWord8 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat toFP_Word16_ToFloat(const SWord16 sbv_input_0)
 {
   const SWord16 s0 = sbv_input_0;
@@ -191,6 +239,14 @@ SFloat toFP_Word16_ToFloat(const SWord16 sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -258,6 +314,14 @@ SFloat toFP_Word32_ToFloat(const SWord32 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -324,6 +388,14 @@ SFloat toFP_Word64_ToFloat(const SWord64 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat toFP_Float_ToFloat(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -335,6 +407,14 @@ SFloat toFP_Float_ToFloat(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -385,6 +465,14 @@ SFloat toFP_Double_ToFloat(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -452,6 +540,14 @@ SFloat toFP_Integer_ToFloat(const SInteger sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat toFP_Real_ToFloat(const SReal sbv_input_0)
 {
   const SReal  s0 = sbv_input_0;
@@ -465,6 +561,14 @@ SFloat toFP_Real_ToFloat(const SReal sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble toFP_Int8_ToDouble(const SInt8 sbv_input_0)
 {
@@ -480,6 +584,14 @@ SDouble toFP_Int8_ToDouble(const SInt8 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble toFP_Int16_ToDouble(const SInt16 sbv_input_0)
 {
   const SInt16  s0 = sbv_input_0;
@@ -494,6 +606,14 @@ SDouble toFP_Int16_ToDouble(const SInt16 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble toFP_Int32_ToDouble(const SInt32 sbv_input_0)
 {
   const SInt32  s0 = sbv_input_0;
@@ -507,6 +627,14 @@ SDouble toFP_Int32_ToDouble(const SInt32 sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -574,6 +702,14 @@ SDouble toFP_Int64_ToDouble(const SInt64 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble toFP_Word8_ToDouble(const SWord8 sbv_input_0)
 {
   const SWord8  s0 = sbv_input_0;
@@ -587,6 +723,14 @@ SDouble toFP_Word8_ToDouble(const SWord8 sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble toFP_Word16_ToDouble(const SWord16 sbv_input_0)
 {
@@ -602,6 +746,14 @@ SDouble toFP_Word16_ToDouble(const SWord16 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble toFP_Word32_ToDouble(const SWord32 sbv_input_0)
 {
   const SWord32 s0 = sbv_input_0;
@@ -615,6 +767,14 @@ SDouble toFP_Word32_ToDouble(const SWord32 sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -682,6 +842,14 @@ SDouble toFP_Word64_ToDouble(const SWord64 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble toFP_Float_ToDouble(const SFloat sbv_input_0)
 {
   const SFloat  s0 = sbv_input_0;
@@ -696,6 +864,14 @@ SDouble toFP_Float_ToDouble(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble toFP_Double_ToDouble(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
@@ -707,6 +883,14 @@ SDouble toFP_Double_ToDouble(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -774,6 +958,14 @@ SDouble toFP_Integer_ToDouble(const SInteger sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble toFP_Real_ToDouble(const SReal sbv_input_0)
 {
   const SReal   s0 = sbv_input_0;
@@ -787,6 +979,14 @@ SDouble toFP_Real_ToDouble(const SReal sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -846,6 +1046,14 @@ SInt8 fromFP_Float_ToInt8(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -903,6 +1111,14 @@ SInt16 fromFP_Float_ToInt16(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -962,6 +1178,14 @@ SInt32 fromFP_Float_ToInt32(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -1019,6 +1243,14 @@ SInt64 fromFP_Float_ToInt64(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -1078,6 +1310,14 @@ SWord8 fromFP_Float_ToWord8(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -1135,6 +1375,14 @@ SWord16 fromFP_Float_ToWord16(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -1194,6 +1442,14 @@ SWord32 fromFP_Float_ToWord32(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -1252,6 +1508,14 @@ SWord64 fromFP_Float_ToWord64(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat fromFP_Float_ToFloat(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -1263,6 +1527,14 @@ SFloat fromFP_Float_ToFloat(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble fromFP_Float_ToDouble(const SFloat sbv_input_0)
 {
@@ -1277,6 +1549,14 @@ SDouble fromFP_Float_ToDouble(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -1336,6 +1616,14 @@ SInteger fromFP_Float_ToInteger(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SReal fromFP_Float_ToReal(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -1349,6 +1637,14 @@ SReal fromFP_Float_ToReal(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -1408,6 +1704,14 @@ SInt8 fromFP_DoubleTo_Int8(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -1465,6 +1769,14 @@ SInt16 fromFP_DoubleTo_Int16(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -1524,6 +1836,14 @@ SInt32 fromFP_DoubleTo_Int32(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -1581,6 +1901,14 @@ SInt64 fromFP_DoubleTo_Int64(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -1640,6 +1968,14 @@ SWord8 fromFP_DoubleTo_Word8(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -1697,6 +2033,14 @@ SWord16 fromFP_DoubleTo_Word16(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -1756,6 +2100,14 @@ SWord32 fromFP_DoubleTo_Word32(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -1814,6 +2166,14 @@ SWord64 fromFP_DoubleTo_Word64(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
 #if defined(__GNUC__) || defined(__clang__)
@@ -1864,6 +2224,14 @@ SFloat fromFP_DoubleTo_Float(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble fromFP_DoubleTo_Double(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
@@ -1875,6 +2243,14 @@ SDouble fromFP_DoubleTo_Double(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 /* LibBF-backed arbitrary floating-point runtime. */
 #ifndef SBV_CGEN_UNUSED
@@ -1934,6 +2310,14 @@ SInteger fromFP_DoubleTo_Integer(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SReal fromFP_DoubleTo_Real(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
@@ -1947,6 +2331,14 @@ SReal fromFP_DoubleTo_Real(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SFloat fromFP_SWord32_SFloat(const SWord32 sbv_input_0)
 {
@@ -1962,6 +2354,14 @@ SFloat fromFP_SWord32_SFloat(const SWord32 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble fromFP_SWord64_SDouble(const SWord64 sbv_input_0)
 {
   const SWord64 s0 = sbv_input_0;
@@ -1975,6 +2375,14 @@ SDouble fromFP_SWord64_SDouble(const SWord64 sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SWord32 fromFP_SFloat_SWord32(const SFloat sbv_input_0)
 {
@@ -1990,6 +2398,14 @@ SWord32 fromFP_SFloat_SWord32(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SWord64 fromFP_SDouble_SWord64(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
@@ -2003,6 +2419,14 @@ SWord64 fromFP_SDouble_SWord64(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SFloat f_FP_Abs(const SFloat sbv_input_0)
 {
@@ -2018,6 +2442,14 @@ SFloat f_FP_Abs(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble d_FP_Abs(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
@@ -2031,6 +2463,14 @@ SDouble d_FP_Abs(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SFloat f_FP_Neg(const SFloat sbv_input_0)
 {
@@ -2046,6 +2486,14 @@ SFloat f_FP_Neg(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble d_FP_Neg(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
@@ -2059,6 +2507,14 @@ SDouble d_FP_Neg(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SFloat f_FP_Add(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
@@ -2074,6 +2530,14 @@ SFloat f_FP_Add(const SFloat sbv_input_0, const SFloat sbv_input_1)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble d_FP_Add(const SDouble sbv_input_0,
                  const SDouble sbv_input_1)
@@ -2091,6 +2555,14 @@ SDouble d_FP_Add(const SDouble sbv_input_0,
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat f_FP_Sub(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
@@ -2105,6 +2577,14 @@ SFloat f_FP_Sub(const SFloat sbv_input_0, const SFloat sbv_input_1)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble d_FP_Sub(const SDouble sbv_input_0,
                  const SDouble sbv_input_1)
@@ -2122,6 +2602,14 @@ SDouble d_FP_Sub(const SDouble sbv_input_0,
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat f_FP_Mul(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
@@ -2136,6 +2624,14 @@ SFloat f_FP_Mul(const SFloat sbv_input_0, const SFloat sbv_input_1)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble d_FP_Mul(const SDouble sbv_input_0,
                  const SDouble sbv_input_1)
@@ -2153,6 +2649,14 @@ SDouble d_FP_Mul(const SDouble sbv_input_0,
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat f_FP_Div(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
@@ -2167,6 +2671,14 @@ SFloat f_FP_Div(const SFloat sbv_input_0, const SFloat sbv_input_1)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble d_FP_Div(const SDouble sbv_input_0,
                  const SDouble sbv_input_1)
@@ -2183,6 +2695,14 @@ SDouble d_FP_Div(const SDouble sbv_input_0,
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SFloat f_FP_FMA(const SFloat sbv_input_0, const SFloat sbv_input_1,
                 const SFloat sbv_input_2)
@@ -2201,6 +2721,14 @@ SFloat f_FP_FMA(const SFloat sbv_input_0, const SFloat sbv_input_1,
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble d_FP_FMA(const SDouble sbv_input_0,
                  const SDouble sbv_input_1, const SDouble sbv_input_2)
 {
@@ -2218,6 +2746,14 @@ SDouble d_FP_FMA(const SDouble sbv_input_0,
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat f_FP_Sqrt(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -2231,6 +2767,14 @@ SFloat f_FP_Sqrt(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble d_FP_Sqrt(const SDouble sbv_input_0)
 {
@@ -2246,6 +2790,14 @@ SDouble d_FP_Sqrt(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat f_FP_Rem(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
@@ -2260,6 +2812,14 @@ SFloat f_FP_Rem(const SFloat sbv_input_0, const SFloat sbv_input_1)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble d_FP_Rem(const SDouble sbv_input_0,
                  const SDouble sbv_input_1)
@@ -2277,6 +2837,14 @@ SDouble d_FP_Rem(const SDouble sbv_input_0,
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat f_FP_RoundToIntegral(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -2291,6 +2859,14 @@ SFloat f_FP_RoundToIntegral(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SDouble d_FP_RoundToIntegral(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
@@ -2304,6 +2880,14 @@ SDouble d_FP_RoundToIntegral(const SDouble sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SFloat f_FP_Min(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
@@ -2320,6 +2904,14 @@ SFloat f_FP_Min(const SFloat sbv_input_0, const SFloat sbv_input_1)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble d_FP_Min(const SDouble sbv_input_0,
                  const SDouble sbv_input_1)
@@ -2338,6 +2930,14 @@ SDouble d_FP_Min(const SDouble sbv_input_0,
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SFloat f_FP_Max(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
@@ -2353,6 +2953,14 @@ SFloat f_FP_Max(const SFloat sbv_input_0, const SFloat sbv_input_1)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SDouble d_FP_Max(const SDouble sbv_input_0,
                  const SDouble sbv_input_1)
@@ -2371,6 +2979,14 @@ SDouble d_FP_Max(const SDouble sbv_input_0,
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SBool f_FP_IsEqualObject(const SFloat sbv_input_0,
                          const SFloat sbv_input_1)
 {
@@ -2386,6 +3002,14 @@ SBool f_FP_IsEqualObject(const SFloat sbv_input_0,
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SBool d_FP_IsEqualObject(const SDouble sbv_input_0,
                          const SDouble sbv_input_1)
@@ -2403,6 +3027,14 @@ SBool d_FP_IsEqualObject(const SDouble sbv_input_0,
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SBool f_FP_IsNormal(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -2416,6 +3048,14 @@ SBool f_FP_IsNormal(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SBool d_FP_IsNormal(const SDouble sbv_input_0)
 {
@@ -2431,6 +3071,14 @@ SBool d_FP_IsNormal(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SBool f_FP_IsZero(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -2444,6 +3092,14 @@ SBool f_FP_IsZero(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SBool d_FP_IsZero(const SDouble sbv_input_0)
 {
@@ -2459,6 +3115,14 @@ SBool d_FP_IsZero(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SBool f_FP_IsSubnormal(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -2472,6 +3136,14 @@ SBool f_FP_IsSubnormal(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SBool d_FP_IsSubnormal(const SDouble sbv_input_0)
 {
@@ -2487,6 +3159,14 @@ SBool d_FP_IsSubnormal(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SBool f_FP_IsInfinite(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -2500,6 +3180,14 @@ SBool f_FP_IsInfinite(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SBool d_FP_IsInfinite(const SDouble sbv_input_0)
 {
@@ -2515,6 +3203,14 @@ SBool d_FP_IsInfinite(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SBool f_FP_IsNaN(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -2528,6 +3224,14 @@ SBool f_FP_IsNaN(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SBool d_FP_IsNaN(const SDouble sbv_input_0)
 {
@@ -2543,6 +3247,14 @@ SBool d_FP_IsNaN(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SBool f_FP_IsNegative(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -2556,6 +3268,14 @@ SBool f_FP_IsNegative(const SFloat sbv_input_0)
 
 #include "floatCodeGen.h"
 #include <libbf.h>
+
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
 
 SBool d_FP_IsNegative(const SDouble sbv_input_0)
 {
@@ -2571,6 +3291,14 @@ SBool d_FP_IsNegative(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SBool f_FP_IsPositive(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
@@ -2585,6 +3313,14 @@ SBool f_FP_IsPositive(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
 SBool d_FP_IsPositive(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
@@ -2598,6 +3334,10 @@ SBool d_FP_IsPositive(const SDouble sbv_input_0)
 
 #ifndef __floatCodeGen__HEADER_INCLUDED__
 #define __floatCodeGen__HEADER_INCLUDED__
+
+#if defined(__FAST_MATH__) || (defined(__FINITE_MATH_ONLY__) && __FINITE_MATH_ONLY__ > 0)
+#error "SBV-generated C requires IEEE floating-point semantics; disable fast-math and finite-math-only."
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -3899,283 +4639,283 @@ floatCodeGen.a: toFP_Int8_ToFloat.o toFP_Int16_ToFloat.o toFP_Int32_ToFloat.o to
 	${AR} ${ARFLAGS} $@ $^
 
 floatCodeGen_driver: floatCodeGen_driver.c floatCodeGen.h floatCodeGen.a
-	${CC} ${CCFLAGS} $< -o $@ floatCodeGen.a ${LDFLAGS}
+	${CC} ${CCFLAGS} -ffp-contract=off $< -o $@ floatCodeGen.a ${LDFLAGS}
 
 toFP_Int8_ToFloat.o: toFP_Int8_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Int16_ToFloat.o: toFP_Int16_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Int32_ToFloat.o: toFP_Int32_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Int64_ToFloat.o: toFP_Int64_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Word8_ToFloat.o: toFP_Word8_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Word16_ToFloat.o: toFP_Word16_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Word32_ToFloat.o: toFP_Word32_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Word64_ToFloat.o: toFP_Word64_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Float_ToFloat.o: toFP_Float_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Double_ToFloat.o: toFP_Double_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Integer_ToFloat.o: toFP_Integer_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Real_ToFloat.o: toFP_Real_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Int8_ToDouble.o: toFP_Int8_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Int16_ToDouble.o: toFP_Int16_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Int32_ToDouble.o: toFP_Int32_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Int64_ToDouble.o: toFP_Int64_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Word8_ToDouble.o: toFP_Word8_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Word16_ToDouble.o: toFP_Word16_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Word32_ToDouble.o: toFP_Word32_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Word64_ToDouble.o: toFP_Word64_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Float_ToDouble.o: toFP_Float_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Double_ToDouble.o: toFP_Double_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Integer_ToDouble.o: toFP_Integer_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 toFP_Real_ToDouble.o: toFP_Real_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToInt8.o: fromFP_Float_ToInt8.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToInt16.o: fromFP_Float_ToInt16.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToInt32.o: fromFP_Float_ToInt32.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToInt64.o: fromFP_Float_ToInt64.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToWord8.o: fromFP_Float_ToWord8.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToWord16.o: fromFP_Float_ToWord16.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToWord32.o: fromFP_Float_ToWord32.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToWord64.o: fromFP_Float_ToWord64.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToFloat.o: fromFP_Float_ToFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToDouble.o: fromFP_Float_ToDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToInteger.o: fromFP_Float_ToInteger.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_Float_ToReal.o: fromFP_Float_ToReal.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Int8.o: fromFP_DoubleTo_Int8.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Int16.o: fromFP_DoubleTo_Int16.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Int32.o: fromFP_DoubleTo_Int32.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Int64.o: fromFP_DoubleTo_Int64.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Word8.o: fromFP_DoubleTo_Word8.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Word16.o: fromFP_DoubleTo_Word16.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Word32.o: fromFP_DoubleTo_Word32.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Word64.o: fromFP_DoubleTo_Word64.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Float.o: fromFP_DoubleTo_Float.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Double.o: fromFP_DoubleTo_Double.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Integer.o: fromFP_DoubleTo_Integer.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_DoubleTo_Real.o: fromFP_DoubleTo_Real.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_SWord32_SFloat.o: fromFP_SWord32_SFloat.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_SWord64_SDouble.o: fromFP_SWord64_SDouble.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_SFloat_SWord32.o: fromFP_SFloat_SWord32.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fromFP_SDouble_SWord64.o: fromFP_SDouble_SWord64.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_Abs.o: f_FP_Abs.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_Abs.o: d_FP_Abs.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_Neg.o: f_FP_Neg.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_Neg.o: d_FP_Neg.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_Add.o: f_FP_Add.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_Add.o: d_FP_Add.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_Sub.o: f_FP_Sub.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_Sub.o: d_FP_Sub.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_Mul.o: f_FP_Mul.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_Mul.o: d_FP_Mul.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_Div.o: f_FP_Div.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_Div.o: d_FP_Div.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_FMA.o: f_FP_FMA.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_FMA.o: d_FP_FMA.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_Sqrt.o: f_FP_Sqrt.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_Sqrt.o: d_FP_Sqrt.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_Rem.o: f_FP_Rem.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_Rem.o: d_FP_Rem.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_RoundToIntegral.o: f_FP_RoundToIntegral.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_RoundToIntegral.o: d_FP_RoundToIntegral.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_Min.o: f_FP_Min.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_Min.o: d_FP_Min.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_Max.o: f_FP_Max.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_Max.o: d_FP_Max.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_IsEqualObject.o: f_FP_IsEqualObject.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_IsEqualObject.o: d_FP_IsEqualObject.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_IsNormal.o: f_FP_IsNormal.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_IsNormal.o: d_FP_IsNormal.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_IsZero.o: f_FP_IsZero.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_IsZero.o: d_FP_IsZero.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_IsSubnormal.o: f_FP_IsSubnormal.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_IsSubnormal.o: d_FP_IsSubnormal.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_IsInfinite.o: f_FP_IsInfinite.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_IsInfinite.o: d_FP_IsInfinite.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_IsNaN.o: f_FP_IsNaN.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_IsNaN.o: d_FP_IsNaN.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_IsNegative.o: f_FP_IsNegative.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_IsNegative.o: d_FP_IsNegative.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 f_FP_IsPositive.o: f_FP_IsPositive.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 d_FP_IsPositive.o: d_FP_IsPositive.c floatCodeGen.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 clean:
 	rm -f *.o

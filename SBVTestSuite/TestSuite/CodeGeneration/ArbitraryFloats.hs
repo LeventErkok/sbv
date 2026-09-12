@@ -43,6 +43,8 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute rounding modes" arbitraryFloatRoundingModes
   , testCase "compile and execute symbolic rounding modes" arbitraryFloatSymbolicRoundingMode
   , testCase "compile and execute native rounding modes" nativeFloatRoundingModes
+  , testCase "preserve native floating rounding steps under optimization" nativeFloatRoundingSteps
+  , testCase "reject unsafe floating compiler modes" nativeFloatCompilerModes
   , testCase "convert between native floats and bit-vectors" nativeFloatBitVectorConversions
   , testCase "convert native floats across non-native widths" nativeFloatWidthConversions
   , testCase "preserve native floating casts under caller rounding modes" nativeFloatCastEnvironment
@@ -241,6 +243,62 @@ arbitraryFloatSymbolicRoundingMode = withSystemTempDirectory "sbv-arbitrary-floa
   compileAndRunLibBF dir "arbitraryFloatSymbolicRoundingMode" program (asHex 2 expected)
  where rawHalf :: SFPHalf -> SWord 16
        rawHalf = sFloatingPointAsSWord
+
+-- | Separate multiplication and addition round the product before adding;
+-- explicit FMA must keep the exact product until the final rounding. The
+-- near-one factors make these results differ in both native formats.
+nativeRoundingProgram :: SBVCodeGen ()
+nativeRoundingProgram = do
+  cgOverwriteFiles True
+  cgSetDriverValues [0x3f800001, 0x3f7ffffe, 0x3ff0000000000001, 0x3feffffffffffffe]
+  floatLeft   <- cgInput "floatLeft"   :: SBVCodeGen SWord32
+  floatRight  <- cgInput "floatRight"  :: SBVCodeGen SWord32
+  doubleLeft  <- cgInput "doubleLeft"  :: SBVCodeGen SWord64
+  doubleRight <- cgInput "doubleRight" :: SBVCodeGen SWord64
+  let xf = sWord32AsSFloat floatLeft
+      yf = sWord32AsSFloat floatRight
+      xd = sWord64AsSDouble doubleLeft
+      yd = sWord64AsSDouble doubleRight
+  cgReturn $ sAnd
+    [ fpAdd sRNE (fpMul sRNE xf yf) (-1) .== 0
+    , fpAdd sRNE (fpMul sRNE xd yd) (-1) .== 0
+    , xf * yf - 1 .== 0
+    , xd * yd - 1 .== 0
+    , fpFMA sRNE xf yf (-1) .== literal (-2 ** (-46) :: Float)
+    , fpFMA sRNE xd yd (-1) .== literal (-2 ** (-104) :: Double)
+    ]
+
+-- | Generated standalone and library Makefiles must preserve rounding steps
+-- under optimization and LTO, even when user CCFLAGS enable contraction.
+nativeFloatRoundingSteps :: Assertion
+nativeFloatRoundingSteps = mapM_ check [(library, flags) | library <- [False, True], flags <- ["-O3", "-O3 -ffp-contract=fast", "-O3 -flto -ffp-contract=fast"]]
+ where check (library, flags) = withSystemTempDirectory "sbv-native-rounding-steps" $ \dir -> do
+         let functionName = "nativeRoundingSteps"
+         (_, cfg, bundle) <- if library
+                               then compileToCLib' functionName [("roundingComponent", nativeRoundingProgram)]
+                               else compileToC' functionName ((:[]) <$> nativeRoundingProgram)
+         renderCgPgmBundle (Just dir) (cfg, bundle)
+         extraFlags <- maybe "" id <$> lookupEnv "SBV_C_TEST_FLAGS"
+         writeFile (dir </> "rounding.mk") ("CCFLAGS=-Wall -Werror " ++ flags ++ " " ++ extraFlags ++ "\n")
+         (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
+         assertEqual makeError ExitSuccess makeExit
+         (runExit, outputText, runError) <- readProcessWithExitCode (dir </> functionName ++ "_driver") [] ""
+         assertEqual runError ExitSuccess runExit
+         assertBool (flags ++ ":\n" ++ outputText) (") = 1" `isInfixOf` outputText)
+
+-- | Reject detectable compiler modes that can discard NaNs, signed zeros,
+-- or IEEE rounding, instead of silently compiling a different computation.
+nativeFloatCompilerModes :: Assertion
+nativeFloatCompilerModes = withSystemTempDirectory "sbv-native-unsafe-compiler-modes" $ \dir -> do
+  let functionName = "nativeCompilerModes"
+  (_, cfg, bundle) <- compileToC' functionName nativeRoundingProgram
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  let check flag = do
+        (ccExit, _, ccError) <- readProcessWithExitCode "cc"
+          ["-std=c11", "-O3", flag, "-c", dir </> functionName ++ ".c", "-o", dir </> "unsafe.o"] ""
+        assertBool ("Expected rejection of " ++ flag) (ccExit /= ExitSuccess)
+        assertBool ccError ("SBV-generated C requires IEEE floating-point semantics" `isInfixOf` ccError)
+  mapM_ check ["-ffast-math", "-ffinite-math-only"]
 
 -- | Exercise all constant rounding modes and runtime-selected modes while
 -- retaining native @float@ and @double@ values at the generated C boundary.
