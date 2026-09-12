@@ -128,6 +128,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute a structured lambda array" structuredLambdaArray
   , testCase "compile managed structured lambda arrays" managedStructuredLambdaArrays
   , testCase "retain an escaping managed lambda array" escapingManagedLambdaArray
+  , testCase "call defined functions inside array lambdas" definedFunctionsInsideArrayLambdas
+  , testCase "call defined functions from library array lambdas" definedFunctionArrayLambdaLibrary
   , testCase "compile and execute structured lambda tables" structuredLambdaTables
   , testCase "compile and execute a defined SBV function" definedSBVFunction
   , testCase "compose acyclic defined SBV functions" composedDefinedSBVFunctions
@@ -1444,6 +1446,69 @@ escapingManagedLambdaArray = withSystemTempDirectory "sbv-escaping-managed-lambd
   assertBool ("Expected the escaping callback to clone managed results into retained storage, received:\n" ++ sourceText)
              ("sbv_function_ctx_retain_empty" `isInfixOf` sourceText
            && "sbv_function_result_clone_" `isInfixOf` sourceText)
+
+-- | Call scalar and managed first-order 'smtFunction' definitions from array
+-- lambdas, including a scalar signature whose body uses hidden managed arenas
+-- and a managed callback that remains callable after its array escapes.
+definedFunctionsInsideArrayLambdas :: Assertion
+definedFunctionsInsideArrayLambdas = withSystemTempDirectory "sbv-defined-functions-in-array-lambdas" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [12]
+        key <- cgInput "key" :: SBVCodeGen SWord8
+        let countDigits :: SWord8 -> SWord8
+            countDigits = smtFunction "C lambda digit count" $ \value ->
+              sFromIntegral (SL.length (SL.natToStr (sFromIntegral value :: SInteger)))
+
+            decorate :: SString -> SString
+            decorate = smtFunction "C lambda text decoration" $ \value ->
+              literal "<" SL.++ value SL.++ literal ">"
+
+            numericSource = lambdaArray countDigits :: SArray Word8 Word8
+            textSource = lambdaArray (\index ->
+                           decorate (ite (index .== 0) (literal "zero") (literal "other")))
+                         :: SArray Word8 String
+        cgOutput "digits" (readArray numericSource key)
+        cgReturn textSource
+
+  stdoutText <- compileProgramAndRunGenerated dir "definedFunctionsInsideArrayLambdas" program
+  sourceText <- readFile (dir </> "definedFunctionsInsideArrayLambdas.c")
+  mapM_ (\fragment -> assertBool ("Expected a defined-function lambda output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                  (fragment `isInfixOf` stdoutText))
+    [ "[0] =<zero>"
+    , "digits = 2"
+    ]
+  assertBool ("Expected array callbacks to forward the function ownership context, received:\n" ++ sourceText)
+             ("/* Uninterpreted function */ sbv_function_" `isInfixOf` sourceText
+           && "sbv_function_ctx __sbv_function_ctx" `isInfixOf` sourceText)
+
+-- | Exercise retained arrays that call managed 'smtFunction' definitions in
+-- separate translation units of one generated static library.
+definedFunctionArrayLambdaLibrary :: Assertion
+definedFunctionArrayLambdaLibrary = withSystemTempDirectory "sbv-defined-function-array-lambda-library" $ \dir -> do
+  let component :: String -> SBVCodeGen ()
+      component prefix = do
+        cgOverwriteFiles True
+        let decorate :: SString -> SString
+            decorate = smtFunction ("C library lambda " ++ prefix) $ \value ->
+              literal prefix SL.++ value
+
+            source = lambdaArray (\index ->
+                       decorate (SL.natToStr (sFromIntegral index :: SInteger)))
+                     :: SArray Word8 String
+        cgReturn source
+
+  (_, cfg, bundle) <- compileToCLib' "definedFunctionArrayLambdaLibrary"
+    [ ("firstLambda", component "first-")
+    , ("secondLambda", component "second-")
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "definedFunctionArrayLambdaLibrary"
+  mapM_ (\fragment -> assertBool ("Expected a library function-backed lambda output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                  (fragment `isInfixOf` stdoutText))
+    [ "firstLambda()[0] =first-0"
+    , "secondLambda()[0] =second-0"
+    ]
 
 -- | Exercise parameter-dependent tables in two structured lambdas, ensuring
 -- their independently numbered local table declarations do not collide.

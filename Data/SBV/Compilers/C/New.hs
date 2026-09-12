@@ -1861,8 +1861,6 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
         -> die $ "Array-lambda result kind " ++ show (kindOf lambdaOutput) ++ " does not match " ++ show valueKind
         | not (null nestedLambdas)
         -> tbd "Nested structured lambdas inside lambda arrays"
-        | not (null definedFunctionCalls)
-        -> tbd "Defined SBV functions inside structured lambda arrays"
         | isArray valueKind
         -> tbd "Structured lambda arrays returning arrays"
         | True
@@ -1926,7 +1924,7 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
          = showSV cfg lambdaConsts lambdaOutput
 
        contextSetup
-         | Set.null contextRequirements = parens (text "void") <+> text "context" P.<> semi
+         | not needsFunctionContext = parens (text "void") <+> text "context" P.<> semi
          | True
          =  text "sbv_function_ctx *const __sbv_parent_function_ctx = (sbv_function_ctx *) context;"
          $$ setupContext CRequiresGMP             "sbv_gmp_ctx"             "gmp"
@@ -1969,6 +1967,8 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
          = text ("*__sbv_parent_" ++ fieldName ++ "_ctx = __sbv_" ++ fieldName ++ "_ctx;")
          | True
          = empty
+
+       needsFunctionContext = not (Set.null contextRequirements && null definedFunctionCalls)
 
 -- | Test whether a kind is a concrete user ADT rather than a built-in or
 -- uninterpreted sort.
