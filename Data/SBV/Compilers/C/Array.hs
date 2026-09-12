@@ -689,11 +689,18 @@ arrayConst _ _ = Nothing
 -- | Lower array initialization, reads, writes, and array-valued conditionals.
 -- Structured lambda-backed arrays, including free arrays, become callback
 -- roots. Array-valued elements cross node boundaries through retained
--- descriptor pointers. The supplied name resolver identifies private defined
--- functions whose array results also cross through retained descriptors.
--- General extensional array equality remains unsupported.
-arrayExpr :: CgConfig -> (T.Text -> Maybe String) -> Op -> [SV] -> SV -> [Doc] -> Maybe CLowering
-arrayExpr cfg definedFunctionName op svs resultSV args
+-- descriptor pointers. The supplied name resolvers identify private defined
+-- functions and lambda-lifted array callbacks. General extensional array
+-- equality remains unsupported.
+arrayExpr :: CgConfig
+          -> (T.Text -> Maybe String)
+          -> (SV -> Maybe String)
+          -> Op
+          -> [SV]
+          -> SV
+          -> [Doc]
+          -> Maybe CLowering
+arrayExpr cfg definedFunctionName structuredLambdaName op svs resultSV args
   | not (isArray resultKind || any isArray svs)
   = Nothing
   | True
@@ -716,16 +723,17 @@ arrayExpr cfg definedFunctionName op svs resultSV args
         -> nodeLowering resultKind
              [text ".kind = SBV_ARRAY_CONSTANT", text ".value =" <+> storedValue (snd pair) defaultValue]
       (ArrayInit (Right lambdaDef), [], [])
-        | Just _ <- smtLambdaInfo lambdaDef
+        | Just _            <- smtLambdaInfo lambdaDef
+        , Just callbackName <- structuredLambdaName resultSV
         -> nodeLowering resultKind
              [ text ".kind = SBV_ARRAY_CALLBACK"
-             , text ".lookup ="  <+> text (arrayLambdaName resultSV)
+             , text ".lookup ="  <+> text callbackName
              , text ".context =" <+> text "&__sbv_function_ctx"
              , text ".retain ="  <+> text "sbv_function_ctx_retain_empty"
              , text ".release =" <+> text "sbv_function_ctx_release_owned"
              ]
         | True
-        -> unsupported "lambda arrays without retained structured expressions"
+        -> unsupported "lambda arrays without registered retained structured expressions"
       (ReadArray, [array, key], [renderedArray, renderedKey])
         | kindOf array == KArray (kindOf key) resultKind
         -> let readResult = namedCall (arrayReadName (kindOf array)) [renderedArray, renderedKey]

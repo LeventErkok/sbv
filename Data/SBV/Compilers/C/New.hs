@@ -1085,6 +1085,7 @@ genCProg cfg adts lists sets fn proto
              $$ definedFunctionResultRuntime functionResultKinds
              $$ (if hasStructuredCallbacks then definedFunctionContextType requirements else empty)
              $$ vcat functionPrototypes
+             $$ vcat arrayLambdaPrototypes
              $$ vcat functionDocs
              $$ vcat arrayLambdaDocs
              $$ proto
@@ -1154,13 +1155,31 @@ genCProg cfg adts lists sets fn proto
                                 ]
        recursiveDefinitionNames = Set.fromList (concat [functionGroup | DG.CyclicSCC functionGroup <- definitionComponents])
 
-       arrayLambdaDefinitions = [ (sv, lambdaInfo)
-                                | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- assignments
-                                , Just lambdaInfo <- [smtLambdaInfo lambdaDef]
-                                ]
+       topLevelArrayLambdaDefinitions = [ (arrayLambdaName sv, sv, lambdaInfo)
+                                        | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- assignments
+                                        , Just lambdaInfo <- [smtLambdaInfo lambdaDef]
+                                        ]
+
+       topLevelArrayLambdaNames = [(sv, callbackName) | (callbackName, sv, _) <- topLevelArrayLambdaDefinitions]
+
+       arrayLambdaDefinitions =
+            topLevelArrayLambdaDefinitions
+         ++ concat [nestedArrayLambdaDefinitions callbackName lambdaInfo
+                   | (callbackName, _, lambdaInfo) <- topLevelArrayLambdaDefinitions
+                   ]
+         ++ concat [nestedArrayLambdaDefinitions (CTypes.definedFunctionCName functionName) lambdaInfo
+                   | (functionName, _, _, _, lambdaInfo) <- structuredDefinitions
+                   ]
+
+       nestedArrayLambdaDefinitions scope LambdaInfo{liAssignments = nestedAssignments}
+         = concat [ (callbackName, sv, lambdaInfo) : nestedArrayLambdaDefinitions callbackName lambdaInfo
+                  | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- F.toList nestedAssignments
+                  , let callbackName = scopedArrayLambdaName scope sv
+                  , Just lambdaInfo <- [smtLambdaInfo lambdaDef]
+                  ]
 
        functionAssignments    = concatMap (\(_, _, _, _, lambdaInfo) -> F.toList (liAssignments lambdaInfo)) structuredDefinitions
-       arrayLambdaAssignments = concatMap (F.toList . liAssignments . snd) arrayLambdaDefinitions
+       arrayLambdaAssignments = concatMap (\(_, _, lambdaInfo) -> F.toList (liAssignments lambdaInfo)) arrayLambdaDefinitions
        lambdaAssignments      = functionAssignments ++ arrayLambdaAssignments
        allAssignments         = assignments ++ lambdaAssignments
 
@@ -1182,11 +1201,16 @@ genCProg cfg adts lists sets fn proto
             , definedFunctionResultNeedsClone cfg adts resultKind
             ]
          ++ [ kindOf (liOutput lambdaInfo)
-            | (_, lambdaInfo) <- arrayLambdaDefinitions
+            | (_, _, lambdaInfo) <- arrayLambdaDefinitions
             , definedFunctionResultNeedsClone cfg adts (kindOf (liOutput lambdaInfo))
             ]
 
-       generatedArrayLambdas = map (uncurry (ppArrayLambda cfg adts functionNames)) arrayLambdaDefinitions
+       generatedArrayLambdas = [ppArrayLambda cfg adts functionNames callbackName sv lambdaInfo
+                               | (callbackName, sv, lambdaInfo) <- arrayLambdaDefinitions
+                               ]
+       arrayLambdaPrototypes  = [arrayLambdaSignature callbackName sv lambdaInfo P.<> semi
+                                | (callbackName, sv, lambdaInfo) <- arrayLambdaDefinitions
+                                ]
        arrayLambdaDocs        = map fst generatedArrayLambdas
 
        generatedAssignments = map genAsgn assignments
@@ -1450,7 +1474,8 @@ genCProg cfg adts lists sets fn proto
 
        genAsgn :: (SV, SBVExpr) -> (Int, Doc, Set.Set CRequirement)
        genAsgn (sv, n) = (cLocation consts sv, doc, needed)
-         where (doc, needed, _) = ppExpr cfg adts functionNames consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
+         where (doc, needed, _) = ppExpr cfg adts functionNames topLevelArrayLambdaNames consts n sv
+                                         (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
 
        -- merge tables intermixed with assignments and assertions, paying attention to putting tables as
        -- early as possible and tables right after.. Note that the assignment list (second argument) is sorted on its order
@@ -1718,7 +1743,8 @@ definedFunctionSignature originalName resultKind parameters
 -- | Lower one first-order SBV function definition from its retained expression
 -- DAG. Recursive definitions use demand-driven control flow so calls protected
 -- by conditionals and short-circuiting Boolean operations remain protected in
--- C. Nested lambdas and higher-order callbacks are handled by a later stage.
+-- C. Closed nested array lambdas are lambda-lifted into private callbacks;
+-- higher-order function values are handled by a later stage.
 ppDefinedFunction :: CgConfig
                   -> [Kind]
                   -> [(T.Text, String)]
@@ -1745,8 +1771,6 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
   = die $ "Non-universal parameter in defined function " ++ show originalName
   | kindOf functionOutput /= resultKind
   = die $ "Output-kind mismatch in defined function " ++ show originalName
-  | not (null nestedLambdas)
-  = tbd $ "Nested lambdas in defined function " ++ show originalName
   | not (null unsupportedManagedKinds)
   = tbd $ "Managed values in defined function " ++ show originalName ++ ": " ++ intercalate ", " (map show unsupportedManagedKinds)
   | True
@@ -1762,7 +1786,9 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
                                       ]
        functionValues               = functionOutput : map snd parameters ++ map fst assignments ++ map fst constants
        typeWidth                    = maximum (0 : map (length . showCType) functionValues)
-       nestedLambdas                = [sv | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments]
+       nestedLambdaNames            = [ (sv, scopedArrayLambdaName (CTypes.definedFunctionCName originalName) sv)
+                                      | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments
+                                      ]
        unsupportedManagedKinds      = nub [ kind
                                           | value <- functionValues
                                           , let kind = kindOf value
@@ -1783,7 +1809,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
 
        generatedAssignments = [(cLocation functionConsts sv, doc, needed)
                               | (sv, expression) <- assignments
-                              , let (doc, needed, _) = ppExpr cfg adts functionNames renderingConsts expression sv
+                              , let (doc, needed, _) = ppExpr cfg adts functionNames nestedLambdaNames renderingConsts expression sv
                                                             (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
                               ]
 
@@ -1853,7 +1879,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
           $$ nest 2 (   contextSetup
                      $$ vcat [declSV typeWidth sv <+> text "=" <+> mkConst cfg cv P.<> semi | (sv, cv) <- stabilizedConstants]
                      $$ functionAssignments
-                     $$ text "const" <+> text functionResultType <+> text "__sbv_function_result =" <+> functionResult P.<> semi
+                     $$ functionResultDeclaration <+> text "__sbv_function_result =" <+> functionResult P.<> semi
                      $$ contextCommit
                      $$ text "return __sbv_function_result;"
                     )
@@ -1910,7 +1936,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
                                                                                                            (operationDependencies op arguments)
                       (withTable, tableDocs) = emitTable withArguments op
                       (assignmentDoc, assignmentRequirements, assignmentDeclarations) =
-                        ppExpr cfg adts functionNames renderingConsts expression sv (text (show sv))
+                        ppExpr cfg adts functionNames nestedLambdaNames renderingConsts expression sv (text (show sv))
                                (declSVNoConst typeWidth sv) False
                   in ( insertAvailableValue sv withTable
                      , argumentDocs $$ tableDocs $$ assignmentDoc
@@ -1988,25 +2014,53 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          | isArray resultKind = CTypes.elementCType resultKind
          | True               = showCType resultKind
 
+       functionResultDeclaration
+         | isArray resultKind = text functionResultType
+         | True               = text "const" <+> text functionResultType
+
+-- | Give a lambda-lifted array callback a name unique to its lexical owner.
+scopedArrayLambdaName :: String -> SV -> String
+scopedArrayLambdaName scope arraySV = scope ++ "_nested_" ++ show arraySV
+
+-- | Render the private C signature for a structured array callback.
+arrayLambdaSignature :: String -> SV -> LambdaInfo -> Doc
+arrayLambdaSignature callbackName arraySV LambdaInfo{liParams = parameters}
+  = case (kindOf arraySV, parameters) of
+      (KArray _ valueKind, [(ALL, parameter)])
+        -> text "static" <+> text (arrayLambdaResultType valueKind) <+> text callbackName
+             P.<> parens (fsep (punctuate comma [text "const void *context", text (showCType (kindOf parameter)) <+> text (show parameter)]))
+      (KArray{}, _) -> die $ "Expected exactly one universal array-lambda parameter, received " ++ show parameters
+      (kind, _)     -> die $ "Expected an array-valued lambda node, received " ++ show kind
+
+-- | Return the C callback result type for an array element kind.
+arrayLambdaResultType :: Kind -> String
+arrayLambdaResultType kind
+  | isArray kind = CTypes.elementCType kind
+  | True         = showCType kind
+
 -- | Lower a retained one-argument array lambda into a C lookup callback. Its
 -- local DAG uses the ordinary lowering pipeline, so scalar and managed values
 -- share the same semantics and ownership arenas as the enclosing generated
 -- function.
-ppArrayLambda :: CgConfig -> [Kind] -> [(T.Text, String)] -> SV -> LambdaInfo -> (Doc, Set.Set CRequirement)
-ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaPgm
-                                                       , liParams      = parameters
-                                                       , liOutput      = lambdaOutput
-                                                       , liConsts      = constants
-                                                       , liTables      = tables
-                                                       }
+ppArrayLambda :: CgConfig
+              -> [Kind]
+              -> [(T.Text, String)]
+              -> String
+              -> SV
+              -> LambdaInfo
+              -> (Doc, Set.Set CRequirement)
+ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
+                                                                              , liParams      = parameters
+                                                                              , liOutput      = lambdaOutput
+                                                                              , liConsts      = constants
+                                                                              , liTables      = tables
+                                                                              }
   = case (kindOf arraySV, parameters) of
       (KArray keyKind valueKind, [(ALL, parameter)])
         | kindOf parameter /= keyKind
         -> die $ "Array-lambda parameter kind " ++ show (kindOf parameter) ++ " does not match " ++ show keyKind
         | kindOf lambdaOutput /= valueKind
         -> die $ "Array-lambda result kind " ++ show (kindOf lambdaOutput) ++ " does not match " ++ show valueKind
-        | not (null nestedLambdas)
-        -> tbd "Nested structured lambdas inside lambda arrays"
         | True
         -> (helper keyKind valueKind parameter, requirements)
       (KArray{}, _) -> die $ "Expected exactly one universal array-lambda parameter, received " ++ show parameters
@@ -2016,7 +2070,9 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
        lambdaValues = lambdaOutput : map snd parameters ++ map fst assignments ++ map fst constants ++ concatMap snd tables
        typeWidth    = maximum (0 : map (length . showCType) lambdaValues)
 
-       nestedLambdas = [sv | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments]
+       nestedLambdaNames = [ (sv, scopedArrayLambdaName callbackName sv)
+                           | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments
+                           ]
        definedFunctionCalls = [ symbol
                               | (_, SBVApp (Uninterpreted symbol) _) <- assignments
                               , isJust (lookup symbol functionNames)
@@ -2026,7 +2082,7 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
 
        generatedAssignments = [(cLocation lambdaConsts sv, doc, needed)
                               | (sv, expression) <- assignments
-                              , let (doc, needed, _) = ppExpr cfg adts functionNames lambdaConsts expression sv
+                              , let (doc, needed, _) = ppExpr cfg adts functionNames nestedLambdaNames lambdaConsts expression sv
                                                             (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
                               ]
 
@@ -2048,13 +2104,12 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
          ++ [CRequiresArrays | any isArray expandedLambdaKinds]
          ++ [CRequiresFunctionResults | definedFunctionResultNeedsClone cfg adts (kindOf lambdaOutput)]
 
-       helper keyKind valueKind parameter
-         = text "static" <+> text (callbackResultType valueKind) <+> text (arrayLambdaName arraySV)
-             P.<> parens (fsep (punctuate comma [text "const void *context", text (showCType keyKind) <+> text (show parameter)]))
+       helper _ valueKind _
+         = arrayLambdaSignature callbackName arraySV lambdaInfo
           $$ text "{"
           $$ nest 2 (   contextSetup
                      $$ vcat (map snd (mergeLocated generatedTables assignmentDocs))
-                     $$ text "const" <+> text (callbackResultType valueKind) <+> text "__sbv_lambda_result" <+> text "=" <+> lambdaResult P.<> semi
+                     $$ lambdaResultDeclaration valueKind <+> text "__sbv_lambda_result" <+> text "=" <+> lambdaResult P.<> semi
                      $$ contextCommit
                      $$ text "return __sbv_lambda_result;"
                     )
@@ -2069,9 +2124,9 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
          | True
          = showSV cfg lambdaConsts lambdaOutput
 
-       callbackResultType kind
-         | isArray kind = CTypes.elementCType kind
-         | True         = showCType kind
+       lambdaResultDeclaration valueKind
+         | isArray lambdaOutput = text (arrayLambdaResultType valueKind)
+         | True                 = text "const" <+> text (arrayLambdaResultType valueKind)
 
        contextSetup
          | not needsFunctionContext = parens (text "void") <+> text "context" P.<> semi
@@ -2230,6 +2285,7 @@ handleIEEE w consts as var = cvt w
 ppExpr :: CgConfig
        -> [Kind]
        -> [(T.Text, String)]
+       -> [(SV, String)]
        -> [(SV, CV)]
        -> SBVExpr
        -> SV
@@ -2237,7 +2293,7 @@ ppExpr :: CgConfig
        -> (Doc, Doc)
        -> Bool
        -> (Doc, Set.Set CRequirement, [Doc])
-ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var) declareResult
+ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) resultSV lhs (typ, var) declareResult
   = ( vcat $ declarations
           ++ loweringSetup selected
           ++ [assignment]
@@ -2258,7 +2314,7 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var) 
         renderedArgs = map (showSV cfg consts) opArgs
 
         selected = fromMaybe legacy $ chooseLowering
-          [ arrayExpr cfg (`lookup` functionNames) op opArgs resultSV renderedArgs
+          [ arrayExpr cfg (`lookup` functionNames) (`lookup` structuredLambdaNames) op opArgs resultSV renderedArgs
           , tableExpr cfg (showSV cfg consts) op resultSV
           , setExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , nonLinearExpr cfg op opArgs (kindOf resultSV) renderedArgs

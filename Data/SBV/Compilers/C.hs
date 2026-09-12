@@ -42,8 +42,8 @@
 -- Quantifiers, special solver relations, uninterpreted sorts,
 -- regular-expression language operations, soft constraints, and general
 -- extensional array equality require solver semantics and are rejected with
--- focused diagnostics. Nested lambdas and higher-order function values are
--- retained for later compiler stages.
+-- focused diagnostics. Higher-order function values are retained for a later
+-- compiler stage.
 --
 -- Import "Data.SBV.Compilers.C.Legacy" to retain the previous compiler while
 -- migrating code that encounters one of these boundaries.

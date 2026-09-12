@@ -132,6 +132,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "call defined functions from library array lambdas" definedFunctionArrayLambdaLibrary
   , testCase "return arrays from structured array lambdas" arrayValuedLambdaResults
   , testCase "return array-valued lambdas from a library" arrayValuedLambdaLibrary
+  , testCase "compile nested structured array lambdas" nestedStructuredArrayLambdas
+  , testCase "compile nested structured lambdas in a library" nestedStructuredArrayLambdaLibrary
   , testCase "compile and execute structured lambda tables" structuredLambdaTables
   , testCase "compile and execute a defined SBV function" definedSBVFunction
   , testCase "compose acyclic defined SBV functions" composedDefinedSBVFunctions
@@ -1585,6 +1587,91 @@ arrayValuedLambdaLibrary = withSystemTempDirectory "sbv-array-valued-lambda-libr
                                   (fragment `isInfixOf` stdoutText))
     [ "firstNestedArray()[0] =[0] =0x00000015UL"
     , "secondNestedArray()[0] =[0] =0x0000001fUL"
+    ]
+
+-- | Lambda-lift closed array callbacks from a defined function and from an
+-- outer array callback whose result is itself a selected callback array.
+nestedStructuredArrayLambdas :: Assertion
+nestedStructuredArrayLambdas = withSystemTempDirectory "sbv-nested-structured-array-lambdas" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [1, 5, 1]
+        chooseFirst <- cgInput "chooseFirst" :: SBVCodeGen SBool
+        key         <- cgInput "key"         :: SBVCodeGen SWord8
+        outerKey    <- cgInput "outerKey"    :: SBVCodeGen SWord8
+        let choose :: SBool -> SArray Word8 Word16
+            choose = smtFunction "C nested lambda choice" $ \condition ->
+                       ite condition
+                           (lambdaArray (\index -> sFromIntegral index + 10))
+                           (lambdaArray (\index -> sFromIntegral index + 20))
+
+            recursiveChoose :: SWord8 -> SArray Word8 Word16
+            recursiveChoose = smtFunctionNoTermination "C recursive nested lambda choice" $ \count ->
+                                ite (count .== 0)
+                                    (lambdaArray (\index -> sFromIntegral index + 60))
+                                    (recursiveChoose (count - 1))
+
+            nested = lambdaArray (\outer ->
+                       ite (outer .== 0)
+                           (lambdaArray (\index -> sFromIntegral index + 30))
+                           (lambdaArray (\index -> sFromIntegral index + 40)))
+                     :: SArray Word8 (ArrayModel Word8 Word16)
+
+            deep = lambdaArray (\_ ->
+                     lambdaArray (\_ ->
+                       lambdaArray (\index -> sFromIntegral index + 50)))
+                   :: SArray Word8 (ArrayModel Word8 (ArrayModel Word8 Word16))
+
+            chosen      = choose chooseFirst
+            selected    = readArray chosen key
+            nestedInner = readArray nested outerKey
+            deepMiddle  = readArray deep outerKey
+            deepInner   = readArray deepMiddle outerKey
+            recursive   = recursiveChoose outerKey
+
+        cgOutput "selected"       selected
+        cgOutput "nestedSelected" (readArray nestedInner key)
+        cgOutput "deepSelected"   (readArray deepInner key)
+        cgOutput "recursive"      (readArray recursive key)
+        cgReturn chosen
+
+  stdoutText <- compileProgramAndRunGenerated dir "nestedStructuredArrayLambdas" program
+  sourceText <- readFile (dir </> "nestedStructuredArrayLambdas.c")
+  mapM_ (\fragment -> assertBool ("Expected nested structured-lambda output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ ")[0] =0x000aU"
+    , "selected = 0x000fU"
+    , "nestedSelected = 0x002dU"
+    , "deepSelected = 0x0037U"
+    , "recursive = 0x0041U"
+    ]
+  assertBool ("Expected nested callbacks to receive lexical-scope-qualified names, received:\n" ++ sourceText)
+             ("_nested_l" `isInfixOf` sourceText)
+
+-- | Exercise lambda-lifted callbacks from private defined functions in
+-- independent translation units of a generated static library.
+nestedStructuredArrayLambdaLibrary :: Assertion
+nestedStructuredArrayLambdaLibrary = withSystemTempDirectory "sbv-nested-structured-array-lambda-library" $ \dir -> do
+  let component :: Word16 -> SBVCodeGen ()
+      component offset = do
+        cgOverwriteFiles True
+        let choose :: SBool -> SArray Word8 Word16
+            choose = smtFunction "C library nested lambda" $ \condition ->
+                       ite condition
+                           (lambdaArray (\index -> sFromIntegral index + literal offset))
+                           (lambdaArray (\index -> sFromIntegral index + literal offset + 100))
+        cgReturn (choose (literal True))
+
+  (_, cfg, bundle) <- compileToCLib' "nestedStructuredArrayLambdaLibrary"
+    [ ("firstNestedLambda", component 10)
+    , ("secondNestedLambda", component 20)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "nestedStructuredArrayLambdaLibrary"
+  mapM_ (\fragment -> assertBool ("Expected nested structured-lambda library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ "firstNestedLambda()[0] =0x000aU"
+    , "secondNestedLambda()[0] =0x0014U"
     ]
 
 -- | Exercise parameter-dependent tables in two structured lambdas, ensuring
