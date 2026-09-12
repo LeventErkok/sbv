@@ -85,9 +85,9 @@ int main(void)
 
 #include "fib1.h"
 
-SWord64 fib1(const SWord64 n)
+SWord64 fib1(const SWord64 sbv_input_0)
 {
-  const SWord64 s0 = n;
+  const SWord64 s0 = sbv_input_0;
   const SBool   s2 = s0 == 0x0000000000000000ULL;
   const SBool   s4 = s0 == 0x0000000000000001ULL;
   const SBool   s6 = s0 == 0x0000000000000002ULL;

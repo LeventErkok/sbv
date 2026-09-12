@@ -183,9 +183,9 @@ static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_0_0_u1(SWord16 a)
 }
 
 
-SWord16 crcUSB5(const SWord16 msg)
+SWord16 crcUSB5(const SWord16 sbv_input_0)
 {
-  const SWord16 s0 = msg;
+  const SWord16 s0 = sbv_input_0;
   const SBool   s1 = sbv_bv_extract_u16_10_10_u1(s0);
   const SBool   s3 = s1 != false;
   const SBool   s4 = sbv_bv_extract_u16_9_9_u1(s0);

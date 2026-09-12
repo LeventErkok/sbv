@@ -74,21 +74,21 @@ void sha256HashBlock(const SWord8 *hIn, const SWord8 *block,
 
 int main(void)
 {
-  const SWord8 hIn[32] = {
+  const SWord8 sbv_driver_input_0[32] = {
       0x6a, 0x09, 0xe6, 0x67, 0xbb, 0x67, 0xae, 0x85, 0x3c, 0x6e, 0xf3,
       0x72, 0xa5, 0x4f, 0xf5, 0x3a, 0x51, 0x0e, 0x52, 0x7f, 0x9b, 0x05,
       0x68, 0x8c, 0x1f, 0x83, 0xd9, 0xab, 0x5b, 0xe0, 0xcd, 0x19
   };
 
   printf("Contents of input array hIn:\n");
-  int hIn_ctr;
-  for(hIn_ctr = 0; hIn_ctr < 32 ; ++hIn_ctr)
-  { printf("  hIn[%2d] = ", hIn_ctr);
-    printf("0x%02"PRIx8"", hIn[hIn_ctr]);
+  int sbv_driver_input_0_ctr;
+  for(sbv_driver_input_0_ctr = 0; sbv_driver_input_0_ctr < 32 ; ++sbv_driver_input_0_ctr)
+  { printf("  hIn[%2d] = ", sbv_driver_input_0_ctr);
+    printf("0x%02"PRIx8"", sbv_driver_input_0[sbv_driver_input_0_ctr]);
     printf("\n");
   }
 
-  const SWord8 block[64] = {
+  const SWord8 sbv_driver_input_1[64] = {
       0x53, 0x42, 0x56, 0x20, 0x67, 0x6f, 0x65, 0x73, 0x20, 0x53, 0x48,
       0x41, 0x32, 0x35, 0x36, 0x21, 0x21, 0x80, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -98,22 +98,23 @@ int main(void)
   };
 
   printf("Contents of input array block:\n");
-  int block_ctr;
-  for(block_ctr = 0; block_ctr < 64 ; ++block_ctr)
-  { printf("  block[%2d] = ", block_ctr);
-    printf("0x%02"PRIx8"", block[block_ctr]);
+  int sbv_driver_input_1_ctr;
+  for(sbv_driver_input_1_ctr = 0; sbv_driver_input_1_ctr < 64 ; ++sbv_driver_input_1_ctr)
+  { printf("  block[%2d] = ", sbv_driver_input_1_ctr);
+    printf("0x%02"PRIx8"", sbv_driver_input_1[sbv_driver_input_1_ctr]);
     printf("\n");
   }
 
-  SWord8 hash[32];
+  SWord8 sbv_driver_output_0[32];
 
-  sha256HashBlock(hIn, block, hash);
+  sha256HashBlock(sbv_driver_input_0, sbv_driver_input_1,
+                  sbv_driver_output_0);
 
   printf("sha256HashBlock(hIn, block, hash) ->\n");
-  int hash_ctr;
-  for(hash_ctr = 0; hash_ctr < 32 ; ++hash_ctr)
-  { printf("  hash[%2d] = ", hash_ctr);
-    printf("0x%02"PRIx8"", hash[hash_ctr]);
+  int sbv_driver_output_0_ctr;
+  for(sbv_driver_output_0_ctr = 0; sbv_driver_output_0_ctr < 32 ; ++sbv_driver_output_0_ctr)
+  { printf("  hash[%2d] = ", sbv_driver_output_0_ctr);
+    printf("0x%02"PRIx8"", sbv_driver_output_0[sbv_driver_output_0_ctr]);
     printf("\n");
   }
 
@@ -216,105 +217,105 @@ static inline SBV_CGEN_UNUSED SWord8 sbv_bv_extract_u32_7_0_u8(SWord32 a)
 }
 
 
-void sha256HashBlock(const SWord8 *hIn, const SWord8 *block,
-                     SWord8 *hash)
+void sha256HashBlock(const SWord8 *sbv_input_0,
+                     const SWord8 *sbv_input_1, SWord8 *sbv_output_0)
 {
-  const SWord8  s0 = hIn[0];
-  const SWord8  s1 = hIn[1];
-  const SWord8  s2 = hIn[2];
-  const SWord8  s3 = hIn[3];
-  const SWord8  s4 = hIn[4];
-  const SWord8  s5 = hIn[5];
-  const SWord8  s6 = hIn[6];
-  const SWord8  s7 = hIn[7];
-  const SWord8  s8 = hIn[8];
-  const SWord8  s9 = hIn[9];
-  const SWord8  s10 = hIn[10];
-  const SWord8  s11 = hIn[11];
-  const SWord8  s12 = hIn[12];
-  const SWord8  s13 = hIn[13];
-  const SWord8  s14 = hIn[14];
-  const SWord8  s15 = hIn[15];
-  const SWord8  s16 = hIn[16];
-  const SWord8  s17 = hIn[17];
-  const SWord8  s18 = hIn[18];
-  const SWord8  s19 = hIn[19];
-  const SWord8  s20 = hIn[20];
-  const SWord8  s21 = hIn[21];
-  const SWord8  s22 = hIn[22];
-  const SWord8  s23 = hIn[23];
-  const SWord8  s24 = hIn[24];
-  const SWord8  s25 = hIn[25];
-  const SWord8  s26 = hIn[26];
-  const SWord8  s27 = hIn[27];
-  const SWord8  s28 = hIn[28];
-  const SWord8  s29 = hIn[29];
-  const SWord8  s30 = hIn[30];
-  const SWord8  s31 = hIn[31];
-  const SWord8  s32 = block[0];
-  const SWord8  s33 = block[1];
-  const SWord8  s34 = block[2];
-  const SWord8  s35 = block[3];
-  const SWord8  s36 = block[4];
-  const SWord8  s37 = block[5];
-  const SWord8  s38 = block[6];
-  const SWord8  s39 = block[7];
-  const SWord8  s40 = block[8];
-  const SWord8  s41 = block[9];
-  const SWord8  s42 = block[10];
-  const SWord8  s43 = block[11];
-  const SWord8  s44 = block[12];
-  const SWord8  s45 = block[13];
-  const SWord8  s46 = block[14];
-  const SWord8  s47 = block[15];
-  const SWord8  s48 = block[16];
-  const SWord8  s49 = block[17];
-  const SWord8  s50 = block[18];
-  const SWord8  s51 = block[19];
-  const SWord8  s52 = block[20];
-  const SWord8  s53 = block[21];
-  const SWord8  s54 = block[22];
-  const SWord8  s55 = block[23];
-  const SWord8  s56 = block[24];
-  const SWord8  s57 = block[25];
-  const SWord8  s58 = block[26];
-  const SWord8  s59 = block[27];
-  const SWord8  s60 = block[28];
-  const SWord8  s61 = block[29];
-  const SWord8  s62 = block[30];
-  const SWord8  s63 = block[31];
-  const SWord8  s64 = block[32];
-  const SWord8  s65 = block[33];
-  const SWord8  s66 = block[34];
-  const SWord8  s67 = block[35];
-  const SWord8  s68 = block[36];
-  const SWord8  s69 = block[37];
-  const SWord8  s70 = block[38];
-  const SWord8  s71 = block[39];
-  const SWord8  s72 = block[40];
-  const SWord8  s73 = block[41];
-  const SWord8  s74 = block[42];
-  const SWord8  s75 = block[43];
-  const SWord8  s76 = block[44];
-  const SWord8  s77 = block[45];
-  const SWord8  s78 = block[46];
-  const SWord8  s79 = block[47];
-  const SWord8  s80 = block[48];
-  const SWord8  s81 = block[49];
-  const SWord8  s82 = block[50];
-  const SWord8  s83 = block[51];
-  const SWord8  s84 = block[52];
-  const SWord8  s85 = block[53];
-  const SWord8  s86 = block[54];
-  const SWord8  s87 = block[55];
-  const SWord8  s88 = block[56];
-  const SWord8  s89 = block[57];
-  const SWord8  s90 = block[58];
-  const SWord8  s91 = block[59];
-  const SWord8  s92 = block[60];
-  const SWord8  s93 = block[61];
-  const SWord8  s94 = block[62];
-  const SWord8  s95 = block[63];
+  const SWord8  s0 = sbv_input_0[0];
+  const SWord8  s1 = sbv_input_0[1];
+  const SWord8  s2 = sbv_input_0[2];
+  const SWord8  s3 = sbv_input_0[3];
+  const SWord8  s4 = sbv_input_0[4];
+  const SWord8  s5 = sbv_input_0[5];
+  const SWord8  s6 = sbv_input_0[6];
+  const SWord8  s7 = sbv_input_0[7];
+  const SWord8  s8 = sbv_input_0[8];
+  const SWord8  s9 = sbv_input_0[9];
+  const SWord8  s10 = sbv_input_0[10];
+  const SWord8  s11 = sbv_input_0[11];
+  const SWord8  s12 = sbv_input_0[12];
+  const SWord8  s13 = sbv_input_0[13];
+  const SWord8  s14 = sbv_input_0[14];
+  const SWord8  s15 = sbv_input_0[15];
+  const SWord8  s16 = sbv_input_0[16];
+  const SWord8  s17 = sbv_input_0[17];
+  const SWord8  s18 = sbv_input_0[18];
+  const SWord8  s19 = sbv_input_0[19];
+  const SWord8  s20 = sbv_input_0[20];
+  const SWord8  s21 = sbv_input_0[21];
+  const SWord8  s22 = sbv_input_0[22];
+  const SWord8  s23 = sbv_input_0[23];
+  const SWord8  s24 = sbv_input_0[24];
+  const SWord8  s25 = sbv_input_0[25];
+  const SWord8  s26 = sbv_input_0[26];
+  const SWord8  s27 = sbv_input_0[27];
+  const SWord8  s28 = sbv_input_0[28];
+  const SWord8  s29 = sbv_input_0[29];
+  const SWord8  s30 = sbv_input_0[30];
+  const SWord8  s31 = sbv_input_0[31];
+  const SWord8  s32 = sbv_input_1[0];
+  const SWord8  s33 = sbv_input_1[1];
+  const SWord8  s34 = sbv_input_1[2];
+  const SWord8  s35 = sbv_input_1[3];
+  const SWord8  s36 = sbv_input_1[4];
+  const SWord8  s37 = sbv_input_1[5];
+  const SWord8  s38 = sbv_input_1[6];
+  const SWord8  s39 = sbv_input_1[7];
+  const SWord8  s40 = sbv_input_1[8];
+  const SWord8  s41 = sbv_input_1[9];
+  const SWord8  s42 = sbv_input_1[10];
+  const SWord8  s43 = sbv_input_1[11];
+  const SWord8  s44 = sbv_input_1[12];
+  const SWord8  s45 = sbv_input_1[13];
+  const SWord8  s46 = sbv_input_1[14];
+  const SWord8  s47 = sbv_input_1[15];
+  const SWord8  s48 = sbv_input_1[16];
+  const SWord8  s49 = sbv_input_1[17];
+  const SWord8  s50 = sbv_input_1[18];
+  const SWord8  s51 = sbv_input_1[19];
+  const SWord8  s52 = sbv_input_1[20];
+  const SWord8  s53 = sbv_input_1[21];
+  const SWord8  s54 = sbv_input_1[22];
+  const SWord8  s55 = sbv_input_1[23];
+  const SWord8  s56 = sbv_input_1[24];
+  const SWord8  s57 = sbv_input_1[25];
+  const SWord8  s58 = sbv_input_1[26];
+  const SWord8  s59 = sbv_input_1[27];
+  const SWord8  s60 = sbv_input_1[28];
+  const SWord8  s61 = sbv_input_1[29];
+  const SWord8  s62 = sbv_input_1[30];
+  const SWord8  s63 = sbv_input_1[31];
+  const SWord8  s64 = sbv_input_1[32];
+  const SWord8  s65 = sbv_input_1[33];
+  const SWord8  s66 = sbv_input_1[34];
+  const SWord8  s67 = sbv_input_1[35];
+  const SWord8  s68 = sbv_input_1[36];
+  const SWord8  s69 = sbv_input_1[37];
+  const SWord8  s70 = sbv_input_1[38];
+  const SWord8  s71 = sbv_input_1[39];
+  const SWord8  s72 = sbv_input_1[40];
+  const SWord8  s73 = sbv_input_1[41];
+  const SWord8  s74 = sbv_input_1[42];
+  const SWord8  s75 = sbv_input_1[43];
+  const SWord8  s76 = sbv_input_1[44];
+  const SWord8  s77 = sbv_input_1[45];
+  const SWord8  s78 = sbv_input_1[46];
+  const SWord8  s79 = sbv_input_1[47];
+  const SWord8  s80 = sbv_input_1[48];
+  const SWord8  s81 = sbv_input_1[49];
+  const SWord8  s82 = sbv_input_1[50];
+  const SWord8  s83 = sbv_input_1[51];
+  const SWord8  s84 = sbv_input_1[52];
+  const SWord8  s85 = sbv_input_1[53];
+  const SWord8  s86 = sbv_input_1[54];
+  const SWord8  s87 = sbv_input_1[55];
+  const SWord8  s88 = sbv_input_1[56];
+  const SWord8  s89 = sbv_input_1[57];
+  const SWord8  s90 = sbv_input_1[58];
+  const SWord8  s91 = sbv_input_1[59];
+  const SWord8  s92 = sbv_input_1[60];
+  const SWord8  s93 = sbv_input_1[61];
+  const SWord8  s94 = sbv_input_1[62];
+  const SWord8  s95 = sbv_input_1[63];
   const SWord16 s96 = sbv_bv_join_u8_u8_u16(s0, s1);
   const SWord16 s97 = sbv_bv_join_u8_u8_u16(s2, s3);
   const SWord32 s98 = sbv_bv_join_u16_u16_u32(s96, s97);
@@ -2653,37 +2654,37 @@ void sha256HashBlock(const SWord8 *hIn, const SWord8 *block,
   const SWord8  s2497 = sbv_bv_extract_u32_15_8_u8(s2494);
   const SWord8  s2498 = sbv_bv_extract_u32_7_0_u8(s2494);
 
-  hash[0] = s2459;
-  hash[1] = s2460;
-  hash[2] = s2461;
-  hash[3] = s2462;
-  hash[4] = s2464;
-  hash[5] = s2465;
-  hash[6] = s2466;
-  hash[7] = s2467;
-  hash[8] = s2469;
-  hash[9] = s2470;
-  hash[10] = s2471;
-  hash[11] = s2472;
-  hash[12] = s2474;
-  hash[13] = s2475;
-  hash[14] = s2476;
-  hash[15] = s2477;
-  hash[16] = s2480;
-  hash[17] = s2481;
-  hash[18] = s2482;
-  hash[19] = s2483;
-  hash[20] = s2485;
-  hash[21] = s2486;
-  hash[22] = s2487;
-  hash[23] = s2488;
-  hash[24] = s2490;
-  hash[25] = s2491;
-  hash[26] = s2492;
-  hash[27] = s2493;
-  hash[28] = s2495;
-  hash[29] = s2496;
-  hash[30] = s2497;
-  hash[31] = s2498;
+  sbv_output_0[0] = s2459;
+  sbv_output_0[1] = s2460;
+  sbv_output_0[2] = s2461;
+  sbv_output_0[3] = s2462;
+  sbv_output_0[4] = s2464;
+  sbv_output_0[5] = s2465;
+  sbv_output_0[6] = s2466;
+  sbv_output_0[7] = s2467;
+  sbv_output_0[8] = s2469;
+  sbv_output_0[9] = s2470;
+  sbv_output_0[10] = s2471;
+  sbv_output_0[11] = s2472;
+  sbv_output_0[12] = s2474;
+  sbv_output_0[13] = s2475;
+  sbv_output_0[14] = s2476;
+  sbv_output_0[15] = s2477;
+  sbv_output_0[16] = s2480;
+  sbv_output_0[17] = s2481;
+  sbv_output_0[18] = s2482;
+  sbv_output_0[19] = s2483;
+  sbv_output_0[20] = s2485;
+  sbv_output_0[21] = s2486;
+  sbv_output_0[22] = s2487;
+  sbv_output_0[23] = s2488;
+  sbv_output_0[24] = s2490;
+  sbv_output_0[25] = s2491;
+  sbv_output_0[26] = s2492;
+  sbv_output_0[27] = s2493;
+  sbv_output_0[28] = s2495;
+  sbv_output_0[29] = s2496;
+  sbv_output_0[30] = s2497;
+  sbv_output_0[31] = s2498;
 }
 == END: "sha256HashBlock.c" ==================

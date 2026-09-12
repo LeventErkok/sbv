@@ -73,20 +73,20 @@ SWord32 tstShiftLeft(const SWord32 *vs);
 
 int main(void)
 {
-  const SWord32 vs[3] = {
+  const SWord32 sbv_driver_input_0[3] = {
       0x00000001UL, 0x00000002UL, 0x00000003UL
   };
 
   printf("Contents of input array vs:\n");
-  int vs_ctr;
-  for(vs_ctr = 0; vs_ctr < 3 ; ++vs_ctr)
-  { printf("  vs[%1d] = ", vs_ctr);
-    printf("0x%08"PRIx32"UL", vs[vs_ctr]);
+  int sbv_driver_input_0_ctr;
+  for(sbv_driver_input_0_ctr = 0; sbv_driver_input_0_ctr < 3 ; ++sbv_driver_input_0_ctr)
+  { printf("  vs[%1d] = ", sbv_driver_input_0_ctr);
+    printf("0x%08"PRIx32"UL", sbv_driver_input_0[sbv_driver_input_0_ctr]);
     printf("\n");
   }
 
 
-  const SWord32 __result = tstShiftLeft(vs);
+  const SWord32 __result = tstShiftLeft(sbv_driver_input_0);
 
   printf("tstShiftLeft(vs) = 0x%08"PRIx32"UL\n", __result);
 
@@ -117,11 +117,11 @@ static inline SBV_CGEN_UNUSED SWord32 sbv_bv_u32_add(SWord32 a, SWord32 b)
 }
 
 
-SWord32 tstShiftLeft(const SWord32 *vs)
+SWord32 tstShiftLeft(const SWord32 *sbv_input_0)
 {
-  const SWord32 s0 = vs[0];
-  const SWord32 s1 = vs[1];
-  const SWord32 s2 = vs[2];
+  const SWord32 s0 = sbv_input_0[0];
+  const SWord32 s1 = sbv_input_0[1];
+  const SWord32 s2 = sbv_input_0[2];
   const SWord32 s3 = /* Uninterpreted function */ SBV_SHIFTLEFT(s0,
                                                                 s2);
   const SWord32 s4 = /* Uninterpreted function */ SBV_SHIFTLEFT(s1,

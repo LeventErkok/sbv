@@ -74,14 +74,14 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
 
 int main(void)
 {
-  SWord8 hi;
-  SWord8 lo;
+  SWord8 sbv_driver_output_0;
+  SWord8 sbv_driver_output_1;
 
-  legatoMult(87, 92, &hi, &lo);
+  legatoMult(87, 92, &sbv_driver_output_0, &sbv_driver_output_1);
 
   printf("legatoMult(87, 92, &hi, &lo) ->\n");
-  printf("  hi = %"PRIu8"\n", hi);
-  printf("  lo = %"PRIu8"\n", lo);
+  printf("  hi = %"PRIu8"\n", sbv_driver_output_0);
+  printf("  lo = %"PRIu8"\n", sbv_driver_output_1);
 
   return 0;
 }
@@ -129,11 +129,11 @@ static inline SBV_CGEN_UNUSED SWord8 sbv_bv_u8_add(SWord8 a, SWord8 b)
 }
 
 
-void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
-                SWord8 *lo)
+void legatoMult(const SWord8 sbv_input_0, const SWord8 sbv_input_1,
+                SWord8 *sbv_output_0, SWord8 *sbv_output_1)
 {
-  const SWord8 s0 = x;
-  const SWord8 s1 = y;
+  const SWord8 s0 = sbv_input_0;
+  const SWord8 s1 = sbv_input_1;
   const SBool  s2 = sbv_bv_extract_u8_0_0_u1(s0);
   const SBool  s4 = s2 != false;
   const SBool  s5 = !s4;
@@ -6457,7 +6457,7 @@ void legatoMult(const SWord8 x, const SWord8 y, SWord8 *hi,
   const SWord8 s6326 = s11 ? s5758 : s6325;
   const SWord8 s6327 = s5 ? s5191 : s6326;
 
-  *hi = s4056;
-  *lo = s6327;
+  *sbv_output_0 = s4056;
+  *sbv_output_1 = s6327;
 }
 == END: "legatoMult.c" ==================

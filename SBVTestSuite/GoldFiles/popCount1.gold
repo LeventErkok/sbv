@@ -114,9 +114,9 @@ static inline SBV_CGEN_UNUSED SWord8 sbv_bv_u8_add(SWord8 a, SWord8 b)
 }
 
 
-SWord8 popCount(const SWord64 x)
+SWord8 popCount(const SWord64 sbv_input_0)
 {
-  const SWord64 s0 = x;
+  const SWord64 s0 = sbv_input_0;
   static const SWord8 table0[] = {
       0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3,
       3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4,

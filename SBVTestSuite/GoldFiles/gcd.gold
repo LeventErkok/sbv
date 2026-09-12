@@ -101,10 +101,10 @@ static inline SBV_CGEN_UNUSED SWord8 sbv_bv_u8_rem(SWord8 a, SWord8 b)
 }
 
 
-SWord8 sgcd(const SWord8 x, const SWord8 y)
+SWord8 sgcd(const SWord8 sbv_input_0, const SWord8 sbv_input_1)
 {
-  const SWord8 s0 = x;
-  const SWord8 s1 = y;
+  const SWord8 s0 = sbv_input_0;
+  const SWord8 s1 = sbv_input_1;
   const SBool  s3 = s1 == 0;
   const SWord8 s4 = sbv_bv_u8_rem(s0, s1);
   const SWord8 s5 = s3 ? s0 : s4;

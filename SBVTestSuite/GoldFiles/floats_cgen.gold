@@ -3,9 +3,9 @@
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Int8_ToFloat(const SInt8 a)
+SFloat toFP_Int8_ToFloat(const SInt8 sbv_input_0)
 {
-  const SInt8  s0 = a;
+  const SInt8  s0 = sbv_input_0;
   const SFloat s2 = (SFloat) s0;
 
   return s2;
@@ -16,9 +16,9 @@ SFloat toFP_Int8_ToFloat(const SInt8 a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Int16_ToFloat(const SInt16 a)
+SFloat toFP_Int16_ToFloat(const SInt16 sbv_input_0)
 {
-  const SInt16 s0 = a;
+  const SInt16 s0 = sbv_input_0;
   const SFloat s2 = (SFloat) s0;
 
   return s2;
@@ -29,9 +29,9 @@ SFloat toFP_Int16_ToFloat(const SInt16 a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Int32_ToFloat(const SInt32 a)
+SFloat toFP_Int32_ToFloat(const SInt32 sbv_input_0)
 {
-  const SInt32 s0 = a;
+  const SInt32 s0 = sbv_input_0;
   const SFloat s2 = (SFloat) s0;
 
   return s2;
@@ -42,9 +42,9 @@ SFloat toFP_Int32_ToFloat(const SInt32 a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Int64_ToFloat(const SInt64 a)
+SFloat toFP_Int64_ToFloat(const SInt64 sbv_input_0)
 {
-  const SInt64 s0 = a;
+  const SInt64 s0 = sbv_input_0;
   const SFloat s2 = (SFloat) s0;
 
   return s2;
@@ -55,9 +55,9 @@ SFloat toFP_Int64_ToFloat(const SInt64 a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Word8_ToFloat(const SWord8 a)
+SFloat toFP_Word8_ToFloat(const SWord8 sbv_input_0)
 {
-  const SWord8 s0 = a;
+  const SWord8 s0 = sbv_input_0;
   const SFloat s2 = (SFloat) s0;
 
   return s2;
@@ -68,9 +68,9 @@ SFloat toFP_Word8_ToFloat(const SWord8 a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Word16_ToFloat(const SWord16 a)
+SFloat toFP_Word16_ToFloat(const SWord16 sbv_input_0)
 {
-  const SWord16 s0 = a;
+  const SWord16 s0 = sbv_input_0;
   const SFloat  s2 = (SFloat) s0;
 
   return s2;
@@ -81,9 +81,9 @@ SFloat toFP_Word16_ToFloat(const SWord16 a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Word32_ToFloat(const SWord32 a)
+SFloat toFP_Word32_ToFloat(const SWord32 sbv_input_0)
 {
-  const SWord32 s0 = a;
+  const SWord32 s0 = sbv_input_0;
   const SFloat  s2 = (SFloat) s0;
 
   return s2;
@@ -94,9 +94,9 @@ SFloat toFP_Word32_ToFloat(const SWord32 a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Word64_ToFloat(const SWord64 a)
+SFloat toFP_Word64_ToFloat(const SWord64 sbv_input_0)
 {
-  const SWord64 s0 = a;
+  const SWord64 s0 = sbv_input_0;
   const SFloat  s2 = (SFloat) s0;
 
   return s2;
@@ -107,9 +107,9 @@ SFloat toFP_Word64_ToFloat(const SWord64 a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Float_ToFloat(const SFloat a)
+SFloat toFP_Float_ToFloat(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   return s0;
 }
 == END: "toFP_Float_ToFloat.c" ==================
@@ -118,9 +118,9 @@ SFloat toFP_Float_ToFloat(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Double_ToFloat(const SDouble a)
+SFloat toFP_Double_ToFloat(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SFloat  s2 = (SFloat) s0;
 
   return s2;
@@ -131,9 +131,9 @@ SFloat toFP_Double_ToFloat(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Integer_ToFloat(const SInteger a)
+SFloat toFP_Integer_ToFloat(const SInteger sbv_input_0)
 {
-  const SInteger s0 = a;
+  const SInteger s0 = sbv_input_0;
   const SFloat   s2 = (SFloat) s0;
 
   return s2;
@@ -144,9 +144,9 @@ SFloat toFP_Integer_ToFloat(const SInteger a)
 
 #include "floatCodeGen.h"
 
-SFloat toFP_Real_ToFloat(const SReal a)
+SFloat toFP_Real_ToFloat(const SReal sbv_input_0)
 {
-  const SReal  s0 = a;
+  const SReal  s0 = sbv_input_0;
   const SFloat s2 = (SFloat) s0;
 
   return s2;
@@ -157,9 +157,9 @@ SFloat toFP_Real_ToFloat(const SReal a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Int8_ToDouble(const SInt8 a)
+SDouble toFP_Int8_ToDouble(const SInt8 sbv_input_0)
 {
-  const SInt8   s0 = a;
+  const SInt8   s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -170,9 +170,9 @@ SDouble toFP_Int8_ToDouble(const SInt8 a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Int16_ToDouble(const SInt16 a)
+SDouble toFP_Int16_ToDouble(const SInt16 sbv_input_0)
 {
-  const SInt16  s0 = a;
+  const SInt16  s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -183,9 +183,9 @@ SDouble toFP_Int16_ToDouble(const SInt16 a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Int32_ToDouble(const SInt32 a)
+SDouble toFP_Int32_ToDouble(const SInt32 sbv_input_0)
 {
-  const SInt32  s0 = a;
+  const SInt32  s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -196,9 +196,9 @@ SDouble toFP_Int32_ToDouble(const SInt32 a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Int64_ToDouble(const SInt64 a)
+SDouble toFP_Int64_ToDouble(const SInt64 sbv_input_0)
 {
-  const SInt64  s0 = a;
+  const SInt64  s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -209,9 +209,9 @@ SDouble toFP_Int64_ToDouble(const SInt64 a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Word8_ToDouble(const SWord8 a)
+SDouble toFP_Word8_ToDouble(const SWord8 sbv_input_0)
 {
-  const SWord8  s0 = a;
+  const SWord8  s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -222,9 +222,9 @@ SDouble toFP_Word8_ToDouble(const SWord8 a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Word16_ToDouble(const SWord16 a)
+SDouble toFP_Word16_ToDouble(const SWord16 sbv_input_0)
 {
-  const SWord16 s0 = a;
+  const SWord16 s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -235,9 +235,9 @@ SDouble toFP_Word16_ToDouble(const SWord16 a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Word32_ToDouble(const SWord32 a)
+SDouble toFP_Word32_ToDouble(const SWord32 sbv_input_0)
 {
-  const SWord32 s0 = a;
+  const SWord32 s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -248,9 +248,9 @@ SDouble toFP_Word32_ToDouble(const SWord32 a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Word64_ToDouble(const SWord64 a)
+SDouble toFP_Word64_ToDouble(const SWord64 sbv_input_0)
 {
-  const SWord64 s0 = a;
+  const SWord64 s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -261,9 +261,9 @@ SDouble toFP_Word64_ToDouble(const SWord64 a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Float_ToDouble(const SFloat a)
+SDouble toFP_Float_ToDouble(const SFloat sbv_input_0)
 {
-  const SFloat  s0 = a;
+  const SFloat  s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -274,9 +274,9 @@ SDouble toFP_Float_ToDouble(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Double_ToDouble(const SDouble a)
+SDouble toFP_Double_ToDouble(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   return s0;
 }
 == END: "toFP_Double_ToDouble.c" ==================
@@ -285,9 +285,9 @@ SDouble toFP_Double_ToDouble(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Integer_ToDouble(const SInteger a)
+SDouble toFP_Integer_ToDouble(const SInteger sbv_input_0)
 {
-  const SInteger s0 = a;
+  const SInteger s0 = sbv_input_0;
   const SDouble  s2 = (SDouble) s0;
 
   return s2;
@@ -298,9 +298,9 @@ SDouble toFP_Integer_ToDouble(const SInteger a)
 
 #include "floatCodeGen.h"
 
-SDouble toFP_Real_ToDouble(const SReal a)
+SDouble toFP_Real_ToDouble(const SReal sbv_input_0)
 {
-  const SReal   s0 = a;
+  const SReal   s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -311,9 +311,9 @@ SDouble toFP_Real_ToDouble(const SReal a)
 
 #include "floatCodeGen.h"
 
-SInt8 fromFP_Float_ToInt8(const SFloat a)
+SInt8 fromFP_Float_ToInt8(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SInt8  s2 = (SInt8) rintf(s0);
 
   return s2;
@@ -324,9 +324,9 @@ SInt8 fromFP_Float_ToInt8(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SInt16 fromFP_Float_ToInt16(const SFloat a)
+SInt16 fromFP_Float_ToInt16(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SInt16 s2 = (SInt16) rintf(s0);
 
   return s2;
@@ -337,9 +337,9 @@ SInt16 fromFP_Float_ToInt16(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SInt32 fromFP_Float_ToInt32(const SFloat a)
+SInt32 fromFP_Float_ToInt32(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SInt32 s2 = (SInt32) rintf(s0);
 
   return s2;
@@ -350,9 +350,9 @@ SInt32 fromFP_Float_ToInt32(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SInt64 fromFP_Float_ToInt64(const SFloat a)
+SInt64 fromFP_Float_ToInt64(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SInt64 s2 = (SInt64) rintf(s0);
 
   return s2;
@@ -363,9 +363,9 @@ SInt64 fromFP_Float_ToInt64(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SWord8 fromFP_Float_ToWord8(const SFloat a)
+SWord8 fromFP_Float_ToWord8(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SWord8 s2 = (SWord8) rintf(s0);
 
   return s2;
@@ -376,9 +376,9 @@ SWord8 fromFP_Float_ToWord8(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SWord16 fromFP_Float_ToWord16(const SFloat a)
+SWord16 fromFP_Float_ToWord16(const SFloat sbv_input_0)
 {
-  const SFloat  s0 = a;
+  const SFloat  s0 = sbv_input_0;
   const SWord16 s2 = (SWord16) rintf(s0);
 
   return s2;
@@ -389,9 +389,9 @@ SWord16 fromFP_Float_ToWord16(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SWord32 fromFP_Float_ToWord32(const SFloat a)
+SWord32 fromFP_Float_ToWord32(const SFloat sbv_input_0)
 {
-  const SFloat  s0 = a;
+  const SFloat  s0 = sbv_input_0;
   const SWord32 s2 = (SWord32) rintf(s0);
 
   return s2;
@@ -402,9 +402,9 @@ SWord32 fromFP_Float_ToWord32(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SWord64 fromFP_Float_ToWord64(const SFloat a)
+SWord64 fromFP_Float_ToWord64(const SFloat sbv_input_0)
 {
-  const SFloat  s0 = a;
+  const SFloat  s0 = sbv_input_0;
   const SWord64 s2 = (SWord64) rintf(s0);
 
   return s2;
@@ -415,9 +415,9 @@ SWord64 fromFP_Float_ToWord64(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SFloat fromFP_Float_ToFloat(const SFloat a)
+SFloat fromFP_Float_ToFloat(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   return s0;
 }
 == END: "fromFP_Float_ToFloat.c" ==================
@@ -426,9 +426,9 @@ SFloat fromFP_Float_ToFloat(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SDouble fromFP_Float_ToDouble(const SFloat a)
+SDouble fromFP_Float_ToDouble(const SFloat sbv_input_0)
 {
-  const SFloat  s0 = a;
+  const SFloat  s0 = sbv_input_0;
   const SDouble s2 = (SDouble) s0;
 
   return s2;
@@ -439,9 +439,9 @@ SDouble fromFP_Float_ToDouble(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SInteger fromFP_Float_ToInteger(const SFloat a)
+SInteger fromFP_Float_ToInteger(const SFloat sbv_input_0)
 {
-  const SFloat   s0 = a;
+  const SFloat   s0 = sbv_input_0;
   const SInteger s2 = (SInteger) rintf(s0);
 
   return s2;
@@ -452,9 +452,9 @@ SInteger fromFP_Float_ToInteger(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SReal fromFP_Float_ToReal(const SFloat a)
+SReal fromFP_Float_ToReal(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SReal  s2 = (SReal) s0;
 
   return s2;
@@ -465,9 +465,9 @@ SReal fromFP_Float_ToReal(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SInt8 fromFP_DoubleTo_Int8(const SDouble a)
+SInt8 fromFP_DoubleTo_Int8(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SInt8   s2 = (SInt8) rint(s0);
 
   return s2;
@@ -478,9 +478,9 @@ SInt8 fromFP_DoubleTo_Int8(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SInt16 fromFP_DoubleTo_Int16(const SDouble a)
+SInt16 fromFP_DoubleTo_Int16(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SInt16  s2 = (SInt16) rint(s0);
 
   return s2;
@@ -491,9 +491,9 @@ SInt16 fromFP_DoubleTo_Int16(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SInt32 fromFP_DoubleTo_Int32(const SDouble a)
+SInt32 fromFP_DoubleTo_Int32(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SInt32  s2 = (SInt32) rint(s0);
 
   return s2;
@@ -504,9 +504,9 @@ SInt32 fromFP_DoubleTo_Int32(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SInt64 fromFP_DoubleTo_Int64(const SDouble a)
+SInt64 fromFP_DoubleTo_Int64(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SInt64  s2 = (SInt64) rint(s0);
 
   return s2;
@@ -517,9 +517,9 @@ SInt64 fromFP_DoubleTo_Int64(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SWord8 fromFP_DoubleTo_Word8(const SDouble a)
+SWord8 fromFP_DoubleTo_Word8(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SWord8  s2 = (SWord8) rint(s0);
 
   return s2;
@@ -530,9 +530,9 @@ SWord8 fromFP_DoubleTo_Word8(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SWord16 fromFP_DoubleTo_Word16(const SDouble a)
+SWord16 fromFP_DoubleTo_Word16(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SWord16 s2 = (SWord16) rint(s0);
 
   return s2;
@@ -543,9 +543,9 @@ SWord16 fromFP_DoubleTo_Word16(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SWord32 fromFP_DoubleTo_Word32(const SDouble a)
+SWord32 fromFP_DoubleTo_Word32(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SWord32 s2 = (SWord32) rint(s0);
 
   return s2;
@@ -556,9 +556,9 @@ SWord32 fromFP_DoubleTo_Word32(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SWord64 fromFP_DoubleTo_Word64(const SDouble a)
+SWord64 fromFP_DoubleTo_Word64(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SWord64 s2 = (SWord64) rint(s0);
 
   return s2;
@@ -569,9 +569,9 @@ SWord64 fromFP_DoubleTo_Word64(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SFloat fromFP_DoubleTo_Float(const SDouble a)
+SFloat fromFP_DoubleTo_Float(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SFloat  s2 = (SFloat) s0;
 
   return s2;
@@ -582,9 +582,9 @@ SFloat fromFP_DoubleTo_Float(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SDouble fromFP_DoubleTo_Double(const SDouble a)
+SDouble fromFP_DoubleTo_Double(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   return s0;
 }
 == END: "fromFP_DoubleTo_Double.c" ==================
@@ -593,9 +593,9 @@ SDouble fromFP_DoubleTo_Double(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SInteger fromFP_DoubleTo_Integer(const SDouble a)
+SInteger fromFP_DoubleTo_Integer(const SDouble sbv_input_0)
 {
-  const SDouble  s0 = a;
+  const SDouble  s0 = sbv_input_0;
   const SInteger s2 = (SInteger) rint(s0);
 
   return s2;
@@ -606,9 +606,9 @@ SInteger fromFP_DoubleTo_Integer(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SReal fromFP_DoubleTo_Real(const SDouble a)
+SReal fromFP_DoubleTo_Real(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SReal   s2 = (SReal) s0;
 
   return s2;
@@ -619,9 +619,9 @@ SReal fromFP_DoubleTo_Real(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SFloat fromFP_SWord32_SFloat(const SWord32 a)
+SFloat fromFP_SWord32_SFloat(const SWord32 sbv_input_0)
 {
-  const SWord32 s0 = a;
+  const SWord32 s0 = sbv_input_0;
         SFloat  s1; memcpy(&s1, &s0, sizeof(SFloat));
 
   return s1;
@@ -632,9 +632,9 @@ SFloat fromFP_SWord32_SFloat(const SWord32 a)
 
 #include "floatCodeGen.h"
 
-SDouble fromFP_SWord64_SDouble(const SWord64 a)
+SDouble fromFP_SWord64_SDouble(const SWord64 sbv_input_0)
 {
-  const SWord64 s0 = a;
+  const SWord64 s0 = sbv_input_0;
         SDouble s1; memcpy(&s1, &s0, sizeof(SDouble));
 
   return s1;
@@ -645,9 +645,9 @@ SDouble fromFP_SWord64_SDouble(const SWord64 a)
 
 #include "floatCodeGen.h"
 
-SWord32 fromFP_SFloat_SWord32(const SFloat a)
+SWord32 fromFP_SFloat_SWord32(const SFloat sbv_input_0)
 {
-  const SFloat  s0 = a;
+  const SFloat  s0 = sbv_input_0;
         SWord32 s1; memcpy(&s1, &s0, sizeof(SWord32));
 
   return s1;
@@ -658,9 +658,9 @@ SWord32 fromFP_SFloat_SWord32(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SWord64 fromFP_SDouble_SWord64(const SDouble a)
+SWord64 fromFP_SDouble_SWord64(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
         SWord64 s1; memcpy(&s1, &s0, sizeof(SWord64));
 
   return s1;
@@ -671,9 +671,9 @@ SWord64 fromFP_SDouble_SWord64(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_Abs(const SFloat a)
+SFloat f_FP_Abs(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SFloat s1 = fabsf(s0);
 
   return s1;
@@ -684,9 +684,9 @@ SFloat f_FP_Abs(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_Abs(const SDouble a)
+SDouble d_FP_Abs(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SDouble s1 = fabs(s0);
 
   return s1;
@@ -697,9 +697,9 @@ SDouble d_FP_Abs(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_Neg(const SFloat a)
+SFloat f_FP_Neg(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SFloat s1 = (- s0);
 
   return s1;
@@ -710,9 +710,9 @@ SFloat f_FP_Neg(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_Neg(const SDouble a)
+SDouble d_FP_Neg(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SDouble s1 = (- s0);
 
   return s1;
@@ -723,10 +723,10 @@ SDouble d_FP_Neg(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_Add(const SFloat a, const SFloat b)
+SFloat f_FP_Add(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
-  const SFloat s0 = a;
-  const SFloat s1 = b;
+  const SFloat s0 = sbv_input_0;
+  const SFloat s1 = sbv_input_1;
   const SFloat s3 = s0 + s1;
 
   return s3;
@@ -737,10 +737,11 @@ SFloat f_FP_Add(const SFloat a, const SFloat b)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_Add(const SDouble a, const SDouble b)
+SDouble d_FP_Add(const SDouble sbv_input_0,
+                 const SDouble sbv_input_1)
 {
-  const SDouble s0 = a;
-  const SDouble s1 = b;
+  const SDouble s0 = sbv_input_0;
+  const SDouble s1 = sbv_input_1;
   const SDouble s3 = s0 + s1;
 
   return s3;
@@ -751,10 +752,10 @@ SDouble d_FP_Add(const SDouble a, const SDouble b)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_Sub(const SFloat a, const SFloat b)
+SFloat f_FP_Sub(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
-  const SFloat s0 = a;
-  const SFloat s1 = b;
+  const SFloat s0 = sbv_input_0;
+  const SFloat s1 = sbv_input_1;
   const SFloat s3 = s0 - s1;
 
   return s3;
@@ -765,10 +766,11 @@ SFloat f_FP_Sub(const SFloat a, const SFloat b)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_Sub(const SDouble a, const SDouble b)
+SDouble d_FP_Sub(const SDouble sbv_input_0,
+                 const SDouble sbv_input_1)
 {
-  const SDouble s0 = a;
-  const SDouble s1 = b;
+  const SDouble s0 = sbv_input_0;
+  const SDouble s1 = sbv_input_1;
   const SDouble s3 = s0 - s1;
 
   return s3;
@@ -779,10 +781,10 @@ SDouble d_FP_Sub(const SDouble a, const SDouble b)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_Mul(const SFloat a, const SFloat b)
+SFloat f_FP_Mul(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
-  const SFloat s0 = a;
-  const SFloat s1 = b;
+  const SFloat s0 = sbv_input_0;
+  const SFloat s1 = sbv_input_1;
   const SFloat s3 = s0 * s1;
 
   return s3;
@@ -793,10 +795,11 @@ SFloat f_FP_Mul(const SFloat a, const SFloat b)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_Mul(const SDouble a, const SDouble b)
+SDouble d_FP_Mul(const SDouble sbv_input_0,
+                 const SDouble sbv_input_1)
 {
-  const SDouble s0 = a;
-  const SDouble s1 = b;
+  const SDouble s0 = sbv_input_0;
+  const SDouble s1 = sbv_input_1;
   const SDouble s3 = s0 * s1;
 
   return s3;
@@ -807,10 +810,10 @@ SDouble d_FP_Mul(const SDouble a, const SDouble b)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_Div(const SFloat a, const SFloat b)
+SFloat f_FP_Div(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
-  const SFloat s0 = a;
-  const SFloat s1 = b;
+  const SFloat s0 = sbv_input_0;
+  const SFloat s1 = sbv_input_1;
   const SFloat s3 = s0 / s1;
 
   return s3;
@@ -821,10 +824,11 @@ SFloat f_FP_Div(const SFloat a, const SFloat b)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_Div(const SDouble a, const SDouble b)
+SDouble d_FP_Div(const SDouble sbv_input_0,
+                 const SDouble sbv_input_1)
 {
-  const SDouble s0 = a;
-  const SDouble s1 = b;
+  const SDouble s0 = sbv_input_0;
+  const SDouble s1 = sbv_input_1;
   const SDouble s3 = s0 / s1;
 
   return s3;
@@ -835,11 +839,12 @@ SDouble d_FP_Div(const SDouble a, const SDouble b)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_FMA(const SFloat a, const SFloat b, const SFloat c)
+SFloat f_FP_FMA(const SFloat sbv_input_0, const SFloat sbv_input_1,
+                const SFloat sbv_input_2)
 {
-  const SFloat s0 = a;
-  const SFloat s1 = b;
-  const SFloat s2 = c;
+  const SFloat s0 = sbv_input_0;
+  const SFloat s1 = sbv_input_1;
+  const SFloat s2 = sbv_input_2;
   const SFloat s4 = fmaf(s0, s1, s2);
 
   return s4;
@@ -850,11 +855,12 @@ SFloat f_FP_FMA(const SFloat a, const SFloat b, const SFloat c)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_FMA(const SDouble a, const SDouble b, const SDouble c)
+SDouble d_FP_FMA(const SDouble sbv_input_0,
+                 const SDouble sbv_input_1, const SDouble sbv_input_2)
 {
-  const SDouble s0 = a;
-  const SDouble s1 = b;
-  const SDouble s2 = c;
+  const SDouble s0 = sbv_input_0;
+  const SDouble s1 = sbv_input_1;
+  const SDouble s2 = sbv_input_2;
   const SDouble s4 = fma(s0, s1, s2);
 
   return s4;
@@ -865,9 +871,9 @@ SDouble d_FP_FMA(const SDouble a, const SDouble b, const SDouble c)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_Sqrt(const SFloat a)
+SFloat f_FP_Sqrt(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SFloat s2 = sqrtf(s0);
 
   return s2;
@@ -878,9 +884,9 @@ SFloat f_FP_Sqrt(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_Sqrt(const SDouble a)
+SDouble d_FP_Sqrt(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SDouble s2 = sqrt(s0);
 
   return s2;
@@ -891,10 +897,10 @@ SDouble d_FP_Sqrt(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_Rem(const SFloat a, const SFloat b)
+SFloat f_FP_Rem(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
-  const SFloat s0 = a;
-  const SFloat s1 = b;
+  const SFloat s0 = sbv_input_0;
+  const SFloat s1 = sbv_input_1;
   const SFloat s2 = remainderf(s0, s1);
 
   return s2;
@@ -905,10 +911,11 @@ SFloat f_FP_Rem(const SFloat a, const SFloat b)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_Rem(const SDouble a, const SDouble b)
+SDouble d_FP_Rem(const SDouble sbv_input_0,
+                 const SDouble sbv_input_1)
 {
-  const SDouble s0 = a;
-  const SDouble s1 = b;
+  const SDouble s0 = sbv_input_0;
+  const SDouble s1 = sbv_input_1;
   const SDouble s2 = remainder(s0, s1);
 
   return s2;
@@ -919,9 +926,9 @@ SDouble d_FP_Rem(const SDouble a, const SDouble b)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_RoundToIntegral(const SFloat a)
+SFloat f_FP_RoundToIntegral(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SFloat s2 = rintf(s0);
 
   return s2;
@@ -932,9 +939,9 @@ SFloat f_FP_RoundToIntegral(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_RoundToIntegral(const SDouble a)
+SDouble d_FP_RoundToIntegral(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SDouble s2 = rint(s0);
 
   return s2;
@@ -945,10 +952,10 @@ SDouble d_FP_RoundToIntegral(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_Min(const SFloat a, const SFloat b)
+SFloat f_FP_Min(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
-  const SFloat s0 = a;
-  const SFloat s1 = b;
+  const SFloat s0 = sbv_input_0;
+  const SFloat s1 = sbv_input_1;
   const SFloat s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0F /* 0.0F */ : fminf(s0,
                                                                                                                                               s1);
 
@@ -960,10 +967,11 @@ SFloat f_FP_Min(const SFloat a, const SFloat b)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_Min(const SDouble a, const SDouble b)
+SDouble d_FP_Min(const SDouble sbv_input_0,
+                 const SDouble sbv_input_1)
 {
-  const SDouble s0 = a;
-  const SDouble s1 = b;
+  const SDouble s0 = sbv_input_0;
+  const SDouble s1 = sbv_input_1;
   const SDouble s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0 /* 0.0 */ : fmin(s0,
                                                                                                                                             s1);
 
@@ -975,10 +983,10 @@ SDouble d_FP_Min(const SDouble a, const SDouble b)
 
 #include "floatCodeGen.h"
 
-SFloat f_FP_Max(const SFloat a, const SFloat b)
+SFloat f_FP_Max(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
-  const SFloat s0 = a;
-  const SFloat s1 = b;
+  const SFloat s0 = sbv_input_0;
+  const SFloat s1 = sbv_input_1;
   const SFloat s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0F /* 0.0F */ : fmaxf(s0,
                                                                                                                                               s1);
 
@@ -990,10 +998,11 @@ SFloat f_FP_Max(const SFloat a, const SFloat b)
 
 #include "floatCodeGen.h"
 
-SDouble d_FP_Max(const SDouble a, const SDouble b)
+SDouble d_FP_Max(const SDouble sbv_input_0,
+                 const SDouble sbv_input_1)
 {
-  const SDouble s0 = a;
-  const SDouble s1 = b;
+  const SDouble s0 = sbv_input_0;
+  const SDouble s1 = sbv_input_1;
   const SDouble s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0 /* 0.0 */ : fmax(s0,
                                                                                                                                             s1);
 
@@ -1005,10 +1014,11 @@ SDouble d_FP_Max(const SDouble a, const SDouble b)
 
 #include "floatCodeGen.h"
 
-SBool f_FP_IsEqualObject(const SFloat a, const SFloat b)
+SBool f_FP_IsEqualObject(const SFloat sbv_input_0,
+                         const SFloat sbv_input_1)
 {
-  const SFloat s0 = a;
-  const SFloat s1 = b;
+  const SFloat s0 = sbv_input_0;
+  const SFloat s1 = sbv_input_1;
   const SBool  s2 = isnan(s0) ? isnan(s1) : (signbit(s0) && (s0 == 0)) ? (signbit(s1) && (s1 == 0)) : (signbit(s1) && (s1 == 0)) ? (signbit(s0) && (s0 == 0)) : (s0 == s1);
 
   return s2;
@@ -1019,10 +1029,11 @@ SBool f_FP_IsEqualObject(const SFloat a, const SFloat b)
 
 #include "floatCodeGen.h"
 
-SBool d_FP_IsEqualObject(const SDouble a, const SDouble b)
+SBool d_FP_IsEqualObject(const SDouble sbv_input_0,
+                         const SDouble sbv_input_1)
 {
-  const SDouble s0 = a;
-  const SDouble s1 = b;
+  const SDouble s0 = sbv_input_0;
+  const SDouble s1 = sbv_input_1;
   const SBool   s2 = isnan(s0) ? isnan(s1) : (signbit(s0) && (s0 == 0)) ? (signbit(s1) && (s1 == 0)) : (signbit(s1) && (s1 == 0)) ? (signbit(s0) && (s0 == 0)) : (s0 == s1);
 
   return s2;
@@ -1033,9 +1044,9 @@ SBool d_FP_IsEqualObject(const SDouble a, const SDouble b)
 
 #include "floatCodeGen.h"
 
-SBool f_FP_IsNormal(const SFloat a)
+SBool f_FP_IsNormal(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SBool  s1 = isnormal(s0);
 
   return s1;
@@ -1046,9 +1057,9 @@ SBool f_FP_IsNormal(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SBool d_FP_IsNormal(const SDouble a)
+SBool d_FP_IsNormal(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SBool   s1 = isnormal(s0);
 
   return s1;
@@ -1059,9 +1070,9 @@ SBool d_FP_IsNormal(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SBool f_FP_IsZero(const SFloat a)
+SBool f_FP_IsZero(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SBool  s1 = FP_ZERO == fpclassify(s0);
 
   return s1;
@@ -1072,9 +1083,9 @@ SBool f_FP_IsZero(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SBool d_FP_IsZero(const SDouble a)
+SBool d_FP_IsZero(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SBool   s1 = FP_ZERO == fpclassify(s0);
 
   return s1;
@@ -1085,9 +1096,9 @@ SBool d_FP_IsZero(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SBool f_FP_IsSubnormal(const SFloat a)
+SBool f_FP_IsSubnormal(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SBool  s1 = FP_SUBNORMAL == fpclassify(s0);
 
   return s1;
@@ -1098,9 +1109,9 @@ SBool f_FP_IsSubnormal(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SBool d_FP_IsSubnormal(const SDouble a)
+SBool d_FP_IsSubnormal(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SBool   s1 = FP_SUBNORMAL == fpclassify(s0);
 
   return s1;
@@ -1111,9 +1122,9 @@ SBool d_FP_IsSubnormal(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SBool f_FP_IsInfinite(const SFloat a)
+SBool f_FP_IsInfinite(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SBool  s1 = isinf(s0);
 
   return s1;
@@ -1124,9 +1135,9 @@ SBool f_FP_IsInfinite(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SBool d_FP_IsInfinite(const SDouble a)
+SBool d_FP_IsInfinite(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SBool   s1 = isinf(s0);
 
   return s1;
@@ -1137,9 +1148,9 @@ SBool d_FP_IsInfinite(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SBool f_FP_IsNaN(const SFloat a)
+SBool f_FP_IsNaN(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SBool  s1 = isnan(s0);
 
   return s1;
@@ -1150,9 +1161,9 @@ SBool f_FP_IsNaN(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SBool d_FP_IsNaN(const SDouble a)
+SBool d_FP_IsNaN(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SBool   s1 = isnan(s0);
 
   return s1;
@@ -1163,9 +1174,9 @@ SBool d_FP_IsNaN(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SBool f_FP_IsNegative(const SFloat a)
+SBool f_FP_IsNegative(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SBool  s1 = !isnan(s0) && signbit(s0);
 
   return s1;
@@ -1176,9 +1187,9 @@ SBool f_FP_IsNegative(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SBool d_FP_IsNegative(const SDouble a)
+SBool d_FP_IsNegative(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SBool   s1 = !isnan(s0) && signbit(s0);
 
   return s1;
@@ -1189,9 +1200,9 @@ SBool d_FP_IsNegative(const SDouble a)
 
 #include "floatCodeGen.h"
 
-SBool f_FP_IsPositive(const SFloat a)
+SBool f_FP_IsPositive(const SFloat sbv_input_0)
 {
-  const SFloat s0 = a;
+  const SFloat s0 = sbv_input_0;
   const SBool  s1 = !isnan(s0) && !signbit(s0);
 
   return s1;
@@ -1202,9 +1213,9 @@ SBool f_FP_IsPositive(const SFloat a)
 
 #include "floatCodeGen.h"
 
-SBool d_FP_IsPositive(const SDouble a)
+SBool d_FP_IsPositive(const SDouble sbv_input_0)
 {
-  const SDouble s0 = a;
+  const SDouble s0 = sbv_input_0;
   const SBool   s1 = !isnan(s0) && !signbit(s0);
 
   return s1;

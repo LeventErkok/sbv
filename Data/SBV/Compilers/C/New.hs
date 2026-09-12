@@ -17,10 +17,10 @@ module Data.SBV.Compilers.C.New(compileToC, compileToCLib, compileToC', compileT
 
 import Control.DeepSeq                 (rnf)
 import qualified Data.ByteString       as BS
-import Data.Char                       (chr, isSpace)
+import Data.Char                       (chr, isAsciiLower, isAsciiUpper, isDigit, isSpace, toLower)
 import qualified Data.Foldable         as F (toList)
 import qualified Data.Graph            as DG
-import Data.List                       (intercalate, intersperse, nub, nubBy)
+import Data.List                       (intercalate, intersperse, isPrefixOf, nub, nubBy)
 import Data.Maybe                      (fromJust, fromMaybe, isJust)
 import qualified Data.Set              as Set (Set, empty, fromList, insert, intersection, map, member, notMember, null, singleton, toList, union, unions)
 import qualified Data.Text             as T
@@ -75,6 +75,8 @@ import GHC.Stack
 -- result, we return whatever the code-gen function returns. Most uses should simply have @()@ as
 -- the return type here, but the value can be useful if you want to chain the result of
 -- one compilation act to the next.
+-- Names must obey the public naming contract in "Data.SBV.Tools.CodeGen";
+-- invalid or reserved names are rejected before any files are written.
 --
 -- Detected runtime failures in the generated code terminate the calling process;
 -- there is no recoverable error-return interface. See the runtime contract in
@@ -86,8 +88,10 @@ compileToC mbDirName nm f = do (retVal, cfg, bundle) <- compileToC' nm f
 
 -- | Lower level version of 'compileToC', producing a t'CgPgmBundle'
 compileToC' :: String -> SBVCodeGen a -> IO (a, CgConfig, CgPgmBundle)
-compileToC' nm f = do rands <- randoms <$> newStdGen
-                      codeGen SBVToC (defaultCgConfig { cgDriverVals = rands }) nm f
+compileToC' nm f = do validateCName "function" nm `seq` pure ()
+                      rands <- randoms <$> newStdGen
+                      result@(_, _, bundle) <- codeGen SBVToC (defaultCgConfig { cgDriverVals = rands }) nm f
+                      bundle `seq` pure result
 
 -- | Create code to generate a library archive (.a) from given symbolic functions. Useful when generating code
 -- from multiple functions that work together as a library.
@@ -117,7 +121,9 @@ compileToCLib' libName comps
   | not (null duplicates)
   = error $ "SBV.compileToCLib: Duplicate component names: " ++ unwords duplicates
   | True
-  = do resCfgBundles <- mapM component comps
+  = do validateCName "library" libName `seq` pure ()
+       mapM_ (\(fn, _) -> validateCName "component" fn `seq` pure ()) comps
+       resCfgBundles <- mapM component comps
        let (finalCfg, finalPgm) = mergeToLib libName [(c, b) | (_, c, b) <- resCfgBundles]
        finalPgm `seq` pure ([r | (r, _, _) <- resCfgBundles], finalCfg, finalPgm)
  where duplicates = duplicateNames (map fst comps)
@@ -129,6 +135,53 @@ compileToCLib' libName comps
 -- | Report each repeated name once, preserving its first occurrence order.
 duplicateNames :: [String] -> [String]
 duplicateNames names = [nm | nm <- nub names, length (filter (== nm) names) > 1]
+
+-- | Validate public C names before rendering. Use a portable ASCII spelling,
+-- excluding language keywords and namespaces owned by the generated runtime
+-- and its headers. User-supplied C declarations remain the caller's responsibility.
+validateCName :: String -> String -> ()
+validateCName role nm
+  | not validIdentifier = reject "expected an ASCII C identifier"
+  | nm `elem` keywords  = reject "C keyword"
+  | reserved            = reject "reserved C/backend name"
+  | True                = ()
+ where reject reason = error $ "SBV->C: Invalid " ++ role ++ " name " ++ show nm ++ ": " ++ reason ++ "."
+       letter c = isAsciiLower c || isAsciiUpper c
+       validIdentifier = case nm of
+                           initial : rest -> (letter initial || initial == '_') && all (\c -> letter c || isDigit c || c == '_') rest
+                           []           -> False
+       keywords = words ("auto break case char const continue default do double else enum extern float for goto if inline int long register"
+                  ++ " restrict return short signed sizeof static struct switch typedef union unsigned void volatile while alignas alignof"
+                  ++ " bool constexpr false nullptr static_assert thread_local true typeof typeof_unqual")
+       reserved = any (`isPrefixOf` nm)
+                    ["_", "sbv_", "SBV", "SWord", "SInt", "SFP", "mp_", "mpz_", "mpq_", "mpf_", "gmp_", "bf_", "BF_", "GMP_"
+                    , "INT", "UINT", "PRI", "SCN", "FLT_", "DBL_", "LDBL_", "FP_", "FE_", "va_"]
+               || nm `elem` words ("SBool SFloat SDouble SReal SRational SChar SString RoundingMode div_t ldiv_t lldiv_t size_t ptrdiff_t intmax_t"
+                  ++ " uintmax_t intptr_t uintptr_t FILE fpos_t NULL EOF stdin stdout stderr BUFSIZ FILENAME_MAX FOPEN_MAX L_tmpnam"
+                  ++ " SEEK_CUR SEEK_END SEEK_SET TMP_MAX EXIT_SUCCESS EXIT_FAILURE RAND_MAX MB_CUR_MAX HUGE_VAL HUGE_VALF HUGE_VALL"
+                  ++ " INFINITY NAN MATH_ERRNO MATH_ERREXCEPT math_errhandling errno limb_t slimb_t fenv_t fexcept_t"
+                  ++ " SIZE_MAX PTRDIFF_MAX PTRDIFF_MIN SIG_ATOMIC_MIN SIG_ATOMIC_MAX WCHAR_MIN WCHAR_MAX WINT_MIN WINT_MAX")
+               || nm `elem` [sign ++ "int" ++ flavor ++ show bits ++ "_t" | sign <- ["", "u"], flavor <- ["", "_least", "_fast"], bits <- [8, 16, 32, 64 :: Int]]
+               || (role /= "parameter" && (nm `elem` libraryFunctions || nm `elem` mathFunctions))
+
+       -- External library identifiers may be shadowed in a prototype's
+       -- parameter scope, but cannot be redefined as generated entry points.
+       libraryFunctions = words ("main abort exit quick_exit _Exit atexit at_quick_exit malloc calloc realloc free aligned_alloc abs labs llabs div ldiv"
+                  ++ " lldiv atoi atol atoll atof strtol strtoll strtoul strtoull strtof strtod strtold rand srand"
+                  ++ " getenv system bsearch qsort mblen mbtowc wctomb mbstowcs wcstombs remove rename tmpfile tmpnam fclose fflush fopen"
+                  ++ " freopen setbuf setvbuf fprintf fscanf printf scanf snprintf sprintf sscanf vfprintf vfscanf vprintf vscanf vsnprintf"
+                  ++ " vsprintf vsscanf fgetc fgets fputc fputs getc getchar putc putchar puts ungetc fread fwrite fgetpos fseek fsetpos"
+                  ++ " ftell rewind clearerr feof ferror perror memcpy memmove memcmp memchr memset strcat strncat strchr strrchr strcmp"
+                  ++ " strncmp strcoll strcpy strncpy strcspn strerror strlen strpbrk strspn strstr strtok strxfrm fpclassify isfinite"
+                  ++ " isinf isnan isnormal signbit isgreater isgreaterequal isless islessequal islessgreater isunordered")
+       mathFunctions = [base ++ suffix | base <- words ("acos asin atan atan2 cos sin tan acosh asinh atanh cosh sinh tanh exp exp2 expm1 frexp ldexp log log10 log1p log2"
+                  ++ " logb modf scalbn scalbln cbrt fabs hypot pow sqrt erf erfc lgamma tgamma ceil floor nearbyint rint lrint llrint"
+                  ++ " round lround llround trunc fmod remainder remquo copysign nan nextafter nexttoward fdim fmax fmin fma"), suffix <- ["", "f", "l"]]
+
+-- | Bind each public parameter to a disjoint implementation-only name. C
+-- parameter names do not affect linkage or the positional calling convention.
+privateParameters :: String -> [(String, CgVal)] -> [(String, CgVal)]
+privateParameters prefix = zipWith (\index (_, value) -> (prefix ++ show index, value)) [0 :: Int ..]
 
 ---------------------------------------------------------------------------
 -- * Implementation
@@ -157,7 +210,8 @@ cgen :: Bool -> CgConfig -> String -> CgState -> Result -> CgPgmBundle
 cgen retainBuildMetadata cfg nm st sbvProg
    -- Force type declarations, the signature, and the main program so any
    -- type-conversion exceptions appear while constructing the bundle.
-   = rnf (render extraTypes) `seq` rnf (render sig) `seq` rnf (render (vcat body)) `seq` result
+   = foldr (seq . validateCName "parameter") () interfaceNames `seq`
+     rnf (render extraTypes) `seq` rnf (render sig) `seq` rnf (render (vcat body)) `seq` result
   where result = CgPgmBundle bundleKind
                         $ filt [ ("Makefile"   , (CgMakefile flags          , [genMake (cgGenDriver cfg) nm nmd flags]))
                                , (nm  ++ ".h"  , (CgHeader [extraTypes, sig, extProtos] , [genHeader bundleKind nm [sig] extProtos extraTypes]))
@@ -165,7 +219,10 @@ cgen retainBuildMetadata cfg nm st sbvProg
                                , (nm  ++ ".c"  , (CgSource                  , body))
                                ]
 
-        (body, requirements) = genCProg cfg adts lists sets nm sig sbvProg ins allOuts mbRet extDecls
+        (body, requirements) = genCProg cfg adts lists sets nm implementationSig sbvProg privateIns privateOuts mbRet extDecls
+        privateIns          = privateParameters "sbv_input_" ins
+        privateOuts         = privateParameters "sbv_output_" allOuts
+        implementationSig   = pprCFunHeader cfg nm privateIns privateOuts mbRet
 
         bundleKind = (cgInteger cfg, cgReal cfg)
 
@@ -573,10 +630,15 @@ isOwnedADT cfg adts sv = isADT sv
 
 -- | Generate an example driver program
 genDriver :: CgConfig -> [Kind] -> [Integer] -> String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> [Doc]
-genDriver cfg adts randVals fn inps outs mbRet
+genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
   | null inputArrayKinds = [pre, include, printHelpers, plainHeader, body, post]
   | True                 = [pre, include, callbacks, printHelpers, header, body, post]
- where pre         =  text "/* Example driver program for" <+> nm P.<> text ". */"
+ where inps = privateParameters "sbv_driver_input_" publicInputs
+       outs = privateParameters "sbv_driver_output_" publicOutputs
+       publicName local = fromMaybe local (lookup local publicNames)
+       publicNames = zip (map fst (inps ++ outs)) (map fst (publicInputs ++ publicOutputs))
+
+       pre         =  text "/* Example driver program for" <+> nm P.<> text ". */"
                    $$ text "/* Automatically generated by SBV. Edit as you see fit! */"
                    $$ text ""
                    $$ text "#include <stdio.h>"
@@ -596,34 +658,34 @@ genDriver cfg adts randVals fn inps outs mbRet
                            $$ text ""
                            $$ (case mbRet of
                               Just sv | isArray sv
-                                      -> displayArray "__result" fcall resultVar (kindOf sv)
+                                      -> displayArray "__result" displayCall resultVar (kindOf sv)
                               Just sv | isTuple sv
-                                      -> displayTuple fcall resultVar (kindOf sv)
+                                      -> displayTuple displayCall resultVar (kindOf sv)
                               Just sv | isADT sv && not (isRoundingMode sv)
-                                      -> displayADT fcall resultVar (kindOf sv)
+                                      -> displayADT displayCall resultVar (kindOf sv)
                               Just sv | isList sv
-                                      -> displayList fcall resultVar (kindOf sv)
+                                      -> displayList displayCall resultVar (kindOf sv)
                               Just sv | isSet sv
-                                      -> displaySet fcall resultVar (kindOf sv)
+                                      -> displaySet displayCall resultVar (kindOf sv)
                               Just sv | isWideBV (kindOf sv)
-                                      -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
+                                      -> text "printf" P.<> parens (printQuotes (displayCall <+> text "=")) P.<> semi
                                       $$ wideBVPrint (kindOf sv) resultVar P.<> semi
                                       $$ text "printf(\"\\n\");"
                               Just sv | isFP (kindOf sv)
-                                      -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
+                                      -> text "printf" P.<> parens (printQuotes (displayCall <+> text "=")) P.<> semi
                                       $$ arbitraryFPPrint (kindOf sv) resultVar P.<> semi
                                       $$ text "printf(\"\\n\");"
                               Just sv | isExactGMPKind cfg (kindOf sv)
-                                      -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
+                                      -> text "printf" P.<> parens (printQuotes (displayCall <+> text "=")) P.<> semi
                                       $$ gmpPrint (kindOf sv) resultVar P.<> semi
                                       $$ text "printf(\"\\n\");"
                               Just sv | kindOf sv `elem` [KChar, KString]
-                                      -> text "printf" P.<> parens (printQuotes (fcall <+> text "=")) P.<> semi
+                                      -> text "printf" P.<> parens (printQuotes (displayCall <+> text "=")) P.<> semi
                                       $$ textPrint (kindOf sv) resultVar P.<> semi
                                       $$ text "printf(\"\\n\");"
-                              Just sv -> text "printf" P.<> parens (printQuotes (fcall <+> text "=" <+> specifier cfg sv P.<> text "\\n")
+                              Just sv -> text "printf" P.<> parens (printQuotes (displayCall <+> text "=" <+> specifier cfg sv P.<> text "\\n")
                                                                               P.<> comma <+> resultVar) P.<> semi
-                              Nothing -> text "printf" P.<> parens (printQuotes (fcall <+> text "->\\n")) P.<> semi)
+                              Nothing -> text "printf" P.<> parens (printQuotes (displayCall <+> text "->\\n")) P.<> semi)
                            $$ vcat (map display outs)
                            $$ driverCleanup
                            )
@@ -749,7 +811,7 @@ genDriver cfg adts randVals fn inps outs mbRet
                initialize index = gmpDriverInitialize kind (text n P.<> brackets (int index))
 
                displayInputArray = text ""
-                                $$ text "printf" P.<> parens (printQuotes (text "Contents of input array" <+> text n P.<> text ":\\n")) P.<> semi
+                                $$ text "printf" P.<> parens (printQuotes (text "Contents of input array" <+> text (publicName n) P.<> text ":\\n")) P.<> semi
                                 $$ display (n, CgArray sws)
                                 $$ text ""
        mkOut (v, CgAtomic sv)
@@ -790,44 +852,47 @@ genDriver cfg adts randVals fn inps outs mbRet
                   | isSet sv                            -> text (setCType (kindOf sv)) <+> resultVar
                                                        <+> text "=" <+> fcall P.<> semi
                   | True                                -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
-       fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs ++ exactResultArg)))
+       fcall       = functionCall id
+       displayCall = functionCall publicName
+       functionCall rename = nm P.<> parens (fsep (punctuate comma (map (mkCVal rename) pairedInputs ++ map (mkOVal rename) outs ++ exactResultArg)))
        exactResultArg = case mbRet of
                           Just sv | isExactGMPKind cfg (kindOf sv) -> [resultVar]
                           _                                        -> []
-       mkCVal ([v], n, CgAtomic sv)
-         | isArray sv                          = text n
-         | isExactGMPKind cfg (kindOf sv)      = text n
-         | listNeedsDriverInit cfg (kindOf sv) = text n
-         | setNeedsDriverInit cfg (kindOf sv)  = text n
-         | tupleNeedsOwnership cfg (kindOf sv) = text n
-         | isOwnedADT cfg adts sv              = text n
+       mkCVal rename ([v], n, CgAtomic sv)
+         | isArray sv                          = text (rename n)
+         | isExactGMPKind cfg (kindOf sv)      = text (rename n)
+         | listNeedsDriverInit cfg (kindOf sv) = text (rename n)
+         | setNeedsDriverInit cfg (kindOf sv)  = text (rename n)
+         | tupleNeedsOwnership cfg (kindOf sv) = text (rename n)
+         | isOwnedADT cfg adts sv              = text (rename n)
          | True                                = v
-       mkCVal (vs,  n, CgAtomic{}) = die $ "Unexpected driver value computed for " ++ show n ++ render (hcat vs)
-       mkCVal (_,   n, CgArray{})  = text n
-       mkOVal (n, CgAtomic sv)
-         | isExactGMPKind cfg (kindOf sv) = text n
-         | True                           = text "&" P.<> text n
-       mkOVal (n, CgArray{})       = text n
+       mkCVal _      (vs, n, CgAtomic{}) = die $ "Unexpected driver value computed for " ++ show n ++ render (hcat vs)
+       mkCVal rename (_,  n, CgArray{})  = text (rename n)
+       mkOVal rename (n, CgAtomic sv)
+         | isExactGMPKind cfg (kindOf sv) = text (rename n)
+         | True                           = text "&" P.<> text (rename n)
+       mkOVal rename (n, CgArray{}) = text (rename n)
        display (n, CgAtomic sv)
-         | isArray sv                           = displayArray n (text n) (text n) (kindOf sv)
-         | isTuple sv                           = displayTuple (text n) (text n) (kindOf sv)
-         | isADT sv && not (isRoundingMode sv) = displayADT (text n) (text n) (kindOf sv)
-         | isList sv                            = displayList (text n) (text n) (kindOf sv)
-         | isSet sv                             = displaySet (text n) (text n) (kindOf sv)
-         | isWideBV (kindOf sv)                 = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
+         | isArray sv                           = displayArray n label (text n) (kindOf sv)
+         | isTuple sv                           = displayTuple label (text n) (kindOf sv)
+         | isADT sv && not (isRoundingMode sv) = displayADT label (text n) (kindOf sv)
+         | isList sv                            = displayList label (text n) (kindOf sv)
+         | isSet sv                             = displaySet label (text n) (kindOf sv)
+         | isWideBV (kindOf sv)                 = text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
                                                 $$ wideBVPrint (kindOf sv) (text n) P.<> semi
                                                 $$ text "printf(\"\\n\");"
-         | isFP (kindOf sv)                     = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
+         | isFP (kindOf sv)                     = text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
                                                 $$ arbitraryFPPrint (kindOf sv) (text n) P.<> semi
                                                 $$ text "printf(\"\\n\");"
-         | isExactGMPKind cfg (kindOf sv)       = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
+         | isExactGMPKind cfg (kindOf sv)       = text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
                                                 $$ gmpPrint (kindOf sv) (text n) P.<> semi
                                                 $$ text "printf(\"\\n\");"
-         | kindOf sv `elem` [KChar, KString]     = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=")) P.<> semi
+         | kindOf sv `elem` [KChar, KString]     = text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
                                                 $$ textPrint (kindOf sv) (text n) P.<> semi
                                                 $$ text "printf(\"\\n\");"
-         | True                                 = text "printf" P.<> parens (printQuotes (text " " <+> text n <+> text "=" <+> specifier cfg sv
+         | True                                 = text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=" <+> specifier cfg sv
                                                                                          P.<> text "\\n") P.<> comma <+> text n) P.<> semi
+         where label = text (publicName n)
        display (n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
        display (n, CgArray sws@(sv:_)) = text "int" <+> nctr P.<> semi
                                       $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
@@ -836,7 +901,7 @@ genDriver cfg adts randVals fn inps outs mbRet
                                       $$ text "}"
          where nctr      = text n P.<> text "_ctr"
                entry     = text n P.<> text "[" P.<> nctr P.<> text "]"
-               entrySpec = text n P.<> text "[%" P.<> int tab P.<> text "d]"
+               entrySpec = text (publicName n) P.<> text "[%" P.<> int tab P.<> text "d]"
                kind      = kindOf sv
                len       = length sws
                tab       = length $ show (len - 1)
@@ -2651,7 +2716,7 @@ mergeToLib libName cfgBundles
         libMake     = ("Makefile", (CgMakefile mkFlags, [genLibMake anyDriver libName sourceNms mkFlags]))
         libDriver   = (libName ++ "_driver.c", (CgDriver, mergeDrivers libName libHInclude drivers))
         resultFiles = sources ++ libHeader : [libDriver | anyDriver] ++ [libMake | anyMake]
-        duplicateFiles = duplicateNames (map fst resultFiles)
+        duplicateFiles = duplicateNames (map (map toLower . fst) resultFiles)
         duplicateSymbols = duplicateNames $ map takeBaseName sourceNms ++ [fn ++ "_driver" | (fn, _) <- drivers] ++ ["main" | anyDriver]
         finalCfg    = case cfgBundles of
                         []         -> defaultCgConfig

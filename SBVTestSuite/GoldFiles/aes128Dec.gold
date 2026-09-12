@@ -73,39 +73,40 @@ void aes128Dec(const SWord32 *pt, const SWord32 *key, SWord32 *ct);
 
 int main(void)
 {
-  const SWord32 pt[4] = {
+  const SWord32 sbv_driver_input_0[4] = {
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL
   };
 
   printf("Contents of input array pt:\n");
-  int pt_ctr;
-  for(pt_ctr = 0; pt_ctr < 4 ; ++pt_ctr)
-  { printf("  pt[%1d] = ", pt_ctr);
-    printf("0x%08"PRIx32"UL", pt[pt_ctr]);
+  int sbv_driver_input_0_ctr;
+  for(sbv_driver_input_0_ctr = 0; sbv_driver_input_0_ctr < 4 ; ++sbv_driver_input_0_ctr)
+  { printf("  pt[%1d] = ", sbv_driver_input_0_ctr);
+    printf("0x%08"PRIx32"UL", sbv_driver_input_0[sbv_driver_input_0_ctr]);
     printf("\n");
   }
 
-  const SWord32 key[4] = {
+  const SWord32 sbv_driver_input_1[4] = {
       0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL
   };
 
   printf("Contents of input array key:\n");
-  int key_ctr;
-  for(key_ctr = 0; key_ctr < 4 ; ++key_ctr)
-  { printf("  key[%1d] = ", key_ctr);
-    printf("0x%08"PRIx32"UL", key[key_ctr]);
+  int sbv_driver_input_1_ctr;
+  for(sbv_driver_input_1_ctr = 0; sbv_driver_input_1_ctr < 4 ; ++sbv_driver_input_1_ctr)
+  { printf("  key[%1d] = ", sbv_driver_input_1_ctr);
+    printf("0x%08"PRIx32"UL", sbv_driver_input_1[sbv_driver_input_1_ctr]);
     printf("\n");
   }
 
-  SWord32 ct[4];
+  SWord32 sbv_driver_output_0[4];
 
-  aes128Dec(pt, key, ct);
+  aes128Dec(sbv_driver_input_0, sbv_driver_input_1,
+            sbv_driver_output_0);
 
   printf("aes128Dec(pt, key, ct) ->\n");
-  int ct_ctr;
-  for(ct_ctr = 0; ct_ctr < 4 ; ++ct_ctr)
-  { printf("  ct[%1d] = ", ct_ctr);
-    printf("0x%08"PRIx32"UL", ct[ct_ctr]);
+  int sbv_driver_output_0_ctr;
+  for(sbv_driver_output_0_ctr = 0; sbv_driver_output_0_ctr < 4 ; ++sbv_driver_output_0_ctr)
+  { printf("  ct[%1d] = ", sbv_driver_output_0_ctr);
+    printf("0x%08"PRIx32"UL", sbv_driver_output_0[sbv_driver_output_0_ctr]);
     printf("\n");
   }
 
@@ -189,16 +190,17 @@ static inline SBV_CGEN_UNUSED SWord32 sbv_bv_join_u16_u16_u32(SWord16 high, SWor
 }
 
 
-void aes128Dec(const SWord32 *pt, const SWord32 *key, SWord32 *ct)
+void aes128Dec(const SWord32 *sbv_input_0,
+               const SWord32 *sbv_input_1, SWord32 *sbv_output_0)
 {
-  const SWord32 s0 = pt[0];
-  const SWord32 s1 = pt[1];
-  const SWord32 s2 = pt[2];
-  const SWord32 s3 = pt[3];
-  const SWord32 s4 = key[0];
-  const SWord32 s5 = key[1];
-  const SWord32 s6 = key[2];
-  const SWord32 s7 = key[3];
+  const SWord32 s0 = sbv_input_0[0];
+  const SWord32 s1 = sbv_input_0[1];
+  const SWord32 s2 = sbv_input_0[2];
+  const SWord32 s3 = sbv_input_0[3];
+  const SWord32 s4 = sbv_input_1[0];
+  const SWord32 s5 = sbv_input_1[1];
+  const SWord32 s6 = sbv_input_1[2];
+  const SWord32 s7 = sbv_input_1[3];
   static const SWord8 table0[] = {
        82,   9, 106, 213,  48,  54, 165,  56, 191,  64, 163, 158, 129,
       243, 215, 251, 124, 227,  57, 130, 155,  47, 255, 135,  52, 142,
@@ -2510,9 +2512,9 @@ void aes128Dec(const SWord32 *pt, const SWord32 *key, SWord32 *ct)
   const SWord32 s3197 = sbv_bv_join_u16_u16_u32(s3191, s3196);
   const SWord32 s3198 = s7 ^ s3197;
 
-  ct[0] = s3162;
-  ct[1] = s3174;
-  ct[2] = s3186;
-  ct[3] = s3198;
+  sbv_output_0[0] = s3162;
+  sbv_output_0[1] = s3174;
+  sbv_output_0[2] = s3186;
+  sbv_output_0[3] = s3198;
 }
 == END: "aes128Dec.c" ==================

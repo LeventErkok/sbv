@@ -119,6 +119,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "preserve external prototypes in libraries" libraryExternalPrototypes
   , testCase "reject empty or conflicting libraries before rendering" libraryValidation
   , testCase "terminate on failed library preconditions and assertions" libraryRuntimeFailures
+  , testCase "reject invalid and reserved public C names before rendering" publicCNameValidation
+  , testCase "preserve public C names without local collisions" privateCBindings
   , testCase "compare finite ADT set universes" finiteADTSetUniverses
   , testCase "compile exact symbolic rationals" exactSymbolicRationals
   , testCase "compile rationals with mapped integers" mappedIntegerRationals
@@ -343,7 +345,8 @@ libraryValidation = do
     , ("duplicateLibrary", [("duplicate", program True), ("duplicate", program True)], "Duplicate component names")
     , ("fileLibrary", [("fileLibrary_driver", program True)], "Conflicting generated file names")
     , ("symbolLibrary", [("entry", program True), ("entry_driver", program False)], "Conflicting generated entry points")
-    , ("mainLibrary", [("main", program True)], "Conflicting generated entry points")
+    , ("mainLibrary", [("main", program True)], "reserved C/backend name")
+    , ("caseLibrary", [("entry", program True), ("Entry", program True)], "Conflicting generated file names")
     ]
   withSystemTempDirectory "sbv-library-no-drivers" $ \dir -> do
     _ <- compileToCLib (Just dir) "noDriverLibrary"
@@ -362,6 +365,58 @@ libraryValidation = do
            Left exception -> assertBool (displayException exception) (diagnostic `isInfixOf` displayException exception)
            Right _        -> assertBool ("Expected library rejection: " ++ libName) False
          assertEqual "Invalid libraries must not write files" [] =<< listDirectory dir
+
+-- | Check all public naming entry points and ensure diagnostics precede any
+-- file writes, including names that could otherwise escape the output directory.
+publicCNameValidation :: Assertion
+publicCNameValidation = do
+  mapM_ (\badName -> rejects $ \dir -> compileToC (Just dir) badName scalar)
+    ["", "my-function", "../escape", "line\nbreak", "switch", "9lives", "caf\233", "sbv_bv_s16_mul", "SBVList_u8", "SFP7_19", "__result", "printf", "remainder", "uint32_t"]
+  rejects $ \dir -> compileToC (Just dir) "badInput" $ do
+    value <- cgInput "switch" :: SBVCodeGen SWord8
+    cgReturn value
+  rejects $ \dir -> compileToC (Just dir) "badOutput" $ do
+    value <- cgInput "value" :: SBVCodeGen SWord8
+    cgOutput "sbv_output_0" value
+  rejects $ \dir -> compileToC (Just dir) "badInputGroup" $ do
+    values <- cgInputArr 2 "my-values" :: SBVCodeGen [SWord8]
+    cgReturnArr values
+  rejects $ \dir -> compileToC (Just dir) "badOutputGroup" $ cgOutputArr "int" [literal (3 :: Word8)]
+  rejects $ \dir -> () <$ compileToCLib (Just dir) "my-library" [("component", scalar)]
+  rejects $ \dir -> () <$ compileToCLib (Just dir) "validLibrary" [("my-component", scalar)]
+ where scalar = do
+         value <- cgInput "value" :: SBVCodeGen SWord8
+         cgReturn value
+
+       rejects generate = withSystemTempDirectory "sbv-c-names" $ \dir -> do
+         result <- try (generate dir) :: IO (Either ErrorCall ())
+         case result of
+           Left exception -> assertBool (displayException exception) ("Invalid" `isInfixOf` displayException exception)
+           Right _        -> assertBool "Expected a public name diagnostic" False
+         assertEqual "Invalid names must not write files" [] =<< listDirectory dir
+
+-- | Keep valid identifiers in the ABI while isolating symbolic temporaries,
+-- table names, and recursively generated driver storage from user names.
+privateCBindings :: Assertion
+privateCBindings = withSystemTempDirectory "sbv-private-c-bindings" $ \dir -> do
+  compileToC (Just dir) "s0" $ do
+    cgOverwriteFiles True
+    cgSetDriverValues [7, 2, 3, 4, 5]
+    value      <- cgInput "s0" :: SBVCodeGen SWord8
+    tableValue <- cgInput "table0" :: SBVCodeGen SWord8
+    values     <- cgInput "values" :: SBVCodeGen (SList Integer)
+    moreValues <- cgInput "values_data" :: SBVCodeGen (SList Integer)
+    group      <- cgInputArr 1 "group" :: SBVCodeGen [SWord8]
+    cgOutput "s1" (select [value, value+1, value+2] 0 tableValue)
+    cgOutput "group_ctr" (sum group)
+    cgOutput "values_element_0" moreValues
+    cgReturn values
+  headerText <- readFile (dir </> "s0.h")
+  mapM_ (\fragment -> assertBool headerText (fragment `isInfixOf` headerText))
+    ["SWord8 s0", "SWord8 table0", "*s1", "*group_ctr"]
+  outputText <- compileAndRunGenerated dir "s0"
+  mapM_ (\fragment -> assertBool outputText (fragment `isInfixOf` outputText))
+    ["s1 = 9", "group_ctr = 5", "values_element_0 =", "s0(7, 2, values, values_data, group"]
 
 -- | Library calls share the standalone fail-fast contract. Exercise both
 -- executable hard constraints and explicit assertions in separate processes.
@@ -2585,10 +2640,10 @@ managedReturnGroups = withSystemTempDirectory "sbv-managed-return-groups" $ \dir
              ("mpz_t *result_1" `isInfixOf` headerText
            && "SBVArrayOutput_u8_u16 *result_2" `isInfixOf` headerText)
   assertBool ("Expected managed group elements to be cloned and released independently, received:\n"
-           ++ unlines (filter (\line -> "result_0" `isInfixOf` line || "result_2" `isInfixOf` line) (lines (sourceText ++ driverText))))
-             ("result_0[0] = sbv_list_clone_u16" `isInfixOf` sourceText
-           && "sbv_list_release_u16(&result_0[0]);" `isInfixOf` driverText
-           && "sbv_array_output_release_u8_u16(&result_2[0]);" `isInfixOf` driverText)
+           ++ unlines (filter ("sbv_" `isInfixOf`) (lines (sourceText ++ driverText))))
+             ("sbv_output_0[0] = sbv_list_clone_u16" `isInfixOf` sourceText
+           && "sbv_list_release_u16(&sbv_driver_output_0[0]);" `isInfixOf` driverText
+           && "sbv_array_output_release_u8_u16(&sbv_driver_output_2[0]);" `isInfixOf` driverText)
 
 -- | Exercise grouped return ABIs across multiple generated library
 -- translation units.

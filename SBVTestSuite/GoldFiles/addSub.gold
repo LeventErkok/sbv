@@ -74,14 +74,14 @@ void addSub(const SWord8 x, const SWord8 y, SWord8 *sum,
 
 int main(void)
 {
-  SWord8 sum;
-  SWord8 dif;
+  SWord8 sbv_driver_output_0;
+  SWord8 sbv_driver_output_1;
 
-  addSub(76, 92, &sum, &dif);
+  addSub(76, 92, &sbv_driver_output_0, &sbv_driver_output_1);
 
   printf("addSub(76, 92, &sum, &dif) ->\n");
-  printf("  sum = %"PRIu8"\n", sum);
-  printf("  dif = %"PRIu8"\n", dif);
+  printf("  sum = %"PRIu8"\n", sbv_driver_output_0);
+  printf("  dif = %"PRIu8"\n", sbv_driver_output_1);
 
   return 0;
 }
@@ -113,15 +113,15 @@ static inline SBV_CGEN_UNUSED SWord8 sbv_bv_u8_sub(SWord8 a, SWord8 b)
 }
 
 
-void addSub(const SWord8 x, const SWord8 y, SWord8 *sum,
-            SWord8 *dif)
+void addSub(const SWord8 sbv_input_0, const SWord8 sbv_input_1,
+            SWord8 *sbv_output_0, SWord8 *sbv_output_1)
 {
-  const SWord8 s0 = x;
-  const SWord8 s1 = y;
+  const SWord8 s0 = sbv_input_0;
+  const SWord8 s1 = sbv_input_1;
   const SWord8 s2 = sbv_bv_u8_add(s0, s1);
   const SWord8 s3 = sbv_bv_u8_sub(s0, s1);
 
-  *sum = s2;
-  *dif = s3;
+  *sbv_output_0 = s2;
+  *sbv_output_1 = s3;
 }
 == END: "addSub.c" ==================

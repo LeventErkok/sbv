@@ -85,9 +85,9 @@ int main(void)
 
 #include "fib2.h"
 
-SWord64 fib2(const SWord64 n)
+SWord64 fib2(const SWord64 sbv_input_0)
 {
-  const SWord64 s0 = n;
+  const SWord64 s0 = sbv_input_0;
   static const SWord64 table0[] = {
       0x0000000000000000ULL, 0x0000000000000001ULL,
       0x0000000000000001ULL, 0x0000000000000002ULL,

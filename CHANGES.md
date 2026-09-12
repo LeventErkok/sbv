@@ -22,6 +22,9 @@
     Empty libraries and conflicting component files or driver entry points are rejected before rendering.
     Native-mapped integers use modular arithmetic without signed C overflow, retaining Euclidean
     division internally and the public truncating and floor-division semantics.
+    Public C names are validated before rendering. Private parameter and driver bindings prevent
+    collisions with accepted user names, which remain unchanged in headers and driver labels.
+    Library file-name conflicts are checked case-insensitively for portable bundles.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

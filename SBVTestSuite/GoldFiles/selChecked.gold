@@ -101,9 +101,9 @@ static inline SBV_CGEN_UNUSED SWord8 sbv_bv_u8_add(SWord8 a, SWord8 b)
 }
 
 
-SWord8 selChecked(const SWord8 x)
+SWord8 selChecked(const SWord8 sbv_input_0)
 {
-  const SWord8 s0 = x;
+  const SWord8 s0 = sbv_input_0;
   const SWord8 s3 = sbv_bv_u8_add(s0, 2);
   const SWord8 table0[] = {
        1, s3

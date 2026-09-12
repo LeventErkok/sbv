@@ -330,10 +330,10 @@ exactFixedInputArrays = withSystemTempDirectory "sbv-exact-fixed-input-arrays" $
            && "const mpq_t *reals" `isInfixOf` headerText
            && "const mpq_t *rationals" `isInfixOf` headerText)
   assertBool "Expected the generated driver to release every GMP input-array element"
-             ("mpz_clear(integers[0]);" `isInfixOf` driverText
-           && "mpz_clear(integers[1]);" `isInfixOf` driverText
-           && "mpq_clear(reals[0]);" `isInfixOf` driverText
-           && "mpq_clear(rationals[1]);" `isInfixOf` driverText)
+             ("mpz_clear(sbv_driver_input_0[0]);" `isInfixOf` driverText
+           && "mpz_clear(sbv_driver_input_0[1]);" `isInfixOf` driverText
+           && "mpq_clear(sbv_driver_input_1[0]);" `isInfixOf` driverText
+           && "mpq_clear(sbv_driver_input_2[1]);" `isInfixOf` driverText)
 
 -- | Exercise repeated reads from a structured array lambda whose arithmetic
 -- allocates exact rational results in the enclosing generated-call arena.

@@ -56,6 +56,27 @@ The original, native-scalar-only implementation remains available from
 "Data.SBV.Tools.CodeGen.Legacy" for compatibility during the transition to the
 new backend.
 
+== Public C names
+
+Function, library, input, and output names must be portable ASCII C identifiers.
+Invalid names and C keywords are rejected, not silently renamed. Leading
+underscores, @sbv_@ and @SBV@ prefixes, generated type names, and names reserved
+for the runtime's C, GMP, and LibBF headers are unavailable for public names.
+For example, @my-function@, @switch@, and @sbv_bv_s16_mul@ are rejected.
+Ordinary library function names such as @remainder@ are allowed as parameter
+names, but not as generated entry points.
+
+Accepted names are preserved in public headers. Implementations and example
+drivers use private parameter bindings, so an input named @s0@ cannot collide
+with a symbolic temporary, and @values_data@ cannot collide with storage for
+an input named @values@. Driver output labels retain the requested names.
+Library component files must also have distinct names ignoring ASCII case,
+so a bundle is safe to render on case-insensitive filesystems.
+
+User-supplied C prototypes, declarations, and external implementations remain
+the caller's responsibility; their identifiers must not conflict with the
+generated runtime or entry points.
+
 == Representations and execution
 
 Generated code evaluates the symbolic computation without an SMT solver.

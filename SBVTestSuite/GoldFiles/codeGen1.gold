@@ -74,7 +74,7 @@ SInt16 foo(const SInt16 x, const SInt64 *xArr, SWord16 *z,
 
 int main(void)
 {
-  const SInt64 xArr[45] = {
+  const SInt64 sbv_driver_input_1[45] = {
       0x0000000000000000LL, 0x0000000000000000LL, 0x0000000000000000LL,
       0x0000000000000000LL, 0x0000000000000000LL, 0x0000000000000000LL,
       0x0000000000000000LL, 0x0000000000000000LL, 0x0000000000000000LL,
@@ -93,31 +93,32 @@ int main(void)
   };
 
   printf("Contents of input array xArr:\n");
-  int xArr_ctr;
-  for(xArr_ctr = 0; xArr_ctr < 45 ; ++xArr_ctr)
-  { printf("  xArr[%2d] = ", xArr_ctr);
-    printf("%"PRId64"LL", xArr[xArr_ctr]);
+  int sbv_driver_input_1_ctr;
+  for(sbv_driver_input_1_ctr = 0; sbv_driver_input_1_ctr < 45 ; ++sbv_driver_input_1_ctr)
+  { printf("  xArr[%2d] = ", sbv_driver_input_1_ctr);
+    printf("%"PRId64"LL", sbv_driver_input_1[sbv_driver_input_1_ctr]);
     printf("\n");
   }
 
-  SWord16 z;
-  SInt16 zArr[7];
-  SInt64 yArr[45];
+  SWord16 sbv_driver_output_0;
+  SInt16 sbv_driver_output_1[7];
+  SInt64 sbv_driver_output_2[45];
 
-  const SInt16 __result = foo(0x0000, xArr, &z, zArr, yArr);
+  const SInt16 __result = foo(0x0000, sbv_driver_input_1,
+                              &sbv_driver_output_0, sbv_driver_output_1, sbv_driver_output_2);
 
   printf("foo(0x0000, xArr, &z, zArr, yArr) = %"PRId16"\n", __result);
-  printf("  z = 0x%04"PRIx16"U\n", z);
-  int zArr_ctr;
-  for(zArr_ctr = 0; zArr_ctr < 7 ; ++zArr_ctr)
-  { printf("  zArr[%1d] = ", zArr_ctr);
-    printf("%"PRId16"", zArr[zArr_ctr]);
+  printf("  z = 0x%04"PRIx16"U\n", sbv_driver_output_0);
+  int sbv_driver_output_1_ctr;
+  for(sbv_driver_output_1_ctr = 0; sbv_driver_output_1_ctr < 7 ; ++sbv_driver_output_1_ctr)
+  { printf("  zArr[%1d] = ", sbv_driver_output_1_ctr);
+    printf("%"PRId16"", sbv_driver_output_1[sbv_driver_output_1_ctr]);
     printf("\n");
   }
-  int yArr_ctr;
-  for(yArr_ctr = 0; yArr_ctr < 45 ; ++yArr_ctr)
-  { printf("  yArr[%2d] = ", yArr_ctr);
-    printf("%"PRId64"LL", yArr[yArr_ctr]);
+  int sbv_driver_output_2_ctr;
+  for(sbv_driver_output_2_ctr = 0; sbv_driver_output_2_ctr < 45 ; ++sbv_driver_output_2_ctr)
+  { printf("  yArr[%2d] = ", sbv_driver_output_2_ctr);
+    printf("%"PRId64"LL", sbv_driver_output_2[sbv_driver_output_2_ctr]);
     printf("\n");
   }
 
@@ -151,111 +152,111 @@ static inline SBV_CGEN_UNUSED SInt16 sbv_bv_s16_mul(SInt16 a, SInt16 b)
 }
 
 
-SInt16 foo(const SInt16 x, const SInt64 *xArr, SWord16 *z,
-           SInt16 *zArr, SInt64 *yArr)
+SInt16 foo(const SInt16 sbv_input_0, const SInt64 *sbv_input_1,
+           SWord16 *sbv_output_0, SInt16 *sbv_output_1, SInt64 *sbv_output_2)
 {
-  const SInt16 s0 = x;
-  const SInt64 s1 = xArr[0];
-  const SInt64 s2 = xArr[1];
-  const SInt64 s3 = xArr[2];
-  const SInt64 s4 = xArr[3];
-  const SInt64 s5 = xArr[4];
-  const SInt64 s6 = xArr[5];
-  const SInt64 s7 = xArr[6];
-  const SInt64 s8 = xArr[7];
-  const SInt64 s9 = xArr[8];
-  const SInt64 s10 = xArr[9];
-  const SInt64 s11 = xArr[10];
-  const SInt64 s12 = xArr[11];
-  const SInt64 s13 = xArr[12];
-  const SInt64 s14 = xArr[13];
-  const SInt64 s15 = xArr[14];
-  const SInt64 s16 = xArr[15];
-  const SInt64 s17 = xArr[16];
-  const SInt64 s18 = xArr[17];
-  const SInt64 s19 = xArr[18];
-  const SInt64 s20 = xArr[19];
-  const SInt64 s21 = xArr[20];
-  const SInt64 s22 = xArr[21];
-  const SInt64 s23 = xArr[22];
-  const SInt64 s24 = xArr[23];
-  const SInt64 s25 = xArr[24];
-  const SInt64 s26 = xArr[25];
-  const SInt64 s27 = xArr[26];
-  const SInt64 s28 = xArr[27];
-  const SInt64 s29 = xArr[28];
-  const SInt64 s30 = xArr[29];
-  const SInt64 s31 = xArr[30];
-  const SInt64 s32 = xArr[31];
-  const SInt64 s33 = xArr[32];
-  const SInt64 s34 = xArr[33];
-  const SInt64 s35 = xArr[34];
-  const SInt64 s36 = xArr[35];
-  const SInt64 s37 = xArr[36];
-  const SInt64 s38 = xArr[37];
-  const SInt64 s39 = xArr[38];
-  const SInt64 s40 = xArr[39];
-  const SInt64 s41 = xArr[40];
-  const SInt64 s42 = xArr[41];
-  const SInt64 s43 = xArr[42];
-  const SInt64 s44 = xArr[43];
-  const SInt64 s45 = xArr[44];
+  const SInt16 s0 = sbv_input_0;
+  const SInt64 s1 = sbv_input_1[0];
+  const SInt64 s2 = sbv_input_1[1];
+  const SInt64 s3 = sbv_input_1[2];
+  const SInt64 s4 = sbv_input_1[3];
+  const SInt64 s5 = sbv_input_1[4];
+  const SInt64 s6 = sbv_input_1[5];
+  const SInt64 s7 = sbv_input_1[6];
+  const SInt64 s8 = sbv_input_1[7];
+  const SInt64 s9 = sbv_input_1[8];
+  const SInt64 s10 = sbv_input_1[9];
+  const SInt64 s11 = sbv_input_1[10];
+  const SInt64 s12 = sbv_input_1[11];
+  const SInt64 s13 = sbv_input_1[12];
+  const SInt64 s14 = sbv_input_1[13];
+  const SInt64 s15 = sbv_input_1[14];
+  const SInt64 s16 = sbv_input_1[15];
+  const SInt64 s17 = sbv_input_1[16];
+  const SInt64 s18 = sbv_input_1[17];
+  const SInt64 s19 = sbv_input_1[18];
+  const SInt64 s20 = sbv_input_1[19];
+  const SInt64 s21 = sbv_input_1[20];
+  const SInt64 s22 = sbv_input_1[21];
+  const SInt64 s23 = sbv_input_1[22];
+  const SInt64 s24 = sbv_input_1[23];
+  const SInt64 s25 = sbv_input_1[24];
+  const SInt64 s26 = sbv_input_1[25];
+  const SInt64 s27 = sbv_input_1[26];
+  const SInt64 s28 = sbv_input_1[27];
+  const SInt64 s29 = sbv_input_1[28];
+  const SInt64 s30 = sbv_input_1[29];
+  const SInt64 s31 = sbv_input_1[30];
+  const SInt64 s32 = sbv_input_1[31];
+  const SInt64 s33 = sbv_input_1[32];
+  const SInt64 s34 = sbv_input_1[33];
+  const SInt64 s35 = sbv_input_1[34];
+  const SInt64 s36 = sbv_input_1[35];
+  const SInt64 s37 = sbv_input_1[36];
+  const SInt64 s38 = sbv_input_1[37];
+  const SInt64 s39 = sbv_input_1[38];
+  const SInt64 s40 = sbv_input_1[39];
+  const SInt64 s41 = sbv_input_1[40];
+  const SInt64 s42 = sbv_input_1[41];
+  const SInt64 s43 = sbv_input_1[42];
+  const SInt64 s44 = sbv_input_1[43];
+  const SInt64 s45 = sbv_input_1[44];
   const SInt16 s48 = sbv_bv_s16_add(s0, 0x0001);
   const SInt16 s50 = sbv_bv_s16_mul(s0, 0x0002);
 
-  *z = 0x0005U;
-  zArr[0] = s48;
-  zArr[1] = s48;
-  zArr[2] = s48;
-  zArr[3] = s48;
-  zArr[4] = s48;
-  zArr[5] = s48;
-  zArr[6] = s48;
-  yArr[0] = s1;
-  yArr[1] = s2;
-  yArr[2] = s3;
-  yArr[3] = s4;
-  yArr[4] = s5;
-  yArr[5] = s6;
-  yArr[6] = s7;
-  yArr[7] = s8;
-  yArr[8] = s9;
-  yArr[9] = s10;
-  yArr[10] = s11;
-  yArr[11] = s12;
-  yArr[12] = s13;
-  yArr[13] = s14;
-  yArr[14] = s15;
-  yArr[15] = s16;
-  yArr[16] = s17;
-  yArr[17] = s18;
-  yArr[18] = s19;
-  yArr[19] = s20;
-  yArr[20] = s21;
-  yArr[21] = s22;
-  yArr[22] = s23;
-  yArr[23] = s24;
-  yArr[24] = s25;
-  yArr[25] = s26;
-  yArr[26] = s27;
-  yArr[27] = s28;
-  yArr[28] = s29;
-  yArr[29] = s30;
-  yArr[30] = s31;
-  yArr[31] = s32;
-  yArr[32] = s33;
-  yArr[33] = s34;
-  yArr[34] = s35;
-  yArr[35] = s36;
-  yArr[36] = s37;
-  yArr[37] = s38;
-  yArr[38] = s39;
-  yArr[39] = s40;
-  yArr[40] = s41;
-  yArr[41] = s42;
-  yArr[42] = s43;
-  yArr[43] = s44;
-  yArr[44] = s45;
+  *sbv_output_0 = 0x0005U;
+  sbv_output_1[0] = s48;
+  sbv_output_1[1] = s48;
+  sbv_output_1[2] = s48;
+  sbv_output_1[3] = s48;
+  sbv_output_1[4] = s48;
+  sbv_output_1[5] = s48;
+  sbv_output_1[6] = s48;
+  sbv_output_2[0] = s1;
+  sbv_output_2[1] = s2;
+  sbv_output_2[2] = s3;
+  sbv_output_2[3] = s4;
+  sbv_output_2[4] = s5;
+  sbv_output_2[5] = s6;
+  sbv_output_2[6] = s7;
+  sbv_output_2[7] = s8;
+  sbv_output_2[8] = s9;
+  sbv_output_2[9] = s10;
+  sbv_output_2[10] = s11;
+  sbv_output_2[11] = s12;
+  sbv_output_2[12] = s13;
+  sbv_output_2[13] = s14;
+  sbv_output_2[14] = s15;
+  sbv_output_2[15] = s16;
+  sbv_output_2[16] = s17;
+  sbv_output_2[17] = s18;
+  sbv_output_2[18] = s19;
+  sbv_output_2[19] = s20;
+  sbv_output_2[20] = s21;
+  sbv_output_2[21] = s22;
+  sbv_output_2[22] = s23;
+  sbv_output_2[23] = s24;
+  sbv_output_2[24] = s25;
+  sbv_output_2[25] = s26;
+  sbv_output_2[26] = s27;
+  sbv_output_2[27] = s28;
+  sbv_output_2[28] = s29;
+  sbv_output_2[29] = s30;
+  sbv_output_2[30] = s31;
+  sbv_output_2[31] = s32;
+  sbv_output_2[32] = s33;
+  sbv_output_2[33] = s34;
+  sbv_output_2[34] = s35;
+  sbv_output_2[35] = s36;
+  sbv_output_2[36] = s37;
+  sbv_output_2[37] = s38;
+  sbv_output_2[38] = s39;
+  sbv_output_2[39] = s40;
+  sbv_output_2[40] = s41;
+  sbv_output_2[41] = s42;
+  sbv_output_2[42] = s43;
+  sbv_output_2[43] = s44;
+  sbv_output_2[44] = s45;
   return s50;
 }
 == END: "foo.c" ==================
