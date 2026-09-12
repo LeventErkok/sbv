@@ -47,6 +47,8 @@
     Generated builds disable implicit floating-point contraction, including during LTO,
     while preserving explicit FMA. Headers reject detectable fast-math and finite-math-only
     compiler modes instead of silently changing IEEE semantics.
+    Acyclic defined functions now share the demand-driven branch scheduler used for recursion,
+    so inactive conditional and short-circuit branches do not evaluate partial ADT selectors.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

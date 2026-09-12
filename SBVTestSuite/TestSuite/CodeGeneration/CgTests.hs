@@ -162,6 +162,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute structured lambda tables" structuredLambdaTables
   , testCase "compile and execute a defined SBV function" definedSBVFunction
   , testCase "compose acyclic defined SBV functions" composedDefinedSBVFunctions
+  , testCase "guard inactive branches in acyclic defined functions" guardedAcyclicDefinedFunctions
   , testCase "compile structural defined SBV functions" structuralDefinedSBVFunctions
   , testCase "compile managed scalar defined SBV functions" managedScalarDefinedSBVFunctions
   , testCase "compile collection defined SBV functions" collectionDefinedSBVFunctions
@@ -2369,6 +2370,47 @@ ownedADTDefinedSBVFunctions = withSystemTempDirectory "sbv-owned-adt-defined-fun
              ("sbv_function_result_clone_" `isInfixOf` sourceText)
   assertBool "Expected private owned ADT result storage to be released"
              ("sbv_function_result_ctx_end(&__sbv_function_result_ctx);" `isInfixOf` sourceText)
+
+-- | An inactive branch must not dereference the null child returned by a
+-- mismatched recursive-ADT selector. Exercise Ite, Boolean short-circuiting,
+-- and a managed result in acyclic functions, standalone and in a library.
+guardedAcyclicDefinedFunctions :: Assertion
+guardedAcyclicDefinedFunctions = mapM_ check [(library, sample) | library <- [False, True], sample <- [1, 0]]
+ where check (library, sample) = withSystemTempDirectory "sbv-guarded-acyclic-functions" $ \dir -> do
+         let functionName = "guardedAcyclicFunctions"
+             program = do
+               cgOverwriteFiles True
+               cgSetDriverValues [sample]
+               chooseLeaf <- cgInput "chooseLeaf" :: SBVCodeGen SBool
+               let guardedLeft :: SCodeGenTree -> SWord8
+                   guardedLeft = smtFunction "C guarded acyclic left" $ \tree ->
+                     ite (isCGLeaf tree) (getCGLeaf_1 tree) (getCGLeaf_1 (getCGNode_1 tree))
+
+                   guardedAnd :: SCodeGenTree -> SBool
+                   guardedAnd = smtFunction "C guarded acyclic and" $ \tree ->
+                     isCGNode tree .&& getCGLeaf_1 (getCGNode_1 tree) .== 7
+
+                   guardedOr :: SCodeGenTree -> SBool
+                   guardedOr = smtFunction "C guarded acyclic or" $ \tree ->
+                     isCGLeaf tree .|| getCGLeaf_1 (getCGNode_1 tree) .== 7
+
+                   guardedImplies :: SCodeGenTree -> SBool
+                   guardedImplies = smtFunction "C guarded acyclic implication" $ \tree ->
+                     isCGNode tree .=> getCGLeaf_1 (getCGNode_1 tree) .== 7
+
+                   guardedTree :: SCodeGenTree -> SCodeGenTree
+                   guardedTree = smtFunction "C guarded acyclic tree" $ \tree ->
+                     ite (isCGLeaf tree) (sCGLeaf (getCGLeaf_1 tree)) (sCGLeaf (getCGLeaf_1 (getCGNode_1 tree)))
+
+                   rootTree = ite chooseLeaf (sCGLeaf 7) (sCGNode (sCGLeaf 7) (sCGLeaf 9))
+               cgOutput "selectedTree" (guardedTree rootTree)
+               cgReturn $ sAnd [guardedLeft rootTree .== 7, guardedAnd rootTree .== sNot chooseLeaf, guardedOr rootTree, guardedImplies rootTree]
+         (_, cfg, bundle) <- if library
+                               then compileToCLib' functionName [("guardedComponent", program)]
+                               else compileToC' functionName ((:[]) <$> program)
+         renderCgPgmBundle (Just dir) (cfg, bundle)
+         outputText <- compileAndRunGenerated dir functionName
+         assertBool outputText (") = 1" `isInfixOf` outputText && "selectedTree =CGLeaf(7)" `isInfixOf` outputText)
 
 -- | Exercise self-recursion, mutually recursive Boolean short-circuiting, and
 -- an owned recursive list result. Each base case must avoid evaluating the

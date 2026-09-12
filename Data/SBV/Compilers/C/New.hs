@@ -1250,13 +1250,6 @@ genCProg cfg adts lists sets fn proto
                                  , Nothing <- [smtDefInfo definition]
                                  ]
 
-       definitionNames      = Set.fromList (map fst definitions)
-       definitionComponents = DG.stronglyConnComp
-                                [ (functionName, functionName, filter (`Set.member` definitionNames) dependencies)
-                                | (functionName, (SMTDef _ dependencies _ _, _)) <- definitions
-                                ]
-       recursiveDefinitionNames = Set.fromList (concat [functionGroup | DG.CyclicSCC functionGroup <- definitionComponents])
-
        topLevelArrayLambdaDefinitions = [ (arrayLambdaName sv, sv, lambdaInfo)
                                         | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- assignments
                                         , Just lambdaInfo <- [smtLambdaInfo lambdaDef]
@@ -1290,9 +1283,7 @@ genCProg cfg adts lists sets fn proto
                              ]
 
        generatedFunctions =
-         [ ppDefinedFunction cfg adts functionNames
-                             (functionName `Set.member` recursiveDefinitionNames)
-                             functionName resultKind functionType lambdaInfo
+         [ ppDefinedFunction cfg adts functionNames functionName resultKind functionType lambdaInfo
          | (functionName, resultKind, _, functionType, lambdaInfo) <- structuredDefinitions
          ]
        functionDocs        = map fst generatedFunctions
@@ -1857,21 +1848,21 @@ definedFunctionSignature originalName resultKind parameters
          : [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters]
 
 -- | Lower one first-order SBV function definition from its retained expression
--- DAG. Recursive definitions use demand-driven control flow so calls protected
+-- DAG. All definitions use demand-driven control flow so operations protected
 -- by conditionals and short-circuiting Boolean operations remain protected in
--- C. Closed nested array lambdas are lambda-lifted into private callbacks;
+-- C, including partial ADT selectors in acyclic functions. Closed nested array
+-- lambdas are lambda-lifted into private callbacks;
 -- SBV's firstified higher-order specializations arrive through the same
 -- first-order representation.
 ppDefinedFunction :: CgConfig
                   -> [Kind]
                   -> [(T.Text, String)]
-                  -> Bool
                   -> String
                   -> Kind
                   -> SBVType
                   -> LambdaInfo
                   -> (Doc, Set.Set CRequirement)
-ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResultKind (SBVType signatureKinds)
+ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVType signatureKinds)
                   LambdaInfo{ liAssignments = functionProgram
                             , liParams      = parameters
                             , liOutput      = functionOutput
@@ -1922,16 +1913,6 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          | isConcreteADTKind kind  = False
          | True                    = valueNeedsOwnership cfg kind
 
-       generatedTables = map (ppTable cfg False renderingConsts) tables
-
-       generatedAssignments = [(cLocation functionConsts sv, doc, needed)
-                              | (sv, expression) <- assignments
-                              , let (doc, needed, _) = ppExpr cfg adts functionNames nestedLambdaNames renderingConsts expression sv
-                                                            (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
-                              ]
-
-       assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
-
        (scheduledAssignments, scheduledRequirements, scheduledDeclarations) = schedule functionOutput
 
        functionRequirements = Set.unions
@@ -1941,8 +1922,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
                        ++ [CRequiresSets            | any isSet expandedFunctionKinds]
                        ++ [CRequiresArrays          | any isArray expandedFunctionKinds]
                        ++ [CRequiresFunctionResults | definedFunctionResultNeedsClone cfg adts resultKind]
-         , if isRecursive then scheduledRequirements
-                          else Set.unions [needed | (_, _, needed) <- generatedAssignments]
+         , scheduledRequirements
          , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
          ]
 
@@ -2004,7 +1984,6 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
           $$ text ""
 
        functionAssignments
-         | isRecursive
          =  vcat [typ <+> var P.<> semi
                  | (sv, _) <- assignments
                  , sv `Set.member` reachableValues
@@ -2012,12 +1991,10 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
                  ]
          $$ vcat (nubBy sameDeclaration scheduledDeclarations)
          $$ scheduledAssignments
-         | True
-         = vcat (map snd (mergeLocated generatedTables assignmentDocs))
 
-       -- Recursive calls must remain under the control-flow nodes that guard
-       -- them. Declare their reachable values once, then initialize each value
-       -- only along paths that demand it.
+       -- Calls and partial operations must remain under the control-flow
+       -- nodes that guard them, regardless of recursion. Declare reachable
+       -- values once, then initialize them only along paths that demand them.
        reachableValues = reach Set.empty functionOutput
 
        reach visited sv
@@ -2061,7 +2038,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
                      , argumentDeclarations ++ assignmentDeclarations
                      )
          | True
-         = die $ "Missing assignment while lowering recursive defined function " ++ show originalName ++ ": " ++ show sv
+         = die $ "Missing assignment while lowering defined function " ++ show originalName ++ ": " ++ show sv
 
        emitMany available [] = (available, empty, Set.empty, [])
        emitMany available (sv:svs) =
@@ -2078,7 +2055,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          , tableIndex `Set.notMember` availableTables
          = case [table | table@((candidateIndex, _, _), _) <- tables, candidateIndex == tableIndex] of
              [table] -> (insertAvailableTable tableIndex available, snd (ppTable cfg False renderingConsts table))
-             _       -> die $ "Missing table while lowering recursive defined function " ++ show originalName
+             _       -> die $ "Missing table while lowering defined function " ++ show originalName
          | True
          = (available, empty)
 
