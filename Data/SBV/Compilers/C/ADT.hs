@@ -876,12 +876,12 @@ adtPrintHelpers adts printField
                        $$ text ""
                        $$ vcat (map definition recursiveKinds)
  where recursiveKinds = filter (adtIsRecursive adts) adts
-       prototype kind = text "static void" <+> text (adtPrintName kind)
+       prototype kind = text "static SBV_CGEN_UNUSED void" <+> text (adtPrintName kind)
                      P.<> parens (text (adtCType kind) <+> text "value")
                      P.<> semi
        definition kind = text "#ifndef" <+> text (adtPrintGuard kind)
                       $$ text "#define" <+> text (adtPrintGuard kind)
-                      $$ text "static void" <+> text (adtPrintName kind)
+                      $$ text "static SBV_CGEN_UNUSED void" <+> text (adtPrintName kind)
                       P.<> parens (text (adtCType kind) <+> text "value")
                       $$ text "{"
                       $$ nest 2 (adtPrintSwitch adts printField kind (text "value"))

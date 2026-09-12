@@ -115,6 +115,13 @@ their storage for the call; owned outputs must be released with the appropriate
 generated helper. Escaping callback contexts additionally require retain and
 release callbacks. See each generated header for its representation contract.
 
+Entry points, defined functions, and array lambdas preserve the guards of
+conditionals and short-circuit Boolean operations. An inactive branch does not
+evaluate its partial ADT selectors or function calls. Total bit-vector work may
+be shared outside branches; dependencies needed by both alternatives are also
+shared. Explicit assertions and hard constraints remain executable checks even
+when the generated function has no outputs.
+
 === Floating-point calling convention
 
 Callers must enter generated code with the hardware rounding mode set to

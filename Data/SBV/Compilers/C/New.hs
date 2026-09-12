@@ -20,9 +20,10 @@ import qualified Data.ByteString       as BS
 import Data.Char                       (chr, isAsciiLower, isAsciiUpper, isDigit, isSpace, toLower)
 import qualified Data.Foldable         as F (toList)
 import qualified Data.Graph            as DG
-import Data.List                       (intercalate, intersperse, isPrefixOf, nub, nubBy)
+import Data.List                       (intercalate, intersperse, isPrefixOf, nub, nubBy, sortOn)
+import qualified Data.Map.Strict       as Map
 import Data.Maybe                      (fromJust, fromMaybe, isJust)
-import qualified Data.Set              as Set (Set, empty, fromList, insert, intersection, map, member, notMember, null, singleton, toList, union, unions)
+import qualified Data.Set              as Set (Set, empty, fromList, insert, intersection, map, member, notMember, null, toList, union, unions)
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as TE
 import Numeric                         (showOct)
@@ -1201,7 +1202,8 @@ genCProg cfg adts lists sets fn proto
                         $$ functionResultStart
                         $$ functionContextStart
                         $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
-                        $$ vcat (merge (map (ppTable cfg True consts) tbls) assignmentDocs runtimeChecks)
+                        $$ constantDeclarations
+                        $$ scheduledAssignments
                         $$ sepIf (not (null assignments) || not (null tbls))
                         $$ vcat (concatMap (genIO False . (True,)) outVars)
                         $$ exactReturn
@@ -1236,7 +1238,9 @@ genCProg cfg adts lists sets fn proto
                                               , attribute /= ":named"
                                               ]
 
-       runtimeChecks = map genAssert asserts ++ map genConstraint constraints
+       runtimeChecks = sortOn (cLocation allConsts . fst)
+                    $ [(sv, snd (genAssert assertion)) | assertion@(_, _, sv) <- asserts]
+                   ++ [(sv, snd (genConstraint constraint)) | constraint@(_, _, sv) <- constraints]
 
        functionNames = [(T.pack functionName, CTypes.definedFunctionCName functionName) | (functionName, _) <- definitions]
 
@@ -1306,12 +1310,19 @@ genCProg cfg adts lists sets fn proto
                                 ]
        arrayLambdaDocs        = map fst generatedArrayLambdas
 
-       generatedAssignments = map genAsgn assignments
-       assignmentDocs        = [(location, doc) | (location, doc, _) <- generatedAssignments]
+       (scheduledAssignments, scheduledRequirements) =
+         scheduleC cfg adts functionNames topLevelArrayLambdaNames consts
+                   (map fst allConsts ++ concatMap (cgValues . snd) inVars) assignments tbls True typeWidth
+                   evaluationRoots
+
+       evaluationRoots = runtimeChecks ++ [(sv, empty) | sv <- concatMap (cgValues . snd) outVars ++ maybe [] pure mbRet]
+
+       cgValues (CgAtomic sv) = [sv]
+       cgValues (CgArray svs) = svs
 
        requirements = Set.unions
          [ kindRequirements
-         , Set.unions [needed | (_, _, needed) <- generatedAssignments]
+         , scheduledRequirements
          , Set.unions (map snd generatedFunctions)
          , Set.unions (map snd generatedArrayLambdas)
          , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
@@ -1503,21 +1514,10 @@ genCProg cfg adts lists sets fn proto
                       getMax m []     = m
                       getMax m (x:xs) = getMax (m `max` x) xs
 
-       consts = (falseSV, falseCV) : (trueSV, trueCV) : preConsts
+       allConsts = (falseSV, falseCV) : (trueSV, trueCV) : preConsts
+       (constantDeclarations, consts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` usedVariables) . fst) allConsts)
 
-       -- TODO: The following is brittle. We should really have a function elsewhere
-       -- that walks the SBVExprs and collects the SWs together.
-       usedVariables = Set.unions (retSWs : checkSWs : map usedCgVal outVars ++ map usedAsgn assignments)
-         where retSWs   = maybe Set.empty Set.singleton mbRet
-               checkSWs = Set.fromList ([sv | (_, _, sv) <- constraints] ++ [sv | (_, _, sv) <- asserts])
-
-               usedCgVal (_, CgAtomic s)  = Set.singleton s
-               usedCgVal (_, CgArray ss)  = Set.fromList ss
-               usedAsgn  (_, SBVApp o ss) = Set.union (opSWs o) (Set.fromList ss)
-
-               opSWs (LkUp _ a b)             = Set.fromList [a, b]
-               opSWs (IEEEFP (FP_Cast _ _ s)) = Set.singleton s
-               opSWs _                        = Set.empty
+       usedVariables = cReachableValues (Map.fromList assignments) tbls (map fst evaluationRoots)
 
        isAlive :: (String, CgVal) -> Bool
        isAlive (_, CgAtomic sv) = sv `Set.member` usedVariables
@@ -1564,16 +1564,6 @@ genCProg cfg adts lists sets fn proto
          where k = kindOf sv
 
        mkRet sv = text "return" <+> showSV cfg consts sv P.<> semi
-
-       genAsgn :: (SV, SBVExpr) -> (Int, Doc, Set.Set CRequirement)
-       genAsgn (sv, n) = (cLocation consts sv, doc, needed)
-         where (doc, needed, _) = ppExpr cfg adts functionNames topLevelArrayLambdaNames consts n sv
-                                         (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
-
-       -- merge tables intermixed with assignments and assertions, paying attention to putting tables as
-       -- early as possible and tables right after.. Note that the assignment list (second argument) is sorted on its order
-       merge :: [(Int, Doc)] -> [(Int, Doc)] -> [(Int, Doc)] -> [Doc]
-       merge tables asgnments asrts = map snd $ mergeLocated asrts (mergeLocated tables asgnments)
 
        genAssert (msg, cs, sv) = (cLocation consts sv, doc)
          where doc =     text "/* ASSERTION:" <+> cCommentText msg
@@ -1637,16 +1627,6 @@ ppTable cfg allowStatic constants ((tableIndex, _, resultKind), elements)
          | allowStatic && location == -1 && not (tableMustBeLocal cfg resultKind) = text "static"
          | True                                                                  = empty
        tableName = text ("table" ++ show tableIndex)
-
--- | Merge two source-ordered declaration streams. Entries from the right-hand
--- stream precede left-hand entries at the same location, allowing a table to
--- follow the assignment that computes its final element.
-mergeLocated :: [(Int, Doc)] -> [(Int, Doc)] -> [(Int, Doc)]
-mergeLocated []               right                       = right
-mergeLocated left             []                          = left
-mergeLocated left@((i, x):xs) right@((j, y):ys)
-  | i < j = (i, x) : mergeLocated xs right
-  | True  = (j, y) : mergeLocated left ys
 
 -- | Render comment contents without allowing terminators, line splices, or
 -- trigraphs to change the surrounding C program during preprocessing.
@@ -1886,12 +1866,8 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
  where (parameterKinds, resultKind) = (init signatureKinds, last signatureKinds)
        assignments                  = F.toList functionProgram
        functionConsts               = (falseSV, falseCV) : (trueSV, trueCV) : constants
-       stabilizedConstantValues     = Set.fromList (map fst stabilizedConstants)
-       renderingConsts              = filter ((`Set.notMember` stabilizedConstantValues) . fst) functionConsts
-       stabilizedConstants          = [ (sv, cv)
-                                      | (sv, cv) <- constants
-                                      , isArray sv || definedFunctionResultNeedsClone cfg adts (kindOf sv)
-                                      ]
+       reachableValues              = cReachableValues (Map.fromList assignments) tables [functionOutput]
+       (constantDeclarations, renderingConsts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` reachableValues) . fst) functionConsts)
        functionValues               = functionOutput : map snd parameters ++ map fst assignments ++ map fst constants
        typeWidth                    = maximum (0 : map (length . showCType) functionValues)
        nestedLambdaNames            = [ (sv, scopedArrayLambdaName (CTypes.definedFunctionCName originalName) sv)
@@ -1913,7 +1889,9 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
          | isConcreteADTKind kind  = False
          | True                    = valueNeedsOwnership cfg kind
 
-       (scheduledAssignments, scheduledRequirements, scheduledDeclarations) = schedule functionOutput
+       (scheduledAssignments, scheduledRequirements) =
+         scheduleC cfg adts functionNames nestedLambdaNames renderingConsts
+                   (map fst functionConsts ++ map snd parameters) assignments tables False typeWidth [(functionOutput, empty)]
 
        functionRequirements = Set.unions
          [ Set.fromList $ [CRequiresGMP             | any (isExactGMPKind cfg) expandedFunctionKinds]
@@ -1974,7 +1952,7 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
          = definedFunctionSignature originalName resultKind parameters
           $$ text "{"
           $$ nest 2 (   contextSetup
-                     $$ vcat [declSV typeWidth sv <+> text "=" <+> mkConst cfg cv P.<> semi | (sv, cv) <- stabilizedConstants]
+                     $$ constantDeclarations
                      $$ functionAssignments
                      $$ functionResultDeclaration <+> text "__sbv_function_result =" <+> functionResult P.<> semi
                      $$ contextCommit
@@ -1983,118 +1961,7 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
           $$ text "}"
           $$ text ""
 
-       functionAssignments
-         =  vcat [typ <+> var P.<> semi
-                 | (sv, _) <- assignments
-                 , sv `Set.member` reachableValues
-                 , let (typ, var) = declSVNoConst typeWidth sv
-                 ]
-         $$ vcat (nubBy sameDeclaration scheduledDeclarations)
-         $$ scheduledAssignments
-
-       -- Calls and partial operations must remain under the control-flow
-       -- nodes that guard them, regardless of recursion. Declare reachable
-       -- values once, then initialize them only along paths that demand them.
-       reachableValues = reach Set.empty functionOutput
-
-       reach visited sv
-         | sv `Set.member` visited
-         = visited
-         | Just (SBVApp op arguments) <- lookup sv assignments
-         = foldl reach (Set.insert sv visited) (operationDependencies op arguments)
-         | True
-         = visited
-
-       schedule resultValue = let (_, docs, needed, declarations) = emit initialAvailability resultValue
-                              in (docs, needed, declarations)
-
-       initialAvailability = (Set.fromList (map fst functionConsts ++ map snd parameters), Set.empty)
-
-       emit available@(availableValues, _) sv
-         | sv `Set.member` availableValues
-         = (available, empty, Set.empty, [])
-         | Just expression@(SBVApp op arguments) <- lookup sv assignments
-         = case (op, arguments) of
-             (Ite, [condition, trueValue, falseValue])
-               -> conditional available sv condition trueValue falseValue
-             (And, [left, right])
-               | kindOf sv == KBool
-               -> conditional available sv left right falseSV
-             (Or, [left, right])
-               | kindOf sv == KBool
-               -> conditional available sv left trueSV right
-             (Implies, [left, right])
-               | kindOf sv == KBool
-               -> conditional available sv left right trueSV
-             _ -> let (withArguments, argumentDocs, argumentRequirements, argumentDeclarations) = emitMany available
-                                                                                                           (operationDependencies op arguments)
-                      (withTable, tableDocs) = emitTable withArguments op
-                      (assignmentDoc, assignmentRequirements, assignmentDeclarations) =
-                        ppExpr cfg adts functionNames nestedLambdaNames renderingConsts expression sv (text (show sv))
-                               (declSVNoConst typeWidth sv) False
-                  in ( insertAvailableValue sv withTable
-                     , argumentDocs $$ tableDocs $$ assignmentDoc
-                     , Set.union argumentRequirements assignmentRequirements
-                     , argumentDeclarations ++ assignmentDeclarations
-                     )
-         | True
-         = die $ "Missing assignment while lowering defined function " ++ show originalName ++ ": " ++ show sv
-
-       emitMany available [] = (available, empty, Set.empty, [])
-       emitMany available (sv:svs) =
-         let (withValue, valueDocs, valueRequirements, valueDeclarations) = emit available sv
-             (withRest, restDocs, restRequirements, restDeclarations) = emitMany withValue svs
-         in ( withRest
-            , valueDocs $$ restDocs
-            , Set.union valueRequirements restRequirements
-            , valueDeclarations ++ restDeclarations
-            )
-
-       emitTable available@(_, availableTables) op
-         | LkUp (tableIndex, _, _, _) _ _ <- op
-         , tableIndex `Set.notMember` availableTables
-         = case [table | table@((candidateIndex, _, _), _) <- tables, candidateIndex == tableIndex] of
-             [table] -> (insertAvailableTable tableIndex available, snd (ppTable cfg False renderingConsts table))
-             _       -> die $ "Missing table while lowering defined function " ++ show originalName
-         | True
-         = (available, empty)
-
-       conditional available result condition trueValue falseValue =
-         let (withCondition, conditionDocs, conditionRequirements, conditionDeclarations) = emit available condition
-             (withTrue, trueDocs, trueRequirements, trueDeclarations) = emit withCondition trueValue
-             (withFalse, falseDocs, falseRequirements, falseDeclarations) = emit withCondition falseValue
-             branch label branchDocs branchValue = text label
-                                                $$ text "{"
-                                                $$ nest 2 (branchDocs $$ assign branchValue)
-                                                $$ text "}"
-             assign value = text (show result) <+> text "=" <+> showSV cfg renderingConsts value P.<> semi
-             docs = conditionDocs
-                 $$ text "if" P.<> parens (showSV cfg renderingConsts condition)
-                 $$ branch "" trueDocs trueValue
-                 $$ branch "else" falseDocs falseValue
-             needed = Set.unions [conditionRequirements, trueRequirements, falseRequirements]
-             -- Values are declared outside the branches, but branch-local C
-             -- table declarations do not remain in scope after the join.
-             availableAfter = ( Set.intersection (fst withTrue) (fst withFalse)
-                              , snd withCondition
-                              )
-             declarations = conditionDeclarations ++ trueDeclarations ++ falseDeclarations
-         in (insertAvailableValue result availableAfter, docs, needed, declarations)
-
-       operationDependencies op arguments = arguments ++ case op of
-         LkUp (tableIndex, _, _, _) index defaultValue
-           -> index : defaultValue : [value | ((candidateIndex, _, _), values) <- tables
-                                            , candidateIndex == tableIndex
-                                            , value <- values
-                                     ]
-         IEEEFP (FP_Cast _ _ rmSV) -> [rmSV]
-         _                           -> []
-
-       insertAvailableValue value (values, availableTables) = (Set.insert value values, availableTables)
-
-       insertAvailableTable tableIndex (values, availableTables) = (values, Set.insert tableIndex availableTables)
-
-       sameDeclaration left right = render left == render right
+       functionAssignments = scheduledAssignments
 
        functionResult
          | isArray resultKind
@@ -2111,6 +1978,224 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
        functionResultDeclaration
          | isArray resultKind = text functionResultType
          | True               = text "const" <+> text functionResultType
+
+-- | Collect every operand, including values retained inside an operator
+-- instead of its ordinary argument list and the entries of referenced tables.
+cExpressionDependencies :: [((Int, Kind, Kind), [SV])] -> SBVExpr -> [SV]
+cExpressionDependencies tables (SBVApp op arguments) = arguments ++ case op of
+  LkUp (tableIndex, _, _, _) index defaultValue
+    -> index : defaultValue : [value | ((candidateIndex, _, _), values) <- tables, candidateIndex == tableIndex, value <- values]
+  IEEEFP (FP_Cast _ _ rmSV) -> [rmSV]
+  _                       -> []
+
+-- | Find the complete demand closure of a collection of roots. Inputs and
+-- constants are included, so declaration liveness and evaluation scheduling
+-- use the same dependency graph.
+cReachableValues :: Map.Map SV SBVExpr -> [((Int, Kind, Kind), [SV])] -> [SV] -> Set.Set SV
+cReachableValues assignments tables = foldl reach Set.empty
+ where reach visited sv
+         | sv `Set.member` visited = visited
+         | True = foldl reach (Set.insert sv visited)
+                        (maybe [] (cExpressionDependencies tables) (Map.lookup sv assignments))
+
+-- | Give managed constants function-wide backing storage. Rendering compound
+-- literals inside a conditional would otherwise leave dangling pointers when
+-- a descriptor is used after that branch exits. A lowering may elide a live
+-- operand, such as an unreachable table default, so acknowledge each binding
+-- even if its rendered use disappears.
+stabilizeCConstants :: CgConfig -> [Kind] -> Int -> [(SV, CV)] -> (Doc, [(SV, CV)])
+stabilizeCConstants cfg adts typeWidth constants
+  = ( vcat [ declSV typeWidth sv <+> text "=" <+> mkConst cfg cv P.<> semi
+          $$ text "(void)" <+> text (show sv) P.<> semi
+           | (sv, cv) <- stabilized
+           ]
+    , filter ((`Set.notMember` stabilizedValues) . fst) constants
+    )
+ where stabilized = [(sv, cv) | (sv, cv) <- constants, isArray sv || definedFunctionResultNeedsClone cfg adts (kindOf sv)]
+       stabilizedValues = Set.fromList (map fst stabilized)
+
+-- | Recognize total bit-vector operations that may be computed before a
+-- guard when all their dependencies are already safe. Restrict speculation
+-- to the exact bit-vector runtime: calls, selectors, allocation, and native
+-- floating-point operations retain their demand ordering.
+cSpeculatable :: SV -> SBVExpr -> Bool
+cSpeculatable result (SBVApp op arguments) = all bitVector (result : arguments) && totalOperation op
+ where bitVector sv = kindOf sv == KBool || isBounded sv
+
+       totalOperation operation = case operation of
+         Plus        -> True
+         Times       -> True
+         Minus       -> True
+         UNeg        -> True
+         Abs         -> True
+         Quot        -> True
+         Rem         -> True
+         Equal{}     -> True
+         NotEqual    -> True
+         LessThan    -> True
+         GreaterThan -> True
+         LessEq      -> True
+         GreaterEq   -> True
+         Ite         -> True
+         Implies     -> True
+         And         -> True
+         Or          -> True
+         XOr         -> True
+         Not         -> True
+         Shl         -> True
+         Shr         -> True
+         Rol{}       -> True
+         Ror{}       -> True
+         Extract{}   -> True
+         Join        -> True
+         _           -> False
+
+-- | Schedule a collection of demanded values and their following statements.
+-- Branch-local work stays under its guard, while declarations are hoisted so
+-- values computed on both paths can safely be reused after the join. Root
+-- statements let entry points retain runtime checks even without live outputs.
+scheduleC :: CgConfig
+          -> [Kind]
+          -> [(T.Text, String)]
+          -> [(SV, String)]
+          -> [(SV, CV)]
+          -> [SV]
+          -> [(SV, SBVExpr)]
+          -> [((Int, Kind, Kind), [SV])]
+          -> Bool
+          -> Int
+          -> [(SV, Doc)]
+          -> (Doc, Set.Set CRequirement)
+scheduleC cfg adts functionNames lambdaNames constants initialValues assignments tables allowStatic typeWidth roots
+  = (vcat eagerDocs $$ declarations $$ statements, Set.union requirements eagerRequirements)
+ where (_, statements, requirements, extraDeclarations) = emitRoots (eagerValues, Set.empty) roots
+       declarations = vcat [typ <+> var P.<> semi
+                           | (sv, _) <- assignments
+                           , sv `Set.member` reachableValues
+                           , sv `Set.notMember` eagerValues
+                           , let (typ, var) = declSVNoConst typeWidth sv
+                           ]
+                   $$ vcat (nubBy (\left right -> render left == render right) extraDeclarations)
+
+       assignmentMap   = Map.fromList assignments
+       reachableValues = cReachableValues assignmentMap tables (map fst roots)
+
+       (eagerValues, eagerReversed) = foldl speculate (Set.fromList initialValues, []) assignments
+       eagerLowerings = [ppExpr cfg adts functionNames lambdaNames constants expression sv
+                               (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
+                        | (sv, expression) <- reverse eagerReversed]
+       eagerDocs = [doc | (doc, _, _) <- eagerLowerings]
+       eagerRequirements = Set.unions [needed | (_, needed, _) <- eagerLowerings]
+
+       speculate available@(values, emitted) assignment@(sv, expression)
+         | sv `Set.member` reachableValues
+         , cSpeculatable sv expression
+         , all (`Set.member` values) (cExpressionDependencies tables expression)
+         = (Set.insert sv values, assignment : emitted)
+         | True
+         = available
+
+       emitRoots available [] = (available, empty, Set.empty, [])
+       emitRoots available ((sv, action):rest) =
+         let (withValue, valueDocs, valueRequirements, valueDeclarations) = emit available sv
+             (withRest, restDocs, restRequirements, restDeclarations) = emitRoots withValue rest
+         in ( withRest
+            , valueDocs $$ action $$ restDocs
+            , Set.union valueRequirements restRequirements
+            , valueDeclarations ++ restDeclarations
+            )
+
+       emit available@(availableValues, _) sv
+         | sv `Set.member` availableValues
+         = (available, empty, Set.empty, [])
+         | Just expression@(SBVApp op arguments) <- Map.lookup sv assignmentMap
+         = case (op, arguments) of
+             (Ite, [condition, trueValue, falseValue])
+               -> conditional available sv condition trueValue falseValue
+             (And, [left, right])
+               | kindOf sv == KBool
+               -> conditional available sv left right falseSV
+             (Or, [left, right])
+               | kindOf sv == KBool
+               -> conditional available sv left trueSV right
+             (Implies, [left, right])
+               | kindOf sv == KBool
+               -> conditional available sv left right trueSV
+             _ -> let (withArguments, argumentDocs, argumentRequirements, argumentDeclarations) = emitMany available
+                                                                                                           (cExpressionDependencies tables expression)
+                      (withTable, tableDocs) = emitTable withArguments op
+                      (assignmentDoc, assignmentRequirements, assignmentDeclarations) =
+                        ppExpr cfg adts functionNames lambdaNames constants expression sv (text (show sv))
+                               (declSVNoConst typeWidth sv) False
+                  in ( insertAvailableValue sv withTable
+                     , argumentDocs $$ tableDocs $$ assignmentDoc
+                     , Set.union argumentRequirements assignmentRequirements
+                     , argumentDeclarations ++ assignmentDeclarations
+                     )
+         | True
+         = die $ "Missing assignment while scheduling C evaluation: " ++ show sv
+
+       emitMany available [] = (available, empty, Set.empty, [])
+       emitMany available (sv:svs) =
+         let (withValue, valueDocs, valueRequirements, valueDeclarations) = emit available sv
+             (withRest, restDocs, restRequirements, restDeclarations) = emitMany withValue svs
+         in ( withRest
+            , valueDocs $$ restDocs
+            , Set.union valueRequirements restRequirements
+            , valueDeclarations ++ restDeclarations
+            )
+
+       emitTable available@(_, availableTables) op
+         | LkUp (tableIndex, _, _, _) _ _ <- op
+         , tableIndex `Set.notMember` availableTables
+         = case [table | table@((candidateIndex, _, _), _) <- tables, candidateIndex == tableIndex] of
+             [table] -> (insertAvailableTable tableIndex available, snd (ppTable cfg allowStatic constants table))
+             _       -> die "Missing table while scheduling C evaluation"
+         | True
+         = (available, empty)
+
+       conditional available result condition trueValue falseValue =
+         let (withCondition, conditionDocs, conditionRequirements, conditionDeclarations) = emit available condition
+             shared = Set.intersection (mandatoryValues withCondition trueValue) (mandatoryValues withCondition falseValue)
+             (withCommon, commonDocs, commonRequirements, commonDeclarations) = emitMany withCondition (Set.toList shared)
+             (withTrue, trueDocs, trueRequirements, trueDeclarations) = emit withCommon trueValue
+             (withFalse, falseDocs, falseRequirements, falseDeclarations) = emit withCommon falseValue
+             branch label branchDocs branchValue = text label
+                                                $$ text "{"
+                                                $$ nest 2 (branchDocs $$ assign branchValue)
+                                                $$ text "}"
+             assign value = text (show result) <+> text "=" <+> showSV cfg constants value P.<> semi
+             docs = conditionDocs
+                 $$ commonDocs
+                 $$ text "if" P.<> parens (showSV cfg constants condition)
+                 $$ branch "" trueDocs trueValue
+                 $$ branch "else" falseDocs falseValue
+             needed = Set.unions [conditionRequirements, commonRequirements, trueRequirements, falseRequirements]
+             -- Values are declared outside the branches, but branch-local C
+             -- table declarations do not remain in scope after the join.
+             availableAfter = ( Set.intersection (fst withTrue) (fst withFalse)
+                              , snd withCommon
+                              )
+             branchDeclarations = conditionDeclarations ++ commonDeclarations ++ trueDeclarations ++ falseDeclarations
+         in (insertAvailableValue result availableAfter, docs, needed, branchDeclarations)
+
+       -- Sharing a mandatory dependency is safe even for partial operations:
+       -- either branch will demand it. Stop at nested guards rather than
+       -- treating their inactive alternatives as mandatory dependencies.
+       mandatoryValues (availableValues, _) = walk Set.empty
+         where walk visited sv
+                 | sv `Set.member` availableValues || sv `Set.member` visited = visited
+                 | True = foldl walk (Set.insert sv visited) dependencies
+                 where dependencies = case Map.lookup sv assignmentMap of
+                         Just (SBVApp Ite (condition:_)) -> [condition]
+                         Just (SBVApp op (left:_))
+                           | kindOf sv == KBool, op `elem` [And, Or, Implies] -> [left]
+                         Just expression -> cExpressionDependencies tables expression
+                         Nothing         -> []
+
+       insertAvailableValue value (values, availableTables) = (Set.insert value values, availableTables)
+
+       insertAvailableTable tableIndex (values, availableTables) = (values, Set.insert tableIndex availableTables)
 
 -- | Give a lambda-lifted array callback a name unique to its lexical owner.
 scopedArrayLambdaName :: String -> SV -> String
@@ -2161,6 +2246,8 @@ ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{
       (kind, _)     -> die $ "Expected an array-valued lambda node, received " ++ show kind
  where assignments = F.toList lambdaPgm
        lambdaConsts = (falseSV, falseCV) : (trueSV, trueCV) : constants
+       reachableValues = cReachableValues (Map.fromList assignments) tables [lambdaOutput]
+       (constantDeclarations, renderingConsts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` reachableValues) . fst) lambdaConsts)
        lambdaValues = lambdaOutput : map snd parameters ++ map fst assignments ++ map fst constants ++ concatMap snd tables
        typeWidth    = maximum (0 : map (length . showCType) lambdaValues)
 
@@ -2172,19 +2259,13 @@ ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{
                               , isJust (lookup symbol functionNames)
                               ]
 
-       generatedTables = map (ppTable cfg False lambdaConsts) tables
-
-       generatedAssignments = [(cLocation lambdaConsts sv, doc, needed)
-                              | (sv, expression) <- assignments
-                              , let (doc, needed, _) = ppExpr cfg adts functionNames nestedLambdaNames lambdaConsts expression sv
-                                                            (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
-                              ]
-
-       assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
+       (scheduledAssignments, scheduledRequirements) =
+         scheduleC cfg adts functionNames nestedLambdaNames renderingConsts
+                   (map fst lambdaConsts ++ map snd parameters) assignments tables False typeWidth [(lambdaOutput, empty)]
 
        requirements = Set.unions
          [ contextRequirements
-         , Set.unions [needed | (_, _, needed) <- generatedAssignments]
+         , scheduledRequirements
          , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
          ]
 
@@ -2202,7 +2283,8 @@ ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{
          = arrayLambdaSignature callbackName arraySV lambdaInfo
           $$ text "{"
           $$ nest 2 (   contextSetup
-                     $$ vcat (map snd (mergeLocated generatedTables assignmentDocs))
+                     $$ constantDeclarations
+                     $$ scheduledAssignments
                      $$ lambdaResultDeclaration valueKind <+> text "__sbv_lambda_result" <+> text "=" <+> lambdaResult P.<> semi
                      $$ contextCommit
                      $$ text "return __sbv_lambda_result;"
@@ -2212,11 +2294,11 @@ ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{
 
        lambdaResult
          | isArray lambdaOutput
-         = arrayStoredValue (kindOf lambdaOutput) (showSV cfg lambdaConsts lambdaOutput)
+         = arrayStoredValue (kindOf lambdaOutput) (showSV cfg renderingConsts lambdaOutput)
          | definedFunctionResultNeedsClone cfg adts (kindOf lambdaOutput)
-         = definedFunctionResultClone (kindOf lambdaOutput) (showSV cfg lambdaConsts lambdaOutput)
+         = definedFunctionResultClone (kindOf lambdaOutput) (showSV cfg renderingConsts lambdaOutput)
          | True
-         = showSV cfg lambdaConsts lambdaOutput
+         = showSV cfg renderingConsts lambdaOutput
 
        lambdaResultDeclaration valueKind
          | isArray lambdaOutput = text (arrayLambdaResultType valueKind)

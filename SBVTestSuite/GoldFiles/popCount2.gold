@@ -135,6 +135,36 @@ static inline SBV_CGEN_UNUSED SWord8 sbv_bv_u8_add(SWord8 a, SWord8 b)
 SWord8 popCount(const SWord64 sbv_input_0)
 {
   const SWord64 s0 = sbv_input_0;
+  const SWord64 s11 = s0 & 0x00000000000000ffULL;
+  const SWord64 s14 = sbv_bv_u64_lshr(s0, 0x0000000000000008ULL);
+  const SWord64 s15 = 0x00000000000000ffULL & s14;
+  const SWord64 s18 = sbv_bv_u64_lshr(s14, 0x0000000000000008ULL);
+  const SWord64 s19 = 0x00000000000000ffULL & s18;
+  const SWord64 s22 = sbv_bv_u64_lshr(s18, 0x0000000000000008ULL);
+  const SWord64 s23 = 0x00000000000000ffULL & s22;
+  const SWord64 s26 = sbv_bv_u64_lshr(s22, 0x0000000000000008ULL);
+  const SWord64 s27 = 0x00000000000000ffULL & s26;
+  const SWord64 s30 = sbv_bv_u64_lshr(s26, 0x0000000000000008ULL);
+  const SWord64 s31 = 0x00000000000000ffULL & s30;
+  const SWord64 s34 = sbv_bv_u64_lshr(s30, 0x0000000000000008ULL);
+  const SWord64 s35 = 0x00000000000000ffULL & s34;
+  const SWord64 s38 = sbv_bv_u64_lshr(s34, 0x0000000000000008ULL);
+  const SWord64 s39 = 0x00000000000000ffULL & s38;
+        SWord8  s12;
+        SWord8  s16;
+        SWord8  s17;
+        SWord8  s20;
+        SWord8  s21;
+        SWord8  s24;
+        SWord8  s25;
+        SWord8  s28;
+        SWord8  s29;
+        SWord8  s32;
+        SWord8  s33;
+        SWord8  s36;
+        SWord8  s37;
+        SWord8  s40;
+        SWord8  s41;
   static const SWord8 table0[] = {
       0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3,
       3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4,
@@ -149,36 +179,21 @@ SWord8 popCount(const SWord64 sbv_input_0)
       5, 6, 6, 7, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5,
       5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
   };
-  const SWord64 s11 = s0 & 0x00000000000000ffULL;
-  const SWord8  s12 = s11 >= 256 ? 0 : table0[s11];
-  const SWord64 s14 = sbv_bv_u64_lshr(s0, 0x0000000000000008ULL);
-  const SWord64 s15 = 0x00000000000000ffULL & s14;
-  const SWord8  s16 = s15 >= 256 ? 0 : table0[s15];
-  const SWord8  s17 = sbv_bv_u8_add(s12, s16);
-  const SWord64 s18 = sbv_bv_u64_lshr(s14, 0x0000000000000008ULL);
-  const SWord64 s19 = 0x00000000000000ffULL & s18;
-  const SWord8  s20 = s19 >= 256 ? 0 : table0[s19];
-  const SWord8  s21 = sbv_bv_u8_add(s17, s20);
-  const SWord64 s22 = sbv_bv_u64_lshr(s18, 0x0000000000000008ULL);
-  const SWord64 s23 = 0x00000000000000ffULL & s22;
-  const SWord8  s24 = s23 >= 256 ? 0 : table0[s23];
-  const SWord8  s25 = sbv_bv_u8_add(s21, s24);
-  const SWord64 s26 = sbv_bv_u64_lshr(s22, 0x0000000000000008ULL);
-  const SWord64 s27 = 0x00000000000000ffULL & s26;
-  const SWord8  s28 = s27 >= 256 ? 0 : table0[s27];
-  const SWord8  s29 = sbv_bv_u8_add(s25, s28);
-  const SWord64 s30 = sbv_bv_u64_lshr(s26, 0x0000000000000008ULL);
-  const SWord64 s31 = 0x00000000000000ffULL & s30;
-  const SWord8  s32 = s31 >= 256 ? 0 : table0[s31];
-  const SWord8  s33 = sbv_bv_u8_add(s29, s32);
-  const SWord64 s34 = sbv_bv_u64_lshr(s30, 0x0000000000000008ULL);
-  const SWord64 s35 = 0x00000000000000ffULL & s34;
-  const SWord8  s36 = s35 >= 256 ? 0 : table0[s35];
-  const SWord8  s37 = sbv_bv_u8_add(s33, s36);
-  const SWord64 s38 = sbv_bv_u64_lshr(s34, 0x0000000000000008ULL);
-  const SWord64 s39 = 0x00000000000000ffULL & s38;
-  const SWord8  s40 = s39 >= 256 ? 0 : table0[s39];
-  const SWord8  s41 = sbv_bv_u8_add(s37, s40);
+  s12 = s11 >= 256 ? 0 : table0[s11];
+  s16 = s15 >= 256 ? 0 : table0[s15];
+  s17 = sbv_bv_u8_add(s12, s16);
+  s20 = s19 >= 256 ? 0 : table0[s19];
+  s21 = sbv_bv_u8_add(s17, s20);
+  s24 = s23 >= 256 ? 0 : table0[s23];
+  s25 = sbv_bv_u8_add(s21, s24);
+  s28 = s27 >= 256 ? 0 : table0[s27];
+  s29 = sbv_bv_u8_add(s25, s28);
+  s32 = s31 >= 256 ? 0 : table0[s31];
+  s33 = sbv_bv_u8_add(s29, s32);
+  s36 = s35 >= 256 ? 0 : table0[s35];
+  s37 = sbv_bv_u8_add(s33, s36);
+  s40 = s39 >= 256 ? 0 : table0[s39];
+  s41 = sbv_bv_u8_add(s37, s40);
 
   return s41;
 }

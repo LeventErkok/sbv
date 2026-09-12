@@ -15,7 +15,8 @@
 SFloat toFP_Int8_ToFloat(const SInt8 sbv_input_0)
 {
   const SInt8  s0 = sbv_input_0;
-  const SFloat s2 = (SFloat) s0;
+        SFloat s2;
+  s2 = (SFloat) s0;
 
   return s2;
 }
@@ -37,7 +38,8 @@ SFloat toFP_Int8_ToFloat(const SInt8 sbv_input_0)
 SFloat toFP_Int16_ToFloat(const SInt16 sbv_input_0)
 {
   const SInt16 s0 = sbv_input_0;
-  const SFloat s2 = (SFloat) s0;
+        SFloat s2;
+  s2 = (SFloat) s0;
 
   return s2;
 }
@@ -111,7 +113,8 @@ static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_s32_float(SInt32 a, bf_rnd_t rn
 SFloat toFP_Int32_ToFloat(const SInt32 sbv_input_0)
 {
   const SInt32 s0 = sbv_input_0;
-  const SFloat s2 = sbv_fp_cast_s32_float(s0, BF_RNDN);
+        SFloat s2;
+  s2 = sbv_fp_cast_s32_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -185,7 +188,8 @@ static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_s64_float(SInt64 a, bf_rnd_t rn
 SFloat toFP_Int64_ToFloat(const SInt64 sbv_input_0)
 {
   const SInt64 s0 = sbv_input_0;
-  const SFloat s2 = sbv_fp_cast_s64_float(s0, BF_RNDN);
+        SFloat s2;
+  s2 = sbv_fp_cast_s64_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -207,7 +211,8 @@ SFloat toFP_Int64_ToFloat(const SInt64 sbv_input_0)
 SFloat toFP_Word8_ToFloat(const SWord8 sbv_input_0)
 {
   const SWord8 s0 = sbv_input_0;
-  const SFloat s2 = (SFloat) s0;
+        SFloat s2;
+  s2 = (SFloat) s0;
 
   return s2;
 }
@@ -229,7 +234,8 @@ SFloat toFP_Word8_ToFloat(const SWord8 sbv_input_0)
 SFloat toFP_Word16_ToFloat(const SWord16 sbv_input_0)
 {
   const SWord16 s0 = sbv_input_0;
-  const SFloat  s2 = (SFloat) s0;
+        SFloat  s2;
+  s2 = (SFloat) s0;
 
   return s2;
 }
@@ -303,7 +309,8 @@ static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_u32_float(SWord32 a, bf_rnd_t r
 SFloat toFP_Word32_ToFloat(const SWord32 sbv_input_0)
 {
   const SWord32 s0 = sbv_input_0;
-  const SFloat  s2 = sbv_fp_cast_u32_float(s0, BF_RNDN);
+        SFloat  s2;
+  s2 = sbv_fp_cast_u32_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -377,7 +384,8 @@ static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_u64_float(SWord64 a, bf_rnd_t r
 SFloat toFP_Word64_ToFloat(const SWord64 sbv_input_0)
 {
   const SWord64 s0 = sbv_input_0;
-  const SFloat  s2 = sbv_fp_cast_u64_float(s0, BF_RNDN);
+        SFloat  s2;
+  s2 = sbv_fp_cast_u64_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -455,7 +463,8 @@ static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_double_float(SDouble a, bf_rnd_
 SFloat toFP_Double_ToFloat(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SFloat  s2 = sbv_fp_cast_double_float(s0, BF_RNDN);
+        SFloat  s2;
+  s2 = sbv_fp_cast_double_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -529,7 +538,8 @@ static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_integer_float(SInt64 a, bf_rnd_
 SFloat toFP_Integer_ToFloat(const SInteger sbv_input_0)
 {
   const SInteger s0 = sbv_input_0;
-  const SFloat   s2 = sbv_fp_cast_integer_float(s0, BF_RNDN);
+        SFloat   s2;
+  s2 = sbv_fp_cast_integer_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -551,7 +561,8 @@ SFloat toFP_Integer_ToFloat(const SInteger sbv_input_0)
 SFloat toFP_Real_ToFloat(const SReal sbv_input_0)
 {
   const SReal  s0 = sbv_input_0;
-  const SFloat s2 = (SFloat) s0;
+        SFloat s2;
+  s2 = (SFloat) s0;
 
   return s2;
 }
@@ -573,7 +584,8 @@ SFloat toFP_Real_ToFloat(const SReal sbv_input_0)
 SDouble toFP_Int8_ToDouble(const SInt8 sbv_input_0)
 {
   const SInt8   s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+        SDouble s2;
+  s2 = (SDouble) s0;
 
   return s2;
 }
@@ -595,7 +607,8 @@ SDouble toFP_Int8_ToDouble(const SInt8 sbv_input_0)
 SDouble toFP_Int16_ToDouble(const SInt16 sbv_input_0)
 {
   const SInt16  s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+        SDouble s2;
+  s2 = (SDouble) s0;
 
   return s2;
 }
@@ -617,7 +630,8 @@ SDouble toFP_Int16_ToDouble(const SInt16 sbv_input_0)
 SDouble toFP_Int32_ToDouble(const SInt32 sbv_input_0)
 {
   const SInt32  s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+        SDouble s2;
+  s2 = (SDouble) s0;
 
   return s2;
 }
@@ -691,7 +705,8 @@ static SBV_CGEN_UNUSED inline SDouble sbv_fp_cast_s64_double(SInt64 a, bf_rnd_t 
 SDouble toFP_Int64_ToDouble(const SInt64 sbv_input_0)
 {
   const SInt64  s0 = sbv_input_0;
-  const SDouble s2 = sbv_fp_cast_s64_double(s0, BF_RNDN);
+        SDouble s2;
+  s2 = sbv_fp_cast_s64_double(s0, BF_RNDN);
 
   return s2;
 }
@@ -713,7 +728,8 @@ SDouble toFP_Int64_ToDouble(const SInt64 sbv_input_0)
 SDouble toFP_Word8_ToDouble(const SWord8 sbv_input_0)
 {
   const SWord8  s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+        SDouble s2;
+  s2 = (SDouble) s0;
 
   return s2;
 }
@@ -735,7 +751,8 @@ SDouble toFP_Word8_ToDouble(const SWord8 sbv_input_0)
 SDouble toFP_Word16_ToDouble(const SWord16 sbv_input_0)
 {
   const SWord16 s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+        SDouble s2;
+  s2 = (SDouble) s0;
 
   return s2;
 }
@@ -757,7 +774,8 @@ SDouble toFP_Word16_ToDouble(const SWord16 sbv_input_0)
 SDouble toFP_Word32_ToDouble(const SWord32 sbv_input_0)
 {
   const SWord32 s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+        SDouble s2;
+  s2 = (SDouble) s0;
 
   return s2;
 }
@@ -831,7 +849,8 @@ static SBV_CGEN_UNUSED inline SDouble sbv_fp_cast_u64_double(SWord64 a, bf_rnd_t
 SDouble toFP_Word64_ToDouble(const SWord64 sbv_input_0)
 {
   const SWord64 s0 = sbv_input_0;
-  const SDouble s2 = sbv_fp_cast_u64_double(s0, BF_RNDN);
+        SDouble s2;
+  s2 = sbv_fp_cast_u64_double(s0, BF_RNDN);
 
   return s2;
 }
@@ -853,7 +872,8 @@ SDouble toFP_Word64_ToDouble(const SWord64 sbv_input_0)
 SDouble toFP_Float_ToDouble(const SFloat sbv_input_0)
 {
   const SFloat  s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+        SDouble s2;
+  s2 = (SDouble) s0;
 
   return s2;
 }
@@ -947,7 +967,8 @@ static SBV_CGEN_UNUSED inline SDouble sbv_fp_cast_integer_double(SInt64 a, bf_rn
 SDouble toFP_Integer_ToDouble(const SInteger sbv_input_0)
 {
   const SInteger s0 = sbv_input_0;
-  const SDouble  s2 = sbv_fp_cast_integer_double(s0, BF_RNDN);
+        SDouble  s2;
+  s2 = sbv_fp_cast_integer_double(s0, BF_RNDN);
 
   return s2;
 }
@@ -969,7 +990,8 @@ SDouble toFP_Integer_ToDouble(const SInteger sbv_input_0)
 SDouble toFP_Real_ToDouble(const SReal sbv_input_0)
 {
   const SReal   s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+        SDouble s2;
+  s2 = (SDouble) s0;
 
   return s2;
 }
@@ -1035,7 +1057,8 @@ static SBV_CGEN_UNUSED inline SInt8 sbv_fp_cast_float_s8(SFloat a, bf_rnd_t rnd)
 SInt8 fromFP_Float_ToInt8(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SInt8  s2 = sbv_fp_cast_float_s8(s0, BF_RNDN);
+        SInt8  s2;
+  s2 = sbv_fp_cast_float_s8(s0, BF_RNDN);
 
   return s2;
 }
@@ -1101,7 +1124,8 @@ static SBV_CGEN_UNUSED inline SInt16 sbv_fp_cast_float_s16(SFloat a, bf_rnd_t rn
 SInt16 fromFP_Float_ToInt16(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SInt16 s2 = sbv_fp_cast_float_s16(s0, BF_RNDN);
+        SInt16 s2;
+  s2 = sbv_fp_cast_float_s16(s0, BF_RNDN);
 
   return s2;
 }
@@ -1167,7 +1191,8 @@ static SBV_CGEN_UNUSED inline SInt32 sbv_fp_cast_float_s32(SFloat a, bf_rnd_t rn
 SInt32 fromFP_Float_ToInt32(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SInt32 s2 = sbv_fp_cast_float_s32(s0, BF_RNDN);
+        SInt32 s2;
+  s2 = sbv_fp_cast_float_s32(s0, BF_RNDN);
 
   return s2;
 }
@@ -1233,7 +1258,8 @@ static SBV_CGEN_UNUSED inline SInt64 sbv_fp_cast_float_s64(SFloat a, bf_rnd_t rn
 SInt64 fromFP_Float_ToInt64(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SInt64 s2 = sbv_fp_cast_float_s64(s0, BF_RNDN);
+        SInt64 s2;
+  s2 = sbv_fp_cast_float_s64(s0, BF_RNDN);
 
   return s2;
 }
@@ -1299,7 +1325,8 @@ static SBV_CGEN_UNUSED inline SWord8 sbv_fp_cast_float_u8(SFloat a, bf_rnd_t rnd
 SWord8 fromFP_Float_ToWord8(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SWord8 s2 = sbv_fp_cast_float_u8(s0, BF_RNDN);
+        SWord8 s2;
+  s2 = sbv_fp_cast_float_u8(s0, BF_RNDN);
 
   return s2;
 }
@@ -1365,7 +1392,8 @@ static SBV_CGEN_UNUSED inline SWord16 sbv_fp_cast_float_u16(SFloat a, bf_rnd_t r
 SWord16 fromFP_Float_ToWord16(const SFloat sbv_input_0)
 {
   const SFloat  s0 = sbv_input_0;
-  const SWord16 s2 = sbv_fp_cast_float_u16(s0, BF_RNDN);
+        SWord16 s2;
+  s2 = sbv_fp_cast_float_u16(s0, BF_RNDN);
 
   return s2;
 }
@@ -1431,7 +1459,8 @@ static SBV_CGEN_UNUSED inline SWord32 sbv_fp_cast_float_u32(SFloat a, bf_rnd_t r
 SWord32 fromFP_Float_ToWord32(const SFloat sbv_input_0)
 {
   const SFloat  s0 = sbv_input_0;
-  const SWord32 s2 = sbv_fp_cast_float_u32(s0, BF_RNDN);
+        SWord32 s2;
+  s2 = sbv_fp_cast_float_u32(s0, BF_RNDN);
 
   return s2;
 }
@@ -1497,7 +1526,8 @@ static SBV_CGEN_UNUSED inline SWord64 sbv_fp_cast_float_u64(SFloat a, bf_rnd_t r
 SWord64 fromFP_Float_ToWord64(const SFloat sbv_input_0)
 {
   const SFloat  s0 = sbv_input_0;
-  const SWord64 s2 = sbv_fp_cast_float_u64(s0, BF_RNDN);
+        SWord64 s2;
+  s2 = sbv_fp_cast_float_u64(s0, BF_RNDN);
 
   return s2;
 }
@@ -1539,7 +1569,8 @@ SFloat fromFP_Float_ToFloat(const SFloat sbv_input_0)
 SDouble fromFP_Float_ToDouble(const SFloat sbv_input_0)
 {
   const SFloat  s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+        SDouble s2;
+  s2 = (SDouble) s0;
 
   return s2;
 }
@@ -1605,7 +1636,8 @@ static SBV_CGEN_UNUSED inline SInt64 sbv_fp_cast_float_integer(SFloat a, bf_rnd_
 SInteger fromFP_Float_ToInteger(const SFloat sbv_input_0)
 {
   const SFloat   s0 = sbv_input_0;
-  const SInteger s2 = sbv_fp_cast_float_integer(s0, BF_RNDN);
+        SInteger s2;
+  s2 = sbv_fp_cast_float_integer(s0, BF_RNDN);
 
   return s2;
 }
@@ -1627,7 +1659,8 @@ SInteger fromFP_Float_ToInteger(const SFloat sbv_input_0)
 SReal fromFP_Float_ToReal(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SReal  s2 = (SReal) s0;
+        SReal  s2;
+  s2 = (SReal) s0;
 
   return s2;
 }
@@ -1693,7 +1726,8 @@ static SBV_CGEN_UNUSED inline SInt8 sbv_fp_cast_double_s8(SDouble a, bf_rnd_t rn
 SInt8 fromFP_DoubleTo_Int8(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SInt8   s2 = sbv_fp_cast_double_s8(s0, BF_RNDN);
+        SInt8   s2;
+  s2 = sbv_fp_cast_double_s8(s0, BF_RNDN);
 
   return s2;
 }
@@ -1759,7 +1793,8 @@ static SBV_CGEN_UNUSED inline SInt16 sbv_fp_cast_double_s16(SDouble a, bf_rnd_t 
 SInt16 fromFP_DoubleTo_Int16(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SInt16  s2 = sbv_fp_cast_double_s16(s0, BF_RNDN);
+        SInt16  s2;
+  s2 = sbv_fp_cast_double_s16(s0, BF_RNDN);
 
   return s2;
 }
@@ -1825,7 +1860,8 @@ static SBV_CGEN_UNUSED inline SInt32 sbv_fp_cast_double_s32(SDouble a, bf_rnd_t 
 SInt32 fromFP_DoubleTo_Int32(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SInt32  s2 = sbv_fp_cast_double_s32(s0, BF_RNDN);
+        SInt32  s2;
+  s2 = sbv_fp_cast_double_s32(s0, BF_RNDN);
 
   return s2;
 }
@@ -1891,7 +1927,8 @@ static SBV_CGEN_UNUSED inline SInt64 sbv_fp_cast_double_s64(SDouble a, bf_rnd_t 
 SInt64 fromFP_DoubleTo_Int64(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SInt64  s2 = sbv_fp_cast_double_s64(s0, BF_RNDN);
+        SInt64  s2;
+  s2 = sbv_fp_cast_double_s64(s0, BF_RNDN);
 
   return s2;
 }
@@ -1957,7 +1994,8 @@ static SBV_CGEN_UNUSED inline SWord8 sbv_fp_cast_double_u8(SDouble a, bf_rnd_t r
 SWord8 fromFP_DoubleTo_Word8(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SWord8  s2 = sbv_fp_cast_double_u8(s0, BF_RNDN);
+        SWord8  s2;
+  s2 = sbv_fp_cast_double_u8(s0, BF_RNDN);
 
   return s2;
 }
@@ -2023,7 +2061,8 @@ static SBV_CGEN_UNUSED inline SWord16 sbv_fp_cast_double_u16(SDouble a, bf_rnd_t
 SWord16 fromFP_DoubleTo_Word16(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SWord16 s2 = sbv_fp_cast_double_u16(s0, BF_RNDN);
+        SWord16 s2;
+  s2 = sbv_fp_cast_double_u16(s0, BF_RNDN);
 
   return s2;
 }
@@ -2089,7 +2128,8 @@ static SBV_CGEN_UNUSED inline SWord32 sbv_fp_cast_double_u32(SDouble a, bf_rnd_t
 SWord32 fromFP_DoubleTo_Word32(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SWord32 s2 = sbv_fp_cast_double_u32(s0, BF_RNDN);
+        SWord32 s2;
+  s2 = sbv_fp_cast_double_u32(s0, BF_RNDN);
 
   return s2;
 }
@@ -2155,7 +2195,8 @@ static SBV_CGEN_UNUSED inline SWord64 sbv_fp_cast_double_u64(SDouble a, bf_rnd_t
 SWord64 fromFP_DoubleTo_Word64(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SWord64 s2 = sbv_fp_cast_double_u64(s0, BF_RNDN);
+        SWord64 s2;
+  s2 = sbv_fp_cast_double_u64(s0, BF_RNDN);
 
   return s2;
 }
@@ -2213,7 +2254,8 @@ static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_double_float(SDouble a, bf_rnd_
 SFloat fromFP_DoubleTo_Float(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SFloat  s2 = sbv_fp_cast_double_float(s0, BF_RNDN);
+        SFloat  s2;
+  s2 = sbv_fp_cast_double_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -2299,7 +2341,8 @@ static SBV_CGEN_UNUSED inline SInt64 sbv_fp_cast_double_integer(SDouble a, bf_rn
 SInteger fromFP_DoubleTo_Integer(const SDouble sbv_input_0)
 {
   const SDouble  s0 = sbv_input_0;
-  const SInteger s2 = sbv_fp_cast_double_integer(s0, BF_RNDN);
+        SInteger s2;
+  s2 = sbv_fp_cast_double_integer(s0, BF_RNDN);
 
   return s2;
 }
@@ -2321,7 +2364,8 @@ SInteger fromFP_DoubleTo_Integer(const SDouble sbv_input_0)
 SReal fromFP_DoubleTo_Real(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SReal   s2 = (SReal) s0;
+        SReal   s2;
+  s2 = (SReal) s0;
 
   return s2;
 }
@@ -2343,7 +2387,8 @@ SReal fromFP_DoubleTo_Real(const SDouble sbv_input_0)
 SFloat fromFP_SWord32_SFloat(const SWord32 sbv_input_0)
 {
   const SWord32 s0 = sbv_input_0;
-        SFloat  s1; memcpy(&s1, &s0, sizeof(SFloat));
+        SFloat  s1;
+  memcpy(&s1, &s0, sizeof(SFloat));
 
   return s1;
 }
@@ -2365,7 +2410,8 @@ SFloat fromFP_SWord32_SFloat(const SWord32 sbv_input_0)
 SDouble fromFP_SWord64_SDouble(const SWord64 sbv_input_0)
 {
   const SWord64 s0 = sbv_input_0;
-        SDouble s1; memcpy(&s1, &s0, sizeof(SDouble));
+        SDouble s1;
+  memcpy(&s1, &s0, sizeof(SDouble));
 
   return s1;
 }
@@ -2387,7 +2433,8 @@ SDouble fromFP_SWord64_SDouble(const SWord64 sbv_input_0)
 SWord32 fromFP_SFloat_SWord32(const SFloat sbv_input_0)
 {
   const SFloat  s0 = sbv_input_0;
-        SWord32 s1; memcpy(&s1, &s0, sizeof(SWord32));
+        SWord32 s1;
+  memcpy(&s1, &s0, sizeof(SWord32));
 
   return s1;
 }
@@ -2409,7 +2456,8 @@ SWord32 fromFP_SFloat_SWord32(const SFloat sbv_input_0)
 SWord64 fromFP_SDouble_SWord64(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-        SWord64 s1; memcpy(&s1, &s0, sizeof(SWord64));
+        SWord64 s1;
+  memcpy(&s1, &s0, sizeof(SWord64));
 
   return s1;
 }
@@ -2431,7 +2479,8 @@ SWord64 fromFP_SDouble_SWord64(const SDouble sbv_input_0)
 SFloat f_FP_Abs(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SFloat s1 = fabsf(s0);
+        SFloat s1;
+  s1 = fabsf(s0);
 
   return s1;
 }
@@ -2453,7 +2502,8 @@ SFloat f_FP_Abs(const SFloat sbv_input_0)
 SDouble d_FP_Abs(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SDouble s1 = fabs(s0);
+        SDouble s1;
+  s1 = fabs(s0);
 
   return s1;
 }
@@ -2475,7 +2525,8 @@ SDouble d_FP_Abs(const SDouble sbv_input_0)
 SFloat f_FP_Neg(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SFloat s1 = (- s0);
+        SFloat s1;
+  s1 = (- s0);
 
   return s1;
 }
@@ -2497,7 +2548,8 @@ SFloat f_FP_Neg(const SFloat sbv_input_0)
 SDouble d_FP_Neg(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SDouble s1 = (- s0);
+        SDouble s1;
+  s1 = (- s0);
 
   return s1;
 }
@@ -2520,7 +2572,8 @@ SFloat f_FP_Add(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
   const SFloat s1 = sbv_input_1;
-  const SFloat s3 = s0 + s1;
+        SFloat s3;
+  s3 = s0 + s1;
 
   return s3;
 }
@@ -2544,7 +2597,8 @@ SDouble d_FP_Add(const SDouble sbv_input_0,
 {
   const SDouble s0 = sbv_input_0;
   const SDouble s1 = sbv_input_1;
-  const SDouble s3 = s0 + s1;
+        SDouble s3;
+  s3 = s0 + s1;
 
   return s3;
 }
@@ -2567,7 +2621,8 @@ SFloat f_FP_Sub(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
   const SFloat s1 = sbv_input_1;
-  const SFloat s3 = s0 - s1;
+        SFloat s3;
+  s3 = s0 - s1;
 
   return s3;
 }
@@ -2591,7 +2646,8 @@ SDouble d_FP_Sub(const SDouble sbv_input_0,
 {
   const SDouble s0 = sbv_input_0;
   const SDouble s1 = sbv_input_1;
-  const SDouble s3 = s0 - s1;
+        SDouble s3;
+  s3 = s0 - s1;
 
   return s3;
 }
@@ -2614,7 +2670,8 @@ SFloat f_FP_Mul(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
   const SFloat s1 = sbv_input_1;
-  const SFloat s3 = s0 * s1;
+        SFloat s3;
+  s3 = s0 * s1;
 
   return s3;
 }
@@ -2638,7 +2695,8 @@ SDouble d_FP_Mul(const SDouble sbv_input_0,
 {
   const SDouble s0 = sbv_input_0;
   const SDouble s1 = sbv_input_1;
-  const SDouble s3 = s0 * s1;
+        SDouble s3;
+  s3 = s0 * s1;
 
   return s3;
 }
@@ -2661,7 +2719,8 @@ SFloat f_FP_Div(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
   const SFloat s1 = sbv_input_1;
-  const SFloat s3 = s0 / s1;
+        SFloat s3;
+  s3 = s0 / s1;
 
   return s3;
 }
@@ -2685,7 +2744,8 @@ SDouble d_FP_Div(const SDouble sbv_input_0,
 {
   const SDouble s0 = sbv_input_0;
   const SDouble s1 = sbv_input_1;
-  const SDouble s3 = s0 / s1;
+        SDouble s3;
+  s3 = s0 / s1;
 
   return s3;
 }
@@ -2710,7 +2770,8 @@ SFloat f_FP_FMA(const SFloat sbv_input_0, const SFloat sbv_input_1,
   const SFloat s0 = sbv_input_0;
   const SFloat s1 = sbv_input_1;
   const SFloat s2 = sbv_input_2;
-  const SFloat s4 = fmaf(s0, s1, s2);
+        SFloat s4;
+  s4 = fmaf(s0, s1, s2);
 
   return s4;
 }
@@ -2735,7 +2796,8 @@ SDouble d_FP_FMA(const SDouble sbv_input_0,
   const SDouble s0 = sbv_input_0;
   const SDouble s1 = sbv_input_1;
   const SDouble s2 = sbv_input_2;
-  const SDouble s4 = fma(s0, s1, s2);
+        SDouble s4;
+  s4 = fma(s0, s1, s2);
 
   return s4;
 }
@@ -2757,7 +2819,8 @@ SDouble d_FP_FMA(const SDouble sbv_input_0,
 SFloat f_FP_Sqrt(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SFloat s2 = sqrtf(s0);
+        SFloat s2;
+  s2 = sqrtf(s0);
 
   return s2;
 }
@@ -2779,7 +2842,8 @@ SFloat f_FP_Sqrt(const SFloat sbv_input_0)
 SDouble d_FP_Sqrt(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SDouble s2 = sqrt(s0);
+        SDouble s2;
+  s2 = sqrt(s0);
 
   return s2;
 }
@@ -2802,7 +2866,8 @@ SFloat f_FP_Rem(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
   const SFloat s1 = sbv_input_1;
-  const SFloat s2 = remainderf(s0, s1);
+        SFloat s2;
+  s2 = remainderf(s0, s1);
 
   return s2;
 }
@@ -2826,7 +2891,8 @@ SDouble d_FP_Rem(const SDouble sbv_input_0,
 {
   const SDouble s0 = sbv_input_0;
   const SDouble s1 = sbv_input_1;
-  const SDouble s2 = remainder(s0, s1);
+        SDouble s2;
+  s2 = remainder(s0, s1);
 
   return s2;
 }
@@ -2848,7 +2914,8 @@ SDouble d_FP_Rem(const SDouble sbv_input_0,
 SFloat f_FP_RoundToIntegral(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SFloat s2 = rintf(s0);
+        SFloat s2;
+  s2 = rintf(s0);
 
   return s2;
 }
@@ -2870,7 +2937,8 @@ SFloat f_FP_RoundToIntegral(const SFloat sbv_input_0)
 SDouble d_FP_RoundToIntegral(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SDouble s2 = rint(s0);
+        SDouble s2;
+  s2 = rint(s0);
 
   return s2;
 }
@@ -2893,8 +2961,9 @@ SFloat f_FP_Min(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
   const SFloat s1 = sbv_input_1;
-  const SFloat s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0F /* 0.0F */ : fminf(s0,
-                                                                                                                                              s1);
+        SFloat s2;
+  s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0F /* 0.0F */ : fminf(s0,
+                                                                                                                                 s1);
 
   return s2;
 }
@@ -2918,8 +2987,9 @@ SDouble d_FP_Min(const SDouble sbv_input_0,
 {
   const SDouble s0 = sbv_input_0;
   const SDouble s1 = sbv_input_1;
-  const SDouble s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0 /* 0.0 */ : fmin(s0,
-                                                                                                                                            s1);
+        SDouble s2;
+  s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0 /* 0.0 */ : fmin(s0,
+                                                                                                                              s1);
 
   return s2;
 }
@@ -2942,8 +3012,9 @@ SFloat f_FP_Max(const SFloat sbv_input_0, const SFloat sbv_input_1)
 {
   const SFloat s0 = sbv_input_0;
   const SFloat s1 = sbv_input_1;
-  const SFloat s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0F /* 0.0F */ : fmaxf(s0,
-                                                                                                                                              s1);
+        SFloat s2;
+  s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0F /* 0.0F */ : fmaxf(s0,
+                                                                                                                                 s1);
 
   return s2;
 }
@@ -2967,8 +3038,9 @@ SDouble d_FP_Max(const SDouble sbv_input_0,
 {
   const SDouble s0 = sbv_input_0;
   const SDouble s1 = sbv_input_1;
-  const SDouble s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0 /* 0.0 */ : fmax(s0,
-                                                                                                                                            s1);
+        SDouble s2;
+  s2 = ((FP_ZERO == fpclassify(s0)) && (FP_ZERO == fpclassify(s1)) && (signbit(s0) != signbit(s1))) ? 0x0p+0 /* 0.0 */ : fmax(s0,
+                                                                                                                              s1);
 
   return s2;
 }
@@ -2992,7 +3064,8 @@ SBool f_FP_IsEqualObject(const SFloat sbv_input_0,
 {
   const SFloat s0 = sbv_input_0;
   const SFloat s1 = sbv_input_1;
-  const SBool  s2 = isnan(s0) ? isnan(s1) : (signbit(s0) && (s0 == 0)) ? (signbit(s1) && (s1 == 0)) : (signbit(s1) && (s1 == 0)) ? (signbit(s0) && (s0 == 0)) : (s0 == s1);
+        SBool  s2;
+  s2 = isnan(s0) ? isnan(s1) : (signbit(s0) && (s0 == 0)) ? (signbit(s1) && (s1 == 0)) : (signbit(s1) && (s1 == 0)) ? (signbit(s0) && (s0 == 0)) : (s0 == s1);
 
   return s2;
 }
@@ -3016,7 +3089,8 @@ SBool d_FP_IsEqualObject(const SDouble sbv_input_0,
 {
   const SDouble s0 = sbv_input_0;
   const SDouble s1 = sbv_input_1;
-  const SBool   s2 = isnan(s0) ? isnan(s1) : (signbit(s0) && (s0 == 0)) ? (signbit(s1) && (s1 == 0)) : (signbit(s1) && (s1 == 0)) ? (signbit(s0) && (s0 == 0)) : (s0 == s1);
+        SBool   s2;
+  s2 = isnan(s0) ? isnan(s1) : (signbit(s0) && (s0 == 0)) ? (signbit(s1) && (s1 == 0)) : (signbit(s1) && (s1 == 0)) ? (signbit(s0) && (s0 == 0)) : (s0 == s1);
 
   return s2;
 }
@@ -3038,7 +3112,8 @@ SBool d_FP_IsEqualObject(const SDouble sbv_input_0,
 SBool f_FP_IsNormal(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SBool  s1 = isnormal(s0);
+        SBool  s1;
+  s1 = isnormal(s0);
 
   return s1;
 }
@@ -3060,7 +3135,8 @@ SBool f_FP_IsNormal(const SFloat sbv_input_0)
 SBool d_FP_IsNormal(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SBool   s1 = isnormal(s0);
+        SBool   s1;
+  s1 = isnormal(s0);
 
   return s1;
 }
@@ -3082,7 +3158,8 @@ SBool d_FP_IsNormal(const SDouble sbv_input_0)
 SBool f_FP_IsZero(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SBool  s1 = FP_ZERO == fpclassify(s0);
+        SBool  s1;
+  s1 = FP_ZERO == fpclassify(s0);
 
   return s1;
 }
@@ -3104,7 +3181,8 @@ SBool f_FP_IsZero(const SFloat sbv_input_0)
 SBool d_FP_IsZero(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SBool   s1 = FP_ZERO == fpclassify(s0);
+        SBool   s1;
+  s1 = FP_ZERO == fpclassify(s0);
 
   return s1;
 }
@@ -3126,7 +3204,8 @@ SBool d_FP_IsZero(const SDouble sbv_input_0)
 SBool f_FP_IsSubnormal(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SBool  s1 = FP_SUBNORMAL == fpclassify(s0);
+        SBool  s1;
+  s1 = FP_SUBNORMAL == fpclassify(s0);
 
   return s1;
 }
@@ -3148,7 +3227,8 @@ SBool f_FP_IsSubnormal(const SFloat sbv_input_0)
 SBool d_FP_IsSubnormal(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SBool   s1 = FP_SUBNORMAL == fpclassify(s0);
+        SBool   s1;
+  s1 = FP_SUBNORMAL == fpclassify(s0);
 
   return s1;
 }
@@ -3170,7 +3250,8 @@ SBool d_FP_IsSubnormal(const SDouble sbv_input_0)
 SBool f_FP_IsInfinite(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SBool  s1 = isinf(s0);
+        SBool  s1;
+  s1 = isinf(s0);
 
   return s1;
 }
@@ -3192,7 +3273,8 @@ SBool f_FP_IsInfinite(const SFloat sbv_input_0)
 SBool d_FP_IsInfinite(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SBool   s1 = isinf(s0);
+        SBool   s1;
+  s1 = isinf(s0);
 
   return s1;
 }
@@ -3214,7 +3296,8 @@ SBool d_FP_IsInfinite(const SDouble sbv_input_0)
 SBool f_FP_IsNaN(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SBool  s1 = isnan(s0);
+        SBool  s1;
+  s1 = isnan(s0);
 
   return s1;
 }
@@ -3236,7 +3319,8 @@ SBool f_FP_IsNaN(const SFloat sbv_input_0)
 SBool d_FP_IsNaN(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SBool   s1 = isnan(s0);
+        SBool   s1;
+  s1 = isnan(s0);
 
   return s1;
 }
@@ -3258,7 +3342,8 @@ SBool d_FP_IsNaN(const SDouble sbv_input_0)
 SBool f_FP_IsNegative(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SBool  s1 = !isnan(s0) && signbit(s0);
+        SBool  s1;
+  s1 = !isnan(s0) && signbit(s0);
 
   return s1;
 }
@@ -3280,7 +3365,8 @@ SBool f_FP_IsNegative(const SFloat sbv_input_0)
 SBool d_FP_IsNegative(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SBool   s1 = !isnan(s0) && signbit(s0);
+        SBool   s1;
+  s1 = !isnan(s0) && signbit(s0);
 
   return s1;
 }
@@ -3302,7 +3388,8 @@ SBool d_FP_IsNegative(const SDouble sbv_input_0)
 SBool f_FP_IsPositive(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SBool  s1 = !isnan(s0) && !signbit(s0);
+        SBool  s1;
+  s1 = !isnan(s0) && !signbit(s0);
 
   return s1;
 }
@@ -3324,7 +3411,8 @@ SBool f_FP_IsPositive(const SFloat sbv_input_0)
 SBool d_FP_IsPositive(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SBool   s1 = !isnan(s0) && !signbit(s0);
+        SBool   s1;
+  s1 = !isnan(s0) && !signbit(s0);
 
   return s1;
 }

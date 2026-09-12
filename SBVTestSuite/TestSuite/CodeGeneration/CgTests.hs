@@ -21,7 +21,7 @@
 module TestSuite.CodeGeneration.CgTests(tests) where
 
 import Control.Exception (ErrorCall, displayException, evaluate, try)
-import Control.Monad (forM)
+import Control.Monad (forM, unless)
 import Data.List (isInfixOf)
 import Data.SBV.Internals
 import Data.SBV.Tools.CodeGen (compileToC, compileToCLib)
@@ -163,6 +163,10 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile and execute a defined SBV function" definedSBVFunction
   , testCase "compose acyclic defined SBV functions" composedDefinedSBVFunctions
   , testCase "guard inactive branches in acyclic defined functions" guardedAcyclicDefinedFunctions
+  , testCase "guard inactive branches in entry points" (guardedProgramEvaluation False)
+  , testCase "guard inactive branches in array lambdas" (guardedProgramEvaluation True)
+  , testCase "retain checks as demand-driven evaluation roots" guardedRuntimeChecks
+  , testCase "preserve sharing across guarded evaluation diamonds" guardedEvaluationSharing
   , testCase "compile structural defined SBV functions" structuralDefinedSBVFunctions
   , testCase "compile managed scalar defined SBV functions" managedScalarDefinedSBVFunctions
   , testCase "compile collection defined SBV functions" collectionDefinedSBVFunctions
@@ -2411,6 +2415,83 @@ guardedAcyclicDefinedFunctions = mapM_ check [(library, sample) | library <- [Fa
          renderCgPgmBundle (Just dir) (cfg, bundle)
          outputText <- compileAndRunGenerated dir functionName
          assertBool outputText (") = 1" `isInfixOf` outputText && "selectedTree =CGLeaf(7)" `isInfixOf` outputText)
+
+-- | Demand-driven evaluation must protect partial selectors both in public
+-- entry points and in retained array callbacks, including owned branch results.
+guardedProgramEvaluation :: Bool -> Assertion
+guardedProgramEvaluation useLambda = mapM_ check [(library, sample) | library <- [False, True], sample <- [1, 0]]
+ where check (library, sample) = withSystemTempDirectory "sbv-guarded-evaluation" $ \dir -> do
+         let functionName = "guardedEvaluation"
+             evaluateTree :: SBool -> SBV (CodeGenTree, Bool)
+             evaluateTree chooseLeaf =
+               let rootTree = ite chooseLeaf (sCGLeaf 7) (sCGNode (sCGLeaf 7) (sCGLeaf 9))
+                   child    = getCGLeaf_1 (getCGNode_1 rootTree)
+                   selected = ite (isCGLeaf rootTree) (sCGLeaf (getCGLeaf_1 rootTree)) (sCGLeaf child)
+                   valid    = sAnd [ (isCGNode rootTree .&& child .== 7) .== sNot chooseLeaf
+                                   , isCGLeaf rootTree .|| child .== 7
+                                   , isCGNode rootTree .=> child .== 7
+                                   ]
+               in tuple (selected, valid)
+             program = do
+               cgOverwriteFiles True
+               cgSetDriverValues [sample]
+               chooseLeaf <- cgInput "chooseLeaf" :: SBVCodeGen SBool
+               let (selected, valid) = untuple $ if useLambda
+                                                  then readArray (lambdaArray evaluateTree) chooseLeaf
+                                                  else evaluateTree chooseLeaf
+               cgOutput "selectedTree" selected
+               cgReturn valid
+         (_, cfg, bundle) <- if library
+                               then compileToCLib' functionName [("guardedComponent", program)]
+                               else compileToC' functionName ((:[]) <$> program)
+         renderCgPgmBundle (Just dir) (cfg, bundle)
+         outputText <- compileAndRunGenerated dir functionName
+         assertBool outputText (") = 1" `isInfixOf` outputText && "selectedTree =CGLeaf(7)" `isInfixOf` outputText)
+
+-- | Preconditions must run before dependent outputs, and must not disappear
+-- when an entry point has no outputs. A rejected leaf must report the named
+-- constraint instead of crashing in the node-only output selector.
+guardedRuntimeChecks :: Assertion
+guardedRuntimeChecks = mapM_ check [(library, noResult, sample) | library <- [False, True], noResult <- [False, True], sample <- [0, 1]]
+ where check (library, noResult, sample) = withSystemTempDirectory "sbv-guarded-checks" $ \dir -> do
+         let functionName = "guardedChecks"
+             program = do
+               cgOverwriteFiles True
+               cgSetDriverValues [sample]
+               chooseLeaf <- cgInput "chooseLeaf" :: SBVCodeGen SBool
+               let rootTree = ite chooseLeaf (sCGLeaf 7) (sCGNode (sCGLeaf 7) (sCGLeaf 9))
+               namedConstraint "node required" (isCGNode rootTree)
+               unless noResult $ cgReturn (getCGLeaf_1 (getCGNode_1 rootTree))
+         (_, cfg, bundle) <- if library
+                               then compileToCLib' functionName [("guardedComponent", program)]
+                               else compileToC' functionName ((:[]) <$> program)
+         renderCgPgmBundle (Just dir) (cfg, bundle)
+         (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+         assertEqual makeError ExitSuccess makeExit
+         (runExit, _, runError) <- readProcessWithExitCode (dir </> functionName ++ "_driver") [] ""
+         if sample == 0
+            then assertEqual runError ExitSuccess runExit
+            else do assertBool "Expected a rejected input" (runExit /= ExitSuccess)
+                    assertBool runError ("CONSTRAINT FAILED: node required" `isInfixOf` runError)
+
+-- | A shared partial dependency must stay below its guard without being
+-- copied exponentially into subsequent conditionals. The generated DAG has
+-- only a few dozen nodes even though its expanded expression tree is large.
+guardedEvaluationSharing :: Assertion
+guardedEvaluationSharing = withSystemTempDirectory "sbv-guarded-sharing" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [0]
+        flags <- cgInput "flags" :: SBVCodeGen SWord32
+        let rootTree = ite (sTestBit flags 31) (sCGLeaf 7) (sCGNode (sCGLeaf 7) (sCGLeaf 9))
+            initial  = ite (isCGLeaf rootTree) (getCGLeaf_1 rootTree) (getCGLeaf_1 (getCGNode_1 rootTree))
+            result   = foldl (\previous bitIndex -> ite (sTestBit flags bitIndex) (previous + 1) (previous + 2)) initial [0 .. 17]
+        cgReturn result
+  (_, cfg, bundle) <- compileToC' "guardedSharing" program
+  assertBool "Guarded evaluation expanded a shared DAG exponentially" (length (show bundle) < 100000)
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  outputText <- compileAndRunGenerated dir "guardedSharing"
+  assertBool outputText (") = 43" `isInfixOf` outputText)
 
 -- | Exercise self-recursion, mutually recursive Boolean short-circuiting, and
 -- an owned recursive list result. Each base case must avoid evaluating the

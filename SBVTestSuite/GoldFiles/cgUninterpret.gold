@@ -140,11 +140,12 @@ SWord32 tstShiftLeft(const SWord32 *sbv_input_0)
   const SWord32 s0 = sbv_input_0[0];
   const SWord32 s1 = sbv_input_0[1];
   const SWord32 s2 = sbv_input_0[2];
-  const SWord32 s3 = /* Uninterpreted function */ SBV_SHIFTLEFT(s0,
-                                                                s2);
-  const SWord32 s4 = /* Uninterpreted function */ SBV_SHIFTLEFT(s1,
-                                                                s2);
-  const SWord32 s5 = sbv_bv_u32_add(s3, s4);
+        SWord32 s3;
+        SWord32 s4;
+        SWord32 s5;
+  s3 = /* Uninterpreted function */ SBV_SHIFTLEFT(s0, s2);
+  s4 = /* Uninterpreted function */ SBV_SHIFTLEFT(s1, s2);
+  s5 = sbv_bv_u32_add(s3, s4);
 
   return s5;
 }

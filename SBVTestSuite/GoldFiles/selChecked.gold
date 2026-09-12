@@ -123,10 +123,11 @@ SWord8 selChecked(const SWord8 sbv_input_0)
 {
   const SWord8 s0 = sbv_input_0;
   const SWord8 s3 = sbv_bv_u8_add(s0, 2);
+        SWord8 s5;
   const SWord8 table0[] = {
        1, s3
   };
-  const SWord8 s5 = s0 >= 2 ? 3 : table0[s0];
+  s5 = s0 >= 2 ? 3 : table0[s0];
 
   return s5;
 }

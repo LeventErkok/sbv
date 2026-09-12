@@ -106,6 +106,7 @@ int main(void)
 SWord64 fib2(const SWord64 sbv_input_0)
 {
   const SWord64 s0 = sbv_input_0;
+        SWord64 s65;
   static const SWord64 table0[] = {
       0x0000000000000000ULL, 0x0000000000000001ULL,
       0x0000000000000001ULL, 0x0000000000000002ULL,
@@ -140,7 +141,7 @@ SWord64 fib2(const SWord64 sbv_input_0)
       0x000001686c8312d0ULL, 0x000002472d96a909ULL,
       0x000003af9a19bbd9ULL, 0x000005f6c7b064e2ULL, 0x000009a661ca20bbULL
   };
-  const SWord64 s65 = s0 >= 65 ? 0x0000000000000000ULL : table0[s0];
+  s65 = s0 >= 65 ? 0x0000000000000000ULL : table0[s0];
 
   return s65;
 }
